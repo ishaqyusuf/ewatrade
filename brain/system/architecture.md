@@ -8,7 +8,8 @@ Describe the intended technical architecture and responsibility boundaries for t
 - Keep this doc implementation-aware but concise.
 
 ## Architecture Direction
-- Frontends: planned Next.js web applications and Expo mobile applications.
+- Workspace shape: follow the `midday` project monorepo pattern with `apps/*` and `packages/*` as the primary structure, with any future tooling packages added only when needed.
+- Frontends: Next.js web applications and planned Expo mobile applications.
 - Backend entry points: Hono-based HTTP services with typed tRPC procedures where shared end-to-end contracts are needed.
 - Domain flow: client -> API layer -> service layer -> repository layer -> database.
 - Async work: Trigger.dev for jobs and workflow orchestration.
@@ -29,5 +30,5 @@ Describe the intended technical architecture and responsibility boundaries for t
 - No direct client access to the database.
 
 ## Open Items
-- TODO: Define actual monorepo package boundaries once code scaffolding exists.
+- TODO: Expand the current `midday`-style monorepo scaffold with `apps/mobile`, `apps/api`, and domain packages as implementation begins.
 - TODO: Document cache, queue, and object storage decisions when selected.

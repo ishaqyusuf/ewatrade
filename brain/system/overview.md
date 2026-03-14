@@ -8,6 +8,7 @@ Operational summary of the platform and how its major domains fit together.
 - Keep this aligned with `brain/SYSTEM_OVERVIEW.md`.
 
 ## Platform Shape
+- Project name: `ewatrade`.
 - Multi-tenant commerce platform for merchants and dispatch providers.
 - Customer-facing experiences include storefronts, checkout, and delivery tracking.
 - Internal experiences include merchant operations, POS workflows, and logistics coordination.

@@ -4,7 +4,7 @@
 High-level summary of the platform, its business domains, and the current implementation direction.
 
 ## Product Summary
-O-Commerce is a multi-tenant commerce and logistics platform for merchants, dispatch providers, and customers.
+`ewatrade` is a multi-tenant commerce and logistics platform for merchants, dispatch providers, and customers.
 
 ## Primary Domains
 - Merchant commerce operations

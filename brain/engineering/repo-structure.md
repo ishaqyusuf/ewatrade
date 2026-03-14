@@ -8,7 +8,10 @@ Describe the current repository shape and the intended monorepo layout.
 
 ## Current State
 - `brain/` - Project Brain documentation currently checked into the repository.
-- No application or package directories detected in this workspace snapshot.
+- `apps/web/` - Next.js App Router application scaffold.
+- `packages/ui/` - Shared Tailwind CSS and UI styling package.
+- `packages/utils/` - Shared utility package.
+- `packages/tsconfig/` - Shared TypeScript config package.
 
 ## Intended Structure
 - `apps/web` - Next.js merchant/admin/public web surfaces.
@@ -20,5 +23,6 @@ Describe the current repository shape and the intended monorepo layout.
 - `packages/domain` - Shared domain models, service helpers, and validation.
 
 ## Notes
+- Use the `midday` project workspace architecture as the default structural reference for future repo expansion.
 - Final directory names should match the actual scaffold once created.
 - Keep schema ownership centralized so Prisma remains authoritative even if Drizzle is used in runtime code.

@@ -7,7 +7,9 @@ Canonical stack reference for current implementation choices.
 - Update when adopting, replacing, or removing core technologies.
 
 ## Application Stack
-- Web: Next.js
+- Monorepo/tooling: Bun workspaces + Turborepo + shared TypeScript configs
+- Web: Next.js 16 App Router
+- Web styling: Tailwind CSS 4 via shared `packages/ui` CSS and shared PostCSS config patterned after the `gnd` project
 - Mobile: Expo / React Native
 - API server: Hono
 - Typed API contracts: tRPC

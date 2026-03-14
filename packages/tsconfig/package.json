@@ -1,0 +1,13 @@
+{
+  "name": "@ewatrade/tsconfig",
+  "private": true,
+  "version": "1.0.0",
+  "exports": {
+    "./base.json": "./base.json",
+    "./nextjs.json": "./nextjs.json"
+  },
+  "files": [
+    "base.json",
+    "nextjs.json"
+  ]
+}

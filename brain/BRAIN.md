@@ -1,7 +1,7 @@
-# Project Brain
+# ewatrade Brain
 
 ## Purpose
-Central index for product, architecture, engineering, database, API, decisions, bugs, and task documentation.
+Central index for ewatrade product, architecture, engineering, database, API, decisions, bugs, and task documentation.
 
 ## How To Use
 - Start here before making product or engineering changes.
@@ -11,6 +11,7 @@ Central index for product, architecture, engineering, database, API, decisions, 
 ## Current State
 - Repository currently contains Brain documentation only.
 - Application code structure is not present yet in this workspace snapshot.
+- `ewatrade` is the working project name for this platform.
 - Core platform direction: multi-tenant commerce, logistics, merchant tooling, and website builder workflows.
 
 ## Key References

@@ -1,10 +1,14 @@
 # Project Index
 
+Project: `ewatrade`
+
 ## Applications
-- None detected.
+- `apps/web` - Next.js App Router web application scaffold for the ewatrade frontend.
 
 ## Packages
-- None detected.
+- `packages/ui` - Shared UI package that owns the Tailwind CSS entrypoint and shared styling tokens.
+- `packages/utils` - Shared utility package for cross-app helper functions.
+- `packages/tsconfig` - Shared TypeScript base configs for apps and packages.
 
 ## Services
 - None detected.
@@ -27,5 +31,5 @@
 - `brain/architecture/multi-tenant.md` - Tenant isolation rules.
 
 ## TODO
-- Add real `apps/`, `packages/`, or `services/` entries when code structure is created.
-- Replace conceptual service listings with actual package names once the monorepo is scaffolded.
+- Add `apps/mobile` when the Expo client is created.
+- Add `apps/api` and database/auth packages when backend scaffolding begins.

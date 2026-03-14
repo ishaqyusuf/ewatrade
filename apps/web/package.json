@@ -1,0 +1,29 @@
+{
+  "name": "@ewatrade/web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build --webpack",
+    "start": "next start",
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ewatrade/ui": "workspace:*",
+    "@ewatrade/utils": "workspace:*",
+    "next": "^16.1.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@ewatrade/tsconfig": "workspace:*",
+    "@tailwindcss/postcss": "^4.1.17",
+    "@types/node": "^24.6.0",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "@biomejs/biome": "^1.9.4",
+    "tailwindcss": "^4.1.17",
+    "typescript": "^5.9.3"
+  }
+}
