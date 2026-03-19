@@ -15,10 +15,27 @@ Track the conceptual schema and schema ownership rules for the platform.
 
 ### Tenant & Identity
 - `Tenant` — merchant or logistics/dispatch organization (type field: `merchant` | `logistics`)
+  - Fields: `name`, `type`, `slug`, `status` (active | pending_verification | suspended), `country`, `state`, `city`, `address`, `phone`, `email`, `registrationNumber`, `taxId`, `verifiedAt`
 - `User` — platform-wide user identity (global, not per-tenant)
+  - Fields: `fullName`, `email`, `phone`, `passwordHash`, `role` (customer | platform_admin), `dateOfBirth`, `profilePhoto`, `defaultDeliveryAddress`, `notificationPreferences`
 - `Session` — user session (managed by Better Auth)
-- `Account` — auth provider link per user
+- `Account` — auth provider link per user (social login: Google, Apple)
 - `Membership` — link between a user and a tenant (with role)
+  - Fields: `userId`, `tenantId`, `role` (merchant_owner | merchant_staff | logistics_owner | driver), `status` (active | invited | suspended)
+
+### Onboarding & Verification
+- `OnboardingProgress` — tracks completion of multi-step onboarding per user/tenant
+  - Fields: `userId`, `tenantId`, `step`, `completedSteps`, `status` (in_progress | complete)
+- `VerificationDocument` — uploaded document for identity/business verification
+  - Fields: `tenantId`, `userId`, `type` (gov_id | business_reg | drivers_license | vehicle_reg | vehicle_insurance | proof_of_residence), `fileUrl`, `status` (pending | approved | rejected), `reviewedAt`, `reviewNote`
+- `BankAccount` — payout details for a tenant or driver
+  - Fields: `tenantId`, `bankName`, `accountNumber`, `accountHolderName`, `accountType` (savings | current), `isDefault`
+- `DriverProfile` — individual driver/rider details under a logistics tenant
+  - Fields: `userId`, `tenantId`, `dateOfBirth`, `homeAddress`, `emergencyContactName`, `emergencyContactPhone`, `govIdType`, `govIdNumber`, `govIdExpiry`, `status` (pending_verification | verified | rejected | suspended)
+- `DriverVehicle` — vehicle associated with a driver
+  - Fields: `driverProfileId`, `type` (bicycle | motorcycle | car | van | truck), `make`, `model`, `year`, `plateNumber`, `color`
+- `ServiceZone` — delivery zones declared by a logistics tenant or driver
+  - Fields: `tenantId`, `driverProfileId` (optional), `city`, `region`, `intercityEnabled`
 
 ### Commerce
 - `Store` — a merchant's store (belongs to merchant tenant)
@@ -75,5 +92,7 @@ Track the conceptual schema and schema ownership rules for the platform.
 
 ## TODO
 - Define exact table names and field sets once the Prisma schema is created.
-- Confirm whether merchant and dispatch organizations share one `Tenant` table with a type discriminator or use separate tables.
+- Confirm whether merchant and dispatch organizations share one `Tenant` table with a type discriminator or use separate tables (current direction: shared table with type discriminator).
 - Define retention/cleanup strategy for `ActivityEvent` records.
+- Define address as embedded fields vs a separate `Address` entity (consider reuse across User, Tenant, Store, Driver).
+- Determine file storage provider for `VerificationDocument.fileUrl` (S3, Cloudinary, etc.).
