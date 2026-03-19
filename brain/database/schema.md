@@ -37,14 +37,38 @@ Track the conceptual schema and schema ownership rules for the platform.
 - `ServiceZone` — delivery zones declared by a logistics tenant or driver
   - Fields: `tenantId`, `driverProfileId` (optional), `city`, `region`, `intercityEnabled`
 
+### Business Types
+- `BusinessCategory` — broad business grouping (food_beverage, retail_goods, services, hospitality, health, logistics)
+  - Fields: `slug`, `label`, `icon`, `order`
+- `StoreKind` — specific business type (restaurant, pharmacy, fashion_wears, etc.)
+  - Fields: `slug`, `label`, `categoryId`, `templateHints` (string[]), `featureFlags` (json), `icon`
+
+### Customer Identity
+- `TenantCustomer` — relationship between a global User and a specific Tenant
+  - Fields: `userId` (nullable), `tenantId`, `customerCode`, `notes`, `tags`, `loyaltyPoints`, `totalOrders`, `totalSpend`, `firstSeenAt`, `lastSeenAt`, `isWalkIn`, `walkinName`, `walkinPhone`
+
+### Legal
+- `LegalAcceptance` — records user agreement to platform ToC/Privacy Policy
+  - Fields: `userId`, `tenantId` (nullable), `documentType` (terms_of_service | privacy_policy | acceptable_use), `documentVersion`, `acceptedAt`, `ipAddress`
+
+### Payment
+- `PaymentGatewayAccount` — merchant's payment subaccount with a gateway provider
+  - Fields: `tenantId`, `provider` (paystack | flutterwave), `subaccountCode`, `businessName`, `settlementBank`, `accountNumber`, `percentageCharge`, `isActive`
+
 ### Commerce
 - `Store` — a merchant's store (belongs to merchant tenant)
+  - Added: `storeKindId` FK → StoreKind
 - `Product` — a product in a store
 - `ProductVariant` — variant of a product (size, color, etc.)
 - `InventoryItem` — stock tracking per variant per location
-- `Cart` — customer cart (per store)
+- `Cart` — customer cart (per store, per user)
+- `MainSiteCart` — temporary cart scoped to main site session (items carry tenantId/storeId)
+  - Fields: `userId` (nullable), `sessionId`, `items` (JSON), `expiresAt`
 - `Order` — placed order
+  - Added: `source` (storefront | main_site | whatsapp | pos | manual | walkin), `fulfillmentMethod` (delivery | pickup | own_delivery), `paymentMethod` (online | cash_on_delivery | bank_transfer | pos_terminal), `staffNotes`, `parentOrderId` (for split orders)
 - `OrderItem` — line item on an order
+- `OrderStatusEvent` — audit log of order status transitions
+  - Fields: `orderId`, `fromStatus`, `toStatus`, `actorId`, `note`, `occurredAt`
 
 ### Fulfillment
 - `DeliveryRequest` — order fulfillment request to dispatch network
@@ -54,12 +78,17 @@ Track the conceptual schema and schema ownership rules for the platform.
 - `TrackingEvent` — location/status event for an active delivery
 
 ### Storefront / Website Builder
-- `TenantSite` — the generated website for a tenant (merchant or logistics)
-  - Fields: `tenantId`, `type` (merchant | logistics), `subdomain`, `customDomain`, `published`, `themeConfig`
+- `TenantSite` — the generated website for a tenant (merchant, logistics, or rider)
+  - Fields: `tenantId`, `type` (merchant | logistics | rider), `subdomain`, `customDomain`, `published`, `themeConfig`
 - `Page` — a page within a tenant site
 - `Section` — a content section within a page (type, config, order)
 - `Theme` — theme token set (fonts, colors, spacing, buttons)
 - `Template` — reusable section/page layout template
+  - Added: `compatibleKinds` (StoreKind slug array — empty = all kinds)
+
+### WhatsApp
+- `WhatsAppChannel` — WhatsApp Business API connection per tenant
+  - Fields: `tenantId` (nullable for platform bot), `phoneNumberId`, `wabaId`, `isActive`, `webhookSecret`
 
 ### Main Site — Advertisement & Discovery
 - `FeaturedListing` — a paid or curated featured entry on the main site
@@ -75,6 +104,9 @@ Track the conceptual schema and schema ownership rules for the platform.
 
 ### POS
 - `CashierSession` — a cashier's active POS session
+  - Fields: `tenantId`, `cashierId`, `openingFloat`, `closingFloat`, `status`, `startedAt`, `endedAt`
+- `SelfServiceSession` — customer QR self-scan session
+  - Fields: `tenantId`, `userId`, `qrCode`, `status` (scanning | ready_for_scan | cashier_review | approved | payment_pending | paid | completed | cancelled), `cartItems` (JSON), `tipAmount`, `expiresAt`
 - `Receipt` — receipt for a POS transaction
 - `BarcodeEvent` — barcode scan event during a session
 
@@ -92,7 +124,9 @@ Track the conceptual schema and schema ownership rules for the platform.
 
 ## TODO
 - Define exact table names and field sets once the Prisma schema is created.
-- Confirm whether merchant and dispatch organizations share one `Tenant` table with a type discriminator or use separate tables (current direction: shared table with type discriminator).
+- Confirmed: `Tenant` uses a shared table with `type` discriminator (merchant | logistics).
 - Define retention/cleanup strategy for `ActivityEvent` records.
-- Define address as embedded fields vs a separate `Address` entity (consider reuse across User, Tenant, Store, Driver).
-- Determine file storage provider for `VerificationDocument.fileUrl` (S3, Cloudinary, etc.).
+- Resolve: embedded address fields vs a separate `Address` entity (consider reuse across User, Tenant, Store, DriverProfile).
+- Choose file storage provider for `VerificationDocument.fileUrl` (Cloudinary recommended for image docs; S3 for PDF).
+- Seed `BusinessCategory` and `StoreKind` lookup data as part of database migrations.
+- Decide: `Tenant.storeKindId` nullable? (nullable for logistics tenants; required for merchant tenants).
