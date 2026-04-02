@@ -25,6 +25,7 @@ Document migration ownership and safety rules.
 - `bun run db:up` - start the local PostgreSQL container
 - `bun run db:down` - stop the local PostgreSQL container
 - `bun run db:generate` - generate Prisma Client from the file-based schema
+- `bunx prisma migrate diff --from-empty --to-schema prisma --script --output prisma/migrations/0001_init/migration.sql` - refresh the baseline SQL migration without a running database
 - `bun run db:migrate:dev` - create and apply a development migration
 - `bun run db:migrate:deploy` - apply committed migrations in deployed environments
 - `bun run db:studio` - open Prisma Studio against the configured database

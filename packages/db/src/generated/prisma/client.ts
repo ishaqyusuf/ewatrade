@@ -52,6 +52,11 @@ export type Tenant = Prisma.TenantModel
  */
 export type TenantHostname = Prisma.TenantHostnameModel
 /**
+ * Model LeadCapture
+ * 
+ */
+export type LeadCapture = Prisma.LeadCaptureModel
+/**
  * Model User
  * 
  */

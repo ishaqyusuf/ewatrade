@@ -233,6 +233,23 @@ export type DateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedDateTimeNullableFilter<$PrismaModel>
 }
 
+export type EnumLeadCaptureTypeFilter<$PrismaModel = never> = {
+  equals?: $Enums.LeadCaptureType | Prisma.EnumLeadCaptureTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.LeadCaptureType[] | Prisma.ListEnumLeadCaptureTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LeadCaptureType[] | Prisma.ListEnumLeadCaptureTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLeadCaptureTypeFilter<$PrismaModel> | $Enums.LeadCaptureType
+}
+
+export type EnumLeadCaptureTypeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.LeadCaptureType | Prisma.EnumLeadCaptureTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.LeadCaptureType[] | Prisma.ListEnumLeadCaptureTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LeadCaptureType[] | Prisma.ListEnumLeadCaptureTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLeadCaptureTypeWithAggregatesFilter<$PrismaModel> | $Enums.LeadCaptureType
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumLeadCaptureTypeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumLeadCaptureTypeFilter<$PrismaModel>
+}
+
 export type EnumMembershipRoleFilter<$PrismaModel = never> = {
   equals?: $Enums.MembershipRole | Prisma.EnumMembershipRoleFieldRefInput<$PrismaModel>
   in?: $Enums.MembershipRole[] | Prisma.ListEnumMembershipRoleFieldRefInput<$PrismaModel>
@@ -789,6 +806,23 @@ export type NestedDateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
   _min?: Prisma.NestedDateTimeNullableFilter<$PrismaModel>
   _max?: Prisma.NestedDateTimeNullableFilter<$PrismaModel>
+}
+
+export type NestedEnumLeadCaptureTypeFilter<$PrismaModel = never> = {
+  equals?: $Enums.LeadCaptureType | Prisma.EnumLeadCaptureTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.LeadCaptureType[] | Prisma.ListEnumLeadCaptureTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LeadCaptureType[] | Prisma.ListEnumLeadCaptureTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLeadCaptureTypeFilter<$PrismaModel> | $Enums.LeadCaptureType
+}
+
+export type NestedEnumLeadCaptureTypeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.LeadCaptureType | Prisma.EnumLeadCaptureTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.LeadCaptureType[] | Prisma.ListEnumLeadCaptureTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LeadCaptureType[] | Prisma.ListEnumLeadCaptureTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLeadCaptureTypeWithAggregatesFilter<$PrismaModel> | $Enums.LeadCaptureType
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumLeadCaptureTypeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumLeadCaptureTypeFilter<$PrismaModel>
 }
 
 export type NestedEnumMembershipRoleFilter<$PrismaModel = never> = {

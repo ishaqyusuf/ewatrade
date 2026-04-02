@@ -386,6 +386,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 export const ModelName = {
   Tenant: 'Tenant',
   TenantHostname: 'TenantHostname',
+  LeadCapture: 'LeadCapture',
   User: 'User',
   Account: 'Account',
   Session: 'Session',
@@ -429,7 +430,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "tenant" | "tenantHostname" | "user" | "account" | "session" | "membership" | "store" | "product" | "productVariant" | "inventoryItem" | "cart" | "cartItem" | "order" | "orderItem" | "dispatchProviderProfile" | "deliveryRequest" | "deliveryBid" | "deliveryAssignment" | "trackingEvent" | "conversation" | "message" | "automationEvent" | "cashierSession" | "receipt" | "barcodeEvent" | "site" | "page" | "pageSection" | "theme" | "template"
+    modelProps: "tenant" | "tenantHostname" | "leadCapture" | "user" | "account" | "session" | "membership" | "store" | "product" | "productVariant" | "inventoryItem" | "cart" | "cartItem" | "order" | "orderItem" | "dispatchProviderProfile" | "deliveryRequest" | "deliveryBid" | "deliveryAssignment" | "trackingEvent" | "conversation" | "message" | "automationEvent" | "cashierSession" | "receipt" | "barcodeEvent" | "site" | "page" | "pageSection" | "theme" | "template"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -578,6 +579,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.TenantHostnameCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.TenantHostnameCountAggregateOutputType> | number
+        }
+      }
+    }
+    LeadCapture: {
+      payload: Prisma.$LeadCapturePayload<ExtArgs>
+      fields: Prisma.LeadCaptureFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.LeadCaptureFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCapturePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.LeadCaptureFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCapturePayload>
+        }
+        findFirst: {
+          args: Prisma.LeadCaptureFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCapturePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.LeadCaptureFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCapturePayload>
+        }
+        findMany: {
+          args: Prisma.LeadCaptureFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCapturePayload>[]
+        }
+        create: {
+          args: Prisma.LeadCaptureCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCapturePayload>
+        }
+        createMany: {
+          args: Prisma.LeadCaptureCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.LeadCaptureCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCapturePayload>[]
+        }
+        delete: {
+          args: Prisma.LeadCaptureDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCapturePayload>
+        }
+        update: {
+          args: Prisma.LeadCaptureUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCapturePayload>
+        }
+        deleteMany: {
+          args: Prisma.LeadCaptureDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.LeadCaptureUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.LeadCaptureUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCapturePayload>[]
+        }
+        upsert: {
+          args: Prisma.LeadCaptureUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCapturePayload>
+        }
+        aggregate: {
+          args: Prisma.LeadCaptureAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateLeadCapture>
+        }
+        groupBy: {
+          args: Prisma.LeadCaptureGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LeadCaptureGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.LeadCaptureCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LeadCaptureCountAggregateOutputType> | number
         }
       }
     }
@@ -2724,6 +2799,23 @@ export const TenantHostnameScalarFieldEnum = {
 export type TenantHostnameScalarFieldEnum = (typeof TenantHostnameScalarFieldEnum)[keyof typeof TenantHostnameScalarFieldEnum]
 
 
+export const LeadCaptureScalarFieldEnum = {
+  id: 'id',
+  type: 'type',
+  email: 'email',
+  fullName: 'fullName',
+  companyName: 'companyName',
+  roleTitle: 'roleTitle',
+  phone: 'phone',
+  message: 'message',
+  metadata: 'metadata',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LeadCaptureScalarFieldEnum = (typeof LeadCaptureScalarFieldEnum)[keyof typeof LeadCaptureScalarFieldEnum]
+
+
 export const UserScalarFieldEnum = {
   id: 'id',
   email: 'email',
@@ -3337,6 +3429,20 @@ export type ListEnumTenantHostnameSurfaceFieldRefInput<$PrismaModel> = FieldRefI
 
 
 /**
+ * Reference to a field of type 'LeadCaptureType'
+ */
+export type EnumLeadCaptureTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LeadCaptureType'>
+    
+
+
+/**
+ * Reference to a field of type 'LeadCaptureType[]'
+ */
+export type ListEnumLeadCaptureTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LeadCaptureType[]'>
+    
+
+
+/**
  * Reference to a field of type 'MembershipRole'
  */
 export type EnumMembershipRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'MembershipRole'>
@@ -3684,6 +3790,7 @@ export type PrismaClientOptions = ({
 export type GlobalOmitConfig = {
   tenant?: Prisma.TenantOmit
   tenantHostname?: Prisma.TenantHostnameOmit
+  leadCapture?: Prisma.LeadCaptureOmit
   user?: Prisma.UserOmit
   account?: Prisma.AccountOmit
   session?: Prisma.SessionOmit

@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ewatrade/db": "workspace:*",
     "@ewatrade/ui": "workspace:*",
     "@ewatrade/utils": "workspace:*",
     "@hugeicons/core-free-icons": "^4.1.1",
@@ -26,6 +27,7 @@
     "@types/react-dom": "^19.1.9",
     "@biomejs/biome": "^1.9.4",
     "tailwindcss": "^4.2.1",
+    "zod": "^4.1.5",
     "typescript": "^5.9.3"
   }
 }

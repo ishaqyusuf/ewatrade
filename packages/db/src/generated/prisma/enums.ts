@@ -27,6 +27,14 @@ export const TenantHostnameSurface = {
 export type TenantHostnameSurface = (typeof TenantHostnameSurface)[keyof typeof TenantHostnameSurface]
 
 
+export const LeadCaptureType = {
+  EARLY_ACCESS: 'EARLY_ACCESS',
+  WAITLIST: 'WAITLIST'
+} as const
+
+export type LeadCaptureType = (typeof LeadCaptureType)[keyof typeof LeadCaptureType]
+
+
 export const MembershipRole = {
   OWNER: 'OWNER',
   ADMIN: 'ADMIN',

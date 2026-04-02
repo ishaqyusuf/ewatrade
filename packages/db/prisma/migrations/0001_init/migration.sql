@@ -8,6 +8,9 @@ CREATE TYPE "TenantType" AS ENUM ('MERCHANT', 'DISPATCH', 'PLATFORM');
 CREATE TYPE "TenantHostnameSurface" AS ENUM ('STOREFRONT', 'POS', 'DASHBOARD');
 
 -- CreateEnum
+CREATE TYPE "LeadCaptureType" AS ENUM ('EARLY_ACCESS', 'WAITLIST');
+
+-- CreateEnum
 CREATE TYPE "MembershipRole" AS ENUM ('OWNER', 'ADMIN', 'MANAGER', 'CASHIER', 'OPERATOR', 'SUPPORT', 'MEMBER');
 
 -- CreateEnum
@@ -85,6 +88,23 @@ CREATE TABLE "TenantHostname" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "TenantHostname_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "LeadCapture" (
+    "id" TEXT NOT NULL,
+    "type" "LeadCaptureType" NOT NULL,
+    "email" TEXT NOT NULL,
+    "fullName" TEXT NOT NULL,
+    "companyName" TEXT,
+    "roleTitle" TEXT,
+    "phone" TEXT,
+    "message" TEXT,
+    "metadata" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "LeadCapture_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -586,6 +606,12 @@ CREATE INDEX "TenantHostname_tenantId_surface_idx" ON "TenantHostname"("tenantId
 
 -- CreateIndex
 CREATE UNIQUE INDEX "TenantHostname_tenantId_surface_hostname_key" ON "TenantHostname"("tenantId", "surface", "hostname");
+
+-- CreateIndex
+CREATE INDEX "LeadCapture_type_createdAt_idx" ON "LeadCapture"("type", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "LeadCapture_email_createdAt_idx" ON "LeadCapture"("email", "createdAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");

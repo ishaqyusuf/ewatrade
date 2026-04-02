@@ -53,6 +53,7 @@ export const AnyNull = runtime.AnyNull
 export const ModelName = {
   Tenant: 'Tenant',
   TenantHostname: 'TenantHostname',
+  LeadCapture: 'LeadCapture',
   User: 'User',
   Account: 'Account',
   Session: 'Session',
@@ -129,6 +130,23 @@ export const TenantHostnameScalarFieldEnum = {
 } as const
 
 export type TenantHostnameScalarFieldEnum = (typeof TenantHostnameScalarFieldEnum)[keyof typeof TenantHostnameScalarFieldEnum]
+
+
+export const LeadCaptureScalarFieldEnum = {
+  id: 'id',
+  type: 'type',
+  email: 'email',
+  fullName: 'fullName',
+  companyName: 'companyName',
+  roleTitle: 'roleTitle',
+  phone: 'phone',
+  message: 'message',
+  metadata: 'metadata',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LeadCaptureScalarFieldEnum = (typeof LeadCaptureScalarFieldEnum)[keyof typeof LeadCaptureScalarFieldEnum]
 
 
 export const UserScalarFieldEnum = {

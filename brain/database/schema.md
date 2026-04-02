@@ -15,6 +15,7 @@ Track the conceptual schema and schema ownership rules for the platform.
 
 ## Core Entity Groups
 - Tenant: merchant tenant, dispatch tenant, and tenant-owned hostname records for each application surface
+- Platform growth: marketing lead capture for early access and waitlist interest
 - Identity: user, session, account, membership
 - Commerce: store, product, product variant, inventory item, cart, order, order item
 - Fulfillment: delivery request, dispatch provider, bid, assignment, tracking event
@@ -23,8 +24,8 @@ Track the conceptual schema and schema ownership rules for the platform.
 - Messaging: conversation, message, automation event
 
 ## Implemented Schema Modules
-- `packages/db/prisma/models/base.prisma` - tenants, users, sessions, accounts, memberships
-- `packages/db/prisma/models/base.prisma` also owns `TenantHostname` records for tenant, POS, and dashboard hostname mapping
+- `packages/db/prisma/models/base.prisma` - tenants, users, sessions, accounts, memberships, marketing lead capture
+- `packages/db/prisma/models/base.prisma` also owns `TenantHostname` records for storefront, POS, and dashboard hostname mapping
 - `packages/db/prisma/models/commerce.prisma` - stores, products, variants, inventory, carts, orders
 - `packages/db/prisma/models/fulfillment.prisma` - delivery requests, bids, assignments, tracking
 - `packages/db/prisma/models/storefront.prisma` - sites, pages, sections, themes, templates

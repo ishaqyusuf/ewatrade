@@ -10,6 +10,11 @@ enum TenantHostnameSurface {
   DASHBOARD
 }
 
+enum LeadCaptureType {
+  EARLY_ACCESS
+  WAITLIST
+}
+
 enum MembershipRole {
   OWNER
   ADMIN

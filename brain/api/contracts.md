@@ -12,4 +12,6 @@ Track important request/response shapes and contract rules.
 - Hide repository/ORM details from API responses.
 
 ## Current State
-- No concrete contracts documented yet because code endpoints are not present.
+- Marketing lead capture contracts:
+  - `POST /api/early-access` accepts `fullName`, `email`, and optional `companyName`, `roleTitle`, `phone`, `message`
+  - `POST /api/waitlist` accepts `fullName` and `email`

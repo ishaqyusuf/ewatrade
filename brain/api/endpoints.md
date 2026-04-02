@@ -7,7 +7,9 @@ Track current and planned API surface areas.
 - Update when routes or procedure groups are added or changed.
 
 ## Current State
-- No implemented API routes detected in this workspace snapshot.
+- `apps/marketing` exposes public POST routes for marketing lead capture:
+  - `POST /api/early-access`
+  - `POST /api/waitlist`
 
 ## Planned Domains
 - Auth

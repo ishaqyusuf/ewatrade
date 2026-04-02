@@ -3,6 +3,8 @@ import { HugeiconsIcon } from "@hugeicons/react"
 
 import { Button } from "@ewatrade/ui"
 
+import { LeadCaptureForm } from "@/components/lead-capture-form"
+
 const valuePillars = [
   {
     title: "Sell everywhere",
@@ -97,12 +99,12 @@ export default function HomePage() {
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
-                <Button size="lg" className="gap-2">
+                <Button size="lg" className="gap-2" render={<a href="#early-access" />}>
                   Request early access
                   <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
                 </Button>
-                <Button size="lg" variant="outline">
-                  Explore the product surfaces
+                <Button size="lg" variant="outline" render={<a href="#waitlist" />}>
+                  Join the waitlist
                 </Button>
               </div>
             </div>
@@ -256,32 +258,41 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="px-6 pb-16 pt-12 sm:px-10 lg:px-16 lg:pb-24 lg:pt-16">
-        <div className="mx-auto max-w-7xl rounded-[2.25rem] border border-border/70 bg-foreground px-8 py-10 text-background shadow-[0_28px_90px_rgba(24,20,16,0.18)] md:px-10 md:py-12">
-          <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
-            <div className="space-y-4">
-              <p className="text-sm uppercase tracking-[0.28em] text-background/70">
-                Early access
-              </p>
-              <h2
-                className="max-w-3xl text-3xl leading-tight text-balance sm:text-4xl"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                Build a merchant operation that can launch fast, sell confidently, and fulfil with control.
-              </h2>
-              <p className="max-w-2xl text-base leading-7 text-background/75">
-                Start with the public ewatrade story today, then grow into storefront, POS, dashboard,
-                and fulfillment surfaces on the same platform foundation.
-              </p>
+      <section className="px-6 py-12 sm:px-10 lg:px-16 lg:py-16">
+        <div className="mx-auto max-w-7xl space-y-6">
+          <div className="max-w-2xl space-y-3">
+            <p className="text-sm uppercase tracking-[0.28em] text-muted-foreground">
+              Get involved
+            </p>
+            <h2
+              className="text-3xl leading-tight sm:text-4xl"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              Tell us how you want to launch, sell, or operate with ewatrade.
+            </h2>
+            <p className="text-base leading-7 text-muted-foreground">
+              Use the early access form if you are ready to talk through your merchant needs now.
+              Use the waitlist if you just want to stay close as ewatrade opens up further.
+            </p>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div id="early-access">
+              <LeadCaptureForm
+                type="early-access"
+                title="Request early access"
+                description="Share your merchant, operations, or fulfillment use case and we will reach out when the next onboarding window opens."
+                submitLabel="Request early access"
+              />
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-              <Button size="lg" variant="secondary">
-                Join the waitlist
-              </Button>
-              <Button size="lg" variant="outline" className="border-background/20 bg-transparent text-background hover:bg-background/10 hover:text-background">
-                Talk to the team
-              </Button>
+            <div id="waitlist">
+              <LeadCaptureForm
+                type="waitlist"
+                title="Join the waitlist"
+                description="Stay in the loop as ewatrade expands from early cohorts into broader merchant access."
+                submitLabel="Join the waitlist"
+              />
             </div>
           </div>
         </div>
