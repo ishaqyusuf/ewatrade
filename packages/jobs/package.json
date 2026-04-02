@@ -1,0 +1,23 @@
+{
+  "name": "@ewatrade/jobs",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ewatrade/db": "workspace:*",
+    "@ewatrade/email": "workspace:*",
+    "@ewatrade/notifications": "workspace:*"
+  },
+  "devDependencies": {
+    "@ewatrade/tsconfig": "workspace:*",
+    "@types/node": "^24.6.0",
+    "typescript": "^5.9.3"
+  }
+}

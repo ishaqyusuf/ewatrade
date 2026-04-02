@@ -15,3 +15,4 @@ Track important request/response shapes and contract rules.
 - Marketing lead capture contracts:
   - `POST /api/early-access` accepts `fullName`, `email`, and optional `companyName`, `roleTitle`, `phone`, `message`
   - `POST /api/waitlist` accepts `fullName` and `email`
+  - Both routes return a simple success `message` on success and still keep notification/email side effects server-side

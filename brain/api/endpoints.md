@@ -10,6 +10,7 @@ Track current and planned API surface areas.
 - `apps/marketing` exposes public POST routes for marketing lead capture:
   - `POST /api/early-access`
   - `POST /api/waitlist`
+- Both marketing lead routes persist a `LeadCapture` record and enqueue a shared notification dispatch job through `@ewatrade/jobs`.
 
 ## Planned Domains
 - Auth

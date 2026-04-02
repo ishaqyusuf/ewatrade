@@ -10,6 +10,9 @@ Project: `ewatrade`
 
 ## Packages
 - `packages/db` - Prisma v7 database package with file-based schema models, generated client, and migration ownership.
+- `packages/email` - Shared email message creation and delivery adapter utilities.
+- `packages/jobs` - Shared background job runner and notification dispatch handlers.
+- `packages/notifications` - Shared notification composition and delivery-planning utilities.
 - `packages/ui` - Shared UI package that owns the Tailwind CSS entrypoint and shared styling tokens.
 - `packages/utils` - Shared utility package for cross-app helper functions, including tenant/domain routing helpers for proxy logic.
 - `packages/tsconfig` - Shared TypeScript base configs for apps and packages.

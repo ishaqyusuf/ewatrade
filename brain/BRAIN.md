@@ -8,6 +8,8 @@ Central index for ewatrade product, architecture, engineering, database, API, de
 - Update linked Brain docs when architecture, schema, APIs, or priorities change.
 - Preserve existing domain docs under `brain/modules/`, `brain/architecture/`, and `brain/workflows/`.
 - Use `~/Document/code/_kitchen_sink/midday` as the default source of inspiration for code structure, workspace boundaries, and app/package organization unless a newer ADR overrides that direction.
+- Use `~/Documents/code/_turbo/gnd` as a reference for shared styling, package wiring, and monorepo app/package ergonomics when relevant.
+- Use `~/Documents/code/plot-keys` as a reference for notifications, email, jobs, and tenant/domain utility patterns when relevant.
 
 ## Current State
 - Repository currently contains Brain documentation only.

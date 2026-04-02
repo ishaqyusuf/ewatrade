@@ -37,6 +37,7 @@
       "version": "1.0.0",
       "dependencies": {
         "@ewatrade/db": "workspace:*",
+        "@ewatrade/jobs": "workspace:*",
         "@ewatrade/ui": "workspace:*",
         "@ewatrade/utils": "workspace:*",
         "@hugeicons/core-free-icons": "^4.1.1",
@@ -116,6 +117,41 @@
         "@ewatrade/tsconfig": "workspace:*",
         "dotenv": "^17.2.3",
         "prisma": "^7.0.0",
+        "typescript": "^5.9.3",
+      },
+    },
+    "packages/email": {
+      "name": "@ewatrade/email",
+      "version": "1.0.0",
+      "devDependencies": {
+        "@ewatrade/tsconfig": "workspace:*",
+        "@types/node": "^24.6.0",
+        "typescript": "^5.9.3",
+      },
+    },
+    "packages/jobs": {
+      "name": "@ewatrade/jobs",
+      "version": "1.0.0",
+      "dependencies": {
+        "@ewatrade/db": "workspace:*",
+        "@ewatrade/email": "workspace:*",
+        "@ewatrade/notifications": "workspace:*",
+      },
+      "devDependencies": {
+        "@ewatrade/tsconfig": "workspace:*",
+        "@types/node": "^24.6.0",
+        "typescript": "^5.9.3",
+      },
+    },
+    "packages/notifications": {
+      "name": "@ewatrade/notifications",
+      "version": "1.0.0",
+      "dependencies": {
+        "@ewatrade/email": "workspace:*",
+      },
+      "devDependencies": {
+        "@ewatrade/tsconfig": "workspace:*",
+        "@types/node": "^24.6.0",
         "typescript": "^5.9.3",
       },
     },
@@ -273,7 +309,13 @@
 
     "@ewatrade/db": ["@ewatrade/db@workspace:packages/db"],
 
+    "@ewatrade/email": ["@ewatrade/email@workspace:packages/email"],
+
+    "@ewatrade/jobs": ["@ewatrade/jobs@workspace:packages/jobs"],
+
     "@ewatrade/marketing": ["@ewatrade/marketing@workspace:apps/marketing"],
+
+    "@ewatrade/notifications": ["@ewatrade/notifications@workspace:packages/notifications"],
 
     "@ewatrade/pos": ["@ewatrade/pos@workspace:apps/pos"],
 

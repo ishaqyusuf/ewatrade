@@ -8,6 +8,8 @@ Standard workflow for AI collaborators working in this repository.
 - Update Brain files whenever architecture, data, APIs, or priorities change.
 - Use `TODO:` markers instead of guessing when implementation details are missing.
 - When deciding repo shape, app boundaries, or shared package placement, inspect `~/Document/code/_kitchen_sink/midday` first and treat it as the default structural reference.
+- When implementing notifications, email, jobs, or tenant-domain mechanics, inspect `~/Documents/code/plot-keys` first for package boundaries and execution patterns.
+- When implementing shared frontend package structure and app ergonomics, inspect `~/Documents/code/_turbo/gnd` as an additional reference.
 
 ## Workflow
 1. Review `brain/SYSTEM_OVERVIEW.md` and the relevant domain/module docs.

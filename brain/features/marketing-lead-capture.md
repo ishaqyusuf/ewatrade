@@ -13,6 +13,8 @@ Capture public marketing interest from merchants and partners through the market
 - Visitor chooses either `Request early access` or `Join the waitlist`.
 - The marketing app submits the form to a Next.js route handler.
 - The route validates the payload and persists a `LeadCapture` record through `@ewatrade/db`.
+- The route enqueues a shared background notification job through `@ewatrade/jobs`.
+- The job composes notification deliveries through `@ewatrade/notifications` and sends email messages through `@ewatrade/email`.
 - The UI shows a success or error message without leaving the page.
 
 ## Data Model
@@ -29,6 +31,7 @@ Capture public marketing interest from merchants and partners through the market
 ## APIs
 - `POST /api/early-access`
 - `POST /api/waitlist`
+- Both APIs currently trigger email-oriented notification side effects after persistence.
 
 ## UI
 - Hero CTA links jump to the relevant lead capture forms.
@@ -46,6 +49,8 @@ Capture public marketing interest from merchants and partners through the market
 
 ## Future Improvements
 - Add anti-spam protection and rate limiting.
+- Replace the current in-memory job fallback with a real Trigger.dev-backed execution path.
+- Replace the console email transport with a production email provider adapter.
 - Add CRM or email automation integration.
 - Add lead source attribution and campaign metadata.
 - Add admin tooling for reviewing captured leads.

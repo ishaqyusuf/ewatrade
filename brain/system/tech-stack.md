@@ -14,6 +14,8 @@ Canonical stack reference for current implementation choices.
 - API server: Hono
 - Typed API contracts: tRPC
 - Background jobs: Trigger.dev
+- Notifications: shared package-driven notification composition with email-first delivery scaffolding
+- Email: shared package-driven email payload and transport scaffolding
 - Auth: Better Auth
 
 ## Database Stack
