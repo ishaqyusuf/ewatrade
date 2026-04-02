@@ -5,8 +5,7 @@
   "sideEffects": false,
   "files": [
     "src",
-    "postcss.config.mjs",
-    "tailwind.config.ts"
+    "postcss.config.mjs"
   ],
   "typesVersions": {
     "*": {
@@ -32,8 +31,8 @@
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",
-    "@tailwindcss/postcss": "^4.1.17",
-    "tailwindcss": "^4.1.17",
+    "@tailwindcss/postcss": "^4.2.1",
+    "tailwindcss": "^4.2.1",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {

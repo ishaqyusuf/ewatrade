@@ -1,0 +1,62 @@
+model CashierSession {
+  id                String           @id @default(cuid())
+  tenantId          String
+  storeId           String
+  userId            String
+  status            PosSessionStatus @default(OPEN)
+  openedAt          DateTime         @default(now())
+  closedAt          DateTime?
+  openingFloatMinor Int              @default(0)
+  closingFloatMinor Int?
+  notes             String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  store             Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  receipts          Receipt[]
+  barcodeEvents     BarcodeEvent[]
+
+  @@index([tenantId, status])
+  @@index([storeId, openedAt])
+}
+
+model Receipt {
+  id               String          @id @default(cuid())
+  tenantId         String
+  storeId          String
+  orderId          String?
+  cashierSessionId String?
+  issuedByUserId   String?
+  receiptNumber    String
+  subtotalMinor    Int             @default(0)
+  taxMinor         Int             @default(0)
+  totalMinor       Int             @default(0)
+  paymentMethod    String?
+  issuedAt         DateTime        @default(now())
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  store            Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  order            Order?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  cashierSession   CashierSession? @relation(fields: [cashierSessionId], references: [id], onDelete: SetNull)
+  issuedBy         User?           @relation(fields: [issuedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([storeId, receiptNumber])
+  @@index([tenantId, issuedAt])
+}
+
+model BarcodeEvent {
+  id               String          @id @default(cuid())
+  tenantId         String
+  storeId          String
+  cashierSessionId String?
+  userId           String?
+  code             String
+  payload          String?
+  happenedAt       DateTime        @default(now())
+  createdAt        DateTime        @default(now())
+  cashierSession   CashierSession? @relation(fields: [cashierSessionId], references: [id], onDelete: SetNull)
+  user             User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, happenedAt])
+  @@index([storeId, code])
+}

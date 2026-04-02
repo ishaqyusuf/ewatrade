@@ -1,0 +1,89 @@
+model Site {
+  id             String     @id @default(cuid())
+  tenantId       String
+  storeId        String
+  slug           String
+  name           String
+  status         SiteStatus @default(DRAFT)
+  domain         String?
+  isPrimary      Boolean    @default(false)
+  seoTitle       String?
+  seoDescription String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  tenant         Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store          Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  pages          Page[]
+
+  @@unique([storeId, slug])
+  @@unique([domain])
+  @@index([tenantId, status])
+}
+
+model Page {
+  id             String        @id @default(cuid())
+  storeId        String
+  siteId         String
+  slug           String
+  title          String
+  status         PageStatus    @default(DRAFT)
+  isHomepage     Boolean       @default(false)
+  seoTitle       String?
+  seoDescription String?
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  store          Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  site           Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  sections       PageSection[]
+
+  @@unique([siteId, slug])
+  @@index([storeId, status])
+}
+
+model PageSection {
+  id        String   @id @default(cuid())
+  pageId    String
+  type      String
+  label     String?
+  sortOrder Int
+  config    Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, sortOrder])
+  @@index([pageId])
+}
+
+model Theme {
+  id          String     @id @default(cuid())
+  storeId     String
+  name        String
+  description String?
+  tokens      Json?
+  isActive    Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  store       Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  templates   Template[]
+
+  @@index([storeId, isActive])
+}
+
+model Template {
+  id              String   @id @default(cuid())
+  storeId         String
+  themeId         String?
+  name            String
+  category        String?
+  previewImageUrl String?
+  definition      Json?
+  isDefault       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  theme           Theme?   @relation(fields: [themeId], references: [id], onDelete: SetNull)
+
+  @@index([storeId, category])
+}

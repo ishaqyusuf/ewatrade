@@ -1,0 +1,184 @@
+model Store {
+  id                String           @id @default(cuid())
+  tenantId          String
+  slug              String
+  name              String
+  description       String?
+  status            StoreStatus      @default(DRAFT)
+  currencyCode      String           @default("NGN")
+  supportPhone      String?
+  supportEmail      String?
+  isMarketplaceLive Boolean          @default(false)
+  metadata          Json?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  products          Product[]
+  carts             Cart[]
+  orders            Order[]
+  inventoryItems    InventoryItem[]
+  pages             Page[]
+  sites             Site[]
+  themes            Theme[]
+  templates         Template[]
+  cashierSessions   CashierSession[]
+  receipts          Receipt[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+}
+
+model Product {
+  id                  String           @id @default(cuid())
+  tenantId            String
+  storeId             String
+  slug                String
+  name                String
+  description         String?
+  status              ProductStatus    @default(DRAFT)
+  sku                 String?
+  listPriceMinor      Int
+  salePriceMinor      Int?
+  currencyCode        String           @default("NGN")
+  isPublished         Boolean          @default(false)
+  isMarketplaceListed Boolean          @default(false)
+  metadata            Json?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  store               Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  orderItems          OrderItem[]
+  variants            ProductVariant[]
+
+  @@unique([storeId, slug])
+  @@unique([storeId, sku])
+  @@index([tenantId, status])
+  @@index([storeId, isPublished])
+}
+
+model ProductVariant {
+  id             String         @id @default(cuid())
+  productId      String
+  sku            String
+  name           String
+  optionSummary  String?
+  priceMinor     Int
+  compareAtMinor Int?
+  isDefault      Boolean        @default(false)
+  isActive       Boolean        @default(true)
+  metadata       Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  product        Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventoryItem  InventoryItem?
+  cartItems      CartItem[]
+  orderItems     OrderItem[]
+
+  @@unique([productId, sku])
+  @@index([productId, isActive])
+}
+
+model InventoryItem {
+  id               String         @id @default(cuid())
+  tenantId         String
+  storeId          String
+  productVariantId String         @unique
+  onHandQuantity   Int            @default(0)
+  reservedQuantity Int            @default(0)
+  reorderPoint     Int?
+  reorderQuantity  Int?
+  locationCode     String?
+  updatedByUserId  String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  store            Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, storeId])
+}
+
+model Cart {
+  id            String     @id @default(cuid())
+  tenantId      String
+  storeId       String
+  sessionKey    String?
+  customerEmail String?
+  customerPhone String?
+  currencyCode  String     @default("NGN")
+  expiresAt     DateTime?
+  metadata      Json?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  store         Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  items         CartItem[]
+
+  @@index([tenantId, storeId])
+  @@index([sessionKey])
+}
+
+model CartItem {
+  id               String         @id @default(cuid())
+  cartId           String
+  productVariantId String
+  quantity         Int            @default(1)
+  unitPriceMinor   Int
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  cart             Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
+
+  @@unique([cartId, productVariantId])
+  @@index([productVariantId])
+}
+
+model Order {
+  id               String           @id @default(cuid())
+  tenantId         String
+  storeId          String
+  orderNumber      String
+  status           OrderStatus      @default(PENDING)
+  paymentStatus    PaymentStatus    @default(PENDING)
+  customerEmail    String?
+  customerPhone    String?
+  customerName     String?
+  subtotalMinor    Int              @default(0)
+  deliveryFeeMinor Int              @default(0)
+  discountMinor    Int              @default(0)
+  taxMinor         Int              @default(0)
+  totalMinor       Int              @default(0)
+  currencyCode     String           @default("NGN")
+  notes            String?
+  metadata         Json?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store            Store            @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  items            OrderItem[]
+  deliveryRequest  DeliveryRequest?
+  receipts         Receipt[]
+
+  @@unique([storeId, orderNumber])
+  @@index([tenantId, status])
+  @@index([storeId, createdAt])
+}
+
+model OrderItem {
+  id               String          @id @default(cuid())
+  orderId          String
+  productId        String
+  productVariantId String?
+  nameSnapshot     String
+  skuSnapshot      String?
+  quantity         Int             @default(1)
+  unitPriceMinor   Int
+  totalPriceMinor  Int
+  metadata         Json?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  order            Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product          Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([productVariantId])
+}

@@ -1,0 +1,57 @@
+model Conversation {
+  id               String              @id @default(cuid())
+  tenantId         String
+  channel          ConversationChannel
+  externalThreadId String?
+  customerName     String?
+  customerPhone    String?
+  customerEmail    String?
+  status           ConversationStatus  @default(OPEN)
+  lastMessageAt    DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messages         Message[]
+
+  @@unique([channel, externalThreadId])
+  @@index([tenantId, status])
+}
+
+model Message {
+  id                String           @id @default(cuid())
+  conversationId    String
+  senderUserId      String?
+  direction         MessageDirection
+  body              String
+  externalMessageId String?
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  readAt            DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  conversation      Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderUser        User?            @relation(fields: [senderUserId], references: [id], onDelete: SetNull)
+
+  @@unique([conversationId, externalMessageId])
+  @@index([conversationId, createdAt])
+}
+
+model AutomationEvent {
+  id            String                @id @default(cuid())
+  tenantId      String
+  actorUserId   String?
+  type          String
+  status        AutomationEventStatus @default(PENDING)
+  referenceType String?
+  referenceId   String?
+  payload       Json?
+  processedAt   DateTime?
+  errorMessage  String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  tenant        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actorUser     User?                 @relation("AutomationActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([referenceType, referenceId])
+}

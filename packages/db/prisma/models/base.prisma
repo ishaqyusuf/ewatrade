@@ -1,0 +1,96 @@
+model Tenant {
+  id             String            @id @default(cuid())
+  slug           String            @unique
+  name           String
+  type           TenantType
+  isActive       Boolean           @default(true)
+  timezone       String            @default("Africa/Lagos")
+  countryCode    String?
+  currencyCode   String            @default("NGN")
+  metadata       Json?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  users          Membership[]
+  stores         Store[]
+  orders         Order[]
+  sites          Site[]
+  conversations  Conversation[]
+  automations    AutomationEvent[]
+  dispatchOffers DeliveryBid[]
+}
+
+model User {
+  id               String            @id @default(cuid())
+  email            String            @unique
+  emailVerifiedAt  DateTime?
+  phone            String?           @unique
+  firstName        String?
+  lastName         String?
+  displayName      String?
+  avatarUrl        String?
+  isPlatformAdmin  Boolean           @default(false)
+  metadata         Json?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  accounts         Account[]
+  sessions         Session[]
+  memberships      Membership[]
+  cashierSessions  CashierSession[]
+  receipts         Receipt[]
+  barcodeEvents    BarcodeEvent[]
+  sentMessages     Message[]
+  automationEvents AutomationEvent[] @relation("AutomationActor")
+}
+
+model Account {
+  id                String    @id @default(cuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  accessToken       String?
+  refreshToken      String?
+  expiresAt         DateTime?
+  tokenType         String?
+  scope             String?
+  idToken           String?
+  passwordHash      String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Membership {
+  id          String           @id @default(cuid())
+  tenantId    String
+  userId      String
+  role        MembershipRole
+  status      MembershipStatus @default(ACTIVE)
+  invitedById String?
+  invitedAt   DateTime?
+  acceptedAt  DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([tenantId, role])
+  @@index([userId, status])
+}

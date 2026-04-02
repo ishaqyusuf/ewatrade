@@ -1,0 +1,91 @@
+model DispatchProviderProfile {
+  id                 String               @id @default(cuid())
+  tenantId           String               @unique
+  displayName        String
+  serviceAreaSummary String?
+  vehicleTypes       String[]
+  averageEtaMinutes  Int?
+  isAvailable        Boolean              @default(true)
+  metadata           Json?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  bids               DeliveryBid[]
+  assignments        DeliveryAssignment[]
+}
+
+model DeliveryRequest {
+  id             String                @id @default(cuid())
+  tenantId       String
+  orderId        String                @unique
+  status         DeliveryRequestStatus @default(OPEN)
+  pickupName     String
+  pickupPhone    String?
+  pickupAddress  String
+  dropoffName    String
+  dropoffPhone   String?
+  dropoffAddress String
+  notes          String?
+  requestedAt    DateTime              @default(now())
+  assignedAt     DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  order          Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  bids           DeliveryBid[]
+  assignment     DeliveryAssignment?
+  trackingEvents TrackingEvent[]
+
+  @@index([tenantId, status])
+}
+
+model DeliveryBid {
+  id                        String                   @id @default(cuid())
+  requestId                 String
+  dispatchTenantId          String
+  dispatchProviderProfileId String?
+  status                    DeliveryBidStatus        @default(PENDING)
+  quotedFeeMinor            Int
+  currencyCode              String                   @default("NGN")
+  etaMinutes                Int?
+  notes                     String?
+  createdAt                 DateTime                 @default(now())
+  updatedAt                 DateTime                 @updatedAt
+  request                   DeliveryRequest          @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  dispatchTenant            Tenant                   @relation(fields: [dispatchTenantId], references: [id], onDelete: Cascade)
+  providerProfile           DispatchProviderProfile? @relation(fields: [dispatchProviderProfileId], references: [id], onDelete: SetNull)
+
+  @@index([requestId, status])
+  @@index([dispatchTenantId, status])
+}
+
+model DeliveryAssignment {
+  id                        String                   @id @default(cuid())
+  requestId                 String                   @unique
+  dispatchTenantId          String
+  dispatchProviderProfileId String?
+  status                    AssignmentStatus         @default(PROPOSED)
+  assignedDriverName        String?
+  assignedDriverPhone       String?
+  pickedUpAt                DateTime?
+  deliveredAt               DateTime?
+  createdAt                 DateTime                 @default(now())
+  updatedAt                 DateTime                 @updatedAt
+  request                   DeliveryRequest          @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  providerProfile           DispatchProviderProfile? @relation(fields: [dispatchProviderProfileId], references: [id], onDelete: SetNull)
+
+  @@index([dispatchTenantId, status])
+}
+
+model TrackingEvent {
+  id          String          @id @default(cuid())
+  requestId   String
+  eventType   String
+  description String?
+  latitude    Float?
+  longitude   Float?
+  happenedAt  DateTime        @default(now())
+  createdAt   DateTime        @default(now())
+  request     DeliveryRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, happenedAt])
+}

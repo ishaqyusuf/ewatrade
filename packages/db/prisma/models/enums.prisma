@@ -1,0 +1,124 @@
+enum TenantType {
+  MERCHANT
+  DISPATCH
+  PLATFORM
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  MANAGER
+  CASHIER
+  OPERATOR
+  SUPPORT
+  MEMBER
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  REMOVED
+}
+
+enum StoreStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum OrderStatus {
+  DRAFT
+  PENDING
+  CONFIRMED
+  FULFILLING
+  READY_FOR_PICKUP
+  OUT_FOR_DELIVERY
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum DeliveryRequestStatus {
+  DRAFT
+  OPEN
+  ASSIGNED
+  PICKED_UP
+  DELIVERED
+  CANCELLED
+}
+
+enum DeliveryBidStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum AssignmentStatus {
+  PROPOSED
+  ACCEPTED
+  IN_TRANSIT
+  COMPLETED
+  CANCELLED
+}
+
+enum SiteStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum PageStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum PosSessionStatus {
+  OPEN
+  CLOSED
+  SUSPENDED
+}
+
+enum ConversationChannel {
+  WHATSAPP
+  SMS
+  EMAIL
+  IN_APP
+}
+
+enum ConversationStatus {
+  OPEN
+  RESOLVED
+  ARCHIVED
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+  INTERNAL
+}
+
+enum AutomationEventStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
