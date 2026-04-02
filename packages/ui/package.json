@@ -24,10 +24,16 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@base-ui/react": "^1.3.0",
     "@ewatrade/utils": "workspace:*",
+    "@hugeicons/core-free-icons": "^4.1.1",
+    "@hugeicons/react": "^1.1.6",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "react": "^19.1.0",
-    "tailwind-merge": "^3.3.1"
+    "shadcn": "^4.1.2",
+    "tailwind-merge": "^3.5.0",
+    "tw-animate-css": "^1.4.0"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",

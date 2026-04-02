@@ -20,7 +20,8 @@ Canonical stack reference for current implementation choices.
 - Schema modeling: Prisma
 - Migrations: Prisma
 - Runtime querying / repositories: Drizzle
-- Database provider: TODO: choose target database engine and hosting
+- Database provider: PostgreSQL as the canonical application database
+- Local database runtime: Docker Compose with a PostgreSQL container
 
 ## Guidance
 - Model entities in Prisma first.

@@ -9,11 +9,16 @@ Capture high-level relationships between major entity groups.
 ## Core Relationships
 - Tenant -> many stores
 - Tenant -> many users through memberships
+- Tenant -> many orders, sites, conversations, and automation events
+- Tenant -> zero or one platform subdomain and zero or one custom domain
 - Store -> many products
 - Product -> many variants
+- Variant -> zero or one inventory item
+- Cart -> many cart items
 - Order -> many order items
 - Order -> zero or one delivery request
 - Delivery request -> many bids
+- Delivery request -> zero or one assignment
 - Dispatch provider -> many bids and assignments
 - Site -> many pages
 - Page -> many sections

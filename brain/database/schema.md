@@ -10,9 +10,11 @@ Track the conceptual schema and schema ownership rules for the platform.
 - `Prisma` is the source of truth for schema definitions.
 - Prisma schema changes should generate and track migrations.
 - `Drizzle` should not become a competing schema definition layer.
+- The canonical Prisma provider is `postgresql`.
+- Prisma schema is organized as a file-based schema under `packages/db/prisma/` with domain-specific `.prisma` files.
 
 ## Core Entity Groups
-- Tenant: merchant tenant, dispatch tenant
+- Tenant: merchant tenant, dispatch tenant, tenant-level subdomain and custom-domain ownership
 - Identity: user, session, account, membership
 - Commerce: store, product, product variant, inventory item, cart, order, order item
 - Fulfillment: delivery request, dispatch provider, bid, assignment, tracking event
@@ -20,11 +22,22 @@ Track the conceptual schema and schema ownership rules for the platform.
 - POS: cashier session, receipt, barcode event
 - Messaging: conversation, message, automation event
 
+## Implemented Schema Modules
+- `packages/db/prisma/models/base.prisma` - tenants, users, sessions, accounts, memberships
+- `packages/db/prisma/models/commerce.prisma` - stores, products, variants, inventory, carts, orders
+- `packages/db/prisma/models/fulfillment.prisma` - delivery requests, bids, assignments, tracking
+- `packages/db/prisma/models/storefront.prisma` - sites, pages, sections, themes, templates
+- `packages/db/prisma/models/pos.prisma` - cashier sessions, receipts, barcode events
+- `packages/db/prisma/models/messaging.prisma` - conversations, messages, automation events
+- `packages/db/prisma/models/enums.prisma` - shared enum definitions
+
 ## Cross-Cutting Rules
 - Tenant-owned records require `tenantId`.
+- Tenant-level hostname resolution starts on the tenant record through `subdomain` and optional `customDomain`.
 - Public marketplace data must be explicitly flagged for exposure.
 - Audit fields should exist on operational entities.
 
 ## TODO
-- Define exact table names and field sets once the Prisma schema is created.
 - Confirm whether merchant and dispatch organizations share one tenant table or use role-specific tables.
+- Refine auth tables once Better Auth integration is selected at implementation time.
+- Add migrations once a local PostgreSQL instance is available and the first migration is generated.
