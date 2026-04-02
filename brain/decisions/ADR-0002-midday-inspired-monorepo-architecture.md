@@ -9,8 +9,8 @@ The project needed its first real code scaffold. A clear repository structure is
 ## Decision
 - Use a `midday`-inspired workspace layout with `apps/*` and `packages/*` as the primary repository structure.
 - Keep applications isolated from each other and move shared code into `packages/*`.
-- Start with `apps/web`, `packages/ui`, `packages/utils`, and `packages/tsconfig`.
-- Treat the `midday` project as the architectural reference for future package boundaries and workspace organization unless a later ADR intentionally changes that direction.
+- Start with a minimal app surface and shared packages, then expand into separate storefront, marketing, POS, and dashboard apps as the platform grows.
+- Treat `~/Document/code/_kitchen_sink/midday` as the architectural reference for future package boundaries and workspace organization unless a later ADR intentionally changes that direction.
 - Use the `gnd` project as the styling/setup reference for shared Tailwind CSS wiring.
 
 ## Consequences

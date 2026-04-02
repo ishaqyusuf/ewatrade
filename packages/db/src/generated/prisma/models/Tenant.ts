@@ -29,9 +29,6 @@ export type TenantMinAggregateOutputType = {
   slug: string | null
   name: string | null
   type: $Enums.TenantType | null
-  subdomain: string | null
-  customDomain: string | null
-  customDomainVerifiedAt: Date | null
   isActive: boolean | null
   timezone: string | null
   countryCode: string | null
@@ -45,9 +42,6 @@ export type TenantMaxAggregateOutputType = {
   slug: string | null
   name: string | null
   type: $Enums.TenantType | null
-  subdomain: string | null
-  customDomain: string | null
-  customDomainVerifiedAt: Date | null
   isActive: boolean | null
   timezone: string | null
   countryCode: string | null
@@ -61,9 +55,6 @@ export type TenantCountAggregateOutputType = {
   slug: number
   name: number
   type: number
-  subdomain: number
-  customDomain: number
-  customDomainVerifiedAt: number
   isActive: number
   timezone: number
   countryCode: number
@@ -80,9 +71,6 @@ export type TenantMinAggregateInputType = {
   slug?: true
   name?: true
   type?: true
-  subdomain?: true
-  customDomain?: true
-  customDomainVerifiedAt?: true
   isActive?: true
   timezone?: true
   countryCode?: true
@@ -96,9 +84,6 @@ export type TenantMaxAggregateInputType = {
   slug?: true
   name?: true
   type?: true
-  subdomain?: true
-  customDomain?: true
-  customDomainVerifiedAt?: true
   isActive?: true
   timezone?: true
   countryCode?: true
@@ -112,9 +97,6 @@ export type TenantCountAggregateInputType = {
   slug?: true
   name?: true
   type?: true
-  subdomain?: true
-  customDomain?: true
-  customDomainVerifiedAt?: true
   isActive?: true
   timezone?: true
   countryCode?: true
@@ -202,9 +184,6 @@ export type TenantGroupByOutputType = {
   slug: string
   name: string
   type: $Enums.TenantType
-  subdomain: string | null
-  customDomain: string | null
-  customDomainVerifiedAt: Date | null
   isActive: boolean
   timezone: string
   countryCode: string | null
@@ -240,9 +219,6 @@ export type TenantWhereInput = {
   slug?: Prisma.StringFilter<"Tenant"> | string
   name?: Prisma.StringFilter<"Tenant"> | string
   type?: Prisma.EnumTenantTypeFilter<"Tenant"> | $Enums.TenantType
-  subdomain?: Prisma.StringNullableFilter<"Tenant"> | string | null
-  customDomain?: Prisma.StringNullableFilter<"Tenant"> | string | null
-  customDomainVerifiedAt?: Prisma.DateTimeNullableFilter<"Tenant"> | Date | string | null
   isActive?: Prisma.BoolFilter<"Tenant"> | boolean
   timezone?: Prisma.StringFilter<"Tenant"> | string
   countryCode?: Prisma.StringNullableFilter<"Tenant"> | string | null
@@ -254,6 +230,7 @@ export type TenantWhereInput = {
   stores?: Prisma.StoreListRelationFilter
   orders?: Prisma.OrderListRelationFilter
   sites?: Prisma.SiteListRelationFilter
+  hostnames?: Prisma.TenantHostnameListRelationFilter
   conversations?: Prisma.ConversationListRelationFilter
   automations?: Prisma.AutomationEventListRelationFilter
   dispatchOffers?: Prisma.DeliveryBidListRelationFilter
@@ -264,9 +241,6 @@ export type TenantOrderByWithRelationInput = {
   slug?: Prisma.SortOrder
   name?: Prisma.SortOrder
   type?: Prisma.SortOrder
-  subdomain?: Prisma.SortOrderInput | Prisma.SortOrder
-  customDomain?: Prisma.SortOrderInput | Prisma.SortOrder
-  customDomainVerifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
   timezone?: Prisma.SortOrder
   countryCode?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -278,6 +252,7 @@ export type TenantOrderByWithRelationInput = {
   stores?: Prisma.StoreOrderByRelationAggregateInput
   orders?: Prisma.OrderOrderByRelationAggregateInput
   sites?: Prisma.SiteOrderByRelationAggregateInput
+  hostnames?: Prisma.TenantHostnameOrderByRelationAggregateInput
   conversations?: Prisma.ConversationOrderByRelationAggregateInput
   automations?: Prisma.AutomationEventOrderByRelationAggregateInput
   dispatchOffers?: Prisma.DeliveryBidOrderByRelationAggregateInput
@@ -286,14 +261,11 @@ export type TenantOrderByWithRelationInput = {
 export type TenantWhereUniqueInput = Prisma.AtLeast<{
   id?: string
   slug?: string
-  subdomain?: string
-  customDomain?: string
   AND?: Prisma.TenantWhereInput | Prisma.TenantWhereInput[]
   OR?: Prisma.TenantWhereInput[]
   NOT?: Prisma.TenantWhereInput | Prisma.TenantWhereInput[]
   name?: Prisma.StringFilter<"Tenant"> | string
   type?: Prisma.EnumTenantTypeFilter<"Tenant"> | $Enums.TenantType
-  customDomainVerifiedAt?: Prisma.DateTimeNullableFilter<"Tenant"> | Date | string | null
   isActive?: Prisma.BoolFilter<"Tenant"> | boolean
   timezone?: Prisma.StringFilter<"Tenant"> | string
   countryCode?: Prisma.StringNullableFilter<"Tenant"> | string | null
@@ -305,19 +277,17 @@ export type TenantWhereUniqueInput = Prisma.AtLeast<{
   stores?: Prisma.StoreListRelationFilter
   orders?: Prisma.OrderListRelationFilter
   sites?: Prisma.SiteListRelationFilter
+  hostnames?: Prisma.TenantHostnameListRelationFilter
   conversations?: Prisma.ConversationListRelationFilter
   automations?: Prisma.AutomationEventListRelationFilter
   dispatchOffers?: Prisma.DeliveryBidListRelationFilter
-}, "id" | "slug" | "subdomain" | "customDomain">
+}, "id" | "slug">
 
 export type TenantOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   slug?: Prisma.SortOrder
   name?: Prisma.SortOrder
   type?: Prisma.SortOrder
-  subdomain?: Prisma.SortOrderInput | Prisma.SortOrder
-  customDomain?: Prisma.SortOrderInput | Prisma.SortOrder
-  customDomainVerifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
   timezone?: Prisma.SortOrder
   countryCode?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -338,9 +308,6 @@ export type TenantScalarWhereWithAggregatesInput = {
   slug?: Prisma.StringWithAggregatesFilter<"Tenant"> | string
   name?: Prisma.StringWithAggregatesFilter<"Tenant"> | string
   type?: Prisma.EnumTenantTypeWithAggregatesFilter<"Tenant"> | $Enums.TenantType
-  subdomain?: Prisma.StringNullableWithAggregatesFilter<"Tenant"> | string | null
-  customDomain?: Prisma.StringNullableWithAggregatesFilter<"Tenant"> | string | null
-  customDomainVerifiedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Tenant"> | Date | string | null
   isActive?: Prisma.BoolWithAggregatesFilter<"Tenant"> | boolean
   timezone?: Prisma.StringWithAggregatesFilter<"Tenant"> | string
   countryCode?: Prisma.StringNullableWithAggregatesFilter<"Tenant"> | string | null
@@ -355,9 +322,6 @@ export type TenantCreateInput = {
   slug: string
   name: string
   type: $Enums.TenantType
-  subdomain?: string | null
-  customDomain?: string | null
-  customDomainVerifiedAt?: Date | string | null
   isActive?: boolean
   timezone?: string
   countryCode?: string | null
@@ -369,6 +333,7 @@ export type TenantCreateInput = {
   stores?: Prisma.StoreCreateNestedManyWithoutTenantInput
   orders?: Prisma.OrderCreateNestedManyWithoutTenantInput
   sites?: Prisma.SiteCreateNestedManyWithoutTenantInput
+  hostnames?: Prisma.TenantHostnameCreateNestedManyWithoutTenantInput
   conversations?: Prisma.ConversationCreateNestedManyWithoutTenantInput
   automations?: Prisma.AutomationEventCreateNestedManyWithoutTenantInput
   dispatchOffers?: Prisma.DeliveryBidCreateNestedManyWithoutDispatchTenantInput
@@ -379,9 +344,6 @@ export type TenantUncheckedCreateInput = {
   slug: string
   name: string
   type: $Enums.TenantType
-  subdomain?: string | null
-  customDomain?: string | null
-  customDomainVerifiedAt?: Date | string | null
   isActive?: boolean
   timezone?: string
   countryCode?: string | null
@@ -393,6 +355,7 @@ export type TenantUncheckedCreateInput = {
   stores?: Prisma.StoreUncheckedCreateNestedManyWithoutTenantInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutTenantInput
   sites?: Prisma.SiteUncheckedCreateNestedManyWithoutTenantInput
+  hostnames?: Prisma.TenantHostnameUncheckedCreateNestedManyWithoutTenantInput
   conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutTenantInput
   automations?: Prisma.AutomationEventUncheckedCreateNestedManyWithoutTenantInput
   dispatchOffers?: Prisma.DeliveryBidUncheckedCreateNestedManyWithoutDispatchTenantInput
@@ -403,9 +366,6 @@ export type TenantUpdateInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
-  subdomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomainVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -417,6 +377,7 @@ export type TenantUpdateInput = {
   stores?: Prisma.StoreUpdateManyWithoutTenantNestedInput
   orders?: Prisma.OrderUpdateManyWithoutTenantNestedInput
   sites?: Prisma.SiteUpdateManyWithoutTenantNestedInput
+  hostnames?: Prisma.TenantHostnameUpdateManyWithoutTenantNestedInput
   conversations?: Prisma.ConversationUpdateManyWithoutTenantNestedInput
   automations?: Prisma.AutomationEventUpdateManyWithoutTenantNestedInput
   dispatchOffers?: Prisma.DeliveryBidUpdateManyWithoutDispatchTenantNestedInput
@@ -427,9 +388,6 @@ export type TenantUncheckedUpdateInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
-  subdomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomainVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -441,6 +399,7 @@ export type TenantUncheckedUpdateInput = {
   stores?: Prisma.StoreUncheckedUpdateManyWithoutTenantNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutTenantNestedInput
   sites?: Prisma.SiteUncheckedUpdateManyWithoutTenantNestedInput
+  hostnames?: Prisma.TenantHostnameUncheckedUpdateManyWithoutTenantNestedInput
   conversations?: Prisma.ConversationUncheckedUpdateManyWithoutTenantNestedInput
   automations?: Prisma.AutomationEventUncheckedUpdateManyWithoutTenantNestedInput
   dispatchOffers?: Prisma.DeliveryBidUncheckedUpdateManyWithoutDispatchTenantNestedInput
@@ -451,9 +410,6 @@ export type TenantCreateManyInput = {
   slug: string
   name: string
   type: $Enums.TenantType
-  subdomain?: string | null
-  customDomain?: string | null
-  customDomainVerifiedAt?: Date | string | null
   isActive?: boolean
   timezone?: string
   countryCode?: string | null
@@ -468,9 +424,6 @@ export type TenantUpdateManyMutationInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
-  subdomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomainVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -485,9 +438,6 @@ export type TenantUncheckedUpdateManyInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
-  subdomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomainVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -502,9 +452,6 @@ export type TenantCountOrderByAggregateInput = {
   slug?: Prisma.SortOrder
   name?: Prisma.SortOrder
   type?: Prisma.SortOrder
-  subdomain?: Prisma.SortOrder
-  customDomain?: Prisma.SortOrder
-  customDomainVerifiedAt?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   timezone?: Prisma.SortOrder
   countryCode?: Prisma.SortOrder
@@ -519,9 +466,6 @@ export type TenantMaxOrderByAggregateInput = {
   slug?: Prisma.SortOrder
   name?: Prisma.SortOrder
   type?: Prisma.SortOrder
-  subdomain?: Prisma.SortOrder
-  customDomain?: Prisma.SortOrder
-  customDomainVerifiedAt?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   timezone?: Prisma.SortOrder
   countryCode?: Prisma.SortOrder
@@ -535,9 +479,6 @@ export type TenantMinOrderByAggregateInput = {
   slug?: Prisma.SortOrder
   name?: Prisma.SortOrder
   type?: Prisma.SortOrder
-  subdomain?: Prisma.SortOrder
-  customDomain?: Prisma.SortOrder
-  customDomainVerifiedAt?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   timezone?: Prisma.SortOrder
   countryCode?: Prisma.SortOrder
@@ -559,20 +500,30 @@ export type EnumTenantTypeFieldUpdateOperationsInput = {
   set?: $Enums.TenantType
 }
 
-export type NullableStringFieldUpdateOperationsInput = {
-  set?: string | null
-}
-
-export type NullableDateTimeFieldUpdateOperationsInput = {
-  set?: Date | string | null
-}
-
 export type BoolFieldUpdateOperationsInput = {
   set?: boolean
 }
 
+export type NullableStringFieldUpdateOperationsInput = {
+  set?: string | null
+}
+
 export type DateTimeFieldUpdateOperationsInput = {
   set?: Date | string
+}
+
+export type TenantCreateNestedOneWithoutHostnamesInput = {
+  create?: Prisma.XOR<Prisma.TenantCreateWithoutHostnamesInput, Prisma.TenantUncheckedCreateWithoutHostnamesInput>
+  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutHostnamesInput
+  connect?: Prisma.TenantWhereUniqueInput
+}
+
+export type TenantUpdateOneRequiredWithoutHostnamesNestedInput = {
+  create?: Prisma.XOR<Prisma.TenantCreateWithoutHostnamesInput, Prisma.TenantUncheckedCreateWithoutHostnamesInput>
+  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutHostnamesInput
+  upsert?: Prisma.TenantUpsertWithoutHostnamesInput
+  connect?: Prisma.TenantWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TenantUpdateToOneWithWhereWithoutHostnamesInput, Prisma.TenantUpdateWithoutHostnamesInput>, Prisma.TenantUncheckedUpdateWithoutHostnamesInput>
 }
 
 export type TenantCreateNestedOneWithoutUsersInput = {
@@ -673,14 +624,111 @@ export type TenantUpdateOneRequiredWithoutSitesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TenantUpdateToOneWithWhereWithoutSitesInput, Prisma.TenantUpdateWithoutSitesInput>, Prisma.TenantUncheckedUpdateWithoutSitesInput>
 }
 
+export type TenantCreateWithoutHostnamesInput = {
+  id?: string
+  slug: string
+  name: string
+  type: $Enums.TenantType
+  isActive?: boolean
+  timezone?: string
+  countryCode?: string | null
+  currencyCode?: string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  users?: Prisma.MembershipCreateNestedManyWithoutTenantInput
+  stores?: Prisma.StoreCreateNestedManyWithoutTenantInput
+  orders?: Prisma.OrderCreateNestedManyWithoutTenantInput
+  sites?: Prisma.SiteCreateNestedManyWithoutTenantInput
+  conversations?: Prisma.ConversationCreateNestedManyWithoutTenantInput
+  automations?: Prisma.AutomationEventCreateNestedManyWithoutTenantInput
+  dispatchOffers?: Prisma.DeliveryBidCreateNestedManyWithoutDispatchTenantInput
+}
+
+export type TenantUncheckedCreateWithoutHostnamesInput = {
+  id?: string
+  slug: string
+  name: string
+  type: $Enums.TenantType
+  isActive?: boolean
+  timezone?: string
+  countryCode?: string | null
+  currencyCode?: string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  users?: Prisma.MembershipUncheckedCreateNestedManyWithoutTenantInput
+  stores?: Prisma.StoreUncheckedCreateNestedManyWithoutTenantInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutTenantInput
+  sites?: Prisma.SiteUncheckedCreateNestedManyWithoutTenantInput
+  conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutTenantInput
+  automations?: Prisma.AutomationEventUncheckedCreateNestedManyWithoutTenantInput
+  dispatchOffers?: Prisma.DeliveryBidUncheckedCreateNestedManyWithoutDispatchTenantInput
+}
+
+export type TenantCreateOrConnectWithoutHostnamesInput = {
+  where: Prisma.TenantWhereUniqueInput
+  create: Prisma.XOR<Prisma.TenantCreateWithoutHostnamesInput, Prisma.TenantUncheckedCreateWithoutHostnamesInput>
+}
+
+export type TenantUpsertWithoutHostnamesInput = {
+  update: Prisma.XOR<Prisma.TenantUpdateWithoutHostnamesInput, Prisma.TenantUncheckedUpdateWithoutHostnamesInput>
+  create: Prisma.XOR<Prisma.TenantCreateWithoutHostnamesInput, Prisma.TenantUncheckedCreateWithoutHostnamesInput>
+  where?: Prisma.TenantWhereInput
+}
+
+export type TenantUpdateToOneWithWhereWithoutHostnamesInput = {
+  where?: Prisma.TenantWhereInput
+  data: Prisma.XOR<Prisma.TenantUpdateWithoutHostnamesInput, Prisma.TenantUncheckedUpdateWithoutHostnamesInput>
+}
+
+export type TenantUpdateWithoutHostnamesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  timezone?: Prisma.StringFieldUpdateOperationsInput | string
+  countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currencyCode?: Prisma.StringFieldUpdateOperationsInput | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  users?: Prisma.MembershipUpdateManyWithoutTenantNestedInput
+  stores?: Prisma.StoreUpdateManyWithoutTenantNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutTenantNestedInput
+  sites?: Prisma.SiteUpdateManyWithoutTenantNestedInput
+  conversations?: Prisma.ConversationUpdateManyWithoutTenantNestedInput
+  automations?: Prisma.AutomationEventUpdateManyWithoutTenantNestedInput
+  dispatchOffers?: Prisma.DeliveryBidUpdateManyWithoutDispatchTenantNestedInput
+}
+
+export type TenantUncheckedUpdateWithoutHostnamesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  timezone?: Prisma.StringFieldUpdateOperationsInput | string
+  countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currencyCode?: Prisma.StringFieldUpdateOperationsInput | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  users?: Prisma.MembershipUncheckedUpdateManyWithoutTenantNestedInput
+  stores?: Prisma.StoreUncheckedUpdateManyWithoutTenantNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutTenantNestedInput
+  sites?: Prisma.SiteUncheckedUpdateManyWithoutTenantNestedInput
+  conversations?: Prisma.ConversationUncheckedUpdateManyWithoutTenantNestedInput
+  automations?: Prisma.AutomationEventUncheckedUpdateManyWithoutTenantNestedInput
+  dispatchOffers?: Prisma.DeliveryBidUncheckedUpdateManyWithoutDispatchTenantNestedInput
+}
+
 export type TenantCreateWithoutUsersInput = {
   id?: string
   slug: string
   name: string
   type: $Enums.TenantType
-  subdomain?: string | null
-  customDomain?: string | null
-  customDomainVerifiedAt?: Date | string | null
   isActive?: boolean
   timezone?: string
   countryCode?: string | null
@@ -691,6 +739,7 @@ export type TenantCreateWithoutUsersInput = {
   stores?: Prisma.StoreCreateNestedManyWithoutTenantInput
   orders?: Prisma.OrderCreateNestedManyWithoutTenantInput
   sites?: Prisma.SiteCreateNestedManyWithoutTenantInput
+  hostnames?: Prisma.TenantHostnameCreateNestedManyWithoutTenantInput
   conversations?: Prisma.ConversationCreateNestedManyWithoutTenantInput
   automations?: Prisma.AutomationEventCreateNestedManyWithoutTenantInput
   dispatchOffers?: Prisma.DeliveryBidCreateNestedManyWithoutDispatchTenantInput
@@ -701,9 +750,6 @@ export type TenantUncheckedCreateWithoutUsersInput = {
   slug: string
   name: string
   type: $Enums.TenantType
-  subdomain?: string | null
-  customDomain?: string | null
-  customDomainVerifiedAt?: Date | string | null
   isActive?: boolean
   timezone?: string
   countryCode?: string | null
@@ -714,6 +760,7 @@ export type TenantUncheckedCreateWithoutUsersInput = {
   stores?: Prisma.StoreUncheckedCreateNestedManyWithoutTenantInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutTenantInput
   sites?: Prisma.SiteUncheckedCreateNestedManyWithoutTenantInput
+  hostnames?: Prisma.TenantHostnameUncheckedCreateNestedManyWithoutTenantInput
   conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutTenantInput
   automations?: Prisma.AutomationEventUncheckedCreateNestedManyWithoutTenantInput
   dispatchOffers?: Prisma.DeliveryBidUncheckedCreateNestedManyWithoutDispatchTenantInput
@@ -740,9 +787,6 @@ export type TenantUpdateWithoutUsersInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
-  subdomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomainVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -753,6 +797,7 @@ export type TenantUpdateWithoutUsersInput = {
   stores?: Prisma.StoreUpdateManyWithoutTenantNestedInput
   orders?: Prisma.OrderUpdateManyWithoutTenantNestedInput
   sites?: Prisma.SiteUpdateManyWithoutTenantNestedInput
+  hostnames?: Prisma.TenantHostnameUpdateManyWithoutTenantNestedInput
   conversations?: Prisma.ConversationUpdateManyWithoutTenantNestedInput
   automations?: Prisma.AutomationEventUpdateManyWithoutTenantNestedInput
   dispatchOffers?: Prisma.DeliveryBidUpdateManyWithoutDispatchTenantNestedInput
@@ -763,9 +808,6 @@ export type TenantUncheckedUpdateWithoutUsersInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
-  subdomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomainVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -776,6 +818,7 @@ export type TenantUncheckedUpdateWithoutUsersInput = {
   stores?: Prisma.StoreUncheckedUpdateManyWithoutTenantNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutTenantNestedInput
   sites?: Prisma.SiteUncheckedUpdateManyWithoutTenantNestedInput
+  hostnames?: Prisma.TenantHostnameUncheckedUpdateManyWithoutTenantNestedInput
   conversations?: Prisma.ConversationUncheckedUpdateManyWithoutTenantNestedInput
   automations?: Prisma.AutomationEventUncheckedUpdateManyWithoutTenantNestedInput
   dispatchOffers?: Prisma.DeliveryBidUncheckedUpdateManyWithoutDispatchTenantNestedInput
@@ -786,9 +829,6 @@ export type TenantCreateWithoutStoresInput = {
   slug: string
   name: string
   type: $Enums.TenantType
-  subdomain?: string | null
-  customDomain?: string | null
-  customDomainVerifiedAt?: Date | string | null
   isActive?: boolean
   timezone?: string
   countryCode?: string | null
@@ -799,6 +839,7 @@ export type TenantCreateWithoutStoresInput = {
   users?: Prisma.MembershipCreateNestedManyWithoutTenantInput
   orders?: Prisma.OrderCreateNestedManyWithoutTenantInput
   sites?: Prisma.SiteCreateNestedManyWithoutTenantInput
+  hostnames?: Prisma.TenantHostnameCreateNestedManyWithoutTenantInput
   conversations?: Prisma.ConversationCreateNestedManyWithoutTenantInput
   automations?: Prisma.AutomationEventCreateNestedManyWithoutTenantInput
   dispatchOffers?: Prisma.DeliveryBidCreateNestedManyWithoutDispatchTenantInput
@@ -809,9 +850,6 @@ export type TenantUncheckedCreateWithoutStoresInput = {
   slug: string
   name: string
   type: $Enums.TenantType
-  subdomain?: string | null
-  customDomain?: string | null
-  customDomainVerifiedAt?: Date | string | null
   isActive?: boolean
   timezone?: string
   countryCode?: string | null
@@ -822,6 +860,7 @@ export type TenantUncheckedCreateWithoutStoresInput = {
   users?: Prisma.MembershipUncheckedCreateNestedManyWithoutTenantInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutTenantInput
   sites?: Prisma.SiteUncheckedCreateNestedManyWithoutTenantInput
+  hostnames?: Prisma.TenantHostnameUncheckedCreateNestedManyWithoutTenantInput
   conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutTenantInput
   automations?: Prisma.AutomationEventUncheckedCreateNestedManyWithoutTenantInput
   dispatchOffers?: Prisma.DeliveryBidUncheckedCreateNestedManyWithoutDispatchTenantInput
@@ -848,9 +887,6 @@ export type TenantUpdateWithoutStoresInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
-  subdomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomainVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -861,6 +897,7 @@ export type TenantUpdateWithoutStoresInput = {
   users?: Prisma.MembershipUpdateManyWithoutTenantNestedInput
   orders?: Prisma.OrderUpdateManyWithoutTenantNestedInput
   sites?: Prisma.SiteUpdateManyWithoutTenantNestedInput
+  hostnames?: Prisma.TenantHostnameUpdateManyWithoutTenantNestedInput
   conversations?: Prisma.ConversationUpdateManyWithoutTenantNestedInput
   automations?: Prisma.AutomationEventUpdateManyWithoutTenantNestedInput
   dispatchOffers?: Prisma.DeliveryBidUpdateManyWithoutDispatchTenantNestedInput
@@ -871,9 +908,6 @@ export type TenantUncheckedUpdateWithoutStoresInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
-  subdomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomainVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -884,6 +918,7 @@ export type TenantUncheckedUpdateWithoutStoresInput = {
   users?: Prisma.MembershipUncheckedUpdateManyWithoutTenantNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutTenantNestedInput
   sites?: Prisma.SiteUncheckedUpdateManyWithoutTenantNestedInput
+  hostnames?: Prisma.TenantHostnameUncheckedUpdateManyWithoutTenantNestedInput
   conversations?: Prisma.ConversationUncheckedUpdateManyWithoutTenantNestedInput
   automations?: Prisma.AutomationEventUncheckedUpdateManyWithoutTenantNestedInput
   dispatchOffers?: Prisma.DeliveryBidUncheckedUpdateManyWithoutDispatchTenantNestedInput
@@ -894,9 +929,6 @@ export type TenantCreateWithoutOrdersInput = {
   slug: string
   name: string
   type: $Enums.TenantType
-  subdomain?: string | null
-  customDomain?: string | null
-  customDomainVerifiedAt?: Date | string | null
   isActive?: boolean
   timezone?: string
   countryCode?: string | null
@@ -907,6 +939,7 @@ export type TenantCreateWithoutOrdersInput = {
   users?: Prisma.MembershipCreateNestedManyWithoutTenantInput
   stores?: Prisma.StoreCreateNestedManyWithoutTenantInput
   sites?: Prisma.SiteCreateNestedManyWithoutTenantInput
+  hostnames?: Prisma.TenantHostnameCreateNestedManyWithoutTenantInput
   conversations?: Prisma.ConversationCreateNestedManyWithoutTenantInput
   automations?: Prisma.AutomationEventCreateNestedManyWithoutTenantInput
   dispatchOffers?: Prisma.DeliveryBidCreateNestedManyWithoutDispatchTenantInput
@@ -917,9 +950,6 @@ export type TenantUncheckedCreateWithoutOrdersInput = {
   slug: string
   name: string
   type: $Enums.TenantType
-  subdomain?: string | null
-  customDomain?: string | null
-  customDomainVerifiedAt?: Date | string | null
   isActive?: boolean
   timezone?: string
   countryCode?: string | null
@@ -930,6 +960,7 @@ export type TenantUncheckedCreateWithoutOrdersInput = {
   users?: Prisma.MembershipUncheckedCreateNestedManyWithoutTenantInput
   stores?: Prisma.StoreUncheckedCreateNestedManyWithoutTenantInput
   sites?: Prisma.SiteUncheckedCreateNestedManyWithoutTenantInput
+  hostnames?: Prisma.TenantHostnameUncheckedCreateNestedManyWithoutTenantInput
   conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutTenantInput
   automations?: Prisma.AutomationEventUncheckedCreateNestedManyWithoutTenantInput
   dispatchOffers?: Prisma.DeliveryBidUncheckedCreateNestedManyWithoutDispatchTenantInput
@@ -956,9 +987,6 @@ export type TenantUpdateWithoutOrdersInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
-  subdomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomainVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -969,6 +997,7 @@ export type TenantUpdateWithoutOrdersInput = {
   users?: Prisma.MembershipUpdateManyWithoutTenantNestedInput
   stores?: Prisma.StoreUpdateManyWithoutTenantNestedInput
   sites?: Prisma.SiteUpdateManyWithoutTenantNestedInput
+  hostnames?: Prisma.TenantHostnameUpdateManyWithoutTenantNestedInput
   conversations?: Prisma.ConversationUpdateManyWithoutTenantNestedInput
   automations?: Prisma.AutomationEventUpdateManyWithoutTenantNestedInput
   dispatchOffers?: Prisma.DeliveryBidUpdateManyWithoutDispatchTenantNestedInput
@@ -979,9 +1008,6 @@ export type TenantUncheckedUpdateWithoutOrdersInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
-  subdomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomainVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -992,6 +1018,7 @@ export type TenantUncheckedUpdateWithoutOrdersInput = {
   users?: Prisma.MembershipUncheckedUpdateManyWithoutTenantNestedInput
   stores?: Prisma.StoreUncheckedUpdateManyWithoutTenantNestedInput
   sites?: Prisma.SiteUncheckedUpdateManyWithoutTenantNestedInput
+  hostnames?: Prisma.TenantHostnameUncheckedUpdateManyWithoutTenantNestedInput
   conversations?: Prisma.ConversationUncheckedUpdateManyWithoutTenantNestedInput
   automations?: Prisma.AutomationEventUncheckedUpdateManyWithoutTenantNestedInput
   dispatchOffers?: Prisma.DeliveryBidUncheckedUpdateManyWithoutDispatchTenantNestedInput
@@ -1002,9 +1029,6 @@ export type TenantCreateWithoutDispatchOffersInput = {
   slug: string
   name: string
   type: $Enums.TenantType
-  subdomain?: string | null
-  customDomain?: string | null
-  customDomainVerifiedAt?: Date | string | null
   isActive?: boolean
   timezone?: string
   countryCode?: string | null
@@ -1016,6 +1040,7 @@ export type TenantCreateWithoutDispatchOffersInput = {
   stores?: Prisma.StoreCreateNestedManyWithoutTenantInput
   orders?: Prisma.OrderCreateNestedManyWithoutTenantInput
   sites?: Prisma.SiteCreateNestedManyWithoutTenantInput
+  hostnames?: Prisma.TenantHostnameCreateNestedManyWithoutTenantInput
   conversations?: Prisma.ConversationCreateNestedManyWithoutTenantInput
   automations?: Prisma.AutomationEventCreateNestedManyWithoutTenantInput
 }
@@ -1025,9 +1050,6 @@ export type TenantUncheckedCreateWithoutDispatchOffersInput = {
   slug: string
   name: string
   type: $Enums.TenantType
-  subdomain?: string | null
-  customDomain?: string | null
-  customDomainVerifiedAt?: Date | string | null
   isActive?: boolean
   timezone?: string
   countryCode?: string | null
@@ -1039,6 +1061,7 @@ export type TenantUncheckedCreateWithoutDispatchOffersInput = {
   stores?: Prisma.StoreUncheckedCreateNestedManyWithoutTenantInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutTenantInput
   sites?: Prisma.SiteUncheckedCreateNestedManyWithoutTenantInput
+  hostnames?: Prisma.TenantHostnameUncheckedCreateNestedManyWithoutTenantInput
   conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutTenantInput
   automations?: Prisma.AutomationEventUncheckedCreateNestedManyWithoutTenantInput
 }
@@ -1064,9 +1087,6 @@ export type TenantUpdateWithoutDispatchOffersInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
-  subdomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomainVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1078,6 +1098,7 @@ export type TenantUpdateWithoutDispatchOffersInput = {
   stores?: Prisma.StoreUpdateManyWithoutTenantNestedInput
   orders?: Prisma.OrderUpdateManyWithoutTenantNestedInput
   sites?: Prisma.SiteUpdateManyWithoutTenantNestedInput
+  hostnames?: Prisma.TenantHostnameUpdateManyWithoutTenantNestedInput
   conversations?: Prisma.ConversationUpdateManyWithoutTenantNestedInput
   automations?: Prisma.AutomationEventUpdateManyWithoutTenantNestedInput
 }
@@ -1087,9 +1108,6 @@ export type TenantUncheckedUpdateWithoutDispatchOffersInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
-  subdomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomainVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1101,6 +1119,7 @@ export type TenantUncheckedUpdateWithoutDispatchOffersInput = {
   stores?: Prisma.StoreUncheckedUpdateManyWithoutTenantNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutTenantNestedInput
   sites?: Prisma.SiteUncheckedUpdateManyWithoutTenantNestedInput
+  hostnames?: Prisma.TenantHostnameUncheckedUpdateManyWithoutTenantNestedInput
   conversations?: Prisma.ConversationUncheckedUpdateManyWithoutTenantNestedInput
   automations?: Prisma.AutomationEventUncheckedUpdateManyWithoutTenantNestedInput
 }
@@ -1110,9 +1129,6 @@ export type TenantCreateWithoutConversationsInput = {
   slug: string
   name: string
   type: $Enums.TenantType
-  subdomain?: string | null
-  customDomain?: string | null
-  customDomainVerifiedAt?: Date | string | null
   isActive?: boolean
   timezone?: string
   countryCode?: string | null
@@ -1124,6 +1140,7 @@ export type TenantCreateWithoutConversationsInput = {
   stores?: Prisma.StoreCreateNestedManyWithoutTenantInput
   orders?: Prisma.OrderCreateNestedManyWithoutTenantInput
   sites?: Prisma.SiteCreateNestedManyWithoutTenantInput
+  hostnames?: Prisma.TenantHostnameCreateNestedManyWithoutTenantInput
   automations?: Prisma.AutomationEventCreateNestedManyWithoutTenantInput
   dispatchOffers?: Prisma.DeliveryBidCreateNestedManyWithoutDispatchTenantInput
 }
@@ -1133,9 +1150,6 @@ export type TenantUncheckedCreateWithoutConversationsInput = {
   slug: string
   name: string
   type: $Enums.TenantType
-  subdomain?: string | null
-  customDomain?: string | null
-  customDomainVerifiedAt?: Date | string | null
   isActive?: boolean
   timezone?: string
   countryCode?: string | null
@@ -1147,6 +1161,7 @@ export type TenantUncheckedCreateWithoutConversationsInput = {
   stores?: Prisma.StoreUncheckedCreateNestedManyWithoutTenantInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutTenantInput
   sites?: Prisma.SiteUncheckedCreateNestedManyWithoutTenantInput
+  hostnames?: Prisma.TenantHostnameUncheckedCreateNestedManyWithoutTenantInput
   automations?: Prisma.AutomationEventUncheckedCreateNestedManyWithoutTenantInput
   dispatchOffers?: Prisma.DeliveryBidUncheckedCreateNestedManyWithoutDispatchTenantInput
 }
@@ -1172,9 +1187,6 @@ export type TenantUpdateWithoutConversationsInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
-  subdomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomainVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1186,6 +1198,7 @@ export type TenantUpdateWithoutConversationsInput = {
   stores?: Prisma.StoreUpdateManyWithoutTenantNestedInput
   orders?: Prisma.OrderUpdateManyWithoutTenantNestedInput
   sites?: Prisma.SiteUpdateManyWithoutTenantNestedInput
+  hostnames?: Prisma.TenantHostnameUpdateManyWithoutTenantNestedInput
   automations?: Prisma.AutomationEventUpdateManyWithoutTenantNestedInput
   dispatchOffers?: Prisma.DeliveryBidUpdateManyWithoutDispatchTenantNestedInput
 }
@@ -1195,9 +1208,6 @@ export type TenantUncheckedUpdateWithoutConversationsInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
-  subdomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomainVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1209,6 +1219,7 @@ export type TenantUncheckedUpdateWithoutConversationsInput = {
   stores?: Prisma.StoreUncheckedUpdateManyWithoutTenantNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutTenantNestedInput
   sites?: Prisma.SiteUncheckedUpdateManyWithoutTenantNestedInput
+  hostnames?: Prisma.TenantHostnameUncheckedUpdateManyWithoutTenantNestedInput
   automations?: Prisma.AutomationEventUncheckedUpdateManyWithoutTenantNestedInput
   dispatchOffers?: Prisma.DeliveryBidUncheckedUpdateManyWithoutDispatchTenantNestedInput
 }
@@ -1218,9 +1229,6 @@ export type TenantCreateWithoutAutomationsInput = {
   slug: string
   name: string
   type: $Enums.TenantType
-  subdomain?: string | null
-  customDomain?: string | null
-  customDomainVerifiedAt?: Date | string | null
   isActive?: boolean
   timezone?: string
   countryCode?: string | null
@@ -1232,6 +1240,7 @@ export type TenantCreateWithoutAutomationsInput = {
   stores?: Prisma.StoreCreateNestedManyWithoutTenantInput
   orders?: Prisma.OrderCreateNestedManyWithoutTenantInput
   sites?: Prisma.SiteCreateNestedManyWithoutTenantInput
+  hostnames?: Prisma.TenantHostnameCreateNestedManyWithoutTenantInput
   conversations?: Prisma.ConversationCreateNestedManyWithoutTenantInput
   dispatchOffers?: Prisma.DeliveryBidCreateNestedManyWithoutDispatchTenantInput
 }
@@ -1241,9 +1250,6 @@ export type TenantUncheckedCreateWithoutAutomationsInput = {
   slug: string
   name: string
   type: $Enums.TenantType
-  subdomain?: string | null
-  customDomain?: string | null
-  customDomainVerifiedAt?: Date | string | null
   isActive?: boolean
   timezone?: string
   countryCode?: string | null
@@ -1255,6 +1261,7 @@ export type TenantUncheckedCreateWithoutAutomationsInput = {
   stores?: Prisma.StoreUncheckedCreateNestedManyWithoutTenantInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutTenantInput
   sites?: Prisma.SiteUncheckedCreateNestedManyWithoutTenantInput
+  hostnames?: Prisma.TenantHostnameUncheckedCreateNestedManyWithoutTenantInput
   conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutTenantInput
   dispatchOffers?: Prisma.DeliveryBidUncheckedCreateNestedManyWithoutDispatchTenantInput
 }
@@ -1280,9 +1287,6 @@ export type TenantUpdateWithoutAutomationsInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
-  subdomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomainVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1294,6 +1298,7 @@ export type TenantUpdateWithoutAutomationsInput = {
   stores?: Prisma.StoreUpdateManyWithoutTenantNestedInput
   orders?: Prisma.OrderUpdateManyWithoutTenantNestedInput
   sites?: Prisma.SiteUpdateManyWithoutTenantNestedInput
+  hostnames?: Prisma.TenantHostnameUpdateManyWithoutTenantNestedInput
   conversations?: Prisma.ConversationUpdateManyWithoutTenantNestedInput
   dispatchOffers?: Prisma.DeliveryBidUpdateManyWithoutDispatchTenantNestedInput
 }
@@ -1303,9 +1308,6 @@ export type TenantUncheckedUpdateWithoutAutomationsInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
-  subdomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomainVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1317,6 +1319,7 @@ export type TenantUncheckedUpdateWithoutAutomationsInput = {
   stores?: Prisma.StoreUncheckedUpdateManyWithoutTenantNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutTenantNestedInput
   sites?: Prisma.SiteUncheckedUpdateManyWithoutTenantNestedInput
+  hostnames?: Prisma.TenantHostnameUncheckedUpdateManyWithoutTenantNestedInput
   conversations?: Prisma.ConversationUncheckedUpdateManyWithoutTenantNestedInput
   dispatchOffers?: Prisma.DeliveryBidUncheckedUpdateManyWithoutDispatchTenantNestedInput
 }
@@ -1326,9 +1329,6 @@ export type TenantCreateWithoutSitesInput = {
   slug: string
   name: string
   type: $Enums.TenantType
-  subdomain?: string | null
-  customDomain?: string | null
-  customDomainVerifiedAt?: Date | string | null
   isActive?: boolean
   timezone?: string
   countryCode?: string | null
@@ -1339,6 +1339,7 @@ export type TenantCreateWithoutSitesInput = {
   users?: Prisma.MembershipCreateNestedManyWithoutTenantInput
   stores?: Prisma.StoreCreateNestedManyWithoutTenantInput
   orders?: Prisma.OrderCreateNestedManyWithoutTenantInput
+  hostnames?: Prisma.TenantHostnameCreateNestedManyWithoutTenantInput
   conversations?: Prisma.ConversationCreateNestedManyWithoutTenantInput
   automations?: Prisma.AutomationEventCreateNestedManyWithoutTenantInput
   dispatchOffers?: Prisma.DeliveryBidCreateNestedManyWithoutDispatchTenantInput
@@ -1349,9 +1350,6 @@ export type TenantUncheckedCreateWithoutSitesInput = {
   slug: string
   name: string
   type: $Enums.TenantType
-  subdomain?: string | null
-  customDomain?: string | null
-  customDomainVerifiedAt?: Date | string | null
   isActive?: boolean
   timezone?: string
   countryCode?: string | null
@@ -1362,6 +1360,7 @@ export type TenantUncheckedCreateWithoutSitesInput = {
   users?: Prisma.MembershipUncheckedCreateNestedManyWithoutTenantInput
   stores?: Prisma.StoreUncheckedCreateNestedManyWithoutTenantInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutTenantInput
+  hostnames?: Prisma.TenantHostnameUncheckedCreateNestedManyWithoutTenantInput
   conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutTenantInput
   automations?: Prisma.AutomationEventUncheckedCreateNestedManyWithoutTenantInput
   dispatchOffers?: Prisma.DeliveryBidUncheckedCreateNestedManyWithoutDispatchTenantInput
@@ -1388,9 +1387,6 @@ export type TenantUpdateWithoutSitesInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
-  subdomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomainVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1401,6 +1397,7 @@ export type TenantUpdateWithoutSitesInput = {
   users?: Prisma.MembershipUpdateManyWithoutTenantNestedInput
   stores?: Prisma.StoreUpdateManyWithoutTenantNestedInput
   orders?: Prisma.OrderUpdateManyWithoutTenantNestedInput
+  hostnames?: Prisma.TenantHostnameUpdateManyWithoutTenantNestedInput
   conversations?: Prisma.ConversationUpdateManyWithoutTenantNestedInput
   automations?: Prisma.AutomationEventUpdateManyWithoutTenantNestedInput
   dispatchOffers?: Prisma.DeliveryBidUpdateManyWithoutDispatchTenantNestedInput
@@ -1411,9 +1408,6 @@ export type TenantUncheckedUpdateWithoutSitesInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumTenantTypeFieldUpdateOperationsInput | $Enums.TenantType
-  subdomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  customDomainVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   countryCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1424,6 +1418,7 @@ export type TenantUncheckedUpdateWithoutSitesInput = {
   users?: Prisma.MembershipUncheckedUpdateManyWithoutTenantNestedInput
   stores?: Prisma.StoreUncheckedUpdateManyWithoutTenantNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutTenantNestedInput
+  hostnames?: Prisma.TenantHostnameUncheckedUpdateManyWithoutTenantNestedInput
   conversations?: Prisma.ConversationUncheckedUpdateManyWithoutTenantNestedInput
   automations?: Prisma.AutomationEventUncheckedUpdateManyWithoutTenantNestedInput
   dispatchOffers?: Prisma.DeliveryBidUncheckedUpdateManyWithoutDispatchTenantNestedInput
@@ -1439,6 +1434,7 @@ export type TenantCountOutputType = {
   stores: number
   orders: number
   sites: number
+  hostnames: number
   conversations: number
   automations: number
   dispatchOffers: number
@@ -1449,6 +1445,7 @@ export type TenantCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions
   stores?: boolean | TenantCountOutputTypeCountStoresArgs
   orders?: boolean | TenantCountOutputTypeCountOrdersArgs
   sites?: boolean | TenantCountOutputTypeCountSitesArgs
+  hostnames?: boolean | TenantCountOutputTypeCountHostnamesArgs
   conversations?: boolean | TenantCountOutputTypeCountConversationsArgs
   automations?: boolean | TenantCountOutputTypeCountAutomationsArgs
   dispatchOffers?: boolean | TenantCountOutputTypeCountDispatchOffersArgs
@@ -1495,6 +1492,13 @@ export type TenantCountOutputTypeCountSitesArgs<ExtArgs extends runtime.Types.Ex
 /**
  * TenantCountOutputType without action
  */
+export type TenantCountOutputTypeCountHostnamesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.TenantHostnameWhereInput
+}
+
+/**
+ * TenantCountOutputType without action
+ */
 export type TenantCountOutputTypeCountConversationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.ConversationWhereInput
 }
@@ -1519,9 +1523,6 @@ export type TenantSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   slug?: boolean
   name?: boolean
   type?: boolean
-  subdomain?: boolean
-  customDomain?: boolean
-  customDomainVerifiedAt?: boolean
   isActive?: boolean
   timezone?: boolean
   countryCode?: boolean
@@ -1533,6 +1534,7 @@ export type TenantSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   stores?: boolean | Prisma.Tenant$storesArgs<ExtArgs>
   orders?: boolean | Prisma.Tenant$ordersArgs<ExtArgs>
   sites?: boolean | Prisma.Tenant$sitesArgs<ExtArgs>
+  hostnames?: boolean | Prisma.Tenant$hostnamesArgs<ExtArgs>
   conversations?: boolean | Prisma.Tenant$conversationsArgs<ExtArgs>
   automations?: boolean | Prisma.Tenant$automationsArgs<ExtArgs>
   dispatchOffers?: boolean | Prisma.Tenant$dispatchOffersArgs<ExtArgs>
@@ -1544,9 +1546,6 @@ export type TenantSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   slug?: boolean
   name?: boolean
   type?: boolean
-  subdomain?: boolean
-  customDomain?: boolean
-  customDomainVerifiedAt?: boolean
   isActive?: boolean
   timezone?: boolean
   countryCode?: boolean
@@ -1561,9 +1560,6 @@ export type TenantSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   slug?: boolean
   name?: boolean
   type?: boolean
-  subdomain?: boolean
-  customDomain?: boolean
-  customDomainVerifiedAt?: boolean
   isActive?: boolean
   timezone?: boolean
   countryCode?: boolean
@@ -1578,9 +1574,6 @@ export type TenantSelectScalar = {
   slug?: boolean
   name?: boolean
   type?: boolean
-  subdomain?: boolean
-  customDomain?: boolean
-  customDomainVerifiedAt?: boolean
   isActive?: boolean
   timezone?: boolean
   countryCode?: boolean
@@ -1590,12 +1583,13 @@ export type TenantSelectScalar = {
   updatedAt?: boolean
 }
 
-export type TenantOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "slug" | "name" | "type" | "subdomain" | "customDomain" | "customDomainVerifiedAt" | "isActive" | "timezone" | "countryCode" | "currencyCode" | "metadata" | "createdAt" | "updatedAt", ExtArgs["result"]["tenant"]>
+export type TenantOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "slug" | "name" | "type" | "isActive" | "timezone" | "countryCode" | "currencyCode" | "metadata" | "createdAt" | "updatedAt", ExtArgs["result"]["tenant"]>
 export type TenantInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   users?: boolean | Prisma.Tenant$usersArgs<ExtArgs>
   stores?: boolean | Prisma.Tenant$storesArgs<ExtArgs>
   orders?: boolean | Prisma.Tenant$ordersArgs<ExtArgs>
   sites?: boolean | Prisma.Tenant$sitesArgs<ExtArgs>
+  hostnames?: boolean | Prisma.Tenant$hostnamesArgs<ExtArgs>
   conversations?: boolean | Prisma.Tenant$conversationsArgs<ExtArgs>
   automations?: boolean | Prisma.Tenant$automationsArgs<ExtArgs>
   dispatchOffers?: boolean | Prisma.Tenant$dispatchOffersArgs<ExtArgs>
@@ -1611,6 +1605,7 @@ export type $TenantPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     stores: Prisma.$StorePayload<ExtArgs>[]
     orders: Prisma.$OrderPayload<ExtArgs>[]
     sites: Prisma.$SitePayload<ExtArgs>[]
+    hostnames: Prisma.$TenantHostnamePayload<ExtArgs>[]
     conversations: Prisma.$ConversationPayload<ExtArgs>[]
     automations: Prisma.$AutomationEventPayload<ExtArgs>[]
     dispatchOffers: Prisma.$DeliveryBidPayload<ExtArgs>[]
@@ -1620,9 +1615,6 @@ export type $TenantPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     slug: string
     name: string
     type: $Enums.TenantType
-    subdomain: string | null
-    customDomain: string | null
-    customDomainVerifiedAt: Date | null
     isActive: boolean
     timezone: string
     countryCode: string | null
@@ -2028,6 +2020,7 @@ export interface Prisma__TenantClient<T, Null = never, ExtArgs extends runtime.T
   stores<T extends Prisma.Tenant$storesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$storesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$StorePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   orders<T extends Prisma.Tenant$ordersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$ordersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   sites<T extends Prisma.Tenant$sitesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$sitesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SitePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  hostnames<T extends Prisma.Tenant$hostnamesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$hostnamesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TenantHostnamePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   conversations<T extends Prisma.Tenant$conversationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$conversationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConversationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   automations<T extends Prisma.Tenant$automationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$automationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AutomationEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   dispatchOffers<T extends Prisma.Tenant$dispatchOffersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$dispatchOffersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DeliveryBidPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -2064,9 +2057,6 @@ export interface TenantFieldRefs {
   readonly slug: Prisma.FieldRef<"Tenant", 'String'>
   readonly name: Prisma.FieldRef<"Tenant", 'String'>
   readonly type: Prisma.FieldRef<"Tenant", 'TenantType'>
-  readonly subdomain: Prisma.FieldRef<"Tenant", 'String'>
-  readonly customDomain: Prisma.FieldRef<"Tenant", 'String'>
-  readonly customDomainVerifiedAt: Prisma.FieldRef<"Tenant", 'DateTime'>
   readonly isActive: Prisma.FieldRef<"Tenant", 'Boolean'>
   readonly timezone: Prisma.FieldRef<"Tenant", 'String'>
   readonly countryCode: Prisma.FieldRef<"Tenant", 'String'>
@@ -2560,6 +2550,30 @@ export type Tenant$sitesArgs<ExtArgs extends runtime.Types.Extensions.InternalAr
   take?: number
   skip?: number
   distinct?: Prisma.SiteScalarFieldEnum | Prisma.SiteScalarFieldEnum[]
+}
+
+/**
+ * Tenant.hostnames
+ */
+export type Tenant$hostnamesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the TenantHostname
+   */
+  select?: Prisma.TenantHostnameSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the TenantHostname
+   */
+  omit?: Prisma.TenantHostnameOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TenantHostnameInclude<ExtArgs> | null
+  where?: Prisma.TenantHostnameWhereInput
+  orderBy?: Prisma.TenantHostnameOrderByWithRelationInput | Prisma.TenantHostnameOrderByWithRelationInput[]
+  cursor?: Prisma.TenantHostnameWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.TenantHostnameScalarFieldEnum | Prisma.TenantHostnameScalarFieldEnum[]
 }
 
 /**

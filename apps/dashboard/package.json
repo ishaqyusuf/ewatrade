@@ -1,9 +1,9 @@
 {
-  "name": "@ewatrade/web",
+  "name": "@ewatrade/dashboard",
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "node ../../scripts/with-workspace-env.mjs PORTLESS_APP_PORT=${PORTLESS_APP_PORT:-3094} TZ=UTC portless ewatrade-dashboard next dev --turbopack --port 3094",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "biome check .",

@@ -4,6 +4,12 @@ enum TenantType {
   PLATFORM
 }
 
+enum TenantHostnameSurface {
+  STOREFRONT
+  POS
+  DASHBOARD
+}
+
 enum MembershipRole {
   OWNER
   ADMIN

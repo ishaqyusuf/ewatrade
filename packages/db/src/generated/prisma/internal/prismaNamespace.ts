@@ -385,6 +385,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 export const ModelName = {
   Tenant: 'Tenant',
+  TenantHostname: 'TenantHostname',
   User: 'User',
   Account: 'Account',
   Session: 'Session',
@@ -428,7 +429,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "tenant" | "user" | "account" | "session" | "membership" | "store" | "product" | "productVariant" | "inventoryItem" | "cart" | "cartItem" | "order" | "orderItem" | "dispatchProviderProfile" | "deliveryRequest" | "deliveryBid" | "deliveryAssignment" | "trackingEvent" | "conversation" | "message" | "automationEvent" | "cashierSession" | "receipt" | "barcodeEvent" | "site" | "page" | "pageSection" | "theme" | "template"
+    modelProps: "tenant" | "tenantHostname" | "user" | "account" | "session" | "membership" | "store" | "product" | "productVariant" | "inventoryItem" | "cart" | "cartItem" | "order" | "orderItem" | "dispatchProviderProfile" | "deliveryRequest" | "deliveryBid" | "deliveryAssignment" | "trackingEvent" | "conversation" | "message" | "automationEvent" | "cashierSession" | "receipt" | "barcodeEvent" | "site" | "page" | "pageSection" | "theme" | "template"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -503,6 +504,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.TenantCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.TenantCountAggregateOutputType> | number
+        }
+      }
+    }
+    TenantHostname: {
+      payload: Prisma.$TenantHostnamePayload<ExtArgs>
+      fields: Prisma.TenantHostnameFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.TenantHostnameFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TenantHostnamePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.TenantHostnameFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TenantHostnamePayload>
+        }
+        findFirst: {
+          args: Prisma.TenantHostnameFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TenantHostnamePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.TenantHostnameFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TenantHostnamePayload>
+        }
+        findMany: {
+          args: Prisma.TenantHostnameFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TenantHostnamePayload>[]
+        }
+        create: {
+          args: Prisma.TenantHostnameCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TenantHostnamePayload>
+        }
+        createMany: {
+          args: Prisma.TenantHostnameCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.TenantHostnameCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TenantHostnamePayload>[]
+        }
+        delete: {
+          args: Prisma.TenantHostnameDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TenantHostnamePayload>
+        }
+        update: {
+          args: Prisma.TenantHostnameUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TenantHostnamePayload>
+        }
+        deleteMany: {
+          args: Prisma.TenantHostnameDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.TenantHostnameUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.TenantHostnameUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TenantHostnamePayload>[]
+        }
+        upsert: {
+          args: Prisma.TenantHostnameUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TenantHostnamePayload>
+        }
+        aggregate: {
+          args: Prisma.TenantHostnameAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateTenantHostname>
+        }
+        groupBy: {
+          args: Prisma.TenantHostnameGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TenantHostnameGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.TenantHostnameCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TenantHostnameCountAggregateOutputType> | number
         }
       }
     }
@@ -2622,9 +2697,6 @@ export const TenantScalarFieldEnum = {
   slug: 'slug',
   name: 'name',
   type: 'type',
-  subdomain: 'subdomain',
-  customDomain: 'customDomain',
-  customDomainVerifiedAt: 'customDomainVerifiedAt',
   isActive: 'isActive',
   timezone: 'timezone',
   countryCode: 'countryCode',
@@ -2635,6 +2707,21 @@ export const TenantScalarFieldEnum = {
 } as const
 
 export type TenantScalarFieldEnum = (typeof TenantScalarFieldEnum)[keyof typeof TenantScalarFieldEnum]
+
+
+export const TenantHostnameScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  surface: 'surface',
+  hostname: 'hostname',
+  isPrimary: 'isPrimary',
+  isCustom: 'isCustom',
+  verifiedAt: 'verifiedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type TenantHostnameScalarFieldEnum = (typeof TenantHostnameScalarFieldEnum)[keyof typeof TenantHostnameScalarFieldEnum]
 
 
 export const UserScalarFieldEnum = {
@@ -3201,20 +3288,6 @@ export type ListEnumTenantTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$P
 
 
 /**
- * Reference to a field of type 'DateTime'
- */
-export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
-    
-
-
-/**
- * Reference to a field of type 'DateTime[]'
- */
-export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
-    
-
-
-/**
  * Reference to a field of type 'Boolean'
  */
 export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
@@ -3232,6 +3305,34 @@ export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'J
  * Reference to a field of type 'QueryMode'
  */
 export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
+    
+
+
+/**
+ * Reference to a field of type 'DateTime'
+ */
+export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
+    
+
+
+/**
+ * Reference to a field of type 'DateTime[]'
+ */
+export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
+    
+
+
+/**
+ * Reference to a field of type 'TenantHostnameSurface'
+ */
+export type EnumTenantHostnameSurfaceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TenantHostnameSurface'>
+    
+
+
+/**
+ * Reference to a field of type 'TenantHostnameSurface[]'
+ */
+export type ListEnumTenantHostnameSurfaceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TenantHostnameSurface[]'>
     
 
 
@@ -3582,6 +3683,7 @@ export type PrismaClientOptions = ({
 }
 export type GlobalOmitConfig = {
   tenant?: Prisma.TenantOmit
+  tenantHostname?: Prisma.TenantHostnameOmit
   user?: Prisma.UserOmit
   account?: Prisma.AccountOmit
   session?: Prisma.SessionOmit

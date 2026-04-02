@@ -5,6 +5,9 @@ CREATE SCHEMA IF NOT EXISTS "public";
 CREATE TYPE "TenantType" AS ENUM ('MERCHANT', 'DISPATCH', 'PLATFORM');
 
 -- CreateEnum
+CREATE TYPE "TenantHostnameSurface" AS ENUM ('STOREFRONT', 'POS', 'DASHBOARD');
+
+-- CreateEnum
 CREATE TYPE "MembershipRole" AS ENUM ('OWNER', 'ADMIN', 'MANAGER', 'CASHIER', 'OPERATOR', 'SUPPORT', 'MEMBER');
 
 -- CreateEnum
@@ -58,9 +61,6 @@ CREATE TABLE "Tenant" (
     "slug" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "type" "TenantType" NOT NULL,
-    "subdomain" TEXT,
-    "customDomain" TEXT,
-    "customDomainVerifiedAt" TIMESTAMP(3),
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "timezone" TEXT NOT NULL DEFAULT 'Africa/Lagos',
     "countryCode" TEXT,
@@ -70,6 +70,21 @@ CREATE TABLE "Tenant" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Tenant_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "TenantHostname" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "surface" "TenantHostnameSurface" NOT NULL,
+    "hostname" TEXT NOT NULL,
+    "isPrimary" BOOLEAN NOT NULL DEFAULT false,
+    "isCustom" BOOLEAN NOT NULL DEFAULT false,
+    "verifiedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "TenantHostname_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -564,10 +579,13 @@ CREATE TABLE "Template" (
 CREATE UNIQUE INDEX "Tenant_slug_key" ON "Tenant"("slug");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Tenant_subdomain_key" ON "Tenant"("subdomain");
+CREATE UNIQUE INDEX "TenantHostname_hostname_key" ON "TenantHostname"("hostname");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Tenant_customDomain_key" ON "Tenant"("customDomain");
+CREATE INDEX "TenantHostname_tenantId_surface_idx" ON "TenantHostname"("tenantId", "surface");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TenantHostname_tenantId_surface_hostname_key" ON "TenantHostname"("tenantId", "surface", "hostname");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
@@ -742,6 +760,9 @@ CREATE INDEX "Theme_storeId_isActive_idx" ON "Theme"("storeId", "isActive");
 
 -- CreateIndex
 CREATE INDEX "Template_storeId_category_idx" ON "Template"("storeId", "category");
+
+-- AddForeignKey
+ALTER TABLE "TenantHostname" ADD CONSTRAINT "TenantHostname_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

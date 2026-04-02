@@ -1,0 +1,31 @@
+{
+  "name": "@ewatrade/pos",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node ../../scripts/with-workspace-env.mjs PORTLESS_APP_PORT=${PORTLESS_APP_PORT:-3093} TZ=UTC portless ewatrade-pos next dev --turbopack --port 3093",
+    "build": "next build --webpack",
+    "start": "next start",
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ewatrade/ui": "workspace:*",
+    "@ewatrade/utils": "workspace:*",
+    "@hugeicons/core-free-icons": "^4.1.1",
+    "@hugeicons/react": "^1.1.6",
+    "next": "^16.1.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@ewatrade/tsconfig": "workspace:*",
+    "@tailwindcss/postcss": "^4.2.1",
+    "@types/node": "^24.6.0",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "@biomejs/biome": "^1.9.4",
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5.9.3"
+  }
+}

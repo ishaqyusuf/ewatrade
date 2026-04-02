@@ -105,7 +105,7 @@ Good specifics from the PRD that should be written into Brain when actioned.
 | Real-time sync across 4 apps | Brain has no WebSocket or event-streaming plan |
 | POS offline tolerance | No offline-first / sync-on-reconnect strategy in Brain |
 | Cross-app order channel assignment | Requires shared order model that knows its source channel |
-| Mobile apps for Market and Dispatch | Brain's PROJECT_INDEX only lists `apps/web` — no mobile scaffold yet |
+| Mobile apps for Market and Dispatch | Brain's PROJECT_INDEX lists only web surfaces today — no mobile scaffold yet |
 
 ---
 

@@ -7,6 +7,7 @@ Central index for ewatrade product, architecture, engineering, database, API, de
 - Start here before making product or engineering changes.
 - Update linked Brain docs when architecture, schema, APIs, or priorities change.
 - Preserve existing domain docs under `brain/modules/`, `brain/architecture/`, and `brain/workflows/`.
+- Use `~/Document/code/_kitchen_sink/midday` as the default source of inspiration for code structure, workspace boundaries, and app/package organization unless a newer ADR overrides that direction.
 
 ## Current State
 - Repository currently contains Brain documentation only.

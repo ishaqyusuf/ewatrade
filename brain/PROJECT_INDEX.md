@@ -3,12 +3,15 @@
 Project: `ewatrade`
 
 ## Applications
-- `apps/web` - Next.js App Router web application scaffold for the ewatrade frontend.
+- `apps/storefront` - Next.js storefront application for merchant-branded customer experiences.
+- `apps/marketing` - Public platform marketing website.
+- `apps/pos` - Tenant point-of-sale application for cashier and in-store flows.
+- `apps/dashboard` - Tenant operations dashboard for catalog, orders, and logistics.
 
 ## Packages
 - `packages/db` - Prisma v7 database package with file-based schema models, generated client, and migration ownership.
 - `packages/ui` - Shared UI package that owns the Tailwind CSS entrypoint and shared styling tokens.
-- `packages/utils` - Shared utility package for cross-app helper functions.
+- `packages/utils` - Shared utility package for cross-app helper functions, including tenant/domain routing helpers for proxy logic.
 - `packages/tsconfig` - Shared TypeScript base configs for apps and packages.
 
 ## Services

@@ -1,9 +1,4 @@
-const pillars = [
-  "Merchant operations",
-  "Website builder",
-  "Dispatch network",
-  "POS and self-service"
-]
+const pillars = ["Operations", "Orders", "Catalog", "Dispatch visibility"]
 
 export default function HomePage() {
   return (
@@ -12,7 +7,7 @@ export default function HomePage() {
         <section className="grid gap-12 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
           <div className="space-y-8">
             <div className="inline-flex items-center rounded-full border border-border bg-muted px-4 py-1 text-sm text-muted-foreground">
-              Midday-style monorepo foundation
+              Tenant dashboard surface
             </div>
             <div className="space-y-4">
               <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">
@@ -22,11 +17,11 @@ export default function HomePage() {
                 className="max-w-4xl text-5xl leading-none sm:text-6xl lg:text-7xl"
                 style={{ fontFamily: "var(--font-display)" }}
               >
-                Retail, logistics, and self-service infrastructure built on a modern web core.
+                Merchant operations dashboards for orders, catalog, delivery, and tenant settings.
               </h1>
               <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                This workspace is now running on the latest Next.js and Tailwind CSS,
-                organized with the same monorepo architecture direction as your midday project.
+                This app is the dashboard surface and will resolve hostnames such as
+                `tenant-dashboard.ewatrade.com` and `dashboard.tenant.com`.
               </p>
             </div>
           </div>
@@ -46,15 +41,15 @@ export default function HomePage() {
         <section className="mt-16 grid gap-4 border-t border-border/80 pt-8 text-sm text-muted-foreground md:grid-cols-3">
           <div>
             <p className="font-medium text-foreground">App</p>
-            <p>`apps/web` uses Next.js App Router.</p>
+            <p>`apps/dashboard` is the tenant operations control plane.</p>
           </div>
           <div>
             <p className="font-medium text-foreground">Shared styling</p>
-            <p>`packages/ui` owns the Tailwind 4 CSS entry and PostCSS plugin config.</p>
+            <p>`packages/ui` supplies the shared foundation for dashboard shells and controls.</p>
           </div>
           <div>
-            <p className="font-medium text-foreground">Architecture</p>
-            <p>`apps/*` and `packages/*` follow the same monorepo direction used in midday.</p>
+            <p className="font-medium text-foreground">Routing</p>
+            <p>Dashboard hostnames remain distinct from storefront and POS hostnames.</p>
           </div>
         </section>
       </div>

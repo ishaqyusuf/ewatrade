@@ -18,6 +18,15 @@ export const TenantType = {
 export type TenantType = (typeof TenantType)[keyof typeof TenantType]
 
 
+export const TenantHostnameSurface = {
+  STOREFRONT: 'STOREFRONT',
+  POS: 'POS',
+  DASHBOARD: 'DASHBOARD'
+} as const
+
+export type TenantHostnameSurface = (typeof TenantHostnameSurface)[keyof typeof TenantHostnameSurface]
+
+
 export const MembershipRole = {
   OWNER: 'OWNER',
   ADMIN: 'ADMIN',

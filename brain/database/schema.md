@@ -14,7 +14,7 @@ Track the conceptual schema and schema ownership rules for the platform.
 - Prisma schema is organized as a file-based schema under `packages/db/prisma/` with domain-specific `.prisma` files.
 
 ## Core Entity Groups
-- Tenant: merchant tenant, dispatch tenant, tenant-level subdomain and custom-domain ownership
+- Tenant: merchant tenant, dispatch tenant, and tenant-owned hostname records for each application surface
 - Identity: user, session, account, membership
 - Commerce: store, product, product variant, inventory item, cart, order, order item
 - Fulfillment: delivery request, dispatch provider, bid, assignment, tracking event
@@ -24,6 +24,7 @@ Track the conceptual schema and schema ownership rules for the platform.
 
 ## Implemented Schema Modules
 - `packages/db/prisma/models/base.prisma` - tenants, users, sessions, accounts, memberships
+- `packages/db/prisma/models/base.prisma` also owns `TenantHostname` records for tenant, POS, and dashboard hostname mapping
 - `packages/db/prisma/models/commerce.prisma` - stores, products, variants, inventory, carts, orders
 - `packages/db/prisma/models/fulfillment.prisma` - delivery requests, bids, assignments, tracking
 - `packages/db/prisma/models/storefront.prisma` - sites, pages, sections, themes, templates
@@ -33,7 +34,7 @@ Track the conceptual schema and schema ownership rules for the platform.
 
 ## Cross-Cutting Rules
 - Tenant-owned records require `tenantId`.
-- Tenant-level hostname resolution starts on the tenant record through `subdomain` and optional `customDomain`.
+- Tenant hostname resolution is modeled through `TenantHostname` records instead of a single pair of domain fields on `Tenant`.
 - Public marketplace data must be explicitly flagged for exposure.
 - Audit fields should exist on operational entities.
 

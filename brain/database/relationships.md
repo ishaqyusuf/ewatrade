@@ -10,7 +10,7 @@ Capture high-level relationships between major entity groups.
 - Tenant -> many stores
 - Tenant -> many users through memberships
 - Tenant -> many orders, sites, conversations, and automation events
-- Tenant -> zero or one platform subdomain and zero or one custom domain
+- Tenant -> many hostname records across tenant, POS, and dashboard surfaces
 - Store -> many products
 - Product -> many variants
 - Variant -> zero or one inventory item
