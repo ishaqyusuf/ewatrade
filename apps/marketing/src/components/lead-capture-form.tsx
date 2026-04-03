@@ -1,7 +1,12 @@
 "use client"
 
-import { startTransition, useState } from "react"
+import { startTransition, useRef, useState } from "react"
 
+import {
+  createMarketingLeadSubmissionFailedNotification,
+  createMarketingLeadSubmittedNotification
+} from "@ewatrade/notifications"
+import { useNotifications } from "@ewatrade/notifications-react"
 import { Button } from "@ewatrade/ui"
 
 type LeadCaptureFormProps = {
@@ -27,8 +32,10 @@ export function LeadCaptureForm({
   type,
   submitLabel
 }: LeadCaptureFormProps) {
+  const formRef = useRef<HTMLFormElement>(null)
   const [state, setState] = useState<SubmissionState>("idle")
   const [message, setMessage] = useState("")
+  const { notify } = useNotifications()
 
   async function handleSubmit(formData: FormData) {
     setState("submitting")
@@ -62,20 +69,45 @@ export function LeadCaptureForm({
 
       if (!response.ok) {
         setState("error")
-        setMessage(result.message ?? "We could not save your request. Please try again.")
+        const nextMessage =
+          result.message ?? "We could not save your request. Please try again."
+
+        setMessage(nextMessage)
+        notify({
+          ...createMarketingLeadSubmissionFailedNotification({
+            type: type === "early-access" ? "EARLY_ACCESS" : "WAITLIST"
+          }),
+          description: nextMessage
+        })
         return
       }
 
-      setState("success")
-      setMessage(
+      const nextMessage =
         result.message ??
-          (type === "early-access"
-            ? "Your early access request has been received."
-            : "You have been added to the waitlist.")
-      )
+        (type === "early-access"
+          ? "Your early access request has been received."
+          : "You have been added to the waitlist.")
+
+      setState("success")
+      setMessage(nextMessage)
+      formRef.current?.reset()
+      notify({
+        ...createMarketingLeadSubmittedNotification({
+          type: type === "early-access" ? "EARLY_ACCESS" : "WAITLIST"
+        }),
+        description: nextMessage
+      })
     } catch {
       setState("error")
-      setMessage("Something went wrong while sending your request.")
+      const nextMessage = "Something went wrong while sending your request."
+
+      setMessage(nextMessage)
+      notify({
+        ...createMarketingLeadSubmissionFailedNotification({
+          type: type === "early-access" ? "EARLY_ACCESS" : "WAITLIST"
+        }),
+        description: nextMessage
+      })
     }
   }
 
@@ -87,6 +119,7 @@ export function LeadCaptureForm({
       </div>
 
       <form
+        ref={formRef}
         className="mt-6 space-y-4"
         action={(formData) => {
           startTransition(() => {

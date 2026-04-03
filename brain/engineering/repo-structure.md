@@ -13,9 +13,10 @@ Describe the current repository shape and the intended monorepo layout.
 - `apps/pos/` - Next.js point-of-sale application scaffold.
 - `apps/dashboard/` - Next.js tenant dashboard scaffold.
 - `packages/db/` - Prisma v7 package containing the canonical PostgreSQL schema, generated client, and migration tooling.
-- `packages/email/` - Shared email payload creation and delivery adapter scaffold.
+- `packages/email/` - Shared email defaults, templates, message creation helpers, and delivery transports.
 - `packages/jobs/` - Shared background job and retry scaffold with future Trigger.dev seam.
-- `packages/notifications/` - Shared notification composition and delivery-planning scaffold.
+- `packages/notifications/` - Shared typed notification registry, payload-utils, services, contacts, and delivery-planning utilities.
+- `packages/notifications-react/` - Shared React notification provider and viewport scaffold for client apps.
 - `packages/ui/` - Shared Tailwind CSS and UI styling package.
 - `packages/utils/` - Shared utility package.
 - `packages/tsconfig/` - Shared TypeScript config package.
@@ -28,9 +29,10 @@ Describe the current repository shape and the intended monorepo layout.
 - `apps/mobile` - Expo mobile app for merchant and/or courier flows.
 - `apps/api` - Hono/tRPC backend entry points if separated as an app.
 - `packages/db` - Prisma schema, generated client/types, migration ownership, and future Drizzle repository utilities.
-- `packages/email` - Email composition and transport utilities for platform notifications.
+- `packages/email` - Email defaults, templates, and transport utilities for platform notifications.
 - `packages/jobs` - Background job orchestration utilities and handlers.
-- `packages/notifications` - Cross-channel notification builders and delivery planning.
+- `packages/notifications` - Cross-channel notification types, payload builders, trigger services, and delivery planning.
+- `packages/notifications-react` - Client-side notification delivery primitives for app toasts and ephemeral UX feedback.
 - `packages/auth` - Better Auth integration and auth helpers.
 - `packages/ui` - Shared UI primitives where needed.
 - `packages/domain` - Shared domain models, service helpers, and validation.

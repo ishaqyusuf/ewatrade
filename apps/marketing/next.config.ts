@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
     "@ewatrade/email",
     "@ewatrade/jobs",
     "@ewatrade/notifications",
+    "@ewatrade/notifications-react",
     "@ewatrade/ui",
     "@ewatrade/utils"
   ]

@@ -8,7 +8,8 @@ The platform needed an initial notification and email delivery foundation that c
 
 ## Decision
 - Introduce `packages/notifications` to own notification payload composition and delivery planning.
-- Introduce `packages/email` to own email message creation and delivery transports.
+- Introduce `packages/notifications-react` to own client-side notification delivery primitives for React apps.
+- Introduce `packages/email` to own email defaults, templates, message creation, and delivery transports.
 - Introduce `packages/jobs` to own background execution helpers, retry behavior, and notification dispatch handlers.
 - Keep application routes responsible for validating requests, persisting data, and enqueueing jobs only.
 - Start with an email-first implementation and an in-memory fallback runner, while preserving a future Trigger.dev integration seam inside `packages/jobs`.
@@ -16,6 +17,8 @@ The platform needed an initial notification and email delivery foundation that c
 
 ## Consequences
 - Notification side effects stay out of app route handlers and can be reused by future apps and domains.
+- Client apps get a shared notification UX layer instead of reimplementing toast state per app.
+- Notification definitions now live as typed registries and payload-utils instead of ad hoc event objects.
 - Email providers can be swapped behind shared transports without changing feature routes.
 - Trigger.dev can be introduced later without forcing feature modules to change their public APIs.
 - Background work in local development currently depends on the process remaining alive because the fallback runner is in-memory.

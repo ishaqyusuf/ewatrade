@@ -5,7 +5,11 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./contacts": "./src/contacts.ts",
+    "./core-types": "./src/core-types.ts",
     "./delivery": "./src/delivery.ts",
+    "./payload-utils": "./src/payload-utils/index.ts",
+    "./services": "./src/services/triggers.ts",
     "./types": "./src/types.ts"
   },
   "scripts": {
@@ -13,7 +17,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ewatrade/email": "workspace:*"
+    "@ewatrade/email": "workspace:*",
+    "zod": "^4.1.5"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",

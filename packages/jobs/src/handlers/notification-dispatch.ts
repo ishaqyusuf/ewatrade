@@ -1,24 +1,32 @@
-import { dispatchEmailMessages } from "@ewatrade/email"
 import {
-  createMarketingLeadEmailMessages,
-  type LeadNotificationPayload
+  createMarketingEarlyAccessDispatch,
+  createMarketingWaitlistDispatch,
+  EmailService,
+  planNotificationDeliveries,
+  type MarketingEarlyAccessRequestedPayload,
+  type MarketingWaitlistJoinedPayload
 } from "@ewatrade/notifications"
 
-export type NotificationDispatchPayload = {
-  type: "marketing.lead.captured"
-  payload: LeadNotificationPayload
-}
+export type NotificationDispatchPayload =
+  | {
+      type: "marketing_early_access_requested"
+      payload: MarketingEarlyAccessRequestedPayload
+    }
+  | {
+      type: "marketing_waitlist_joined"
+      payload: MarketingWaitlistJoinedPayload
+    }
 
 export async function notificationDispatchHandler(
   input: NotificationDispatchPayload
 ) {
-  if (input.type !== "marketing.lead.captured") {
-    return
-  }
+  const dispatch =
+    input.type === "marketing_early_access_requested"
+      ? createMarketingEarlyAccessDispatch(input.payload)
+      : createMarketingWaitlistDispatch(input.payload)
 
-  const { adminMessages, confirmationMessage } = createMarketingLeadEmailMessages(
-    input.payload
-  )
+  const deliveryPlan = planNotificationDeliveries(dispatch)
+  const emailService = new EmailService()
 
-  await dispatchEmailMessages([...adminMessages, confirmationMessage])
+  await emailService.sendBulk(deliveryPlan.dispatches)
 }

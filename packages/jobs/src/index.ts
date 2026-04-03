@@ -1,5 +1,4 @@
 import type { LeadCaptureType } from "@ewatrade/db"
-import type { LeadNotificationPayload } from "@ewatrade/notifications"
 
 import {
   notificationDispatchHandler,
@@ -25,6 +24,11 @@ export type MarketingLeadNotificationInput = {
 export async function enqueueMarketingLeadNotification(
   input: MarketingLeadNotificationInput
 ) {
+  const type =
+    input.type === "EARLY_ACCESS"
+      ? "marketing_early_access_requested"
+      : "marketing_waitlist_joined"
+
   const payload: NotificationDispatchPayload = {
     payload: {
       companyName: input.companyName ?? null,
@@ -33,10 +37,9 @@ export async function enqueueMarketingLeadNotification(
       id: input.id,
       message: input.message ?? null,
       phone: input.phone ?? null,
-      roleTitle: input.roleTitle ?? null,
-      type: input.type as LeadNotificationPayload["type"]
+      roleTitle: input.roleTitle ?? null
     },
-    type: "marketing.lead.captured"
+    type
   }
 
   await triggerJob(jobIds.notificationDispatch, notificationDispatchHandler, payload)

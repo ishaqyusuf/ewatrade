@@ -1,7 +1,7 @@
 import type {
   NotificationChannel,
   NotificationDispatch,
-  NotificationRecipient
+  NotificationContact
 } from "./types"
 
 export type NotificationChannelDispatch = {
@@ -9,7 +9,7 @@ export type NotificationChannelDispatch = {
   description?: string
   notificationType: string
   payload: unknown
-  recipients: NotificationRecipient[]
+  recipients: NotificationContact[]
   title: string
   variant: NonNullable<NotificationDispatch["variant"]>
 }
@@ -20,7 +20,7 @@ export type NotificationDeliveryPlan = {
 }
 
 function supportsChannel(
-  recipient: NotificationRecipient,
+  recipient: NotificationContact,
   channel: NotificationChannel
 ) {
   if (channel === "email") {
