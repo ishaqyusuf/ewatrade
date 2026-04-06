@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import "@ewatrade/ui/globals.css"
 import { NotificationsProvider } from "@ewatrade/notifications-react"
-import { Geist } from "next/font/google"
+import { Fraunces, Geist } from "next/font/google"
 import { cn } from "@/utils"
 
 const geist = Geist({
@@ -9,16 +9,23 @@ const geist = Geist({
   variable: "--font-sans"
 })
 
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-display",
+  axes: ["SOFT", "WONK"]
+})
+
 export const metadata: Metadata = {
-  title: "ewatrade Marketing",
-  description: "Public marketing website for ewatrade."
+  title: "ewatrade — Commerce, logistics, and merchant operations",
+  description:
+    "ewatrade combines branded storefronts, merchant operations, dispatch coordination, POS workflows, and customer messaging into one multi-tenant platform."
 }
 
 export default function RootLayout({
   children
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={cn("font-sans", geist.variable)}>
+    <html lang="en" className={cn("font-sans", geist.variable, fraunces.variable)}>
       <body>
         <NotificationsProvider>{children}</NotificationsProvider>
       </body>
