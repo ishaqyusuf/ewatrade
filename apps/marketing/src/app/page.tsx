@@ -2,7 +2,7 @@ import {
   ArrowRight01Icon,
   DeliveryTruck01Icon,
   Store04Icon,
-  WhatsappIcon
+  WhatsappIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 
@@ -20,7 +20,7 @@ const valuePillars = [
     body: "Launch branded storefronts, manage catalog across multiple stores, and keep pricing, stock, and orders unified in one operating layer.",
     accent: "text-primary",
     bar: "bg-primary",
-    glow: "shadow-primary/20"
+    glow: "shadow-primary/20",
   },
   {
     index: "02",
@@ -28,7 +28,7 @@ const valuePillars = [
     body: "Turn order flow into dispatch-ready fulfillment with bidding, provider coordination, and merchant-friendly delivery visibility.",
     accent: "text-amber-700",
     bar: "bg-amber-500",
-    glow: "shadow-amber-500/20"
+    glow: "shadow-amber-500/20",
   },
   {
     index: "03",
@@ -36,52 +36,52 @@ const valuePillars = [
     body: "Support cashier, POS, and assisted self-checkout experiences without splitting your operation across disconnected systems.",
     accent: "text-emerald-700",
     bar: "bg-emerald-500",
-    glow: "shadow-emerald-500/20"
-  }
+    glow: "shadow-emerald-500/20",
+  },
 ]
 
 const platformSurfaces = [
   {
     eyebrow: "Storefront",
     title: "Merchant-branded commerce experiences",
-    body: "Custom domains, multi-store catalog publishing, and section-based website building for modern retail teams."
+    body: "Custom domains, multi-store catalog publishing, and section-based website building for modern retail teams.",
   },
   {
     eyebrow: "Dashboard",
     title: "One control plane for daily operations",
-    body: "Orders, inventory, delivery activity, and merchant configuration together so teams act without context-switching."
+    body: "Orders, inventory, delivery activity, and merchant configuration together so teams act without context-switching.",
   },
   {
     eyebrow: "POS",
     title: "In-store without the extra complexity",
-    body: "Cashier workflows, barcode scanning, and receipts connected directly to the same product and order model."
-  }
+    body: "Cashier workflows, barcode scanning, and receipts connected directly to the same product and order model.",
+  },
 ]
 
 const workflowSteps = [
   {
     heading: "Create and publish",
-    body: "Set up a merchant storefront and publish catalog-ready sections to your branded domain in minutes."
+    body: "Set up a merchant storefront and publish catalog-ready sections to your branded domain in minutes.",
   },
   {
     heading: "Capture orders",
-    body: "Receive orders from branded customer-facing surfaces — online, in-store POS, or via assisted checkout."
+    body: "Receive orders from branded customer-facing surfaces — online, in-store POS, or via assisted checkout.",
   },
   {
     heading: "Fulfil and dispatch",
-    body: "Route fulfillment into delivery coordination with provider bidding, zone management, and handoff tracking."
+    body: "Route fulfillment into delivery coordination with provider bidding, zone management, and handoff tracking.",
   },
   {
     heading: "Stay aligned",
-    body: "Keep merchant teams, cashiers, and dispatch providers synchronized in one platform with no manual bridging."
-  }
+    body: "Keep merchant teams, cashiers, and dispatch providers synchronized in one platform with no manual bridging.",
+  },
 ]
 
 const stats = [
   { value: "4", label: "Core surfaces" },
   { value: "Multi-store", label: "Merchant scope" },
   { value: "Commerce + logistics", label: "Operational model" },
-  { value: "WhatsApp-ready", label: "Messaging layer" }
+  { value: "WhatsApp-ready", label: "Messaging layer" },
 ]
 
 // ─── Shared animation style helper ───────────────────────────────────────────
@@ -106,7 +106,10 @@ export default function HomePage() {
               ewatrade
             </span>
             <div className="hidden items-center gap-6 text-sm text-muted-foreground lg:flex">
-              <a href="#platform" className="transition-colors duration-200 hover:text-foreground">
+              <a
+                href="#platform"
+                className="transition-colors duration-200 hover:text-foreground"
+              >
                 Platform
               </a>
               <a
@@ -115,21 +118,60 @@ export default function HomePage() {
               >
                 How it works
               </a>
-              <a
-                href="#early-access"
-                className="transition-colors duration-200 hover:text-foreground"
-              >
-                Get access
-              </a>
+              {process.env.NEXT_PUBLIC_SIGNUP_ENABLED === "true" ? (
+                <a
+                  href="/signup"
+                  className="font-medium text-primary transition-colors duration-200 hover:text-primary/80"
+                >
+                  Sign up
+                </a>
+              ) : (
+                <a
+                  href="#early-access"
+                  className="transition-colors duration-200 hover:text-foreground"
+                >
+                  Get access
+                </a>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" render={<a href="#waitlist" />}>
-              Join waitlist
-            </Button>
-            <Button size="sm" className="rounded-full px-4" render={<a href="#early-access" />}>
-              Request access
-            </Button>
+            {process.env.NEXT_PUBLIC_SIGNUP_ENABLED !== "true" && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  render={<a href="#waitlist" />}
+                >
+                  Join waitlist
+                </Button>
+                <Button
+                  size="sm"
+                  className="rounded-full px-4"
+                  render={<a href="#early-access" />}
+                >
+                  Request access
+                </Button>
+              </>
+            )}
+            {process.env.NEXT_PUBLIC_SIGNUP_ENABLED === "true" && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  render={<a href="#how-it-works" />}
+                >
+                  How it works
+                </Button>
+                <Button
+                  size="sm"
+                  className="rounded-full px-4"
+                  render={<a href="/signup" />}
+                >
+                  Get started
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -160,7 +202,10 @@ export default function HomePage() {
                 </p>
                 <h1
                   className="animate-in fade-in slide-in-from-bottom-8 max-w-2xl text-[clamp(2.6rem,6vw,4.8rem)] leading-[0.9] tracking-tight text-foreground duration-700"
-                  style={{ ...heroStyle(160), fontFamily: "var(--font-display)" }}
+                  style={{
+                    ...heroStyle(160),
+                    fontFamily: "var(--font-display)",
+                  }}
                 >
                   The merchant operating system for African commerce.
                 </h1>
@@ -168,8 +213,9 @@ export default function HomePage() {
                   className="animate-in fade-in slide-in-from-bottom-6 max-w-xl text-lg leading-8 text-muted-foreground duration-700"
                   style={heroStyle(320)}
                 >
-                  ewatrade connects branded storefronts, merchant operations, dispatch coordination,
-                  POS workflows, and customer messaging into one multi-tenant platform.
+                  ewatrade connects branded storefronts, merchant operations,
+                  dispatch coordination, POS workflows, and customer messaging
+                  into one multi-tenant platform.
                 </p>
               </div>
 
@@ -177,22 +223,53 @@ export default function HomePage() {
                 className="animate-in fade-in slide-in-from-bottom-4 flex flex-col gap-3 sm:flex-row duration-700"
                 style={heroStyle(460)}
               >
-                <Button
-                  size="lg"
-                  className="gap-2 rounded-full px-6 transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98]"
-                  render={<a href="#early-access" />}
-                >
-                  Request early access
-                  <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="rounded-full px-6 transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98]"
-                  render={<a href="#waitlist" />}
-                >
-                  Join the waitlist
-                </Button>
+                {process.env.NEXT_PUBLIC_SIGNUP_ENABLED === "true" ? (
+                  <>
+                    <Button
+                      size="lg"
+                      className="gap-2 rounded-full px-6 transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98]"
+                      render={<a href="/signup" />}
+                    >
+                      Create your workspace
+                      <HugeiconsIcon
+                        icon={ArrowRight01Icon}
+                        strokeWidth={2}
+                        className="size-4"
+                      />
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="rounded-full px-6 transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98]"
+                      render={<a href="#platform" />}
+                    >
+                      See the platform
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      size="lg"
+                      className="gap-2 rounded-full px-6 transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98]"
+                      render={<a href="#early-access" />}
+                    >
+                      Request early access
+                      <HugeiconsIcon
+                        icon={ArrowRight01Icon}
+                        strokeWidth={2}
+                        className="size-4"
+                      />
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="rounded-full px-6 transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98]"
+                      render={<a href="#waitlist" />}
+                    >
+                      Join the waitlist
+                    </Button>
+                  </>
+                )}
               </div>
 
               {/* Audience chips */}
@@ -200,8 +277,15 @@ export default function HomePage() {
                 className="animate-in fade-in flex flex-wrap items-center gap-2 pt-1 duration-500"
                 style={heroStyle(600)}
               >
-                <span className="text-xs text-muted-foreground">Built for:</span>
-                {["Merchants", "Dispatch providers", "Cashiers", "Customers"].map((chip) => (
+                <span className="text-xs text-muted-foreground">
+                  Built for:
+                </span>
+                {[
+                  "Merchants",
+                  "Dispatch providers",
+                  "Cashiers",
+                  "Customers",
+                ].map((chip) => (
                   <span
                     key={chip}
                     className="rounded-full border border-border/60 bg-muted/60 px-3 py-1 text-xs text-foreground transition-colors duration-200 hover:border-border hover:bg-muted"
@@ -220,7 +304,11 @@ export default function HomePage() {
               <div className="overflow-hidden rounded-[2rem] border border-border/70 bg-background/95 p-7 shadow-[0_32px_100px_rgba(39,28,14,0.1)] backdrop-blur transition-shadow duration-300 hover:shadow-[0_40px_120px_rgba(39,28,14,0.13)]">
                 <div className="mb-6 flex items-center gap-3">
                   <span className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-colors duration-200 group-hover:bg-primary/15">
-                    <HugeiconsIcon icon={Store04Icon} strokeWidth={2} className="size-5" />
+                    <HugeiconsIcon
+                      icon={Store04Icon}
+                      strokeWidth={2}
+                      className="size-5"
+                    />
                   </span>
                   <div>
                     <p className="text-sm font-semibold text-foreground">
@@ -239,13 +327,15 @@ export default function HomePage() {
                       className="rounded-2xl bg-muted/50 px-4 py-4 transition-colors duration-200 hover:bg-muted/80"
                       style={{
                         animationDelay: `${360 + i * 80}ms`,
-                        animationFillMode: "both"
+                        animationFillMode: "both",
                       }}
                     >
                       <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
                         {stat.label}
                       </p>
-                      <p className="mt-2 text-xl font-bold text-foreground">{stat.value}</p>
+                      <p className="mt-2 text-xl font-bold text-foreground">
+                        {stat.value}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -254,20 +344,34 @@ export default function HomePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="group rounded-[1.75rem] border border-border/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(255,242,220,0.92))] p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
                   <div className="mb-3 flex size-9 items-center justify-center rounded-2xl bg-amber-500/12 text-amber-700 transition-colors duration-200 group-hover:bg-amber-500/20">
-                    <HugeiconsIcon icon={DeliveryTruck01Icon} strokeWidth={2} className="size-4" />
+                    <HugeiconsIcon
+                      icon={DeliveryTruck01Icon}
+                      strokeWidth={2}
+                      className="size-4"
+                    />
                   </div>
-                  <p className="text-sm font-semibold text-foreground">Dispatch-ready by design</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    Dispatch-ready by design
+                  </p>
                   <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                    Coordinated delivery from order to handoff, no bridging required.
+                    Coordinated delivery from order to handoff, no bridging
+                    required.
                   </p>
                 </div>
                 <div className="group rounded-[1.75rem] border border-border/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(220,249,240,0.92))] p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
                   <div className="mb-3 flex size-9 items-center justify-center rounded-2xl bg-emerald-500/12 text-emerald-700 transition-colors duration-200 group-hover:bg-emerald-500/20">
-                    <HugeiconsIcon icon={WhatsappIcon} strokeWidth={2} className="size-4" />
+                    <HugeiconsIcon
+                      icon={WhatsappIcon}
+                      strokeWidth={2}
+                      className="size-4"
+                    />
                   </div>
-                  <p className="text-sm font-semibold text-foreground">WhatsApp-ready</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    WhatsApp-ready
+                  </p>
                   <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                    Commerce updates via messaging as part of the same platform experience.
+                    Commerce updates via messaging as part of the same platform
+                    experience.
                   </p>
                 </div>
               </div>
@@ -287,7 +391,8 @@ export default function HomePage() {
               className="text-3xl leading-tight sm:text-[2.4rem]"
               style={{ fontFamily: "var(--font-display)" }}
             >
-              Most merchant teams do not need more tools. They need one operating rhythm.
+              Most merchant teams do not need more tools. They need one
+              operating rhythm.
             </h2>
           </AnimateIn>
 
@@ -304,11 +409,17 @@ export default function HomePage() {
                   {/* Subtle background tint on hover */}
                   <div className="absolute inset-0 -z-10 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-gradient-to-b from-muted/40 to-transparent" />
 
-                  <p className={`mb-5 text-xs font-bold tracking-[0.2em] ${pillar.accent}`}>
+                  <p
+                    className={`mb-5 text-xs font-bold tracking-[0.2em] ${pillar.accent}`}
+                  >
                     {pillar.index}
                   </p>
-                  <p className="text-xl font-semibold text-foreground">{pillar.title}</p>
-                  <p className="mt-4 text-sm leading-7 text-muted-foreground">{pillar.body}</p>
+                  <p className="text-xl font-semibold text-foreground">
+                    {pillar.title}
+                  </p>
+                  <p className="mt-4 text-sm leading-7 text-muted-foreground">
+                    {pillar.body}
+                  </p>
                 </article>
               </AnimateIn>
             ))}
@@ -331,11 +442,12 @@ export default function HomePage() {
                     className="text-3xl leading-tight sm:text-4xl"
                     style={{ fontFamily: "var(--font-display)" }}
                   >
-                    One platform, separated into the surfaces each team actually needs.
+                    One platform, separated into the surfaces each team actually
+                    needs.
                   </h2>
                   <p className="mt-5 text-sm leading-7 text-muted-foreground">
-                    Merchants, cashiers, and operations teams each get the right surface, all sharing
-                    one underlying data and order model.
+                    Merchants, cashiers, and operations teams each get the right
+                    surface, all sharing one underlying data and order model.
                   </p>
                 </div>
 
@@ -352,7 +464,9 @@ export default function HomePage() {
                       <p className="text-base font-semibold leading-snug text-foreground">
                         {surface.title}
                       </p>
-                      <p className="mt-3 text-sm leading-6 text-muted-foreground">{surface.body}</p>
+                      <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                        {surface.body}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -363,7 +477,10 @@ export default function HomePage() {
       </section>
 
       {/* ── How it works ──────────────────────────────────────────────────────── */}
-      <section id="how-it-works" className="px-6 py-20 sm:px-10 lg:px-16 lg:py-24">
+      <section
+        id="how-it-works"
+        className="px-6 py-20 sm:px-10 lg:px-16 lg:py-24"
+      >
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-16 lg:grid-cols-2 lg:items-start">
             {/* Sticky heading */}
@@ -378,8 +495,9 @@ export default function HomePage() {
                 From discovery to delivery on one operational thread.
               </h2>
               <p className="text-base leading-7 text-muted-foreground">
-                Customer-facing commerce, internal operations, and delivery coordination built to
-                reinforce one another — not stitched together after the fact.
+                Customer-facing commerce, internal operations, and delivery
+                coordination built to reinforce one another — not stitched
+                together after the fact.
               </p>
             </AnimateIn>
 
@@ -396,7 +514,9 @@ export default function HomePage() {
                       <p className="text-sm font-semibold text-foreground transition-colors duration-200 group-hover:text-primary">
                         {step.heading}
                       </p>
-                      <p className="text-sm leading-7 text-muted-foreground">{step.body}</p>
+                      <p className="text-sm leading-7 text-muted-foreground">
+                        {step.body}
+                      </p>
                     </div>
                   </div>
                 </AnimateIn>
@@ -420,8 +540,9 @@ export default function HomePage() {
               Tell us how you want to launch, sell, or operate with ewatrade.
             </h2>
             <p className="mt-5 text-base leading-7 text-muted-foreground">
-              Use early access if you are ready to talk through your merchant needs now. Use the
-              waitlist to stay close as ewatrade opens up further.
+              Use early access if you are ready to talk through your merchant
+              needs now. Use the waitlist to stay close as ewatrade opens up
+              further.
             </p>
           </AnimateIn>
 
@@ -450,6 +571,60 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── Signup CTA (shown only when signup is enabled) ───────────────────── */}
+      {process.env.NEXT_PUBLIC_SIGNUP_ENABLED === "true" && (
+        <section className="relative overflow-hidden px-6 py-20 sm:px-10 lg:px-16 lg:py-28">
+          {/* Decorative background */}
+          <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_70%_60%_at_50%_50%,color-mix(in_oklab,var(--primary)_10%,transparent),transparent)]" />
+          <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(180deg,transparent_0%,color-mix(in_oklab,var(--primary)_4%,transparent)_100%)]" />
+
+          <div className="mx-auto max-w-4xl text-center">
+            <AnimateIn>
+              <p className="mb-4 text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                Get started today
+              </p>
+              <h2
+                className="mb-6 text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                Launch your merchant workspace in minutes.
+              </h2>
+              <p className="mx-auto mb-10 max-w-2xl text-lg leading-8 text-muted-foreground">
+                Branded storefront, POS, and full operations dashboard — all on
+                one platform, configured for your business from day one.
+              </p>
+
+              <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+                <Button
+                  size="lg"
+                  className="gap-2 rounded-full px-8 py-4 text-base transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98]"
+                  render={<a href="/signup" />}
+                >
+                  Create your workspace
+                  <HugeiconsIcon
+                    icon={ArrowRight01Icon}
+                    strokeWidth={2}
+                    className="size-4"
+                  />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="rounded-full px-8 py-4 text-base"
+                  render={<a href="#platform" />}
+                >
+                  Explore the platform
+                </Button>
+              </div>
+
+              <p className="mt-6 text-sm text-muted-foreground">
+                No credit card required · Free to start · Cancel any time
+              </p>
+            </AnimateIn>
+          </div>
+        </section>
+      )}
+
       {/* ── Footer ────────────────────────────────────────────────────────────── */}
       <footer className="border-t border-border/60 px-6 py-12 sm:px-10 lg:px-16">
         <div className="mx-auto max-w-7xl">
@@ -462,12 +637,16 @@ export default function HomePage() {
                 ewatrade
               </span>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Multi-tenant commerce, logistics, and merchant operations for African markets.
+                Multi-tenant commerce, logistics, and merchant operations for
+                African markets.
               </p>
             </div>
 
             <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:items-end">
-              <a href="#platform" className="transition-colors duration-200 hover:text-foreground">
+              <a
+                href="#platform"
+                className="transition-colors duration-200 hover:text-foreground"
+              >
                 Platform
               </a>
               <a
@@ -476,15 +655,29 @@ export default function HomePage() {
               >
                 How it works
               </a>
-              <a
-                href="#early-access"
-                className="transition-colors duration-200 hover:text-foreground"
-              >
-                Request early access
-              </a>
-              <a href="#waitlist" className="transition-colors duration-200 hover:text-foreground">
-                Join the waitlist
-              </a>
+              {process.env.NEXT_PUBLIC_SIGNUP_ENABLED === "true" ? (
+                <a
+                  href="/signup"
+                  className="font-medium text-primary transition-colors duration-200 hover:text-primary/80"
+                >
+                  Create workspace
+                </a>
+              ) : (
+                <>
+                  <a
+                    href="#early-access"
+                    className="transition-colors duration-200 hover:text-foreground"
+                  >
+                    Request early access
+                  </a>
+                  <a
+                    href="#waitlist"
+                    className="transition-colors duration-200 hover:text-foreground"
+                  >
+                    Join the waitlist
+                  </a>
+                </>
+              )}
             </div>
           </div>
 

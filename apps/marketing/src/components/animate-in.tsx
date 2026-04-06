@@ -22,7 +22,7 @@ export function AnimateIn({
   children,
   className,
   delay = 0,
-  from = "bottom"
+  from = "bottom",
 }: AnimateInProps) {
   const ref = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
@@ -33,12 +33,12 @@ export function AnimateIn({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
+        if (entry?.isIntersecting) {
           setVisible(true)
           observer.disconnect()
         }
       },
-      { threshold: 0.1, rootMargin: "0px 0px -48px 0px" }
+      { threshold: 0.1, rootMargin: "0px 0px -48px 0px" },
     )
 
     observer.observe(el)
@@ -49,7 +49,7 @@ export function AnimateIn({
     bottom: "translate-y-8",
     top: "-translate-y-8",
     left: "-translate-x-8",
-    right: "translate-x-8"
+    right: "translate-x-8",
   }[from]
 
   return (
@@ -57,12 +57,14 @@ export function AnimateIn({
       ref={ref}
       className={cn(
         "transition-[opacity,transform] ease-out",
-        visible ? "opacity-100 translate-y-0 translate-x-0" : `opacity-0 ${hiddenTranslate}`,
-        className
+        visible
+          ? "opacity-100 translate-y-0 translate-x-0"
+          : `opacity-0 ${hiddenTranslate}`,
+        className,
       )}
       style={{
         transitionDuration: "640ms",
-        transitionDelay: visible ? `${delay}ms` : "0ms"
+        transitionDelay: visible ? `${delay}ms` : "0ms",
       }}
     >
       {children}

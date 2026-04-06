@@ -4,6 +4,12 @@ enum TenantType {
   PLATFORM
 }
 
+enum TenantMode {
+  STORE
+  DISPATCH
+  MERCHANT
+}
+
 enum TenantHostnameSurface {
   STOREFRONT
   POS
