@@ -9,8 +9,8 @@ const nextConfig: NextConfig = {
     "@ewatrade/notifications",
     "@ewatrade/notifications-react",
     "@ewatrade/ui",
-    "@ewatrade/utils"
-  ]
+    "@ewatrade/utils",
+  ],
 }
 
 export default nextConfig

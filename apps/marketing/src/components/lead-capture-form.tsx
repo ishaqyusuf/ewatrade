@@ -4,7 +4,7 @@ import { startTransition, useRef, useState } from "react"
 
 import {
   createMarketingLeadSubmissionFailedNotification,
-  createMarketingLeadSubmittedNotification
+  createMarketingLeadSubmittedNotification,
 } from "@ewatrade/notifications"
 import { useNotifications } from "@ewatrade/notifications-react"
 import { Button } from "@ewatrade/ui"
@@ -20,7 +20,7 @@ type SubmissionState = "idle" | "submitting" | "success" | "error"
 
 const endpointByType = {
   "early-access": "/api/early-access",
-  waitlist: "/api/waitlist"
+  waitlist: "/api/waitlist",
 } as const
 
 const baseInputClasses =
@@ -30,7 +30,7 @@ export function LeadCaptureForm({
   title,
   description,
   type,
-  submitLabel
+  submitLabel,
 }: LeadCaptureFormProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const [state, setState] = useState<SubmissionState>("idle")
@@ -49,20 +49,20 @@ export function LeadCaptureForm({
             companyName: String(formData.get("companyName") ?? ""),
             roleTitle: String(formData.get("roleTitle") ?? ""),
             phone: String(formData.get("phone") ?? ""),
-            message: String(formData.get("message") ?? "")
+            message: String(formData.get("message") ?? ""),
           }
         : {
             fullName: String(formData.get("fullName") ?? ""),
-            email: String(formData.get("email") ?? "")
+            email: String(formData.get("email") ?? ""),
           }
 
     try {
       const response = await fetch(endpointByType[type], {
         method: "POST",
         headers: {
-          "content-type": "application/json"
+          "content-type": "application/json",
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       })
 
       const result = (await response.json()) as { message?: string }
@@ -75,9 +75,9 @@ export function LeadCaptureForm({
         setMessage(nextMessage)
         notify({
           ...createMarketingLeadSubmissionFailedNotification({
-            type: type === "early-access" ? "EARLY_ACCESS" : "WAITLIST"
+            type: type === "early-access" ? "EARLY_ACCESS" : "WAITLIST",
           }),
-          description: nextMessage
+          description: nextMessage,
         })
         return
       }
@@ -93,9 +93,9 @@ export function LeadCaptureForm({
       formRef.current?.reset()
       notify({
         ...createMarketingLeadSubmittedNotification({
-          type: type === "early-access" ? "EARLY_ACCESS" : "WAITLIST"
+          type: type === "early-access" ? "EARLY_ACCESS" : "WAITLIST",
         }),
-        description: nextMessage
+        description: nextMessage,
       })
     } catch {
       setState("error")
@@ -104,9 +104,9 @@ export function LeadCaptureForm({
       setMessage(nextMessage)
       notify({
         ...createMarketingLeadSubmissionFailedNotification({
-          type: type === "early-access" ? "EARLY_ACCESS" : "WAITLIST"
+          type: type === "early-access" ? "EARLY_ACCESS" : "WAITLIST",
         }),
-        description: nextMessage
+        description: nextMessage,
       })
     }
   }

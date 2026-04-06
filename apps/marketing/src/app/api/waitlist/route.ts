@@ -12,12 +12,12 @@ export async function POST(request: Request) {
   if (!result.success) {
     return NextResponse.json(
       { message: "Please provide your name and a valid email address." },
-      { status: 400 }
+      { status: 400 },
     )
   }
 
   const lead = await prisma.leadCapture.create({
-    data: toLeadCapturePayload(LeadCaptureType.WAITLIST, result.data)
+    data: toLeadCapturePayload(LeadCaptureType.WAITLIST, result.data),
   })
 
   await enqueueMarketingLeadNotification({
@@ -28,10 +28,10 @@ export async function POST(request: Request) {
     message: lead.message,
     phone: lead.phone,
     roleTitle: lead.roleTitle,
-    type: lead.type
+    type: lead.type,
   })
 
   return NextResponse.json({
-    message: "You have been added to the waitlist."
+    message: "You have been added to the waitlist.",
   })
 }
