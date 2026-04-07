@@ -53,6 +53,7 @@ export const AnyNull = runtime.AnyNull
 export const ModelName = {
   Tenant: 'Tenant',
   TenantHostname: 'TenantHostname',
+  OnboardingSession: 'OnboardingSession',
   LeadCapture: 'LeadCapture',
   User: 'User',
   Account: 'Account',
@@ -105,6 +106,7 @@ export const TenantScalarFieldEnum = {
   slug: 'slug',
   name: 'name',
   type: 'type',
+  enabledModes: 'enabledModes',
   isActive: 'isActive',
   timezone: 'timezone',
   countryCode: 'countryCode',
@@ -130,6 +132,22 @@ export const TenantHostnameScalarFieldEnum = {
 } as const
 
 export type TenantHostnameScalarFieldEnum = (typeof TenantHostnameScalarFieldEnum)[keyof typeof TenantHostnameScalarFieldEnum]
+
+
+export const OnboardingSessionScalarFieldEnum = {
+  id: 'id',
+  token: 'token',
+  tenantId: 'tenantId',
+  userId: 'userId',
+  step: 'step',
+  formData: 'formData',
+  completed: 'completed',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type OnboardingSessionScalarFieldEnum = (typeof OnboardingSessionScalarFieldEnum)[keyof typeof OnboardingSessionScalarFieldEnum]
 
 
 export const LeadCaptureScalarFieldEnum = {
