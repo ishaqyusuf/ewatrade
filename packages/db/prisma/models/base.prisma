@@ -3,6 +3,7 @@ model Tenant {
   slug           String            @unique
   name           String
   type           TenantType
+  enabledModes   TenantMode[]
   isActive       Boolean           @default(true)
   timezone       String            @default("Africa/Lagos")
   countryCode    String?
@@ -34,6 +35,22 @@ model TenantHostname {
 
   @@unique([tenantId, surface, hostname])
   @@index([tenantId, surface])
+}
+
+model OnboardingSession {
+  id        String   @id @default(cuid())
+  token     String   @unique @default(cuid())
+  tenantId  String?
+  userId    String?
+  step      Int      @default(1)
+  formData  Json?
+  completed Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([token])
+  @@index([tenantId])
 }
 
 model LeadCapture {

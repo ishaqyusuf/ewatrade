@@ -12,12 +12,12 @@ export async function POST(request: Request) {
   if (!result.success) {
     return NextResponse.json(
       { message: "Please complete the form with valid details." },
-      { status: 400 }
+      { status: 400 },
     )
   }
 
   const lead = await prisma.leadCapture.create({
-    data: toLeadCapturePayload(LeadCaptureType.EARLY_ACCESS, result.data)
+    data: toLeadCapturePayload(LeadCaptureType.EARLY_ACCESS, result.data),
   })
 
   await enqueueMarketingLeadNotification({
@@ -28,10 +28,10 @@ export async function POST(request: Request) {
     message: lead.message,
     phone: lead.phone,
     roleTitle: lead.roleTitle,
-    type: lead.type
+    type: lead.type,
   })
 
   return NextResponse.json({
-    message: "Your early access request has been received."
+    message: "Your early access request has been received.",
   })
 }

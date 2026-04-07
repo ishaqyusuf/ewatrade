@@ -386,6 +386,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 export const ModelName = {
   Tenant: 'Tenant',
   TenantHostname: 'TenantHostname',
+  OnboardingSession: 'OnboardingSession',
   LeadCapture: 'LeadCapture',
   User: 'User',
   Account: 'Account',
@@ -430,7 +431,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "tenant" | "tenantHostname" | "leadCapture" | "user" | "account" | "session" | "membership" | "store" | "product" | "productVariant" | "inventoryItem" | "cart" | "cartItem" | "order" | "orderItem" | "dispatchProviderProfile" | "deliveryRequest" | "deliveryBid" | "deliveryAssignment" | "trackingEvent" | "conversation" | "message" | "automationEvent" | "cashierSession" | "receipt" | "barcodeEvent" | "site" | "page" | "pageSection" | "theme" | "template"
+    modelProps: "tenant" | "tenantHostname" | "onboardingSession" | "leadCapture" | "user" | "account" | "session" | "membership" | "store" | "product" | "productVariant" | "inventoryItem" | "cart" | "cartItem" | "order" | "orderItem" | "dispatchProviderProfile" | "deliveryRequest" | "deliveryBid" | "deliveryAssignment" | "trackingEvent" | "conversation" | "message" | "automationEvent" | "cashierSession" | "receipt" | "barcodeEvent" | "site" | "page" | "pageSection" | "theme" | "template"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -579,6 +580,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.TenantHostnameCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.TenantHostnameCountAggregateOutputType> | number
+        }
+      }
+    }
+    OnboardingSession: {
+      payload: Prisma.$OnboardingSessionPayload<ExtArgs>
+      fields: Prisma.OnboardingSessionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.OnboardingSessionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OnboardingSessionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.OnboardingSessionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OnboardingSessionPayload>
+        }
+        findFirst: {
+          args: Prisma.OnboardingSessionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OnboardingSessionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.OnboardingSessionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OnboardingSessionPayload>
+        }
+        findMany: {
+          args: Prisma.OnboardingSessionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OnboardingSessionPayload>[]
+        }
+        create: {
+          args: Prisma.OnboardingSessionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OnboardingSessionPayload>
+        }
+        createMany: {
+          args: Prisma.OnboardingSessionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.OnboardingSessionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OnboardingSessionPayload>[]
+        }
+        delete: {
+          args: Prisma.OnboardingSessionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OnboardingSessionPayload>
+        }
+        update: {
+          args: Prisma.OnboardingSessionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OnboardingSessionPayload>
+        }
+        deleteMany: {
+          args: Prisma.OnboardingSessionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.OnboardingSessionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.OnboardingSessionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OnboardingSessionPayload>[]
+        }
+        upsert: {
+          args: Prisma.OnboardingSessionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OnboardingSessionPayload>
+        }
+        aggregate: {
+          args: Prisma.OnboardingSessionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateOnboardingSession>
+        }
+        groupBy: {
+          args: Prisma.OnboardingSessionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.OnboardingSessionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.OnboardingSessionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.OnboardingSessionCountAggregateOutputType> | number
         }
       }
     }
@@ -2772,6 +2847,7 @@ export const TenantScalarFieldEnum = {
   slug: 'slug',
   name: 'name',
   type: 'type',
+  enabledModes: 'enabledModes',
   isActive: 'isActive',
   timezone: 'timezone',
   countryCode: 'countryCode',
@@ -2797,6 +2873,22 @@ export const TenantHostnameScalarFieldEnum = {
 } as const
 
 export type TenantHostnameScalarFieldEnum = (typeof TenantHostnameScalarFieldEnum)[keyof typeof TenantHostnameScalarFieldEnum]
+
+
+export const OnboardingSessionScalarFieldEnum = {
+  id: 'id',
+  token: 'token',
+  tenantId: 'tenantId',
+  userId: 'userId',
+  step: 'step',
+  formData: 'formData',
+  completed: 'completed',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type OnboardingSessionScalarFieldEnum = (typeof OnboardingSessionScalarFieldEnum)[keyof typeof OnboardingSessionScalarFieldEnum]
 
 
 export const LeadCaptureScalarFieldEnum = {
@@ -3380,6 +3472,20 @@ export type ListEnumTenantTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$P
 
 
 /**
+ * Reference to a field of type 'TenantMode[]'
+ */
+export type ListEnumTenantModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TenantMode[]'>
+    
+
+
+/**
+ * Reference to a field of type 'TenantMode'
+ */
+export type EnumTenantModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TenantMode'>
+    
+
+
+/**
  * Reference to a field of type 'Boolean'
  */
 export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
@@ -3425,6 +3531,20 @@ export type EnumTenantHostnameSurfaceFieldRefInput<$PrismaModel> = FieldRefInput
  * Reference to a field of type 'TenantHostnameSurface[]'
  */
 export type ListEnumTenantHostnameSurfaceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TenantHostnameSurface[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Int'
+ */
+export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+    
+
+
+/**
+ * Reference to a field of type 'Int[]'
+ */
+export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
     
 
 
@@ -3495,20 +3615,6 @@ export type EnumProductStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$Pr
  * Reference to a field of type 'ProductStatus[]'
  */
 export type ListEnumProductStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ProductStatus[]'>
-    
-
-
-/**
- * Reference to a field of type 'Int'
- */
-export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
-    
-
-
-/**
- * Reference to a field of type 'Int[]'
- */
-export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
     
 
 
@@ -3790,6 +3896,7 @@ export type PrismaClientOptions = ({
 export type GlobalOmitConfig = {
   tenant?: Prisma.TenantOmit
   tenantHostname?: Prisma.TenantHostnameOmit
+  onboardingSession?: Prisma.OnboardingSessionOmit
   leadCapture?: Prisma.LeadCaptureOmit
   user?: Prisma.UserOmit
   account?: Prisma.AccountOmit

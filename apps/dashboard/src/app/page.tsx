@@ -17,11 +17,13 @@ export default function HomePage() {
                 className="max-w-4xl text-5xl leading-none sm:text-6xl lg:text-7xl"
                 style={{ fontFamily: "var(--font-display)" }}
               >
-                Merchant operations dashboards for orders, catalog, delivery, and tenant settings.
+                Merchant operations dashboards for orders, catalog, delivery,
+                and tenant settings.
               </h1>
               <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                This app is the dashboard surface and will resolve hostnames such as
-                `tenant-dashboard.ewatrade.com` and `dashboard.tenant.com`.
+                This app is the dashboard surface and will resolve hostnames
+                such as `tenant-dashboard.ewatrade.com` and
+                `dashboard.tenant.com`.
               </p>
             </div>
           </div>
@@ -45,11 +47,17 @@ export default function HomePage() {
           </div>
           <div>
             <p className="font-medium text-foreground">Shared styling</p>
-            <p>`packages/ui` supplies the shared foundation for dashboard shells and controls.</p>
+            <p>
+              `packages/ui` supplies the shared foundation for dashboard shells
+              and controls.
+            </p>
           </div>
           <div>
             <p className="font-medium text-foreground">Routing</p>
-            <p>Dashboard hostnames remain distinct from storefront and POS hostnames.</p>
+            <p>
+              Dashboard hostnames remain distinct from storefront and POS
+              hostnames.
+            </p>
           </div>
         </section>
       </div>
