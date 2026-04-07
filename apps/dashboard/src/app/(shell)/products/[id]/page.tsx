@@ -28,6 +28,18 @@ export default async function EditProductPage({
       salePriceMinor: true,
       isMarketplaceListed: true,
       isPublished: true,
+      options: {
+        orderBy: { position: "asc" },
+        select: {
+          id: true,
+          name: true,
+          position: true,
+          values: {
+            orderBy: { position: "asc" },
+            select: { id: true, value: true, position: true },
+          },
+        },
+      },
       variants: {
         orderBy: { createdAt: "asc" },
         select: {
@@ -39,6 +51,17 @@ export default async function EditProductPage({
           compareAtMinor: true,
           isDefault: true,
           isActive: true,
+          selectedOptions: {
+            select: {
+              optionValue: {
+                select: {
+                  id: true,
+                  value: true,
+                  option: { select: { name: true } },
+                },
+              },
+            },
+          },
         },
       },
     },

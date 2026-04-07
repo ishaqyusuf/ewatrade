@@ -97,6 +97,21 @@ export type Product = Prisma.ProductModel
  */
 export type ProductVariant = Prisma.ProductVariantModel
 /**
+ * Model ProductOption
+ * A named option axis for a product (e.g. "Size", "Color")
+ */
+export type ProductOption = Prisma.ProductOptionModel
+/**
+ * Model ProductOptionValue
+ * A single value within an option axis (e.g. "S", "M", "L")
+ */
+export type ProductOptionValue = Prisma.ProductOptionValueModel
+/**
+ * Model ProductVariantOptionValue
+ * Join: which option values apply to a given variant
+ */
+export type ProductVariantOptionValue = Prisma.ProductVariantOptionValueModel
+/**
  * Model InventoryItem
  * 
  */

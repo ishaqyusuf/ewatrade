@@ -70,6 +70,18 @@ export async function GET(
       isMarketplaceListed: true,
       createdAt: true,
       updatedAt: true,
+      options: {
+        orderBy: { position: "asc" },
+        select: {
+          id: true,
+          name: true,
+          position: true,
+          values: {
+            orderBy: { position: "asc" },
+            select: { id: true, value: true, position: true },
+          },
+        },
+      },
       variants: {
         orderBy: { createdAt: "asc" },
         select: {
@@ -83,6 +95,17 @@ export async function GET(
           isActive: true,
           inventoryItem: {
             select: { id: true, onHandQuantity: true, reservedQuantity: true },
+          },
+          selectedOptions: {
+            select: {
+              optionValue: {
+                select: {
+                  id: true,
+                  value: true,
+                  option: { select: { name: true } },
+                },
+              },
+            },
           },
         },
       },

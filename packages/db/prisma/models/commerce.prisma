@@ -48,6 +48,7 @@ model Product {
   store               Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
   orderItems          OrderItem[]
   variants            ProductVariant[]
+  options             ProductOption[]
 
   @@unique([storeId, slug])
   @@unique([storeId, sku])
@@ -56,25 +57,64 @@ model Product {
 }
 
 model ProductVariant {
-  id             String         @id @default(cuid())
+  id             String                      @id @default(cuid())
   productId      String
   sku            String
   name           String
   optionSummary  String?
   priceMinor     Int
   compareAtMinor Int?
-  isDefault      Boolean        @default(false)
-  isActive       Boolean        @default(true)
+  isDefault      Boolean                     @default(false)
+  isActive       Boolean                     @default(true)
   metadata       Json?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  product        Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime                    @updatedAt
+  product        Product                     @relation(fields: [productId], references: [id], onDelete: Cascade)
   inventoryItem  InventoryItem?
   cartItems      CartItem[]
   orderItems     OrderItem[]
+  selectedOptions ProductVariantOptionValue[]
 
   @@unique([productId, sku])
   @@index([productId, isActive])
+}
+
+/// A named option axis for a product (e.g. "Size", "Color")
+model ProductOption {
+  id        String               @id @default(cuid())
+  productId String
+  name      String
+  position  Int                  @default(0)
+  createdAt DateTime             @default(now())
+  product   Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  values    ProductOptionValue[]
+
+  @@unique([productId, name])
+  @@index([productId])
+}
+
+/// A single value within an option axis (e.g. "S", "M", "L")
+model ProductOptionValue {
+  id              String                      @id @default(cuid())
+  optionId        String
+  value           String
+  position        Int                         @default(0)
+  createdAt       DateTime                    @default(now())
+  option          ProductOption               @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  variantMappings ProductVariantOptionValue[]
+
+  @@unique([optionId, value])
+  @@index([optionId])
+}
+
+/// Join: which option values apply to a given variant
+model ProductVariantOptionValue {
+  variantId     String
+  optionValueId String
+  variant       ProductVariant     @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  optionValue   ProductOptionValue @relation(fields: [optionValueId], references: [id], onDelete: Cascade)
+
+  @@id([variantId, optionValueId])
 }
 
 model InventoryItem {
