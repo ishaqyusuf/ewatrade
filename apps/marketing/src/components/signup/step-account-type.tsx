@@ -2,6 +2,7 @@
 
 import { DevFormFillButton } from "@/components/dev/dev-form-fill-button"
 import { useDevFormFill } from "@/hooks/use-dev-form-fill"
+import { useZodForm } from "@/hooks/use-zod-form"
 import { accountTypeFill } from "@/lib/dev-fill-definitions"
 import {
   type AccountTypeValues,
@@ -9,7 +10,6 @@ import {
   accountTypeSchema,
 } from "@/lib/signup-schemas"
 import { Button } from "@ewatrade/ui"
-import { zodResolver } from "@hookform/resolvers/zod"
 import {
   CheckmarkCircle01Icon,
   DeliveryTruck01Icon,
@@ -17,7 +17,6 @@ import {
   UserMultiple02Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useForm } from "react-hook-form"
 
 const MODES: {
   value: TenantMode
@@ -77,8 +76,7 @@ export function StepAccountType({
   defaultValues,
   onNext,
 }: StepAccountTypeProps) {
-  const form = useForm<AccountTypeValues>({
-    resolver: zodResolver(accountTypeSchema),
+  const form = useZodForm<AccountTypeValues>(accountTypeSchema, {
     defaultValues: defaultValues ?? { modes: [] },
   })
 

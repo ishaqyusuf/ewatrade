@@ -2,10 +2,10 @@
 
 import { DevFormFillButton } from "@/components/dev/dev-form-fill-button"
 import { useDevFormFill } from "@/hooks/use-dev-form-fill"
+import { useZodForm } from "@/hooks/use-zod-form"
 import { workspaceFill } from "@/lib/dev-fill-definitions"
 import { type WorkspaceValues, workspaceSchema } from "@/lib/signup-schemas"
 import { Button } from "@ewatrade/ui"
-import { zodResolver } from "@hookform/resolvers/zod"
 import {
   Alert01Icon,
   CashierIcon,
@@ -16,7 +16,6 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useCallback, useEffect, useState } from "react"
-import { useForm } from "react-hook-form"
 
 const PLATFORM_DOMAIN =
   process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com"
@@ -106,8 +105,7 @@ export function StepWorkspace({
   onNext,
   onBack,
 }: StepWorkspaceProps) {
-  const form = useForm<WorkspaceValues>({
-    resolver: zodResolver(workspaceSchema),
+  const form = useZodForm<WorkspaceValues>(workspaceSchema, {
     defaultValues: defaultValues ?? { subdomain: "", customDomain: "" },
     mode: "onChange",
   })

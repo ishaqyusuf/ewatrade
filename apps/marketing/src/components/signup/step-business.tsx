@@ -2,6 +2,7 @@
 
 import { DevFormFillButton } from "@/components/dev/dev-form-fill-button"
 import { useDevFormFill } from "@/hooks/use-dev-form-fill"
+import { useZodForm } from "@/hooks/use-zod-form"
 import { businessFill } from "@/lib/dev-fill-definitions"
 import {
   BUSINESS_SIZES,
@@ -11,8 +12,6 @@ import {
   businessSchema,
 } from "@/lib/signup-schemas"
 import { Button } from "@ewatrade/ui"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
 
 const baseInputClasses =
   "w-full rounded-2xl border border-border/70 bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10 appearance-none"
@@ -28,8 +27,7 @@ export function StepBusiness({
   onNext,
   onBack,
 }: StepBusinessProps) {
-  const form = useForm<BusinessValues>({
-    resolver: zodResolver(businessSchema),
+  const form = useZodForm<BusinessValues>(businessSchema, {
     defaultValues: defaultValues ?? {
       businessName: "",
       industry: "",

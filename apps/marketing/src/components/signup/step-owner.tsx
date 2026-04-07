@@ -2,14 +2,13 @@
 
 import { DevFormFillButton } from "@/components/dev/dev-form-fill-button"
 import { useDevFormFill } from "@/hooks/use-dev-form-fill"
+import { useZodForm } from "@/hooks/use-zod-form"
 import { ownerFill } from "@/lib/dev-fill-definitions"
 import { type OwnerValues, ownerSchema } from "@/lib/signup-schemas"
 import { Button } from "@ewatrade/ui"
-import { zodResolver } from "@hookform/resolvers/zod"
 import { ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useState } from "react"
-import { useForm } from "react-hook-form"
 
 const baseInputClasses =
   "w-full rounded-2xl border border-border/70 bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
@@ -82,8 +81,7 @@ export function StepOwner({
   isSubmitting,
   submitError,
 }: StepOwnerProps) {
-  const form = useForm<OwnerValues>({
-    resolver: zodResolver(ownerSchema),
+  const form = useZodForm<OwnerValues>(ownerSchema, {
     defaultValues: defaultValues ?? {
       firstName: "",
       lastName: "",
