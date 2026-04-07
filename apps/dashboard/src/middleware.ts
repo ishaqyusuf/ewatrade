@@ -1,9 +1,11 @@
+import { resolveTenantDomain } from "@ewatrade/utils"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { resolveTenantDomain } from "@ewatrade/utils"
 
-const PLATFORM_DOMAIN = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com"
-const MARKETING_URL = process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com"
+const PLATFORM_DOMAIN =
+  process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com"
+const MARKETING_URL =
+  process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com"
 const SIGNUP_URL = `${MARKETING_URL}/signup`
 
 /**
@@ -20,7 +22,9 @@ const SIGNUP_URL = `${MARKETING_URL}/signup`
  */
 export function middleware(request: NextRequest) {
   const hostname = request.headers.get("host") ?? ""
-  const result = resolveTenantDomain(hostname, { platformDomain: PLATFORM_DOMAIN })
+  const result = resolveTenantDomain(hostname, {
+    platformDomain: PLATFORM_DOMAIN,
+  })
 
   // Non-dashboard hostnames → redirect to marketing
   if (result.kind !== "tenant" || result.surface !== "dashboard") {
@@ -52,5 +56,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api).*)"]
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api).*)"],
 }
