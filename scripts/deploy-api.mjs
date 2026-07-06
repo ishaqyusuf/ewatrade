@@ -48,6 +48,7 @@ Optional deployment config in ${envFile}:
   VERCEL_API_PROJECT=ewatrade-api
   VERCEL_API_TARGET=production
   VERCEL_API_SKIP_TEST=false
+  VERCEL_API_SKIP_MIGRATIONS=false
   VERCEL_API_FORCE=false
   VERCEL_API_ENV_KEYS=DATABASE_URL,BETTER_AUTH_SECRET,...
 `)
@@ -90,6 +91,7 @@ function bool(value, fallback = false) {
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: rootDir,
+    env: options.env ?? process.env,
     encoding: "utf8",
     stdio: options.capture ? ["ignore", "pipe", "pipe"] : "inherit",
   })
@@ -146,6 +148,7 @@ const scope = env.VERCEL_SCOPE?.trim() || ""
 const target = env.VERCEL_API_TARGET?.trim() || "production"
 const isProduction = target === "production"
 const skipTest = bool(env.VERCEL_API_SKIP_TEST, false)
+const skipMigrations = bool(env.VERCEL_API_SKIP_MIGRATIONS, false)
 const force = bool(env.VERCEL_API_FORCE, false)
 const envKeys = (env.VERCEL_API_ENV_KEYS?.split(",") ?? defaultEnvKeys)
   .map((key) => key.trim())
@@ -176,10 +179,16 @@ console.log(`Project: ${project}`)
 if (scope) console.log(`Scope:   ${scope}`)
 console.log(`Target:  ${target}`)
 console.log(`Env:     ${envFile}`)
+console.log(`Migrate: ${skipMigrations ? "skip" : "deploy"}`)
 
 if (!existsSync(".vercel/project.json")) {
   console.log("No local Vercel link found. Linking or creating project...")
   run("bunx", ["vercel", "link", "--yes", "--project", project, ...vercelScopeArgs])
+}
+
+if (!skipMigrations) {
+  console.log("Running database migrations...")
+  run("bun", ["--cwd", "packages/db", "run", "migrate:deploy"], { env })
 }
 
 const deployArgs = [
