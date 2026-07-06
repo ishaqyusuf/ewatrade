@@ -4,9 +4,9 @@ import { Button } from "@ewatrade/ui"
 import { ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useState } from "react"
+import { Suspense, useState } from "react"
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const nextUrl = searchParams.get("next") ?? null
@@ -160,5 +160,17 @@ export default function LoginPage() {
         </p>
       </div>
     </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-[calc(100vh-8rem)] px-4 py-16" />
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   )
 }
