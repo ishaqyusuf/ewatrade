@@ -35,7 +35,6 @@ Describe the current repository shape and the intended monorepo layout.
 - `packages/notifications-react` - Client-side notification delivery primitives for app toasts and ephemeral UX feedback.
 - `packages/auth` - Better Auth integration and auth helpers.
 - `packages/ui` - Shared UI primitives where needed.
-- `packages/domain` - Shared domain models, service helpers, and validation.
 
 ## Notes
 - Important project reference: `midday` at `/Users/M1PRO/Documents/code/_kitchen_sink/midday` is the default structural reference for future repo expansion and for any new app/package boundary decisions.

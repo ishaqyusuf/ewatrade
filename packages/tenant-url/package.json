@@ -1,0 +1,29 @@
+{
+  "name": "@ewatrade/tenant-url",
+  "version": "1.0.0",
+  "private": true,
+  "sideEffects": false,
+  "main": "src/index.ts",
+  "scripts": {
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./react": "./src/react.tsx",
+    "./next": "./src/next.tsx",
+    "./next/server": "./src/next-server.ts"
+  },
+  "peerDependencies": {
+    "next": "^16.0.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@ewatrade/tsconfig": "workspace:*",
+    "@types/react": "^19.1.13",
+    "next": "^16.2.2",
+    "react": "^19.1.0",
+    "typescript": "^5.9.3"
+  }
+}

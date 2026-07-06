@@ -1,6 +1,5 @@
 {
   "lockfileVersion": 1,
-  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "ewatrade",
@@ -112,6 +111,20 @@
         "typescript": "^5.9.3",
       },
     },
+    "packages/auth": {
+      "name": "@ewatrade/auth",
+      "version": "1.0.0",
+      "dependencies": {
+        "@ewatrade/db": "workspace:*",
+        "@ewatrade/utils": "workspace:*",
+      },
+      "devDependencies": {
+        "@biomejs/biome": "^1.9.4",
+        "@ewatrade/tsconfig": "workspace:*",
+        "@types/node": "^24.6.0",
+        "typescript": "^5.9.3",
+      },
+    },
     "packages/db": {
       "name": "@ewatrade/db",
       "version": "1.0.0",
@@ -179,6 +192,22 @@
         "@types/react": "^19.1.13",
         "@types/react-dom": "^19.1.9",
         "typescript": "^5.9.3",
+      },
+    },
+    "packages/tenant-url": {
+      "name": "@ewatrade/tenant-url",
+      "version": "1.0.0",
+      "devDependencies": {
+        "@biomejs/biome": "^1.9.4",
+        "@ewatrade/tsconfig": "workspace:*",
+        "@types/react": "^19.1.13",
+        "next": "^16.2.2",
+        "react": "^19.1.0",
+        "typescript": "^5.9.3",
+      },
+      "peerDependencies": {
+        "next": "^16.0.0",
+        "react": "^19.0.0",
       },
     },
     "packages/tsconfig": {
@@ -331,6 +360,8 @@
 
     "@emnapi/runtime": ["@emnapi/runtime@1.9.0", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-QN75eB0IH2ywSpRpNddCRfQIhmJYBCJ1x5Lb3IscKAL8bMnVAKnRg8dCoXbHzVLLH7P38N2Z3mtulB7W0J0FKw=="],
 
+    "@ewatrade/auth": ["@ewatrade/auth@workspace:packages/auth"],
+
     "@ewatrade/dashboard": ["@ewatrade/dashboard@workspace:apps/dashboard"],
 
     "@ewatrade/db": ["@ewatrade/db@workspace:packages/db"],
@@ -348,6 +379,8 @@
     "@ewatrade/pos": ["@ewatrade/pos@workspace:apps/pos"],
 
     "@ewatrade/storefront": ["@ewatrade/storefront@workspace:apps/storefront"],
+
+    "@ewatrade/tenant-url": ["@ewatrade/tenant-url@workspace:packages/tenant-url"],
 
     "@ewatrade/tsconfig": ["@ewatrade/tsconfig@workspace:packages/tsconfig"],
 
