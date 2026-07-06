@@ -1,5 +1,5 @@
-import { prisma } from "@ewatrade/db"
-import { cookies } from "next/headers"
+import { auth } from "@ewatrade/auth"
+import { headers } from "next/headers"
 
 export type SessionUser = {
   id: string
@@ -18,35 +18,32 @@ export type AuthSession = {
 }
 
 export async function getServerSession(): Promise<AuthSession | null> {
-  const cookieStore = await cookies()
-  const token = cookieStore.get("ewt-session")?.value
-  if (!token) return null
-
-  const session = await prisma.session.findUnique({
-    where: { token },
-    select: {
-      id: true,
-      expiresAt: true,
-      user: {
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          displayName: true,
-          avatarUrl: true,
-          isPlatformAdmin: true,
-        },
-      },
-    },
+  const session = await auth.api.getSession({
+    headers: await headers(),
   })
 
-  if (!session || session.expiresAt < new Date()) return null
+  if (!session) return null
+
+  const user = session.user as typeof session.user & {
+    firstName?: string | null
+    lastName?: string | null
+    displayName?: string | null
+    avatarUrl?: string | null
+    isPlatformAdmin?: boolean | null
+  }
 
   return {
-    user: session.user,
-    sessionId: session.id,
-    expiresAt: session.expiresAt,
+    user: {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName ?? null,
+      lastName: user.lastName ?? null,
+      displayName: user.displayName ?? user.name ?? null,
+      avatarUrl: user.avatarUrl ?? user.image ?? null,
+      isPlatformAdmin: user.isPlatformAdmin ?? false,
+    },
+    sessionId: session.session.id,
+    expiresAt: session.session.expiresAt,
   }
 }
 

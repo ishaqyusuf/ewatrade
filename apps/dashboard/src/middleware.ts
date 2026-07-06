@@ -7,12 +7,16 @@ const PLATFORM_DOMAIN =
 const MARKETING_URL =
   process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com"
 const SIGNUP_URL = `${MARKETING_URL}/signup`
+const BETTER_AUTH_SESSION_COOKIE_NAMES = [
+  "better-auth.session_token",
+  "__Secure-better-auth.session_token",
+] as const
 
 /**
  * Dashboard middleware.
  *
  * 1. Validates the hostname resolves to the dashboard surface.
- * 2. Enforces authentication: if no `ewt-session` cookie is present, redirects
+ * 2. Enforces authentication: if no Better Auth session cookie is present, redirects
  *    to the marketing signup page.
  * 3. Sets tenant context headers for downstream route handlers.
  *
@@ -35,9 +39,11 @@ export function middleware(request: NextRequest) {
   }
 
   // Auth guard: require the session cookie to be present
-  const sessionToken = request.cookies.get("ewt-session")?.value
+  const hasSessionCookie = BETTER_AUTH_SESSION_COOKIE_NAMES.some((cookieName) =>
+    request.cookies.has(cookieName),
+  )
 
-  if (!sessionToken) {
+  if (!hasSessionCookie) {
     const signupUrl = new URL(SIGNUP_URL)
     signupUrl.searchParams.set("next", request.nextUrl.pathname)
     return NextResponse.redirect(signupUrl)

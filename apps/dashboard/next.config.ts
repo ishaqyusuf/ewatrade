@@ -1,8 +1,29 @@
 import type { NextConfig } from "next"
 
+function getApiOrigin() {
+  return (
+    process.env.NEXT_PUBLIC_API_URL ??
+    process.env.EWATRADE_API_URL ??
+    "http://localhost:3095"
+  ).replace(/\/$/, "")
+}
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  transpilePackages: ["@ewatrade/db", "@ewatrade/ui", "@ewatrade/utils"],
+  transpilePackages: [
+    "@ewatrade/api",
+    "@ewatrade/db",
+    "@ewatrade/ui",
+    "@ewatrade/utils",
+  ],
+  async rewrites() {
+    return [
+      {
+        source: "/api/trpc/:path*",
+        destination: `${getApiOrigin()}/api/trpc/:path*`,
+      },
+    ]
+  },
 }
 
 export default nextConfig

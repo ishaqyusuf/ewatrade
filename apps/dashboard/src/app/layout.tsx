@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import "@ewatrade/ui/globals.css"
 import { cn } from "@/utils"
+import { Providers } from "./providers"
 import { Geist } from "next/font/google"
 
 const geist = Geist({
@@ -19,7 +20,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={cn("font-sans", geist.variable)}>
-      <body className="bg-background">{children}</body>
+      <body className="bg-background">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   )
 }

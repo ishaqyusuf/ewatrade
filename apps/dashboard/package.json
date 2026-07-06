@@ -3,21 +3,30 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "node ../../scripts/with-workspace-env.mjs PORTLESS_APP_PORT=${PORTLESS_APP_PORT:-3094} TZ=UTC portless ewatrade-dashboard next dev --turbopack --port 3094",
-    "build": "next build --webpack",
+    "dev": "node ../../scripts/with-workspace-env.mjs PORTLESS_WILDCARD=1 PORTLESS_HTTPS=0 PORTLESS_APP_PORT=${PORTLESS_APP_PORT:-3094} TZ=UTC portless ewatrade-dashboard next dev --turbopack",
+    "dev:portless": "node ../../scripts/with-workspace-env.mjs PORTLESS_WILDCARD=1 PORTLESS_HTTPS=0 portless ewatrade-dashboard next dev --turbopack",
+    "build": "bun next build --turbopack",
     "start": "next start",
     "lint": "biome check .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ewatrade/api": "workspace:*",
+    "@ewatrade/auth": "workspace:*",
     "@ewatrade/db": "workspace:*",
     "@ewatrade/ui": "workspace:*",
     "@ewatrade/utils": "workspace:*",
     "@hugeicons/core-free-icons": "^4.1.1",
     "@hugeicons/react": "^1.1.6",
+    "@tanstack/react-query": "^5.100.14",
+    "@trpc/client": "^11.16.0",
+    "@trpc/tanstack-react-query": "^11.16.0",
     "next": "^16.2.2",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "server-only": "^0.0.1",
+    "superjson": "^2.2.6",
+    "zod": "^4.1.5"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",

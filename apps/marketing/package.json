@@ -3,13 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "node ../../scripts/with-workspace-env.mjs PORTLESS_APP_PORT=${PORTLESS_APP_PORT:-3092} TZ=UTC portless ewatrade-marketing next dev --turbopack --port 3092",
-    "build": "next build --webpack",
+    "dev": "node ../../scripts/with-workspace-env.mjs PORTLESS_WILDCARD=1 PORTLESS_HTTPS=0 PORTLESS_APP_PORT=${PORTLESS_APP_PORT:-3092} TZ=UTC portless ewatrade-marketing next dev --turbopack",
+    "dev:portless": "node ../../scripts/with-workspace-env.mjs PORTLESS_WILDCARD=1 PORTLESS_HTTPS=0 portless ewatrade-marketing next dev --turbopack",
+    "build": "bun next build --turbopack",
     "start": "next start",
     "lint": "biome check .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ewatrade/auth": "workspace:*",
     "@ewatrade/db": "workspace:*",
     "@ewatrade/jobs": "workspace:*",
     "@ewatrade/notifications": "workspace:*",
@@ -19,7 +21,6 @@
     "@hookform/resolvers": "^5.2.2",
     "@hugeicons/core-free-icons": "^4.1.1",
     "@hugeicons/react": "^1.1.6",
-    "bcryptjs": "^3.0.3",
     "next": "^16.2.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -29,7 +30,6 @@
     "@biomejs/biome": "^1.9.4",
     "@ewatrade/tsconfig": "workspace:*",
     "@tailwindcss/postcss": "^4.2.1",
-    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^24.6.0",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",

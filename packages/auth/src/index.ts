@@ -1,46 +1,144 @@
-import type { Membership, User } from "@ewatrade/db"
-import {
-  extractTenantSlugFromPlatformHostname,
-  inferTenantSurfaceFromHostname,
-  normalizeHostname,
-} from "@ewatrade/utils"
+import { prisma } from "@ewatrade/db"
+import { normalizeHostname, stripPort } from "@ewatrade/utils"
+import { compare } from "bcryptjs"
+import type { BetterAuthOptions } from "better-auth"
+import { betterAuth } from "better-auth"
+import { prismaAdapter } from "better-auth/adapters/prisma"
+import { hashPassword, verifyPassword } from "better-auth/crypto"
+import { nextCookies } from "better-auth/next-js"
+
 export * from "./roles"
 
-export type SessionScope = typeof platformSessionScope | string
-
-export type AuthSession = {
-  scope: SessionScope
-  token: string
-  user: User
+type InitAuthOptions = {
+  baseUrl?: string
+  productionUrl?: string
+  secret?: string
 }
 
-export type SignedSessionPayload = {
-  expiresAt: number
-  nonce: string
-  scope: SessionScope
-  userId: string
+function splitEnvList(value: string | null | undefined) {
+  return (
+    value
+      ?.split(",")
+      .map((item) => item.trim())
+      .filter(Boolean) ?? []
+  )
 }
 
-export type AuthContext = {
-  activeMembership: Membership | null
-  session: AuthSession | null
+function uniq(values: Array<string | null | undefined>) {
+  return [...new Set(values.filter(Boolean))] as string[]
 }
 
-export const authSessionCookieName = "ewatrade_session"
-export const authUserCookieName = "ewatrade_user"
-export const platformSessionScope = "platform"
-const sessionTtlMs = 1000 * 60 * 60 * 24 * 7
-
-export function getScopedAuthSessionCookieName(scope: SessionScope) {
-  return scope === platformSessionScope
-    ? authSessionCookieName
-    : `${authSessionCookieName}_${scope}`
+function getPlatformDomain() {
+  return (
+    process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ??
+    process.env.EWATRADE_PLATFORM_DOMAIN ??
+    process.env.NEXT_PUBLIC_EWATRADE_PLATFORM_DOMAIN ??
+    "ewatrade.com"
+  )
 }
 
-export function getScopedAuthUserCookieName(scope: SessionScope) {
-  return scope === platformSessionScope
-    ? authUserCookieName
-    : `${authUserCookieName}_${scope}`
+function getAuthSecret() {
+  const secret =
+    process.env.BETTER_AUTH_SECRET ??
+    process.env.EWATRADE_AUTH_SECRET ??
+    process.env.AUTH_SECRET
+
+  if (secret?.trim()) {
+    return secret.trim()
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("BETTER_AUTH_SECRET is required in production.")
+  }
+
+  return "ewatrade-dev-better-auth-secret"
+}
+
+function getDefaultBaseUrl() {
+  return (
+    process.env.BETTER_AUTH_URL ??
+    process.env.EWATRADE_API_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    process.env.API_URL ??
+    "http://localhost:3095"
+  )
+}
+
+function getDefaultProductionUrl(platformDomain = getPlatformDomain()) {
+  return (
+    process.env.BETTER_AUTH_PRODUCTION_URL ??
+    process.env.EWATRADE_API_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    `https://api.${stripPort(platformDomain)}`
+  )
+}
+
+function getCookieDomain(platformDomain = getPlatformDomain()) {
+  const hostname = stripPort(normalizeHostname(platformDomain))
+
+  if (
+    !hostname ||
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname.endsWith(".localhost")
+  ) {
+    return null
+  }
+
+  return hostname.startsWith(".") ? hostname : `.${hostname}`
+}
+
+function toOrigin(value: string | null | undefined) {
+  if (!value?.trim()) {
+    return null
+  }
+
+  try {
+    return new URL(value).origin
+  } catch {
+    const hostname = normalizeHostname(value)
+    if (!hostname) return null
+
+    return `https://${hostname}`
+  }
+}
+
+function getTrustedOrigins(input: {
+  baseUrl: string
+  productionUrl: string
+  request?: Request
+}) {
+  const platformDomain = stripPort(getPlatformDomain())
+  const requestOrigin = input.request?.headers.get("origin") ?? null
+  const requestUrlOrigin = input.request?.url
+    ? new URL(input.request.url).origin
+    : null
+
+  return uniq([
+    "http://localhost:3092",
+    "http://localhost:3094",
+    "http://localhost:3095",
+    "http://127.0.0.1:3092",
+    "http://127.0.0.1:3094",
+    "http://127.0.0.1:3095",
+    toOrigin(input.baseUrl),
+    toOrigin(input.productionUrl),
+    toOrigin(platformDomain),
+    process.env.NEXT_PUBLIC_MARKETING_URL,
+    process.env.NEXT_PUBLIC_DASHBOARD_URL,
+    process.env.NEXT_PUBLIC_API_URL,
+    process.env.EWATRADE_MARKETING_URL,
+    process.env.EWATRADE_DASHBOARD_URL,
+    process.env.EWATRADE_API_URL,
+    requestUrlOrigin,
+    requestOrigin,
+    ...splitEnvList(process.env.BETTER_AUTH_TRUSTED_ORIGINS),
+    ...splitEnvList(process.env.ALLOWED_API_ORIGINS),
+  ]).map((origin) => origin.replace(/\/$/, ""))
+}
+
+function isLegacyBcryptHash(hash: string) {
+  return /^\$2[aby]\$/.test(hash)
 }
 
 export function parseCookieHeader(cookieHeader: string | null | undefined) {
@@ -56,165 +154,100 @@ export function parseCookieHeader(cookieHeader: string | null | undefined) {
       .map((part) => {
         const separatorIndex = part.indexOf("=")
         return [part.slice(0, separatorIndex), part.slice(separatorIndex + 1)]
-      })
+      }),
   )
 }
 
-function getSessionSecret() {
-  const secret = process.env.EWATRADE_AUTH_SECRET
+export function initAuth(options: InitAuthOptions = {}) {
+  const platformDomain = getPlatformDomain()
+  const baseUrl = options.baseUrl ?? getDefaultBaseUrl()
+  const productionUrl =
+    options.productionUrl ?? getDefaultProductionUrl(platformDomain)
+  const cookieDomain = getCookieDomain(platformDomain)
 
-  if (secret?.trim()) {
-    return secret.trim()
-  }
-
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("EWATRADE_AUTH_SECRET is required in production.")
-  }
-
-  return "ewatrade-dev-session-secret"
-}
-
-function encodeBase64Url(value: string) {
-  return Buffer.from(value, "utf8").toString("base64url")
-}
-
-function decodeBase64Url(value: string) {
-  return Buffer.from(value, "base64url").toString("utf8")
-}
-
-async function signValue(value: string) {
-  const { createHmac, timingSafeEqual } = await import("node:crypto")
-  const signature = createHmac("sha256", getSessionSecret())
-    .update(value)
-    .digest("base64url")
-
-  return {
-    signature,
-    verify(candidate: string) {
-      const expected = Buffer.from(signature)
-      const actual = Buffer.from(candidate)
-
-      return (
-        actual.length === expected.length && timingSafeEqual(actual, expected)
-      )
+  const config = {
+    database: prismaAdapter(prisma, {
+      provider: "postgresql",
+    }),
+    baseURL: baseUrl,
+    secret: options.secret ?? getAuthSecret(),
+    user: {
+      additionalFields: {
+        firstName: {
+          required: false,
+          type: "string",
+        },
+        lastName: {
+          required: false,
+          type: "string",
+        },
+        displayName: {
+          required: false,
+          type: "string",
+        },
+        avatarUrl: {
+          required: false,
+          type: "string",
+        },
+        phone: {
+          required: false,
+          type: "string",
+        },
+        isPlatformAdmin: {
+          defaultValue: false,
+          required: false,
+          type: "boolean",
+        },
+      },
     },
-  }
+    session: {
+      cookieCache: {
+        enabled: true,
+        maxAge: 5 * 60,
+        strategy: "jwe",
+      },
+    },
+    emailAndPassword: {
+      enabled: true,
+      password: {
+        hash: hashPassword,
+        async verify({ hash, password }) {
+          if (isLegacyBcryptHash(hash)) {
+            return compare(password, hash)
+          }
+
+          return verifyPassword({ hash, password })
+        },
+      },
+    },
+    advanced: {
+      defaultCookieAttributes: {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      },
+      ...(cookieDomain
+        ? {
+            crossSubDomainCookies: {
+              enabled: true,
+              domain: cookieDomain,
+            },
+          }
+        : {}),
+    },
+    plugins: [nextCookies()],
+    trustedOrigins: (request) =>
+      getTrustedOrigins({
+        baseUrl,
+        productionUrl,
+        request,
+      }),
+  } satisfies BetterAuthOptions
+
+  return betterAuth(config)
 }
 
-export async function createSignedSessionToken(input: {
-  scope: SessionScope
-  userId: string
-}) {
-  const payload = {
-    expiresAt: Date.now() + sessionTtlMs,
-    nonce: crypto.randomUUID(),
-    scope: input.scope,
-    userId: input.userId,
-  } satisfies SignedSessionPayload
-  const encodedPayload = encodeBase64Url(JSON.stringify(payload))
-  const { signature } = await signValue(encodedPayload)
+export const auth = initAuth()
 
-  return `${encodedPayload}.${signature}`
-}
-
-export async function verifySignedSessionToken(input: {
-  expectedScope?: SessionScope | null
-  token: string | null | undefined
-}) {
-  if (!input.token) {
-    return null
-  }
-
-  const [encodedPayload, signature] = input.token.split(".")
-
-  if (!encodedPayload || !signature) {
-    return null
-  }
-
-  const verifier = await signValue(encodedPayload)
-
-  if (!verifier.verify(signature)) {
-    return null
-  }
-
-  try {
-    const payload = JSON.parse(
-      decodeBase64Url(encodedPayload)
-    ) as Partial<SignedSessionPayload>
-
-    if (
-      !payload.userId ||
-      !payload.scope ||
-      typeof payload.expiresAt !== "number" ||
-      payload.expiresAt <= Date.now()
-    ) {
-      return null
-    }
-
-    if (input.expectedScope && payload.scope !== input.expectedScope) {
-      return null
-    }
-
-    return payload as SignedSessionPayload
-  } catch {
-    return null
-  }
-}
-
-export function resolveRequestSessionScope(host: string | null | undefined) {
-  const platformDomain =
-    process.env.EWATRADE_PLATFORM_DOMAIN ??
-    process.env.NEXT_PUBLIC_EWATRADE_PLATFORM_DOMAIN ??
-    "ewatrade.localhost"
-  const hostname = normalizeHostname(host)
-
-  if (!hostname) {
-    return platformSessionScope
-  }
-
-  const surface = inferTenantSurfaceFromHostname(hostname, platformDomain)
-
-  if (surface === "dashboard" || surface === "pos" || surface === "storefront") {
-    return (
-      extractTenantSlugFromPlatformHostname(hostname, platformDomain) ??
-      hostname
-    )
-  }
-
-  return platformSessionScope
-}
-
-export function getSessionTokenFromCookieHeader(input: {
-  cookieHeader?: string | null
-  host?: string | null
-  explicitScope?: SessionScope | null
-}) {
-  const cookies = parseCookieHeader(input.cookieHeader)
-  const scope = input.explicitScope ?? resolveRequestSessionScope(input.host)
-  const scopedCookieName = getScopedAuthSessionCookieName(scope)
-
-  return (
-    cookies.get(scopedCookieName) ?? cookies.get(authSessionCookieName) ?? null
-  )
-}
-
-export function getUserIdFromCookieHeader(input: {
-  cookieHeader?: string | null
-  host?: string | null
-  explicitScope?: SessionScope | null
-}) {
-  const cookies = parseCookieHeader(input.cookieHeader)
-  const scope = input.explicitScope ?? resolveRequestSessionScope(input.host)
-  const scopedCookieName = getScopedAuthUserCookieName(scope)
-
-  return (
-    cookies.get(scopedCookieName) ?? cookies.get(authUserCookieName) ?? null
-  )
-}
-
-export function hasActiveMembership(auth: AuthContext): auth is AuthContext & {
-  activeMembership: Membership
-  session: AuthSession
-} {
-  return Boolean(auth.session && auth.activeMembership)
-}
+export type Auth = ReturnType<typeof initAuth>
+export type Session = Auth["$Infer"]["Session"]

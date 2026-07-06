@@ -9,9 +9,12 @@
   },
   "dependencies": {
     "@ewatrade/db": "workspace:*",
-    "@ewatrade/utils": "workspace:*"
+    "@ewatrade/utils": "workspace:*",
+    "bcryptjs": "^3.0.3",
+    "better-auth": "^1.5.5"
   },
   "devDependencies": {
+    "@better-auth/cli": "^1.4.21",
     "@biomejs/biome": "^1.9.4",
     "@ewatrade/tsconfig": "workspace:*",
     "@types/node": "^24.6.0",

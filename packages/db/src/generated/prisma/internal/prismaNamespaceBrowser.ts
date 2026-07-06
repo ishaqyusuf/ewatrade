@@ -58,6 +58,7 @@ export const ModelName = {
   User: 'User',
   Account: 'Account',
   Session: 'Session',
+  Verification: 'Verification',
   Membership: 'Membership',
   Store: 'Store',
   Product: 'Product',
@@ -169,8 +170,11 @@ export type LeadCaptureScalarFieldEnum = (typeof LeadCaptureScalarFieldEnum)[key
 
 export const UserScalarFieldEnum = {
   id: 'id',
+  name: 'name',
   email: 'email',
+  emailVerified: 'emailVerified',
   emailVerifiedAt: 'emailVerifiedAt',
+  image: 'image',
   phone: 'phone',
   firstName: 'firstName',
   lastName: 'lastName',
@@ -188,14 +192,19 @@ export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof User
 export const AccountScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
+  accountId: 'accountId',
+  providerId: 'providerId',
   provider: 'provider',
   providerAccountId: 'providerAccountId',
   accessToken: 'accessToken',
   refreshToken: 'refreshToken',
   expiresAt: 'expiresAt',
+  accessTokenExpiresAt: 'accessTokenExpiresAt',
+  refreshTokenExpiresAt: 'refreshTokenExpiresAt',
   tokenType: 'tokenType',
   scope: 'scope',
   idToken: 'idToken',
+  password: 'password',
   passwordHash: 'passwordHash',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -216,6 +225,18 @@ export const SessionScalarFieldEnum = {
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
+
+
+export const VerificationScalarFieldEnum = {
+  id: 'id',
+  identifier: 'identifier',
+  value: 'value',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type VerificationScalarFieldEnum = (typeof VerificationScalarFieldEnum)[keyof typeof VerificationScalarFieldEnum]
 
 
 export const MembershipScalarFieldEnum = {

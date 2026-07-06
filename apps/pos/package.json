@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "node ../../scripts/with-workspace-env.mjs PORTLESS_APP_PORT=${PORTLESS_APP_PORT:-3093} TZ=UTC portless ewatrade-pos next dev --turbopack --port 3093",
-    "build": "next build --webpack",
+    "dev": "node ../../scripts/with-workspace-env.mjs PORTLESS_WILDCARD=1 PORTLESS_HTTPS=0 PORTLESS_APP_PORT=${PORTLESS_APP_PORT:-3093} TZ=UTC portless ewatrade-pos next dev --turbopack",
+    "dev:portless": "node ../../scripts/with-workspace-env.mjs PORTLESS_WILDCARD=1 PORTLESS_HTTPS=0 portless ewatrade-pos next dev --turbopack",
+    "build": "bun next build --turbopack",
     "start": "next start",
     "lint": "biome check .",
     "typecheck": "tsc --noEmit"

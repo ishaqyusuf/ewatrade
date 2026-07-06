@@ -1,11 +1,11 @@
 import { signupPayloadSchema } from "@/lib/signup-schemas"
+import { auth } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
 import {
   buildCustomTenantHostname,
   buildInternalTenantHostname,
   provisionTenantVercelDomains,
 } from "@ewatrade/utils"
-import bcrypt from "bcryptjs"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
@@ -157,8 +157,37 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // ── 3. Hash password ─────────────────────────────────────────────────────
-  const passwordHash = await bcrypt.hash(password, 12)
+  const normalizedEmail = email.toLowerCase()
+  const normalizedPhone = phone.replace(/\s+/g, "")
+  const displayName = `${firstName} ${lastName}`.trim()
+
+  // ── 3. Create Better Auth user/session ──────────────────────────────────
+  const signUpResult = await auth.api
+    .signUpEmail({
+      body: {
+        email: normalizedEmail,
+        password,
+        name: displayName || normalizedEmail,
+        firstName,
+        lastName,
+        displayName,
+        phone: normalizedPhone,
+      },
+      headers: request.headers,
+    })
+    .catch((error: unknown) => {
+      console.error("[signup] Better Auth signup failed", error)
+      return null
+    })
+
+  if (!signUpResult?.user?.id) {
+    return NextResponse.json(
+      { message: "Unable to create your account. Please try again." },
+      { status: 400 },
+    )
+  }
+
+  const userId = signUpResult.user.id
 
   // ── 4. Determine primary tenant type ────────────────────────────────────
   const primaryType =
@@ -185,140 +214,124 @@ export async function POST(request: NextRequest) {
   const dashboardUrl = `https://${dashboardHostname}`
 
   // ── 6. Transactional DB writes ───────────────────────────────────────────
-  const { user, tenant, session } = await prisma.$transaction(async (tx) => {
-    // Create user
-    const user = await tx.user.create({
-      data: {
-        email: email.toLowerCase(),
-        firstName,
-        lastName,
-        displayName: `${firstName} ${lastName}`.trim(),
-        phone: phone.replace(/\s+/g, ""),
-      },
-    })
-
-    // Create credentials account
-    await tx.account.create({
-      data: {
-        userId: user.id,
-        provider: "credentials",
-        providerAccountId: email.toLowerCase(),
-        passwordHash,
-      },
-    })
-
-    // Create tenant
-    // biome-ignore lint/suspicious/noExplicitAny: enabledModes added in migration; Prisma client not regenerated yet
-    const tenant = await (
-      tx.tenant.create as unknown as (
-        args: unknown,
-      ) => Promise<{ id: string; slug: string }>
-    )({
-      data: {
-        slug: subdomain,
-        name: businessName,
-        type: primaryType,
-        enabledModes: modes,
-        countryCode,
-        currencyCode: countryCode === "NG" ? "NGN" : "USD",
-        metadata: { industry, businessSize },
-      },
-    })
-
-    // Create all three internal hostname records
-    await tx.tenantHostname.createMany({
-      data: [
-        {
-          tenantId: tenant.id,
-          surface: "STOREFRONT",
-          hostname: storefrontHostname,
-          isPrimary: true,
-          isCustom: false,
+  const { tenant } = await prisma
+    .$transaction(async (tx) => {
+      const user = await tx.user.update({
+        where: { id: userId },
+        data: {
+          email: normalizedEmail,
+          name: displayName || normalizedEmail,
+          emailVerified: false,
+          image: null,
+          firstName,
+          lastName,
+          displayName,
+          phone: normalizedPhone,
         },
-        {
-          tenantId: tenant.id,
-          surface: "POS",
-          hostname: posHostname,
-          isPrimary: true,
-          isCustom: false,
-        },
-        {
-          tenantId: tenant.id,
-          surface: "DASHBOARD",
-          hostname: dashboardHostname,
-          isPrimary: true,
-          isCustom: false,
-        },
-      ],
-    })
+        select: { id: true },
+      })
 
-    // If custom domain provided, also create custom hostname records
-    if (customDomain && customDomain.trim().length > 0) {
-      const cleanCustom = customDomain.trim().toLowerCase()
+      // Create tenant
+      // biome-ignore lint/suspicious/noExplicitAny: enabledModes added in migration; Prisma client not regenerated yet
+      const tenant = await (
+        tx.tenant.create as unknown as (
+          args: unknown,
+        ) => Promise<{ id: string; slug: string }>
+      )({
+        data: {
+          slug: subdomain,
+          name: businessName,
+          type: primaryType,
+          enabledModes: modes,
+          countryCode,
+          currencyCode: countryCode === "NG" ? "NGN" : "USD",
+          metadata: { industry, businessSize },
+        },
+      })
+
+      // Create all three internal hostname records
       await tx.tenantHostname.createMany({
         data: [
           {
             tenantId: tenant.id,
             surface: "STOREFRONT",
-            hostname: buildCustomTenantHostname({
-              customDomain: cleanCustom,
-              surface: "storefront",
-            }),
-            isPrimary: false,
-            isCustom: true,
+            hostname: storefrontHostname,
+            isPrimary: true,
+            isCustom: false,
           },
           {
             tenantId: tenant.id,
             surface: "POS",
-            hostname: buildCustomTenantHostname({
-              customDomain: cleanCustom,
-              surface: "pos",
-            }),
-            isPrimary: false,
-            isCustom: true,
+            hostname: posHostname,
+            isPrimary: true,
+            isCustom: false,
           },
           {
             tenantId: tenant.id,
             surface: "DASHBOARD",
-            hostname: buildCustomTenantHostname({
-              customDomain: cleanCustom,
-              surface: "dashboard",
-            }),
-            isPrimary: false,
-            isCustom: true,
+            hostname: dashboardHostname,
+            isPrimary: true,
+            isCustom: false,
           },
         ],
       })
-    }
 
-    // Create owner membership
-    await tx.membership.create({
-      data: {
-        tenantId: tenant.id,
-        userId: user.id,
-        role: "OWNER",
-        status: "ACTIVE",
-        acceptedAt: new Date(),
-      },
+      // If custom domain provided, also create custom hostname records
+      if (customDomain && customDomain.trim().length > 0) {
+        const cleanCustom = customDomain.trim().toLowerCase()
+        await tx.tenantHostname.createMany({
+          data: [
+            {
+              tenantId: tenant.id,
+              surface: "STOREFRONT",
+              hostname: buildCustomTenantHostname({
+                customDomain: cleanCustom,
+                surface: "storefront",
+              }),
+              isPrimary: false,
+              isCustom: true,
+            },
+            {
+              tenantId: tenant.id,
+              surface: "POS",
+              hostname: buildCustomTenantHostname({
+                customDomain: cleanCustom,
+                surface: "pos",
+              }),
+              isPrimary: false,
+              isCustom: true,
+            },
+            {
+              tenantId: tenant.id,
+              surface: "DASHBOARD",
+              hostname: buildCustomTenantHostname({
+                customDomain: cleanCustom,
+                surface: "dashboard",
+              }),
+              isPrimary: false,
+              isCustom: true,
+            },
+          ],
+        })
+      }
+
+      // Create owner membership
+      await tx.membership.create({
+        data: {
+          tenantId: tenant.id,
+          userId: user.id,
+          role: "OWNER",
+          status: "ACTIVE",
+          acceptedAt: new Date(),
+        },
+      })
+
+      return { tenant }
     })
-
-    // Create session (30 days)
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-    const session = await tx.session.create({
-      data: {
-        userId: user.id,
-        token: crypto.randomUUID(),
-        expiresAt,
-        ipAddress:
-          request.headers.get("x-forwarded-for") ??
-          request.headers.get("x-real-ip") ??
-          null,
-        userAgent: request.headers.get("user-agent") ?? null,
-      },
+    .catch(async (error: unknown) => {
+      await prisma.user.delete({ where: { id: userId } }).catch(() => null)
+      throw error
     })
-
-    return { user, tenant, session }
-  })
 
   // ── 7. Vercel domain provisioning (fire-and-forget) ──────────────────────
   if (process.env.VERCEL_API_TOKEN) {
@@ -342,21 +355,11 @@ export async function POST(request: NextRequest) {
     console.info(`\n[signup] Welcome email for ${email}:\n${dashboardUrl}\n`)
   }
 
-  // ── 9. Set session cookie + return ───────────────────────────────────────
-  const response = NextResponse.json({
+  // ── 9. Return signup result ──────────────────────────────────────────────
+  return NextResponse.json({
     success: true,
     tenantSlug: tenant.slug,
     dashboardUrl,
     ...(IS_DEV ? { devEmailHtml: emailHtml } : {}),
   })
-
-  response.cookies.set("ewt-session", session.token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 30 * 24 * 60 * 60,
-  })
-
-  return response
 }

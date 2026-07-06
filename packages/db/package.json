@@ -11,6 +11,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
+    "./queries": "./src/queries/index.ts",
     "./enums": "./src/generated/prisma/enums.ts",
     "./browser": "./src/generated/prisma/browser.ts"
   },

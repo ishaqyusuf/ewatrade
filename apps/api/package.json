@@ -1,0 +1,32 @@
+{
+  "name": "@ewatrade/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node ../../scripts/with-workspace-env.mjs PORTLESS_WILDCARD=1 PORTLESS_HTTPS=0 PORTLESS_APP_PORT=${PORTLESS_APP_PORT:-3095} TZ=UTC portless ewatrade-api bun run --hot src/index.ts",
+    "dev:portless": "node ../../scripts/with-workspace-env.mjs PORTLESS_WILDCARD=1 PORTLESS_HTTPS=0 portless ewatrade-api bun run --hot src/index.ts",
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    "./trpc/routers/_app": "./src/trpc/routers/_app.ts"
+  },
+  "dependencies": {
+    "@ewatrade/auth": "workspace:*",
+    "@ewatrade/db": "workspace:*",
+    "@ewatrade/utils": "workspace:*",
+    "@hono/trpc-server": "^0.4.2",
+    "@hono/zod-openapi": "^1.4.0",
+    "@trpc/server": "^11.16.0",
+    "hono": "^4.12.10",
+    "superjson": "^2.2.6",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@ewatrade/tsconfig": "workspace:*",
+    "@types/bun": "latest",
+    "typescript": "^5.9.3"
+  }
+}
