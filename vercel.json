@@ -1,0 +1,6 @@
+{
+  "framework": "hono",
+  "bunVersion": "1.x",
+  "buildCommand": "bun run api:vercel-build",
+  "installCommand": "bun install"
+}

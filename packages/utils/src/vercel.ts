@@ -73,7 +73,7 @@ export async function provisionTenantVercelDomains(params: {
 
     if (result.status === "rejected") {
       console.error(`[vercel] Failed to add ${surface} domain:`, result.reason)
-    } else if (!result.value.ok) {
+    } else if (result.value.ok === false) {
       console.warn(`[vercel] Could not add ${surface} domain:`, result.value.error)
     }
   }

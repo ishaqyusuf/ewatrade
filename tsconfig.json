@@ -1,3 +1,17 @@
 {
-  "extends": "./packages/tsconfig/base.json"
+  "extends": "./packages/tsconfig/base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@api/*": ["apps/api/src/*"]
+    }
+  },
+  "include": ["apps/api/src/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "apps/dashboard",
+    "apps/marketing",
+    "apps/pos",
+    "apps/storefront"
+  ]
 }

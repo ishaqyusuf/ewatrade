@@ -5,6 +5,7 @@
       "name": "ewatrade",
       "dependencies": {
         "@biomejs/biome": "^1.9.4",
+        "hono": "^4.12.10",
         "turbo": "^2.5.8",
         "typescript": "^5.9.3",
       },

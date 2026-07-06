@@ -1,4 +1,5 @@
 import { auth } from "@ewatrade/auth"
+import { prisma } from "@ewatrade/db"
 import { trpcServer } from "@hono/trpc-server"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { cors } from "hono/cors"
@@ -84,13 +85,14 @@ app.use("/api/trpc/*", async (c, next) => {
 app.get("/favicon.ico", (c) => c.body(null, 204))
 app.get("/robots.txt", (c) => c.body(null, 204))
 
-app.get("/health", (c) => {
+app.get("/health", async (c) => {
   const start = performance.now()
+  const accounts = await prisma.account.count({})
 
   c.header("Server-Timing", `app;dur=${(performance.now() - start).toFixed(2)}`)
   c.header("X-Server-Timestamp", Date.now().toString())
 
-  return c.json({ status: "ok" }, 200)
+  return c.json({ status: "ok", database: { accounts } }, 200)
 })
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw))
