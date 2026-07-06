@@ -38,8 +38,10 @@ Describe the current repository shape and the intended monorepo layout.
 - `packages/domain` - Shared domain models, service helpers, and validation.
 
 ## Notes
-- Use `~/Document/code/_kitchen_sink/midday` as the default structural reference for future repo expansion and for any new app/package boundary decisions.
-- Use `~/Documents/code/_turbo/gnd` as a secondary reference for app/package ergonomics and shared frontend package wiring.
-- Use `~/Documents/code/plot-keys` as the default reference when designing email, notifications, jobs, and related package boundaries.
+- Important project reference: `midday` at `/Users/M1PRO/Documents/code/_kitchen_sink/midday` is the default structural reference for future repo expansion and for any new app/package boundary decisions.
+- Important project reference: `gnd` at `/Users/M1PRO/Documents/code/_turbo/gnd` is the secondary reference for app/package ergonomics and shared frontend package wiring.
+- Important project reference: `school-clerk` at `/Users/M1PRO/Documents/code/school-clerk` is a reference for SaaS administration, school/tenant workflows, and operational dashboard patterns.
+- Important project reference: `plotkeys` at `/Users/M1PRO/Documents/code/plot-keys` is the default reference when designing email, notifications, jobs, and related package boundaries.
+- Important project reference: `halaal-coperative` at `/Users/M1PRO/Documents/code/halaal-coperative` is a reference for cooperative commerce, member/account workflows, and finance-oriented product patterns.
 - Final directory names should match the actual scaffold once created.
 - Keep schema ownership centralized so Prisma remains authoritative even if Drizzle is used in runtime code.

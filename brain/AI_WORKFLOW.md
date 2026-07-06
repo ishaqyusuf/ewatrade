@@ -7,14 +7,16 @@ Standard workflow for AI collaborators working in this repository.
 - Read `brain/BRAIN.md` and relevant focused docs before making changes.
 - Update Brain files whenever architecture, data, APIs, or priorities change.
 - Use `TODO:` markers instead of guessing when implementation details are missing.
-- When deciding repo shape, app boundaries, or shared package placement, inspect `~/Document/code/_kitchen_sink/midday` first and treat it as the default structural reference.
-- When implementing notifications, email, jobs, or tenant-domain mechanics, inspect `~/Documents/code/plot-keys` first for package boundaries and execution patterns.
-- When implementing shared frontend package structure and app ergonomics, inspect `~/Documents/code/_turbo/gnd` as an additional reference.
+- Important project reference: inspect `midday` at `/Users/M1PRO/Documents/code/_kitchen_sink/midday` first for repo shape, app boundaries, and shared package placement.
+- Important project reference: inspect `gnd` at `/Users/M1PRO/Documents/code/_turbo/gnd` for shared frontend package structure, styling setup, and app ergonomics.
+- Important project reference: inspect `school-clerk` at `/Users/M1PRO/Documents/code/school-clerk` for SaaS administration, school/tenant workflows, and operational dashboard patterns.
+- Important project reference: inspect `plotkeys` at `/Users/M1PRO/Documents/code/plot-keys` for notifications, email, jobs, tenant-domain mechanics, package boundaries, and execution patterns.
+- Important project reference: inspect `halaal-coperative` at `/Users/M1PRO/Documents/code/halaal-coperative` for cooperative commerce, member/account workflows, and finance-oriented product patterns.
 
 ## Workflow
 1. Review `brain/SYSTEM_OVERVIEW.md` and the relevant domain/module docs.
 2. Check `brain/system/`, `brain/database/`, and `brain/api/` for current constraints.
-3. For code structure decisions, review `~/Document/code/_kitchen_sink/midday` before introducing new app/package patterns.
+3. For code structure decisions, review `/Users/M1PRO/Documents/code/_kitchen_sink/midday` before introducing new app/package patterns.
 4. Implement or document changes.
 5. Update impacted Brain files in the same turn.
 6. Record decisions in `brain/decisions/` when a choice affects long-term architecture.
