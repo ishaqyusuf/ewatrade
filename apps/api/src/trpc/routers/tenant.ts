@@ -1,6 +1,6 @@
-import { createStoreSchema } from "@api/schemas/tenant"
 import { createTenantStore } from "@ewatrade/db/queries"
 import { createTRPCRouter, protectedProcedure } from "../init"
+import { createStoreSchema } from "../../schemas/tenant"
 
 export const tenantRouter = createTRPCRouter({
   current: protectedProcedure.query(async ({ ctx }) => {
