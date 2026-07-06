@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "exports": {
+    "./internal-api": "./src/internal-api.ts",
     "./trpc/routers/_app": "./src/trpc/routers/_app.ts"
   },
   "dependencies": {
