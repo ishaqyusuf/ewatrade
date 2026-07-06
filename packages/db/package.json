@@ -16,6 +16,7 @@
     "./browser": "./src/generated/prisma/browser.ts"
   },
   "scripts": {
+    "build": "bun run generate && tsc --noEmit",
     "generate": "prisma generate --config prisma.config.ts",
     "format": "prisma format --config prisma.config.ts",
     "migrate:dev": "prisma migrate dev --config prisma.config.ts",
