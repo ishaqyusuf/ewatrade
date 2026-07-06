@@ -49,6 +49,7 @@ Optional deployment config in ${envFile}:
   VERCEL_API_TARGET=production
   VERCEL_API_SKIP_TEST=false
   VERCEL_API_SKIP_MIGRATIONS=false
+  VERCEL_API_HEALTH_URL=https://api.ewatrade.com
   VERCEL_API_FORCE=false
   VERCEL_API_ENV_KEYS=DATABASE_URL,BETTER_AUTH_SECRET,...
 `)
@@ -150,6 +151,7 @@ const isProduction = target === "production"
 const skipTest = bool(env.VERCEL_API_SKIP_TEST, false)
 const skipMigrations = bool(env.VERCEL_API_SKIP_MIGRATIONS, false)
 const force = bool(env.VERCEL_API_FORCE, false)
+const healthUrl = env.VERCEL_API_HEALTH_URL?.trim() || ""
 const envKeys = (env.VERCEL_API_ENV_KEYS?.split(",") ?? defaultEnvKeys)
   .map((key) => key.trim())
   .filter(Boolean)
@@ -188,7 +190,7 @@ if (!existsSync(".vercel/project.json")) {
 
 if (!skipMigrations) {
   console.log("Running database migrations...")
-  run("bun", ["--cwd", "packages/db", "run", "migrate:deploy"], { env })
+  run("bun", ["run", "--cwd", "packages/db", "migrate:deploy"], { env })
 }
 
 const deployArgs = [
@@ -240,7 +242,10 @@ console.log(`Deployment URL: ${url}`)
 
 if (!skipTest) {
   console.log("Testing health endpoint...")
-  const response = await fetch(`${url}/health`, { redirect: "manual" })
+  const baseUrl = healthUrl || url
+  const response = await fetch(`${baseUrl.replace(/\/$/, "")}/health`, {
+    redirect: "manual",
+  })
   const body = await response.text()
 
   if (!response.ok) {

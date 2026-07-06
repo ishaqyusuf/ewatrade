@@ -38,7 +38,6 @@
     "dev:api": "bun run dev:prepare && turbo dev --filter=@ewatrade/api",
     "dev:api:portless": "bun run dev:prepare && turbo dev:portless --filter=@ewatrade/api",
     "api:deploy": "bun scripts/deploy-api.mjs",
-    "api:vercel-build": "bun run --cwd apps/api typecheck && bun build apps/api/src/index.ts --target=bun --outfile=dist/api.js",
     "deploy:api": "bun run api:deploy",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",

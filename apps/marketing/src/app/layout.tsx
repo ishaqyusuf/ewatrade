@@ -1,8 +1,8 @@
 import type { Metadata } from "next"
 import "@ewatrade/ui/globals.css"
 import { cn } from "@/utils"
-import { NotificationsProvider } from "@ewatrade/notifications-react"
 import { Fraunces, Geist } from "next/font/google"
+import { Providers } from "./providers"
 
 const geist = Geist({
   subsets: ["latin"],
@@ -30,7 +30,7 @@ export default function RootLayout({
       className={cn("font-sans", geist.variable, fraunces.variable)}
     >
       <body>
-        <NotificationsProvider>{children}</NotificationsProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   )
