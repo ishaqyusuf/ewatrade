@@ -1,6 +1,22 @@
-import { createTenantStore } from "@ewatrade/db/queries"
-import { createTRPCRouter, protectedProcedure } from "../init"
+import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
+import {
+  RetailOpsSubscriptionError,
+  createTenantStore,
+} from "@ewatrade/db/queries"
+import { TRPCError } from "@trpc/server"
 import { createStoreSchema } from "../../schemas/tenant"
+import { createTRPCRouter, protectedProcedure } from "../init"
+
+function assertCanManageTenantStores(role: string) {
+  const normalizedRole = normalizeRole(role)
+
+  if (!normalizedRole || !canManageTenant(normalizedRole)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "You do not have permission to manage business stores.",
+    })
+  }
+}
 
 export const tenantRouter = createTRPCRouter({
   current: protectedProcedure.query(async ({ ctx }) => {
@@ -14,9 +30,27 @@ export const tenantRouter = createTRPCRouter({
   createStore: protectedProcedure
     .input(createStoreSchema)
     .mutation(async ({ ctx, input }) => {
-      return createTenantStore(ctx.db, {
-        tenantId: ctx.tenantContext.tenant.id,
-        ...input,
-      })
+      assertCanManageTenantStores(ctx.tenantContext.membership.role)
+      const { onboarding, ...storeInput } = input
+
+      try {
+        return await createTenantStore(ctx.db, {
+          createdByUserId: ctx.session.user.id,
+          tenantId: ctx.tenantContext.tenant.id,
+          ...storeInput,
+          onboarding: onboarding
+            ? { ...onboarding, source: "trpc_store_create" }
+            : undefined,
+        })
+      } catch (error) {
+        if (error instanceof RetailOpsSubscriptionError) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: error.message,
+          })
+        }
+
+        throw error
+      }
     }),
 })

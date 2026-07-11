@@ -1,26 +1,30 @@
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
+import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import { prisma } from "@ewatrade/db"
+import {
+  RetailOpsSubscriptionError,
+  createTenantStore,
+} from "@ewatrade/db/queries"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { z } from "zod/v4"
 
+const storeOnboardingSchema = z.object({
+  businessType: z.string().trim().max(80).optional(),
+  countryCode: z.string().trim().max(8).optional(),
+  productCategory: z.string().trim().max(120).optional(),
+  salesMethod: z.string().trim().max(80).optional(),
+  teamSize: z.string().trim().max(80).optional(),
+})
+
 const createStoreSchema = z.object({
   name: z.string().min(1).max(120),
   currencyCode: z.string().length(3).default("NGN"),
+  onboarding: storeOnboardingSchema.optional(),
   supportEmail: z.email().optional(),
   supportPhone: z.string().optional(),
 })
-
-// Slugify a display name into a URL-safe store slug
-function toSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 48)
-}
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession()
@@ -31,6 +35,15 @@ export async function POST(request: NextRequest) {
   if (!ctx)
     return NextResponse.json({ error: "Tenant not found" }, { status: 404 })
 
+  const normalizedRole = normalizeRole(ctx.membership.role)
+
+  if (!normalizedRole || !canManageTenant(normalizedRole)) {
+    return NextResponse.json(
+      { error: "You do not have permission to manage business stores." },
+      { status: 403 },
+    )
+  }
+
   const body = await request.json().catch(() => null)
   const parsed = createStoreSchema.safeParse(body)
   if (!parsed.success) {
@@ -40,34 +53,28 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { name, currencyCode, supportEmail, supportPhone } = parsed.data
+  const { name, currencyCode, onboarding, supportEmail, supportPhone } =
+    parsed.data
 
-  // Generate a unique slug within the tenant
-  const baseSlug = toSlug(name) || "store"
-  let slug = baseSlug
-  let attempt = 0
-
-  while (true) {
-    const existing = await prisma.store.findUnique({
-      where: { tenantId_slug: { tenantId: ctx.tenant.id, slug } },
-    })
-    if (!existing) break
-    attempt++
-    slug = `${baseSlug}-${attempt}`
-  }
-
-  const store = await prisma.store.create({
-    data: {
+  try {
+    const store = await createTenantStore(prisma, {
+      createdByUserId: session.user.id,
       tenantId: ctx.tenant.id,
-      slug,
       name,
       currencyCode,
+      onboarding: onboarding
+        ? { ...onboarding, source: "dashboard_first_store_setup" }
+        : undefined,
       supportEmail: supportEmail ?? null,
       supportPhone: supportPhone ?? null,
-      status: "ACTIVE",
-    },
-    select: { id: true, slug: true, name: true, status: true },
-  })
+    })
 
-  return NextResponse.json({ success: true, store }, { status: 201 })
+    return NextResponse.json({ success: true, store }, { status: 201 })
+  } catch (error) {
+    if (error instanceof RetailOpsSubscriptionError) {
+      return NextResponse.json({ error: error.message }, { status: 403 })
+    }
+
+    throw error
+  }
 }

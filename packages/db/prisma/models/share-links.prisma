@@ -1,0 +1,220 @@
+model ProductShareLink {
+  id                   String                         @id @default(cuid())
+  tenantId             String
+  storeId              String
+  productId            String
+  token                String
+  url                  String
+  label                String?
+  status               ProductShareLinkStatus         @default(ACTIVE)
+  createdByUserId      String
+  createExternalId     String?
+  deactivatedByUserId  String?
+  deactivateExternalId String?
+  deactivatedAt        DateTime?
+  lastActivityAt       DateTime?
+  viewCount            Int                            @default(0)
+  orderCount           Int                            @default(0)
+  metadata             Json?
+  createdAt            DateTime                       @default(now())
+  updatedAt            DateTime                       @updatedAt
+  tenant               Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                Store                          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product              Product                        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  events               ProductShareLinkEvent[]
+  views                ProductShareLinkView[]
+  orderRequests        ProductShareLinkOrderRequest[]
+  reservations         ProductShareLinkReservation[]
+  notifications        ProductShareLinkNotification[]
+  dailyAnalytics       ProductShareLinkAnalyticsDaily[]
+
+  @@unique([tenantId, token])
+  @@unique([tenantId, storeId, productId, createExternalId])
+  @@index([tenantId, storeId, status])
+  @@index([productId, status])
+  @@index([createdByUserId, createdAt])
+  @@index([lastActivityAt])
+}
+
+model ProductShareLinkEvent {
+  id                String                    @id @default(cuid())
+  tenantId          String
+  storeId           String
+  shareLinkId       String
+  type              ProductShareLinkEventType
+  actorUserId       String?
+  customerAccountId String?
+  eventExternalId   String?
+  happenedAt        DateTime                  @default(now())
+  metadata          Json?
+  createdAt         DateTime                  @default(now())
+  tenant            Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  shareLink         ProductShareLink          @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, shareLinkId, type, eventExternalId])
+  @@index([tenantId, happenedAt])
+  @@index([shareLinkId, happenedAt])
+  @@index([type, happenedAt])
+}
+
+model ProductShareLinkView {
+  id          String           @id @default(cuid())
+  tenantId    String
+  storeId     String
+  shareLinkId String
+  productId   String
+  visitorKey  String?
+  referrer    String?
+  userAgent   String?
+  ipHash      String?
+  viewedAt    DateTime         @default(now())
+  metadata    Json?
+  createdAt   DateTime         @default(now())
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store       Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  shareLink   ProductShareLink @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+  product     Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, viewedAt])
+  @@index([shareLinkId, viewedAt])
+  @@index([productId, viewedAt])
+  @@index([visitorKey])
+}
+
+model ProductShareLinkOrderRequest {
+  id                 String                             @id @default(cuid())
+  tenantId           String
+  storeId            String
+  shareLinkId        String
+  productId          String
+  orderId            String                             @unique
+  customerAccountId  String?
+  customerAuthMode   String?
+  status             ProductShareLinkOrderRequestStatus @default(PENDING)
+  quantity           Int
+  totalMinor         Int
+  requestedAt        DateTime                           @default(now())
+  completedAt        DateTime?
+  cancelledAt        DateTime?
+  followedUpByUserId String?
+  metadata           Json?
+  createdAt          DateTime                           @default(now())
+  updatedAt          DateTime                           @updatedAt
+  tenant             Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store              Store                              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  shareLink          ProductShareLink                   @relation(fields: [shareLinkId], references: [id], onDelete: Restrict)
+  product            Product                            @relation(fields: [productId], references: [id], onDelete: Restrict)
+  order              Order                              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reservations       ProductShareLinkReservation[]
+  notifications      ProductShareLinkNotification[]
+
+  @@index([tenantId, storeId, status])
+  @@index([shareLinkId, requestedAt])
+  @@index([customerAccountId, requestedAt])
+  @@index([followedUpByUserId, updatedAt])
+}
+
+model ProductShareLinkReservation {
+  id                 String                            @id @default(cuid())
+  tenantId           String
+  storeId            String
+  shareLinkId        String
+  orderRequestId     String?
+  productId          String
+  productVariantId   String
+  orderId            String?
+  orderItemId        String?
+  status             ProductShareLinkReservationStatus @default(RESERVED)
+  quantity           Int
+  reservedByUserId   String?
+  reservedAt         DateTime                          @default(now())
+  expiresAt          DateTime?
+  releasedAt         DateTime?
+  consumedAt         DateTime?
+  failureReason      String?
+  externalId         String?
+  metadata           Json?
+  createdAt          DateTime                          @default(now())
+  updatedAt          DateTime                          @updatedAt
+  tenant             Tenant                            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store              Store                             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  shareLink          ProductShareLink                  @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+  orderRequest       ProductShareLinkOrderRequest?     @relation(fields: [orderRequestId], references: [id], onDelete: SetNull)
+  product            Product                           @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productVariant     ProductVariant                    @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
+  order              Order?                            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  orderItem          OrderItem?                        @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, storeId, shareLinkId, externalId])
+  @@index([tenantId, storeId, status])
+  @@index([shareLinkId, reservedAt])
+  @@index([orderRequestId])
+  @@index([productVariantId, status])
+  @@index([orderId])
+  @@index([expiresAt])
+}
+
+model ProductShareLinkNotification {
+  id                String                                    @id @default(cuid())
+  tenantId          String
+  storeId           String
+  shareLinkId       String
+  orderRequestId    String?
+  channel           ProductShareLinkNotificationChannel       @default(EMAIL)
+  recipientType     ProductShareLinkNotificationRecipientType
+  recipientUserId   String?
+  recipientEmail    String?
+  status            ProductShareLinkNotificationStatus        @default(PENDING)
+  providerMessageId String?
+  subject           String?
+  sentAt            DateTime?
+  failedAt          DateTime?
+  failureReason     String?
+  externalId        String?
+  metadata          Json?
+  createdAt         DateTime                                  @default(now())
+  updatedAt         DateTime                                  @updatedAt
+  tenant            Tenant                                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                                     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  shareLink         ProductShareLink                          @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+  orderRequest      ProductShareLinkOrderRequest?             @relation(fields: [orderRequestId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, shareLinkId, recipientType, channel, externalId])
+  @@index([tenantId, storeId, status])
+  @@index([shareLinkId, createdAt])
+  @@index([orderRequestId, createdAt])
+  @@index([recipientUserId, createdAt])
+  @@index([recipientEmail, createdAt])
+}
+
+model ProductShareLinkAnalyticsDaily {
+  id                   String           @id @default(cuid())
+  tenantId             String
+  storeId              String
+  shareLinkId          String
+  productId            String
+  day                  DateTime
+  viewCount            Int              @default(0)
+  uniqueVisitorCount   Int              @default(0)
+  orderRequestCount    Int              @default(0)
+  completedOrderCount  Int              @default(0)
+  cancelledOrderCount  Int              @default(0)
+  reservedQuantity     Int              @default(0)
+  releasedQuantity     Int              @default(0)
+  consumedQuantity     Int              @default(0)
+  revenueMinor         Int              @default(0)
+  lastRolledUpAt       DateTime?
+  metadata             Json?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  tenant               Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  shareLink            ProductShareLink @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+  product              Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([shareLinkId, day])
+  @@index([tenantId, storeId, day])
+  @@index([productId, day])
+  @@index([lastRolledUpAt])
+}

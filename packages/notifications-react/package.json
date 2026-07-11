@@ -15,14 +15,14 @@
   "dependencies": {
     "@ewatrade/notifications": "workspace:*",
     "@ewatrade/utils": "workspace:*",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",
     "@types/node": "^24.6.0",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
-    "typescript": "^5.9.3"
+    "typescript": "catalog:"
   }
 }

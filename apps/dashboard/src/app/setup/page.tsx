@@ -15,13 +15,53 @@ const CURRENCIES = [
   { code: "EGP", label: "Egyptian Pound (EGP)" },
 ]
 
+const COUNTRIES = [
+  { code: "NG", currencyCode: "NGN", label: "Nigeria" },
+  { code: "GH", currencyCode: "GHS", label: "Ghana" },
+  { code: "KE", currencyCode: "KES", label: "Kenya" },
+  { code: "ZA", currencyCode: "ZAR", label: "South Africa" },
+  { code: "EG", currencyCode: "EGP", label: "Egypt" },
+  { code: "OTHER", currencyCode: "USD", label: "Other" },
+]
+
+const BUSINESS_TYPES = [
+  "Retail",
+  "Wholesale",
+  "Food and beverage",
+  "Services",
+  "Logistics",
+  "Other",
+]
+
+const SALES_METHODS = [
+  "In-store sales",
+  "Delivery and pickup",
+  "WhatsApp/order links",
+  "Mixed channels",
+]
+
+const TEAM_SIZES = ["Just me", "2-5 people", "6-10 people", "11+ people"]
+
 export default function SetupPage() {
   const router = useRouter()
   const [storeName, setStoreName] = useState("")
+  const [businessType, setBusinessType] = useState("Retail")
+  const [countryCode, setCountryCode] = useState("NG")
   const [currency, setCurrency] = useState("NGN")
+  const [productCategory, setProductCategory] = useState("")
+  const [salesMethod, setSalesMethod] = useState("In-store sales")
   const [supportEmail, setSupportEmail] = useState("")
+  const [teamSize, setTeamSize] = useState("Just me")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  function handleCountryChange(value: string) {
+    setCountryCode(value)
+    const nextCurrency = COUNTRIES.find(
+      (country) => country.code === value,
+    )?.currencyCode
+    if (nextCurrency) setCurrency(nextCurrency)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -36,6 +76,13 @@ export default function SetupPage() {
         body: JSON.stringify({
           name: storeName.trim(),
           currencyCode: currency,
+          onboarding: {
+            businessType,
+            countryCode,
+            productCategory: productCategory.trim() || undefined,
+            salesMethod,
+            teamSize,
+          },
           supportEmail: supportEmail.trim() || undefined,
         }),
       })
@@ -97,23 +144,114 @@ export default function SetupPage() {
             />
           </div>
 
-          {/* Currency */}
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="currency" className="text-sm font-medium">
-              Store currency
-            </label>
-            <select
-              id="currency"
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
-            >
-              {CURRENCIES.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="business-type" className="text-sm font-medium">
+                Business type
+              </label>
+              <select
+                id="business-type"
+                value={businessType}
+                onChange={(e) => setBusinessType(e.target.value)}
+                className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+              >
+                {BUSINESS_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="product-category" className="text-sm font-medium">
+                Main product category
+              </label>
+              <input
+                id="product-category"
+                type="text"
+                value={productCategory}
+                onChange={(e) => setProductCategory(e.target.value)}
+                placeholder="e.g. Feed, groceries"
+                className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="country" className="text-sm font-medium">
+                Country
+              </label>
+              <select
+                id="country"
+                value={countryCode}
+                onChange={(e) => handleCountryChange(e.target.value)}
+                className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+              >
+                {COUNTRIES.map((country) => (
+                  <option key={country.code} value={country.code}>
+                    {country.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="currency" className="text-sm font-medium">
+                Store currency
+              </label>
+              <select
+                id="currency"
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+              >
+                {CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="sales-method" className="text-sm font-medium">
+                Sales method
+              </label>
+              <select
+                id="sales-method"
+                value={salesMethod}
+                onChange={(e) => setSalesMethod(e.target.value)}
+                className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+              >
+                {SALES_METHODS.map((method) => (
+                  <option key={method} value={method}>
+                    {method}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="team-size" className="text-sm font-medium">
+                Team size
+              </label>
+              <select
+                id="team-size"
+                value={teamSize}
+                onChange={(e) => setTeamSize(e.target.value)}
+                className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+              >
+                {TEAM_SIZES.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Support email */}

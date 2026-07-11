@@ -19,6 +19,11 @@ export const metadata: Metadata = {
   title: "ewatrade — Commerce, logistics, and merchant operations",
   description:
     "ewatrade combines branded storefronts, merchant operations, dispatch coordination, POS workflows, and customer messaging into one multi-tenant platform.",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/brand/ewatrade-mark.png",
+  },
 }
 
 export default function RootLayout({

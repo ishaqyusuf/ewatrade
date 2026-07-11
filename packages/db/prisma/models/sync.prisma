@@ -1,0 +1,120 @@
+model OfflineDevice {
+  id                String                    @id @default(cuid())
+  tenantId          String
+  storeId           String?
+  deviceId          String
+  deviceName        String?
+  platform          OfflineDevicePlatform     @default(UNKNOWN)
+  appVersion        String?
+  status            OfflineDeviceStatus       @default(ACTIVE)
+  registeredByUserId String?
+  registeredAt      DateTime                  @default(now())
+  lastSeenAt        DateTime                  @default(now())
+  revokedAt         DateTime?
+  revokedByUserId   String?
+  metadata          Json?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  tenant            Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store?                    @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  revocations       OfflineDeviceRevocation[]
+  syncRuns          RetailOpsSyncRun[]
+  syncEvents        RetailOpsSyncEvent[]
+
+  @@unique([tenantId, deviceId])
+  @@index([tenantId, status])
+  @@index([storeId, lastSeenAt])
+}
+
+model OfflineDeviceRevocation {
+  id              String                @id @default(cuid())
+  tenantId        String
+  offlineDeviceId String?
+  deviceId        String
+  deviceName      String?
+  platform        OfflineDevicePlatform @default(UNKNOWN)
+  appVersion      String?
+  revokedByUserId String
+  revokedAt       DateTime              @default(now())
+  restoredByUserId String?
+  restoredAt      DateTime?
+  reason          String?
+  metadata        Json?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  tenant          Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  offlineDevice   OfflineDevice?        @relation(fields: [offlineDeviceId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, deviceId])
+  @@index([tenantId, revokedAt])
+  @@index([offlineDeviceId, revokedAt])
+}
+
+model RetailOpsSyncRun {
+  id              String                 @id @default(cuid())
+  tenantId        String
+  storeId         String?
+  offlineDeviceId String?
+  deviceId        String?
+  actorUserId     String?
+  status          RetailOpsSyncRunStatus @default(PENDING)
+  totalCount      Int                    @default(0)
+  appliedCount    Int                    @default(0)
+  failedCount     Int                    @default(0)
+  skippedCount    Int                    @default(0)
+  startedAt       DateTime               @default(now())
+  completedAt     DateTime?
+  errorMessage    String?
+  metadata        Json?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  tenant          Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store           Store?                 @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  offlineDevice   OfflineDevice?         @relation(fields: [offlineDeviceId], references: [id], onDelete: SetNull)
+  events          RetailOpsSyncEvent[]
+
+  @@index([tenantId, completedAt])
+  @@index([tenantId, status])
+  @@index([offlineDeviceId, completedAt])
+  @@index([deviceId, completedAt])
+  @@index([actorUserId, completedAt])
+}
+
+model RetailOpsSyncEvent {
+  id               String                   @id @default(cuid())
+  tenantId         String
+  storeId          String?
+  syncRunId        String?
+  offlineDeviceId  String?
+  deviceId         String?
+  eventId          String
+  type             String
+  status           RetailOpsSyncEventStatus @default(PENDING)
+  actorUserId      String?
+  payload          Json?
+  result           Json?
+  errorCode        String?
+  errorMessage     String?
+  dependencyReason String?
+  createdAtClient  DateTime?
+  processedAt      DateTime?
+  nextRetryAt      DateTime?
+  reviewedAt       DateTime?
+  reviewedByUserId String?
+  metadata         Json?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  tenant           Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store            Store?                   @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  syncRun          RetailOpsSyncRun?        @relation(fields: [syncRunId], references: [id], onDelete: SetNull)
+  offlineDevice    OfflineDevice?           @relation(fields: [offlineDeviceId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, eventId])
+  @@index([tenantId, status])
+  @@index([tenantId, type])
+  @@index([syncRunId, status])
+  @@index([offlineDeviceId, createdAt])
+  @@index([deviceId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([nextRetryAt])
+}

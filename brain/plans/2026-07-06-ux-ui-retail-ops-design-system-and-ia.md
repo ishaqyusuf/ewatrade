@@ -4,13 +4,13 @@
 UX/UI
 
 ## Status
-Proposed
+Completed
 
 ## Created Date
 2026-07-06
 
 ## Last Updated
-2026-07-06
+2026-07-10
 
 ## Intake
 - Intake File: brain/intake/2026-07-06-sales-management-saas-mvp.md
@@ -21,6 +21,14 @@ Define the product information architecture, core screens, and reusable UI syste
 
 ## Current Context
 The project already has `apps/marketing`, `apps/pos`, `apps/dashboard`, and `packages/ui`. Brain currently positions ewatrade as a multi-tenant commerce, logistics, POS, and merchant operations platform. Existing app surfaces are mostly scaffolded and do not yet express the focused retail sales-rep workflow.
+
+The Retail Ops design system and IA is now documented in `brain/features/retail-ops-design-system-and-ia.md`. That doc defines the role split, surface ownership, screen map, reusable components, operational state language, architecture boundaries, implementation constraints, and acceptance review checklist for future Retail Ops slices.
+
+## Design References
+- Smart Sales & Order Management Mobile App by Sujon Hossain on Dribbble: https://dribbble.com/shots/27067100-Smart-Sales-Order-Management-Mobile-App
+  - Use as the primary early mobile visual reference for `mobile`.
+  - Borrow the emphasis on sales performance cards, order status visibility, analytics snapshots, simple onboarding, profile/settings, notifications, and quick navigation.
+  - Adapt the pattern toward inventory custody, rep workflows, offline sync, and end-of-day reconciliation instead of copying it as a generic sales dashboard.
 
 ## Proposed Approach
 Audit strong sales/POS/inventory dashboard patterns, then translate the relevant patterns into an ewatrade Retail Ops design system. Define screen-level IA for owner/admin dashboard, POS/rep selling surface, onboarding, inventory, reports, offline/sync states, and end-of-day closeout. Update shared UI guidance and produce implementation-ready screen notes without building the app code in this plan.
@@ -81,6 +89,9 @@ Lower agent must report:
 
 ## Open Questions
 - TODO: Confirm whether mobile-first PWA is the primary target for reps.
+
+## Progress Notes
+- 2026-07-10: Added `brain/features/retail-ops-design-system-and-ia.md` and linked it from product, merchant, POS, and feature docs. The IA now covers owner/admin, manager, attendant, platform admin, mobile, dashboard, POS, and web share-link surfaces; onboarding, dashboard, selling, inventory, staff, closeout, reports, and subscription screen maps; reusable mobile/dashboard components; offline/sync, shortage, credit, and variance states; and implementation constraints for NativeWind-first reusable UI.
 
 ## Linked Task
 - Task Title: Retail Ops Design System And IA

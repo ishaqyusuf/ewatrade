@@ -38,6 +38,23 @@ enum MembershipStatus {
   REMOVED
 }
 
+enum RetailOpsStaffInviteTokenStatus {
+  ACTIVE
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+enum RetailOpsStaffLifecycleEventType {
+  INVITED
+  INVITE_REFRESHED
+  ONBOARDING_COMPLETED
+  SUSPENDED
+  REACTIVATED
+  REMOVED
+  ROLE_CHANGED
+}
+
 enum StoreStatus {
   DRAFT
   ACTIVE
@@ -49,6 +66,225 @@ enum ProductStatus {
   DRAFT
   ACTIVE
   ARCHIVED
+}
+
+enum ProductUnitPriceChangeSource {
+  PRODUCT_SETUP
+  MANUAL
+  SYNC_REPLAY
+  IMPORT
+}
+
+enum StockDeliveryStatus {
+  DRAFT
+  RECEIVED
+  CANCELLED
+}
+
+enum StockDeliverySource {
+  PRODUCTION
+  SUPPLIER
+  MANUAL
+  TRANSFER
+  OTHER
+}
+
+enum InventoryMovementDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum InventoryMovementType {
+  OPENING_STOCK
+  STOCK_INTAKE
+  STOCK_ADJUSTMENT
+  CONVERSION_OUT
+  CONVERSION_IN
+  SALE_DEDUCTION
+  STAFF_ASSIGNMENT
+  STAFF_RETURN
+  CLOSEOUT_ADJUSTMENT
+  DAMAGE
+  LOSS
+  SYNC_CORRECTION
+}
+
+enum InventoryMovementSource {
+  PRODUCT_SETUP
+  STOCK_DELIVERY
+  STOCK_ADJUSTMENT
+  UNIT_CONVERSION
+  SALE
+  STAFF_STOCK_ASSIGNMENT
+  STAFF_STOCK_RETURN
+  CLOSEOUT
+  SYNC_REPLAY
+  MANUAL
+}
+
+enum BillingProvider {
+  NONE
+  MANUAL
+  STRIPE
+  APP_STORE
+  PLAY_STORE
+  OTHER
+}
+
+enum BillingSubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+}
+
+enum BillingCheckoutSessionStatus {
+  CREATED
+  PENDING
+  COMPLETED
+  CANCELLED
+  EXPIRED
+  FAILED
+}
+
+enum BillingInvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+enum BillingProviderEventStatus {
+  PENDING
+  PROCESSED
+  FAILED
+  SKIPPED
+}
+
+enum OfflineDevicePlatform {
+  ANDROID
+  IOS
+  WEB
+  UNKNOWN
+}
+
+enum OfflineDeviceStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum RetailOpsSyncRunStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  PARTIAL
+  FAILED
+  SKIPPED
+}
+
+enum RetailOpsSyncEventStatus {
+  PENDING
+  APPLIED
+  FAILED
+  SKIPPED
+  CONFLICT
+  WAITING
+}
+
+enum ProductShareLinkStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ProductShareLinkEventType {
+  CREATED
+  VIEWED
+  ORDER_REQUESTED
+  DEACTIVATED
+}
+
+enum ProductShareLinkOrderRequestStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum ProductShareLinkReservationStatus {
+  RESERVED
+  RELEASED
+  CONSUMED
+  EXPIRED
+  FAILED
+}
+
+enum ProductShareLinkNotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum ProductShareLinkNotificationChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+  IN_APP
+}
+
+enum ProductShareLinkNotificationRecipientType {
+  CUSTOMER
+  OWNER
+  ADMIN
+  SALES_REP
+  LINK_CREATOR
+  OTHER
+}
+
+enum RetailOpsCustomerIdentityType {
+  EMAIL
+  PHONE
+  NAME
+  PLATFORM_ACCOUNT
+}
+
+enum RetailOpsCustomerEventType {
+  CREATED
+  UPDATED
+  SALE_RECORDED
+  ORDER_REQUESTED
+  MERGED
+}
+
+enum RetailOpsCloseoutStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  NEEDS_CORRECTION
+}
+
+enum RetailOpsCloseoutReviewResult {
+  APPROVED
+  REJECTED
+  NEEDS_CORRECTION
+}
+
+enum RetailOpsPaymentDeclarationMethod {
+  CASH
+  TRANSFER
+  CARD
+  CREDIT
+  OTHER
+}
+
+enum RetailOpsStockDeclarationType {
+  OPENING
+  CLOSING
+}
+
+enum RetailOpsStockDeclarationSource {
+  CENTRAL_STOCK
+  STAFF_WALLET
 }
 
 enum OrderStatus {

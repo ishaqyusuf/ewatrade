@@ -20,6 +20,13 @@ Describe the intended technical architecture and responsibility boundaries for t
 - `Drizzle` is the preferred query builder/runtime for repository implementations and SQL-heavy access patterns.
 - Repositories should hide ORM/query-tool specifics from service and API layers.
 
+## Offline Sync Boundary
+- Mobile can queue Retail Ops events locally after a user has logged in once.
+- API sync procedures must remain idempotent by tenant-scoped client event ids.
+- Durable offline device, revocation, sync run, and sync event tables now exist in Prisma source schema, migrations, and the generated Prisma client.
+- Live sync history writes/reads and offline-device registration, listing, revocation, restoration, sync eligibility checks, and subscription usage counts are durable-first with tenant-metadata fallback until every environment has applied the migration.
+- First sync conflict review reads/acknowledgements sit behind service/repository boundaries. Guided resolution actions, retry scheduling, and broader admin resolution workflows should stay out of UI components and behind those same boundaries.
+
 ## Multi-Tenancy
 - Every tenant-owned entity carries a tenant identifier.
 - Merchant tenants and dispatch tenants are isolated in storage and authorization.

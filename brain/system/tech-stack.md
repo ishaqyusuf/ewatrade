@@ -24,7 +24,7 @@ Canonical stack reference for current implementation choices.
 - Migrations: Prisma
 - Runtime querying / repositories: Drizzle
 - Database provider: PostgreSQL as the canonical application database
-- Local database runtime: Docker Compose with a PostgreSQL container
+- Development database runtime: hosted Neon branch via `DATABASE_URL`
 
 ## Guidance
 - Model entities in Prisma first.

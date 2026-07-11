@@ -3,13 +3,14 @@ import {
   DeliveryTruck01Icon,
   Store04Icon,
   WhatsappIcon,
-} from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 
-import { Button } from "@ewatrade/ui"
+import { Button } from "@ewatrade/ui";
 
-import { AnimateIn } from "@/components/animate-in"
-import { LeadCaptureForm } from "@/components/lead-capture-form"
+import { AnimateIn } from "@/components/animate-in";
+import { LeadCaptureForm } from "@/components/lead-capture-form";
+import { prisma } from "@ewatrade/db";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -38,7 +39,7 @@ const valuePillars = [
     bar: "bg-emerald-500",
     glow: "shadow-emerald-500/20",
   },
-]
+];
 
 const platformSurfaces = [
   {
@@ -56,7 +57,7 @@ const platformSurfaces = [
     title: "In-store without the extra complexity",
     body: "Cashier workflows, barcode scanning, and receipts connected directly to the same product and order model.",
   },
-]
+];
 
 const workflowSteps = [
   {
@@ -75,36 +76,39 @@ const workflowSteps = [
     heading: "Stay aligned",
     body: "Keep merchant teams, cashiers, and dispatch providers synchronized in one platform with no manual bridging.",
   },
-]
+];
 
 const stats = [
   { value: "4", label: "Core surfaces" },
   { value: "Multi-store", label: "Merchant scope" },
   { value: "Commerce + logistics", label: "Operational model" },
   { value: "WhatsApp-ready", label: "Messaging layer" },
-]
+];
 
 // ─── Shared animation style helper ───────────────────────────────────────────
 
 function heroStyle(delay: number): React.CSSProperties {
-  return { animationDelay: `${delay}ms`, animationFillMode: "both" }
+  return { animationDelay: `${delay}ms`, animationFillMode: "both" };
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function HomePage() {
+export default async function HomePage() {
+  const dbTest = await prisma.account.count();
+  console.log("DB Test: ", dbTest);
   return (
     <div className="min-h-screen">
       {/* ── Nav ── */}
       <nav className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 sm:px-10 lg:px-16">
           <div className="flex items-center gap-8">
-            <span
-              className="text-xl font-semibold tracking-tight text-foreground"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
-              ewatrade
-            </span>
+            <a href="/" aria-label="EwaTrade home" className="block">
+              <img
+                src="/brand/ewatrade-logo.png"
+                alt="EwaTrade"
+                className="h-8 w-auto"
+              />
+            </a>
             <div className="hidden items-center gap-6 text-sm text-muted-foreground lg:flex">
               <a
                 href="#platform"
@@ -689,5 +693,5 @@ export default function HomePage() {
         </div>
       </footer>
     </div>
-  )
+  );
 }

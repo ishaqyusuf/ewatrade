@@ -7,7 +7,12 @@ import type {
   NotificationInput,
   NotificationVariant
 } from "./core-types"
-import { marketingEarlyAccessRequested, marketingWaitlistJoined } from "./types"
+import {
+  marketingEarlyAccessRequested,
+  marketingWaitlistJoined,
+  retailOpsSharedLinkOrderRequested,
+  retailOpsStaffInvited
+} from "./types"
 
 type BuiltNotificationInput = Omit<NotificationInput, "action">
 
@@ -114,5 +119,7 @@ export function createNotificationDispatchFromType<
 
 export const ewatradeNotificationTypes = defineNotificationTypes({
   marketing_early_access_requested: marketingEarlyAccessRequested,
-  marketing_waitlist_joined: marketingWaitlistJoined
+  marketing_waitlist_joined: marketingWaitlistJoined,
+  retail_ops_shared_link_order_requested: retailOpsSharedLinkOrderRequested,
+  retail_ops_staff_invited: retailOpsStaffInvited
 })

@@ -19,6 +19,34 @@ model Tenant {
   conversations  Conversation[]
   automations    AutomationEvent[]
   dispatchOffers DeliveryBid[]
+  subscription   TenantSubscription?
+  billingCheckoutSessions BillingCheckoutSession[]
+  billingInvoices BillingInvoice[]
+  billingProviderEvents BillingProviderEvent[]
+  productUnitTemplates ProductUnitTemplate[]
+  productUnitPriceHistory ProductUnitPriceHistory[]
+  retailOpsStaffProfiles RetailOpsStaffProfile[]
+  retailOpsStaffInviteTokens RetailOpsStaffInviteToken[]
+  retailOpsStaffLifecycleEvents RetailOpsStaffLifecycleEvent[]
+  offlineDevices OfflineDevice[]
+  offlineDeviceRevocations OfflineDeviceRevocation[]
+  retailOpsSyncRuns RetailOpsSyncRun[]
+  retailOpsSyncEvents RetailOpsSyncEvent[]
+  productShareLinks ProductShareLink[]
+  productShareLinkEvents ProductShareLinkEvent[]
+  productShareLinkViews ProductShareLinkView[]
+  productShareLinkOrderRequests ProductShareLinkOrderRequest[]
+  productShareLinkReservations ProductShareLinkReservation[]
+  productShareLinkNotifications ProductShareLinkNotification[]
+  productShareLinkAnalyticsDaily ProductShareLinkAnalyticsDaily[]
+  retailOpsCustomers RetailOpsCustomer[]
+  retailOpsCustomerIdentities RetailOpsCustomerIdentity[]
+  retailOpsCustomerEvents RetailOpsCustomerEvent[]
+  retailOpsCloseouts RetailOpsCloseout[]
+  retailOpsStockDeclarations RetailOpsStockDeclaration[]
+  retailOpsPaymentDeclarations RetailOpsPaymentDeclaration[]
+  retailOpsCloseoutReviews RetailOpsCloseoutReview[]
+  staffStockWallets StaffStockWallet[]
 }
 
 model TenantHostname {
@@ -89,9 +117,11 @@ model User {
   accounts         Account[]
   sessions         Session[]
   memberships      Membership[]
+  retailOpsStaffProfiles RetailOpsStaffProfile[] @relation("RetailOpsStaffProfileUser")
   cashierSessions  CashierSession[]
   receipts         Receipt[]
   barcodeEvents    BarcodeEvent[]
+  staffStockWallets StaffStockWallet[] @relation("StaffStockWalletUser")
   sentMessages     Message[]
   automationEvents AutomationEvent[] @relation("AutomationActor")
 }
@@ -158,6 +188,9 @@ model Membership {
   updatedAt   DateTime         @updatedAt
   tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  retailOpsStaffProfile RetailOpsStaffProfile?
+  retailOpsStaffInviteTokens RetailOpsStaffInviteToken[]
+  retailOpsStaffLifecycleEvents RetailOpsStaffLifecycleEvent[]
 
   @@unique([tenantId, userId])
   @@index([tenantId, role])

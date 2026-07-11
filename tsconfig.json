@@ -3,10 +3,15 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@api/*": ["apps/api/src/*"]
+      "@api/*": [
+        "apps/api/src/*"
+      ]
     }
   },
-  "include": ["apps/api/src/**/*.ts"],
+  "include": [
+    "apps/api/src/**/*.ts",
+    "nativewind-env.d.ts"
+  ],
   "exclude": [
     "node_modules",
     "apps/dashboard",

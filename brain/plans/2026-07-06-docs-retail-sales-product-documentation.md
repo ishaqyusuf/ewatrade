@@ -4,13 +4,13 @@
 Docs
 
 ## Status
-Proposed
+Completed
 
 ## Created Date
 2026-07-06
 
 ## Last Updated
-2026-07-06
+2026-07-10
 
 ## Intake
 - Intake File: brain/intake/2026-07-06-sales-management-saas-mvp.md
@@ -21,6 +21,8 @@ Update Brain documentation so the Retail Ops/Sales MVP is clearly represented as
 
 ## Current Context
 Brain currently describes ewatrade as commerce and logistics infrastructure for African merchants, with POS and merchant operations in scope. It does not yet document the flexible-unit sales-rep reconciliation MVP as a coherent product slice.
+
+Retail Ops/Sales is now documented as an explicit ewatrade product wedge in `brain/features/retail-ops-sales-product.md`. The stock-to-closeout operating workflow is documented in `brain/workflows/retail-ops-stock-to-closeout-flow.md`, and product, module, roadmap, feature, and schema docs now link to that direction.
 
 ## Proposed Approach
 Create or update Brain product, module, feature, workflow, and roadmap docs to describe the Retail Ops MVP. Capture positioning, personas, workflow, core entities, reports, offline expectations, subscription model, and open questions. Keep implementation docs aligned with generated plans.
@@ -78,6 +80,9 @@ Lower agent must report:
 
 ## Open Questions
 - None.
+
+## Progress Notes
+- 2026-07-10: Added the Retail Ops/Sales A-to-Z product documentation and the receive-stock-to-closeout workflow. Updated vision, roadmap, merchant/POS modules, feature index, schema entity notes, roadmap, done, and progress records. Feed/rabbit-feed examples are now documented as starter templates for flexible-unit inventory businesses rather than the product boundary.
 
 ## Linked Task
 - Task Title: Retail Sales Product Documentation

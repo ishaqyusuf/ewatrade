@@ -21,15 +21,19 @@ function mergeEnvFile(filePath, targetEnv) {
   }
 }
 
-function buildEnv() {
+function buildEnv(mode = "development") {
   const env = { ...process.env };
   const rootEnvFiles = [
     path.join(repoRoot, ".env"),
-    path.join(repoRoot, ".env.development"),
+    path.join(repoRoot, ".env.local"),
+    path.join(repoRoot, `.env.${mode}`),
+    path.join(repoRoot, `.env.${mode}.local`),
   ];
   const workspaceEnvFiles = [
     path.join(workspaceDir, ".env"),
-    path.join(workspaceDir, ".env.development"),
+    path.join(workspaceDir, ".env.local"),
+    path.join(workspaceDir, `.env.${mode}`),
+    path.join(workspaceDir, `.env.${mode}.local`),
   ];
 
   for (const filePath of rootEnvFiles) {
@@ -75,8 +79,9 @@ function parseCommand(argv) {
 }
 
 const { envAssignments, command, args } = parseCommand(process.argv.slice(2));
+const mode = envAssignments.EWATRADE_ENV ?? process.env.EWATRADE_ENV ?? "development";
 const env = {
-  ...buildEnv(),
+  ...buildEnv(mode),
   ...envAssignments,
 };
 

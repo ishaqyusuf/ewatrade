@@ -3,12 +3,19 @@
   "version": "1.0.0",
   "private": true,
   "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./colors": "./src/colors.ts",
+    "./constants": "./src/constants.ts",
+    "./dayjs": "./src/dayjs.ts",
+    "./insurance-documents": "./src/insurance-documents.ts"
+  },
   "sideEffects": false,
   "scripts": {
     "lint": "biome check .",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "catalog:"
   }
 }

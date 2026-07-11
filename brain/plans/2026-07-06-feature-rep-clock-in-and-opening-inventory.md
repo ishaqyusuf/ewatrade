@@ -4,13 +4,13 @@
 Feature
 
 ## Status
-Proposed
+In Progress
 
 ## Created Date
 2026-07-06
 
 ## Last Updated
-2026-07-06
+2026-07-10
 
 ## Intake
 - Intake File: brain/intake/2026-07-06-sales-management-saas-mvp.md
@@ -21,6 +21,8 @@ Require each sales rep to start the day by clocking in and confirming opening in
 
 ## Current Context
 The POS schema includes `CashierSession` with open/close timestamps and cash float fields. It does not track opening stock confirmation by product/unit or rep location/device context.
+
+The mobile MVP now has a local rep-session bridge: the dashboard can open a keyboard-aware clock-in sheet, confirm opening stock per product/unit/variant, record variances, show currently clocked-in reps, require the current attendant to clock in before sales can complete, and close the local session when that attendant submits a closeout. This does not replace production POS session schema, server idempotency, location/device capture, role permissions, or admin approval workflows.
 
 ## Proposed Approach
 Extend POS/cashier session behavior for sales reps. Opening a session should capture confirmed stock counts by product/unit, optional notes, and variance from assigned wallet balances. Admins should see who is clocked in and whether opening stock matched expected quantities.
@@ -80,6 +82,14 @@ Lower agent must report:
 
 ## Open Questions
 - TODO: Confirm whether clock-in requires GPS/location capture.
+
+## Progress Notes
+- 2026-07-10: Added the first mobile local rep clock-in slice. The Retail Ops store now persists rep sessions with opening inventory snapshots, variance counts, pending sync state, and sale linkage. The dashboard shows a Rep sessions admin status card, the clock-in sheet captures confirmed opening stock, the New sale path routes through clock-in when needed, and sale creation is guarded until the current attendant has an open session.
+- 2026-07-10: Added the first production session lifecycle bridge. `retailOps.openSession` opens a `CashierSession` for the acting user/store with opening float and duplicate-open prevention. First-phase opening inventory lines and variance snapshots were added in a follow-up slice; device/location context remains pending.
+- 2026-07-10: Added first-phase production opening inventory declarations. `retailOps.openSession` now accepts bounded product-unit count lines, validates the units in the selected store, stores metadata-backed opening inventory declarations, computes variance against the acting user's staff wallet balance when present or central inventory otherwise, and returns opening inventory through open, session-list, and payment-reconciliation reads.
+- 2026-07-10: Added first-phase offline clock-in replay. `retailOps.openSession` accepts `externalId`, `retailOps.syncEvents` supports `rep_session_opened`, store metadata keeps applied open-session replay results, and mobile stores the returned production cashier session id for sale replay attribution.
+- 2026-07-10: Added the first production session-list read bridge. `retailOps.sessions` lists bounded open, closed, or all cashier sessions with rep identity, receipt totals, expected cash, and variance summary for the selected tenant/store range.
+- 2026-07-10: Added role-aware session mutation enforcement. `retailOps.openSession` and `retailOps.closeSession` now require a POS-capable role (owner, admin, manager, cashier, or operator) before resolving store scope or writing session state.
 
 ## Linked Task
 - Task Title: Rep Clock-In And Opening Inventory

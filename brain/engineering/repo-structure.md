@@ -12,6 +12,7 @@ Describe the current repository shape and the intended monorepo layout.
 - `apps/marketing/` - Next.js marketing site scaffold.
 - `apps/pos/` - Next.js point-of-sale application scaffold.
 - `apps/dashboard/` - Next.js tenant dashboard scaffold.
+- `apps/mobile/` - Expo mobile starter scaffold.
 - `packages/db/` - Prisma v7 package containing the canonical PostgreSQL schema, generated client, and migration tooling.
 - `packages/email/` - Shared email defaults, templates, message creation helpers, and delivery transports.
 - `packages/jobs/` - Shared background job and retry scaffold with future Trigger.dev seam.

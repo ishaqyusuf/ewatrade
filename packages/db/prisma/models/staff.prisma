@@ -1,0 +1,88 @@
+model RetailOpsStaffProfile {
+  id              String                         @id @default(cuid())
+  tenantId        String
+  userId          String
+  membershipId    String?                        @unique
+  defaultStoreId  String?
+  displayName     String
+  phone           String?
+  employeeCode    String?
+  roleSnapshot    MembershipRole
+  statusSnapshot  MembershipStatus               @default(ACTIVE)
+  invitedAt       DateTime?
+  acceptedAt      DateTime?
+  suspendedAt     DateTime?
+  lastSeenAt      DateTime?
+  metadata        Json?
+  createdAt       DateTime                       @default(now())
+  updatedAt       DateTime                       @updatedAt
+  tenant          Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user            User                           @relation("RetailOpsStaffProfileUser", fields: [userId], references: [id], onDelete: Cascade)
+  membership      Membership?                    @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+  defaultStore    Store?                         @relation(fields: [defaultStoreId], references: [id], onDelete: SetNull)
+  lifecycleEvents RetailOpsStaffLifecycleEvent[]
+
+  @@unique([tenantId, userId])
+  @@unique([tenantId, employeeCode])
+  @@index([tenantId, statusSnapshot])
+  @@index([defaultStoreId, statusSnapshot])
+  @@index([roleSnapshot, statusSnapshot])
+}
+
+model RetailOpsStaffInviteToken {
+  id               String                          @id @default(cuid())
+  tenantId         String
+  membershipId     String?
+  invitedUserId    String?
+  email            String
+  role             MembershipRole
+  tokenHash        String                          @unique
+  status           RetailOpsStaffInviteTokenStatus @default(ACTIVE)
+  invitedByUserId  String
+  sentAt           DateTime?
+  expiresAt        DateTime
+  acceptedAt       DateTime?
+  acceptedByUserId String?
+  revokedAt        DateTime?
+  revokedByUserId  String?
+  externalId       String?
+  metadata         Json?
+  createdAt        DateTime                        @default(now())
+  updatedAt        DateTime                        @updatedAt
+  tenant           Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  membership       Membership?                     @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, email, role, externalId])
+  @@index([tenantId, status, expiresAt])
+  @@index([membershipId, createdAt])
+  @@index([invitedUserId, createdAt])
+  @@index([invitedByUserId, createdAt])
+}
+
+model RetailOpsStaffLifecycleEvent {
+  id             String                            @id @default(cuid())
+  tenantId       String
+  membershipId   String?
+  staffProfileId String?
+  staffUserId    String
+  actorUserId    String?
+  type           RetailOpsStaffLifecycleEventType
+  fromStatus     MembershipStatus?
+  toStatus       MembershipStatus?
+  fromRole       MembershipRole?
+  toRole         MembershipRole?
+  happenedAt     DateTime                          @default(now())
+  reason         String?
+  metadata       Json?
+  createdAt      DateTime                          @default(now())
+  tenant         Tenant                            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  membership     Membership?                       @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+  staffProfile   RetailOpsStaffProfile?            @relation(fields: [staffProfileId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, happenedAt])
+  @@index([membershipId, happenedAt])
+  @@index([staffProfileId, happenedAt])
+  @@index([staffUserId, happenedAt])
+  @@index([actorUserId, happenedAt])
+  @@index([type, happenedAt])
+}

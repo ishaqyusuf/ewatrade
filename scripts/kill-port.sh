@@ -2,7 +2,7 @@
 
 set -eu
 
-default_ports="${EWATRADE_KILL_PORTS:-3091 3092 3093 3094 3095 5555}"
+default_ports="${EWATRADE_KILL_PORTS:-3002 3091 3092 3093 3094 3095 5555}"
 
 ports=$(
   {

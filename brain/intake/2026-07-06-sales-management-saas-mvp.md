@@ -59,11 +59,19 @@ Create a full A-Z implementation plan for a simple SaaS sales management product
 - Admin mode, sales rep creation, sales monitoring, clock-in, and stock wallet concepts were split across rep management, opening inventory, sales recording, and closeout plans because each has distinct acceptance criteria.
 - Offline feature and online sync were merged into one offline-first sales sync plan because they share client storage, idempotency, and conflict-resolution contracts.
 
+## Product Naming Notes
+- The mobile app working name is `mobile`.
+- The product direction is a sales and inventory management system for small businesses, covering inventory, orders, sales reps, stock custody, closeout, and reporting.
+
+## Design References
+- Smart Sales & Order Management Mobile App by Sujon Hossain on Dribbble: https://dribbble.com/shots/27067100-Smart-Sales-Order-Management-Mobile-App
+  - Useful direction for `mobile`: modern mobile sales/order dashboard, real-time sales tracking, analytics, order status management, onboarding, settings/profile, and notification patterns.
+
 ## Duplicate Or Existing Items
 - POS and inventory concepts overlap with existing Brain modules `brain/modules/pos-cashier.md` and `brain/modules/merchant-system.md`, but no existing Brain plan covers this specific sales-rep reconciliation MVP.
 
 ## Needs Clarification
-- Confirm whether the first implementation target is web/PWA only or whether a native mobile app is required for offline reps.
+- Confirm whether `mobile` should be built as a native Expo app first, or as a mobile-first PWA before native packaging.
 - Confirm billing provider and package limits for subscriptions.
 - Confirm whether the first vertical template should be named Rabbit Feed, Animal Feed, or a neutral Bag/Weight retail starter.
 - Confirm payment methods and credit-sale approval rules for the initial market.

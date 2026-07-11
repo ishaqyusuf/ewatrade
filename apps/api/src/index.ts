@@ -5,6 +5,7 @@ import { OpenAPIHono } from "@hono/zod-openapi"
 import { cors } from "hono/cors"
 import { HTTPException } from "hono/http-exception"
 import { secureHeaders } from "hono/secure-headers"
+import { registerBillingProviderEventRoutes } from "./billing/provider-events"
 import { createTRPCContext } from "./trpc/init"
 import { appRouter } from "./trpc/routers/_app"
 import { getRequestTrace } from "./utils/request-trace"
@@ -94,6 +95,8 @@ app.get("/health", async (c) => {
 
   return c.json({ status: "ok", database: { accounts } }, 200)
 })
+
+registerBillingProviderEventRoutes(app)
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw))
 

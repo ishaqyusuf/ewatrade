@@ -1,10 +1,19 @@
 import {
+  type MarketingLeadEmailInput,
   renderMarketingEarlyAccessAdminTemplate,
-  type MarketingLeadEmailInput
 } from "../templates/marketing-early-access-admin"
 import { renderMarketingEarlyAccessConfirmationTemplate } from "../templates/marketing-early-access-confirmation"
 import { renderMarketingWaitlistAdminTemplate } from "../templates/marketing-waitlist-admin"
 import { renderMarketingWaitlistConfirmationTemplate } from "../templates/marketing-waitlist-confirmation"
+import {
+  type RetailOpsSharedLinkOrderEmailInput,
+  renderRetailOpsSharedLinkOrderCustomerTemplate,
+  renderRetailOpsSharedLinkOrderMerchantTemplate,
+} from "../templates/retail-ops-shared-link-order"
+import {
+  type RetailOpsStaffInviteEmailInput,
+  renderRetailOpsStaffInviteTemplate,
+} from "../templates/retail-ops-staff-invite"
 
 export type EmailMessage = {
   from: string
@@ -13,6 +22,21 @@ export type EmailMessage = {
   subject: string
   text: string
   to: string
+}
+
+export type EmailDeliveryReceipt = {
+  provider?: string
+  providerMessageId?: string
+}
+
+export type EmailDispatchResult = {
+  error?: string
+  failedAt?: string
+  message: EmailMessage
+  provider?: string
+  providerMessageId?: string
+  sentAt?: string
+  status: "failed" | "sent"
 }
 
 export type LeadCaptureEmailInput = {
@@ -31,7 +55,7 @@ export type MarketingEmailInput = MarketingLeadEmailInput & {
 }
 
 export type EmailTransport = {
-  send: (message: EmailMessage) => Promise<void>
+  send: (message: EmailMessage) => Promise<EmailDeliveryReceipt | undefined>
 }
 
 export * from "../defaults"
@@ -39,6 +63,8 @@ export * from "../templates/marketing-early-access-admin"
 export * from "../templates/marketing-early-access-confirmation"
 export * from "../templates/marketing-waitlist-admin"
 export * from "../templates/marketing-waitlist-confirmation"
+export * from "../templates/retail-ops-shared-link-order"
+export * from "../templates/retail-ops-staff-invite"
 
 export function createEmailMessage(message: EmailMessage) {
   return message
@@ -120,6 +146,63 @@ export function createMarketingWaitlistConfirmationEmail(params: {
   })
 }
 
+export function createRetailOpsSharedLinkOrderCustomerEmail(params: {
+  from: string
+  input: RetailOpsSharedLinkOrderEmailInput
+  replyTo?: string
+  subject: string
+  to: string
+}) {
+  const content = renderRetailOpsSharedLinkOrderCustomerTemplate(params.input)
+
+  return createEmailMessage({
+    from: params.from,
+    html: content.html,
+    replyTo: params.replyTo,
+    subject: params.subject,
+    text: content.text,
+    to: params.to
+  })
+}
+
+export function createRetailOpsSharedLinkOrderMerchantEmail(params: {
+  from: string
+  input: RetailOpsSharedLinkOrderEmailInput
+  replyTo?: string
+  subject: string
+  to: string
+}) {
+  const content = renderRetailOpsSharedLinkOrderMerchantTemplate(params.input)
+
+  return createEmailMessage({
+    from: params.from,
+    html: content.html,
+    replyTo: params.replyTo,
+    subject: params.subject,
+    text: content.text,
+    to: params.to
+  })
+}
+
+export function createRetailOpsStaffInviteEmail(params: {
+  from: string
+  input: RetailOpsStaffInviteEmailInput
+  replyTo?: string
+  subject: string
+  to: string
+}) {
+  const content = renderRetailOpsStaffInviteTemplate(params.input)
+
+  return createEmailMessage({
+    from: params.from,
+    html: content.html,
+    replyTo: params.replyTo,
+    subject: params.subject,
+    text: content.text,
+    to: params.to
+  })
+}
+
 export const consoleEmailTransport: EmailTransport = {
   async send(message) {
     console.info("[email:console]", {
@@ -127,6 +210,11 @@ export const consoleEmailTransport: EmailTransport = {
       subject: message.subject,
       to: message.to
     })
+
+    return {
+      provider: "console",
+      providerMessageId: `console:${Date.now()}:${message.to}`
+    }
   }
 }
 
@@ -134,5 +222,29 @@ export async function dispatchEmailMessages(
   messages: EmailMessage[],
   transport: EmailTransport = consoleEmailTransport
 ) {
-  await Promise.all(messages.map((message) => transport.send(message)))
+  return Promise.all(
+    messages.map(async (message): Promise<EmailDispatchResult> => {
+      try {
+        const receipt = await transport.send(message)
+
+        return {
+          message,
+          provider: receipt?.provider,
+          providerMessageId: receipt?.providerMessageId,
+          sentAt: new Date().toISOString(),
+          status: "sent"
+        }
+      } catch (error) {
+        return {
+          error:
+            error instanceof Error
+              ? error.message
+              : "Unknown email delivery failure.",
+          failedAt: new Date().toISOString(),
+          message,
+          status: "failed"
+        }
+      }
+    })
+  )
 }

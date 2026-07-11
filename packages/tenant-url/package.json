@@ -22,8 +22,8 @@
     "@biomejs/biome": "^1.9.4",
     "@ewatrade/tsconfig": "workspace:*",
     "@types/react": "^19.1.13",
-    "next": "^16.2.2",
-    "react": "^19.1.0",
-    "typescript": "^5.9.3"
+    "next": "catalog:",
+    "react": "catalog:",
+    "typescript": "catalog:"
   }
 }

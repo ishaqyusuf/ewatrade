@@ -1,0 +1,141 @@
+model SubscriptionPlan {
+  id                String               @id @default(cuid())
+  key               String               @unique
+  name              String
+  description       String?
+  priceLabel        String?
+  currencyCode      String               @default("NGN")
+  monthlyPriceMinor Int?
+  yearlyPriceMinor  Int?
+  supportLabel      String?
+  limits            Json
+  isActive          Boolean              @default(true)
+  sortOrder         Int                  @default(0)
+  metadata          Json?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  subscriptions     TenantSubscription[]
+  checkoutSessions  BillingCheckoutSession[]
+  invoices          BillingInvoice[]
+
+  @@index([isActive, sortOrder])
+}
+
+model TenantSubscription {
+  id                    String                    @id @default(cuid())
+  tenantId              String                    @unique
+  planId                String
+  status                BillingSubscriptionStatus @default(TRIALING)
+  provider              BillingProvider           @default(NONE)
+  billingCustomerId     String?
+  billingSubscriptionId String?
+  currentPeriodStartsAt DateTime?
+  currentPeriodEndsAt   DateTime?
+  trialStartsAt         DateTime?
+  trialEndsAt           DateTime?
+  startedAt             DateTime                  @default(now())
+  cancelledAt           DateTime?
+  cancelAtPeriodEnd     Boolean                   @default(false)
+  cancellationReason    String?
+  limitsSnapshot        Json
+  metadata              Json?
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  tenant                Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan                  SubscriptionPlan          @relation(fields: [planId], references: [id], onDelete: Restrict)
+  checkoutSessions      BillingCheckoutSession[]
+  invoices              BillingInvoice[]
+
+  @@unique([provider, billingSubscriptionId])
+  @@index([tenantId, status])
+  @@index([planId, status])
+  @@index([provider, billingCustomerId])
+  @@index([currentPeriodEndsAt])
+}
+
+model BillingCheckoutSession {
+  id                   String                       @id @default(cuid())
+  tenantId             String
+  planId               String
+  tenantSubscriptionId String?
+  provider             BillingProvider              @default(NONE)
+  status               BillingCheckoutSessionStatus @default(CREATED)
+  providerSessionId    String?
+  checkoutUrl          String?
+  requestedByUserId    String
+  surface              String?
+  successUrl           String?
+  cancelUrl            String?
+  externalId           String?
+  expiresAt            DateTime?
+  completedAt          DateTime?
+  cancelledAt          DateTime?
+  metadata             Json?
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+  tenant               Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan                 SubscriptionPlan             @relation(fields: [planId], references: [id], onDelete: Restrict)
+  tenantSubscription   TenantSubscription?          @relation(fields: [tenantSubscriptionId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, providerSessionId])
+  @@unique([tenantId, externalId])
+  @@index([tenantId, status, createdAt])
+  @@index([planId, createdAt])
+  @@index([requestedByUserId, createdAt])
+  @@index([expiresAt])
+}
+
+model BillingInvoice {
+  id                   String               @id @default(cuid())
+  tenantId             String
+  tenantSubscriptionId String?
+  planId               String?
+  provider             BillingProvider      @default(NONE)
+  providerInvoiceId    String?
+  status               BillingInvoiceStatus @default(DRAFT)
+  currencyCode         String               @default("NGN")
+  amountDueMinor       Int                  @default(0)
+  amountPaidMinor      Int                  @default(0)
+  periodStartsAt       DateTime?
+  periodEndsAt         DateTime?
+  issuedAt             DateTime?
+  dueAt                DateTime?
+  paidAt               DateTime?
+  voidedAt             DateTime?
+  hostedInvoiceUrl     String?
+  metadata             Json?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  tenant               Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantSubscription   TenantSubscription?  @relation(fields: [tenantSubscriptionId], references: [id], onDelete: SetNull)
+  plan                 SubscriptionPlan?    @relation(fields: [planId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, providerInvoiceId])
+  @@index([tenantId, status, issuedAt])
+  @@index([tenantSubscriptionId, issuedAt])
+  @@index([planId, issuedAt])
+  @@index([dueAt])
+}
+
+model BillingProviderEvent {
+  id           String                     @id @default(cuid())
+  tenantId     String?
+  provider     BillingProvider
+  eventId      String
+  type         String
+  status       BillingProviderEventStatus @default(PENDING)
+  receivedAt   DateTime                   @default(now())
+  processedAt  DateTime?
+  failedAt     DateTime?
+  errorMessage String?
+  payload      Json
+  metadata     Json?
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+  tenant       Tenant?                    @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, eventId])
+  @@index([tenantId, receivedAt])
+  @@index([provider, status, receivedAt])
+  @@index([type, receivedAt])
+}

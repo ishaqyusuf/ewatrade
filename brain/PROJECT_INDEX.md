@@ -3,10 +3,12 @@
 Project: `ewatrade`
 
 ## Applications
+- `apps/api` - Hono and tRPC API application for authenticated tenant, Retail Ops, and future integration surfaces.
 - `apps/storefront` - Next.js storefront application for merchant-branded customer experiences.
 - `apps/marketing` - Public platform marketing website.
 - `apps/pos` - Tenant point-of-sale application for cashier and in-store flows.
 - `apps/dashboard` - Tenant operations dashboard for catalog, orders, and logistics.
+- `apps/mobile` - Expo mobile starter for sales and inventory workflows.
 
 ## Packages
 - `packages/db` - Prisma v7 database package with file-based schema models, generated client, and migration ownership.
@@ -39,5 +41,4 @@ Project: `ewatrade`
 - `brain/architecture/multi-tenant.md` - Tenant isolation rules.
 
 ## TODO
-- Add `apps/mobile` when the Expo client is created.
-- Add `apps/api` and database/auth packages when backend scaffolding begins.
+- Keep app/package listings updated as new bounded contexts become active.

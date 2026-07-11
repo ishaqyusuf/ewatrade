@@ -11,22 +11,25 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ewatrade/auth": "workspace:*",
+    "@ewatrade/db": "workspace:*",
+    "@ewatrade/jobs": "workspace:*",
     "@ewatrade/ui": "workspace:*",
     "@ewatrade/utils": "workspace:*",
     "@hugeicons/core-free-icons": "^4.1.1",
     "@hugeicons/react": "^1.1.6",
-    "next": "^16.2.2",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",
-    "@tailwindcss/postcss": "^4.2.1",
+    "@tailwindcss/postcss": "catalog:",
     "@types/node": "^24.6.0",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "@biomejs/biome": "^1.9.4",
-    "tailwindcss": "^4.2.1",
-    "typescript": "^5.9.3"
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:"
   }
 }

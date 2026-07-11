@@ -18,6 +18,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { useState } from "react"
 
 type NavItem = {
   label: string
@@ -32,7 +33,7 @@ const STORE_NAV: NavItem[] = [
   { label: "Products", href: "/products", icon: Package01Icon },
   { label: "Orders", href: "/orders", icon: ShoppingCart01Icon },
   { label: "Inventory", href: "/inventory", icon: Archive01Icon },
-  { label: "Analytics", href: "/analytics", icon: Analytics01Icon },
+  { label: "Reports", href: "/analytics", icon: Analytics01Icon },
   { label: "Settings", href: "/settings", icon: Settings01Icon },
 ]
 
@@ -45,10 +46,64 @@ export function DashboardSidebar({ user, ctx }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const initials = getUserInitials(user)
+  const [isSwitchingTenant, setIsSwitchingTenant] = useState(false)
+  const [isSwitchingStore, setIsSwitchingStore] = useState(false)
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" })
     router.push(process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com")
+  }
+
+  async function handleStoreChange(storeId: string) {
+    if (!storeId || storeId === ctx.activeStore?.id) return
+
+    setIsSwitchingStore(true)
+
+    try {
+      const response = await fetch("/api/stores/active", {
+        body: JSON.stringify({ storeId }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      })
+
+      if (response.ok) {
+        router.refresh()
+      }
+    } finally {
+      setIsSwitchingStore(false)
+    }
+  }
+
+  async function handleTenantChange(tenantId: string) {
+    if (!tenantId || tenantId === ctx.tenant.id) return
+
+    setIsSwitchingTenant(true)
+
+    try {
+      const response = await fetch("/api/tenants/active", {
+        body: JSON.stringify({ tenantId, path: pathname }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      })
+      const result = response.ok
+        ? ((await response.json()) as { dashboardUrl?: string | null })
+        : null
+
+      if (result?.dashboardUrl) {
+        window.location.assign(result.dashboardUrl)
+        return
+      }
+
+      if (response.ok) {
+        router.refresh()
+      }
+    } finally {
+      setIsSwitchingTenant(false)
+    }
   }
 
   return (
@@ -61,10 +116,44 @@ export function DashboardSidebar({ user, ctx }: Props) {
             className="size-4 text-primary-foreground"
           />
         </div>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-sidebar-foreground">
-            {ctx.activeStore?.name ?? ctx.tenant.name}
-          </p>
+        <div className="min-w-0 flex-1 space-y-1">
+          {ctx.tenants.length > 1 ? (
+            <select
+              value={ctx.tenant.id}
+              disabled={isSwitchingTenant}
+              onChange={(event) => handleTenantChange(event.target.value)}
+              className="h-7 w-full truncate rounded-lg border border-sidebar-border bg-sidebar px-2 text-sm font-semibold text-sidebar-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-wait disabled:opacity-70"
+            >
+              {ctx.tenants.map((tenant) => (
+                <option key={tenant.id} value={tenant.id}>
+                  {tenant.name}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          {ctx.stores.length > 1 ? (
+            <select
+              value={ctx.activeStore?.id ?? ""}
+              disabled={isSwitchingStore}
+              onChange={(event) => handleStoreChange(event.target.value)}
+              className={cn(
+                "h-7 w-full truncate rounded-lg border border-sidebar-border bg-sidebar px-2 text-sidebar-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-wait disabled:opacity-70",
+                ctx.tenants.length > 1
+                  ? "text-xs font-medium"
+                  : "text-sm font-semibold",
+              )}
+            >
+              {ctx.stores.map((store) => (
+                <option key={store.id} value={store.id}>
+                  {store.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <p className="truncate text-sm font-semibold text-sidebar-foreground">
+              {ctx.activeStore?.name ?? ctx.tenant.name}
+            </p>
+          )}
           <p className="truncate text-xs text-muted-foreground">
             {ctx.tenant.slug}.ewatrade.com
           </p>

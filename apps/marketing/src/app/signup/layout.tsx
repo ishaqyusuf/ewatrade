@@ -40,10 +40,14 @@ export default function SignupLayout({
           <header className="flex h-16 items-center px-6 sm:px-10">
             <a
               href="/"
-              className="text-xl font-semibold tracking-tight text-foreground transition-opacity hover:opacity-80"
-              style={{ fontFamily: "var(--font-display)" }}
+              className="block transition-opacity hover:opacity-80"
+              aria-label="EwaTrade home"
             >
-              ewatrade
+              <img
+                src="/brand/ewatrade-logo.png"
+                alt="EwaTrade"
+                className="h-8 w-auto"
+              />
             </a>
           </header>
 
