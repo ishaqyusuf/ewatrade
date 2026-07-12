@@ -1,19 +1,19 @@
-import type { ExpoConfig } from "expo/config";
+import type { ExpoConfig } from "expo/config"
 
-export const UPDATE_VERSION = "2026.07.07";
-const PROJECT_ID = "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b";
+export const UPDATE_VERSION = "2026.07.07"
+const PROJECT_ID = "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b"
 const appVariant =
   process.env.APP_VARIANT ??
   process.env.EXPO_PUBLIC_APP_VARIANT ??
-  (process.env.EAS_BUILD_PROFILE === "development" ? "development" : undefined);
+  (process.env.EAS_BUILD_PROFILE === "development" ? "development" : undefined)
 
-const normalizedAppVariant = (appVariant ?? "production").toLowerCase();
+const normalizedAppVariant = (appVariant ?? "production").toLowerCase()
 const isDevelopmentBuild =
-  normalizedAppVariant === "development" || normalizedAppVariant === "dev";
+  normalizedAppVariant === "development" || normalizedAppVariant === "dev"
 
 const variantConfig = isDevelopmentBuild
   ? {
-      name: "Ewrtrade Dev",
+      name: "Ewatrade Dev",
       scheme: "ewatrade-dev",
       iosBundleIdentifier: "com.ewatrade.dev",
       androidPackage: "com.ewatrade.dev",
@@ -45,11 +45,11 @@ const variantConfig = isDevelopmentBuild
         splashLight: "./assets/icons/splash-logo.png",
         splashDark: "./assets/icons/splash-logo.png",
       },
-    };
+    }
 
 const config: ExpoConfig = {
-	name: variantConfig.name,
-	slug: "ewatrade",
+  name: variantConfig.name,
+  slug: "ewatrade",
   owner: "cipron-startups",
   version: "1.0.0",
   orientation: "portrait",
@@ -132,6 +132,6 @@ const config: ExpoConfig = {
     },
     router: {},
   },
-};
+}
 
-export default config;
+export default config

@@ -14,10 +14,7 @@ export function ActionButton({
 }: ActionButtonProps) {
   return (
     <Button
-      className={cn(
-        "h-12 w-full rounded-xl shadow-sm shadow-black/5",
-        className,
-      )}
+      className={cn("h-12 w-full rounded-xl", className)}
       size="lg"
       {...props}
     >

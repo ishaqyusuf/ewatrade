@@ -1,105 +1,107 @@
-import { ActionButton } from "@/components/mobile/action-button";
-import { FormField } from "@/components/mobile/form-field";
-import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view";
-import { Icon } from "@/components/ui/icon";
-import { Modal } from "@/components/ui/modal";
-import { Text } from "@/components/ui/text";
-import { useBusinessStore } from "@/store/businessStore";
+import { ActionButton } from "@/components/mobile/action-button"
+import { FormField } from "@/components/mobile/form-field"
+import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
+import { Icon } from "@/components/ui/icon"
+import { Modal } from "@/components/ui/modal"
+import { Text } from "@/components/ui/text"
+import { useBusinessStore } from "@/store/businessStore"
 import {
   type RetailOpsStaffMember,
   useRetailOpsStore,
-} from "@/store/retailOpsStore";
+} from "@/store/retailOpsStore"
 import {
   getBusinessSubscription,
   getPlan,
   useSubscriptionStore,
-} from "@/store/subscriptionStore";
-import { useTRPC } from "@/trpc/client";
-import type { BottomSheetModal } from "@gorhom/bottom-sheet";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { forwardRef, useMemo, useState } from "react";
-import { View } from "react-native";
+} from "@/store/subscriptionStore"
+import { useTRPC } from "@/trpc/client"
+import type { BottomSheetModal } from "@gorhom/bottom-sheet"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { forwardRef, useMemo, useState } from "react"
+import { View } from "react-native"
 
 type StaffInviteSheetProps = {
-  onComplete?: () => void;
-};
+  onComplete?: () => void
+}
+
+const STAFF_PREVIEW_LIMIT = 6
 
 type ProductionStaffMember = {
-  acceptedAt?: Date | string | null;
-  createdAt?: Date | string;
-  id: string;
-  invitedAt?: Date | string | null;
-  role: string;
-  status: string;
-  updatedAt?: Date | string;
+  acceptedAt?: Date | string | null
+  createdAt?: Date | string
+  id: string
+  invitedAt?: Date | string | null
+  role: string
+  status: string
+  updatedAt?: Date | string
   user: {
-    displayName?: string | null;
-    email: string;
-    id: string;
-    name?: string | null;
-  };
-};
+    displayName?: string | null
+    email: string
+    id: string
+    name?: string | null
+  }
+}
 
 type StaffRow = {
-  detail: string;
-  email: string;
-  id: string;
-  name: string;
-  source: "local" | "production";
-  sourceLabel: string;
-  statusLabel: string;
-};
+  detail: string
+  email: string
+  id: string
+  name: string
+  source: "local" | "production"
+  sourceLabel: string
+  statusLabel: string
+}
 
 function isValidEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
 }
 
 function formatStaffDate(value: Date | string | null | undefined) {
-  if (!value) return "Not set";
+  if (!value) return "Not set"
 
-  const date = value instanceof Date ? value : new Date(value);
+  const date = value instanceof Date ? value : new Date(value)
 
-  if (Number.isNaN(date.getTime())) return "Not set";
+  if (Number.isNaN(date.getTime())) return "Not set"
 
   return date.toLocaleDateString(undefined, {
     day: "numeric",
     month: "short",
-  });
+  })
 }
 
 function getStaffStatusLabel(status: string) {
-  const normalizedStatus = status.toLowerCase();
+  const normalizedStatus = status.toLowerCase()
 
-  if (normalizedStatus === "active") return "Active";
+  if (normalizedStatus === "active") return "Active"
   if (normalizedStatus === "invited" || normalizedStatus === "pending") {
-    return "Pending";
+    return "Pending"
   }
-  if (normalizedStatus === "suspended") return "Suspended";
+  if (normalizedStatus === "suspended") return "Suspended"
 
-  return status;
+  return status
 }
 
 function getStaffRoleLabel(role: string) {
-  const normalizedRole = role.toLowerCase();
+  const normalizedRole = role.toLowerCase()
 
-  if (normalizedRole === "cashier") return "Attendant";
-  if (normalizedRole === "operator") return "Operator";
-  if (normalizedRole === "manager") return "Manager";
-  if (normalizedRole === "owner") return "Owner";
-  if (normalizedRole === "admin") return "Admin";
+  if (normalizedRole === "cashier") return "Attendant"
+  if (normalizedRole === "operator") return "Operator"
+  if (normalizedRole === "manager") return "Manager"
+  if (normalizedRole === "owner") return "Owner"
+  if (normalizedRole === "admin") return "Admin"
 
-  return role;
+  return role
 }
 
 function getStaffKey(staff: { email: string }) {
-  return staff.email.trim().toLowerCase();
+  return staff.email.trim().toLowerCase()
 }
 
 function mapProductionStaff(staff: ProductionStaffMember): StaffRow {
   const name =
     staff.user.displayName?.trim() ||
     staff.user.name?.trim() ||
-    staff.user.email;
+    staff.user.email
 
   return {
     detail: `${getStaffRoleLabel(staff.role)} - invited ${formatStaffDate(
@@ -111,7 +113,7 @@ function mapProductionStaff(staff: ProductionStaffMember): StaffRow {
     source: "production",
     sourceLabel: "Synced staff",
     statusLabel: getStaffStatusLabel(staff.status),
-  };
+  }
 }
 
 function mapLocalStaff(staff: RetailOpsStaffMember): StaffRow {
@@ -124,7 +126,7 @@ function mapLocalStaff(staff: RetailOpsStaffMember): StaffRow {
     sourceLabel:
       staff.syncStatus === "synced" ? "Local synced" : "Pending sync",
     statusLabel: getStaffStatusLabel(staff.status),
-  };
+  }
 }
 
 function StaffRowItem({ staff }: { staff: StaffRow }) {
@@ -160,33 +162,33 @@ function StaffRowItem({ staff }: { staff: StaffRow }) {
         </Text>
       </View>
     </View>
-  );
+  )
 }
 
 export const StaffInviteSheet = forwardRef<
   BottomSheetModal,
   StaffInviteSheetProps
 >(({ onComplete }, ref) => {
-  const trpc = useTRPC();
-  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId);
-  const inviteStaff = useRetailOpsStore((state) => state.inviteStaff);
-  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode);
-  const staff = useRetailOpsStore((state) =>
-    state.staff.filter(
-      (staffMember) =>
-        !activeBusinessId ||
-        (staffMember.businessId ?? activeBusinessId) === activeBusinessId,
-    ),
-  );
-  const subscriptions = useSubscriptionStore((state) => state.subscriptions);
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const subscription = getBusinessSubscription(
-    subscriptions,
-    activeBusinessId,
-  );
-  const plan = getPlan(subscription.planId);
+  const trpc = useTRPC()
+  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
+  const inviteStaff = useRetailOpsStore((state) => state.inviteStaff)
+  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
+  const allStaff = useRetailOpsStore((state) => state.staff)
+  const staff = useMemo(
+    () =>
+      allStaff.filter(
+        (staffMember) =>
+          !activeBusinessId ||
+          (staffMember.businessId ?? activeBusinessId) === activeBusinessId,
+      ),
+    [activeBusinessId, allStaff],
+  )
+  const subscriptions = useSubscriptionStore((state) => state.subscriptions)
+  const [email, setEmail] = useState("")
+  const [name, setName] = useState("")
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const subscription = getBusinessSubscription(subscriptions, activeBusinessId)
+  const plan = getPlan(subscription.planId)
   const productionStaffQuery = useQuery(
     trpc.retailOps.staff.queryOptions(
       {
@@ -199,88 +201,90 @@ export const StaffInviteSheet = forwardRef<
         retry: false,
       },
     ),
-  );
+  )
   const inviteStaffMutation = useMutation(
     trpc.retailOps.inviteStaff.mutationOptions({
       onError: (error) => {
-        setSubmitError(error.message);
+        setSubmitError(error.message)
       },
       onSuccess: () => {
-        setEmail("");
-        setName("");
-        setSubmitError(null);
-        void productionStaffQuery.refetch();
-        onComplete?.();
+        setEmail("")
+        setName("")
+        setSubmitError(null)
+        void productionStaffQuery.refetch()
+        onComplete?.()
       },
     }),
-  );
-  const localStaffRows = useMemo(() => staff.map(mapLocalStaff), [staff]);
+  )
+  const localStaffRows = useMemo(() => staff.map(mapLocalStaff), [staff])
   const productionStaffRows = useMemo(
     () =>
       ((productionStaffQuery.data ?? []) as ProductionStaffMember[]).map(
         mapProductionStaff,
       ),
     [productionStaffQuery.data],
-  );
+  )
+  const usesLocalStaffFallback = isOfflineMode || productionStaffQuery.isError
   const staffRows = useMemo(() => {
-    if (isOfflineMode || productionStaffQuery.isError) return localStaffRows;
+    if (usesLocalStaffFallback) return localStaffRows
 
-    const productionStaffKeys = new Set(productionStaffRows.map(getStaffKey));
+    const productionStaffKeys = new Set(productionStaffRows.map(getStaffKey))
     const unsyncedLocalRows = localStaffRows.filter(
       (staffMember) => !productionStaffKeys.has(getStaffKey(staffMember)),
-    );
+    )
 
-    return [...productionStaffRows, ...unsyncedLocalRows];
-  }, [
-    isOfflineMode,
-    localStaffRows,
-    productionStaffQuery.isError,
-    productionStaffRows,
-  ]);
-  const isAtStaffLimit = staffRows.length >= plan.limits.staff;
+    return [...productionStaffRows, ...unsyncedLocalRows]
+  }, [localStaffRows, productionStaffRows, usesLocalStaffFallback])
+  const visibleStaffRows = useMemo(
+    () => staffRows.slice(0, STAFF_PREVIEW_LIMIT),
+    [staffRows],
+  )
+  const isAtStaffLimit = staffRows.length >= plan.limits.staff
   const canSubmit =
-    !isAtStaffLimit && isValidEmail(email) && !inviteStaffMutation.isPending;
+    !isAtStaffLimit &&
+    isValidEmail(email) &&
+    (usesLocalStaffFallback || !inviteStaffMutation.isPending)
   const sourceLabel = isOfflineMode
     ? "Local"
     : productionStaffQuery.isError
       ? "Local fallback"
       : productionStaffQuery.isFetching
         ? "Refreshing"
-        : "Online";
+        : "Online"
   const sourceDetail = isOfflineMode
     ? "Staff invites are queued on this device until sync reconnects."
     : productionStaffQuery.isError
       ? "Production staff list is unavailable, so local staff are shown."
       : productionStaffQuery.isFetching
         ? "Refreshing production staff."
-        : "Production staff includes invited, active, and suspended attendant memberships.";
+        : "Production staff includes invited, active, and suspended attendant memberships."
 
   const submit = () => {
-    if (!canSubmit) return;
+    if (!canSubmit) return
 
-    const normalizedEmail = email.trim().toLowerCase();
-    const trimmedName = name.trim();
+    const normalizedEmail = email.trim().toLowerCase()
+    const trimmedName = name.trim()
 
-    setSubmitError(null);
+    setSubmitError(null)
 
-    if (!isOfflineMode) {
+    if (!usesLocalStaffFallback) {
       inviteStaffMutation.mutate({
         email: normalizedEmail,
         name: trimmedName || undefined,
         role: "cashier",
-      });
-      return;
+      })
+      return
     }
 
     inviteStaff({
       businessId: activeBusinessId ?? undefined,
       email: normalizedEmail,
       name: trimmedName,
-    });
-    setEmail("");
-    setName("");
-    onComplete?.();
-  };
+    })
+    setEmail("")
+    setName("")
+    onComplete?.()
+  }
 
   return (
     <Modal
@@ -290,8 +294,8 @@ export const StaffInviteSheet = forwardRef<
       title="Invite attendant"
     >
       <BottomSheetKeyboardAwareScrollView
-        bottomOffset={96}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        bottomOffset={320}
+        contentContainerStyle={{ paddingBottom: 240 }}
         keyboardShouldPersistTaps="handled"
       >
         <View className="gap-5 px-5 pb-6">
@@ -313,7 +317,7 @@ export const StaffInviteSheet = forwardRef<
             <FormField
               label="Attendant name"
               onChangeText={setName}
-              placeholder="Aisha Bello"
+              placeholder="Enter attendant name"
               value={name}
             />
             <FormField
@@ -323,7 +327,7 @@ export const StaffInviteSheet = forwardRef<
               keyboardType="email-address"
               label="Email address"
               onChangeText={setEmail}
-              placeholder="aisha@example.com"
+              placeholder="Enter attendant email address"
               value={email}
             />
           </View>
@@ -338,7 +342,8 @@ export const StaffInviteSheet = forwardRef<
                   Email invite
                 </Text>
                 <Text className="text-sm leading-5 text-muted-foreground">
-                  The attendant receives download and setup instructions.
+                  The attendant receives download instructions, signs in with
+                  their own email OTP, then confirms their sales profile.
                 </Text>
               </View>
             </View>
@@ -380,13 +385,19 @@ export const StaffInviteSheet = forwardRef<
           ) : null}
 
           <View className="gap-3">
-            <Text className="text-base font-bold text-foreground">
-              Staff
-            </Text>
+            <Text className="text-base font-bold text-foreground">Staff</Text>
             {staffRows.length > 0 ? (
-              staffRows.slice(0, 6).map((staffMember) => (
-                <StaffRowItem key={staffMember.id} staff={staffMember} />
-              ))
+              <>
+                {visibleStaffRows.map((staffMember) => (
+                  <StaffRowItem key={staffMember.id} staff={staffMember} />
+                ))}
+                {staffRows.length > visibleStaffRows.length ? (
+                  <Text className="text-xs font-semibold text-muted-foreground">
+                    Showing first {visibleStaffRows.length} of{" "}
+                    {staffRows.length} attendants.
+                  </Text>
+                ) : null}
+              </>
             ) : (
               <View className="rounded-2xl border border-dashed border-border p-4">
                 <Text className="text-sm text-muted-foreground">
@@ -397,12 +408,14 @@ export const StaffInviteSheet = forwardRef<
           </View>
 
           <ActionButton disabled={!canSubmit} onPress={submit}>
-            {inviteStaffMutation.isPending ? "Sending invite..." : "Send invite"}
+            {inviteStaffMutation.isPending
+              ? "Sending invite..."
+              : "Send invite"}
           </ActionButton>
         </View>
       </BottomSheetKeyboardAwareScrollView>
     </Modal>
-  );
-});
+  )
+})
 
-StaffInviteSheet.displayName = "StaffInviteSheet";
+StaffInviteSheet.displayName = "StaffInviteSheet"

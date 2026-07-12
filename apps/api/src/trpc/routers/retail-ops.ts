@@ -1,13 +1,11 @@
 import {
   type EwaTradeRole,
   canManageSalesOperations,
-  canManageTenant,
   canOperatePos,
   normalizeRole,
 } from "@ewatrade/auth/roles"
 import {
   RetailOpsCustomerError,
-  RetailOpsFulfillmentError,
   RetailOpsOfflineDeviceError,
   RetailOpsProductError,
   RetailOpsSaleError,
@@ -15,44 +13,24 @@ import {
   RetailOpsShareLinkError,
   RetailOpsStaffError,
   RetailOpsStockError,
-  RetailOpsStockWalletError,
   RetailOpsSubscriptionError,
   assertRetailOpsOfflineDeviceCanSync,
   assertRetailOpsReportRangeAllowed,
-  assignRetailOpsStaffStock,
   closeRetailOpsSession,
-  completeRetailOpsStaffOnboarding,
-  createRetailOpsDeliveryRequest,
   createRetailOpsProduct,
   createRetailOpsProductShareLink,
   createRetailOpsSale,
   createRetailOpsSharedProductOrderRequest,
-  createRetailOpsSubscriptionCheckoutIntent,
   deactivateRetailOpsProductShareLink,
   getRetailOpsCustomerBook,
   getRetailOpsDashboardSummary,
   getRetailOpsInventorySnapshot,
-  getRetailOpsProductShareLinkAnalytics,
-  getRetailOpsProductUnitPriceAt,
   getRetailOpsSalesByProduct,
   getRetailOpsSharedProduct,
-  getRetailOpsSubscriptionSnapshot,
   inviteRetailOpsStaff,
-  listRetailOpsCreditSales,
-  listRetailOpsDeliveryRequests,
   listRetailOpsOfflineDevices,
-  listRetailOpsPaymentReconciliation,
-  listRetailOpsProductShareLinks,
-  listRetailOpsProductUnitPriceHistory,
-  listRetailOpsProductUnitTemplates,
-  listRetailOpsRecentSales,
   listRetailOpsRevokedOfflineDevices,
   listRetailOpsSalesByRep,
-  listRetailOpsSessions,
-  listRetailOpsSharedLinkOrderRequests,
-  listRetailOpsStaff,
-  listRetailOpsStaffStockWallets,
-  listRetailOpsStockMovements,
   listRetailOpsSyncConflicts,
   listRetailOpsSyncRuns,
   openRetailOpsSession,
@@ -65,14 +43,8 @@ import {
   recordRetailOpsUnitConversion,
   registerRetailOpsOfflineDevice,
   restoreRetailOpsOfflineDevice,
-  returnRetailOpsStaffStock,
-  reviewRetailOpsCloseoutSession,
   reviewRetailOpsSyncConflict,
   revokeRetailOpsOfflineDevice,
-  updateRetailOpsDeliveryRequestStatus,
-  updateRetailOpsProductUnitPrice,
-  updateRetailOpsSharedLinkOrderRequestStatus,
-  updateRetailOpsStaffStatus,
 } from "@ewatrade/db/queries"
 import type { InvitedRetailOpsStaff } from "@ewatrade/db/queries"
 import {
@@ -82,58 +54,33 @@ import {
 import { TRPCError } from "@trpc/server"
 import {
   type RetailOpsSyncEventInput,
-  retailOpsAssignStaffStockSchema,
-  retailOpsCloseSessionSchema,
-  retailOpsCompleteStaffOnboardingSchema,
-  retailOpsCreateDeliveryRequestSchema,
-  retailOpsCreateProductSchema,
-  retailOpsCreateProductShareLinkSchema,
-  retailOpsCreateSaleSchema,
   retailOpsCreateSharedProductOrderRequestSchema,
-  retailOpsCreateSubscriptionCheckoutIntentSchema,
-  retailOpsCreditSalesSchema,
   retailOpsCustomerBookSchema,
-  retailOpsDeactivateProductShareLinkSchema,
-  retailOpsDeliveryRequestsSchema,
-  retailOpsInviteStaffSchema,
-  retailOpsOpenSessionSchema,
-  retailOpsProductShareLinkAnalyticsSchema,
-  retailOpsProductUnitEffectivePriceSchema,
-  retailOpsProductUnitPriceHistorySchema,
-  retailOpsRecentSalesSchema,
-  retailOpsRecordCreditPaymentSchema,
-  retailOpsRecordStockAdjustmentSchema,
-  retailOpsRecordStockIntakeSchema,
-  retailOpsRecordUnitConversionSchema,
   retailOpsRegisterOfflineDeviceSchema,
   retailOpsReportRangeSchema,
   retailOpsRestoreOfflineDeviceSchema,
-  retailOpsReturnStaffStockSchema,
-  retailOpsReviewCloseoutSessionSchema,
   retailOpsReviewSyncConflictSchema,
   retailOpsRevokeOfflineDeviceSchema,
-  retailOpsSessionsSchema,
-  retailOpsSharedLinkOrderRequestsSchema,
   retailOpsSharedProductLookupSchema,
-  retailOpsStaffListSchema,
-  retailOpsStaffStockWalletsSchema,
-  retailOpsStockMovementsSchema,
   retailOpsStoreScopeSchema,
   retailOpsSyncConflictsSchema,
   retailOpsSyncEventsSchema,
   retailOpsSyncHistorySchema,
-  retailOpsUpdateDeliveryRequestStatusSchema,
-  retailOpsUpdateProductUnitPriceSchema,
-  retailOpsUpdateSharedLinkOrderRequestStatusSchema,
-  retailOpsUpdateStaffStatusSchema,
 } from "../../schemas/retail-ops"
 import {
   type TRPCContext,
-  authenticatedProcedure,
   createTRPCRouter,
+  mergeRouters,
   protectedProcedure,
   publicProcedure,
 } from "../init"
+import { retailOpsProductsRouter } from "./retail-ops-products"
+import { retailOpsSalesRouter } from "./retail-ops-sales"
+import { retailOpsSessionsRouter } from "./retail-ops-sessions"
+import { retailOpsShareLinksRouter } from "./retail-ops-share-links"
+import { retailOpsStaffRouter } from "./retail-ops-staff"
+import { retailOpsStockRouter } from "./retail-ops-stock"
+import { retailOpsSubscriptionsRouter } from "./retail-ops-subscriptions"
 
 function getSaleErrorCode(error: RetailOpsSaleError): "CONFLICT" | "NOT_FOUND" {
   if (error.code === "INSUFFICIENT_STOCK") return "CONFLICT"
@@ -168,14 +115,6 @@ function getStockErrorCode(
   return "NOT_FOUND"
 }
 
-function getStockWalletErrorCode(
-  error: RetailOpsStockWalletError,
-): "CONFLICT" | "NOT_FOUND" {
-  if (error.code === "INSUFFICIENT_STOCK") return "CONFLICT"
-
-  return "NOT_FOUND"
-}
-
 function getSessionErrorCode(
   error: RetailOpsSessionError,
 ): "BAD_REQUEST" | "CONFLICT" | "NOT_FOUND" {
@@ -204,16 +143,6 @@ function getShareLinkErrorCode(
   if (error.code === "ORDER_REQUEST_ALREADY_FINALIZED") return "CONFLICT"
   if (error.code === "ORDER_REQUEST_FORBIDDEN") return "FORBIDDEN"
   if (error.code === "SHARE_LINK_FORBIDDEN") return "FORBIDDEN"
-
-  return "NOT_FOUND"
-}
-
-function getFulfillmentErrorCode(
-  error: RetailOpsFulfillmentError,
-): "BAD_REQUEST" | "CONFLICT" | "FORBIDDEN" | "NOT_FOUND" {
-  if (error.code === "ORDER_NOT_DELIVERY_ELIGIBLE") return "BAD_REQUEST"
-  if (error.code === "DELIVERY_REQUEST_UNAVAILABLE") return "CONFLICT"
-  if (error.code === "ORDER_REQUEST_FORBIDDEN") return "FORBIDDEN"
 
   return "NOT_FOUND"
 }
@@ -256,17 +185,6 @@ function assertCanManageRetailOpsStaff(role: string) {
   }
 }
 
-function assertCanManageRetailOpsProducts(role: string) {
-  const normalizedRole = getRetailOpsRole(role)
-
-  if (!canManageSalesOperations(normalizedRole)) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: "You do not have permission to manage Retail Ops products.",
-    })
-  }
-}
-
 function assertCanOperateRetailOpsPos(role: string) {
   const normalizedRole = getRetailOpsRole(role)
 
@@ -278,35 +196,14 @@ function assertCanOperateRetailOpsPos(role: string) {
   }
 }
 
-function assertCanReviewRetailOpsCloseouts(role: string) {
-  const normalizedRole = getRetailOpsRole(role)
-
-  if (!canManageSalesOperations(normalizedRole)) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: "You do not have permission to review Retail Ops closeouts.",
-    })
-  }
-}
-
 function assertCanReviewRetailOpsSyncConflicts(role: string) {
   const normalizedRole = getRetailOpsRole(role)
 
   if (!canManageSalesOperations(normalizedRole)) {
     throw new TRPCError({
       code: "FORBIDDEN",
-      message: "You do not have permission to review Retail Ops sync conflicts.",
-    })
-  }
-}
-
-function assertCanViewRetailOpsSubscription(role: string) {
-  const normalizedRole = getRetailOpsRole(role)
-
-  if (!canManageTenant(normalizedRole)) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: "You do not have permission to manage Retail Ops billing.",
+      message:
+        "You do not have permission to review Retail Ops sync conflicts.",
     })
   }
 }
@@ -414,6 +311,23 @@ function getRetailOpsAppUrl() {
   )
 }
 
+function getRetailOpsStaffInviteUrl(token: string | null | undefined) {
+  const appUrl = getRetailOpsAppUrl()
+
+  if (!token) return appUrl
+
+  try {
+    const url = new URL(appUrl)
+    url.pathname = "/staff-onboarding"
+    url.searchParams.set("inviteToken", token)
+    return url.toString()
+  } catch {
+    return `${appUrl.replace(/\/$/, "")}/staff-onboarding?inviteToken=${encodeURIComponent(
+      token,
+    )}`
+  }
+}
+
 async function enqueueStaffInviteNotification(input: {
   businessName: string
   invitedByName: string
@@ -424,6 +338,9 @@ async function enqueueStaffInviteNotification(input: {
   await enqueueRetailOpsStaffInviteNotification({
     appUrl: getRetailOpsAppUrl(),
     businessName: input.businessName,
+    inviteUrl: getRetailOpsStaffInviteUrl(
+      input.invitedStaff.invite.acceptanceToken,
+    ),
     invitedByName: input.invitedByName,
     inviteeEmail: input.invitedStaff.staff.email,
     inviteeName:
@@ -433,6 +350,18 @@ async function enqueueStaffInviteNotification(input: {
     membershipId: input.invitedStaff.invite.id,
     role: input.invitedStaff.invite.role,
   })
+}
+
+function hideStaffInviteAcceptanceToken(
+  invitedStaff: InvitedRetailOpsStaff,
+): InvitedRetailOpsStaff {
+  return {
+    ...invitedStaff,
+    invite: {
+      ...invitedStaff.invite,
+      acceptanceToken: null,
+    },
+  }
 }
 
 async function enqueueSharedLinkOrderNotification(input: {
@@ -603,6 +532,9 @@ async function processRetailOpsSyncEvent(
   ctx: RetailOpsProtectedContext,
   event: RetailOpsSyncEventInput,
 ): Promise<RetailOpsSyncEventResult> {
+  const eventId = event.eventId
+  const eventType = event.type
+
   try {
     if (event.type === "product_setup") {
       const store = resolveStore(
@@ -614,6 +546,7 @@ async function processRetailOpsSyncEvent(
         actorUserId: ctx.session.user.id,
         description: event.payload.description,
         externalId: event.payload.externalId ?? event.eventId,
+        imageUrl: event.payload.imageUrl,
         name: event.payload.name,
         openingStockQuantity: event.payload.openingStockQuantity,
         primaryUnitName: event.payload.primaryUnitName,
@@ -933,29 +866,29 @@ async function processRetailOpsSyncEvent(
 
       return {
         eventId: event.eventId,
-        result,
+        result: hideStaffInviteAcceptanceToken(result),
         status: "applied",
         type: event.type,
       }
     }
 
     return {
-      eventId: event.eventId,
+      eventId,
       message: "This Retail Ops sync event type is not supported yet.",
       status: "skipped",
-      type: event.type,
+      type: eventType,
     }
   } catch (error) {
     return {
       error: getSyncEventError(error),
-      eventId: event.eventId,
+      eventId,
       status: "failed",
-      type: event.type,
+      type: eventType,
     }
   }
 }
 
-export const retailOpsRouter = createTRPCRouter({
+const retailOpsCoreRouter = createTRPCRouter({
   sharedProduct: publicProcedure
     .input(retailOpsSharedProductLookupSchema)
     .query(async ({ ctx, input }) => {
@@ -1094,99 +1027,6 @@ export const retailOpsRouter = createTRPCRouter({
         storeId: store.id,
         from: input.from,
         to: input.to,
-      })
-    }),
-
-  productUnitPriceAt: protectedProcedure
-    .input(retailOpsProductUnitEffectivePriceSchema)
-    .query(async ({ ctx, input }) => {
-      assertCanOperateRetailOpsPos(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await getRetailOpsProductUnitPriceAt(ctx.db, {
-          effectiveAt: input.effectiveAt,
-          productVariantId: input.productVariantId,
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsProductError) {
-          throw new TRPCError({
-            code: getProductErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  priceHistory: protectedProcedure
-    .input(retailOpsProductUnitPriceHistorySchema)
-    .query(async ({ ctx, input }) => {
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      await assertRetailOpsReportHistoryAllowed(ctx, input)
-
-      return listRetailOpsProductUnitPriceHistory(ctx.db, {
-        from: input.from,
-        limit: input.limit,
-        productVariantId: input.productVariantId,
-        storeId: store.id,
-        tenantId: ctx.tenantContext.tenant.id,
-        to: input.to,
-      })
-    }),
-
-  stockMovements: protectedProcedure
-    .input(retailOpsStockMovementsSchema)
-    .query(async ({ ctx, input }) => {
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      await assertRetailOpsReportHistoryAllowed(ctx, input)
-
-      return listRetailOpsStockMovements(ctx.db, {
-        from: input.from,
-        limit: input.limit,
-        productVariantId: input.productVariantId,
-        storeId: store.id,
-        tenantId: ctx.tenantContext.tenant.id,
-        to: input.to,
-      })
-    }),
-
-  subscription: protectedProcedure.query(async ({ ctx }) => {
-    assertCanViewRetailOpsSubscription(ctx.tenantContext.membership.role)
-
-    return getRetailOpsSubscriptionSnapshot(ctx.db, {
-      tenantId: ctx.tenantContext.tenant.id,
-    })
-  }),
-
-  createSubscriptionCheckoutIntent: protectedProcedure
-    .input(retailOpsCreateSubscriptionCheckoutIntentSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertCanViewRetailOpsSubscription(ctx.tenantContext.membership.role)
-
-      return createRetailOpsSubscriptionCheckoutIntent(ctx.db, {
-        planId: input.planId,
-        requestedByUserId: ctx.session.user.id,
-        surface: input.surface,
-        tenantId: ctx.tenantContext.tenant.id,
       })
     }),
 
@@ -1409,972 +1249,15 @@ export const retailOpsRouter = createTRPCRouter({
         tenantId: ctx.tenantContext.tenant.id,
       })
     }),
-
-  recentSales: protectedProcedure
-    .input(retailOpsRecentSalesSchema)
-    .query(async ({ ctx, input }) => {
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      await assertRetailOpsReportHistoryAllowed(ctx, input)
-
-      return listRetailOpsRecentSales(ctx.db, {
-        actorUserId: getRetailOpsActorReadScope(
-          ctx.tenantContext.membership.role,
-          ctx.session.user.id,
-        ),
-        from: input.from,
-        limit: input.limit,
-        storeId: store.id,
-        tenantId: ctx.tenantContext.tenant.id,
-        to: input.to,
-      })
-    }),
-
-  creditSales: protectedProcedure
-    .input(retailOpsCreditSalesSchema)
-    .query(async ({ ctx, input }) => {
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      await assertRetailOpsReportHistoryAllowed(ctx, input)
-
-      return listRetailOpsCreditSales(ctx.db, {
-        actorUserId: getRetailOpsActorReadScope(
-          ctx.tenantContext.membership.role,
-          ctx.session.user.id,
-        ),
-        from: input.from,
-        limit: input.limit,
-        storeId: store.id,
-        tenantId: ctx.tenantContext.tenant.id,
-        to: input.to,
-      })
-    }),
-
-  recordCreditPayment: protectedProcedure
-    .input(retailOpsRecordCreditPaymentSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertCanOperateRetailOpsPos(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await recordRetailOpsCreditPayment(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          amountMinor: input.amountMinor,
-          cashierSessionId: input.cashierSessionId,
-          externalId: input.externalId,
-          notes: input.notes,
-          orderId: input.orderId,
-          paidAt: input.paidAt,
-          paymentMethod: input.paymentMethod,
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsSaleError) {
-          throw new TRPCError({
-            code: getSaleErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  sessions: protectedProcedure
-    .input(retailOpsSessionsSchema)
-    .query(async ({ ctx, input }) => {
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      await assertRetailOpsReportHistoryAllowed(ctx, input)
-
-      return listRetailOpsSessions(ctx.db, {
-        from: input.from,
-        limit: input.limit,
-        status: input.status,
-        storeId: store.id,
-        tenantId: ctx.tenantContext.tenant.id,
-        to: input.to,
-        userId: getRetailOpsActorReadScope(
-          ctx.tenantContext.membership.role,
-          ctx.session.user.id,
-        ),
-      })
-    }),
-
-  paymentReconciliation: protectedProcedure
-    .input(retailOpsReportRangeSchema)
-    .query(async ({ ctx, input }) => {
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      await assertRetailOpsReportHistoryAllowed(ctx, input)
-
-      return listRetailOpsPaymentReconciliation(ctx.db, {
-        tenantId: ctx.tenantContext.tenant.id,
-        storeId: store.id,
-        from: input.from,
-        to: input.to,
-        userId: getRetailOpsActorReadScope(
-          ctx.tenantContext.membership.role,
-          ctx.session.user.id,
-        ),
-      })
-    }),
-
-  openSession: protectedProcedure
-    .input(retailOpsOpenSessionSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertCanOperateRetailOpsPos(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await openRetailOpsSession(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          externalId: input.externalId,
-          inventoryLines: input.inventoryLines,
-          notes: input.notes,
-          openedAt: input.openedAt,
-          openingFloatMinor: input.openingFloatMinor,
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsSessionError) {
-          throw new TRPCError({
-            code: getSessionErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  closeSession: protectedProcedure
-    .input(retailOpsCloseSessionSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertCanOperateRetailOpsPos(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await closeRetailOpsSession(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          cashierSessionId: input.cashierSessionId,
-          closedAt: input.closedAt,
-          closingFloatMinor: input.closingFloatMinor,
-          declaredCardMinor: input.declaredCardMinor,
-          declaredCreditMinor: input.declaredCreditMinor,
-          declaredTransferMinor: input.declaredTransferMinor,
-          externalId: input.externalId,
-          inventoryLines: input.inventoryLines,
-          notes: input.notes,
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsSessionError) {
-          throw new TRPCError({
-            code: getSessionErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  reviewCloseoutSession: protectedProcedure
-    .input(retailOpsReviewCloseoutSessionSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertCanReviewRetailOpsCloseouts(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await reviewRetailOpsCloseoutSession(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          cashierSessionId: input.cashierSessionId,
-          note: input.note,
-          status: input.status,
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsSessionError) {
-          throw new TRPCError({
-            code: getSessionErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  completeStaffOnboarding: authenticatedProcedure
-    .input(retailOpsCompleteStaffOnboardingSchema)
-    .mutation(async ({ ctx, input }) => {
-      try {
-        return await completeRetailOpsStaffOnboarding(ctx.db, {
-          displayName: input.displayName,
-          name: input.name,
-          tenantSlug: input.tenantSlug ?? ctx.tenantSlug ?? undefined,
-          userId: ctx.session.user.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsStaffError) {
-          throw new TRPCError({
-            code: getStaffErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  staff: protectedProcedure
-    .input(retailOpsStaffListSchema)
-    .query(async ({ ctx, input }) => {
-      assertCanManageRetailOpsStaff(ctx.tenantContext.membership.role)
-
-      resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      return listRetailOpsStaff(ctx.db, {
-        limit: input.limit,
-        role: input.role,
-        search: input.search,
-        status: input.status,
-        tenantId: ctx.tenantContext.tenant.id,
-      })
-    }),
-
-  updateStaffStatus: protectedProcedure
-    .input(retailOpsUpdateStaffStatusSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertCanManageRetailOpsStaff(ctx.tenantContext.membership.role)
-
-      resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await updateRetailOpsStaffStatus(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          staffUserId: input.staffUserId,
-          status: input.status,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsStaffError) {
-          throw new TRPCError({
-            code: getStaffErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  staffStockWallets: protectedProcedure
-    .input(retailOpsStaffStockWalletsSchema)
-    .query(async ({ ctx, input }) => {
-      assertCanManageRetailOpsStaff(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      return listRetailOpsStaffStockWallets(ctx.db, {
-        limit: input.limit,
-        staffUserId: input.staffUserId,
-        storeId: store.id,
-        tenantId: ctx.tenantContext.tenant.id,
-      })
-    }),
-
-  assignStaffStock: protectedProcedure
-    .input(retailOpsAssignStaffStockSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertCanManageRetailOpsStaff(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await assignRetailOpsStaffStock(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          assignedAt: input.assignedAt,
-          externalId: input.externalId,
-          note: input.note,
-          productVariantId: input.productVariantId,
-          quantity: input.quantity,
-          staffUserId: input.staffUserId,
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsStockWalletError) {
-          throw new TRPCError({
-            code: getStockWalletErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  returnStaffStock: protectedProcedure
-    .input(retailOpsReturnStaffStockSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertCanManageRetailOpsStaff(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await returnRetailOpsStaffStock(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          externalId: input.externalId,
-          note: input.note,
-          productVariantId: input.productVariantId,
-          quantity: input.quantity,
-          returnedAt: input.returnedAt,
-          staffUserId: input.staffUserId,
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsStockWalletError) {
-          throw new TRPCError({
-            code: getStockWalletErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  inviteStaff: protectedProcedure
-    .input(retailOpsInviteStaffSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertCanManageRetailOpsStaff(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        const invitedStaff = await inviteRetailOpsStaff(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          email: input.email,
-          externalId: input.externalId,
-          name: input.name,
-          role: input.role,
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-
-        await enqueueStaffInviteNotification({
-          businessName: ctx.tenantContext.tenant.name,
-          invitedByName:
-            ctx.session.user.displayName ||
-            ctx.session.user.name ||
-            ctx.session.user.email,
-          invitedStaff,
-        })
-
-        return invitedStaff
-      } catch (error) {
-        if (error instanceof RetailOpsStaffError) {
-          throw new TRPCError({
-            code: getStaffErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        if (error instanceof RetailOpsSubscriptionError) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  productShareLinks: protectedProcedure
-    .input(retailOpsStoreScopeSchema)
-    .query(async ({ ctx, input }) => {
-      assertCanUseRetailOpsShareLinks(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      return listRetailOpsProductShareLinks(ctx.db, {
-        storeId: store.id,
-        tenantId: ctx.tenantContext.tenant.id,
-      })
-    }),
-
-  productShareLinkAnalytics: protectedProcedure
-    .input(retailOpsProductShareLinkAnalyticsSchema)
-    .query(async ({ ctx, input }) => {
-      const role = assertCanUseRetailOpsShareLinks(
-        ctx.tenantContext.membership.role,
-      )
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      await assertRetailOpsReportHistoryAllowed(ctx, input)
-
-      return getRetailOpsProductShareLinkAnalytics(ctx.db, {
-        actorUserId: ctx.session.user.id,
-        canManageAllLinks: canManageSalesOperations(role),
-        from: input.from,
-        productId: input.productId,
-        shareLinkId: input.shareLinkId,
-        storeId: store.id,
-        tenantId: ctx.tenantContext.tenant.id,
-        to: input.to,
-      })
-    }),
-
-  sharedLinkOrderRequests: protectedProcedure
-    .input(retailOpsSharedLinkOrderRequestsSchema)
-    .query(async ({ ctx, input }) => {
-      const role = assertCanUseRetailOpsShareLinks(
-        ctx.tenantContext.membership.role,
-      )
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      await assertRetailOpsReportHistoryAllowed(ctx, input)
-
-      return listRetailOpsSharedLinkOrderRequests(ctx.db, {
-        actorUserId: ctx.session.user.id,
-        canManageAllRequests: canManageSalesOperations(role),
-        from: input.from,
-        limit: input.limit,
-        status: input.status,
-        storeId: store.id,
-        tenantId: ctx.tenantContext.tenant.id,
-        to: input.to,
-      })
-    }),
-
-  updateSharedLinkOrderRequestStatus: protectedProcedure
-    .input(retailOpsUpdateSharedLinkOrderRequestStatusSchema)
-    .mutation(async ({ ctx, input }) => {
-      const role = assertCanUseRetailOpsShareLinks(
-        ctx.tenantContext.membership.role,
-      )
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await updateRetailOpsSharedLinkOrderRequestStatus(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          canManageAllRequests: canManageSalesOperations(role),
-          cashierSessionId: input.cashierSessionId,
-          fulfilledAt: input.fulfilledAt,
-          fulfillmentMethod: input.fulfillmentMethod,
-          fulfillmentNote: input.fulfillmentNote,
-          fulfillmentStatus: input.fulfillmentStatus,
-          orderId: input.orderId,
-          paidAt: input.paidAt,
-          paymentMethod: input.paymentMethod,
-          status: input.status,
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsShareLinkError) {
-          throw new TRPCError({
-            code: getShareLinkErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  deliveryRequests: protectedProcedure
-    .input(retailOpsDeliveryRequestsSchema)
-    .query(async ({ ctx, input }) => {
-      const role = assertCanUseRetailOpsShareLinks(
-        ctx.tenantContext.membership.role,
-      )
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      await assertRetailOpsReportHistoryAllowed(ctx, input)
-
-      return listRetailOpsDeliveryRequests(ctx.db, {
-        actorUserId: ctx.session.user.id,
-        canManageAllRequests: canManageSalesOperations(role),
-        from: input.from,
-        limit: input.limit,
-        status: input.status,
-        storeId: store.id,
-        tenantId: ctx.tenantContext.tenant.id,
-        to: input.to,
-      })
-    }),
-
-  createDeliveryRequest: protectedProcedure
-    .input(retailOpsCreateDeliveryRequestSchema)
-    .mutation(async ({ ctx, input }) => {
-      const role = assertCanUseRetailOpsShareLinks(
-        ctx.tenantContext.membership.role,
-      )
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await createRetailOpsDeliveryRequest(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          canManageAllRequests: canManageSalesOperations(role),
-          dropoffAddress: input.dropoffAddress,
-          dropoffName: input.dropoffName,
-          dropoffPhone: input.dropoffPhone,
-          notes: input.notes,
-          orderId: input.orderId,
-          pickupAddress: input.pickupAddress,
-          pickupName: input.pickupName,
-          pickupPhone: input.pickupPhone,
-          requestedAt: input.requestedAt,
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsFulfillmentError) {
-          throw new TRPCError({
-            code: getFulfillmentErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  updateDeliveryRequestStatus: protectedProcedure
-    .input(retailOpsUpdateDeliveryRequestStatusSchema)
-    .mutation(async ({ ctx, input }) => {
-      const role = assertCanUseRetailOpsShareLinks(
-        ctx.tenantContext.membership.role,
-      )
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await updateRetailOpsDeliveryRequestStatus(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          assignedDriverName: input.assignedDriverName,
-          assignedDriverPhone: input.assignedDriverPhone,
-          canManageAllRequests: canManageSalesOperations(role),
-          deliveryRequestId: input.deliveryRequestId,
-          happenedAt: input.happenedAt,
-          note: input.note,
-          status: input.status,
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsFulfillmentError) {
-          throw new TRPCError({
-            code: getFulfillmentErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  createProductShareLink: protectedProcedure
-    .input(retailOpsCreateProductShareLinkSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertCanUseRetailOpsShareLinks(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await createRetailOpsProductShareLink(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          externalId: input.externalId,
-          label: input.label,
-          productId: input.productId,
-          publicBaseUrl: getPublicProductBaseUrl(),
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsShareLinkError) {
-          throw new TRPCError({
-            code: getShareLinkErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  deactivateProductShareLink: protectedProcedure
-    .input(retailOpsDeactivateProductShareLinkSchema)
-    .mutation(async ({ ctx, input }) => {
-      const role = assertCanUseRetailOpsShareLinks(
-        ctx.tenantContext.membership.role,
-      )
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await deactivateRetailOpsProductShareLink(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          canManageAllLinks: canManageSalesOperations(role),
-          externalId: input.externalId,
-          productId: input.productId,
-          shareLinkId: input.shareLinkId,
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsShareLinkError) {
-          throw new TRPCError({
-            code: getShareLinkErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  unitTemplates: protectedProcedure.query(async ({ ctx }) => {
-    assertCanManageRetailOpsProducts(ctx.tenantContext.membership.role)
-
-    return listRetailOpsProductUnitTemplates(ctx.db, {
-      tenantId: ctx.tenantContext.tenant.id,
-    })
-  }),
-
-  createProduct: protectedProcedure
-    .input(retailOpsCreateProductSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertCanManageRetailOpsProducts(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await createRetailOpsProduct(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          description: input.description,
-          externalId: input.externalId,
-          name: input.name,
-          openingStockQuantity: input.openingStockQuantity,
-          primaryUnitName: input.primaryUnitName,
-          priceMinor: input.priceMinor,
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-          unitTemplateKey: input.unitTemplateKey,
-          variants: input.variants,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsProductError) {
-          throw new TRPCError({
-            code: getProductErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        if (error instanceof RetailOpsSubscriptionError) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  updateProductUnitPrice: protectedProcedure
-    .input(retailOpsUpdateProductUnitPriceSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertCanManageRetailOpsProducts(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await updateRetailOpsProductUnitPrice(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          effectiveAt: input.effectiveAt,
-          priceMinor: input.priceMinor,
-          productVariantId: input.productVariantId,
-          reason: input.reason,
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsProductError) {
-          throw new TRPCError({
-            code: getProductErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  recordStockIntake: protectedProcedure
-    .input(retailOpsRecordStockIntakeSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertCanOperateRetailOpsPos(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await recordRetailOpsStockIntake(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          externalId: input.externalId,
-          note: input.note,
-          productVariantId: input.productVariantId,
-          quantity: input.quantity,
-          receivedAt: input.receivedAt,
-          sourceName: input.sourceName,
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsStockError) {
-          throw new TRPCError({
-            code: getStockErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  recordStockAdjustment: protectedProcedure
-    .input(retailOpsRecordStockAdjustmentSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertCanOperateRetailOpsPos(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await recordRetailOpsStockAdjustment(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          adjustedAt: input.adjustedAt,
-          direction: input.direction,
-          externalId: input.externalId,
-          note: input.note,
-          productVariantId: input.productVariantId,
-          quantity: input.quantity,
-          reason: input.reason,
-          sourceName: input.sourceName,
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsStockError) {
-          throw new TRPCError({
-            code: getStockErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  recordUnitConversion: protectedProcedure
-    .input(retailOpsRecordUnitConversionSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertCanOperateRetailOpsPos(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await recordRetailOpsUnitConversion(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          convertedAt: input.convertedAt,
-          externalId: input.externalId,
-          note: input.note,
-          sourceProductVariantId: input.sourceProductVariantId,
-          sourceQuantity: input.sourceQuantity,
-          storeId: store.id,
-          targetProductVariantId: input.targetProductVariantId,
-          targetQuantity: input.targetQuantity,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsStockError) {
-          throw new TRPCError({
-            code: getStockErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  createSale: protectedProcedure
-    .input(retailOpsCreateSaleSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertCanOperateRetailOpsPos(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await createRetailOpsSale(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          cashierSessionId: input.cashierSessionId,
-          creditDueAt: input.creditDueAt,
-          creditTermsNote: input.creditTermsNote,
-          customerEmail: input.customerEmail,
-          customerName: input.customerName,
-          customerPhone: input.customerPhone,
-          externalId: input.externalId,
-          notes: input.notes,
-          paymentMethod: input.paymentMethod,
-          productVariantId: input.productVariantId,
-          quantity: input.quantity,
-          soldAt: input.soldAt,
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsSaleError) {
-          throw new TRPCError({
-            code: getSaleErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        if (error instanceof RetailOpsStockWalletError) {
-          throw new TRPCError({
-            code: getStockWalletErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
 })
+
+export const retailOpsRouter = mergeRouters(
+  retailOpsCoreRouter,
+  retailOpsProductsRouter,
+  retailOpsSalesRouter,
+  retailOpsSessionsRouter,
+  retailOpsShareLinksRouter,
+  retailOpsStaffRouter,
+  retailOpsStockRouter,
+  retailOpsSubscriptionsRouter,
+)

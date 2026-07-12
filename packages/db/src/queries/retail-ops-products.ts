@@ -20,6 +20,7 @@ export type CreateRetailOpsProductInput = {
   actorUserId: string
   description?: string
   externalId?: string
+  imageUrl?: string
   name: string
   openingStockQuantity: number
   primaryUnitName: string
@@ -87,10 +88,7 @@ export type RetailOpsResolvedProductUnitPrice = {
   effectiveAt: string | null
   priceMinor: number
   productVariantId: string
-  source:
-    | "current_variant"
-    | "durable_price_history"
-    | "metadata_price_history"
+  source: "current_variant" | "durable_price_history" | "metadata_price_history"
 }
 
 export type RetailOpsProductUnitEffectivePrice =
@@ -220,7 +218,8 @@ type DurableProductUnitTemplate = {
   }>
 }
 
-type DurableProductUnitTemplateUnit = DurableProductUnitTemplate["units"][number]
+type DurableProductUnitTemplateUnit =
+  DurableProductUnitTemplate["units"][number]
 type RetailOpsFallbackProductUnitTemplateUnit =
   RetailOpsProductUnitTemplate["units"][number]
 type RetailOpsProductSetupTemplateUnit =
@@ -780,12 +779,10 @@ async function writeDurableOpeningStockMovement(
   }
 }
 
-function getVariantOpeningStock(
-  variant: {
-    inventoryItem: { onHandQuantity: number } | null
-    metadata: unknown
-  },
-) {
+function getVariantOpeningStock(variant: {
+  inventoryItem: { onHandQuantity: number } | null
+  metadata: unknown
+}) {
   const openingStockQuantity = getNumberField(
     getRetailOpsMetadata(variant.metadata).openingStockQuantity,
   )
@@ -1208,6 +1205,7 @@ export async function createRetailOpsProduct(
           retailOps: {
             actorUserId: input.actorUserId,
             externalId,
+            imageUrl: input.imageUrl?.trim() || null,
             primaryUnitName: normalizeUnitName(input.primaryUnitName),
             source: "retail_ops_product_setup",
             unitTemplateId: unitTemplate?.id ?? null,
@@ -1248,8 +1246,9 @@ export async function createRetailOpsProduct(
           ? getTemplateUnitConversionMultiplier(templateUnit)
           : unit.conversionMultiplier
         const conversionRatio =
-          (templateUnit ? getTemplateUnitConversionRatio(templateUnit) : null) ??
-          toConversionRatio(conversionMultiplier)
+          (templateUnit
+            ? getTemplateUnitConversionRatio(templateUnit)
+            : null) ?? toConversionRatio(conversionMultiplier)
         const variant = await tx.productVariant.create({
           data: {
             conversionRatioDenominator: conversionRatio?.denominator ?? null,

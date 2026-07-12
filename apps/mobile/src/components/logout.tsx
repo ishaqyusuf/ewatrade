@@ -1,23 +1,22 @@
-import { LogOut } from "lucide-react-native";
-import { TouchableOpacity } from "react-native";
-import { useColorScheme } from "@/hooks/use-color";
-import { useAuthContext } from "@/hooks/use-auth";
+import { Pressable } from "@/components/ui/pressable"
+import { useAuthContext } from "@/hooks/use-auth"
+import { useColors } from "@/hooks/use-color"
+import { LogOut } from "lucide-react-native"
 
 export function Logout() {
-  const { colorScheme } = useColorScheme();
-  const auth = useAuthContext();
+  const colors = useColors()
+  const auth = useAuthContext()
+
   return (
-    <TouchableOpacity
-      onPress={(e) => {
-        auth.signOutLocal();
+    <Pressable
+      className="rounded-full p-2.5 active:bg-muted"
+      haptic
+      onPress={() => {
+        auth.signOutLocal()
       }}
-      className="p-2.5 rounded-full active:bg-gray-200 dark:active:bg-gray-700"
+      transition
     >
-      <LogOut
-        // name="menu"
-        size={20}
-        color={colorScheme === "dark" ? "#F9FAFB" : "#1F2937"}
-      />
-    </TouchableOpacity>
-  );
+      <LogOut size={20} color={colors.foreground} />
+    </Pressable>
+  )
 }

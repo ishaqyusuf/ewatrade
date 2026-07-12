@@ -1,13 +1,24 @@
-import { cn } from "@/lib/utils";
-import { cva, type VariantProps } from "class-variance-authority";
-import * as React from "react";
-import { Platform, View as RNView } from "react-native";
+import { cn } from "@/lib/utils"
+import { type VariantProps, cva } from "class-variance-authority"
+import * as React from "react"
+import { Platform, View as RNView } from "react-native"
 
-type ViewVariantProps = VariantProps<typeof viewVariants>;
+const viewVariants = cva("", {
+  variants: {
+    variant: {
+      default: "",
+    },
+  },
+  defaultVariants: {
+    variant: "default",
+  },
+})
 
-type ViewVariant = NonNullable<ViewVariantProps["variant"]>;
+type ViewVariantProps = VariantProps<typeof viewVariants>
 
-const ViewClassContext = React.createContext<string | undefined>(undefined);
+type ViewVariant = NonNullable<ViewVariantProps["variant"]>
+
+const ViewClassContext = React.createContext<string | undefined>(undefined)
 
 function View({
   className,
@@ -18,9 +29,9 @@ function View({
 }: React.ComponentProps<typeof RNView> &
   ViewVariantProps &
   React.RefAttributes<RNView> & {
-    asChild?: boolean;
+    asChild?: boolean
   }) {
-  const viewClass = React.useContext(ViewClassContext);
+  const viewClass = React.useContext(ViewClassContext)
   // const Component = RNView;
   return (
     <RNView
@@ -28,11 +39,11 @@ function View({
         // "bg-background",
         // viewVariants({ variant }),
         viewClass,
-        className
+        className,
       )}
       {...props}
     />
-  );
+  )
 }
 
-export { View, ViewClassContext };
+export { View, ViewClassContext }

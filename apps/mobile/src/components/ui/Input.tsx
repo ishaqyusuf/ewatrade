@@ -1,9 +1,15 @@
-import { Ionicons } from '@expo/vector-icons'
 // import { useAuth } from '@providers/auth-provider'
-// import { cn } from '@utils/cn'
-import { useState } from 'react'
-import { Control, Controller, FieldValues, Path } from 'react-hook-form'
-import { Image, Text, TextInput, TextInputProps, View } from 'react-native'
+import { useColors } from "@/hooks/use-color"
+import { cn } from "@/lib/utils"
+import { Ionicons } from "@expo/vector-icons"
+import { useState } from "react"
+import {
+  type Control,
+  Controller,
+  type FieldValues,
+  type Path,
+} from "react-hook-form"
+import { Text, TextInput, type TextInputProps, View } from "react-native"
 
 interface InputProps<T extends FieldValues> extends TextInputProps {
   label?: string
@@ -24,6 +30,7 @@ export function Input<T extends FieldValues>({
   ...rest
 }: InputProps<T>) {
   const [isPasswordVisible, setIsPasswordVisible] = useState(true)
+  const colors = useColors()
   // const { user } = useAuth()
 
   const togglePasswordVisibility = () => {
@@ -40,70 +47,64 @@ export function Input<T extends FieldValues>({
           fieldState: { error },
         }) => (
           <>
-            <View className='flex-row justify-between'>
-              <Text className='text-sm mb-1 text-[#111827] font-poppins-medium'>
+            <View className="flex-row justify-between">
+              <Text className="mb-1 text-sm font-poppins-medium text-foreground">
                 {label}
               </Text>
               {error && (
-                <Text className='text-xs text-red-500 font-poppins'>
+                <Text className="font-poppins text-xs text-destructive">
                   {error?.message}
                 </Text>
               )}
             </View>
             <View
               className={cn(
-                'flex-row items-center rounded-xl p-4 border bg-[#F3F4F6] border-[#E5E7EB]',
-                error ? 'border-red-300' : 'border-gray-300'
+                "flex-row items-center rounded-xl border bg-card p-4",
+                error ? "border-destructive" : "border-border",
               )}
             >
-              {name === 'full_name' ? (
-                <Image
-                  source={{ uri: user?.avatar_url }}
-                  className='w-6 aspect-square rounded-full'
-                  resizeMode='contain'
-                />
-              ) : (
-                <Ionicons name={icon} size={20} color='#6366F1' />
-              )}
-              <View className={cn('flex-1 mx-3', className)}>
+              {icon ? (
+                <Ionicons name={icon} size={20} color={colors.primary} />
+              ) : null}
+              <View className={cn("flex-1 mx-3", className)}>
                 <TextInput
                   value={value}
                   onBlur={onBlur}
                   onChangeText={onChange}
                   secureTextEntry={
-                    name === 'password' ||
-                    name === 'confirmPassword' ||
-                    name === 'oldPassword' ||
-                    name === 'newPassword' ||
-                    name === 'confirmNewPassword'
+                    name === "password" ||
+                    name === "confirmPassword" ||
+                    name === "oldPassword" ||
+                    name === "newPassword" ||
+                    name === "confirmNewPassword"
                       ? isPasswordVisible
                       : false
                   }
-                  autoCapitalize='none'
+                  autoCapitalize="none"
                   autoCorrect={false}
-                  placeholderTextColor='#9CA3AF'
+                  placeholderTextColor={colors.mutedForeground}
                   style={{
                     flex: 1,
-                    color: '#111827',
-                    fontFamily: 'Poppins',
+                    color: colors.foreground,
+                    fontFamily: "Poppins",
                     fontSize: 18,
-                    textAlignVertical: 'center',
+                    textAlignVertical: "center",
                     paddingVertical: 0,
                     includeFontPadding: false,
                   }}
                   {...rest}
                 />
               </View>
-              {(name === 'password' ||
-                name === 'confirmPassword' ||
-                name === 'oldPassword' ||
-                name === 'newPassword' ||
-                name === 'confirmNewPassword') &&
-                value.length > 0 && (
+              {(name === "password" ||
+                name === "confirmPassword" ||
+                name === "oldPassword" ||
+                name === "newPassword" ||
+                name === "confirmNewPassword") &&
+                String(value ?? "").length > 0 && (
                   <Ionicons
-                    name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
+                    name={isPasswordVisible ? "eye-off-outline" : "eye-outline"}
                     size={20}
-                    color='#6366F1'
+                    color={colors.primary}
                     onPress={togglePasswordVisibility}
                   />
                 )}

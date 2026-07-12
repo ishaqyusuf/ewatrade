@@ -16,6 +16,7 @@
   "dependencies": {
     "@ewatrade/auth": "workspace:*",
     "@ewatrade/db": "workspace:*",
+    "@ewatrade/email": "workspace:*",
     "@ewatrade/jobs": "workspace:*",
     "@ewatrade/utils": "workspace:*",
     "@hono/trpc-server": "^0.4.2",

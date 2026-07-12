@@ -1,11 +1,11 @@
-import { PRODUCTS } from "@/data/products-data";
-import type { Order } from "@/types/order-types";
+import { PRODUCTS } from "@/data/products-data"
+import type { Order } from "@/types/order-types"
 
 export const ORDERS: Order[] = [
   {
     id: "1",
     item: "Sale #1001",
-    details: "2 bags of Starter Poultry Feed paid by cash",
+    details: "2 bags of Rice paid by cash",
     status: "Completed",
     slug: "sale-1001",
     date: "2026-07-10",
@@ -14,7 +14,7 @@ export const ORDERS: Order[] = [
   {
     id: "2",
     item: "Sale #1002",
-    details: "1 bag of Grower Feed paid by transfer",
+    details: "1 bag of Beans paid by transfer",
     status: "Synced",
     slug: "sale-1002",
     date: "2026-07-10",
@@ -23,10 +23,10 @@ export const ORDERS: Order[] = [
   {
     id: "3",
     item: "Sale #1003",
-    details: "Quarter bag stock sale pending sync",
+    details: "Partial unit sale pending sync",
     status: "Pending",
     slug: "sale-1003",
     date: "2026-07-10",
     items: PRODUCTS.slice(2, 3),
   },
-];
+]

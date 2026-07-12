@@ -15,7 +15,7 @@ export function formatMoney(value?: number | string | null, currency = "USD") {
 }
 
 export function sum(values: Array<number | string | null | undefined>) {
-  return values.reduce((total, value) => {
+  return values.reduce<number>((total, value) => {
     const amount = Number(value ?? 0)
     return total + (Number.isFinite(amount) ? amount : 0)
   }, 0)
@@ -58,11 +58,7 @@ export function getNameInitials(value?: string | null) {
     .join("")
 }
 
-export function listFilter<T>(
-  items: T[],
-  search: string,
-  deep = false,
-): T[] {
+export function listFilter<T>(items: T[], search: string, deep = false): T[] {
   const query = search.trim().toLowerCase()
   if (!query) return items
 

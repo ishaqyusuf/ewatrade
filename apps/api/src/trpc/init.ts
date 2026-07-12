@@ -96,7 +96,9 @@ export const createTRPCContext = async (
   c: Context,
 ): Promise<TRPCContext> => {
   const { requestId, cfRay } = getRequestTrace(c.req)
-  const bearerToken = getBearerToken(c.req.header("authorization"))
+  const bearerToken = getBearerToken(
+    c.req.header("authorization") ?? c.req.header("x-app-authorization"),
+  )
   const cookieSession = await auth.api.getSession({
     headers: c.req.raw.headers,
   })
@@ -123,6 +125,7 @@ const t = initTRPC.context<TRPCContext>().create({
 
 export const createTRPCRouter = t.router
 export const createCallerFactory = t.createCallerFactory
+export const mergeRouters = t.mergeRouters
 
 const withTimingMiddleware = t.middleware(async (opts) => {
   const startedAt = performance.now()

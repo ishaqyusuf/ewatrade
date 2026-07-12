@@ -1,15 +1,30 @@
 import { z } from "zod"
 
+const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .transform((value) => value || undefined)
+    .optional()
+
+const optionalEmailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .transform((value) => value || undefined)
+  .pipe(z.email().optional())
+
 export const tenantBootstrapSchema = z.object({
-  tenantSlug: z.string().trim().min(1).optional(),
+  tenantSlug: optionalText(120),
 })
 
 const storeOnboardingSchema = z.object({
-  businessType: z.string().trim().max(80).optional(),
-  countryCode: z.string().trim().max(8).optional(),
-  productCategory: z.string().trim().max(120).optional(),
-  salesMethod: z.string().trim().max(80).optional(),
-  teamSize: z.string().trim().max(80).optional(),
+  businessType: optionalText(80),
+  countryCode: optionalText(8),
+  productCategory: optionalText(120),
+  salesMethod: optionalText(80),
+  teamSize: optionalText(80),
 })
 
 export const createStoreSchema = z.object({
@@ -21,8 +36,8 @@ export const createStoreSchema = z.object({
     .default("NGN")
     .transform((value) => value.toUpperCase()),
   onboarding: storeOnboardingSchema.optional(),
-  supportEmail: z.email().optional(),
-  supportPhone: z.string().trim().max(40).optional(),
+  supportEmail: optionalEmailSchema,
+  supportPhone: optionalText(40),
 })
 
 export type TenantBootstrapInput = z.infer<typeof tenantBootstrapSchema>

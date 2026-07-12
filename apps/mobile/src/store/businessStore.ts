@@ -18,6 +18,7 @@ type CreateBusinessInput = {
   category?: string;
   country?: string;
   currency?: string;
+  id?: string;
   name: string;
   salesMethod?: string;
   teamSize?: string;
@@ -48,7 +49,7 @@ function createBusinessRecord(input: CreateBusinessInput): RetailOpsBusiness {
     country: input.country?.trim() || "Nigeria",
     createdAt: new Date().toISOString(),
     currency: input.currency?.trim() || "NGN",
-    id: createId(),
+    id: input.id?.trim() || createId(),
     name: input.name.trim() || "My Business",
     salesMethod: input.salesMethod?.trim() || "In-store sales",
     teamSize: input.teamSize?.trim() || undefined,

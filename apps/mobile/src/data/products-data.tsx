@@ -1,64 +1,64 @@
-import type { Product } from "@/types/product-types";
+import type { Product } from "@/types/product-types"
 
 export const PRODUCTS: Product[] = [
   {
     id: 1,
-    title: "Starter Poultry Feed",
-    slug: "starter-poultry-feed",
+    title: "Rice",
+    slug: "rice",
     imagesUrl: [],
     price: 18500,
     category: {
-      name: "Feed",
-      slug: "feed",
+      name: "Staple Goods",
+      slug: "staple-goods",
     },
     maxQuantity: 42,
   },
   {
     id: 2,
-    title: "Grower Feed",
-    slug: "grower-feed",
+    title: "Beans",
+    slug: "beans",
     imagesUrl: [],
     price: 17800,
     category: {
-      name: "Feed",
-      slug: "feed",
+      name: "Staple Goods",
+      slug: "staple-goods",
     },
     maxQuantity: 36,
   },
   {
     id: 3,
-    title: "Layer Mash",
-    slug: "layer-mash",
+    title: "Garri",
+    slug: "garri",
     imagesUrl: [],
     price: 19200,
     category: {
-      name: "Feed",
-      slug: "feed",
+      name: "Staple Goods",
+      slug: "staple-goods",
     },
     maxQuantity: 18,
   },
   {
     id: 4,
-    title: "Maize Bran",
-    slug: "maize-bran",
+    title: "Palm Oil",
+    slug: "palm-oil",
     imagesUrl: [],
     price: 9600,
     category: {
-      name: "Raw Material",
-      slug: "raw-material",
+      name: "Cooking Essentials",
+      slug: "cooking-essentials",
     },
     maxQuantity: 8,
   },
   {
     id: 5,
-    title: "Vitamin Premix",
-    slug: "vitamin-premix",
+    title: "Cooking Gas",
+    slug: "cooking-gas",
     imagesUrl: [],
     price: 3200,
     category: {
-      name: "Supplement",
-      slug: "supplement",
+      name: "Household Supplies",
+      slug: "household-supplies",
     },
     maxQuantity: 15,
   },
-];
+]

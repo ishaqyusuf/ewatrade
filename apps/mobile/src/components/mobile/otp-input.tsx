@@ -1,10 +1,12 @@
+import { useColors } from "@/hooks/use-color";
 import { cn } from "@/lib/utils";
 import { useRef } from "react";
 import {
-  TextInput,
-  View,
   type NativeSyntheticEvent,
+  StyleSheet,
+  TextInput,
   type TextInputKeyPressEventData,
+  View,
 } from "react-native";
 
 type OtpInputProps = {
@@ -20,8 +22,13 @@ export function OtpInput({
   onChange,
   value,
 }: OtpInputProps) {
+  const colors = useColors();
   const refs = useRef<Array<TextInput | null>>([]);
   const digits = Array.from({ length }, (_, index) => value[index] ?? "");
+  const cells = digits.map((digit, index) => ({
+    digit,
+    id: `otp-cell-${index + 1}`,
+  }));
 
   const updateDigit = (index: number, nextValue: string) => {
     const nextDigits = [...digits];
@@ -55,14 +62,14 @@ export function OtpInput({
 
   return (
     <View className={cn("flex-row justify-between gap-2", className)}>
-      {digits.map((digit, index) => (
+      {cells.map(({ digit, id }, index) => (
         <TextInput
           accessibilityLabel={`OTP digit ${index + 1}`}
-          autoComplete="sms-otp"
-          className="h-14 flex-1 rounded-xl border border-border bg-card text-center text-xl font-bold text-foreground shadow-sm shadow-black/5"
+          autoCapitalize="none"
+          autoCorrect={false}
           inputMode="numeric"
           keyboardType="number-pad"
-          key={`otp-${index}`}
+          key={id}
           maxLength={index === 0 ? length : 1}
           onChangeText={(nextValue) => updateDigit(index, nextValue)}
           onKeyPress={(event) => handleKeyPress(index, event)}
@@ -70,10 +77,29 @@ export function OtpInput({
             refs.current[index] = node;
           }}
           selectTextOnFocus
-          textContentType="oneTimeCode"
+          style={[
+            styles.cell,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              color: colors.foreground,
+            },
+          ]}
           value={digit}
         />
       ))}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  cell: {
+    borderRadius: 12,
+    borderWidth: 1,
+    flex: 1,
+    fontSize: 20,
+    fontWeight: "700",
+    height: 56,
+    textAlign: "center",
+  },
+});

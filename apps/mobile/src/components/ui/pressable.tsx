@@ -1,12 +1,12 @@
+import { useColors } from "@/hooks/use-color";
 import { cn } from "@/lib/utils";
-import { LinkProps, useRouter } from "expo-router";
+import { hexToRgba } from "@ewatrade/utils/colors";
+import * as Haptics from "expo-haptics";
+import { type LinkProps, useRouter } from "expo-router";
 import {
   Pressable as BasePressable,
-  PressableProps as BasePressableProps,
+  type PressableProps as BasePressableProps,
 } from "react-native";
-import * as Haptics from "expo-haptics";
-import { useColors } from "@/hooks/use-color";
-import { hexToRgba } from "@ewatrade/utils/colors";
 
 type Props = BasePressableProps & {
   href?: LinkProps["href"];

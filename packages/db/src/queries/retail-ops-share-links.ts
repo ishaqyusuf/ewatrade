@@ -202,6 +202,7 @@ export type RetailOpsSharedProduct = {
     currencyCode: string
     description: string | null
     id: string
+    imageUrl: string | null
     name: string
     slug: string
     variants: Array<{
@@ -414,6 +415,7 @@ type DurableProductShareLinkWithSharedProduct = DurableProductShareLinkRow & {
     currencyCode: string
     description: string | null
     id: string
+    metadata: unknown
     name: string
     slug: string
     store: {
@@ -700,8 +702,7 @@ function getSharedLinkFulfillmentPatch(
 
   return {
     fulfilledAt: (
-      input.fulfilledAt ??
-      (shouldStampFulfilledAt ? happenedAt : null)
+      input.fulfilledAt ?? (shouldStampFulfilledAt ? happenedAt : null)
     )?.toISOString(),
     fulfilledByUserId: input.actorUserId,
     method: input.fulfillmentMethod ?? null,
@@ -728,16 +729,15 @@ function getShareLinks(metadata: unknown): ProductShareLinkMetadata[] {
 
   if (!Array.isArray(shareLinks)) return []
 
-  return shareLinks.filter(
-    (shareLink): shareLink is ProductShareLinkMetadata =>
-      Boolean(
-        shareLink &&
-          typeof shareLink === "object" &&
-          !Array.isArray(shareLink) &&
-          typeof (shareLink as ProductShareLinkMetadata).id === "string" &&
-          typeof (shareLink as ProductShareLinkMetadata).token === "string" &&
-          typeof (shareLink as ProductShareLinkMetadata).url === "string",
-      ),
+  return shareLinks.filter((shareLink): shareLink is ProductShareLinkMetadata =>
+    Boolean(
+      shareLink &&
+        typeof shareLink === "object" &&
+        !Array.isArray(shareLink) &&
+        typeof (shareLink as ProductShareLinkMetadata).id === "string" &&
+        typeof (shareLink as ProductShareLinkMetadata).token === "string" &&
+        typeof (shareLink as ProductShareLinkMetadata).url === "string",
+    ),
   )
 }
 
@@ -841,14 +841,144 @@ function replaceShareLink(
   )
 }
 
+type StorefrontHostnameOption = {
+  hostname: string
+  isCustom: boolean
+  isPrimary: boolean
+  verifiedAt: Date | null
+}
+
+function getProtocolFromBaseUrl(publicBaseUrl: string) {
+  try {
+    return new URL(publicBaseUrl).protocol || "https:"
+  } catch {
+    return "https:"
+  }
+}
+
+function isLocalOrIpHostname(hostname: string) {
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "0.0.0.0" ||
+    hostname.endsWith(".localhost") ||
+    /^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname) ||
+    hostname.includes(":")
+  )
+}
+
+function getTenantSubdomainBaseUrl(input: {
+  publicBaseUrl: string
+  tenantSlug: string
+}) {
+  const tenantSlug = input.tenantSlug.trim().toLowerCase()
+
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(tenantSlug)) {
+    return null
+  }
+
+  try {
+    const url = new URL(input.publicBaseUrl)
+    const hostname = url.hostname.toLowerCase()
+
+    if (!hostname || isLocalOrIpHostname(hostname)) return null
+
+    const rootHostname = hostname.replace(/^(storefront|www)\./, "")
+    url.hostname = hostname.startsWith(`${tenantSlug}.`)
+      ? hostname
+      : `${tenantSlug}.${rootHostname}`
+    url.hash = ""
+    url.pathname = ""
+    url.search = ""
+
+    return url.toString().replace(/\/+$/, "")
+  } catch {
+    return null
+  }
+}
+
+function toHostnameBaseUrl(input: {
+  hostname: string
+  publicBaseUrl: string
+}) {
+  const hostname = input.hostname.trim().replace(/\/+$/, "")
+
+  if (!hostname) return null
+
+  const hasProtocol = /^[a-z][a-z\d+.-]*:\/\//i.test(hostname)
+  const urlValue = hasProtocol
+    ? hostname
+    : `${getProtocolFromBaseUrl(input.publicBaseUrl)}//${hostname}`
+
+  try {
+    const url = new URL(urlValue)
+    const hostname = url.hostname.toLowerCase()
+
+    if (!["http:", "https:"].includes(url.protocol)) return null
+    if (!hostname || isLocalOrIpHostname(hostname)) return null
+
+    url.hash = ""
+    url.pathname = ""
+    url.search = ""
+
+    return url.toString().replace(/\/+$/, "")
+  } catch {
+    return null
+  }
+}
+
+function getPreferredStorefrontBaseUrl(input: {
+  hostnames?: StorefrontHostnameOption[]
+  publicBaseUrl: string
+  tenantSlug: string
+}) {
+  const fallbackBaseUrl = input.publicBaseUrl.replace(/\/+$/, "")
+  const hostnames = input.hostnames ?? []
+  const preferredHostnames = [
+    ...hostnames.filter(
+      (hostname) =>
+        hostname.isCustom && hostname.isPrimary && hostname.verifiedAt,
+    ),
+    ...hostnames.filter(
+      (hostname) =>
+        hostname.isCustom && !hostname.isPrimary && hostname.verifiedAt,
+    ),
+    ...hostnames.filter((hostname) => !hostname.isCustom && hostname.isPrimary),
+    ...hostnames.filter(
+      (hostname) => !hostname.isCustom && !hostname.isPrimary,
+    ),
+  ]
+
+  for (const preferredHostname of preferredHostnames) {
+    const baseUrl = toHostnameBaseUrl({
+      hostname: preferredHostname.hostname,
+      publicBaseUrl: input.publicBaseUrl,
+    })
+
+    if (baseUrl) return baseUrl
+  }
+
+  return (
+    getTenantSubdomainBaseUrl({
+      publicBaseUrl: input.publicBaseUrl,
+      tenantSlug: input.tenantSlug,
+    }) ?? fallbackBaseUrl
+  )
+}
+
 function buildShareUrl(input: {
+  hostnames?: StorefrontHostnameOption[]
   productSlug: string
   publicBaseUrl: string
   storeSlug: string
   tenantSlug: string
   token: string
 }) {
-  const baseUrl = input.publicBaseUrl.replace(/\/+$/, "")
+  const baseUrl = getPreferredStorefrontBaseUrl({
+    hostnames: input.hostnames,
+    publicBaseUrl: input.publicBaseUrl,
+    tenantSlug: input.tenantSlug,
+  })
   const path = [
     "p",
     encodeURIComponent(input.tenantSlug),
@@ -921,6 +1051,7 @@ function toSharedProductFromDurableShareLink(
       currencyCode: shareLink.product.currencyCode,
       description: shareLink.product.description,
       id: shareLink.product.id,
+      imageUrl: getProductImageUrl(shareLink.product.metadata),
       name: shareLink.product.name,
       slug: shareLink.product.slug,
       variants: shareLink.product.variants.map((variant) => ({
@@ -948,6 +1079,56 @@ function toSharedProductFromDurableShareLink(
     },
     tenant: shareLink.product.store.tenant,
   }
+}
+
+function getProductImageUrl(metadata: unknown) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null
+  }
+
+  const record = metadata as Record<string, unknown>
+  const retailOps =
+    record.retailOps && typeof record.retailOps === "object"
+      ? (record.retailOps as Record<string, unknown>)
+      : {}
+  const candidates = [
+    record.imageUrl,
+    record.thumbnailUrl,
+    record.previewImageUrl,
+    retailOps.imageUrl,
+    retailOps.thumbnailUrl,
+    retailOps.previewImageUrl,
+    getFirstImageFromCollection(record.images),
+    getFirstImageFromCollection(record.imagesUrl),
+    getFirstImageFromCollection(record.media),
+    getFirstImageFromCollection(retailOps.images),
+    getFirstImageFromCollection(retailOps.imagesUrl),
+    getFirstImageFromCollection(retailOps.media),
+  ]
+
+  return candidates.find((candidate) => typeof candidate === "string") ?? null
+}
+
+function getFirstImageFromCollection(value: unknown) {
+  if (!Array.isArray(value)) return null
+
+  for (const item of value) {
+    if (typeof item === "string" && item.trim()) {
+      return item.trim()
+    }
+
+    if (item && typeof item === "object" && !Array.isArray(item)) {
+      const record = item as Record<string, unknown>
+      const candidate =
+        record.url ?? record.imageUrl ?? record.src ?? record.previewImageUrl
+
+      if (typeof candidate === "string" && candidate.trim()) {
+        return candidate.trim()
+      }
+    }
+  }
+
+  return null
 }
 
 function mergeShareLinks(input: {
@@ -993,10 +1174,8 @@ function addShareLinkAnalyticsMetrics(
   next: RetailOpsProductShareLinkAnalyticsMetrics,
 ): RetailOpsProductShareLinkAnalyticsMetrics {
   return {
-    cancelledOrderCount:
-      current.cancelledOrderCount + next.cancelledOrderCount,
-    completedOrderCount:
-      current.completedOrderCount + next.completedOrderCount,
+    cancelledOrderCount: current.cancelledOrderCount + next.cancelledOrderCount,
+    completedOrderCount: current.completedOrderCount + next.completedOrderCount,
     consumedQuantity: current.consumedQuantity + next.consumedQuantity,
     orderRequestCount: current.orderRequestCount + next.orderRequestCount,
     releasedQuantity: current.releasedQuantity + next.releasedQuantity,
@@ -1287,7 +1466,9 @@ function normalizeFailureReason(failureReason: string | undefined) {
   return trimmed ? trimmed.slice(0, 500) : null
 }
 
-function normalizeNullableFailureReason(failureReason: string | null | undefined) {
+function normalizeNullableFailureReason(
+  failureReason: string | null | undefined,
+) {
   const trimmed = failureReason?.trim()
 
   return trimmed ? trimmed.slice(0, 500) : null
@@ -1452,7 +1633,8 @@ async function getSharedLinkOrderMerchantRecipients(
 
     return [
       {
-        displayName: membership.user.displayName || membership.user.name || null,
+        displayName:
+          membership.user.displayName || membership.user.name || null,
         email,
       },
     ]
@@ -1484,6 +1666,28 @@ async function getShareableProduct(
           slug: true,
           tenant: {
             select: {
+              hostnames: {
+                where: {
+                  surface: "STOREFRONT",
+                },
+                orderBy: [
+                  {
+                    isPrimary: "desc",
+                  },
+                  {
+                    isCustom: "desc",
+                  },
+                  {
+                    createdAt: "asc",
+                  },
+                ],
+                select: {
+                  hostname: true,
+                  isCustom: true,
+                  isPrimary: true,
+                  verifiedAt: true,
+                },
+              },
               slug: true,
             },
           },
@@ -2232,7 +2436,8 @@ async function recordDurableShareLinkNotificationDispatch(
         type: "ADMIN" | "CUSTOMER"
       }
     >()
-    const customerEmail = input.notification?.customerEmail ?? input.customerEmail
+    const customerEmail =
+      input.notification?.customerEmail ?? input.customerEmail
 
     if (customerEmail) {
       recipients.set(`customer:${customerEmail.toLowerCase()}`, {
@@ -2288,7 +2493,7 @@ async function recordDurableShareLinkNotificationDispatch(
         ),
         maxAttempts: input.maxAttempts ?? null,
         nextRetryAt:
-          deliveryStatus === "failed" ? input.nextRetryAt ?? null : null,
+          deliveryStatus === "failed" ? (input.nextRetryAt ?? null) : null,
         orderRequestId: orderRequest.id,
         provider: delivery?.provider ?? null,
         providerMessageId: delivery?.providerMessageId ?? null,
@@ -2403,6 +2608,7 @@ async function getDurableRetailOpsSharedProduct(
             currencyCode: true,
             description: true,
             id: true,
+            metadata: true,
             name: true,
             slug: true,
             store: {
@@ -2491,6 +2697,7 @@ async function getDurableRetailOpsSharedProduct(
               currencyCode: true,
               description: true,
               id: true,
+              metadata: true,
               name: true,
               slug: true,
               store: {
@@ -3184,10 +3391,9 @@ export async function updateRetailOpsSharedLinkOrderRequestStatus(
           followUpStatus: input.status,
           ...(fulfillment ? { fulfillment } : {}),
           paymentMethod: input.paymentMethod ?? null,
-          paymentState:
-            receipt
-              ? "paid_at_follow_up"
-              : input.status === "completed"
+          paymentState: receipt
+            ? "paid_at_follow_up"
+            : input.status === "completed"
               ? "follow_up_completed"
               : "follow_up_cancelled",
           receipt: receipt
@@ -3359,7 +3565,10 @@ export async function recordRetailOpsSharedLinkNotificationDispatch(
   const attemptCount =
     input.status === "queued"
       ? existingAttemptCount
-      : Math.max(input.attempt ?? existingAttemptCount + 1, existingAttemptCount)
+      : Math.max(
+          input.attempt ?? existingAttemptCount + 1,
+          existingAttemptCount,
+        )
   const failureReason = normalizeFailureReason(input.failureReason)
   const deliveryResults = (input.deliveries ?? []).map((delivery) => ({
     error: normalizeNullableFailureReason(delivery.error),
@@ -3377,19 +3586,24 @@ export async function recordRetailOpsSharedLinkNotificationDispatch(
     attemptCount,
     deliveryResults,
     failedAt:
-      input.status === "failed" ? now : getStringField(existingDispatch.failedAt),
+      input.status === "failed"
+        ? now
+        : getStringField(existingDispatch.failedAt),
     failureReason: input.status === "failed" ? failureReason : null,
     lastAttemptAt:
       input.status === "queued"
         ? getStringField(existingDispatch.lastAttemptAt)
         : now,
-    maxAttempts: input.maxAttempts ?? getNumberField(existingDispatch.maxAttempts),
+    maxAttempts:
+      input.maxAttempts ?? getNumberField(existingDispatch.maxAttempts),
     nextRetryAt:
       input.status === "failed"
-        ? input.nextRetryAt?.toISOString() ?? null
+        ? (input.nextRetryAt?.toISOString() ?? null)
         : null,
     queuedAt:
-      input.status === "queued" ? now : getStringField(existingDispatch.queuedAt),
+      input.status === "queued"
+        ? now
+        : getStringField(existingDispatch.queuedAt),
     sentAt:
       input.status === "sent" ? now : getStringField(existingDispatch.sentAt),
     status: input.status,
@@ -3534,6 +3748,7 @@ export async function getRetailOpsSharedProduct(
       currencyCode: product.currencyCode,
       description: product.description,
       id: product.id,
+      imageUrl: getProductImageUrl(product.metadata),
       name: product.name,
       slug: product.slug,
       variants: product.variants.map((variant) => ({
@@ -3595,6 +3810,7 @@ export async function createRetailOpsProductShareLink(
   const nowIso = now.toISOString()
   const token = createToken()
   const url = buildShareUrl({
+    hostnames: product.store.tenant.hostnames,
     productSlug: product.slug,
     publicBaseUrl: input.publicBaseUrl,
     storeSlug: product.store.slug,
@@ -3697,10 +3913,7 @@ export async function deactivateRetailOpsProductShareLink(
     )
   }
 
-  if (
-    externalId &&
-    shareLinkForChecks.deactivationExternalId === externalId
-  ) {
+  if (externalId && shareLinkForChecks.deactivationExternalId === externalId) {
     return durableShareLink
       ? toDurableShareLink(durableShareLink)
       : toShareLink({
@@ -3739,7 +3952,9 @@ export async function deactivateRetailOpsProductShareLink(
         }
     const nextShareLinks = existingShareLink
       ? shareLinks.map((shareLink) =>
-          shareLink.id === shareLinkForChecks.id ? metadataShareLink : shareLink,
+          shareLink.id === shareLinkForChecks.id
+            ? metadataShareLink
+            : shareLink,
         )
       : [metadataShareLink, ...shareLinks]
 
@@ -3815,203 +4030,201 @@ export async function createRetailOpsSharedProductOrderRequest(
     unitName: selectedVariant.name,
   }
 
-  const {
-    order,
-    orderedShareLink,
-    product,
-  } = await db.$transaction(async (tx) => {
-    const inventoryItem = await tx.inventoryItem.findFirst({
-      where: {
-        productVariantId: selectedVariant.id,
-        storeId: sharedProduct.store.id,
-        tenantId: sharedProduct.tenant.id,
-      },
-      select: {
-        id: true,
-        onHandQuantity: true,
-        reservedQuantity: true,
-      },
-    })
-
-    if (
-      !inventoryItem ||
-      inventoryItem.onHandQuantity - inventoryItem.reservedQuantity <
-        input.quantity
-    ) {
-      throw new RetailOpsShareLinkError(
-        "INSUFFICIENT_STOCK",
-        "Not enough stock is available for this order request.",
-      )
-    }
-
-    const stockReservation = await tx.inventoryItem.updateMany({
-      where: {
-        id: inventoryItem.id,
-        onHandQuantity: {
-          gte: inventoryItem.reservedQuantity + input.quantity,
-        },
-        reservedQuantity: inventoryItem.reservedQuantity,
-      },
-      data: {
-        reservedQuantity: { increment: input.quantity },
-        updatedByUserId: sharedProduct.shareLink.createdByUserId,
-      },
-    })
-
-    if (stockReservation.count !== 1) {
-      throw new RetailOpsShareLinkError(
-        "INSUFFICIENT_STOCK",
-        "Not enough stock is available for this order request.",
-      )
-    }
-
-    const order = await tx.order.create({
-      data: {
-        currencyCode: sharedProduct.product.currencyCode,
-        customerEmail: input.customerEmail,
-        customerName: input.customerName,
-        customerPhone: input.customerPhone,
-        metadata: {
-          retailOps: {
-            paymentState: "pending_follow_up",
-            requestedAt,
-            customerAccountId: input.customerAccount?.id ?? null,
-            customerAuthMode: input.customerAccount?.mode ?? "guest",
-            customerIdentityScope: "platform",
-            shareLinkCreatorUserId: sharedProduct.shareLink.createdByUserId,
-            shareLinkId: sharedProduct.shareLink.id,
-            shareToken: sharedProduct.shareLink.token,
-            source: "retail_ops_share_link_order_request",
-            stockReservation: {
-              inventoryItemId: inventoryItem.id,
-              productVariantId: selectedVariant.id,
-              quantity: input.quantity,
-              reservedAt: requestedAt,
-              status: "reserved",
-            },
-          },
-        },
-        notes: input.notes,
-        orderNumber: createReference("REQ"),
-        paymentStatus: "PENDING",
-        status: "PENDING",
-        storeId: sharedProduct.store.id,
-        subtotalMinor: totalMinor,
-        tenantId: sharedProduct.tenant.id,
-        totalMinor,
-        items: {
-          create: {
-            metadata: {
-              retailOps: {
-                stockReservation: {
-                  inventoryItemId: inventoryItem.id,
-                  quantity: input.quantity,
-                  reservedAt: requestedAt,
-                  status: "reserved",
-                },
-                unitName: selectedVariant.name,
-              },
-            },
-            nameSnapshot: sharedProduct.product.name,
-            productId: sharedProduct.product.id,
-            productVariantId: selectedVariant.id,
-            quantity: input.quantity,
-            skuSnapshot: selectedVariant.sku,
-            totalPriceMinor: totalMinor,
-            unitPriceMinor: selectedVariant.priceMinor,
-          },
-        },
-      },
-      select: {
-        currencyCode: true,
-        id: true,
-        orderNumber: true,
-        paymentStatus: true,
-        status: true,
-        totalMinor: true,
-      },
-    })
-
-    await recordRetailOpsSharedLinkCustomer(tx, {
-      actorUserId: sharedProduct.shareLink.createdByUserId,
-      customerAccountId: input.customerAccount?.id ?? null,
-      email: input.customerEmail,
-      name: input.customerName,
-      orderId: order.id,
-      phone: input.customerPhone ?? null,
-      storeId: sharedProduct.store.id,
-      tenantId: sharedProduct.tenant.id,
-    })
-
-    await recordDurableShareLinkOrderRequest(tx, {
-      customerAccountId: input.customerAccount?.id ?? null,
-      customerAuthMode: input.customerAccount?.mode ?? "guest",
-      happenedAt: requestedAtDate,
-      inventoryItemId: inventoryItem.id,
-      orderId: order.id,
-      productId: sharedProduct.product.id,
-      productVariantId: selectedVariant.id,
-      quantity: input.quantity,
-      reservedByUserId: sharedProduct.shareLink.createdByUserId,
-      shareLinkId: sharedProduct.shareLink.id,
-      storeId: sharedProduct.store.id,
-      tenantId: sharedProduct.tenant.id,
-      totalMinor,
-      unitName: selectedVariant.name,
-    })
-
-    const product = await tx.product.findUnique({
-      where: {
-        id: sharedProduct.product.id,
-      },
-      select: {
-        id: true,
-        metadata: true,
-        name: true,
-        slug: true,
-      },
-    })
-
-    if (!product) {
-      return {
-        order,
-        orderedShareLink: null,
-        product,
-      }
-    }
-
-    const shareLink = findShareLinkByToken(product.metadata, input.token)
-    const orderedShareLink = shareLink
-      ? {
-          ...shareLink,
-          lastActivityAt: requestedAt,
-          orderCount: (shareLink.orderCount ?? 0) + 1,
-        }
-      : null
-
-    if (orderedShareLink) {
-      await tx.product.update({
+  const { order, orderedShareLink, product } = await db.$transaction(
+    async (tx) => {
+      const inventoryItem = await tx.inventoryItem.findFirst({
         where: {
-          id: product.id,
-        },
-        data: {
-          metadata: withShareLinks(
-            product.metadata,
-            replaceShareLink(product.metadata, orderedShareLink),
-          ),
+          productVariantId: selectedVariant.id,
+          storeId: sharedProduct.store.id,
+          tenantId: sharedProduct.tenant.id,
         },
         select: {
           id: true,
+          onHandQuantity: true,
+          reservedQuantity: true,
         },
       })
-    }
 
-    return {
-      order,
-      orderedShareLink,
-      product,
-    }
-  })
+      if (
+        !inventoryItem ||
+        inventoryItem.onHandQuantity - inventoryItem.reservedQuantity <
+          input.quantity
+      ) {
+        throw new RetailOpsShareLinkError(
+          "INSUFFICIENT_STOCK",
+          "Not enough stock is available for this order request.",
+        )
+      }
+
+      const stockReservation = await tx.inventoryItem.updateMany({
+        where: {
+          id: inventoryItem.id,
+          onHandQuantity: {
+            gte: inventoryItem.reservedQuantity + input.quantity,
+          },
+          reservedQuantity: inventoryItem.reservedQuantity,
+        },
+        data: {
+          reservedQuantity: { increment: input.quantity },
+          updatedByUserId: sharedProduct.shareLink.createdByUserId,
+        },
+      })
+
+      if (stockReservation.count !== 1) {
+        throw new RetailOpsShareLinkError(
+          "INSUFFICIENT_STOCK",
+          "Not enough stock is available for this order request.",
+        )
+      }
+
+      const order = await tx.order.create({
+        data: {
+          currencyCode: sharedProduct.product.currencyCode,
+          customerEmail: input.customerEmail,
+          customerName: input.customerName,
+          customerPhone: input.customerPhone,
+          metadata: {
+            retailOps: {
+              paymentState: "pending_follow_up",
+              requestedAt,
+              customerAccountId: input.customerAccount?.id ?? null,
+              customerAuthMode: input.customerAccount?.mode ?? "guest",
+              customerIdentityScope: "platform",
+              shareLinkCreatorUserId: sharedProduct.shareLink.createdByUserId,
+              shareLinkId: sharedProduct.shareLink.id,
+              shareToken: sharedProduct.shareLink.token,
+              source: "retail_ops_share_link_order_request",
+              stockReservation: {
+                inventoryItemId: inventoryItem.id,
+                productVariantId: selectedVariant.id,
+                quantity: input.quantity,
+                reservedAt: requestedAt,
+                status: "reserved",
+              },
+            },
+          },
+          notes: input.notes,
+          orderNumber: createReference("REQ"),
+          paymentStatus: "PENDING",
+          status: "PENDING",
+          storeId: sharedProduct.store.id,
+          subtotalMinor: totalMinor,
+          tenantId: sharedProduct.tenant.id,
+          totalMinor,
+          items: {
+            create: {
+              metadata: {
+                retailOps: {
+                  stockReservation: {
+                    inventoryItemId: inventoryItem.id,
+                    quantity: input.quantity,
+                    reservedAt: requestedAt,
+                    status: "reserved",
+                  },
+                  unitName: selectedVariant.name,
+                },
+              },
+              nameSnapshot: sharedProduct.product.name,
+              productId: sharedProduct.product.id,
+              productVariantId: selectedVariant.id,
+              quantity: input.quantity,
+              skuSnapshot: selectedVariant.sku,
+              totalPriceMinor: totalMinor,
+              unitPriceMinor: selectedVariant.priceMinor,
+            },
+          },
+        },
+        select: {
+          currencyCode: true,
+          id: true,
+          orderNumber: true,
+          paymentStatus: true,
+          status: true,
+          totalMinor: true,
+        },
+      })
+
+      await recordRetailOpsSharedLinkCustomer(tx, {
+        actorUserId: sharedProduct.shareLink.createdByUserId,
+        customerAccountId: input.customerAccount?.id ?? null,
+        email: input.customerEmail,
+        name: input.customerName,
+        orderId: order.id,
+        phone: input.customerPhone ?? null,
+        storeId: sharedProduct.store.id,
+        tenantId: sharedProduct.tenant.id,
+      })
+
+      await recordDurableShareLinkOrderRequest(tx, {
+        customerAccountId: input.customerAccount?.id ?? null,
+        customerAuthMode: input.customerAccount?.mode ?? "guest",
+        happenedAt: requestedAtDate,
+        inventoryItemId: inventoryItem.id,
+        orderId: order.id,
+        productId: sharedProduct.product.id,
+        productVariantId: selectedVariant.id,
+        quantity: input.quantity,
+        reservedByUserId: sharedProduct.shareLink.createdByUserId,
+        shareLinkId: sharedProduct.shareLink.id,
+        storeId: sharedProduct.store.id,
+        tenantId: sharedProduct.tenant.id,
+        totalMinor,
+        unitName: selectedVariant.name,
+      })
+
+      const product = await tx.product.findUnique({
+        where: {
+          id: sharedProduct.product.id,
+        },
+        select: {
+          id: true,
+          metadata: true,
+          name: true,
+          slug: true,
+        },
+      })
+
+      if (!product) {
+        return {
+          order,
+          orderedShareLink: null,
+          product,
+        }
+      }
+
+      const shareLink = findShareLinkByToken(product.metadata, input.token)
+      const orderedShareLink = shareLink
+        ? {
+            ...shareLink,
+            lastActivityAt: requestedAt,
+            orderCount: (shareLink.orderCount ?? 0) + 1,
+          }
+        : null
+
+      if (orderedShareLink) {
+        await tx.product.update({
+          where: {
+            id: product.id,
+          },
+          data: {
+            metadata: withShareLinks(
+              product.metadata,
+              replaceShareLink(product.metadata, orderedShareLink),
+            ),
+          },
+          select: {
+            id: true,
+          },
+        })
+      }
+
+      return {
+        order,
+        orderedShareLink,
+        product,
+      }
+    },
+  )
 
   if (!product) {
     const merchantRecipients = await getSharedLinkOrderMerchantRecipients(db, {

@@ -1,61 +1,65 @@
-import { ActionButton } from "@/components/mobile/action-button";
-import { FormField } from "@/components/mobile/form-field";
-import { QuantityStepper } from "@/components/mobile/quantity-stepper";
-import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view";
-import { Icon } from "@/components/ui/icon";
-import { Modal } from "@/components/ui/modal";
-import { Pressable } from "@/components/ui/pressable";
-import { Text } from "@/components/ui/text";
-import { parseWholeQuantity } from "@/lib/quantity";
-import { cn } from "@/lib/utils";
-import { useBusinessStore } from "@/store/businessStore";
+import { ActionButton } from "@/components/mobile/action-button"
+import { FormField } from "@/components/mobile/form-field"
+import { QuantityStepper } from "@/components/mobile/quantity-stepper"
+import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
+import { Icon } from "@/components/ui/icon"
+import { Modal } from "@/components/ui/modal"
+import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
+import { parseWholeQuantity } from "@/lib/quantity"
+import { cn } from "@/lib/utils"
+import { useBusinessStore } from "@/store/businessStore"
 import {
   type RetailOpsProduct,
   type RetailOpsStockAdjustmentDirection,
   type RetailOpsStockAdjustmentReason,
   type RetailOpsStockMovement,
+  normalizeStockAdjustmentDirection,
   useRetailOpsStore,
-} from "@/store/retailOpsStore";
-import { useTRPC } from "@/trpc/client";
-import type { BottomSheetModal } from "@gorhom/bottom-sheet";
-import { useMutation } from "@tanstack/react-query";
-import { forwardRef, useEffect, useMemo, useState } from "react";
-import { View } from "react-native";
+} from "@/store/retailOpsStore"
+import { useTRPC } from "@/trpc/client"
+import type { BottomSheetModal } from "@gorhom/bottom-sheet"
+import { useMutation } from "@tanstack/react-query"
+import { forwardRef, useEffect, useMemo, useState } from "react"
+import { View } from "react-native"
 
 type StockIntakeSheetProps = {
-  onComplete?: () => void;
-};
+  onComplete?: () => void
+}
 
-type StockMode = "adjust" | "intake";
+type StockMode = "adjust" | "intake"
 
 type StockUnitOption = {
-  id: string;
-  label: string;
-  remoteVariantId?: string;
-  stock: number;
-  variantId?: string;
-};
+  id: string
+  label: string
+  remoteVariantId?: string
+  stock: number
+  variantId?: string
+}
+
+const STOCK_UNIT_PREVIEW_LIMIT = 8
+const STOCK_MOVEMENT_PREVIEW_LIMIT = 8
 
 const stockAdjustmentReasons: Array<{
-  label: string;
-  value: RetailOpsStockAdjustmentReason;
+  label: string
+  value: RetailOpsStockAdjustmentReason
 }> = [
   { label: "Correction", value: "correction" },
   { label: "Damage", value: "damage" },
   { label: "Loss", value: "loss" },
   { label: "Found", value: "found_stock" },
-];
+]
 
 function getProductStock(product: RetailOpsProduct) {
-  return product.currentStock ?? product.startingStock ?? 0;
+  return product.currentStock ?? product.startingStock ?? 0
 }
 
 function getVariantStock(variant: RetailOpsProduct["variants"][number]) {
-  return variant.currentStock ?? variant.startingStock ?? 0;
+  return variant.currentStock ?? variant.startingStock ?? 0
 }
 
 function getStockUnitOptions(product?: RetailOpsProduct): StockUnitOption[] {
-  if (!product) return [];
+  if (!product) return []
 
   return [
     {
@@ -71,16 +75,16 @@ function getStockUnitOptions(product?: RetailOpsProduct): StockUnitOption[] {
       stock: getVariantStock(variant),
       variantId: variant.id,
     })),
-  ];
+  ]
 }
 
 function movementLabel(type: RetailOpsStockMovement["type"]) {
-  if (type === "conversion_in") return "Conversion in";
-  if (type === "conversion_out") return "Conversion out";
-  if (type === "opening_stock") return "Opening stock";
-  if (type === "stock_adjustment") return "Stock adjustment";
-  if (type === "stock_intake") return "Stock intake";
-  return "Sale";
+  if (type === "conversion_in") return "Conversion in"
+  if (type === "conversion_out") return "Conversion out"
+  if (type === "opening_stock") return "Opening stock"
+  if (type === "stock_adjustment") return "Stock adjustment"
+  if (type === "stock_intake") return "Stock intake"
+  return "Sale"
 }
 
 function ProductOption({
@@ -88,11 +92,11 @@ function ProductOption({
   product,
   selected,
 }: {
-  onPress: () => void;
-  product: RetailOpsProduct;
-  selected: boolean;
+  onPress: () => void
+  product: RetailOpsProduct
+  selected: boolean
 }) {
-  const currentStock = product.currentStock ?? product.startingStock;
+  const currentStock = product.currentStock ?? product.startingStock
 
   return (
     <Pressable
@@ -121,24 +125,28 @@ function ProductOption({
         />
       </View>
     </Pressable>
-  );
+  )
 }
 
 function SegmentOption({
+  disabled = false,
   label,
   onPress,
   selected,
 }: {
-  label: string;
-  onPress: () => void;
-  selected: boolean;
+  disabled?: boolean
+  label: string
+  onPress: () => void
+  selected: boolean
 }) {
   return (
     <Pressable
       className={cn(
         "h-11 flex-1 items-center justify-center rounded-xl border border-border bg-card px-3 active:bg-accent",
         selected && "border-primary bg-primary/10",
+        disabled && "opacity-50",
       )}
+      disabled={disabled}
       haptic
       onPress={onPress}
       transition
@@ -152,7 +160,7 @@ function SegmentOption({
         {label}
       </Text>
     </Pressable>
-  );
+  )
 }
 
 function UnitOption({
@@ -160,9 +168,9 @@ function UnitOption({
   selected,
   unit,
 }: {
-  onPress: () => void;
-  selected: boolean;
-  unit: StockUnitOption;
+  onPress: () => void
+  selected: boolean
+  unit: StockUnitOption
 }) {
   return (
     <Pressable
@@ -186,11 +194,11 @@ function UnitOption({
         {unit.stock} available
       </Text>
     </Pressable>
-  );
+  )
 }
 
 function MovementRow({ movement }: { movement: RetailOpsStockMovement }) {
-  const isIncrease = movement.quantity >= 0;
+  const isIncrease = movement.quantity >= 0
 
   return (
     <View className="flex-row items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
@@ -213,135 +221,212 @@ function MovementRow({ movement }: { movement: RetailOpsStockMovement }) {
           {movement.quantity} {movement.unitName}
         </Text>
         {movement.syncStatus === "pending" ? (
-          <Text className="text-xs font-bold text-amber-700">
-            Pending sync
-          </Text>
+          <Text className="text-xs font-bold text-amber-700">Pending sync</Text>
         ) : null}
       </View>
     </View>
-  );
+  )
 }
 
 export const StockIntakeSheet = forwardRef<
   BottomSheetModal,
   StockIntakeSheetProps
 >(({ onComplete }, ref) => {
-  const trpc = useTRPC();
-  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId);
-  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode);
-  const products = useRetailOpsStore((state) =>
-    state.products.filter(
-      (product) =>
-        !activeBusinessId ||
-        (product.businessId ?? activeBusinessId) === activeBusinessId,
-    ),
-  );
+  const trpc = useTRPC()
+  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
+  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
+  const allProducts = useRetailOpsStore((state) => state.products)
+  const allStockMovements = useRetailOpsStore((state) => state.stockMovements)
+  const products = useMemo(
+    () =>
+      allProducts.filter(
+        (product) =>
+          !activeBusinessId ||
+          (product.businessId ?? activeBusinessId) === activeBusinessId,
+      ),
+    [activeBusinessId, allProducts],
+  )
   const recordStockIntake = useRetailOpsStore(
     (state) => state.recordStockIntake,
-  );
+  )
   const recordStockAdjustment = useRetailOpsStore(
     (state) => state.recordStockAdjustment,
-  );
-  const stockMovements = useRetailOpsStore((state) =>
-    state.stockMovements.filter(
-      (movement) =>
-        !activeBusinessId ||
-        (movement.businessId ?? activeBusinessId) === activeBusinessId,
-    ),
-  );
+  )
+  const stockMovements = useMemo(
+    () =>
+      allStockMovements.filter(
+        (movement) =>
+          !activeBusinessId ||
+          (movement.businessId ?? activeBusinessId) === activeBusinessId,
+      ),
+    [activeBusinessId, allStockMovements],
+  )
   const [direction, setDirection] =
-    useState<RetailOpsStockAdjustmentDirection>("decrease");
-  const [mode, setMode] = useState<StockMode>("intake");
-  const [note, setNote] = useState("");
-  const [quantity, setQuantity] = useState("1");
+    useState<RetailOpsStockAdjustmentDirection>("decrease")
+  const [mode, setMode] = useState<StockMode>("intake")
+  const [note, setNote] = useState("")
+  const [quantity, setQuantity] = useState("1")
+  const [productQuery, setProductQuery] = useState("")
+  const [unitQuery, setUnitQuery] = useState("")
   const [reason, setReason] =
-    useState<RetailOpsStockAdjustmentReason>("correction");
-  const [submitError, setSubmitError] = useState<string | null>(null);
+    useState<RetailOpsStockAdjustmentReason>("correction")
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
     products[0]?.id ?? null,
-  );
-  const [selectedUnitId, setSelectedUnitId] = useState("primary");
+  )
+  const [selectedUnitId, setSelectedUnitId] = useState("primary")
   const stockIntakeMutation = useMutation(
     trpc.retailOps.recordStockIntake.mutationOptions({
       onError: (error) => {
-        setSubmitError(error.message);
+        setSubmitError(error.message)
       },
     }),
-  );
+  )
   const stockAdjustmentMutation = useMutation(
     trpc.retailOps.recordStockAdjustment.mutationOptions({
       onError: (error) => {
-        setSubmitError(error.message);
+        setSubmitError(error.message)
       },
     }),
-  );
+  )
+  const filteredProducts = useMemo(() => {
+    const normalizedQuery = productQuery.trim().toLowerCase()
+
+    if (!normalizedQuery) return products
+
+    return products.filter((product) =>
+      [
+        product.name,
+        product.unitName,
+        ...product.variants.map((variant) => variant.name),
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedQuery),
+    )
+  }, [productQuery, products])
+  const visibleProducts = useMemo(
+    () => filteredProducts.slice(0, 12),
+    [filteredProducts],
+  )
   const selectedProduct = products.find(
     (product) => product.id === selectedProductId,
-  );
+  )
   const unitOptions = useMemo(
     () => getStockUnitOptions(selectedProduct),
     [selectedProduct],
-  );
+  )
+  const filteredUnitOptions = useMemo(() => {
+    const normalizedQuery = unitQuery.trim().toLowerCase()
+
+    if (!normalizedQuery) return unitOptions
+
+    return unitOptions.filter((unit) =>
+      unit.label.toLowerCase().includes(normalizedQuery),
+    )
+  }, [unitOptions, unitQuery])
+  const visibleUnitOptions = useMemo(
+    () => filteredUnitOptions.slice(0, STOCK_UNIT_PREVIEW_LIMIT),
+    [filteredUnitOptions],
+  )
+  const visibleStockMovements = useMemo(
+    () => stockMovements.slice(0, STOCK_MOVEMENT_PREVIEW_LIMIT),
+    [stockMovements],
+  )
   const selectedUnit =
-    unitOptions.find((unit) => unit.id === selectedUnitId) ?? unitOptions[0];
-  const quantityValue = parseWholeQuantity(quantity);
+    unitOptions.find((unit) => unit.id === selectedUnitId) ?? unitOptions[0]
+  const quantityValue = parseWholeQuantity(quantity)
+  const resolvedAdjustmentDirection = normalizeStockAdjustmentDirection({
+    direction,
+    reason,
+  })
+  const directionWasAdjusted =
+    mode === "adjust" && direction !== resolvedAdjustmentDirection
+  const canDecreaseAdjustment =
+    normalizeStockAdjustmentDirection({
+      direction: "decrease",
+      reason,
+    }) === "decrease"
+  const canIncreaseAdjustment =
+    normalizeStockAdjustmentDirection({
+      direction: "increase",
+      reason,
+    }) === "increase"
+  const adjustmentDirectionHelper =
+    reason === "damage" || reason === "loss"
+      ? "Damage and loss always decrease stock."
+      : reason === "found_stock"
+        ? "Found stock always increases stock."
+        : "Corrections can increase or decrease stock."
   const hasEnoughStock =
     mode !== "adjust" ||
-    direction !== "decrease" ||
-    quantityValue <= (selectedUnit?.stock ?? 0);
+    resolvedAdjustmentDirection !== "decrease" ||
+    quantityValue <= (selectedUnit?.stock ?? 0)
   const canRecordProductionStock =
-    !isOfflineMode && !!selectedUnit?.remoteVariantId;
+    !isOfflineMode && !!selectedUnit?.remoteVariantId
   const isSubmitting =
-    stockIntakeMutation.isPending || stockAdjustmentMutation.isPending;
+    stockIntakeMutation.isPending || stockAdjustmentMutation.isPending
   const canSubmit =
     !!selectedProduct &&
     !!selectedUnit &&
     quantityValue > 0 &&
+    !directionWasAdjusted &&
     hasEnoughStock &&
-    !isSubmitting;
+    !isSubmitting
   const sourceLabel = canRecordProductionStock
     ? "Online"
     : isOfflineMode
       ? "Local"
-      : "Local queue";
+      : "Local queue"
   const sourceDetail = canRecordProductionStock
     ? "This stock change will be recorded in production immediately."
     : isOfflineMode
       ? "This stock change will be queued locally and synced later."
-      : "Waiting for the selected product unit to sync before direct production stock updates.";
+      : "Waiting for the selected product unit to sync before direct production stock updates."
 
   useEffect(() => {
     if (products.length === 0) {
-      setSelectedProductId(null);
-      return;
+      setSelectedProductId(null)
+      return
     }
 
     const selectedProductExists = products.some(
       (product) => product.id === selectedProductId,
-    );
+    )
 
     if (!selectedProductExists) {
-      setSelectedProductId(products[0]?.id ?? null);
+      setSelectedProductId(products[0]?.id ?? null)
     }
-  }, [products, selectedProductId]);
+  }, [products, selectedProductId])
 
   useEffect(() => {
     if (!selectedUnit) {
-      setSelectedUnitId("primary");
-      return;
+      setSelectedUnitId("primary")
+      return
     }
 
     const selectedUnitExists = unitOptions.some(
       (unit) => unit.id === selectedUnitId,
-    );
+    )
 
     if (!selectedUnitExists) {
-      setSelectedUnitId(unitOptions[0]?.id ?? "primary");
+      setSelectedUnitId(unitOptions[0]?.id ?? "primary")
     }
-  }, [selectedUnit, selectedUnitId, unitOptions]);
+  }, [selectedUnit, selectedUnitId, unitOptions])
+
+  useEffect(() => {
+    const nextDirection = normalizeStockAdjustmentDirection({
+      direction,
+      reason,
+    })
+
+    if (nextDirection !== direction) {
+      setDirection(nextDirection)
+    }
+  }, [direction, reason])
 
   const submit = () => {
-    if (!selectedProduct || !selectedUnit || !canSubmit) return;
+    if (!selectedProduct || !selectedUnit || !canSubmit) return
 
     const completeLocalIntake = (syncStatus: "pending" | "synced") => {
       recordStockIntake({
@@ -351,33 +436,33 @@ export const StockIntakeSheet = forwardRef<
         quantity: quantityValue,
         syncStatus,
         variantId: selectedUnit.variantId,
-      });
-    };
+      })
+    }
     const completeLocalAdjustment = (syncStatus: "pending" | "synced") => {
       recordStockAdjustment({
         businessId: activeBusinessId ?? undefined,
-        direction,
+        direction: resolvedAdjustmentDirection,
         note,
         productId: selectedProduct.id,
         quantity: quantityValue,
         reason,
         syncStatus,
         variantId: selectedUnit.variantId,
-      });
-    };
+      })
+    }
     const resetForm = () => {
-      setNote("");
-      setQuantity("1");
-      setSubmitError(null);
-    };
+      setNote("")
+      setQuantity("1")
+      setSubmitError(null)
+    }
 
-    setSubmitError(null);
+    setSubmitError(null)
 
     if (canRecordProductionStock && selectedUnit.remoteVariantId) {
       if (mode === "adjust") {
         stockAdjustmentMutation.mutate(
           {
-            direction,
+            direction: resolvedAdjustmentDirection,
             note: note.trim() || undefined,
             productVariantId: selectedUnit.remoteVariantId,
             quantity: quantityValue,
@@ -386,13 +471,13 @@ export const StockIntakeSheet = forwardRef<
           },
           {
             onSuccess: () => {
-              completeLocalAdjustment("synced");
-              resetForm();
-              onComplete?.();
+              completeLocalAdjustment("synced")
+              resetForm()
+              onComplete?.()
             },
           },
-        );
-        return;
+        )
+        return
       }
 
       stockIntakeMutation.mutate(
@@ -404,24 +489,24 @@ export const StockIntakeSheet = forwardRef<
         },
         {
           onSuccess: () => {
-            completeLocalIntake("synced");
-            resetForm();
-            onComplete?.();
+            completeLocalIntake("synced")
+            resetForm()
+            onComplete?.()
           },
         },
-      );
-      return;
+      )
+      return
     }
 
     if (mode === "adjust") {
-      completeLocalAdjustment("pending");
+      completeLocalAdjustment("pending")
     } else {
-      completeLocalIntake("pending");
+      completeLocalIntake("pending")
     }
 
-    resetForm();
-    onComplete?.();
-  };
+    resetForm()
+    onComplete?.()
+  }
 
   return (
     <Modal
@@ -431,8 +516,8 @@ export const StockIntakeSheet = forwardRef<
       title="Record stock"
     >
       <BottomSheetKeyboardAwareScrollView
-        bottomOffset={96}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        bottomOffset={320}
+        contentContainerStyle={{ paddingBottom: 240 }}
         keyboardShouldPersistTaps="handled"
       >
         <View className="gap-5 px-5 pb-6">
@@ -480,17 +565,43 @@ export const StockIntakeSheet = forwardRef<
 
           {products.length > 0 ? (
             <View className="gap-3">
-              {products.map((product) => (
-                <ProductOption
-                  key={product.id}
-                  onPress={() => {
-                    setSelectedProductId(product.id);
-                    setSelectedUnitId("primary");
-                  }}
-                  product={product}
-                  selected={selectedProductId === product.id}
+              {products.length > 8 ? (
+                <FormField
+                  label="Find product"
+                  onChangeText={setProductQuery}
+                  placeholder="Search products or units"
+                  value={productQuery}
                 />
-              ))}
+              ) : null}
+              {visibleProducts.length > 0 ? (
+                visibleProducts.map((product) => (
+                  <ProductOption
+                    key={product.id}
+                    onPress={() => {
+                      setSelectedProductId(product.id)
+                      setSelectedUnitId("primary")
+                      setUnitQuery("")
+                    }}
+                    product={product}
+                    selected={selectedProductId === product.id}
+                  />
+                ))
+              ) : (
+                <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
+                  <Text className="font-semibold text-foreground">
+                    No matching products
+                  </Text>
+                  <Text className="text-sm leading-5 text-muted-foreground">
+                    Try another product, unit, or variant name.
+                  </Text>
+                </View>
+              )}
+              {filteredProducts.length > visibleProducts.length ? (
+                <Text className="text-xs font-semibold text-muted-foreground">
+                  Showing first {visibleProducts.length} of{" "}
+                  {filteredProducts.length} matching products.
+                </Text>
+              ) : null}
             </View>
           ) : (
             <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
@@ -508,22 +619,49 @@ export const StockIntakeSheet = forwardRef<
               <Text className="text-sm font-semibold text-foreground">
                 Unit
               </Text>
+              {unitOptions.length > STOCK_UNIT_PREVIEW_LIMIT ? (
+                <FormField
+                  label="Find unit"
+                  onChangeText={setUnitQuery}
+                  placeholder="Search units or variants"
+                  value={unitQuery}
+                />
+              ) : null}
               <View className="flex-row flex-wrap gap-2">
-                {unitOptions.map((unit) => (
-                  <UnitOption
-                    key={unit.id}
-                    onPress={() => setSelectedUnitId(unit.id)}
-                    selected={selectedUnit?.id === unit.id}
-                    unit={unit}
-                  />
-                ))}
+                {visibleUnitOptions.length > 0 ? (
+                  visibleUnitOptions.map((unit) => (
+                    <UnitOption
+                      key={unit.id}
+                      onPress={() => setSelectedUnitId(unit.id)}
+                      selected={selectedUnit?.id === unit.id}
+                      unit={unit}
+                    />
+                  ))
+                ) : (
+                  <View className="flex-1 rounded-2xl border border-dashed border-border p-4">
+                    <Text className="font-semibold text-foreground">
+                      No matching units
+                    </Text>
+                    <Text className="text-sm leading-5 text-muted-foreground">
+                      Try another unit or variant name.
+                    </Text>
+                  </View>
+                )}
               </View>
+              {filteredUnitOptions.length > visibleUnitOptions.length ? (
+                <Text className="text-xs font-semibold text-muted-foreground">
+                  Showing first {visibleUnitOptions.length} of{" "}
+                  {filteredUnitOptions.length} matching units.
+                </Text>
+              ) : null}
             </View>
           ) : null}
 
           <QuantityStepper
             helper={selectedUnit?.label}
-            label={mode === "adjust" ? "Quantity to adjust" : "Quantity received"}
+            label={
+              mode === "adjust" ? "Quantity to adjust" : "Quantity received"
+            }
             onChangeText={setQuantity}
             value={quantity}
           />
@@ -536,16 +674,21 @@ export const StockIntakeSheet = forwardRef<
                 </Text>
                 <View className="flex-row gap-2">
                   <SegmentOption
+                    disabled={!canDecreaseAdjustment}
                     label="Decrease"
                     onPress={() => setDirection("decrease")}
                     selected={direction === "decrease"}
                   />
                   <SegmentOption
+                    disabled={!canIncreaseAdjustment}
                     label="Increase"
                     onPress={() => setDirection("increase")}
                     selected={direction === "increase"}
                   />
                 </View>
+                <Text className="text-xs leading-4 text-muted-foreground">
+                  {adjustmentDirectionHelper}
+                </Text>
               </View>
 
               <View className="gap-2">
@@ -558,10 +701,19 @@ export const StockIntakeSheet = forwardRef<
                       key={option.value}
                       className={cn(
                         "rounded-xl border border-border bg-card px-3 py-2 active:bg-accent",
-                        reason === option.value && "border-primary bg-primary/10",
+                        reason === option.value &&
+                          "border-primary bg-primary/10",
                       )}
                       haptic
-                      onPress={() => setReason(option.value)}
+                      onPress={() => {
+                        setReason(option.value)
+                        setDirection(
+                          normalizeStockAdjustmentDirection({
+                            direction,
+                            reason: option.value,
+                          }),
+                        )
+                      }}
                       transition
                     >
                       <Text
@@ -588,7 +740,11 @@ export const StockIntakeSheet = forwardRef<
           <FormField
             label={mode === "adjust" ? "Note" : "Source or note"}
             onChangeText={setNote}
-            placeholder={mode === "adjust" ? "Short reason" : "Supplier delivery"}
+            placeholder={
+              mode === "adjust"
+                ? "Enter adjustment reason"
+                : "Enter source note"
+            }
             value={note}
           />
 
@@ -613,9 +769,17 @@ export const StockIntakeSheet = forwardRef<
               Recent movements
             </Text>
             {stockMovements.length > 0 ? (
-              stockMovements.slice(0, 8).map((movement) => (
-                <MovementRow key={movement.id} movement={movement} />
-              ))
+              <>
+                {visibleStockMovements.map((movement) => (
+                  <MovementRow key={movement.id} movement={movement} />
+                ))}
+                {stockMovements.length > visibleStockMovements.length ? (
+                  <Text className="text-xs font-semibold text-muted-foreground">
+                    Showing first {visibleStockMovements.length} of{" "}
+                    {stockMovements.length} stock movements.
+                  </Text>
+                ) : null}
+              </>
             ) : (
               <View className="rounded-2xl border border-dashed border-border p-4">
                 <Text className="text-sm leading-5 text-muted-foreground">
@@ -631,7 +795,7 @@ export const StockIntakeSheet = forwardRef<
         </View>
       </BottomSheetKeyboardAwareScrollView>
     </Modal>
-  );
-});
+  )
+})
 
-StockIntakeSheet.displayName = "StockIntakeSheet";
+StockIntakeSheet.displayName = "StockIntakeSheet"

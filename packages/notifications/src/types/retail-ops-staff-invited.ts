@@ -5,6 +5,7 @@ import { defineNotificationType } from "../notification-types"
 export const retailOpsStaffInvitedPayloadSchema = z.object({
   appUrl: z.string().url(),
   businessName: z.string().trim().min(1),
+  inviteUrl: z.string().url().optional(),
   invitedByName: z.string().trim().min(1),
   inviteeEmail: z.string().email(),
   inviteeName: z.string().trim().min(1).nullable().optional(),

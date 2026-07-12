@@ -3,6 +3,7 @@ import { renderMarketingEmailTemplate } from "./shared"
 export type RetailOpsStaffInviteEmailInput = {
   appUrl: string
   businessName: string
+  inviteUrl?: string
   invitedByName: string
   inviteeEmail: string
   inviteeName?: string | null
@@ -23,9 +24,9 @@ export function renderRetailOpsStaffInviteTemplate(
   const roleLabel = getRoleLabel(input.role)
 
   return renderMarketingEmailTemplate({
-    ctaHref: input.appUrl,
+    ctaHref: input.inviteUrl ?? input.appUrl,
     ctaLabel: "Get started",
-    intro: `${input.invitedByName} invited you to join ${input.businessName} as ${roleLabel}. Download or open the ewatrade app to accept the invitation and start working with the business.`,
+    intro: `${input.invitedByName} invited you to join ${input.businessName} as ${roleLabel}. Open the secure invite link to accept the invitation and start working with the business.`,
     outro:
       "If you were not expecting this invitation, you can ignore this email.",
     sections: [

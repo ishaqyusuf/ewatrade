@@ -1,4 +1,4 @@
-import { DarkTheme, DefaultTheme, type Theme } from "@react-navigation/native";
+import { DarkTheme, DefaultTheme, type Theme } from "@react-navigation/native"
 
 export const THEME = {
   light: {
@@ -46,49 +46,49 @@ export const THEME = {
   },
 
   dark: {
-    background: "rgb(15, 23, 42)",
-    foreground: "rgb(226, 232, 240)",
+    background: "rgb(18, 18, 18)",
+    foreground: "rgb(250, 250, 250)",
 
-    card: "rgb(30, 41, 59)",
-    cardForeground: "rgb(226, 232, 240)",
+    card: "rgb(30, 30, 30)",
+    cardForeground: "rgb(250, 250, 250)",
 
-    popover: "rgb(30, 41, 59)",
-    popoverForeground: "rgb(226, 232, 240)",
+    popover: "rgb(30, 30, 30)",
+    popoverForeground: "rgb(250, 250, 250)",
 
-    primary: "rgb(96, 165, 250)",
-    primaryForeground: "rgb(15, 23, 42)",
+    primary: "rgb(255, 108, 0)",
+    primaryForeground: "rgb(255, 247, 237)",
 
-    success: "rgb(22, 163, 74)",
+    success: "rgb(34, 197, 94)",
     successForeground: "rgb(236, 253, 245)",
 
     warn: "rgb(245, 158, 11)",
     warnForeground: "rgb(255, 251, 235)",
 
-    secondary: "rgb(51, 65, 85)",
-    secondaryForeground: "rgb(226, 232, 240)",
+    secondary: "rgb(46, 46, 46)",
+    secondaryForeground: "rgb(245, 245, 245)",
 
-    muted: "rgb(30, 41, 59)",
-    mutedForeground: "rgb(148, 163, 184)",
+    muted: "rgb(38, 38, 38)",
+    mutedForeground: "rgb(163, 163, 163)",
 
-    accent: "rgb(30, 58, 138)",
-    accentForeground: "rgb(219, 234, 254)",
+    accent: "rgb(64, 64, 64)",
+    accentForeground: "rgb(245, 245, 245)",
 
     destructive: "rgb(220, 38, 38)",
     destructiveForeground: "rgb(254, 242, 242)",
 
-    border: "rgb(51, 65, 85)",
-    input: "rgb(71, 85, 105)",
-    ring: "rgb(125, 211, 252)",
+    border: "rgb(46, 46, 46)",
+    input: "rgb(56, 56, 56)",
+    ring: "rgb(255, 137, 51)",
 
     radius: "0.65rem",
 
-    chart1: "rgb(96, 165, 250)",
-    chart2: "rgb(52, 211, 153)",
+    chart1: "rgb(255, 108, 0)",
+    chart2: "rgb(34, 197, 94)",
     chart3: "rgb(251, 191, 36)",
-    chart4: "rgb(192, 132, 252)",
+    chart4: "rgb(115, 115, 115)",
     chart5: "rgb(244, 63, 94)",
   },
-};
+}
 
 export const NAV_THEME: Record<"light" | "dark", Theme> = {
   light: {
@@ -113,4 +113,4 @@ export const NAV_THEME: Record<"light" | "dark", Theme> = {
       text: THEME.dark.foreground,
     },
   },
-};
+}

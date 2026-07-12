@@ -2,6 +2,12 @@ export type VercelAddDomainResult = { ok: true } | { ok: false; error: string }
 
 const VERCEL_API_BASE = "https://api.vercel.com"
 
+function readEnv(name: string) {
+  return (
+    globalThis as { process?: { env?: Record<string, string | undefined> } }
+  ).process?.env?.[name]
+}
+
 /**
  * Register a custom domain with a Vercel project.
  * Requires VERCEL_API_TOKEN to be set in the environment.
@@ -9,9 +15,9 @@ const VERCEL_API_BASE = "https://api.vercel.com"
  */
 export async function addVercelDomain(
   domain: string,
-  projectId: string
+  projectId: string,
 ): Promise<VercelAddDomainResult> {
-  const token = process.env.VERCEL_API_TOKEN
+  const token = readEnv("VERCEL_API_TOKEN")
 
   if (!token) {
     return { ok: false, error: "VERCEL_API_TOKEN is not set" }
@@ -22,20 +28,25 @@ export async function addVercelDomain(
   }
 
   try {
-    const response = await fetch(`${VERCEL_API_BASE}/v10/projects/${projectId}/domains`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
+    const response = await fetch(
+      `${VERCEL_API_BASE}/v10/projects/${projectId}/domains`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: domain }),
       },
-      body: JSON.stringify({ name: domain })
-    })
+    )
 
     if (!response.ok) {
-      const body = (await response.json().catch(() => ({}))) as { error?: { message?: string } }
+      const body = (await response.json().catch(() => ({}))) as {
+        error?: { message?: string }
+      }
       return {
         ok: false,
-        error: body?.error?.message ?? `Vercel API error: ${response.status}`
+        error: body?.error?.message ?? `Vercel API error: ${response.status}`,
       }
     }
 
@@ -43,7 +54,10 @@ export async function addVercelDomain(
   } catch (err) {
     return {
       ok: false,
-      error: err instanceof Error ? err.message : "Unknown error adding domain to Vercel"
+      error:
+        err instanceof Error
+          ? err.message
+          : "Unknown error adding domain to Vercel",
     }
   }
 }
@@ -58,14 +72,14 @@ export async function provisionTenantVercelDomains(params: {
   posDomain: string
   dashboardDomain: string
 }): Promise<void> {
-  const storefrontProjectId = process.env.VERCEL_STOREFRONT_PROJECT_ID ?? ""
-  const posProjectId = process.env.VERCEL_POS_PROJECT_ID ?? ""
-  const dashboardProjectId = process.env.VERCEL_DASHBOARD_PROJECT_ID ?? ""
+  const storefrontProjectId = readEnv("VERCEL_STOREFRONT_PROJECT_ID") ?? ""
+  const posProjectId = readEnv("VERCEL_POS_PROJECT_ID") ?? ""
+  const dashboardProjectId = readEnv("VERCEL_DASHBOARD_PROJECT_ID") ?? ""
 
   const results = await Promise.allSettled([
     addVercelDomain(params.storefrontDomain, storefrontProjectId),
     addVercelDomain(params.posDomain, posProjectId),
-    addVercelDomain(params.dashboardDomain, dashboardProjectId)
+    addVercelDomain(params.dashboardDomain, dashboardProjectId),
   ])
 
   for (const [index, result] of results.entries()) {
@@ -74,7 +88,10 @@ export async function provisionTenantVercelDomains(params: {
     if (result.status === "rejected") {
       console.error(`[vercel] Failed to add ${surface} domain:`, result.reason)
     } else if (result.value.ok === false) {
-      console.warn(`[vercel] Could not add ${surface} domain:`, result.value.error)
+      console.warn(
+        `[vercel] Could not add ${surface} domain:`,
+        result.value.error,
+      )
     }
   }
 }

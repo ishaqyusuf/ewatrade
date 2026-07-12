@@ -1,12 +1,12 @@
-import { ActionButton } from "@/components/mobile/action-button";
-import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view";
-import { Icon } from "@/components/ui/icon";
-import { Modal } from "@/components/ui/modal";
-import { Pressable } from "@/components/ui/pressable";
-import { Text } from "@/components/ui/text";
-import { cn } from "@/lib/utils";
-import { useBusinessStore } from "@/store/businessStore";
-import { useRetailOpsStore } from "@/store/retailOpsStore";
+import { ActionButton } from "@/components/mobile/action-button"
+import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
+import { Icon } from "@/components/ui/icon"
+import { Modal } from "@/components/ui/modal"
+import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
+import { cn } from "@/lib/utils"
+import { useBusinessStore } from "@/store/businessStore"
+import { useRetailOpsStore } from "@/store/retailOpsStore"
 import {
   RETAIL_OPS_PLANS,
   type RetailOpsPlan,
@@ -16,77 +16,77 @@ import {
   getPlan,
   getUsageLimitState,
   useSubscriptionStore,
-} from "@/store/subscriptionStore";
-import { useTRPC } from "@/trpc/client";
-import type { BottomSheetModal } from "@gorhom/bottom-sheet";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { forwardRef, useMemo } from "react";
-import { View } from "react-native";
+} from "@/store/subscriptionStore"
+import { useTRPC } from "@/trpc/client"
+import type { BottomSheetModal } from "@gorhom/bottom-sheet"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { forwardRef, useMemo, useState } from "react"
+import { Linking, View } from "react-native"
 
 type SubscriptionPlanSheetProps = {
-  onComplete?: () => void;
+  onComplete?: () => void
   usage: {
-    businesses: number;
-    products: number;
-    staff: number;
-  };
-};
+    businesses: number
+    products: number
+    staff: number
+  }
+}
 
 type ProductionSubscriptionSnapshot = {
   entitlements: Array<{
-    isAtLimit: boolean;
-    key: keyof RetailOpsPlan["limits"];
-    limit: number;
-    used: number;
-  }>;
-  plan: RetailOpsPlan;
-  plans: RetailOpsPlan[];
+    isAtLimit: boolean
+    key: keyof RetailOpsPlan["limits"]
+    limit: number
+    used: number
+  }>
+  plan: RetailOpsPlan
+  plans: RetailOpsPlan[]
   subscription: {
-    currentPeriodEndsAt: string | null;
-    planId: RetailOpsPlanId;
-    status: RetailOpsSubscription["status"];
-    trialEndsAt: string | null;
-    updatedAt: string;
-  };
+    currentPeriodEndsAt: string | null
+    planId: RetailOpsPlanId
+    status: RetailOpsSubscription["status"]
+    trialEndsAt: string | null
+    updatedAt: string
+  }
   usage: {
-    businesses: number;
-    offlineDevices: number;
-    products: number;
-    staff: number;
-  };
-};
+    businesses: number
+    offlineDevices: number
+    products: number
+    staff: number
+  }
+}
 
 type CheckoutIntent = {
-  checkoutUrl: string | null;
+  checkoutUrl: string | null
   intent: {
-    status: "active_plan" | "provider_not_configured";
-  };
-  message: string;
-  provider: "none";
-  targetPlan: RetailOpsPlan;
-};
+    status: "active_plan" | "checkout_created" | "provider_not_configured"
+  }
+  message: string
+  provider: "app_store" | "manual" | "none" | "other" | "play_store" | "stripe"
+  targetPlan: RetailOpsPlan
+}
 
 function formatDate(value: string | undefined) {
-  if (!value) return "Not set";
+  if (!value) return "Not set"
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Not set";
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "Not set"
 
   return date.toLocaleDateString(undefined, {
     day: "numeric",
     month: "short",
-  });
+  })
 }
 
 function subscriptionStatusLabel(status: RetailOpsSubscription["status"]) {
-  if (status === "trialing") return "Trial";
-  if (status === "past_due") return "Past due";
-  if (status === "cancelled") return "Cancelled";
-  return "Active";
+  if (status === "trialing") return "Trial"
+  if (status === "past_due") return "Past due"
+  if (status === "cancelled") return "Cancelled"
+  return "Active"
 }
 
 function toOptionalDate(value: string | null | undefined) {
-  return value ?? undefined;
+  return value ?? undefined
 }
 
 function UsageRow({
@@ -94,11 +94,11 @@ function UsageRow({
   limit,
   used,
 }: {
-  label: string;
-  limit: number;
-  used: number;
+  label: string
+  limit: number
+  used: number
 }) {
-  const limitState = getUsageLimitState(used, limit);
+  const limitState = getUsageLimitState(used, limit)
 
   return (
     <View className="flex-row items-center justify-between gap-3 rounded-xl bg-muted px-3 py-2">
@@ -112,22 +112,22 @@ function UsageRow({
         {limitState.label}
       </Text>
     </View>
-  );
+  )
 }
 
 function PlanLimitRow({
   label,
   value,
 }: {
-  label: string;
-  value: string;
+  label: string
+  value: string
 }) {
   return (
     <View className="flex-row items-center justify-between gap-3 rounded-xl bg-muted px-3 py-2">
       <Text className="text-sm font-semibold text-foreground">{label}</Text>
       <Text className="text-xs font-bold text-muted-foreground">{value}</Text>
     </View>
-  );
+  )
 }
 
 function PlanCard({
@@ -137,11 +137,11 @@ function PlanCard({
   onSelect,
   plan,
 }: {
-  actionLabel: string;
-  current: boolean;
-  disabled: boolean;
-  onSelect: () => void;
-  plan: RetailOpsPlan;
+  actionLabel: string
+  current: boolean
+  disabled: boolean
+  onSelect: () => void
+  plan: RetailOpsPlan
 }) {
   return (
     <Pressable
@@ -201,7 +201,7 @@ function PlanCard({
         <Text className="text-xs font-bold text-primary">{actionLabel}</Text>
       </View>
     </Pressable>
-  );
+  )
 }
 
 function CheckoutIntentNotice({ intent }: { intent: CheckoutIntent }) {
@@ -214,35 +214,36 @@ function CheckoutIntentNotice({ intent }: { intent: CheckoutIntent }) {
         {intent.message}
       </Text>
     </View>
-  );
+  )
 }
 
 export const SubscriptionPlanSheet = forwardRef<
   BottomSheetModal,
   SubscriptionPlanSheetProps
 >(({ onComplete, usage }, ref) => {
-  const trpc = useTRPC();
-  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId);
-  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode);
-  const setBusinessPlan = useSubscriptionStore((state) => state.setBusinessPlan);
-  const subscriptions = useSubscriptionStore((state) => state.subscriptions);
+  const trpc = useTRPC()
+  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
+  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
+  const subscriptions = useSubscriptionStore((state) => state.subscriptions)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const localSubscription = getBusinessSubscription(
     subscriptions,
     activeBusinessId,
-  );
+  )
   const subscriptionQuery = useQuery(
     trpc.retailOps.subscription.queryOptions(undefined, {
       enabled: !isOfflineMode,
       retry: false,
     }),
-  );
+  )
   const checkoutIntentMutation = useMutation(
     trpc.retailOps.createSubscriptionCheckoutIntent.mutationOptions(),
-  );
-  const productionSnapshot =
-    subscriptionQuery.data as ProductionSubscriptionSnapshot | undefined;
+  )
+  const productionSnapshot = subscriptionQuery.data as
+    | ProductionSubscriptionSnapshot
+    | undefined
   const shouldUseProductionSnapshot =
-    !isOfflineMode && !!productionSnapshot && !subscriptionQuery.isError;
+    !isOfflineMode && !!productionSnapshot && !subscriptionQuery.isError
   const subscription = shouldUseProductionSnapshot
     ? {
         businessId: activeBusinessId ?? "production-business",
@@ -251,79 +252,96 @@ export const SubscriptionPlanSheet = forwardRef<
         ),
         planId: productionSnapshot.subscription.planId,
         status: productionSnapshot.subscription.status,
-        trialEndsAt: toOptionalDate(productionSnapshot.subscription.trialEndsAt),
+        trialEndsAt: toOptionalDate(
+          productionSnapshot.subscription.trialEndsAt,
+        ),
         updatedAt: productionSnapshot.subscription.updatedAt,
       }
-    : localSubscription;
+    : localSubscription
   const currentPlan = shouldUseProductionSnapshot
     ? productionSnapshot.plan
-    : getPlan(subscription.planId);
+    : getPlan(subscription.planId)
   const plans = shouldUseProductionSnapshot
     ? productionSnapshot.plans
-    : RETAIL_OPS_PLANS;
+    : RETAIL_OPS_PLANS
   const usageSnapshot = shouldUseProductionSnapshot
     ? productionSnapshot.usage
-    : usage;
+    : usage
   const checkoutIntent = checkoutIntentMutation.data as
     | CheckoutIntent
-    | undefined;
+    | undefined
   const sourceLabel = isOfflineMode
     ? "Local"
     : subscriptionQuery.isError
       ? "Local fallback"
       : subscriptionQuery.isFetching
         ? "Refreshing"
-        : "Online";
+        : "Online"
   const sourceDetail = isOfflineMode
     ? "Plan changes stay local while this device is offline."
     : subscriptionQuery.isError
       ? "Production billing is unavailable, so local plan state is shown."
       : subscriptionQuery.isFetching
         ? "Refreshing production plan and entitlement usage."
-        : "Production billing controls the current plan, limits, and upgrade handoff.";
+        : "Production billing controls the current plan, limits, and upgrade handoff."
   const offlineDeviceUsage = shouldUseProductionSnapshot
     ? productionSnapshot.usage.offlineDevices
-    : null;
-  const reportHistoryLimit = currentPlan.limits.reportsHistoryDays;
-  const isCheckoutPending = checkoutIntentMutation.isPending;
+    : null
+  const reportHistoryLimit = currentPlan.limits.reportsHistoryDays
+  const isCheckoutPending = checkoutIntentMutation.isPending
+  const canRequestCheckout = shouldUseProductionSnapshot && !isCheckoutPending
 
   const selectPlan = (plan: RetailOpsPlan) => {
-    if (plan.id === currentPlan.id || isCheckoutPending) return;
+    if (plan.id === currentPlan.id || !canRequestCheckout) return
 
-    if (shouldUseProductionSnapshot) {
-      checkoutIntentMutation.mutate({
+    checkoutIntentMutation.mutate(
+      {
         planId: plan.id,
         surface: "mobile",
-      });
-      return;
-    }
+      },
+      {
+        onError(error) {
+          setCheckoutError(error.message)
+        },
+        async onSuccess(intent: CheckoutIntent) {
+          setCheckoutError(null)
 
-    setBusinessPlan(subscription.businessId, plan.id);
-  };
-  const planActionLabels = useMemo(
-    () => {
-      const labels: Record<string, string> = {};
+          if (!intent.checkoutUrl) return
 
-      for (const plan of plans) {
-        if (plan.id === currentPlan.id) {
-          labels[plan.id] = "Current plan";
-          continue;
-        }
+          const canOpen = await Linking.canOpenURL(intent.checkoutUrl)
+          if (!canOpen) {
+            setCheckoutError(
+              "The checkout link could not be opened on this device.",
+            )
+            return
+          }
 
-        if (isCheckoutPending) {
-          labels[plan.id] = "Preparing";
-          continue;
-        }
+          await Linking.openURL(intent.checkoutUrl)
+        },
+      },
+    )
+  }
+  const planActionLabels = useMemo(() => {
+    const labels: Record<string, string> = {}
 
-        labels[plan.id] = shouldUseProductionSnapshot
-          ? "Request upgrade"
-          : "Set local plan";
+    for (const plan of plans) {
+      if (plan.id === currentPlan.id) {
+        labels[plan.id] = "Current plan"
+        continue
       }
 
-      return labels;
-    },
-    [currentPlan.id, isCheckoutPending, plans, shouldUseProductionSnapshot],
-  );
+      if (isCheckoutPending) {
+        labels[plan.id] = "Preparing"
+        continue
+      }
+
+      labels[plan.id] = shouldUseProductionSnapshot
+        ? "Request upgrade"
+        : "Online required"
+    }
+
+    return labels
+  }, [currentPlan.id, isCheckoutPending, plans, shouldUseProductionSnapshot])
 
   return (
     <Modal
@@ -371,23 +389,29 @@ export const SubscriptionPlanSheet = forwardRef<
             </View>
           </View>
 
-          {subscriptionQuery.error ? (
+          {checkoutError || checkoutIntentMutation.error ? (
             <View className="rounded-2xl bg-destructive/10 p-3">
               <Text className="text-sm font-semibold text-destructive">
-                {subscriptionQuery.error.message}
+                {checkoutError ?? checkoutIntentMutation.error?.message}
               </Text>
             </View>
           ) : null}
 
-          {checkoutIntentMutation.error ? (
-            <View className="rounded-2xl bg-destructive/10 p-3">
-              <Text className="text-sm font-semibold text-destructive">
-                {checkoutIntentMutation.error.message}
+          {checkoutIntent ? (
+            <CheckoutIntentNotice intent={checkoutIntent} />
+          ) : null}
+
+          {!shouldUseProductionSnapshot ? (
+            <View className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
+              <Text className="font-semibold text-foreground">
+                Upgrade requests need production billing
+              </Text>
+              <Text className="mt-1 text-sm leading-5 text-muted-foreground">
+                Local subscription data is shown only as a fallback. Reconnect
+                to request an upgrade from the business account.
               </Text>
             </View>
           ) : null}
-
-          {checkoutIntent ? <CheckoutIntentNotice intent={checkoutIntent} /> : null}
 
           <View className="gap-3 rounded-2xl border border-border bg-card p-4">
             <View className="flex-row items-start justify-between gap-3">
@@ -436,14 +460,16 @@ export const SubscriptionPlanSheet = forwardRef<
           </View>
 
           <View className="gap-3">
-            <Text className="text-base font-bold text-foreground">
-              Tiers
-            </Text>
+            <Text className="text-base font-bold text-foreground">Tiers</Text>
             {plans.map((plan) => (
               <PlanCard
                 actionLabel={planActionLabels[plan.id] ?? "Select"}
                 current={plan.id === subscription.planId}
-                disabled={plan.id === currentPlan.id || isCheckoutPending}
+                disabled={
+                  plan.id === currentPlan.id ||
+                  isCheckoutPending ||
+                  !shouldUseProductionSnapshot
+                }
                 key={plan.id}
                 onSelect={() => selectPlan(plan)}
                 plan={plan}
@@ -457,7 +483,7 @@ export const SubscriptionPlanSheet = forwardRef<
         </View>
       </BottomSheetKeyboardAwareScrollView>
     </Modal>
-  );
-});
+  )
+})
 
-SubscriptionPlanSheet.displayName = "SubscriptionPlanSheet";
+SubscriptionPlanSheet.displayName = "SubscriptionPlanSheet"

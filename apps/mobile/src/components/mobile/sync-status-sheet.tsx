@@ -1,9 +1,9 @@
-import { ActionButton } from "@/components/mobile/action-button";
-import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view";
-import { Icon } from "@/components/ui/icon";
-import { Modal } from "@/components/ui/modal";
-import { Pressable } from "@/components/ui/pressable";
-import { Text } from "@/components/ui/text";
+import { ActionButton } from "@/components/mobile/action-button"
+import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
+import { Icon } from "@/components/ui/icon"
+import { Modal } from "@/components/ui/modal"
+import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
 import {
   buildRetailOpsSyncEventsInput,
   getRetailOpsCustomerSyncMappings,
@@ -13,33 +13,39 @@ import {
   getRetailOpsShareLinkSyncMappings,
   getRetailOpsStaffSyncMappings,
   getRetailOpsSyncBlockedEvents,
-} from "@/lib/retail-ops-sync";
-import { cn } from "@/lib/utils";
-import { useBusinessStore } from "@/store/businessStore";
+} from "@/lib/retail-ops-sync"
+import { cn } from "@/lib/utils"
+import { useBusinessStore } from "@/store/businessStore"
 import {
   type RetailOpsSyncEvent,
   useRetailOpsStore,
-} from "@/store/retailOpsStore";
-import { useTRPC } from "@/trpc/client";
-import type { BottomSheetModal } from "@gorhom/bottom-sheet";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import Constants from "expo-constants";
-import { forwardRef } from "react";
-import { useMemo } from "react";
-import { Platform, View } from "react-native";
+} from "@/store/retailOpsStore"
+import { useTRPC } from "@/trpc/client"
+import type { BottomSheetModal } from "@gorhom/bottom-sheet"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import Constants from "expo-constants"
+import { forwardRef } from "react"
+import { useMemo } from "react"
+import { Platform, View } from "react-native"
 
 type SyncStatusSheetProps = {
-  onComplete?: () => void;
-};
+  onComplete?: () => void
+}
+
+const OFFLINE_DEVICE_PREVIEW_LIMIT = 4
+const SERVER_SYNC_HISTORY_PREVIEW_LIMIT = 5
+const SERVER_SYNC_CONFLICT_PREVIEW_LIMIT = 8
+const BLOCKED_EVENT_PREVIEW_LIMIT = 3
+const SYNC_QUEUE_PREVIEW_LIMIT = 12
 
 function formatEventTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Pending";
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "Pending"
 
   return date.toLocaleTimeString(undefined, {
     hour: "numeric",
     minute: "2-digit",
-  });
+  })
 }
 
 function getOfflineDevicePlatform() {
@@ -48,107 +54,154 @@ function getOfflineDevicePlatform() {
     Platform.OS === "ios" ||
     Platform.OS === "web"
   ) {
-    return Platform.OS;
+    return Platform.OS
   }
 
-  return "unknown";
+  return "unknown"
 }
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error
     ? error.message
-    : "The offline device could not be registered. Check the connection and retry.";
+    : "The offline device could not be registered. Check the connection and retry."
 }
 
 function isRetryBackoffActive(event: RetailOpsSyncEvent) {
-  if (event.status !== "failed" || !event.nextRetryAt) return false;
+  if (event.status !== "failed" || !event.nextRetryAt) return false
 
-  const nextRetryTime = new Date(event.nextRetryAt).getTime();
+  const nextRetryTime = new Date(event.nextRetryAt).getTime()
 
-  return !Number.isNaN(nextRetryTime) && nextRetryTime > Date.now();
+  return !Number.isNaN(nextRetryTime) && nextRetryTime > Date.now()
 }
 
 function getSyncRunStatusClassName(status: string) {
-  if (status === "failed") return "text-destructive";
-  if (status === "partial" || status === "skipped") return "text-amber-700";
+  if (status === "failed") return "text-destructive"
+  if (status === "partial" || status === "skipped") return "text-amber-700"
 
-  return "text-emerald-700";
+  return "text-emerald-700"
 }
 
 function formatSyncRunStatus(status: string) {
-  if (status === "succeeded") return "Synced";
-  if (status === "partial") return "Partial";
-  if (status === "skipped") return "Skipped";
+  if (status === "succeeded") return "Synced"
+  if (status === "partial") return "Partial"
+  if (status === "skipped") return "Skipped"
 
-  return "Failed";
+  return "Failed"
 }
 
 function formatSyncEventType(type: string) {
-  return type.replace(/_/g, " ");
+  return type.replace(/_/g, " ")
+}
+
+function formatDeviceLabel(deviceId?: string | null) {
+  if (!deviceId) return "Unknown device"
+
+  return deviceId.slice(-8) || deviceId
+}
+
+function getSyncConflictBusinessImpact(input: {
+  errorMessage?: string | null
+  type: string
+}) {
+  const normalizedMessage = input.errorMessage?.toLowerCase() ?? ""
+
+  if (
+    input.type === "sale_created" ||
+    normalizedMessage.includes("stock") ||
+    normalizedMessage.includes("inventory")
+  ) {
+    return "Sales or stock may be missing from production until inventory is reviewed and replay succeeds."
+  }
+
+  if (
+    input.type === "closeout_created" ||
+    input.type === "rep_session_opened" ||
+    normalizedMessage.includes("session")
+  ) {
+    return "The attendant session or closeout may not match production reporting until the session state is corrected."
+  }
+
+  if (input.type === "customer_upsert") {
+    return "Customer history may stay device-only until the customer record can be matched or retried."
+  }
+
+  if (input.type === "staff_invited") {
+    return "The staff invite may not reach production, so the attendant may be unable to onboard."
+  }
+
+  if (input.type.startsWith("share_link")) {
+    return "The product link state may differ between this device and production."
+  }
+
+  return "This local change is not fully reflected in production until it is reviewed and replayed."
+}
+
+function getLocalSyncResolutionAction(event: RetailOpsSyncEvent) {
+  if (event.status === "conflict") {
+    return "Review the production state, confirm the local change is still valid, then move it back to pending."
+  }
+
+  if (isRetryBackoffActive(event)) {
+    return "Wait for the retry timer or move the event back to pending after checking the server message."
+  }
+
+  return "Move the event back to pending after the connection or server issue is resolved."
 }
 
 function SyncEventRow({
   event,
   onRetry,
 }: {
-  event: RetailOpsSyncEvent;
-  onRetry?: (eventId: string) => void;
+  event: RetailOpsSyncEvent
+  onRetry?: (eventId: string) => void
 }) {
-  const isPending = event.status === "pending";
-  const isFailed = event.status === "failed";
-  const isConflict = event.status === "conflict";
-  const needsAttention = isFailed || isConflict;
+  const isPending = event.status === "pending"
+  const isFailed = event.status === "failed"
+  const isConflict = event.status === "conflict"
+  const needsAttention = isFailed || isConflict
   const statusBadgeClassName = isConflict
     ? "bg-amber-500/10"
     : isFailed
       ? "bg-destructive/10"
       : isPending
         ? "bg-primary/10"
-        : "bg-emerald-500/10";
+        : "bg-emerald-500/10"
   const statusTextClassName = isConflict
     ? "text-amber-700"
     : isFailed
       ? "text-destructive"
       : isPending
         ? "text-primary"
-        : "text-emerald-700";
+        : "text-emerald-700"
   const statusLabel = isConflict
     ? "Conflict"
     : isFailed
       ? "Needs retry"
       : isPending
         ? "Pending"
-        : "Synced";
+        : "Synced"
   const retryDetailLabel =
     isRetryBackoffActive(event) && event.nextRetryAt
       ? `Retry after ${formatEventTime(event.nextRetryAt)}`
       : event.retryCount
-        ? `Retried ${event.retryCount} time${
-            event.retryCount === 1 ? "" : "s"
-          }`
-        : event.errorCode || "Sync failed";
+        ? `Retried ${event.retryCount} time${event.retryCount === 1 ? "" : "s"}`
+        : event.errorCode || "Sync failed"
 
   return (
-    <View className="gap-3 rounded-2xl border border-border bg-card p-4">
+    <View
+      className="gap-3 rounded-2xl border border-border bg-card p-4"
+      testID="retail-sync-event-row"
+    >
       <View className="flex-row items-start justify-between gap-3">
         <View className="flex-1 gap-1">
           <Text className="font-semibold text-foreground">{event.label}</Text>
           <Text className="text-xs font-semibold uppercase text-muted-foreground">
-            {formatSyncEventType(event.type)} - {formatEventTime(event.createdAt)}
+            {formatSyncEventType(event.type)} -{" "}
+            {formatEventTime(event.createdAt)}
           </Text>
         </View>
-        <View
-          className={cn(
-            "rounded-full px-3 py-1",
-            statusBadgeClassName,
-          )}
-        >
-          <Text
-            className={cn(
-              "text-xs font-bold",
-              statusTextClassName,
-            )}
-          >
+        <View className={cn("rounded-full px-3 py-1", statusBadgeClassName)}>
+          <Text className={cn("text-xs font-bold", statusTextClassName)}>
             {statusLabel}
           </Text>
         </View>
@@ -159,6 +212,11 @@ function SyncEventRow({
             "gap-3 rounded-xl p-3",
             isConflict ? "bg-amber-500/10" : "bg-destructive/5",
           )}
+          testID={
+            isConflict
+              ? "retail-sync-event-conflict-detail"
+              : "retail-sync-event-failed-detail"
+          }
         >
           <Text
             className={cn(
@@ -171,6 +229,18 @@ function SyncEventRow({
                 ? "This event needs review before it can sync."
                 : "This event could not sync. Review the details and retry.")}
           </Text>
+          <View className="gap-2 border-t border-border/60 pt-3">
+            <Text className="text-xs leading-4 text-muted-foreground">
+              Impact:{" "}
+              {getSyncConflictBusinessImpact({
+                errorMessage: event.errorMessage,
+                type: event.type,
+              })}
+            </Text>
+            <Text className="text-xs leading-4 text-muted-foreground">
+              Action: {getLocalSyncResolutionAction(event)}
+            </Text>
+          </View>
           <View className="flex-row items-center justify-between gap-3">
             <Text className="flex-1 text-xs font-semibold uppercase text-muted-foreground">
               {retryDetailLabel}
@@ -192,91 +262,105 @@ function SyncEventRow({
         </View>
       ) : null}
     </View>
-  );
+  )
 }
 
 export const SyncStatusSheet = forwardRef<
   BottomSheetModal,
   SyncStatusSheetProps
 >(({ onComplete }, ref) => {
-  const trpc = useTRPC();
-  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId);
-  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode);
-  const closeouts = useRetailOpsStore((state) => state.closeouts);
-  const customers = useRetailOpsStore((state) => state.customers);
-  const lastSyncSummary = useRetailOpsStore((state) => state.lastSyncSummary);
+  const trpc = useTRPC()
+  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
+  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
+  const closeouts = useRetailOpsStore((state) => state.closeouts)
+  const customers = useRetailOpsStore((state) => state.customers)
+  const lastSyncSummary = useRetailOpsStore((state) => state.lastSyncSummary)
   const markSyncEventsResolved = useRetailOpsStore(
     (state) => state.markSyncEventsResolved,
-  );
-  const offlineDeviceId = useRetailOpsStore((state) => state.offlineDeviceId);
+  )
+  const offlineDeviceId = useRetailOpsStore((state) => state.offlineDeviceId)
   const recordSyncSummary = useRetailOpsStore(
     (state) => state.recordSyncSummary,
-  );
-  const repSessions = useRetailOpsStore((state) => state.repSessions);
-  const sales = useRetailOpsStore((state) => state.sales);
-  const setOfflineMode = useRetailOpsStore((state) => state.setOfflineMode);
-  const shareLinks = useRetailOpsStore((state) => state.shareLinks);
-  const staff = useRetailOpsStore((state) => state.staff);
-  const stockMovements = useRetailOpsStore((state) => state.stockMovements);
-  const products = useRetailOpsStore((state) => state.products);
-  const retrySyncEvents = useRetailOpsStore((state) => state.retrySyncEvents);
-  const syncEvents = useRetailOpsStore((state) =>
-    state.syncEvents.filter(
-      (event) =>
-        !activeBusinessId ||
-        (event.businessId ?? activeBusinessId) === activeBusinessId,
-    ),
-  );
+  )
+  const repSessions = useRetailOpsStore((state) => state.repSessions)
+  const sales = useRetailOpsStore((state) => state.sales)
+  const setOfflineMode = useRetailOpsStore((state) => state.setOfflineMode)
+  const shareLinks = useRetailOpsStore((state) => state.shareLinks)
+  const staff = useRetailOpsStore((state) => state.staff)
+  const stockMovements = useRetailOpsStore((state) => state.stockMovements)
+  const products = useRetailOpsStore((state) => state.products)
+  const retrySyncEvents = useRetailOpsStore((state) => state.retrySyncEvents)
+  const allSyncEvents = useRetailOpsStore((state) => state.syncEvents)
+  const syncEvents = useMemo(
+    () =>
+      allSyncEvents.filter(
+        (event) =>
+          !activeBusinessId ||
+          (event.businessId ?? activeBusinessId) === activeBusinessId,
+      ),
+    [activeBusinessId, allSyncEvents],
+  )
   const syncEventsMutation = useMutation(
     trpc.retailOps.syncEvents.mutationOptions(),
-  );
+  )
   const registerOfflineDeviceMutation = useMutation(
     trpc.retailOps.registerOfflineDevice.mutationOptions(),
-  );
+  )
   const revokeOfflineDeviceMutation = useMutation(
     trpc.retailOps.revokeOfflineDevice.mutationOptions(),
-  );
+  )
   const restoreOfflineDeviceMutation = useMutation(
     trpc.retailOps.restoreOfflineDevice.mutationOptions(),
-  );
+  )
   const reviewSyncConflictMutation = useMutation(
     trpc.retailOps.reviewSyncConflict.mutationOptions(),
-  );
+  )
   const offlineDevicesQuery = useQuery(
     trpc.retailOps.offlineDevices.queryOptions(undefined, {
       enabled: !isOfflineMode,
       retry: false,
     }),
-  );
+  )
   const revokedOfflineDevicesQuery = useQuery(
     trpc.retailOps.revokedOfflineDevices.queryOptions(undefined, {
       enabled: !isOfflineMode,
       retry: false,
     }),
-  );
+  )
   const syncHistoryQuery = useQuery(
     trpc.retailOps.syncHistory.queryOptions(
       {
         deviceId: offlineDeviceId,
-        limit: 5,
+        limit: SERVER_SYNC_HISTORY_PREVIEW_LIMIT,
       },
       {
         enabled: !isOfflineMode,
       },
     ),
-  );
+  )
   const syncConflictsQuery = useQuery(
     trpc.retailOps.syncConflicts.queryOptions(
       {
         deviceId: offlineDeviceId,
-        limit: 8,
+        limit: SERVER_SYNC_CONFLICT_PREVIEW_LIMIT,
       },
       {
         enabled: !isOfflineMode,
         retry: false,
       },
     ),
-  );
+  )
+  const tenantSyncConflictsQuery = useQuery(
+    trpc.retailOps.syncConflicts.queryOptions(
+      {
+        limit: SERVER_SYNC_CONFLICT_PREVIEW_LIMIT,
+      },
+      {
+        enabled: !isOfflineMode,
+        retry: false,
+      },
+    ),
+  )
   const syncInput = useMemo(
     () =>
       buildRetailOpsSyncEventsInput({
@@ -305,7 +389,7 @@ export const SyncStatusSheet = forwardRef<
       stockMovements,
       syncEvents,
     ],
-  );
+  )
   const blockedEvents = useMemo(
     () =>
       getRetailOpsSyncBlockedEvents({
@@ -334,27 +418,53 @@ export const SyncStatusSheet = forwardRef<
       stockMovements,
       syncEvents,
     ],
-  );
-  const pendingEvents = syncEvents.filter((event) => event.status === "pending");
-  const failedEvents = syncEvents.filter((event) => event.status === "failed");
-  const retryBackoffEvents = failedEvents.filter(isRetryBackoffActive);
+  )
+  const pendingEvents = syncEvents.filter((event) => event.status === "pending")
+  const failedEvents = syncEvents.filter((event) => event.status === "failed")
+  const retryBackoffEvents = failedEvents.filter(isRetryBackoffActive)
   const conflictEvents = syncEvents.filter(
     (event) => event.status === "conflict",
-  );
-  const activeOfflineDevices = offlineDevicesQuery.data ?? [];
-  const revokedOfflineDevices = revokedOfflineDevicesQuery.data ?? [];
+  )
+  const activeOfflineDevices = offlineDevicesQuery.data ?? []
+  const revokedOfflineDevices = revokedOfflineDevicesQuery.data ?? []
+  const visibleActiveOfflineDevices = activeOfflineDevices.slice(
+    0,
+    OFFLINE_DEVICE_PREVIEW_LIMIT,
+  )
+  const visibleRevokedOfflineDevices = revokedOfflineDevices.slice(
+    0,
+    OFFLINE_DEVICE_PREVIEW_LIMIT,
+  )
   const shouldShowDeviceManagement =
     offlineDevicesQuery.isSuccess ||
     revokedOfflineDevicesQuery.isSuccess ||
     offlineDevicesQuery.isFetching ||
-    revokedOfflineDevicesQuery.isFetching;
-  const serverSyncConflicts = syncConflictsQuery.data ?? [];
+    revokedOfflineDevicesQuery.isFetching
+  const serverSyncHistory = syncHistoryQuery.data ?? []
+  const visibleServerSyncHistory = serverSyncHistory.slice(
+    0,
+    SERVER_SYNC_HISTORY_PREVIEW_LIMIT,
+  )
+  const serverSyncConflicts = syncConflictsQuery.data ?? []
+  const tenantSyncConflicts = tenantSyncConflictsQuery.data ?? []
+  const visibleTenantSyncConflicts = tenantSyncConflicts.slice(
+    0,
+    SERVER_SYNC_CONFLICT_PREVIEW_LIMIT,
+  )
+  const visibleBlockedEvents = blockedEvents.slice(
+    0,
+    BLOCKED_EVENT_PREVIEW_LIMIT,
+  )
+  const visibleSyncEvents = syncEvents.slice(0, SYNC_QUEUE_PREVIEW_LIMIT)
   const shouldShowServerConflicts =
-    syncConflictsQuery.isSuccess || syncConflictsQuery.isFetching;
+    syncConflictsQuery.isSuccess ||
+    syncConflictsQuery.isFetching ||
+    tenantSyncConflictsQuery.isSuccess ||
+    tenantSyncConflictsQuery.isFetching
+  const shortOfflineDeviceId = offlineDeviceId.slice(-8) || "Pending"
   const isSyncBusy =
-    registerOfflineDeviceMutation.isPending || syncEventsMutation.isPending;
-  const canSync =
-    syncInput.events.length > 0 && !isOfflineMode && !isSyncBusy;
+    registerOfflineDeviceMutation.isPending || syncEventsMutation.isPending
+  const canSync = syncInput.events.length > 0 && !isOfflineMode && !isSyncBusy
   const syncButtonLabel = registerOfflineDeviceMutation.isPending
     ? "Registering device..."
     : syncEventsMutation.isPending
@@ -363,25 +473,26 @@ export const SyncStatusSheet = forwardRef<
         ? "Waiting for retry timer"
         : `Sync ${syncInput.events.length} supported event${
             syncInput.events.length === 1 ? "" : "s"
-          }`;
+          }`
 
   function retryFailedEvents(eventIds: string[]) {
-    if (eventIds.length === 0 || isSyncBusy) return;
+    if (eventIds.length === 0 || isSyncBusy) return
 
     retrySyncEvents({
       businessId: activeBusinessId ?? undefined,
       eventIds,
-    });
+    })
   }
 
   function refreshDeviceManagement() {
-    void offlineDevicesQuery.refetch();
-    void revokedOfflineDevicesQuery.refetch();
+    void offlineDevicesQuery.refetch()
+    void revokedOfflineDevicesQuery.refetch()
   }
 
   function refreshServerSyncState() {
-    void syncHistoryQuery.refetch();
-    void syncConflictsQuery.refetch();
+    void syncHistoryQuery.refetch()
+    void syncConflictsQuery.refetch()
+    void tenantSyncConflictsQuery.refetch()
   }
 
   function revokeDevice(deviceId: string) {
@@ -390,7 +501,7 @@ export const SyncStatusSheet = forwardRef<
       revokeOfflineDeviceMutation.isPending ||
       restoreOfflineDeviceMutation.isPending
     ) {
-      return;
+      return
     }
 
     revokeOfflineDeviceMutation.mutate(
@@ -398,7 +509,7 @@ export const SyncStatusSheet = forwardRef<
       {
         onSuccess: refreshDeviceManagement,
       },
-    );
+    )
   }
 
   function restoreDevice(deviceId: string) {
@@ -406,7 +517,7 @@ export const SyncStatusSheet = forwardRef<
       revokeOfflineDeviceMutation.isPending ||
       restoreOfflineDeviceMutation.isPending
     ) {
-      return;
+      return
     }
 
     restoreOfflineDeviceMutation.mutate(
@@ -414,24 +525,24 @@ export const SyncStatusSheet = forwardRef<
       {
         onSuccess: refreshDeviceManagement,
       },
-    );
+    )
   }
 
   function reviewServerConflict(eventId: string) {
-    if (reviewSyncConflictMutation.isPending) return;
+    if (reviewSyncConflictMutation.isPending) return
 
     reviewSyncConflictMutation.mutate(
       { eventId },
       {
         onSuccess: refreshServerSyncState,
       },
-    );
+    )
   }
 
   async function syncSupportedEvents() {
-    if (!canSync) return;
+    if (!canSync) return
 
-    const attemptedAt = new Date().toISOString();
+    const attemptedAt = new Date().toISOString()
 
     try {
       await registerOfflineDeviceMutation.mutateAsync({
@@ -439,10 +550,10 @@ export const SyncStatusSheet = forwardRef<
         deviceId: offlineDeviceId,
         deviceName: "Ewatrade mobile",
         platform: getOfflineDevicePlatform(),
-      });
-      refreshDeviceManagement();
+      })
+      refreshDeviceManagement()
     } catch (error) {
-      const message = getErrorMessage(error);
+      const message = getErrorMessage(error)
 
       markSyncEventsResolved({
         businessId: activeBusinessId ?? undefined,
@@ -451,7 +562,7 @@ export const SyncStatusSheet = forwardRef<
           errorMessage: message,
           eventId: event.eventId,
         })),
-      });
+      })
       recordSyncSummary({
         appliedCount: 0,
         attemptedAt,
@@ -462,15 +573,15 @@ export const SyncStatusSheet = forwardRef<
         skippedCount: 0,
         status: "failed",
         totalCount: syncInput.events.length,
-      });
-      return;
+      })
+      return
     }
 
     syncEventsMutation.mutate(syncInput, {
       onError: (error) => {
         const message =
           error.message ||
-          "The sync request could not be completed. Check the connection and retry.";
+          "The sync request could not be completed. Check the connection and retry."
 
         markSyncEventsResolved({
           businessId: activeBusinessId ?? undefined,
@@ -479,7 +590,7 @@ export const SyncStatusSheet = forwardRef<
             errorMessage: message,
             eventId: event.eventId,
           })),
-        });
+        })
         recordSyncSummary({
           appliedCount: 0,
           attemptedAt,
@@ -490,7 +601,7 @@ export const SyncStatusSheet = forwardRef<
           skippedCount: 0,
           status: "failed",
           totalCount: syncInput.events.length,
-        });
+        })
       },
       onSuccess: (result) => {
         markSyncEventsResolved({
@@ -513,7 +624,7 @@ export const SyncStatusSheet = forwardRef<
           syncedEventIds: result.results
             .filter((eventResult) => eventResult.status === "applied")
             .map((eventResult) => eventResult.eventId),
-        });
+        })
         recordSyncSummary({
           appliedCount: result.appliedCount,
           attemptedAt,
@@ -526,10 +637,10 @@ export const SyncStatusSheet = forwardRef<
               ? "partial"
               : "completed",
           totalCount: result.totalCount,
-        });
-        refreshServerSyncState();
+        })
+        refreshServerSyncState()
       },
-    });
+    })
   }
 
   return (
@@ -566,7 +677,7 @@ export const SyncStatusSheet = forwardRef<
               </Text>
               <Text className="text-sm leading-5 text-muted-foreground">
                 {isOfflineMode
-                  ? "Changes stay on this device until the app reconnects."
+                  ? "Changes stay on this device and will be applied when next you connect."
                   : "Supported sales and stock changes can sync to production now."}
               </Text>
             </View>
@@ -579,14 +690,15 @@ export const SyncStatusSheet = forwardRef<
             )}
             haptic
             onPress={() => setOfflineMode(!isOfflineMode)}
+            testID="retail-offline-toggle"
             transition
           >
-            <View className="gap-1">
+            <View className="flex-1 gap-1 pr-3">
               <Text className="font-semibold text-foreground">
                 Offline mode
               </Text>
               <Text className="text-sm text-muted-foreground">
-                Use this while testing poor-network sales.
+                Keep selling during poor network. Sync resumes when online.
               </Text>
             </View>
             <View
@@ -599,11 +711,20 @@ export const SyncStatusSheet = forwardRef<
             </View>
           </Pressable>
 
-          <View className="rounded-2xl border border-border bg-card p-4">
+          <View
+            className="rounded-2xl border border-border bg-card p-4"
+            testID="retail-offline-device"
+          >
             <Text className="text-xs font-semibold uppercase text-muted-foreground">
               Offline device
             </Text>
             <Text className="mt-2 text-sm font-semibold text-foreground">
+              Device {shortOfflineDeviceId}
+            </Text>
+            <Text
+              className="mt-1 text-xs text-muted-foreground"
+              numberOfLines={1}
+            >
               {offlineDeviceId}
             </Text>
           </View>
@@ -627,7 +748,7 @@ export const SyncStatusSheet = forwardRef<
                       ? "text-primary"
                       : "text-muted-foreground",
                   )}
-                  name="Smartphone"
+                  name="AppWindow"
                 />
               </View>
 
@@ -642,10 +763,10 @@ export const SyncStatusSheet = forwardRef<
                     <Text className="text-xs font-semibold uppercase text-muted-foreground">
                       Active
                     </Text>
-                    {activeOfflineDevices.length > 0 ? (
-                      activeOfflineDevices.slice(0, 4).map((device) => {
+                    {visibleActiveOfflineDevices.length > 0 ? (
+                      visibleActiveOfflineDevices.map((device) => {
                         const isCurrentDevice =
-                          device.deviceId === offlineDeviceId;
+                          device.deviceId === offlineDeviceId
 
                         return (
                           <View
@@ -681,9 +802,7 @@ export const SyncStatusSheet = forwardRef<
                                       ? "text-muted-foreground"
                                       : "text-destructive",
                                   )}
-                                  name={
-                                    isCurrentDevice ? "CircleCheck" : "Ban"
-                                  }
+                                  name={isCurrentDevice ? "CircleCheck" : "Ban"}
                                 />
                                 <Text
                                   className={cn(
@@ -698,13 +817,20 @@ export const SyncStatusSheet = forwardRef<
                               </Pressable>
                             </View>
                           </View>
-                        );
+                        )
                       })
                     ) : (
                       <Text className="text-xs leading-4 text-muted-foreground">
                         No registered offline devices returned.
                       </Text>
                     )}
+                    {activeOfflineDevices.length >
+                    visibleActiveOfflineDevices.length ? (
+                      <Text className="text-xs font-medium text-muted-foreground">
+                        Showing first {visibleActiveOfflineDevices.length} of{" "}
+                        {activeOfflineDevices.length} active devices.
+                      </Text>
+                    ) : null}
                   </View>
 
                   {revokedOfflineDevices.length > 0 ? (
@@ -712,7 +838,7 @@ export const SyncStatusSheet = forwardRef<
                       <Text className="text-xs font-semibold uppercase text-muted-foreground">
                         Revoked
                       </Text>
-                      {revokedOfflineDevices.slice(0, 4).map((device) => (
+                      {visibleRevokedOfflineDevices.map((device) => (
                         <View
                           className="gap-3 rounded-xl border border-border bg-background p-3"
                           key={device.deviceId}
@@ -734,7 +860,7 @@ export const SyncStatusSheet = forwardRef<
                             >
                               <Icon
                                 className="size-sm text-primary-foreground"
-                                name="RotateCcw"
+                                name="Activity"
                               />
                               <Text className="text-xs font-bold text-primary-foreground">
                                 Restore
@@ -743,6 +869,13 @@ export const SyncStatusSheet = forwardRef<
                           </View>
                         </View>
                       ))}
+                      {revokedOfflineDevices.length >
+                      visibleRevokedOfflineDevices.length ? (
+                        <Text className="text-xs font-medium text-muted-foreground">
+                          Showing first {visibleRevokedOfflineDevices.length} of{" "}
+                          {revokedOfflineDevices.length} revoked devices.
+                        </Text>
+                      ) : null}
                     </View>
                   ) : null}
 
@@ -815,7 +948,7 @@ export const SyncStatusSheet = forwardRef<
                     ? "text-primary"
                     : "text-muted-foreground",
                 )}
-                name="History"
+                name="Clock"
               />
             </View>
 
@@ -823,9 +956,9 @@ export const SyncStatusSheet = forwardRef<
               <Text className="mt-3 text-xs leading-4 text-destructive">
                 Server sync history is unavailable right now.
               </Text>
-            ) : syncHistoryQuery.data?.length ? (
+            ) : serverSyncHistory.length ? (
               <View className="mt-4 gap-3">
-                {syncHistoryQuery.data.map((syncRun) => (
+                {visibleServerSyncHistory.map((syncRun) => (
                   <View
                     className="gap-2 rounded-xl border border-border bg-background p-3"
                     key={syncRun.id}
@@ -836,9 +969,8 @@ export const SyncStatusSheet = forwardRef<
                           {formatEventTime(syncRun.completedAt)}
                         </Text>
                         <Text className="mt-1 text-xs text-muted-foreground">
-                          {syncRun.appliedCount} applied,{" "}
-                          {syncRun.failedCount} failed,{" "}
-                          {syncRun.skippedCount} skipped
+                          {syncRun.appliedCount} applied, {syncRun.failedCount}{" "}
+                          failed, {syncRun.skippedCount} skipped
                         </Text>
                       </View>
                       <Text
@@ -860,6 +992,12 @@ export const SyncStatusSheet = forwardRef<
                     ) : null}
                   </View>
                 ))}
+                {serverSyncHistory.length > visibleServerSyncHistory.length ? (
+                  <Text className="text-xs font-medium text-muted-foreground">
+                    Showing first {visibleServerSyncHistory.length} of{" "}
+                    {serverSyncHistory.length} sync runs.
+                  </Text>
+                ) : null}
               </View>
             ) : (
               <Text className="mt-3 text-xs leading-4 text-muted-foreground">
@@ -876,13 +1014,15 @@ export const SyncStatusSheet = forwardRef<
                     Server conflicts
                   </Text>
                   <Text className="text-sm leading-5 text-muted-foreground">
-                    Unreviewed production conflicts recorded for this device.
+                    Unreviewed production conflicts for this device and the
+                    wider business.
                   </Text>
                 </View>
                 <Icon
                   className={cn(
                     "size-sm",
-                    syncConflictsQuery.isFetching
+                    syncConflictsQuery.isFetching ||
+                      tenantSyncConflictsQuery.isFetching
                       ? "text-primary"
                       : "text-muted-foreground",
                   )}
@@ -890,13 +1030,33 @@ export const SyncStatusSheet = forwardRef<
                 />
               </View>
 
-              {syncConflictsQuery.isFetching ? (
+              <View className="mt-4 flex-row gap-3">
+                <View className="flex-1 rounded-xl bg-background p-3">
+                  <Text className="text-xs font-semibold uppercase text-muted-foreground">
+                    This device
+                  </Text>
+                  <Text className="mt-2 text-xl font-bold text-foreground">
+                    {serverSyncConflicts.length}
+                  </Text>
+                </View>
+                <View className="flex-1 rounded-xl bg-background p-3">
+                  <Text className="text-xs font-semibold uppercase text-muted-foreground">
+                    Business
+                  </Text>
+                  <Text className="mt-2 text-xl font-bold text-foreground">
+                    {tenantSyncConflicts.length}
+                  </Text>
+                </View>
+              </View>
+
+              {syncConflictsQuery.isFetching ||
+              tenantSyncConflictsQuery.isFetching ? (
                 <Text className="mt-3 text-xs leading-4 text-muted-foreground">
                   Loading conflicts...
                 </Text>
-              ) : serverSyncConflicts.length > 0 ? (
+              ) : tenantSyncConflicts.length > 0 ? (
                 <View className="mt-4 gap-3">
-                  {serverSyncConflicts.map((conflict) => (
+                  {visibleTenantSyncConflicts.map((conflict) => (
                     <View
                       className="gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3"
                       key={conflict.id}
@@ -910,7 +1070,7 @@ export const SyncStatusSheet = forwardRef<
                             {conflict.processedAt
                               ? formatEventTime(conflict.processedAt)
                               : "Waiting for review"}{" "}
-                            - {conflict.eventId}
+                            - {formatDeviceLabel(conflict.deviceId)}
                           </Text>
                         </View>
                         <Pressable
@@ -935,6 +1095,13 @@ export const SyncStatusSheet = forwardRef<
                         </Text>
                       ) : null}
                       <View className="border-t border-amber-500/20 pt-3">
+                        <Text className="text-xs leading-4 text-muted-foreground">
+                          Impact:{" "}
+                          {getSyncConflictBusinessImpact({
+                            errorMessage: conflict.errorMessage,
+                            type: conflict.type,
+                          })}
+                        </Text>
                         <Text className="text-xs font-bold text-foreground">
                           {conflict.resolutionAction}
                         </Text>
@@ -944,10 +1111,17 @@ export const SyncStatusSheet = forwardRef<
                       </View>
                     </View>
                   ))}
+                  {tenantSyncConflicts.length >
+                  visibleTenantSyncConflicts.length ? (
+                    <Text className="text-xs font-medium text-muted-foreground">
+                      Showing first {visibleTenantSyncConflicts.length} of{" "}
+                      {tenantSyncConflicts.length} server conflicts.
+                    </Text>
+                  ) : null}
                 </View>
               ) : (
                 <Text className="mt-3 text-xs leading-4 text-muted-foreground">
-                  No unreviewed server conflicts for this device.
+                  No unreviewed server conflicts for this business.
                 </Text>
               )}
 
@@ -960,7 +1134,10 @@ export const SyncStatusSheet = forwardRef<
           ) : null}
 
           <View className="flex-row gap-3">
-            <View className="flex-1 rounded-2xl border border-border bg-card p-4">
+            <View
+              className="flex-1 rounded-2xl border border-border bg-card p-4"
+              testID="retail-sync-pending-count"
+            >
               <Text className="text-xs font-semibold uppercase text-muted-foreground">
                 Pending
               </Text>
@@ -968,7 +1145,10 @@ export const SyncStatusSheet = forwardRef<
                 {pendingEvents.length}
               </Text>
             </View>
-            <View className="flex-1 rounded-2xl border border-border bg-card p-4">
+            <View
+              className="flex-1 rounded-2xl border border-border bg-card p-4"
+              testID="retail-sync-retry-count"
+            >
               <Text className="text-xs font-semibold uppercase text-muted-foreground">
                 Retry
               </Text>
@@ -976,7 +1156,10 @@ export const SyncStatusSheet = forwardRef<
                 {failedEvents.length}
               </Text>
             </View>
-            <View className="flex-1 rounded-2xl border border-border bg-card p-4">
+            <View
+              className="flex-1 rounded-2xl border border-border bg-card p-4"
+              testID="retail-sync-review-count"
+            >
               <Text className="text-xs font-semibold uppercase text-muted-foreground">
                 Review
               </Text>
@@ -998,7 +1181,10 @@ export const SyncStatusSheet = forwardRef<
           </View>
 
           {conflictEvents.length > 0 ? (
-            <View className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
+            <View
+              className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4"
+              testID="retail-sync-conflict-summary"
+            >
               <Text className="text-sm font-semibold text-amber-700">
                 {conflictEvents.length} sync conflict
                 {conflictEvents.length === 1 ? "" : "s"} need review
@@ -1014,6 +1200,7 @@ export const SyncStatusSheet = forwardRef<
                 onPress={() =>
                   retryFailedEvents(conflictEvents.map((event) => event.id))
                 }
+                testID="retail-sync-conflicts-reviewed"
                 transition
               >
                 <Icon className="size-sm text-primary-foreground" name="Zap" />
@@ -1043,6 +1230,7 @@ export const SyncStatusSheet = forwardRef<
                 onPress={() =>
                   retryFailedEvents(failedEvents.map((event) => event.id))
                 }
+                testID="retail-sync-failed-retry"
                 transition
               >
                 <Icon className="size-sm text-primary-foreground" name="Zap" />
@@ -1069,7 +1257,11 @@ export const SyncStatusSheet = forwardRef<
             </View>
           ) : null}
 
-          <ActionButton disabled={!canSync} onPress={syncSupportedEvents}>
+          <ActionButton
+            disabled={!canSync}
+            onPress={syncSupportedEvents}
+            testID="retail-sync-now"
+          >
             {syncButtonLabel}
           </ActionButton>
 
@@ -1081,7 +1273,7 @@ export const SyncStatusSheet = forwardRef<
                 local change to sync first.
               </Text>
               <View className="mt-3 gap-2">
-                {blockedEvents.slice(0, 3).map((event) => (
+                {visibleBlockedEvents.map((event) => (
                   <View
                     className="rounded-xl border border-border bg-background p-3"
                     key={event.eventId}
@@ -1094,22 +1286,36 @@ export const SyncStatusSheet = forwardRef<
                     </Text>
                   </View>
                 ))}
+                {blockedEvents.length > visibleBlockedEvents.length ? (
+                  <Text className="text-xs font-medium text-muted-foreground">
+                    Showing first {visibleBlockedEvents.length} of{" "}
+                    {blockedEvents.length} blocked events.
+                  </Text>
+                ) : null}
               </View>
             </View>
           ) : null}
 
-          <View className="gap-3">
+          <View className="gap-3" testID="retail-sync-queue">
             <Text className="text-base font-bold text-foreground">
               Sync queue
             </Text>
             {syncEvents.length > 0 ? (
-              syncEvents.slice(0, 12).map((event) => (
-                <SyncEventRow
-                  event={event}
-                  key={event.id}
-                  onRetry={(eventId) => retryFailedEvents([eventId])}
-                />
-              ))
+              <>
+                {visibleSyncEvents.map((event) => (
+                  <SyncEventRow
+                    event={event}
+                    key={event.id}
+                    onRetry={(eventId) => retryFailedEvents([eventId])}
+                  />
+                ))}
+                {syncEvents.length > visibleSyncEvents.length ? (
+                  <Text className="text-xs font-medium text-muted-foreground">
+                    Showing first {visibleSyncEvents.length} of{" "}
+                    {syncEvents.length} local sync events.
+                  </Text>
+                ) : null}
+              </>
             ) : (
               <View className="rounded-2xl border border-dashed border-border p-4">
                 <Text className="text-sm leading-5 text-muted-foreground">
@@ -1125,7 +1331,7 @@ export const SyncStatusSheet = forwardRef<
         </View>
       </BottomSheetKeyboardAwareScrollView>
     </Modal>
-  );
-});
+  )
+})
 
-SyncStatusSheet.displayName = "SyncStatusSheet";
+SyncStatusSheet.displayName = "SyncStatusSheet"

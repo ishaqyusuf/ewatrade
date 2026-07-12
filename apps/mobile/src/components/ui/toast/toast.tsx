@@ -1,17 +1,13 @@
-import { useToast } from "@/context/toast-context";
+import { Pressable } from "@/components/ui/pressable"
+import { useToast } from "@/context/toast-context"
+import { useColors } from "@/hooks/use-color"
 import type {
   Toast as ToastType,
   ToastType as ToastVariant,
-} from "@/types/toast.types";
-import React, { useEffect, useRef } from "react";
-import {
-  LayoutAnimation,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+} from "@/types/toast.types"
+import type React from "react"
+import { useCallback, useEffect, useRef } from "react"
+import { LayoutAnimation, StyleSheet, Text, View } from "react-native"
 import Animated, {
   Easing,
   runOnJS,
@@ -19,85 +15,137 @@ import Animated, {
   useSharedValue,
   withSpring,
   withTiming,
-} from "react-native-reanimated";
+} from "react-native-reanimated"
 
 interface ToastProps {
-  toast: ToastType;
-  index: number;
-  onHeightChange?: (id: string, height: number) => void;
+  toast: ToastType
+  index: number
+  onHeightChange?: (id: string, height: number) => void
 }
 
-const getBackgroundColor = (type: ToastVariant) => {
+type ToastPalette = {
+  actionBackground: string
+  actionForeground: string
+  background: string
+  foreground: string
+  ripple: string
+}
+
+function withOpacity(color: string, opacity: number) {
+  const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+
+  if (!match) {
+    return color
+  }
+
+  return `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${opacity})`
+}
+
+const getToastPalette = (
+  type: ToastVariant,
+  colors: ReturnType<typeof useColors>,
+): ToastPalette => {
   switch (type) {
     case "success":
-      return "#10B981";
+      return {
+        actionBackground: withOpacity(colors.successForeground, 0.18),
+        actionForeground: colors.successForeground,
+        background: colors.success,
+        foreground: colors.successForeground,
+        ripple: withOpacity(colors.successForeground, 0.12),
+      }
     case "error":
-      return "#EF4444";
+      return {
+        actionBackground: withOpacity(colors.destructiveForeground, 0.18),
+        actionForeground: colors.destructiveForeground,
+        background: colors.destructive,
+        foreground: colors.destructiveForeground,
+        ripple: withOpacity(colors.destructiveForeground, 0.12),
+      }
     case "warning":
-      return "#F59E0B";
+      return {
+        actionBackground: withOpacity(colors.foreground, 0.12),
+        actionForeground: colors.foreground,
+        background: colors.warn,
+        foreground: colors.foreground,
+        ripple: withOpacity(colors.foreground, 0.12),
+      }
     case "info":
-      return "#3B82F6";
+      return {
+        actionBackground: withOpacity(colors.primaryForeground, 0.18),
+        actionForeground: colors.primaryForeground,
+        background: colors.primary,
+        foreground: colors.primaryForeground,
+        ripple: withOpacity(colors.primaryForeground, 0.12),
+      }
     default:
-      return "#262626";
+      return {
+        actionBackground: withOpacity(colors.background, 0.16),
+        actionForeground: colors.background,
+        background: colors.foreground,
+        foreground: colors.background,
+        ripple: withOpacity(colors.background, 0.12),
+      }
   }
-};
+}
 
 const getIconForType = (type: ToastVariant) => {
   switch (type) {
     case "success":
-      return "✓";
+      return "✓"
     case "error":
-      return "✗";
+      return "✗"
     case "warning":
-      return "⚠";
+      return "⚠"
     case "info":
-      return "ℹ";
+      return "ℹ"
     default:
-      return "";
+      return ""
   }
-};
+}
 
 export const Toast: React.FC<ToastProps> = ({ toast, index }) => {
-  const prevContentRef = useRef<string | React.ReactNode | null>(null);
-  const prevTypeRef = useRef<ToastVariant | null>(null);
-  const prevIndexRef = useRef<number>(-1);
+  const prevContentRef = useRef<string | React.ReactNode | null>(null)
+  const prevTypeRef = useRef<ToastVariant | null>(null)
+  const prevIndexRef = useRef<number>(-1)
 
-  const { dismiss } = useToast();
-  const opacity = useSharedValue(0);
+  const colors = useColors()
+  const { dismiss } = useToast()
+  const opacity = useSharedValue(0)
   const translateY = useSharedValue(
-    toast.options.position === "top" ? -100 : 100
-  );
-  const scale = useSharedValue(0.9);
-  const rotateZ = useSharedValue(0);
-  const height = useSharedValue(0);
-  const viewRef = useRef<View>(null);
+    toast.options.position === "top" ? -100 : 100,
+  )
+  const scale = useSharedValue(0.9)
+  const rotateZ = useSharedValue(0)
+  const height = useSharedValue(0)
+  const viewRef = useRef<View>(null)
 
-  const getStackOffset = () => {
-    const baseOffset = 4;
-    const maxOffset = 12;
-    const offset = Math.min(index * baseOffset, maxOffset);
-    return toast.options.position === "top" ? offset : -offset;
-  };
+  const getStackOffset = useCallback(() => {
+    const baseOffset = 4
+    const maxOffset = 12
+    const offset = Math.min(index * baseOffset, maxOffset)
+    return toast.options.position === "top" ? offset : -offset
+  }, [index, toast.options.position])
 
-  const getStackScale = () => {
-    const scaleReduction = 0.02;
-    const minScale = 0.92;
-    return Math.max(1 - index * scaleReduction, minScale);
-  };
+  const getStackScale = useCallback(() => {
+    const scaleReduction = 0.02
+    const minScale = 0.92
+    return Math.max(1 - index * scaleReduction, minScale)
+  }, [index])
 
   useEffect(() => {
     if (prevIndexRef.current !== index && opacity.value > 0) {
-      const soonerOffset = toast.options.position === "top" ? 2 : -2;
+      const soonerOffset = toast.options.position === "top" ? 2 : -2
 
       translateY.value = withTiming(getStackOffset() + soonerOffset, {
         duration: 400,
         easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
-      });
+      })
 
       scale.value = withTiming(getStackScale() * 0.98, {
         duration: 400,
         easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
-      });
+      })
 
       setTimeout(() => {
         translateY.value = withSpring(getStackOffset(), {
@@ -105,27 +153,35 @@ export const Toast: React.FC<ToastProps> = ({ toast, index }) => {
           stiffness: 120,
           mass: 0.8,
           velocity: 0,
-        });
+        })
 
         scale.value = withSpring(getStackScale(), {
           damping: 25,
           stiffness: 120,
           mass: 0.8,
           velocity: 0,
-        });
-      }, 200);
+        })
+      }, 200)
     }
 
-    prevIndexRef.current = index;
-  }, [index, toast.options.position, translateY, scale, opacity]);
+    prevIndexRef.current = index
+  }, [
+    getStackOffset,
+    getStackScale,
+    index,
+    opacity,
+    scale,
+    toast.options.position,
+    translateY,
+  ])
 
-  const handleDismiss = () => {
-    dismiss(toast.id);
-    toast.options.onClose?.();
-  };
+  const handleDismiss = useCallback(() => {
+    dismiss(toast.id)
+    toast.options.onClose?.()
+  }, [dismiss, toast.id, toast.options])
 
   useEffect(() => {
-    const delay = index * 50;
+    const delay = index * 50
 
     LayoutAnimation.configureNext({
       duration: 300,
@@ -136,66 +192,75 @@ export const Toast: React.FC<ToastProps> = ({ toast, index }) => {
       update: {
         type: LayoutAnimation.Types.easeInEaseOut,
       },
-    });
+    })
 
     setTimeout(() => {
       opacity.value = withTiming(1, {
         duration: 500,
         easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
-      });
+      })
 
       translateY.value = withSpring(getStackOffset(), {
         damping: 28,
         stiffness: 140,
         mass: 0.8,
         velocity: 0,
-        restDisplacementThreshold: 0.001,
-        restSpeedThreshold: 0.001,
-      });
+      })
 
       scale.value = withSpring(getStackScale(), {
         damping: 28,
         stiffness: 140,
         mass: 0.8,
         velocity: 0,
-      });
+      })
 
       rotateZ.value = withTiming(0, {
         duration: 500,
         easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
-      });
-    }, delay);
+      })
+    }, delay)
 
     if (toast.options.duration > 0) {
-      const exitDelay = Math.max(0, toast.options.duration - 500);
+      const exitDelay = Math.max(0, toast.options.duration - 500)
 
       const exitAnimations = () => {
         opacity.value = withTiming(0, {
           duration: 400,
           easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
-        });
+        })
 
         translateY.value = withTiming(
           toast.options.position === "top" ? -20 : 20,
           {
             duration: 400,
             easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
-          }
-        );
+          },
+        )
 
         scale.value = withTiming(0.95, {
           duration: 400,
           easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
-        });
+        })
 
         setTimeout(() => {
-          runOnJS(handleDismiss)();
-        }, 400);
-      };
+          runOnJS(handleDismiss)()
+        }, 400)
+      }
 
-      setTimeout(exitAnimations, exitDelay);
+      setTimeout(exitAnimations, exitDelay)
     }
-  }, [toast, opacity, translateY, scale, rotateZ, index]);
+  }, [
+    getStackOffset,
+    getStackScale,
+    handleDismiss,
+    index,
+    opacity,
+    rotateZ,
+    scale,
+    toast.options.duration,
+    toast.options.position,
+    translateY,
+  ])
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -206,35 +271,35 @@ export const Toast: React.FC<ToastProps> = ({ toast, index }) => {
         { rotateZ: `${rotateZ.value}deg` },
       ],
       zIndex: 1000 - index,
-    };
-  });
+    }
+  })
 
   const handlePress = () => {
     opacity.value = withTiming(0, {
       duration: 250,
       easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
-    });
+    })
 
     translateY.value = withTiming(
       toast.options.position === "top" ? -100 : 100,
       {
         duration: 250,
         easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
-      }
-    );
+      },
+    )
 
     scale.value = withTiming(0.8, {
       duration: 250,
       easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
-    });
+    })
 
     setTimeout(() => {
-      handleDismiss();
-    }, 250);
-  };
+      handleDismiss()
+    }, 250)
+  }
 
-  const backgroundColor = getBackgroundColor(toast.options.type);
-  const icon = getIconForType(toast.options.type);
+  const palette = getToastPalette(toast.options.type, colors)
+  const icon = getIconForType(toast.options.type)
 
   return (
     <Animated.View
@@ -245,39 +310,54 @@ export const Toast: React.FC<ToastProps> = ({ toast, index }) => {
           marginTop: 0,
           marginBottom: 0,
           position: "absolute",
+          shadowColor: colors.foreground,
           top: toast.options.position === "top" ? 100 : undefined,
           bottom: toast.options.position === "bottom" ? 0 : undefined,
         },
       ]}
     >
       <Pressable
-        style={[styles.toast, { backgroundColor }]}
+        style={[styles.toast, { backgroundColor: palette.background }]}
         onPress={handlePress}
-        android_ripple={{ color: "rgba(255, 255, 255, 0.1)" }}
+        android_ripple={{ color: palette.ripple }}
       >
-        {icon ? <Text style={styles.icon}>{icon}</Text> : null}
+        {icon ? (
+          <Text style={[styles.icon, { color: palette.foreground }]}>
+            {icon}
+          </Text>
+        ) : null}
         <View style={styles.contentContainer}>
           {typeof toast.content === "string" ? (
-            <Text style={styles.text}>{toast.content}</Text>
+            <Text style={[styles.text, { color: palette.foreground }]}>
+              {toast.content}
+            </Text>
           ) : (
             toast.content
           )}
         </View>
         {toast.options.action && (
-          <TouchableOpacity
-            style={styles.actionButton}
+          <Pressable
+            style={[
+              styles.actionButton,
+              { backgroundColor: palette.actionBackground },
+            ]}
+            haptic
             onPress={() => {
-              toast?.options?.action?.onPress!();
-              handlePress();
+              toast?.options?.action?.onPress?.()
+              handlePress()
             }}
           >
-            <Text style={styles.actionText}>{toast.options.action.label}</Text>
-          </TouchableOpacity>
+            <Text
+              style={[styles.actionText, { color: palette.actionForeground }]}
+            >
+              {toast.options.action.label}
+            </Text>
+          </Pressable>
         )}
       </Pressable>
     </Animated.View>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   toastContainer: {
@@ -287,7 +367,6 @@ const styles = StyleSheet.create({
     marginVertical: 4,
     borderRadius: 12,
     overflow: "hidden",
-    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 4,
@@ -303,7 +382,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   icon: {
-    color: "#fff",
     fontSize: 20,
     marginRight: 12,
     fontWeight: "bold",
@@ -314,7 +392,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   text: {
-    color: "#fff",
     fontSize: 16,
     fontWeight: "500",
     lineHeight: 20,
@@ -323,12 +400,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
     marginLeft: 12,
   },
   actionText: {
-    color: "#fff",
     fontSize: 14,
     fontWeight: "600",
   },
-});
+})

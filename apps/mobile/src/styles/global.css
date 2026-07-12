@@ -54,44 +54,44 @@
 @media (prefers-color-scheme: dark) {
   @layer base {
     :root {
-      --background: rgb(15, 23, 42);
-      --foreground: rgb(226, 232, 240);
+      --background: rgb(18, 18, 18);
+      --foreground: rgb(250, 250, 250);
 
-      --card: rgb(30, 41, 59);
-      --card-foreground: rgb(226, 232, 240);
+      --card: rgb(30, 30, 30);
+      --card-foreground: rgb(250, 250, 250);
 
-      --popover: rgb(30, 41, 59);
-      --popover-foreground: rgb(226, 232, 240);
+      --popover: rgb(30, 30, 30);
+      --popover-foreground: rgb(250, 250, 250);
 
-      --primary: rgb(96, 165, 250);
-      --primary-foreground: rgb(15, 23, 42);
+      --primary: rgb(255, 108, 0);
+      --primary-foreground: rgb(255, 247, 237);
 
-      --success: rgb(22, 163, 74);
+      --success: rgb(34, 197, 94);
       --success-foreground: rgb(236, 253, 245);
 
       --warn: rgb(245, 158, 11);
       --warn-foreground: rgb(255, 251, 235);
 
-      --secondary: rgb(51, 65, 85);
-      --secondary-foreground: rgb(226, 232, 240);
+      --secondary: rgb(46, 46, 46);
+      --secondary-foreground: rgb(245, 245, 245);
 
-      --muted: rgb(30, 41, 59);
-      --muted-foreground: rgb(148, 163, 184);
+      --muted: rgb(38, 38, 38);
+      --muted-foreground: rgb(163, 163, 163);
 
-      --accent: rgb(30, 58, 138);
-      --accent-foreground: rgb(219, 234, 254);
+      --accent: rgb(64, 64, 64);
+      --accent-foreground: rgb(245, 245, 245);
 
       --destructive: rgb(220, 38, 38);
       --destructive-foreground: rgb(254, 242, 242);
 
-      --border: rgb(51, 65, 85);
-      --input: rgb(71, 85, 105);
-      --ring: rgb(125, 211, 252);
+      --border: rgb(46, 46, 46);
+      --input: rgb(56, 56, 56);
+      --ring: rgb(255, 137, 51);
 
-      --chart-1: rgb(96, 165, 250);
-      --chart-2: rgb(52, 211, 153);
+      --chart-1: rgb(255, 108, 0);
+      --chart-2: rgb(34, 197, 94);
       --chart-3: rgb(251, 191, 36);
-      --chart-4: rgb(192, 132, 252);
+      --chart-4: rgb(115, 115, 115);
       --chart-5: rgb(244, 63, 94);
     }
   }

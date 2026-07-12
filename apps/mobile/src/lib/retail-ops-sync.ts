@@ -8,80 +8,80 @@ import type {
   RetailOpsStaffMember,
   RetailOpsStockMovement,
   RetailOpsSyncEvent,
-} from "@/store/retailOpsStore";
+} from "@/store/retailOpsStore"
 import type {
   RouterInputs,
   RouterOutputs,
-} from "@ewatrade/api/trpc/routers/_app";
+} from "@ewatrade/api/trpc/routers/_app"
 
-type RetailOpsSyncEventsInput = RouterInputs["retailOps"]["syncEvents"];
-type RetailOpsSyncEventsOutput = RouterOutputs["retailOps"]["syncEvents"];
-type RetailOpsSyncEventInput = RetailOpsSyncEventsInput["events"][number];
+type RetailOpsSyncEventsInput = RouterInputs["retailOps"]["syncEvents"]
+type RetailOpsSyncEventsOutput = RouterOutputs["retailOps"]["syncEvents"]
+type RetailOpsSyncEventInput = RetailOpsSyncEventsInput["events"][number]
 type RetailOpsProductSetupSyncEventInput = Extract<
   RetailOpsSyncEventInput,
   { type: "product_setup" }
->;
+>
 type RetailOpsCloseoutSyncEventInput = Extract<
   RetailOpsSyncEventInput,
   { type: "closeout_created" }
->;
+>
 type RetailOpsCustomerUpsertSyncEventInput = Extract<
   RetailOpsSyncEventInput,
   { type: "customer_upsert" }
->;
+>
 type RetailOpsRepSessionOpenSyncEventInput = Extract<
   RetailOpsSyncEventInput,
   { type: "rep_session_opened" }
->;
+>
 type RetailOpsStaffInviteSyncEventInput = Extract<
   RetailOpsSyncEventInput,
   { type: "staff_invited" }
->;
+>
 type RetailOpsSaleSyncEventInput = Extract<
   RetailOpsSyncEventInput,
   { type: "sale_created" }
->;
+>
 type RetailOpsShareLinkCreateSyncEventInput = Extract<
   RetailOpsSyncEventInput,
   { type: "share_link_created" }
->;
+>
 type RetailOpsShareLinkDeactivateSyncEventInput = Extract<
   RetailOpsSyncEventInput,
   { type: "share_link_deactivated" }
->;
+>
 type RetailOpsStockIntakeSyncEventInput = Extract<
   RetailOpsSyncEventInput,
   { type: "stock_intake_recorded" }
->;
+>
 type RetailOpsStockAdjustmentSyncEventInput = Extract<
   RetailOpsSyncEventInput,
   { type: "stock_adjustment_recorded" }
->;
+>
 type RetailOpsUnitConversionSyncEventInput = Extract<
   RetailOpsSyncEventInput,
   { type: "unit_conversion_recorded" }
->;
+>
 
 type BuildRetailOpsSyncEventsInput = {
-  activeBusinessId: string | null;
-  closeouts: RetailOpsCloseout[];
-  customers: RetailOpsCustomer[];
-  deviceId?: string;
-  products: RetailOpsProduct[];
-  repSessions: RetailOpsRepSession[];
-  sales: RetailOpsSale[];
-  shareLinks: RetailOpsShareLink[];
-  staff: RetailOpsStaffMember[];
-  stockMovements: RetailOpsStockMovement[];
-  syncEvents: RetailOpsSyncEvent[];
-};
+  activeBusinessId: string | null
+  closeouts: RetailOpsCloseout[]
+  customers: RetailOpsCustomer[]
+  deviceId?: string
+  products: RetailOpsProduct[]
+  repSessions: RetailOpsRepSession[]
+  sales: RetailOpsSale[]
+  shareLinks: RetailOpsShareLink[]
+  staff: RetailOpsStaffMember[]
+  stockMovements: RetailOpsStockMovement[]
+  syncEvents: RetailOpsSyncEvent[]
+}
 
 export type RetailOpsSyncBlockedEvent = {
-  eventId: string;
-  label: string;
-  reason: string;
-  type: RetailOpsSyncEvent["type"];
-};
+  eventId: string
+  label: string
+  reason: string
+  type: RetailOpsSyncEvent["type"]
+}
 
 function belongsToActiveBusiness(
   value: { businessId?: string },
@@ -90,84 +90,88 @@ function belongsToActiveBusiness(
   return (
     !activeBusinessId ||
     (value.businessId ?? activeBusinessId) === activeBusinessId
-  );
+  )
 }
 
 function toDate(value: string) {
-  const date = new Date(value);
+  const date = new Date(value)
 
-  return Number.isNaN(date.getTime()) ? new Date() : date;
+  return Number.isNaN(date.getTime()) ? new Date() : date
+}
+
+function toNonNegativeWholeQuantity(value: number) {
+  return Math.max(0, Math.trunc(Number.isFinite(value) ? value : 0))
 }
 
 function toRemoteVariantId(input: {
-  product?: RetailOpsProduct;
-  variantId?: string;
+  product?: RetailOpsProduct
+  variantId?: string
 }) {
-  if (!input.product) return null;
+  if (!input.product) return null
 
-  if (!input.variantId) return input.product.remoteVariantId ?? null;
+  if (!input.variantId) return input.product.remoteVariantId ?? null
 
   return (
     input.product.variants.find((variant) => variant.id === input.variantId)
       ?.remoteId ?? null
-  );
+  )
 }
 
 function toRemoteSessionId(input: {
-  repSessionId?: string;
-  repSessions: RetailOpsRepSession[];
+  repSessionId?: string
+  repSessions: RetailOpsRepSession[]
 }) {
-  if (!input.repSessionId) return null;
+  if (!input.repSessionId) return null
 
   return (
     input.repSessions.find((session) => session.id === input.repSessionId)
       ?.remoteId ?? null
-  );
+  )
 }
 
 type LocalInventorySyncLine = {
-  confirmedQuantity?: number;
-  declaredQuantity?: number;
-  note?: string;
-  productId: string;
-  variantId?: string;
-};
+  confirmedQuantity?: number
+  declaredQuantity?: number
+  note?: string
+  productId: string
+  variantId?: string
+}
 
 function toRemoteInventoryLines(input: {
-  products: RetailOpsProduct[];
-  quantityKey: "confirmedQuantity" | "declaredQuantity";
-  lines: LocalInventorySyncLine[];
+  products: RetailOpsProduct[]
+  quantityKey: "confirmedQuantity" | "declaredQuantity"
+  lines: LocalInventorySyncLine[]
 }) {
   const inventoryLines: Array<{
-    countedQuantity: number;
-    note?: string;
-    productVariantId: string;
-  }> = [];
+    countedQuantity: number
+    note?: string
+    productVariantId: string
+  }> = []
 
   for (const line of input.lines) {
     const product = input.products.find(
       (currentProduct) => currentProduct.id === line.productId,
-    );
+    )
     const productVariantId = toRemoteVariantId({
       product,
       variantId: line.variantId,
-    });
+    })
 
-    if (!productVariantId) return null;
+    if (!productVariantId) return null
 
     const countedQuantity =
       input.quantityKey === "confirmedQuantity"
         ? (line.confirmedQuantity ?? 0)
-        : (line.declaredQuantity ?? 0);
+        : (line.declaredQuantity ?? 0)
 
     inventoryLines.push({
-      countedQuantity: Math.max(0, Math.trunc(countedQuantity)),
+      countedQuantity: toNonNegativeWholeQuantity(countedQuantity),
       note: line.note,
       productVariantId,
-    });
+    })
   }
 
-  return inventoryLines;
+  return inventoryLines
 }
 
 function findCloseoutSession(
@@ -175,7 +179,7 @@ function findCloseoutSession(
   repSessions: RetailOpsRepSession[],
 ) {
   if (closeout.repSessionId) {
-    return repSessions.find((session) => session.id === closeout.repSessionId);
+    return repSessions.find((session) => session.id === closeout.repSessionId)
   }
 
   return (
@@ -192,7 +196,7 @@ function findCloseoutSession(
         session.attendantName === closeout.attendantName &&
         belongsToActiveBusiness(session, closeout.businessId ?? null),
     )
-  );
+  )
 }
 
 function findProductSetupPayload(
@@ -201,23 +205,27 @@ function findProductSetupPayload(
 ): RetailOpsProductSetupSyncEventInput["payload"] | null {
   const product = products.find(
     (currentProduct) => currentProduct.id === event.entityId,
-  );
+  )
 
-  if (!product) return null;
+  if (!product) return null
 
   return {
+    description: product.description,
     externalId: event.id,
+    imageUrl: product.imageUrl,
     name: product.name,
-    openingStockQuantity: product.startingStock,
+    openingStockQuantity: toNonNegativeWholeQuantity(product.startingStock),
     priceMinor: product.price,
     primaryUnitName: product.unitName,
     variants: product.variants.map((variant) => ({
       conversionMultiplier: variant.conversionMultiplier,
       name: variant.name,
-      openingStockQuantity: variant.startingStock ?? 0,
+      openingStockQuantity: toNonNegativeWholeQuantity(
+        variant.startingStock ?? 0,
+      ),
       priceMinor: variant.price,
     })),
-  };
+  }
 }
 
 function findCloseoutPayload(
@@ -228,21 +236,21 @@ function findCloseoutPayload(
 ): RetailOpsCloseoutSyncEventInput["payload"] | null {
   const closeout = closeouts.find(
     (currentCloseout) => currentCloseout.id === event.entityId,
-  );
+  )
 
-  if (!closeout) return null;
+  if (!closeout) return null
 
-  const session = findCloseoutSession(closeout, repSessions);
+  const session = findCloseoutSession(closeout, repSessions)
 
-  if (!session?.remoteId) return null;
+  if (!session?.remoteId) return null
 
   const inventoryLines = toRemoteInventoryLines({
     lines: closeout.inventoryLines,
     products,
     quantityKey: "declaredQuantity",
-  });
+  })
 
-  if (!inventoryLines) return null;
+  if (!inventoryLines) return null
 
   return {
     cashierSessionId: session.remoteId,
@@ -252,7 +260,7 @@ function findCloseoutPayload(
     externalId: event.id,
     inventoryLines,
     notes: closeout.note,
-  };
+  }
 }
 
 function findCustomerUpsertPayload(
@@ -263,33 +271,32 @@ function findCustomerUpsertPayload(
 ): RetailOpsCustomerUpsertSyncEventInput["payload"] | null {
   const customer = customers.find(
     (currentCustomer) => currentCustomer.id === event.entityId,
-  );
+  )
 
-  if (!customer) return null;
+  if (!customer) return null
 
-  const customerName = customer.name.trim().toLowerCase();
+  const customerName = customer.name.trim().toLowerCase()
   const sale = sales.find(
     (currentSale) =>
       currentSale.customerName.trim().toLowerCase() === customerName &&
       belongsToActiveBusiness(currentSale, customer.businessId ?? null),
-  );
+  )
 
-  if (!sale) return null;
+  if (!sale) return null
 
   const saleEvent = syncEvents.find(
     (currentEvent) =>
-      currentEvent.type === "sale_created" &&
-      currentEvent.entityId === sale.id,
-  );
+      currentEvent.type === "sale_created" && currentEvent.entityId === sale.id,
+  )
 
-  if (!saleEvent) return null;
+  if (!saleEvent) return null
 
   return {
     externalId: event.id,
     lastSaleExternalId: saleEvent.id,
     lastSeenAt: toDate(customer.lastSeenAt),
     name: customer.name,
-  };
+  }
 }
 
 function findSalePayload(
@@ -298,26 +305,29 @@ function findSalePayload(
   repSessions: RetailOpsRepSession[],
   sales: RetailOpsSale[],
 ): RetailOpsSaleSyncEventInput["payload"] | null {
-  const sale = sales.find((currentSale) => currentSale.id === event.entityId);
+  const sale = sales.find((currentSale) => currentSale.id === event.entityId)
 
-  if (!sale) return null;
+  if (!sale) return null
 
   const product = products.find(
     (currentProduct) => currentProduct.id === sale.productId,
-  );
+  )
   const productVariantId = toRemoteVariantId({
     product,
     variantId: sale.variantId,
-  });
+  })
 
-  if (!productVariantId) return null;
+  if (!productVariantId) return null
 
   const cashierSessionId = toRemoteSessionId({
     repSessionId: sale.repSessionId,
     repSessions,
-  });
+  })
 
-  if (sale.repSessionId && !cashierSessionId) return null;
+  if (sale.repSessionId && !cashierSessionId) return null
+
+  const quantity = toNonNegativeWholeQuantity(sale.quantity)
+  if (quantity <= 0) return null
 
   return {
     cashierSessionId: cashierSessionId ?? undefined,
@@ -325,9 +335,9 @@ function findSalePayload(
     externalId: event.id,
     paymentMethod: sale.paymentMethod,
     productVariantId,
-    quantity: sale.quantity,
+    quantity,
     soldAt: toDate(sale.createdAt),
-  };
+  }
 }
 
 function findRepSessionOpenPayload(
@@ -337,17 +347,17 @@ function findRepSessionOpenPayload(
 ): RetailOpsRepSessionOpenSyncEventInput["payload"] | null {
   const session = repSessions.find(
     (currentSession) => currentSession.id === event.entityId,
-  );
+  )
 
-  if (!session) return null;
+  if (!session) return null
 
   const inventoryLines = toRemoteInventoryLines({
     lines: session.openingInventoryLines,
     products,
     quantityKey: "confirmedQuantity",
-  });
+  })
 
-  if (!inventoryLines) return null;
+  if (!inventoryLines) return null
 
   return {
     externalId: event.id,
@@ -355,7 +365,7 @@ function findRepSessionOpenPayload(
     notes: session.note,
     openedAt: toDate(session.clockedInAt),
     openingFloatMinor: 0,
-  };
+  }
 }
 
 function findStaffInvitePayload(
@@ -364,16 +374,16 @@ function findStaffInvitePayload(
 ): RetailOpsStaffInviteSyncEventInput["payload"] | null {
   const staffMember = staff.find(
     (currentStaffMember) => currentStaffMember.id === event.entityId,
-  );
+  )
 
-  if (!staffMember) return null;
+  if (!staffMember) return null
 
   return {
     email: staffMember.email,
     externalId: event.id,
     name: staffMember.name,
     role: "cashier",
-  };
+  }
 }
 
 function findShareLinkCreatePayload(
@@ -383,21 +393,21 @@ function findShareLinkCreatePayload(
 ): RetailOpsShareLinkCreateSyncEventInput["payload"] | null {
   const shareLink = shareLinks.find(
     (currentShareLink) => currentShareLink.id === event.entityId,
-  );
+  )
 
-  if (!shareLink) return null;
+  if (!shareLink) return null
 
   const product = products.find(
     (currentProduct) => currentProduct.id === shareLink.productId,
-  );
+  )
 
-  if (!product?.remoteId) return null;
+  if (!product?.remoteId) return null
 
   return {
     externalId: event.id,
     label: shareLink.productName,
     productId: product.remoteId,
-  };
+  }
 }
 
 function findShareLinkDeactivatePayload(
@@ -407,21 +417,21 @@ function findShareLinkDeactivatePayload(
 ): RetailOpsShareLinkDeactivateSyncEventInput["payload"] | null {
   const shareLink = shareLinks.find(
     (currentShareLink) => currentShareLink.id === event.entityId,
-  );
+  )
 
-  if (!shareLink?.remoteId) return null;
+  if (!shareLink?.remoteId) return null
 
   const product = products.find(
     (currentProduct) => currentProduct.id === shareLink.productId,
-  );
+  )
 
-  if (!product?.remoteId) return null;
+  if (!product?.remoteId) return null
 
   return {
     externalId: event.id,
     productId: product.remoteId,
     shareLinkId: shareLink.remoteId,
-  };
+  }
 }
 
 function findStockIntakePayload(
@@ -433,27 +443,29 @@ function findStockIntakePayload(
     (currentMovement) =>
       currentMovement.id === event.entityId &&
       currentMovement.type === "stock_intake",
-  );
+  )
 
-  if (!movement || movement.quantity <= 0) return null;
+  const quantity = movement ? toNonNegativeWholeQuantity(movement.quantity) : 0
+
+  if (!movement || quantity <= 0) return null
 
   const product = products.find(
     (currentProduct) => currentProduct.id === movement.productId,
-  );
+  )
   const productVariantId = toRemoteVariantId({
     product,
     variantId: movement.variantId,
-  });
+  })
 
-  if (!productVariantId) return null;
+  if (!productVariantId) return null
 
   return {
     externalId: event.id,
     note: movement.note,
     productVariantId,
-    quantity: movement.quantity,
+    quantity,
     receivedAt: toDate(movement.createdAt),
-  };
+  }
 }
 
 function findStockAdjustmentPayload(
@@ -465,19 +477,23 @@ function findStockAdjustmentPayload(
     (currentMovement) =>
       currentMovement.id === event.entityId &&
       currentMovement.type === "stock_adjustment",
-  );
+  )
 
-  if (!movement || movement.quantity === 0) return null;
+  const quantity = movement
+    ? toNonNegativeWholeQuantity(Math.abs(movement.quantity))
+    : 0
+
+  if (!movement || quantity <= 0) return null
 
   const product = products.find(
     (currentProduct) => currentProduct.id === movement.productId,
-  );
+  )
   const productVariantId = toRemoteVariantId({
     product,
     variantId: movement.variantId,
-  });
+  })
 
-  if (!productVariantId) return null;
+  if (!productVariantId) return null
 
   return {
     adjustedAt: toDate(movement.createdAt),
@@ -485,10 +501,10 @@ function findStockAdjustmentPayload(
     externalId: event.id,
     note: movement.note,
     productVariantId,
-    quantity: Math.abs(movement.quantity),
+    quantity,
     reason: movement.stockAdjustmentReason ?? "correction",
     sourceName: "Mobile stock adjustment",
-  };
+  }
 }
 
 function findUnitConversionPayload(
@@ -498,34 +514,36 @@ function findUnitConversionPayload(
 ): RetailOpsUnitConversionSyncEventInput["payload"] | null {
   const conversionMovements = stockMovements.filter(
     (movement) => movement.syncGroupId === event.entityId,
-  );
+  )
   const sourceMovement = conversionMovements.find(
     (movement) => movement.type === "conversion_out",
-  );
+  )
   const targetMovement = conversionMovements.find(
     (movement) => movement.type === "conversion_in",
-  );
+  )
 
-  if (!sourceMovement || !targetMovement) return null;
+  if (!sourceMovement || !targetMovement) return null
 
-  const sourceQuantity = Math.abs(sourceMovement.quantity);
-  const targetQuantity = targetMovement.quantity;
+  const sourceQuantity = toNonNegativeWholeQuantity(
+    Math.abs(sourceMovement.quantity),
+  )
+  const targetQuantity = toNonNegativeWholeQuantity(targetMovement.quantity)
 
-  if (sourceQuantity <= 0 || targetQuantity <= 0) return null;
+  if (sourceQuantity <= 0 || targetQuantity <= 0) return null
 
   const product = products.find(
     (currentProduct) => currentProduct.id === sourceMovement.productId,
-  );
+  )
   const sourceProductVariantId = toRemoteVariantId({
     product,
     variantId: sourceMovement.variantId,
-  });
+  })
   const targetProductVariantId = toRemoteVariantId({
     product,
     variantId: targetMovement.variantId,
-  });
+  })
 
-  if (!sourceProductVariantId || !targetProductVariantId) return null;
+  if (!sourceProductVariantId || !targetProductVariantId) return null
 
   return {
     convertedAt: toDate(sourceMovement.createdAt),
@@ -535,18 +553,18 @@ function findUnitConversionPayload(
     sourceQuantity,
     targetProductVariantId,
     targetQuantity,
-  };
+  }
 }
 
 function isReplayableSyncEvent(event: RetailOpsSyncEvent) {
-  if (event.status === "pending") return true;
+  if (event.status === "pending") return true
 
-  if (event.status !== "failed") return false;
-  if (!event.nextRetryAt) return true;
+  if (event.status !== "failed") return false
+  if (!event.nextRetryAt) return true
 
-  const nextRetryTime = new Date(event.nextRetryAt).getTime();
+  const nextRetryTime = new Date(event.nextRetryAt).getTime()
 
-  return Number.isNaN(nextRetryTime) || nextRetryTime <= Date.now();
+  return Number.isNaN(nextRetryTime) || nextRetryTime <= Date.now()
 }
 
 function getRetailOpsSyncEventInput(
@@ -559,7 +577,7 @@ function getRetailOpsSyncEventInput(
       input.closeouts,
       input.products,
       input.repSessions,
-    );
+    )
 
     return payload
       ? {
@@ -568,7 +586,7 @@ function getRetailOpsSyncEventInput(
           payload,
           type: event.type,
         }
-      : null;
+      : null
   }
 
   if (event.type === "customer_upsert") {
@@ -577,7 +595,7 @@ function getRetailOpsSyncEventInput(
       input.customers,
       input.sales,
       input.syncEvents,
-    );
+    )
 
     return payload
       ? {
@@ -586,11 +604,11 @@ function getRetailOpsSyncEventInput(
           payload,
           type: event.type,
         }
-      : null;
+      : null
   }
 
   if (event.type === "product_setup") {
-    const payload = findProductSetupPayload(event, input.products);
+    const payload = findProductSetupPayload(event, input.products)
 
     return payload
       ? {
@@ -599,7 +617,7 @@ function getRetailOpsSyncEventInput(
           payload,
           type: event.type,
         }
-      : null;
+      : null
   }
 
   if (event.type === "sale_created") {
@@ -608,7 +626,7 @@ function getRetailOpsSyncEventInput(
       input.products,
       input.repSessions,
       input.sales,
-    );
+    )
 
     return payload
       ? {
@@ -617,7 +635,7 @@ function getRetailOpsSyncEventInput(
           payload,
           type: event.type,
         }
-      : null;
+      : null
   }
 
   if (event.type === "rep_session_opened") {
@@ -625,7 +643,7 @@ function getRetailOpsSyncEventInput(
       event,
       input.products,
       input.repSessions,
-    );
+    )
 
     return payload
       ? {
@@ -634,11 +652,11 @@ function getRetailOpsSyncEventInput(
           payload,
           type: event.type,
         }
-      : null;
+      : null
   }
 
   if (event.type === "staff_invited") {
-    const payload = findStaffInvitePayload(event, input.staff);
+    const payload = findStaffInvitePayload(event, input.staff)
 
     return payload
       ? {
@@ -647,7 +665,7 @@ function getRetailOpsSyncEventInput(
           payload,
           type: event.type,
         }
-      : null;
+      : null
   }
 
   if (event.type === "share_link_created") {
@@ -655,7 +673,7 @@ function getRetailOpsSyncEventInput(
       event,
       input.products,
       input.shareLinks,
-    );
+    )
 
     return payload
       ? {
@@ -664,7 +682,7 @@ function getRetailOpsSyncEventInput(
           payload,
           type: event.type,
         }
-      : null;
+      : null
   }
 
   if (event.type === "share_link_deactivated") {
@@ -672,7 +690,7 @@ function getRetailOpsSyncEventInput(
       event,
       input.products,
       input.shareLinks,
-    );
+    )
 
     return payload
       ? {
@@ -681,7 +699,7 @@ function getRetailOpsSyncEventInput(
           payload,
           type: event.type,
         }
-      : null;
+      : null
   }
 
   if (event.type === "stock_intake_recorded") {
@@ -689,7 +707,7 @@ function getRetailOpsSyncEventInput(
       event,
       input.products,
       input.stockMovements,
-    );
+    )
 
     return payload
       ? {
@@ -698,7 +716,7 @@ function getRetailOpsSyncEventInput(
           payload,
           type: event.type,
         }
-      : null;
+      : null
   }
 
   if (event.type === "stock_adjustment_recorded") {
@@ -706,7 +724,7 @@ function getRetailOpsSyncEventInput(
       event,
       input.products,
       input.stockMovements,
-    );
+    )
 
     return payload
       ? {
@@ -715,7 +733,7 @@ function getRetailOpsSyncEventInput(
           payload,
           type: event.type,
         }
-      : null;
+      : null
   }
 
   if (event.type === "unit_conversion_recorded") {
@@ -723,7 +741,7 @@ function getRetailOpsSyncEventInput(
       event,
       input.products,
       input.stockMovements,
-    );
+    )
 
     return payload
       ? {
@@ -732,10 +750,10 @@ function getRetailOpsSyncEventInput(
           payload,
           type: event.type,
         }
-      : null;
+      : null
   }
 
-  return null;
+  return null
 }
 
 function getRetailOpsSyncBlockedReason(
@@ -745,36 +763,37 @@ function getRetailOpsSyncBlockedReason(
   if (event.type === "sale_created") {
     const sale = input.sales.find(
       (currentSale) => currentSale.id === event.entityId,
-    );
+    )
     const product = input.products.find(
       (currentProduct) => currentProduct.id === sale?.productId,
-    );
+    )
     const hasRemoteUnit = toRemoteVariantId({
       product,
       variantId: sale?.variantId,
-    });
+    })
     const hasRemoteSession =
       !sale?.repSessionId ||
       toRemoteSessionId({
         repSessionId: sale.repSessionId,
         repSessions: input.repSessions,
-      });
+      })
 
-    if (!sale) return "Waiting for the local sale record.";
-    if (!hasRemoteUnit) return "Waiting for the product/unit to sync first.";
-    if (!hasRemoteSession) return "Waiting for the rep session to sync first.";
+    if (!sale) return "Waiting for the local sale record."
+    if (!hasRemoteUnit) return "Waiting for the product/unit to sync first."
+    if (!hasRemoteSession) return "Waiting for the rep session to sync first."
   }
 
   if (event.type === "closeout_created") {
     const closeout = input.closeouts.find(
       (currentCloseout) => currentCloseout.id === event.entityId,
-    );
+    )
     const session = closeout
       ? findCloseoutSession(closeout, input.repSessions)
-      : null;
+      : null
 
-    if (!closeout) return "Waiting for the local closeout record.";
-    if (!session?.remoteId) return "Waiting for the linked rep session to sync first.";
+    if (!closeout) return "Waiting for the local closeout record."
+    if (!session?.remoteId)
+      return "Waiting for the linked rep session to sync first."
     if (
       !toRemoteInventoryLines({
         lines: closeout.inventoryLines,
@@ -782,22 +801,22 @@ function getRetailOpsSyncBlockedReason(
         quantityKey: "declaredQuantity",
       })
     ) {
-      return "Waiting for the closing product/unit mappings to sync first.";
+      return "Waiting for the closing product/unit mappings to sync first."
     }
 
-    return "Waiting for the linked rep session to sync first.";
+    return "Waiting for the linked rep session to sync first."
   }
 
   if (event.type === "customer_upsert") {
-    return "Waiting for the customer's sale to sync first.";
+    return "Waiting for the customer's sale to sync first."
   }
 
   if (event.type === "share_link_created") {
-    return "Waiting for the product to sync before creating the link.";
+    return "Waiting for the product to sync before creating the link."
   }
 
   if (event.type === "share_link_deactivated") {
-    return "Waiting for the share link to sync before deactivation.";
+    return "Waiting for the share link to sync before deactivation."
   }
 
   if (
@@ -805,15 +824,15 @@ function getRetailOpsSyncBlockedReason(
     event.type === "stock_intake_recorded" ||
     event.type === "unit_conversion_recorded"
   ) {
-    return "Waiting for the product/unit mapping to sync first.";
+    return "Waiting for the product/unit mapping to sync first."
   }
 
   if (event.type === "rep_session_opened") {
     const session = input.repSessions.find(
       (currentSession) => currentSession.id === event.entityId,
-    );
+    )
 
-    if (!session) return "Waiting for the local rep session record.";
+    if (!session) return "Waiting for the local rep session record."
     if (
       !toRemoteInventoryLines({
         lines: session.openingInventoryLines,
@@ -821,11 +840,11 @@ function getRetailOpsSyncBlockedReason(
         quantityKey: "confirmedQuantity",
       })
     ) {
-      return "Waiting for the opening product/unit mappings to sync first.";
+      return "Waiting for the opening product/unit mappings to sync first."
     }
   }
 
-  return "Waiting for the local record needed to build this sync payload.";
+  return "Waiting for the local record needed to build this sync payload."
 }
 
 export function buildRetailOpsSyncEventsInput(
@@ -838,16 +857,16 @@ export function buildRetailOpsSyncEventsInput(
         belongsToActiveBusiness(event, input.activeBusinessId),
     )
     .flatMap<RetailOpsSyncEventInput>((event) => {
-      const syncEvent = getRetailOpsSyncEventInput(event, input);
+      const syncEvent = getRetailOpsSyncEventInput(event, input)
 
-      return syncEvent ? [syncEvent] : [];
+      return syncEvent ? [syncEvent] : []
     })
-    .slice(0, 50);
+    .slice(0, 50)
 
   return {
     deviceId: input.deviceId,
     events,
-  };
+  }
 }
 
 export function getRetailOpsSyncBlockedEvents(
@@ -859,7 +878,7 @@ export function getRetailOpsSyncBlockedEvents(
       !belongsToActiveBusiness(event, input.activeBusinessId) ||
       getRetailOpsSyncEventInput(event, input)
     ) {
-      return [];
+      return []
     }
 
     return {
@@ -867,8 +886,8 @@ export function getRetailOpsSyncBlockedEvents(
       label: event.label,
       reason: getRetailOpsSyncBlockedReason(event, input),
       type: event.type,
-    };
-  });
+    }
+  })
 }
 
 export function getRetailOpsProductSyncMappings(
@@ -876,7 +895,7 @@ export function getRetailOpsProductSyncMappings(
 ) {
   return results.flatMap((result) => {
     if (result.type !== "product_setup" || result.status !== "applied") {
-      return [];
+      return []
     }
 
     const value = result.result as
@@ -895,14 +914,14 @@ export function getRetailOpsProductSyncMappings(
             typeof unit.name !== "string" ||
             typeof unit.isDefault !== "boolean"
           ) {
-            return [];
+            return []
           }
 
           return {
             id: unit.id,
             isDefault: unit.isDefault,
             name: unit.name,
-          };
+          }
         })
       : []
 
@@ -914,8 +933,8 @@ export function getRetailOpsProductSyncMappings(
             units,
           },
         ]
-      : [];
-  });
+      : []
+  })
 }
 
 export function getRetailOpsCustomerSyncMappings(
@@ -923,7 +942,7 @@ export function getRetailOpsCustomerSyncMappings(
 ) {
   return results.flatMap((result) => {
     if (result.type !== "customer_upsert" || result.status !== "applied") {
-      return [];
+      return []
     }
 
     const value = result.result as
@@ -931,9 +950,9 @@ export function getRetailOpsCustomerSyncMappings(
           customer?: { id?: unknown }
         }
       | null
-      | undefined;
+      | undefined
     const customerId =
-      typeof value?.customer?.id === "string" ? value.customer.id : null;
+      typeof value?.customer?.id === "string" ? value.customer.id : null
 
     return customerId
       ? [
@@ -942,8 +961,8 @@ export function getRetailOpsCustomerSyncMappings(
             eventId: result.eventId,
           },
         ]
-      : [];
-  });
+      : []
+  })
 }
 
 export function getRetailOpsRepSessionSyncMappings(
@@ -951,16 +970,16 @@ export function getRetailOpsRepSessionSyncMappings(
 ) {
   return results.flatMap((result) => {
     if (result.type !== "rep_session_opened" || result.status !== "applied") {
-      return [];
+      return []
     }
 
     const value = result.result as
       | {
-          id?: unknown;
+          id?: unknown
         }
       | null
-      | undefined;
-    const cashierSessionId = typeof value?.id === "string" ? value.id : null;
+      | undefined
+    const cashierSessionId = typeof value?.id === "string" ? value.id : null
 
     return cashierSessionId
       ? [
@@ -969,8 +988,8 @@ export function getRetailOpsRepSessionSyncMappings(
             cashierSessionId,
           },
         ]
-      : [];
-  });
+      : []
+  })
 }
 
 export function getRetailOpsSaleSyncMappings(
@@ -978,7 +997,7 @@ export function getRetailOpsSaleSyncMappings(
 ) {
   return results.flatMap((result) => {
     if (result.type !== "sale_created" || result.status !== "applied") {
-      return [];
+      return []
     }
 
     const value = result.result as
@@ -986,8 +1005,8 @@ export function getRetailOpsSaleSyncMappings(
           order?: { id?: unknown }
         }
       | null
-      | undefined;
-    const orderId = typeof value?.order?.id === "string" ? value.order.id : null;
+      | undefined
+    const orderId = typeof value?.order?.id === "string" ? value.order.id : null
 
     return orderId
       ? [
@@ -996,8 +1015,8 @@ export function getRetailOpsSaleSyncMappings(
             orderId,
           },
         ]
-      : [];
-  });
+      : []
+  })
 }
 
 export function getRetailOpsStaffSyncMappings(
@@ -1005,7 +1024,7 @@ export function getRetailOpsStaffSyncMappings(
 ) {
   return results.flatMap((result) => {
     if (result.type !== "staff_invited" || result.status !== "applied") {
-      return [];
+      return []
     }
 
     const value = result.result as
@@ -1013,9 +1032,9 @@ export function getRetailOpsStaffSyncMappings(
           invite?: { id?: unknown }
         }
       | null
-      | undefined;
+      | undefined
     const membershipId =
-      typeof value?.invite?.id === "string" ? value.invite.id : null;
+      typeof value?.invite?.id === "string" ? value.invite.id : null
 
     return membershipId
       ? [
@@ -1024,8 +1043,8 @@ export function getRetailOpsStaffSyncMappings(
             membershipId,
           },
         ]
-      : [];
-  });
+      : []
+  })
 }
 
 export function getRetailOpsShareLinkSyncMappings(
@@ -1037,18 +1056,18 @@ export function getRetailOpsShareLinkSyncMappings(
       (result.type !== "share_link_created" &&
         result.type !== "share_link_deactivated")
     ) {
-      return [];
+      return []
     }
 
     const value = result.result as
       | {
-          active?: unknown;
-          id?: unknown;
-          url?: unknown;
+          active?: unknown
+          id?: unknown
+          url?: unknown
         }
       | null
-      | undefined;
-    const shareLinkId = typeof value?.id === "string" ? value.id : null;
+      | undefined
+    const shareLinkId = typeof value?.id === "string" ? value.id : null
 
     return shareLinkId
       ? [
@@ -1059,6 +1078,6 @@ export function getRetailOpsShareLinkSyncMappings(
             url: typeof value?.url === "string" ? value.url : null,
           },
         ]
-      : [];
-  });
+      : []
+  })
 }

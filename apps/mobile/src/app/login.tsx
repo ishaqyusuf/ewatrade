@@ -1,28 +1,67 @@
-import { ActionButton, FormField, MobileScreen } from "@/components/mobile";
-import { Pressable } from "@/components/ui/pressable";
-import { Text } from "@/components/ui/text";
-import { useAuthContext } from "@/hooks/use-auth";
-import { Link, useRouter } from "expo-router";
-import { useState } from "react";
-import { View } from "react-native";
+import { ActionButton, FormField, MobileScreen } from "@/components/mobile"
+import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
+import { useMobileGoogleAuth } from "@/hooks/use-mobile-google-auth"
+import { useTRPC } from "@/trpc/client"
+import { useMutation } from "@tanstack/react-query"
+import { useLocalSearchParams, useRouter } from "expo-router"
+import { useState } from "react"
+import { View } from "react-native"
 
 export default function LoginRoute() {
-  const auth = useAuthContext();
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const normalizedEmail = email.trim().toLowerCase();
+  const router = useRouter()
+  const params = useLocalSearchParams<{ email?: string }>()
+  const trpc = useTRPC()
+  const [email, setEmail] = useState(
+    typeof params.email === "string" ? params.email : "",
+  )
+  const [error, setError] = useState<string | null>(null)
+  const normalizedEmail = email.trim().toLowerCase()
+  const googleAuth = useMobileGoogleAuth({
+    mode: "login",
+    onError: setError,
+  })
+  const requestOtpMutation = useMutation(
+    trpc.auth.requestMobileOwnerOtp.mutationOptions({
+      onError(error) {
+        setError(
+          error.message ||
+            "We could not send a production code. You can continue locally while the service is unavailable.",
+        )
+        router.push({
+          pathname: "/verify-email",
+          params: {
+            email: normalizedEmail,
+            fallback: "local",
+            mode: "login",
+          },
+        })
+      },
+      onSuccess() {
+        setError(null)
+        router.push({
+          pathname: "/verify-email",
+          params: {
+            email: normalizedEmail,
+            mode: "login",
+          },
+        })
+      },
+    }),
+  )
 
   const continueWithEmail = () => {
-    if (!normalizedEmail) return;
+    if (!normalizedEmail) return
 
-    router.push({
-      pathname: "/verify-email",
-      params: {
-        email: normalizedEmail,
-        mode: "login",
-      },
-    });
-  };
+    requestOtpMutation.mutate({
+      email: normalizedEmail,
+      mode: "login",
+    })
+  }
+
+  const continueWithGoogle = () => {
+    void googleAuth.startGoogleAuth()
+  }
 
   return (
     <MobileScreen contentClassName="justify-center gap-8">
@@ -44,10 +83,13 @@ export default function LoginRoute() {
       <View className="gap-3">
         <ActionButton
           className="border border-border bg-card active:bg-accent"
-          onPress={() => auth.signInLocal()}
+          disabled={googleAuth.isPending}
+          onPress={continueWithGoogle}
           variant="outline"
         >
-          Continue with Google
+          {googleAuth.isPending
+            ? "Connecting to Google"
+            : "Continue with Google"}
         </ActionButton>
         <View className="flex-row items-center gap-3">
           <View className="h-px flex-1 bg-border" />
@@ -64,27 +106,31 @@ export default function LoginRoute() {
           keyboardType="email-address"
           label="Email address"
           onChangeText={setEmail}
-          placeholder="owner@business.com"
+          placeholder="Enter your email address"
           textContentType="emailAddress"
           value={email}
         />
         <ActionButton disabled={!normalizedEmail} onPress={continueWithEmail}>
-          Send login code
+          {requestOtpMutation.isPending ? "Sending code" : "Send login code"}
         </ActionButton>
+        {error ? (
+          <Text className="text-sm leading-5 text-destructive">{error}</Text>
+        ) : null}
       </View>
 
-      <View className="items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+      <Pressable
+        className="items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 p-4 active:bg-primary/10"
+        haptic
+        href="/sign-up"
+        transition
+      >
         <Text className="text-base leading-6 text-muted-foreground">
           New to Ewatrade?
         </Text>
-        <Link href="/sign-up" asChild>
-          <Pressable haptic transition>
-            <Text className="text-lg font-bold text-primary">
-              Create your business account
-            </Text>
-          </Pressable>
-        </Link>
-      </View>
+        <Text className="text-lg font-bold text-primary">
+          Create your business account
+        </Text>
+      </Pressable>
     </MobileScreen>
-  );
+  )
 }

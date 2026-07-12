@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
-import { existsSync, readFileSync } from "node:fs"
 import { spawnSync } from "node:child_process"
+import { existsSync, readFileSync } from "node:fs"
 
 const rootDir = new URL("../", import.meta.url).pathname
 const envFile = ".env.production"
@@ -49,7 +49,7 @@ Optional deployment config in ${envFile}:
   VERCEL_API_TARGET=production
   VERCEL_API_SKIP_TEST=false
   VERCEL_API_SKIP_MIGRATIONS=false
-  VERCEL_API_HEALTH_URL=https://api.ewatrade.com
+  VERCEL_API_HEALTH_URL=https://ewatrade.com
   VERCEL_API_FORCE=false
   VERCEL_API_ENV_KEYS=DATABASE_URL,BETTER_AUTH_SECRET,...
 `)
@@ -138,7 +138,9 @@ if (process.argv.includes("--help") || process.argv.includes("-h")) {
 }
 
 if (!existsSync(envFile)) {
-  console.error(`${envFile} is missing. Add it once, then run bun run api:deploy.`)
+  console.error(
+    `${envFile} is missing. Add it once, then run bun run api:deploy.`,
+  )
   process.exit(1)
 }
 
@@ -170,7 +172,9 @@ if (
 }
 
 if (/localhost|127\.0\.0\.1/.test(env.DATABASE_URL)) {
-  console.error(`DATABASE_URL in ${envFile} must be a hosted production database.`)
+  console.error(
+    `DATABASE_URL in ${envFile} must be a hosted production database.`,
+  )
   process.exit(1)
 }
 
@@ -185,7 +189,14 @@ console.log(`Migrate: ${skipMigrations ? "skip" : "deploy"}`)
 
 if (!existsSync(".vercel/project.json")) {
   console.log("No local Vercel link found. Linking or creating project...")
-  run("bunx", ["vercel", "link", "--yes", "--project", project, ...vercelScopeArgs])
+  run("bunx", [
+    "vercel",
+    "link",
+    "--yes",
+    "--project",
+    project,
+    ...vercelScopeArgs,
+  ])
 }
 
 if (!skipMigrations) {
@@ -225,7 +236,9 @@ for (const key of envKeys) {
 }
 
 console.log("Starting deployment...")
-const deploy = run("bunx", [...deployArgs, ...vercelScopeArgs], { capture: true })
+const deploy = run("bunx", [...deployArgs, ...vercelScopeArgs], {
+  capture: true,
+})
 const deploymentUrl = getDeploymentUrl(deploy.stdout)
 
 if (!deploymentUrl) {

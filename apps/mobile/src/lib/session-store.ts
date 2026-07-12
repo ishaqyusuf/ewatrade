@@ -1,41 +1,47 @@
-import * as SecureStore from "expo-secure-store";
+import * as SecureStore from "expo-secure-store"
 
-export const SESSION_KEY = "ewatrade_mobile_session";
+export const SESSION_KEY = "ewatrade_mobile_session"
 
 export type MobileProfile = {
-  businessId?: string;
-  id: string;
-  name: string;
-  email: string;
-  businessName?: string;
-};
+  businessId?: string
+  id: string
+  name: string
+  email: string
+  businessName?: string
+  role?: string
+  status?: string
+}
 
 export type MobileSession = {
-  token: string;
-  profile: MobileProfile;
-};
+  expiresAt?: string
+  token: string
+  profile: MobileProfile
+}
 
 export const getSession = (): MobileSession | null => {
-  const value = SecureStore.getItem(SESSION_KEY);
-  if (!value) return null;
+  const value = SecureStore.getItem(SESSION_KEY)
+  if (!value) return null
 
   try {
-    return JSON.parse(value) as MobileSession;
+    return JSON.parse(value) as MobileSession
   } catch {
-    deleteSession();
-    return null;
+    deleteSession()
+    return null
   }
-};
+}
 
 export const setSession = (session: MobileSession) =>
-  SecureStore.setItem(SESSION_KEY, JSON.stringify(session));
+  SecureStore.setItem(SESSION_KEY, JSON.stringify(session))
 
-export const deleteSession = () => SecureStore.deleteItemAsync(SESSION_KEY);
+export const deleteSession = () => SecureStore.deleteItemAsync(SESSION_KEY)
 
-export const getToken = () => getSession()?.token ?? null;
+export const getToken = () => getSession()?.token ?? null
+
+export const isLocalSessionToken = (token: string | null | undefined) =>
+  token?.startsWith("local-") ?? false
 
 export const setToken = (token: string) => {
-  const existing = getSession();
+  const existing = getSession()
   setSession({
     token,
     profile:
@@ -43,9 +49,9 @@ export const setToken = (token: string) => {
       ({
         id: "local-user",
         name: "Local User",
-        email: "local@ewatrade.test",
+        email: "",
       } satisfies MobileProfile),
-  });
-};
+  })
+}
 
-export const deleteToken = deleteSession;
+export const deleteToken = deleteSession

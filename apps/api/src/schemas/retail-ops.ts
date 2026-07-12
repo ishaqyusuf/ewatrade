@@ -1,5 +1,26 @@
 import { z } from "zod"
 
+const retailOpsEmailSchema = z.string().trim().toLowerCase().pipe(z.email())
+const retailOpsOptionalPhoneSchema = z
+  .string()
+  .trim()
+  .max(40)
+  .transform((value) => value || undefined)
+  .optional()
+const retailOpsProductImageUrlSchema = z
+  .string()
+  .trim()
+  .url()
+  .max(2_000)
+  .refine((value) => {
+    try {
+      return ["http:", "https:"].includes(new URL(value).protocol)
+    } catch {
+      return false
+    }
+  }, "Product image URL must use http or https.")
+  .optional()
+
 export const retailOpsStoreScopeSchema = z.object({
   storeId: z.string().trim().min(1).optional(),
 })
@@ -50,12 +71,12 @@ export const retailOpsCustomerBookSchema = retailOpsStoreScopeSchema.extend({
 })
 
 export const retailOpsCustomerUpsertSchema = retailOpsStoreScopeSchema.extend({
-  email: z.email().optional(),
+  email: retailOpsEmailSchema.optional(),
   externalId: z.string().trim().min(1).max(120).optional(),
   lastSaleExternalId: z.string().trim().min(1).max(120),
   lastSeenAt: z.coerce.date().optional(),
   name: z.string().trim().min(1).max(160),
-  phone: z.string().trim().min(1).max(40).optional(),
+  phone: retailOpsOptionalPhoneSchema,
 })
 
 export const retailOpsRecentSalesSchema = retailOpsStoreScopeSchema.extend({
@@ -137,6 +158,10 @@ export const retailOpsCompleteStaffOnboardingSchema = z.object({
   tenantSlug: z.string().trim().min(1).max(120).optional(),
 })
 
+export const retailOpsResolveStaffInviteTokenSchema = z.object({
+  token: z.string().trim().min(20).max(256),
+})
+
 export const retailOpsStaffStockWalletsSchema =
   retailOpsStoreScopeSchema.extend({
     limit: z.coerce.number().int().min(1).max(100).default(50),
@@ -169,9 +194,9 @@ export const retailOpsCreateSaleSchema = retailOpsStoreScopeSchema.extend({
   cashierSessionId: z.string().trim().min(1).optional(),
   creditDueAt: z.coerce.date().optional(),
   creditTermsNote: z.string().trim().max(500).optional(),
-  customerEmail: z.email().optional(),
+  customerEmail: retailOpsEmailSchema.optional(),
   customerName: z.string().trim().min(1).max(160).optional(),
-  customerPhone: z.string().trim().min(1).max(40).optional(),
+  customerPhone: retailOpsOptionalPhoneSchema,
   externalId: z.string().trim().min(1).max(120).optional(),
   notes: z.string().trim().max(500).optional(),
   paymentMethod: retailOpsPaymentMethodSchema.default("cash"),
@@ -201,6 +226,7 @@ export const retailOpsCreateProductUnitSchema = z.object({
 export const retailOpsCreateProductSchema = retailOpsStoreScopeSchema.extend({
   description: z.string().trim().max(1_000).optional(),
   externalId: z.string().trim().min(1).max(120).optional(),
+  imageUrl: retailOpsProductImageUrlSchema,
   name: z.string().trim().min(1).max(160),
   openingStockQuantity: z.coerce.number().int().min(0).default(0),
   primaryUnitName: z.string().trim().min(1).max(80),
@@ -324,7 +350,7 @@ export const retailOpsReviewCloseoutSessionSchema =
   })
 
 export const retailOpsInviteStaffSchema = retailOpsStoreScopeSchema.extend({
-  email: z.email().transform((email) => email.trim().toLowerCase()),
+  email: retailOpsEmailSchema,
   externalId: z.string().trim().min(1).max(120).optional(),
   name: z.string().trim().min(1).max(120).optional(),
   role: retailOpsStaffRoleSchema.default("cashier"),
@@ -406,19 +432,19 @@ export const retailOpsCreateDeliveryRequestSchema =
   retailOpsStoreScopeSchema.extend({
     dropoffAddress: z.string().trim().min(1).max(240),
     dropoffName: z.string().trim().min(1).max(160),
-    dropoffPhone: z.string().trim().min(1).max(40).optional(),
+    dropoffPhone: retailOpsOptionalPhoneSchema,
     notes: z.string().trim().max(500).optional(),
     orderId: z.string().trim().min(1),
     pickupAddress: z.string().trim().min(1).max(240),
     pickupName: z.string().trim().min(1).max(160),
-    pickupPhone: z.string().trim().min(1).max(40).optional(),
+    pickupPhone: retailOpsOptionalPhoneSchema,
     requestedAt: z.coerce.date().optional(),
   })
 
 export const retailOpsUpdateDeliveryRequestStatusSchema =
   retailOpsStoreScopeSchema.extend({
     assignedDriverName: z.string().trim().min(1).max(120).optional(),
-    assignedDriverPhone: z.string().trim().min(1).max(40).optional(),
+    assignedDriverPhone: retailOpsOptionalPhoneSchema,
     deliveryRequestId: z.string().trim().min(1),
     happenedAt: z.coerce.date().optional(),
     note: z.string().trim().max(500).optional(),
@@ -436,9 +462,9 @@ export const retailOpsSharedProductLookupSchema = z.object({
 
 export const retailOpsCreateSharedProductOrderRequestSchema =
   retailOpsSharedProductLookupSchema.extend({
-    customerEmail: z.email().transform((email) => email.trim().toLowerCase()),
+    customerEmail: retailOpsEmailSchema,
     customerName: z.string().trim().min(1).max(160),
-    customerPhone: z.string().trim().min(1).max(40).optional(),
+    customerPhone: retailOpsOptionalPhoneSchema,
     notes: z.string().trim().max(500).optional(),
     productVariantId: z.string().trim().min(1),
     quantity: z.coerce.number().int().positive().max(100_000),
@@ -576,6 +602,9 @@ export type RetailOpsStaffListStatusFilter = z.infer<
 export type RetailOpsStaffListInput = z.infer<typeof retailOpsStaffListSchema>
 export type RetailOpsCompleteStaffOnboardingInput = z.infer<
   typeof retailOpsCompleteStaffOnboardingSchema
+>
+export type RetailOpsResolveStaffInviteTokenInput = z.infer<
+  typeof retailOpsResolveStaffInviteTokenSchema
 >
 export type RetailOpsCreateSaleInput = z.infer<typeof retailOpsCreateSaleSchema>
 export type RetailOpsRecordCreditPaymentInput = z.infer<

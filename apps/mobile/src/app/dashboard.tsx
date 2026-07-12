@@ -1,4 +1,4 @@
-import { Logout } from "@/components/logout";
+import { Logout } from "@/components/logout"
 import {
   BusinessSwitchSheet,
   CloseoutSheet,
@@ -14,15 +14,15 @@ import {
   SubscriptionPlanSheet,
   SyncStatusSheet,
   UnitConversionSheet,
-} from "@/components/mobile";
-import { Icon, type IconKeys } from "@/components/ui/icon";
-import { useModal } from "@/components/ui/modal";
-import { Pressable } from "@/components/ui/pressable";
-import { Text } from "@/components/ui/text";
-import { quickActions } from "@/data/retail-ops-dashboard-data";
-import { useAuthContext } from "@/hooks/use-auth";
-import { cn } from "@/lib/utils";
-import { useBusinessStore } from "@/store/businessStore";
+} from "@/components/mobile"
+import { Icon, type IconKeys } from "@/components/ui/icon"
+import { useModal } from "@/components/ui/modal"
+import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
+import { quickActions } from "@/data/retail-ops-dashboard-data"
+import { useAuthContext } from "@/hooks/use-auth"
+import { cn } from "@/lib/utils"
+import { useBusinessStore } from "@/store/businessStore"
 import {
   type RetailOpsCloseout,
   type RetailOpsCustomer,
@@ -33,7 +33,7 @@ import {
   type RetailOpsStaffMember,
   type RetailOpsStockMovement,
   useRetailOpsStore,
-} from "@/store/retailOpsStore";
+} from "@/store/retailOpsStore"
 import {
   type RetailOpsPlan,
   type RetailOpsSubscription,
@@ -41,39 +41,42 @@ import {
   getPlan,
   getUsageLimitState,
   useSubscriptionStore,
-} from "@/store/subscriptionStore";
-import { useTRPC } from "@/trpc/client";
-import { formatMoney } from "@ewatrade/utils";
-import { useQuery } from "@tanstack/react-query";
-import { Redirect } from "expo-router";
-import { useEffect, useMemo } from "react";
-import { View } from "react-native";
+} from "@/store/subscriptionStore"
+import { useTRPC } from "@/trpc/client"
+import { formatMoney } from "@ewatrade/utils"
+import { useQuery } from "@tanstack/react-query"
+import { Redirect } from "expo-router"
+import { useEffect, useMemo, useRef } from "react"
+import { View } from "react-native"
 
 type DashboardMetric = {
-  detail: string;
-  label: string;
-  tone: "primary" | "success" | "warning" | "neutral";
-  value: number;
-};
+  detail: string
+  label: string
+  tone: "primary" | "success" | "warning" | "neutral"
+  value: number
+}
 
 type LowStockAlert = {
-  id: string;
-  name: string;
-  remaining: string;
-  status: "Low" | "Out" | "Watch";
-};
+  id: string
+  name: string
+  remaining: string
+  status: "Low" | "Out" | "Watch"
+}
 
-const LOW_STOCK_THRESHOLD = 10;
-const WATCH_STOCK_THRESHOLD = 20;
+const LOW_STOCK_THRESHOLD = 10
+const WATCH_STOCK_THRESHOLD = 20
+const DASHBOARD_VARIANT_PREVIEW_LIMIT = 4
+const DASHBOARD_REP_SESSION_PREVIEW_LIMIT = 3
+const DASHBOARD_LOW_STOCK_PREVIEW_LIMIT = 3
+const DASHBOARD_STAFF_PREVIEW_LIMIT = 3
+const DASHBOARD_SHARE_LINK_PREVIEW_LIMIT = 3
+const DASHBOARD_STOCK_MOVEMENT_PREVIEW_LIMIT = 3
+const DASHBOARD_CUSTOMER_PREVIEW_LIMIT = 3
+const DASHBOARD_RECENT_SALE_PREVIEW_LIMIT = 5
 
-function MetricCard({
-  detail,
-  label,
-  tone,
-  value,
-}: DashboardMetric) {
+function MetricCard({ detail, label, tone, value }: DashboardMetric) {
   const displayValue =
-    label === "Today sales" ? formatMoney(value, "NGN") : String(value);
+    label === "Today sales" ? formatMoney(value, "NGN") : String(value)
 
   return (
     <View className="w-[48%] gap-3 rounded-2xl border border-border bg-card p-4">
@@ -107,19 +110,19 @@ function MetricCard({
         <Text className="text-xs text-muted-foreground">{detail}</Text>
       </View>
     </View>
-  );
+  )
 }
 
 function getStockStatus(stock: number): LowStockAlert["status"] {
-  if (stock <= 0) return "Out";
-  if (stock <= LOW_STOCK_THRESHOLD) return "Low";
-  return "Watch";
+  if (stock <= 0) return "Out"
+  if (stock <= LOW_STOCK_THRESHOLD) return "Low"
+  return "Watch"
 }
 
 function getLowStockAlerts(products: RetailOpsProduct[]) {
   return products.flatMap((product) => {
-    const primaryStock = product.currentStock ?? product.startingStock ?? 0;
-    const rows: LowStockAlert[] = [];
+    const primaryStock = product.currentStock ?? product.startingStock ?? 0
+    const rows: LowStockAlert[] = []
 
     if (primaryStock <= WATCH_STOCK_THRESHOLD) {
       rows.push({
@@ -127,36 +130,31 @@ function getLowStockAlerts(products: RetailOpsProduct[]) {
         name: product.name,
         remaining: `${primaryStock} ${product.unitName}`,
         status: getStockStatus(primaryStock),
-      });
+      })
     }
 
     for (const variant of product.variants) {
-      const variantStock = variant.currentStock ?? variant.startingStock ?? 0;
+      const variantStock = variant.currentStock ?? variant.startingStock ?? 0
 
-      if (variantStock > WATCH_STOCK_THRESHOLD) continue;
+      if (variantStock > WATCH_STOCK_THRESHOLD) continue
 
       rows.push({
         id: `${product.id}-${variant.id}`,
         name: `${product.name} - ${variant.name}`,
         remaining: `${variantStock} ${variant.name}`,
         status: getStockStatus(variantStock),
-      });
+      })
     }
 
-    return rows;
-  });
+    return rows
+  })
 }
 
 type QuickActionProps = (typeof quickActions)[number] & {
-  onPress?: () => void;
-};
+  onPress?: () => void
+}
 
-function QuickAction({
-  description,
-  icon,
-  label,
-  onPress,
-}: QuickActionProps) {
+function QuickAction({ description, icon, label, onPress }: QuickActionProps) {
   return (
     <Pressable
       className="flex-1 gap-2 rounded-2xl border border-border bg-card p-3 active:bg-accent"
@@ -172,134 +170,178 @@ function QuickAction({
         <Text className="text-xs text-muted-foreground">{description}</Text>
       </View>
     </Pressable>
-  );
+  )
 }
 
 type RecentSaleItem = {
-  attendant: string;
-  customer: string;
-  id: string;
-  item: string;
-  method: string;
-  syncStatus?: RetailOpsSale["syncStatus"];
-  total: number;
-};
+  attendant: string
+  customer: string
+  id: string
+  item: string
+  method: string
+  syncStatus?: RetailOpsSale["syncStatus"]
+  total: number
+}
 
 type ProductionDashboardSummary = {
   inventory: {
-    lowStockCount: number;
-    stockUnitCount: number;
-  };
+    lowStockCount: number
+    stockUnitCount: number
+  }
   sales: {
-    orderCount: number;
-    pendingOrderCount: number;
-    totalMinor: number;
-  };
+    orderCount: number
+    pendingOrderCount: number
+    totalMinor: number
+  }
   sessions: {
-    openCount: number;
-  };
-};
+    openCount: number
+  }
+}
 
 type ProductionRecentSale = {
   customer: {
-    name: string | null;
-  };
-  id: string;
+    name: string | null
+  }
+  id: string
   lines: Array<{
-    productName: string;
-    unitName: string;
-  }>;
-  orderNumber: string;
+    productName: string
+    unitName: string
+  }>
+  orderNumber: string
   payment: {
-    method: string | null;
-  };
+    method: string | null
+  }
   retailOps: {
-    externalId: string | null;
-  };
-  totalMinor: number;
-};
+    externalId: string | null
+  }
+  totalMinor: number
+}
+
+type ProductionCustomerBookEntry = {
+  email: string | null
+  id: string
+  lastOrder?: {
+    orderNumber: string
+  } | null
+  lastSeenAt: Date | string
+  name: string
+  orderCount: number
+  phone: string | null
+}
+
+type ProductionStaffMember = {
+  createdAt?: Date | string
+  id: string
+  invitedAt?: Date | string | null
+  role: string
+  status: string
+  user: {
+    displayName?: string | null
+    email: string
+    name?: string | null
+  }
+}
+
+type ProductionSubscriptionSnapshot = {
+  plan: RetailOpsPlan
+  subscription: {
+    currentPeriodEndsAt: string | null
+    planId: RetailOpsSubscription["planId"]
+    status: RetailOpsSubscription["status"]
+    trialEndsAt: string | null
+    updatedAt: string
+  }
+  usage: {
+    businesses: number
+    products: number
+    staff: number
+  }
+}
 
 function formatPaymentMethod(method: RetailOpsSale["paymentMethod"]) {
-  return method === "cash" ? "Cash" : "Transfer";
+  return method === "cash" ? "Cash" : "Transfer"
 }
 
 function formatProductionPaymentMethod(method: string | null) {
-  const normalizedMethod = method?.trim().toLowerCase() ?? "";
+  const normalizedMethod = method?.trim().toLowerCase() ?? ""
 
-  if (normalizedMethod.includes("transfer") || normalizedMethod.includes("bank")) {
-    return "Transfer";
+  if (
+    normalizedMethod.includes("transfer") ||
+    normalizedMethod.includes("bank")
+  ) {
+    return "Transfer"
   }
 
-  if (normalizedMethod.includes("card")) return "Card";
-  if (normalizedMethod.includes("credit")) return "Credit";
+  if (normalizedMethod.includes("card")) return "Card"
+  if (normalizedMethod.includes("credit")) return "Credit"
 
-  return "Cash";
+  return "Cash"
 }
 
 function getOpenCloseoutSales(
   sales: RetailOpsSale[],
   closeouts: RetailOpsCloseout[],
 ) {
-  const latestCloseout = closeouts[0];
+  const latestCloseout = closeouts[0]
 
-  if (!latestCloseout) return sales;
+  if (!latestCloseout) return sales
 
-  const latestCloseoutTime = new Date(latestCloseout.createdAt).getTime();
+  const latestCloseoutTime = new Date(latestCloseout.createdAt).getTime()
 
-  if (Number.isNaN(latestCloseoutTime)) return sales;
+  if (Number.isNaN(latestCloseoutTime)) return sales
 
   return sales.filter((sale) => {
-    const saleTime = new Date(sale.createdAt).getTime();
+    const saleTime = new Date(sale.createdAt).getTime()
 
-    return !Number.isNaN(saleTime) && saleTime > latestCloseoutTime;
-  });
+    return !Number.isNaN(saleTime) && saleTime > latestCloseoutTime
+  })
 }
 
 function getSalePaymentTotals(sales: RetailOpsSale[]) {
   return sales.reduce(
     (totals, sale) => {
       if (sale.paymentMethod === "cash") {
-        totals.cash += sale.total;
+        totals.cash += sale.total
       } else {
-        totals.transfer += sale.total;
+        totals.transfer += sale.total
       }
 
-      totals.gross += sale.total;
+      totals.gross += sale.total
 
-      return totals;
+      return totals
     },
     {
       cash: 0,
       gross: 0,
       transfer: 0,
     },
-  );
+  )
 }
 
 function isToday(value: string) {
-  const date = new Date(value);
+  const date = new Date(value)
 
-  if (Number.isNaN(date.getTime())) return false;
+  if (Number.isNaN(date.getTime())) return false
 
-  const now = new Date();
+  const now = new Date()
 
   return (
     date.getFullYear() === now.getFullYear() &&
     date.getMonth() === now.getMonth() &&
     date.getDate() === now.getDate()
-  );
+  )
 }
 
 function isActiveBusinessRecord(
   record: {
-    businessId?: string;
+    businessId?: string
   },
   activeBusinessId: string | null,
 ) {
   return (
     !activeBusinessId ||
     (record.businessId ?? activeBusinessId) === activeBusinessId
-  );
+  )
 }
 
 function toRecentSaleItem(sale: RetailOpsSale): RecentSaleItem {
@@ -311,11 +353,13 @@ function toRecentSaleItem(sale: RetailOpsSale): RecentSaleItem {
     method: formatPaymentMethod(sale.paymentMethod),
     syncStatus: sale.syncStatus,
     total: sale.total,
-  };
+  }
 }
 
-function toProductionRecentSaleItem(sale: ProductionRecentSale): RecentSaleItem {
-  const firstLine = sale.lines[0];
+function toProductionRecentSaleItem(
+  sale: ProductionRecentSale,
+): RecentSaleItem {
+  const firstLine = sale.lines[0]
 
   return {
     attendant: "Synced sale",
@@ -327,7 +371,88 @@ function toProductionRecentSaleItem(sale: ProductionRecentSale): RecentSaleItem 
     method: formatProductionPaymentMethod(sale.payment.method),
     syncStatus: "synced",
     total: sale.totalMinor,
-  };
+  }
+}
+
+function toIsoDateString(value: Date | string | null | undefined) {
+  if (!value) return new Date().toISOString()
+
+  if (value instanceof Date) return value.toISOString()
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) return new Date().toISOString()
+
+  return date.toISOString()
+}
+
+function toProductionStaffPreview(
+  staff: ProductionStaffMember,
+): RetailOpsStaffMember {
+  const normalizedStatus = staff.status.trim().toLowerCase()
+  const status: RetailOpsStaffMember["status"] =
+    normalizedStatus === "suspended"
+      ? "suspended"
+      : normalizedStatus === "active"
+        ? "active"
+        : "pending"
+  const name =
+    staff.user.displayName?.trim() ||
+    staff.user.name?.trim() ||
+    staff.user.email
+
+  return {
+    email: staff.user.email,
+    id: `production-${staff.id}`,
+    invitedAt: toIsoDateString(staff.invitedAt ?? staff.createdAt),
+    name,
+    remoteId: staff.id,
+    role: "attendant",
+    status,
+    syncStatus: "synced",
+  }
+}
+
+function toProductionCustomerPreview(
+  customer: ProductionCustomerBookEntry,
+): RetailOpsCustomer {
+  return {
+    id: `production-${customer.id}`,
+    lastSeenAt: toIsoDateString(customer.lastSeenAt),
+    name: customer.name,
+    remoteId: customer.id,
+    saleCount: customer.orderCount,
+    syncStatus: "synced",
+  }
+}
+
+function getStaffPreviewKey(staff: RetailOpsStaffMember) {
+  return staff.remoteId ?? staff.email.trim().toLowerCase()
+}
+
+function getCustomerPreviewKey(customer: RetailOpsCustomer) {
+  return customer.remoteId ?? customer.name.trim().toLowerCase()
+}
+
+function isAttendantRole(role: string | undefined) {
+  const normalizedRole = role?.trim().toUpperCase()
+
+  return normalizedRole === "CASHIER" || normalizedRole === "OPERATOR"
+}
+
+function isInvitedStaffProfile(
+  profile: {
+    role?: string
+    status?: string
+  } | null,
+) {
+  const role = profile?.role?.trim().toUpperCase()
+  const status = profile?.status?.trim().toUpperCase()
+
+  return (
+    status === "INVITED" &&
+    (role === "CASHIER" || role === "MANAGER" || role === "OPERATOR")
+  )
 }
 
 function RecentSaleCard({ sale }: { sale: RecentSaleItem }) {
@@ -356,17 +481,15 @@ function RecentSaleCard({ sale }: { sale: RecentSaleItem }) {
               </Text>
             </View>
           ) : null}
-          <Text className="text-xs font-bold text-primary">
-            {sale.method}
-          </Text>
+          <Text className="text-xs font-bold text-primary">{sale.method}</Text>
         </View>
       </View>
     </View>
-  );
+  )
 }
 
 function StaffStatusBadge({ staff }: { staff: RetailOpsStaffMember }) {
-  const isPending = staff.status === "pending";
+  const isPending = staff.status === "pending"
 
   return (
     <View
@@ -384,7 +507,7 @@ function StaffStatusBadge({ staff }: { staff: RetailOpsStaffMember }) {
         {isPending ? "Invite pending" : "Active"}
       </Text>
     </View>
-  );
+  )
 }
 
 function StaffCard({ staff }: { staff: RetailOpsStaffMember }) {
@@ -406,7 +529,7 @@ function StaffCard({ staff }: { staff: RetailOpsStaffMember }) {
         ) : null}
       </View>
     </View>
-  );
+  )
 }
 
 function ProductLinkCard({
@@ -414,11 +537,11 @@ function ProductLinkCard({
   onDeactivate,
   onManage,
 }: {
-  link: RetailOpsShareLink;
-  onDeactivate: () => void;
-  onManage: () => void;
+  link: RetailOpsShareLink
+  onDeactivate: () => void
+  onManage: () => void
 }) {
-  const isActive = link.status === "active";
+  const isActive = link.status === "active"
 
   return (
     <View className="gap-3 rounded-2xl border border-border bg-card p-4">
@@ -483,31 +606,29 @@ function ProductLinkCard({
         </View>
       </View>
     </View>
-  );
+  )
 }
 
 function formatCustomerLastSeen(value: string | undefined) {
-  if (!value) return "Recent";
+  if (!value) return "Recent"
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Recent";
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "Recent"
 
   return date.toLocaleDateString(undefined, {
     day: "numeric",
     month: "short",
-  });
+  })
 }
 
 function CustomerCard({ customer }: { customer: RetailOpsCustomer }) {
-  const saleCount = customer.saleCount ?? 1;
+  const saleCount = customer.saleCount ?? 1
 
   return (
     <View className="gap-3 rounded-2xl border border-border bg-card p-4">
       <View className="flex-row items-start justify-between gap-3">
         <View className="flex-1 gap-1">
-          <Text className="font-semibold text-foreground">
-            {customer.name}
-          </Text>
+          <Text className="font-semibold text-foreground">{customer.name}</Text>
           <Text className="text-sm text-muted-foreground">
             Last sale {formatCustomerLastSeen(customer.lastSeenAt)}
           </Text>
@@ -522,24 +643,24 @@ function CustomerCard({ customer }: { customer: RetailOpsCustomer }) {
         <Text className="text-xs font-bold text-amber-700">Pending sync</Text>
       ) : null}
     </View>
-  );
+  )
 }
 
 function stockMovementLabel(type: RetailOpsStockMovement["type"]) {
-  if (type === "conversion_in") return "Conversion in";
-  if (type === "conversion_out") return "Conversion out";
-  if (type === "opening_stock") return "Opening stock";
-  if (type === "stock_adjustment") return "Stock adjustment";
-  if (type === "stock_intake") return "Stock intake";
-  return "Sale";
+  if (type === "conversion_in") return "Conversion in"
+  if (type === "conversion_out") return "Conversion out"
+  if (type === "opening_stock") return "Opening stock"
+  if (type === "stock_adjustment") return "Stock adjustment"
+  if (type === "stock_intake") return "Stock intake"
+  return "Sale"
 }
 
 function StockMovementCard({
   movement,
 }: {
-  movement: RetailOpsStockMovement;
+  movement: RetailOpsStockMovement
 }) {
-  const isIncrease = movement.quantity >= 0;
+  const isIncrease = movement.quantity >= 0
 
   return (
     <View className="flex-row items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
@@ -562,35 +683,33 @@ function StockMovementCard({
           {movement.quantity} {movement.unitName}
         </Text>
         {movement.syncStatus === "pending" ? (
-          <Text className="text-xs font-bold text-amber-700">
-            Pending sync
-          </Text>
+          <Text className="text-xs font-bold text-amber-700">Pending sync</Text>
         ) : null}
       </View>
     </View>
-  );
+  )
 }
 
 function closeoutStatusLabel(status: RetailOpsCloseout["approvalStatus"]) {
-  if (status === "approved") return "Approved";
-  if (status === "flagged") return "Flagged";
-  return "Pending review";
+  if (status === "approved") return "Approved"
+  if (status === "flagged") return "Flagged"
+  return "Pending review"
 }
 
 function formatSessionTime(value: string) {
-  const date = new Date(value);
+  const date = new Date(value)
 
-  if (Number.isNaN(date.getTime())) return "Today";
+  if (Number.isNaN(date.getTime())) return "Today"
 
   return date.toLocaleTimeString(undefined, {
     hour: "numeric",
     minute: "2-digit",
-  });
+  })
 }
 
 function getSessionVarianceCount(session: RetailOpsRepSession) {
   return session.openingInventoryLines.filter((line) => line.variance !== 0)
-    .length;
+    .length
 }
 
 function CloseoutSummaryCard({
@@ -599,14 +718,14 @@ function CloseoutSummaryCard({
   openSalesCount,
   paymentTotals,
 }: {
-  latestCloseout: RetailOpsCloseout | null;
-  onPress: () => void;
-  openSalesCount: number;
+  latestCloseout: RetailOpsCloseout | null
+  onPress: () => void
+  openSalesCount: number
   paymentTotals: {
-    cash: number;
-    gross: number;
-    transfer: number;
-  };
+    cash: number
+    gross: number
+    transfer: number
+  }
 }) {
   return (
     <View className="gap-4 rounded-2xl border border-border bg-card p-4">
@@ -677,7 +796,7 @@ function CloseoutSummaryCard({
         </View>
       ) : null}
     </View>
-  );
+  )
 }
 
 function RepSessionStatusCard({
@@ -687,26 +806,30 @@ function RepSessionStatusCard({
   onCreateSale,
   openSessions,
 }: {
-  currentSession: RetailOpsRepSession | null;
-  hasInventory: boolean;
-  onClockIn: () => void;
-  onCreateSale: () => void;
-  openSessions: RetailOpsRepSession[];
+  currentSession: RetailOpsRepSession | null
+  hasInventory: boolean
+  onClockIn: () => void
+  onCreateSale: () => void
+  openSessions: RetailOpsRepSession[]
 }) {
   const totalVarianceCount = openSessions.reduce(
     (total, session) => total + getSessionVarianceCount(session),
     0,
-  );
+  )
+  const visibleOpenSessions = openSessions.slice(
+    0,
+    DASHBOARD_REP_SESSION_PREVIEW_LIMIT,
+  )
   const title = currentSession
     ? "Sales day open"
     : hasInventory
       ? "Opening stock required"
-      : "Inventory required";
+      : "Inventory required"
   const description = currentSession
     ? `${currentSession.attendantName} is clocked in and can record sales.`
     : hasInventory
       ? "Clock in and confirm opening inventory before the first sale."
-      : "Add an item before reps can start the sales day.";
+      : "Add an item before reps can start the sales day."
 
   return (
     <View className="gap-4 rounded-2xl border border-border bg-card p-4">
@@ -760,8 +883,8 @@ function RepSessionStatusCard({
 
       {openSessions.length > 0 ? (
         <View className="gap-2">
-          {openSessions.slice(0, 3).map((session) => {
-            const varianceCount = getSessionVarianceCount(session);
+          {visibleOpenSessions.map((session) => {
+            const varianceCount = getSessionVarianceCount(session)
 
             return (
               <View
@@ -779,9 +902,7 @@ function RepSessionStatusCard({
                 <Text
                   className={cn(
                     "text-xs font-bold",
-                    varianceCount > 0
-                      ? "text-destructive"
-                      : "text-emerald-700",
+                    varianceCount > 0 ? "text-destructive" : "text-emerald-700",
                   )}
                 >
                   {varianceCount > 0
@@ -791,8 +912,14 @@ function RepSessionStatusCard({
                     : "Balanced"}
                 </Text>
               </View>
-            );
+            )
           })}
+          {openSessions.length > visibleOpenSessions.length ? (
+            <Text className="text-xs font-semibold text-muted-foreground">
+              Showing first {visibleOpenSessions.length} of{" "}
+              {openSessions.length} open sessions.
+            </Text>
+          ) : null}
         </View>
       ) : null}
 
@@ -824,7 +951,7 @@ function RepSessionStatusCard({
         </Text>
       </Pressable>
     </View>
-  );
+  )
 }
 
 function PlanUsageStat({
@@ -832,11 +959,11 @@ function PlanUsageStat({
   limit,
   used,
 }: {
-  label: string;
-  limit: number;
-  used: number;
+  label: string
+  limit: number
+  used: number
 }) {
-  const limitState = getUsageLimitState(used, limit);
+  const limitState = getUsageLimitState(used, limit)
 
   return (
     <View className="flex-1 rounded-xl bg-muted p-3">
@@ -852,14 +979,14 @@ function PlanUsageStat({
         {limitState.label}
       </Text>
     </View>
-  );
+  )
 }
 
 function subscriptionStatusLabel(status: RetailOpsSubscription["status"]) {
-  if (status === "trialing") return "Trial";
-  if (status === "past_due") return "Past due";
-  if (status === "cancelled") return "Cancelled";
-  return "Active";
+  if (status === "trialing") return "Trial"
+  if (status === "past_due") return "Past due"
+  if (status === "cancelled") return "Cancelled"
+  return "Active"
 }
 
 function PlanStatusCard({
@@ -868,14 +995,14 @@ function PlanStatusCard({
   subscription,
   usage,
 }: {
-  onPress: () => void;
-  plan: RetailOpsPlan;
-  subscription: RetailOpsSubscription;
+  onPress: () => void
+  plan: RetailOpsPlan
+  subscription: RetailOpsSubscription
   usage: {
-    businesses: number;
-    products: number;
-    staff: number;
-  };
+    businesses: number
+    products: number
+    staff: number
+  }
 }) {
   return (
     <View className="gap-4 rounded-2xl border border-border bg-card p-4">
@@ -928,7 +1055,7 @@ function PlanStatusCard({
         used={usage.businesses}
       />
     </View>
-  );
+  )
 }
 
 function ReportsSummaryCard({
@@ -939,12 +1066,12 @@ function ReportsSummaryCard({
   todayTotal,
   varianceCount,
 }: {
-  onPress: () => void;
-  pendingSyncCount: number;
-  stockUnitCount: number;
-  todaySalesCount: number;
-  todayTotal: number;
-  varianceCount: number;
+  onPress: () => void
+  pendingSyncCount: number
+  stockUnitCount: number
+  todaySalesCount: number
+  todayTotal: number
+  varianceCount: number
 }) {
   return (
     <View className="gap-4 rounded-2xl border border-border bg-card p-4">
@@ -1019,10 +1146,40 @@ function ReportsSummaryCard({
         </View>
       </View>
     </View>
-  );
+  )
 }
 
-function SetupPrompt({ onAddItem }: { onAddItem: () => void }) {
+function SetupPrompt({
+  isAttendant,
+  onAddItem,
+}: {
+  isAttendant?: boolean
+  onAddItem: () => void
+}) {
+  if (isAttendant) {
+    return (
+      <View className="gap-4 rounded-2xl border border-border bg-card p-4">
+        <View className="flex-row gap-3">
+          <View className="h-11 w-11 items-center justify-center rounded-2xl bg-muted">
+            <Icon
+              className="size-base text-muted-foreground"
+              name="Warehouse"
+            />
+          </View>
+          <View className="flex-1 gap-1">
+            <Text className="text-base font-bold text-foreground">
+              Inventory not assigned yet
+            </Text>
+            <Text className="text-sm leading-5 text-muted-foreground">
+              Products and stock will appear here after an owner or manager sets
+              up inventory for this business.
+            </Text>
+          </View>
+        </View>
+      </View>
+    )
+  }
+
   return (
     <View className="gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
       <View className="flex-row gap-3">
@@ -1045,26 +1202,30 @@ function SetupPrompt({ onAddItem }: { onAddItem: () => void }) {
         onPress={onAddItem}
         transition
       >
-        <Text className="font-semibold text-primary-foreground">
-          Add item
-        </Text>
+        <Text className="font-semibold text-primary-foreground">Add item</Text>
       </Pressable>
     </View>
-  );
+  )
 }
 
 function InventorySetupSummary({
+  canManageInventory,
   onConvert,
   onRestock,
   onShare,
   product,
 }: {
-  onConvert: () => void;
-  onRestock: () => void;
-  onShare: () => void;
-  product: RetailOpsProduct;
+  canManageInventory?: boolean
+  onConvert: () => void
+  onRestock: () => void
+  onShare: () => void
+  product: RetailOpsProduct
 }) {
-  const currentStock = product.currentStock ?? product.startingStock;
+  const currentStock = product.currentStock ?? product.startingStock
+  const visibleVariants = product.variants.slice(
+    0,
+    DASHBOARD_VARIANT_PREVIEW_LIMIT,
+  )
 
   return (
     <View className="gap-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
@@ -1097,9 +1258,9 @@ function InventorySetupSummary({
             {formatMoney(product.price, "NGN")}
           </Text>
         </View>
-        {product.variants.length > 0 ? (
+        {visibleVariants.length > 0 ? (
           <View className="gap-2">
-            {product.variants.map((variant) => (
+            {visibleVariants.map((variant) => (
               <View
                 className="flex-row items-center justify-between rounded-xl bg-muted px-3 py-2"
                 key={variant.id}
@@ -1118,32 +1279,41 @@ function InventorySetupSummary({
                 </Text>
               </View>
             ))}
+            {product.variants.length > visibleVariants.length ? (
+              <Text className="text-xs font-medium text-muted-foreground">
+                Showing first {visibleVariants.length} of{" "}
+                {product.variants.length} variants. Open Share or Create sale to
+                browse the full list.
+              </Text>
+            ) : null}
           </View>
         ) : null}
         <View className="self-start rounded-full bg-amber-500/10 px-3 py-1">
-          <Text className="text-xs font-bold text-amber-700">
-            Pending sync
-          </Text>
+          <Text className="text-xs font-bold text-amber-700">Pending sync</Text>
         </View>
         <View className="flex-row gap-2">
-          <Pressable
-            className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-3 active:bg-primary/20"
-            haptic
-            onPress={onRestock}
-            transition
-          >
-            <Icon className="size-sm text-primary" name="Truck" />
-            <Text className="text-sm font-bold text-primary">Restock</Text>
-          </Pressable>
-          <Pressable
-            className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-3 active:bg-primary/20"
-            haptic
-            onPress={onConvert}
-            transition
-          >
-            <Icon className="size-sm text-primary" name="Wrench" />
-            <Text className="text-sm font-bold text-primary">Convert</Text>
-          </Pressable>
+          {canManageInventory ? (
+            <>
+              <Pressable
+                className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-3 active:bg-primary/20"
+                haptic
+                onPress={onRestock}
+                transition
+              >
+                <Icon className="size-sm text-primary" name="Truck" />
+                <Text className="text-sm font-bold text-primary">Restock</Text>
+              </Pressable>
+              <Pressable
+                className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-3 active:bg-primary/20"
+                haptic
+                onPress={onConvert}
+                transition
+              >
+                <Icon className="size-sm text-primary" name="Wrench" />
+                <Text className="text-sm font-bold text-primary">Convert</Text>
+              </Pressable>
+            </>
+          ) : null}
           <Pressable
             className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-3 active:bg-primary/20"
             haptic
@@ -1156,97 +1326,134 @@ function InventorySetupSummary({
         </View>
       </View>
     </View>
-  );
+  )
 }
 
 export default function DashboardRoute() {
-  const trpc = useTRPC();
-  const { isAuthenticated, profile } = useAuthContext();
-  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId);
-  const businesses = useBusinessStore((state) => state.businesses);
-  const ensureBusiness = useBusinessStore((state) => state.ensureBusiness);
-  const setActiveBusiness = useBusinessStore((state) => state.setActiveBusiness);
+  const trpc = useTRPC()
+  const { isAuthenticated, profile } = useAuthContext()
+  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
+  const businesses = useBusinessStore((state) => state.businesses)
+  const ensureBusiness = useBusinessStore((state) => state.ensureBusiness)
+  const setActiveBusiness = useBusinessStore((state) => state.setActiveBusiness)
   const activeBusiness = businesses.find(
     (business) => business.id === activeBusinessId,
-  );
-  const businessModal = useModal();
-  const closeoutModal = useModal();
-  const conversionModal = useModal();
-  const customerModal = useModal();
-  const reportsModal = useModal();
-  const sessionModal = useModal();
-  const saleModal = useModal();
-  const shareModal = useModal();
-  const setupModal = useModal();
-  const staffModal = useModal();
-  const stockModal = useModal();
-  const subscriptionModal = useModal();
-  const syncModal = useModal();
-  const attendantName = profile?.name ?? "Store Owner";
-  const subscriptions = useSubscriptionStore((state) => state.subscriptions);
+  )
+  const businessModal = useModal()
+  const closeoutModal = useModal()
+  const conversionModal = useModal()
+  const customerModal = useModal()
+  const reportsModal = useModal()
+  const sessionModal = useModal()
+  const saleModal = useModal()
+  const shareModal = useModal()
+  const setupModal = useModal()
+  const staffModal = useModal()
+  const stockModal = useModal()
+  const subscriptionModal = useModal()
+  const syncModal = useModal()
+  const setupPromptedBusinessRef = useRef<string | null>(null)
+  const attendantName = profile?.name ?? "Store Owner"
+  const isAttendantDashboard = isAttendantRole(profile?.role)
+  const canManageInventory = !isAttendantDashboard
+  const visibleQuickActions = useMemo(
+    () =>
+      quickActions.filter(
+        (action) => !isAttendantDashboard || action.label === "New sale",
+      ),
+    [isAttendantDashboard],
+  )
+  const subscriptions = useSubscriptionStore((state) => state.subscriptions)
   const deactivateShareLink = useRetailOpsStore(
     (state) => state.deactivateShareLink,
-  );
-  const closeouts = useRetailOpsStore((state) =>
-    state.closeouts.filter((closeout) =>
-      isActiveBusinessRecord(closeout, activeBusinessId),
-    ),
-  );
-  const customers = useRetailOpsStore((state) =>
-    state.customers.filter((customer) =>
-      isActiveBusinessRecord(customer, activeBusinessId),
-    ),
-  );
-  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode);
-  const products = useRetailOpsStore((state) =>
-    state.products.filter((product) =>
-      isActiveBusinessRecord(product, activeBusinessId),
-    ),
-  );
-  const repSessions = useRetailOpsStore((state) =>
-    state.repSessions.filter((session) =>
-      isActiveBusinessRecord(session, activeBusinessId),
-    ),
-  );
-  const sales = useRetailOpsStore((state) =>
-    state.sales.filter((sale) => isActiveBusinessRecord(sale, activeBusinessId)),
-  );
-  const shareLinks = useRetailOpsStore((state) =>
-    state.shareLinks.filter((link) =>
-      isActiveBusinessRecord(link, activeBusinessId),
-    ),
-  );
-  const staff = useRetailOpsStore((state) =>
-    state.staff.filter((staffMember) =>
-      isActiveBusinessRecord(staffMember, activeBusinessId),
-    ),
-  );
-  const stockMovements = useRetailOpsStore((state) =>
-    state.stockMovements.filter((movement) =>
-      isActiveBusinessRecord(movement, activeBusinessId),
-    ),
-  );
-  const syncEvents = useRetailOpsStore((state) =>
-    state.syncEvents.filter((event) =>
-      isActiveBusinessRecord(event, activeBusinessId),
-    ),
-  );
+  )
+  const allCloseouts = useRetailOpsStore((state) => state.closeouts)
+  const allCustomers = useRetailOpsStore((state) => state.customers)
+  const allProducts = useRetailOpsStore((state) => state.products)
+  const allRepSessions = useRetailOpsStore((state) => state.repSessions)
+  const allSales = useRetailOpsStore((state) => state.sales)
+  const allShareLinks = useRetailOpsStore((state) => state.shareLinks)
+  const allStaff = useRetailOpsStore((state) => state.staff)
+  const allStockMovements = useRetailOpsStore((state) => state.stockMovements)
+  const allSyncEvents = useRetailOpsStore((state) => state.syncEvents)
+  const closeouts = useMemo(
+    () =>
+      allCloseouts.filter((closeout) =>
+        isActiveBusinessRecord(closeout, activeBusinessId),
+      ),
+    [activeBusinessId, allCloseouts],
+  )
+  const customers = useMemo(
+    () =>
+      allCustomers.filter((customer) =>
+        isActiveBusinessRecord(customer, activeBusinessId),
+      ),
+    [activeBusinessId, allCustomers],
+  )
+  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
+  const products = useMemo(
+    () =>
+      allProducts.filter((product) =>
+        isActiveBusinessRecord(product, activeBusinessId),
+      ),
+    [activeBusinessId, allProducts],
+  )
+  const repSessions = useMemo(
+    () =>
+      allRepSessions.filter((session) =>
+        isActiveBusinessRecord(session, activeBusinessId),
+      ),
+    [activeBusinessId, allRepSessions],
+  )
+  const sales = useMemo(
+    () =>
+      allSales.filter((sale) => isActiveBusinessRecord(sale, activeBusinessId)),
+    [activeBusinessId, allSales],
+  )
+  const shareLinks = useMemo(
+    () =>
+      allShareLinks.filter((link) =>
+        isActiveBusinessRecord(link, activeBusinessId),
+      ),
+    [activeBusinessId, allShareLinks],
+  )
+  const staff = useMemo(
+    () =>
+      allStaff.filter((staffMember) =>
+        isActiveBusinessRecord(staffMember, activeBusinessId),
+      ),
+    [activeBusinessId, allStaff],
+  )
+  const stockMovements = useMemo(
+    () =>
+      allStockMovements.filter((movement) =>
+        isActiveBusinessRecord(movement, activeBusinessId),
+      ),
+    [activeBusinessId, allStockMovements],
+  )
+  const syncEvents = useMemo(
+    () =>
+      allSyncEvents.filter((event) =>
+        isActiveBusinessRecord(event, activeBusinessId),
+      ),
+    [activeBusinessId, allSyncEvents],
+  )
   const dashboardRange = useMemo(() => {
-    const from = new Date();
-    from.setHours(0, 0, 0, 0);
+    const from = new Date()
+    from.setHours(0, 0, 0, 0)
 
     return {
       from,
       to: new Date(),
-    };
-  }, []);
-  const canReadProductionDashboard = isAuthenticated && !isOfflineMode;
+    }
+  }, [])
+  const canReadProductionDashboard = isAuthenticated && !isOfflineMode
   const dashboardSummaryQuery = useQuery(
     trpc.retailOps.summary.queryOptions(dashboardRange, {
       enabled: canReadProductionDashboard,
       retry: false,
     }),
-  );
+  )
   const productionRecentSalesQuery = useQuery(
     trpc.retailOps.recentSales.queryOptions(
       {
@@ -1258,43 +1465,116 @@ export default function DashboardRoute() {
         retry: false,
       },
     ),
-  );
+  )
+  const productionSubscriptionQuery = useQuery(
+    trpc.retailOps.subscription.queryOptions(undefined, {
+      enabled: canReadProductionDashboard,
+      retry: false,
+    }),
+  )
+  const productionStaffQuery = useQuery(
+    trpc.retailOps.staff.queryOptions(
+      {
+        limit: 3,
+        role: "cashier",
+        status: "all",
+      },
+      {
+        enabled: canReadProductionDashboard,
+        retry: false,
+      },
+    ),
+  )
+  const productionCustomersQuery = useQuery(
+    trpc.retailOps.customerBook.queryOptions(
+      {
+        limit: 3,
+      },
+      {
+        enabled: canReadProductionDashboard,
+        retry: false,
+      },
+    ),
+  )
   const productionSummary = dashboardSummaryQuery.data as
     | ProductionDashboardSummary
-    | undefined;
-  const productionRecentSales =
-    (productionRecentSalesQuery.data ?? []) as ProductionRecentSale[];
-  const firstProduct = products[0] ?? null;
-  const subscription = getBusinessSubscription(
+    | undefined
+  const productionRecentSales = (productionRecentSalesQuery.data ??
+    []) as ProductionRecentSale[]
+  const productionSubscriptionSnapshot = productionSubscriptionQuery.data as
+    | ProductionSubscriptionSnapshot
+    | undefined
+  const productionStaff = (productionStaffQuery.data ??
+    []) as ProductionStaffMember[]
+  const productionCustomers = (productionCustomersQuery.data ??
+    []) as ProductionCustomerBookEntry[]
+  const firstProduct = products[0] ?? null
+  const productionInventoryKnown =
+    canReadProductionDashboard && dashboardSummaryQuery.isSuccess
+  const shouldPromptFirstProduct =
+    isAuthenticated &&
+    !!activeBusinessId &&
+    !firstProduct &&
+    ((productionInventoryKnown &&
+      (productionSummary?.inventory.stockUnitCount ?? 0) === 0) ||
+      !canReadProductionDashboard ||
+      dashboardSummaryQuery.isError)
+  const localSubscription = getBusinessSubscription(
     subscriptions,
     activeBusinessId,
-  );
-  const subscriptionPlan = getPlan(subscription.planId);
-  const subscriptionUsage = {
-    businesses: businesses.length,
-    products: products.length,
-    staff: staff.length,
-  };
+  )
+  const useProductionSubscriptionSnapshot =
+    canReadProductionDashboard &&
+    !!productionSubscriptionSnapshot &&
+    !productionSubscriptionQuery.isError
+  const subscription: RetailOpsSubscription = useProductionSubscriptionSnapshot
+    ? {
+        businessId: activeBusinessId ?? "production-business",
+        currentPeriodEndsAt:
+          productionSubscriptionSnapshot.subscription.currentPeriodEndsAt ??
+          undefined,
+        planId: productionSubscriptionSnapshot.subscription.planId,
+        status: productionSubscriptionSnapshot.subscription.status,
+        trialEndsAt:
+          productionSubscriptionSnapshot.subscription.trialEndsAt ?? undefined,
+        updatedAt: productionSubscriptionSnapshot.subscription.updatedAt,
+      }
+    : localSubscription
+  const subscriptionPlan = useProductionSubscriptionSnapshot
+    ? productionSubscriptionSnapshot.plan
+    : getPlan(subscription.planId)
+  const subscriptionUsage = useProductionSubscriptionSnapshot
+    ? {
+        businesses: productionSubscriptionSnapshot.usage.businesses,
+        products: productionSubscriptionSnapshot.usage.products,
+        staff: productionSubscriptionSnapshot.usage.staff,
+      }
+    : {
+        businesses: businesses.length,
+        products: products.length,
+        staff: staff.length,
+      }
   const openRepSessions = repSessions.filter(
     (session) => session.status === "open",
-  );
+  )
   const currentRepSession =
-    openRepSessions.find((session) => session.attendantName === attendantName) ??
-    null;
-  const lastSyncSummary = useRetailOpsStore((state) => state.lastSyncSummary);
+    openRepSessions.find(
+      (session) => session.attendantName === attendantName,
+    ) ?? null
+  const lastSyncSummary = useRetailOpsStore((state) => state.lastSyncSummary)
   const pendingSyncEvents = syncEvents.filter(
     (event) => event.status === "pending",
-  );
+  )
   const failedSyncEvents = syncEvents.filter(
     (event) => event.status === "failed",
-  );
+  )
   const conflictSyncEvents = syncEvents.filter(
     (event) => event.status === "conflict",
-  );
+  )
   const openSyncEventCount =
     pendingSyncEvents.length +
     failedSyncEvents.length +
-    conflictSyncEvents.length;
+    conflictSyncEvents.length
   const syncBannerClassName = isOfflineMode
     ? "border-amber-500/30 bg-amber-500/10"
     : conflictSyncEvents.length > 0
@@ -1303,7 +1583,7 @@ export default function DashboardRoute() {
         ? "border-destructive/30 bg-destructive/10"
         : pendingSyncEvents.length > 0
           ? "border-primary/30 bg-primary/10"
-          : "border-emerald-500/30 bg-emerald-500/10";
+          : "border-emerald-500/30 bg-emerald-500/10"
   const syncBannerIconClassName = isOfflineMode
     ? "text-amber-600"
     : conflictSyncEvents.length > 0
@@ -1312,15 +1592,15 @@ export default function DashboardRoute() {
         ? "text-destructive"
         : pendingSyncEvents.length > 0
           ? "text-primary"
-          : "text-emerald-600";
+          : "text-emerald-600"
   const syncBannerIconName =
     isOfflineMode || conflictSyncEvents.length > 0
       ? "TriangleAlert"
       : failedSyncEvents.length > 0
         ? "TriangleAlert"
-        : "CircleCheck";
+        : "CircleCheck"
   const syncBannerText = isOfflineMode
-    ? "You are currently offline. Changes will sync when you reconnect."
+    ? "Offline mode. Changes will be applied when next you connect."
     : conflictSyncEvents.length > 0
       ? `${conflictSyncEvents.length} sync conflict${
           conflictSyncEvents.length === 1 ? "" : "s"
@@ -1339,50 +1619,54 @@ export default function DashboardRoute() {
               )}. Applied ${lastSyncSummary.appliedCount} of ${
                 lastSyncSummary.totalCount
               }.`
-          : "Online. Local changes are synced.";
-  const todaySales = sales.filter((sale) => isToday(sale.createdAt));
-  const todayPaymentTotals = getSalePaymentTotals(todaySales);
+            : "Online. Local changes are synced."
+  const todaySales = sales.filter((sale) => isToday(sale.createdAt))
+  const todayPaymentTotals = getSalePaymentTotals(todaySales)
   const productionDashboardReady =
     canReadProductionDashboard &&
     !!productionSummary &&
-    !dashboardSummaryQuery.isError;
+    !dashboardSummaryQuery.isError
   const localPendingOrderCount = shareLinks.reduce(
     (total, link) => total + link.orders,
     0,
-  );
-  const lowStockAlerts = getLowStockAlerts(products);
+  )
+  const lowStockAlerts = getLowStockAlerts(products)
   const localStockUnitCount = products.reduce(
     (total, product) => total + 1 + product.variants.length,
     0,
-  );
+  )
+  const visibleLowStockAlerts = lowStockAlerts.slice(
+    0,
+    DASHBOARD_LOW_STOCK_PREVIEW_LIMIT,
+  )
   const dashboardTodayTotal = productionDashboardReady
     ? productionSummary.sales.totalMinor
-    : todayPaymentTotals.gross;
+    : todayPaymentTotals.gross
   const dashboardTodaySalesCount = productionDashboardReady
     ? productionSummary.sales.orderCount
-    : todaySales.length;
+    : todaySales.length
   const pendingOrderCount = productionDashboardReady
     ? productionSummary.sales.pendingOrderCount
-    : localPendingOrderCount;
+    : localPendingOrderCount
   const lowStockCount = productionDashboardReady
     ? productionSummary.inventory.lowStockCount
-    : lowStockAlerts.length;
+    : lowStockAlerts.length
   const activeRepCount = productionDashboardReady
     ? productionSummary.sessions.openCount
-    : openRepSessions.length;
+    : openRepSessions.length
   const stockUnitCount = productionDashboardReady
     ? productionSummary.inventory.stockUnitCount
-    : localStockUnitCount;
-  const latestCloseout = closeouts[0] ?? null;
+    : localStockUnitCount
+  const latestCloseout = closeouts[0] ?? null
   const closeoutVarianceCount = latestCloseout
     ? [
         latestCloseout.cashVariance,
         latestCloseout.transferVariance,
         ...latestCloseout.inventoryLines.map((line) => line.variance),
       ].filter((variance) => variance !== 0).length
-    : 0;
-  const openCloseoutSales = getOpenCloseoutSales(sales, closeouts);
-  const closeoutPaymentTotals = getSalePaymentTotals(openCloseoutSales);
+    : 0
+  const openCloseoutSales = getOpenCloseoutSales(sales, closeouts)
+  const closeoutPaymentTotals = getSalePaymentTotals(openCloseoutSales)
   const metrics: DashboardMetric[] = [
     {
       detail:
@@ -1404,9 +1688,7 @@ export default function DashboardRoute() {
     },
     {
       detail:
-        lowStockCount > 0
-          ? "Needs attention soon"
-          : "Stock levels look okay",
+        lowStockCount > 0 ? "Needs attention soon" : "Stock levels look okay",
       label: "Low stock",
       tone: "warning",
       value: lowStockCount,
@@ -1420,89 +1702,186 @@ export default function DashboardRoute() {
       tone: "neutral",
       value: activeRepCount,
     },
-  ];
+  ]
   const productionRecentSaleItems = productionRecentSales.map(
     toProductionRecentSaleItem,
-  );
+  )
   const productionRecentIds = new Set(
     productionRecentSales.map((sale) => sale.id),
-  );
+  )
   const productionRecentExternalIds = new Set(
     productionRecentSales
       .map((sale) => sale.retailOps.externalId)
       .filter((externalId): externalId is string => !!externalId),
-  );
+  )
   const localRecentSaleItems = sales
     .filter((sale) => {
-      if (sale.syncStatus !== "synced") return true;
-      if (sale.remoteId && productionRecentIds.has(sale.remoteId)) return false;
-      if (productionRecentExternalIds.has(sale.id)) return false;
+      if (sale.syncStatus !== "synced") return true
+      if (sale.remoteId && productionRecentIds.has(sale.remoteId)) return false
+      if (productionRecentExternalIds.has(sale.id)) return false
 
-      return true;
+      return true
     })
-    .map(toRecentSaleItem);
-  const visibleRecentSales = (
+    .map(toRecentSaleItem)
+  const recentSalePreviewRows =
     canReadProductionDashboard && !productionRecentSalesQuery.isError
       ? [...localRecentSaleItems, ...productionRecentSaleItems]
       : localRecentSaleItems
-  ).slice(0, 5);
+  const visibleRecentSales = recentSalePreviewRows.slice(
+    0,
+    DASHBOARD_RECENT_SALE_PREVIEW_LIMIT,
+  )
+  const productionStaffPreview = productionStaff.map(toProductionStaffPreview)
+  const localStaffPreview = staff.filter(
+    (staffMember) =>
+      staffMember.syncStatus !== "synced" || !staffMember.remoteId,
+  )
+  const staffPreviewRows =
+    canReadProductionDashboard && !productionStaffQuery.isError
+      ? (() => {
+          const seen = new Set(productionStaffPreview.map(getStaffPreviewKey))
+          const mergedStaff = [...productionStaffPreview]
+
+          for (const staffMember of localStaffPreview) {
+            const key = getStaffPreviewKey(staffMember)
+
+            if (!seen.has(key)) {
+              seen.add(key)
+              mergedStaff.push(staffMember)
+            }
+          }
+
+          return mergedStaff
+        })()
+      : staff
+  const visibleStaffPreview = staffPreviewRows.slice(
+    0,
+    DASHBOARD_STAFF_PREVIEW_LIMIT,
+  )
+  const productionCustomerPreview = productionCustomers.map(
+    toProductionCustomerPreview,
+  )
+  const localCustomerPreview = customers.filter(
+    (customer) => customer.syncStatus !== "synced" || !customer.remoteId,
+  )
+  const customerPreviewRows =
+    canReadProductionDashboard && !productionCustomersQuery.isError
+      ? (() => {
+          const seen = new Set(
+            productionCustomerPreview.map(getCustomerPreviewKey),
+          )
+          const mergedCustomers = [...productionCustomerPreview]
+
+          for (const customer of localCustomerPreview) {
+            const key = getCustomerPreviewKey(customer)
+
+            if (!seen.has(key)) {
+              seen.add(key)
+              mergedCustomers.push(customer)
+            }
+          }
+
+          return mergedCustomers
+        })()
+      : customers
+  const visibleCustomerPreview = customerPreviewRows.slice(
+    0,
+    DASHBOARD_CUSTOMER_PREVIEW_LIMIT,
+  )
+  const visibleShareLinks = shareLinks.slice(
+    0,
+    DASHBOARD_SHARE_LINK_PREVIEW_LIMIT,
+  )
+  const visibleStockMovements = stockMovements.slice(
+    0,
+    DASHBOARD_STOCK_MOVEMENT_PREVIEW_LIMIT,
+  )
 
   const handleQuickAction = (label: QuickActionProps["label"]) => {
     if (label === "Add item") {
-      setupModal.present();
-      return;
+      if (isAttendantDashboard) return
+      setupModal.present()
+      return
     }
 
     if (label === "New sale") {
       if (!firstProduct) {
-        setupModal.present();
-        return;
+        if (!isAttendantDashboard) {
+          setupModal.present()
+        }
+        return
       }
 
       if (currentRepSession) {
-        saleModal.present();
+        saleModal.present()
       } else {
-        sessionModal.present();
+        sessionModal.present()
       }
-      return;
+      return
     }
 
     if (label === "Add staff") {
-      staffModal.present();
+      if (isAttendantDashboard) return
+      staffModal.present()
     }
-  };
+  }
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) return
 
     if (!activeBusinessId && businesses[0]?.id) {
-      setActiveBusiness(businesses[0].id);
-      return;
+      setActiveBusiness(businesses[0].id)
+      return
     }
 
     if (!activeBusinessId && profile?.businessName) {
-      ensureBusiness({ name: profile.businessName });
+      ensureBusiness({
+        id: profile.businessId,
+        name: profile.businessName,
+      })
     }
   }, [
     activeBusinessId,
     businesses,
     ensureBusiness,
     isAuthenticated,
+    profile?.businessId,
     profile?.businessName,
     setActiveBusiness,
-  ]);
+  ])
+
+  useEffect(() => {
+    if (
+      !shouldPromptFirstProduct ||
+      !activeBusinessId ||
+      isAttendantDashboard
+    ) {
+      return
+    }
+    if (setupPromptedBusinessRef.current === activeBusinessId) return
+
+    setupPromptedBusinessRef.current = activeBusinessId
+    setupModal.present()
+  }, [
+    activeBusinessId,
+    isAttendantDashboard,
+    setupModal,
+    shouldPromptFirstProduct,
+  ])
 
   if (!isAuthenticated) {
-    return <Redirect href="/login" />;
+    return <Redirect href="/login" />
+  }
+
+  if (isInvitedStaffProfile(profile)) {
+    return <Redirect href="/staff-onboarding" />
   }
 
   return (
     <MobileScreen contentClassName="gap-6" keyboardBottomOffset={120}>
       <View className="flex-row items-center justify-between">
         <View className="flex-1 gap-1 pr-4">
-          <Text className="text-3xl font-bold text-foreground">
-            Dashboard
-          </Text>
+          <Text className="text-3xl font-bold text-foreground">Dashboard</Text>
           <Pressable
             className="flex-row items-center gap-2 self-start active:opacity-80"
             haptic
@@ -1514,7 +1893,10 @@ export default function DashboardRoute() {
                 profile?.businessName ??
                 "Retail workspace"}
             </Text>
-            <Icon className="size-sm text-muted-foreground" name="ChevronDown" />
+            <Icon
+              className="size-sm text-muted-foreground"
+              name="ChevronDown"
+            />
           </Pressable>
         </View>
         <Logout />
@@ -1522,53 +1904,68 @@ export default function DashboardRoute() {
 
       <Pressable
         className={cn(
-          "flex-row items-center gap-2 rounded-2xl border p-3 active:opacity-90",
+          "flex-row items-start gap-2 rounded-2xl border p-3 active:opacity-90",
           syncBannerClassName,
         )}
         haptic
         onPress={() => syncModal.present()}
+        testID="retail-sync-banner"
         transition
       >
         <Icon
-          className={cn(
-            "size-base",
-            syncBannerIconClassName,
-          )}
+          className={cn("mt-0.5 size-base shrink-0", syncBannerIconClassName)}
           name={isOfflineMode ? "Wind" : syncBannerIconName}
         />
-        <Text className="flex-1 text-sm font-medium leading-5 text-foreground">
-          {syncBannerText}
-        </Text>
-        <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
+        <View className="min-w-0 flex-1 shrink">
+          <Text className="text-sm font-medium leading-5 text-foreground">
+            {syncBannerText}
+          </Text>
+        </View>
+        {isOfflineMode ? null : (
+          <Icon
+            className="mt-0.5 size-sm shrink-0 text-muted-foreground"
+            name="ChevronRight"
+          />
+        )}
       </Pressable>
 
       {firstProduct ? (
         <InventorySetupSummary
+          canManageInventory={canManageInventory}
           onRestock={() => stockModal.present()}
           onConvert={() => conversionModal.present()}
           onShare={() => shareModal.present()}
           product={firstProduct}
         />
       ) : (
-        <SetupPrompt onAddItem={() => setupModal.present()} />
+        <SetupPrompt
+          isAttendant={isAttendantDashboard}
+          onAddItem={() => setupModal.present()}
+        />
       )}
 
       <RepSessionStatusCard
         currentSession={currentRepSession}
         hasInventory={!!firstProduct}
         onClockIn={() =>
-          firstProduct ? sessionModal.present() : setupModal.present()
+          firstProduct
+            ? sessionModal.present()
+            : isAttendantDashboard
+              ? undefined
+              : setupModal.present()
         }
         onCreateSale={() => saleModal.present()}
         openSessions={openRepSessions}
       />
 
-      <PlanStatusCard
-        onPress={() => subscriptionModal.present()}
-        plan={subscriptionPlan}
-        subscription={subscription}
-        usage={subscriptionUsage}
-      />
+      {isAttendantDashboard ? null : (
+        <PlanStatusCard
+          onPress={() => subscriptionModal.present()}
+          plan={subscriptionPlan}
+          subscription={subscription}
+          usage={subscriptionUsage}
+        />
+      )}
 
       <View className="flex-row flex-wrap justify-between gap-y-3">
         {metrics.map((metric) => (
@@ -1577,11 +1974,9 @@ export default function DashboardRoute() {
       </View>
 
       <View className="gap-3">
-        <Text className="text-lg font-bold text-foreground">
-          Quick actions
-        </Text>
+        <Text className="text-lg font-bold text-foreground">Quick actions</Text>
         <View className="flex-row gap-3">
-          {quickActions.map((action) => (
+          {visibleQuickActions.map((action) => (
             <QuickAction
               key={action.label}
               {...action}
@@ -1591,57 +1986,62 @@ export default function DashboardRoute() {
         </View>
       </View>
 
-      <ReportsSummaryCard
-        onPress={() => reportsModal.present()}
-        pendingSyncCount={openSyncEventCount}
-        stockUnitCount={stockUnitCount}
-        todaySalesCount={dashboardTodaySalesCount}
-        todayTotal={dashboardTodayTotal}
-        varianceCount={closeoutVarianceCount}
-      />
+      {isAttendantDashboard ? null : (
+        <>
+          <ReportsSummaryCard
+            onPress={() => reportsModal.present()}
+            pendingSyncCount={openSyncEventCount}
+            stockUnitCount={stockUnitCount}
+            todaySalesCount={dashboardTodaySalesCount}
+            todayTotal={dashboardTodayTotal}
+            varianceCount={closeoutVarianceCount}
+          />
 
-      <CloseoutSummaryCard
-        latestCloseout={closeouts[0] ?? null}
-        onPress={() =>
-          firstProduct ? closeoutModal.present() : setupModal.present()
-        }
-        openSalesCount={openCloseoutSales.length}
-        paymentTotals={closeoutPaymentTotals}
-      />
+          <CloseoutSummaryCard
+            latestCloseout={closeouts[0] ?? null}
+            onPress={() =>
+              firstProduct ? closeoutModal.present() : setupModal.present()
+            }
+            openSalesCount={openCloseoutSales.length}
+            paymentTotals={closeoutPaymentTotals}
+          />
+        </>
+      )}
 
       <View className="gap-3">
         <View className="flex-row items-center justify-between">
-          <Text className="text-lg font-bold text-foreground">
-            Low stock
-          </Text>
-          {lowStockAlerts.length > 3 ? (
-            <Text className="text-sm font-semibold text-primary">
-              View all
-            </Text>
-          ) : null}
+          <Text className="text-lg font-bold text-foreground">Low stock</Text>
         </View>
         <View className="gap-3">
           {lowStockAlerts.length > 0 ? (
-            lowStockAlerts.slice(0, 3).map((item) => (
-              <View
-                className="flex-row items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4"
-                key={item.id}
-              >
-                <View className="flex-1 gap-1">
-                  <Text className="font-semibold text-foreground">
-                    {item.name}
-                  </Text>
-                  <Text className="text-sm text-muted-foreground">
-                    {item.remaining} remaining
-                  </Text>
+            <>
+              {visibleLowStockAlerts.map((item) => (
+                <View
+                  className="flex-row items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4"
+                  key={item.id}
+                >
+                  <View className="flex-1 gap-1">
+                    <Text className="font-semibold text-foreground">
+                      {item.name}
+                    </Text>
+                    <Text className="text-sm text-muted-foreground">
+                      {item.remaining} remaining
+                    </Text>
+                  </View>
+                  <View className="rounded-full bg-amber-500/10 px-3 py-1">
+                    <Text className="text-xs font-bold text-amber-700">
+                      {item.status}
+                    </Text>
+                  </View>
                 </View>
-                <View className="rounded-full bg-amber-500/10 px-3 py-1">
-                  <Text className="text-xs font-bold text-amber-700">
-                    {item.status}
-                  </Text>
-                </View>
-              </View>
-            ))
+              ))}
+              {lowStockAlerts.length > visibleLowStockAlerts.length ? (
+                <Text className="text-xs font-semibold text-muted-foreground">
+                  Showing first {visibleLowStockAlerts.length} of{" "}
+                  {lowStockAlerts.length} low-stock alerts.
+                </Text>
+              ) : null}
+            </>
           ) : (
             <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
               <Text className="font-semibold text-foreground">
@@ -1657,38 +2057,46 @@ export default function DashboardRoute() {
         </View>
       </View>
 
-      <View className="gap-3">
-        <View className="flex-row items-center justify-between gap-3">
-          <Text className="text-lg font-bold text-foreground">
-            Attendants
-          </Text>
-          <Pressable
-            className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
-            haptic
-            onPress={() => staffModal.present()}
-            transition
-          >
-            <Text className="text-xs font-bold text-primary">Invite</Text>
-          </Pressable>
+      {isAttendantDashboard ? null : (
+        <View className="gap-3">
+          <View className="flex-row items-center justify-between gap-3">
+            <Text className="text-lg font-bold text-foreground">
+              Attendants
+            </Text>
+            <Pressable
+              className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
+              haptic
+              onPress={() => staffModal.present()}
+              transition
+            >
+              <Text className="text-xs font-bold text-primary">Invite</Text>
+            </Pressable>
+          </View>
+          {visibleStaffPreview.length > 0 ? (
+            <View className="gap-3">
+              {visibleStaffPreview.map((staffMember) => (
+                <StaffCard key={staffMember.id} staff={staffMember} />
+              ))}
+              {staffPreviewRows.length > visibleStaffPreview.length ? (
+                <Text className="text-xs font-semibold text-muted-foreground">
+                  Showing first {visibleStaffPreview.length} of{" "}
+                  {staffPreviewRows.length} attendants.
+                </Text>
+              ) : null}
+            </View>
+          ) : (
+            <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
+              <Text className="font-semibold text-foreground">
+                No attendants yet
+              </Text>
+              <Text className="text-sm leading-5 text-muted-foreground">
+                Invite your first attendant when you are ready to share sales
+                work.
+              </Text>
+            </View>
+          )}
         </View>
-        {staff.length > 0 ? (
-          <View className="gap-3">
-            {staff.slice(0, 3).map((staffMember) => (
-              <StaffCard key={staffMember.id} staff={staffMember} />
-            ))}
-          </View>
-        ) : (
-          <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-            <Text className="font-semibold text-foreground">
-              No attendants yet
-            </Text>
-            <Text className="text-sm leading-5 text-muted-foreground">
-              Invite your first attendant when you are ready to share sales
-              work.
-            </Text>
-          </View>
-        )}
-      </View>
+      )}
 
       {shareLinks.length > 0 ? (
         <View className="gap-3">
@@ -1706,7 +2114,7 @@ export default function DashboardRoute() {
             </Pressable>
           </View>
           <View className="gap-3">
-            {shareLinks.slice(0, 3).map((link) => (
+            {visibleShareLinks.map((link) => (
               <ProductLinkCard
                 key={link.id}
                 link={link}
@@ -1714,6 +2122,12 @@ export default function DashboardRoute() {
                 onManage={() => shareModal.present()}
               />
             ))}
+            {shareLinks.length > visibleShareLinks.length ? (
+              <Text className="text-xs font-semibold text-muted-foreground">
+                Showing first {visibleShareLinks.length} of {shareLinks.length}{" "}
+                product links.
+              </Text>
+            ) : null}
           </View>
         </View>
       ) : null}
@@ -1723,22 +2137,30 @@ export default function DashboardRoute() {
           <Text className="text-lg font-bold text-foreground">
             Stock movements
           </Text>
-          <Pressable
-            className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
-            haptic
-            onPress={() =>
-              firstProduct ? stockModal.present() : setupModal.present()
-            }
-            transition
-          >
-            <Text className="text-xs font-bold text-primary">Record</Text>
-          </Pressable>
+          {canManageInventory ? (
+            <Pressable
+              className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
+              haptic
+              onPress={() =>
+                firstProduct ? stockModal.present() : setupModal.present()
+              }
+              transition
+            >
+              <Text className="text-xs font-bold text-primary">Record</Text>
+            </Pressable>
+          ) : null}
         </View>
         {stockMovements.length > 0 ? (
           <View className="gap-3">
-            {stockMovements.slice(0, 3).map((movement) => (
+            {visibleStockMovements.map((movement) => (
               <StockMovementCard key={movement.id} movement={movement} />
             ))}
+            {stockMovements.length > visibleStockMovements.length ? (
+              <Text className="text-xs font-semibold text-muted-foreground">
+                Showing first {visibleStockMovements.length} of{" "}
+                {stockMovements.length} stock movements.
+              </Text>
+            ) : null}
           </View>
         ) : (
           <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
@@ -1767,11 +2189,17 @@ export default function DashboardRoute() {
             <Text className="text-xs font-bold text-primary">View all</Text>
           </Pressable>
         </View>
-        {customers.length > 0 ? (
+        {visibleCustomerPreview.length > 0 ? (
           <View className="gap-3">
-            {customers.slice(0, 3).map((customer) => (
+            {visibleCustomerPreview.map((customer) => (
               <CustomerCard customer={customer} key={customer.id} />
             ))}
+            {customerPreviewRows.length > visibleCustomerPreview.length ? (
+              <Text className="text-xs font-semibold text-muted-foreground">
+                Showing first {visibleCustomerPreview.length} of{" "}
+                {customerPreviewRows.length} customers.
+              </Text>
+            ) : null}
           </View>
         ) : (
           <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
@@ -1786,14 +2214,20 @@ export default function DashboardRoute() {
       </View>
 
       <View className="gap-3">
-        <Text className="text-lg font-bold text-foreground">
-          Recent sales
-        </Text>
+        <Text className="text-lg font-bold text-foreground">Recent sales</Text>
         <View className="gap-3">
           {visibleRecentSales.length > 0 ? (
-            visibleRecentSales.map((sale) => (
-              <RecentSaleCard key={sale.id} sale={sale} />
-            ))
+            <>
+              {visibleRecentSales.map((sale) => (
+                <RecentSaleCard key={sale.id} sale={sale} />
+              ))}
+              {recentSalePreviewRows.length > visibleRecentSales.length ? (
+                <Text className="text-xs font-semibold text-muted-foreground">
+                  Showing first {visibleRecentSales.length} of{" "}
+                  {recentSalePreviewRows.length} recent sales.
+                </Text>
+              ) : null}
+            </>
           ) : (
             <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
               <Text className="font-semibold text-foreground">
@@ -1835,14 +2269,8 @@ export default function DashboardRoute() {
         onComplete={sessionModal.dismiss}
         ref={sessionModal.ref}
       />
-      <ReportsSheet
-        onComplete={reportsModal.dismiss}
-        ref={reportsModal.ref}
-      />
-      <StaffInviteSheet
-        onComplete={staffModal.dismiss}
-        ref={staffModal.ref}
-      />
+      <ReportsSheet onComplete={reportsModal.dismiss} ref={reportsModal.ref} />
+      <StaffInviteSheet onComplete={staffModal.dismiss} ref={staffModal.ref} />
       <StockIntakeSheet onComplete={stockModal.dismiss} ref={stockModal.ref} />
       <SubscriptionPlanSheet
         onComplete={subscriptionModal.dismiss}
@@ -1855,5 +2283,5 @@ export default function DashboardRoute() {
       />
       <SyncStatusSheet onComplete={syncModal.dismiss} ref={syncModal.ref} />
     </MobileScreen>
-  );
+  )
 }

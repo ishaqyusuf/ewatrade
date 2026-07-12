@@ -1,75 +1,128 @@
-import { ActionButton } from "@/components/mobile/action-button";
-import { FormField } from "@/components/mobile/form-field";
-import { QuantityStepper } from "@/components/mobile/quantity-stepper";
-import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view";
-import { Icon } from "@/components/ui/icon";
-import { Modal } from "@/components/ui/modal";
-import { Pressable } from "@/components/ui/pressable";
-import { Text } from "@/components/ui/text";
-import { parseWholeQuantity } from "@/lib/quantity";
-import { cn } from "@/lib/utils";
-import { useBusinessStore } from "@/store/businessStore";
+import { ActionButton } from "@/components/mobile/action-button"
+import { FormField } from "@/components/mobile/form-field"
+import { QuantityStepper } from "@/components/mobile/quantity-stepper"
+import { BottomSheetInputProvider } from "@/components/ui/bottom-sheet-input-context"
+import { Icon } from "@/components/ui/icon"
+import { Modal } from "@/components/ui/modal"
+import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
+import { parseWholeQuantity } from "@/lib/quantity"
+import { cn } from "@/lib/utils"
+import { useBusinessStore } from "@/store/businessStore"
 import {
+  type RetailOpsCustomer,
   type RetailOpsPaymentMethod,
   type RetailOpsProduct,
   useRetailOpsStore,
-} from "@/store/retailOpsStore";
-import { useTRPC } from "@/trpc/client";
-import { formatMoney } from "@ewatrade/utils";
-import type { BottomSheetModal } from "@gorhom/bottom-sheet";
-import { useMutation } from "@tanstack/react-query";
-import { forwardRef, useMemo, useState } from "react";
-import { View } from "react-native";
+} from "@/store/retailOpsStore"
+import { useTRPC } from "@/trpc/client"
+import { formatMoney } from "@ewatrade/utils"
+import {
+  type BottomSheetModal,
+  BottomSheetSectionList,
+  type BottomSheetSectionListMethods,
+} from "@gorhom/bottom-sheet"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { forwardRef, useMemo, useRef, useState } from "react"
+import { View } from "react-native"
 
 type CreateSaleSheetProps = {
-  attendantName?: string;
-  onComplete?: () => void;
-};
-
-type SellableItem = {
-  id: string;
-  productId: string;
-  productName: string;
-  remoteVariantId?: string;
-  stock: number;
-  unitName: string;
-  unitPrice: number;
-  variantId?: string;
-};
-
-function getProductStock(product: RetailOpsProduct) {
-  return product.currentStock ?? product.startingStock ?? 0;
+  attendantName?: string
+  onComplete?: () => void
 }
 
-function getSellableItems(product: RetailOpsProduct): SellableItem[] {
-  const stock = getProductStock(product);
-  const primaryItem = {
+type SellableItem = {
+  id: string
+  productId: string
+  productName: string
+  remoteVariantId?: string
+  stock: number
+  unitName: string
+  unitPrice: number
+  variantId?: string
+}
+
+type SellableSection = {
+  data: SellableItem[]
+  product: RetailOpsProduct
+}
+
+type SaleListItem =
+  | { item: SellableItem; kind: "sellable" }
+  | {
+      kind:
+        | "customer"
+        | "payment"
+        | "quantity"
+        | "session-warning"
+        | "stock-warning"
+        | "submit"
+        | "submit-error"
+        | "total"
+    }
+
+type SaleListSection = {
+  data: SaleListItem[]
+  id: string
+  product?: RetailOpsProduct
+  type: "checkout" | "product"
+}
+
+type ProductionCustomerBookEntry = {
+  email: string | null
+  id: string
+  lastOrder?: {
+    orderNumber: string
+  } | null
+  lastSeenAt: Date | string
+  name: string
+  orderCount: number
+  phone: string | null
+}
+
+type CustomerOption = {
+  detail: string
+  email?: string
+  id: string
+  name: string
+  phone?: string
+  source: "local" | "production"
+  status?: RetailOpsCustomer["syncStatus"]
+}
+
+function getProductStock(product: RetailOpsProduct) {
+  return product.currentStock ?? product.startingStock ?? 0
+}
+
+function getPrimarySellableItem(product: RetailOpsProduct): SellableItem {
+  return {
     id: `${product.id}-primary`,
     productId: product.id,
     productName: product.name,
     remoteVariantId: product.remoteVariantId,
-    stock,
+    stock: getProductStock(product),
     unitName: product.unitName,
     unitPrice: product.price,
-  };
+  }
+}
+
+function getSellableItems(product: RetailOpsProduct): SellableItem[] {
+  const primaryItem = getPrimarySellableItem(product)
 
   if (product.variants.length > 0) {
-    return [
-      primaryItem,
-      ...product.variants.map((variant) => ({
-        id: `${product.id}-${variant.id}`,
-        productId: product.id,
-        productName: product.name,
-        remoteVariantId: variant.remoteId,
-        stock: variant.currentStock ?? variant.startingStock ?? 0,
-        unitName: variant.name,
-        unitPrice: variant.price,
-        variantId: variant.id,
-      })),
-    ];
+    return product.variants.map((variant) => ({
+      id: `${product.id}-${variant.id}`,
+      productId: product.id,
+      productName: product.name,
+      remoteVariantId: variant.remoteId,
+      stock: variant.currentStock ?? variant.startingStock ?? 0,
+      unitName: variant.name,
+      unitPrice: variant.price,
+      variantId: variant.id,
+    }))
   }
 
-  return [primaryItem];
+  return [primaryItem]
 }
 
 function PaymentOption({
@@ -77,9 +130,9 @@ function PaymentOption({
   onPress,
   selected,
 }: {
-  label: string;
-  onPress: () => void;
-  selected: boolean;
+  label: string
+  onPress: () => void
+  selected: boolean
 }) {
   return (
     <Pressable
@@ -96,7 +149,7 @@ function PaymentOption({
           "size-sm text-muted-foreground",
           selected && "text-primary",
         )}
-        name={selected ? "CircleCheck" : "Circle"}
+        name="CheckCircle2"
       />
       <Text
         className={cn(
@@ -107,7 +160,7 @@ function PaymentOption({
         {label}
       </Text>
     </Pressable>
-  );
+  )
 }
 
 function SellableOption({
@@ -115,17 +168,41 @@ function SellableOption({
   onPress,
   selected,
 }: {
-  item: SellableItem;
-  onPress: () => void;
-  selected: boolean;
+  item: SellableItem
+  onPress: () => void
+  selected: boolean
 }) {
-  const isOutOfStock = item.stock <= 0;
+  const isOutOfStock = item.stock <= 0
+
+  if (selected) {
+    return (
+      <Pressable
+        className="rounded-xl border border-primary bg-primary/10 px-3 py-2 active:bg-accent"
+        haptic
+        onPress={onPress}
+        transition
+      >
+        <View className="flex-row items-center justify-between gap-3">
+          <View className="min-w-0 flex-1">
+            <Text className="font-semibold text-foreground">
+              {item.unitName}
+            </Text>
+            <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+              {item.productName} - {item.stock} available - selected
+            </Text>
+          </View>
+          <Text className="font-bold text-foreground">
+            {formatMoney(item.unitPrice, "NGN")}
+          </Text>
+        </View>
+      </Pressable>
+    )
+  }
 
   return (
     <Pressable
       className={cn(
         "gap-2 rounded-xl border border-border bg-card p-3 active:bg-accent",
-        selected && "border-primary bg-primary/10",
         isOutOfStock && "opacity-50",
       )}
       disabled={isOutOfStock}
@@ -136,6 +213,9 @@ function SellableOption({
       <View className="flex-row items-start justify-between gap-3">
         <View className="flex-1 gap-1">
           <Text className="font-semibold text-foreground">{item.unitName}</Text>
+          <Text className="text-xs font-medium text-muted-foreground">
+            {item.productName}
+          </Text>
           <Text className="text-xs text-muted-foreground">
             {item.stock} available
           </Text>
@@ -150,31 +230,142 @@ function SellableOption({
         </View>
       ) : null}
     </Pressable>
-  );
+  )
+}
+
+function ProductSectionHeader({ product }: { product: RetailOpsProduct }) {
+  return (
+    <View className="gap-3 bg-background pt-2 pb-3">
+      <View className="flex-row items-start justify-between gap-3">
+        <View className="flex-1 gap-1">
+          <Text className="font-bold text-foreground">{product.name}</Text>
+          <Text className="text-xs text-muted-foreground">
+            {product.variants.length > 0
+              ? "Choose a unit or variant"
+              : "Primary unit"}
+          </Text>
+        </View>
+        <View className="rounded-full bg-muted px-3 py-1">
+          <Text className="text-xs font-bold text-muted-foreground">
+            {getProductStock(product)} {product.unitName}
+          </Text>
+        </View>
+      </View>
+    </View>
+  )
+}
+
+function getCustomerOptionKey(customer: CustomerOption) {
+  return (
+    customer.email?.trim().toLowerCase() ??
+    customer.phone?.trim() ??
+    customer.name.trim().toLowerCase()
+  )
+}
+
+function mapProductionCustomerOption(
+  customer: ProductionCustomerBookEntry,
+): CustomerOption {
+  const orderLabel =
+    customer.orderCount === 1 ? "1 order" : `${customer.orderCount} orders`
+
+  return {
+    detail: customer.lastOrder?.orderNumber
+      ? `${orderLabel} - last ${customer.lastOrder.orderNumber}`
+      : orderLabel,
+    email: customer.email ?? undefined,
+    id: `production-${customer.id}`,
+    name: customer.name,
+    phone: customer.phone ?? undefined,
+    source: "production",
+    status: "synced",
+  }
+}
+
+function mapLocalCustomerOption(customer: RetailOpsCustomer): CustomerOption {
+  const saleLabel =
+    customer.saleCount === 1
+      ? "1 local sale"
+      : `${customer.saleCount} local sales`
+
+  return {
+    detail: customer.remoteId ? `${saleLabel} - synced` : saleLabel,
+    id: `local-${customer.id}`,
+    name: customer.name,
+    source: "local",
+    status: customer.syncStatus,
+  }
+}
+
+function CustomerOptionChip({
+  customer,
+  onPress,
+  selected,
+}: {
+  customer: CustomerOption
+  onPress: () => void
+  selected: boolean
+}) {
+  return (
+    <Pressable
+      className={cn(
+        "max-w-full rounded-2xl border border-border bg-card px-3 py-2 active:bg-accent",
+        selected && "border-primary bg-primary/10",
+      )}
+      haptic
+      onPress={onPress}
+      transition
+    >
+      <Text
+        className={cn(
+          "text-xs font-bold text-foreground",
+          selected && "text-primary",
+        )}
+      >
+        {customer.name}
+      </Text>
+      <Text className="text-xs text-muted-foreground">{customer.detail}</Text>
+      {customer.email || customer.phone ? (
+        <Text className="text-xs text-muted-foreground">
+          {[customer.email, customer.phone].filter(Boolean).join(" - ")}
+        </Text>
+      ) : null}
+      {customer.status === "pending" ? (
+        <Text className="text-xs font-bold text-amber-700">Pending sync</Text>
+      ) : null}
+    </Pressable>
+  )
 }
 
 export const CreateSaleSheet = forwardRef<
   BottomSheetModal,
   CreateSaleSheetProps
 >(({ attendantName = "Store Owner", onComplete }, ref) => {
-  const trpc = useTRPC();
-  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId);
-  const createSale = useRetailOpsStore((state) => state.createSale);
-  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode);
-  const customers = useRetailOpsStore((state) =>
-    state.customers.filter(
-      (customer) =>
-        !activeBusinessId ||
-        (customer.businessId ?? activeBusinessId) === activeBusinessId,
-    ),
-  );
-  const products = useRetailOpsStore((state) =>
-    state.products.filter(
-      (product) =>
-        !activeBusinessId ||
-        (product.businessId ?? activeBusinessId) === activeBusinessId,
-    ),
-  );
+  const trpc = useTRPC()
+  const checkoutListRef = useRef<BottomSheetSectionListMethods>(null)
+  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
+  const createSale = useRetailOpsStore((state) => state.createSale)
+  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
+  const allCustomers = useRetailOpsStore((state) => state.customers)
+  const allProducts = useRetailOpsStore((state) => state.products)
+  const customers = useMemo(
+    () =>
+      allCustomers.filter(
+        (customer) =>
+          !activeBusinessId ||
+          (customer.businessId ?? activeBusinessId) === activeBusinessId,
+      ),
+    [activeBusinessId, allCustomers],
+  )
+  const products = useMemo(
+    () =>
+      allProducts.filter(
+        (product) =>
+          !activeBusinessId ||
+          (product.businessId ?? activeBusinessId) === activeBusinessId,
+      ),
+    [activeBusinessId, allProducts],
+  )
   const currentOpenSession = useRetailOpsStore(
     (state) =>
       state.repSessions.find(
@@ -184,73 +375,231 @@ export const CreateSaleSheet = forwardRef<
           (!activeBusinessId ||
             (session.businessId ?? activeBusinessId) === activeBusinessId),
       ) ?? null,
-  );
-  const [customerName, setCustomerName] = useState("");
+  )
+  const [customerName, setCustomerName] = useState("")
+  const [selectedCustomer, setSelectedCustomer] =
+    useState<CustomerOption | null>(null)
   const [paymentMethod, setPaymentMethod] =
-    useState<RetailOpsPaymentMethod>("cash");
-  const [quantity, setQuantity] = useState("1");
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+    useState<RetailOpsPaymentMethod>("cash")
+  const [quantity, setQuantity] = useState("1")
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const createProductionSaleMutation = useMutation(
     trpc.retailOps.createSale.mutationOptions({
       onError: (error) => {
-        setSubmitError(error.message);
+        setSubmitError(error.message)
       },
     }),
-  );
+  )
+  const normalizedCustomerSearch = customerName.trim()
+  const productionCustomersQuery = useQuery(
+    trpc.retailOps.customerBook.queryOptions(
+      {
+        limit: 8,
+        search: normalizedCustomerSearch || undefined,
+      },
+      {
+        enabled: !isOfflineMode,
+        retry: false,
+      },
+    ),
+  )
 
   const sellableItems = useMemo(
     () => products.flatMap((product) => getSellableItems(product)),
     [products],
-  );
-  const selectedItem = sellableItems.find((item) => item.id === selectedItemId);
-  const quantityValue = parseWholeQuantity(quantity);
-  const total = selectedItem ? selectedItem.unitPrice * quantityValue : 0;
+  )
+  const sellableSections = useMemo<SaleListSection[]>(
+    () =>
+      products.map((product) => ({
+        data: getSellableItems(product).map((item) => ({
+          item,
+          kind: "sellable" as const,
+        })),
+        id: product.id,
+        product,
+        type: "product",
+      })),
+    [products],
+  )
+  const selectedItem = sellableItems.find((item) => item.id === selectedItemId)
+  const quantityValue = parseWholeQuantity(quantity)
+  const total = selectedItem ? selectedItem.unitPrice * quantityValue : 0
   const hasEnoughStock = selectedItem
     ? quantityValue <= selectedItem.stock
-    : true;
-  const hasOpenSession = !!currentOpenSession;
+    : true
+  const hasOpenSession = !!currentOpenSession
   const canCreateProductionSale =
     !isOfflineMode &&
     !!selectedItem?.remoteVariantId &&
-    !!currentOpenSession?.remoteId;
+    !!currentOpenSession?.remoteId
   const canSubmit =
     hasOpenSession &&
     !!selectedItem &&
     quantityValue > 0 &&
     hasEnoughStock &&
-    !createProductionSaleMutation.isPending;
+    !createProductionSaleMutation.isPending
   const sourceLabel = canCreateProductionSale
     ? "Online"
     : isOfflineMode
       ? "Local"
-      : "Local queue";
+      : "Local queue"
   const sourceDetail = canCreateProductionSale
     ? "This sale will be recorded in production immediately."
     : isOfflineMode
       ? "This sale will be queued locally and synced later."
-      : "Waiting for the product unit or rep session to sync before direct production sale.";
+      : "Waiting for the product unit or rep session to sync before direct production sale."
+  const localCustomerOptions = useMemo(() => {
+    const normalizedSearch = normalizedCustomerSearch.toLowerCase()
+    const localCustomers = normalizedSearch
+      ? customers.filter((customer) =>
+          customer.name.toLowerCase().includes(normalizedSearch),
+        )
+      : customers
+
+    return localCustomers.map(mapLocalCustomerOption)
+  }, [customers, normalizedCustomerSearch])
+  const productionCustomerOptions = useMemo(
+    () =>
+      (
+        (productionCustomersQuery.data ?? []) as ProductionCustomerBookEntry[]
+      ).map(mapProductionCustomerOption),
+    [productionCustomersQuery.data],
+  )
+  const visibleCustomerOptions = useMemo(() => {
+    if (isOfflineMode || productionCustomersQuery.isError) {
+      return localCustomerOptions.slice(0, 8)
+    }
+
+    const seen = new Set(productionCustomerOptions.map(getCustomerOptionKey))
+    const mergedCustomers = [...productionCustomerOptions]
+
+    for (const localCustomer of localCustomerOptions) {
+      const key = getCustomerOptionKey(localCustomer)
+
+      if (!seen.has(key)) {
+        seen.add(key)
+        mergedCustomers.push(localCustomer)
+      }
+    }
+
+    return mergedCustomers.slice(0, 8)
+  }, [
+    isOfflineMode,
+    localCustomerOptions,
+    productionCustomerOptions,
+    productionCustomersQuery.isError,
+  ])
+  const checkoutRows = useMemo<SaleListItem[]>(() => {
+    const rows: SaleListItem[] = [{ kind: "quantity" }]
+
+    if (!hasEnoughStock && selectedItem) {
+      rows.push({ kind: "stock-warning" })
+    }
+
+    if (!hasOpenSession) {
+      rows.push({ kind: "session-warning" })
+    }
+
+    if (submitError) {
+      rows.push({ kind: "submit-error" })
+    }
+
+    rows.push(
+      { kind: "total" },
+      { kind: "payment" },
+      { kind: "customer" },
+      { kind: "submit" },
+    )
+
+    return rows
+  }, [hasEnoughStock, hasOpenSession, selectedItem, submitError])
+  const saleSections = useMemo<SaleListSection[]>(
+    () => [
+      ...sellableSections,
+      {
+        data: checkoutRows,
+        id: "checkout",
+        type: "checkout",
+      },
+    ],
+    [checkoutRows, sellableSections],
+  )
+  const checkoutSectionIndex = saleSections.length - 1
+  const quantityRowIndex = checkoutRows.findIndex(
+    (row) => row.kind === "quantity",
+  )
+  const paymentRowIndex = checkoutRows.findIndex(
+    (row) => row.kind === "payment",
+  )
+  const customerRowIndex = checkoutRows.findIndex(
+    (row) => row.kind === "customer",
+  )
+  const updateCustomerName = (value: string) => {
+    setCustomerName(value)
+    setSelectedCustomer(null)
+  }
+
+  const selectCustomer = (customer: CustomerOption) => {
+    setCustomerName(customer.name)
+    setSelectedCustomer(customer)
+  }
+
+  const scrollToCheckoutRow = (
+    itemIndex: number,
+    viewPosition = 0.15,
+    delay = 120,
+  ) => {
+    setTimeout(() => {
+      if (checkoutSectionIndex >= 0 && itemIndex >= 0) {
+        checkoutListRef.current?.scrollToLocation({
+          animated: true,
+          itemIndex,
+          sectionIndex: checkoutSectionIndex,
+          viewPosition,
+        })
+      }
+    }, delay)
+  }
+
+  const scrollToQuantityInput = () => {
+    const quantityScrollTarget =
+      paymentRowIndex >= 0
+        ? paymentRowIndex
+        : Math.min(quantityRowIndex + 2, checkoutRows.length - 1)
+
+    scrollToCheckoutRow(quantityScrollTarget, 0.65)
+    scrollToCheckoutRow(quantityScrollTarget, 0.65, 360)
+  }
+
+  const scrollToCustomerInput = () => {
+    scrollToCheckoutRow(customerRowIndex, 0.15)
+  }
 
   const selectItem = (item: SellableItem) => {
-    setSelectedItemId(item.id);
-    setQuantity("1");
-  };
+    setSelectedItemId(item.id)
+    setQuantity("1")
+    scrollToQuantityInput()
+  }
 
   const resetForm = () => {
-    setCustomerName("");
-    setPaymentMethod("cash");
-    setQuantity("1");
-    setSelectedItemId(null);
-    setSubmitError(null);
-  };
+    setCustomerName("")
+    setSelectedCustomer(null)
+    setPaymentMethod("cash")
+    setQuantity("1")
+    setSelectedItemId(null)
+    setSubmitError(null)
+  }
 
   const submit = () => {
-    if (!selectedItem || !canSubmit) return;
+    if (!selectedItem || !canSubmit) return
 
+    const resolvedCustomerName =
+      selectedCustomer?.name.trim() || customerName.trim()
     const localSaleInput = {
       attendantName,
       businessId: activeBusinessId ?? undefined,
-      customerName,
+      customerName: resolvedCustomerName,
       paymentMethod,
       productId: selectedItem.productId,
       productName: selectedItem.productName,
@@ -258,15 +607,17 @@ export const CreateSaleSheet = forwardRef<
       unitName: selectedItem.unitName,
       unitPrice: selectedItem.unitPrice,
       variantId: selectedItem.variantId,
-    };
+    }
 
-    setSubmitError(null);
+    setSubmitError(null)
 
     if (canCreateProductionSale && selectedItem.remoteVariantId) {
       createProductionSaleMutation.mutate(
         {
           cashierSessionId: currentOpenSession?.remoteId,
-          customerName: customerName.trim() || undefined,
+          customerEmail: selectedCustomer?.email,
+          customerName: resolvedCustomerName || undefined,
+          customerPhone: selectedCustomer?.phone,
           paymentMethod,
           productVariantId: selectedItem.remoteVariantId,
           quantity: quantityValue,
@@ -277,19 +628,19 @@ export const CreateSaleSheet = forwardRef<
               ...localSaleInput,
               remoteId: sale.order.id,
               syncStatus: "synced",
-            });
-            resetForm();
-            onComplete?.();
+            })
+            resetForm()
+            onComplete?.()
           },
         },
-      );
-      return;
+      )
+      return
     }
 
-    createSale(localSaleInput);
-    resetForm();
-    onComplete?.();
-  };
+    createSale(localSaleInput)
+    resetForm()
+    onComplete?.()
+  }
 
   return (
     <Modal
@@ -298,179 +649,236 @@ export const CreateSaleSheet = forwardRef<
       snapPoints={["90%"]}
       title="Create sale"
     >
-      <BottomSheetKeyboardAwareScrollView
-        bottomOffset={112}
-        contentContainerStyle={{ paddingBottom: 32 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View className="gap-5 px-5 pb-6">
-          <View className="gap-2">
-            <Text className="text-xl font-bold text-foreground">
-              Select item
-            </Text>
-            <Text className="text-sm leading-5 text-muted-foreground">
-              Choose a product unit or variant, set quantity, then confirm
-              payment and customer.
-            </Text>
-          </View>
-
-          <View className="rounded-2xl border border-border bg-card p-4">
-            <View className="flex-row items-start justify-between gap-3">
-              <View className="flex-1 gap-1">
-                <Text className="font-semibold text-foreground">
-                  Sale source
+      <BottomSheetInputProvider>
+        <BottomSheetSectionList<SaleListItem, SaleListSection>
+          contentContainerStyle={{ paddingBottom: 240, paddingHorizontal: 20 }}
+          keyExtractor={(item) =>
+            item.kind === "sellable" ? item.item.id : item.kind
+          }
+          keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={
+            <View className="gap-5 pt-1 pb-4">
+              <View className="gap-2">
+                <Text className="text-xl font-bold text-foreground">
+                  Select item
                 </Text>
                 <Text className="text-sm leading-5 text-muted-foreground">
-                  {sourceDetail}
+                  Choose a product unit or variant, set quantity, then confirm
+                  payment and customer.
                 </Text>
               </View>
-              <View className="rounded-full bg-muted px-3 py-1">
-                <Text className="text-xs font-bold text-muted-foreground">
-                  {sourceLabel}
-                </Text>
-              </View>
-            </View>
-          </View>
 
-          {products.length === 0 ? (
-            <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-              <Text className="font-semibold text-foreground">
-                Add inventory first
-              </Text>
-              <Text className="text-sm leading-5 text-muted-foreground">
-                Create at least one item before recording a sale.
-              </Text>
-            </View>
-          ) : (
-            <View className="gap-4">
-              {products.map((product) => {
-                const items = getSellableItems(product);
-
-                return (
-                  <View className="gap-3" key={product.id}>
-                    <View className="flex-row items-start justify-between gap-3">
-                      <View className="flex-1 gap-1">
-                        <Text className="font-bold text-foreground">
-                          {product.name}
-                        </Text>
-                        <Text className="text-xs text-muted-foreground">
-                          {product.variants.length > 0
-                            ? "Choose a unit or variant"
-                            : "Primary unit"}
-                        </Text>
-                      </View>
-                      <View className="rounded-full bg-muted px-3 py-1">
-                        <Text className="text-xs font-bold text-muted-foreground">
-                          {getProductStock(product)} {product.unitName}
-                        </Text>
-                      </View>
-                    </View>
-                    <View className="gap-3">
-                      {items.map((item) => (
-                        <SellableOption
-                          item={item}
-                          key={item.id}
-                          onPress={() => selectItem(item)}
-                          selected={selectedItemId === item.id}
-                        />
-                      ))}
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-
-          <QuantityStepper
-            helper={selectedItem ? selectedItem.unitName : undefined}
-            onChangeText={setQuantity}
-            value={quantity}
-          />
-          {!hasEnoughStock && selectedItem ? (
-            <View className="rounded-2xl bg-destructive/10 p-3">
-              <Text className="text-sm font-semibold text-destructive">
-                Only {selectedItem.stock} {selectedItem.unitName} available.
-              </Text>
-            </View>
-          ) : null}
-          {!hasOpenSession ? (
-            <View className="rounded-2xl bg-amber-500/10 p-3">
-              <Text className="text-sm font-semibold text-amber-700">
-                Clock in and confirm opening stock before completing a sale.
-              </Text>
-            </View>
-          ) : null}
-
-          {submitError ? (
-            <View className="rounded-2xl bg-destructive/10 p-3">
-              <Text className="text-sm font-semibold text-destructive">
-                {submitError}
-              </Text>
-            </View>
-          ) : null}
-
-          <View className="gap-3 rounded-2xl border border-border bg-card p-4">
-            <Text className="text-sm font-semibold text-muted-foreground">
-              Total
-            </Text>
-            <Text className="text-3xl font-bold text-foreground">
-              {formatMoney(total, "NGN")}
-            </Text>
-          </View>
-
-          <View className="gap-3">
-            <Text className="text-sm font-semibold text-foreground">
-              Payment method
-            </Text>
-            <View className="flex-row gap-3">
-              <PaymentOption
-                label="Cash"
-                onPress={() => setPaymentMethod("cash")}
-                selected={paymentMethod === "cash"}
-              />
-              <PaymentOption
-                label="Transfer"
-                onPress={() => setPaymentMethod("transfer")}
-                selected={paymentMethod === "transfer"}
-              />
-            </View>
-          </View>
-
-          <View className="gap-3">
-            <FormField
-              label="Customer name"
-              onChangeText={setCustomerName}
-              placeholder="Walk-in customer"
-              value={customerName}
-            />
-            {customers.length > 0 ? (
-              <View className="flex-row flex-wrap gap-2">
-                {customers.slice(0, 6).map((customer) => (
-                  <Pressable
-                    className="rounded-full border border-border bg-card px-3 py-2 active:bg-accent"
-                    haptic
-                    key={customer.id}
-                    onPress={() => setCustomerName(customer.name)}
-                    transition
-                  >
-                    <Text className="text-xs font-semibold text-foreground">
-                      {customer.name}
+              <View className="rounded-2xl border border-border bg-card p-4">
+                <View className="flex-row items-start justify-between gap-3">
+                  <View className="flex-1 gap-1">
+                    <Text className="font-semibold text-foreground">
+                      Sale source
                     </Text>
-                  </Pressable>
-                ))}
+                    <Text className="text-sm leading-5 text-muted-foreground">
+                      {sourceDetail}
+                    </Text>
+                  </View>
+                  <View className="rounded-full bg-muted px-3 py-1">
+                    <Text className="text-xs font-bold text-muted-foreground">
+                      {sourceLabel}
+                    </Text>
+                  </View>
+                </View>
               </View>
-            ) : null}
-          </View>
 
-          <ActionButton disabled={!canSubmit} onPress={submit}>
-            {createProductionSaleMutation.isPending
-              ? "Recording sale..."
-              : "Complete transaction"}
-          </ActionButton>
-        </View>
-      </BottomSheetKeyboardAwareScrollView>
+              {products.length === 0 ? (
+                <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
+                  <Text className="font-semibold text-foreground">
+                    Add inventory first
+                  </Text>
+                  <Text className="text-sm leading-5 text-muted-foreground">
+                    Create at least one item before recording a sale.
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          }
+          ref={checkoutListRef}
+          renderItem={({ item }) => {
+            if (item.kind === "sellable") {
+              return (
+                <View className="pb-3">
+                  <SellableOption
+                    item={item.item}
+                    onPress={() => selectItem(item.item)}
+                    selected={selectedItemId === item.item.id}
+                  />
+                </View>
+              )
+            }
+
+            if (item.kind === "quantity") {
+              return (
+                <View className="pt-5 pb-3">
+                  <QuantityStepper
+                    helper={selectedItem ? selectedItem.unitName : undefined}
+                    onChangeText={setQuantity}
+                    onFocus={scrollToQuantityInput}
+                    value={quantity}
+                  />
+                </View>
+              )
+            }
+
+            if (item.kind === "stock-warning" && selectedItem) {
+              return (
+                <View className="pb-3">
+                  <View className="rounded-2xl bg-destructive/10 p-3">
+                    <Text className="text-sm font-semibold text-destructive">
+                      Only {selectedItem.stock} {selectedItem.unitName}{" "}
+                      available.
+                    </Text>
+                  </View>
+                </View>
+              )
+            }
+
+            if (item.kind === "session-warning") {
+              return (
+                <View className="pb-3">
+                  <View className="rounded-2xl bg-amber-500/10 p-3">
+                    <Text className="text-sm font-semibold text-amber-700">
+                      Clock in and confirm opening stock before completing a
+                      sale.
+                    </Text>
+                  </View>
+                </View>
+              )
+            }
+
+            if (item.kind === "submit-error" && submitError) {
+              return (
+                <View className="pb-3">
+                  <View className="rounded-2xl bg-destructive/10 p-3">
+                    <Text className="text-sm font-semibold text-destructive">
+                      {submitError}
+                    </Text>
+                  </View>
+                </View>
+              )
+            }
+
+            if (item.kind === "total") {
+              return (
+                <View className="pb-5">
+                  <View className="gap-3 rounded-2xl border border-border bg-card p-4">
+                    <Text className="text-sm font-semibold text-muted-foreground">
+                      Total
+                    </Text>
+                    <Text className="text-3xl font-bold text-foreground">
+                      {formatMoney(total, "NGN")}
+                    </Text>
+                  </View>
+                </View>
+              )
+            }
+
+            if (item.kind === "payment") {
+              return (
+                <View className="gap-3 pb-5">
+                  <Text className="text-sm font-semibold text-foreground">
+                    Payment method
+                  </Text>
+                  <View className="flex-row gap-3">
+                    <PaymentOption
+                      label="Cash"
+                      onPress={() => setPaymentMethod("cash")}
+                      selected={paymentMethod === "cash"}
+                    />
+                    <PaymentOption
+                      label="Transfer"
+                      onPress={() => setPaymentMethod("transfer")}
+                      selected={paymentMethod === "transfer"}
+                    />
+                  </View>
+                </View>
+              )
+            }
+
+            if (item.kind === "customer") {
+              return (
+                <View className="gap-3 pb-5">
+                  <FormField
+                    autoCapitalize="words"
+                    helper={
+                      isOfflineMode
+                        ? "Searching customers saved on this device."
+                        : productionCustomersQuery.isError
+                          ? "Production customer search is unavailable, showing local customers."
+                          : "Type a new name or pick a saved customer."
+                    }
+                    label="Customer"
+                    onChangeText={updateCustomerName}
+                    onFocus={scrollToCustomerInput}
+                    placeholder="Enter customer name"
+                    value={customerName}
+                  />
+                  {visibleCustomerOptions.length > 0 ? (
+                    <View className="gap-2">
+                      <View className="flex-row items-center justify-between gap-3">
+                        <Text className="text-xs font-bold uppercase text-muted-foreground">
+                          Customer book
+                        </Text>
+                        <View className="rounded-full bg-muted px-3 py-1">
+                          <Text className="text-xs font-bold text-muted-foreground">
+                            {isOfflineMode || productionCustomersQuery.isError
+                              ? "Local"
+                              : productionCustomersQuery.isFetching
+                                ? "Refreshing"
+                                : "Online"}
+                          </Text>
+                        </View>
+                      </View>
+                      <View className="flex-row flex-wrap gap-2">
+                        {visibleCustomerOptions.map((customer) => (
+                          <CustomerOptionChip
+                            customer={customer}
+                            key={customer.id}
+                            onPress={() => selectCustomer(customer)}
+                            selected={selectedCustomer?.id === customer.id}
+                          />
+                        ))}
+                      </View>
+                    </View>
+                  ) : null}
+                </View>
+              )
+            }
+
+            if (item.kind === "submit") {
+              return (
+                <View className="pb-6">
+                  <ActionButton disabled={!canSubmit} onPress={submit}>
+                    {createProductionSaleMutation.isPending
+                      ? "Recording sale..."
+                      : "Complete transaction"}
+                  </ActionButton>
+                </View>
+              )
+            }
+
+            return null
+          }}
+          renderSectionHeader={({ section }) =>
+            section.product &&
+            !section.data.some(
+              (row) =>
+                row.kind === "sellable" && row.item.id === selectedItemId,
+            ) ? (
+              <ProductSectionHeader product={section.product} />
+            ) : null
+          }
+          sections={saleSections}
+          stickySectionHeadersEnabled={false}
+        />
+      </BottomSheetInputProvider>
     </Modal>
-  );
-});
+  )
+})
 
-CreateSaleSheet.displayName = "CreateSaleSheet";
+CreateSaleSheet.displayName = "CreateSaleSheet"

@@ -1,16 +1,16 @@
-import { Text } from "@/components/ui/text";
-import { Input } from "@/components/ui/input-2";
-import { cn } from "@/lib/utils";
-import type { ComponentProps } from "react";
-import { View } from "react-native";
+import { Input } from "@/components/ui/input-2"
+import { Text } from "@/components/ui/text"
+import { cn } from "@/lib/utils"
+import type { ComponentProps } from "react"
+import { View } from "react-native"
 
 type FormFieldProps = Omit<ComponentProps<typeof Input>, "className"> & {
-  containerClassName?: string;
-  error?: string;
-  helper?: string;
-  inputClassName?: string;
-  label: string;
-};
+  containerClassName?: string
+  error?: string
+  helper?: string
+  inputClassName?: string
+  label: string
+}
 
 export function FormField({
   containerClassName,
@@ -29,7 +29,6 @@ export function FormField({
           error && "border-destructive",
           inputClassName,
         )}
-        placeholderTextColor="#94A3B8"
         {...inputProps}
       />
       {error ? (
@@ -38,5 +37,5 @@ export function FormField({
         <Text className="text-xs text-muted-foreground">{helper}</Text>
       ) : null}
     </View>
-  );
+  )
 }

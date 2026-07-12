@@ -1,53 +1,53 @@
-import { ActionButton } from "@/components/mobile/action-button";
-import { FormField } from "@/components/mobile/form-field";
-import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view";
-import { Icon } from "@/components/ui/icon";
-import { Modal } from "@/components/ui/modal";
-import { Text } from "@/components/ui/text";
+import { ActionButton } from "@/components/mobile/action-button"
+import { FormField } from "@/components/mobile/form-field"
+import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
+import { Icon } from "@/components/ui/icon"
+import { Modal } from "@/components/ui/modal"
+import { Text } from "@/components/ui/text"
 import {
   formatWholeQuantity as formatQuantity,
   normalizeWholeNumberInput,
   parseWholeQuantity as parseQuantity,
-} from "@/lib/quantity";
-import { cn } from "@/lib/utils";
-import { useBusinessStore } from "@/store/businessStore";
+} from "@/lib/quantity"
+import { cn } from "@/lib/utils"
+import { useBusinessStore } from "@/store/businessStore"
 import {
   type RetailOpsProduct,
   type RetailOpsRepSession,
   useRetailOpsStore,
-} from "@/store/retailOpsStore";
-import { useTRPC } from "@/trpc/client";
-import type { BottomSheetModal } from "@gorhom/bottom-sheet";
-import { useMutation } from "@tanstack/react-query";
-import { forwardRef, useEffect, useMemo, useState } from "react";
-import { View } from "react-native";
+} from "@/store/retailOpsStore"
+import { useTRPC } from "@/trpc/client"
+import type { BottomSheetModal } from "@gorhom/bottom-sheet"
+import { useMutation } from "@tanstack/react-query"
+import { forwardRef, useEffect, useMemo, useState } from "react"
+import { View } from "react-native"
 
 type RepClockInSheetProps = {
-  attendantName?: string;
-  onComplete?: () => void;
-};
+  attendantName?: string
+  onComplete?: () => void
+}
 
 type OpeningInventoryDraftLine = {
-  expectedQuantity: number;
-  id: string;
-  productId: string;
-  productName: string;
-  remoteVariantId?: string;
-  unitName: string;
-  variantId?: string;
-};
+  expectedQuantity: number
+  id: string
+  productId: string
+  productName: string
+  remoteVariantId?: string
+  unitName: string
+  variantId?: string
+}
 
 function formatClockInTime(value: string) {
-  const date = new Date(value);
+  const date = new Date(value)
 
-  if (Number.isNaN(date.getTime())) return "Today";
+  if (Number.isNaN(date.getTime())) return "Today"
 
   return date.toLocaleString(undefined, {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
     month: "short",
-  });
+  })
 }
 
 function getOpeningInventoryLines(
@@ -61,7 +61,7 @@ function getOpeningInventoryLines(
       productName: product.name,
       remoteVariantId: product.remoteVariantId,
       unitName: product.unitName,
-    };
+    }
     const variantLines = product.variants.map((variant) => ({
       expectedQuantity: variant.currentStock ?? variant.startingStock ?? 0,
       id: `${product.id}-${variant.id}`,
@@ -70,20 +70,20 @@ function getOpeningInventoryLines(
       remoteVariantId: variant.remoteId,
       unitName: variant.name,
       variantId: variant.id,
-    }));
+    }))
 
-    return [primaryLine, ...variantLines];
-  });
+    return [primaryLine, ...variantLines]
+  })
 }
 
 function OpenSessionSummary({
   session,
 }: {
-  session: RetailOpsRepSession;
+  session: RetailOpsRepSession
 }) {
   const varianceLines = session.openingInventoryLines.filter(
     (line) => line.variance !== 0,
-  );
+  )
 
   return (
     <View className="gap-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
@@ -128,101 +128,122 @@ function OpenSessionSummary({
       </View>
       {session.syncStatus === "pending" ? (
         <View className="self-start rounded-full bg-amber-500/10 px-3 py-1">
-          <Text className="text-xs font-bold text-amber-700">
-            Pending sync
-          </Text>
+          <Text className="text-xs font-bold text-amber-700">Pending sync</Text>
         </View>
       ) : null}
     </View>
-  );
+  )
 }
 
 export const RepClockInSheet = forwardRef<
   BottomSheetModal,
   RepClockInSheetProps
 >(({ attendantName = "Store Owner", onComplete }, ref) => {
-  const trpc = useTRPC();
-  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId);
+  const trpc = useTRPC()
+  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
   const clockInRepSession = useRetailOpsStore(
     (state) => state.clockInRepSession,
-  );
-  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode);
-  const products = useRetailOpsStore((state) =>
-    state.products.filter(
-      (product) =>
-        !activeBusinessId ||
-        (product.businessId ?? activeBusinessId) === activeBusinessId,
-    ),
-  );
-  const repSessions = useRetailOpsStore((state) =>
-    state.repSessions.filter(
-      (session) =>
-        !activeBusinessId ||
-        (session.businessId ?? activeBusinessId) === activeBusinessId,
-    ),
-  );
+  )
+  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
+  const allProducts = useRetailOpsStore((state) => state.products)
+  const allRepSessions = useRetailOpsStore((state) => state.repSessions)
+  const products = useMemo(
+    () =>
+      allProducts.filter(
+        (product) =>
+          !activeBusinessId ||
+          (product.businessId ?? activeBusinessId) === activeBusinessId,
+      ),
+    [activeBusinessId, allProducts],
+  )
+  const repSessions = useMemo(
+    () =>
+      allRepSessions.filter(
+        (session) =>
+          !activeBusinessId ||
+          (session.businessId ?? activeBusinessId) === activeBusinessId,
+      ),
+    [activeBusinessId, allRepSessions],
+  )
   const openingInventoryLines = useMemo(
     () => getOpeningInventoryLines(products),
     [products],
-  );
+  )
   const openSession = repSessions.find(
     (session) =>
       session.status === "open" && session.attendantName === attendantName,
-  );
-  const [inventoryDraft, setInventoryDraft] = useState<
-    Record<string, string>
-  >({});
-  const [note, setNote] = useState("");
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  )
+  const [inventoryDraft, setInventoryDraft] = useState<Record<string, string>>(
+    {},
+  )
+  const [inventoryLineQuery, setInventoryLineQuery] = useState("")
+  const [note, setNote] = useState("")
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const openSessionMutation = useMutation(
     trpc.retailOps.openSession.mutationOptions({
       onError: (error) => {
-        setSubmitError(error.message);
+        setSubmitError(error.message)
       },
     }),
-  );
+  )
   const canOpenProductionSession =
     !isOfflineMode &&
     openingInventoryLines.length > 0 &&
-    openingInventoryLines.every((line) => !!line.remoteVariantId);
+    openingInventoryLines.every((line) => !!line.remoteVariantId)
   const canSubmit =
     !openSession &&
     openingInventoryLines.length > 0 &&
     openingInventoryLines.every((line) => inventoryDraft[line.id]?.trim()) &&
-    !openSessionMutation.isPending;
+    !openSessionMutation.isPending
   const sourceLabel = canOpenProductionSession
     ? "Online"
     : isOfflineMode
       ? "Local"
-      : "Local queue";
+      : "Local queue"
   const sourceDetail = canOpenProductionSession
     ? "This session will open in production immediately."
     : isOfflineMode
       ? "This clock-in will be queued locally and synced later."
-      : "Waiting for all product units to sync before direct production clock-in.";
+      : "Waiting for all product units to sync before direct production clock-in."
+  const filteredOpeningInventoryLines = useMemo(() => {
+    const normalizedQuery = inventoryLineQuery.trim().toLowerCase()
+
+    if (!normalizedQuery) return openingInventoryLines
+
+    return openingInventoryLines.filter((line) =>
+      [line.productName, line.unitName]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedQuery),
+    )
+  }, [inventoryLineQuery, openingInventoryLines])
+  const visibleOpeningInventoryLines = useMemo(
+    () => filteredOpeningInventoryLines.slice(0, 12),
+    [filteredOpeningInventoryLines],
+  )
 
   useEffect(() => {
     setInventoryDraft((current) => {
-      const nextDraft: Record<string, string> = {};
+      const nextDraft: Record<string, string> = {}
 
       for (const line of openingInventoryLines) {
         nextDraft[line.id] =
-          current[line.id] ?? formatQuantity(line.expectedQuantity);
+          current[line.id] ?? formatQuantity(line.expectedQuantity)
       }
 
-      return nextDraft;
-    });
-  }, [openingInventoryLines]);
+      return nextDraft
+    })
+  }, [openingInventoryLines])
 
   const updateInventoryLine = (id: string, value: string) => {
     setInventoryDraft((current) => ({
       ...current,
       [id]: normalizeWholeNumberInput(value),
-    }));
-  };
+    }))
+  }
 
   const submit = () => {
-    if (!canSubmit) return;
+    if (!canSubmit) return
 
     const openingLines = openingInventoryLines.map((line) => ({
       confirmedQuantity: parseQuantity(inventoryDraft[line.id] ?? "0"),
@@ -231,9 +252,9 @@ export const RepClockInSheet = forwardRef<
       productName: line.productName,
       unitName: line.unitName,
       variantId: line.variantId,
-    }));
+    }))
 
-    setSubmitError(null);
+    setSubmitError(null)
 
     if (canOpenProductionSession) {
       openSessionMutation.mutate(
@@ -258,13 +279,13 @@ export const RepClockInSheet = forwardRef<
               openingInventoryLines: openingLines,
               remoteId: session.id,
               syncStatus: "synced",
-            });
-            setNote("");
-            onComplete?.();
+            })
+            setNote("")
+            onComplete?.()
           },
         },
-      );
-      return;
+      )
+      return
     }
 
     clockInRepSession({
@@ -272,21 +293,16 @@ export const RepClockInSheet = forwardRef<
       businessId: activeBusinessId ?? undefined,
       note,
       openingInventoryLines: openingLines,
-    });
-    setNote("");
-    onComplete?.();
-  };
+    })
+    setNote("")
+    onComplete?.()
+  }
 
   return (
-    <Modal
-      enableDynamicSizing
-      ref={ref}
-      snapPoints={["92%"]}
-      title="Clock in"
-    >
+    <Modal enableDynamicSizing ref={ref} snapPoints={["92%"]} title="Clock in">
       <BottomSheetKeyboardAwareScrollView
-        bottomOffset={112}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        bottomOffset={320}
+        contentContainerStyle={{ paddingBottom: 240 }}
         keyboardShouldPersistTaps="handled"
       >
         <View className="gap-5 px-5 pb-6">
@@ -332,57 +348,83 @@ export const RepClockInSheet = forwardRef<
             </View>
           ) : (
             <View className="gap-4">
-              {openingInventoryLines.map((line) => {
-                const confirmedQuantity = parseQuantity(
-                  inventoryDraft[line.id] ?? "0",
-                );
-                const variance = confirmedQuantity - line.expectedQuantity;
+              {openingInventoryLines.length > 8 ? (
+                <FormField
+                  label="Find stock line"
+                  onChangeText={setInventoryLineQuery}
+                  placeholder="Search products or units"
+                  value={inventoryLineQuery}
+                />
+              ) : null}
+              {visibleOpeningInventoryLines.length > 0 ? (
+                visibleOpeningInventoryLines.map((line) => {
+                  const confirmedQuantity = parseQuantity(
+                    inventoryDraft[line.id] ?? "0",
+                  )
+                  const variance = confirmedQuantity - line.expectedQuantity
 
-                return (
-                  <View
-                    className="gap-3 rounded-2xl border border-border bg-card p-4"
-                    key={line.id}
-                  >
-                    <View className="flex-row items-start justify-between gap-3">
-                      <View className="flex-1 gap-1">
-                        <Text className="font-semibold text-foreground">
-                          {line.productName}
-                        </Text>
-                        <Text className="text-xs font-semibold uppercase text-muted-foreground">
-                          {line.unitName}
+                  return (
+                    <View
+                      className="gap-3 rounded-2xl border border-border bg-card p-4"
+                      key={line.id}
+                    >
+                      <View className="flex-row items-start justify-between gap-3">
+                        <View className="flex-1 gap-1">
+                          <Text className="font-semibold text-foreground">
+                            {line.productName}
+                          </Text>
+                          <Text className="text-xs font-semibold uppercase text-muted-foreground">
+                            {line.unitName}
+                          </Text>
+                        </View>
+                        <Text className="text-xs font-bold text-muted-foreground">
+                          Expected {formatQuantity(line.expectedQuantity)}
                         </Text>
                       </View>
-                      <Text className="text-xs font-bold text-muted-foreground">
-                        Expected {formatQuantity(line.expectedQuantity)}
+                      <FormField
+                        inputMode="numeric"
+                        keyboardType="numeric"
+                        label="Confirmed opening stock"
+                        onChangeText={(value) =>
+                          updateInventoryLine(line.id, value)
+                        }
+                        placeholder="Enter counted stock"
+                        value={inventoryDraft[line.id] ?? ""}
+                      />
+                      <Text
+                        className={cn(
+                          "text-xs font-bold",
+                          variance === 0
+                            ? "text-emerald-700"
+                            : "text-destructive",
+                        )}
+                      >
+                        {variance === 0
+                          ? "Opening stock balanced"
+                          : `${variance > 0 ? "+" : ""}${formatQuantity(
+                              variance,
+                            )} variance`}
                       </Text>
                     </View>
-                    <FormField
-                      inputMode="numeric"
-                      keyboardType="numeric"
-                      label="Confirmed opening stock"
-                      onChangeText={(value) =>
-                        updateInventoryLine(line.id, value)
-                      }
-                      placeholder={formatQuantity(line.expectedQuantity)}
-                      value={inventoryDraft[line.id] ?? ""}
-                    />
-                    <Text
-                      className={cn(
-                        "text-xs font-bold",
-                        variance === 0
-                          ? "text-emerald-700"
-                          : "text-destructive",
-                      )}
-                    >
-                      {variance === 0
-                        ? "Opening stock balanced"
-                        : `${variance > 0 ? "+" : ""}${formatQuantity(
-                            variance,
-                          )} variance`}
-                    </Text>
-                  </View>
-                );
-              })}
+                  )
+                })
+              ) : (
+                <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
+                  <Text className="font-semibold text-foreground">
+                    No matching stock lines
+                  </Text>
+                  <Text className="text-sm leading-5 text-muted-foreground">
+                    Try another product or unit name.
+                  </Text>
+                </View>
+              )}
+              {filteredOpeningInventoryLines.length >
+              visibleOpeningInventoryLines.length ? (
+                <Text className="text-xs font-semibold text-muted-foreground">
+                  Showing first {visibleOpeningInventoryLines.length} of{" "}
+                  {filteredOpeningInventoryLines.length} stock lines.
+                </Text>
+              ) : null}
             </View>
           )}
 
@@ -390,7 +432,7 @@ export const RepClockInSheet = forwardRef<
             <FormField
               label="Opening note"
               onChangeText={setNote}
-              placeholder="Optional variance or handover note"
+              placeholder="Enter variance or handover note"
               value={note}
             />
           ) : null}
@@ -415,7 +457,7 @@ export const RepClockInSheet = forwardRef<
         </View>
       </BottomSheetKeyboardAwareScrollView>
     </Modal>
-  );
-});
+  )
+})
 
-RepClockInSheet.displayName = "RepClockInSheet";
+RepClockInSheet.displayName = "RepClockInSheet"

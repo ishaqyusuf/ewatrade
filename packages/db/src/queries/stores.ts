@@ -173,8 +173,11 @@ export async function createTenantStore(
     tenantId: input.tenantId,
   })
 
-  const baseSlug = toSlug(input.name) || "store"
-  const currencyCode = input.currencyCode?.toUpperCase() ?? "NGN"
+  const name = cleanText(input.name) ?? "Store"
+  const supportEmail = cleanText(input.supportEmail)
+  const supportPhone = cleanText(input.supportPhone)
+  const baseSlug = toSlug(name) || "store"
+  const currencyCode = cleanText(input.currencyCode)?.toUpperCase() ?? "NGN"
   const capturedAt = new Date()
   const onboardingMetadata = buildOnboardingMetadata(
     input.onboarding,
@@ -197,10 +200,10 @@ export async function createTenantStore(
         data: {
           tenantId: input.tenantId,
           slug,
-          name: input.name,
+          name,
           currencyCode,
-          supportEmail: input.supportEmail ?? null,
-          supportPhone: input.supportPhone ?? null,
+          supportEmail,
+          supportPhone,
           status: "ACTIVE",
           ...(metadata ? { metadata } : {}),
         },

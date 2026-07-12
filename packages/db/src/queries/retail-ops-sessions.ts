@@ -437,10 +437,7 @@ function getCloseoutDeclarations(
   })
 }
 
-function findCloseoutDeclaration(
-  metadata: unknown,
-  cashierSessionId: string,
-) {
+function findCloseoutDeclaration(metadata: unknown, cashierSessionId: string) {
   const declaration = getCloseoutDeclarations(metadata).find(
     (currentDeclaration) =>
       currentDeclaration.cashierSessionId === cashierSessionId,
@@ -459,7 +456,8 @@ function findCloseoutDeclaration(
 function getCloseoutInventoryDeclarations(
   metadata: unknown,
 ): RetailOpsCloseoutInventoryDeclaration[] {
-  const declarations = getRetailOpsMetadata(metadata).closeoutInventoryDeclarations
+  const declarations =
+    getRetailOpsMetadata(metadata).closeoutInventoryDeclarations
 
   if (!Array.isArray(declarations)) return []
 
@@ -549,7 +547,8 @@ function findCloseoutInventoryDeclaration(
 function getOpeningInventoryDeclarations(
   metadata: unknown,
 ): RetailOpsOpeningInventoryDeclaration[] {
-  const declarations = getRetailOpsMetadata(metadata).openingInventoryDeclarations
+  const declarations =
+    getRetailOpsMetadata(metadata).openingInventoryDeclarations
 
   if (!Array.isArray(declarations)) return []
 
@@ -1467,11 +1466,17 @@ async function writeDurableApprovedCloseoutAdjustmentMovements(
           })
         : Promise.resolve([]),
     ])
-    const inventoryItemIdByVariantId = new Map(
-      inventoryItems.map((item) => [item.productVariantId, item.id]),
+    const inventoryItemIdByVariantId = new Map<string, string>(
+      inventoryItems.map((item): [string, string] => [
+        item.productVariantId,
+        item.id,
+      ]),
     )
-    const staffWalletIdByVariantId = new Map(
-      staffWallets.map((wallet) => [wallet.productVariantId, wallet.id]),
+    const staffWalletIdByVariantId = new Map<string, string>(
+      staffWallets.map((wallet): [string, string] => [
+        wallet.productVariantId,
+        wallet.id,
+      ]),
     )
 
     await Promise.all(
@@ -1502,9 +1507,8 @@ async function writeDurableApprovedCloseoutAdjustmentMovements(
             happenedAt: input.review.reviewedAt,
             inventoryItemId: isStaffWallet
               ? null
-              : (inventoryItemIdByVariantId.get(
-                  declaration.productVariantId,
-                ) ?? null),
+              : (inventoryItemIdByVariantId.get(declaration.productVariantId) ??
+                null),
             metadata: {
               retailOps: {
                 closeoutId: closeout.id,
@@ -1513,10 +1517,8 @@ async function writeDurableApprovedCloseoutAdjustmentMovements(
               },
             } as Prisma.InputJsonValue,
             movementGroupId: `closeout:${closeout.id}`,
-            note: declaration.note ?? input.review.note,
-            onHandQuantity: isStaffWallet
-              ? null
-              : declaration.countedQuantity,
+            note: getStringField(declaration.note) ?? input.review.note,
+            onHandQuantity: isStaffWallet ? null : declaration.countedQuantity,
             previousOnHandQuantity: isStaffWallet
               ? null
               : declaration.expectedQuantity,
@@ -1550,9 +1552,8 @@ async function writeDurableApprovedCloseoutAdjustmentMovements(
             happenedAt: input.review.reviewedAt,
             inventoryItemId: isStaffWallet
               ? null
-              : (inventoryItemIdByVariantId.get(
-                  declaration.productVariantId,
-                ) ?? null),
+              : (inventoryItemIdByVariantId.get(declaration.productVariantId) ??
+                null),
             metadata: {
               retailOps: {
                 closeoutId: closeout.id,
@@ -1561,10 +1562,8 @@ async function writeDurableApprovedCloseoutAdjustmentMovements(
               },
             } as Prisma.InputJsonValue,
             movementGroupId: `closeout:${closeout.id}`,
-            note: declaration.note ?? input.review.note,
-            onHandQuantity: isStaffWallet
-              ? null
-              : declaration.countedQuantity,
+            note: getStringField(declaration.note) ?? input.review.note,
+            onHandQuantity: isStaffWallet ? null : declaration.countedQuantity,
             previousOnHandQuantity: isStaffWallet
               ? null
               : declaration.expectedQuantity,

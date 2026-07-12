@@ -55,7 +55,13 @@ const billingSubscriptionStatusSchema = z.enum([
 
 const billingPlanIdSchema = z.enum(["growth", "pro", "starter"])
 const optionalDateSchema = z.coerce.date().nullable().optional()
-const optionalStringSchema = z.string().trim().min(1).max(500).nullable().optional()
+const optionalStringSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(500)
+  .nullable()
+  .optional()
 
 const billingProviderEventSchema = z.object({
   checkout: z
@@ -154,8 +160,7 @@ export function registerBillingProviderEventRoutes(app: OpenAPIHono) {
       prisma,
       parsed.data,
     )
-    const statusCode =
-      result.providerEvent.status === "failed" ? 500 : 200
+    const statusCode = result.providerEvent.status === "failed" ? 500 : 200
 
     return c.json(result, statusCode)
   })

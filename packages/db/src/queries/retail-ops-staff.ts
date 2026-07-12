@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto"
+import { createHash, randomBytes } from "node:crypto"
 
 import {
   type MembershipRole,
@@ -62,6 +62,7 @@ export type ListRetailOpsStaffInput = {
 
 export type InvitedRetailOpsStaff = {
   invite: {
+    acceptanceToken: string | null
     id: string
     invitedAt: Date | null
     invitedByUserId: string | null
@@ -136,7 +137,23 @@ export type CompletedRetailOpsStaffOnboarding = {
   }
 }
 
+export type ResolvedRetailOpsStaffInvite = {
+  email: string
+  expiresAt: Date
+  inviteTokenId: string
+  membershipId: string | null
+  role: string
+  status: string
+  tenant: {
+    id: string
+    name: string
+    slug: string
+  }
+}
+
 type RetailOpsStaffErrorCode =
+  | "STAFF_INVITE_EXPIRED"
+  | "STAFF_INVITE_INVALID"
   | "STAFF_ALREADY_ACTIVE"
   | "STAFF_NOT_FOUND"
   | "STAFF_SELF_UPDATE_FORBIDDEN"
@@ -243,6 +260,7 @@ function serializeInvitedStaffResult(result: InvitedRetailOpsStaff) {
     ...result,
     invite: {
       ...result.invite,
+      acceptanceToken: null,
       invitedAt: result.invite.invitedAt?.toISOString() ?? null,
     },
   }
@@ -278,6 +296,7 @@ function deserializeInvitedStaffResult(
 
   return {
     invite: {
+      acceptanceToken: null,
       id: inviteId,
       invitedAt: getDateField(invite.invitedAt),
       invitedByUserId: getNullableStringField(invite.invitedByUserId),
@@ -313,7 +332,12 @@ function normalizeName(name: string | undefined) {
 }
 
 function getFallbackName(email: string) {
-  return email.split("@")[0]?.replace(/[._-]+/g, " ").trim() || email
+  return (
+    email
+      .split("@")[0]
+      ?.replace(/[._-]+/g, " ")
+      .trim() || email
+  )
 }
 
 function getDisplayName(user: {
@@ -399,24 +423,12 @@ function isDurableStaffProfileTableUnavailable(error: unknown) {
   )
 }
 
-function getDurableInviteTokenHash(input: {
-  email: string
-  externalId?: string
-  invitedAt: Date
-  membershipId: string
-  tenantId: string
-}) {
-  return createHash("sha256")
-    .update(
-      [
-        "retail_ops_staff_invite",
-        input.tenantId,
-        input.membershipId,
-        input.email,
-        input.externalId ?? input.invitedAt.toISOString(),
-      ].join(":"),
-    )
-    .digest("hex")
+function createDurableInviteToken() {
+  return randomBytes(32).toString("base64url")
+}
+
+function getDurableInviteTokenHash(token: string) {
+  return createHash("sha256").update(token.trim()).digest("hex")
 }
 
 async function upsertDurableRetailOpsStaffProfile(
@@ -536,15 +548,10 @@ async function writeDurableRetailOpsStaffInvite(
     storeId: string
     tenantId: string
   },
-) {
+): Promise<string | null> {
   try {
-    const tokenHash = getDurableInviteTokenHash({
-      email: input.email,
-      externalId: input.externalId,
-      invitedAt: input.invitedAt,
-      membershipId: input.membershipId,
-      tenantId: input.tenantId,
-    })
+    const acceptanceToken = createDurableInviteToken()
+    const tokenHash = getDurableInviteTokenHash(acceptanceToken)
     const profile = await upsertDurableRetailOpsStaffProfile(db, {
       acceptedAt: null,
       defaultStoreId: input.storeId,
@@ -557,13 +564,25 @@ async function writeDurableRetailOpsStaffInvite(
       userId: input.invitedUserId,
     })
 
-    await db.retailOpsStaffInviteToken.upsert({
+    await db.retailOpsStaffInviteToken.updateMany({
       where: {
-        tokenHash,
+        membershipId: input.membershipId,
+        status: DurableRetailOpsStaffInviteTokenStatus.ACTIVE,
+        tenantId: input.tenantId,
       },
-      create: {
+      data: {
+        revokedAt: input.invitedAt,
+        revokedByUserId: input.invitedByUserId,
+        status: DurableRetailOpsStaffInviteTokenStatus.REVOKED,
+      },
+    })
+
+    await db.retailOpsStaffInviteToken.create({
+      data: {
         email: input.email,
-        expiresAt: new Date(input.invitedAt.getTime() + 1000 * 60 * 60 * 24 * 14),
+        expiresAt: new Date(
+          input.invitedAt.getTime() + 1000 * 60 * 60 * 24 * 14,
+        ),
         externalId: input.externalId ?? null,
         invitedByUserId: input.invitedByUserId,
         invitedUserId: input.invitedUserId,
@@ -577,14 +596,6 @@ async function writeDurableRetailOpsStaffInvite(
         status: DurableRetailOpsStaffInviteTokenStatus.ACTIVE,
         tenantId: input.tenantId,
         tokenHash,
-      },
-      update: {
-        expiresAt: new Date(input.invitedAt.getTime() + 1000 * 60 * 60 * 24 * 14),
-        invitedByUserId: input.invitedByUserId,
-        invitedUserId: input.invitedUserId,
-        membershipId: input.membershipId,
-        role: input.role,
-        status: DurableRetailOpsStaffInviteTokenStatus.ACTIVE,
       },
       select: {
         id: true,
@@ -612,8 +623,10 @@ async function writeDurableRetailOpsStaffInvite(
         ? DurableRetailOpsStaffLifecycleEventType.INVITE_REFRESHED
         : DurableRetailOpsStaffLifecycleEventType.INVITED,
     })
+
+    return acceptanceToken
   } catch (error) {
-    if (isDurableStaffProfileTableUnavailable(error)) return
+    if (isDurableStaffProfileTableUnavailable(error)) return null
 
     throw error
   }
@@ -1162,8 +1175,24 @@ export async function inviteRetailOpsStaff(
           },
         })
 
+    const acceptanceToken = await writeDurableRetailOpsStaffInvite(tx, {
+      email,
+      externalId,
+      invitedAt: membership.invitedAt ?? invitedAt,
+      invitedByUserId: input.actorUserId,
+      invitedUserId: user.id,
+      membershipId: membership.id,
+      previousRole: existingMembership?.role ?? null,
+      previousStatus: existingMembership?.status ?? null,
+      role: membership.role,
+      staffDisplayName: getDisplayName(user),
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
+
     const invitedStaff = {
       invite: {
+        acceptanceToken,
         id: membership.id,
         invitedAt: membership.invitedAt,
         invitedByUserId: membership.invitedById,
@@ -1182,21 +1211,6 @@ export async function inviteRetailOpsStaff(
       storeId: input.storeId,
       tenantId: input.tenantId,
     }
-
-    await writeDurableRetailOpsStaffInvite(tx, {
-      email,
-      externalId,
-      invitedAt: membership.invitedAt ?? invitedAt,
-      invitedByUserId: input.actorUserId,
-      invitedUserId: user.id,
-      membershipId: membership.id,
-      previousRole: existingMembership?.role ?? null,
-      previousStatus: existingMembership?.status ?? null,
-      role: membership.role,
-      staffDisplayName: getDisplayName(user),
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-    })
 
     if (externalId) {
       await tx.tenant.update({
@@ -1350,6 +1364,90 @@ export async function updateRetailOpsStaffStatus(
   })
 }
 
+export async function resolveRetailOpsStaffInviteToken(
+  db: PrismaClient,
+  input: { token: string },
+): Promise<ResolvedRetailOpsStaffInvite> {
+  const token = input.token.trim()
+
+  if (!token) {
+    throw new RetailOpsStaffError(
+      "STAFF_INVITE_INVALID",
+      "This staff invitation link is not valid.",
+    )
+  }
+
+  try {
+    const invite = await db.retailOpsStaffInviteToken.findUnique({
+      where: {
+        tokenHash: getDurableInviteTokenHash(token),
+      },
+      select: {
+        email: true,
+        expiresAt: true,
+        id: true,
+        membershipId: true,
+        role: true,
+        status: true,
+        tenant: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+      },
+    })
+
+    if (!invite) {
+      throw new RetailOpsStaffError(
+        "STAFF_INVITE_INVALID",
+        "This staff invitation link is not valid.",
+      )
+    }
+
+    if (
+      invite.status !== DurableRetailOpsStaffInviteTokenStatus.ACTIVE ||
+      invite.expiresAt.getTime() <= Date.now()
+    ) {
+      if (
+        invite.status === DurableRetailOpsStaffInviteTokenStatus.ACTIVE &&
+        invite.expiresAt.getTime() <= Date.now()
+      ) {
+        await db.retailOpsStaffInviteToken.update({
+          where: { id: invite.id },
+          data: { status: DurableRetailOpsStaffInviteTokenStatus.EXPIRED },
+        })
+      }
+
+      throw new RetailOpsStaffError(
+        "STAFF_INVITE_EXPIRED",
+        "This staff invitation link has expired. Ask the business owner to send a new invite.",
+      )
+    }
+
+    return {
+      email: invite.email,
+      expiresAt: invite.expiresAt,
+      inviteTokenId: invite.id,
+      membershipId: invite.membershipId,
+      role: invite.role,
+      status: invite.status,
+      tenant: invite.tenant,
+    }
+  } catch (error) {
+    if (error instanceof RetailOpsStaffError) throw error
+    if (isDurableStaffProfileTableUnavailable(error)) {
+      throw new RetailOpsStaffError(
+        "STAFF_INVITE_INVALID",
+        "Staff invitation links are not available yet. Sign in with your invited email address.",
+      )
+    }
+
+    throw error
+  }
+}
+
 export async function completeRetailOpsStaffOnboarding(
   db: PrismaClient,
   input: CompleteRetailOpsStaffOnboardingInput,
@@ -1404,7 +1502,9 @@ export async function completeRetailOpsStaffOnboarding(
       },
     })
     const membership =
-      memberships.find((currentMembership) => currentMembership.status === "INVITED") ??
+      memberships.find(
+        (currentMembership) => currentMembership.status === "INVITED",
+      ) ??
       memberships[0] ??
       null
 

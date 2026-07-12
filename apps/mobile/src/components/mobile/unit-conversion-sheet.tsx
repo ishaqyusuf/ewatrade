@@ -1,41 +1,43 @@
-import { ActionButton } from "@/components/mobile/action-button";
-import { FormField } from "@/components/mobile/form-field";
-import { QuantityStepper } from "@/components/mobile/quantity-stepper";
-import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view";
-import { Icon } from "@/components/ui/icon";
-import { Modal } from "@/components/ui/modal";
-import { Pressable } from "@/components/ui/pressable";
-import { Text } from "@/components/ui/text";
-import { parseWholeQuantity } from "@/lib/quantity";
-import { cn } from "@/lib/utils";
-import { useBusinessStore } from "@/store/businessStore";
+import { ActionButton } from "@/components/mobile/action-button"
+import { FormField } from "@/components/mobile/form-field"
+import { QuantityStepper } from "@/components/mobile/quantity-stepper"
+import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
+import { Icon } from "@/components/ui/icon"
+import { Modal } from "@/components/ui/modal"
+import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
+import { parseWholeQuantity } from "@/lib/quantity"
+import { cn } from "@/lib/utils"
+import { useBusinessStore } from "@/store/businessStore"
 import {
   type RetailOpsProduct,
   type RetailOpsVariant,
   useRetailOpsStore,
-} from "@/store/retailOpsStore";
-import { useTRPC } from "@/trpc/client";
-import type { BottomSheetModal } from "@gorhom/bottom-sheet";
-import { useMutation } from "@tanstack/react-query";
-import { forwardRef, useEffect, useMemo, useState } from "react";
-import { View } from "react-native";
+} from "@/store/retailOpsStore"
+import { useTRPC } from "@/trpc/client"
+import type { BottomSheetModal } from "@gorhom/bottom-sheet"
+import { useMutation } from "@tanstack/react-query"
+import { forwardRef, useEffect, useMemo, useState } from "react"
+import { View } from "react-native"
 
 type UnitConversionSheetProps = {
-  onComplete?: () => void;
-};
+  onComplete?: () => void
+}
+
+const CONVERSION_VARIANT_PREVIEW_LIMIT = 8
 
 function formatQuantity(value: number) {
   return Number.isInteger(value)
     ? String(value)
-    : String(Number(value.toFixed(2)));
+    : String(Number(value.toFixed(2)))
 }
 
 function getProductStock(product: RetailOpsProduct) {
-  return product.currentStock ?? product.startingStock ?? 0;
+  return product.currentStock ?? product.startingStock ?? 0
 }
 
 function getVariantStock(variant: RetailOpsVariant) {
-  return variant.currentStock ?? variant.startingStock ?? 0;
+  return variant.currentStock ?? variant.startingStock ?? 0
 }
 
 function ProductOption({
@@ -43,11 +45,11 @@ function ProductOption({
   product,
   selected,
 }: {
-  onPress: () => void;
-  product: RetailOpsProduct;
-  selected: boolean;
+  onPress: () => void
+  product: RetailOpsProduct
+  selected: boolean
 }) {
-  const currentStock = getProductStock(product);
+  const currentStock = getProductStock(product)
 
   return (
     <Pressable
@@ -76,7 +78,7 @@ function ProductOption({
         />
       </View>
     </Pressable>
-  );
+  )
 }
 
 function VariantOption({
@@ -84,11 +86,11 @@ function VariantOption({
   selected,
   variant,
 }: {
-  onPress: () => void;
-  selected: boolean;
-  variant: RetailOpsVariant;
+  onPress: () => void
+  selected: boolean
+  variant: RetailOpsVariant
 }) {
-  const currentStock = getVariantStock(variant);
+  const currentStock = getVariantStock(variant)
 
   return (
     <Pressable
@@ -123,148 +125,189 @@ function VariantOption({
         </View>
       </View>
     </Pressable>
-  );
+  )
 }
 
 export const UnitConversionSheet = forwardRef<
   BottomSheetModal,
   UnitConversionSheetProps
 >(({ onComplete }, ref) => {
-  const trpc = useTRPC();
-  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId);
-  const products = useRetailOpsStore((state) =>
-    state.products.filter(
-      (product) =>
-        !activeBusinessId ||
-        (product.businessId ?? activeBusinessId) === activeBusinessId,
-    ),
-  );
+  const trpc = useTRPC()
+  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
+  const allProducts = useRetailOpsStore((state) => state.products)
+  const products = useMemo(
+    () =>
+      allProducts.filter(
+        (product) =>
+          !activeBusinessId ||
+          (product.businessId ?? activeBusinessId) === activeBusinessId,
+      ),
+    [activeBusinessId, allProducts],
+  )
   const recordUnitConversion = useRetailOpsStore(
     (state) => state.recordUnitConversion,
-  );
-  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode);
+  )
+  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
   const convertibleProducts = useMemo(
     () => products.filter((product) => product.variants.length > 0),
     [products],
-  );
-  const [note, setNote] = useState("");
-  const [outputQuantity, setOutputQuantity] = useState("2");
+  )
+  const [note, setNote] = useState("")
+  const [outputQuantity, setOutputQuantity] = useState("2")
+  const [productQuery, setProductQuery] = useState("")
+  const [variantQuery, setVariantQuery] = useState("")
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
     convertibleProducts[0]?.id ?? null,
-  );
+  )
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
     convertibleProducts[0]?.variants[0]?.id ?? null,
-  );
-  const [sourceQuantity, setSourceQuantity] = useState("1");
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  )
+  const [sourceQuantity, setSourceQuantity] = useState("1")
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const unitConversionMutation = useMutation(
     trpc.retailOps.recordUnitConversion.mutationOptions({
       onError: (error) => {
-        setSubmitError(error.message);
+        setSubmitError(error.message)
       },
     }),
-  );
+  )
+  const filteredConvertibleProducts = useMemo(() => {
+    const normalizedQuery = productQuery.trim().toLowerCase()
+
+    if (!normalizedQuery) return convertibleProducts
+
+    return convertibleProducts.filter((product) =>
+      [
+        product.name,
+        product.unitName,
+        ...product.variants.map((variant) => variant.name),
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedQuery),
+    )
+  }, [convertibleProducts, productQuery])
+  const visibleConvertibleProducts = useMemo(
+    () => filteredConvertibleProducts.slice(0, 12),
+    [filteredConvertibleProducts],
+  )
   const selectedProduct = convertibleProducts.find(
     (product) => product.id === selectedProductId,
-  );
+  )
+  const filteredSelectedVariants = useMemo(() => {
+    const variants = selectedProduct?.variants ?? []
+    const normalizedQuery = variantQuery.trim().toLowerCase()
+
+    if (!normalizedQuery) return variants
+
+    return variants.filter((variant) =>
+      variant.name.toLowerCase().includes(normalizedQuery),
+    )
+  }, [selectedProduct?.variants, variantQuery])
+  const visibleSelectedVariants = useMemo(
+    () => filteredSelectedVariants.slice(0, CONVERSION_VARIANT_PREVIEW_LIMIT),
+    [filteredSelectedVariants],
+  )
   const selectedVariant = selectedProduct?.variants.find(
     (variant) => variant.id === selectedVariantId,
-  );
-  const sourceQuantityValue = parseWholeQuantity(sourceQuantity);
-  const outputQuantityValue = parseWholeQuantity(outputQuantity);
+  )
+  const sourceQuantityValue = parseWholeQuantity(sourceQuantity)
+  const outputQuantityValue = parseWholeQuantity(outputQuantity)
   const availableSourceStock = selectedProduct
     ? getProductStock(selectedProduct)
-    : 0;
-  const hasEnoughSourceStock = sourceQuantityValue <= availableSourceStock;
+    : 0
+  const hasEnoughSourceStock = sourceQuantityValue <= availableSourceStock
   const canRecordProductionConversion =
     !isOfflineMode &&
     !!selectedProduct?.remoteVariantId &&
-    !!selectedVariant?.remoteId;
+    !!selectedVariant?.remoteId
   const canSubmit =
     !!selectedProduct &&
     !!selectedVariant &&
     sourceQuantityValue > 0 &&
     outputQuantityValue > 0 &&
     hasEnoughSourceStock &&
-    !unitConversionMutation.isPending;
+    !unitConversionMutation.isPending
   const sourceLabel = canRecordProductionConversion
     ? "Online"
     : isOfflineMode
       ? "Local"
-      : "Local queue";
+      : "Local queue"
   const sourceDetail = canRecordProductionConversion
     ? "This conversion will be recorded in production immediately."
     : isOfflineMode
       ? "This conversion will be queued locally and synced later."
-      : "Waiting for the source and target units to sync before direct production conversion.";
+      : "Waiting for the source and target units to sync before direct production conversion."
 
   useEffect(() => {
     if (convertibleProducts.length === 0) {
-      setSelectedProductId(null);
-      setSelectedVariantId(null);
-      return;
+      setSelectedProductId(null)
+      setSelectedVariantId(null)
+      return
     }
 
     const selectedProductExists = convertibleProducts.some(
       (product) => product.id === selectedProductId,
-    );
+    )
 
     if (!selectedProductExists) {
-      const nextProduct = convertibleProducts[0];
-      const nextVariant = nextProduct?.variants[0];
+      const nextProduct = convertibleProducts[0]
+      const nextVariant = nextProduct?.variants[0]
 
-      setSelectedProductId(nextProduct?.id ?? null);
-      setSelectedVariantId(nextVariant?.id ?? null);
+      setSelectedProductId(nextProduct?.id ?? null)
+      setSelectedVariantId(nextVariant?.id ?? null)
       setOutputQuantity(
         formatQuantity(
           parseWholeQuantity(sourceQuantity) *
             (nextVariant?.conversionMultiplier ?? 1),
         ),
-      );
+      )
     }
-  }, [convertibleProducts, selectedProductId, sourceQuantity]);
+  }, [convertibleProducts, selectedProductId, sourceQuantity])
 
   const selectProduct = (product: RetailOpsProduct) => {
-    setSelectedProductId(product.id);
-    setSelectedVariantId(product.variants[0]?.id ?? null);
+    setSelectedProductId(product.id)
+    setSelectedVariantId(product.variants[0]?.id ?? null)
+    setVariantQuery("")
     setOutputQuantity(
       formatQuantity(
         parseWholeQuantity(sourceQuantity) *
           (product.variants[0]?.conversionMultiplier ?? 1),
       ),
-    );
-  };
+    )
+  }
 
   const selectVariant = (variant: RetailOpsVariant) => {
-    setSelectedVariantId(variant.id);
+    setSelectedVariantId(variant.id)
     setOutputQuantity(
       formatQuantity(
-        parseWholeQuantity(sourceQuantity) * (variant.conversionMultiplier ?? 1),
+        parseWholeQuantity(sourceQuantity) *
+          (variant.conversionMultiplier ?? 1),
       ),
-    );
-  };
+    )
+  }
 
   const updateSourceQuantity = (value: string) => {
-    setSourceQuantity(value);
+    setSourceQuantity(value)
 
     if (selectedVariant?.conversionMultiplier) {
       setOutputQuantity(
         formatQuantity(
           parseWholeQuantity(value) * selectedVariant.conversionMultiplier,
         ),
-      );
+      )
     }
-  };
+  }
 
   const submit = () => {
-    if (!selectedProduct || !selectedVariant || !canSubmit) return;
+    if (!selectedProduct || !selectedVariant || !canSubmit) return
 
     const completeLocalConversion = (
       syncStatus: "pending" | "synced",
       stockSnapshot?: {
-        convertedAt?: string;
-        sourceStockAfter?: number;
-        targetStockAfter?: number;
+        convertedAt?: string
+        sourceStockAfter?: number
+        targetStockAfter?: number
       },
     ) => {
       recordUnitConversion({
@@ -278,16 +321,16 @@ export const UnitConversionSheet = forwardRef<
         syncStatus,
         targetStockAfter: stockSnapshot?.targetStockAfter,
         targetVariantId: selectedVariant.id,
-      });
-      setNote("");
+      })
+      setNote("")
       setOutputQuantity(
         formatQuantity(selectedVariant.conversionMultiplier ?? 1),
-      );
-      setSourceQuantity("1");
-      onComplete?.();
-    };
+      )
+      setSourceQuantity("1")
+      onComplete?.()
+    }
 
-    setSubmitError(null);
+    setSubmitError(null)
 
     if (
       canRecordProductionConversion &&
@@ -307,21 +350,21 @@ export const UnitConversionSheet = forwardRef<
             const convertedAt =
               conversion.conversion.convertedAt instanceof Date
                 ? conversion.conversion.convertedAt.toISOString()
-                : String(conversion.conversion.convertedAt);
+                : String(conversion.conversion.convertedAt)
 
             completeLocalConversion("synced", {
               convertedAt,
               sourceStockAfter: conversion.source.onHandQuantity,
               targetStockAfter: conversion.target.onHandQuantity,
-            });
+            })
           },
         },
-      );
-      return;
+      )
+      return
     }
 
-    completeLocalConversion("pending");
-  };
+    completeLocalConversion("pending")
+  }
 
   return (
     <Modal
@@ -331,8 +374,8 @@ export const UnitConversionSheet = forwardRef<
       title="Convert units"
     >
       <BottomSheetKeyboardAwareScrollView
-        bottomOffset={112}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        bottomOffset={320}
+        contentContainerStyle={{ paddingBottom: 240 }}
         keyboardShouldPersistTaps="handled"
       >
         <View className="gap-5 px-5 pb-6">
@@ -366,14 +409,40 @@ export const UnitConversionSheet = forwardRef<
 
           {convertibleProducts.length > 0 ? (
             <View className="gap-3">
-              {convertibleProducts.map((product) => (
-                <ProductOption
-                  key={product.id}
-                  onPress={() => selectProduct(product)}
-                  product={product}
-                  selected={selectedProductId === product.id}
+              {convertibleProducts.length > 8 ? (
+                <FormField
+                  label="Find product"
+                  onChangeText={setProductQuery}
+                  placeholder="Search products or variants"
+                  value={productQuery}
                 />
-              ))}
+              ) : null}
+              {visibleConvertibleProducts.length > 0 ? (
+                visibleConvertibleProducts.map((product) => (
+                  <ProductOption
+                    key={product.id}
+                    onPress={() => selectProduct(product)}
+                    product={product}
+                    selected={selectedProductId === product.id}
+                  />
+                ))
+              ) : (
+                <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
+                  <Text className="font-semibold text-foreground">
+                    No matching products
+                  </Text>
+                  <Text className="text-sm leading-5 text-muted-foreground">
+                    Try another product or variant name.
+                  </Text>
+                </View>
+              )}
+              {filteredConvertibleProducts.length >
+              visibleConvertibleProducts.length ? (
+                <Text className="text-xs font-semibold text-muted-foreground">
+                  Showing first {visibleConvertibleProducts.length} of{" "}
+                  {filteredConvertibleProducts.length} matching products.
+                </Text>
+              ) : null}
             </View>
           ) : (
             <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
@@ -392,14 +461,41 @@ export const UnitConversionSheet = forwardRef<
               <Text className="text-sm font-semibold text-foreground">
                 Convert into
               </Text>
-              {selectedProduct.variants.map((variant) => (
-                <VariantOption
-                  key={variant.id}
-                  onPress={() => selectVariant(variant)}
-                  selected={selectedVariantId === variant.id}
-                  variant={variant}
+              {selectedProduct.variants.length >
+              CONVERSION_VARIANT_PREVIEW_LIMIT ? (
+                <FormField
+                  label="Find variant"
+                  onChangeText={setVariantQuery}
+                  placeholder="Search variants"
+                  value={variantQuery}
                 />
-              ))}
+              ) : null}
+              {visibleSelectedVariants.length > 0 ? (
+                visibleSelectedVariants.map((variant) => (
+                  <VariantOption
+                    key={variant.id}
+                    onPress={() => selectVariant(variant)}
+                    selected={selectedVariantId === variant.id}
+                    variant={variant}
+                  />
+                ))
+              ) : (
+                <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
+                  <Text className="font-semibold text-foreground">
+                    No matching variants
+                  </Text>
+                  <Text className="text-sm leading-5 text-muted-foreground">
+                    Try another sub-unit or variant name.
+                  </Text>
+                </View>
+              )}
+              {filteredSelectedVariants.length >
+              visibleSelectedVariants.length ? (
+                <Text className="text-xs font-semibold text-muted-foreground">
+                  Showing first {visibleSelectedVariants.length} of{" "}
+                  {filteredSelectedVariants.length} matching variants.
+                </Text>
+              ) : null}
             </View>
           ) : null}
 
@@ -428,7 +524,7 @@ export const UnitConversionSheet = forwardRef<
           <FormField
             label="Conversion note"
             onChangeText={setNote}
-            placeholder="Rebagged for afternoon sales"
+            placeholder="Enter conversion note"
             value={note}
           />
 
@@ -452,7 +548,7 @@ export const UnitConversionSheet = forwardRef<
         </View>
       </BottomSheetKeyboardAwareScrollView>
     </Modal>
-  );
-});
+  )
+})
 
-UnitConversionSheet.displayName = "UnitConversionSheet";
+UnitConversionSheet.displayName = "UnitConversionSheet"

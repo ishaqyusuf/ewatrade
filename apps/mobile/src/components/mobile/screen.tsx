@@ -1,8 +1,9 @@
+import { useColors } from "@/hooks/use-color";
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 import {
-  View,
   type StyleProp,
+  View,
   type ViewStyle,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
@@ -10,7 +11,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type MobileScreenProps = {
   children: ReactNode;
-  className?: string;
   contentClassName?: string;
   contentContainerStyle?: StyleProp<ViewStyle>;
   keyboardBottomOffset?: number;
@@ -19,19 +19,22 @@ type MobileScreenProps = {
 
 export function MobileScreen({
   children,
-  className,
   contentClassName,
   contentContainerStyle,
   keyboardBottomOffset = 88,
   scroll = true,
 }: MobileScreenProps) {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const bottomPadding = Math.max(insets.bottom + 24, 40);
 
   return (
     <View
-      className={cn("flex-1 bg-background", className)}
-      style={{ paddingTop: insets.top }}
+      style={{
+        backgroundColor: colors.background,
+        flex: 1,
+        paddingTop: insets.top,
+      }}
     >
       {scroll ? (
         <KeyboardAwareScrollView
@@ -50,11 +53,12 @@ export function MobileScreen({
           </View>
         </KeyboardAwareScrollView>
       ) : (
-        <View
-          className={cn("flex-1 px-6 py-6", contentClassName)}
-          style={[{ paddingBottom: bottomPadding }, contentContainerStyle]}
-        >
-          {children}
+        <View className={cn("flex-1 px-6 py-6", contentClassName)}>
+          <View
+            style={[{ flex: 1, paddingBottom: bottomPadding }, contentContainerStyle]}
+          >
+            {children}
+          </View>
         </View>
       )}
     </View>

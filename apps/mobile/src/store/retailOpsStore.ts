@@ -1,186 +1,206 @@
-import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
-import { zustandStorage } from "./mmkv";
+import { create } from "zustand"
+import { createJSONStorage, persist } from "zustand/middleware"
+import { zustandStorage } from "./mmkv"
 
 export type RetailOpsVariant = {
-  conversionMultiplier?: number;
-  currentStock?: number;
-  id: string;
-  name: string;
-  price: number;
-  remoteId?: string;
-  startingStock?: number;
-};
+  conversionMultiplier?: number
+  currentStock?: number
+  id: string
+  name: string
+  price: number
+  remoteId?: string
+  startingStock?: number
+}
 
 export type RetailOpsProduct = {
-  businessId?: string;
-  currentStock: number;
-  id: string;
-  name: string;
-  price: number;
-  remoteId?: string;
-  remoteVariantId?: string;
-  startingStock: number;
-  syncStatus: "pending" | "synced";
-  unitName: string;
-  variants: RetailOpsVariant[];
-};
+  businessId?: string
+  currentStock: number
+  description?: string
+  id: string
+  imageUrl?: string
+  name: string
+  price: number
+  remoteId?: string
+  remoteVariantId?: string
+  startingStock: number
+  syncStatus: "pending" | "synced"
+  unitName: string
+  variants: RetailOpsVariant[]
+}
 
 export type RetailOpsStockAdjustmentReason =
   | "correction"
   | "damage"
   | "found_stock"
-  | "loss";
+  | "loss"
 
-export type RetailOpsStockAdjustmentDirection = "decrease" | "increase";
+export type RetailOpsStockAdjustmentDirection = "decrease" | "increase"
 
-export type RetailOpsPaymentMethod = "cash" | "transfer";
+export type RetailOpsPaymentMethod = "cash" | "transfer"
 
 export type RetailOpsSale = {
-  attendantName: string;
-  businessId?: string;
-  createdAt: string;
-  customerName: string;
-  id: string;
-  paymentMethod: RetailOpsPaymentMethod;
-  productId: string;
-  productName: string;
-  quantity: number;
-  remoteId?: string;
-  repSessionId?: string;
-  syncStatus: "pending" | "synced";
-  total: number;
-  unitName: string;
-  unitPrice: number;
-  variantId?: string;
-};
+  attendantName: string
+  businessId?: string
+  createdAt: string
+  customerName: string
+  id: string
+  paymentMethod: RetailOpsPaymentMethod
+  productId: string
+  productName: string
+  quantity: number
+  remoteId?: string
+  repSessionId?: string
+  syncStatus: "pending" | "synced"
+  total: number
+  unitName: string
+  unitPrice: number
+  variantId?: string
+}
 
 export type RetailOpsCustomer = {
-  businessId?: string;
-  id: string;
-  lastSeenAt: string;
-  name: string;
-  remoteId?: string;
-  saleCount: number;
-  syncStatus: "pending" | "synced";
-};
+  businessId?: string
+  id: string
+  lastSeenAt: string
+  name: string
+  remoteId?: string
+  saleCount: number
+  syncStatus: "pending" | "synced"
+}
 
 export type RetailOpsStaffMember = {
-  businessId?: string;
-  email: string;
-  id: string;
-  invitedAt: string;
-  name: string;
-  remoteId?: string;
-  role: "attendant";
-  status: "pending" | "active" | "suspended";
-  syncStatus: "pending" | "synced";
-};
+  businessId?: string
+  email: string
+  id: string
+  invitedAt: string
+  name: string
+  remoteId?: string
+  role: "attendant"
+  status: "pending" | "active" | "suspended"
+  syncStatus: "pending" | "synced"
+}
 
 export type RetailOpsShareLink = {
-  businessId?: string;
-  createdAt: string;
-  id: string;
-  orders: number;
-  productId: string;
-  productName: string;
-  remoteId?: string;
-  slug: string;
-  status: "active" | "inactive";
-  syncStatus: "pending" | "synced";
-  url: string;
-  views: number;
-};
+  businessId?: string
+  createdAt: string
+  id: string
+  orders: number
+  productId: string
+  productName: string
+  remoteId?: string
+  slug: string
+  status: "active" | "inactive"
+  syncStatus: "pending" | "synced"
+  url: string
+  views: number
+}
 
 export type RetailOpsStockMovement = {
-  businessId?: string;
-  createdAt: string;
-  id: string;
-  note?: string;
-  productId: string;
-  productName: string;
-  quantity: number;
-  stockAdjustmentReason?: RetailOpsStockAdjustmentReason;
-  relatedMovementId?: string;
-  syncStatus: "pending" | "synced";
-  syncGroupId?: string;
+  businessId?: string
+  createdAt: string
+  id: string
+  note?: string
+  productId: string
+  productName: string
+  quantity: number
+  stockAdjustmentReason?: RetailOpsStockAdjustmentReason
+  relatedMovementId?: string
+  syncStatus: "pending" | "synced"
+  syncGroupId?: string
   type:
     | "conversion_in"
     | "conversion_out"
     | "opening_stock"
     | "sale"
     | "stock_adjustment"
-    | "stock_intake";
-  unitName: string;
-  variantId?: string;
-};
+    | "stock_intake"
+  unitName: string
+  variantId?: string
+}
 
 export type RetailOpsCloseoutInventoryLine = {
-  declaredQuantity: number;
-  expectedQuantity: number;
-  productId: string;
-  productName: string;
-  unitName: string;
-  variance: number;
-  variantId?: string;
-};
+  declaredQuantity: number
+  expectedQuantity: number
+  productId: string
+  productName: string
+  unitName: string
+  variance: number
+  variantId?: string
+}
 
 export type RetailOpsCloseout = {
-  approvalStatus: "pending_review" | "approved" | "flagged";
-  attendantName: string;
-  businessId?: string;
-  cashVariance: number;
-  createdAt: string;
-  declaredCash: number;
-  declaredTransfer: number;
-  expectedCash: number;
-  expectedTransfer: number;
-  grossSales: number;
-  id: string;
-  inventoryLines: RetailOpsCloseoutInventoryLine[];
-  note?: string;
-  repSessionId?: string;
-  salesCount: number;
-  syncStatus: "pending" | "synced";
-  transferVariance: number;
-};
+  approvalStatus: "pending_review" | "approved" | "flagged"
+  attendantName: string
+  businessId?: string
+  cashVariance: number
+  createdAt: string
+  declaredCash: number
+  declaredTransfer: number
+  expectedCash: number
+  expectedTransfer: number
+  grossSales: number
+  id: string
+  inventoryLines: RetailOpsCloseoutInventoryLine[]
+  note?: string
+  repSessionId?: string
+  salesCount: number
+  syncStatus: "pending" | "synced"
+  transferVariance: number
+}
 
 export type RetailOpsRepSessionInventoryLine = {
-  confirmedQuantity: number;
-  expectedQuantity: number;
-  productId: string;
-  productName: string;
-  unitName: string;
-  variance: number;
-  variantId?: string;
-};
+  confirmedQuantity: number
+  expectedQuantity: number
+  productId: string
+  productName: string
+  unitName: string
+  variance: number
+  variantId?: string
+}
 
 export type RetailOpsRepSession = {
-  attendantName: string;
-  businessId?: string;
-  clockedInAt: string;
-  clockedOutAt?: string;
-  hasOpeningVariance: boolean;
-  id: string;
-  note?: string;
-  openingInventoryLines: RetailOpsRepSessionInventoryLine[];
-  remoteId?: string;
-  status: "open" | "closed";
-  syncStatus: "pending" | "synced";
-};
+  attendantName: string
+  businessId?: string
+  clockedInAt: string
+  clockedOutAt?: string
+  hasOpeningVariance: boolean
+  id: string
+  note?: string
+  openingInventoryLines: RetailOpsRepSessionInventoryLine[]
+  remoteId?: string
+  status: "open" | "closed"
+  syncStatus: "pending" | "synced"
+}
 
 export type RetailOpsSyncEvent = {
-  businessId?: string;
-  createdAt: string;
-  entityId: string;
-  errorCode?: string;
-  errorMessage?: string;
-  failedAt?: string;
-  id: string;
-  label: string;
-  nextRetryAt?: string;
-  retryCount?: number;
-  status: "pending" | "synced" | "failed" | "conflict";
+  actorId?: string
+  actorName?: string
+  businessId?: string
+  createdAt: string
+  dependencies?: Array<{
+    id: string
+    kind:
+      | "customer"
+      | "product"
+      | "rep_session"
+      | "sale"
+      | "share_link"
+      | "staff"
+      | "stock_movement"
+      | "unit"
+    remoteId?: string
+  }>
+  deviceId?: string
+  entityId: string
+  errorCode?: string
+  errorMessage?: string
+  failedAt?: string
+  id: string
+  label: string
+  nextRetryAt?: string
+  retryCount?: number
+  storeId?: string
+  status: "pending" | "synced" | "failed" | "conflict"
+  updatedAt?: string
   type:
     | "closeout_created"
     | "customer_upsert"
@@ -192,217 +212,223 @@ export type RetailOpsSyncEvent = {
     | "stock_adjustment_recorded"
     | "stock_intake_recorded"
     | "staff_invited"
-    | "unit_conversion_recorded";
-};
+    | "unit_conversion_recorded"
+}
 
 export type RetailOpsSyncSummary = {
-  appliedCount: number;
-  attemptedAt: string;
-  completedAt: string;
-  deviceId: string;
-  errorMessage?: string;
-  failedCount: number;
-  skippedCount: number;
-  status: "completed" | "failed" | "partial";
-  totalCount: number;
-};
+  appliedCount: number
+  attemptedAt: string
+  completedAt: string
+  deviceId: string
+  errorMessage?: string
+  failedCount: number
+  skippedCount: number
+  status: "completed" | "failed" | "partial"
+  totalCount: number
+}
 
 type FirstProductInput = {
-  businessId?: string;
-  name: string;
-  price: number;
-  remoteId?: string;
-  remoteVariantId?: string;
-  startingStock: number;
-  syncStatus?: "pending" | "synced";
-  unitName: string;
+  businessId?: string
+  description?: string
+  imageUrl?: string
+  name: string
+  price: number
+  remoteId?: string
+  remoteVariantId?: string
+  startingStock: number
+  syncStatus?: "pending" | "synced"
+  unitName: string
   variants: Array<{
-    currentStock?: number;
-    conversionMultiplier?: number;
-    name: string;
-    price: number;
-    remoteId?: string;
-    startingStock?: number;
-  }>;
-};
+    currentStock?: number
+    conversionMultiplier?: number
+    name: string
+    price: number
+    remoteId?: string
+    startingStock?: number
+  }>
+}
 
 type CreateSaleInput = {
-  attendantName: string;
-  businessId?: string;
-  customerName: string;
-  paymentMethod: RetailOpsPaymentMethod;
-  productId: string;
-  productName: string;
-  quantity: number;
-  remoteId?: string;
-  syncStatus?: "pending" | "synced";
-  unitName: string;
-  unitPrice: number;
-  variantId?: string;
-};
+  attendantName: string
+  businessId?: string
+  customerName: string
+  paymentMethod: RetailOpsPaymentMethod
+  productId: string
+  productName: string
+  quantity: number
+  remoteId?: string
+  syncStatus?: "pending" | "synced"
+  unitName: string
+  unitPrice: number
+  variantId?: string
+}
 
 type InviteStaffInput = {
-  businessId?: string;
-  email: string;
-  name: string;
-};
+  businessId?: string
+  email: string
+  name: string
+}
 
 type CreateShareLinkInput = {
-  businessId?: string;
-  productId: string;
-  productName: string;
-};
+  businessId?: string
+  productId: string
+  productName: string
+}
 
 type RecordStockIntakeInput = {
-  businessId?: string;
-  note?: string;
-  productId: string;
-  quantity: number;
-  syncStatus?: "pending" | "synced";
-  variantId?: string;
-};
+  businessId?: string
+  note?: string
+  productId: string
+  quantity: number
+  syncStatus?: "pending" | "synced"
+  variantId?: string
+}
 
 type RecordStockAdjustmentInput = {
-  businessId?: string;
-  direction: RetailOpsStockAdjustmentDirection;
-  note?: string;
-  productId: string;
-  quantity: number;
-  reason: RetailOpsStockAdjustmentReason;
-  syncStatus?: "pending" | "synced";
-  variantId?: string;
-};
+  businessId?: string
+  direction: RetailOpsStockAdjustmentDirection
+  note?: string
+  productId: string
+  quantity: number
+  reason: RetailOpsStockAdjustmentReason
+  syncStatus?: "pending" | "synced"
+  variantId?: string
+}
 
 type RecordUnitConversionInput = {
-  businessId?: string;
-  convertedAt?: string;
-  note?: string;
-  outputQuantity: number;
-  productId: string;
-  sourceQuantity: number;
-  sourceStockAfter?: number;
-  syncStatus?: "pending" | "synced";
-  targetStockAfter?: number;
-  targetVariantId: string;
-};
+  businessId?: string
+  convertedAt?: string
+  note?: string
+  outputQuantity: number
+  productId: string
+  sourceQuantity: number
+  sourceStockAfter?: number
+  syncStatus?: "pending" | "synced"
+  targetStockAfter?: number
+  targetVariantId: string
+}
 
 type CreateCloseoutInput = {
-  attendantName: string;
-  businessId?: string;
-  createdAt?: string;
-  declaredCash: number;
-  declaredTransfer: number;
+  attendantName: string
+  businessId?: string
+  createdAt?: string
+  declaredCash: number
+  declaredTransfer: number
   inventoryLines: Array<{
-    declaredQuantity: number;
-    expectedQuantity: number;
-    productId: string;
-    productName: string;
-    unitName: string;
-    variantId?: string;
-  }>;
-  note?: string;
-  syncStatus?: "pending" | "synced";
-};
+    declaredQuantity: number
+    expectedQuantity: number
+    productId: string
+    productName: string
+    unitName: string
+    variantId?: string
+  }>
+  note?: string
+  syncStatus?: "pending" | "synced"
+}
 
 type ClockInRepSessionInput = {
-  attendantName: string;
-  businessId?: string;
-  clockedInAt?: string;
+  attendantName: string
+  businessId?: string
+  clockedInAt?: string
   openingInventoryLines: Array<{
-    confirmedQuantity: number;
-    expectedQuantity: number;
-    productId: string;
-    productName: string;
-    unitName: string;
-    variantId?: string;
-  }>;
-  remoteId?: string;
-  note?: string;
-  syncStatus?: "pending" | "synced";
-};
+    confirmedQuantity: number
+    expectedQuantity: number
+    productId: string
+    productName: string
+    unitName: string
+    variantId?: string
+  }>
+  remoteId?: string
+  note?: string
+  syncStatus?: "pending" | "synced"
+}
 
 type RetailOpsState = {
-  addFirstProduct: (input: FirstProductInput) => void;
-  clockInRepSession: (input: ClockInRepSessionInput) => void;
-  closeouts: RetailOpsCloseout[];
-  createCloseout: (input: CreateCloseoutInput) => void;
-  createShareLink: (input: CreateShareLinkInput) => RetailOpsShareLink;
-  createSale: (input: CreateSaleInput) => void;
-  customers: RetailOpsCustomer[];
-  deactivateShareLink: (id: string) => void;
-  hasHydrated: boolean;
-  inviteStaff: (input: InviteStaffInput) => void;
-  isOfflineMode: boolean;
-  lastSyncSummary?: RetailOpsSyncSummary;
-  markPendingEventsSynced: (businessId?: string) => void;
+  addFirstProduct: (input: FirstProductInput) => void
+  clockInRepSession: (input: ClockInRepSessionInput) => void
+  closeouts: RetailOpsCloseout[]
+  createCloseout: (input: CreateCloseoutInput) => void
+  createShareLink: (input: CreateShareLinkInput) => RetailOpsShareLink
+  createSale: (input: CreateSaleInput) => void
+  customers: RetailOpsCustomer[]
+  deactivateShareLink: (id: string) => void
+  hasHydrated: boolean
+  inviteStaff: (input: InviteStaffInput) => void
+  isOfflineMode: boolean
+  lastSyncSummary?: RetailOpsSyncSummary
+  markPendingEventsSynced: (businessId?: string) => void
   markSyncEventsResolved: (input: {
-    businessId?: string;
-    failedEventIds?: string[];
+    businessId?: string
+    failedEventIds?: string[]
     failedEvents?: Array<{
-      errorCode?: string;
-      errorMessage?: string;
-      eventId: string;
-    }>;
+      errorCode?: string
+      errorMessage?: string
+      eventId: string
+    }>
     customerMappings?: Array<{
-      customerId: string;
-      eventId: string;
-    }>;
+      customerId: string
+      eventId: string
+    }>
     productMappings?: Array<{
-      eventId: string;
-      productId: string;
+      eventId: string
+      productId: string
       units: Array<{
-        id: string;
-        isDefault: boolean;
-        name: string;
-      }>;
-    }>;
+        id: string
+        isDefault: boolean
+        name: string
+      }>
+    }>
     repSessionMappings?: Array<{
-      cashierSessionId: string;
-      eventId: string;
-    }>;
+      cashierSessionId: string
+      eventId: string
+    }>
     saleMappings?: Array<{
-      eventId: string;
-      orderId: string;
-    }>;
+      eventId: string
+      orderId: string
+    }>
     staffMappings?: Array<{
-      eventId: string;
-      membershipId: string;
-    }>;
+      eventId: string
+      membershipId: string
+    }>
     shareLinkMappings?: Array<{
-      active: boolean | null;
-      eventId: string;
-      shareLinkId: string;
-      url: string | null;
-    }>;
-    syncedEventIds?: string[];
-  }) => void;
-  offlineDeviceId: string;
-  products: RetailOpsProduct[];
-  repSessions: RetailOpsRepSession[];
-  recordStockAdjustment: (input: RecordStockAdjustmentInput) => void;
-  recordStockIntake: (input: RecordStockIntakeInput) => void;
-  recordSyncSummary: (summary: RetailOpsSyncSummary) => void;
-  recordUnitConversion: (input: RecordUnitConversionInput) => void;
+      active: boolean | null
+      eventId: string
+      shareLinkId: string
+      url: string | null
+    }>
+    syncedEventIds?: string[]
+  }) => void
+  offlineDeviceId: string
+  products: RetailOpsProduct[]
+  repSessions: RetailOpsRepSession[]
+  recordStockAdjustment: (input: RecordStockAdjustmentInput) => void
+  recordStockIntake: (input: RecordStockIntakeInput) => void
+  recordSyncSummary: (summary: RetailOpsSyncSummary) => void
+  recordUnitConversion: (input: RecordUnitConversionInput) => void
   retrySyncEvents: (input: {
-    businessId?: string;
-    eventIds?: string[];
-  }) => void;
-  setOfflineMode: (isOfflineMode: boolean) => void;
-  sales: RetailOpsSale[];
-  shareLinks: RetailOpsShareLink[];
-  staff: RetailOpsStaffMember[];
-  stockMovements: RetailOpsStockMovement[];
-  syncEvents: RetailOpsSyncEvent[];
-  resetProducts: () => void;
-  setHasHydrated: (hasHydrated: boolean) => void;
-};
+    businessId?: string
+    eventIds?: string[]
+  }) => void
+  setOfflineMode: (isOfflineMode: boolean) => void
+  sales: RetailOpsSale[]
+  shareLinks: RetailOpsShareLink[]
+  staff: RetailOpsStaffMember[]
+  stockMovements: RetailOpsStockMovement[]
+  syncEvents: RetailOpsSyncEvent[]
+  resetProducts: () => void
+  setHasHydrated: (hasHydrated: boolean) => void
+}
 
 function createId(prefix: string) {
-  return `${prefix}-${Date.now()}-${Math.round(Math.random() * 10000)}`;
+  return `${prefix}-${Date.now()}-${Math.round(Math.random() * 10000)}`
 }
 
 function resolveBusinessId(businessId?: string) {
-  return businessId || "local-business";
+  return businessId || "local-business"
+}
+
+function toNonNegativeWholeQuantity(value: number) {
+  return Math.max(0, Math.trunc(Number.isFinite(value) ? value : 0))
 }
 
 function createSyncEvent(
@@ -410,16 +436,61 @@ function createSyncEvent(
   label: string,
   entityId: string,
   businessId?: string,
+  options: {
+    actorName?: string
+    dependencies?: RetailOpsSyncEvent["dependencies"]
+    deviceId?: string
+    storeId?: string
+  } = {},
 ) {
+  const now = new Date().toISOString()
+
   return {
+    actorName: options.actorName,
     businessId,
-    createdAt: new Date().toISOString(),
+    createdAt: now,
+    dependencies: options.dependencies ?? [],
+    deviceId: options.deviceId,
     entityId,
     id: createId("sync"),
     label,
+    retryCount: 0,
     status: "pending",
+    storeId: options.storeId,
     type,
-  } satisfies RetailOpsSyncEvent;
+    updatedAt: now,
+  } satisfies RetailOpsSyncEvent
+}
+
+function compactDependencies(dependencies: RetailOpsSyncEvent["dependencies"]) {
+  return dependencies?.filter((dependency) => !!dependency.id)
+}
+
+function getProductSyncDependencies(input: {
+  productId?: string
+  productRemoteId?: string
+  unitId?: string
+  unitRemoteId?: string
+}) {
+  const dependencies: RetailOpsSyncEvent["dependencies"] = []
+
+  if (input.productId) {
+    dependencies.push({
+      id: input.productId,
+      kind: "product",
+      remoteId: input.productRemoteId,
+    })
+  }
+
+  if (input.unitId) {
+    dependencies.push({
+      id: input.unitId,
+      kind: "unit",
+      remoteId: input.unitRemoteId,
+    })
+  }
+
+  return compactDependencies(dependencies)
 }
 
 function createSlug(value: string) {
@@ -428,79 +499,93 @@ function createSlug(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
-    .slice(0, 36);
-  const token = Math.random().toString(36).slice(2, 8);
+    .slice(0, 36)
+  const token = Math.random().toString(36).slice(2, 8)
 
-  return `${baseSlug || "product"}-${token}`;
+  return `${baseSlug || "product"}-${token}`
 }
 
 function getProductStock(product: RetailOpsProduct) {
-  return product.currentStock ?? product.startingStock ?? 0;
+  return toNonNegativeWholeQuantity(
+    product.currentStock ?? product.startingStock ?? 0,
+  )
 }
 
 function getVariantStock(variant: RetailOpsVariant) {
-  return variant.currentStock ?? variant.startingStock ?? 0;
+  return toNonNegativeWholeQuantity(
+    variant.currentStock ?? variant.startingStock ?? 0,
+  )
 }
 
 function stockAdjustmentReasonLabel(reason: RetailOpsStockAdjustmentReason) {
-  if (reason === "damage") return "Damage";
-  if (reason === "found_stock") return "Found stock";
-  if (reason === "loss") return "Loss";
+  if (reason === "damage") return "Damage"
+  if (reason === "found_stock") return "Found stock"
+  if (reason === "loss") return "Loss"
 
-  return "Count correction";
+  return "Count correction"
+}
+
+export function normalizeStockAdjustmentDirection(input: {
+  direction: RetailOpsStockAdjustmentDirection
+  reason: RetailOpsStockAdjustmentReason
+}) {
+  if (input.reason === "damage" || input.reason === "loss") return "decrease"
+  if (input.reason === "found_stock") return "increase"
+
+  return input.direction
 }
 
 function getSalesAfterLastCloseout(
   sales: RetailOpsSale[],
   closeouts: RetailOpsCloseout[],
 ) {
-  const latestCloseout = closeouts[0];
+  const latestCloseout = closeouts[0]
 
-  if (!latestCloseout) return sales;
+  if (!latestCloseout) return sales
 
-  const latestCloseoutTime = new Date(latestCloseout.createdAt).getTime();
+  const latestCloseoutTime = new Date(latestCloseout.createdAt).getTime()
 
-  if (Number.isNaN(latestCloseoutTime)) return sales;
+  if (Number.isNaN(latestCloseoutTime)) return sales
 
   return sales.filter((sale) => {
-    const saleTime = new Date(sale.createdAt).getTime();
+    const saleTime = new Date(sale.createdAt).getTime()
 
-    return !Number.isNaN(saleTime) && saleTime > latestCloseoutTime;
-  });
+    return !Number.isNaN(saleTime) && saleTime > latestCloseoutTime
+  })
 }
 
 function getPaymentTotals(sales: RetailOpsSale[]) {
   return sales.reduce(
     (totals, sale) => {
       if (sale.paymentMethod === "cash") {
-        totals.cash += sale.total;
+        totals.cash += sale.total
       } else {
-        totals.transfer += sale.total;
+        totals.transfer += sale.total
       }
 
-      totals.gross += sale.total;
+      totals.gross += sale.total
 
-      return totals;
+      return totals
     },
     {
       cash: 0,
       gross: 0,
       transfer: 0,
     },
-  );
+  )
 }
 
 function isSyncConflictCode(errorCode?: string) {
-  return errorCode === "CONFLICT";
+  return errorCode === "CONFLICT"
 }
 
 function getNextRetryAt(retryCount = 0) {
-  const retryDelaysMs = [30_000, 120_000, 300_000, 900_000];
+  const retryDelaysMs = [30_000, 120_000, 300_000, 900_000]
   const delayMs =
     retryDelaysMs[Math.min(retryCount, retryDelaysMs.length - 1)] ??
-    retryDelaysMs[retryDelaysMs.length - 1];
+    retryDelaysMs[retryDelaysMs.length - 1]
 
-  return new Date(Date.now() + delayMs).toISOString();
+  return new Date(Date.now() + delayMs).toISOString()
 }
 
 export const useRetailOpsStore = create<RetailOpsState>()(
@@ -521,32 +606,44 @@ export const useRetailOpsStore = create<RetailOpsState>()(
       syncEvents: [],
       addFirstProduct: (input) =>
         set((state) => {
-          const businessId = resolveBusinessId(input.businessId);
-          const productId = createId("product");
-          const stockMovementId = createId("stock");
-          const syncStatus = input.syncStatus ?? "pending";
-          const shouldQueueSync = syncStatus === "pending";
+          const businessId = resolveBusinessId(input.businessId)
+          const productId = createId("product")
+          const stockMovementId = createId("stock")
+          const syncStatus = input.syncStatus ?? "pending"
+          const shouldQueueSync = syncStatus === "pending"
+          const startingStock = toNonNegativeWholeQuantity(input.startingStock)
 
           return {
             products: [
               ...state.products,
               {
                 businessId,
-                currentStock: input.startingStock,
+                currentStock: startingStock,
+                description: input.description,
                 id: productId,
+                imageUrl: input.imageUrl,
                 name: input.name,
                 price: input.price,
                 remoteId: input.remoteId,
                 remoteVariantId: input.remoteVariantId,
-                startingStock: input.startingStock,
+                startingStock,
                 syncStatus,
                 unitName: input.unitName,
-                variants: input.variants.map((variant) => ({
-                  currentStock: variant.currentStock ?? variant.startingStock ?? 0,
-                  id: createId("variant"),
-                  startingStock: variant.startingStock ?? 0,
-                  ...variant,
-                })),
+                variants: input.variants.map((variant) => {
+                  const variantStartingStock = toNonNegativeWholeQuantity(
+                    variant.startingStock ?? 0,
+                  )
+                  const variantCurrentStock = toNonNegativeWholeQuantity(
+                    variant.currentStock ?? variantStartingStock,
+                  )
+
+                  return {
+                    ...variant,
+                    currentStock: variantCurrentStock,
+                    id: createId("variant"),
+                    startingStock: variantStartingStock,
+                  }
+                }),
               },
             ],
             stockMovements: [
@@ -557,7 +654,7 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                 note: "Opening stock",
                 productId,
                 productName: input.name,
-                quantity: input.startingStock,
+                quantity: startingStock,
                 syncStatus,
                 type: "opening_stock",
                 unitName: input.unitName,
@@ -571,45 +668,53 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                     `Product setup: ${input.name}`,
                     productId,
                     businessId,
+                    {
+                      dependencies: [],
+                      deviceId: state.offlineDeviceId,
+                    },
                   ),
                   ...state.syncEvents,
                 ]
               : state.syncEvents,
-          };
+          }
         }),
       clockInRepSession: (input) =>
         set((state) => {
-          const businessId = resolveBusinessId(input.businessId);
-          const syncStatus = input.syncStatus ?? "pending";
-          const shouldQueueSync = syncStatus === "pending";
+          const businessId = resolveBusinessId(input.businessId)
+          const syncStatus = input.syncStatus ?? "pending"
+          const shouldQueueSync = syncStatus === "pending"
           const hasOpenSession = state.repSessions.some(
             (session) =>
               (session.businessId ?? businessId) === businessId &&
               session.status === "open" &&
               session.attendantName === input.attendantName,
-          );
+          )
 
           if (hasOpenSession || input.openingInventoryLines.length === 0) {
-            return state;
+            return state
           }
 
-          const repSessionId = createId("session");
+          const repSessionId = createId("session")
           const openingInventoryLines = input.openingInventoryLines.map(
             (line) => {
-              const expectedQuantity = Math.max(0, line.expectedQuantity);
-              const confirmedQuantity = Math.max(0, line.confirmedQuantity);
+              const expectedQuantity = toNonNegativeWholeQuantity(
+                line.expectedQuantity,
+              )
+              const confirmedQuantity = toNonNegativeWholeQuantity(
+                line.confirmedQuantity,
+              )
 
               return {
                 ...line,
                 confirmedQuantity,
                 expectedQuantity,
                 variance: confirmedQuantity - expectedQuantity,
-              };
+              }
             },
-          );
+          )
           const hasOpeningVariance = openingInventoryLines.some(
             (line) => line.variance !== 0,
-          );
+          )
 
           return {
             repSessions: [
@@ -634,41 +739,53 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                     `Clock in: ${input.attendantName}`,
                     repSessionId,
                     businessId,
+                    {
+                      actorName: input.attendantName,
+                      dependencies: openingInventoryLines.flatMap(
+                        (line) =>
+                          getProductSyncDependencies({
+                            productId: line.productId,
+                            unitId: line.variantId,
+                          }) ?? [],
+                      ),
+                      deviceId: state.offlineDeviceId,
+                    },
                   ),
                   ...state.syncEvents,
                 ]
               : state.syncEvents,
-          };
+          }
         }),
       createSale: (input) =>
         set((state) => {
-          const now = new Date().toISOString();
-          const syncStatus = input.syncStatus ?? "pending";
-          const shouldQueueSync = syncStatus === "pending";
+          const now = new Date().toISOString()
+          const syncStatus = input.syncStatus ?? "pending"
+          const shouldQueueSync = syncStatus === "pending"
           const product = state.products.find(
             (currentProduct) => currentProduct.id === input.productId,
-          );
+          )
           const businessId = resolveBusinessId(
             input.businessId ?? product?.businessId,
-          );
-          const customerName = input.customerName.trim();
-          const saleId = createId("sale");
-          const stockMovementId = createId("stock");
+          )
+          const customerName = input.customerName.trim()
+          const saleId = createId("sale")
+          const stockMovementId = createId("stock")
+          const quantity = toNonNegativeWholeQuantity(input.quantity)
           const openSession = state.repSessions.find(
             (session) =>
               (session.businessId ?? businessId) === businessId &&
               session.status === "open" &&
               session.attendantName === input.attendantName,
-          );
+          )
 
-          if (!openSession) return state;
+          if (!openSession || quantity <= 0) return state
 
           const existingCustomer = state.customers.find(
             (customer) =>
               (customer.businessId ?? businessId) === businessId &&
               customer.name.toLowerCase() === customerName.toLowerCase(),
-          );
-          const customerId = existingCustomer?.id ?? createId("customer");
+          )
+          const customerId = existingCustomer?.id ?? createId("customer")
           const nextCustomers =
             customerName && existingCustomer
               ? state.customers.map((customer) =>
@@ -694,7 +811,7 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                     },
                     ...state.customers,
                   ]
-                : state.customers;
+                : state.customers
 
           return {
             customers: nextCustomers,
@@ -704,14 +821,16 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                   ? {
                       ...product,
                       syncStatus:
-                        syncStatus === "synced" ? product.syncStatus : "pending",
+                        syncStatus === "synced"
+                          ? product.syncStatus
+                          : "pending",
                       variants: product.variants.map((variant) =>
                         variant.id === input.variantId
                           ? {
                               ...variant,
                               currentStock: Math.max(
                                 0,
-                                getVariantStock(variant) - input.quantity,
+                                getVariantStock(variant) - quantity,
                               ),
                             }
                           : variant,
@@ -721,10 +840,12 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                       ...product,
                       currentStock: Math.max(
                         0,
-                        getProductStock(product) - input.quantity,
+                        getProductStock(product) - quantity,
                       ),
                       syncStatus:
-                        syncStatus === "synced" ? product.syncStatus : "pending",
+                        syncStatus === "synced"
+                          ? product.syncStatus
+                          : "pending",
                     }
                 : product,
             ),
@@ -735,10 +856,11 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                 remoteId: input.remoteId,
                 repSessionId: openSession.id,
                 syncStatus,
-                total: input.unitPrice * input.quantity,
                 ...input,
                 businessId,
                 customerName: customerName || "Walk-in customer",
+                quantity,
+                total: input.unitPrice * quantity,
               },
               ...state.sales,
             ],
@@ -749,7 +871,7 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                 id: stockMovementId,
                 productId: input.productId,
                 productName: input.productName,
-                quantity: -input.quantity,
+                quantity: -quantity,
                 syncStatus,
                 type: "sale",
                 unitName: input.unitName,
@@ -764,6 +886,36 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                     `Sale: ${input.productName} ${input.unitName}`,
                     saleId,
                     businessId,
+                    {
+                      actorName: input.attendantName,
+                      dependencies: [
+                        ...(getProductSyncDependencies({
+                          productId: input.productId,
+                          productRemoteId: product?.remoteId,
+                          unitId: input.variantId ?? input.productId,
+                          unitRemoteId: input.variantId
+                            ? product?.variants.find(
+                                (variant) => variant.id === input.variantId,
+                              )?.remoteId
+                            : product?.remoteVariantId,
+                        }) ?? []),
+                        {
+                          id: openSession.id,
+                          kind: "rep_session",
+                          remoteId: openSession.remoteId,
+                        },
+                        ...(customerName
+                          ? [
+                              {
+                                id: customerId,
+                                kind: "customer" as const,
+                                remoteId: existingCustomer?.remoteId,
+                              },
+                            ]
+                          : []),
+                      ],
+                      deviceId: state.offlineDeviceId,
+                    },
                   ),
                   ...(customerName
                     ? [
@@ -772,47 +924,63 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                           `Customer: ${customerName}`,
                           customerId,
                           businessId,
+                          {
+                            actorName: input.attendantName,
+                            dependencies: [
+                              {
+                                id: saleId,
+                                kind: "sale",
+                              },
+                            ],
+                            deviceId: state.offlineDeviceId,
+                          },
                         ),
                       ]
                     : []),
                   ...state.syncEvents,
                 ]
               : state.syncEvents,
-          };
+          }
         }),
       createCloseout: (input) =>
         set((state) => {
-          const now = input.createdAt ?? new Date().toISOString();
-          const syncStatus = input.syncStatus ?? "pending";
-          const shouldQueueSync = syncStatus === "pending";
-          const businessId = resolveBusinessId(input.businessId);
-          const closeoutId = createId("closeout");
+          const now = input.createdAt ?? new Date().toISOString()
+          const syncStatus = input.syncStatus ?? "pending"
+          const shouldQueueSync = syncStatus === "pending"
+          const businessId = resolveBusinessId(input.businessId)
+          const closeoutId = createId("closeout")
           const openSales = getSalesAfterLastCloseout(
             state.sales.filter(
               (sale) => (sale.businessId ?? businessId) === businessId,
             ),
             state.closeouts.filter(
-              (closeout) =>
-                (closeout.businessId ?? businessId) === businessId,
+              (closeout) => (closeout.businessId ?? businessId) === businessId,
             ),
-          );
-          const paymentTotals = getPaymentTotals(openSales);
-          const declaredCash = Math.max(0, input.declaredCash);
-          const declaredTransfer = Math.max(0, input.declaredTransfer);
+          )
+          const paymentTotals = getPaymentTotals(openSales)
+          const declaredCash = Math.max(0, input.declaredCash)
+          const declaredTransfer = Math.max(0, input.declaredTransfer)
           const openSession = state.repSessions.find(
             (session) =>
               (session.businessId ?? businessId) === businessId &&
               session.status === "open" &&
               session.attendantName === input.attendantName,
-          );
-          const inventoryLines = input.inventoryLines.map((line) => ({
-            ...line,
-            declaredQuantity: Math.max(0, line.declaredQuantity),
-            expectedQuantity: Math.max(0, line.expectedQuantity),
-            variance:
-              Math.max(0, line.declaredQuantity) -
-              Math.max(0, line.expectedQuantity),
-          }));
+          )
+          const inventoryLines = input.inventoryLines.map((line) => {
+            const declaredQuantity = toNonNegativeWholeQuantity(
+              line.declaredQuantity,
+            )
+            const expectedQuantity = toNonNegativeWholeQuantity(
+              line.expectedQuantity,
+            )
+
+            return {
+              ...line,
+              declaredQuantity,
+              expectedQuantity,
+              variance: declaredQuantity - expectedQuantity,
+            }
+          })
 
           return {
             closeouts: [
@@ -843,8 +1011,7 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                     ...session,
                     clockedOutAt: now,
                     status: "closed",
-                    syncStatus:
-                      syncStatus === "synced" ? "synced" : "pending",
+                    syncStatus: syncStatus === "synced" ? "synced" : "pending",
                   }
                 : session,
             ),
@@ -857,21 +1024,48 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                     }`,
                     closeoutId,
                     businessId,
+                    {
+                      actorName: input.attendantName,
+                      dependencies: [
+                        ...(openSession
+                          ? [
+                              {
+                                id: openSession.id,
+                                kind: "rep_session" as const,
+                                remoteId: openSession.remoteId,
+                              },
+                            ]
+                          : []),
+                        ...openSales.map((sale) => ({
+                          id: sale.id,
+                          kind: "sale" as const,
+                          remoteId: sale.remoteId,
+                        })),
+                        ...inventoryLines.flatMap(
+                          (line) =>
+                            getProductSyncDependencies({
+                              productId: line.productId,
+                              unitId: line.variantId,
+                            }) ?? [],
+                        ),
+                      ],
+                      deviceId: state.offlineDeviceId,
+                    },
                   ),
                   ...state.syncEvents,
                 ]
               : state.syncEvents,
-          };
+          }
         }),
       createShareLink: (input) => {
         const product = get().products.find(
           (currentProduct) => currentProduct.id === input.productId,
-        );
+        )
         const businessId = resolveBusinessId(
           input.businessId ?? product?.businessId,
-        );
-        const slug = createSlug(input.productName);
-        const shareLinkId = createId("share");
+        )
+        const slug = createSlug(input.productName)
+        const shareLinkId = createId("share")
         const shareLink = {
           businessId,
           createdAt: new Date().toISOString(),
@@ -884,7 +1078,7 @@ export const useRetailOpsStore = create<RetailOpsState>()(
           syncStatus: "pending",
           url: `https://storefront.ewatrade.com/products/${slug}`,
           views: 0,
-        } satisfies RetailOpsShareLink;
+        } satisfies RetailOpsShareLink
 
         set((state) => ({
           shareLinks: [shareLink, ...state.shareLinks],
@@ -894,12 +1088,22 @@ export const useRetailOpsStore = create<RetailOpsState>()(
               `Share link: ${input.productName}`,
               shareLinkId,
               businessId,
+              {
+                dependencies: [
+                  {
+                    id: input.productId,
+                    kind: "product",
+                    remoteId: product?.remoteId,
+                  },
+                ],
+                deviceId: get().offlineDeviceId,
+              },
             ),
             ...state.syncEvents,
           ],
-        }));
+        }))
 
-        return shareLink;
+        return shareLink
       },
       deactivateShareLink: (id) =>
         set((state) => ({
@@ -919,20 +1123,32 @@ export const useRetailOpsStore = create<RetailOpsState>()(
               id,
               state.shareLinks.find((shareLink) => shareLink.id === id)
                 ?.businessId,
+              {
+                dependencies: [
+                  {
+                    id,
+                    kind: "share_link",
+                    remoteId: state.shareLinks.find(
+                      (shareLink) => shareLink.id === id,
+                    )?.remoteId,
+                  },
+                ],
+                deviceId: state.offlineDeviceId,
+              },
             ),
             ...state.syncEvents,
           ],
         })),
       inviteStaff: (input) =>
         set((state) => {
-          const businessId = resolveBusinessId(input.businessId);
-          const email = input.email.trim().toLowerCase();
-          const name = input.name.trim();
+          const businessId = resolveBusinessId(input.businessId)
+          const email = input.email.trim().toLowerCase()
+          const name = input.name.trim()
           const existingBusinessStaff = state.staff.find(
             (staffMember) =>
               (staffMember.businessId ?? businessId) === businessId &&
               staffMember.email.toLowerCase() === email,
-          );
+          )
 
           if (existingBusinessStaff) {
             return {
@@ -953,12 +1169,22 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                   `Staff invite: ${email}`,
                   existingBusinessStaff.id,
                   businessId,
+                  {
+                    dependencies: [
+                      {
+                        id: existingBusinessStaff.id,
+                        kind: "staff",
+                        remoteId: existingBusinessStaff.remoteId,
+                      },
+                    ],
+                    deviceId: state.offlineDeviceId,
+                  },
                 ),
                 ...state.syncEvents,
               ],
-            };
+            }
           }
-          const staffId = createId("staff");
+          const staffId = createId("staff")
 
           return {
             staff: [
@@ -980,10 +1206,19 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                 `Staff invite: ${email}`,
                 staffId,
                 businessId,
+                {
+                  dependencies: [
+                    {
+                      id: staffId,
+                      kind: "staff",
+                    },
+                  ],
+                  deviceId: state.offlineDeviceId,
+                },
               ),
               ...state.syncEvents,
             ],
-          };
+          }
         }),
       markPendingEventsSynced: (businessId) =>
         set((state) => ({
@@ -1057,25 +1292,26 @@ export const useRetailOpsStore = create<RetailOpsState>()(
               ? {
                   ...event,
                   status: "synced",
+                  updatedAt: new Date().toISOString(),
                 }
               : event,
-            ),
+          ),
         })),
       markSyncEventsResolved: (input) =>
         set((state) => {
-          const syncedEventIds = new Set(input.syncedEventIds ?? []);
+          const syncedEventIds = new Set(input.syncedEventIds ?? [])
           const failedEventIds = new Set([
             ...(input.failedEventIds ?? []),
             ...(input.failedEvents ?? []).map((event) => event.eventId),
-          ]);
+          ])
           const failedEventsById = new Map(
             (input.failedEvents ?? []).map((event) => [event.eventId, event]),
-          );
+          )
           const syncedEntityIds = new Set(
             state.syncEvents
               .filter((event) => syncedEventIds.has(event.id))
               .map((event) => event.entityId),
-          );
+          )
           const syncedCloseoutRepSessionIds = new Set(
             state.closeouts
               .filter(
@@ -1083,64 +1319,64 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                   syncedEntityIds.has(closeout.id) && closeout.repSessionId,
               )
               .map((closeout) => closeout.repSessionId as string),
-          );
+          )
           const customerMappingsByLocalId = new Map(
             (input.customerMappings ?? []).flatMap((mapping) => {
               const event = state.syncEvents.find(
                 (currentEvent) => currentEvent.id === mapping.eventId,
-              );
+              )
 
-              return event ? [[event.entityId, mapping]] : [];
+              return event ? [[event.entityId, mapping]] : []
             }),
-          );
+          )
           const productMappingsByLocalId = new Map(
             (input.productMappings ?? []).flatMap((mapping) => {
               const event = state.syncEvents.find(
                 (currentEvent) => currentEvent.id === mapping.eventId,
-              );
+              )
 
-              return event ? [[event.entityId, mapping]] : [];
+              return event ? [[event.entityId, mapping]] : []
             }),
-          );
+          )
           const repSessionMappingsByLocalId = new Map(
             (input.repSessionMappings ?? []).flatMap((mapping) => {
               const event = state.syncEvents.find(
                 (currentEvent) => currentEvent.id === mapping.eventId,
-              );
+              )
 
-              return event ? [[event.entityId, mapping]] : [];
+              return event ? [[event.entityId, mapping]] : []
             }),
-          );
+          )
           const saleMappingsByLocalId = new Map(
             (input.saleMappings ?? []).flatMap((mapping) => {
               const event = state.syncEvents.find(
                 (currentEvent) => currentEvent.id === mapping.eventId,
-              );
+              )
 
-              return event ? [[event.entityId, mapping]] : [];
+              return event ? [[event.entityId, mapping]] : []
             }),
-          );
+          )
           const staffMappingsByLocalId = new Map(
             (input.staffMappings ?? []).flatMap((mapping) => {
               const event = state.syncEvents.find(
                 (currentEvent) => currentEvent.id === mapping.eventId,
-              );
+              )
 
-              return event ? [[event.entityId, mapping]] : [];
+              return event ? [[event.entityId, mapping]] : []
             }),
-          );
+          )
           const shareLinkMappingsByLocalId = new Map(
             (input.shareLinkMappings ?? []).flatMap((mapping) => {
               const event = state.syncEvents.find(
                 (currentEvent) => currentEvent.id === mapping.eventId,
-              );
+              )
 
-              return event ? [[event.entityId, mapping]] : [];
+              return event ? [[event.entityId, mapping]] : []
             }),
-          );
+          )
           const matchesBusiness = (businessId?: string) =>
             !input.businessId ||
-            (businessId ?? input.businessId) === input.businessId;
+            (businessId ?? input.businessId) === input.businessId
 
           return {
             closeouts: state.closeouts.map((closeout) =>
@@ -1153,13 +1389,13 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                 : closeout,
             ),
             products: state.products.map((product) => {
-              const mapping = productMappingsByLocalId.get(product.id);
+              const mapping = productMappingsByLocalId.get(product.id)
 
               if (!mapping || !matchesBusiness(product.businessId)) {
-                return product;
+                return product
               }
 
-              const defaultUnit = mapping.units.find((unit) => unit.isDefault);
+              const defaultUnit = mapping.units.find((unit) => unit.isDefault)
 
               return {
                 ...product,
@@ -1172,19 +1408,19 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                       !unit.isDefault &&
                       unit.name.trim().toLowerCase() ===
                         variant.name.trim().toLowerCase(),
-                  );
+                  )
 
                   return remoteUnit
                     ? {
                         ...variant,
                         remoteId: remoteUnit.id,
                       }
-                    : variant;
+                    : variant
                 }),
-              };
+              }
             }),
             customers: state.customers.map((customer) => {
-              const mapping = customerMappingsByLocalId.get(customer.id);
+              const mapping = customerMappingsByLocalId.get(customer.id)
 
               return syncedEntityIds.has(customer.id) &&
                 matchesBusiness(customer.businessId)
@@ -1193,10 +1429,10 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                     remoteId: mapping?.customerId ?? customer.remoteId,
                     syncStatus: "synced",
                   }
-                : customer;
+                : customer
             }),
             sales: state.sales.map((sale) => {
-              const mapping = saleMappingsByLocalId.get(sale.id);
+              const mapping = saleMappingsByLocalId.get(sale.id)
 
               return syncedEntityIds.has(sale.id) &&
                 matchesBusiness(sale.businessId)
@@ -1205,10 +1441,10 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                     remoteId: mapping?.orderId ?? sale.remoteId,
                     syncStatus: "synced",
                   }
-                : sale;
+                : sale
             }),
             repSessions: state.repSessions.map((session) => {
-              const mapping = repSessionMappingsByLocalId.get(session.id);
+              const mapping = repSessionMappingsByLocalId.get(session.id)
 
               return (syncedEntityIds.has(session.id) ||
                 syncedCloseoutRepSessionIds.has(session.id)) &&
@@ -1218,10 +1454,10 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                     remoteId: mapping?.cashierSessionId ?? session.remoteId,
                     syncStatus: "synced",
                   }
-                : session;
+                : session
             }),
             staff: state.staff.map((staffMember) => {
-              const mapping = staffMappingsByLocalId.get(staffMember.id);
+              const mapping = staffMappingsByLocalId.get(staffMember.id)
 
               return syncedEntityIds.has(staffMember.id) &&
                 matchesBusiness(staffMember.businessId)
@@ -1230,10 +1466,10 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                     remoteId: mapping?.membershipId ?? staffMember.remoteId,
                     syncStatus: "synced",
                   }
-                : staffMember;
+                : staffMember
             }),
             shareLinks: state.shareLinks.map((shareLink) => {
-              const mapping = shareLinkMappingsByLocalId.get(shareLink.id);
+              const mapping = shareLinkMappingsByLocalId.get(shareLink.id)
 
               return syncedEntityIds.has(shareLink.id) &&
                 matchesBusiness(shareLink.businessId)
@@ -1245,7 +1481,7 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                     syncStatus: "synced",
                     url: mapping?.url ?? shareLink.url,
                   }
-                : shareLink;
+                : shareLink
             }),
             stockMovements: state.stockMovements.map((movement) =>
               matchesBusiness(movement.businessId) &&
@@ -1262,14 +1498,15 @@ export const useRetailOpsStore = create<RetailOpsState>()(
             syncEvents: state.syncEvents.map((event) =>
               syncedEventIds.has(event.id) && matchesBusiness(event.businessId)
                 ? {
-                  ...event,
-                  errorCode: undefined,
-                  errorMessage: undefined,
-                  failedAt: undefined,
-                  nextRetryAt: undefined,
-                  status: "synced",
-                }
-              : failedEventIds.has(event.id) &&
+                    ...event,
+                    errorCode: undefined,
+                    errorMessage: undefined,
+                    failedAt: undefined,
+                    nextRetryAt: undefined,
+                    status: "synced",
+                    updatedAt: new Date().toISOString(),
+                  }
+                : failedEventIds.has(event.id) &&
                     matchesBusiness(event.businessId)
                   ? {
                       ...event,
@@ -1288,17 +1525,18 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                       )
                         ? "conflict"
                         : "failed",
+                      updatedAt: new Date().toISOString(),
                     }
                   : event,
             ),
-          };
+          }
         }),
       retrySyncEvents: (input) =>
         set((state) => {
-          const eventIds = input.eventIds ? new Set(input.eventIds) : null;
+          const eventIds = input.eventIds ? new Set(input.eventIds) : null
           const matchesBusiness = (businessId?: string) =>
             !input.businessId ||
-            (businessId ?? input.businessId) === input.businessId;
+            (businessId ?? input.businessId) === input.businessId
 
           return {
             syncEvents: state.syncEvents.map((event) =>
@@ -1313,42 +1551,44 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                     nextRetryAt: undefined,
                     retryCount: (event.retryCount ?? 0) + 1,
                     status: "pending",
+                    updatedAt: new Date().toISOString(),
                   }
                 : event,
             ),
-          };
+          }
         }),
       recordStockIntake: (input) =>
         set((state) => {
-          const syncStatus = input.syncStatus ?? "pending";
-          const shouldQueueSync = syncStatus === "pending";
+          const syncStatus = input.syncStatus ?? "pending"
+          const shouldQueueSync = syncStatus === "pending"
           const product = state.products.find(
             (currentProduct) => currentProduct.id === input.productId,
-          );
+          )
           const targetVariant = input.variantId
-            ? product?.variants.find((variant) => variant.id === input.variantId)
-            : null;
+            ? product?.variants.find(
+                (variant) => variant.id === input.variantId,
+              )
+            : null
 
-          if (!product || (input.variantId && !targetVariant)) return state;
+          if (!product || (input.variantId && !targetVariant)) return state
 
           const businessId = resolveBusinessId(
             input.businessId ?? product.businessId,
-          );
-          const stockMovementId = createId("stock");
-          const quantity = Math.max(0, input.quantity);
-          const unitName = targetVariant?.name ?? product.unitName;
+          )
+          const stockMovementId = createId("stock")
+          const quantity = toNonNegativeWholeQuantity(input.quantity)
+          const unitName = targetVariant?.name ?? product.unitName
 
-          if (quantity <= 0) return state;
+          if (quantity <= 0) return state
 
           return {
             products: state.products.map((currentProduct) =>
               currentProduct.id === input.productId
                 ? {
                     ...currentProduct,
-                    currentStock:
-                      targetVariant
-                        ? currentProduct.currentStock
-                        : getProductStock(currentProduct) + quantity,
+                    currentStock: targetVariant
+                      ? currentProduct.currentStock
+                      : getProductStock(currentProduct) + quantity,
                     syncStatus:
                       syncStatus === "synced"
                         ? currentProduct.syncStatus
@@ -1387,46 +1627,62 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                     `Stock intake: ${product.name}`,
                     stockMovementId,
                     businessId,
+                    {
+                      dependencies: getProductSyncDependencies({
+                        productId: product.id,
+                        productRemoteId: product.remoteId,
+                        unitId: targetVariant?.id ?? product.id,
+                        unitRemoteId:
+                          targetVariant?.remoteId ?? product.remoteVariantId,
+                      }),
+                      deviceId: state.offlineDeviceId,
+                    },
                   ),
                   ...state.syncEvents,
                 ]
               : state.syncEvents,
-          };
+          }
         }),
       recordStockAdjustment: (input) =>
         set((state) => {
-          const syncStatus = input.syncStatus ?? "pending";
-          const shouldQueueSync = syncStatus === "pending";
+          const syncStatus = input.syncStatus ?? "pending"
+          const shouldQueueSync = syncStatus === "pending"
           const product = state.products.find(
             (currentProduct) => currentProduct.id === input.productId,
-          );
+          )
           const targetVariant = input.variantId
-            ? product?.variants.find((variant) => variant.id === input.variantId)
-            : null;
+            ? product?.variants.find(
+                (variant) => variant.id === input.variantId,
+              )
+            : null
 
-          if (!product || (input.variantId && !targetVariant)) return state;
+          if (!product || (input.variantId && !targetVariant)) return state
 
-          const quantity = Math.max(0, input.quantity);
+          const quantity = toNonNegativeWholeQuantity(input.quantity)
+          const normalizedDirection = normalizeStockAdjustmentDirection({
+            direction: input.direction,
+            reason: input.reason,
+          })
           const currentStock = targetVariant
             ? getVariantStock(targetVariant)
-            : getProductStock(product);
+            : getProductStock(product)
 
           if (
             quantity <= 0 ||
-            (input.direction === "decrease" && quantity > currentStock)
+            (normalizedDirection === "decrease" && quantity > currentStock)
           ) {
-            return state;
+            return state
           }
 
           const businessId = resolveBusinessId(
             input.businessId ?? product.businessId,
-          );
-          const stockMovementId = createId("stock");
+          )
+          const stockMovementId = createId("stock")
           const signedQuantity =
-            input.direction === "increase" ? quantity : -quantity;
-          const reasonLabel = stockAdjustmentReasonLabel(input.reason);
-          const unitName = targetVariant?.name ?? product.unitName;
-          const note = input.note?.trim() || reasonLabel;
+            normalizedDirection === "increase" ? quantity : -quantity
+          const reasonLabel = stockAdjustmentReasonLabel(input.reason)
+          const unitName = targetVariant?.name ?? product.unitName
+          const note = input.note?.trim() || reasonLabel
 
           return {
             products: state.products.map((currentProduct) =>
@@ -1476,48 +1732,62 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                     `Stock adjustment: ${product.name}`,
                     stockMovementId,
                     businessId,
+                    {
+                      dependencies: getProductSyncDependencies({
+                        productId: product.id,
+                        productRemoteId: product.remoteId,
+                        unitId: targetVariant?.id ?? product.id,
+                        unitRemoteId:
+                          targetVariant?.remoteId ?? product.remoteVariantId,
+                      }),
+                      deviceId: state.offlineDeviceId,
+                    },
                   ),
                   ...state.syncEvents,
                 ]
               : state.syncEvents,
-          };
+          }
         }),
       recordSyncSummary: (summary) => set({ lastSyncSummary: summary }),
       recordUnitConversion: (input) =>
         set((state) => {
-          const syncStatus = input.syncStatus ?? "pending";
-          const shouldQueueSync = syncStatus === "pending";
+          const syncStatus = input.syncStatus ?? "pending"
+          const shouldQueueSync = syncStatus === "pending"
           const product = state.products.find(
             (currentProduct) => currentProduct.id === input.productId,
-          );
+          )
           const targetVariant = product?.variants.find(
             (variant) => variant.id === input.targetVariantId,
-          );
+          )
 
-          if (!product || !targetVariant) return state;
+          if (!product || !targetVariant) return state
 
           const businessId = resolveBusinessId(
             input.businessId ?? product.businessId,
-          );
-          const sourceQuantity = Math.max(0, input.sourceQuantity);
-          const outputQuantity = Math.max(0, input.outputQuantity);
-          const sourceStock = getProductStock(product);
+          )
+          const sourceQuantity = toNonNegativeWholeQuantity(
+            input.sourceQuantity,
+          )
+          const outputQuantity = toNonNegativeWholeQuantity(
+            input.outputQuantity,
+          )
+          const sourceStock = getProductStock(product)
 
           if (
             sourceQuantity <= 0 ||
             outputQuantity <= 0 ||
             sourceQuantity > sourceStock
           ) {
-            return state;
+            return state
           }
 
-          const now = input.convertedAt ?? new Date().toISOString();
-          const conversionId = createId("conversion");
-          const conversionOutId = createId("stock");
-          const conversionInId = createId("stock");
+          const now = input.convertedAt ?? new Date().toISOString()
+          const conversionId = createId("conversion")
+          const conversionOutId = createId("stock")
+          const conversionInId = createId("stock")
           const note =
             input.note?.trim() ||
-            `Converted ${sourceQuantity} ${product.unitName} to ${outputQuantity} ${targetVariant.name}`;
+            `Converted ${sourceQuantity} ${product.unitName} to ${outputQuantity} ${targetVariant.name}`
 
           return {
             products: state.products.map((currentProduct) =>
@@ -1583,11 +1853,28 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                     `Unit conversion: ${product.name}`,
                     conversionId,
                     businessId,
+                    {
+                      dependencies: [
+                        ...(getProductSyncDependencies({
+                          productId: product.id,
+                          productRemoteId: product.remoteId,
+                          unitId: product.id,
+                          unitRemoteId: product.remoteVariantId,
+                        }) ?? []),
+                        ...(getProductSyncDependencies({
+                          productId: product.id,
+                          productRemoteId: product.remoteId,
+                          unitId: targetVariant.id,
+                          unitRemoteId: targetVariant.remoteId,
+                        }) ?? []),
+                      ],
+                      deviceId: state.offlineDeviceId,
+                    },
                   ),
                   ...state.syncEvents,
                 ]
               : state.syncEvents,
-          };
+          }
         }),
       resetProducts: () => set({ products: [] }),
       setOfflineMode: (isOfflineMode) => set({ isOfflineMode }),
@@ -1611,8 +1898,8 @@ export const useRetailOpsStore = create<RetailOpsState>()(
         syncEvents: state.syncEvents,
       }),
       onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
+        state?.setHasHydrated(true)
       },
     },
   ),
-);
+)
