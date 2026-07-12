@@ -1,4 +1,4 @@
-import { Prisma, type PrismaClient } from "../src/generated/prisma/client"
+import { Prisma, type PrismaClient } from "../generated/prisma/client"
 
 type CheckStatus = "pass" | "warn" | "fail"
 

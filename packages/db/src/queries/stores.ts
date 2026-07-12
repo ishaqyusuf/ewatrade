@@ -1,4 +1,4 @@
-import { Prisma } from "../generated/prisma/client"
+import { Prisma } from "../../generated/prisma/client"
 import { assertRetailOpsEntitlementAvailable } from "./retail-ops-subscriptions"
 import type { DbClient } from "./types"
 

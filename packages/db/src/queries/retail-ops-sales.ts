@@ -1,9 +1,9 @@
-import { Prisma, type PrismaClient } from "../generated/prisma/client"
+import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
   InventoryMovementDirection as DurableInventoryMovementDirection,
   InventoryMovementSource as DurableInventoryMovementSource,
   InventoryMovementType as DurableInventoryMovementType,
-} from "../generated/prisma/enums"
+} from "../../generated/prisma/enums"
 import { resolveRetailOpsProductUnitPriceAt } from "./retail-ops-products"
 import {
   type RetailOpsStaffStockWalletSale,

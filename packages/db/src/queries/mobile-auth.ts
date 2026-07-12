@@ -1,5 +1,5 @@
 import { createHash, randomBytes, randomInt } from "node:crypto"
-import { Prisma } from "../generated/prisma/client"
+import { Prisma } from "../../generated/prisma/client"
 import { createTenantStore } from "./stores"
 import type { DbClient } from "./types"
 

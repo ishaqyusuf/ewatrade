@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { createHash } from "node:crypto"
-import type { PrismaClient } from "../generated/prisma/client"
+import type { PrismaClient } from "../../generated/prisma/client"
 import {
   completeRetailOpsStaffOnboarding,
   inviteRetailOpsStaff,

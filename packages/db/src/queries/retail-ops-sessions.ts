@@ -1,4 +1,4 @@
-import { Prisma, type PrismaClient } from "../generated/prisma/client"
+import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
   InventoryMovementDirection as DurableInventoryMovementDirection,
   InventoryMovementSource as DurableInventoryMovementSource,
@@ -8,7 +8,7 @@ import {
   RetailOpsPaymentDeclarationMethod as DurableRetailOpsPaymentDeclarationMethod,
   RetailOpsStockDeclarationSource as DurableRetailOpsStockDeclarationSource,
   RetailOpsStockDeclarationType as DurableRetailOpsStockDeclarationType,
-} from "../generated/prisma/enums"
+} from "../../generated/prisma/enums"
 import { getRetailOpsStaffStockWalletBalance } from "./retail-ops-stock-wallets"
 
 export type OpenRetailOpsSessionInput = {

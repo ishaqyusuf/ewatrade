@@ -19,8 +19,11 @@ Document migration ownership and safety rules.
 - Record major schema shifts in an ADR.
 
 ## Prisma Migration Workflow Rules
+
+- Use the repository DB push command against the intended database profile for schema readiness checks.
+- Use `bun run db:push --local` for local schema readiness checks, `bun run db:push --remote-dev` for the remote development database, and `bun run db:push --prod` only for explicitly requested production validation/push after confirming the target database and risk. Do not force data-loss prompts or destructive changes without approval.
 - If repository root scripts `db:migrate` and `db:push` exist, run `bun db:migrate` and `bun db:push` after Prisma schema/database updates.
-- This repository currently exposes `db:migrate:dev`, `db:migrate:deploy`, and `db:push`; use the matching environment-safe migration command plus `bun run db:push` when a schema push is explicitly required.
+- This repository exposes `db:start`, `db:generate`, `db:migrate`, `db:migrate:deploy`, and profile-aware `db:push`; use the matching environment-safe migration command plus the intended profile flag when a schema push is explicitly required.
 - Do not manually create migration files; use the repository scripts and Prisma workflow.
 - Keep migration commands aligned with root `package.json` and `packages/db` scripts.
 
@@ -28,15 +31,17 @@ Document migration ownership and safety rules.
 - Add environment rollout notes once staging/production infrastructure exists.
 
 ## Current Commands
-- `bun run db:generate` - generate Prisma Client from the file-based schema
+- `bun run db:start` - start the local Docker PostgreSQL service for the local profile
+- `bun run db:generate` - generate Prisma Client from the file-based schema into `packages/db/generated`
 - `bunx prisma migrate diff --from-empty --to-schema prisma --script --output prisma/migrations/0001_init/migration.sql` - refresh the baseline SQL migration without a running database
-- `bun run db:migrate:dev` - create and apply a development migration
+- `bun run db:migrate` / `bun run db:migrate:dev` - create and apply a development migration after starting local PostgreSQL
 - `bun run db:migrate:deploy` - apply committed migrations in deployed environments
 - `EWATRADE_CONFIRM_RETAIL_OPS_REFERENCE_SEED=1 bun run db:seed:retail-ops-reference` - upsert active Retail Ops Starter/Growth/Pro plan rows and system unit-template rows into a selected validation database
 - `EWATRADE_CONFIRM_RETAIL_OPS_FULL_VALIDATION=1 EWATRADE_RETAIL_OPS_VALIDATION_TARGET=<target> bun run db:validate:retail-ops-full` - run the guarded full Retail Ops validation sequence, including generation, schema validation, migration deploy/status, reference seeding, live validation, workflow validation, and optional JSON evidence output
 - `EWATRADE_CONFIRM_RETAIL_OPS_FULL_VALIDATION=1 EWATRADE_RETAIL_OPS_VALIDATION_TARGET=<target> EWATRADE_RETAIL_OPS_VALIDATION_DRY_RUN=1 bun run db:validate:retail-ops-full` - validate the full runner guard inputs and print the planned validation sequence without running any validation step
 - `bun run db:validate:retail-ops-live` - read-only Retail Ops live validation against a selected migrated database
 - `EWATRADE_CONFIRM_RETAIL_OPS_WORKFLOW_VALIDATION=1 bun run db:validate:retail-ops-workflows` - write isolated Retail Ops validation data, exercise migrated repository workflows, and clean up the validation tenant/user unless `EWATRADE_KEEP_RETAIL_OPS_WORKFLOW_VALIDATION_DATA=1` is set
+- `bun run db:push --local|--remote-dev|--prod` - run Prisma db push against the selected database profile
 - `bun run db:studio` - open Prisma Studio against the configured database
 
 ## Retail Ops Static Readiness Snapshot

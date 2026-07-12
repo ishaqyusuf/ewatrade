@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ewatrade-postgres
+    restart: unless-stopped
+    ports:
+      - "${DB_HOST_PORT:-55436}:5432"
+    environment:
+      POSTGRES_DB: ewatrade
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ewatrade-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ewatrade"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  ewatrade-postgres-data:

@@ -3,12 +3,12 @@ import {
   type MembershipStatus,
   Prisma,
   type PrismaClient,
-} from "../generated/prisma/client"
+} from "../../generated/prisma/client"
 import {
   InventoryMovementDirection as DurableInventoryMovementDirection,
   InventoryMovementSource as DurableInventoryMovementSource,
   InventoryMovementType as DurableInventoryMovementType,
-} from "../generated/prisma/enums"
+} from "../../generated/prisma/enums"
 
 export type AssignRetailOpsStaffStockInput = {
   actorUserId: string

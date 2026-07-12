@@ -24,7 +24,7 @@ Canonical stack reference for current implementation choices.
 - Migrations: Prisma
 - Runtime querying / repositories: Drizzle
 - Database provider: PostgreSQL as the canonical application database
-- Development database runtime: hosted Neon branch via `DATABASE_URL`
+- Development database runtime: local Docker PostgreSQL by default, with `remote-dev` and `prod` database profiles available through `DEV_PROFILE`/`APP_ENV` and `LOCAL_DATABASE_URL`/`REMOTE_DEV_DATABASE_URL`/`PROD_DATABASE_URL`.
 
 ## Guidance
 - Model entities in Prisma first.
@@ -34,3 +34,4 @@ Canonical stack reference for current implementation choices.
 
 ## Excluded Stack
 - Supabase is not part of the current platform design.
+- Local named-host dev: Portless-capable workspace scripts. Website/dashboard QA should use `bun run dev --local --filter dashboard marketing` when those apps are in scope, then browse the repository's Portless hostnames for marketing, storefront, dashboard, POS, and API flows instead of raw localhost ports.

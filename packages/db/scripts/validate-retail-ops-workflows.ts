@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto"
 
-import type { Prisma, PrismaClient } from "../src/generated/prisma/client"
+import type { Prisma, PrismaClient } from "../generated/prisma/client"
 import {
   MembershipRole,
   MembershipStatus,
   StoreStatus,
   TenantMode,
   TenantType,
-} from "../src/generated/prisma/enums"
+} from "../generated/prisma/enums"
 import {
   type CreatedRetailOpsProduct,
   createRetailOpsProduct,

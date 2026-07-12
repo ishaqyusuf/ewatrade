@@ -1,8 +1,10 @@
 {
   "extends": "../../packages/tsconfig/base.json",
   "compilerOptions": {
-    "types": ["bun"]
+    "types": ["bun"],
+    "outDir": "dist",
+    "rootDir": "."
   },
-  "include": ["src/**/*.ts", "scripts/**/*.ts", "prisma.config.ts"],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*.ts", "generated/**/*.ts", "scripts/**/*.ts", "prisma.config.ts"],
+  "exclude": ["node_modules", "dist", "src/generated"]
 }

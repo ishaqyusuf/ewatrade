@@ -1,11 +1,11 @@
-import { Prisma, type PrismaClient } from "../generated/prisma/client"
+import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
   InventoryMovementDirection as DurableInventoryMovementDirection,
   InventoryMovementSource as DurableInventoryMovementSource,
   InventoryMovementType as DurableInventoryMovementType,
   StockDeliverySource as DurableStockDeliverySource,
   StockDeliveryStatus as DurableStockDeliveryStatus,
-} from "../generated/prisma/enums"
+} from "../../generated/prisma/enums"
 import {
   type RetailOpsPaymentReconciliationRow,
   listRetailOpsPaymentReconciliation,

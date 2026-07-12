@@ -3,7 +3,7 @@ import type {
   OrderStatus,
   Prisma,
   PrismaClient,
-} from "../generated/prisma/client"
+} from "../../generated/prisma/client"
 import { recordRetailOpsSharedLinkCustomer } from "./retail-ops-customers"
 
 export type CreateRetailOpsProductShareLinkInput = {

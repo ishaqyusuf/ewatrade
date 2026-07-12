@@ -5,11 +5,11 @@ import {
   type MembershipStatus,
   Prisma,
   type PrismaClient,
-} from "../generated/prisma/client"
+} from "../../generated/prisma/client"
 import {
   RetailOpsStaffInviteTokenStatus as DurableRetailOpsStaffInviteTokenStatus,
   RetailOpsStaffLifecycleEventType as DurableRetailOpsStaffLifecycleEventType,
-} from "../generated/prisma/enums"
+} from "../../generated/prisma/enums"
 import { assertRetailOpsEntitlementAvailable } from "./retail-ops-subscriptions"
 
 export type RetailOpsStaffInviteRole = "cashier" | "operator" | "manager"

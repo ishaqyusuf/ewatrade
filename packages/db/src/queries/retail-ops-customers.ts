@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto"
 
-import { Prisma } from "../generated/prisma/client"
+import { Prisma } from "../../generated/prisma/client"
 import {
   RetailOpsCustomerEventType as DurableRetailOpsCustomerEventType,
   RetailOpsCustomerIdentityType as DurableRetailOpsCustomerIdentityType,
-} from "../generated/prisma/enums"
+} from "../../generated/prisma/enums"
 import type { DbClient } from "./types"
 
 export type RetailOpsCustomerIdentityType = "email" | "name" | "phone"

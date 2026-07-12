@@ -3,7 +3,7 @@ import type {
   StoreStatus,
   TenantMode,
   TenantType,
-} from "../generated/prisma/client"
+} from "../../generated/prisma/client"
 import type { DbClient } from "./types"
 
 export type TenantStore = {

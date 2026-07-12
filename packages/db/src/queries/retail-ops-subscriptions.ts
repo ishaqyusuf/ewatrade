@@ -1,4 +1,4 @@
-import { Prisma } from "../generated/prisma/client"
+import { Prisma } from "../../generated/prisma/client"
 import {
   BillingCheckoutSessionStatus as DurableBillingCheckoutSessionStatus,
   BillingInvoiceStatus as DurableBillingInvoiceStatus,
@@ -7,7 +7,7 @@ import {
   BillingSubscriptionStatus as DurableBillingSubscriptionStatus,
   OfflineDevicePlatform as DurableOfflineDevicePlatform,
   OfflineDeviceStatus as DurableOfflineDeviceStatus,
-} from "../generated/prisma/enums"
+} from "../../generated/prisma/enums"
 import type { DbClient } from "./types"
 
 export type RetailOpsPlanId = "growth" | "pro" | "starter"

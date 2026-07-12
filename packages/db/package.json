@@ -5,6 +5,7 @@
   "type": "module",
   "files": [
     "src",
+    "generated",
     "prisma",
     "prisma.config.ts"
   ],
@@ -12,26 +13,31 @@
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
     "./queries": "./src/queries/index.ts",
-    "./enums": "./src/generated/prisma/enums.ts",
-    "./browser": "./src/generated/prisma/browser.ts"
+    "./enums": "./generated/prisma/enums.ts",
+    "./browser": "./generated/prisma/browser.ts"
   },
   "scripts": {
-    "build": "bun run generate && tsc --noEmit",
-    "generate": "node node_modules/prisma/build/index.js generate --config prisma.config.ts",
-    "format": "node node_modules/prisma/build/index.js format --config prisma.config.ts",
-    "migrate:dev": "node node_modules/prisma/build/index.js migrate dev --config prisma.config.ts",
-    "migrate:deploy": "node node_modules/prisma/build/index.js migrate deploy --config prisma.config.ts",
-    "db:push": "node node_modules/prisma/build/index.js db push --config prisma.config.ts",
+    "build": "bun run db:generate && tsc --noEmit",
+    "generate": "bun run db:generate",
+    "format": "bun run db:format",
+    "migrate:dev": "bun run db:migrate",
+    "migrate:deploy": "bun run db:migrate:deploy",
+    "db:push": "prisma db push",
     "seed:retail-ops-reference": "bun scripts/seed-retail-ops-reference-data.ts",
     "validate:retail-ops-live": "bun scripts/retail-ops-live-validation.ts",
     "validate:retail-ops-full": "bun scripts/run-retail-ops-full-validation.ts",
     "validate:retail-ops-workflows": "bun scripts/validate-retail-ops-workflows.ts",
-    "studio": "node node_modules/prisma/build/index.js studio --config prisma.config.ts",
+    "studio": "bun run db:studio",
     "lint": "biome check .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "bun run db:generate && tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:format": "prisma format",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^7.0.0",
+    "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.0.0",
     "pg": "^8.16.3"
   },

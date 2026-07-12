@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto"
-import { Prisma } from "../generated/prisma/client"
+import { Prisma } from "../../generated/prisma/client"
 import {
   RetailOpsSyncEventStatus as DurableRetailOpsSyncEventStatus,
   RetailOpsSyncRunStatus as DurableRetailOpsSyncRunStatus,
-} from "../generated/prisma/enums"
+} from "../../generated/prisma/enums"
 import type { DbClient } from "./types"
 
 export type RetailOpsSyncRunEventStatus = "applied" | "failed" | "skipped"

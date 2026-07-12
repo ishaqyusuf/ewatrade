@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto"
 
-import { Prisma, type PrismaClient } from "../generated/prisma/client"
+import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
   InventoryMovementDirection as DurableInventoryMovementDirection,
   InventoryMovementSource as DurableInventoryMovementSource,
   InventoryMovementType as DurableInventoryMovementType,
   ProductUnitPriceChangeSource as DurableProductUnitPriceChangeSource,
-} from "../generated/prisma/enums"
+} from "../../generated/prisma/enums"
 import { assertRetailOpsEntitlementAvailable } from "./retail-ops-subscriptions"
 
 export type CreateRetailOpsProductUnitInput = {

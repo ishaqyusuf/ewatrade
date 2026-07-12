@@ -1,10 +1,29 @@
 {
   "$schema": "https://turborepo.org/schema.json",
-  "globalDependencies": ["**/.env"],
+  "globalDependencies": [
+    ".env",
+    ".env.development",
+    ".env.local",
+    ".env.development.local",
+    ".env.remote-dev.local",
+    ".env.remote-dev",
+    ".env.production.local",
+    ".env.production",
+    "**/.env",
+    "**/.env.development",
+    "**/.env.local",
+    "**/.env.development.local",
+    "**/.env.remote-dev.local",
+    "**/.env.remote-dev",
+    "**/.env.production.local",
+    "**/.env.production"
+  ],
   "ui": "tui",
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build"
+      ],
       "env": [
         "DATABASE_URL",
         "BETTER_AUTH_SECRET",
@@ -12,24 +31,86 @@
         "EWATRADE_API_URL",
         "NEXT_PUBLIC_API_URL"
       ],
-      "outputs": [".next/**", "!.next/cache/**", "next-env.d.ts"]
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        ".expo/**",
+        "dist/**",
+        "generated/**",
+        "build/**",
+        "next-env.d.ts"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*"
+      ]
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*"
+      ]
     },
     "dev:portless": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*"
+      ]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": [
+        "^lint"
+      ]
     },
     "typecheck": {
-      "dependsOn": ["^typecheck"]
+      "dependsOn": [
+        "^typecheck"
+      ]
     },
     "clean": {
       "cache": false
+    },
+    "db:generate": {
+      "cache": false,
+      "outputs": [
+        "generated/**"
+      ]
     }
-  }
+  },
+  "globalEnv": [
+    "APP_ENV",
+    "COMPOSE_FILE",
+    "DATABASE_URL",
+    "DB_HOST",
+    "DB_HOST_PORT",
+    "DB_NAME",
+    "DB_PASSWORD",
+    "DB_SERVICE",
+    "DB_USER",
+    "DB_WAIT_ATTEMPTS",
+    "DB_WAIT_SECONDS",
+    "DEV_PROFILE",
+    "DOCKER_WAIT_ATTEMPTS",
+    "DOCKER_WAIT_SECONDS",
+    "LOCAL_DATABASE_URL",
+    "LOCAL_POSTGRES_URL",
+    "POSTGRES_URL",
+    "REMOTE_DEV_DATABASE_URL",
+    "REMOTE_DEV_POSTGRES_URL",
+    "DEV_DATABASE_URL",
+    "DEV_POSTGRES_URL",
+    "PROD_DATABASE_URL",
+    "PROD_POSTGRES_URL",
+    "REQUIRE_PROD_DATABASE_URL",
+    "NODE_ENV",
+    "TZ",
+    "BETTER_AUTH_SECRET",
+    "BETTER_AUTH_URL",
+    "EWATRADE_API_URL",
+    "NEXT_PUBLIC_API_URL"
+  ]
 }
