@@ -7,6 +7,7 @@
     "qa:action-primitives": "node ./scripts/check-action-primitives.mjs",
     "qa:app-shell": "node ./scripts/check-app-shell.mjs",
     "qa:app-launch": "node ./scripts/check-app-launch-config.mjs",
+    "qa:auth-redesign": "node ./scripts/check-auth-redesign.mjs",
     "icons:generate": "node ./scripts/generate-launcher-icons.mjs",
     "qa:android-ready": "node ./scripts/check-android-qa-ready.mjs",
     "qa:android-ready-fixtures": "node ./scripts/check-android-qa-ready-fixtures.mjs",

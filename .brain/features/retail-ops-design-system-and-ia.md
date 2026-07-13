@@ -391,6 +391,17 @@ Dashboard-class mobile screens should use `MobileAppShell` for the shared header
 - Screen logic should pass actions into the shell rather than reimplementing tab bars or fixed footers in individual screens.
 - `qa:app-shell` is part of mobile source QA and verifies the reusable shell, role filtering, floating nav selectors, and dashboard integration.
 
+## Mobile Auth Redesign
+
+Splash, login, sign-up, and OTP verification use shared auth primitives so the entry flow feels minimal and consistent.
+
+- `AuthHeader` owns the icon, title, supporting copy, and optional badge treatment for auth/onboarding screens.
+- `AuthMethodButton` owns haptic third-party auth choices such as Google sign-up/sign-in.
+- Owner sign-up remains intentionally short: business name, full name, and email address for email OTP, with Google available after business name entry.
+- Login keeps the new-user CTA visually stronger than a plain text link.
+- OTP uses the shared segmented `OtpInput` with status badge/banner feedback for local fallback, resend, loading, and error states.
+- `qa:auth-redesign` is part of mobile source QA and protects prompt-style placeholders instead of sample email examples.
+
 ## Acceptance Review Checklist
 
 Every Retail Ops implementation slice should answer:

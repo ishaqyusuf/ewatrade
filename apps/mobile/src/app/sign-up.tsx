@@ -1,4 +1,11 @@
-import { ActionButton, FormField, MobileScreen } from "@/components/mobile"
+import {
+  ActionButton,
+  AuthHeader,
+  AuthMethodButton,
+  FormField,
+  MobileScreen,
+  StatusBanner,
+} from "@/components/mobile"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useMobileGoogleAuth } from "@/hooks/use-mobile-google-auth"
@@ -84,38 +91,30 @@ export default function SignUpRoute() {
       contentClassName="justify-center gap-8"
       keyboardBottomOffset={420}
     >
-      <View className="gap-4">
-        <View className="h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-          <Text className="text-2xl font-bold text-primary">E</Text>
-        </View>
-        <View className="gap-2">
-          <Text className="text-3xl font-bold text-foreground">
-            Create your account
-          </Text>
-          <Text className="text-base leading-6 text-muted-foreground">
-            Start with the essentials. You can add products, staff, and stock
-            once the account is ready.
-          </Text>
-        </View>
-      </View>
+      <AuthHeader
+        badge="New business"
+        icon="Building2"
+        subtitle="Start with only the details needed to create your retail workspace."
+        title="Create your account"
+      />
 
       <View className="gap-3">
         <FormField
+          helper="This is the business customers and attendants will see."
           label="Business name"
           onChangeText={setBusinessName}
           placeholder="Enter your business name"
           value={businessName}
         />
-        <ActionButton
-          className="border border-border bg-card active:bg-accent"
+        <AuthMethodButton
           disabled={googleAuth.isPending || !canContinueWithGoogle}
+          icon="Globe"
+          label="Sign up with Google"
+          loadingLabel="Connecting to Google"
           onPress={continueWithGoogle}
-          variant="outline"
-        >
-          {googleAuth.isPending
-            ? "Connecting to Google"
-            : "Sign up with Google"}
-        </ActionButton>
+          pending={googleAuth.isPending}
+          tone="primary"
+        />
         <View className="flex-row items-center gap-3">
           <View className="h-px flex-1 bg-border" />
           <Text className="text-xs font-semibold uppercase text-muted-foreground">
@@ -154,7 +153,12 @@ export default function SignUpRoute() {
             : "Send verification code"}
         </ActionButton>
         {error ? (
-          <Text className="text-sm leading-5 text-destructive">{error}</Text>
+          <StatusBanner
+            icon="TriangleAlert"
+            message={error}
+            title="Sign-up needs attention"
+            tone="destructive"
+          />
         ) : null}
         <Pressable className="items-center" haptic href="/login" transition>
           <Text className="text-sm font-semibold text-muted-foreground">

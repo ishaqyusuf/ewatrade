@@ -1,4 +1,12 @@
-import { ActionButton, FormField, MobileScreen } from "@/components/mobile"
+import {
+  ActionButton,
+  AuthHeader,
+  AuthMethodButton,
+  FormField,
+  MobileScreen,
+  StatusBanner,
+} from "@/components/mobile"
+import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useMobileGoogleAuth } from "@/hooks/use-mobile-google-auth"
@@ -65,32 +73,22 @@ export default function LoginRoute() {
 
   return (
     <MobileScreen contentClassName="justify-center gap-8">
-      <View className="gap-4">
-        <View className="h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-          <Text className="text-2xl font-bold text-primary">E</Text>
-        </View>
-        <View className="gap-2">
-          <Text className="text-3xl font-bold text-foreground">
-            Welcome back
-          </Text>
-          <Text className="text-base leading-6 text-muted-foreground">
-            Sign in to continue managing sales, stock, and staff from your
-            phone.
-          </Text>
-        </View>
-      </View>
+      <AuthHeader
+        badge="Retail ops"
+        icon="Building2"
+        subtitle="Sign in to continue managing sales, stock, and staff from your phone."
+        title="Welcome back"
+      />
 
       <View className="gap-3">
-        <ActionButton
-          className="border border-border bg-card active:bg-accent"
+        <AuthMethodButton
           disabled={googleAuth.isPending}
+          icon="Globe"
+          label="Continue with Google"
+          loadingLabel="Connecting to Google"
           onPress={continueWithGoogle}
-          variant="outline"
-        >
-          {googleAuth.isPending
-            ? "Connecting to Google"
-            : "Continue with Google"}
-        </ActionButton>
+          pending={googleAuth.isPending}
+        />
         <View className="flex-row items-center gap-3">
           <View className="h-px flex-1 bg-border" />
           <Text className="text-xs font-semibold uppercase text-muted-foreground">
@@ -114,7 +112,12 @@ export default function LoginRoute() {
           {requestOtpMutation.isPending ? "Sending code" : "Send login code"}
         </ActionButton>
         {error ? (
-          <Text className="text-sm leading-5 text-destructive">{error}</Text>
+          <StatusBanner
+            icon="TriangleAlert"
+            message={error}
+            title="Login needs attention"
+            tone="destructive"
+          />
         ) : null}
       </View>
 
@@ -124,12 +127,20 @@ export default function LoginRoute() {
         href="/sign-up"
         transition
       >
-        <Text className="text-base leading-6 text-muted-foreground">
-          New to Ewatrade?
-        </Text>
-        <Text className="text-lg font-bold text-primary">
-          Create your business account
-        </Text>
+        <View className="flex-row items-center gap-3">
+          <View className="h-11 w-11 items-center justify-center rounded-full bg-primary">
+            <Icon className="size-base text-primary-foreground" name="Plus" />
+          </View>
+          <View className="min-w-0 flex-1">
+            <Text className="text-sm leading-5 text-muted-foreground">
+              New to Ewatrade?
+            </Text>
+            <Text className="text-lg font-bold text-primary">
+              Create your business account
+            </Text>
+          </View>
+          <Icon className="size-sm text-primary" name="ChevronRight" />
+        </View>
       </Pressable>
     </MobileScreen>
   )

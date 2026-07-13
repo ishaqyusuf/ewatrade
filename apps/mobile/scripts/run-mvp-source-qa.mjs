@@ -21,6 +21,10 @@ const CHECKS = [
     script: "check-auth-onboarding-flow.mjs",
   },
   {
+    label: "Auth redesign",
+    script: "check-auth-redesign.mjs",
+  },
+  {
     label: "Create-sale flow",
     script: "check-create-sale-flow.mjs",
   },

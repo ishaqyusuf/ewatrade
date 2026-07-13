@@ -2,6 +2,14 @@
 
 ## 2026-07-13
 
+### Mobile UI Redesign Auth Flow
+- Source Mode: `/implement-with-progress`
+- Source Ticket: `.scratch/mobile-ui-redesign-implementation/issues/03-auth-signup-otp-and-business-entry-redesign.md`
+- Completed: Implemented the third mobile UI redesign ticket by adding shared auth primitives, redesigning splash/login/sign-up/OTP screens around the new foundation, strengthening the login sign-up CTA, keeping sign-up to business name/name/email with prompt placeholders, and adding `qa:auth-redesign` to mobile source QA.
+- Changed Source Files: `apps/mobile/src/components/mobile/auth-header.tsx`, `apps/mobile/src/components/mobile/index.ts`, `apps/mobile/src/app/index.tsx`, `apps/mobile/src/app/login.tsx`, `apps/mobile/src/app/sign-up.tsx`, `apps/mobile/src/app/verify-email.tsx`, `apps/mobile/scripts/check-auth-redesign.mjs`, `apps/mobile/scripts/run-mvp-source-qa.mjs`, `apps/mobile/package.json`, `.scratch/mobile-ui-redesign-implementation/issues/03-auth-signup-otp-and-business-entry-redesign.md`.
+- Brain Files Updated: `.brain/features/retail-ops-design-system-and-ia.md`, `.brain/progress.md`.
+- Checks Run: `bun --cwd apps/mobile qa:auth-redesign`; `bun --cwd apps/mobile qa:auth-onboarding`; `bun --cwd apps/mobile qa:prompt-placeholders`; `bun --cwd apps/mobile qa:keyboard-coverage`; `bun --cwd apps/mobile qa:nativewind-style`; `bun --cwd apps/mobile qa:mvp-typechecks`; `bun --cwd apps/mobile qa:mvp-source`; `bunx biome check --write ...`.
+
 ### Mobile UI Redesign Floating Shell
 - Source Mode: `/implement-with-progress`
 - Source Ticket: `.scratch/mobile-ui-redesign-implementation/issues/02-floating-app-shell-and-role-aware-navigation.md`
