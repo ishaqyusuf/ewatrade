@@ -1,5 +1,8 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
+import { StatusBadge } from "@/components/mobile/status-badge"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetInputProvider } from "@/components/ui/bottom-sheet-input-context"
 import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
@@ -108,12 +111,10 @@ function CustomerRow({ customer }: { customer: CustomerBookRow }) {
             {customer.detail} - {formatLastSeen(customer.lastSeenAt)}
           </Text>
         </View>
-        <View className="rounded-full bg-primary/10 px-3 py-1">
-          <Text className="text-xs font-bold text-primary">
-            {customer.totalOrders} order
-            {customer.totalOrders === 1 ? "" : "s"}
-          </Text>
-        </View>
+        <StatusBadge
+          label={`${customer.totalOrders} order${customer.totalOrders === 1 ? "" : "s"}`}
+          tone="primary"
+        />
       </View>
       {customer.email || customer.phone ? (
         <Text className="text-xs leading-4 text-muted-foreground">
@@ -121,12 +122,19 @@ function CustomerRow({ customer }: { customer: CustomerBookRow }) {
         </Text>
       ) : null}
       {customer.source === "production" ? (
-        <Text className="text-xs font-bold text-emerald-700">
-          Synced customer
-        </Text>
+        <StatusBadge
+          className="self-start"
+          label="Synced customer"
+          tone="success"
+        />
       ) : null}
       {customer.status === "pending" ? (
-        <Text className="text-xs font-bold text-amber-700">Pending sync</Text>
+        <StatusBadge
+          className="self-start"
+          icon="Clock"
+          label="Pending sync"
+          tone="warning"
+        />
       ) : null}
     </View>
   )
@@ -232,14 +240,12 @@ export const CustomerBookSheet = forwardRef<
           keyExtractor={(customer) => customer.id}
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
-            <View className="mx-5 gap-2 rounded-2xl border border-dashed border-border p-4">
-              <Text className="font-semibold text-foreground">
-                No customers found
-              </Text>
-              <Text className="text-sm leading-5 text-muted-foreground">
-                New customers appear here after a sale or shared-link request.
-              </Text>
-            </View>
+            <EmptyState
+              className="mx-5"
+              icon="Users"
+              message="New customers appear here after a sale or shared-link request."
+              title="No customers found"
+            />
           }
           ListFooterComponent={
             <View className="px-5 pt-3 pb-6">
@@ -265,19 +271,12 @@ export const CustomerBookSheet = forwardRef<
                 </View>
               </View>
 
-              <View className="rounded-2xl border border-border bg-card p-4">
-                <View className="flex-row items-center justify-between gap-3">
-                  <Text className="font-semibold text-foreground">Source</Text>
-                  <View className="rounded-full bg-primary/10 px-3 py-1">
-                    <Text className="text-xs font-bold text-primary">
-                      {sourceLabel}
-                    </Text>
-                  </View>
-                </View>
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  {sourceDetail}
-                </Text>
-              </View>
+              <StatusBanner
+                icon={sourceLabel === "Online" ? "CircleCheck" : "Clock"}
+                message={sourceDetail}
+                title={`Customer source: ${sourceLabel}`}
+                tone={sourceLabel === "Online" ? "success" : "warning"}
+              />
 
               <FormField
                 autoCapitalize="words"

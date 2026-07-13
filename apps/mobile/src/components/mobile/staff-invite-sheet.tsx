@@ -1,5 +1,8 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
+import { StatusBadge } from "@/components/mobile/status-badge"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
@@ -138,29 +141,17 @@ function StaffRowItem({ staff }: { staff: StaffRow }) {
           <Text className="text-xs text-muted-foreground">{staff.email}</Text>
           <Text className="text-xs text-muted-foreground">{staff.detail}</Text>
         </View>
-        <View className="rounded-full bg-muted px-3 py-1">
-          <Text className="text-xs font-bold text-muted-foreground">
-            {staff.statusLabel}
-          </Text>
-        </View>
+        <StatusBadge
+          label={staff.statusLabel}
+          tone={staff.statusLabel === "Active" ? "success" : "warning"}
+        />
       </View>
-      <View
-        className={
-          staff.source === "production"
-            ? "self-start rounded-full bg-emerald-500/10 px-3 py-1"
-            : "self-start rounded-full bg-amber-500/10 px-3 py-1"
-        }
-      >
-        <Text
-          className={
-            staff.source === "production"
-              ? "text-xs font-bold text-emerald-700"
-              : "text-xs font-bold text-amber-700"
-          }
-        >
-          {staff.sourceLabel}
-        </Text>
-      </View>
+      <StatusBadge
+        className="self-start"
+        icon={staff.source === "production" ? "CircleCheck" : "Clock"}
+        label={staff.sourceLabel}
+        tone={staff.source === "production" ? "success" : "warning"}
+      />
     </View>
   )
 }
@@ -332,56 +323,36 @@ export const StaffInviteSheet = forwardRef<
             />
           </View>
 
-          <View className="rounded-2xl border border-border bg-card p-4">
-            <View className="flex-row gap-3">
-              <View className="h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10">
-                <Icon className="size-sm text-amber-600" name="Mail" />
-              </View>
-              <View className="flex-1 gap-1">
-                <Text className="font-semibold text-foreground">
-                  Email invite
-                </Text>
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  The attendant receives download instructions, signs in with
-                  their own email OTP, then confirms their sales profile.
-                </Text>
-              </View>
-            </View>
-          </View>
+          <StatusBanner
+            icon="Mail"
+            message="The attendant receives download instructions, signs in with their own email OTP, then confirms their sales profile."
+            title="Email invite"
+            tone="primary"
+          />
 
-          <View className="rounded-2xl border border-border bg-card p-4">
-            <View className="flex-row items-start justify-between gap-3">
-              <View className="flex-1 gap-1">
-                <Text className="font-semibold text-foreground">
-                  Staff source
-                </Text>
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  {sourceDetail}
-                </Text>
-              </View>
-              <View className="rounded-full bg-muted px-3 py-1">
-                <Text className="text-xs font-bold text-muted-foreground">
-                  {sourceLabel}
-                </Text>
-              </View>
-            </View>
-          </View>
+          <StatusBanner
+            icon={sourceLabel === "Online" ? "CircleCheck" : "Clock"}
+            message={sourceDetail}
+            title={`Staff source: ${sourceLabel}`}
+            tone={sourceLabel === "Online" ? "success" : "warning"}
+          />
 
           {isAtStaffLimit ? (
-            <View className="rounded-2xl bg-destructive/10 p-3">
-              <Text className="text-sm font-semibold text-destructive">
-                {plan.name} allows {plan.limits.staff} attendants. Upgrade
-                before inviting more staff.
-              </Text>
-            </View>
+            <StatusBanner
+              icon="TriangleAlert"
+              message={`${plan.name} allows ${plan.limits.staff} attendants. Upgrade before inviting more staff.`}
+              title="Staff limit reached"
+              tone="destructive"
+            />
           ) : null}
 
           {submitError ? (
-            <View className="rounded-2xl bg-destructive/10 p-3">
-              <Text className="text-sm font-semibold text-destructive">
-                {submitError}
-              </Text>
-            </View>
+            <StatusBanner
+              icon="TriangleAlert"
+              message={submitError}
+              title="Invite was not sent"
+              tone="destructive"
+            />
           ) : null}
 
           <View className="gap-3">
@@ -399,11 +370,11 @@ export const StaffInviteSheet = forwardRef<
                 ) : null}
               </>
             ) : (
-              <View className="rounded-2xl border border-dashed border-border p-4">
-                <Text className="text-sm text-muted-foreground">
-                  Invited attendants appear here after you send their access.
-                </Text>
-              </View>
+              <EmptyState
+                icon="UserPlus"
+                message="Invited attendants appear here after you send their access."
+                title="No attendants yet"
+              />
             )}
           </View>
 

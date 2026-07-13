@@ -44,6 +44,9 @@ const CONTRACTS = [
     file: FILES.customerBook,
     markers: [
       "BottomSheetFlatList",
+      "StatusBadge",
+      "StatusBanner",
+      "EmptyState",
       "trpc.retailOps.customerBook.queryOptions",
       "mapProductionCustomer",
       "mapLocalCustomer",

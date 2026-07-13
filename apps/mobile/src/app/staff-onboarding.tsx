@@ -1,4 +1,9 @@
-import { ActionButton, MobileScreen } from "@/components/mobile"
+import {
+  ActionButton,
+  MobileScreen,
+  StatusBadge,
+  StatusBanner,
+} from "@/components/mobile"
 import { FormField } from "@/components/mobile/form-field"
 import { Icon } from "@/components/ui/icon"
 import { Text } from "@/components/ui/text"
@@ -146,13 +151,18 @@ export default function StaffOnboardingRoute() {
 
         <View className="gap-3 rounded-2xl border border-border bg-card p-4">
           {inviteQuery.isPending ? (
-            <Text className="text-sm text-muted-foreground">
-              Checking invitation...
-            </Text>
+            <StatusBadge
+              icon="Clock"
+              label="Checking invitation"
+              tone="muted"
+            />
           ) : inviteQuery.isError ? (
-            <Text className="text-sm font-semibold text-destructive">
-              {inviteQuery.error.message}
-            </Text>
+            <StatusBanner
+              icon="TriangleAlert"
+              message={inviteQuery.error.message}
+              title="Invitation unavailable"
+              tone="destructive"
+            />
           ) : resolvedInvite ? (
             <>
               <Text className="text-base font-bold text-foreground">
@@ -161,9 +171,11 @@ export default function StaffOnboardingRoute() {
               <Text className="text-sm text-muted-foreground">
                 {resolvedInvite.email}
               </Text>
-              <Text className="text-sm text-muted-foreground">
-                Role: {getRoleLabel(resolvedInvite.role)}
-              </Text>
+              <StatusBadge
+                className="self-start"
+                label={getRoleLabel(resolvedInvite.role)}
+                tone="primary"
+              />
             </>
           ) : null}
         </View>
@@ -211,6 +223,12 @@ export default function StaffOnboardingRoute() {
           <ActionButton onPress={() => router.replace("/login")}>
             Sign in with invited email
           </ActionButton>
+          <StatusBanner
+            icon="TriangleAlert"
+            message="This invite must be accepted with the email address that was added by the business owner."
+            title="Wrong account"
+            tone="warning"
+          />
         </MobileScreen>
       )
     }
@@ -261,11 +279,12 @@ export default function StaffOnboardingRoute() {
           value={displayName}
         />
         {submitError ? (
-          <View className="rounded-2xl border border-destructive/20 bg-destructive/10 p-3">
-            <Text className="text-sm font-semibold text-destructive">
-              {submitError}
-            </Text>
-          </View>
+          <StatusBanner
+            icon="TriangleAlert"
+            message={submitError}
+            title="Staff setup failed"
+            tone="destructive"
+          />
         ) : null}
       </View>
 

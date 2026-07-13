@@ -1,4 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { StatusBadge } from "@/components/mobile/status-badge"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
@@ -103,14 +105,10 @@ function UsageRow({
   return (
     <View className="flex-row items-center justify-between gap-3 rounded-xl bg-muted px-3 py-2">
       <Text className="text-sm font-semibold text-foreground">{label}</Text>
-      <Text
-        className={cn(
-          "text-xs font-bold",
-          limitState.isAtLimit ? "text-destructive" : "text-muted-foreground",
-        )}
-      >
-        {limitState.label}
-      </Text>
+      <StatusBadge
+        label={limitState.label}
+        tone={limitState.isAtLimit ? "destructive" : "muted"}
+      />
     </View>
   )
 }
@@ -125,7 +123,7 @@ function PlanLimitRow({
   return (
     <View className="flex-row items-center justify-between gap-3 rounded-xl bg-muted px-3 py-2">
       <Text className="text-sm font-semibold text-foreground">{label}</Text>
-      <Text className="text-xs font-bold text-muted-foreground">{value}</Text>
+      <StatusBadge label={value} tone="muted" />
     </View>
   )
 }
@@ -164,21 +162,10 @@ function PlanCard({
             {plan.description}
           </Text>
         </View>
-        <View
-          className={cn(
-            "rounded-full px-3 py-1",
-            current ? "bg-primary/10" : "bg-muted",
-          )}
-        >
-          <Text
-            className={cn(
-              "text-xs font-bold",
-              current ? "text-primary" : "text-muted-foreground",
-            )}
-          >
-            {current ? "Current" : plan.priceLabel}
-          </Text>
-        </View>
+        <StatusBadge
+          label={current ? "Current" : plan.priceLabel}
+          tone={current ? "primary" : "muted"}
+        />
       </View>
 
       <View className="gap-2">
@@ -206,14 +193,12 @@ function PlanCard({
 
 function CheckoutIntentNotice({ intent }: { intent: CheckoutIntent }) {
   return (
-    <View className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
-      <Text className="font-semibold text-foreground">
-        {intent.targetPlan.name} checkout
-      </Text>
-      <Text className="mt-1 text-sm leading-5 text-muted-foreground">
-        {intent.message}
-      </Text>
-    </View>
+    <StatusBanner
+      icon="CreditCard"
+      message={intent.message}
+      title={`${intent.targetPlan.name} checkout`}
+      tone="primary"
+    />
   )
 }
 
@@ -371,30 +356,24 @@ export const SubscriptionPlanSheet = forwardRef<
             </View>
           </View>
 
-          <View className="rounded-2xl border border-border bg-card p-4">
-            <View className="flex-row items-start justify-between gap-3">
-              <View className="flex-1 gap-1">
-                <Text className="font-semibold text-foreground">
-                  Billing source
-                </Text>
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  {sourceDetail}
-                </Text>
-              </View>
-              <View className="rounded-full bg-muted px-3 py-1">
-                <Text className="text-xs font-bold text-muted-foreground">
-                  {sourceLabel}
-                </Text>
-              </View>
-            </View>
-          </View>
+          <StatusBanner
+            icon={sourceLabel === "Online" ? "CircleCheck" : "Clock"}
+            message={sourceDetail}
+            title={`Billing source: ${sourceLabel}`}
+            tone={sourceLabel === "Online" ? "success" : "warning"}
+          />
 
           {checkoutError || checkoutIntentMutation.error ? (
-            <View className="rounded-2xl bg-destructive/10 p-3">
-              <Text className="text-sm font-semibold text-destructive">
-                {checkoutError ?? checkoutIntentMutation.error?.message}
-              </Text>
-            </View>
+            <StatusBanner
+              icon="TriangleAlert"
+              message={
+                checkoutError ??
+                checkoutIntentMutation.error?.message ??
+                "Try the upgrade request again."
+              }
+              title="Upgrade request failed"
+              tone="destructive"
+            />
           ) : null}
 
           {checkoutIntent ? (
@@ -402,15 +381,12 @@ export const SubscriptionPlanSheet = forwardRef<
           ) : null}
 
           {!shouldUseProductionSnapshot ? (
-            <View className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
-              <Text className="font-semibold text-foreground">
-                Upgrade requests need production billing
-              </Text>
-              <Text className="mt-1 text-sm leading-5 text-muted-foreground">
-                Local subscription data is shown only as a fallback. Reconnect
-                to request an upgrade from the business account.
-              </Text>
-            </View>
+            <StatusBanner
+              icon="TriangleAlert"
+              message="Local subscription data is shown only as a fallback. Reconnect to request an upgrade from the business account."
+              title="Upgrade requests need production billing"
+              tone="warning"
+            />
           ) : null}
 
           <View className="gap-3 rounded-2xl border border-border bg-card p-4">
@@ -425,11 +401,12 @@ export const SubscriptionPlanSheet = forwardRef<
                     : `Renews ${formatDate(subscription.currentPeriodEndsAt)}`}
                 </Text>
               </View>
-              <View className="rounded-full bg-emerald-500/10 px-3 py-1">
-                <Text className="text-xs font-bold text-emerald-700">
-                  {subscriptionStatusLabel(subscription.status)}
-                </Text>
-              </View>
+              <StatusBadge
+                label={subscriptionStatusLabel(subscription.status)}
+                tone={
+                  subscription.status === "past_due" ? "warning" : "success"
+                }
+              />
             </View>
             <UsageRow
               label="Businesses"

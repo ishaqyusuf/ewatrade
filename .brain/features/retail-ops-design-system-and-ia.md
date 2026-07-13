@@ -447,6 +447,18 @@ Inventory management surfaces should reuse one compact product-row vocabulary ac
 - Production stock intake, stock adjustment, unit conversion, local/offline fallback, and stock movement ledger behavior must stay unchanged while the visual layer evolves.
 - `qa:inventory-operations-flow` protects the reusable card, source states, bounded product/unit/variant lists, stock shortages, tRPC mutations, and local queue behavior.
 
+## Secondary Operational Screen Redesign
+
+Staff, customer, subscription, and business settings surfaces should feel like compact operations panels, not marketing or admin sprawl.
+
+- Staff invite stays short: attendant name, email address, cashier role submission, clear email invite guidance, and source/limit/error states through `StatusBanner`.
+- Staff onboarding uses shared status treatment for invite lookup, wrong-account handling, role label, and setup errors while keeping only the required name/display-name fields.
+- Customer book remains virtualized and uses shared badges for order count, synced customer, and pending sync states.
+- Customer book source, empty search, and offline/local fallback states use shared banners and empty states.
+- Subscription plan management shows current plan, usage, tier comparison, and provider-neutral upgrade handoff with operational cards and status badges instead of landing-page copy.
+- Business switching groups current businesses, search, active status, business creation, and plan-limit warnings in the same calm sheet vocabulary.
+- `qa:customer-book-flow`, `qa:staff-flow`, and `qa:subscription-flow` protect these shared primitives, production/local fallbacks, bounded rows, and role/billing boundaries.
+
 ## Acceptance Review Checklist
 
 Every Retail Ops implementation slice should answer:

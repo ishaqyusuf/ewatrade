@@ -25,6 +25,9 @@ const CONTRACTS = [
     file: FILES.staffInvite,
     markers: [
       "BottomSheetKeyboardAwareScrollView",
+      "StatusBadge",
+      "StatusBanner",
+      "EmptyState",
       "trpc.retailOps.staff",
       "trpc.retailOps.inviteStaff",
       "inviteStaff(",
@@ -44,6 +47,8 @@ const CONTRACTS = [
     file: FILES.staffOnboarding,
     markers: [
       "MobileScreen",
+      "StatusBadge",
+      "StatusBanner",
       "resolveStaffInviteToken",
       "completeStaffOnboarding",
       "isInvitedStaff",

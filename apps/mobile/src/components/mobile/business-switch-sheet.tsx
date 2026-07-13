@@ -1,7 +1,9 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
+import { StatusBadge } from "@/components/mobile/status-badge"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
-import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -48,12 +50,10 @@ function BusinessRow({
             {business.type ?? "Retail"} - {business.currency ?? "NGN"}
           </Text>
         </View>
-        <Icon
-          className={cn(
-            "size-base text-muted-foreground",
-            selected && "text-primary",
-          )}
-          name={selected ? "CircleCheck" : "Building2"}
+        <StatusBadge
+          icon={selected ? "CircleCheck" : "Building2"}
+          label={selected ? "Active" : (business.currency ?? "NGN")}
+          tone={selected ? "primary" : "muted"}
         />
       </View>
     </Pressable>
@@ -177,24 +177,18 @@ export const BusinessSwitchSheet = forwardRef<
                   ) : null}
                 </>
               ) : (
-                <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-                  <Text className="font-semibold text-foreground">
-                    No matching businesses
-                  </Text>
-                  <Text className="text-sm leading-5 text-muted-foreground">
-                    Try another business, branch, currency, or category.
-                  </Text>
-                </View>
+                <EmptyState
+                  icon="Search"
+                  message="Try another business, branch, currency, or category."
+                  title="No matching businesses"
+                />
               )
             ) : (
-              <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-                <Text className="font-semibold text-foreground">
-                  No business yet
-                </Text>
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  Create a business to scope inventory, staff, and sales.
-                </Text>
-              </View>
+              <EmptyState
+                icon="Building2"
+                message="Create a business to scope inventory, staff, and sales."
+                title="No business yet"
+              />
             )}
           </View>
 
@@ -249,13 +243,12 @@ export const BusinessSwitchSheet = forwardRef<
           </View>
 
           {isAtBusinessLimit ? (
-            <View className="rounded-2xl bg-destructive/10 p-3">
-              <Text className="text-sm font-semibold text-destructive">
-                {plan.name} allows {plan.limits.businesses} business
-                {plan.limits.businesses === 1 ? "" : "es"}. Upgrade before
-                adding another business.
-              </Text>
-            </View>
+            <StatusBanner
+              icon="TriangleAlert"
+              message={`${plan.name} allows ${plan.limits.businesses} business${plan.limits.businesses === 1 ? "" : "es"}. Upgrade before adding another business.`}
+              title="Business limit reached"
+              tone="destructive"
+            />
           ) : null}
 
           <ActionButton disabled={!canCreate} onPress={submit}>

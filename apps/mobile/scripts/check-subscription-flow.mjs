@@ -56,6 +56,8 @@ const CONTRACTS = [
     file: FILES.subscriptionSheet,
     markers: [
       "BottomSheetKeyboardAwareScrollView",
+      "StatusBadge",
+      "StatusBanner",
       "trpc.retailOps.subscription",
       "trpc.retailOps.createSubscriptionCheckoutIntent",
       "shouldUseProductionSnapshot",
