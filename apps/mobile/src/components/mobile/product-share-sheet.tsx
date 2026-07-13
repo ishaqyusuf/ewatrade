@@ -1,10 +1,15 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
+import { InventoryProductCard } from "@/components/mobile/inventory-product-card"
+import { StatusBadge } from "@/components/mobile/status-badge"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import type { MobileDesignStatusTone } from "@/lib/design-foundation"
 import { cn } from "@/lib/utils"
 import { useBusinessStore } from "@/store/businessStore"
 import {
@@ -309,55 +314,35 @@ function getDeliveryRequestStatusTone(status: DeliveryRequestStatus) {
   return "pending"
 }
 
-function getStatusPillClassName(status: string | null | undefined) {
+function getStatusBadgeTone(
+  status: string | null | undefined,
+): MobileDesignStatusTone {
   if (status === "sent" || status === "reserved") {
-    return "bg-emerald-500/10"
+    return "success"
   }
 
   if (status === "failed") {
-    return "bg-destructive/10"
+    return "destructive"
   }
 
   if (status === "released" || status === "consumed") {
-    return "bg-primary/10"
+    return "primary"
   }
 
-  return "bg-muted"
+  return "muted"
 }
 
-function getStatusPillTextClassName(status: string | null | undefined) {
-  if (status === "sent" || status === "reserved") {
-    return "text-emerald-700"
-  }
-
-  if (status === "failed") {
-    return "text-destructive"
-  }
-
-  if (status === "released" || status === "consumed") {
-    return "text-primary"
-  }
-
-  return "text-muted-foreground"
-}
-
-function StatusPill({
+function SharedLinkStatusBadge({
+  icon,
   label,
   status,
 }: {
+  icon?: IconKeys
   label: string
   status?: string | null
 }) {
   return (
-    <View
-      className={cn("rounded-full px-3 py-1", getStatusPillClassName(status))}
-    >
-      <Text
-        className={cn("text-xs font-bold", getStatusPillTextClassName(status))}
-      >
-        {label}
-      </Text>
-    </View>
+    <StatusBadge icon={icon} label={label} tone={getStatusBadgeTone(status)} />
   )
 }
 
@@ -422,33 +407,20 @@ function ProductOption({
   selected: boolean
 }) {
   return (
-    <Pressable
-      className={cn(
-        "gap-2 rounded-2xl border border-border bg-card p-4 active:bg-accent",
-        selected && "border-primary bg-primary/10",
-      )}
-      haptic
+    <InventoryProductCard
+      icon="Share"
       onPress={onPress}
-      transition
-    >
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-semibold text-foreground">{product.name}</Text>
-          <Text className="text-sm text-muted-foreground">
-            {product.variants.length > 0
-              ? `${product.variants.length} variants`
-              : product.unitName}
-          </Text>
-        </View>
-        <Icon
-          className={cn(
-            "size-base text-muted-foreground",
-            selected && "text-primary",
-          )}
-          name={selected ? "CircleCheck" : "Share"}
-        />
-      </View>
-    </Pressable>
+      priceLabel={formatMoney(product.price, "NGN")}
+      selected={selected}
+      stockLabel={
+        product.variants.length > 0
+          ? `${product.variants.length} variants`
+          : product.unitName
+      }
+      stockTone="muted"
+      subtitle="Shareable product"
+      title={product.name}
+    />
   )
 }
 
@@ -530,26 +502,22 @@ function ShareLinkAnalyticsPanel({
       </View>
 
       <View className="flex-row flex-wrap gap-2">
-        <View className="rounded-full bg-card px-3 py-2">
-          <Text className="text-xs font-semibold text-muted-foreground">
-            Reserved {analytics.summary.reservedQuantity}
-          </Text>
-        </View>
-        <View className="rounded-full bg-card px-3 py-2">
-          <Text className="text-xs font-semibold text-muted-foreground">
-            Consumed {analytics.summary.consumedQuantity}
-          </Text>
-        </View>
-        <View className="rounded-full bg-card px-3 py-2">
-          <Text className="text-xs font-semibold text-muted-foreground">
-            Released {analytics.summary.releasedQuantity}
-          </Text>
-        </View>
-        <View className="rounded-full bg-card px-3 py-2">
-          <Text className="text-xs font-semibold text-muted-foreground">
-            Cancelled {analytics.summary.cancelledOrderCount}
-          </Text>
-        </View>
+        <StatusBadge
+          label={`Reserved ${analytics.summary.reservedQuantity}`}
+          tone="success"
+        />
+        <StatusBadge
+          label={`Consumed ${analytics.summary.consumedQuantity}`}
+          tone="primary"
+        />
+        <StatusBadge
+          label={`Released ${analytics.summary.releasedQuantity}`}
+          tone="muted"
+        />
+        <StatusBadge
+          label={`Cancelled ${analytics.summary.cancelledOrderCount}`}
+          tone="destructive"
+        />
       </View>
 
       {topLinks.length > 0 ? (
@@ -721,20 +689,22 @@ function SharedLinkOrderRequestRow({
         </Text>
       </View>
       <View className="flex-row flex-wrap gap-2">
-        <StatusPill
+        <SharedLinkStatusBadge
           label={getReservationStatusLabel(reservationStatus)}
           status={reservationStatus}
         />
-        <StatusPill
+        <SharedLinkStatusBadge
           label={getNotificationStatusLabel(notificationStatus)}
           status={notificationStatus}
         />
       </View>
       {notificationStatus === "failed" ? (
-        <Text className="text-xs leading-4 text-destructive">
-          The customer request is saved. Contact them directly if email is not
-          confirmed.
-        </Text>
+        <StatusBanner
+          icon="TriangleAlert"
+          message="The customer request is saved. Contact them directly if email is not confirmed."
+          title="Notification needs follow-up"
+          tone="destructive"
+        />
       ) : null}
       <View className="gap-3 rounded-xl bg-muted p-3">
         <Text className="text-xs font-bold uppercase text-muted-foreground">
@@ -910,7 +880,8 @@ function DeliveryRequestRow({
             {formatOrderTime(request.requestedAt)}
           </Text>
         </View>
-        <StatusPill
+        <SharedLinkStatusBadge
+          icon="Truck"
           label={getDeliveryRequestStatusLabel(request.status)}
           status={getDeliveryRequestStatusTone(request.status)}
         />
@@ -1012,21 +983,11 @@ function ProductionShareLinkRow({
             {formatCreatorLabel(link.createdByUserId)}
           </Text>
         </View>
-        <View
-          className={cn(
-            "rounded-full px-3 py-1",
-            link.active ? "bg-emerald-500/10" : "bg-muted",
-          )}
-        >
-          <Text
-            className={cn(
-              "text-xs font-bold",
-              link.active ? "text-emerald-700" : "text-muted-foreground",
-            )}
-          >
-            {link.active ? "Active" : "Inactive"}
-          </Text>
-        </View>
+        <StatusBadge
+          icon={link.active ? "CircleCheck" : "Ban"}
+          label={link.active ? "Active" : "Inactive"}
+          tone={link.active ? "success" : "muted"}
+        />
       </View>
 
       <View className="flex-row gap-3">
@@ -1132,21 +1093,11 @@ function ShareLinkRow({
             Created {formatOrderTime(link.createdAt)} · {formatCreatorLabel()}
           </Text>
         </View>
-        <View
-          className={cn(
-            "rounded-full px-3 py-1",
-            isActive ? "bg-emerald-500/10" : "bg-muted",
-          )}
-        >
-          <Text
-            className={cn(
-              "text-xs font-bold",
-              isActive ? "text-emerald-700" : "text-muted-foreground",
-            )}
-          >
-            {isActive ? "Active" : "Inactive"}
-          </Text>
-        </View>
+        <StatusBadge
+          icon={isActive ? "CircleCheck" : "Ban"}
+          label={isActive ? "Active" : "Inactive"}
+          tone={isActive ? "success" : "muted"}
+        />
       </View>
 
       <Text className="text-xs leading-4 text-muted-foreground">
@@ -1623,14 +1574,11 @@ export const ProductShareSheet = forwardRef<
           </View>
 
           {products.length === 0 ? (
-            <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-              <Text className="font-semibold text-foreground">
-                Add inventory first
-              </Text>
-              <Text className="text-sm leading-5 text-muted-foreground">
-                Create at least one item before generating a product link.
-              </Text>
-            </View>
+            <EmptyState
+              icon="Warehouse"
+              message="Create at least one item before generating a product link."
+              title="Add inventory first"
+            />
           ) : (
             <View className="gap-3">
               <FormField
@@ -1655,14 +1603,11 @@ export const ProductShareSheet = forwardRef<
                   />
                 ))
               ) : (
-                <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-                  <Text className="font-semibold text-foreground">
-                    No products found
-                  </Text>
-                  <Text className="text-sm leading-5 text-muted-foreground">
-                    Adjust the product search to generate a link.
-                  </Text>
-                </View>
+                <EmptyState
+                  icon="Search"
+                  message="Adjust the product search to generate a link."
+                  title="No products found"
+                />
               )}
             </View>
           )}
@@ -1680,15 +1625,20 @@ export const ProductShareSheet = forwardRef<
                 : "Generate and share link"}
           </ActionButton>
           {!isOfflineMode && selectedProduct && !selectedProduct.remoteId ? (
-            <Text className="text-xs leading-4 text-muted-foreground">
-              This product will use the local link flow until product setup has
-              synced to production.
-            </Text>
+            <StatusBanner
+              icon="Clock"
+              message="This product will use the local link flow until product setup has synced to production."
+              title="Local link fallback"
+              tone="warning"
+            />
           ) : null}
           {createProductionShareLinkMutation.isError ? (
-            <Text className="text-sm leading-5 text-destructive">
-              {createProductionShareLinkMutation.error.message}
-            </Text>
+            <StatusBanner
+              icon="TriangleAlert"
+              message={createProductionShareLinkMutation.error.message}
+              title="Link was not generated"
+              tone="destructive"
+            />
           ) : null}
 
           <View className="gap-3">
@@ -1722,12 +1672,11 @@ export const ProductShareSheet = forwardRef<
                 ) : null}
               </>
             ) : (
-              <View className="rounded-2xl border border-dashed border-border p-4">
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  Generated product links will appear here with views, orders,
-                  and deactivation controls.
-                </Text>
-              </View>
+              <EmptyState
+                icon="Share"
+                message="Generated product links will appear here with views, orders, and deactivation controls."
+                title="No generated links yet"
+              />
             )}
           </View>
 
@@ -1754,12 +1703,12 @@ export const ProductShareSheet = forwardRef<
             </View>
 
             {isOfflineMode ? (
-              <View className="rounded-2xl border border-dashed border-border p-4">
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  Production link analytics will refresh when this device is
-                  back online.
-                </Text>
-              </View>
+              <StatusBanner
+                icon="Clock"
+                message="Production link analytics will refresh when this device is back online."
+                title="Analytics offline"
+                tone="warning"
+              />
             ) : productionLinks.length > 0 ? (
               <View className="gap-3">
                 <View className="flex-row gap-3">
@@ -1791,18 +1740,19 @@ export const ProductShareSheet = forwardRef<
                     analytics={productionLinkAnalytics}
                   />
                 ) : productionLinkAnalyticsQuery.isFetching ? (
-                  <View className="rounded-2xl border border-dashed border-border p-4">
-                    <Text className="text-sm leading-5 text-muted-foreground">
-                      Checking detailed generated-link analytics.
-                    </Text>
-                  </View>
+                  <StatusBanner
+                    icon="Clock"
+                    message="Checking detailed generated-link analytics."
+                    title="Refreshing analytics"
+                    tone="muted"
+                  />
                 ) : productionLinkAnalyticsQuery.isError ? (
-                  <View className="rounded-2xl border border-dashed border-border p-4">
-                    <Text className="text-sm leading-5 text-muted-foreground">
-                      Detailed generated-link analytics are unavailable for this
-                      session.
-                    </Text>
-                  </View>
+                  <StatusBanner
+                    icon="TriangleAlert"
+                    message="Detailed generated-link analytics are unavailable for this session."
+                    title="Analytics unavailable"
+                    tone="warning"
+                  />
                 ) : null}
                 {visibleProductionLinks.map((link) => (
                   <ProductionShareLinkRow
@@ -1836,29 +1786,33 @@ export const ProductShareSheet = forwardRef<
                 ) : null}
               </View>
             ) : productionLinksQuery.isFetching ? (
-              <View className="rounded-2xl border border-dashed border-border p-4">
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  Checking production for generated product links.
-                </Text>
-              </View>
+              <StatusBanner
+                icon="Clock"
+                message="Checking production for generated product links."
+                title="Refreshing links"
+                tone="muted"
+              />
             ) : productionLinksQuery.isError ? (
-              <View className="rounded-2xl border border-dashed border-border p-4">
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  Production link analytics are unavailable for this session.
-                </Text>
-              </View>
+              <StatusBanner
+                icon="TriangleAlert"
+                message="Production link analytics are unavailable for this session."
+                title="Links unavailable"
+                tone="warning"
+              />
             ) : (
-              <View className="rounded-2xl border border-dashed border-border p-4">
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  Synced generated links will appear here with production views
-                  and order counts.
-                </Text>
-              </View>
+              <EmptyState
+                icon="Globe"
+                message="Synced generated links will appear here with production views and order counts."
+                title="No production links yet"
+              />
             )}
             {deactivateProductionShareLinkMutation.isError ? (
-              <Text className="text-sm leading-5 text-destructive">
-                {deactivateProductionShareLinkMutation.error.message}
-              </Text>
+              <StatusBanner
+                icon="TriangleAlert"
+                message={deactivateProductionShareLinkMutation.error.message}
+                title="Link was not deactivated"
+                tone="destructive"
+              />
             ) : null}
           </View>
 
@@ -1884,11 +1838,12 @@ export const ProductShareSheet = forwardRef<
             </View>
 
             {isOfflineMode ? (
-              <View className="rounded-2xl border border-dashed border-border p-4">
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  Link orders will refresh when this device is back online.
-                </Text>
-              </View>
+              <StatusBanner
+                icon="Clock"
+                message="Link orders will refresh when this device is back online."
+                title="Orders offline"
+                tone="warning"
+              />
             ) : orderRequests.length > 0 ? (
               <>
                 {visibleOrderRequests.map((order) => (
@@ -1937,33 +1892,41 @@ export const ProductShareSheet = forwardRef<
                 ) : null}
               </>
             ) : orderRequestsQuery.isFetching ? (
-              <View className="rounded-2xl border border-dashed border-border p-4">
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  Checking production for new link orders.
-                </Text>
-              </View>
+              <StatusBanner
+                icon="Clock"
+                message="Checking production for new link orders."
+                title="Refreshing orders"
+                tone="muted"
+              />
             ) : orderRequestsQuery.isError ? (
-              <View className="rounded-2xl border border-dashed border-border p-4">
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  Production link orders are unavailable for this session.
-                </Text>
-              </View>
+              <StatusBanner
+                icon="TriangleAlert"
+                message="Production link orders are unavailable for this session."
+                title="Orders unavailable"
+                tone="warning"
+              />
             ) : (
-              <View className="rounded-2xl border border-dashed border-border p-4">
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  No pending customer requests from shared links yet.
-                </Text>
-              </View>
+              <EmptyState
+                icon="ReceiptText"
+                message="No pending customer requests from shared links yet."
+                title="No pending link orders"
+              />
             )}
             {updateOrderRequestStatusMutation.isError ? (
-              <Text className="text-sm leading-5 text-destructive">
-                {updateOrderRequestStatusMutation.error.message}
-              </Text>
+              <StatusBanner
+                icon="TriangleAlert"
+                message={updateOrderRequestStatusMutation.error.message}
+                title="Order follow-up failed"
+                tone="destructive"
+              />
             ) : null}
             {createDeliveryRequestMutation.isError ? (
-              <Text className="text-sm leading-5 text-destructive">
-                {createDeliveryRequestMutation.error.message}
-              </Text>
+              <StatusBanner
+                icon="TriangleAlert"
+                message={createDeliveryRequestMutation.error.message}
+                title="Delivery request failed"
+                tone="destructive"
+              />
             ) : null}
           </View>
 
@@ -1989,12 +1952,12 @@ export const ProductShareSheet = forwardRef<
             </View>
 
             {isOfflineMode ? (
-              <View className="rounded-2xl border border-dashed border-border p-4">
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  Delivery requests will refresh when this device is back
-                  online.
-                </Text>
-              </View>
+              <StatusBanner
+                icon="Clock"
+                message="Delivery requests will refresh when this device is back online."
+                title="Delivery offline"
+                tone="warning"
+              />
             ) : deliveryRequests.length > 0 ? (
               <>
                 {visibleDeliveryRequests.map((request) => (
@@ -2024,29 +1987,33 @@ export const ProductShareSheet = forwardRef<
                 ) : null}
               </>
             ) : deliveryRequestsQuery.isFetching ? (
-              <View className="rounded-2xl border border-dashed border-border p-4">
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  Checking production for delivery requests.
-                </Text>
-              </View>
+              <StatusBanner
+                icon="Clock"
+                message="Checking production for delivery requests."
+                title="Refreshing delivery"
+                tone="muted"
+              />
             ) : deliveryRequestsQuery.isError ? (
-              <View className="rounded-2xl border border-dashed border-border p-4">
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  Delivery requests are unavailable for this session.
-                </Text>
-              </View>
+              <StatusBanner
+                icon="TriangleAlert"
+                message="Delivery requests are unavailable for this session."
+                title="Delivery unavailable"
+                tone="warning"
+              />
             ) : (
-              <View className="rounded-2xl border border-dashed border-border p-4">
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  Delivery requests created from shared-link orders will appear
-                  here.
-                </Text>
-              </View>
+              <EmptyState
+                icon="Truck"
+                message="Delivery requests created from shared-link orders will appear here."
+                title="No delivery requests yet"
+              />
             )}
             {updateDeliveryRequestStatusMutation.isError ? (
-              <Text className="text-sm leading-5 text-destructive">
-                {updateDeliveryRequestStatusMutation.error.message}
-              </Text>
+              <StatusBanner
+                icon="TriangleAlert"
+                message={updateDeliveryRequestStatusMutation.error.message}
+                title="Delivery update failed"
+                tone="destructive"
+              />
             ) : null}
           </View>
 

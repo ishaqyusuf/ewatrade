@@ -27,6 +27,10 @@ const CONTRACTS = [
     file: FILES.shareSheet,
     markers: [
       "BottomSheetKeyboardAwareScrollView",
+      "InventoryProductCard",
+      "StatusBadge",
+      "StatusBanner",
+      "EmptyState",
       "trpc.retailOps.productShareLinks",
       "trpc.retailOps.productShareLinkAnalytics",
       "trpc.retailOps.sharedLinkOrderRequests",

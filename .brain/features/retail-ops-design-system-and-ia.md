@@ -459,6 +459,18 @@ Staff, customer, subscription, and business settings surfaces should feel like c
 - Business switching groups current businesses, search, active status, business creation, and plan-limit warnings in the same calm sheet vocabulary.
 - `qa:customer-book-flow`, `qa:staff-flow`, and `qa:subscription-flow` protect these shared primitives, production/local fallbacks, bounded rows, and role/billing boundaries.
 
+## Product Share Link Redesign
+
+Product share workflows should make generated links, analytics, and follow-up actions feel like part of the mobile POS rather than a separate marketing tool.
+
+- Shareable product selection uses `InventoryProductCard` for no-image placeholders, selected state, price, and unit/variant context.
+- Generated link rows show product, URL, creator, active/inactive status, views, orders, last activity, native share, copy feedback, and careful deactivation.
+- Link analytics use compact metric cards plus shared status badges for reserved, consumed, released, and cancelled quantities.
+- Incoming shared-link orders show customer, order number, product/unit, quantity, total, reservation status, notification status, payment choice, fulfillment status, fulfillment method, and complete/cancel actions.
+- Delivery follow-up keeps route details, delivery status, and status update actions close to each delivery request.
+- Offline, loading, empty, inactive-link, notification-failure, analytics-error, order-error, delivery-error, and mutation-error states should use shared `StatusBanner` or `EmptyState` primitives.
+- `qa:product-share-management` protects native sharing, clipboard copy feedback, production and local link handling, analytics, order follow-up, delivery follow-up, and the shared UI primitives.
+
 ## Acceptance Review Checklist
 
 Every Retail Ops implementation slice should answer:
