@@ -4,12 +4,12 @@
 
 **Blocked by:** 06 - Dry Cleaning Evidence, Notes, And Status Lifecycle
 
-**Status:** ready-for-agent
+**Status:** implemented
 
-- [ ] Marking an order ready can create a customer notification intent tied to the service order event.
-- [ ] Marking an order delayed can capture a delay note and revised ready/delivery expectation where known.
-- [ ] Ready notification copy includes business name, order reference, amount due or total amount, and pickup/delivery instruction.
-- [ ] Delay notification copy includes business name, order reference, delay note, and revised expectation where known.
-- [ ] The UX supports configured WhatsApp/SMS channel targets where available and manual copy/share fallback where providers are not configured.
-- [ ] Notification generation failures do not corrupt the service order status update.
-- [ ] Automated tests cover ready notification payloads, delay notification payloads, manual fallback copy, provider-unavailable behavior, and tenant/customer scoping.
+- [x] Marking an order ready can create a customer notification intent tied to the service order event.
+- [x] Marking an order delayed can capture a delay note and revised ready/delivery expectation where known.
+- [x] Ready notification copy includes business name, order reference, amount due or total amount, and pickup/delivery instruction.
+- [x] Delay notification copy includes business name, order reference, delay note, and revised expectation where known.
+- [x] The UX supports configured WhatsApp/SMS channel targets where available and manual copy/share fallback where providers are not configured.
+- [x] Notification generation failures do not corrupt the service order status update.
+- [x] Automated tests cover ready notification payloads, delay notification payloads, manual fallback copy, provider-unavailable behavior, and tenant/customer scoping.

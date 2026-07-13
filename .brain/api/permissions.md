@@ -36,6 +36,19 @@ Define authorization and visibility rules for APIs.
 - Cashier/operator roles are actor-scoped on those operational reads: sales and customer-book reports only include in-person sales attributed to the current actor or shared-link order requests attributed to links they created, and session/reconciliation reports only include the current user's cashier sessions.
 - First-phase `retailOps.summary` and `retailOps.inventory` remain selected-store reads because they describe store-level stock and dashboard state rather than actor-owned activity.
 
+## Business Template And Dry Cleaning Rules
+- `retailOps.businessTemplates` and `retailOps.storeBusinessTemplate` are protected tRPC procedures.
+- Store template reads must resolve tenant membership and store scope before returning the effective template.
+- Stores without explicit template metadata resolve to Product Sales.
+- `retailOps.updateBusinessTemplate` is a protected mutation for owner/admin tenant-management roles.
+- Template changes are audited in store metadata and are blocked by default when Product Sales products/orders or dry-cleaning service records already exist.
+- `retailOps.unsupportedBusinessDemand` is an internal-only procedure protected by the internal API key boundary.
+- Dry-cleaning service catalog mutations require owner/admin/manager-style sales-management permission.
+- Dry-cleaning service order creation, request review/conversion, and status updates require POS-capable roles: owner, admin, manager, cashier, or operator.
+- Dry-cleaning protected reads and writes must resolve the selected store from the active tenant context and reject stores outside that tenant.
+- Dry-cleaning operations are only available when the selected store resolves to the Dry Cleaning / Laundry template.
+- Public dry-cleaning service-request and tracking procedures must use opaque tokens and must not expose raw database ids or private evidence metadata.
+
 ## Retail Ops Sale Mutation Rules
 - `retailOps.createSale` is a protected tRPC procedure.
 - The procedure must resolve tenant membership and store scope before writing.

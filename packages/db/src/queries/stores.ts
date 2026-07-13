@@ -1,4 +1,9 @@
 import { Prisma } from "../../generated/prisma/client"
+import {
+  type BusinessTemplateKey,
+  getBusinessTemplateDefinition,
+  resolveBusinessTemplateKey,
+} from "./business-templates"
 import { assertRetailOpsEntitlementAvailable } from "./retail-ops-subscriptions"
 import type { DbClient } from "./types"
 
@@ -13,10 +18,18 @@ export type CreateTenantStoreInput = {
 }
 
 export type CreateTenantStoreOnboardingInput = {
+  businessTemplateKey?: BusinessTemplateKey | string | null
   businessType?: string | null
   countryCode?: string | null
+  offeringCategory?: string | null
+  operatingModel?: string | null
+  orderChannels?: string[] | null
+  otherBusinessDescription?: string | null
   productCategory?: string | null
+  requestedCapabilities?: string[] | null
   salesMethod?: string | null
+  serviceCategory?: string | null
+  staffInvolvement?: string | null
   source?: string | null
   teamSize?: string | null
 }
@@ -49,6 +62,16 @@ function cleanText(value: string | null | undefined) {
   return text ? text : null
 }
 
+function cleanTextArray(value: string[] | null | undefined) {
+  if (!Array.isArray(value)) return []
+
+  return value.flatMap((entry) => {
+    const text = cleanText(entry)
+
+    return text ? [text] : []
+  })
+}
+
 function buildOnboardingMetadata(
   onboarding: CreateTenantStoreOnboardingInput | null | undefined,
   currencyCode: string,
@@ -56,18 +79,30 @@ function buildOnboardingMetadata(
 ) {
   if (!onboarding) return null
 
+  const templateKey = resolveBusinessTemplateKey({
+    businessTemplateKey: onboarding.businessTemplateKey,
+    businessType: onboarding.businessType,
+  })
+  const template = getBusinessTemplateDefinition(templateKey)
   const onboardingMetadata: Record<string, Prisma.InputJsonValue> = {
+    businessTemplateKey: template.key,
+    businessTemplateLabel: template.label,
     capturedAt: capturedAt.toISOString(),
     currencyCode,
     source: cleanText(onboarding.source) ?? "store_setup",
   }
-  let hasOnboardingField = false
+  let hasOnboardingField = true
 
   const fields = [
     ["businessType", onboarding.businessType],
     ["countryCode", onboarding.countryCode],
+    ["offeringCategory", onboarding.offeringCategory],
+    ["operatingModel", onboarding.operatingModel],
+    ["otherBusinessDescription", onboarding.otherBusinessDescription],
     ["productCategory", onboarding.productCategory],
     ["salesMethod", onboarding.salesMethod],
+    ["serviceCategory", onboarding.serviceCategory],
+    ["staffInvolvement", onboarding.staffInvolvement],
     ["teamSize", onboarding.teamSize],
   ] as const
 
@@ -78,6 +113,14 @@ function buildOnboardingMetadata(
     hasOnboardingField = true
   }
 
+  const orderChannels = cleanTextArray(onboarding.orderChannels)
+  const requestedCapabilities = cleanTextArray(onboarding.requestedCapabilities)
+
+  if (orderChannels.length > 0) onboardingMetadata.orderChannels = orderChannels
+  if (requestedCapabilities.length > 0) {
+    onboardingMetadata.requestedCapabilities = requestedCapabilities
+  }
+
   if (!hasOnboardingField) return null
 
   return onboardingMetadata as Prisma.InputJsonObject
@@ -85,10 +128,50 @@ function buildOnboardingMetadata(
 
 function buildStoreMetadata(onboardingMetadata: Prisma.InputJsonObject | null) {
   if (!onboardingMetadata) return undefined
+  const templateKey = resolveBusinessTemplateKey({
+    businessTemplateKey:
+      typeof onboardingMetadata.businessTemplateKey === "string"
+        ? onboardingMetadata.businessTemplateKey
+        : null,
+    businessType:
+      typeof onboardingMetadata.businessType === "string"
+        ? onboardingMetadata.businessType
+        : null,
+  })
+  const template = getBusinessTemplateDefinition(templateKey)
+  const unsupportedBusinessDemand =
+    templateKey === "other_generic"
+      ? {
+          capturedAt: onboardingMetadata.capturedAt,
+          description:
+            onboardingMetadata.otherBusinessDescription ??
+            onboardingMetadata.businessType ??
+            "Other business",
+          requestedCapabilities: onboardingMetadata.requestedCapabilities ?? [],
+        }
+      : undefined
 
   return {
     retailOps: {
+      businessTemplate: {
+        key: template.key,
+        label: template.label,
+        selectedAt: onboardingMetadata.capturedAt,
+        source: onboardingMetadata.source,
+      },
+      ...(templateKey === "dry_cleaning_laundry"
+        ? {
+            dryCleaning: {
+              notificationIntents: [],
+              serviceItems: [],
+              serviceOrders: [],
+              serviceRequestLinks: [],
+              serviceRequests: [],
+            },
+          }
+        : {}),
       onboarding: onboardingMetadata,
+      ...(unsupportedBusinessDemand ? { unsupportedBusinessDemand } : {}),
     },
   } satisfies Prisma.InputJsonObject
 }

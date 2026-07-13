@@ -290,4 +290,86 @@ describe("tenant store queries", () => {
     expect(getCalls(db.calls, "store.create")).toHaveLength(0)
     expect(getCalls(db.calls, "onboardingSession.create")).toHaveLength(0)
   })
+
+  test("stores dry-cleaning and other business template onboarding snapshots", async () => {
+    const dryCleaningDb = createMockStoreDb()
+
+    await createTenantStore(dryCleaningDb.client, {
+      currencyCode: "NGN",
+      name: "Sparkle Laundry",
+      onboarding: {
+        businessTemplateKey: "dry_cleaning_laundry",
+        businessType: "Dry Cleaning / Laundry",
+        serviceCategory: "Laundry and ironing",
+        teamSize: "2-5 people",
+      },
+      tenantId: "tenant_123",
+    })
+
+    expect(getCall(dryCleaningDb.calls, "store.create")).toMatchObject({
+      data: {
+        metadata: {
+          retailOps: {
+            businessTemplate: {
+              key: "dry_cleaning_laundry",
+              label: "Dry Cleaning / Laundry",
+            },
+            dryCleaning: {
+              notificationIntents: [],
+              serviceItems: [],
+              serviceOrders: [],
+              serviceRequestLinks: [],
+              serviceRequests: [],
+            },
+            onboarding: {
+              businessTemplateKey: "dry_cleaning_laundry",
+              businessTemplateLabel: "Dry Cleaning / Laundry",
+              serviceCategory: "Laundry and ironing",
+            },
+          },
+        },
+      },
+    })
+
+    const otherDb = createMockStoreDb()
+
+    await createTenantStore(otherDb.client, {
+      currencyCode: "GHS",
+      name: "Rental Desk",
+      onboarding: {
+        businessTemplateKey: "other_generic",
+        businessType: "Other business",
+        offeringCategory: "Equipment rentals",
+        orderChannels: ["Phone", "WhatsApp"],
+        otherBusinessDescription: "Equipment rental service",
+        requestedCapabilities: ["bookings", "deposits"],
+      },
+      tenantId: "tenant_123",
+    })
+
+    expect(getCall(otherDb.calls, "store.create")).toMatchObject({
+      data: {
+        metadata: {
+          retailOps: {
+            businessTemplate: {
+              key: "other_generic",
+              label: "Other business",
+            },
+            onboarding: {
+              businessTemplateKey: "other_generic",
+              businessTemplateLabel: "Other business",
+              offeringCategory: "Equipment rentals",
+              orderChannels: ["Phone", "WhatsApp"],
+              otherBusinessDescription: "Equipment rental service",
+              requestedCapabilities: ["bookings", "deposits"],
+            },
+            unsupportedBusinessDemand: {
+              description: "Equipment rental service",
+              requestedCapabilities: ["bookings", "deposits"],
+            },
+          },
+        },
+      },
+    })
+  })
 })

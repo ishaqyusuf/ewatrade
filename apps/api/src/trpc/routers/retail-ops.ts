@@ -74,6 +74,7 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "../init"
+import { retailOpsBusinessTemplatesRouter } from "./retail-ops-business-templates"
 import { retailOpsProductsRouter } from "./retail-ops-products"
 import { retailOpsSalesRouter } from "./retail-ops-sales"
 import { retailOpsSessionsRouter } from "./retail-ops-sessions"
@@ -1253,6 +1254,7 @@ const retailOpsCoreRouter = createTRPCRouter({
 
 export const retailOpsRouter = mergeRouters(
   retailOpsCoreRouter,
+  retailOpsBusinessTemplatesRouter,
   retailOpsProductsRouter,
   retailOpsSalesRouter,
   retailOpsSessionsRouter,

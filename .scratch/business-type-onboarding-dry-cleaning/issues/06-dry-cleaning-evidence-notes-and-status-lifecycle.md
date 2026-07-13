@@ -4,12 +4,12 @@
 
 **Blocked by:** 05 - Dry Cleaning Walk-In Service Order Flow
 
-**Status:** ready-for-agent
+**Status:** implemented
 
-- [ ] Staff can add package notes such as stain notes, missing buttons, special instructions, or bag details.
-- [ ] Staff can attach or record metadata for optional photos and short videos associated with the service order.
-- [ ] Media evidence is recommended in the UI but does not block order creation in v1.
-- [ ] Media evidence remains private to authorized business users unless a future customer-facing policy explicitly allows exposure.
-- [ ] Orders can transition through received, in progress, ready, delayed, pickup pending or delivery pending, completed, and cancelled states.
-- [ ] Invalid status transitions are blocked or handled predictably.
-- [ ] Automated tests cover notes, media metadata, status transitions, privacy/scoping, and invalid transitions.
+- [x] Staff can add package notes such as stain notes, missing buttons, special instructions, or bag details.
+- [x] Staff can attach or record metadata for optional photos and short videos associated with the service order.
+- [x] Media evidence is recommended in the UI but does not block order creation in v1.
+- [x] Media evidence remains private to authorized business users unless a future customer-facing policy explicitly allows exposure.
+- [x] Orders can transition through received, in progress, ready, delayed, pickup pending or delivery pending, completed, and cancelled states.
+- [x] Invalid status transitions are blocked or handled predictably.
+- [x] Automated tests cover notes, media metadata, status transitions, privacy/scoping, and invalid transitions.

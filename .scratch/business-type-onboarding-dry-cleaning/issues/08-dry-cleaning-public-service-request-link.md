@@ -4,12 +4,12 @@
 
 **Blocked by:** 05 - Dry Cleaning Walk-In Service Order Flow
 
-**Status:** ready-for-agent
+**Status:** implemented
 
-- [ ] Authorized business users can create or access an active public service-request link for a Dry Cleaning/Laundry store.
-- [ ] The public link uses opaque identifiers and does not expose raw database IDs.
-- [ ] Customers can submit contact details, pickup address or drop-off preference, preferred pickup time, notes, and optional item/package description.
-- [ ] Submitted requests enter a pending state and are visible to authorized staff for review.
-- [ ] Staff can confirm or reject a pending request.
-- [ ] Staff can convert a confirmed request into a service order that uses the same customer and service-order flow as walk-in orders.
-- [ ] Automated tests cover link creation/resolution, request submission, pending review, confirmation, rejection, conversion, and public/tenant authorization boundaries.
+- [x] Authorized business users can create or access an active public service-request link for a Dry Cleaning/Laundry store.
+- [x] The public link uses opaque identifiers and does not expose raw database IDs.
+- [x] Customers can submit contact details, pickup address or drop-off preference, preferred pickup time, notes, and optional item/package description.
+- [x] Submitted requests enter a pending state and are visible to authorized staff for review.
+- [x] Staff can confirm or reject a pending request.
+- [x] Staff can convert a confirmed request into a service order that uses the same customer and service-order flow as walk-in orders.
+- [x] Automated tests cover link creation/resolution, request submission, pending review, confirmation, rejection, conversion, and public/tenant authorization boundaries.

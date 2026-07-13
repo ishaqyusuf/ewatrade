@@ -18,6 +18,15 @@ Track current and planned API surface areas.
   - `tenant.current` returns the authenticated user's active tenant context.
   - `tenant.stores` returns stores available to the active tenant membership.
   - `tenant.createStore` creates a store/business under the active tenant for owner/admin users when the tenant is within the current business/store entitlement.
+  - `retailOps.businessTemplates` returns the system-owned Product Sales, Dry Cleaning / Laundry, and Other business template definitions.
+  - `retailOps.storeBusinessTemplate` returns the effective template for the selected tenant store, defaulting stores without explicit metadata to Product Sales.
+  - `retailOps.updateBusinessTemplate` lets owner/admin tenant managers correct a store template with operational-data guardrails and audit metadata.
+  - `retailOps.unsupportedBusinessDemand` is an internal procedure that ranks Other-business onboarding submissions from completed onboarding sessions.
+  - `retailOps.dryCleaningServiceItems`, `retailOps.createDryCleaningServiceItem`, and `retailOps.updateDryCleaningServiceItem` manage metadata-backed Dry Cleaning / Laundry service catalog entries and variants.
+  - `retailOps.dryCleaningServiceOrders`, `retailOps.createDryCleaningServiceOrder`, and `retailOps.updateDryCleaningServiceOrderStatus` manage metadata-backed dry-cleaning service orders, status events, evidence, notes, and ready/delay notification intents.
+  - `retailOps.createDryCleaningServiceRequestLink`, `retailOps.dryCleaningServiceRequests`, `retailOps.updateDryCleaningServiceRequestStatus`, and `retailOps.convertDryCleaningServiceRequest` manage protected dry-cleaning public request intake.
+  - `retailOps.dryCleaningOperationalReport` returns dry-cleaning order, payment-state, service-item, request-conversion, and completion metrics for the selected store/range.
+  - `retailOps.dryCleaningServiceRequestLink`, `retailOps.createDryCleaningPublicServiceRequest`, and `retailOps.dryCleaningTracking` are public procedures for opaque dry-cleaning request links and accountless customer tracking.
   - `retailOps.sharedProduct` publicly returns an active shared product link payload for a tenant/store/product slug and share token.
   - `retailOps.createSharedProductOrderRequest` publicly creates a pending order request from an active shared product link, reserves the requested unit quantity through the first-phase inventory balance bridge, and records notification dispatch status without failing checkout when enqueue fails after order creation.
   - `retailOps.summary` returns the first tenant-scoped Retail Ops dashboard summary.

@@ -11,10 +11,23 @@ import type { NextRequest } from "next/server"
 import { z } from "zod/v4"
 
 const storeOnboardingSchema = z.object({
+  businessTemplateKey: z
+    .enum(["product_sales", "dry_cleaning_laundry", "other_generic"])
+    .optional(),
   businessType: z.string().trim().max(80).optional(),
   countryCode: z.string().trim().max(8).optional(),
+  offeringCategory: z.string().trim().max(120).optional(),
+  operatingModel: z.string().trim().max(120).optional(),
+  orderChannels: z.array(z.string().trim().min(1).max(80)).max(8).optional(),
+  otherBusinessDescription: z.string().trim().max(240).optional(),
   productCategory: z.string().trim().max(120).optional(),
+  requestedCapabilities: z
+    .array(z.string().trim().min(1).max(120))
+    .max(12)
+    .optional(),
   salesMethod: z.string().trim().max(80).optional(),
+  serviceCategory: z.string().trim().max(120).optional(),
+  staffInvolvement: z.string().trim().max(120).optional(),
   teamSize: z.string().trim().max(80).optional(),
 })
 

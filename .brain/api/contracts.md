@@ -24,7 +24,16 @@ Track important request/response shapes and contract rules.
   - Mobile tRPC accepts bearer sessions from either `Authorization` or `x-app-authorization` so the Expo client can authenticate production reads and mutations after OTP verification
 - Retail Ops read contracts:
   - `tenant.createStore` accepts store/business `name`, optional `currencyCode`, optional `supportEmail`, and optional `supportPhone`
+  - `tenant.createStore` also accepts optional onboarding fields for `businessTemplateKey`, `businessType`, `countryCode`, product/service/offering categories, Other-business raw description, operating model, order channels, sales method, staff involvement, requested capabilities, and team size
   - `tenant.createStore` returns the created store id, slug, name, and status after enforcing owner/admin permission and the tenant's business/store entitlement
+  - Business template reads return system-owned definitions keyed by `product_sales`, `dry_cleaning_laundry`, and `other_generic`
+  - Template changes accept `nextTemplateKey`, optional `reason`, optional `storeId`, and an explicit `allowOperationalDataChange` flag; unsafe changes are blocked by default when Product Sales records, service records, or order records already exist
+  - Dry-cleaning service item mutations accept optional `storeId`, service name/category/description, base `priceMinor`, optional turnaround hours, active/archive status, and optional bounded variants with labels and prices
+  - Dry-cleaning service orders accept customer name/email/phone, one or more service lines with service item id, optional variant id, quantity, optional line note, optional override price, optional due time, notes, and payment state `unpaid`, `paid`, `partial`, `pay_on_collection`, or `pay_on_delivery`
+  - Dry-cleaning status updates accept an order id, next status, optional note, optional evidence URLs/labels, and a `notifyCustomer` flag; valid statuses are `received`, `in_progress`, `ready`, `delayed`, `pickup_pending`, `delivery_pending`, `completed`, and `cancelled`
+  - Public dry-cleaning service-request links use opaque tokens. Public submissions accept customer details, service lines, and notes, then create pending service requests that staff can confirm, reject, cancel, or convert into service orders.
+  - Dry-cleaning tracking accepts an opaque token and returns only bounded public status data, not private evidence.
+  - Dry-cleaning operational reports summarize selected-store service orders by status, payment state, completed revenue, popular service items, average completion hours, request count, and request conversion rate.
   - `retailOps.summary` accepts optional `storeId`, `from`, and `to`
   - `retailOps.inventory` accepts optional `storeId`
   - `retailOps.salesByProduct` accepts optional `storeId`, `from`, and `to`

@@ -1,6 +1,6 @@
 # Spec: Business Type Onboarding, Dry Cleaning Template, and Unsupported Business Ranking
 
-Status: ready-for-agent
+Status: implemented
 Source issue: https://github.com/ishaqyusuf/ewatrade/issues/28
 
 ## Problem Statement

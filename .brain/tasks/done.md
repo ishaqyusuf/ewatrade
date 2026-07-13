@@ -4,6 +4,7 @@
 Completed work with durable value to the project.
 
 ## Items
+- Implemented metadata-backed business type onboarding templates and the Dry Cleaning / Laundry v1 surface. Product Sales is the default effective template for existing stores; dashboard setup now submits Product Sales, Dry Cleaning / Laundry, or Other business onboarding answers; protected tRPC procedures expose template reads/guarded updates, dry-cleaning service catalog, service orders, request links, request review/conversion, and reports; public tRPC procedures expose opaque service-request submission and customer tracking; Other onboarding demand can be ranked through an internal procedure. Completed Date: 2026-07-13. Checks Run: `bun test packages/db/src/queries/business-templates.test.ts packages/db/src/queries/stores.test.ts`; `bun --filter @ewatrade/db typecheck`; `bun --filter @ewatrade/api typecheck`; `bunx biome check <changed source/test files>`.
 - Added a standard Project Brain skeleton around the pre-existing product, module, and architecture notes.
 - Updated Brain architecture guidance to reflect Prisma-managed schema plus Drizzle runtime querying.
 - Documented that Supabase is not part of the current architecture.

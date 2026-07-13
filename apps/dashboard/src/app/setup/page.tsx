@@ -24,14 +24,13 @@ const COUNTRIES = [
   { code: "OTHER", currencyCode: "USD", label: "Other" },
 ]
 
-const BUSINESS_TYPES = [
-  "Retail",
-  "Wholesale",
-  "Food and beverage",
-  "Services",
-  "Logistics",
-  "Other",
-]
+const BUSINESS_TEMPLATES = [
+  { key: "product_sales", label: "Product Sales" },
+  { key: "dry_cleaning_laundry", label: "Dry Cleaning / Laundry" },
+  { key: "other_generic", label: "Other business" },
+] as const
+
+type BusinessTemplateKey = (typeof BUSINESS_TEMPLATES)[number]["key"]
 
 const SALES_METHODS = [
   "In-store sales",
@@ -45,10 +44,13 @@ const TEAM_SIZES = ["Just me", "2-5 people", "6-10 people", "11+ people"]
 export default function SetupPage() {
   const router = useRouter()
   const [storeName, setStoreName] = useState("")
-  const [businessType, setBusinessType] = useState("Retail")
+  const [businessTemplateKey, setBusinessTemplateKey] =
+    useState<BusinessTemplateKey>("product_sales")
   const [countryCode, setCountryCode] = useState("NG")
   const [currency, setCurrency] = useState("NGN")
   const [productCategory, setProductCategory] = useState("")
+  const [serviceCategory, setServiceCategory] = useState("Laundry")
+  const [otherBusinessDescription, setOtherBusinessDescription] = useState("")
   const [salesMethod, setSalesMethod] = useState("In-store sales")
   const [supportEmail, setSupportEmail] = useState("")
   const [teamSize, setTeamSize] = useState("Just me")
@@ -77,10 +79,28 @@ export default function SetupPage() {
           name: storeName.trim(),
           currencyCode: currency,
           onboarding: {
-            businessType,
+            businessTemplateKey,
+            businessType:
+              BUSINESS_TEMPLATES.find(
+                (template) => template.key === businessTemplateKey,
+              )?.label ?? "Product Sales",
             countryCode,
-            productCategory: productCategory.trim() || undefined,
+            operatingModel: salesMethod,
+            offeringCategory:
+              businessTemplateKey === "other_generic"
+                ? productCategory.trim() || undefined
+                : undefined,
+            otherBusinessDescription:
+              otherBusinessDescription.trim() || undefined,
+            productCategory:
+              businessTemplateKey === "product_sales"
+                ? productCategory.trim() || undefined
+                : undefined,
             salesMethod,
+            serviceCategory:
+              businessTemplateKey === "dry_cleaning_laundry"
+                ? serviceCategory.trim() || undefined
+                : undefined,
             teamSize,
           },
           supportEmail: supportEmail.trim() || undefined,
@@ -146,37 +166,101 @@ export default function SetupPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="business-type" className="text-sm font-medium">
+              <label
+                htmlFor="business-template"
+                className="text-sm font-medium"
+              >
                 Business type
               </label>
               <select
-                id="business-type"
-                value={businessType}
-                onChange={(e) => setBusinessType(e.target.value)}
+                id="business-template"
+                value={businessTemplateKey}
+                onChange={(e) =>
+                  setBusinessTemplateKey(e.target.value as BusinessTemplateKey)
+                }
                 className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
               >
-                {BUSINESS_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
+                {BUSINESS_TEMPLATES.map((template) => (
+                  <option key={template.key} value={template.key}>
+                    {template.label}
                   </option>
                 ))}
               </select>
             </div>
 
+            {businessTemplateKey === "product_sales" && (
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="product-category"
+                  className="text-sm font-medium"
+                >
+                  Main product category
+                </label>
+                <input
+                  id="product-category"
+                  type="text"
+                  value={productCategory}
+                  onChange={(e) => setProductCategory(e.target.value)}
+                  placeholder="e.g. Feed, groceries"
+                  className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+                />
+              </div>
+            )}
+
+            {businessTemplateKey === "dry_cleaning_laundry" && (
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="service-category"
+                  className="text-sm font-medium"
+                >
+                  Main service category
+                </label>
+                <input
+                  id="service-category"
+                  type="text"
+                  value={serviceCategory}
+                  onChange={(e) => setServiceCategory(e.target.value)}
+                  placeholder="e.g. Laundry, ironing"
+                  className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+                />
+              </div>
+            )}
+
+            {businessTemplateKey === "other_generic" && (
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="other-business" className="text-sm font-medium">
+                  Business description
+                </label>
+                <input
+                  id="other-business"
+                  type="text"
+                  value={otherBusinessDescription}
+                  onChange={(e) => setOtherBusinessDescription(e.target.value)}
+                  placeholder="e.g. Repairs, rentals"
+                  className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+                />
+              </div>
+            )}
+          </div>
+
+          {businessTemplateKey === "other_generic" && (
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="product-category" className="text-sm font-medium">
-                Main product category
+              <label
+                htmlFor="offering-category"
+                className="text-sm font-medium"
+              >
+                Main offering
               </label>
               <input
-                id="product-category"
+                id="offering-category"
                 type="text"
                 value={productCategory}
                 onChange={(e) => setProductCategory(e.target.value)}
-                placeholder="e.g. Feed, groceries"
+                placeholder="e.g. Bookings, field service"
                 className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
               />
             </div>
-          </div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
