@@ -2,6 +2,14 @@
 
 ## 2026-07-13
 
+### Mobile UI Redesign Acceptance Coverage
+- Source Mode: `/implement-with-progress`
+- Source Ticket: `.scratch/mobile-ui-redesign-implementation/issues/11-visual-qa-accessibility-and-redesign-acceptance-coverage.md`
+- Completed: Implemented the final mobile UI redesign ticket by adding `qa:mobile-redesign-acceptance`, wiring it into `qa:mvp-source`, and strengthening the hands-on evidence template so final QA explicitly covers light/dark screenshots, compact-phone overlap checks, keyboard-open states, floating sheets, owner/attendant role variants, offline/sync failure/conflict states, tap targets, contrast, status copy, text fit, and NativeWind discipline.
+- Changed Source Files: `apps/mobile/scripts/check-mobile-redesign-acceptance.mjs`, `apps/mobile/scripts/run-mvp-source-qa.mjs`, `apps/mobile/scripts/print-mvp-hands-on-evidence-template.mjs`, `apps/mobile/package.json`, `.scratch/mobile-ui-redesign-implementation/issues/11-visual-qa-accessibility-and-redesign-acceptance-coverage.md`.
+- Brain Files Updated: `.brain/features/retail-ops-design-system-and-ia.md`, `.brain/progress.md`.
+- Checks Run: `bunx biome check --write apps/mobile/scripts/check-mobile-redesign-acceptance.mjs apps/mobile/scripts/run-mvp-source-qa.mjs apps/mobile/scripts/print-mvp-hands-on-evidence-template.mjs apps/mobile/package.json`; `bun --cwd apps/mobile qa:mobile-redesign-acceptance`; `bun --cwd apps/mobile qa:mvp-hands-on-evidence-template-fixtures`; `bun --cwd apps/mobile qa:keyboard-coverage`; `bun --cwd apps/mobile qa:nativewind-style`; `bun --cwd apps/mobile qa:mvp-typechecks`; `bun --cwd apps/mobile qa:mvp-source`.
+
 ### Mobile UI Redesign Offline Sync Reliability
 - Source Mode: `/implement-with-progress`
 - Source Ticket: `.scratch/mobile-ui-redesign-implementation/issues/10-offline-sync-failure-and-conflict-review-redesign.md`

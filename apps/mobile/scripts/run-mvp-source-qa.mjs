@@ -77,6 +77,10 @@ const CHECKS = [
     script: "check-mobile-auth-api-boundary.mjs",
   },
   {
+    label: "Mobile redesign acceptance",
+    script: "check-mobile-redesign-acceptance.mjs",
+  },
+  {
     label: "MVP smoke-flow coverage",
     script: "check-mvp-smoke-flow-coverage.mjs",
   },

@@ -34,6 +34,7 @@
     "qa:long-lists": "node ./scripts/check-long-list-coverage.mjs",
     "qa:mobile-env-config": "node ./scripts/check-mobile-env-config.mjs",
     "qa:mobile-auth-api-boundary": "node ./scripts/check-mobile-auth-api-boundary.mjs",
+    "qa:mobile-redesign-acceptance": "node ./scripts/check-mobile-redesign-acceptance.mjs",
     "qa:mvp-live-env-checklist": "node ./scripts/print-mvp-live-env-checklist.mjs",
     "qa:mvp-live-env-checklist:prod": "MVP_LIVE_ENV_CHECKLIST_ENV_FILE=../../.env.production node ./scripts/print-mvp-live-env-checklist.mjs",
     "qa:mvp-live-blocker-report:prod": "MVP_LIVE_ENV_CHECKLIST_ENV_FILE=../../.env.production MVP_LIVE_ENV_CHECKLIST_REPORT_PATH=/tmp/ewatrade-mvp-live-blockers.json node ./scripts/print-mvp-live-env-checklist.mjs",

@@ -483,6 +483,16 @@ Offline and sync states should be persistent, compact, and actionable without bl
 - Manager/server conflict review must keep business-impact copy, recommended resolution, review action, and permission-aware API boundaries.
 - `qa:offline-sync-flow` and `qa:offline-visuals` protect sync mechanics, dashboard banner coverage, stable QA selectors, bounded rows, manager conflict review, and shared reliability primitives.
 
+## Mobile Redesign Acceptance Gate
+
+The mobile redesign is complete only when source QA and hands-on evidence prompts cover the full screen set and the visual/accessibility risks called out in the redesign spec.
+
+- `qa:mobile-redesign-acceptance` verifies the final redesign gate is exposed in package scripts and included in `qa:mvp-source`.
+- The gate ensures source QA still runs the auth, first-product, dashboard, create-sale, inventory, staff, customer, subscription, product-share, offline/sync, keyboard, NativeWind, prompt-placeholder, theme, app-shell, design-foundation, and surface-structure checks.
+- The hands-on evidence template must request light/dark screenshots, compact-phone overlap proof, keyboard-open states, floating bottom sheets, owner/attendant variants, offline/sync failure/conflict states, tap targets, contrast, status copy, text fit, and NativeWind discipline.
+- The gate protects floating navigation tap-target/accessibility markers, shared floating bottom-sheet defaults, dashboard role/sync markers, and evidence validation hooks.
+- Static acceptance does not replace device screenshots; it keeps the screenshot evidence requirements visible and validated in the normal MVP evidence workflow.
+
 ## Acceptance Review Checklist
 
 Every Retail Ops implementation slice should answer:
