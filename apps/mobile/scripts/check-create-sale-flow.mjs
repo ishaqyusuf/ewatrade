@@ -16,6 +16,9 @@ const CONTRACTS = [
     file: FILES.createSale,
     markers: [
       "BottomSheetSectionList",
+      "StatusBadge",
+      "StatusBanner",
+      "EmptyState",
       "ProductSectionHeader",
       "getSellableItems",
       "product.variants.map",
@@ -58,6 +61,9 @@ const CONTRACTS = [
       'syncStatus: "synced"',
       "createSale(localSaleInput)",
       "Local queue",
+      "Sale source:",
+      "Rep session required",
+      "Insufficient stock",
     ],
     reason:
       "sale submission must keep production tRPC creation when remote ids exist and local queued fallback while offline or unsynced",

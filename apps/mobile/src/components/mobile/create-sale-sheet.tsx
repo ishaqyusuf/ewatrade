@@ -1,6 +1,9 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
 import { QuantityStepper } from "@/components/mobile/quantity-stepper"
+import { StatusBadge } from "@/components/mobile/status-badge"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetInputProvider } from "@/components/ui/bottom-sheet-input-context"
 import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
@@ -245,11 +248,10 @@ function ProductSectionHeader({ product }: { product: RetailOpsProduct }) {
               : "Primary unit"}
           </Text>
         </View>
-        <View className="rounded-full bg-muted px-3 py-1">
-          <Text className="text-xs font-bold text-muted-foreground">
-            {getProductStock(product)} {product.unitName}
-          </Text>
-        </View>
+        <StatusBadge
+          label={`${getProductStock(product)} ${product.unitName}`}
+          tone="muted"
+        />
       </View>
     </View>
   )
@@ -331,7 +333,7 @@ function CustomerOptionChip({
         </Text>
       ) : null}
       {customer.status === "pending" ? (
-        <Text className="text-xs font-bold text-amber-700">Pending sync</Text>
+        <StatusBadge icon="Clock" label="Pending sync" tone="warning" />
       ) : null}
     </Pressable>
   )
@@ -668,33 +670,19 @@ export const CreateSaleSheet = forwardRef<
                 </Text>
               </View>
 
-              <View className="rounded-2xl border border-border bg-card p-4">
-                <View className="flex-row items-start justify-between gap-3">
-                  <View className="flex-1 gap-1">
-                    <Text className="font-semibold text-foreground">
-                      Sale source
-                    </Text>
-                    <Text className="text-sm leading-5 text-muted-foreground">
-                      {sourceDetail}
-                    </Text>
-                  </View>
-                  <View className="rounded-full bg-muted px-3 py-1">
-                    <Text className="text-xs font-bold text-muted-foreground">
-                      {sourceLabel}
-                    </Text>
-                  </View>
-                </View>
-              </View>
+              <StatusBanner
+                icon={canCreateProductionSale ? "CircleCheck" : "Clock"}
+                message={sourceDetail}
+                title={`Sale source: ${sourceLabel}`}
+                tone={canCreateProductionSale ? "success" : "warning"}
+              />
 
               {products.length === 0 ? (
-                <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-                  <Text className="font-semibold text-foreground">
-                    Add inventory first
-                  </Text>
-                  <Text className="text-sm leading-5 text-muted-foreground">
-                    Create at least one item before recording a sale.
-                  </Text>
-                </View>
+                <EmptyState
+                  icon="Warehouse"
+                  message="Create at least one item before recording a sale."
+                  title="Add inventory first"
+                />
               ) : null}
             </View>
           }
@@ -728,12 +716,12 @@ export const CreateSaleSheet = forwardRef<
             if (item.kind === "stock-warning" && selectedItem) {
               return (
                 <View className="pb-3">
-                  <View className="rounded-2xl bg-destructive/10 p-3">
-                    <Text className="text-sm font-semibold text-destructive">
-                      Only {selectedItem.stock} {selectedItem.unitName}{" "}
-                      available.
-                    </Text>
-                  </View>
+                  <StatusBanner
+                    icon="TriangleAlert"
+                    message={`Only ${selectedItem.stock} ${selectedItem.unitName} available.`}
+                    title="Insufficient stock"
+                    tone="destructive"
+                  />
                 </View>
               )
             }
@@ -741,12 +729,12 @@ export const CreateSaleSheet = forwardRef<
             if (item.kind === "session-warning") {
               return (
                 <View className="pb-3">
-                  <View className="rounded-2xl bg-amber-500/10 p-3">
-                    <Text className="text-sm font-semibold text-amber-700">
-                      Clock in and confirm opening stock before completing a
-                      sale.
-                    </Text>
-                  </View>
+                  <StatusBanner
+                    icon="TriangleAlert"
+                    message="Clock in and confirm opening stock before completing a sale."
+                    title="Rep session required"
+                    tone="warning"
+                  />
                 </View>
               )
             }
@@ -754,11 +742,12 @@ export const CreateSaleSheet = forwardRef<
             if (item.kind === "submit-error" && submitError) {
               return (
                 <View className="pb-3">
-                  <View className="rounded-2xl bg-destructive/10 p-3">
-                    <Text className="text-sm font-semibold text-destructive">
-                      {submitError}
-                    </Text>
-                  </View>
+                  <StatusBanner
+                    icon="TriangleAlert"
+                    message={submitError}
+                    title="Sale was not completed"
+                    tone="destructive"
+                  />
                 </View>
               )
             }
@@ -824,15 +813,20 @@ export const CreateSaleSheet = forwardRef<
                         <Text className="text-xs font-bold uppercase text-muted-foreground">
                           Customer book
                         </Text>
-                        <View className="rounded-full bg-muted px-3 py-1">
-                          <Text className="text-xs font-bold text-muted-foreground">
-                            {isOfflineMode || productionCustomersQuery.isError
+                        <StatusBadge
+                          label={
+                            isOfflineMode || productionCustomersQuery.isError
                               ? "Local"
                               : productionCustomersQuery.isFetching
                                 ? "Refreshing"
-                                : "Online"}
-                          </Text>
-                        </View>
+                                : "Online"
+                          }
+                          tone={
+                            isOfflineMode || productionCustomersQuery.isError
+                              ? "warning"
+                              : "success"
+                          }
+                        />
                       </View>
                       <View className="flex-row flex-wrap gap-2">
                         {visibleCustomerOptions.map((customer) => (

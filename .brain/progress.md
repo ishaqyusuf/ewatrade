@@ -2,6 +2,14 @@
 
 ## 2026-07-13
 
+### Mobile UI Redesign Create Sale Checkout
+- Source Mode: `/implement-with-progress`
+- Source Ticket: `.scratch/mobile-ui-redesign-implementation/issues/06-create-sale-and-checkout-redesign.md`
+- Completed: Implemented the sixth mobile UI redesign ticket by refreshing the create-sale checkout sheet with shared status banners, badges, and empty states while preserving the virtualized product/variant picker, quantity stepper with total preview, cash/transfer selection, customer book/manual customer flow, production sale creation, and local/offline fallback behavior.
+- Changed Source Files: `apps/mobile/src/components/mobile/create-sale-sheet.tsx`, `apps/mobile/scripts/check-create-sale-flow.mjs`, `.scratch/mobile-ui-redesign-implementation/issues/06-create-sale-and-checkout-redesign.md`.
+- Brain Files Updated: `.brain/features/retail-ops-design-system-and-ia.md`, `.brain/progress.md`.
+- Checks Run: `bunx biome check --write apps/mobile/src/components/mobile/create-sale-sheet.tsx apps/mobile/scripts/check-create-sale-flow.mjs`; `bun --cwd apps/mobile qa:create-sale-flow`; `bun --cwd apps/mobile qa:keyboard-coverage`; `bun --cwd apps/mobile qa:nativewind-style`; `bun --cwd apps/mobile qa:mvp-typechecks`; `bun --cwd apps/mobile qa:mvp-source`.
+
 ### Mobile UI Redesign Dashboard
 - Source Mode: `/implement-with-progress`
 - Source Ticket: `.scratch/mobile-ui-redesign-implementation/issues/05-owner-and-attendant-dashboard-redesign.md`

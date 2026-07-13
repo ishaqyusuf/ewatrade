@@ -424,6 +424,17 @@ Owner and attendant dashboard surfaces should share the same shell and operation
 - Production snapshot reads, local fallback rows, offline banner behavior, and first-product prompting remain guarded by source QA.
 - `qa:dashboard-redesign` is part of mobile source QA and protects the shared shell, role gating, compact sections, shared badges, and shared empty states.
 
+## Create Sale Checkout Redesign
+
+The create-sale workflow is the core mobile POS path and should stay optimized for quick one-handed checkout.
+
+- Product and variant selection remains virtualized with `BottomSheetSectionList`; product parents with variants stay display-only while primary units and variant rows are selectable.
+- Sale source, rep session, insufficient stock, submit error, and empty-product states use shared `StatusBanner` and `EmptyState` primitives.
+- Stock, selected-customer, and customer-source labels use `StatusBadge` so operational status treatment is consistent with dashboards and setup sheets.
+- Checkout keeps the shared `QuantityStepper`, nearby total preview, cash/transfer selector, customer book lookup, and typed new-customer fallback together in the same keyboard-safe sheet.
+- Production sale creation, local/offline fallback recording, rep session validation, and sync queue behavior must remain unchanged when the visual layer is updated.
+- `qa:create-sale-flow` continues to protect the sale list, quantity, payment, customer, offline/local fallback, and source status coverage.
+
 ## Acceptance Review Checklist
 
 Every Retail Ops implementation slice should answer:
