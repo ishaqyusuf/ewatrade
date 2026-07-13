@@ -402,6 +402,17 @@ Splash, login, sign-up, and OTP verification use shared auth primitives so the e
 - OTP uses the shared segmented `OtpInput` with status badge/banner feedback for local fallback, resend, loading, and error states.
 - `qa:auth-redesign` is part of mobile source QA and protects prompt-style placeholders instead of sample email examples.
 
+## First Product Setup Redesign
+
+The first-product setup sheet is the empty-business bridge after auth/business entry.
+
+- The setup remains a staged bottom sheet: item details first, starting stock second.
+- Setup source, product-limit, and submission error states use shared status banners.
+- Current stock uses the shared `QuantityStepper` so users get plus, minus, and numeric keyboard entry.
+- Unit templates remain available for common sub-units, while manual variants stay optional.
+- Empty variant copy must make it clear that users can skip variants and continue with only the primary unit.
+- Production product creation, local/offline fallback, opening-stock movement, and sync queue behavior stay unchanged.
+
 ## Acceptance Review Checklist
 
 Every Retail Ops implementation slice should answer:

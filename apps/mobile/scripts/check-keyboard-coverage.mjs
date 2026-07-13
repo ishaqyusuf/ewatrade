@@ -194,7 +194,8 @@ const CONTRACTS = [
       'keyboardShouldPersistTaps="handled"',
       "setupStep",
       'keyboardType="numeric"',
-      "Enter current stock",
+      "QuantityStepper",
+      "normalizeWholeNumberInput(value)",
     ],
     reason:
       "first-product setup must keep keyboard-safe item/unit/variant/current-stock steps",

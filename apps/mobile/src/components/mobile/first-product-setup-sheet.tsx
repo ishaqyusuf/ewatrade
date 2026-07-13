@@ -1,5 +1,8 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
+import { QuantityStepper } from "@/components/mobile/quantity-stepper"
+import { StatusBadge } from "@/components/mobile/status-badge"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
@@ -409,6 +412,13 @@ export const FirstProductSetupSheet = forwardRef<
       >
         <View className="gap-5 px-5 pb-6">
           <View className="gap-2">
+            <StatusBadge
+              icon={setupStep === "details" ? "FilePenLine" : "Warehouse"}
+              label={
+                setupStep === "details" ? "Item details" : "Starting stock"
+              }
+              tone="primary"
+            />
             <Text className="text-xl font-bold text-foreground">
               {setupStep === "details" ? "Set up item" : "Add current stock"}
             </Text>
@@ -419,25 +429,16 @@ export const FirstProductSetupSheet = forwardRef<
             </Text>
           </View>
 
-          <View className="rounded-2xl border border-border bg-card p-4">
-            <View className="flex-row items-start justify-between gap-3">
-              <View className="flex-1 gap-1">
-                <Text className="font-semibold text-foreground">
-                  Setup source
-                </Text>
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  {shouldUseLocalQueue
-                    ? "This item will be queued locally and synced later."
-                    : "This item will be created in production immediately."}
-                </Text>
-              </View>
-              <View className="rounded-full bg-muted px-3 py-1">
-                <Text className="text-xs font-bold text-muted-foreground">
-                  {shouldUseLocalQueue ? "Local" : "Online"}
-                </Text>
-              </View>
-            </View>
-          </View>
+          <StatusBanner
+            icon={shouldUseLocalQueue ? "Wind" : "CircleCheck"}
+            message={
+              shouldUseLocalQueue
+                ? "This item will be queued locally and synced later."
+                : "This item will be created in production immediately."
+            }
+            title={shouldUseLocalQueue ? "Local setup" : "Online setup"}
+            tone={shouldUseLocalQueue ? "warning" : "success"}
+          />
 
           {setupStep === "details" ? (
             <>
@@ -545,7 +546,7 @@ export const FirstProductSetupSheet = forwardRef<
               </View>
 
               <View className="gap-3">
-                <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center justify-between gap-3">
                   <View className="gap-1">
                     <Text className="font-bold text-foreground">
                       Sub-units or variants
@@ -556,6 +557,7 @@ export const FirstProductSetupSheet = forwardRef<
                   </View>
                   <Pressable
                     className="h-10 w-10 items-center justify-center rounded-full bg-primary/10"
+                    accessibilityLabel="Add more sub-units or variants"
                     haptic
                     onPress={() =>
                       setVariants((current) => [
@@ -570,11 +572,24 @@ export const FirstProductSetupSheet = forwardRef<
                 </View>
 
                 {variants.length === 0 ? (
-                  <View className="rounded-2xl border border-dashed border-border p-4">
-                    <Text className="text-sm text-muted-foreground">
-                      No variants yet. You can continue with only the primary
-                      unit.
-                    </Text>
+                  <View className="gap-3 rounded-2xl border border-dashed border-border p-4">
+                    <View className="flex-row items-center gap-3">
+                      <View className="h-9 w-9 items-center justify-center rounded-full bg-muted">
+                        <Icon
+                          className="size-base text-muted-foreground"
+                          name="PlusCircle"
+                        />
+                      </View>
+                      <View className="min-w-0 flex-1">
+                        <Text className="font-semibold text-foreground">
+                          No variants yet
+                        </Text>
+                        <Text className="text-sm leading-5 text-muted-foreground">
+                          You can skip this and continue with only the primary
+                          unit.
+                        </Text>
+                      </View>
+                    </View>
                   </View>
                 ) : (
                   <View className="gap-3">
@@ -657,14 +672,13 @@ export const FirstProductSetupSheet = forwardRef<
                     : "No variants added"}
                 </Text>
               </View>
-              <FormField
-                inputMode="numeric"
-                keyboardType="numeric"
+              <QuantityStepper
+                helper={unitName.trim() || "units"}
                 label="Current stock"
                 onChangeText={(value) =>
                   setStartingStock(normalizeWholeNumberInput(value))
                 }
-                placeholder="Enter current stock"
+                min={0}
                 value={startingStock}
               />
               <Pressable
@@ -685,20 +699,21 @@ export const FirstProductSetupSheet = forwardRef<
           )}
 
           {isAtProductLimit ? (
-            <View className="rounded-2xl bg-destructive/10 p-3">
-              <Text className="text-sm font-semibold text-destructive">
-                {plan.name} allows {plan.limits.products} products. Open
-                Subscription to move to a higher tier.
-              </Text>
-            </View>
+            <StatusBanner
+              icon="TriangleAlert"
+              message={`${plan.name} allows ${plan.limits.products} products. Open Subscription to move to a higher tier.`}
+              title="Product limit reached"
+              tone="destructive"
+            />
           ) : null}
 
           {submitError ? (
-            <View className="rounded-2xl bg-destructive/10 p-3">
-              <Text className="text-sm font-semibold text-destructive">
-                {submitError}
-              </Text>
-            </View>
+            <StatusBanner
+              icon="TriangleAlert"
+              message={submitError}
+              title="Item was not added"
+              tone="destructive"
+            />
           ) : null}
 
           <ActionButton
