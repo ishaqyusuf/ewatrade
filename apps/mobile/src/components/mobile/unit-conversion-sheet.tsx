@@ -1,13 +1,14 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
+import { InventoryProductCard } from "@/components/mobile/inventory-product-card"
 import { QuantityStepper } from "@/components/mobile/quantity-stepper"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
-import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
-import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import type { MobileDesignStatusTone } from "@/lib/design-foundation"
 import { parseWholeQuantity } from "@/lib/quantity"
-import { cn } from "@/lib/utils"
 import { useBusinessStore } from "@/store/businessStore"
 import {
   type RetailOpsProduct,
@@ -40,6 +41,12 @@ function getVariantStock(variant: RetailOpsVariant) {
   return variant.currentStock ?? variant.startingStock ?? 0
 }
 
+function getInventoryStockTone(stock: number): MobileDesignStatusTone {
+  if (stock <= 0) return "destructive"
+  if (stock <= 5) return "warning"
+  return "success"
+}
+
 function ProductOption({
   onPress,
   product,
@@ -52,32 +59,15 @@ function ProductOption({
   const currentStock = getProductStock(product)
 
   return (
-    <Pressable
-      className={cn(
-        "gap-2 rounded-2xl border border-border bg-card p-4 active:bg-accent",
-        selected && "border-primary bg-primary/10",
-      )}
-      haptic
+    <InventoryProductCard
+      icon="Warehouse"
       onPress={onPress}
-      transition
-    >
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-semibold text-foreground">{product.name}</Text>
-          <Text className="text-sm text-muted-foreground">
-            {currentStock} {product.unitName}
-            {currentStock === 1 ? "" : "s"} available
-          </Text>
-        </View>
-        <Icon
-          className={cn(
-            "size-base text-muted-foreground",
-            selected && "text-primary",
-          )}
-          name={selected ? "CircleCheck" : "Warehouse"}
-        />
-      </View>
-    </Pressable>
+      selected={selected}
+      stockLabel={`${currentStock} ${product.unitName}${currentStock === 1 ? "" : "s"} available`}
+      stockTone={getInventoryStockTone(currentStock)}
+      subtitle={`${product.variants.length} conversion target${product.variants.length === 1 ? "" : "s"}`}
+      title={product.name}
+    />
   )
 }
 
@@ -93,38 +83,20 @@ function VariantOption({
   const currentStock = getVariantStock(variant)
 
   return (
-    <Pressable
-      className={cn(
-        "gap-2 rounded-2xl border border-border bg-card p-4 active:bg-accent",
-        selected && "border-primary bg-primary/10",
-      )}
-      haptic
+    <InventoryProductCard
+      icon="Wrench"
       onPress={onPress}
-      transition
-    >
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-semibold text-foreground">{variant.name}</Text>
-          <Text className="text-sm text-muted-foreground">
-            {currentStock} in stock
-          </Text>
-        </View>
-        <View className="items-end gap-1">
-          <Icon
-            className={cn(
-              "size-base text-muted-foreground",
-              selected && "text-primary",
-            )}
-            name={selected ? "CircleCheck" : "Wrench"}
-          />
-          {variant.conversionMultiplier ? (
-            <Text className="text-xs font-bold text-muted-foreground">
-              x{variant.conversionMultiplier}
-            </Text>
-          ) : null}
-        </View>
-      </View>
-    </Pressable>
+      priceLabel={
+        variant.conversionMultiplier
+          ? `x${variant.conversionMultiplier}`
+          : undefined
+      }
+      selected={selected}
+      stockLabel={`${currentStock} in stock`}
+      stockTone={getInventoryStockTone(currentStock)}
+      subtitle="Variant or sub-unit"
+      title={variant.name}
+    />
   )
 }
 
@@ -389,23 +361,12 @@ export const UnitConversionSheet = forwardRef<
             </Text>
           </View>
 
-          <View className="rounded-2xl border border-border bg-card p-4">
-            <View className="flex-row items-start justify-between gap-3">
-              <View className="flex-1 gap-1">
-                <Text className="font-semibold text-foreground">
-                  Conversion source
-                </Text>
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  {sourceDetail}
-                </Text>
-              </View>
-              <View className="rounded-full bg-muted px-3 py-1">
-                <Text className="text-xs font-bold text-muted-foreground">
-                  {sourceLabel}
-                </Text>
-              </View>
-            </View>
-          </View>
+          <StatusBanner
+            icon={canRecordProductionConversion ? "CircleCheck" : "Clock"}
+            message={sourceDetail}
+            title={`Conversion source: ${sourceLabel}`}
+            tone={canRecordProductionConversion ? "success" : "warning"}
+          />
 
           {convertibleProducts.length > 0 ? (
             <View className="gap-3">
@@ -427,14 +388,11 @@ export const UnitConversionSheet = forwardRef<
                   />
                 ))
               ) : (
-                <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-                  <Text className="font-semibold text-foreground">
-                    No matching products
-                  </Text>
-                  <Text className="text-sm leading-5 text-muted-foreground">
-                    Try another product or variant name.
-                  </Text>
-                </View>
+                <EmptyState
+                  icon="Search"
+                  message="Try another product or variant name."
+                  title="No matching products"
+                />
               )}
               {filteredConvertibleProducts.length >
               visibleConvertibleProducts.length ? (
@@ -445,15 +403,11 @@ export const UnitConversionSheet = forwardRef<
               ) : null}
             </View>
           ) : (
-            <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-              <Text className="font-semibold text-foreground">
-                Add variants first
-              </Text>
-              <Text className="text-sm leading-5 text-muted-foreground">
-                Create half bag, quarter bag, or another variant before
-                recording conversions.
-              </Text>
-            </View>
+            <EmptyState
+              icon="Warehouse"
+              message="Create half bag, quarter bag, or another variant before recording conversions."
+              title="Add variants first"
+            />
           )}
 
           {selectedProduct ? (
@@ -480,14 +434,11 @@ export const UnitConversionSheet = forwardRef<
                   />
                 ))
               ) : (
-                <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-                  <Text className="font-semibold text-foreground">
-                    No matching variants
-                  </Text>
-                  <Text className="text-sm leading-5 text-muted-foreground">
-                    Try another sub-unit or variant name.
-                  </Text>
-                </View>
+                <EmptyState
+                  icon="Search"
+                  message="Try another sub-unit or variant name."
+                  title="No matching variants"
+                />
               )}
               {filteredSelectedVariants.length >
               visibleSelectedVariants.length ? (
@@ -506,12 +457,12 @@ export const UnitConversionSheet = forwardRef<
             value={sourceQuantity}
           />
           {!hasEnoughSourceStock ? (
-            <View className="rounded-2xl bg-destructive/10 p-3">
-              <Text className="text-sm font-semibold text-destructive">
-                Only {availableSourceStock} {selectedProduct?.unitName} in
-                primary stock.
-              </Text>
-            </View>
+            <StatusBanner
+              icon="TriangleAlert"
+              message={`Only ${availableSourceStock} ${selectedProduct?.unitName} in primary stock.`}
+              title="Insufficient source stock"
+              tone="destructive"
+            />
           ) : null}
 
           <QuantityStepper
@@ -529,11 +480,12 @@ export const UnitConversionSheet = forwardRef<
           />
 
           {submitError ? (
-            <View className="rounded-2xl bg-destructive/10 p-3">
-              <Text className="text-sm font-semibold text-destructive">
-                {submitError}
-              </Text>
-            </View>
+            <StatusBanner
+              icon="TriangleAlert"
+              message={submitError}
+              title="Conversion was not recorded"
+              tone="destructive"
+            />
           ) : null}
 
           <ActionButton disabled={!canSubmit} onPress={submit}>

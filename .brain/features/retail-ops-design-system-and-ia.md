@@ -435,6 +435,18 @@ The create-sale workflow is the core mobile POS path and should stay optimized f
 - Production sale creation, local/offline fallback recording, rep session validation, and sync queue behavior must remain unchanged when the visual layer is updated.
 - `qa:create-sale-flow` continues to protect the sale list, quantity, payment, customer, offline/local fallback, and source status coverage.
 
+## Product And Inventory Management Redesign
+
+Inventory management surfaces should reuse one compact product-row vocabulary across stock intake, unit conversion, dashboard inventory previews, and future product detail screens.
+
+- `InventoryProductCard` is the shared no-image product/variant row for inventory lists; it provides icon placeholders, selected state, stock badges, and optional price or conversion labels.
+- Product rows should identify the parent item, primary unit, variant count, and stock status without making parent rows look like hidden variants.
+- Variant/sub-unit rows should read as sellable or convertible units with their own stock and price/conversion labels.
+- Stock intake and unit conversion sheets use shared `StatusBanner` and `EmptyState` for online/local source, shortage, empty inventory, empty search, and submit error states.
+- Low and empty stock states should use warning/destructive status tones; healthy stock should use success treatment.
+- Production stock intake, stock adjustment, unit conversion, local/offline fallback, and stock movement ledger behavior must stay unchanged while the visual layer evolves.
+- `qa:inventory-operations-flow` protects the reusable card, source states, bounded product/unit/variant lists, stock shortages, tRPC mutations, and local queue behavior.
+
 ## Acceptance Review Checklist
 
 Every Retail Ops implementation slice should answer:

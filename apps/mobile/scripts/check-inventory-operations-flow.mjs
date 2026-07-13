@@ -5,6 +5,10 @@ const REPO_ROOT = resolve(new URL("../../..", import.meta.url).pathname)
 const MOBILE_DIR = join(REPO_ROOT, "apps/mobile")
 const FILES = {
   closeoutSheet: join(MOBILE_DIR, "src/components/mobile/closeout-sheet.tsx"),
+  inventoryProductCard: join(
+    MOBILE_DIR,
+    "src/components/mobile/inventory-product-card.tsx",
+  ),
   repClockInSheet: join(
     MOBILE_DIR,
     "src/components/mobile/rep-clock-in-sheet.tsx",
@@ -77,6 +81,10 @@ const CONTRACTS = [
     file: FILES.stockIntakeSheet,
     markers: [
       "BottomSheetKeyboardAwareScrollView",
+      "InventoryProductCard",
+      "StatusBadge",
+      "StatusBanner",
+      "EmptyState",
       "trpc.retailOps.recordStockIntake.mutationOptions",
       "trpc.retailOps.recordStockAdjustment.mutationOptions",
       "canRecordProductionStock",
@@ -102,6 +110,9 @@ const CONTRACTS = [
     file: FILES.unitConversionSheet,
     markers: [
       "BottomSheetKeyboardAwareScrollView",
+      "InventoryProductCard",
+      "StatusBanner",
+      "EmptyState",
       "trpc.retailOps.recordUnitConversion.mutationOptions",
       "canRecordProductionConversion",
       "!!selectedProduct?.remoteVariantId",
@@ -119,6 +130,19 @@ const CONTRACTS = [
     ],
     reason:
       "unit conversion must keep production conversion mutation, synced source/target gating, local fallback, stock snapshot reconciliation, and bounded product/variant rows",
+  },
+  {
+    file: FILES.inventoryProductCard,
+    markers: [
+      "InventoryProductCard",
+      "StatusBadge",
+      "priceLabel",
+      "stockLabel",
+      'selected ? "CircleCheck" : icon',
+      "active:bg-accent",
+    ],
+    reason:
+      "inventory product and variant rows must use the reusable no-image card with selection, stock, and price/status treatment",
   },
   {
     file: FILES.store,

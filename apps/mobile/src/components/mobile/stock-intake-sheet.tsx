@@ -1,11 +1,15 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
+import { InventoryProductCard } from "@/components/mobile/inventory-product-card"
 import { QuantityStepper } from "@/components/mobile/quantity-stepper"
+import { StatusBadge } from "@/components/mobile/status-badge"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
-import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import type { MobileDesignStatusTone } from "@/lib/design-foundation"
 import { parseWholeQuantity } from "@/lib/quantity"
 import { cn } from "@/lib/utils"
 import { useBusinessStore } from "@/store/businessStore"
@@ -58,6 +62,12 @@ function getVariantStock(variant: RetailOpsProduct["variants"][number]) {
   return variant.currentStock ?? variant.startingStock ?? 0
 }
 
+function getInventoryStockTone(stock: number): MobileDesignStatusTone {
+  if (stock <= 0) return "destructive"
+  if (stock <= 5) return "warning"
+  return "success"
+}
+
 function getStockUnitOptions(product?: RetailOpsProduct): StockUnitOption[] {
   if (!product) return []
 
@@ -99,32 +109,19 @@ function ProductOption({
   const currentStock = product.currentStock ?? product.startingStock
 
   return (
-    <Pressable
-      className={cn(
-        "gap-2 rounded-2xl border border-border bg-card p-4 active:bg-accent",
-        selected && "border-primary bg-primary/10",
-      )}
-      haptic
+    <InventoryProductCard
+      icon="Warehouse"
       onPress={onPress}
-      transition
-    >
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-semibold text-foreground">{product.name}</Text>
-          <Text className="text-sm text-muted-foreground">
-            {currentStock} {product.unitName}
-            {currentStock === 1 ? "" : "s"} available
-          </Text>
-        </View>
-        <Icon
-          className={cn(
-            "size-base text-muted-foreground",
-            selected && "text-primary",
-          )}
-          name={selected ? "CircleCheck" : "Warehouse"}
-        />
-      </View>
-    </Pressable>
+      selected={selected}
+      stockLabel={`${currentStock} ${product.unitName}${currentStock === 1 ? "" : "s"} available`}
+      stockTone={getInventoryStockTone(currentStock)}
+      subtitle={
+        product.variants.length > 0
+          ? `${product.variants.length} variant${product.variants.length === 1 ? "" : "s"}`
+          : "Primary unit only"
+      }
+      title={product.name}
+    />
   )
 }
 
@@ -175,7 +172,7 @@ function UnitOption({
   return (
     <Pressable
       className={cn(
-        "min-w-[45%] flex-1 gap-1 rounded-2xl border border-border bg-card p-3 active:bg-accent",
+        "min-w-[45%] flex-1 gap-2 rounded-2xl border border-border bg-card p-3 active:bg-accent",
         selected && "border-primary bg-primary/10",
       )}
       haptic
@@ -190,9 +187,11 @@ function UnitOption({
       >
         {unit.label}
       </Text>
-      <Text className="text-xs text-muted-foreground">
-        {unit.stock} available
-      </Text>
+      <StatusBadge
+        className="self-start"
+        label={`${unit.stock} available`}
+        tone={getInventoryStockTone(unit.stock)}
+      />
     </Pressable>
   )
 }
@@ -220,9 +219,10 @@ function MovementRow({ movement }: { movement: RetailOpsStockMovement }) {
           {isIncrease ? "+" : ""}
           {movement.quantity} {movement.unitName}
         </Text>
-        {movement.syncStatus === "pending" ? (
-          <Text className="text-xs font-bold text-amber-700">Pending sync</Text>
-        ) : null}
+        <StatusBadge
+          label={movement.syncStatus === "pending" ? "Pending sync" : "Synced"}
+          tone={movement.syncStatus === "pending" ? "warning" : "success"}
+        />
       </View>
     </View>
   )
@@ -532,23 +532,12 @@ export const StockIntakeSheet = forwardRef<
             </Text>
           </View>
 
-          <View className="rounded-2xl border border-border bg-card p-4">
-            <View className="flex-row items-start justify-between gap-3">
-              <View className="flex-1 gap-1">
-                <Text className="font-semibold text-foreground">
-                  Stock source
-                </Text>
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  {sourceDetail}
-                </Text>
-              </View>
-              <View className="rounded-full bg-muted px-3 py-1">
-                <Text className="text-xs font-bold text-muted-foreground">
-                  {sourceLabel}
-                </Text>
-              </View>
-            </View>
-          </View>
+          <StatusBanner
+            icon={canRecordProductionStock ? "CircleCheck" : "Clock"}
+            message={sourceDetail}
+            title={`Stock source: ${sourceLabel}`}
+            tone={canRecordProductionStock ? "success" : "warning"}
+          />
 
           <View className="flex-row gap-2">
             <SegmentOption
@@ -587,14 +576,11 @@ export const StockIntakeSheet = forwardRef<
                   />
                 ))
               ) : (
-                <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-                  <Text className="font-semibold text-foreground">
-                    No matching products
-                  </Text>
-                  <Text className="text-sm leading-5 text-muted-foreground">
-                    Try another product, unit, or variant name.
-                  </Text>
-                </View>
+                <EmptyState
+                  icon="Search"
+                  message="Try another product, unit, or variant name."
+                  title="No matching products"
+                />
               )}
               {filteredProducts.length > visibleProducts.length ? (
                 <Text className="text-xs font-semibold text-muted-foreground">
@@ -604,14 +590,11 @@ export const StockIntakeSheet = forwardRef<
               ) : null}
             </View>
           ) : (
-            <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-              <Text className="font-semibold text-foreground">
-                Add inventory first
-              </Text>
-              <Text className="text-sm leading-5 text-muted-foreground">
-                Create an item before recording delivered stock.
-              </Text>
-            </View>
+            <EmptyState
+              icon="Warehouse"
+              message="Create an item before recording delivered stock."
+              title="Add inventory first"
+            />
           )}
 
           {selectedProduct && unitOptions.length > 0 ? (
@@ -638,14 +621,12 @@ export const StockIntakeSheet = forwardRef<
                     />
                   ))
                 ) : (
-                  <View className="flex-1 rounded-2xl border border-dashed border-border p-4">
-                    <Text className="font-semibold text-foreground">
-                      No matching units
-                    </Text>
-                    <Text className="text-sm leading-5 text-muted-foreground">
-                      Try another unit or variant name.
-                    </Text>
-                  </View>
+                  <EmptyState
+                    className="flex-1"
+                    icon="Search"
+                    message="Try another unit or variant name."
+                    title="No matching units"
+                  />
                 )}
               </View>
               {filteredUnitOptions.length > visibleUnitOptions.length ? (
@@ -730,9 +711,12 @@ export const StockIntakeSheet = forwardRef<
               </View>
 
               {!hasEnoughStock ? (
-                <Text className="text-xs font-medium text-destructive">
-                  This unit only has {selectedUnit?.stock ?? 0} available.
-                </Text>
+                <StatusBanner
+                  icon="TriangleAlert"
+                  message={`This unit only has ${selectedUnit?.stock ?? 0} available.`}
+                  title="Insufficient stock"
+                  tone="destructive"
+                />
               ) : null}
             </View>
           ) : null}
@@ -749,11 +733,12 @@ export const StockIntakeSheet = forwardRef<
           />
 
           {submitError ? (
-            <View className="rounded-2xl bg-destructive/10 p-3">
-              <Text className="text-sm font-semibold text-destructive">
-                {submitError}
-              </Text>
-            </View>
+            <StatusBanner
+              icon="TriangleAlert"
+              message={submitError}
+              title="Stock was not recorded"
+              tone="destructive"
+            />
           ) : null}
 
           <ActionButton disabled={!canSubmit} onPress={submit}>
@@ -781,11 +766,11 @@ export const StockIntakeSheet = forwardRef<
                 ) : null}
               </>
             ) : (
-              <View className="rounded-2xl border border-dashed border-border p-4">
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  No stock movements recorded yet.
-                </Text>
-              </View>
+              <EmptyState
+                icon="ListChecks"
+                message="No stock movements recorded yet."
+                title="No stock movement yet"
+              />
             )}
           </View>
 
