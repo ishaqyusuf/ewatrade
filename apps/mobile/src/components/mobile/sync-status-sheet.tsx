@@ -1,4 +1,7 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { EmptyState } from "@/components/mobile/empty-state"
+import { StatusBadge } from "@/components/mobile/status-badge"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
@@ -72,13 +75,6 @@ function isRetryBackoffActive(event: RetailOpsSyncEvent) {
   const nextRetryTime = new Date(event.nextRetryAt).getTime()
 
   return !Number.isNaN(nextRetryTime) && nextRetryTime > Date.now()
-}
-
-function getSyncRunStatusClassName(status: string) {
-  if (status === "failed") return "text-destructive"
-  if (status === "partial" || status === "skipped") return "text-amber-700"
-
-  return "text-emerald-700"
 }
 
 function formatSyncRunStatus(status: string) {
@@ -159,20 +155,6 @@ function SyncEventRow({
   const isFailed = event.status === "failed"
   const isConflict = event.status === "conflict"
   const needsAttention = isFailed || isConflict
-  const statusBadgeClassName = isConflict
-    ? "bg-amber-500/10"
-    : isFailed
-      ? "bg-destructive/10"
-      : isPending
-        ? "bg-primary/10"
-        : "bg-emerald-500/10"
-  const statusTextClassName = isConflict
-    ? "text-amber-700"
-    : isFailed
-      ? "text-destructive"
-      : isPending
-        ? "text-primary"
-        : "text-emerald-700"
   const statusLabel = isConflict
     ? "Conflict"
     : isFailed
@@ -180,6 +162,13 @@ function SyncEventRow({
       : isPending
         ? "Pending"
         : "Synced"
+  const statusTone = isConflict
+    ? "warning"
+    : isFailed
+      ? "destructive"
+      : isPending
+        ? "primary"
+        : "success"
   const retryDetailLabel =
     isRetryBackoffActive(event) && event.nextRetryAt
       ? `Retry after ${formatEventTime(event.nextRetryAt)}`
@@ -200,11 +189,11 @@ function SyncEventRow({
             {formatEventTime(event.createdAt)}
           </Text>
         </View>
-        <View className={cn("rounded-full px-3 py-1", statusBadgeClassName)}>
-          <Text className={cn("text-xs font-bold", statusTextClassName)}>
-            {statusLabel}
-          </Text>
-        </View>
+        <StatusBadge
+          icon={needsAttention ? "TriangleAlert" : "CircleCheck"}
+          label={statusLabel}
+          tone={statusTone}
+        />
       </View>
       {needsAttention ? (
         <View
@@ -904,18 +893,16 @@ export const SyncStatusSheet = forwardRef<
                     {lastSyncSummary.deviceId}
                   </Text>
                 </View>
-                <Text
-                  className={cn(
-                    "text-xs font-bold uppercase",
+                <StatusBadge
+                  label={lastSyncSummary.status}
+                  tone={
                     lastSyncSummary.status === "failed"
-                      ? "text-destructive"
+                      ? "destructive"
                       : lastSyncSummary.status === "partial"
-                        ? "text-amber-700"
-                        : "text-emerald-700",
-                  )}
-                >
-                  {lastSyncSummary.status}
-                </Text>
+                        ? "warning"
+                        : "success"
+                  }
+                />
               </View>
               <Text className="mt-3 text-xs leading-4 text-muted-foreground">
                 Applied {lastSyncSummary.appliedCount} of{" "}
@@ -973,14 +960,17 @@ export const SyncStatusSheet = forwardRef<
                           failed, {syncRun.skippedCount} skipped
                         </Text>
                       </View>
-                      <Text
-                        className={cn(
-                          "text-xs font-bold uppercase",
-                          getSyncRunStatusClassName(syncRun.status),
-                        )}
-                      >
-                        {formatSyncRunStatus(syncRun.status)}
-                      </Text>
+                      <StatusBadge
+                        label={formatSyncRunStatus(syncRun.status)}
+                        tone={
+                          syncRun.status === "failed"
+                            ? "destructive"
+                            : syncRun.status === "partial" ||
+                                syncRun.status === "skipped"
+                              ? "warning"
+                              : "success"
+                        }
+                      />
                     </View>
                     {syncRun.events.some((event) => event.errorMessage) ? (
                       <Text className="text-xs leading-4 text-muted-foreground">
@@ -1181,20 +1171,15 @@ export const SyncStatusSheet = forwardRef<
           </View>
 
           {conflictEvents.length > 0 ? (
-            <View
-              className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4"
-              testID="retail-sync-conflict-summary"
-            >
-              <Text className="text-sm font-semibold text-amber-700">
-                {conflictEvents.length} sync conflict
-                {conflictEvents.length === 1 ? "" : "s"} need review
-              </Text>
-              <Text className="mt-1 text-sm leading-5 text-muted-foreground">
-                Conflicts usually mean stock, session, staff, or customer state
-                changed on the server. Review the message before retrying.
-              </Text>
+            <View className="gap-3" testID="retail-sync-conflict-summary">
+              <StatusBanner
+                icon="TriangleAlert"
+                message="Conflicts usually mean stock, session, staff, or customer state changed on the server. Review the message before retrying."
+                title={`${conflictEvents.length} sync conflict${conflictEvents.length === 1 ? "" : "s"} need review`}
+                tone="warning"
+              />
               <Pressable
-                className="mt-4 h-11 flex-row items-center justify-center gap-2 rounded-full bg-primary px-4 active:bg-primary/90"
+                className="h-11 flex-row items-center justify-center gap-2 rounded-full bg-primary px-4 active:bg-primary/90"
                 disabled={isSyncBusy}
                 haptic
                 onPress={() =>
@@ -1212,19 +1197,19 @@ export const SyncStatusSheet = forwardRef<
           ) : null}
 
           {failedEvents.length > 0 ? (
-            <View className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4">
-              <Text className="text-sm font-semibold text-destructive">
-                {failedEvents.length} event
-                {failedEvents.length === 1 ? "" : "s"} need retry
-              </Text>
-              <Text className="mt-1 text-sm leading-5 text-muted-foreground">
-                Failed events stay on this device with the server message.
-                {retryBackoffEvents.length > 0
-                  ? ` ${retryBackoffEvents.length} will wait for the retry timer unless you move them to pending now.`
-                  : " They can be moved to pending now."}
-              </Text>
+            <View className="gap-3">
+              <StatusBanner
+                icon="TriangleAlert"
+                message={`Failed events stay on this device with the server message.${
+                  retryBackoffEvents.length > 0
+                    ? ` ${retryBackoffEvents.length} will wait for the retry timer unless you move them to pending now.`
+                    : " They can be moved to pending now."
+                }`}
+                title={`${failedEvents.length} event${failedEvents.length === 1 ? "" : "s"} need retry`}
+                tone="destructive"
+              />
               <Pressable
-                className="mt-4 h-11 flex-row items-center justify-center gap-2 rounded-full bg-primary px-4 active:bg-primary/90"
+                className="h-11 flex-row items-center justify-center gap-2 rounded-full bg-primary px-4 active:bg-primary/90"
                 disabled={isSyncBusy}
                 haptic
                 onPress={() =>
@@ -1242,19 +1227,21 @@ export const SyncStatusSheet = forwardRef<
           ) : null}
 
           {syncEventsMutation.isError ? (
-            <View className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4">
-              <Text className="text-sm leading-5 text-destructive">
-                {syncEventsMutation.error.message}
-              </Text>
-            </View>
+            <StatusBanner
+              icon="TriangleAlert"
+              message={syncEventsMutation.error.message}
+              title="Sync failed"
+              tone="destructive"
+            />
           ) : null}
 
           {registerOfflineDeviceMutation.isError ? (
-            <View className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4">
-              <Text className="text-sm leading-5 text-destructive">
-                {registerOfflineDeviceMutation.error.message}
-              </Text>
-            </View>
+            <StatusBanner
+              icon="TriangleAlert"
+              message={registerOfflineDeviceMutation.error.message}
+              title="Device registration failed"
+              tone="destructive"
+            />
           ) : null}
 
           <ActionButton
@@ -1267,11 +1254,12 @@ export const SyncStatusSheet = forwardRef<
 
           {blockedEvents.length > 0 ? (
             <View className="rounded-2xl border border-border bg-muted/40 p-4">
-              <Text className="text-sm leading-5 text-muted-foreground">
-                {blockedEvents.length} event
-                {blockedEvents.length === 1 ? "" : "s"} waiting for another
-                local change to sync first.
-              </Text>
+              <StatusBanner
+                icon="Clock"
+                message={`${blockedEvents.length} event${blockedEvents.length === 1 ? "" : "s"} waiting for another local change to sync first.`}
+                title="Waiting on dependencies"
+                tone="muted"
+              />
               <View className="mt-3 gap-2">
                 {visibleBlockedEvents.map((event) => (
                   <View
@@ -1317,11 +1305,11 @@ export const SyncStatusSheet = forwardRef<
                 ) : null}
               </>
             ) : (
-              <View className="rounded-2xl border border-dashed border-border p-4">
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  No local changes are waiting to sync.
-                </Text>
-              </View>
+              <EmptyState
+                icon="CircleCheck"
+                message="No local changes are waiting to sync."
+                title="Sync queue is clear"
+              />
             )}
           </View>
 

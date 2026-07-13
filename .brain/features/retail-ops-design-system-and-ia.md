@@ -471,6 +471,18 @@ Product share workflows should make generated links, analytics, and follow-up ac
 - Offline, loading, empty, inactive-link, notification-failure, analytics-error, order-error, delivery-error, and mutation-error states should use shared `StatusBanner` or `EmptyState` primitives.
 - `qa:product-share-management` protects native sharing, clipboard copy feedback, production and local link handling, analytics, order follow-up, delivery follow-up, and the shared UI primitives.
 
+## Offline Sync And Conflict Review Redesign
+
+Offline and sync states should be persistent, compact, and actionable without blocking sales work.
+
+- Dashboard keeps a non-blocking sync banner for offline, pending, failed, conflict, and synced states.
+- `SyncStatusSheet` is the detailed reliability surface for offline toggle, device identity, pending queue, retries, conflicts, server history, server conflict review, and blocked dependencies.
+- Local sync event rows use shared `StatusBadge` treatment for pending, synced, failed, and conflict states while preserving impact and action copy.
+- Failed and conflict summaries use `StatusBanner` so retry/review work is visually distinct and not color-only.
+- Empty queues, loading/server unavailable states, blocked dependencies, device registration failures, and sync mutation failures use shared `EmptyState` or `StatusBanner` primitives.
+- Manager/server conflict review must keep business-impact copy, recommended resolution, review action, and permission-aware API boundaries.
+- `qa:offline-sync-flow` and `qa:offline-visuals` protect sync mechanics, dashboard banner coverage, stable QA selectors, bounded rows, manager conflict review, and shared reliability primitives.
+
 ## Acceptance Review Checklist
 
 Every Retail Ops implementation slice should answer:

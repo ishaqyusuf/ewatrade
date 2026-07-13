@@ -2,6 +2,14 @@
 
 ## 2026-07-13
 
+### Mobile UI Redesign Offline Sync Reliability
+- Source Mode: `/implement-with-progress`
+- Source Ticket: `.scratch/mobile-ui-redesign-implementation/issues/10-offline-sync-failure-and-conflict-review-redesign.md`
+- Completed: Implemented the tenth mobile UI redesign ticket by refreshing sync reliability states with shared status badges, status banners, and empty states for event status, last sync, server history, conflict summary, retry summary, blocked dependencies, mutation errors, device registration errors, and empty queue states while preserving offline toggle, sync replay, retry, conflict review, server history, server conflict review, and stable QA selectors.
+- Changed Source Files: `apps/mobile/src/components/mobile/sync-status-sheet.tsx`, `apps/mobile/scripts/check-offline-sync-flow.mjs`, `apps/mobile/scripts/check-offline-visual-coverage.mjs`, `.scratch/mobile-ui-redesign-implementation/issues/10-offline-sync-failure-and-conflict-review-redesign.md`.
+- Brain Files Updated: `.brain/features/retail-ops-design-system-and-ia.md`, `.brain/progress.md`.
+- Checks Run: `bunx biome check --write apps/mobile/src/components/mobile/sync-status-sheet.tsx apps/mobile/scripts/check-offline-sync-flow.mjs apps/mobile/scripts/check-offline-visual-coverage.mjs`; `bun --cwd apps/mobile qa:offline-sync-flow`; `bun --cwd apps/mobile qa:offline-visuals`; `bun --cwd apps/mobile qa:keyboard-coverage`; `bun --cwd apps/mobile qa:nativewind-style`; `bun --cwd apps/mobile qa:mvp-typechecks`; `bun --cwd apps/mobile qa:mvp-source`.
+
 ### Mobile UI Redesign Product Share Links
 - Source Mode: `/implement-with-progress`
 - Source Ticket: `.scratch/mobile-ui-redesign-implementation/issues/09-product-share-links-and-shared-link-order-follow-up-redesign.md`

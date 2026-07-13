@@ -36,6 +36,9 @@ const CONTRACTS = [
     file: FILES.syncSheet,
     markers: [
       "BottomSheetKeyboardAwareScrollView",
+      "StatusBadge",
+      "StatusBanner",
+      "EmptyState",
       "Offline mode",
       "Online mode",
       "Changes stay on this device and will be applied when next you connect.",
