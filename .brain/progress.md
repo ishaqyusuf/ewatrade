@@ -2,6 +2,14 @@
 
 ## 2026-07-13
 
+### Mobile UI Redesign Dashboard
+- Source Mode: `/implement-with-progress`
+- Source Ticket: `.scratch/mobile-ui-redesign-implementation/issues/05-owner-and-attendant-dashboard-redesign.md`
+- Completed: Implemented the fifth mobile UI redesign ticket by standardizing dashboard status chips with `StatusBadge`, moving repeated empty dashboard sections to `EmptyState`, preserving owner/attendant role gating and production/local data behavior, and adding `qa:dashboard-redesign` to mobile source QA.
+- Changed Source Files: `apps/mobile/src/app/dashboard.tsx`, `apps/mobile/scripts/check-dashboard-redesign.mjs`, `apps/mobile/scripts/run-mvp-source-qa.mjs`, `apps/mobile/package.json`, `.scratch/mobile-ui-redesign-implementation/issues/05-owner-and-attendant-dashboard-redesign.md`.
+- Brain Files Updated: `.brain/features/retail-ops-design-system-and-ia.md`, `.brain/progress.md`.
+- Checks Run: `bun --cwd apps/mobile qa:dashboard-redesign`; `bun --cwd apps/mobile qa:dashboard-production-flow`; `bun --cwd apps/mobile qa:offline-visuals`; `bun --cwd apps/mobile qa:nativewind-style`; `bun --cwd apps/mobile qa:mvp-typechecks`; `bun --cwd apps/mobile qa:mvp-source`; `bunx biome check --write ...`.
+
 ### Mobile UI Redesign First Product Setup
 - Source Mode: `/implement-with-progress`
 - Source Ticket: `.scratch/mobile-ui-redesign-implementation/issues/04-first-product-setup-and-starting-inventory-redesign.md`

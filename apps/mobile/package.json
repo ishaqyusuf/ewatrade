@@ -14,6 +14,7 @@
     "qa:auth-onboarding": "node ./scripts/check-auth-onboarding-flow.mjs",
     "qa:create-sale-flow": "node ./scripts/check-create-sale-flow.mjs",
     "qa:customer-book-flow": "node ./scripts/check-customer-book-flow.mjs",
+    "qa:dashboard-redesign": "node ./scripts/check-dashboard-redesign.mjs",
     "qa:dashboard-production-flow": "node ./scripts/check-dashboard-production-flow.mjs",
     "qa:design-foundation": "node ./scripts/check-design-foundation.mjs",
     "qa:expo-env-attachment": "node ./scripts/check-expo-env-attachment.mjs",

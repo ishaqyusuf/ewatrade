@@ -4,6 +4,7 @@ import {
   CloseoutSheet,
   CreateSaleSheet,
   CustomerBookSheet,
+  EmptyState,
   FirstProductSetupSheet,
   MobileAppShell,
   type MobileAppShellNavItem,
@@ -11,6 +12,7 @@ import {
   RepClockInSheet,
   ReportsSheet,
   StaffInviteSheet,
+  StatusBadge,
   StockIntakeSheet,
   SubscriptionPlanSheet,
   SyncStatusSheet,
@@ -476,13 +478,9 @@ function RecentSaleCard({ sale }: { sale: RecentSaleItem }) {
         </Text>
         <View className="flex-row items-center gap-2">
           {sale.syncStatus === "pending" ? (
-            <View className="rounded-full bg-amber-500/10 px-3 py-1">
-              <Text className="text-xs font-bold text-amber-700">
-                Pending sync
-              </Text>
-            </View>
+            <StatusBadge icon="Clock" label="Pending sync" tone="warning" />
           ) : null}
-          <Text className="text-xs font-bold text-primary">{sale.method}</Text>
+          <StatusBadge label={sale.method} tone="primary" />
         </View>
       </View>
     </View>
@@ -493,21 +491,11 @@ function StaffStatusBadge({ staff }: { staff: RetailOpsStaffMember }) {
   const isPending = staff.status === "pending"
 
   return (
-    <View
-      className={cn(
-        "rounded-full px-3 py-1",
-        isPending ? "bg-amber-500/10" : "bg-emerald-500/10",
-      )}
-    >
-      <Text
-        className={cn(
-          "text-xs font-bold",
-          isPending ? "text-amber-700" : "text-emerald-700",
-        )}
-      >
-        {isPending ? "Invite pending" : "Active"}
-      </Text>
-    </View>
+    <StatusBadge
+      icon={isPending ? "Clock" : "CheckCircle2"}
+      label={isPending ? "Invite pending" : "Active"}
+      tone={isPending ? "warning" : "success"}
+    />
   )
 }
 
@@ -526,7 +514,7 @@ function StaffCard({ staff }: { staff: RetailOpsStaffMember }) {
           Attendant
         </Text>
         {staff.syncStatus === "pending" ? (
-          <Text className="text-xs font-bold text-primary">Pending sync</Text>
+          <StatusBadge icon="Clock" label="Pending sync" tone="primary" />
         ) : null}
       </View>
     </View>
@@ -558,21 +546,11 @@ function ProductLinkCard({
             {link.url}
           </Text>
         </View>
-        <View
-          className={cn(
-            "rounded-full px-3 py-1",
-            isActive ? "bg-emerald-500/10" : "bg-muted",
-          )}
-        >
-          <Text
-            className={cn(
-              "text-xs font-bold",
-              isActive ? "text-emerald-700" : "text-muted-foreground",
-            )}
-          >
-            {isActive ? "Active" : "Inactive"}
-          </Text>
-        </View>
+        <StatusBadge
+          icon={isActive ? "CheckCircle2" : "XCircle"}
+          label={isActive ? "Active" : "Inactive"}
+          tone={isActive ? "success" : "muted"}
+        />
       </View>
       <View className="flex-row items-center justify-between gap-3">
         <View className="flex-row gap-3">
@@ -634,14 +612,13 @@ function CustomerCard({ customer }: { customer: RetailOpsCustomer }) {
             Last sale {formatCustomerLastSeen(customer.lastSeenAt)}
           </Text>
         </View>
-        <View className="rounded-full bg-primary/10 px-3 py-1">
-          <Text className="text-xs font-bold text-primary">
-            {saleCount} sale{saleCount === 1 ? "" : "s"}
-          </Text>
-        </View>
+        <StatusBadge
+          label={`${saleCount} sale${saleCount === 1 ? "" : "s"}`}
+          tone="primary"
+        />
       </View>
       {(customer.syncStatus ?? "pending") === "pending" ? (
-        <Text className="text-xs font-bold text-amber-700">Pending sync</Text>
+        <StatusBadge icon="Clock" label="Pending sync" tone="warning" />
       ) : null}
     </View>
   )
@@ -684,7 +661,7 @@ function StockMovementCard({
           {movement.quantity} {movement.unitName}
         </Text>
         {movement.syncStatus === "pending" ? (
-          <Text className="text-xs font-bold text-amber-700">Pending sync</Text>
+          <StatusBadge icon="Clock" label="Pending sync" tone="warning" />
         ) : null}
       </View>
     </View>
@@ -2052,11 +2029,11 @@ export default function DashboardRoute() {
                       {item.remaining} remaining
                     </Text>
                   </View>
-                  <View className="rounded-full bg-amber-500/10 px-3 py-1">
-                    <Text className="text-xs font-bold text-amber-700">
-                      {item.status}
-                    </Text>
-                  </View>
+                  <StatusBadge
+                    icon={item.status === "Out" ? "TriangleAlert" : "Clock"}
+                    label={item.status}
+                    tone="warning"
+                  />
                 </View>
               ))}
               {lowStockAlerts.length > visibleLowStockAlerts.length ? (
@@ -2067,16 +2044,15 @@ export default function DashboardRoute() {
               ) : null}
             </>
           ) : (
-            <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-              <Text className="font-semibold text-foreground">
-                No low-stock items
-              </Text>
-              <Text className="text-sm leading-5 text-muted-foreground">
-                {products.length > 0
+            <EmptyState
+              icon="Warehouse"
+              message={
+                products.length > 0
                   ? "Stock alerts will appear here when any unit drops near its reorder level."
-                  : "Add your first item to start tracking stock alerts."}
-              </Text>
-            </View>
+                  : "Add your first item to start tracking stock alerts."
+              }
+              title="No low-stock items"
+            />
           )}
         </View>
       </View>
@@ -2109,15 +2085,13 @@ export default function DashboardRoute() {
               ) : null}
             </View>
           ) : (
-            <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-              <Text className="font-semibold text-foreground">
-                No attendants yet
-              </Text>
-              <Text className="text-sm leading-5 text-muted-foreground">
-                Invite your first attendant when you are ready to share sales
-                work.
-              </Text>
-            </View>
+            <EmptyState
+              actionLabel="Invite attendant"
+              actionProps={{ onPress: () => staffModal.present() }}
+              icon="UserPlus"
+              message="Invite your first attendant when you are ready to share sales work."
+              title="No attendants yet"
+            />
           )}
         </View>
       )}
@@ -2187,15 +2161,11 @@ export default function DashboardRoute() {
             ) : null}
           </View>
         ) : (
-          <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-            <Text className="font-semibold text-foreground">
-              No stock movement yet
-            </Text>
-            <Text className="text-sm leading-5 text-muted-foreground">
-              Opening stock, restocks, adjustments, conversions, and sales will
-              appear here.
-            </Text>
-          </View>
+          <EmptyState
+            icon="ListChecks"
+            message="Opening stock, restocks, adjustments, conversions, and sales will appear here."
+            title="No stock movement yet"
+          />
         )}
       </View>
 
@@ -2226,14 +2196,11 @@ export default function DashboardRoute() {
             ) : null}
           </View>
         ) : (
-          <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-            <Text className="font-semibold text-foreground">
-              No saved customers yet
-            </Text>
-            <Text className="text-sm leading-5 text-muted-foreground">
-              Customer names from completed sales will appear here.
-            </Text>
-          </View>
+          <EmptyState
+            icon="Users"
+            message="Customer names from completed sales will appear here."
+            title="No saved customers yet"
+          />
         )}
       </View>
 
@@ -2253,14 +2220,11 @@ export default function DashboardRoute() {
               ) : null}
             </>
           ) : (
-            <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-              <Text className="font-semibold text-foreground">
-                No sales yet
-              </Text>
-              <Text className="text-sm leading-5 text-muted-foreground">
-                Completed sales will appear here as soon as they are recorded.
-              </Text>
-            </View>
+            <EmptyState
+              icon="ReceiptText"
+              message="Completed sales will appear here as soon as they are recorded."
+              title="No sales yet"
+            />
           )}
         </View>
       </View>

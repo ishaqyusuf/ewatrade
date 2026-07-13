@@ -413,6 +413,17 @@ The first-product setup sheet is the empty-business bridge after auth/business e
 - Empty variant copy must make it clear that users can skip variants and continue with only the primary unit.
 - Production product creation, local/offline fallback, opening-stock movement, and sync queue behavior stay unchanged.
 
+## Mobile Dashboard Redesign
+
+Owner and attendant dashboard surfaces should share the same shell and operational component vocabulary.
+
+- Dashboard status chips should use `StatusBadge` for sync, payment, staff, customer, product-link, stock, and movement states.
+- Empty dashboard sections should use `EmptyState` rather than hand-built dashed panels.
+- Owner-only subscription, staff, closeout, reports, and inventory management actions remain hidden from attendants.
+- Attendant views prioritize sale creation, current session, recent sales, customers, assigned/available stock, and sync state.
+- Production snapshot reads, local fallback rows, offline banner behavior, and first-product prompting remain guarded by source QA.
+- `qa:dashboard-redesign` is part of mobile source QA and protects the shared shell, role gating, compact sections, shared badges, and shared empty states.
+
 ## Acceptance Review Checklist
 
 Every Retail Ops implementation slice should answer:
