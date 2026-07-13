@@ -5,9 +5,8 @@ dist
 build
 *.tsbuildinfo
 .DS_Store
-.env.local
-.env*.local
-.env.production
-.vercel
 .env
+.env.*
+!.env.example
+.vercel
 packages/db/generated
