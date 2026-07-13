@@ -1,5 +1,15 @@
 # Progress
 
+## 2026-07-13
+
+### Mobile UI Redesign Foundation Primitives
+- Source Mode: `/implement-with-progress`
+- Source Ticket: `.scratch/mobile-ui-redesign-implementation/issues/01-mobile-design-foundation-and-reusable-primitives.md`
+- Completed: Implemented the first mobile UI redesign ticket by adding a shared mobile design foundation module, refreshing mobile light/dark theme tokens toward the approved dark-mode/teal operational direction, adding reusable status badge, status banner, empty state, and timeline row primitives, and wiring a focused `qa:design-foundation` check into mobile source QA.
+- Changed Source Files: `apps/mobile/src/lib/design-foundation.ts`, `apps/mobile/src/lib/theme.ts`, `apps/mobile/src/styles/global.css`, `apps/mobile/src/components/mobile/status-badge.tsx`, `apps/mobile/src/components/mobile/status-banner.tsx`, `apps/mobile/src/components/mobile/empty-state.tsx`, `apps/mobile/src/components/mobile/timeline-row.tsx`, `apps/mobile/src/components/mobile/index.ts`, `apps/mobile/scripts/check-design-foundation.mjs`, `apps/mobile/scripts/check-theme-color-guard.mjs`, `apps/mobile/scripts/run-mvp-source-qa.mjs`, `apps/mobile/package.json`, `apps/mobile/DESIGN.md`, `.scratch/mobile-ui-redesign-implementation/issues/01-mobile-design-foundation-and-reusable-primitives.md`.
+- Brain Files Updated: `.brain/features/retail-ops-design-system-and-ia.md`, `.brain/progress.md`.
+- Checks Run: `bunx biome check --write apps/mobile/src/lib/design-foundation.ts apps/mobile/src/lib/theme.ts apps/mobile/src/styles/global.css apps/mobile/src/components/mobile/status-badge.tsx apps/mobile/src/components/mobile/status-banner.tsx apps/mobile/src/components/mobile/empty-state.tsx apps/mobile/src/components/mobile/timeline-row.tsx apps/mobile/src/components/mobile/index.ts apps/mobile/scripts/check-design-foundation.mjs apps/mobile/scripts/check-theme-color-guard.mjs apps/mobile/scripts/run-mvp-source-qa.mjs apps/mobile/package.json apps/mobile/DESIGN.md .scratch/mobile-ui-redesign-implementation/issues/01-mobile-design-foundation-and-reusable-primitives.md .brain/features/retail-ops-design-system-and-ia.md .brain/progress.md` (left existing Tailwind `@config`/`@import` order unchanged after Biome reported it); `bun --cwd apps/mobile qa:design-foundation`; `bun --cwd apps/mobile qa:theme-colors`; `bun --cwd apps/mobile qa:action-primitives`; `bun --cwd apps/mobile qa:keyboard-coverage`; `bun --cwd apps/mobile qa:nativewind-style`; `bun --cwd apps/mobile qa:mvp-typechecks`; `bun --cwd apps/mobile qa:mvp-source`; package JSON parse check for `apps/mobile/package.json`; `git diff --check -- ...`.
+
 ## 2026-07-12
 
 ### Mobile Retail Ops QA Phase 385 - Expo Public URL Blocker Proof

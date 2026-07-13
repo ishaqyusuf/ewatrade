@@ -13,6 +13,7 @@
     "qa:create-sale-flow": "node ./scripts/check-create-sale-flow.mjs",
     "qa:customer-book-flow": "node ./scripts/check-customer-book-flow.mjs",
     "qa:dashboard-production-flow": "node ./scripts/check-dashboard-production-flow.mjs",
+    "qa:design-foundation": "node ./scripts/check-design-foundation.mjs",
     "qa:expo-env-attachment": "node ./scripts/check-expo-env-attachment.mjs",
     "qa:expo-env-attachment-live": "EWATRADE_EXPO_ENV_VERIFY_LIVE=1 node ./scripts/check-expo-env-attachment.mjs",
     "qa:expo-env-attachment-fixtures": "node ./scripts/check-expo-env-attachment-fixtures.mjs",

@@ -2,17 +2,17 @@ import { DarkTheme, DefaultTheme, type Theme } from "@react-navigation/native"
 
 export const THEME = {
   light: {
-    background: "rgb(248, 250, 252)",
-    foreground: "rgb(15, 23, 42)",
+    background: "rgb(247, 249, 247)",
+    foreground: "rgb(17, 24, 20)",
 
     card: "rgb(255, 255, 255)",
-    cardForeground: "rgb(15, 23, 42)",
+    cardForeground: "rgb(17, 24, 20)",
 
     popover: "rgb(255, 255, 255)",
-    popoverForeground: "rgb(15, 23, 42)",
+    popoverForeground: "rgb(17, 24, 20)",
 
-    primary: "rgb(30, 64, 175)",
-    primaryForeground: "rgb(239, 246, 255)",
+    primary: "rgb(13, 94, 82)",
+    primaryForeground: "rgb(240, 253, 250)",
 
     success: "rgb(22, 163, 74)",
     successForeground: "rgb(240, 253, 244)",
@@ -20,28 +20,28 @@ export const THEME = {
     warn: "rgb(217, 119, 6)",
     warnForeground: "rgb(255, 247, 237)",
 
-    secondary: "rgb(241, 245, 249)",
-    secondaryForeground: "rgb(30, 41, 59)",
+    secondary: "rgb(238, 243, 240)",
+    secondaryForeground: "rgb(34, 48, 42)",
 
-    muted: "rgb(226, 232, 240)",
-    mutedForeground: "rgb(100, 116, 139)",
+    muted: "rgb(225, 233, 229)",
+    mutedForeground: "rgb(92, 106, 100)",
 
-    accent: "rgb(219, 234, 254)",
-    accentForeground: "rgb(30, 64, 175)",
+    accent: "rgb(219, 245, 239)",
+    accentForeground: "rgb(13, 94, 82)",
 
     destructive: "rgb(185, 28, 28)",
     destructiveForeground: "rgb(254, 242, 242)",
 
-    border: "rgb(203, 213, 225)",
-    input: "rgb(226, 232, 240)",
-    ring: "rgb(37, 99, 235)",
+    border: "rgb(203, 215, 209)",
+    input: "rgb(225, 233, 229)",
+    ring: "rgb(20, 184, 166)",
 
     radius: "0.65rem",
 
-    chart1: "rgb(37, 99, 235)",
+    chart1: "rgb(13, 94, 82)",
     chart2: "rgb(13, 148, 136)",
     chart3: "rgb(217, 119, 6)",
-    chart4: "rgb(99, 102, 241)",
+    chart4: "rgb(31, 41, 55)",
     chart5: "rgb(225, 29, 72)",
   },
 
@@ -55,8 +55,8 @@ export const THEME = {
     popover: "rgb(30, 30, 30)",
     popoverForeground: "rgb(250, 250, 250)",
 
-    primary: "rgb(255, 108, 0)",
-    primaryForeground: "rgb(255, 247, 237)",
+    primary: "rgb(45, 212, 191)",
+    primaryForeground: "rgb(4, 47, 46)",
 
     success: "rgb(34, 197, 94)",
     successForeground: "rgb(236, 253, 245)",
@@ -78,11 +78,11 @@ export const THEME = {
 
     border: "rgb(46, 46, 46)",
     input: "rgb(56, 56, 56)",
-    ring: "rgb(255, 137, 51)",
+    ring: "rgb(45, 212, 191)",
 
     radius: "0.65rem",
 
-    chart1: "rgb(255, 108, 0)",
+    chart1: "rgb(45, 212, 191)",
     chart2: "rgb(34, 197, 94)",
     chart3: "rgb(251, 191, 36)",
     chart4: "rgb(115, 115, 115)",

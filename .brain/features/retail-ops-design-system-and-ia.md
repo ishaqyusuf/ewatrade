@@ -371,6 +371,16 @@ Use consistent labels across surfaces:
 - Avoid decorative gradients/orbs and one-note palettes.
 - Dark mode must use shared color/icon primitives, not one-off screen colors.
 
+## Mobile Redesign Foundation
+
+The first mobile redesign implementation slice established a reusable foundation in `apps/mobile/src/lib/design-foundation.ts` and the shared mobile component barrel.
+
+- Mobile light mode uses a calm operational green/teal primary system for action and brand emphasis.
+- Mobile dark mode follows the dark sample direction with a near-black canvas, compact dark cards, and teal action accents instead of the retired orange primary action color.
+- Amber remains the warning and attention color for money, pending, and stock-risk states.
+- Reusable mobile primitives now include `StatusBadge`, `StatusBanner`, `EmptyState`, and `TimelineRow`, alongside the existing haptic action buttons, pressables, floating sheets, and keyboard-aware layouts.
+- `qa:design-foundation` is part of the mobile source QA path so later screen tickets must preserve the shared tokens, primitives, NativeWind discipline, and documented dark/light foundation.
+
 ## Acceptance Review Checklist
 
 Every Retail Ops implementation slice should answer:

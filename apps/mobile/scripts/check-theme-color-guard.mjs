@@ -95,12 +95,16 @@ function checkDarkThemeTokens() {
       token: "rgb(250, 250, 250)",
     },
     {
-      label: "orange brand/action accent",
-      token: "rgb(255, 108, 0)",
+      label: "teal brand/action accent",
+      token: "rgb(45, 212, 191)",
     },
     {
       label: "green success/online accent",
       token: "rgb(34, 197, 94)",
+    },
+    {
+      label: "amber attention accent",
+      token: "rgb(245, 158, 11)",
     },
     {
       label: "muted gray metadata",
@@ -113,6 +117,7 @@ function checkDarkThemeTokens() {
     "rgb(51, 65, 85)",
     "rgb(96, 165, 250)",
     "rgb(125, 211, 252)",
+    "rgb(255, 108, 0)",
   ]
 
   for (const { contents, file } of tokenFiles) {

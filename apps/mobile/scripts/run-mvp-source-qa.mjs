@@ -29,6 +29,10 @@ const CHECKS = [
     script: "check-dashboard-production-flow.mjs",
   },
   {
+    label: "Design foundation",
+    script: "check-design-foundation.mjs",
+  },
+  {
     label: "First-product flow",
     script: "check-first-product-flow.mjs",
   },
