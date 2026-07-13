@@ -18,3 +18,14 @@ Themes control:
 - button styles
 
 Templates combine sections into full site layouts.
+
+## Publish Site Wayfinder
+
+The product-image/storefront Wayfinder resolved the first paid Publish Site boundary:
+
+- Publish Site is a store-level entitlement under tenant billing ownership.
+- Candidate subdomains can be reserved at store setup, but public storefronts only become live after publish entitlement succeeds.
+- MVP storefronts include product grid, product detail, product images, price/availability labels, contact or WhatsApp CTA, and existing order-request flow where enabled.
+- Custom domains, rich templates, advanced branding, and direct online payment acceptance remain later.
+
+See `.brain/features/product-image-marketplace-and-storefront-publishing.md`.

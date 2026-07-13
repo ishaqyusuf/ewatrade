@@ -8,6 +8,7 @@ Completed work with durable value to the project.
 - Updated Brain architecture guidance to reflect Prisma-managed schema plus Drizzle runtime querying.
 - Documented that Supabase is not part of the current architecture.
 - Added ADR-0001 to make the Prisma/Drizzle ownership split explicit.
+- Resolved the `.scratch` Wayfinder decision tickets for Ewatrade Dispatch and Product Image Marketplace/Storefront Publishing, including Brain feature docs and ADRs for the durable product/package boundaries.
 - Scaffolded the repository as a `midday`-style monorepo foundation that later expanded into storefront, marketing, POS, and dashboard app surfaces.
 - Standardized the frontend foundation on Next.js 16 and Tailwind CSS 4 using a shared styling setup informed by the `gnd` project.
 

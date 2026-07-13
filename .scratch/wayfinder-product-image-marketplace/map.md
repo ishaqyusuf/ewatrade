@@ -8,16 +8,26 @@ Find the spec boundary for a Product Image Marketplace and Storefront Publishing
 - Repo language: `Tenant` is the merchant/business account; `Store` is the per-business or sub-business unit; `Product` and `ProductVariant` are the catalog records; `Site`, `Page`, `Theme`, `Template`, and `TenantHostname` already cover storefront publishing primitives.
 - Consult `.brain/database/schema.md`, `.brain/database/relationships.md`, `.brain/modules/marketplace.md`, `.brain/modules/website-builder.md`, `packages/db/prisma/models/commerce.prisma`, `packages/db/prisma/models/storefront.prisma`, `packages/db/prisma/models/base.prisma`, and `packages/db/prisma/models/billing.prisma`.
 - Preserve the existing rule that public marketplace data must be explicitly flagged for exposure.
-- Token pricing, provider choice, marketplace image licensing, and AI refinement policy are unresolved decisions, not assumptions.
+- Token pricing, provider path, marketplace image licensing, and AI refinement policy are now resolved at Wayfinder level; implementation specs still need exact provider configuration, pricing values, and legal copy.
 
 ## Decisions so far
 
+- Marketplace image publishing grants Ewatrade a reusable in-platform license listing, while buyers receive a copied asset license for their own store/product use.
+- Token balances belong to tenant billing ownership with store attribution on ledger entries.
+- Native iOS/Android token top-ups should use Apple/Google billing paths for digital image tokens; local bank/fintech checkout is appropriate for web/dashboard or non-digital contexts.
+- Product-title image discovery searches marketplace listings and the merchant's own gallery, never another tenant's private images.
+- AI refinement runs on merchant-owned or licensed copies, uses token holds, requires merchant acceptance, and preserves original/refined lineage.
+- Product create stays simple: title first, image optional, stock/variants/publish controls discoverable, marketplace consent explicit.
+- Publish Site is a store-level entitlement under tenant billing, not token-gated.
+- Marketplace moderation uses pre-listing automated checks, report/dispute workflows, listing states, and audit-backed refunds/reversals.
+- The prototype flow is a mobile-first image picker with Marketplace, Your gallery, Upload, Camera, optional refinement, token recovery, consent, and Draft/Publish/Schedule outcomes.
+
 ## Not yet specified
 
-- Final implementation spec and tracer-bullet ticket breakdown after the decision tickets close.
-- Exact database migration sequence for product image assets, marketplace listings, token wallet/ledger rows, purchase sessions, and refinement jobs after lifecycle and token decisions are resolved.
-- Exact mobile/web UI state machine and final copy after the product-create image flow, payment recovery, and marketplace opt-in behavior are chosen.
-- AI image provider, storage, moderation, and generated/refined image policy after cost, quality, and consent constraints are settled.
+- Final implementation spec and tracer-bullet ticket breakdown.
+- Exact database migration sequence for product image assets, marketplace listings, license purchases, token wallet/ledger rows, top-up sessions, holds, disputes, and refinement jobs.
+- Provider choices for storage, moderation, AI refinement, Apple/Google IAP products, and web/dashboard payment processors.
+- Final UI copy, legal terms, tax/accounting treatment, and support operations process.
 - Storefront template/branding roadmap beyond the first paid publish-site MVP boundary.
 
 ## Out of scope
