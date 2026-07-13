@@ -26,9 +26,15 @@ const SURFACE_CONTRACTS = [
   },
   {
     file: "src/app/dashboard.tsx",
-    markers: ["MobileScreen", "DASHBOARD_RECENT_SALE_PREVIEW_LIMIT"],
+    markers: ["MobileAppShell", "DASHBOARD_RECENT_SALE_PREVIEW_LIMIT"],
     reason:
-      "dashboard must keep safe-area/keyboard handling and bounded previews",
+      "dashboard must keep the shared safe-area shell and bounded previews",
+  },
+  {
+    file: "src/components/mobile/app-shell.tsx",
+    markers: ["MobileScreen", "contentContainerStyle", "keyboardBottomOffset"],
+    reason:
+      "mobile app shell must preserve safe-area and keyboard handling through MobileScreen",
   },
   {
     file: "src/components/ui/modal.tsx",

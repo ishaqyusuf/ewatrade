@@ -381,6 +381,16 @@ The first mobile redesign implementation slice established a reusable foundation
 - Reusable mobile primitives now include `StatusBadge`, `StatusBanner`, `EmptyState`, and `TimelineRow`, alongside the existing haptic action buttons, pressables, floating sheets, and keyboard-aware layouts.
 - `qa:design-foundation` is part of the mobile source QA path so later screen tickets must preserve the shared tokens, primitives, NativeWind discipline, and documented dark/light foundation.
 
+## Mobile App Shell
+
+Dashboard-class mobile screens should use `MobileAppShell` for the shared header, active business context, non-blocking sync banner slot, safe-area keyboard-aware content, and floating bottom navigation.
+
+- The shell uses a GND-inspired floating bottom nav with a central create-sale action.
+- Owner and attendant navigation is filtered from the same shell API; owner-only nav items are not rendered for attendants.
+- Dynamic safe-area placement is handled inside the shell while visual styling remains NativeWind-first.
+- Screen logic should pass actions into the shell rather than reimplementing tab bars or fixed footers in individual screens.
+- `qa:app-shell` is part of mobile source QA and verifies the reusable shell, role filtering, floating nav selectors, and dashboard integration.
+
 ## Acceptance Review Checklist
 
 Every Retail Ops implementation slice should answer:

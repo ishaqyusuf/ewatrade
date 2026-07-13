@@ -9,6 +9,10 @@ const CHECKS = [
     script: "check-app-launch-config.mjs",
   },
   {
+    label: "App shell",
+    script: "check-app-shell.mjs",
+  },
+  {
     label: "Action primitives",
     script: "check-action-primitives.mjs",
   },

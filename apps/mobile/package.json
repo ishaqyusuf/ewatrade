@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "bun run with-env node ./scripts/run-expo-cli.cjs start --port ${EWATRADE_EXPO_PORT:-3002} --clear",
     "qa:action-primitives": "node ./scripts/check-action-primitives.mjs",
+    "qa:app-shell": "node ./scripts/check-app-shell.mjs",
     "qa:app-launch": "node ./scripts/check-app-launch-config.mjs",
     "icons:generate": "node ./scripts/generate-launcher-icons.mjs",
     "qa:android-ready": "node ./scripts/check-android-qa-ready.mjs",

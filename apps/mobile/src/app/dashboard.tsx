@@ -5,7 +5,8 @@ import {
   CreateSaleSheet,
   CustomerBookSheet,
   FirstProductSetupSheet,
-  MobileScreen,
+  MobileAppShell,
+  type MobileAppShellNavItem,
   ProductShareSheet,
   RepClockInSheet,
   ReportsSheet,
@@ -1363,6 +1364,8 @@ export default function DashboardRoute() {
       ),
     [isAttendantDashboard],
   )
+  const businessDisplayName =
+    activeBusiness?.name ?? profile?.businessName ?? "Retail workspace"
   const subscriptions = useSubscriptionStore((state) => state.subscriptions)
   const deactivateShareLink = useRetailOpsStore(
     (state) => state.deactivateShareLink,
@@ -1825,6 +1828,67 @@ export default function DashboardRoute() {
       staffModal.present()
     }
   }
+  const syncBanner = (
+    <Pressable
+      className={cn(
+        "flex-row items-start gap-2 rounded-2xl border p-3 active:opacity-90",
+        syncBannerClassName,
+      )}
+      haptic
+      onPress={() => syncModal.present()}
+      testID="retail-sync-banner"
+      transition
+    >
+      <Icon
+        className={cn("mt-0.5 size-base shrink-0", syncBannerIconClassName)}
+        name={isOfflineMode ? "Wind" : syncBannerIconName}
+      />
+      <View className="min-w-0 flex-1 shrink">
+        <Text className="text-sm font-medium leading-5 text-foreground">
+          {syncBannerText}
+        </Text>
+      </View>
+      {isOfflineMode ? null : (
+        <Icon
+          className="mt-0.5 size-sm shrink-0 text-muted-foreground"
+          name="ChevronRight"
+        />
+      )}
+    </Pressable>
+  )
+  const shellCentralAction: MobileAppShellNavItem = {
+    accessibilityLabel: "Create sale",
+    icon: "Plus",
+    label: "Sale",
+    onPress: () => handleQuickAction("New sale"),
+  }
+  const shellNavItems: MobileAppShellNavItem[] = [
+    {
+      icon: "LayoutDashboard",
+      isActive: true,
+      label: "Home",
+      onPress: () => undefined,
+    },
+    {
+      icon: "ReceiptText",
+      label: "Sales",
+      onPress: () => handleQuickAction("New sale"),
+    },
+    {
+      icon: "Warehouse",
+      label: "Stock",
+      onPress: () =>
+        firstProduct ? stockModal.present() : setupModal.present(),
+      ownerOnly: true,
+    },
+    {
+      icon: "Users",
+      label: isAttendantDashboard ? "Customers" : "Staff",
+      onPress: () =>
+        isAttendantDashboard ? customerModal.present() : staffModal.present(),
+      ownerOnly: false,
+    },
+  ]
 
   useEffect(() => {
     if (!isAuthenticated) return
@@ -1878,57 +1942,17 @@ export default function DashboardRoute() {
   }
 
   return (
-    <MobileScreen contentClassName="gap-6" keyboardBottomOffset={120}>
-      <View className="flex-row items-center justify-between">
-        <View className="flex-1 gap-1 pr-4">
-          <Text className="text-3xl font-bold text-foreground">Dashboard</Text>
-          <Pressable
-            className="flex-row items-center gap-2 self-start active:opacity-80"
-            haptic
-            onPress={() => businessModal.present()}
-            transition
-          >
-            <Text className="text-base text-muted-foreground">
-              {activeBusiness?.name ??
-                profile?.businessName ??
-                "Retail workspace"}
-            </Text>
-            <Icon
-              className="size-sm text-muted-foreground"
-              name="ChevronDown"
-            />
-          </Pressable>
-        </View>
-        <Logout />
-      </View>
-
-      <Pressable
-        className={cn(
-          "flex-row items-start gap-2 rounded-2xl border p-3 active:opacity-90",
-          syncBannerClassName,
-        )}
-        haptic
-        onPress={() => syncModal.present()}
-        testID="retail-sync-banner"
-        transition
-      >
-        <Icon
-          className={cn("mt-0.5 size-base shrink-0", syncBannerIconClassName)}
-          name={isOfflineMode ? "Wind" : syncBannerIconName}
-        />
-        <View className="min-w-0 flex-1 shrink">
-          <Text className="text-sm font-medium leading-5 text-foreground">
-            {syncBannerText}
-          </Text>
-        </View>
-        {isOfflineMode ? null : (
-          <Icon
-            className="mt-0.5 size-sm shrink-0 text-muted-foreground"
-            name="ChevronRight"
-          />
-        )}
-      </Pressable>
-
+    <MobileAppShell
+      businessName={businessDisplayName}
+      centralAction={shellCentralAction}
+      headerAction={<Logout />}
+      keyboardBottomOffset={140}
+      navItems={shellNavItems}
+      onBusinessPress={() => businessModal.present()}
+      role={isAttendantDashboard ? "attendant" : "owner"}
+      syncBanner={syncBanner}
+      title="Dashboard"
+    >
       {firstProduct ? (
         <InventorySetupSummary
           canManageInventory={canManageInventory}
@@ -2282,6 +2306,6 @@ export default function DashboardRoute() {
         ref={conversionModal.ref}
       />
       <SyncStatusSheet onComplete={syncModal.dismiss} ref={syncModal.ref} />
-    </MobileScreen>
+    </MobileAppShell>
   )
 }

@@ -1,4 +1,9 @@
 export { ActionButton } from "./action-button"
+export {
+  MobileAppShell,
+  type MobileAppShellNavItem,
+  type MobileAppShellRole,
+} from "./app-shell"
 export { BusinessSwitchSheet } from "./business-switch-sheet"
 export { CloseoutSheet } from "./closeout-sheet"
 export { CreateSaleSheet } from "./create-sale-sheet"

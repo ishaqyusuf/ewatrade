@@ -2,6 +2,14 @@
 
 ## 2026-07-13
 
+### Mobile UI Redesign Floating Shell
+- Source Mode: `/implement-with-progress`
+- Source Ticket: `.scratch/mobile-ui-redesign-implementation/issues/02-floating-app-shell-and-role-aware-navigation.md`
+- Completed: Implemented the second mobile UI redesign ticket by adding a reusable `MobileAppShell`, wiring the dashboard into the new floating bottom navigation frame, preserving the existing non-blocking sync banner and production dashboard gates, and adding `qa:app-shell` to mobile source QA.
+- Changed Source Files: `apps/mobile/src/components/mobile/app-shell.tsx`, `apps/mobile/src/components/mobile/index.ts`, `apps/mobile/src/app/dashboard.tsx`, `apps/mobile/scripts/check-app-shell.mjs`, `apps/mobile/scripts/check-mvp-surface-structure.mjs`, `apps/mobile/scripts/run-mvp-source-qa.mjs`, `apps/mobile/package.json`, `.scratch/mobile-ui-redesign-implementation/issues/02-floating-app-shell-and-role-aware-navigation.md`.
+- Brain Files Updated: `.brain/features/retail-ops-design-system-and-ia.md`, `.brain/progress.md`.
+- Checks Run: `bun --cwd apps/mobile qa:app-shell`; `bun --cwd apps/mobile qa:dashboard-production-flow`; `bun --cwd apps/mobile qa:offline-visuals`; `bun --cwd apps/mobile qa:nativewind-style`; `bun --cwd apps/mobile qa:mvp-typechecks`; `bun --cwd apps/mobile qa:mvp-source`; `bunx biome check --write ...`.
+
 ### Mobile UI Redesign Foundation Primitives
 - Source Mode: `/implement-with-progress`
 - Source Ticket: `.scratch/mobile-ui-redesign-implementation/issues/01-mobile-design-foundation-and-reusable-primitives.md`
