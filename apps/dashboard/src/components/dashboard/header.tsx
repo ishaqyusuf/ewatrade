@@ -1,5 +1,6 @@
 "use client"
 
+import { DashboardCommandSearch } from "@/components/dashboard/command-search"
 import {
   type DashboardNavItem,
   getDashboardNavItem,
@@ -10,11 +11,7 @@ import type { TenantContext } from "@/lib/tenant"
 import { getUserInitials } from "@/lib/user-display"
 import { cn } from "@/utils"
 import { Avatar, AvatarFallback, Button } from "@ewatrade/ui"
-import {
-  Logout01Icon,
-  Search01Icon,
-  Store04Icon,
-} from "@hugeicons/core-free-icons"
+import { Logout01Icon, Store04Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { usePathname, useRouter } from "next/navigation"
 import { useState } from "react"
@@ -101,18 +98,7 @@ export function DashboardHeader({ ctx, navItems, user }: Props) {
         </h1>
       </div>
 
-      <button
-        type="button"
-        disabled
-        className="hidden min-w-[220px] items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-sm text-muted-foreground transition disabled:cursor-not-allowed disabled:opacity-70 lg:flex"
-        aria-label="Dashboard search is not available yet"
-      >
-        <HugeiconsIcon icon={Search01Icon} className="size-4" />
-        <span className="flex-1 text-left">Find anything...</span>
-        <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-          /
-        </kbd>
-      </button>
+      <DashboardCommandSearch navItems={navItems} />
 
       <div className="hidden items-center gap-2 xl:flex">
         <HugeiconsIcon

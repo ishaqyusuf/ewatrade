@@ -29,6 +29,9 @@ Define authorization and visibility rules for APIs.
 - Active store switching can only select stores from the active tenant context.
 - Dashboard shell navigation is role-aware: owner/admin users see the full dashboard surface, managers see operational administration without owner-only settings, cashier/operator users see permitted work surfaces, and support/member users are limited to overview.
 - Known dashboard routes are gated by the same centralized role policy used by navigation visibility. API/service permission checks remain the source of truth for data access.
+- `GET /api/search` is an authenticated dashboard-only command-surface endpoint. It must resolve the active tenant and selected or active store before reading records.
+- Dashboard search record groups must follow the same role gates as their underlying surfaces: product results require catalog or inventory access, staff results require staff-management access, sales/customer results require sales-operations access, and generated-link results require share-link access.
+- Dashboard command-surface page and command entries are derived from permitted navigation items and only navigate to target surfaces; they must not perform writes or bypass target page/API authorization.
 
 ## Retail Ops Read Rules
 - `retailOps.summary`, `retailOps.inventory`, `retailOps.salesByProduct`, `retailOps.salesByRep`, `retailOps.customerBook`, `retailOps.recentSales`, `retailOps.creditSales`, `retailOps.sessions`, and `retailOps.paymentReconciliation` are protected tRPC procedures.

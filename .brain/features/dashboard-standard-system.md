@@ -28,6 +28,8 @@ Ticket 07 generated product links and shared-link follow-up slice is complete. `
 
 Ticket 08 analytics and reports standardization is complete. `/analytics` remains the standard Reports surface with summary KPI cards, date/store/table filters, CSV exports, browser print-to-PDF controls, sales/payment/inventory/stock/credit/session/variance/sync/conflict report sections, and sync conflict review through existing Retail Ops tRPC procedures.
 
+Ticket 09 search-anything command surface is complete. The dashboard header now exposes a Midday-style command search with visible shell triggers, `/` keyboard open, page and bounded command results derived from permitted navigation, and tenant/store/role-scoped record search through `GET /api/search`. The route searches permitted products, customers, staff, sales, and generated links without performing writes; command entries navigate users to the relevant sheet/work surface and keep final permission enforcement on the target page/API.
+
 The current direction is:
 
 - Use `/Users/M1PRO/Documents/code/halaal-coperative` as the fast-start dashboard reference where it accelerates implementation.
@@ -51,6 +53,7 @@ Resolved audit guidance:
 - The dashboard staff bridge route handlers are retained as proof-slice migration bridges until the typed dashboard API surface fully covers staff list, invite, status update, and onboarding follow-up workflows.
 - The dashboard sales and customer bridge route handlers are retained as proof-slice migration bridges until the typed dashboard API surface fully covers sales review, customer book, cashier sessions, payment reconciliation, and closeout variance review workflows.
 - The dashboard links bridge route handler is retained as a proof-slice migration bridge until the typed dashboard API surface fully covers generated product links, shared-link order requests, order follow-up, and delivery request visibility workflows.
+- The dashboard search bridge route handler is retained as a proof-slice migration bridge until the typed dashboard API surface fully covers cross-surface record search and command discovery.
 
 ## Planned Dashboard Scope
 

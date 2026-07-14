@@ -45,6 +45,9 @@ Track important request/response shapes and contract rules.
   - `retailOps.paymentReconciliation` accepts optional `storeId`, `from`, and `to`
   - `GET /api/sales` is the dashboard bridge read contract over recent sales, credit sales, cashier sessions, and payment reconciliation. It accepts optional `storeId` and `sessionStatus` values `all`, `open`, or `closed`.
   - `GET /api/customers` is the dashboard bridge read contract over the customer book. It accepts optional `storeId` and `search`.
+  - `GET /api/search` is the dashboard bridge read contract for command-surface record search. It accepts optional `q` and `storeId`, returns `{ query, results }`, and returns an empty `results` array when the trimmed query is shorter than two characters.
+  - Dashboard search results use `{ id, group, title, description, href }`; current groups are `products`, `customers`, `staff`, `sales`, and `links`.
+  - Dashboard command-surface pages and commands are client-composed from permitted navigation items; the search API only returns records and does not perform writes.
   - Date range inputs are coerced to dates at the tRPC boundary. When omitted, reporting defaults to today from local server midnight through request time.
   - Protected date-range reads that receive a `from` date must pass the tenant's `reportsHistoryDays` entitlement before querying report data.
   - Store resolution uses the requested store when provided, otherwise the active tenant store, otherwise the first non-archived tenant store.
