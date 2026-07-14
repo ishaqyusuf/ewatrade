@@ -1,0 +1,22 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "EwaTrade",
+  "version": "0.1.0",
+  "identifier": "com.ewatrade.desktop",
+  "build": {
+    "frontendDist": "../static"
+  },
+  "app": {
+    "macOSPrivateApi": true,
+    "security": {
+      "capabilities": ["default"],
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "category": "Business",
+    "createUpdaterArtifacts": false,
+    "targets": ["dmg", "app"]
+  }
+}

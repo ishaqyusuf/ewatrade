@@ -66,6 +66,10 @@
         "typescript": "catalog:",
       },
     },
+    "apps/desktop": {
+      "name": "@ewatrade/desktop",
+      "version": "0.1.0",
+    },
     "apps/marketing": {
       "name": "@ewatrade/marketing",
       "version": "1.0.0",
@@ -692,6 +696,8 @@
     "@ewatrade/dashboard": ["@ewatrade/dashboard@workspace:apps/dashboard"],
 
     "@ewatrade/db": ["@ewatrade/db@workspace:packages/db"],
+
+    "@ewatrade/desktop": ["@ewatrade/desktop@workspace:apps/desktop"],
 
     "@ewatrade/email": ["@ewatrade/email@workspace:packages/email"],
 

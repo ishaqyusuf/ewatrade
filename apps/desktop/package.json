@@ -1,0 +1,16 @@
+{
+  "name": "@ewatrade/desktop",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "smoke": "bun scripts/smoke-desktop-config.ts",
+    "tauri": "bunx @tauri-apps/cli",
+    "tauri:dev": "DESKTOP_ENV=development bunx @tauri-apps/cli dev --config src-tauri/tauri.dev.conf.json",
+    "tauri:staging": "DESKTOP_ENV=staging bunx @tauri-apps/cli dev --config src-tauri/tauri.staging.conf.json",
+    "tauri:prod": "DESKTOP_ENV=production bunx @tauri-apps/cli dev",
+    "tauri:build:dev": "DESKTOP_ENV=development bunx @tauri-apps/cli build --config src-tauri/tauri.dev.conf.json",
+    "tauri:build:staging": "DESKTOP_ENV=staging bunx @tauri-apps/cli build --config src-tauri/tauri.staging.conf.json",
+    "tauri:build:prod": "DESKTOP_ENV=production bunx @tauri-apps/cli build"
+  }
+}

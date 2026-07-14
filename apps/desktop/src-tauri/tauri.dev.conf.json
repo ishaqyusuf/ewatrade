@@ -1,0 +1,7 @@
+{
+  "productName": "EwaTrade Dev",
+  "identifier": "com.ewatrade.desktop.dev",
+  "bundle": {
+    "createUpdaterArtifacts": false
+  }
+}

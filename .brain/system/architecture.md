@@ -10,6 +10,7 @@ Describe the intended technical architecture and responsibility boundaries for t
 ## Architecture Direction
 - Workspace shape: follow the `midday` project monorepo pattern with `apps/*` and `packages/*` as the primary structure, with any future tooling packages added only when needed.
 - Frontends: Next.js web applications and planned Expo mobile applications.
+- Desktop wrapper: a private Tauri package may wrap the dashboard URL for internal desktop builds, but dashboard workflows remain implemented in the web dashboard.
 - Backend entry points: Hono-based HTTP services with typed tRPC procedures where shared end-to-end contracts are needed.
 - Domain flow: client -> API layer -> service layer -> repository layer -> database.
 - Async work: Trigger.dev for jobs and workflow orchestration.

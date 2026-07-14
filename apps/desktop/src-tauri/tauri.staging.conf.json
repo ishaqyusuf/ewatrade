@@ -1,0 +1,7 @@
+{
+  "productName": "EwaTrade Staging",
+  "identifier": "com.ewatrade.desktop.staging",
+  "bundle": {
+    "createUpdaterArtifacts": false
+  }
+}
