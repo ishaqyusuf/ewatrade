@@ -34,6 +34,8 @@ Ticket 10 settings, subscription, and payroll/payout planning surface is complet
 
 Ticket 11 Midday-style desktop wrapper internal build is complete. `apps/desktop` is a private Tauri/Vite wrapper package that opens the EwaTrade dashboard URL for development, staging, or production through environment-targeted build scripts. It keeps dashboard auth/session behavior in the web app, provides internal macOS build instructions, and leaves signing, notarization, updater artifacts, installer artwork, and public distribution as future scope.
 
+Ticket 12 dashboard QA hardening and Brain handoff is complete. The closing pass verified dashboard helper policies, dashboard typecheck, desktop wrapper smoke, authenticated route availability across the main dashboard pages, logged-out redirects with `next` preservation, and selected dashboard API smoke checks. Remaining QA gaps are fixture-dependent positive paths for multi-tenant/store switching, non-empty sales/session/customer datasets, and shared-link order/delivery follow-up.
+
 The current direction is:
 
 - Use `/Users/M1PRO/Documents/code/halaal-coperative` as the fast-start dashboard reference where it accelerates implementation.
