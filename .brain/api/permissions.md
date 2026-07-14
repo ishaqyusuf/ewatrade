@@ -113,12 +113,14 @@ Define authorization and visibility rules for APIs.
 
 ## Retail Ops Product Mutation Rules
 - `retailOps.createProduct` and `retailOps.updateProductUnitPrice` are protected tRPC procedures.
+- Dashboard bridge routes `GET /api/products`, `POST /api/products`, and `PATCH /api/products/[productId]` are authenticated dashboard-only product catalog endpoints for the first web proof slice.
 - The procedure must resolve tenant membership and store scope before writing.
+- Dashboard product bridge routes must resolve the active tenant and selected or active store before reading or writing products.
 - Unit names must be unique within the product request.
 - Product, variant, and inventory creation must happen atomically.
 - When an `externalId` is supplied, product setup must treat tenant/store external id as a replay key and return the original product/unit ids without creating a duplicate product.
 - Product creation must pass the tenant product entitlement check before writing.
-- Product creation and product unit price changes require owner/admin/manager-style sales-management permission; cashier/operator users cannot change the catalog.
+- Product listing, creation, product edits, and product unit price changes require owner/admin/manager-style sales-management permission; cashier/operator users cannot manage the catalog.
 
 ## Retail Ops Closeout Review Rules
 - `retailOps.reviewCloseoutSession` is a protected tRPC procedure.

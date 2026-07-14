@@ -15,6 +15,10 @@ Track current and planned API surface areas.
   - `POST /api/tenants/active` stores the active tenant slug after verifying the user belongs to the requested tenant.
   - `POST /api/stores/active` stores the active store id after verifying the store belongs to the active tenant context.
   - `POST /api/stores` creates the first or next tenant store from the dashboard onboarding/setup flow.
+- `apps/dashboard` exposes temporary product catalog bridge routes for the dashboard proof slice:
+  - `GET /api/products` lists selected-store products with search, status filtering, unit stock, default-unit pricing, and recent price-history rows.
+  - `POST /api/products` creates a selected-store Product Sales catalog item through the existing Retail Ops product setup helper.
+  - `PATCH /api/products/[productId]` edits selected-store product name, description, status, default-unit name, and default-unit price while appending durable price history for price changes.
 - Both marketing lead routes persist a `LeadCapture` record and enqueue a shared notification dispatch job through `@ewatrade/jobs`.
 - `apps/api` exposes the authenticated tRPC app router.
 - Current tRPC procedure groups:

@@ -16,6 +16,8 @@ The dashboard reference audit for ticket 01 is complete at `.scratch/wayfinder-d
 
 Ticket 02 shell/auth implementation is in progress. The dashboard now has a Midday-style fixed sidebar plus sticky header, role-aware navigation policy, profile/sign-out controls, and tenant/store workspace controls. The dashboard app root placeholder has been removed so authenticated `/` requests resolve through the `(shell)` dashboard route. Browser/HTTP QA now covers unauthenticated redirect, login, shell load, owner role navigation rendering, logout, and active-store endpoint behavior. Full business switching and multi-store UI switching still require a seeded multi-tenant, multi-store QA fixture.
 
+Ticket 03 product catalog proof slice is complete. `/products` now uses a reusable dashboard table, a reusable right-side sheet, and dashboard product API bridge routes for selected-store list/search/status filtering, create, edit, validation errors, and default-unit price history updates. The slice preserves the Retail Ops product model by creating products through the existing product setup helper and updating default-unit prices through the existing price-history helper.
+
 The current direction is:
 
 - Use `/Users/M1PRO/Documents/code/halaal-coperative` as the fast-start dashboard reference where it accelerates implementation.
@@ -34,6 +36,7 @@ Resolved audit guidance:
 - Dashboard middleware should redirect unauthenticated users to the marketing login page with `next` preserved, while server components and route handlers continue to validate the real Better Auth session.
 - Role-aware dashboard navigation is centralized in `apps/dashboard/src/lib/navigation.ts`; owner/admin users see full shell navigation, managers see operational administration without owner-only settings, cashier/operator users see permitted work surfaces, and support/member roles are limited to overview.
 - The dashboard logout, active tenant, active store, and store creation route handlers are retained as migration bridges until the typed API surface fully covers those shell workflows.
+- The dashboard product catalog route handlers are retained as proof-slice migration bridges until the typed dashboard API surface fully covers product list, create, and edit workflows.
 
 ## Planned Dashboard Scope
 
