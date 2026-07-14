@@ -30,6 +30,8 @@ Ticket 08 analytics and reports standardization is complete. `/analytics` remain
 
 Ticket 09 search-anything command surface is complete. The dashboard header now exposes a Midday-style command search with visible shell triggers, `/` keyboard open, page and bounded command results derived from permitted navigation, and tenant/store/role-scoped record search through `GET /api/search`. The route searches permitted products, customers, staff, sales, and generated links without performing writes; command entries navigate users to the relevant sheet/work surface and keep final permission enforcement on the target page/API.
 
+Ticket 10 settings, subscription, and payroll/payout planning surface is complete. `/settings` now combines business, store, account, notification, permission, billing, subscription, and clearly scoped payroll/payout planning sections. Subscription plans, usage, and provider-neutral upgrade intent remain backed by the existing Retail Ops subscription APIs; payroll and payout are intentionally read-only planning surfaces until provider settlement and payroll execution are designed.
+
 The current direction is:
 
 - Use `/Users/M1PRO/Documents/code/halaal-coperative` as the fast-start dashboard reference where it accelerates implementation.

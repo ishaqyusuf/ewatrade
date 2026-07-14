@@ -1,5 +1,7 @@
 "use client"
 
+import type { SessionUser } from "@/lib/session"
+import type { TenantContext } from "@/lib/tenant"
 import { useTRPC } from "@/trpc/client"
 import { cn } from "@/utils"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
@@ -20,6 +22,18 @@ type CheckoutIntent =
   RouterOutputs["retailOps"]["createSubscriptionCheckoutIntent"]
 type Entitlement = SubscriptionSnapshot["entitlements"][number]
 type Plan = SubscriptionSnapshot["plans"][number]
+type SettingsContext = {
+  activeStore: TenantContext["activeStore"]
+  membershipRole: string
+  stores: TenantContext["stores"]
+  tenant: TenantContext["tenant"]
+  user: SessionUser
+} | null
+
+type SettingsPanelItem = {
+  label: string
+  value: string
+}
 
 const ENTITLEMENT_LABELS: Record<Entitlement["key"], string> = {
   businesses: "Businesses",
@@ -76,6 +90,128 @@ function statusTone(status: SubscriptionSnapshot["subscription"]["status"]) {
   if (status === "cancelled") return "bg-red-50 text-red-700"
 
   return "bg-primary/10 text-primary"
+}
+
+function formatList(values: string[]) {
+  if (values.length === 0) return "Not configured"
+
+  return values.join(", ")
+}
+
+function SettingsPanel({
+  icon,
+  items,
+  title,
+}: {
+  icon: typeof Store04Icon
+  items: SettingsPanelItem[]
+  title: string
+}) {
+  return (
+    <section className="rounded-lg border border-border/70 bg-background p-4 shadow-sm">
+      <div className="flex items-center gap-2">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+          <HugeiconsIcon icon={icon} className="size-4 text-muted-foreground" />
+        </div>
+        <h2 className="text-sm font-semibold">{title}</h2>
+      </div>
+      <dl className="mt-4 grid gap-3 text-sm">
+        {items.map((item) => (
+          <div
+            key={item.label}
+            className="flex justify-between gap-4 border-t border-border/70 pt-3"
+          >
+            <dt className="text-muted-foreground">{item.label}</dt>
+            <dd className="max-w-[60%] text-right font-medium">{item.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  )
+}
+
+function SettingsOverview({ context }: { context: SettingsContext }) {
+  const tenant = context?.tenant
+  const activeStore = context?.activeStore
+  const user = context?.user
+
+  return (
+    <>
+      <section className="grid gap-4 lg:grid-cols-3">
+        <SettingsPanel
+          icon={Store04Icon}
+          title="Business"
+          items={[
+            { label: "Name", value: tenant?.name ?? "Loading..." },
+            { label: "Slug", value: tenant?.slug ?? "Loading..." },
+            {
+              label: "Modes",
+              value: tenant ? formatList(tenant.enabledModes) : "Loading...",
+            },
+            { label: "Timezone", value: tenant?.timezone ?? "Loading..." },
+          ]}
+        />
+        <SettingsPanel
+          icon={Package01Icon}
+          title="Store"
+          items={[
+            { label: "Active store", value: activeStore?.name ?? "Not set" },
+            { label: "Store slug", value: activeStore?.slug ?? "Not set" },
+            { label: "Status", value: activeStore?.status ?? "Not set" },
+            {
+              label: "Stores",
+              value: context
+                ? new Intl.NumberFormat("en-NG").format(context.stores.length)
+                : "Loading...",
+            },
+          ]}
+        />
+        <SettingsPanel
+          icon={UserCircle02Icon}
+          title="Account"
+          items={[
+            {
+              label: "User",
+              value: user?.displayName ?? user?.email ?? "Loading...",
+            },
+            { label: "Email", value: user?.email ?? "Loading..." },
+            { label: "Role", value: context?.membershipRole ?? "Loading..." },
+            { label: "Currency", value: tenant?.currencyCode ?? "Loading..." },
+          ]}
+        />
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-3">
+        <SettingsPanel
+          icon={Settings01Icon}
+          title="Notifications"
+          items={[
+            { label: "Order alerts", value: "Email queue" },
+            { label: "Staff invites", value: "Email queue" },
+            { label: "Sync conflicts", value: "Dashboard review" },
+          ]}
+        />
+        <SettingsPanel
+          icon={UserCircle02Icon}
+          title="Permissions"
+          items={[
+            { label: "Billing access", value: "Owner/admin" },
+            { label: "Staff access", value: "Owner/admin/manager" },
+            { label: "POS access", value: "Assigned roles" },
+          ]}
+        />
+        <SettingsPanel
+          icon={Archive01Icon}
+          title="Payroll and payout"
+          items={[
+            { label: "Payroll", value: "Planned" },
+            { label: "Owner payouts", value: "Planned" },
+            { label: "Provider settlement", value: "Future provider scope" },
+          ]}
+        />
+      </section>
+    </>
+  )
 }
 
 function EntitlementRow({ entitlement }: { entitlement: Entitlement }) {
@@ -199,7 +335,11 @@ function CheckoutIntentNotice({ intent }: { intent: CheckoutIntent }) {
   )
 }
 
-export function RetailOpsSubscriptionSettings() {
+export function RetailOpsSubscriptionSettings({
+  settingsContext,
+}: {
+  settingsContext: SettingsContext
+}) {
   const trpc = useTRPC()
   const subscriptionQuery = useQuery(
     trpc.retailOps.subscription.queryOptions(undefined, {
@@ -231,6 +371,8 @@ export function RetailOpsSubscriptionSettings() {
           Plan limits, usage, and billing state for Retail Ops.
         </p>
       </div>
+
+      <SettingsOverview context={settingsContext} />
 
       {subscriptionQuery.error ? (
         <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -289,8 +431,8 @@ export function RetailOpsSubscriptionSettings() {
                 {snapshot?.subscription.source === "tenant_subscription"
                   ? "Billing record"
                   : snapshot?.subscription.source === "tenant_metadata"
-                  ? "Production metadata"
-                  : "Starter trial fallback"}
+                    ? "Production metadata"
+                    : "Starter trial fallback"}
               </dd>
             </div>
           </dl>
