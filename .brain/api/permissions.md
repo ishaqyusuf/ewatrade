@@ -104,7 +104,9 @@ Define authorization and visibility rules for APIs.
 - Public shared-product procedures must validate tenant slug, store slug, product slug, and active opaque share token before exposing product or accepting an order request.
 - Public order requests only create pending orders for business follow-up; they must not deduct stock, create receipts, or mark payment complete.
 - `retailOps.productShareLinks`, `retailOps.sharedLinkOrderRequests`, `retailOps.updateSharedLinkOrderRequestStatus`, `retailOps.deliveryRequests`, `retailOps.createDeliveryRequest`, `retailOps.updateDeliveryRequestStatus`, `retailOps.createProductShareLink`, and `retailOps.deactivateProductShareLink` are protected tRPC procedures.
+- Dashboard bridge route `GET /api/links` and `POST /api/links` are authenticated dashboard-only generated-link and shared-link follow-up endpoints for the first web proof slice.
 - The procedures must resolve tenant membership and store scope before reading or writing product link data.
+- Dashboard links bridge reads and writes must resolve the active tenant and selected or active store before reading links/orders/deliveries/products or writing link/order follow-up changes.
 - Owner, admin, manager, cashier, and operator roles can list and generate product share links.
 - Shared-link order request reads must return all selected-store requests to owner/admin/manager users and only creator-attributed requests to cashier/operator users.
 - Shared-link order request status updates must use the same scope: owner/admin/manager users can complete or cancel selected-store requests, while cashier/operator users can only update requests attributed to their generated links.

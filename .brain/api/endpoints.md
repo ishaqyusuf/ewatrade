@@ -28,6 +28,9 @@ Track current and planned API surface areas.
 - `apps/dashboard` exposes temporary sales and customer bridge routes for the dashboard proof slice:
   - `GET /api/sales` returns selected-store recent sales, credit sales, cashier sessions, and payment reconciliation rows. It accepts optional `storeId` and `sessionStatus` query parameters.
   - `GET /api/customers` returns the selected-store customer book with optional `storeId` and `search` query parameters.
+- `apps/dashboard` exposes a temporary generated-links bridge route for the dashboard proof slice:
+  - `GET /api/links` returns selected-store generated product links, shared-link order requests, delivery requests, and active products for link creation. It accepts optional `storeId` and `orderStatus` query parameters.
+  - `POST /api/links` creates generated product links, deactivates generated product links, or completes/cancels shared-link order requests through the existing Retail Ops helpers.
 - Both marketing lead routes persist a `LeadCapture` record and enqueue a shared notification dispatch job through `@ewatrade/jobs`.
 - `apps/api` exposes the authenticated tRPC app router.
 - Current tRPC procedure groups:
