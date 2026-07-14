@@ -14,6 +14,7 @@
     "@ewatrade/api": "workspace:*",
     "@ewatrade/auth": "workspace:*",
     "@ewatrade/db": "workspace:*",
+    "@ewatrade/jobs": "workspace:*",
     "@ewatrade/ui": "workspace:*",
     "@ewatrade/utils": "workspace:*",
     "@hugeicons/core-free-icons": "^4.1.1",

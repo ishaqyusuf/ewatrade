@@ -20,6 +20,8 @@ Ticket 03 product catalog proof slice is complete. `/products` now uses a reusab
 
 Ticket 04 inventory operations slice is complete. `/inventory` now exposes a dashboard stock operations workbench with product/unit stock rows, available/reserved quantities, low-stock and out-of-stock filtering, stock intake, stock adjustment, unit conversion sheets, and stock movement history. `GET /api/inventory` and `POST /api/inventory` are authenticated dashboard bridge routes that resolve the active tenant/store and call the existing Retail Ops stock movement, intake, adjustment, and unit-conversion helpers.
 
+Ticket 05 staff management slice is complete. `/staff` now exposes a dashboard staff management workbench with staff summary cards, role/status/search filtering, active/invited/suspended membership rows, invite sheet, and suspend/reactivate actions. `GET /api/staff` and `POST /api/staff` are authenticated dashboard bridge routes that resolve the active tenant/store and call the existing Retail Ops staff list, invite, status update, and invite-notification helpers.
+
 The current direction is:
 
 - Use `/Users/M1PRO/Documents/code/halaal-coperative` as the fast-start dashboard reference where it accelerates implementation.
@@ -40,6 +42,7 @@ Resolved audit guidance:
 - The dashboard logout, active tenant, active store, and store creation route handlers are retained as migration bridges until the typed API surface fully covers those shell workflows.
 - The dashboard product catalog route handlers are retained as proof-slice migration bridges until the typed dashboard API surface fully covers product list, create, and edit workflows.
 - The dashboard inventory bridge route handlers are retained as proof-slice migration bridges until the typed dashboard API surface fully covers inventory list, movement history, stock intake, stock adjustment, and unit conversion workflows.
+- The dashboard staff bridge route handlers are retained as proof-slice migration bridges until the typed dashboard API surface fully covers staff list, invite, status update, and onboarding follow-up workflows.
 
 ## Planned Dashboard Scope
 

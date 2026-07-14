@@ -113,9 +113,11 @@ Track important request/response shapes and contract rules.
   - This is still a session lifecycle and metadata-backed read bridge. Durable read cutover, opening stock persistence, approved ledger posting, rejection correction workflow, and variance resolution still need dedicated contracts.
 - Retail Ops staff management contract:
   - `retailOps.staff` accepts optional `storeId`, optional `search`, optional `limit`, role filter `all`, `owner`, `admin`, `manager`, `cashier`, or `operator`, and status filter `all`, `active`, `invited`, or `suspended`
+  - `GET /api/staff` is the dashboard bridge read contract over the same staff list rules, accepting optional `storeId`, `search`, `role`, and `status`
   - Staff list reads require owner/admin/manager-level permission and return non-removed tenant memberships for Retail Ops roles
   - Staff list results include membership id, role, status, invited/accepted timestamps, inviter id, update timestamps, and user identity/display fields
   - `retailOps.inviteStaff` accepts optional `storeId`, optional `externalId`, staff `email`, optional `name`, and role `cashier`, `operator`, or `manager`
+  - `POST /api/staff` is the dashboard bridge write contract for staff `invite` and `status` operations; invite accepts staff `email`, optional `name`, and role `cashier`, `operator`, or `manager`, while status accepts `staffUserId` and target status `active` or `suspended`
   - The mutation resolves tenant/store membership before writing and requires an owner/admin/manager-level role
   - Staff emails are normalized to lowercase at the API boundary
   - The mutation creates a user record when the email is new, then creates or refreshes a tenant `Membership` with `status: INVITED`, `invitedById`, `invitedAt`, and the selected role

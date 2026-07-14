@@ -22,6 +22,9 @@ Track current and planned API surface areas.
 - `apps/dashboard` exposes temporary inventory bridge routes for the dashboard proof slice:
   - `GET /api/inventory` lists selected-store product/unit inventory rows with on-hand, reserved, available, reorder, low/out state, and recent stock movement history. It accepts optional `storeId` and `productVariantId` query parameters.
   - `POST /api/inventory` records selected-store stock intake, stock adjustment, or unit conversion operations through the existing Retail Ops stock helpers. It generates dashboard external ids when callers do not provide replay keys.
+- `apps/dashboard` exposes temporary staff bridge routes for the dashboard proof slice:
+  - `GET /api/staff` lists active, invited, and suspended Retail Ops staff memberships with optional `storeId`, `search`, `role`, and `status` filters.
+  - `POST /api/staff` invites cashier/operator/manager staff or updates cashier/operator/manager staff status through the existing Retail Ops staff helpers. Invite responses hide the acceptance token and enqueue the existing staff invitation notification.
 - Both marketing lead routes persist a `LeadCapture` record and enqueue a shared notification dispatch job through `@ewatrade/jobs`.
 - `apps/api` exposes the authenticated tRPC app router.
 - Current tRPC procedure groups:

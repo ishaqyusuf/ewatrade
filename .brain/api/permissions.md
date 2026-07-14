@@ -78,7 +78,9 @@ Define authorization and visibility rules for APIs.
 
 ## Retail Ops Staff Rules
 - `retailOps.staff` and `retailOps.inviteStaff` are protected tRPC procedures.
+- Dashboard bridge routes `GET /api/staff` and `POST /api/staff` are authenticated dashboard-only staff management endpoints for the first web proof slice.
 - The procedures must resolve tenant membership and store scope before reading or writing.
+- Dashboard staff bridge routes must resolve the active tenant and selected or active store before reading staff, inviting staff, or updating staff status.
 - Only owner, admin, and manager roles can list, invite, re-invite, suspend, or reactivate Retail Ops staff.
 - Staff list reads only return non-removed owner, admin, manager, cashier, or operator memberships in the active tenant.
 - Invites can target cashier, operator, or manager roles.
