@@ -26,6 +26,8 @@ Ticket 06 sales, sessions, customers, and closeout review slice is complete. `/s
 
 Ticket 07 generated product links and shared-link follow-up slice is complete. `/links` now exposes a dashboard generated-link workbench with product share-link rows, create-link sheet, deactivate actions, shared-link order request review, complete/cancel follow-up actions, and delivery-state visibility where existing delivery data is available. `GET /api/links` and `POST /api/links` are authenticated dashboard bridge routes that resolve the active tenant/store and call the existing Retail Ops product share-link, shared-link order request, order follow-up, and delivery request helpers.
 
+Ticket 08 analytics and reports standardization is complete. `/analytics` remains the standard Reports surface with summary KPI cards, date/store/table filters, CSV exports, browser print-to-PDF controls, sales/payment/inventory/stock/credit/session/variance/sync/conflict report sections, and sync conflict review through existing Retail Ops tRPC procedures.
+
 The current direction is:
 
 - Use `/Users/M1PRO/Documents/code/halaal-coperative` as the fast-start dashboard reference where it accelerates implementation.
