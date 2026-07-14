@@ -28,5 +28,5 @@
 ## Handoff Notes
 
 - Full Playwright/gstack browser automation could not be completed in this sandbox because the Playwright browser binary was unavailable, system Chrome aborted in headless mode, and gstack browse could not allocate a browser server port. The fallback coverage is unit/API/HTTP route QA plus documented browser-runner attempts.
-- Seeded QA fixtures are still needed for full positive-path browser proof of multi-tenant/multi-store switching, non-empty sales/session/customer tables, and shared-link order/delivery follow-up.
+- Seeded QA fixtures are still needed for durable regression proof of non-empty sales/session/customer tables and shared-link order/delivery follow-up. Ticket 02's multi-tenant/multi-store switching proof is covered by the local Better Auth dashboard QA fixture recorded in ticket 02.
 - No database schema changes were made by tickets 09-12, so `.brain/database/*` updates were not required for this closing slice.

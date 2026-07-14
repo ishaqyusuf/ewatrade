@@ -10,4 +10,4 @@ Pending work that is identified but not actively being executed.
 - Decide where Drizzle lives and which repositories will use it first.
 - Formalize tenant membership and role models.
 - Design and implement self-service app store detection on launch using device geolocation with safe confirmation and manual fallback flows.
-- Add seeded dashboard QA fixtures for multi-tenant/multi-store switching, non-empty sales/session/customer datasets, and shared-link order/delivery follow-up positive paths.
+- Add durable seeded dashboard QA fixture automation for multi-tenant/multi-store switching regressions, non-empty sales/session/customer datasets, and shared-link order/delivery follow-up positive paths.
