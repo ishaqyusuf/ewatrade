@@ -269,7 +269,7 @@ function getInventoryVarianceRows(rows: RetailOpsPaymentReconciliationRow[]) {
 
 function getTableState(
   isLoading: boolean,
-  error: Error | null,
+  error: { message?: string } | null,
   rowCount: number,
   filteredRowCount = rowCount,
 ) {
@@ -278,7 +278,7 @@ function getTableState(
   }
 
   if (error) {
-    return error.message
+    return error.message ?? "Unable to load report rows."
   }
 
   if (rowCount === 0) {

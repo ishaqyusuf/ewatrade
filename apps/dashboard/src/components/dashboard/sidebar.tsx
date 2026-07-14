@@ -1,5 +1,6 @@
 "use client"
 
+import { type DashboardNavItem, getDashboardRoleLabel } from "@/lib/navigation"
 import type { SessionUser } from "@/lib/session"
 import { getUserInitials } from "@/lib/session"
 import type { TenantContext } from "@/lib/tenant"
@@ -8,7 +9,6 @@ import {
   Analytics01Icon,
   Archive01Icon,
   Home01Icon,
-  Logout01Icon,
   Package01Icon,
   Settings01Icon,
   ShoppingCart01Icon,
@@ -17,202 +17,148 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
-import { useState } from "react"
+import { usePathname } from "next/navigation"
 
-type NavItem = {
-  label: string
-  href: string
-  // biome-ignore lint/suspicious/noExplicitAny: HugeIcons icon data type
-  icon: any
-  end?: boolean
+// biome-ignore lint/suspicious/noExplicitAny: HugeIcons icon data is package-defined.
+const NAV_ICONS: Record<DashboardNavItem["icon"], any> = {
+  analytics: Analytics01Icon,
+  customers: UserCircle02Icon,
+  home: Home01Icon,
+  inventory: Archive01Icon,
+  links: Store04Icon,
+  products: Package01Icon,
+  sales: ShoppingCart01Icon,
+  settings: Settings01Icon,
+  staff: UserCircle02Icon,
 }
 
-const STORE_NAV: NavItem[] = [
-  { label: "Overview", href: "/", icon: Home01Icon, end: true },
-  { label: "Products", href: "/products", icon: Package01Icon },
-  { label: "Orders", href: "/orders", icon: ShoppingCart01Icon },
-  { label: "Inventory", href: "/inventory", icon: Archive01Icon },
-  { label: "Reports", href: "/analytics", icon: Analytics01Icon },
-  { label: "Settings", href: "/settings", icon: Settings01Icon },
-]
-
 type Props = {
+  navItems: DashboardNavItem[]
   user: SessionUser
   ctx: TenantContext
 }
 
-export function DashboardSidebar({ user, ctx }: Props) {
+export function DashboardSidebar({ navItems, user, ctx }: Props) {
   const pathname = usePathname()
-  const router = useRouter()
   const initials = getUserInitials(user)
-  const [isSwitchingTenant, setIsSwitchingTenant] = useState(false)
-  const [isSwitchingStore, setIsSwitchingStore] = useState(false)
-
-  async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" })
-    router.push(process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com")
-  }
-
-  async function handleStoreChange(storeId: string) {
-    if (!storeId || storeId === ctx.activeStore?.id) return
-
-    setIsSwitchingStore(true)
-
-    try {
-      const response = await fetch("/api/stores/active", {
-        body: JSON.stringify({ storeId }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-      })
-
-      if (response.ok) {
-        router.refresh()
-      }
-    } finally {
-      setIsSwitchingStore(false)
-    }
-  }
-
-  async function handleTenantChange(tenantId: string) {
-    if (!tenantId || tenantId === ctx.tenant.id) return
-
-    setIsSwitchingTenant(true)
-
-    try {
-      const response = await fetch("/api/tenants/active", {
-        body: JSON.stringify({ tenantId, path: pathname }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-      })
-      const result = response.ok
-        ? ((await response.json()) as { dashboardUrl?: string | null })
-        : null
-
-      if (result?.dashboardUrl) {
-        window.location.assign(result.dashboardUrl)
-        return
-      }
-
-      if (response.ok) {
-        router.refresh()
-      }
-    } finally {
-      setIsSwitchingTenant(false)
-    }
-  }
+  const roleLabel = getDashboardRoleLabel(ctx.membership.role)
 
   return (
-    <aside className="flex h-screen w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
-      {/* Logo + store name */}
-      <div className="flex h-16 items-center gap-2.5 border-b border-sidebar-border px-5">
-        <div className="flex size-7 items-center justify-center rounded-lg bg-primary">
-          <HugeiconsIcon
-            icon={Store04Icon}
-            className="size-4 text-primary-foreground"
-          />
-        </div>
-        <div className="min-w-0 flex-1 space-y-1">
-          {ctx.tenants.length > 1 ? (
-            <select
-              value={ctx.tenant.id}
-              disabled={isSwitchingTenant}
-              onChange={(event) => handleTenantChange(event.target.value)}
-              className="h-7 w-full truncate rounded-lg border border-sidebar-border bg-sidebar px-2 text-sm font-semibold text-sidebar-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-wait disabled:opacity-70"
-            >
-              {ctx.tenants.map((tenant) => (
-                <option key={tenant.id} value={tenant.id}>
-                  {tenant.name}
-                </option>
-              ))}
-            </select>
-          ) : null}
-          {ctx.stores.length > 1 ? (
-            <select
-              value={ctx.activeStore?.id ?? ""}
-              disabled={isSwitchingStore}
-              onChange={(event) => handleStoreChange(event.target.value)}
-              className={cn(
-                "h-7 w-full truncate rounded-lg border border-sidebar-border bg-sidebar px-2 text-sidebar-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-wait disabled:opacity-70",
-                ctx.tenants.length > 1
-                  ? "text-xs font-medium"
-                  : "text-sm font-semibold",
-              )}
-            >
-              {ctx.stores.map((store) => (
-                <option key={store.id} value={store.id}>
-                  {store.name}
-                </option>
-              ))}
-            </select>
-          ) : (
+    <aside className="group/sidebar fixed left-0 top-0 z-40 hidden h-screen w-[70px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar pb-4 transition-all duration-200 hover:w-[240px] md:flex">
+      <div className="relative flex h-[70px] items-center border-b border-sidebar-border px-[18px]">
+        <Link
+          href="/"
+          aria-label="EwaTrade dashboard home"
+          className="flex min-w-0 items-center gap-2"
+        >
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary">
+            <HugeiconsIcon
+              icon={Store04Icon}
+              className="size-5 text-primary-foreground"
+            />
+          </div>
+          <div className="min-w-0 opacity-0 transition-opacity group-hover/sidebar:opacity-100">
             <p className="truncate text-sm font-semibold text-sidebar-foreground">
-              {ctx.activeStore?.name ?? ctx.tenant.name}
+              ewatrade
             </p>
-          )}
-          <p className="truncate text-xs text-muted-foreground">
-            {ctx.tenant.slug}.ewatrade.com
-          </p>
+            <p className="truncate text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              Dashboard
+            </p>
+          </div>
+        </Link>
+      </div>
+
+      <div className="border-b border-sidebar-border px-[18px] py-4">
+        <div className="flex items-center gap-2">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-accent">
+            <HugeiconsIcon
+              icon={Store04Icon}
+              className="size-4 text-sidebar-foreground"
+            />
+          </div>
+          <div className="min-w-0 opacity-0 transition-opacity group-hover/sidebar:opacity-100">
+            <p className="truncate text-sm font-medium text-sidebar-foreground">
+              {ctx.tenant.name}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {ctx.activeStore?.name ?? ctx.tenant.slug}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Nav links */}
-      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-4">
-        {STORE_NAV.map((item) => {
+      <nav className="flex flex-1 flex-col gap-2 overflow-y-auto px-0 py-4">
+        {navItems.map((item) => {
+          const icon = NAV_ICONS[item.icon]
           const isActive = item.end
             ? pathname === item.href
-            : pathname.startsWith(item.href)
+            : pathname === item.href || pathname.startsWith(`${item.href}/`)
+
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={cn(
-                "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-              )}
+              title={item.label}
+              aria-label={item.label}
+              className="group block"
             >
-              <HugeiconsIcon icon={item.icon} className="size-4 shrink-0" />
-              {item.label}
+              <div className="relative mx-[15px] h-10">
+                <div
+                  className={cn(
+                    "absolute inset-0 border border-transparent transition-colors group-hover:border-sidebar-border group-hover:bg-sidebar-accent",
+                    isActive
+                      ? "border-sidebar-border bg-sidebar-primary text-sidebar-primary-foreground"
+                      : "text-sidebar-foreground",
+                  )}
+                />
+                <div
+                  className={cn(
+                    "absolute left-0 top-0 flex size-10 items-center justify-center transition-colors",
+                    isActive
+                      ? "text-sidebar-primary-foreground"
+                      : "text-muted-foreground group-hover:text-sidebar-foreground",
+                  )}
+                >
+                  <HugeiconsIcon icon={icon} className="size-4 shrink-0" />
+                </div>
+                <div className="absolute left-10 right-2 top-0 flex h-10 items-center overflow-hidden opacity-0 transition-opacity group-hover/sidebar:opacity-100">
+                  <span
+                    className={cn(
+                      "truncate text-sm font-medium",
+                      isActive
+                        ? "text-sidebar-primary-foreground"
+                        : "text-sidebar-foreground",
+                    )}
+                  >
+                    {item.label}
+                  </span>
+                </div>
+              </div>
             </Link>
           )
         })}
       </nav>
 
-      {/* User section */}
-      <div className="border-t border-sidebar-border px-3 py-3">
-        <div className="flex items-center gap-2.5 px-2 py-2">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+      <div className="px-[18px]">
+        <div className="flex items-center gap-2">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
             {initials}
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 opacity-0 transition-opacity group-hover/sidebar:opacity-100">
             <p className="truncate text-sm font-medium text-sidebar-foreground">
               {user.displayName ??
                 (`${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
                   user.email)}
             </p>
             <p className="truncate text-xs text-muted-foreground">
-              {user.email}
+              {roleLabel}
             </p>
           </div>
           <HugeiconsIcon
             icon={UserCircle02Icon}
-            className="size-4 shrink-0 text-muted-foreground"
+            className="ml-auto hidden size-4 shrink-0 text-muted-foreground group-hover/sidebar:block"
           />
         </div>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="mt-1 flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-        >
-          <HugeiconsIcon icon={Logout01Icon} className="size-4 shrink-0" />
-          Sign out
-        </button>
       </div>
     </aside>
   )

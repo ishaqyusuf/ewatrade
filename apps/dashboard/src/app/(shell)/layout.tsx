@@ -1,6 +1,12 @@
+import { DashboardHeader } from "@/components/dashboard/header"
 import { DashboardSidebar } from "@/components/dashboard/sidebar"
+import {
+  canAccessDashboardPath,
+  getDashboardNavigation,
+} from "@/lib/navigation"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
+import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
 const MARKETING_URL =
@@ -10,6 +16,7 @@ export default async function ShellLayout({
   children,
 }: { children: React.ReactNode }) {
   const session = await getServerSession()
+  const headerStore = await headers()
 
   if (!session) {
     redirect(`${MARKETING_URL}/login`)
@@ -17,22 +24,33 @@ export default async function ShellLayout({
 
   const ctx = await getActiveTenant(session.user.id)
 
-  // No store yet → first-time setup
+  // No store yet: first-time setup.
   if (ctx && ctx.stores.length === 0) {
     redirect("/setup")
   }
 
-  // No tenant membership found → account issue
+  // No tenant membership found: account issue.
   if (!ctx) {
     redirect(`${MARKETING_URL}/login?error=no_tenant`)
   }
 
+  const pathname = headerStore.get("x-pathname") ?? "/"
+
+  if (!canAccessDashboardPath(pathname, ctx.membership.role)) {
+    redirect("/")
+  }
+
+  const navItems = getDashboardNavigation(ctx.membership.role)
+
   return (
-    <div className="flex h-screen overflow-hidden">
-      <DashboardSidebar user={session.user} ctx={ctx} />
-      <main className="flex flex-1 flex-col overflow-y-auto bg-muted/30">
-        {children}
-      </main>
+    <div className="min-h-screen bg-muted/30">
+      <DashboardSidebar user={session.user} ctx={ctx} navItems={navItems} />
+      <div className="min-h-screen md:pl-[70px]">
+        <DashboardHeader user={session.user} ctx={ctx} navItems={navItems} />
+        <main className="flex min-h-[calc(100vh-70px)] flex-col">
+          {children}
+        </main>
+      </div>
     </div>
   )
 }

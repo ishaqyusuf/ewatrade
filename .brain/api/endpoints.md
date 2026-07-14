@@ -10,6 +10,11 @@ Track current and planned API surface areas.
 - `apps/marketing` exposes public POST routes for marketing lead capture:
   - `POST /api/early-access`
   - `POST /api/waitlist`
+- `apps/dashboard` exposes retained migration bridge routes for dashboard shell behavior:
+  - `POST /api/auth/logout` signs out the Better Auth session for the dashboard surface.
+  - `POST /api/tenants/active` stores the active tenant slug after verifying the user belongs to the requested tenant.
+  - `POST /api/stores/active` stores the active store id after verifying the store belongs to the active tenant context.
+  - `POST /api/stores` creates the first or next tenant store from the dashboard onboarding/setup flow.
 - Both marketing lead routes persist a `LeadCapture` record and enqueue a shared notification dispatch job through `@ewatrade/jobs`.
 - `apps/api` exposes the authenticated tRPC app router.
 - Current tRPC procedure groups:

@@ -14,6 +14,8 @@ Ready-for-agent implementation tickets have been published under `.scratch/wayfi
 
 The dashboard reference audit for ticket 01 is complete at `.scratch/wayfinder-dashboard-standard-system/reference-audit.md`.
 
+Ticket 02 shell/auth implementation is in progress. The dashboard now has a Midday-style fixed sidebar plus sticky header, role-aware navigation policy, profile/sign-out controls, and tenant/store workspace controls. Browser workflow QA is still pending before ticket 02 can be closed.
+
 The current direction is:
 
 - Use `/Users/M1PRO/Documents/code/halaal-coperative` as the fast-start dashboard reference where it accelerates implementation.
@@ -29,6 +31,9 @@ Resolved audit guidance:
 - Locale/i18n is deferred for the first dashboard scaffold because the current EwaTrade dashboard and HalalVest reference are non-locale; new copy should still be centralized enough to move into Midday-style locale files later.
 - The current EwaTrade route handlers for logout, stores, and active tenant/store may remain as temporary shims while the shell/auth ticket standardizes the dashboard.
 - The current retail reports component may remain as a temporary shim, but should not be expanded before the analytics ticket decomposes it into Midday-style focused components.
+- Dashboard middleware should redirect unauthenticated users to the marketing login page with `next` preserved, while server components and route handlers continue to validate the real Better Auth session.
+- Role-aware dashboard navigation is centralized in `apps/dashboard/src/lib/navigation.ts`; owner/admin users see full shell navigation, managers see operational administration without owner-only settings, cashier/operator users see permitted work surfaces, and support/member roles are limited to overview.
+- The dashboard logout, active tenant, active store, and store creation route handlers are retained as migration bridges until the typed API surface fully covers those shell workflows.
 
 ## Planned Dashboard Scope
 
@@ -44,8 +49,7 @@ Resolved audit guidance:
 
 ## Open Planning Questions
 
-- Dashboard route map and role-based navigation.
-- Web onboarding flow and business switching behavior.
+- Browser workflow QA for ticket 02 login, shell load, role-aware navigation, business switching, store switching, and sign out.
 - Dashboard-only API gaps.
 - Desktop wrapper packaging and release path.
 

@@ -19,6 +19,17 @@ Define authorization and visibility rules for APIs.
 - Store creation must pass the tenant business/store entitlement before writing.
 - Created stores must belong to the active tenant context.
 
+## Dashboard Shell And Workspace Rules
+
+- Dashboard middleware performs only a presence check for Better Auth session cookies; server components and route handlers remain responsible for validating the actual session.
+- Unauthenticated dashboard page requests redirect to the marketing login page with the requested path preserved as `next`.
+- Dashboard middleware passes tenant slug and pathname context through request headers for server-side tenant resolution and known-route role gating.
+- `POST /api/auth/logout`, `POST /api/tenants/active`, and `POST /api/stores/active` are retained dashboard migration bridges until equivalent typed shell APIs replace them.
+- Active tenant switching can only select tenants from active memberships for the authenticated user.
+- Active store switching can only select stores from the active tenant context.
+- Dashboard shell navigation is role-aware: owner/admin users see the full dashboard surface, managers see operational administration without owner-only settings, cashier/operator users see permitted work surfaces, and support/member users are limited to overview.
+- Known dashboard routes are gated by the same centralized role policy used by navigation visibility. API/service permission checks remain the source of truth for data access.
+
 ## Retail Ops Read Rules
 - `retailOps.summary`, `retailOps.inventory`, `retailOps.salesByProduct`, `retailOps.salesByRep`, `retailOps.customerBook`, `retailOps.recentSales`, `retailOps.creditSales`, `retailOps.sessions`, and `retailOps.paymentReconciliation` are protected tRPC procedures.
 - The procedure must resolve tenant membership before reading data.
