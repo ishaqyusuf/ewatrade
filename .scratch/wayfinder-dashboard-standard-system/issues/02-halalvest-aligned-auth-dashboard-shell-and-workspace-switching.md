@@ -22,4 +22,7 @@
 - Changed unauthenticated dashboard middleware behavior from marketing signup redirect to marketing login redirect with `next` preserved.
 - Retained the current dashboard route-handler bridges for logout, active tenant, active store, and store creation during this migration slice.
 - Focused validation passed: `bun test apps/dashboard/src/lib/navigation.test.ts`, `bun --filter @ewatrade/dashboard typecheck`, and targeted `bunx biome check` on touched files.
-- Browser workflow QA is still pending because the local dashboard/marketing stack was not started in this slice.
+- Removed the dashboard app root placeholder so `/` resolves through `(shell)/page.tsx` and the authenticated Midday-style shell instead of shadowing it.
+- Moved `getUserInitials` into `apps/dashboard/src/lib/user-display.ts` so client shell components no longer import `apps/dashboard/src/lib/session.ts`, which depends on `next/headers`.
+- Browser/HTTP workflow QA now covers unauthenticated redirect to marketing login, login session creation, authenticated shell load, role-aware owner navigation in rendered shell HTML, profile/sign-out route behavior, and active-store endpoint success/error behavior.
+- Remaining QA gap: full business switching and multi-store UI switching still need a seeded multi-tenant, multi-store QA account or plan-tier fixture. The local QA tenant's public store creation path correctly rejects a second store on the Starter plan with `403 The Starter plan limit for businesses has been reached.`

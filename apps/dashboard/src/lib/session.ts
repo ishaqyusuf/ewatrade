@@ -1,5 +1,6 @@
 import { auth } from "@ewatrade/auth"
 import { headers } from "next/headers"
+export { getUserInitials } from "./user-display"
 
 export type SessionUser = {
   id: string
@@ -45,21 +46,4 @@ export async function getServerSession(): Promise<AuthSession | null> {
     sessionId: session.session.id,
     expiresAt: session.session.expiresAt,
   }
-}
-
-export function getUserInitials(
-  user: Pick<SessionUser, "firstName" | "lastName" | "displayName" | "email">,
-): string {
-  if (user.firstName && user.lastName) {
-    return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()
-  }
-  if (user.displayName) {
-    const parts = user.displayName.trim().split(" ")
-    const first = parts[0] ?? ""
-    const last = parts.length >= 2 ? (parts[parts.length - 1] ?? "") : ""
-    if (parts.length >= 2 && first && last)
-      return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase()
-    return first.slice(0, 2).toUpperCase()
-  }
-  return user.email.slice(0, 2).toUpperCase()
 }

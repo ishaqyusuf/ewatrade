@@ -14,7 +14,7 @@ Ready-for-agent implementation tickets have been published under `.scratch/wayfi
 
 The dashboard reference audit for ticket 01 is complete at `.scratch/wayfinder-dashboard-standard-system/reference-audit.md`.
 
-Ticket 02 shell/auth implementation is in progress. The dashboard now has a Midday-style fixed sidebar plus sticky header, role-aware navigation policy, profile/sign-out controls, and tenant/store workspace controls. Browser workflow QA is still pending before ticket 02 can be closed.
+Ticket 02 shell/auth implementation is in progress. The dashboard now has a Midday-style fixed sidebar plus sticky header, role-aware navigation policy, profile/sign-out controls, and tenant/store workspace controls. The dashboard app root placeholder has been removed so authenticated `/` requests resolve through the `(shell)` dashboard route. Browser/HTTP QA now covers unauthenticated redirect, login, shell load, owner role navigation rendering, logout, and active-store endpoint behavior. Full business switching and multi-store UI switching still require a seeded multi-tenant, multi-store QA fixture.
 
 The current direction is:
 
@@ -49,7 +49,7 @@ Resolved audit guidance:
 
 ## Open Planning Questions
 
-- Browser workflow QA for ticket 02 login, shell load, role-aware navigation, business switching, store switching, and sign out.
+- Seeded multi-tenant, multi-store browser fixture for ticket 02 business switching and store switching QA.
 - Dashboard-only API gaps.
 - Desktop wrapper packaging and release path.
 

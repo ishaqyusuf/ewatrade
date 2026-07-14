@@ -6,8 +6,8 @@ import {
   getDashboardRoleLabel,
 } from "@/lib/navigation"
 import type { SessionUser } from "@/lib/session"
-import { getUserInitials } from "@/lib/session"
 import type { TenantContext } from "@/lib/tenant"
+import { getUserInitials } from "@/lib/user-display"
 import { cn } from "@/utils"
 import { Avatar, AvatarFallback, Button } from "@ewatrade/ui"
 import {
