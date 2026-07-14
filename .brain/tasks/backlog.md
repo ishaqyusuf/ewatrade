@@ -11,3 +11,4 @@ Pending work that is identified but not actively being executed.
 - Formalize tenant membership and role models.
 - Design and implement self-service app store detection on launch using device geolocation with safe confirmation and manual fallback flows.
 - Add durable seeded dashboard QA fixture automation for multi-tenant/multi-store switching regressions, non-empty sales/session/customer datasets, and shared-link order/delivery follow-up positive paths.
+- Implement the approved mobile navigation and home-screen cleanup ticket set: role-protected admin/sales-rep homes, admin bottom tabs, More navigation, full-screen modal form rules, shared input reuse, and QA handoff.
