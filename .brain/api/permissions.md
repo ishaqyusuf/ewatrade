@@ -32,7 +32,9 @@ Define authorization and visibility rules for APIs.
 
 ## Retail Ops Read Rules
 - `retailOps.summary`, `retailOps.inventory`, `retailOps.salesByProduct`, `retailOps.salesByRep`, `retailOps.customerBook`, `retailOps.recentSales`, `retailOps.creditSales`, `retailOps.sessions`, and `retailOps.paymentReconciliation` are protected tRPC procedures.
+- Dashboard bridge routes `GET /api/sales` and `GET /api/customers` are authenticated dashboard-only read endpoints for the first web proof slice.
 - The procedure must resolve tenant membership before reading data.
+- Dashboard sales and customer bridge routes must resolve the active tenant and selected or active store before reading sales, sessions, reconciliation, or customer-book rows.
 - A requested `storeId` must belong to the active tenant context.
 - If no `storeId` is supplied, the active tenant store should be used before falling back to the first available tenant store.
 - Customer-book reads only return customers derived from orders in the selected tenant/store.
@@ -45,6 +47,7 @@ Define authorization and visibility rules for APIs.
 - Protected date-range report reads must pass the tenant report-history entitlement when a `from` date is supplied.
 - Owner/admin/manager roles can read selected-store operational reports for `retailOps.salesByProduct`, `retailOps.salesByRep`, `retailOps.customerBook`, `retailOps.recentSales`, `retailOps.creditSales`, `retailOps.sessions`, and `retailOps.paymentReconciliation`.
 - Cashier/operator roles are actor-scoped on those operational reads: sales and customer-book reports only include in-person sales attributed to the current actor or shared-link order requests attributed to links they created, and session/reconciliation reports only include the current user's cashier sessions.
+- Dashboard sales and customer bridge reads must preserve the same role-aware selected-store versus actor/user scoping.
 - First-phase `retailOps.summary` and `retailOps.inventory` remain selected-store reads because they describe store-level stock and dashboard state rather than actor-owned activity.
 
 ## Business Template And Dry Cleaning Rules

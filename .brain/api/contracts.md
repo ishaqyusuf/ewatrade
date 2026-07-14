@@ -43,10 +43,13 @@ Track important request/response shapes and contract rules.
   - `retailOps.creditSales` accepts optional `storeId`, optional `from`, optional `to`, and optional `limit`
   - `retailOps.sessions` accepts optional `storeId`, optional `from`, optional `to`, optional `limit`, and status filter `all`, `open`, or `closed`
   - `retailOps.paymentReconciliation` accepts optional `storeId`, `from`, and `to`
+  - `GET /api/sales` is the dashboard bridge read contract over recent sales, credit sales, cashier sessions, and payment reconciliation. It accepts optional `storeId` and `sessionStatus` values `all`, `open`, or `closed`.
+  - `GET /api/customers` is the dashboard bridge read contract over the customer book. It accepts optional `storeId` and `search`.
   - Date range inputs are coerced to dates at the tRPC boundary. When omitted, reporting defaults to today from local server midnight through request time.
   - Protected date-range reads that receive a `from` date must pass the tenant's `reportsHistoryDays` entitlement before querying report data.
   - Store resolution uses the requested store when provided, otherwise the active tenant store, otherwise the first non-archived tenant store.
   - Owner/admin/manager users read selected-store operational report data, while cashier/operator users are actor-scoped on `salesByProduct`, `salesByRep`, `recentSales`, and `creditSales`, customer-scoped to their own in-person sale orders or creator-attributed shared-link order requests in `customerBook`, and user-scoped on `sessions` and `paymentReconciliation`.
+  - Dashboard sales/customer bridge reads use the same role-aware actor/user scoping as the Retail Ops tRPC procedures.
   - `retailOps.summary` and `retailOps.inventory` remain selected-store reads in the first phase because they report store-level operating state rather than actor-owned sale/session activity.
   - Read responses expose operational DTOs: store identity/currency, inventory counts, receipt payment totals, order totals/counts, open cashier session count, product/unit stock rows, and product/unit sales rows.
   - `retailOps.customerBook` groups recent non-cancelled orders by customer email, then phone, then normalized name. It returns customer display data, order count, total spend, first/last seen timestamps, and last order summary.

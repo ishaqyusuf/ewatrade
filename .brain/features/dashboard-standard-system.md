@@ -22,6 +22,8 @@ Ticket 04 inventory operations slice is complete. `/inventory` now exposes a das
 
 Ticket 05 staff management slice is complete. `/staff` now exposes a dashboard staff management workbench with staff summary cards, role/status/search filtering, active/invited/suspended membership rows, invite sheet, and suspend/reactivate actions. `GET /api/staff` and `POST /api/staff` are authenticated dashboard bridge routes that resolve the active tenant/store and call the existing Retail Ops staff list, invite, status update, and invite-notification helpers.
 
+Ticket 06 sales, sessions, customers, and closeout review slice is complete. `/sales` now exposes a dashboard sales operations workbench with recent sales, credit sale counts, cashier sessions, payment reconciliation, closeout review state, and variance summary. `/customers` now exposes a searchable customer book table. `GET /api/sales` and `GET /api/customers` are authenticated dashboard bridge routes that resolve the active tenant/store and call the existing Retail Ops sales, credit sales, customer book, sessions, and payment reconciliation query helpers with the same role-aware actor scoping as the production tRPC procedures.
+
 The current direction is:
 
 - Use `/Users/M1PRO/Documents/code/halaal-coperative` as the fast-start dashboard reference where it accelerates implementation.
@@ -43,6 +45,7 @@ Resolved audit guidance:
 - The dashboard product catalog route handlers are retained as proof-slice migration bridges until the typed dashboard API surface fully covers product list, create, and edit workflows.
 - The dashboard inventory bridge route handlers are retained as proof-slice migration bridges until the typed dashboard API surface fully covers inventory list, movement history, stock intake, stock adjustment, and unit conversion workflows.
 - The dashboard staff bridge route handlers are retained as proof-slice migration bridges until the typed dashboard API surface fully covers staff list, invite, status update, and onboarding follow-up workflows.
+- The dashboard sales and customer bridge route handlers are retained as proof-slice migration bridges until the typed dashboard API surface fully covers sales review, customer book, cashier sessions, payment reconciliation, and closeout variance review workflows.
 
 ## Planned Dashboard Scope
 
@@ -59,6 +62,7 @@ Resolved audit guidance:
 ## Open Planning Questions
 
 - Seeded multi-tenant, multi-store browser fixture for ticket 02 business switching and store switching QA.
+- Seeded non-empty sales, cashier session, payment reconciliation, closeout variance, and customer-book browser fixture for ticket 06 table-content QA.
 - Dashboard-only API gaps.
 - Desktop wrapper packaging and release path.
 
