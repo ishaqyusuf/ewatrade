@@ -19,6 +19,9 @@ Track current and planned API surface areas.
   - `GET /api/products` lists selected-store products with search, status filtering, unit stock, default-unit pricing, and recent price-history rows.
   - `POST /api/products` creates a selected-store Product Sales catalog item through the existing Retail Ops product setup helper.
   - `PATCH /api/products/[productId]` edits selected-store product name, description, status, default-unit name, and default-unit price while appending durable price history for price changes.
+- `apps/dashboard` exposes temporary inventory bridge routes for the dashboard proof slice:
+  - `GET /api/inventory` lists selected-store product/unit inventory rows with on-hand, reserved, available, reorder, low/out state, and recent stock movement history. It accepts optional `storeId` and `productVariantId` query parameters.
+  - `POST /api/inventory` records selected-store stock intake, stock adjustment, or unit conversion operations through the existing Retail Ops stock helpers. It generates dashboard external ids when callers do not provide replay keys.
 - Both marketing lead routes persist a `LeadCapture` record and enqueue a shared notification dispatch job through `@ewatrade/jobs`.
 - `apps/api` exposes the authenticated tRPC app router.
 - Current tRPC procedure groups:

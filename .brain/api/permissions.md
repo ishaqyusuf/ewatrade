@@ -132,7 +132,9 @@ Define authorization and visibility rules for APIs.
 - `retailOps.recordStockIntake` is a protected tRPC procedure.
 - `retailOps.recordStockAdjustment` is a protected tRPC procedure.
 - `retailOps.recordUnitConversion` is a protected tRPC procedure.
+- Dashboard bridge routes `GET /api/inventory` and `POST /api/inventory` are authenticated dashboard-only inventory endpoints for the first web proof slice.
 - The procedure must resolve tenant membership and store scope before writing.
+- Dashboard inventory bridge routes must resolve the active tenant and selected or active store before reading inventory, reading stock movement history, or writing stock operations.
 - Stock intake, stock adjustment, and unit conversion require a POS-capable role: owner, admin, manager, cashier, or operator.
 - The product variant must belong to the selected tenant/store and must be active.
 - Unit conversions must keep source and target variants within the same product.

@@ -18,6 +18,8 @@ Ticket 02 shell/auth implementation is in progress. The dashboard now has a Midd
 
 Ticket 03 product catalog proof slice is complete. `/products` now uses a reusable dashboard table, a reusable right-side sheet, and dashboard product API bridge routes for selected-store list/search/status filtering, create, edit, validation errors, and default-unit price history updates. The slice preserves the Retail Ops product model by creating products through the existing product setup helper and updating default-unit prices through the existing price-history helper.
 
+Ticket 04 inventory operations slice is complete. `/inventory` now exposes a dashboard stock operations workbench with product/unit stock rows, available/reserved quantities, low-stock and out-of-stock filtering, stock intake, stock adjustment, unit conversion sheets, and stock movement history. `GET /api/inventory` and `POST /api/inventory` are authenticated dashboard bridge routes that resolve the active tenant/store and call the existing Retail Ops stock movement, intake, adjustment, and unit-conversion helpers.
+
 The current direction is:
 
 - Use `/Users/M1PRO/Documents/code/halaal-coperative` as the fast-start dashboard reference where it accelerates implementation.
@@ -37,6 +39,7 @@ Resolved audit guidance:
 - Role-aware dashboard navigation is centralized in `apps/dashboard/src/lib/navigation.ts`; owner/admin users see full shell navigation, managers see operational administration without owner-only settings, cashier/operator users see permitted work surfaces, and support/member roles are limited to overview.
 - The dashboard logout, active tenant, active store, and store creation route handlers are retained as migration bridges until the typed API surface fully covers those shell workflows.
 - The dashboard product catalog route handlers are retained as proof-slice migration bridges until the typed dashboard API surface fully covers product list, create, and edit workflows.
+- The dashboard inventory bridge route handlers are retained as proof-slice migration bridges until the typed dashboard API surface fully covers inventory list, movement history, stock intake, stock adjustment, and unit conversion workflows.
 
 ## Planned Dashboard Scope
 
