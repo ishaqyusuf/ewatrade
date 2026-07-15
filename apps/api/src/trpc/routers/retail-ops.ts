@@ -547,6 +547,7 @@ async function processRetailOpsSyncEvent(
         actorUserId: ctx.session.user.id,
         description: event.payload.description,
         externalId: event.payload.externalId ?? event.eventId,
+        imageLinks: event.payload.imageLinks,
         imageUrl: event.payload.imageUrl,
         name: event.payload.name,
         openingStockQuantity: event.payload.openingStockQuantity,

@@ -5,17 +5,22 @@ import { zustandStorage } from "./mmkv"
 export type RetailOpsVariant = {
   conversionMultiplier?: number
   currentStock?: number
+  enabled?: boolean
   id: string
+  imageLinks?: string[]
+  imageUrl?: string
   name: string
   price: number
   remoteId?: string
   startingStock?: number
+  variantLabel?: string
 }
 
 export type RetailOpsProduct = {
   businessId?: string
   currentStock: number
   description?: string
+  imageLinks?: string[]
   id: string
   imageUrl?: string
   name: string
@@ -230,6 +235,7 @@ export type RetailOpsSyncSummary = {
 type FirstProductInput = {
   businessId?: string
   description?: string
+  imageLinks?: string[]
   imageUrl?: string
   name: string
   price: number
@@ -241,10 +247,14 @@ type FirstProductInput = {
   variants: Array<{
     currentStock?: number
     conversionMultiplier?: number
+    enabled?: boolean
+    imageLinks?: string[]
+    imageUrl?: string
     name: string
     price: number
     remoteId?: string
     startingStock?: number
+    variantLabel?: string
   }>
 }
 
@@ -620,6 +630,7 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                 businessId,
                 currentStock: startingStock,
                 description: input.description,
+                imageLinks: input.imageLinks,
                 id: productId,
                 imageUrl: input.imageUrl,
                 name: input.name,

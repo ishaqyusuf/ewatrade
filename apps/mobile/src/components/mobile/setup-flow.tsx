@@ -100,7 +100,7 @@ export function SetupSection({
 
 type SetupChoicePillProps = {
   children: ReactNode
-  onPress: () => void
+  onPress?: () => void
   selected?: boolean
 }
 

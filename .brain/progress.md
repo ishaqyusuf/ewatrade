@@ -2,6 +2,14 @@
 
 ## 2026-07-15
 
+### Standard Inventory Item Form
+- Source Mode: Goal implementation from `.scratch/wayfinder-standard-inventory-item-form/`.
+- Completed: Reworked first product setup into a standard item form with required item name, optional Add Description disclosure, camera/gallery image card, optional public image-link rows with add/delete controls, default-unit bottom sheet, single price disabled by variant pricing, full-screen variant type/value modals, enabled variant values, inline variant price/stock rows, expandable variant image details, and generated sellable combination rows when multiple variant labels are present.
+- Changed Source Files: `apps/mobile/src/components/mobile/first-product-setup-sheet.tsx`, `apps/mobile/src/components/mobile/setup-flow.tsx`, `apps/mobile/scripts/check-first-product-flow.mjs`, `apps/mobile/src/store/retailOpsStore.ts`, `apps/mobile/src/lib/retail-ops-sync.ts`, `apps/api/src/schemas/retail-ops.ts`, `apps/api/src/trpc/routers/retail-ops-products.ts`, `apps/api/src/trpc/routers/retail-ops.ts`, `packages/db/src/queries/retail-ops-products.ts`, and focused tests.
+- Brain Files Updated: `.brain/features/retail-ops-sales-product.md`, `.brain/api/contracts.md`, `.brain/database/schema.md`, `.brain/progress.md`.
+- Checks Run: `bun test apps/api/src/schemas/retail-ops.test.ts apps/mobile/src/store/retailOpsStore.test.ts apps/mobile/src/lib/retail-ops-sync.test.ts packages/db/src/queries/retail-ops-products.test.ts`; `bun run --cwd apps/mobile qa:first-product-flow`; `bun --cwd apps/mobile tsc --noEmit`; `bun --filter @ewatrade/api typecheck`; `bun --filter @ewatrade/db typecheck`; `bun run --cwd apps/mobile qa:nativewind-style`; `git diff --check`; Android emulator Expo Go validation with existing Alijawda feed-seller QA session for the item form first viewport, Add Description disclosure, image-link row, default-unit/price area, Add variant search, Size values editor, added value, disabled single price, and inline variant price/stock row.
+- Follow-up: Durable suggestion aggregation remains metadata/planning work; the shipped mobile picker uses known local suggestions and typed creation while preserving the API/schema room for a future tenant-local and credibility-threshold suggestion service.
+
 ### Mobile Dry-Cleaning Service Orders
 - Source Mode: Goal Implementation
 - Source Brain Record: `.brain/features/business-type-onboarding-dry-cleaning.md`

@@ -82,6 +82,10 @@ describe("buildRetailOpsSyncEventsInput", () => {
           businessId,
           currentStock: 15.8,
           description: "Premium long-grain rice for shared product previews.",
+          imageLinks: [
+            "https://cdn.example.com/products/rice-side.png",
+            "https://cdn.example.com/products/rice-stack.png",
+          ],
           id: productId,
           imageUrl: "https://cdn.example.com/products/rice.png",
           name: "Rice",
@@ -95,11 +99,15 @@ describe("buildRetailOpsSyncEventsInput", () => {
             {
               conversionMultiplier: 0.5,
               currentStock: 5.8,
+              enabled: true,
               id: variantId,
+              imageLinks: ["https://cdn.example.com/products/rice-half.png"],
+              imageUrl: "https://cdn.example.com/products/rice-half-main.png",
               name: "Half bag",
               price: 9_500,
               remoteId: "remote-unit-half-bag",
               startingStock: 3.9,
+              variantLabel: "Size",
             },
           ],
         },
@@ -222,11 +230,19 @@ describe("buildRetailOpsSyncEventsInput", () => {
 
     expect(getPayload(result, "product_setup")).toMatchObject({
       description: "Premium long-grain rice for shared product previews.",
+      imageLinks: [
+        "https://cdn.example.com/products/rice-side.png",
+        "https://cdn.example.com/products/rice-stack.png",
+      ],
       imageUrl: "https://cdn.example.com/products/rice.png",
       openingStockQuantity: 12,
       variants: [
         {
+          enabled: true,
+          imageLinks: ["https://cdn.example.com/products/rice-half.png"],
+          imageUrl: "https://cdn.example.com/products/rice-half-main.png",
           openingStockQuantity: 3,
+          variantLabel: "Size",
         },
       ],
     })

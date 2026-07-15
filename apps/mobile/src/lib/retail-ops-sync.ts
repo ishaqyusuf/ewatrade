@@ -212,6 +212,7 @@ function findProductSetupPayload(
   return {
     description: product.description,
     externalId: event.id,
+    imageLinks: product.imageLinks,
     imageUrl: product.imageUrl,
     name: product.name,
     openingStockQuantity: toNonNegativeWholeQuantity(product.startingStock),
@@ -219,11 +220,15 @@ function findProductSetupPayload(
     primaryUnitName: product.unitName,
     variants: product.variants.map((variant) => ({
       conversionMultiplier: variant.conversionMultiplier,
+      enabled: variant.enabled,
+      imageLinks: variant.imageLinks,
+      imageUrl: variant.imageUrl,
       name: variant.name,
       openingStockQuantity: toNonNegativeWholeQuantity(
         variant.startingStock ?? 0,
       ),
       priceMinor: variant.price,
+      variantLabel: variant.variantLabel,
     })),
   }
 }

@@ -81,6 +81,10 @@ describe("mobile retail ops local MVP smoke flow", () => {
     useRetailOpsStore.getState().addFirstProduct({
       businessId,
       description: "Premium long-grain rice for shared product previews.",
+      imageLinks: [
+        "https://cdn.example.com/products/rice-side.png",
+        "https://cdn.example.com/products/rice-stack.png",
+      ],
       name: "Rice",
       price: 18_500,
       startingStock: 10,
@@ -88,9 +92,12 @@ describe("mobile retail ops local MVP smoke flow", () => {
       unitName: "Bag",
       variants: [
         {
+          enabled: true,
+          imageLinks: ["https://cdn.example.com/products/rice-half.png"],
           name: "Half bag",
           price: 9_500,
           startingStock: 0,
+          variantLabel: "Size",
         },
       ],
     })
@@ -101,14 +108,21 @@ describe("mobile retail ops local MVP smoke flow", () => {
     expect(product).toMatchObject({
       businessId,
       currentStock: 10,
+      imageLinks: [
+        "https://cdn.example.com/products/rice-side.png",
+        "https://cdn.example.com/products/rice-stack.png",
+      ],
       name: "Rice",
       syncStatus: "pending",
       unitName: "Bag",
     })
     expect(product.variants[0]).toMatchObject({
       currentStock: 0,
+      enabled: true,
+      imageLinks: ["https://cdn.example.com/products/rice-half.png"],
       name: "Half bag",
       price: 9_500,
+      variantLabel: "Size",
     })
     expect(state.stockMovements[0]).toMatchObject({
       productId: product.id,

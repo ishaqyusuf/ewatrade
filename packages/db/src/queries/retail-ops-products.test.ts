@@ -521,6 +521,10 @@ describe("retail ops product queries", () => {
       actorUserId: "user_owner",
       description: "Local rice inventory",
       externalId: " local_product_123 ",
+      imageLinks: [
+        "https://cdn.example.com/products/rice-side.png",
+        "https://cdn.example.com/products/rice-stack.png",
+      ],
       imageUrl: "https://cdn.example.com/products/rice.png",
       name: "Rice",
       openingStockQuantity: 10,
@@ -532,9 +536,13 @@ describe("retail ops product queries", () => {
       variants: [
         {
           conversionMultiplier: 0.5,
+          enabled: true,
+          imageLinks: ["https://cdn.example.com/products/rice-half.png"],
+          imageUrl: "https://cdn.example.com/products/rice-half-main.png",
           name: "Half bag",
           openingStockQuantity: 4,
           priceMinor: 9_500,
+          variantLabel: "Size",
         },
         {
           conversionMultiplier: 0.25,
@@ -597,6 +605,10 @@ describe("retail ops product queries", () => {
           retailOps: {
             actorUserId: "user_owner",
             externalId: "local_product_123",
+            imageLinks: [
+              "https://cdn.example.com/products/rice-side.png",
+              "https://cdn.example.com/products/rice-stack.png",
+            ],
             imageUrl: "https://cdn.example.com/products/rice.png",
             primaryUnitName: "Bag",
             source: "retail_ops_product_setup",
@@ -628,6 +640,14 @@ describe("retail ops product queries", () => {
         conversionRatioDenominator: 2,
         conversionRatioNumerator: 1,
         isDefault: false,
+        metadata: {
+          retailOps: {
+            enabled: true,
+            imageLinks: ["https://cdn.example.com/products/rice-half.png"],
+            imageUrl: "https://cdn.example.com/products/rice-half-main.png",
+            variantLabel: "Size",
+          },
+        },
         name: "Half bag",
         priceMinor: 9_500,
       },

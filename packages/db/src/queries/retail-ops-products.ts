@@ -11,15 +11,20 @@ import { assertRetailOpsEntitlementAvailable } from "./retail-ops-subscriptions"
 
 export type CreateRetailOpsProductUnitInput = {
   conversionMultiplier?: number
+  enabled?: boolean
+  imageLinks?: string[]
+  imageUrl?: string
   name: string
   openingStockQuantity: number
   priceMinor: number
+  variantLabel?: string
 }
 
 export type CreateRetailOpsProductInput = {
   actorUserId: string
   description?: string
   externalId?: string
+  imageLinks?: string[]
   imageUrl?: string
   name: string
   openingStockQuantity: number
@@ -29,6 +34,17 @@ export type CreateRetailOpsProductInput = {
   tenantId: string
   unitTemplateKey?: string
   variants: CreateRetailOpsProductUnitInput[]
+}
+
+type NormalizedRetailOpsProductUnitInput = {
+  conversionMultiplier: number | null
+  enabled: boolean
+  imageLinks: string[]
+  imageUrl?: string
+  name: string
+  openingStockQuantity: number
+  priceMinor: number
+  variantLabel?: string
 }
 
 export type UpdateRetailOpsProductUnitPriceInput = {
@@ -1092,19 +1108,25 @@ export async function createRetailOpsProduct(
 ): Promise<CreatedRetailOpsProduct> {
   const externalId = input.externalId?.trim() || null
   const unitTemplateKey = normalizeTemplateKey(input.unitTemplateKey)
-  const primaryUnit = {
+  const primaryUnit: NormalizedRetailOpsProductUnitInput = {
     conversionMultiplier: 1,
+    enabled: true,
+    imageLinks: [],
     name: input.primaryUnitName,
     openingStockQuantity: input.openingStockQuantity,
     priceMinor: input.priceMinor,
   }
-  const units = [
+  const units: NormalizedRetailOpsProductUnitInput[] = [
     primaryUnit,
     ...input.variants.map((variant) => ({
       conversionMultiplier: variant.conversionMultiplier ?? null,
+      enabled: variant.enabled !== false,
+      imageLinks: variant.imageLinks ?? [],
+      imageUrl: variant.imageUrl,
       name: variant.name,
       openingStockQuantity: variant.openingStockQuantity,
       priceMinor: variant.priceMinor,
+      variantLabel: variant.variantLabel,
     })),
   ]
 
@@ -1205,7 +1227,9 @@ export async function createRetailOpsProduct(
           retailOps: {
             actorUserId: input.actorUserId,
             externalId,
+            imageLinks: input.imageLinks ?? [],
             imageUrl: input.imageUrl?.trim() || null,
+            imagesUrl: input.imageLinks ?? [],
             primaryUnitName: normalizeUnitName(input.primaryUnitName),
             source: "retail_ops_product_setup",
             unitTemplateId: unitTemplate?.id ?? null,
@@ -1253,10 +1277,15 @@ export async function createRetailOpsProduct(
           data: {
             conversionRatioDenominator: conversionRatio?.denominator ?? null,
             conversionRatioNumerator: conversionRatio?.numerator ?? null,
+            isActive: unit.enabled !== false,
             isDefault: unitNumber === 0,
             metadata: {
               retailOps: {
                 conversionMultiplier,
+                enabled: unit.enabled !== false,
+                imageLinks: unit.imageLinks ?? [],
+                imageUrl: unit.imageUrl?.trim() || null,
+                imagesUrl: unit.imageLinks ?? [],
                 openingStockQuantity: unit.openingStockQuantity,
                 priceHistory: [
                   createPriceHistoryEntry({
@@ -1277,6 +1306,7 @@ export async function createRetailOpsProduct(
                 unitTemplateSource: setupUnitTemplateSource,
                 unitTemplateUnitId: durableTemplateUnit?.id ?? null,
                 unitTemplateUnitKey: templateUnit?.key ?? null,
+                variantLabel: unit.variantLabel?.trim() || null,
               },
             },
             name: normalizeUnitName(unit.name),

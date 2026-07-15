@@ -60,6 +60,7 @@ May be captured during in-person sales or through a shared product link. The cus
 - Minimal owner sign-up fields: name, email, business name.
 - Multi-business active workspace selection.
 - First product setup with unit, price, variants, and starting stock.
+- Standard item setup now follows an inventory-oriented mobile form: item name first, optional Add Description disclosure, image capture/gallery card, optional public image-link rows, default unit bottom sheet, single-price entry until variants exist, and per-variant or generated-combination price/stock rows.
 - Product and variant sales with price snapshots.
 - Metadata-backed product unit price changes with price-history entries.
 - Durable product-unit and price-history schema foundation for reusable unit templates, conversion ratios, and effective price history.

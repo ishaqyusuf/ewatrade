@@ -20,6 +20,10 @@ const retailOpsProductImageUrlSchema = z
     }
   }, "Product image URL must use http or https.")
   .optional()
+const retailOpsProductImageLinksSchema = z
+  .array(retailOpsProductImageUrlSchema.unwrap())
+  .max(8)
+  .default([])
 
 export const retailOpsStoreScopeSchema = z.object({
   storeId: z.string().trim().min(1).optional(),
@@ -218,14 +222,19 @@ export const retailOpsRecordCreditPaymentSchema =
 
 export const retailOpsCreateProductUnitSchema = z.object({
   conversionMultiplier: z.coerce.number().positive().optional(),
+  enabled: z.boolean().default(true),
+  imageLinks: retailOpsProductImageLinksSchema,
+  imageUrl: retailOpsProductImageUrlSchema,
   name: z.string().trim().min(1).max(80),
   openingStockQuantity: z.coerce.number().int().min(0).default(0),
   priceMinor: z.coerce.number().int().positive(),
+  variantLabel: z.string().trim().min(1).max(80).optional(),
 })
 
 export const retailOpsCreateProductSchema = retailOpsStoreScopeSchema.extend({
   description: z.string().trim().max(1_000).optional(),
   externalId: z.string().trim().min(1).max(120).optional(),
+  imageLinks: retailOpsProductImageLinksSchema,
   imageUrl: retailOpsProductImageUrlSchema,
   name: z.string().trim().min(1).max(160),
   openingStockQuantity: z.coerce.number().int().min(0).default(0),

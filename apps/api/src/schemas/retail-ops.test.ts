@@ -158,19 +158,49 @@ describe("retail ops product setup schemas", () => {
       ...storeScope,
       description: " Premium long-grain rice for customer previews. ",
       imageUrl: " https://cdn.example.com/products/rice.png ",
+      imageLinks: [
+        " https://cdn.example.com/products/rice-side.png ",
+        "https://cdn.example.com/products/rice-stack.png",
+      ],
       name: "Rice",
       openingStockQuantity: "10",
       priceMinor: "18500",
       primaryUnitName: "Bag",
+      variants: [
+        {
+          enabled: true,
+          imageLinks: [" https://cdn.example.com/products/rice-half.png "],
+          imageUrl: " https://cdn.example.com/products/rice-half-main.png ",
+          name: "Half bag",
+          openingStockQuantity: "4",
+          priceMinor: "9500",
+          variantLabel: " Size ",
+        },
+      ],
     })
 
     expect(parsed).toMatchObject({
       description: "Premium long-grain rice for customer previews.",
       imageUrl: "https://cdn.example.com/products/rice.png",
+      imageLinks: [
+        "https://cdn.example.com/products/rice-side.png",
+        "https://cdn.example.com/products/rice-stack.png",
+      ],
       name: "Rice",
       openingStockQuantity: 10,
       priceMinor: 18_500,
       primaryUnitName: "Bag",
+      variants: [
+        {
+          enabled: true,
+          imageLinks: ["https://cdn.example.com/products/rice-half.png"],
+          imageUrl: "https://cdn.example.com/products/rice-half-main.png",
+          name: "Half bag",
+          openingStockQuantity: 4,
+          priceMinor: 9_500,
+          variantLabel: "Size",
+        },
+      ],
     })
   })
 
@@ -190,6 +220,28 @@ describe("retail ops product setup schemas", () => {
       openingStockQuantity: 10,
       priceMinor: 18_500,
       primaryUnitName: "Bag",
+    })
+    expectQuantityRejected(retailOpsCreateProductSchema, {
+      ...storeScope,
+      imageLinks: ["https://cdn.example.com/products/rice.png", "notaurl"],
+      name: "Rice",
+      openingStockQuantity: 10,
+      priceMinor: 18_500,
+      primaryUnitName: "Bag",
+    })
+    expectQuantityRejected(retailOpsCreateProductSchema, {
+      ...storeScope,
+      name: "Rice",
+      openingStockQuantity: 10,
+      priceMinor: 18_500,
+      primaryUnitName: "Bag",
+      variants: [
+        {
+          imageUrl: "file:///local-only.png",
+          name: "Half bag",
+          priceMinor: 9_500,
+        },
+      ],
     })
   })
 })

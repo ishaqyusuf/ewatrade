@@ -211,6 +211,7 @@ export const retailOpsProductsRouter = createTRPCRouter({
           actorUserId: ctx.session.user.id,
           description: input.description,
           externalId: input.externalId,
+          imageLinks: input.imageLinks,
           imageUrl: input.imageUrl,
           name: input.name,
           openingStockQuantity: input.openingStockQuantity,
