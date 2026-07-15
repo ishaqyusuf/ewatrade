@@ -36,6 +36,8 @@ Ticket 11 Midday-style desktop wrapper internal build is complete. `apps/desktop
 
 Ticket 12 dashboard QA hardening and Brain handoff is complete. The closing pass verified dashboard helper policies, dashboard typecheck, desktop wrapper smoke, authenticated route availability across the main dashboard pages, logged-out redirects with `next` preservation, selected dashboard API smoke checks, and ticket 02's local multi-business/multi-store switching workflow. Remaining QA gaps are fixture-dependent positive paths for non-empty sales/session/customer datasets and shared-link order/delivery follow-up.
 
+Low-stock planning has been extended beyond passive stock-state badges and filters. The dashboard Wayfinder now includes `.scratch/wayfinder-dashboard-standard-system/13-low-stock-level-alert-workflow.md`, which defines low-stock level alerts as a follow-up inventory workflow with threshold source visibility, open/acknowledged/snoozed/resolved lifecycle states, role-gated actions, dashboard/inventory/search placement, notification settings, and QA expectations.
+
 The current direction is:
 
 - Use `/Users/M1PRO/Documents/code/halaal-coperative` as the fast-start dashboard reference where it accelerates implementation.
@@ -67,6 +69,7 @@ Resolved audit guidance:
 - Business and store switching.
 - Product registration and catalog management.
 - Inventory, stock movements, inbounds, and unit/variant operations.
+- Low-stock level alerts with threshold context, alert lifecycle, role-gated acknowledgement or snooze, and restock/adjustment entry points.
 - Sales, customers, generated product links, and shared-link follow-up.
 - Staff management and payroll or payout planning.
 - Analytics, reports, KPIs, charts, exports, sync history, and conflict review.
@@ -78,6 +81,7 @@ Resolved audit guidance:
 - Durable seeded dashboard browser fixture automation for multi-tenant and multi-store switching regression coverage.
 - Seeded non-empty sales, cashier session, payment reconciliation, closeout variance, and customer-book browser fixture for ticket 06 table-content QA.
 - Seeded shared-link order request and delivery request browser fixture for ticket 07 complete/cancel and delivery table-content QA.
+- Low-stock alert implementation decisions: durable alert persistence versus derived read-model alerts, channel rollout beyond in-app, and threshold defaults beyond per-unit reorder points.
 - Dashboard-only API gaps.
 - Desktop wrapper packaging and release path.
 

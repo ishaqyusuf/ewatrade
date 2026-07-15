@@ -8,11 +8,10 @@ const sdkRoot =
   process.env.ANDROID_SDK_ROOT ||
   join(homedir(), "Library/Android/sdk")
 const adbPath =
-  process.env.EWATRADE_ANDROID_ADB_PATH || join(sdkRoot, "platform-tools/adb")
+  process.env.ANDROID_ADB_PATH || join(sdkRoot, "platform-tools/adb")
 const emulatorPath =
-  process.env.EWATRADE_ANDROID_EMULATOR_PATH ||
-  join(sdkRoot, "emulator/emulator")
-const REQUIRED_AVD = process.env.EWATRADE_ANDROID_AVD || "Pixel_3a_API_34"
+  process.env.ANDROID_EMULATOR_PATH || join(sdkRoot, "emulator/emulator")
+const REQUIRED_AVD = process.env.ANDROID_AVD || "Pixel_3a_API_34"
 const failures = []
 
 function parseAdbDeviceLine(line) {
@@ -51,8 +50,8 @@ if (!existsSync(emulatorPath)) {
 
 let avds = []
 if (existsSync(emulatorPath)) {
-  if (process.env.EWATRADE_ANDROID_AVD_LIST_OUTPUT) {
-    avds = process.env.EWATRADE_ANDROID_AVD_LIST_OUTPUT.split("\n")
+  if (process.env.ANDROID_AVD_LIST_OUTPUT) {
+    avds = process.env.ANDROID_AVD_LIST_OUTPUT.split("\n")
       .map((line) => line.trim())
       .filter(Boolean)
   } else {
@@ -83,10 +82,8 @@ if (!avds.includes(REQUIRED_AVD)) {
 let adbRows = []
 let onlineDevices = []
 if (existsSync(adbPath)) {
-  if (process.env.EWATRADE_ANDROID_ADB_DEVICES_OUTPUT) {
-    adbRows = parseAdbDevicesOutput(
-      process.env.EWATRADE_ANDROID_ADB_DEVICES_OUTPUT,
-    )
+  if (process.env.ANDROID_ADB_DEVICES_OUTPUT) {
+    adbRows = parseAdbDevicesOutput(process.env.ANDROID_ADB_DEVICES_OUTPUT)
   } else {
     const adbResult = spawnSync(adbPath, ["devices", "-l"], {
       encoding: "utf8",

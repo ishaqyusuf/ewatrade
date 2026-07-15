@@ -11,8 +11,7 @@ import { z } from "zod/v4"
 const ACTIVE_TENANT_COOKIE = "ewatrade.active_tenant_slug"
 const PLATFORM_DOMAIN =
   process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ??
-  process.env.NEXT_PUBLIC_EWATRADE_PLATFORM_DOMAIN ??
-  process.env.EWATRADE_PLATFORM_DOMAIN ??
+  process.env.PLATFORM_DOMAIN ??
   "ewatrade.com"
 
 const activeTenantSchema = z.object({

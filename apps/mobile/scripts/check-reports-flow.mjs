@@ -4,6 +4,7 @@ import { join, relative, resolve } from "node:path"
 const REPO_ROOT = resolve(new URL("../../..", import.meta.url).pathname)
 const MOBILE_DIR = join(REPO_ROOT, "apps/mobile")
 const FILES = {
+  reportFlow: join(MOBILE_DIR, "src/components/mobile/report-flow.tsx"),
   reportsSheet: join(MOBILE_DIR, "src/components/mobile/reports-sheet.tsx"),
   retailOpsQueries: join(REPO_ROOT, "packages/db/src/queries/retail-ops.ts"),
   router: join(REPO_ROOT, "apps/api/src/trpc/routers/retail-ops.ts"),
@@ -28,9 +29,8 @@ const CONTRACTS = [
     markers: [
       "BottomSheetKeyboardAwareScrollView",
       "ReportSection",
-      "visibleRows",
-      "visibleLimit = 8",
-      "ReportMetricCard",
+      "ReportMetricTile",
+      "StatusBanner",
       "Retail reports",
       "Today, stock, payment, variance, and movement snapshots for",
       "buildRetailOpsReportCsv",
@@ -40,7 +40,24 @@ const CONTRACTS = [
       "CSV export includes the visible report rows",
     ],
     reason:
-      "reports sheet must remain keyboard-safe, bounded, compact, and export visible report rows as CSV",
+      "reports sheet must remain keyboard-safe, bounded, compact, use shared report primitives, and export visible report rows as CSV",
+  },
+  {
+    file: FILES.reportFlow,
+    markers: [
+      "ReportMetricTile",
+      "ReportRecordRow",
+      "ReportSection",
+      "visibleRows",
+      "visibleLimit = 8",
+      "EmptyState",
+      "border-t border-border py-3",
+      "text-success",
+      "text-warn",
+      "text-destructive",
+    ],
+    reason:
+      "reports UI must use reusable flat report primitives with bounded rows, semantic tones, and shared empty states instead of local card-heavy report widgets",
   },
   {
     file: FILES.reportsSheet,

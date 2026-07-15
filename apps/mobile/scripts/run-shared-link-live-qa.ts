@@ -27,23 +27,21 @@ runReadinessCheck()
 
 const env = process.env as EnvValues
 const apiUrl = pickEnv([
-  "EWATRADE_API_URL",
+  "API_URL",
   "NEXT_PUBLIC_API_URL",
   "EXPO_PUBLIC_API_URL",
 ])
 const storefrontUrl = pickEnv([
-  "EWATRADE_STOREFRONT_URL",
+  "STOREFRONT_URL",
   "NEXT_PUBLIC_STOREFRONT_URL",
   "NEXT_PUBLIC_APP_URL",
 ])
-const ownerBearerToken = requireEnv(
-  "EWATRADE_SHARED_LINK_LIVE_OWNER_BEARER_TOKEN",
-)
-const productId = requireEnv("EWATRADE_SHARED_LINK_LIVE_PRODUCT_ID")
-const customerEmail = requireEnv("EWATRADE_SHARED_LINK_LIVE_CUSTOMER_EMAIL")
-const customerName = requireEnv("EWATRADE_SHARED_LINK_LIVE_CUSTOMER_NAME")
-const followUpMode = requireEnv("EWATRADE_SHARED_LINK_LIVE_FOLLOW_UP_MODE")
-const evidencePath = requireEnv("EWATRADE_SHARED_LINK_LIVE_EVIDENCE_PATH")
+const ownerBearerToken = requireEnv("SHARED_LINK_LIVE_OWNER_BEARER_TOKEN")
+const productId = requireEnv("SHARED_LINK_LIVE_PRODUCT_ID")
+const customerEmail = requireEnv("SHARED_LINK_LIVE_CUSTOMER_EMAIL")
+const customerName = requireEnv("SHARED_LINK_LIVE_CUSTOMER_NAME")
+const followUpMode = requireEnv("SHARED_LINK_LIVE_FOLLOW_UP_MODE")
+const evidencePath = requireEnv("SHARED_LINK_LIVE_EVIDENCE_PATH")
 const quantity = getQuantity()
 const runId = `live-qa-${Date.now()}`
 
@@ -262,7 +260,7 @@ function requireEnv(key: string) {
 }
 
 function getQuantity() {
-  const parsed = Number(process.env.EWATRADE_SHARED_LINK_LIVE_QUANTITY ?? "")
+  const parsed = Number(process.env.SHARED_LINK_LIVE_QUANTITY ?? "")
 
   if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_QUANTITY
 

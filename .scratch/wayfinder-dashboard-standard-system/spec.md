@@ -15,6 +15,8 @@ Without a clear spec, the dashboard implementation can drift in two risky ways. 
 
 Build a standard EwaTrade dashboard system for laptop and desktop-first users. The dashboard should let owners, admins, managers, and permitted attendants operate the business from the web: sign up, log in, onboard, create or switch businesses and stores, register products, manage catalogs, review inventory, record inbounds and stock movements, manage sales, review customers, invite staff, plan payroll or payouts, manage subscriptions, inspect generated product links, follow up shared-link orders, review analytics, handle sync issues, and configure settings.
 
+The dashboard should also promote low-stock state from a passive table badge into a first-class operational alert workflow. Owners and managers need to see which products are below reorder level, understand the threshold that triggered the alert, acknowledge or snooze noisy alerts, and move directly into restock, adjustment, or reorder-point changes without hunting through inventory rows.
+
 The implementation should use HalalVest as a practical fast-start reference where it accelerates delivery, especially for auth alignment, dashboard scaffolding, API-connected pages, tables, sheets, modals, and operational layouts. Every imported or adapted pattern must still be reshaped to the Midday standard unless a deliberate and documented exception is approved.
 
 The dashboard should use the same product model as Retail Ops mobile rather than creating a dashboard-only product. Mobile remains a focused operations surface for fast sales and offline work; the web dashboard becomes the fuller control center for administration, analysis, larger tables, exports, setup, and review.
@@ -136,6 +138,15 @@ The dashboard should also support a future installable desktop wrapper based on 
 109. As a developer, I want desktop environment profiles, branding, icons, app ids, and auth handoff planned, so that desktop builds can be released deliberately.
 110. As a project owner, I want the dashboard implementation broken into phases, so that agents can ship the standard system without one giant risky rewrite.
 
+## Low-Stock Level Alert Extension
+
+- As an owner, I want low-stock level alerts to appear when available stock drops below a reorder threshold, so that I can restock before sales are blocked.
+- As a manager, I want each alert to show product, unit or variant, store, available stock, threshold, and age, so that I know what to fix first.
+- As an owner, I want to configure reorder points per sellable unit or variant, so that slow and fast-moving items do not share the same threshold.
+- As a manager, I want to acknowledge or snooze a low-stock alert, so that the dashboard stays useful while I am already handling a restock.
+- As an owner, I want low-stock alerts to resolve automatically after stock rises above the threshold, so that stale alerts do not create noise.
+- As an owner, I want notification settings for low-stock alerts, so that in-app alerts can later expand to email or WhatsApp/SMS fallback without changing the workflow.
+
 ## Implementation Decisions
 
 - The dashboard standard is a web-first Retail Ops control center for laptop and desktop users. It does not replace the mobile app; it complements it with richer navigation, tables, analytics, exports, setup, and administrative workflows.
@@ -151,6 +162,8 @@ The dashboard should also support a future installable desktop wrapper based on 
 - API procedures should call service functions, and services should call repository or query modules. UI components must not own domain rules such as authorization, stock mutation, price snapshotting, idempotency, sync conflict semantics, or subscription entitlement checks.
 - Prisma remains the schema source of truth. Runtime query tools may be used only behind repository/query boundaries and must not become a second schema authority.
 - The dashboard route map should include dashboard home, onboarding/setup, products/catalog, inventory, inbounds/stock movements, sales, customers, staff, payroll or payout planning, generated links, shared-link order follow-up, analytics/reports, subscriptions, settings, sync/conflict review, and search.
+- Low-stock level alerts should be a first-class inventory workflow, not just a visual state. Alerts derive from available stock compared with a product/unit reorder point, a business/store default, or the existing fallback threshold, and must preserve tenant, store, role, and entitlement boundaries.
+- Low-stock alert lifecycle should support open, acknowledged, snoozed, and resolved states. Repeated reads while an item remains below threshold should update the active alert rather than creating duplicates, and restocking above threshold should remove it from active alert counts.
 - The sidebar should be role-aware. Owners/admins see full business, billing, staff, settings, analytics, and destructive management surfaces. Managers see operational administration where permitted. Attendants see only permitted work surfaces.
 - Business and store switching should be visible and consistent in the global shell, and it should update the active tenant/store context used by queries.
 - The dashboard home should show a compact operational summary, not a marketing landing page.
@@ -185,6 +198,7 @@ The dashboard should also support a future installable desktop wrapper based on 
 - Browser QA should use the repository's Portless hostnames rather than raw localhost ports except for low-level Portless debugging.
 - Supporting tRPC/API contract tests should be added where browser tests cannot cleanly prove domain behavior, permission boundaries, tenant scoping, mutation outcomes, or idempotency.
 - Contract tests should cover auth/session context, tenant/store selection, role-based access, product creation, stock intake, unit conversion, sale reads, customer book reads, staff invite/status changes, generated-link management, subscription reads, sync history, and conflict acknowledgement where those workflows are touched.
+- Low-stock alert tests should cover threshold calculation, reserved-stock-aware available quantity, duplicate prevention, acknowledgement, snooze, automatic resolution after restock, permission gates, dashboard count consistency, inventory filters, and notification-setting visibility.
 - Dashboard table tests should focus on user-observable behavior: rendering rows, applying filters, sorting, pagination or virtualization, selection, row actions, skeletons, empty states, and exports.
 - Form tests should verify validation, submission, loading state, success state, error state, and cache invalidation outcomes rather than internal field implementation.
 - Sheet and modal tests should verify open/close behavior, submitted outcomes, destructive confirmations, and preservation of page context.

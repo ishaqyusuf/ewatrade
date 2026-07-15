@@ -12,20 +12,16 @@ const EXAMPLE_ENV_FILE =
   join(REPO_ROOT, ".env.example")
 const BASE_READY_SCRIPT = join(SCRIPT_DIR, "check-google-oauth-ready.mjs")
 const REQUIRED_EXAMPLE_KEYS = [
-  "EWATRADE_GOOGLE_LIVE_CONFIRM_AUTH",
-  "EWATRADE_GOOGLE_LIVE_ID_TOKEN",
-  "EWATRADE_GOOGLE_LIVE_MODE",
-  "EWATRADE_GOOGLE_LIVE_EXPECTED_EMAIL",
-  "EWATRADE_GOOGLE_LIVE_EVIDENCE_PATH",
-  "EWATRADE_GOOGLE_LIVE_NAME",
-  "EWATRADE_GOOGLE_LIVE_BUSINESS_NAME",
-  "EWATRADE_GOOGLE_LIVE_ALLOW_LOCALHOST",
+  "GOOGLE_LIVE_CONFIRM_AUTH",
+  "GOOGLE_LIVE_ID_TOKEN",
+  "GOOGLE_LIVE_MODE",
+  "GOOGLE_LIVE_EXPECTED_EMAIL",
+  "GOOGLE_LIVE_EVIDENCE_PATH",
+  "GOOGLE_LIVE_NAME",
+  "GOOGLE_LIVE_BUSINESS_NAME",
+  "GOOGLE_LIVE_ALLOW_LOCALHOST",
 ]
-const API_URL_KEYS = [
-  "EWATRADE_API_URL",
-  "NEXT_PUBLIC_API_URL",
-  "EXPO_PUBLIC_API_URL",
-]
+const API_URL_KEYS = ["API_URL", "NEXT_PUBLIC_API_URL", "EXPO_PUBLIC_API_URL"]
 const failures = []
 const env = readEnvFile(ENV_FILE)
 const exampleEnv = readEnvFile(EXAMPLE_ENV_FILE)
@@ -54,44 +50,44 @@ if (!selectedApiUrlKey) {
   failures.push(`Live API URL: set one of ${API_URL_KEYS.join(", ")}.`)
 } else {
   validateApiUrl({
-    allowLocalhost: env.EWATRADE_GOOGLE_LIVE_ALLOW_LOCALHOST === "1",
+    allowLocalhost: env.GOOGLE_LIVE_ALLOW_LOCALHOST === "1",
     key: selectedApiUrlKey,
     value: env[selectedApiUrlKey],
   })
 }
 
 requireExactFlag({
-  key: "EWATRADE_GOOGLE_LIVE_CONFIRM_AUTH",
+  key: "GOOGLE_LIVE_CONFIRM_AUTH",
   reason:
     "Set to 1 only when the selected API/database may receive a live Google auth verification that can create or update account/session records.",
 })
-requireValue("EWATRADE_GOOGLE_LIVE_ID_TOKEN", {
+requireValue("GOOGLE_LIVE_ID_TOKEN", {
   minLength: 100,
   reason: "Paste a fresh Google ID token from the configured mobile client.",
 })
-requireValue("EWATRADE_GOOGLE_LIVE_EXPECTED_EMAIL", {
+requireValue("GOOGLE_LIVE_EXPECTED_EMAIL", {
   pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   reason:
     "Used to verify the returned mobile auth profile without printing it.",
 })
-requireValue("EWATRADE_GOOGLE_LIVE_EVIDENCE_PATH", {
+requireValue("GOOGLE_LIVE_EVIDENCE_PATH", {
   minLength: 6,
   reason:
     "Provide an absolute .json path where the live Google runner can save value-safe release evidence.",
 })
 validateEvidencePath()
 
-const mode = env.EWATRADE_GOOGLE_LIVE_MODE?.trim()
+const mode = env.GOOGLE_LIVE_MODE?.trim()
 if (!["login", "sign_up"].includes(mode)) {
-  failures.push("EWATRADE_GOOGLE_LIVE_MODE must be either login or sign_up.")
+  failures.push("GOOGLE_LIVE_MODE must be either login or sign_up.")
 }
 
 if (mode === "sign_up") {
-  requireValue("EWATRADE_GOOGLE_LIVE_NAME", {
+  requireValue("GOOGLE_LIVE_NAME", {
     minLength: 2,
     reason: "Sign-up live QA should use a disposable owner name.",
   })
-  requireValue("EWATRADE_GOOGLE_LIVE_BUSINESS_NAME", {
+  requireValue("GOOGLE_LIVE_BUSINESS_NAME", {
     minLength: 2,
     reason: "Sign-up live QA should use a disposable business name.",
   })
@@ -208,7 +204,7 @@ function validateApiUrl({ allowLocalhost, key, value }) {
 
   if (isLocalhost && !allowLocalhost) {
     failures.push(
-      `${key} points to localhost. Set EWATRADE_GOOGLE_LIVE_ALLOW_LOCALHOST=1 only for local OAuth API fixtures.`,
+      `${key} points to localhost. Set GOOGLE_LIVE_ALLOW_LOCALHOST=1 only for local OAuth API fixtures.`,
     )
   }
 
@@ -218,20 +214,16 @@ function validateApiUrl({ allowLocalhost, key, value }) {
 }
 
 function validateEvidencePath() {
-  const evidencePath = env.EWATRADE_GOOGLE_LIVE_EVIDENCE_PATH?.trim()
+  const evidencePath = env.GOOGLE_LIVE_EVIDENCE_PATH?.trim()
 
   if (!evidencePath) return
 
   if (!isAbsolute(evidencePath)) {
-    failures.push(
-      "EWATRADE_GOOGLE_LIVE_EVIDENCE_PATH must be an absolute path.",
-    )
+    failures.push("GOOGLE_LIVE_EVIDENCE_PATH must be an absolute path.")
   }
 
   if (!evidencePath.toLowerCase().endsWith(".json")) {
-    failures.push(
-      "EWATRADE_GOOGLE_LIVE_EVIDENCE_PATH must point to a .json file.",
-    )
+    failures.push("GOOGLE_LIVE_EVIDENCE_PATH must point to a .json file.")
   }
 }
 

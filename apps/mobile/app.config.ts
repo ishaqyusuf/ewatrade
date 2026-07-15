@@ -10,6 +10,11 @@ const appVariant =
 const normalizedAppVariant = (appVariant ?? "production").toLowerCase()
 const isDevelopmentBuild =
   normalizedAppVariant === "development" || normalizedAppVariant === "dev"
+const autoUpdateOnForeground =
+  process.env.EXPO_PUBLIC_AUTO_UPDATE_ON_FOREGROUND !== "false"
+const autoUpdateForegroundCooldownMs = Number(
+  process.env.EXPO_PUBLIC_AUTO_UPDATE_FOREGROUND_COOLDOWN_MS ?? 5 * 60 * 1000,
+)
 
 const variantConfig = isDevelopmentBuild
   ? {
@@ -17,9 +22,9 @@ const variantConfig = isDevelopmentBuild
       scheme: "ewatrade-dev",
       iosBundleIdentifier: "com.ewatrade.dev",
       androidPackage: "com.ewatrade.dev",
-      iconBackgroundColor: "#DFF7EC",
-      splashBackgroundColor: "#F4FFF8",
-      splashDarkBackgroundColor: "#042116",
+      iconBackgroundColor: "#FEE2E2",
+      splashBackgroundColor: "#FFF5F5",
+      splashDarkBackgroundColor: "#2A0505",
       icons: {
         app: "./assets/icons/dev-loading-icon.png",
         adaptive: "./assets/icons/dev-adaptive-icon.png",
@@ -118,6 +123,12 @@ const config: ExpoConfig = {
   },
   extra: {
     appVariant: normalizedAppVariant,
+    autoUpdateOnForeground,
+    autoUpdateForegroundCooldownMs: Number.isFinite(
+      autoUpdateForegroundCooldownMs,
+    )
+      ? autoUpdateForegroundCooldownMs
+      : 5 * 60 * 1000,
     updateVersion: UPDATE_VERSION,
     eas: {
       projectId: PROJECT_ID,

@@ -3,7 +3,12 @@ import {
   verifyMobileGoogleIdentity,
   verifyMobileOwnerOtp,
 } from "@ewatrade/db/queries"
-import { createEmailMessage, dispatchEmailMessages } from "@ewatrade/email"
+import {
+  type EmailRoutingEnv,
+  createEmailMessage,
+  createTestRoutedEmailMessages,
+  dispatchEmailMessages,
+} from "@ewatrade/email"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { verifyGoogleIdToken } from "../../auth/mobile-google"
@@ -39,11 +44,7 @@ export const verifyMobileGoogleSchema = z
   .strict()
 
 function getEmailFromAddress() {
-  return (
-    process.env.EMAIL_FROM ??
-    process.env.EWATRADE_EMAIL_FROM ??
-    "Ewatrade <noreply@ewatrade.com>"
-  )
+  return process.env.EMAIL_FROM ?? "Ewatrade <noreply@ewatrade.com>"
 }
 
 function renderOtpEmail(input: {
@@ -68,27 +69,55 @@ function renderOtpEmail(input: {
   }
 }
 
+export function createMobileOwnerOtpEmailMessages(input: {
+  code: string
+  email: string
+  env?: EmailRoutingEnv
+  expiresAt: Date
+  mode: "login" | "sign_up"
+}) {
+  const email = renderOtpEmail({
+    code: input.code,
+    expiresAt: input.expiresAt,
+    mode: input.mode,
+  })
+
+  return createTestRoutedEmailMessages(
+    createEmailMessage({
+      from: getEmailFromAddress(),
+      html: email.html,
+      subject: email.subject,
+      text: email.text,
+      to: input.email,
+    }),
+    { env: input.env },
+  )
+}
+
 export const authRouter = createTRPCRouter({
   requestMobileOwnerOtp: publicProcedure
     .input(requestMobileOwnerOtpSchema)
     .mutation(async ({ ctx, input }) => {
       const otp = await createMobileOwnerOtp(ctx.db, input)
-      const email = renderOtpEmail({
-        code: otp.code,
-        expiresAt: otp.expiresAt,
-        mode: input.mode,
-      })
-      const [result] = await dispatchEmailMessages([
-        createEmailMessage({
-          from: getEmailFromAddress(),
-          html: email.html,
-          subject: email.subject,
-          text: email.text,
-          to: otp.email,
-        }),
-      ])
+      const emailMessages = (() => {
+        try {
+          return createMobileOwnerOtpEmailMessages({
+            code: otp.code,
+            email: otp.email,
+            expiresAt: otp.expiresAt,
+            mode: input.mode,
+          })
+        } catch {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "We could not send the verification email. Try again.",
+          })
+        }
+      })()
+      const results = await dispatchEmailMessages(emailMessages)
+      const failedResult = results.find((result) => result.status === "failed")
 
-      if (result?.status === "failed") {
+      if (failedResult) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "We could not send the verification email. Try again.",

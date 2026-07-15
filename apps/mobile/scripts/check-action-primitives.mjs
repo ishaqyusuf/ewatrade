@@ -45,12 +45,16 @@ const PRIMITIVE_CONTRACTS = [
     markers: [
       "import { Button",
       'from "@/components/ui/button"',
-      "h-12 w-full rounded-xl",
+      "min-h-[50px] w-full rounded-xl",
       'size="lg"',
-      "font-semibold",
+      "isLoading",
+      "loadingLabel",
+      "ActivityIndicator",
+      "Icon",
+      "bg-primary",
     ],
     reason:
-      "mobile ActionButton must keep wrapping the shared Button primitive",
+      "mobile ActionButton must keep wrapping the shared Button primitive with auth-style sizing, icons, and loading state",
   },
 ]
 const failures = []

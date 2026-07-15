@@ -44,39 +44,39 @@ const REPORT_SECRET_MARKERS = SECRET_MARKERS.filter(
 const ENV_CONTENT = [
   "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=1234567890-android.apps.googleusercontent.com",
   "GOOGLE_ANDROID_CLIENT_ID=1234567890-android.apps.googleusercontent.com",
-  "EWATRADE_GOOGLE_LIVE_CONFIRM_AUTH=1",
-  "EWATRADE_GOOGLE_LIVE_ID_TOKEN=google-id-token-secret",
-  "EWATRADE_GOOGLE_LIVE_MODE=sign_up",
-  "EWATRADE_GOOGLE_LIVE_EXPECTED_EMAIL=owner@qa-mail.test",
-  "EWATRADE_GOOGLE_LIVE_EVIDENCE_PATH=/tmp/google-live-evidence.json",
-  "EWATRADE_GOOGLE_LIVE_NAME=QA Google Owner",
-  "EWATRADE_GOOGLE_LIVE_BUSINESS_NAME=QA Google Store",
-  "EWATRADE_GOOGLE_LIVE_ALLOW_LOCALHOST=1",
-  "EWATRADE_API_URL=https://api.ewatrade.test",
+  "GOOGLE_LIVE_CONFIRM_AUTH=1",
+  "GOOGLE_LIVE_ID_TOKEN=google-id-token-secret",
+  "GOOGLE_LIVE_MODE=sign_up",
+  "GOOGLE_LIVE_EXPECTED_EMAIL=owner@qa-mail.test",
+  "GOOGLE_LIVE_EVIDENCE_PATH=/tmp/google-live-evidence.json",
+  "GOOGLE_LIVE_NAME=QA Google Owner",
+  "GOOGLE_LIVE_BUSINESS_NAME=QA Google Store",
+  "GOOGLE_LIVE_ALLOW_LOCALHOST=1",
+  "API_URL=https://api.ewatrade.test",
   "EXPO_PUBLIC_API_URL=https://api.ewatrade.test",
   "EXPO_PUBLIC_BASE_URL=https://shop.ewatrade.test",
   "EXPO_PUBLIC_WEB_URL=https://shop.ewatrade.test",
-  "EWATRADE_STOREFRONT_URL=https://shop.ewatrade.test",
-  "EWATRADE_SHARED_LINK_LIVE_OWNER_BEARER_TOKEN=owner-live-token-1234567890",
-  "EWATRADE_SHARED_LINK_LIVE_CUSTOMER_NAME=Shared Link Buyer",
-  "EWATRADE_SHARED_LINK_LIVE_QUANTITY=3",
-  "EWATRADE_SHARED_LINK_LIVE_EVIDENCE_PATH=/tmp/shared-link-live-evidence.json",
-  "EWATRADE_SHARED_LINK_LIVE_ALLOW_LOCALHOST=1",
-  "EWATRADE_SHARED_LINK_LIVE_CUSTOMER_PASSWORD=customer-password",
-  "EWATRADE_SHARED_LINK_PREVIEW_URL=https://retail.example.test/p/store/main/rice?share=secret-token",
-  "EWATRADE_SHARED_LINK_PREVIEW_EVIDENCE_PATH=/tmp/share-preview-evidence.json",
-  "EWATRADE_SHARED_LINK_PREVIEW_ALLOW_LOCALHOST=1",
-  "EWATRADE_SHARED_LINK_BROWSER_CONFIRM_ORDER=1",
-  "EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_EMAIL=browser-buyer@example.test",
-  "EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_NAME=Browser Buyer",
-  "EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_PASSWORD=browser-password",
-  "EWATRADE_SHARED_LINK_BROWSER_AUTH_MODE=register",
-  "EWATRADE_SHARED_LINK_BROWSER_QUANTITY=2",
-  "EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_PHONE=+2348012345678",
-  "EWATRADE_SHARED_LINK_BROWSER_NOTES=Browser checkout fixture note",
-  "EWATRADE_SHARED_LINK_BROWSER_SCREENSHOT_PATH=/tmp/browser-checkout.png",
-  "EWATRADE_SHARED_LINK_BROWSER_HEADFUL=1",
-  "EWATRADE_SHARED_LINK_BROWSER_ALLOW_LOCALHOST=1",
+  "STOREFRONT_URL=https://shop.ewatrade.test",
+  "SHARED_LINK_LIVE_OWNER_BEARER_TOKEN=owner-live-token-1234567890",
+  "SHARED_LINK_LIVE_CUSTOMER_NAME=Shared Link Buyer",
+  "SHARED_LINK_LIVE_QUANTITY=3",
+  "SHARED_LINK_LIVE_EVIDENCE_PATH=/tmp/shared-link-live-evidence.json",
+  "SHARED_LINK_LIVE_ALLOW_LOCALHOST=1",
+  "SHARED_LINK_LIVE_CUSTOMER_PASSWORD=customer-password",
+  "SHARED_LINK_PREVIEW_URL=https://retail.example.test/p/store/main/rice?share=secret-token",
+  "SHARED_LINK_PREVIEW_EVIDENCE_PATH=/tmp/share-preview-evidence.json",
+  "SHARED_LINK_PREVIEW_ALLOW_LOCALHOST=1",
+  "SHARED_LINK_BROWSER_CONFIRM_ORDER=1",
+  "SHARED_LINK_BROWSER_CUSTOMER_EMAIL=browser-buyer@example.test",
+  "SHARED_LINK_BROWSER_CUSTOMER_NAME=Browser Buyer",
+  "SHARED_LINK_BROWSER_CUSTOMER_PASSWORD=browser-password",
+  "SHARED_LINK_BROWSER_AUTH_MODE=register",
+  "SHARED_LINK_BROWSER_QUANTITY=2",
+  "SHARED_LINK_BROWSER_CUSTOMER_PHONE=+2348012345678",
+  "SHARED_LINK_BROWSER_NOTES=Browser checkout fixture note",
+  "SHARED_LINK_BROWSER_SCREENSHOT_PATH=/tmp/browser-checkout.png",
+  "SHARED_LINK_BROWSER_HEADFUL=1",
+  "SHARED_LINK_BROWSER_ALLOW_LOCALHOST=1",
 ].join("\n")
 
 const fixtureDir = mkdtempSync(join(tmpdir(), "ewatrade-live-env-checklist-"))
@@ -140,7 +140,7 @@ try {
     "- Google OAuth: API iOS audience (GOOGLE_IOS_CLIENT_ID)",
     "- Google OAuth: Expo web/generic client ID (EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID or EXPO_PUBLIC_GOOGLE_CLIENT_ID)",
     "- Google OAuth: API web/generic audience (GOOGLE_WEB_CLIENT_ID or GOOGLE_CLIENT_ID)",
-    "- Shared-Link Live Write And Email QA: Write confirmation (EWATRADE_SHARED_LINK_LIVE_CONFIRM_WRITES)",
+    "- Shared-Link Live Write And Email QA: Write confirmation (SHARED_LINK_LIVE_CONFIRM_WRITES)",
     "qa:mvp-live-env-checklist:prod",
     "qa:mvp-live-readiness:prod",
     "qa:mvp-readiness:prod",
@@ -167,17 +167,17 @@ try {
   )
   writeFileSync(
     optionalUnsetEnvFile,
-    `${ENV_CONTENT.replace(/^EWATRADE_GOOGLE_LIVE_NAME=.*\n?/m, "")
-      .replace(/^EWATRADE_GOOGLE_LIVE_BUSINESS_NAME=.*\n?/m, "")
-      .replace(/^EWATRADE_GOOGLE_LIVE_ALLOW_LOCALHOST=.*\n?/m, "")
-      .replace(/^EWATRADE_SHARED_LINK_LIVE_QUANTITY=.*\n?/m, "")
-      .replace(/^EWATRADE_SHARED_LINK_LIVE_ALLOW_LOCALHOST=.*\n?/m, "")
-      .replace(/^EWATRADE_SHARED_LINK_PREVIEW_ALLOW_LOCALHOST=.*\n?/m, "")
-      .replace(/^EWATRADE_SHARED_LINK_BROWSER_QUANTITY=.*\n?/m, "")
-      .replace(/^EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_PHONE=.*\n?/m, "")
-      .replace(/^EWATRADE_SHARED_LINK_BROWSER_NOTES=.*\n?/m, "")
-      .replace(/^EWATRADE_SHARED_LINK_BROWSER_HEADFUL=.*\n?/m, "")
-      .replace(/^EWATRADE_SHARED_LINK_BROWSER_ALLOW_LOCALHOST=.*\n?/m, "")}\n`,
+    `${ENV_CONTENT.replace(/^GOOGLE_LIVE_NAME=.*\n?/m, "")
+      .replace(/^GOOGLE_LIVE_BUSINESS_NAME=.*\n?/m, "")
+      .replace(/^GOOGLE_LIVE_ALLOW_LOCALHOST=.*\n?/m, "")
+      .replace(/^SHARED_LINK_LIVE_QUANTITY=.*\n?/m, "")
+      .replace(/^SHARED_LINK_LIVE_ALLOW_LOCALHOST=.*\n?/m, "")
+      .replace(/^SHARED_LINK_PREVIEW_ALLOW_LOCALHOST=.*\n?/m, "")
+      .replace(/^SHARED_LINK_BROWSER_QUANTITY=.*\n?/m, "")
+      .replace(/^SHARED_LINK_BROWSER_CUSTOMER_PHONE=.*\n?/m, "")
+      .replace(/^SHARED_LINK_BROWSER_NOTES=.*\n?/m, "")
+      .replace(/^SHARED_LINK_BROWSER_HEADFUL=.*\n?/m, "")
+      .replace(/^SHARED_LINK_BROWSER_ALLOW_LOCALHOST=.*\n?/m, "")}\n`,
   )
   const optionalUnsetResult = spawnSync(process.execPath, [SCRIPT_PATH], {
     encoding: "utf8",
@@ -376,15 +376,14 @@ try {
   }
 
   if (
-    report.publicConfiguredValues?.EWATRADE_API_URL !==
-      "https://api.ewatrade.test" ||
+    report.publicConfiguredValues?.API_URL !== "https://api.ewatrade.test" ||
     report.publicConfiguredValues?.EXPO_PUBLIC_API_URL !==
       "https://api.ewatrade.test" ||
     report.publicConfiguredValues?.EXPO_PUBLIC_BASE_URL !==
       "https://shop.ewatrade.test" ||
     report.publicConfiguredValues?.EXPO_PUBLIC_WEB_URL !==
       "https://shop.ewatrade.test" ||
-    report.publicConfiguredValues?.EWATRADE_STOREFRONT_URL !==
+    report.publicConfiguredValues?.STOREFRONT_URL !==
       "https://shop.ewatrade.test"
   ) {
     fail(

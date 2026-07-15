@@ -296,7 +296,7 @@ async function assertRetailOpsReportHistoryAllowed(
 
 function getPublicProductBaseUrl() {
   return (
-    process.env.EWATRADE_STOREFRONT_URL ??
+    process.env.STOREFRONT_URL ??
     process.env.NEXT_PUBLIC_STOREFRONT_URL ??
     process.env.NEXT_PUBLIC_APP_URL ??
     "https://ewatrade.com"
@@ -305,7 +305,7 @@ function getPublicProductBaseUrl() {
 
 function getRetailOpsAppUrl() {
   return (
-    process.env.EWATRADE_MOBILE_APP_URL ??
+    process.env.MOBILE_APP_URL ??
     process.env.NEXT_PUBLIC_MOBILE_APP_URL ??
     process.env.NEXT_PUBLIC_APP_URL ??
     "https://ewatrade.com/download"

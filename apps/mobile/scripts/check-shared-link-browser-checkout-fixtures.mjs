@@ -19,29 +19,29 @@ const CHECKOUT_SCRIPT_PATH = new URL(
   import.meta.url,
 ).pathname
 const EXAMPLE_ENV_CONTENT = [
-  "EWATRADE_SHARED_LINK_PREVIEW_URL=",
-  "EWATRADE_SHARED_LINK_BROWSER_CONFIRM_ORDER=",
-  "EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_EMAIL=",
-  "EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_NAME=",
-  "EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_PASSWORD=",
-  "EWATRADE_SHARED_LINK_BROWSER_AUTH_MODE=",
-  "EWATRADE_SHARED_LINK_BROWSER_QUANTITY=",
-  "EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_PHONE=",
-  "EWATRADE_SHARED_LINK_BROWSER_NOTES=",
-  "EWATRADE_SHARED_LINK_BROWSER_SCREENSHOT_PATH=",
-  "EWATRADE_SHARED_LINK_BROWSER_HEADFUL=",
-  "EWATRADE_SHARED_LINK_BROWSER_ALLOW_LOCALHOST=",
+  "SHARED_LINK_PREVIEW_URL=",
+  "SHARED_LINK_BROWSER_CONFIRM_ORDER=",
+  "SHARED_LINK_BROWSER_CUSTOMER_EMAIL=",
+  "SHARED_LINK_BROWSER_CUSTOMER_NAME=",
+  "SHARED_LINK_BROWSER_CUSTOMER_PASSWORD=",
+  "SHARED_LINK_BROWSER_AUTH_MODE=",
+  "SHARED_LINK_BROWSER_QUANTITY=",
+  "SHARED_LINK_BROWSER_CUSTOMER_PHONE=",
+  "SHARED_LINK_BROWSER_NOTES=",
+  "SHARED_LINK_BROWSER_SCREENSHOT_PATH=",
+  "SHARED_LINK_BROWSER_HEADFUL=",
+  "SHARED_LINK_BROWSER_ALLOW_LOCALHOST=",
 ].join("\n")
 const VALID_ENV_CONTENT = [
-  "EWATRADE_SHARED_LINK_PREVIEW_URL=http://127.0.0.1:3000/p/business/main/rice?share=token_123",
-  "EWATRADE_SHARED_LINK_BROWSER_CONFIRM_ORDER=1",
-  "EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_EMAIL=buyer@qa-mail.test",
-  "EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_NAME=Buyer Name",
-  "EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_PASSWORD=customer-password",
-  "EWATRADE_SHARED_LINK_BROWSER_AUTH_MODE=register",
-  "EWATRADE_SHARED_LINK_BROWSER_ALLOW_LOCALHOST=1",
-  "EWATRADE_SHARED_LINK_BROWSER_QUANTITY=2",
-  "EWATRADE_SHARED_LINK_BROWSER_SCREENSHOT_PATH=/tmp/ewatrade-browser-checkout-fixture.png",
+  "SHARED_LINK_PREVIEW_URL=http://127.0.0.1:3000/p/business/main/rice?share=token_123",
+  "SHARED_LINK_BROWSER_CONFIRM_ORDER=1",
+  "SHARED_LINK_BROWSER_CUSTOMER_EMAIL=buyer@qa-mail.test",
+  "SHARED_LINK_BROWSER_CUSTOMER_NAME=Buyer Name",
+  "SHARED_LINK_BROWSER_CUSTOMER_PASSWORD=customer-password",
+  "SHARED_LINK_BROWSER_AUTH_MODE=register",
+  "SHARED_LINK_BROWSER_ALLOW_LOCALHOST=1",
+  "SHARED_LINK_BROWSER_QUANTITY=2",
+  "SHARED_LINK_BROWSER_SCREENSHOT_PATH=/tmp/ewatrade-browser-checkout-fixture.png",
 ].join("\n")
 
 runScenario({
@@ -53,39 +53,39 @@ runScenario({
 
 runScenario({
   envContent: VALID_ENV_CONTENT.replace(
-    "EWATRADE_SHARED_LINK_BROWSER_SCREENSHOT_PATH=/tmp/ewatrade-browser-checkout-fixture.png",
-    "EWATRADE_SHARED_LINK_BROWSER_SCREENSHOT_PATH=",
+    "SHARED_LINK_BROWSER_SCREENSHOT_PATH=/tmp/ewatrade-browser-checkout-fixture.png",
+    "SHARED_LINK_BROWSER_SCREENSHOT_PATH=",
   ),
   expectedStatus: 1,
   label: "missing screenshot evidence path",
-  requiredOutput: "EWATRADE_SHARED_LINK_BROWSER_SCREENSHOT_PATH is required",
+  requiredOutput: "SHARED_LINK_BROWSER_SCREENSHOT_PATH is required",
 })
 
 runScenario({
   envContent: VALID_ENV_CONTENT.replace(
-    "EWATRADE_SHARED_LINK_BROWSER_SCREENSHOT_PATH=/tmp/ewatrade-browser-checkout-fixture.png",
-    "EWATRADE_SHARED_LINK_BROWSER_SCREENSHOT_PATH=relative/browser-checkout.jpg",
+    "SHARED_LINK_BROWSER_SCREENSHOT_PATH=/tmp/ewatrade-browser-checkout-fixture.png",
+    "SHARED_LINK_BROWSER_SCREENSHOT_PATH=relative/browser-checkout.jpg",
   ),
   expectedStatus: 1,
   label: "invalid screenshot evidence path",
   requiredOutput:
-    "EWATRADE_SHARED_LINK_BROWSER_SCREENSHOT_PATH must be an absolute path",
+    "SHARED_LINK_BROWSER_SCREENSHOT_PATH must be an absolute path",
 })
 
 runScenario({
   envContent: VALID_ENV_CONTENT.replace(
-    "EWATRADE_SHARED_LINK_BROWSER_CONFIRM_ORDER=1",
-    "EWATRADE_SHARED_LINK_BROWSER_CONFIRM_ORDER=",
+    "SHARED_LINK_BROWSER_CONFIRM_ORDER=1",
+    "SHARED_LINK_BROWSER_CONFIRM_ORDER=",
   ),
   expectedStatus: 1,
   label: "missing explicit order confirmation",
-  requiredOutput: "EWATRADE_SHARED_LINK_BROWSER_CONFIRM_ORDER must be set to 1",
+  requiredOutput: "SHARED_LINK_BROWSER_CONFIRM_ORDER must be set to 1",
 })
 
 runScenario({
   envContent: VALID_ENV_CONTENT.replace(
-    "EWATRADE_SHARED_LINK_BROWSER_ALLOW_LOCALHOST=1",
-    "EWATRADE_SHARED_LINK_BROWSER_ALLOW_LOCALHOST=",
+    "SHARED_LINK_BROWSER_ALLOW_LOCALHOST=1",
+    "SHARED_LINK_BROWSER_ALLOW_LOCALHOST=",
   ),
   expectedStatus: 1,
   label: "localhost without explicit allowance",
@@ -94,25 +94,25 @@ runScenario({
 
 runScenario({
   envContent: VALID_ENV_CONTENT.replace(
-    "EWATRADE_SHARED_LINK_BROWSER_AUTH_MODE=register",
-    "EWATRADE_SHARED_LINK_BROWSER_AUTH_MODE=password",
+    "SHARED_LINK_BROWSER_AUTH_MODE=register",
+    "SHARED_LINK_BROWSER_AUTH_MODE=password",
   ),
   expectedStatus: 1,
   label: "invalid auth mode",
   requiredOutput:
-    "EWATRADE_SHARED_LINK_BROWSER_AUTH_MODE must be either register or login",
+    "SHARED_LINK_BROWSER_AUTH_MODE must be either register or login",
 })
 
 runScenario({
   envContent: VALID_ENV_CONTENT,
   exampleEnvContent: EXAMPLE_ENV_CONTENT.replace(
-    "EWATRADE_SHARED_LINK_PREVIEW_URL=\n",
+    "SHARED_LINK_PREVIEW_URL=\n",
     "",
   ),
   expectedStatus: 1,
   label: "missing documented deployed share URL key",
   requiredOutput:
-    ".env.example is missing documented shared-link browser checkout keys: EWATRADE_SHARED_LINK_PREVIEW_URL.",
+    ".env.example is missing documented shared-link browser checkout keys: SHARED_LINK_PREVIEW_URL.",
 })
 
 await runBrowserCheckoutScenario()
@@ -215,16 +215,16 @@ async function runBrowserCheckoutScenario() {
       writeFileSync(
         envFile,
         [
-          `EWATRADE_SHARED_LINK_PREVIEW_URL=${shareUrl}`,
-          "EWATRADE_SHARED_LINK_BROWSER_CONFIRM_ORDER=1",
-          `EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_EMAIL=${expected.customerEmail}`,
-          `EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_NAME=${expected.customerName}`,
-          `EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_PASSWORD=${expected.customerPassword}`,
-          `EWATRADE_SHARED_LINK_BROWSER_AUTH_MODE=${expected.authMode}`,
-          `EWATRADE_SHARED_LINK_BROWSER_QUANTITY=${expected.quantity}`,
-          `EWATRADE_SHARED_LINK_BROWSER_NOTES=${expected.notes}`,
-          `EWATRADE_SHARED_LINK_BROWSER_SCREENSHOT_PATH=${screenshotPath}`,
-          "EWATRADE_SHARED_LINK_BROWSER_ALLOW_LOCALHOST=1",
+          `SHARED_LINK_PREVIEW_URL=${shareUrl}`,
+          "SHARED_LINK_BROWSER_CONFIRM_ORDER=1",
+          `SHARED_LINK_BROWSER_CUSTOMER_EMAIL=${expected.customerEmail}`,
+          `SHARED_LINK_BROWSER_CUSTOMER_NAME=${expected.customerName}`,
+          `SHARED_LINK_BROWSER_CUSTOMER_PASSWORD=${expected.customerPassword}`,
+          `SHARED_LINK_BROWSER_AUTH_MODE=${expected.authMode}`,
+          `SHARED_LINK_BROWSER_QUANTITY=${expected.quantity}`,
+          `SHARED_LINK_BROWSER_NOTES=${expected.notes}`,
+          `SHARED_LINK_BROWSER_SCREENSHOT_PATH=${screenshotPath}`,
+          "SHARED_LINK_BROWSER_ALLOW_LOCALHOST=1",
         ].join("\n"),
       )
 

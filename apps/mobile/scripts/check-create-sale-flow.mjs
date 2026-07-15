@@ -9,6 +9,7 @@ const FILES = {
     MOBILE_DIR,
     "src/components/mobile/quantity-stepper.tsx",
   ),
+  saleFlow: join(MOBILE_DIR, "src/components/mobile/sale-flow.tsx"),
 }
 
 const CONTRACTS = [
@@ -35,6 +36,7 @@ const CONTRACTS = [
     file: FILES.createSale,
     markers: [
       "PaymentOption",
+      "SaleSegmentOption",
       'setPaymentMethod("cash")',
       'setPaymentMethod("transfer")',
       "Complete transaction",
@@ -67,6 +69,19 @@ const CONTRACTS = [
     ],
     reason:
       "sale submission must keep production tRPC creation when remote ids exist and local queued fallback while offline or unsynced",
+  },
+  {
+    file: FILES.saleFlow,
+    markers: [
+      "SaleSelectableRow",
+      "SaleSegmentOption",
+      "SaleTotalSummary",
+      "border-t border-border",
+      "rounded-full",
+      "text-4xl",
+    ],
+    reason:
+      "create-sale redesign must keep reusable sale-flow primitives for selectable rows, segmented choices, and total preview",
   },
   {
     file: FILES.quantityStepper,

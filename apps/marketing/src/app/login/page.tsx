@@ -166,9 +166,7 @@ function LoginPageContent() {
 export default function LoginPage() {
   return (
     <Suspense
-      fallback={
-        <main className="min-h-[calc(100vh-8rem)] px-4 py-16" />
-      }
+      fallback={<main className="min-h-[calc(100vh-8rem)] px-4 py-16" />}
     >
       <LoginPageContent />
     </Suspense>

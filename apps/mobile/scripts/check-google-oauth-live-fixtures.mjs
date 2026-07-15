@@ -32,17 +32,17 @@ const EXAMPLE_ENV_CONTENT = [
   "EXPO_PUBLIC_GOOGLE_CLIENT_ID=",
   "GOOGLE_WEB_CLIENT_ID=",
   "GOOGLE_CLIENT_ID=",
-  "EWATRADE_GOOGLE_LIVE_CONFIRM_AUTH=",
-  "EWATRADE_GOOGLE_LIVE_ID_TOKEN=",
-  "EWATRADE_GOOGLE_LIVE_MODE=",
-  "EWATRADE_GOOGLE_LIVE_EXPECTED_EMAIL=",
-  "EWATRADE_GOOGLE_LIVE_EVIDENCE_PATH=",
-  "EWATRADE_GOOGLE_LIVE_NAME=",
-  "EWATRADE_GOOGLE_LIVE_BUSINESS_NAME=",
-  "EWATRADE_GOOGLE_LIVE_ALLOW_LOCALHOST=",
+  "GOOGLE_LIVE_CONFIRM_AUTH=",
+  "GOOGLE_LIVE_ID_TOKEN=",
+  "GOOGLE_LIVE_MODE=",
+  "GOOGLE_LIVE_EXPECTED_EMAIL=",
+  "GOOGLE_LIVE_EVIDENCE_PATH=",
+  "GOOGLE_LIVE_NAME=",
+  "GOOGLE_LIVE_BUSINESS_NAME=",
+  "GOOGLE_LIVE_ALLOW_LOCALHOST=",
 ].join("\n")
 const VALID_ENV_CONTENT = [
-  "EWATRADE_API_URL=http://127.0.0.1:4010",
+  "API_URL=http://127.0.0.1:4010",
   `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=${ANDROID_CLIENT_ID}`,
   `GOOGLE_ANDROID_CLIENT_ID=${ANDROID_CLIENT_ID}`,
   `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=${IOS_CLIENT_ID}`,
@@ -51,14 +51,14 @@ const VALID_ENV_CONTENT = [
   "EXPO_PUBLIC_GOOGLE_CLIENT_ID=",
   `GOOGLE_WEB_CLIENT_ID=${WEB_CLIENT_ID}`,
   "GOOGLE_CLIENT_ID=",
-  "EWATRADE_GOOGLE_LIVE_CONFIRM_AUTH=1",
-  `EWATRADE_GOOGLE_LIVE_ID_TOKEN=${ID_TOKEN}`,
-  "EWATRADE_GOOGLE_LIVE_MODE=sign_up",
-  "EWATRADE_GOOGLE_LIVE_EXPECTED_EMAIL=owner@qa-mail.test",
-  "EWATRADE_GOOGLE_LIVE_EVIDENCE_PATH=/tmp/ewatrade-google-live-evidence.json",
-  "EWATRADE_GOOGLE_LIVE_NAME=QA Owner",
-  "EWATRADE_GOOGLE_LIVE_BUSINESS_NAME=QA Store",
-  "EWATRADE_GOOGLE_LIVE_ALLOW_LOCALHOST=1",
+  "GOOGLE_LIVE_CONFIRM_AUTH=1",
+  `GOOGLE_LIVE_ID_TOKEN=${ID_TOKEN}`,
+  "GOOGLE_LIVE_MODE=sign_up",
+  "GOOGLE_LIVE_EXPECTED_EMAIL=owner@qa-mail.test",
+  "GOOGLE_LIVE_EVIDENCE_PATH=/tmp/ewatrade-google-live-evidence.json",
+  "GOOGLE_LIVE_NAME=QA Owner",
+  "GOOGLE_LIVE_BUSINESS_NAME=QA Store",
+  "GOOGLE_LIVE_ALLOW_LOCALHOST=1",
 ].join("\n")
 
 runReadinessScenario({
@@ -70,38 +70,38 @@ runReadinessScenario({
 
 runReadinessScenario({
   envContent: VALID_ENV_CONTENT.replace(
-    "EWATRADE_GOOGLE_LIVE_CONFIRM_AUTH=1",
-    "EWATRADE_GOOGLE_LIVE_CONFIRM_AUTH=",
+    "GOOGLE_LIVE_CONFIRM_AUTH=1",
+    "GOOGLE_LIVE_CONFIRM_AUTH=",
   ),
   expectedStatus: 1,
   label: "missing explicit auth confirmation",
-  requiredOutput: "EWATRADE_GOOGLE_LIVE_CONFIRM_AUTH must be set to 1",
+  requiredOutput: "GOOGLE_LIVE_CONFIRM_AUTH must be set to 1",
 })
 
 runReadinessScenario({
   envContent: VALID_ENV_CONTENT.replace(
-    "EWATRADE_GOOGLE_LIVE_EVIDENCE_PATH=/tmp/ewatrade-google-live-evidence.json",
-    "EWATRADE_GOOGLE_LIVE_EVIDENCE_PATH=",
+    "GOOGLE_LIVE_EVIDENCE_PATH=/tmp/ewatrade-google-live-evidence.json",
+    "GOOGLE_LIVE_EVIDENCE_PATH=",
   ),
   expectedStatus: 1,
   label: "missing evidence path",
-  requiredOutput: "EWATRADE_GOOGLE_LIVE_EVIDENCE_PATH is required",
+  requiredOutput: "GOOGLE_LIVE_EVIDENCE_PATH is required",
 })
 
 runReadinessScenario({
   envContent: VALID_ENV_CONTENT.replace(
-    "EWATRADE_GOOGLE_LIVE_EVIDENCE_PATH=/tmp/ewatrade-google-live-evidence.json",
-    "EWATRADE_GOOGLE_LIVE_EVIDENCE_PATH=relative/google-evidence.txt",
+    "GOOGLE_LIVE_EVIDENCE_PATH=/tmp/ewatrade-google-live-evidence.json",
+    "GOOGLE_LIVE_EVIDENCE_PATH=relative/google-evidence.txt",
   ),
   expectedStatus: 1,
   label: "invalid evidence path",
-  requiredOutput: "EWATRADE_GOOGLE_LIVE_EVIDENCE_PATH must be an absolute path",
+  requiredOutput: "GOOGLE_LIVE_EVIDENCE_PATH must be an absolute path",
 })
 
 runReadinessScenario({
   envContent: VALID_ENV_CONTENT.replace(
-    "EWATRADE_GOOGLE_LIVE_ALLOW_LOCALHOST=1",
-    "EWATRADE_GOOGLE_LIVE_ALLOW_LOCALHOST=",
+    "GOOGLE_LIVE_ALLOW_LOCALHOST=1",
+    "GOOGLE_LIVE_ALLOW_LOCALHOST=",
   ),
   expectedStatus: 1,
   label: "localhost without explicit allowance",
@@ -237,11 +237,11 @@ async function runLiveGoogleOAuthScenario() {
       writeFileSync(
         envFile,
         VALID_ENV_CONTENT.replace(
-          "EWATRADE_API_URL=http://127.0.0.1:4010",
-          `EWATRADE_API_URL=http://127.0.0.1:${address.port}`,
+          "API_URL=http://127.0.0.1:4010",
+          `API_URL=http://127.0.0.1:${address.port}`,
         ).replace(
-          "EWATRADE_GOOGLE_LIVE_EVIDENCE_PATH=/tmp/ewatrade-google-live-evidence.json",
-          `EWATRADE_GOOGLE_LIVE_EVIDENCE_PATH=${evidencePath}`,
+          "GOOGLE_LIVE_EVIDENCE_PATH=/tmp/ewatrade-google-live-evidence.json",
+          `GOOGLE_LIVE_EVIDENCE_PATH=${evidencePath}`,
         ),
       )
 

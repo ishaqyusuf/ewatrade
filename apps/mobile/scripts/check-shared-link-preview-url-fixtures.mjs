@@ -80,24 +80,24 @@ const origin = `http://127.0.0.1:${address.port}`
 const validUrl = `${origin}${SHARE_PATH}?share=${SHARE_TOKEN}`
 const productImageUrl = `${origin}${SHARE_PATH}?share=${PRODUCT_IMAGE_SHARE_TOKEN}`
 const validEnv = [
-  `EWATRADE_SHARED_LINK_PREVIEW_URL=${validUrl}`,
-  "EWATRADE_SHARED_LINK_PREVIEW_EXPECTED_HOST=127.0.0.1",
-  `EWATRADE_SHARED_LINK_PREVIEW_EXPECTED_PRODUCT_NAME=${PRODUCT_NAME}`,
-  `EWATRADE_SHARED_LINK_PREVIEW_EXPECTED_BUSINESS_NAME=${BUSINESS_NAME}`,
-  "EWATRADE_SHARED_LINK_PREVIEW_EVIDENCE_PATH=/tmp/ewatrade-share-preview-evidence.json",
-  "EWATRADE_SHARED_LINK_PREVIEW_ALLOW_LOCALHOST=1",
+  `SHARED_LINK_PREVIEW_URL=${validUrl}`,
+  "SHARED_LINK_PREVIEW_EXPECTED_HOST=127.0.0.1",
+  `SHARED_LINK_PREVIEW_EXPECTED_PRODUCT_NAME=${PRODUCT_NAME}`,
+  `SHARED_LINK_PREVIEW_EXPECTED_BUSINESS_NAME=${BUSINESS_NAME}`,
+  "SHARED_LINK_PREVIEW_EVIDENCE_PATH=/tmp/ewatrade-share-preview-evidence.json",
+  "SHARED_LINK_PREVIEW_ALLOW_LOCALHOST=1",
 ].join("\n")
 const productImageEnv = validEnv.replace(
-  `EWATRADE_SHARED_LINK_PREVIEW_URL=${validUrl}`,
-  `EWATRADE_SHARED_LINK_PREVIEW_URL=${productImageUrl}`,
+  `SHARED_LINK_PREVIEW_URL=${validUrl}`,
+  `SHARED_LINK_PREVIEW_URL=${productImageUrl}`,
 )
 const exampleEnv = [
-  "EWATRADE_SHARED_LINK_PREVIEW_URL=",
-  "EWATRADE_SHARED_LINK_PREVIEW_EXPECTED_HOST=",
-  "EWATRADE_SHARED_LINK_PREVIEW_EXPECTED_PRODUCT_NAME=",
-  "EWATRADE_SHARED_LINK_PREVIEW_EXPECTED_BUSINESS_NAME=",
-  "EWATRADE_SHARED_LINK_PREVIEW_EVIDENCE_PATH=",
-  "EWATRADE_SHARED_LINK_PREVIEW_ALLOW_LOCALHOST=",
+  "SHARED_LINK_PREVIEW_URL=",
+  "SHARED_LINK_PREVIEW_EXPECTED_HOST=",
+  "SHARED_LINK_PREVIEW_EXPECTED_PRODUCT_NAME=",
+  "SHARED_LINK_PREVIEW_EXPECTED_BUSINESS_NAME=",
+  "SHARED_LINK_PREVIEW_EVIDENCE_PATH=",
+  "SHARED_LINK_PREVIEW_ALLOW_LOCALHOST=",
 ].join("\n")
 const cases = [
   {
@@ -116,8 +116,8 @@ const cases = [
   },
   {
     env: validEnv.replace(
-      "EWATRADE_SHARED_LINK_PREVIEW_ALLOW_LOCALHOST=1",
-      "EWATRADE_SHARED_LINK_PREVIEW_ALLOW_LOCALHOST=",
+      "SHARED_LINK_PREVIEW_ALLOW_LOCALHOST=1",
+      "SHARED_LINK_PREVIEW_ALLOW_LOCALHOST=",
     ),
     exampleEnv,
     expectedStatus: 1,
@@ -126,8 +126,8 @@ const cases = [
   },
   {
     env: validEnv.replace(
-      `EWATRADE_SHARED_LINK_PREVIEW_EXPECTED_PRODUCT_NAME=${PRODUCT_NAME}`,
-      "EWATRADE_SHARED_LINK_PREVIEW_EXPECTED_PRODUCT_NAME=Missing Product",
+      `SHARED_LINK_PREVIEW_EXPECTED_PRODUCT_NAME=${PRODUCT_NAME}`,
+      "SHARED_LINK_PREVIEW_EXPECTED_PRODUCT_NAME=Missing Product",
     ),
     exampleEnv,
     expectedStatus: 1,
@@ -136,8 +136,8 @@ const cases = [
   },
   {
     env: validEnv.replace(
-      `EWATRADE_SHARED_LINK_PREVIEW_URL=${validUrl}`,
-      `EWATRADE_SHARED_LINK_PREVIEW_URL=${origin}${SHARE_PATH}`,
+      `SHARED_LINK_PREVIEW_URL=${validUrl}`,
+      `SHARED_LINK_PREVIEW_URL=${origin}${SHARE_PATH}`,
     ),
     exampleEnv,
     expectedStatus: 1,
@@ -146,29 +146,29 @@ const cases = [
   },
   {
     env: validEnv.replace(
-      "EWATRADE_SHARED_LINK_PREVIEW_EVIDENCE_PATH=/tmp/ewatrade-share-preview-evidence.json",
-      "EWATRADE_SHARED_LINK_PREVIEW_EVIDENCE_PATH=",
+      "SHARED_LINK_PREVIEW_EVIDENCE_PATH=/tmp/ewatrade-share-preview-evidence.json",
+      "SHARED_LINK_PREVIEW_EVIDENCE_PATH=",
     ),
     exampleEnv,
     expectedStatus: 1,
     label: "missing preview evidence path",
-    requiredOutput: "EWATRADE_SHARED_LINK_PREVIEW_EVIDENCE_PATH is required.",
+    requiredOutput: "SHARED_LINK_PREVIEW_EVIDENCE_PATH is required.",
   },
   {
     env: validEnv.replace(
-      "EWATRADE_SHARED_LINK_PREVIEW_EVIDENCE_PATH=/tmp/ewatrade-share-preview-evidence.json",
-      "EWATRADE_SHARED_LINK_PREVIEW_EVIDENCE_PATH=relative/share-preview.txt",
+      "SHARED_LINK_PREVIEW_EVIDENCE_PATH=/tmp/ewatrade-share-preview-evidence.json",
+      "SHARED_LINK_PREVIEW_EVIDENCE_PATH=relative/share-preview.txt",
     ),
     exampleEnv,
     expectedStatus: 1,
     label: "invalid preview evidence path",
     requiredOutput:
-      "EWATRADE_SHARED_LINK_PREVIEW_EVIDENCE_PATH must be an absolute path.",
+      "SHARED_LINK_PREVIEW_EVIDENCE_PATH must be an absolute path.",
   },
   {
     env: validEnv,
     exampleEnv: exampleEnv.replace(
-      "EWATRADE_SHARED_LINK_PREVIEW_EXPECTED_BUSINESS_NAME=\n",
+      "SHARED_LINK_PREVIEW_EXPECTED_BUSINESS_NAME=\n",
       "",
     ),
     expectedStatus: 1,
@@ -189,8 +189,8 @@ try {
       writeFileSync(
         envFile,
         `${testCase.env.replace(
-          "EWATRADE_SHARED_LINK_PREVIEW_EVIDENCE_PATH=/tmp/ewatrade-share-preview-evidence.json",
-          `EWATRADE_SHARED_LINK_PREVIEW_EVIDENCE_PATH=${evidencePath}`,
+          "SHARED_LINK_PREVIEW_EVIDENCE_PATH=/tmp/ewatrade-share-preview-evidence.json",
+          `SHARED_LINK_PREVIEW_EVIDENCE_PATH=${evidencePath}`,
         )}\n`,
       )
       writeFileSync(exampleEnvFile, `${testCase.exampleEnv}\n`)

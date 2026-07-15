@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import {
+  createMobileOwnerOtpEmailMessages,
   requestMobileOwnerOtpSchema,
   verifyMobileGoogleSchema,
   verifyMobileOwnerOtpSchema,
@@ -100,5 +101,38 @@ describe("mobile auth router schemas", () => {
       idToken: "google-id-token-with-enough-length",
       mode: "register",
     })
+  })
+
+  test("routes mobile OTP email to test inboxes without changing the identity email", () => {
+    const input = requestMobileOwnerOtpSchema.parse({
+      businessName: " Rice Store ",
+      email: " OWNER@TEST.COM ",
+      mode: "sign_up",
+      name: " Store Owner ",
+    })
+    const messages = createMobileOwnerOtpEmailMessages({
+      code: "123456",
+      email: input.email,
+      env: {
+        NODE_ENV: "production",
+        TEST_EMAILS: "qa-one@example.com, qa-two@example.com",
+      },
+      expiresAt: new Date("2026-07-13T12:00:00.000Z"),
+      mode: input.mode,
+    })
+
+    expect(input.email).toBe("owner@test.com")
+    expect(messages.map((message) => message.to)).toEqual([
+      "qa-one@example.com",
+      "qa-two@example.com",
+    ])
+    expect(
+      messages.every((message) =>
+        message.text.includes("Original recipient: owner@test.com"),
+      ),
+    ).toBe(true)
+    expect(messages.every((message) => message.text.includes("123456"))).toBe(
+      true,
+    )
   })
 })

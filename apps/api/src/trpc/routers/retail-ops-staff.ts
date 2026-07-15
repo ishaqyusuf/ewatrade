@@ -81,7 +81,7 @@ function assertCanManageRetailOpsStaff(role: string) {
 
 function getRetailOpsAppUrl() {
   return (
-    process.env.EWATRADE_MOBILE_APP_URL ??
+    process.env.MOBILE_APP_URL ??
     process.env.NEXT_PUBLIC_MOBILE_APP_URL ??
     process.env.NEXT_PUBLIC_APP_URL ??
     "https://ewatrade.com/download"

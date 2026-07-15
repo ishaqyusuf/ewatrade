@@ -8,12 +8,12 @@ const EXAMPLE_ENV_FILE =
   process.env.SHARED_LINK_PREVIEW_EXAMPLE_ENV_FILE ??
   join(REPO_ROOT, ".env.example")
 const REQUIRED_EXAMPLE_KEYS = [
-  "EWATRADE_SHARED_LINK_PREVIEW_URL",
-  "EWATRADE_SHARED_LINK_PREVIEW_EXPECTED_HOST",
-  "EWATRADE_SHARED_LINK_PREVIEW_EXPECTED_PRODUCT_NAME",
-  "EWATRADE_SHARED_LINK_PREVIEW_EXPECTED_BUSINESS_NAME",
-  "EWATRADE_SHARED_LINK_PREVIEW_EVIDENCE_PATH",
-  "EWATRADE_SHARED_LINK_PREVIEW_ALLOW_LOCALHOST",
+  "SHARED_LINK_PREVIEW_URL",
+  "SHARED_LINK_PREVIEW_EXPECTED_HOST",
+  "SHARED_LINK_PREVIEW_EXPECTED_PRODUCT_NAME",
+  "SHARED_LINK_PREVIEW_EXPECTED_BUSINESS_NAME",
+  "SHARED_LINK_PREVIEW_EVIDENCE_PATH",
+  "SHARED_LINK_PREVIEW_ALLOW_LOCALHOST",
 ]
 const USER_AGENT = "WhatsApp/2.24 EwaTrade-Mobile-Retail-Ops-Preview-QA/1.0"
 
@@ -33,27 +33,23 @@ try {
 async function main() {
   assertExampleEnvKeys()
 
-  const previewUrl = process.env.EWATRADE_SHARED_LINK_PREVIEW_URL?.trim()
+  const previewUrl = process.env.SHARED_LINK_PREVIEW_URL?.trim()
   const expectedHost =
-    process.env.EWATRADE_SHARED_LINK_PREVIEW_EXPECTED_HOST?.trim().toLowerCase()
+    process.env.SHARED_LINK_PREVIEW_EXPECTED_HOST?.trim().toLowerCase()
   const expectedProductName =
-    process.env.EWATRADE_SHARED_LINK_PREVIEW_EXPECTED_PRODUCT_NAME?.trim()
+    process.env.SHARED_LINK_PREVIEW_EXPECTED_PRODUCT_NAME?.trim()
   const expectedBusinessName =
-    process.env.EWATRADE_SHARED_LINK_PREVIEW_EXPECTED_BUSINESS_NAME?.trim()
-  const evidencePath =
-    process.env.EWATRADE_SHARED_LINK_PREVIEW_EVIDENCE_PATH?.trim()
-  const allowLocalhost =
-    process.env.EWATRADE_SHARED_LINK_PREVIEW_ALLOW_LOCALHOST === "1"
+    process.env.SHARED_LINK_PREVIEW_EXPECTED_BUSINESS_NAME?.trim()
+  const evidencePath = process.env.SHARED_LINK_PREVIEW_EVIDENCE_PATH?.trim()
+  const allowLocalhost = process.env.SHARED_LINK_PREVIEW_ALLOW_LOCALHOST === "1"
   const setupFailures = []
 
   if (!previewUrl) {
-    setupFailures.push("EWATRADE_SHARED_LINK_PREVIEW_URL is required.")
+    setupFailures.push("SHARED_LINK_PREVIEW_URL is required.")
   }
 
   if (!evidencePath) {
-    setupFailures.push(
-      "EWATRADE_SHARED_LINK_PREVIEW_EVIDENCE_PATH is required.",
-    )
+    setupFailures.push("SHARED_LINK_PREVIEW_EVIDENCE_PATH is required.")
   } else {
     validateEvidencePath(evidencePath)
   }
@@ -94,10 +90,7 @@ function assertExampleEnvKeys() {
 }
 
 async function assertSharedLinkPreview(input) {
-  const pageUrl = requireAbsoluteUrl(
-    input.rawUrl,
-    "EWATRADE_SHARED_LINK_PREVIEW_URL",
-  )
+  const pageUrl = requireAbsoluteUrl(input.rawUrl, "SHARED_LINK_PREVIEW_URL")
 
   assertPublicUrl(pageUrl, input.allowLocalhost)
 
@@ -106,7 +99,7 @@ async function assertSharedLinkPreview(input) {
     pageUrl.hostname.toLowerCase() !== input.expectedHost
   ) {
     throw new Error(
-      `EWATRADE_SHARED_LINK_PREVIEW_URL host ${pageUrl.hostname} did not match EWATRADE_SHARED_LINK_PREVIEW_EXPECTED_HOST ${input.expectedHost}.`,
+      `SHARED_LINK_PREVIEW_URL host ${pageUrl.hostname} did not match SHARED_LINK_PREVIEW_EXPECTED_HOST ${input.expectedHost}.`,
     )
   }
 
@@ -347,7 +340,7 @@ function assertPublicUrl(url, allowLocal) {
 
   if (isLocal && !allowLocal) {
     throw new Error(
-      `${url.href} points to a local host. Use EWATRADE_SHARED_LINK_PREVIEW_ALLOW_LOCALHOST=1 only for local fixtures.`,
+      `${url.href} points to a local host. Use SHARED_LINK_PREVIEW_ALLOW_LOCALHOST=1 only for local fixtures.`,
     )
   }
 
@@ -565,13 +558,13 @@ function assertCheckoutHtml(html) {
 function validateEvidencePath(evidencePath) {
   if (!isAbsolute(evidencePath)) {
     throw new Error(
-      "EWATRADE_SHARED_LINK_PREVIEW_EVIDENCE_PATH must be an absolute path.",
+      "SHARED_LINK_PREVIEW_EVIDENCE_PATH must be an absolute path.",
     )
   }
 
   if (!evidencePath.toLowerCase().endsWith(".json")) {
     throw new Error(
-      "EWATRADE_SHARED_LINK_PREVIEW_EVIDENCE_PATH must point to a .json file.",
+      "SHARED_LINK_PREVIEW_EVIDENCE_PATH must point to a .json file.",
     )
   }
 }

@@ -44,16 +44,16 @@ try {
 async function runBrowserCheckout() {
   const playwright = await importPlaywright()
   const browser = await playwright.chromium.launch({
-    headless: process.env.EWATRADE_SHARED_LINK_BROWSER_HEADFUL !== "1",
+    headless: process.env.SHARED_LINK_BROWSER_HEADFUL !== "1",
   })
 
   try {
     const page = await browser.newPage({
       userAgent: USER_AGENT,
     })
-    const shareUrl = requireEnv("EWATRADE_SHARED_LINK_PREVIEW_URL")
+    const shareUrl = requireEnv("SHARED_LINK_PREVIEW_URL")
     const authMode = getAuthMode()
-    const quantity = process.env.EWATRADE_SHARED_LINK_BROWSER_QUANTITY ?? "1"
+    const quantity = process.env.SHARED_LINK_BROWSER_QUANTITY ?? "1"
 
     await page.goto(shareUrl, {
       waitUntil: "domcontentloaded",
@@ -77,18 +77,17 @@ async function runBrowserCheckout() {
         .check()
       await page
         .locator('[data-testid="shared-product-customer-name"]')
-        .fill(requireEnv("EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_NAME"))
+        .fill(requireEnv("SHARED_LINK_BROWSER_CUSTOMER_NAME"))
     }
 
     await page
       .locator('[data-testid="shared-product-customer-email"]')
-      .fill(requireEnv("EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_EMAIL"))
+      .fill(requireEnv("SHARED_LINK_BROWSER_CUSTOMER_EMAIL"))
     await page
       .locator('[data-testid="shared-product-customer-password"]')
-      .fill(requireEnv("EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_PASSWORD"))
+      .fill(requireEnv("SHARED_LINK_BROWSER_CUSTOMER_PASSWORD"))
 
-    const phone =
-      process.env.EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_PHONE?.trim()
+    const phone = process.env.SHARED_LINK_BROWSER_CUSTOMER_PHONE?.trim()
     if (phone) {
       await page
         .locator('[data-testid="shared-product-customer-phone"]')
@@ -96,7 +95,7 @@ async function runBrowserCheckout() {
     }
 
     const notes =
-      process.env.EWATRADE_SHARED_LINK_BROWSER_NOTES?.trim() ??
+      process.env.SHARED_LINK_BROWSER_NOTES?.trim() ??
       "Automated browser checkout QA order request."
     await page.locator('[data-testid="shared-product-notes"]').fill(notes)
     await page.locator('[data-testid="shared-product-submit"]').click()
@@ -121,9 +120,7 @@ async function runBrowserCheckout() {
       .locator('[data-testid="shared-product-order-requested"]')
       .waitFor({ state: "visible", timeout: 20_000 })
 
-    const screenshotPath = requireEnv(
-      "EWATRADE_SHARED_LINK_BROWSER_SCREENSHOT_PATH",
-    )
+    const screenshotPath = requireEnv("SHARED_LINK_BROWSER_SCREENSHOT_PATH")
     mkdirSync(dirname(screenshotPath), { recursive: true })
     await page.screenshot({
       fullPage: true,
@@ -190,7 +187,7 @@ function requireEnv(key) {
 }
 
 function getAuthMode() {
-  return process.env.EWATRADE_SHARED_LINK_BROWSER_AUTH_MODE?.trim() === "login"
+  return process.env.SHARED_LINK_BROWSER_AUTH_MODE?.trim() === "login"
     ? "login"
     : "register"
 }

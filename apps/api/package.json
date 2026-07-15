@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node ../../scripts/with-workspace-env.mjs PORTLESS_WILDCARD=1 PORTLESS_HTTPS=0 PORTLESS_APP_PORT=${PORTLESS_APP_PORT:-3095} TZ=UTC portless ewatrade-api bun run --hot src/index.ts",
-    "dev:portless": "node ../../scripts/with-workspace-env.mjs PORTLESS_WILDCARD=1 PORTLESS_HTTPS=0 portless ewatrade-api bun run --hot src/index.ts",
+    "dev": "node ../../scripts/with-workspace-env.mjs PORTLESS_WILDCARD=${PORTLESS_WILDCARD:-1} PORTLESS_SYNC_HOSTS=${PORTLESS_SYNC_HOSTS:-0} PORTLESS_HTTPS=0 PORTLESS_APP_PORT=${PORTLESS_APP_PORT:-3095} TZ=UTC portless ewatrade-api bun run --hot src/index.ts",
     "lint": "biome check .",
     "typecheck": "tsc --noEmit"
   },

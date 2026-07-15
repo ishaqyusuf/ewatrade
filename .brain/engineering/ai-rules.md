@@ -9,3 +9,4 @@ Repository-specific rules for AI contributors.
 - Keep Prisma as schema source of truth.
 - Use Drizzle as an implementation detail behind repositories, not as a second schema authority.
 - Add ADRs for major stack or architecture changes.
+- Use the profile-aware root dev command for workspace development: `bun run dev --local`, `bun run dev --remote`/`--remote-dev`, or `bun run dev --prod`, plus `--filter` for scoped app/package runs.

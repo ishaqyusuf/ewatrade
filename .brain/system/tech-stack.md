@@ -14,9 +14,11 @@ Canonical stack reference for current implementation choices.
 - API server: Hono
 - Typed API contracts: tRPC
 - Background jobs: Trigger.dev
+- Jobs dev runtime: `@ewatrade/jobs` exposes `bun --filter @ewatrade/jobs dev`, which runs `trigger dev` through the shared env loader and Trigger profile helper.
+- Jobs deployment runtime: root `bun run jobs:deploy` forwards to `@ewatrade/jobs deploy`, loading `.env.production`, requiring a non-local production database URL, and passing the configured Trigger profile to `trigger deploy`.
 - Notifications: shared package-driven typed notification registry with payload-utils, trigger services, and delivery planning
 - Client notifications: shared React notification provider and viewport package for app toasts
-- Email: shared package-driven email defaults, templates, message helpers, and transports
+- Email: shared package-driven email defaults, templates, message helpers, and transports. Resend is the production provider when `RESEND_API_KEY` is present; console delivery remains the no-provider fallback. Root `bun run email:test` sends a smoke email to the first configured `TEST_EMAILS` recipient, falling back to `TEST_EMAIL`.
 - Auth: Better Auth
 
 ## Database Stack
@@ -25,6 +27,7 @@ Canonical stack reference for current implementation choices.
 - Runtime querying / repositories: Drizzle
 - Database provider: PostgreSQL as the canonical application database
 - Development database runtime: local Docker PostgreSQL by default, with `remote-dev` and `prod` database profiles available through `DEV_PROFILE`/`APP_ENV` and `LOCAL_DATABASE_URL`/`REMOTE_DEV_DATABASE_URL`/`PROD_DATABASE_URL`.
+- Development command router: `bun run dev` selects the environment profile with `--local`, `--remote`/`--remote-dev`, or `--prod`, then forwards package filters to Turbo.
 
 ## Guidance
 - Model entities in Prisma first.
@@ -34,4 +37,4 @@ Canonical stack reference for current implementation choices.
 
 ## Excluded Stack
 - Supabase is not part of the current platform design.
-- Local named-host dev: Portless-capable workspace scripts. Website/dashboard QA should use `bun run dev --local --filter dashboard marketing` when those apps are in scope, then browse the repository's Portless hostnames for marketing, storefront, dashboard, POS, and API flows instead of raw localhost ports.
+- Local named-host dev: workspace `dev` scripts are Portless-backed directly without `PORTLESS_PORT`, so local named-host URLs do not include a proxy port. Website/dashboard QA should use `bun run dev --local --filter dashboard marketing` when those apps are in scope, then browse the repository's Portless hostnames for marketing, storefront, dashboard, POS, and API flows instead of raw localhost ports.

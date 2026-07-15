@@ -20,9 +20,14 @@ import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useMutation } from "@tanstack/react-query"
 import { forwardRef, useEffect, useMemo, useState } from "react"
 import { View } from "react-native"
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
 type UnitConversionSheetProps = {
   onComplete?: () => void
+}
+
+type UnitConversionContentProps = UnitConversionSheetProps & {
+  presentation?: "screen" | "sheet"
 }
 
 const CONVERSION_VARIANT_PREVIEW_LIMIT = 8
@@ -100,10 +105,10 @@ function VariantOption({
   )
 }
 
-export const UnitConversionSheet = forwardRef<
-  BottomSheetModal,
-  UnitConversionSheetProps
->(({ onComplete }, ref) => {
+export function UnitConversionContent({
+  onComplete,
+  presentation = "sheet",
+}: UnitConversionContentProps) {
   const trpc = useTRPC()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
   const allProducts = useRetailOpsStore((state) => state.products)
@@ -338,19 +343,8 @@ export const UnitConversionSheet = forwardRef<
     completeLocalConversion("pending")
   }
 
-  return (
-    <Modal
-      enableDynamicSizing
-      ref={ref}
-      snapPoints={["90%"]}
-      title="Convert units"
-    >
-      <BottomSheetKeyboardAwareScrollView
-        bottomOffset={320}
-        contentContainerStyle={{ paddingBottom: 240 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View className="gap-5 px-5 pb-6">
+  const content = (
+    <View className="gap-5 px-5 pb-6">
           <View className="gap-2">
             <Text className="text-xl font-bold text-foreground">
               Convert stock
@@ -494,11 +488,50 @@ export const UnitConversionSheet = forwardRef<
               : "Record conversion"}
           </ActionButton>
 
-          <ActionButton onPress={onComplete} variant="outline">
-            Done
-          </ActionButton>
-        </View>
-      </BottomSheetKeyboardAwareScrollView>
+      <ActionButton onPress={onComplete} variant="outline">
+        Done
+      </ActionButton>
+    </View>
+  )
+
+  if (presentation === "screen") {
+    return (
+      <KeyboardAwareScrollView
+        className="flex-1"
+        bottomOffset={320}
+        contentContainerStyle={{ paddingBottom: 240 }}
+        disableScrollOnKeyboardHide
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+      >
+        {content}
+      </KeyboardAwareScrollView>
+    )
+  }
+
+  return (
+    <BottomSheetKeyboardAwareScrollView
+      bottomOffset={320}
+      contentContainerStyle={{ paddingBottom: 240 }}
+      keyboardShouldPersistTaps="handled"
+    >
+      {content}
+    </BottomSheetKeyboardAwareScrollView>
+  )
+}
+
+export const UnitConversionSheet = forwardRef<
+  BottomSheetModal,
+  UnitConversionSheetProps
+>((props, ref) => {
+  return (
+    <Modal
+      enableDynamicSizing
+      ref={ref}
+      snapPoints={["90%"]}
+      title="Convert units"
+    >
+      <UnitConversionContent {...props} presentation="sheet" />
     </Modal>
   )
 })

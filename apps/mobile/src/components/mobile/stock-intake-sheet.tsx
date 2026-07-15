@@ -1,9 +1,13 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
-import { InventoryProductCard } from "@/components/mobile/inventory-product-card"
+import {
+  InventoryMovementRow,
+  InventoryProductCard,
+  InventorySegmentOption,
+  InventoryUnitOption,
+} from "@/components/mobile/inventory-product-card"
 import { QuantityStepper } from "@/components/mobile/quantity-stepper"
-import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Modal } from "@/components/ui/modal"
@@ -26,9 +30,15 @@ import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useMutation } from "@tanstack/react-query"
 import { forwardRef, useEffect, useMemo, useState } from "react"
 import { View } from "react-native"
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
 type StockIntakeSheetProps = {
   onComplete?: () => void
+}
+
+type StockIntakeContentProps = {
+  onComplete?: () => void
+  presentation?: "screen" | "sheet"
 }
 
 type StockMode = "adjust" | "intake"
@@ -125,113 +135,27 @@ function ProductOption({
   )
 }
 
-function SegmentOption({
-  disabled = false,
-  label,
-  onPress,
-  selected,
-}: {
-  disabled?: boolean
-  label: string
-  onPress: () => void
-  selected: boolean
-}) {
-  return (
-    <Pressable
-      className={cn(
-        "h-11 flex-1 items-center justify-center rounded-xl border border-border bg-card px-3 active:bg-accent",
-        selected && "border-primary bg-primary/10",
-        disabled && "opacity-50",
-      )}
-      disabled={disabled}
-      haptic
-      onPress={onPress}
-      transition
-    >
-      <Text
-        className={cn(
-          "text-sm font-bold text-muted-foreground",
-          selected && "text-primary",
-        )}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  )
-}
-
-function UnitOption({
-  onPress,
-  selected,
-  unit,
-}: {
-  onPress: () => void
-  selected: boolean
-  unit: StockUnitOption
-}) {
-  return (
-    <Pressable
-      className={cn(
-        "min-w-[45%] flex-1 gap-2 rounded-2xl border border-border bg-card p-3 active:bg-accent",
-        selected && "border-primary bg-primary/10",
-      )}
-      haptic
-      onPress={onPress}
-      transition
-    >
-      <Text
-        className={cn(
-          "text-sm font-bold text-foreground",
-          selected && "text-primary",
-        )}
-      >
-        {unit.label}
-      </Text>
-      <StatusBadge
-        className="self-start"
-        label={`${unit.stock} available`}
-        tone={getInventoryStockTone(unit.stock)}
-      />
-    </Pressable>
-  )
-}
-
 function MovementRow({ movement }: { movement: RetailOpsStockMovement }) {
   const isIncrease = movement.quantity >= 0
 
   return (
-    <View className="flex-row items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
-      <View className="flex-1 gap-1">
-        <Text className="font-semibold text-foreground">
-          {movement.productName}
-        </Text>
-        <Text className="text-xs font-semibold uppercase text-muted-foreground">
-          {movementLabel(movement.type)}
-        </Text>
-      </View>
-      <View className="items-end gap-1">
-        <Text
-          className={cn(
-            "font-bold",
-            isIncrease ? "text-emerald-700" : "text-destructive",
-          )}
-        >
-          {isIncrease ? "+" : ""}
-          {movement.quantity} {movement.unitName}
-        </Text>
-        <StatusBadge
-          label={movement.syncStatus === "pending" ? "Pending sync" : "Synced"}
-          tone={movement.syncStatus === "pending" ? "warning" : "success"}
-        />
-      </View>
-    </View>
+    <InventoryMovementRow
+      detail={movementLabel(movement.type)}
+      quantityLabel={`${isIncrease ? "+" : ""}${movement.quantity} ${movement.unitName}`}
+      quantityTone={isIncrease ? "success" : "destructive"}
+      statusLabel={
+        movement.syncStatus === "pending" ? "Pending sync" : "Synced"
+      }
+      statusTone={movement.syncStatus === "pending" ? "warning" : "success"}
+      title={movement.productName}
+    />
   )
 }
 
-export const StockIntakeSheet = forwardRef<
-  BottomSheetModal,
-  StockIntakeSheetProps
->(({ onComplete }, ref) => {
+export function StockIntakeContent({
+  onComplete,
+  presentation = "sheet",
+}: StockIntakeContentProps) {
   const trpc = useTRPC()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
   const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
@@ -508,19 +432,8 @@ export const StockIntakeSheet = forwardRef<
     onComplete?.()
   }
 
-  return (
-    <Modal
-      enableDynamicSizing
-      ref={ref}
-      snapPoints={["88%"]}
-      title="Record stock"
-    >
-      <BottomSheetKeyboardAwareScrollView
-        bottomOffset={320}
-        contentContainerStyle={{ paddingBottom: 240 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View className="gap-5 px-5 pb-6">
+  const content = (
+    <View className="gap-5 px-5 pb-6">
           <View className="gap-2">
             <Text className="text-xl font-bold text-foreground">
               {mode === "adjust" ? "Adjust stock" : "Stock intake"}
@@ -540,12 +453,12 @@ export const StockIntakeSheet = forwardRef<
           />
 
           <View className="flex-row gap-2">
-            <SegmentOption
+            <InventorySegmentOption
               label="Restock"
               onPress={() => setMode("intake")}
               selected={mode === "intake"}
             />
-            <SegmentOption
+            <InventorySegmentOption
               label="Adjust"
               onPress={() => setMode("adjust")}
               selected={mode === "adjust"}
@@ -613,11 +526,13 @@ export const StockIntakeSheet = forwardRef<
               <View className="flex-row flex-wrap gap-2">
                 {visibleUnitOptions.length > 0 ? (
                   visibleUnitOptions.map((unit) => (
-                    <UnitOption
+                    <InventoryUnitOption
                       key={unit.id}
+                      label={unit.label}
                       onPress={() => setSelectedUnitId(unit.id)}
                       selected={selectedUnit?.id === unit.id}
-                      unit={unit}
+                      stockLabel={`${unit.stock} available`}
+                      stockTone={getInventoryStockTone(unit.stock)}
                     />
                   ))
                 ) : (
@@ -654,13 +569,13 @@ export const StockIntakeSheet = forwardRef<
                   Direction
                 </Text>
                 <View className="flex-row gap-2">
-                  <SegmentOption
+                  <InventorySegmentOption
                     disabled={!canDecreaseAdjustment}
                     label="Decrease"
                     onPress={() => setDirection("decrease")}
                     selected={direction === "decrease"}
                   />
-                  <SegmentOption
+                  <InventorySegmentOption
                     disabled={!canIncreaseAdjustment}
                     label="Increase"
                     onPress={() => setDirection("increase")}
@@ -681,9 +596,10 @@ export const StockIntakeSheet = forwardRef<
                     <Pressable
                       key={option.value}
                       className={cn(
-                        "rounded-xl border border-border bg-card px-3 py-2 active:bg-accent",
-                        reason === option.value &&
-                          "border-primary bg-primary/10",
+                        "rounded-full border px-4 py-2",
+                        reason === option.value
+                          ? "border-primary bg-primary"
+                          : "border-border bg-background active:bg-accent",
                       )}
                       haptic
                       onPress={() => {
@@ -699,8 +615,10 @@ export const StockIntakeSheet = forwardRef<
                     >
                       <Text
                         className={cn(
-                          "text-sm font-bold text-muted-foreground",
-                          reason === option.value && "text-primary",
+                          "text-sm font-extrabold",
+                          reason === option.value
+                            ? "text-primary-foreground"
+                            : "text-foreground",
                         )}
                       >
                         {option.label}
@@ -777,8 +695,49 @@ export const StockIntakeSheet = forwardRef<
           <ActionButton onPress={onComplete} variant="outline">
             Done
           </ActionButton>
-        </View>
-      </BottomSheetKeyboardAwareScrollView>
+    </View>
+  )
+
+  if (presentation === "screen") {
+    return (
+      <View className="flex-1">
+        <KeyboardAwareScrollView
+          bottomOffset={160}
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: 144 }}
+          disableScrollOnKeyboardHide
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+        >
+          {content}
+        </KeyboardAwareScrollView>
+      </View>
+    )
+  }
+
+  return (
+    <BottomSheetKeyboardAwareScrollView
+      bottomOffset={320}
+      contentContainerStyle={{ paddingBottom: 240 }}
+      keyboardShouldPersistTaps="handled"
+    >
+      {content}
+    </BottomSheetKeyboardAwareScrollView>
+  )
+}
+
+export const StockIntakeSheet = forwardRef<
+  BottomSheetModal,
+  StockIntakeSheetProps
+>(({ onComplete }, ref) => {
+  return (
+    <Modal
+      enableDynamicSizing
+      ref={ref}
+      snapPoints={["88%"]}
+      title="Record stock"
+    >
+      <StockIntakeContent onComplete={onComplete} />
     </Modal>
   )
 })

@@ -30,7 +30,7 @@ Align mobile package dependencies and aliases with Ewatrade, define clear Expo p
 - Align `@trpc/client` and `@trpc/tanstack-react-query` versions with the web apps.
 - Replace the `@api/*` import style with `@ewatrade/api/trpc/routers/_app` for `AppRouter` typing, unless a repo-wide convention requires retaining the path alias.
 - Update `apps/mobile/src/lib/base-url.ts` to prefer `EXPO_PUBLIC_API_URL` for API calls and `EXPO_PUBLIC_WEB_URL` only for web-surface links.
-- Update `.env.example` to document `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_WEB_URL`, `EXPO_PUBLIC_APP_VARIANT`, and `EWATRADE_EXPO_PORT`.
+- Update `.env.example` to document `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_WEB_URL`, `EXPO_PUBLIC_APP_VARIANT`, and `EXPO_PORT`.
 - Remove copied `www-mobile-sign-in`, `www-mobile-session`, and `www-mobile-sign-out` usage from the starter flow.
 - Keep tRPC headers minimal: include `x-trpc-source: mobile`; leave auth token headers as a future extension.
 

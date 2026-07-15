@@ -20,7 +20,7 @@ const ENVIRONMENTS = [
   {
     envFile: MOBILE_LOCAL_ENV,
     label: "development",
-    listFile: process.env.EWATRADE_EXPO_ENV_LIST_DEVELOPMENT_FILE,
+    listFile: process.env.EXPO_ENV_LIST_DEVELOPMENT_FILE,
     requiredKeys: [
       "APP_VARIANT",
       "EXPO_PUBLIC_APP_VARIANT",
@@ -37,7 +37,7 @@ const ENVIRONMENTS = [
       "GOOGLE_WEB_CLIENT_ID",
       "GOOGLE_ANDROID_CLIENT_ID",
       "GOOGLE_IOS_CLIENT_ID",
-      "EWATRADE_EXPO_PORT",
+      "EXPO_PORT",
     ],
     valueCheckedKeys: [
       "APP_VARIANT",
@@ -47,13 +47,13 @@ const ENVIRONMENTS = [
       "EXPO_PUBLIC_API_PORT",
       "EXPO_PUBLIC_WEB_URL",
       "EXPO_PUBLIC_WEB_PORT",
-      "EWATRADE_EXPO_PORT",
+      "EXPO_PORT",
     ],
   },
   {
     envFile: MOBILE_PRODUCTION_ENV,
     label: "production",
-    listFile: process.env.EWATRADE_EXPO_ENV_LIST_PRODUCTION_FILE,
+    listFile: process.env.EXPO_ENV_LIST_PRODUCTION_FILE,
     requiredKeys: [
       "APP_VARIANT",
       "EXPO_PUBLIC_APP_VARIANT",
@@ -178,7 +178,7 @@ function checkEnvFiles() {
 }
 
 function checkExpoEnvLists() {
-  const verifyLive = process.env.EWATRADE_EXPO_ENV_VERIFY_LIVE === "1"
+  const verifyLive = process.env.EXPO_ENV_VERIFY_LIVE === "1"
   let verifiedAnyList = false
 
   for (const environment of ENVIRONMENTS) {
@@ -222,7 +222,7 @@ function checkExpoEnvLists() {
 
   if (!verifiedAnyList) {
     console.log(
-      "External Expo env list verification skipped. Set EWATRADE_EXPO_ENV_LIST_DEVELOPMENT_FILE and EWATRADE_EXPO_ENV_LIST_PRODUCTION_FILE, or set EWATRADE_EXPO_ENV_VERIFY_LIVE=1.",
+      "External Expo env list verification skipped. Set EXPO_ENV_LIST_DEVELOPMENT_FILE and EXPO_ENV_LIST_PRODUCTION_FILE, or set EXPO_ENV_VERIFY_LIVE=1.",
     )
   }
 }

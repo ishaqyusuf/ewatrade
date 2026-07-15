@@ -22,15 +22,13 @@ const DEVELOPMENT_KEYS = [
   "GOOGLE_WEB_CLIENT_ID",
   "GOOGLE_ANDROID_CLIENT_ID",
   "GOOGLE_IOS_CLIENT_ID",
-  "EWATRADE_EXPO_PORT",
+  "EXPO_PORT",
 ]
 const PRODUCTION_KEYS = DEVELOPMENT_KEYS.filter(
   (key) =>
-    ![
-      "EXPO_PUBLIC_API_PORT",
-      "EXPO_PUBLIC_WEB_PORT",
-      "EWATRADE_EXPO_PORT",
-    ].includes(key),
+    !["EXPO_PUBLIC_API_PORT", "EXPO_PUBLIC_WEB_PORT", "EXPO_PORT"].includes(
+      key,
+    ),
 )
 
 runScenario({
@@ -136,8 +134,8 @@ function runScenario(input) {
     }
 
     if (!input.omitListFiles) {
-      env.EWATRADE_EXPO_ENV_LIST_DEVELOPMENT_FILE = developmentList
-      env.EWATRADE_EXPO_ENV_LIST_PRODUCTION_FILE = productionList
+      env.EXPO_ENV_LIST_DEVELOPMENT_FILE = developmentList
+      env.EXPO_ENV_LIST_PRODUCTION_FILE = productionList
     }
 
     const result = spawnSync(process.execPath, [SCRIPT_PATH], {
@@ -217,7 +215,7 @@ function envValues(environment, includePorts) {
   }
 
   if (includePorts) {
-    values.EWATRADE_EXPO_PORT = "3002"
+    values.EXPO_PORT = "3096"
     values.EXPO_PUBLIC_API_PORT = "3095"
     values.EXPO_PUBLIC_WEB_PORT = "3092"
   }

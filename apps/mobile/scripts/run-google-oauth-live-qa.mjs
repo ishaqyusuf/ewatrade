@@ -9,11 +9,7 @@ const REPO_ROOT = resolve(new URL("../../..", import.meta.url).pathname)
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const ENV_FILE =
   process.env.GOOGLE_OAUTH_LIVE_ENV_FILE ?? join(REPO_ROOT, ".env")
-const API_URL_KEYS = [
-  "EWATRADE_API_URL",
-  "NEXT_PUBLIC_API_URL",
-  "EXPO_PUBLIC_API_URL",
-]
+const API_URL_KEYS = ["API_URL", "NEXT_PUBLIC_API_URL", "EXPO_PUBLIC_API_URL"]
 
 loadEnvFile(ENV_FILE)
 runReadinessCheck()
@@ -28,20 +24,15 @@ try {
 
 async function runGoogleOAuthLiveQa() {
   const apiUrl = pickEnv(API_URL_KEYS)
-  const expectedEmail = requireEnv(
-    "EWATRADE_GOOGLE_LIVE_EXPECTED_EMAIL",
-  ).toLowerCase()
-  const evidencePath = requireEnv("EWATRADE_GOOGLE_LIVE_EVIDENCE_PATH")
+  const expectedEmail = requireEnv("GOOGLE_LIVE_EXPECTED_EMAIL").toLowerCase()
+  const evidencePath = requireEnv("GOOGLE_LIVE_EVIDENCE_PATH")
   const mode = getMode()
   const input = {
     businessName:
-      mode === "sign_up"
-        ? requireEnv("EWATRADE_GOOGLE_LIVE_BUSINESS_NAME")
-        : undefined,
-    idToken: requireEnv("EWATRADE_GOOGLE_LIVE_ID_TOKEN"),
+      mode === "sign_up" ? requireEnv("GOOGLE_LIVE_BUSINESS_NAME") : undefined,
+    idToken: requireEnv("GOOGLE_LIVE_ID_TOKEN"),
     mode,
-    name:
-      mode === "sign_up" ? requireEnv("EWATRADE_GOOGLE_LIVE_NAME") : undefined,
+    name: mode === "sign_up" ? requireEnv("GOOGLE_LIVE_NAME") : undefined,
   }
   const trpc = createTRPCClient({
     links: [
@@ -161,7 +152,7 @@ function pickEnv(keys) {
 }
 
 function getMode() {
-  return process.env.EWATRADE_GOOGLE_LIVE_MODE?.trim() === "sign_up"
+  return process.env.GOOGLE_LIVE_MODE?.trim() === "sign_up"
     ? "sign_up"
     : "login"
 }

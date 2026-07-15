@@ -15,12 +15,12 @@ export const MOBILE_DESIGN_FOUNDATION = {
   },
   components: {
     actionButton:
-      "Primary full-width CTA using the shared haptic Button primitive.",
+      "Primary full-width CTA using the shared haptic Button primitive with auth-style sizing, icons, and loading state.",
     emptyState: "Calm empty or first-use state with optional icon and action.",
     floatingSheet:
       "GND-style detached bottom sheet with keyboard-aware scroll content.",
     formField:
-      "Label, helper, error, and input wrapper for short operational forms.",
+      "Auth-style label, helper, error, icon, and input wrapper for short operational forms.",
     otpInput: "Segmented verification entry for email code flows.",
     pressable: "Haptic press/ripple primitive for all app actions.",
     quantityStepper:

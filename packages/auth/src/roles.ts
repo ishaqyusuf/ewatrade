@@ -21,7 +21,7 @@ const roleRank: Record<EwaTradeRole, number> = {
 }
 
 export function normalizeRole(
-  input: string | null | undefined
+  input: string | null | undefined,
 ): EwaTradeRole | null {
   if (!input) {
     return null
@@ -36,7 +36,7 @@ export function normalizeRole(
 
 export function isRoleAtLeast(
   actual: EwaTradeRole,
-  required: EwaTradeRole
+  required: EwaTradeRole,
 ): boolean {
   return roleRank[actual] >= roleRank[required]
 }
@@ -59,9 +59,7 @@ export function canOperatePos(role: EwaTradeRole) {
   )
 }
 
-export function getRoleDisplayName(
-  role: EwaTradeRole | null | undefined
-) {
+export function getRoleDisplayName(role: EwaTradeRole | null | undefined) {
   switch (role) {
     case "OWNER":
       return "Owner"
@@ -82,9 +80,7 @@ export function getRoleDisplayName(
   }
 }
 
-export function getRoleScopeSummary(
-  role: EwaTradeRole | null | undefined
-) {
+export function getRoleScopeSummary(role: EwaTradeRole | null | undefined) {
   switch (role) {
     case "OWNER":
       return "Full ownership over business setup, billing, users, sales, and operations."

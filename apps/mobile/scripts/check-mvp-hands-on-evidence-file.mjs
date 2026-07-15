@@ -186,8 +186,8 @@ const REQUIRED_LIVE_BLOCKER_REPORT_SECTIONS = [
   "Shared-Link Browser Checkout",
 ]
 const PRODUCTION_PUBLIC_CONFIGURED_VALUES = {
-  EWATRADE_API_URL: "https://ewatrade.com",
-  EWATRADE_STOREFRONT_URL: "https://ewatrade.com",
+  API_URL: "https://ewatrade.com",
+  STOREFRONT_URL: "https://ewatrade.com",
   EXPO_PUBLIC_API_URL: "https://ewatrade.com",
   EXPO_PUBLIC_BASE_URL: "https://ewatrade.com",
   EXPO_PUBLIC_WEB_URL: "https://ewatrade.com",
@@ -206,7 +206,7 @@ const SECRET_PATTERNS = [
   },
   {
     label: "Google ID token env value",
-    pattern: /\bEWATRADE_GOOGLE_LIVE_ID_TOKEN\s*=/,
+    pattern: /\bGOOGLE_LIVE_ID_TOKEN\s*=/,
   },
   {
     label: "Google ID token assignment",
@@ -214,7 +214,7 @@ const SECRET_PATTERNS = [
   },
   {
     label: "owner bearer token env value",
-    pattern: /\bEWATRADE_SHARED_LINK_LIVE_OWNER_BEARER_TOKEN\s*=/,
+    pattern: /\bSHARED_LINK_LIVE_OWNER_BEARER_TOKEN\s*=/,
   },
   {
     label: "live share token in URL",

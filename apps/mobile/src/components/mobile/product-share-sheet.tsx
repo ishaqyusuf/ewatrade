@@ -2,6 +2,13 @@ import { ActionButton } from "@/components/mobile/action-button"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
 import { InventoryProductCard } from "@/components/mobile/inventory-product-card"
+import {
+  ShareLinkActionButton,
+  ShareLinkMetricTile,
+  ShareLinkOptionPill,
+  ShareLinkPanel,
+  ShareLinkRecordRow,
+} from "@/components/mobile/share-link-flow"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
@@ -24,9 +31,14 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import * as Clipboard from "expo-clipboard"
 import { forwardRef, useEffect, useMemo, useState } from "react"
 import { Share, View } from "react-native"
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
 type ProductShareSheetProps = {
   onComplete?: () => void
+}
+
+type ProductShareContentProps = ProductShareSheetProps & {
+  presentation?: "screen" | "sheet"
 }
 
 type ShareLinkMetric = {
@@ -425,17 +437,7 @@ function ProductOption({
 }
 
 function ShareLinkMetricCard({ icon, label, value }: ShareLinkMetric) {
-  return (
-    <View className="flex-1 rounded-2xl border border-border bg-card p-4">
-      <View className="flex-row items-center gap-2">
-        <Icon className="size-sm text-muted-foreground" name={icon} />
-        <Text className="text-xs font-semibold uppercase text-muted-foreground">
-          {label}
-        </Text>
-      </View>
-      <Text className="mt-2 text-xl font-bold text-foreground">{value}</Text>
-    </View>
-  )
+  return <ShareLinkMetricTile icon={icon} label={label} value={value} />
 }
 
 function ShareLinkAnalyticsPanel({
@@ -461,20 +463,13 @@ function ShareLinkAnalyticsPanel({
     analytics.source === "daily_rollup" ? "Daily rollup" : "Link counters"
 
   return (
-    <View className="gap-3 rounded-2xl border border-border bg-muted/40 p-4">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-semibold text-foreground">
-            Generated-link analytics
-          </Text>
-          <Text className="text-xs leading-4 text-muted-foreground">
-            {formatShortDate(analytics.range.from)} to{" "}
-            {formatShortDate(analytics.range.to)} · {sourceLabel}
-          </Text>
-        </View>
-        <Icon className="size-base text-primary" name="TrendingUp" />
-      </View>
-
+    <ShareLinkPanel
+      description={`${formatShortDate(analytics.range.from)} to ${formatShortDate(
+        analytics.range.to,
+      )} - ${sourceLabel}`}
+      icon="TrendingUp"
+      title="Generated-link analytics"
+    >
       <View className="flex-row gap-3">
         <ShareLinkMetricCard
           icon="Users"
@@ -526,31 +521,19 @@ function ShareLinkAnalyticsPanel({
             Top links
           </Text>
           {topLinks.map((linkSummary) => (
-            <View
-              className="gap-2 rounded-xl border border-border bg-card p-3"
+            <ShareLinkRecordRow
+              detail={linkSummary.shareLink.url}
               key={linkSummary.shareLink.id}
-            >
-              <View className="flex-row items-start justify-between gap-3">
-                <View className="flex-1 gap-1">
-                  <Text className="text-sm font-semibold text-foreground">
-                    {linkSummary.shareLink.product.name}
-                  </Text>
-                  <Text
-                    className="text-xs leading-4 text-muted-foreground"
-                    numberOfLines={1}
-                  >
-                    {linkSummary.shareLink.url}
-                  </Text>
-                </View>
+              meta={`${linkSummary.viewCount} views - ${
+                linkSummary.uniqueVisitorCount
+              } visitors - ${formatMinorMoney(linkSummary.revenueMinor, "NGN")}`}
+              title={linkSummary.shareLink.product.name}
+              trailing={
                 <Text className="text-xs font-bold text-primary">
                   {linkSummary.orderRequestCount} orders
                 </Text>
-              </View>
-              <Text className="text-xs leading-4 text-muted-foreground">
-                {linkSummary.viewCount} views · {linkSummary.uniqueVisitorCount}{" "}
-                visitors · {formatMinorMoney(linkSummary.revenueMinor, "NGN")}
-              </Text>
-            </View>
+              }
+            />
           ))}
         </View>
       ) : (
@@ -559,7 +542,7 @@ function ShareLinkAnalyticsPanel({
           production link.
         </Text>
       )}
-    </View>
+    </ShareLinkPanel>
   )
 }
 
@@ -586,34 +569,14 @@ function FollowUpOptionGroup<Value extends string>({
           const selected = selectedValue === option.value
 
           return (
-            <Pressable
-              className={cn(
-                "flex-row items-center gap-2 rounded-full border border-border bg-card px-3 py-2 active:bg-accent",
-                selected && "border-primary bg-primary/10",
-                disabled && "opacity-60",
-              )}
+            <ShareLinkOptionPill
               disabled={disabled}
-              haptic
+              icon={option.icon}
               key={option.value}
+              label={option.label}
               onPress={() => onSelect(option.value)}
-              transition
-            >
-              <Icon
-                className={cn(
-                  "size-xs text-muted-foreground",
-                  selected && "text-primary",
-                )}
-                name={option.icon}
-              />
-              <Text
-                className={cn(
-                  "text-xs font-bold text-muted-foreground",
-                  selected && "text-primary",
-                )}
-              >
-                {option.label}
-              </Text>
-            </Pressable>
+              selected={selected}
+            />
           )
         })}
       </View>
@@ -668,19 +631,16 @@ function SharedLinkOrderRequestRow({
     resolvedDeliveryDraft.dropoffAddress.trim().length > 0
 
   return (
-    <View className="gap-3 rounded-2xl border border-border bg-card p-4">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-semibold text-foreground">{customerName}</Text>
-          <Text className="text-xs leading-5 text-muted-foreground">
-            {order.orderNumber} - {formatOrderTime(order.createdAt)}
-          </Text>
-        </View>
+    <ShareLinkRecordRow
+      detail={`${order.orderNumber} - ${formatOrderTime(order.createdAt)}`}
+      title={customerName}
+      trailing={
         <Text className="text-sm font-bold text-primary">
           {formatMinorMoney(order.totalMinor, order.currencyCode)}
         </Text>
-      </View>
-      <View className="rounded-xl bg-muted p-3">
+      }
+    >
+      <View className="border-y border-border py-3">
         <Text className="text-sm font-semibold text-foreground">
           {lineName}
         </Text>
@@ -706,7 +666,7 @@ function SharedLinkOrderRequestRow({
           tone="destructive"
         />
       ) : null}
-      <View className="gap-3 rounded-xl bg-muted p-3">
+      <View className="gap-3 border-y border-border py-3">
         <Text className="text-xs font-bold uppercase text-muted-foreground">
           Follow-up details
         </Text>
@@ -737,7 +697,7 @@ function SharedLinkOrderRequestRow({
         />
       </View>
       {followUp.fulfillmentMethod === "delivery" ? (
-        <View className="gap-3 rounded-xl bg-muted p-3">
+        <View className="gap-3 border-y border-border py-3">
           <Text className="text-xs font-bold uppercase text-muted-foreground">
             Delivery request
           </Text>
@@ -801,59 +761,34 @@ function SharedLinkOrderRequestRow({
             placeholder="Enter delivery instructions"
             value={resolvedDeliveryDraft.notes}
           />
-          <Pressable
-            className={cn(
-              "flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-3 active:bg-primary/20",
-              (!canCreateDeliveryRequest || isDeliveryCreationDisabled) &&
-                "opacity-60",
-            )}
+          <ShareLinkActionButton
             disabled={!canCreateDeliveryRequest || isDeliveryCreationDisabled}
-            haptic
-            onPress={onCreateDeliveryRequest}
-            transition
-          >
-            <Icon className="size-sm text-primary" name="Truck" />
-            <Text className="text-sm font-bold text-primary">
-              {isCreatingDelivery
+            icon="Truck"
+            label={
+              isCreatingDelivery
                 ? "Creating request"
-                : "Create delivery request"}
-            </Text>
-          </Pressable>
+                : "Create delivery request"
+            }
+            onPress={onCreateDeliveryRequest}
+          />
         </View>
       ) : null}
       <View className="flex-row gap-3">
-        <Pressable
-          className={cn(
-            "flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-3 active:bg-primary/20",
-            isUpdating && "opacity-60",
-          )}
+        <ShareLinkActionButton
           disabled={isUpdating}
-          haptic
+          icon="CheckCircle2"
+          label={activeStatus === "completed" ? "Completing" : "Complete"}
           onPress={onComplete}
-          transition
-        >
-          <Icon className="size-sm text-primary" name="CheckCircle2" />
-          <Text className="text-sm font-bold text-primary">
-            {activeStatus === "completed" ? "Completing" : "Complete"}
-          </Text>
-        </Pressable>
-        <Pressable
-          className={cn(
-            "flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-destructive/10 px-3 py-3 active:bg-destructive/20",
-            isUpdating && "opacity-60",
-          )}
+        />
+        <ShareLinkActionButton
+          destructive
           disabled={isUpdating}
-          haptic
+          icon="XCircle"
+          label={activeStatus === "cancelled" ? "Cancelling" : "Cancel"}
           onPress={onCancel}
-          transition
-        >
-          <Icon className="size-sm text-destructive" name="XCircle" />
-          <Text className="text-sm font-bold text-destructive">
-            {activeStatus === "cancelled" ? "Cancelling" : "Cancel"}
-          </Text>
-        </Pressable>
+        />
       </View>
-    </View>
+    </ShareLinkRecordRow>
   )
 }
 
@@ -869,25 +804,18 @@ function DeliveryRequestRow({
   request: DeliveryRequest
 }) {
   return (
-    <View className="gap-3 rounded-2xl border border-border bg-card p-4">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-semibold text-foreground">
-            {request.order.orderNumber}
-          </Text>
-          <Text className="text-xs leading-5 text-muted-foreground">
-            {request.customer.name ?? request.customer.email ?? "Customer"} -{" "}
-            {formatOrderTime(request.requestedAt)}
-          </Text>
-        </View>
+    <ShareLinkRecordRow
+      detail={`${request.customer.name ?? request.customer.email ?? "Customer"} - ${formatOrderTime(request.requestedAt)}`}
+      title={request.order.orderNumber}
+      trailing={
         <SharedLinkStatusBadge
           icon="Truck"
           label={getDeliveryRequestStatusLabel(request.status)}
           status={getDeliveryRequestStatusTone(request.status)}
         />
-      </View>
-
-      <View className="gap-2 rounded-xl bg-muted p-3">
+      }
+    >
+      <View className="gap-2 border-y border-border py-3">
         <Text className="text-xs font-bold uppercase text-muted-foreground">
           Route
         </Text>
@@ -906,45 +834,19 @@ function DeliveryRequestRow({
           { label: "Delivered", status: "delivered" },
           { label: "Cancel", status: "cancelled" },
         ].map((option) => (
-          <Pressable
-            className={cn(
-              "flex-row items-center gap-2 rounded-full px-3 py-2",
-              option.status === "cancelled"
-                ? "bg-destructive/10 active:bg-destructive/20"
-                : "bg-primary/10 active:bg-primary/20",
-              isUpdating && "opacity-60",
-            )}
+          <ShareLinkActionButton
+            destructive={option.status === "cancelled"}
             disabled={isUpdating}
-            haptic
+            icon={option.status === "cancelled" ? "XCircle" : "Truck"}
             key={option.status}
+            label={activeStatus === option.status ? "Updating" : option.label}
             onPress={() =>
               onUpdateStatus(option.status as DeliveryRequestStatusUpdate)
             }
-            transition
-          >
-            <Icon
-              className={cn(
-                "size-sm",
-                option.status === "cancelled"
-                  ? "text-destructive"
-                  : "text-primary",
-              )}
-              name={option.status === "cancelled" ? "XCircle" : "Truck"}
-            />
-            <Text
-              className={cn(
-                "text-xs font-bold",
-                option.status === "cancelled"
-                  ? "text-destructive"
-                  : "text-primary",
-              )}
-            >
-              {activeStatus === option.status ? "Updating" : option.label}
-            </Text>
-          </Pressable>
+          />
         ))}
       </View>
-    </View>
+    </ShareLinkRecordRow>
   )
 }
 
@@ -966,47 +868,31 @@ function ProductionShareLinkRow({
   onShare: () => void
 }) {
   return (
-    <View className="gap-3 rounded-2xl border border-border bg-card p-4">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-semibold text-foreground">
-            {link.product.name}
-          </Text>
-          <Text
-            className="text-xs leading-5 text-muted-foreground"
-            numberOfLines={2}
-          >
-            {link.url}
-          </Text>
-          <Text className="text-xs leading-5 text-muted-foreground">
-            Created {formatOrderTime(link.createdAt)} ·{" "}
-            {formatCreatorLabel(link.createdByUserId)}
-          </Text>
-        </View>
+    <ShareLinkRecordRow
+      detail={link.url}
+      meta={`Created ${formatOrderTime(link.createdAt)} · ${formatCreatorLabel(
+        link.createdByUserId,
+      )}`}
+      title={link.product.name}
+      trailing={
         <StatusBadge
           icon={link.active ? "CircleCheck" : "Ban"}
           label={link.active ? "Active" : "Inactive"}
           tone={link.active ? "success" : "muted"}
         />
-      </View>
-
+      }
+    >
       <View className="flex-row gap-3">
-        <View className="flex-1 rounded-xl bg-muted p-3">
-          <Text className="text-xs font-semibold text-muted-foreground">
-            Views
-          </Text>
-          <Text className="mt-1 text-lg font-bold text-foreground">
-            {link.viewCount}
-          </Text>
-        </View>
-        <View className="flex-1 rounded-xl bg-muted p-3">
-          <Text className="text-xs font-semibold text-muted-foreground">
-            Orders
-          </Text>
-          <Text className="mt-1 text-lg font-bold text-foreground">
-            {link.orderCount}
-          </Text>
-        </View>
+        <ShareLinkMetricTile
+          icon="Eye"
+          label="Views"
+          value={String(link.viewCount)}
+        />
+        <ShareLinkMetricTile
+          icon="ReceiptText"
+          label="Orders"
+          value={String(link.orderCount)}
+        />
       </View>
 
       <Text className="text-xs leading-4 text-muted-foreground">
@@ -1015,49 +901,24 @@ function ProductionShareLinkRow({
 
       <View className="gap-3">
         <View className="flex-row gap-3">
-          <Pressable
-            className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-3 active:bg-primary/20"
-            haptic
-            onPress={onShare}
-            transition
-          >
-            <Icon className="size-sm text-primary" name="Share" />
-            <Text className="text-sm font-bold text-primary">Share</Text>
-          </Pressable>
-          <Pressable
-            className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-3 active:bg-primary/20"
-            haptic
+          <ShareLinkActionButton icon="Share" label="Share" onPress={onShare} />
+          <ShareLinkActionButton
+            icon={isCopied ? "ClipboardCheck" : "ClipboardList"}
+            label={isCopied ? "Link copied" : "Copy link"}
             onPress={onCopy}
-            transition
-          >
-            <Icon
-              className="size-sm text-primary"
-              name={isCopied ? "ClipboardCheck" : "ClipboardList"}
-            />
-            <Text className="text-sm font-bold text-primary">
-              {isCopied ? "Link copied" : "Copy link"}
-            </Text>
-          </Pressable>
+          />
         </View>
         {link.active ? (
-          <Pressable
-            className={cn(
-              "flex-row items-center justify-center gap-2 rounded-xl bg-destructive/10 px-3 py-3 active:bg-destructive/20",
-              isUpdating && "opacity-60",
-            )}
+          <ShareLinkActionButton
+            destructive
             disabled={isUpdating}
-            haptic
+            icon="Ban"
+            label={isDeactivating ? "Deactivating" : "Deactivate"}
             onPress={onDeactivate}
-            transition
-          >
-            <Icon className="size-sm text-destructive" name="Ban" />
-            <Text className="text-sm font-bold text-destructive">
-              {isDeactivating ? "Deactivating" : "Deactivate"}
-            </Text>
-          </Pressable>
+          />
         ) : null}
       </View>
-    </View>
+    </ShareLinkRecordRow>
   )
 }
 
@@ -1077,109 +938,65 @@ function ShareLinkRow({
   const isActive = link.status === "active"
 
   return (
-    <View className="gap-3 rounded-2xl border border-border bg-card p-4">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-semibold text-foreground">
-            {link.productName}
-          </Text>
-          <Text
-            className="text-xs leading-5 text-muted-foreground"
-            numberOfLines={2}
-          >
-            {link.url}
-          </Text>
-          <Text className="text-xs leading-5 text-muted-foreground">
-            Created {formatOrderTime(link.createdAt)} · {formatCreatorLabel()}
-          </Text>
-        </View>
+    <ShareLinkRecordRow
+      detail={link.url}
+      meta={`Created ${formatOrderTime(link.createdAt)} · ${formatCreatorLabel()}`}
+      title={link.productName}
+      trailing={
         <StatusBadge
           icon={isActive ? "CircleCheck" : "Ban"}
           label={isActive ? "Active" : "Inactive"}
           tone={isActive ? "success" : "muted"}
         />
-      </View>
-
+      }
+    >
       <Text className="text-xs leading-4 text-muted-foreground">
         Last activity: {formatLocalLinkActivity(link)}
       </Text>
 
       <View className="flex-row gap-3">
-        <View className="flex-1 rounded-xl bg-muted p-3">
-          <View className="flex-row items-center gap-2">
-            <Icon className="size-sm text-muted-foreground" name="Eye" />
-            <Text className="text-xs font-semibold text-muted-foreground">
-              Views
-            </Text>
-          </View>
-          <Text className="mt-1 text-lg font-bold text-foreground">
-            {link.views}
-          </Text>
-        </View>
-        <View className="flex-1 rounded-xl bg-muted p-3">
-          <View className="flex-row items-center gap-2">
-            <Icon
-              className="size-sm text-muted-foreground"
-              name="ReceiptText"
-            />
-            <Text className="text-xs font-semibold text-muted-foreground">
-              Orders
-            </Text>
-          </View>
-          <Text className="mt-1 text-lg font-bold text-foreground">
-            {link.orders}
-          </Text>
-        </View>
+        <ShareLinkMetricTile
+          icon="Eye"
+          label="Views"
+          value={String(link.views)}
+        />
+        <ShareLinkMetricTile
+          icon="ReceiptText"
+          label="Orders"
+          value={String(link.orders)}
+        />
       </View>
 
       <View className="gap-3">
         <View className="flex-row gap-3">
-          <Pressable
-            className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-3 active:bg-primary/20"
-            haptic
+          <ShareLinkActionButton
+            icon="Share"
+            label="Share link"
             onPress={onShare}
-            transition
-          >
-            <Icon className="size-sm text-primary" name="Share" />
-            <Text className="text-sm font-bold text-primary">Share link</Text>
-          </Pressable>
-          <Pressable
-            className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-3 active:bg-primary/20"
-            haptic
+          />
+          <ShareLinkActionButton
+            icon={isCopied ? "ClipboardCheck" : "ClipboardList"}
+            label={isCopied ? "Link copied" : "Copy link"}
             onPress={onCopy}
-            transition
-          >
-            <Icon
-              className="size-sm text-primary"
-              name={isCopied ? "ClipboardCheck" : "ClipboardList"}
-            />
-            <Text className="text-sm font-bold text-primary">
-              {isCopied ? "Link copied" : "Copy link"}
-            </Text>
-          </Pressable>
+          />
         </View>
         {isActive ? (
-          <Pressable
-            className="flex-row items-center justify-center gap-2 rounded-xl bg-destructive/10 px-3 py-3 active:bg-destructive/20"
-            haptic
+          <ShareLinkActionButton
+            destructive
+            icon="Ban"
+            label="Deactivate"
             onPress={onDeactivate}
-            transition
-          >
-            <Icon className="size-sm text-destructive" name="Ban" />
-            <Text className="text-sm font-bold text-destructive">
-              Deactivate
-            </Text>
-          </Pressable>
+          />
         ) : null}
       </View>
-    </View>
+    </ShareLinkRecordRow>
   )
 }
 
-export const ProductShareSheet = forwardRef<
-  BottomSheetModal,
-  ProductShareSheetProps
->(({ onComplete }, ref) => {
+export function ProductShareContent({
+  onComplete,
+  presentation = "sheet",
+}: ProductShareContentProps) {
   const trpc = useTRPC()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
   const createShareLink = useRetailOpsStore((state) => state.createShareLink)
@@ -1525,19 +1342,8 @@ export const ProductShareSheet = forwardRef<
     })
   }
 
-  return (
-    <Modal
-      enableDynamicSizing
-      ref={ref}
-      snapPoints={["88%"]}
-      title="Share product"
-    >
-      <BottomSheetKeyboardAwareScrollView
-        bottomOffset={320}
-        contentContainerStyle={{ paddingBottom: 240 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View className="gap-5 px-5 pb-6">
+  const content = (
+    <View className="gap-5 px-5 pb-6">
           <View className="gap-2">
             <Text className="text-xl font-bold text-foreground">
               Product links
@@ -2017,11 +1823,50 @@ export const ProductShareSheet = forwardRef<
             ) : null}
           </View>
 
-          <ActionButton onPress={onComplete} variant="outline">
-            Done
-          </ActionButton>
-        </View>
-      </BottomSheetKeyboardAwareScrollView>
+      <ActionButton onPress={onComplete} variant="outline">
+        Done
+      </ActionButton>
+    </View>
+  )
+
+  if (presentation === "screen") {
+    return (
+      <KeyboardAwareScrollView
+        className="flex-1"
+        bottomOffset={320}
+        contentContainerStyle={{ paddingBottom: 240 }}
+        disableScrollOnKeyboardHide
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+      >
+        {content}
+      </KeyboardAwareScrollView>
+    )
+  }
+
+  return (
+    <BottomSheetKeyboardAwareScrollView
+      bottomOffset={320}
+      contentContainerStyle={{ paddingBottom: 240 }}
+      keyboardShouldPersistTaps="handled"
+    >
+      {content}
+    </BottomSheetKeyboardAwareScrollView>
+  )
+}
+
+export const ProductShareSheet = forwardRef<
+  BottomSheetModal,
+  ProductShareSheetProps
+>((props, ref) => {
+  return (
+    <Modal
+      enableDynamicSizing
+      ref={ref}
+      snapPoints={["88%"]}
+      title="Share product"
+    >
+      <ProductShareContent {...props} presentation="sheet" />
     </Modal>
   )
 })

@@ -1,4 +1,11 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import {
+  ReportMetricTile,
+  type ReportRowItem,
+  ReportSection,
+  type ReportTone,
+} from "@/components/mobile/report-flow"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
@@ -21,22 +28,19 @@ import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useQuery } from "@tanstack/react-query"
 import { forwardRef, useMemo, useState } from "react"
 import { Share, View } from "react-native"
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
 type ReportsSheetProps = {
   onComplete?: () => void
 }
 
-type ReportMetric = {
-  label: string
-  tone?: "default" | "success" | "warning" | "danger"
-  value: string
+type ReportsContentProps = ReportsSheetProps & {
+  presentation?: "screen" | "sheet"
 }
 
-type ReportRowItem = {
-  detail?: string
-  id: string
+type ReportMetric = {
   label: string
-  tone?: "default" | "success" | "warning" | "danger"
+  tone?: ReportTone
   value: string
 }
 
@@ -658,93 +662,10 @@ function SyncDeviceFilterControl({
   )
 }
 
-function ReportMetricCard({ label, tone = "default", value }: ReportMetric) {
-  return (
-    <View className="flex-1 rounded-2xl border border-border bg-card p-4">
-      <Text className="text-xs font-semibold uppercase text-muted-foreground">
-        {label}
-      </Text>
-      <Text
-        className={cn(
-          "mt-2 text-lg font-bold",
-          tone === "success" && "text-emerald-700",
-          tone === "warning" && "text-amber-700",
-          tone === "danger" && "text-destructive",
-          tone === "default" && "text-foreground",
-        )}
-      >
-        {value}
-      </Text>
-    </View>
-  )
-}
-
-function ReportRow({ item }: { item: ReportRowItem }) {
-  return (
-    <View className="flex-row items-center justify-between gap-3 rounded-xl bg-muted px-3 py-3">
-      <View className="flex-1 gap-1">
-        <Text className="text-sm font-semibold text-foreground">
-          {item.label}
-        </Text>
-        {item.detail ? (
-          <Text className="text-xs text-muted-foreground">{item.detail}</Text>
-        ) : null}
-      </View>
-      <Text
-        className={cn(
-          "text-sm font-bold",
-          item.tone === "success" && "text-emerald-700",
-          item.tone === "warning" && "text-amber-700",
-          item.tone === "danger" && "text-destructive",
-          (!item.tone || item.tone === "default") && "text-foreground",
-        )}
-      >
-        {item.value}
-      </Text>
-    </View>
-  )
-}
-
-function ReportSection({
-  empty,
-  rows,
-  title,
-  visibleLimit = 8,
-}: {
-  empty: string
-  rows: ReportRowItem[]
-  title: string
-  visibleLimit?: number
-}) {
-  const visibleRows = rows.slice(0, visibleLimit)
-
-  return (
-    <View className="gap-3">
-      <Text className="text-base font-bold text-foreground">{title}</Text>
-      {rows.length > 0 ? (
-        <View className="gap-2">
-          {visibleRows.map((item) => (
-            <ReportRow item={item} key={item.id} />
-          ))}
-          {rows.length > visibleRows.length ? (
-            <Text className="text-xs font-semibold text-muted-foreground">
-              Showing first {visibleRows.length} of {rows.length} rows.
-            </Text>
-          ) : null}
-        </View>
-      ) : (
-        <View className="rounded-2xl border border-dashed border-border p-4">
-          <Text className="text-sm leading-5 text-muted-foreground">
-            {empty}
-          </Text>
-        </View>
-      )}
-    </View>
-  )
-}
-
-export const ReportsSheet = forwardRef<BottomSheetModal, ReportsSheetProps>(
-  ({ onComplete }, ref) => {
+export function ReportsContent({
+  onComplete,
+  presentation = "sheet",
+}: ReportsContentProps) {
     const trpc = useTRPC()
     const [syncDeviceFilter, setSyncDeviceFilter] =
       useState<SyncDeviceConflictFilter>("all")
@@ -1080,14 +1001,8 @@ export const ReportsSheet = forwardRef<BottomSheetModal, ReportsSheetProps>(
       })
     }
 
-    return (
-      <Modal enableDynamicSizing ref={ref} snapPoints={["92%"]} title="Reports">
-        <BottomSheetKeyboardAwareScrollView
-          bottomOffset={112}
-          contentContainerStyle={{ paddingBottom: 32 }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View className="gap-5 px-5 pb-6">
+    const content = (
+      <View className="gap-5 px-5 pb-6">
             <View className="gap-3">
               <View className="h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
                 <Icon className="size-base text-primary" name="BarChart3" />
@@ -1110,21 +1025,21 @@ export const ReportsSheet = forwardRef<BottomSheetModal, ReportsSheetProps>(
             />
 
             <View className="flex-row gap-3">
-              <ReportMetricCard
+              <ReportMetricTile
                 label="Today sales"
                 value={formatMoney(
                   summary?.sales.totalMinor ?? todayTotals.gross,
                   "NGN",
                 )}
               />
-              <ReportMetricCard
+              <ReportMetricTile
                 label="Transactions"
                 value={String(summary?.sales.orderCount ?? todaySales.length)}
               />
             </View>
 
             <View className="flex-row gap-3">
-              <ReportMetricCard
+              <ReportMetricTile
                 label="Expected cash"
                 value={formatMoney(
                   latestProductionCloseout?.expectedCashMinor ??
@@ -1133,7 +1048,7 @@ export const ReportsSheet = forwardRef<BottomSheetModal, ReportsSheetProps>(
                   "NGN",
                 )}
               />
-              <ReportMetricCard
+              <ReportMetricTile
                 label="Transfer"
                 value={formatMoney(
                   summary?.payments.transferMinor ?? todayTotals.transfer,
@@ -1143,12 +1058,12 @@ export const ReportsSheet = forwardRef<BottomSheetModal, ReportsSheetProps>(
             </View>
 
             <View className="flex-row gap-3">
-              <ReportMetricCard
+              <ReportMetricTile
                 label="Open sync"
                 tone={openSyncCount > 0 ? "warning" : "success"}
                 value={String(openSyncCount)}
               />
-              <ReportMetricCard
+              <ReportMetricTile
                 label="Last closeout"
                 tone={
                   latestProductionCloseout?.review || latestCloseout
@@ -1164,7 +1079,7 @@ export const ReportsSheet = forwardRef<BottomSheetModal, ReportsSheetProps>(
             </View>
 
             <View className="flex-row gap-3">
-              <ReportMetricCard
+              <ReportMetricTile
                 label="Server conflicts"
                 tone={
                   (tenantSyncConflictsCountQuery.data?.length ?? 0) > 0
@@ -1173,7 +1088,7 @@ export const ReportsSheet = forwardRef<BottomSheetModal, ReportsSheetProps>(
                 }
                 value={String(tenantSyncConflictsCountQuery.data?.length ?? 0)}
               />
-              <ReportMetricCard
+              <ReportMetricTile
                 label="Filtered conflicts"
                 tone={syncConflictRows.length > 0 ? "danger" : "success"}
                 value={String(syncConflictRows.length)}
@@ -1263,12 +1178,12 @@ export const ReportsSheet = forwardRef<BottomSheetModal, ReportsSheetProps>(
               title="Cash and stock variance"
             />
 
-            <View className="rounded-2xl bg-muted p-4">
-              <Text className="text-sm leading-5 text-muted-foreground">
-                CSV export includes the visible report rows, source state, and
-                current sync-device conflict filter.
-              </Text>
-            </View>
+            <StatusBanner
+              icon="FileText"
+              message="CSV export includes the visible report rows, source state, and current sync-device conflict filter."
+              title="Export scope"
+              tone="muted"
+            />
 
             <ActionButton
               onPress={() => {
@@ -1280,11 +1195,43 @@ export const ReportsSheet = forwardRef<BottomSheetModal, ReportsSheetProps>(
               Export CSV
             </ActionButton>
 
-            <ActionButton onPress={onComplete} variant="outline">
-              Done
-            </ActionButton>
-          </View>
-        </BottomSheetKeyboardAwareScrollView>
+        <ActionButton onPress={onComplete} variant="outline">
+          Done
+        </ActionButton>
+      </View>
+    )
+
+    if (presentation === "screen") {
+      return (
+        <KeyboardAwareScrollView
+          className="flex-1"
+          bottomOffset={140}
+          contentContainerStyle={{ paddingBottom: 120 }}
+          disableScrollOnKeyboardHide
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+        >
+          {content}
+        </KeyboardAwareScrollView>
+      )
+    }
+
+    return (
+      <BottomSheetKeyboardAwareScrollView
+        bottomOffset={112}
+        contentContainerStyle={{ paddingBottom: 32 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {content}
+      </BottomSheetKeyboardAwareScrollView>
+    )
+}
+
+export const ReportsSheet = forwardRef<BottomSheetModal, ReportsSheetProps>(
+  (props, ref) => {
+    return (
+      <Modal enableDynamicSizing ref={ref} snapPoints={["92%"]} title="Reports">
+        <ReportsContent {...props} presentation="sheet" />
       </Modal>
     )
   },

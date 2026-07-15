@@ -19,6 +19,7 @@ type StepSuccessProps = {
   tenantSlug: string
   businessName: string
   devEmailHtml?: string
+  emailDeliveryStatus?: "failed" | "sent"
 }
 
 function ConfettiDot({ style }: { style: React.CSSProperties }) {
@@ -43,6 +44,7 @@ export function StepSuccess({
   tenantSlug,
   businessName,
   devEmailHtml,
+  emailDeliveryStatus = "sent",
 }: StepSuccessProps) {
   const [visible, setVisible] = useState(false)
 
@@ -159,8 +161,9 @@ export function StepSuccess({
       {/* Check email notice */}
       <div className="mb-6 rounded-2xl border border-border/50 bg-muted/30 px-4 py-3">
         <p className="text-sm text-muted-foreground">
-          We sent a confirmation email to verify your address. Check your inbox
-          and follow the link to activate your account.
+          {emailDeliveryStatus === "sent"
+            ? "We sent a confirmation email to verify your address. Check your inbox and follow the link to activate your account."
+            : "Your workspace is ready, but the confirmation email could not be sent yet. Open your dashboard and contact support if you need help verifying your address."}
         </p>
       </div>
 
@@ -177,7 +180,7 @@ export function StepSuccess({
         <Button
           size="lg"
           className="gap-2 rounded-full px-8"
-          render={<a href={dashboardUrl} />}
+          render={<a href={dashboardUrl}>Go to dashboard</a>}
         >
           Go to dashboard
           <HugeiconsIcon
@@ -190,7 +193,7 @@ export function StepSuccess({
           variant="outline"
           size="lg"
           className="rounded-full px-6"
-          render={<a href="/" />}
+          render={<a href="/">Back to home</a>}
         >
           Back to home
         </Button>

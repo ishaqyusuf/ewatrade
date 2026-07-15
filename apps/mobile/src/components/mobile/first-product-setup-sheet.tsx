@@ -1,7 +1,13 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
 import { QuantityStepper } from "@/components/mobile/quantity-stepper"
-import { StatusBadge } from "@/components/mobile/status-badge"
+import {
+  SetupChoicePill,
+  SetupFlowHeader,
+  SetupInlineNotice,
+  SetupSection,
+  SetupSummaryRow,
+} from "@/components/mobile/setup-flow"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Icon } from "@/components/ui/icon"
@@ -27,9 +33,15 @@ import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { forwardRef, useMemo, useState } from "react"
 import { View } from "react-native"
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
 type FirstProductSetupSheetProps = {
   onComplete?: () => void
+}
+
+type FirstProductSetupContentProps = {
+  onComplete?: () => void
+  presentation?: "screen" | "sheet"
 }
 
 type VariantDraft = {
@@ -71,6 +83,7 @@ type CreateProductInput = {
 }
 
 type FirstProductSetupStep = "details" | "stock"
+const FIRST_PRODUCT_STEPS = ["Item", "Stock"]
 
 type UnitTemplate = {
   baseUnitName: string
@@ -173,10 +186,10 @@ function createVariantDraft(): VariantDraft {
   }
 }
 
-export const FirstProductSetupSheet = forwardRef<
-  BottomSheetModal,
-  FirstProductSetupSheetProps
->(({ onComplete }, ref) => {
+export function FirstProductSetupContent({
+  onComplete,
+  presentation = "sheet",
+}: FirstProductSetupContentProps) {
   const trpc = useTRPC()
   const auth = useAuthContext()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
@@ -398,55 +411,44 @@ export const FirstProductSetupSheet = forwardRef<
     setSetupStep("stock")
   }
 
-  return (
-    <Modal
-      enableDynamicSizing
-      ref={ref}
-      snapPoints={["88%"]}
-      title="Add first item"
-    >
-      <BottomSheetKeyboardAwareScrollView
-        bottomOffset={320}
-        contentContainerStyle={{ paddingBottom: 240 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View className="gap-5 px-5 pb-6">
-          <View className="gap-2">
-            <StatusBadge
-              icon={setupStep === "details" ? "FilePenLine" : "Warehouse"}
-              label={
-                setupStep === "details" ? "Item details" : "Starting stock"
-              }
-              tone="primary"
-            />
-            <Text className="text-xl font-bold text-foreground">
-              {setupStep === "details" ? "Set up item" : "Add current stock"}
-            </Text>
-            <Text className="text-sm leading-5 text-muted-foreground">
-              {setupStep === "details"
-                ? "Add the item, its selling unit, and any optional variants."
-                : "Enter what you already have in inventory so the dashboard starts accurately."}
-            </Text>
-          </View>
+  const content = (
+    <View className="gap-7 px-5 pb-6 pt-1">
+          <SetupFlowHeader
+            badgeIcon={setupStep === "details" ? "FilePenLine" : "Warehouse"}
+            badgeLabel={
+              setupStep === "details" ? "Item details" : "Starting stock"
+            }
+            currentStep={setupStep === "details" ? 1 : 2}
+            description={
+              setupStep === "details"
+                ? "Add one real item, define how you sell it, then capture starting stock."
+                : "Confirm the item setup and enter the stock already on hand."
+            }
+            steps={FIRST_PRODUCT_STEPS}
+            title={setupStep === "details" ? "Set up item" : "Add stock"}
+          />
 
-          <StatusBanner
+          <SetupInlineNotice
             icon={shouldUseLocalQueue ? "Wind" : "CircleCheck"}
-            message={
+            text={
               shouldUseLocalQueue
                 ? "This item will be queued locally and synced later."
                 : "This item will be created in production immediately."
             }
-            title={shouldUseLocalQueue ? "Local setup" : "Online setup"}
             tone={shouldUseLocalQueue ? "warning" : "success"}
           />
 
           {setupStep === "details" ? (
             <>
-              <View className="gap-4">
+              <SetupSection
+                description="Keep setup light: name the item, choose how it is sold, and add optional product media."
+                title="Item and selling unit"
+              >
                 <FormField
                   label="Item name"
                   onChangeText={setName}
                   placeholder="Enter item name"
+                  variant="line"
                   value={name}
                 />
                 <FormField
@@ -460,6 +462,7 @@ export const FirstProductSetupSheet = forwardRef<
                   multiline
                   onChangeText={setDescription}
                   placeholder="Enter product description"
+                  variant="line"
                   value={description}
                 />
                 <View className="gap-2">
@@ -471,40 +474,19 @@ export const FirstProductSetupSheet = forwardRef<
                       const isSelected = template.key === unitTemplateKey
 
                       return (
-                        <Pressable
-                          className={
-                            isSelected
-                              ? "rounded-full bg-primary px-3 py-2"
-                              : "rounded-full border border-border bg-card px-3 py-2"
-                          }
-                          haptic
+                        <SetupChoicePill
                           key={template.key}
                           onPress={() => applyUnitTemplate(template)}
-                          transition
+                          selected={isSelected}
                         >
-                          <Text
-                            className={
-                              isSelected
-                                ? "text-xs font-bold text-primary-foreground"
-                                : "text-xs font-semibold text-foreground"
-                            }
-                          >
-                            {template.name}
-                          </Text>
-                        </Pressable>
+                          {template.name}
+                        </SetupChoicePill>
                       )
                     })}
                     {selectedUnitTemplate ? (
-                      <Pressable
-                        className="rounded-full border border-border bg-card px-3 py-2"
-                        haptic
-                        onPress={() => applyUnitTemplate(null)}
-                        transition
-                      >
-                        <Text className="text-xs font-semibold text-muted-foreground">
-                          Manual
-                        </Text>
-                      </Pressable>
+                      <SetupChoicePill onPress={() => applyUnitTemplate(null)}>
+                        Manual
+                      </SetupChoicePill>
                     ) : null}
                   </View>
                   <Text className="text-xs leading-5 text-muted-foreground">
@@ -517,6 +499,7 @@ export const FirstProductSetupSheet = forwardRef<
                   label="Primary unit"
                   onChangeText={setUnitName}
                   placeholder="Enter unit name"
+                  variant="line"
                   value={unitName}
                 />
                 <FormField
@@ -525,6 +508,7 @@ export const FirstProductSetupSheet = forwardRef<
                   label="Price per unit"
                   onChangeText={setPrice}
                   placeholder="Enter unit price"
+                  variant="line"
                   value={price}
                 />
                 <FormField
@@ -541,23 +525,24 @@ export const FirstProductSetupSheet = forwardRef<
                   label="Product image link"
                   onChangeText={setImageUrl}
                   placeholder="Enter product image link"
+                  variant="line"
                   value={imageUrl}
                 />
-              </View>
+              </SetupSection>
 
-              <View className="gap-3">
+              <SetupSection
+                description="Skip this for a simple item, or add sellable sub-units with their own prices."
+                title="Sub-units or variants"
+              >
                 <View className="flex-row items-center justify-between gap-3">
-                  <View className="gap-1">
-                    <Text className="font-bold text-foreground">
-                      Sub-units or variants
-                    </Text>
-                    <Text className="text-xs text-muted-foreground">
-                      Add any smaller units or sellable options for this item.
-                    </Text>
-                  </View>
+                  <Text className="text-sm font-semibold text-muted-foreground">
+                    {variants.length > 0
+                      ? `${variants.length} added`
+                      : "No variants yet"}
+                  </Text>
                   <Pressable
-                    className="h-10 w-10 items-center justify-center rounded-full bg-primary/10"
                     accessibilityLabel="Add more sub-units or variants"
+                    className="h-10 w-10 items-center justify-center rounded-full bg-primary/10"
                     haptic
                     onPress={() =>
                       setVariants((current) => [
@@ -572,7 +557,7 @@ export const FirstProductSetupSheet = forwardRef<
                 </View>
 
                 {variants.length === 0 ? (
-                  <View className="gap-3 rounded-2xl border border-dashed border-border p-4">
+                  <View className="gap-3 border-y border-border py-4">
                     <View className="flex-row items-center gap-3">
                       <View className="h-9 w-9 items-center justify-center rounded-full bg-muted">
                         <Icon
@@ -595,11 +580,11 @@ export const FirstProductSetupSheet = forwardRef<
                   <View className="gap-3">
                     {variants.map((variant, index) => (
                       <View
-                        className="gap-3 rounded-2xl border border-border bg-card p-3"
+                        className="gap-4 border-t border-border pt-4"
                         key={variant.id}
                       >
                         <View className="flex-row items-center justify-between">
-                          <Text className="font-semibold text-foreground">
+                          <Text className="text-sm font-extrabold uppercase tracking-[1px] text-muted-foreground">
                             Variant {index + 1}
                           </Text>
                           <Pressable
@@ -620,6 +605,7 @@ export const FirstProductSetupSheet = forwardRef<
                             updateVariant(variant.id, "name", value)
                           }
                           placeholder="Enter variant name"
+                          variant="line"
                           value={variant.name}
                         />
                         <FormField
@@ -639,6 +625,7 @@ export const FirstProductSetupSheet = forwardRef<
                             )
                           }
                           placeholder="Enter portion"
+                          variant="line"
                           value={variant.conversionMultiplier}
                         />
                         <FormField
@@ -649,40 +636,48 @@ export const FirstProductSetupSheet = forwardRef<
                             updateVariant(variant.id, "price", value)
                           }
                           placeholder="Enter variant price"
+                          variant="line"
                           value={variant.price}
                         />
                       </View>
                     ))}
                   </View>
                 )}
-              </View>
+              </SetupSection>
             </>
           ) : (
             <>
-              <View className="gap-3 rounded-2xl border border-border bg-card p-4">
-                <Text className="font-semibold text-foreground">
-                  {name.trim()}
-                </Text>
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  {unitName.trim()} at {price.trim()} per unit
-                </Text>
-                <Text className="text-xs leading-5 text-muted-foreground">
-                  {variants.length > 0
-                    ? `${variants.length} variant${variants.length === 1 ? "" : "s"} added`
-                    : "No variants added"}
-                </Text>
-              </View>
-              <QuantityStepper
-                helper={unitName.trim() || "units"}
-                label="Current stock"
-                onChangeText={(value) =>
-                  setStartingStock(normalizeWholeNumberInput(value))
-                }
-                min={0}
-                value={startingStock}
-              />
+              <SetupSection
+                description="Review the item, then enter the count already available for sale."
+                title="Stock starting point"
+              >
+                <View className="border-t border-border">
+                  <SetupSummaryRow label="Item" value={name.trim()} />
+                  <SetupSummaryRow
+                    label="Unit"
+                    value={`${unitName.trim()} at ${price.trim()}`}
+                  />
+                  <SetupSummaryRow
+                    label="Variants"
+                    value={
+                      variants.length > 0
+                        ? `${variants.length} variant${variants.length === 1 ? "" : "s"}`
+                        : "None"
+                    }
+                  />
+                </View>
+                <QuantityStepper
+                  helper={unitName.trim() || "units"}
+                  label="Current stock"
+                  onChangeText={(value) =>
+                    setStartingStock(normalizeWholeNumberInput(value))
+                  }
+                  min={0}
+                  value={startingStock}
+                />
+              </SetupSection>
               <Pressable
-                className="flex-row items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 py-3"
+                className="flex-row items-center justify-center gap-2 rounded-full border border-border bg-background px-3 py-3"
                 haptic
                 onPress={() => setSetupStep("details")}
                 transition
@@ -728,8 +723,50 @@ export const FirstProductSetupSheet = forwardRef<
                 ? "Adding item..."
                 : "Add item and stock"}
           </ActionButton>
-        </View>
-      </BottomSheetKeyboardAwareScrollView>
+    </View>
+  )
+
+  if (presentation === "screen") {
+    return (
+      <View className="flex-1">
+        <KeyboardAwareScrollView
+          bottomOffset={160}
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: 144 }}
+          disableScrollOnKeyboardHide
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+        >
+          {content}
+        </KeyboardAwareScrollView>
+      </View>
+    )
+  }
+
+  return (
+    <BottomSheetKeyboardAwareScrollView
+      bottomOffset={280}
+      contentContainerStyle={{ paddingBottom: 220 }}
+      keyboardShouldPersistTaps="handled"
+    >
+      {content}
+    </BottomSheetKeyboardAwareScrollView>
+  )
+}
+
+export const FirstProductSetupSheet = forwardRef<
+  BottomSheetModal,
+  FirstProductSetupSheetProps
+>(({ onComplete }, ref) => {
+  return (
+    <Modal
+      enableDynamicSizing
+      hideHeader
+      ref={ref}
+      snapPoints={["90%"]}
+      title="Add first item"
+    >
+      <FirstProductSetupContent onComplete={onComplete} />
     </Modal>
   )
 })

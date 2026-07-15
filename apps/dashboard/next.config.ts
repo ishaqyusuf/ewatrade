@@ -3,7 +3,7 @@ import type { NextConfig } from "next"
 function getApiOrigin() {
   return (
     process.env.NEXT_PUBLIC_API_URL ??
-    process.env.EWATRADE_API_URL ??
+    process.env.API_URL ??
     "http://localhost:3095"
   ).replace(/\/$/, "")
 }

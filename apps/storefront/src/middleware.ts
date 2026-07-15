@@ -1,9 +1,11 @@
+import { resolveTenantDomain } from "@ewatrade/utils"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { resolveTenantDomain } from "@ewatrade/utils"
 
-const PLATFORM_DOMAIN = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com"
-const MARKETING_URL = process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com"
+const PLATFORM_DOMAIN =
+  process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com"
+const MARKETING_URL =
+  process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com"
 
 /**
  * Storefront middleware.
@@ -15,7 +17,9 @@ const MARKETING_URL = process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade
  */
 export function middleware(request: NextRequest) {
   const hostname = request.headers.get("host") ?? ""
-  const result = resolveTenantDomain(hostname, { platformDomain: PLATFORM_DOMAIN })
+  const result = resolveTenantDomain(hostname, {
+    platformDomain: PLATFORM_DOMAIN,
+  })
 
   // Allow the request if it resolves to a tenant storefront
   if (result.kind === "tenant" && result.surface === "storefront") {
@@ -25,7 +29,10 @@ export function middleware(request: NextRequest) {
       response.headers.set("x-tenant-slug", result.tenantSlug)
     }
     response.headers.set("x-tenant-surface", "storefront")
-    response.headers.set("x-is-custom-domain", result.isCustomDomain ? "1" : "0")
+    response.headers.set(
+      "x-is-custom-domain",
+      result.isCustomDomain ? "1" : "0",
+    )
 
     return response
   }
@@ -50,6 +57,6 @@ export const config = {
      * - favicon.ico
      * - api routes
      */
-    "/((?!_next/static|_next/image|favicon.ico|api).*)"
-  ]
+    "/((?!_next/static|_next/image|favicon.ico|api).*)",
+  ],
 }

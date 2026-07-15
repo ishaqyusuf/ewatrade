@@ -27,16 +27,16 @@ describe("shared product order utilities", () => {
   })
 
   test("normalizes storefront base urls from configured env values", () => {
-    const previousEwatradeUrl = process.env.EWATRADE_STOREFRONT_URL
+    const previousEwatradeUrl = process.env.STOREFRONT_URL
     const previousUrl = process.env.NEXT_PUBLIC_STOREFRONT_URL
     const previousAppUrl = process.env.NEXT_PUBLIC_APP_URL
-    process.env.EWATRADE_STOREFRONT_URL = undefined
+    process.env.STOREFRONT_URL = undefined
     process.env.NEXT_PUBLIC_STOREFRONT_URL = "https://shop.example.com///"
     process.env.NEXT_PUBLIC_APP_URL = undefined
 
     expect(getStorefrontBaseUrl()).toBe("https://shop.example.com")
 
-    process.env.EWATRADE_STOREFRONT_URL = previousEwatradeUrl
+    process.env.STOREFRONT_URL = previousEwatradeUrl
     process.env.NEXT_PUBLIC_STOREFRONT_URL = previousUrl
     process.env.NEXT_PUBLIC_APP_URL = previousAppUrl
   })
@@ -64,10 +64,10 @@ describe("shared product order utilities", () => {
   })
 
   test("falls back to configured storefront url for malformed request host", () => {
-    const previousEwatradeUrl = process.env.EWATRADE_STOREFRONT_URL
+    const previousEwatradeUrl = process.env.STOREFRONT_URL
     const previousUrl = process.env.NEXT_PUBLIC_STOREFRONT_URL
     const previousAppUrl = process.env.NEXT_PUBLIC_APP_URL
-    process.env.EWATRADE_STOREFRONT_URL = undefined
+    process.env.STOREFRONT_URL = undefined
     process.env.NEXT_PUBLIC_STOREFRONT_URL = "https://shop.example.com"
     process.env.NEXT_PUBLIC_APP_URL = undefined
 
@@ -79,7 +79,7 @@ describe("shared product order utilities", () => {
       ),
     ).toBe("https://shop.example.com")
 
-    process.env.EWATRADE_STOREFRONT_URL = previousEwatradeUrl
+    process.env.STOREFRONT_URL = previousEwatradeUrl
     process.env.NEXT_PUBLIC_STOREFRONT_URL = previousUrl
     process.env.NEXT_PUBLIC_APP_URL = previousAppUrl
   })

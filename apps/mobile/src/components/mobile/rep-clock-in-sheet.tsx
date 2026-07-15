@@ -1,7 +1,13 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
+import {
+  SessionInventoryLine,
+  SessionSourcePanel,
+  SessionStatTile,
+} from "@/components/mobile/session-flow"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
-import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import {
@@ -9,7 +15,6 @@ import {
   normalizeWholeNumberInput,
   parseWholeQuantity as parseQuantity,
 } from "@/lib/quantity"
-import { cn } from "@/lib/utils"
 import { useBusinessStore } from "@/store/businessStore"
 import {
   type RetailOpsProduct,
@@ -21,10 +26,15 @@ import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useMutation } from "@tanstack/react-query"
 import { forwardRef, useEffect, useMemo, useState } from "react"
 import { View } from "react-native"
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
 type RepClockInSheetProps = {
   attendantName?: string
   onComplete?: () => void
+}
+
+type RepClockInContentProps = RepClockInSheetProps & {
+  presentation?: "screen" | "sheet"
 }
 
 type OpeningInventoryDraftLine = {
@@ -86,59 +96,43 @@ function OpenSessionSummary({
   )
 
   return (
-    <View className="gap-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+    <View className="gap-3">
+      <StatusBanner
+        icon="Clock"
+        message={`${session.attendantName} opened this sales day at ${formatClockInTime(
+          session.clockedInAt,
+        )}.`}
+        title="Already clocked in"
+        tone="success"
+      />
       <View className="flex-row gap-3">
-        <View className="h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/10">
-          <Icon className="size-base text-emerald-600" name="Clock" />
-        </View>
-        <View className="flex-1 gap-1">
-          <Text className="text-base font-bold text-foreground">
-            Already clocked in
-          </Text>
-          <Text className="text-sm leading-5 text-muted-foreground">
-            {session.attendantName} opened this sales day at{" "}
-            {formatClockInTime(session.clockedInAt)}.
-          </Text>
-        </View>
-      </View>
-      <View className="flex-row gap-3">
-        <View className="flex-1 rounded-xl bg-card p-3">
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">
-            Lines
-          </Text>
-          <Text className="mt-1 text-lg font-bold text-foreground">
-            {session.openingInventoryLines.length}
-          </Text>
-        </View>
-        <View className="flex-1 rounded-xl bg-card p-3">
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">
-            Variances
-          </Text>
-          <Text
-            className={cn(
-              "mt-1 text-lg font-bold",
-              varianceLines.length > 0
-                ? "text-destructive"
-                : "text-emerald-700",
-            )}
-          >
-            {varianceLines.length}
-          </Text>
-        </View>
+        <SessionStatTile
+          label="Lines"
+          value={String(session.openingInventoryLines.length)}
+        />
+        <SessionStatTile
+          label="Variances"
+          tone={varianceLines.length > 0 ? "destructive" : "success"}
+          value={String(varianceLines.length)}
+        />
       </View>
       {session.syncStatus === "pending" ? (
-        <View className="self-start rounded-full bg-amber-500/10 px-3 py-1">
-          <Text className="text-xs font-bold text-amber-700">Pending sync</Text>
-        </View>
+        <StatusBanner
+          icon="Zap"
+          message="This opening session is saved locally and will sync when the device reconnects."
+          title="Pending sync"
+          tone="warning"
+        />
       ) : null}
     </View>
   )
 }
 
-export const RepClockInSheet = forwardRef<
-  BottomSheetModal,
-  RepClockInSheetProps
->(({ attendantName = "Store Owner", onComplete }, ref) => {
+export function RepClockInContent({
+  attendantName = "Store Owner",
+  onComplete,
+  presentation = "sheet",
+}: RepClockInContentProps) {
   const trpc = useTRPC()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
   const clockInRepSession = useRetailOpsStore(
@@ -298,14 +292,8 @@ export const RepClockInSheet = forwardRef<
     onComplete?.()
   }
 
-  return (
-    <Modal enableDynamicSizing ref={ref} snapPoints={["92%"]} title="Clock in">
-      <BottomSheetKeyboardAwareScrollView
-        bottomOffset={320}
-        contentContainerStyle={{ paddingBottom: 240 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View className="gap-5 px-5 pb-6">
+  const content = (
+    <View className="gap-5 px-5 pb-6">
           <View className="gap-2">
             <Text className="text-xl font-bold text-foreground">
               Start sales day
@@ -316,36 +304,22 @@ export const RepClockInSheet = forwardRef<
           </View>
 
           {!openSession ? (
-            <View className="rounded-2xl border border-border bg-card p-4">
-              <View className="flex-row items-start justify-between gap-3">
-                <View className="flex-1 gap-1">
-                  <Text className="font-semibold text-foreground">
-                    Clock-in source
-                  </Text>
-                  <Text className="text-sm leading-5 text-muted-foreground">
-                    {sourceDetail}
-                  </Text>
-                </View>
-                <View className="rounded-full bg-muted px-3 py-1">
-                  <Text className="text-xs font-bold text-muted-foreground">
-                    {sourceLabel}
-                  </Text>
-                </View>
-              </View>
-            </View>
+            <SessionSourcePanel
+              detail={sourceDetail}
+              label={sourceLabel}
+              title="Clock-in source"
+              tone={canOpenProductionSession ? "success" : "warning"}
+            />
           ) : null}
 
           {openSession ? (
             <OpenSessionSummary session={openSession} />
           ) : products.length === 0 ? (
-            <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-              <Text className="font-semibold text-foreground">
-                Add inventory first
-              </Text>
-              <Text className="text-sm leading-5 text-muted-foreground">
-                A rep can clock in after at least one product unit exists.
-              </Text>
-            </View>
+            <EmptyState
+              icon="Warehouse"
+              message="A rep can clock in after at least one product unit exists."
+              title="Add inventory first"
+            />
           ) : (
             <View className="gap-4">
               {openingInventoryLines.length > 8 ? (
@@ -364,23 +338,22 @@ export const RepClockInSheet = forwardRef<
                   const variance = confirmedQuantity - line.expectedQuantity
 
                   return (
-                    <View
-                      className="gap-3 rounded-2xl border border-border bg-card p-4"
+                    <SessionInventoryLine
+                      expectedLabel={`Expected ${formatQuantity(
+                        line.expectedQuantity,
+                      )}`}
                       key={line.id}
+                      productName={line.productName}
+                      unitName={line.unitName}
+                      varianceLabel={
+                        variance === 0
+                          ? "Opening stock balanced"
+                          : `${variance > 0 ? "+" : ""}${formatQuantity(
+                              variance,
+                            )} variance`
+                      }
+                      varianceTone={variance === 0 ? "success" : "destructive"}
                     >
-                      <View className="flex-row items-start justify-between gap-3">
-                        <View className="flex-1 gap-1">
-                          <Text className="font-semibold text-foreground">
-                            {line.productName}
-                          </Text>
-                          <Text className="text-xs font-semibold uppercase text-muted-foreground">
-                            {line.unitName}
-                          </Text>
-                        </View>
-                        <Text className="text-xs font-bold text-muted-foreground">
-                          Expected {formatQuantity(line.expectedQuantity)}
-                        </Text>
-                      </View>
                       <FormField
                         inputMode="numeric"
                         keyboardType="numeric"
@@ -391,32 +364,15 @@ export const RepClockInSheet = forwardRef<
                         placeholder="Enter counted stock"
                         value={inventoryDraft[line.id] ?? ""}
                       />
-                      <Text
-                        className={cn(
-                          "text-xs font-bold",
-                          variance === 0
-                            ? "text-emerald-700"
-                            : "text-destructive",
-                        )}
-                      >
-                        {variance === 0
-                          ? "Opening stock balanced"
-                          : `${variance > 0 ? "+" : ""}${formatQuantity(
-                              variance,
-                            )} variance`}
-                      </Text>
-                    </View>
+                    </SessionInventoryLine>
                   )
                 })
               ) : (
-                <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-                  <Text className="font-semibold text-foreground">
-                    No matching stock lines
-                  </Text>
-                  <Text className="text-sm leading-5 text-muted-foreground">
-                    Try another product or unit name.
-                  </Text>
-                </View>
+                <EmptyState
+                  icon="Search"
+                  message="Try another product or unit name."
+                  title="No matching stock lines"
+                />
               )}
               {filteredOpeningInventoryLines.length >
               visibleOpeningInventoryLines.length ? (
@@ -438,11 +394,12 @@ export const RepClockInSheet = forwardRef<
           ) : null}
 
           {submitError ? (
-            <View className="rounded-2xl bg-destructive/10 p-3">
-              <Text className="text-sm font-semibold text-destructive">
-                {submitError}
-              </Text>
-            </View>
+            <StatusBanner
+              icon="TriangleAlert"
+              message={submitError}
+              title="Clock-in failed"
+              tone="destructive"
+            />
           ) : null}
 
           <ActionButton disabled={!canSubmit} onPress={submit}>
@@ -451,11 +408,45 @@ export const RepClockInSheet = forwardRef<
               : "Clock in and start selling"}
           </ActionButton>
 
-          <ActionButton onPress={onComplete} variant="outline">
-            Done
-          </ActionButton>
-        </View>
-      </BottomSheetKeyboardAwareScrollView>
+      <ActionButton onPress={onComplete} variant="outline">
+        Done
+      </ActionButton>
+    </View>
+  )
+
+  if (presentation === "screen") {
+    return (
+      <KeyboardAwareScrollView
+        className="flex-1"
+        bottomOffset={320}
+        contentContainerStyle={{ paddingBottom: 240 }}
+        disableScrollOnKeyboardHide
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+      >
+        {content}
+      </KeyboardAwareScrollView>
+    )
+  }
+
+  return (
+    <BottomSheetKeyboardAwareScrollView
+      bottomOffset={320}
+      contentContainerStyle={{ paddingBottom: 240 }}
+      keyboardShouldPersistTaps="handled"
+    >
+      {content}
+    </BottomSheetKeyboardAwareScrollView>
+  )
+}
+
+export const RepClockInSheet = forwardRef<
+  BottomSheetModal,
+  RepClockInSheetProps
+>((props, ref) => {
+  return (
+    <Modal enableDynamicSizing ref={ref} snapPoints={["92%"]} title="Clock in">
+      <RepClockInContent {...props} presentation="sheet" />
     </Modal>
   )
 })

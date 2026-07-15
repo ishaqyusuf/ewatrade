@@ -1,29 +1,25 @@
 import { Logout } from "@/components/logout"
 import {
-  BusinessSwitchSheet,
-  CloseoutSheet,
-  CreateSaleSheet,
-  CustomerBookSheet,
+  DashboardInlineStatus,
+  DashboardPanel,
+  DashboardRecordRow,
+  DashboardStatTile,
+  type DashboardTone,
   EmptyState,
-  FirstProductSetupSheet,
+  DashboardMetricCard as MetricCard,
   MobileAppShell,
   type MobileAppShellNavItem,
-  ProductShareSheet,
-  RepClockInSheet,
-  ReportsSheet,
-  StaffInviteSheet,
+  DashboardQuickAction as QuickAction,
   StatusBadge,
-  StockIntakeSheet,
-  SubscriptionPlanSheet,
-  SyncStatusSheet,
-  UnitConversionSheet,
 } from "@/components/mobile"
 import { Icon, type IconKeys } from "@/components/ui/icon"
-import { useModal } from "@/components/ui/modal"
+import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { quickActions } from "@/data/retail-ops-dashboard-data"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useColorScheme } from "@/hooks/use-color"
+import { isInvitedStaffProfile, isSalesRepRole } from "@/lib/mobile-roles"
 import { cn } from "@/lib/utils"
 import { useBusinessStore } from "@/store/businessStore"
 import {
@@ -48,9 +44,9 @@ import {
 import { useTRPC } from "@/trpc/client"
 import { formatMoney } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
-import { Redirect } from "expo-router"
-import { useEffect, useMemo, useRef } from "react"
-import { View } from "react-native"
+import { Redirect, useRouter } from "expo-router"
+import { type ReactNode, useCallback, useEffect, useMemo, useRef } from "react"
+import { useWindowDimensions, View } from "react-native"
 
 type DashboardMetric = {
   detail: string
@@ -76,45 +72,6 @@ const DASHBOARD_SHARE_LINK_PREVIEW_LIMIT = 3
 const DASHBOARD_STOCK_MOVEMENT_PREVIEW_LIMIT = 3
 const DASHBOARD_CUSTOMER_PREVIEW_LIMIT = 3
 const DASHBOARD_RECENT_SALE_PREVIEW_LIMIT = 5
-
-function MetricCard({ detail, label, tone, value }: DashboardMetric) {
-  const displayValue =
-    label === "Today sales" ? formatMoney(value, "NGN") : String(value)
-
-  return (
-    <View className="w-[48%] gap-3 rounded-2xl border border-border bg-card p-4">
-      <View
-        className={cn(
-          "h-9 w-9 items-center justify-center rounded-xl",
-          tone === "primary" && "bg-primary/10",
-          tone === "success" && "bg-emerald-500/10",
-          tone === "warning" && "bg-amber-500/10",
-          tone === "neutral" && "bg-muted",
-        )}
-      >
-        <Icon
-          className={cn(
-            "size-base",
-            tone === "primary" && "text-primary",
-            tone === "success" && "text-emerald-600",
-            tone === "warning" && "text-amber-600",
-            tone === "neutral" && "text-muted-foreground",
-          )}
-          name={tone === "warning" ? "TriangleAlert" : "TrendingUp"}
-        />
-      </View>
-      <View className="gap-1">
-        <Text className="text-xs font-semibold uppercase text-muted-foreground">
-          {label}
-        </Text>
-        <Text className="text-xl font-bold text-foreground">
-          {displayValue}
-        </Text>
-        <Text className="text-xs text-muted-foreground">{detail}</Text>
-      </View>
-    </View>
-  )
-}
 
 function getStockStatus(stock: number): LowStockAlert["status"] {
   if (stock <= 0) return "Out"
@@ -157,25 +114,6 @@ type QuickActionProps = (typeof quickActions)[number] & {
   onPress?: () => void
 }
 
-function QuickAction({ description, icon, label, onPress }: QuickActionProps) {
-  return (
-    <Pressable
-      className="flex-1 gap-2 rounded-2xl border border-border bg-card p-3 active:bg-accent"
-      haptic
-      onPress={onPress}
-      transition
-    >
-      <View className="h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-        <Icon className="size-base text-primary" name={icon as IconKeys} />
-      </View>
-      <View className="gap-1">
-        <Text className="text-sm font-bold text-foreground">{label}</Text>
-        <Text className="text-xs text-muted-foreground">{description}</Text>
-      </View>
-    </Pressable>
-  )
-}
-
 type RecentSaleItem = {
   attendant: string
   customer: string
@@ -184,6 +122,19 @@ type RecentSaleItem = {
   method: string
   syncStatus?: RetailOpsSale["syncStatus"]
   total: number
+}
+
+type MoreNavigationItem = {
+  description: string
+  icon: IconKeys
+  label: string
+  onPress: () => void
+}
+
+type RetailOpsDashboardSurfaceMode = "admin" | "sales-rep"
+
+type RetailOpsDashboardSurfaceProps = {
+  surface?: RetailOpsDashboardSurfaceMode
 }
 
 type ProductionDashboardSummary = {
@@ -437,53 +388,24 @@ function getCustomerPreviewKey(customer: RetailOpsCustomer) {
   return customer.remoteId ?? customer.name.trim().toLowerCase()
 }
 
-function isAttendantRole(role: string | undefined) {
-  const normalizedRole = role?.trim().toUpperCase()
-
-  return normalizedRole === "CASHIER" || normalizedRole === "OPERATOR"
-}
-
-function isInvitedStaffProfile(
-  profile: {
-    role?: string
-    status?: string
-  } | null,
-) {
-  const role = profile?.role?.trim().toUpperCase()
-  const status = profile?.status?.trim().toUpperCase()
-
-  return (
-    status === "INVITED" &&
-    (role === "CASHIER" || role === "MANAGER" || role === "OPERATOR")
-  )
-}
-
 function RecentSaleCard({ sale }: { sale: RecentSaleItem }) {
   return (
-    <View className="gap-3 rounded-2xl border border-border bg-card p-4">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-semibold text-foreground">{sale.item}</Text>
-          <Text className="text-sm text-muted-foreground">
-            {sale.customer} by {sale.attendant}
-          </Text>
-        </View>
-        <Text className="font-bold text-foreground">
+    <DashboardRecordRow
+      detail={`${sale.customer} by ${sale.attendant}`}
+      icon="Receipt"
+      metadata={sale.id}
+      title={sale.item}
+      trailing={
+        <Text className="font-extrabold text-foreground">
           {formatMoney(sale.total, "NGN")}
         </Text>
-      </View>
-      <View className="flex-row items-center justify-between gap-3">
-        <Text className="flex-1 text-xs font-semibold uppercase text-muted-foreground">
-          {sale.id}
-        </Text>
-        <View className="flex-row items-center gap-2">
-          {sale.syncStatus === "pending" ? (
-            <StatusBadge icon="Clock" label="Pending sync" tone="warning" />
-          ) : null}
-          <StatusBadge label={sale.method} tone="primary" />
-        </View>
-      </View>
-    </View>
+      }
+    >
+      {sale.syncStatus === "pending" ? (
+        <StatusBadge icon="Clock" label="Pending sync" tone="warning" />
+      ) : null}
+      <StatusBadge label={sale.method} tone="primary" />
+    </DashboardRecordRow>
   )
 }
 
@@ -501,23 +423,17 @@ function StaffStatusBadge({ staff }: { staff: RetailOpsStaffMember }) {
 
 function StaffCard({ staff }: { staff: RetailOpsStaffMember }) {
   return (
-    <View className="gap-3 rounded-2xl border border-border bg-card p-4">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-semibold text-foreground">{staff.name}</Text>
-          <Text className="text-sm text-muted-foreground">{staff.email}</Text>
-        </View>
-        <StaffStatusBadge staff={staff} />
-      </View>
-      <View className="flex-row items-center justify-between gap-3">
-        <Text className="text-xs font-semibold uppercase text-muted-foreground">
-          Attendant
-        </Text>
-        {staff.syncStatus === "pending" ? (
-          <StatusBadge icon="Clock" label="Pending sync" tone="primary" />
-        ) : null}
-      </View>
-    </View>
+    <DashboardRecordRow
+      detail={staff.email}
+      icon="User"
+      metadata="Attendant"
+      title={staff.name}
+      trailing={<StaffStatusBadge staff={staff} />}
+    >
+      {staff.syncStatus === "pending" ? (
+        <StatusBadge icon="Clock" label="Pending sync" tone="primary" />
+      ) : null}
+    </DashboardRecordRow>
   )
 }
 
@@ -533,58 +449,38 @@ function ProductLinkCard({
   const isActive = link.status === "active"
 
   return (
-    <View className="gap-3 rounded-2xl border border-border bg-card p-4">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-semibold text-foreground">
-            {link.productName}
-          </Text>
-          <Text
-            className="text-xs leading-5 text-muted-foreground"
-            numberOfLines={2}
-          >
-            {link.url}
-          </Text>
-        </View>
+    <DashboardRecordRow
+      detail={link.url}
+      icon="Share"
+      metadata={`${link.views} views - ${link.orders} orders`}
+      title={link.productName}
+      trailing={
         <StatusBadge
           icon={isActive ? "CheckCircle2" : "XCircle"}
           label={isActive ? "Active" : "Inactive"}
           tone={isActive ? "success" : "muted"}
         />
-      </View>
-      <View className="flex-row items-center justify-between gap-3">
-        <View className="flex-row gap-3">
-          <Text className="text-xs font-bold text-muted-foreground">
-            {link.views} views
-          </Text>
-          <Text className="text-xs font-bold text-muted-foreground">
-            {link.orders} orders
-          </Text>
-        </View>
-        <View className="flex-row gap-2">
-          <Pressable
-            className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
-            haptic
-            onPress={onManage}
-            transition
-          >
-            <Text className="text-xs font-bold text-primary">Manage</Text>
-          </Pressable>
-          {isActive ? (
-            <Pressable
-              className="rounded-full bg-destructive/10 px-3 py-2 active:bg-destructive/20"
-              haptic
-              onPress={onDeactivate}
-              transition
-            >
-              <Text className="text-xs font-bold text-destructive">
-                Deactivate
-              </Text>
-            </Pressable>
-          ) : null}
-        </View>
-      </View>
-    </View>
+      }
+    >
+      <Pressable
+        className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
+        haptic
+        onPress={onManage}
+        transition
+      >
+        <Text className="text-xs font-bold text-primary">Manage</Text>
+      </Pressable>
+      {isActive ? (
+        <Pressable
+          className="rounded-full bg-destructive/10 px-3 py-2 active:bg-destructive/20"
+          haptic
+          onPress={onDeactivate}
+          transition
+        >
+          <Text className="text-xs font-bold text-destructive">Deactivate</Text>
+        </Pressable>
+      ) : null}
+    </DashboardRecordRow>
   )
 }
 
@@ -604,23 +500,21 @@ function CustomerCard({ customer }: { customer: RetailOpsCustomer }) {
   const saleCount = customer.saleCount ?? 1
 
   return (
-    <View className="gap-3 rounded-2xl border border-border bg-card p-4">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-semibold text-foreground">{customer.name}</Text>
-          <Text className="text-sm text-muted-foreground">
-            Last sale {formatCustomerLastSeen(customer.lastSeenAt)}
-          </Text>
-        </View>
+    <DashboardRecordRow
+      detail={`Last sale ${formatCustomerLastSeen(customer.lastSeenAt)}`}
+      icon="Users"
+      title={customer.name}
+      trailing={
         <StatusBadge
           label={`${saleCount} sale${saleCount === 1 ? "" : "s"}`}
           tone="primary"
         />
-      </View>
+      }
+    >
       {(customer.syncStatus ?? "pending") === "pending" ? (
         <StatusBadge icon="Clock" label="Pending sync" tone="warning" />
       ) : null}
-    </View>
+    </DashboardRecordRow>
   )
 }
 
@@ -641,30 +535,26 @@ function StockMovementCard({
   const isIncrease = movement.quantity >= 0
 
   return (
-    <View className="flex-row items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
-      <View className="flex-1 gap-1">
-        <Text className="font-semibold text-foreground">
-          {movement.productName}
-        </Text>
-        <Text className="text-xs font-semibold uppercase text-muted-foreground">
-          {stockMovementLabel(movement.type)}
-        </Text>
-      </View>
-      <View className="items-end gap-1">
+    <DashboardRecordRow
+      detail={stockMovementLabel(movement.type)}
+      icon={isIncrease ? "TrendingUp" : "TrendingDown"}
+      title={movement.productName}
+      trailing={
         <Text
           className={cn(
-            "font-bold",
-            isIncrease ? "text-emerald-700" : "text-destructive",
+            "font-extrabold",
+            isIncrease ? "text-success" : "text-destructive",
           )}
         >
           {isIncrease ? "+" : ""}
           {movement.quantity} {movement.unitName}
         </Text>
-        {movement.syncStatus === "pending" ? (
-          <StatusBadge icon="Clock" label="Pending sync" tone="warning" />
-        ) : null}
-      </View>
-    </View>
+      }
+    >
+      {movement.syncStatus === "pending" ? (
+        <StatusBadge icon="Clock" label="Pending sync" tone="warning" />
+      ) : null}
+    </DashboardRecordRow>
   )
 }
 
@@ -672,6 +562,14 @@ function closeoutStatusLabel(status: RetailOpsCloseout["approvalStatus"]) {
   if (status === "approved") return "Approved"
   if (status === "flagged") return "Flagged"
   return "Pending review"
+}
+
+function closeoutStatusTone(
+  status: RetailOpsCloseout["approvalStatus"],
+): DashboardTone {
+  if (status === "approved") return "success"
+  if (status === "flagged") return "destructive"
+  return "warning"
 }
 
 function formatSessionTime(value: string) {
@@ -706,74 +604,42 @@ function CloseoutSummaryCard({
   }
 }) {
   return (
-    <View className="gap-4 rounded-2xl border border-border bg-card p-4">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-bold text-foreground">Day closeout</Text>
-          <Text className="text-sm leading-5 text-muted-foreground">
-            Confirm payments and closing stock for admin review.
-          </Text>
-        </View>
-        <Pressable
-          className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
-          haptic
-          onPress={onPress}
-          transition
-        >
-          <Text className="text-xs font-bold text-primary">Close day</Text>
-        </Pressable>
+    <DashboardPanel
+      actionLabel="Close day"
+      description="Confirm payments and closing stock for admin review."
+      icon="ClipboardCheck"
+      onActionPress={onPress}
+      title="Day closeout"
+    >
+      <View className="flex-row gap-3">
+        <DashboardStatTile label="Open sales" value={openSalesCount} />
+        <DashboardStatTile
+          label="Expected"
+          value={formatMoney(paymentTotals.gross, "NGN")}
+        />
       </View>
 
       <View className="flex-row gap-3">
-        <View className="flex-1 rounded-xl bg-muted p-3">
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">
-            Open sales
-          </Text>
-          <Text className="mt-1 text-lg font-bold text-foreground">
-            {openSalesCount}
-          </Text>
-        </View>
-        <View className="flex-1 rounded-xl bg-muted p-3">
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">
-            Expected
-          </Text>
-          <Text className="mt-1 text-lg font-bold text-foreground">
-            {formatMoney(paymentTotals.gross, "NGN")}
-          </Text>
-        </View>
-      </View>
-
-      <View className="flex-row gap-3">
-        <View className="flex-1 rounded-xl bg-muted p-3">
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">
-            Cash
-          </Text>
-          <Text className="mt-1 text-sm font-bold text-foreground">
-            {formatMoney(paymentTotals.cash, "NGN")}
-          </Text>
-        </View>
-        <View className="flex-1 rounded-xl bg-muted p-3">
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">
-            Transfer
-          </Text>
-          <Text className="mt-1 text-sm font-bold text-foreground">
-            {formatMoney(paymentTotals.transfer, "NGN")}
-          </Text>
-        </View>
+        <DashboardStatTile
+          label="Cash"
+          value={formatMoney(paymentTotals.cash, "NGN")}
+        />
+        <DashboardStatTile
+          label="Transfer"
+          value={formatMoney(paymentTotals.transfer, "NGN")}
+        />
       </View>
 
       {latestCloseout ? (
-        <View className="flex-row items-center justify-between gap-3 rounded-xl bg-amber-500/10 px-3 py-2">
-          <Text className="text-sm font-semibold text-foreground">
-            Last closeout
-          </Text>
-          <Text className="text-xs font-bold text-amber-700">
-            {closeoutStatusLabel(latestCloseout.approvalStatus)}
-            {latestCloseout.syncStatus === "pending" ? " - Pending sync" : ""}
-          </Text>
-        </View>
+        <DashboardInlineStatus
+          label={`${closeoutStatusLabel(latestCloseout.approvalStatus)}${
+            latestCloseout.syncStatus === "pending" ? " - Pending sync" : ""
+          }`}
+          title="Last closeout"
+          tone={closeoutStatusTone(latestCloseout.approvalStatus)}
+        />
       ) : null}
-    </View>
+    </DashboardPanel>
   )
 }
 
@@ -808,88 +674,56 @@ function RepSessionStatusCard({
     : hasInventory
       ? "Clock in and confirm opening inventory before the first sale."
       : "Add an item before reps can start the sales day."
+  const sessionTone: DashboardTone = currentSession ? "success" : "warning"
 
   return (
-    <View className="gap-4 rounded-2xl border border-border bg-card p-4">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-bold text-foreground">Rep sessions</Text>
-          <Text className="text-sm leading-5 text-muted-foreground">
-            {description}
-          </Text>
-        </View>
-        <View
-          className={cn(
-            "rounded-full px-3 py-1",
-            currentSession ? "bg-emerald-500/10" : "bg-amber-500/10",
-          )}
-        >
-          <Text
-            className={cn(
-              "text-xs font-bold",
-              currentSession ? "text-emerald-700" : "text-amber-700",
-            )}
-          >
-            {title}
-          </Text>
-        </View>
-      </View>
+    <DashboardPanel
+      description={description}
+      icon={currentSession ? "CircleCheck" : "Clock"}
+      title="Rep sessions"
+      tone={sessionTone}
+    >
+      <DashboardInlineStatus
+        label={title}
+        title="Session state"
+        tone={sessionTone}
+      />
 
       <View className="flex-row gap-3">
-        <View className="flex-1 rounded-xl bg-muted p-3">
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">
-            Clocked in
-          </Text>
-          <Text className="mt-1 text-lg font-bold text-foreground">
-            {openSessions.length}
-          </Text>
-        </View>
-        <View className="flex-1 rounded-xl bg-muted p-3">
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">
-            Variances
-          </Text>
-          <Text
-            className={cn(
-              "mt-1 text-lg font-bold",
-              totalVarianceCount > 0 ? "text-destructive" : "text-emerald-700",
-            )}
-          >
-            {totalVarianceCount}
-          </Text>
-        </View>
+        <DashboardStatTile label="Clocked in" value={openSessions.length} />
+        <DashboardStatTile
+          label="Variances"
+          tone={totalVarianceCount > 0 ? "destructive" : "success"}
+          value={totalVarianceCount}
+        />
       </View>
 
       {openSessions.length > 0 ? (
-        <View className="gap-2">
+        <View>
           {visibleOpenSessions.map((session) => {
             const varianceCount = getSessionVarianceCount(session)
 
             return (
-              <View
-                className="flex-row items-center justify-between gap-3 rounded-xl bg-muted px-3 py-2"
+              <DashboardRecordRow
+                detail={`Since ${formatSessionTime(session.clockedInAt)}`}
+                icon="User"
                 key={session.id}
-              >
-                <View className="flex-1 gap-1">
-                  <Text className="text-sm font-semibold text-foreground">
-                    {session.attendantName}
+                title={session.attendantName}
+                trailing={
+                  <Text
+                    className={cn(
+                      "text-xs font-bold",
+                      varianceCount > 0 ? "text-destructive" : "text-success",
+                    )}
+                  >
+                    {varianceCount > 0
+                      ? `${varianceCount} variance${
+                          varianceCount === 1 ? "" : "s"
+                        }`
+                      : "Balanced"}
                   </Text>
-                  <Text className="text-xs text-muted-foreground">
-                    Since {formatSessionTime(session.clockedInAt)}
-                  </Text>
-                </View>
-                <Text
-                  className={cn(
-                    "text-xs font-bold",
-                    varianceCount > 0 ? "text-destructive" : "text-emerald-700",
-                  )}
-                >
-                  {varianceCount > 0
-                    ? `${varianceCount} variance${
-                        varianceCount === 1 ? "" : "s"
-                      }`
-                    : "Balanced"}
-                </Text>
-              </View>
+                }
+              />
             )
           })}
           {openSessions.length > visibleOpenSessions.length ? (
@@ -928,7 +762,7 @@ function RepSessionStatusCard({
           {currentSession ? "New sale" : "Clock in"}
         </Text>
       </Pressable>
-    </View>
+    </DashboardPanel>
   )
 }
 
@@ -944,19 +778,11 @@ function PlanUsageStat({
   const limitState = getUsageLimitState(used, limit)
 
   return (
-    <View className="flex-1 rounded-xl bg-muted p-3">
-      <Text className="text-xs font-semibold uppercase text-muted-foreground">
-        {label}
-      </Text>
-      <Text
-        className={cn(
-          "mt-1 text-lg font-bold",
-          limitState.isAtLimit ? "text-destructive" : "text-foreground",
-        )}
-      >
-        {limitState.label}
-      </Text>
-    </View>
+    <DashboardStatTile
+      label={label}
+      tone={limitState.isAtLimit ? "destructive" : "neutral"}
+      value={limitState.label}
+    />
   )
 }
 
@@ -983,36 +809,19 @@ function PlanStatusCard({
   }
 }) {
   return (
-    <View className="gap-4 rounded-2xl border border-border bg-card p-4">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-bold text-foreground">Subscription</Text>
-          <Text className="text-sm leading-5 text-muted-foreground">
-            {plan.name} plan controls products, staff, businesses, reports, and
-            offline device limits.
-          </Text>
-        </View>
-        <Pressable
-          className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
-          haptic
-          onPress={onPress}
-          transition
-        >
-          <Text className="text-xs font-bold text-primary">Plans</Text>
-        </Pressable>
-      </View>
-
-      <View className="flex-row items-center justify-between gap-3 rounded-xl bg-primary/10 px-3 py-2">
-        <View className="flex-row items-center gap-2">
-          <Icon className="size-sm text-primary" name="CreditCard" />
-          <Text className="text-sm font-semibold text-foreground">
-            {plan.name}
-          </Text>
-        </View>
-        <Text className="text-xs font-bold text-primary">
-          {subscriptionStatusLabel(subscription.status)}
-        </Text>
-      </View>
+    <DashboardPanel
+      actionLabel="Plans"
+      description={`${plan.name} plan controls products, staff, businesses, reports, and offline device limits.`}
+      icon="CreditCard"
+      onActionPress={onPress}
+      title="Subscription"
+      tone="primary"
+    >
+      <DashboardInlineStatus
+        label={subscriptionStatusLabel(subscription.status)}
+        title={plan.name}
+        tone="primary"
+      />
 
       <View className="flex-row gap-3">
         <PlanUsageStat
@@ -1032,7 +841,7 @@ function PlanStatusCard({
         limit={plan.limits.businesses}
         used={usage.businesses}
       />
-    </View>
+    </DashboardPanel>
   )
 }
 
@@ -1052,78 +861,39 @@ function ReportsSummaryCard({
   varianceCount: number
 }) {
   return (
-    <View className="gap-4 rounded-2xl border border-border bg-card p-4">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-bold text-foreground">Reports</Text>
-          <Text className="text-sm leading-5 text-muted-foreground">
-            Daily sales, stock, cash, variance, and movement snapshots.
-          </Text>
-        </View>
-        <Pressable
-          className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
-          haptic
-          onPress={onPress}
-          transition
-        >
-          <Text className="text-xs font-bold text-primary">Open</Text>
-        </Pressable>
+    <DashboardPanel
+      actionLabel="Open"
+      description="Daily sales, stock, cash, variance, and movement snapshots."
+      icon="PieChart"
+      onActionPress={onPress}
+      title="Reports"
+    >
+      <View className="flex-row gap-3">
+        <DashboardStatTile
+          detail={`${todaySalesCount} sale${todaySalesCount === 1 ? "" : "s"}`}
+          label="Today"
+          value={formatMoney(todayTotal, "NGN")}
+        />
+        <DashboardStatTile
+          detail="Product and variants"
+          label="Stock units"
+          value={stockUnitCount}
+        />
       </View>
 
       <View className="flex-row gap-3">
-        <View className="flex-1 rounded-xl bg-muted p-3">
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">
-            Today
-          </Text>
-          <Text className="mt-1 text-lg font-bold text-foreground">
-            {formatMoney(todayTotal, "NGN")}
-          </Text>
-          <Text className="mt-1 text-xs text-muted-foreground">
-            {todaySalesCount} sale{todaySalesCount === 1 ? "" : "s"}
-          </Text>
-        </View>
-        <View className="flex-1 rounded-xl bg-muted p-3">
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">
-            Stock units
-          </Text>
-          <Text className="mt-1 text-lg font-bold text-foreground">
-            {stockUnitCount}
-          </Text>
-          <Text className="mt-1 text-xs text-muted-foreground">
-            Product and variants
-          </Text>
-        </View>
+        <DashboardStatTile
+          label="Variance"
+          tone={varianceCount > 0 ? "destructive" : "success"}
+          value={varianceCount}
+        />
+        <DashboardStatTile
+          label="Pending sync"
+          tone={pendingSyncCount > 0 ? "warning" : "success"}
+          value={pendingSyncCount}
+        />
       </View>
-
-      <View className="flex-row gap-3">
-        <View className="flex-1 rounded-xl bg-muted p-3">
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">
-            Variance
-          </Text>
-          <Text
-            className={cn(
-              "mt-1 text-lg font-bold",
-              varianceCount > 0 ? "text-destructive" : "text-emerald-700",
-            )}
-          >
-            {varianceCount}
-          </Text>
-        </View>
-        <View className="flex-1 rounded-xl bg-muted p-3">
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">
-            Pending sync
-          </Text>
-          <Text
-            className={cn(
-              "mt-1 text-lg font-bold",
-              pendingSyncCount > 0 ? "text-amber-700" : "text-emerald-700",
-            )}
-          >
-            {pendingSyncCount}
-          </Text>
-        </View>
-      </View>
-    </View>
+    </DashboardPanel>
   )
 }
 
@@ -1136,53 +906,23 @@ function SetupPrompt({
 }) {
   if (isAttendant) {
     return (
-      <View className="gap-4 rounded-2xl border border-border bg-card p-4">
-        <View className="flex-row gap-3">
-          <View className="h-11 w-11 items-center justify-center rounded-2xl bg-muted">
-            <Icon
-              className="size-base text-muted-foreground"
-              name="Warehouse"
-            />
-          </View>
-          <View className="flex-1 gap-1">
-            <Text className="text-base font-bold text-foreground">
-              Inventory not assigned yet
-            </Text>
-            <Text className="text-sm leading-5 text-muted-foreground">
-              Products and stock will appear here after an owner or manager sets
-              up inventory for this business.
-            </Text>
-          </View>
-        </View>
-      </View>
+      <DashboardPanel
+        description="Products and stock will appear here after an owner or manager sets up inventory for this business."
+        icon="Warehouse"
+        title="Inventory not assigned yet"
+      />
     )
   }
 
   return (
-    <View className="gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
-      <View className="flex-row gap-3">
-        <View className="h-11 w-11 items-center justify-center rounded-2xl bg-primary/10">
-          <Icon className="size-base text-primary" name="Warehouse" />
-        </View>
-        <View className="flex-1 gap-1">
-          <Text className="text-base font-bold text-foreground">
-            Add your first item
-          </Text>
-          <Text className="text-sm leading-5 text-muted-foreground">
-            Create a product, set units like bag or kilogram, then enter
-            starting stock.
-          </Text>
-        </View>
-      </View>
-      <Pressable
-        className="h-11 items-center justify-center rounded-xl bg-primary active:bg-primary/90"
-        haptic
-        onPress={onAddItem}
-        transition
-      >
-        <Text className="font-semibold text-primary-foreground">Add item</Text>
-      </Pressable>
-    </View>
+    <DashboardPanel
+      actionLabel="Add item"
+      description="Create a product, set units like bag or kilogram, then enter starting stock."
+      icon="Warehouse"
+      onActionPress={onAddItem}
+      title="Add your first item"
+      tone="primary"
+    />
   )
 }
 
@@ -1206,56 +946,41 @@ function InventorySetupSummary({
   )
 
   return (
-    <View className="gap-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
-      <View className="flex-row gap-3">
-        <View className="h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/10">
-          <Icon className="size-base text-emerald-600" name="CircleCheck" />
-        </View>
-        <View className="flex-1 gap-1">
-          <Text className="text-base font-bold text-foreground">
-            Inventory started
-          </Text>
-          <Text className="text-sm leading-5 text-muted-foreground">
-            {product.name} has {currentStock} {product.unitName}
-            {currentStock === 1 ? "" : "s"} ready to sell.
-          </Text>
-        </View>
-      </View>
-
-      <View className="gap-3 rounded-2xl border border-border bg-card p-4">
-        <View className="flex-row items-start justify-between gap-3">
-          <View className="flex-1 gap-1">
-            <Text className="font-semibold text-foreground">
-              {product.name}
+    <DashboardPanel
+      description={`${product.name} has ${currentStock} ${product.unitName}${
+        currentStock === 1 ? "" : "s"
+      } ready to sell.`}
+      icon="CircleCheck"
+      title="Inventory started"
+      tone="success"
+    >
+      <View className="gap-3">
+        <DashboardRecordRow
+          detail={`Primary unit: ${product.unitName}`}
+          icon="Warehouse"
+          title={product.name}
+          trailing={
+            <Text className="font-extrabold text-foreground">
+              {formatMoney(product.price, "NGN")}
             </Text>
-            <Text className="text-sm text-muted-foreground">
-              Primary unit: {product.unitName}
-            </Text>
-          </View>
-          <Text className="font-bold text-foreground">
-            {formatMoney(product.price, "NGN")}
-          </Text>
-        </View>
+          }
+        />
         {visibleVariants.length > 0 ? (
-          <View className="gap-2">
+          <View>
             {visibleVariants.map((variant) => (
-              <View
-                className="flex-row items-center justify-between rounded-xl bg-muted px-3 py-2"
+              <DashboardRecordRow
+                detail={`${
+                  variant.currentStock ?? variant.startingStock ?? 0
+                } in stock`}
+                icon="List"
                 key={variant.id}
-              >
-                <View className="flex-1 gap-1">
-                  <Text className="text-sm font-medium text-foreground">
-                    {variant.name}
+                title={variant.name}
+                trailing={
+                  <Text className="text-sm font-bold text-foreground">
+                    {formatMoney(variant.price, "NGN")}
                   </Text>
-                  <Text className="text-xs text-muted-foreground">
-                    {variant.currentStock ?? variant.startingStock ?? 0} in
-                    stock
-                  </Text>
-                </View>
-                <Text className="text-sm font-semibold text-foreground">
-                  {formatMoney(variant.price, "NGN")}
-                </Text>
-              </View>
+                }
+              />
             ))}
             {product.variants.length > visibleVariants.length ? (
               <Text className="text-xs font-medium text-muted-foreground">
@@ -1266,9 +991,7 @@ function InventorySetupSummary({
             ) : null}
           </View>
         ) : null}
-        <View className="self-start rounded-full bg-amber-500/10 px-3 py-1">
-          <Text className="text-xs font-bold text-amber-700">Pending sync</Text>
-        </View>
+        <StatusBadge icon="Clock" label="Pending sync" tone="warning" />
         <View className="flex-row gap-2">
           {canManageInventory ? (
             <>
@@ -1303,13 +1026,655 @@ function InventorySetupSummary({
           </Pressable>
         </View>
       </View>
+    </DashboardPanel>
+  )
+}
+
+function DashboardMoreSheet({
+  items,
+  modal,
+}: {
+  items: MoreNavigationItem[]
+  modal: ReturnType<typeof useModal>
+}) {
+  return (
+    <Modal
+      accessibilityLabel="More navigation"
+      ref={modal.ref}
+      snapPoints={["48%"]}
+      title="More"
+    >
+      <View className="gap-2 px-4 pb-5">
+        {items.map((item) => (
+          <Pressable
+            className="flex-row items-center gap-3 rounded-2xl px-3 py-3 active:bg-accent"
+            haptic
+            key={item.label}
+            onPress={item.onPress}
+            transition
+          >
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-muted">
+              <Icon
+                className="size-sm text-muted-foreground"
+                name={item.icon}
+              />
+            </View>
+            <View className="min-w-0 flex-1 gap-0.5">
+              <Text className="font-extrabold text-foreground">
+                {item.label}
+              </Text>
+              <Text
+                className="text-xs leading-4 text-muted-foreground"
+                numberOfLines={2}
+              >
+                {item.description}
+              </Text>
+            </View>
+            <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
+          </Pressable>
+        ))}
+      </View>
+    </Modal>
+  )
+}
+
+function DashboardActionPickerSheet({
+  items,
+  modal,
+}: {
+  items: MoreNavigationItem[]
+  modal: ReturnType<typeof useModal>
+}) {
+  return (
+    <Modal
+      accessibilityLabel="Create action"
+      ref={modal.ref}
+      snapPoints={["42%"]}
+      title="Create"
+    >
+      <View className="gap-2 px-4 pb-5">
+        {items.map((item) => (
+          <Pressable
+            className="flex-row items-center gap-3 rounded-2xl px-3 py-3 active:bg-accent"
+            haptic
+            key={item.label}
+            onPress={item.onPress}
+            transition
+          >
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+              <Icon className="size-sm text-primary" name={item.icon} />
+            </View>
+            <View className="min-w-0 flex-1 gap-0.5">
+              <Text className="font-extrabold text-foreground">
+                {item.label}
+              </Text>
+              <Text
+                className="text-xs leading-4 text-muted-foreground"
+                numberOfLines={2}
+              >
+                {item.description}
+              </Text>
+            </View>
+          </Pressable>
+        ))}
+      </View>
+    </Modal>
+  )
+}
+
+function DashboardSettingsSheet({
+  items,
+  modal,
+}: {
+  items: MoreNavigationItem[]
+  modal: ReturnType<typeof useModal>
+}) {
+  return (
+    <Modal
+      accessibilityLabel="Workspace settings"
+      ref={modal.ref}
+      snapPoints={["54%"]}
+      title="Settings"
+    >
+      <View className="gap-2 px-4 pb-5">
+        {items.map((item) => (
+          <Pressable
+            className="flex-row items-center gap-3 rounded-2xl px-3 py-3 active:bg-accent"
+            haptic
+            key={item.label}
+            onPress={item.onPress}
+            transition
+          >
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-muted">
+              <Icon
+                className="size-sm text-muted-foreground"
+                name={item.icon}
+              />
+            </View>
+            <View className="min-w-0 flex-1 gap-0.5">
+              <Text className="font-extrabold text-foreground">
+                {item.label}
+              </Text>
+              <Text className="text-xs leading-4 text-muted-foreground">
+                {item.description}
+              </Text>
+            </View>
+            <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
+          </Pressable>
+        ))}
+      </View>
+    </Modal>
+  )
+}
+
+function DashboardThemeSheet({
+  colorScheme,
+  modal,
+  onSelect,
+}: {
+  colorScheme: "light" | "dark"
+  modal: ReturnType<typeof useModal>
+  onSelect: (scheme: "light" | "dark" | "system") => void
+}) {
+  const options: Array<{
+    description: string
+    icon: IconKeys
+    label: string
+    value: "light" | "dark" | "system"
+  }> = [
+    {
+      description: "Follow the device theme setting.",
+      icon: "SlidersHorizontal",
+      label: "System",
+      value: "system",
+    },
+    {
+      description: "Use the brighter app surface.",
+      icon: "Eye",
+      label: "Light",
+      value: "light",
+    },
+    {
+      description: "Use the darker app surface.",
+      icon: "EyeOff",
+      label: "Dark",
+      value: "dark",
+    },
+  ]
+
+  return (
+    <Modal
+      accessibilityLabel="Theme settings"
+      ref={modal.ref}
+      snapPoints={["46%"]}
+      title="Theme"
+    >
+      <View className="gap-2 px-4 pb-5">
+        {options.map((option) => {
+          const selected =
+            option.value === "system" ? false : option.value === colorScheme
+
+          return (
+            <Pressable
+              className="flex-row items-center gap-3 rounded-2xl px-3 py-3 active:bg-accent"
+              haptic
+              key={option.value}
+              onPress={() => onSelect(option.value)}
+              transition
+            >
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-muted">
+                <Icon
+                  className="size-sm text-muted-foreground"
+                  name={option.icon}
+                />
+              </View>
+              <View className="min-w-0 flex-1 gap-0.5">
+                <Text className="font-extrabold text-foreground">
+                  {option.label}
+                </Text>
+                <Text className="text-xs leading-4 text-muted-foreground">
+                  {option.description}
+                </Text>
+              </View>
+              {selected ? (
+                <StatusBadge label="Active" tone="success" />
+              ) : null}
+            </Pressable>
+          )
+        })}
+      </View>
+    </Modal>
+  )
+}
+
+function RetailOpsHomeHero({
+  businessName,
+  headerAction,
+  onBusinessPress,
+  onPrimaryPress,
+  onSearchPress,
+  primaryActionLabel,
+  roleLabel,
+  searchPlaceholder,
+  summaryDetail,
+  summaryLabel,
+  summaryValue,
+}: {
+  businessName: string
+  headerAction?: ReactNode
+  onBusinessPress: () => void
+  onPrimaryPress: () => void
+  onSearchPress: () => void
+  primaryActionLabel: string
+  roleLabel: string
+  searchPlaceholder: string
+  summaryDetail: string
+  summaryLabel: string
+  summaryValue: string
+}) {
+  const { width } = useWindowDimensions()
+  const isCompact = width < 380
+
+  return (
+    <View
+      className={cn(
+        "gap-5 rounded-[32px] bg-primary",
+        isCompact ? "p-4" : "p-5",
+      )}
+    >
+      <View className="flex-row items-center justify-between gap-4">
+        <Pressable
+          accessibilityRole="button"
+          className="min-w-0 flex-1 gap-1 active:opacity-85"
+          haptic
+          onPress={onBusinessPress}
+          transition
+        >
+          <Text className="text-xs font-bold uppercase tracking-[1px] text-primary-foreground">
+            {roleLabel}
+          </Text>
+          <View className="flex-row items-center gap-2">
+            <Icon className="size-sm text-primary-foreground" name="MapPin" />
+            <Text
+              className="text-lg font-extrabold text-primary-foreground"
+              numberOfLines={1}
+            >
+              {businessName}
+            </Text>
+            <Icon
+              className="size-sm text-primary-foreground"
+              name="ChevronDown"
+            />
+          </View>
+        </Pressable>
+        {headerAction}
+      </View>
+
+      <Pressable
+        accessibilityLabel="Search workspace"
+        accessibilityRole="button"
+        className="h-12 flex-row items-center gap-3 rounded-full bg-background px-4 active:opacity-90"
+        haptic
+        onPress={onSearchPress}
+        transition
+      >
+        <Icon className="size-sm text-muted-foreground" name="Search" />
+        <Text
+          className="min-w-0 flex-1 text-sm font-semibold text-muted-foreground"
+          numberOfLines={2}
+        >
+          {searchPlaceholder}
+        </Text>
+      </Pressable>
+
+      <View
+        className={cn(
+          "rounded-[28px] bg-background",
+          isCompact ? "p-3" : "p-4",
+        )}
+      >
+        <View className="flex-row items-center gap-4">
+          <View className="min-w-0 flex-1 gap-2">
+            <Text
+              className="text-xs font-bold uppercase tracking-[1px] text-muted-foreground"
+              numberOfLines={1}
+            >
+              {summaryLabel}
+            </Text>
+            <Text
+              adjustsFontSizeToFit
+              className={cn(
+                "font-extrabold text-foreground",
+                isCompact ? "text-2xl leading-8" : "text-3xl leading-9",
+              )}
+              minimumFontScale={0.7}
+              numberOfLines={1}
+            >
+              {summaryValue}
+            </Text>
+            <Text
+              className="text-sm leading-5 text-muted-foreground"
+              numberOfLines={isCompact ? 3 : 2}
+            >
+              {summaryDetail}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              className="self-start rounded-full bg-primary px-4 py-2 active:opacity-90"
+              haptic
+              onPress={onPrimaryPress}
+              transition
+            >
+              <Text className="text-xs font-extrabold text-primary-foreground">
+                {primaryActionLabel}
+              </Text>
+            </Pressable>
+          </View>
+          {isCompact ? null : (
+            <View className="h-24 w-24 items-center justify-center rounded-[28px] bg-muted">
+              <Icon className="size-2xl text-primary" name="BarChart3" />
+            </View>
+          )}
+        </View>
+      </View>
     </View>
   )
 }
 
-export default function DashboardRoute() {
+function AdminHomeOverview({
+  firstProduct,
+  lowStockAlerts,
+  onCloseout,
+  onCustomers,
+  onSales,
+  onSalesReps,
+  onStocks,
+  openRepSessionCount,
+  openSalesCount,
+  productCount,
+  recentSale,
+  stockUnitCount,
+  todaySalesCount,
+  todayTotal,
+}: {
+  firstProduct: RetailOpsProduct | null
+  lowStockAlerts: LowStockAlert[]
+  onCloseout: () => void
+  onCustomers: () => void
+  onSales: () => void
+  onSalesReps: () => void
+  onStocks: () => void
+  openRepSessionCount: number
+  openSalesCount: number
+  productCount: number
+  recentSale: RecentSaleItem | null
+  stockUnitCount: number
+  todaySalesCount: number
+  todayTotal: number
+}) {
+  const primaryLowStock = lowStockAlerts[0]
+
+  return (
+    <>
+      <View className="gap-4">
+        <View className="flex-row flex-wrap gap-3">
+          <DashboardStatTile
+            detail={`${todaySalesCount} sale${todaySalesCount === 1 ? "" : "s"}`}
+            label="Today"
+            tone="primary"
+            value={formatMoney(todayTotal, "NGN")}
+          />
+          <DashboardStatTile
+            detail={`${productCount} product${productCount === 1 ? "" : "s"}`}
+            label="Stock"
+            tone={lowStockAlerts.length > 0 ? "warning" : "success"}
+            value={stockUnitCount}
+          />
+        </View>
+
+        <View className="gap-3">
+          <Text className="text-xl font-extrabold text-foreground">
+            Service categories
+          </Text>
+          <View className="flex-row flex-wrap gap-3">
+            <AdminHomeCategory
+              icon="ReceiptText"
+              label="Sales"
+              onPress={onSales}
+            />
+            <AdminHomeCategory
+              icon="Warehouse"
+              label="Stocks"
+              onPress={onStocks}
+            />
+            <AdminHomeCategory
+              icon="UserPlus"
+              label="Sales Reps"
+              onPress={onSalesReps}
+            />
+            <AdminHomeCategory
+              icon="Users"
+              label="Customers"
+              onPress={onCustomers}
+            />
+          </View>
+        </View>
+      </View>
+
+      <DashboardPanel
+        actionLabel="Closeout"
+        description="A compact view of the operations that need owner attention."
+        icon="LayoutDashboard"
+        onActionPress={onCloseout}
+        title="Current operations"
+        tone={primaryLowStock ? "warning" : "neutral"}
+      >
+        <View className="gap-3">
+          <DashboardRecordRow
+            detail={
+              firstProduct
+                ? `${firstProduct.currentStock ?? firstProduct.startingStock ?? 0} ${firstProduct.unitName} available`
+                : "Add your first item to start tracking sales and stock."
+            }
+            icon="Warehouse"
+            title={firstProduct?.name ?? "Inventory setup"}
+            trailing={
+              primaryLowStock ? (
+                <StatusBadge label={primaryLowStock.status} tone="warning" />
+              ) : null
+            }
+          />
+          <DashboardRecordRow
+            detail={
+              recentSale
+                ? `${recentSale.customer} by ${recentSale.attendant}`
+                : "Completed sales will appear here."
+            }
+            icon="ReceiptText"
+            title={recentSale?.item ?? "No recent sale yet"}
+            trailing={
+              recentSale ? (
+                <Text className="font-extrabold text-foreground">
+                  {formatMoney(recentSale.total, "NGN")}
+                </Text>
+              ) : null
+            }
+          />
+          <View className="flex-row flex-wrap gap-3">
+            <DashboardInlineStatus
+              label={`${openRepSessionCount} open`}
+              title="Rep sessions"
+              tone={openRepSessionCount > 0 ? "primary" : "neutral"}
+            />
+            <DashboardInlineStatus
+              label={`${openSalesCount} open`}
+              title="Closeout queue"
+              tone={openSalesCount > 0 ? "warning" : "success"}
+            />
+          </View>
+        </View>
+      </DashboardPanel>
+    </>
+  )
+}
+
+function AdminHomeCategory({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: IconKeys
+  label: string
+  onPress: () => void
+}) {
+  return (
+    <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      className="min-h-24 w-[47%] justify-center gap-3 rounded-[24px] bg-muted p-4 active:opacity-90"
+      haptic
+      onPress={onPress}
+      transition
+    >
+      <View className="size-10 items-center justify-center rounded-full bg-card">
+        <Icon className="size-sm text-primary" name={icon} />
+      </View>
+      <Text className="font-extrabold text-foreground">{label}</Text>
+    </Pressable>
+  )
+}
+
+function SalesRepHomeOverview({
+  attendantName,
+  currentSession,
+  firstProduct,
+  onClockIn,
+  onCloseout,
+  onCreateSale,
+  onCustomers,
+  openSalesCount,
+  todaySalesCount,
+  todayTotal,
+}: {
+  attendantName: string
+  currentSession: RetailOpsRepSession | null
+  firstProduct: RetailOpsProduct | null
+  onClockIn: () => void
+  onCloseout: () => void
+  onCreateSale: () => void
+  onCustomers: () => void
+  openSalesCount: number
+  todaySalesCount: number
+  todayTotal: number
+}) {
+  const canSell = !!firstProduct && !!currentSession
+  const description = currentSession
+    ? "Record sales, check customers, and close out your assigned shift."
+    : firstProduct
+      ? "Clock in before recording sales for this workspace."
+      : "Ask an admin to finish stock setup before starting sales."
+
+  return (
+    <DashboardPanel
+      actionLabel={canSell ? "New sale" : "Clock in"}
+      description={description}
+      icon={canSell ? "ReceiptText" : "Clock"}
+      onActionPress={canSell ? onCreateSale : onClockIn}
+      title={`Hi, ${attendantName}`}
+      tone={canSell ? "success" : "warning"}
+    >
+      <View className="flex-row flex-wrap gap-3">
+        <DashboardStatTile
+          detail="Recorded today"
+          label="Sales"
+          tone="success"
+          value={todaySalesCount}
+        />
+        <DashboardStatTile
+          detail="Today total"
+          label="Amount"
+          tone="primary"
+          value={formatMoney(todayTotal, "NGN")}
+        />
+      </View>
+      <View className="flex-row gap-2">
+        <Pressable
+          className={cn(
+            "flex-1 flex-row items-center justify-center gap-2 rounded-xl px-3 py-3",
+            canSell ? "bg-primary active:bg-primary/90" : "bg-muted",
+          )}
+          haptic
+          onPress={canSell ? onCreateSale : onClockIn}
+          transition
+        >
+          <Icon
+            className={cn(
+              "size-sm",
+              canSell ? "text-primary-foreground" : "text-muted-foreground",
+            )}
+            name={canSell ? "Plus" : "Clock"}
+          />
+          <Text
+            className={cn(
+              "text-sm font-bold",
+              canSell ? "text-primary-foreground" : "text-muted-foreground",
+            )}
+          >
+            {canSell ? "Sale" : "Clock in"}
+          </Text>
+        </Pressable>
+        <Pressable
+          className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-3 active:bg-primary/20"
+          haptic
+          onPress={onCustomers}
+          transition
+        >
+          <Icon className="size-sm text-primary" name="Users" />
+          <Text className="text-sm font-bold text-primary">Customers</Text>
+        </Pressable>
+        <Pressable
+          className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-3 active:bg-primary/20"
+          haptic
+          onPress={onCloseout}
+          transition
+        >
+          <Icon className="size-sm text-primary" name="ClipboardCheck" />
+          <Text className="text-sm font-bold text-primary">Closeout</Text>
+        </Pressable>
+      </View>
+      <DashboardRecordRow
+        detail={
+          firstProduct
+            ? `${firstProduct.currentStock ?? firstProduct.startingStock ?? 0} ${firstProduct.unitName} available for sales`
+            : "Assigned stock will appear after an admin completes inventory setup."
+        }
+        icon="Warehouse"
+        title={firstProduct?.name ?? "Assigned stock"}
+        trailing={
+          firstProduct ? (
+            <StatusBadge
+              label={canSell ? "Ready" : "Clock in"}
+              tone={canSell ? "success" : "warning"}
+            />
+          ) : null
+        }
+      />
+      <DashboardInlineStatus
+        label={`${openSalesCount} open`}
+        title="Closeout queue"
+        tone={openSalesCount > 0 ? "warning" : "success"}
+      />
+    </DashboardPanel>
+  )
+}
+
+export function RetailOpsDashboardSurface({
+  surface,
+}: RetailOpsDashboardSurfaceProps = {}) {
+  const router = useRouter()
   const trpc = useTRPC()
   const { isAuthenticated, profile } = useAuthContext()
+  const { colorScheme, setColorScheme } = useColorScheme()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
   const businesses = useBusinessStore((state) => state.businesses)
   const ensureBusiness = useBusinessStore((state) => state.ensureBusiness)
@@ -1317,22 +1682,16 @@ export default function DashboardRoute() {
   const activeBusiness = businesses.find(
     (business) => business.id === activeBusinessId,
   )
-  const businessModal = useModal()
-  const closeoutModal = useModal()
-  const conversionModal = useModal()
-  const customerModal = useModal()
-  const reportsModal = useModal()
-  const sessionModal = useModal()
-  const saleModal = useModal()
-  const shareModal = useModal()
-  const setupModal = useModal()
-  const staffModal = useModal()
-  const stockModal = useModal()
-  const subscriptionModal = useModal()
-  const syncModal = useModal()
+  const actionModal = useModal()
+  const moreModal = useModal()
+  const settingsModal = useModal()
+  const themeModal = useModal()
   const setupPromptedBusinessRef = useRef<string | null>(null)
   const attendantName = profile?.name ?? "Store Owner"
-  const isAttendantDashboard = isAttendantRole(profile?.role)
+  const profileIsSalesRep = isSalesRepRole(profile?.role)
+  const isAttendantDashboard =
+    surface === "sales-rep" || (!surface && profileIsSalesRep)
+  const showSecondaryAdminHomeSections = false
   const canManageInventory = !isAttendantDashboard
   const visibleQuickActions = useMemo(
     () =>
@@ -1556,23 +1915,23 @@ export default function DashboardRoute() {
     failedSyncEvents.length +
     conflictSyncEvents.length
   const syncBannerClassName = isOfflineMode
-    ? "border-amber-500/30 bg-amber-500/10"
+    ? "border-warn/30 bg-warn/10"
     : conflictSyncEvents.length > 0
-      ? "border-amber-500/30 bg-amber-500/10"
+      ? "border-warn/30 bg-warn/10"
       : failedSyncEvents.length > 0
         ? "border-destructive/30 bg-destructive/10"
         : pendingSyncEvents.length > 0
           ? "border-primary/30 bg-primary/10"
-          : "border-emerald-500/30 bg-emerald-500/10"
+          : "border-success/30 bg-success/10"
   const syncBannerIconClassName = isOfflineMode
-    ? "text-amber-600"
+    ? "text-warn"
     : conflictSyncEvents.length > 0
-      ? "text-amber-600"
+      ? "text-warn"
       : failedSyncEvents.length > 0
         ? "text-destructive"
         : pendingSyncEvents.length > 0
           ? "text-primary"
-          : "text-emerald-600"
+          : "text-success"
   const syncBannerIconName =
     isOfflineMode || conflictSyncEvents.length > 0
       ? "TriangleAlert"
@@ -1776,33 +2135,66 @@ export default function DashboardRoute() {
     0,
     DASHBOARD_STOCK_MOVEMENT_PREVIEW_LIMIT,
   )
+  const openFirstProductSetup = useCallback(() => {
+    router.push("/first-product-setup-modal")
+  }, [router])
+  const openStockIntake = useCallback(() => {
+    router.push("/stock-intake-modal")
+  }, [router])
+  const openCreateSale = useCallback(() => {
+    router.push("/create-sale-modal")
+  }, [router])
+  const openRepClockIn = useCallback(() => {
+    router.push("/rep-clock-in-modal")
+  }, [router])
+  const openCloseout = useCallback(() => {
+    router.push("/closeout-modal")
+  }, [router])
+  const openReports = useCallback(() => {
+    router.push("/reports-modal")
+  }, [router])
+  const openSubscription = useCallback(() => {
+    router.push("/subscription-modal")
+  }, [router])
+  const openBusinessSwitch = useCallback(() => {
+    router.push("/business-switch-modal")
+  }, [router])
+  const openCustomerBook = useCallback(() => {
+    router.push("/customer-book-modal")
+  }, [router])
+  const openSyncStatus = useCallback(() => {
+    router.push("/sync-status-modal")
+  }, [router])
+  const openProductShare = useCallback(() => {
+    router.push("/product-share-modal")
+  }, [router])
 
   const handleQuickAction = (label: QuickActionProps["label"]) => {
     if (label === "Add item") {
       if (isAttendantDashboard) return
-      setupModal.present()
+      openFirstProductSetup()
       return
     }
 
     if (label === "New sale") {
       if (!firstProduct) {
         if (!isAttendantDashboard) {
-          setupModal.present()
+          openFirstProductSetup()
         }
         return
       }
 
       if (currentRepSession) {
-        saleModal.present()
+        openCreateSale()
       } else {
-        sessionModal.present()
+        openRepClockIn()
       }
       return
     }
 
     if (label === "Add staff") {
       if (isAttendantDashboard) return
-      staffModal.present()
+      router.push("/staff-invite-modal")
     }
   }
   const syncBanner = (
@@ -1812,7 +2204,7 @@ export default function DashboardRoute() {
         syncBannerClassName,
       )}
       haptic
-      onPress={() => syncModal.present()}
+      onPress={openSyncStatus}
       testID="retail-sync-banner"
       transition
     >
@@ -1837,7 +2229,128 @@ export default function DashboardRoute() {
     accessibilityLabel: "Create sale",
     icon: "Plus",
     label: "Sale",
-    onPress: () => handleQuickAction("New sale"),
+    onPress: () =>
+      isAttendantDashboard
+        ? handleQuickAction("New sale")
+        : actionModal.present(),
+  }
+  const actionPickerItems: MoreNavigationItem[] = [
+    {
+      description: "Start a sale for the current session.",
+      icon: "ReceiptText",
+      label: "New sale",
+      onPress: () => {
+        actionModal.dismiss()
+        handleQuickAction("New sale")
+      },
+    },
+    {
+      description: "Record restock, adjustment, or inventory movement.",
+      icon: "Warehouse",
+      label: "Stock entry",
+      onPress: () => {
+        actionModal.dismiss()
+        firstProduct ? openStockIntake() : openFirstProductSetup()
+      },
+    },
+    {
+      description: "Invite a sales rep into this workspace.",
+      icon: "UserPlus",
+      label: "Sales rep",
+      onPress: () => {
+        actionModal.dismiss()
+        router.push("/staff-invite-modal")
+      },
+    },
+  ]
+  const moreNavigationItems: MoreNavigationItem[] = [
+    {
+      description: "Invite reps and review their access.",
+      icon: "UserPlus",
+      label: "Sales Reps",
+      onPress: () => {
+        moreModal.dismiss()
+        router.push("/staff-invite-modal")
+      },
+    },
+    {
+      description: "Find saved customers and recent purchase activity.",
+      icon: "Users",
+      label: "Customers",
+      onPress: () => {
+        moreModal.dismiss()
+        openCustomerBook()
+      },
+    },
+    {
+      description: "Manage business switching and workspace settings.",
+      icon: "Settings",
+      label: "Settings",
+      onPress: () => {
+        moreModal.dismiss()
+        settingsModal.present()
+      },
+    },
+    {
+      description: "Choose system, light, or dark app themes.",
+      icon: "SlidersHorizontal",
+      label: "Theme",
+      onPress: () => {
+        moreModal.dismiss()
+        themeModal.present()
+      },
+    },
+  ]
+  const settingsNavigationItems: MoreNavigationItem[] = [
+    {
+      description: "Switch businesses or add another workspace.",
+      icon: "Building2",
+      label: "Business",
+      onPress: () => {
+        settingsModal.dismiss()
+        openBusinessSwitch()
+      },
+    },
+    {
+      description: "Review plan usage and subscription limits.",
+      icon: "CreditCard",
+      label: "Subscription",
+      onPress: () => {
+        settingsModal.dismiss()
+        openSubscription()
+      },
+    },
+    {
+      description: "Open sales, stock, and closeout reports.",
+      icon: "BarChart3",
+      label: "Reports",
+      onPress: () => {
+        settingsModal.dismiss()
+        openReports()
+      },
+    },
+    {
+      description: "Review offline queue, retries, and conflicts.",
+      icon: "Wind",
+      label: "Sync status",
+      onPress: () => {
+        settingsModal.dismiss()
+        openSyncStatus()
+      },
+    },
+    {
+      description: "Check the installed build, channel, runtime, and updates.",
+      icon: "Download",
+      label: "App updates",
+      onPress: () => {
+        settingsModal.dismiss()
+        router.push("/updates")
+      },
+    },
+  ]
+  const handleThemeSelection = (scheme: "light" | "dark" | "system") => {
+    setColorScheme(scheme)
+    themeModal.dismiss()
   }
   const shellNavItems: MobileAppShellNavItem[] = [
     {
@@ -1853,16 +2366,16 @@ export default function DashboardRoute() {
     },
     {
       icon: "Warehouse",
-      label: "Stock",
+      label: "Stocks",
       onPress: () =>
-        firstProduct ? stockModal.present() : setupModal.present(),
+        firstProduct ? openStockIntake() : openFirstProductSetup(),
       ownerOnly: true,
     },
     {
-      icon: "Users",
-      label: isAttendantDashboard ? "Customers" : "Staff",
+      icon: isAttendantDashboard ? "Users" : "more",
+      label: isAttendantDashboard ? "Customers" : "More",
       onPress: () =>
-        isAttendantDashboard ? customerModal.present() : staffModal.present(),
+        isAttendantDashboard ? openCustomerBook() : moreModal.present(),
       ownerOnly: false,
     },
   ]
@@ -1902,11 +2415,11 @@ export default function DashboardRoute() {
     if (setupPromptedBusinessRef.current === activeBusinessId) return
 
     setupPromptedBusinessRef.current = activeBusinessId
-    setupModal.present()
+    openFirstProductSetup()
   }, [
     activeBusinessId,
     isAttendantDashboard,
-    setupModal,
+    openFirstProductSetup,
     shouldPromptFirstProduct,
   ])
 
@@ -1918,79 +2431,165 @@ export default function DashboardRoute() {
     return <Redirect href="/staff-onboarding" />
   }
 
+  if (surface === "admin" && profileIsSalesRep) {
+    return <Redirect href="/sales-rep-home" />
+  }
+
+  if (surface === "sales-rep" && !profileIsSalesRep) {
+    return <Redirect href="/admin-home" />
+  }
+
   return (
     <MobileAppShell
       businessName={businessDisplayName}
       centralAction={shellCentralAction}
-      headerAction={<Logout />}
+      hero={
+        <RetailOpsHomeHero
+          businessName={businessDisplayName}
+          headerAction={<Logout />}
+          onBusinessPress={openBusinessSwitch}
+          onPrimaryPress={() =>
+            isAttendantDashboard
+              ? handleQuickAction("New sale")
+              : openReports()
+          }
+          onSearchPress={openCustomerBook}
+          primaryActionLabel={
+            isAttendantDashboard
+              ? currentRepSession
+                ? "Record sale"
+                : "Clock in"
+              : "Review sales"
+          }
+          roleLabel={isAttendantDashboard ? "Sales rep home" : "Admin home"}
+          searchPlaceholder={
+            isAttendantDashboard
+              ? "Search customers and recent sales"
+              : "Search sales, stock, reps, customers"
+          }
+          summaryDetail={
+            isAttendantDashboard
+              ? currentRepSession
+                ? `${openCloseoutSales.length} sale${
+                    openCloseoutSales.length === 1 ? "" : "s"
+                  } waiting for closeout.`
+                : "Clock in to begin recording sales for this workspace."
+              : `${dashboardTodaySalesCount} sale${
+                  dashboardTodaySalesCount === 1 ? "" : "s"
+                } today, ${lowStockCount} stock alert${
+                  lowStockCount === 1 ? "" : "s"
+                }, ${openRepSessions.length} active rep${
+                  openRepSessions.length === 1 ? "" : "s"
+                }.`
+          }
+          summaryLabel={
+            isAttendantDashboard ? "Your shift snapshot" : "Today snapshot"
+          }
+          summaryValue={formatMoney(dashboardTodayTotal, "NGN")}
+        />
+      }
       keyboardBottomOffset={140}
       navItems={shellNavItems}
-      onBusinessPress={() => businessModal.present()}
+      onBusinessPress={openBusinessSwitch}
       role={isAttendantDashboard ? "attendant" : "owner"}
+      showHeader={false}
       syncBanner={syncBanner}
       title="Dashboard"
     >
-      {firstProduct ? (
-        <InventorySetupSummary
-          canManageInventory={canManageInventory}
-          onRestock={() => stockModal.present()}
-          onConvert={() => conversionModal.present()}
-          onShare={() => shareModal.present()}
-          product={firstProduct}
+      {isAttendantDashboard ? (
+        <SalesRepHomeOverview
+          attendantName={attendantName}
+          currentSession={currentRepSession}
+          firstProduct={firstProduct ?? null}
+          onClockIn={() =>
+            firstProduct ? openRepClockIn() : undefined
+          }
+          onCloseout={() =>
+            firstProduct ? openCloseout() : undefined
+          }
+          onCreateSale={() => handleQuickAction("New sale")}
+          onCustomers={openCustomerBook}
+          openSalesCount={openCloseoutSales.length}
+          todaySalesCount={dashboardTodaySalesCount}
+          todayTotal={dashboardTodayTotal}
         />
       ) : (
-        <SetupPrompt
-          isAttendant={isAttendantDashboard}
-          onAddItem={() => setupModal.present()}
+        <AdminHomeOverview
+          firstProduct={firstProduct ?? null}
+          lowStockAlerts={lowStockAlerts}
+          onCloseout={() =>
+            firstProduct ? openCloseout() : openFirstProductSetup()
+          }
+          onCustomers={openCustomerBook}
+          onSales={() => handleQuickAction("New sale")}
+          onSalesReps={() => router.push("/staff-invite-modal")}
+          onStocks={() =>
+            firstProduct ? openStockIntake() : openFirstProductSetup()
+          }
+          openRepSessionCount={openRepSessions.length}
+          openSalesCount={openCloseoutSales.length}
+          productCount={products.length}
+          recentSale={visibleRecentSales[0] ?? null}
+          stockUnitCount={stockUnitCount}
+          todaySalesCount={dashboardTodaySalesCount}
+          todayTotal={dashboardTodayTotal}
         />
       )}
 
-      <RepSessionStatusCard
-        currentSession={currentRepSession}
-        hasInventory={!!firstProduct}
-        onClockIn={() =>
-          firstProduct
-            ? sessionModal.present()
-            : isAttendantDashboard
-              ? undefined
-              : setupModal.present()
-        }
-        onCreateSale={() => saleModal.present()}
-        openSessions={openRepSessions}
-      />
+      {showSecondaryAdminHomeSections ? (
+        <RepSessionStatusCard
+          currentSession={currentRepSession}
+          hasInventory={!!firstProduct}
+          onClockIn={() =>
+            firstProduct
+              ? openRepClockIn()
+              : isAttendantDashboard
+                ? undefined
+                : openFirstProductSetup()
+          }
+          onCreateSale={openCreateSale}
+          openSessions={openRepSessions}
+        />
+      ) : null}
 
-      {isAttendantDashboard ? null : (
+      {showSecondaryAdminHomeSections ? (
         <PlanStatusCard
-          onPress={() => subscriptionModal.present()}
+          onPress={openSubscription}
           plan={subscriptionPlan}
           subscription={subscription}
           usage={subscriptionUsage}
         />
-      )}
+      ) : null}
 
-      <View className="flex-row flex-wrap justify-between gap-y-3">
-        {metrics.map((metric) => (
-          <MetricCard key={metric.label} {...metric} />
-        ))}
-      </View>
-
-      <View className="gap-3">
-        <Text className="text-lg font-bold text-foreground">Quick actions</Text>
-        <View className="flex-row gap-3">
-          {visibleQuickActions.map((action) => (
-            <QuickAction
-              key={action.label}
-              {...action}
-              onPress={() => handleQuickAction(action.label)}
-            />
+      {showSecondaryAdminHomeSections ? (
+        <View className="flex-row flex-wrap justify-between gap-y-3">
+          {metrics.map((metric) => (
+            <MetricCard key={metric.label} {...metric} />
           ))}
         </View>
-      </View>
+      ) : null}
 
-      {isAttendantDashboard ? null : (
+      {showSecondaryAdminHomeSections ? (
+        <View className="gap-3">
+          <Text className="text-lg font-bold text-foreground">
+            Quick actions
+          </Text>
+          <View className="flex-row gap-3">
+            {visibleQuickActions.map((action) => (
+              <QuickAction
+                key={action.label}
+                {...action}
+                onPress={() => handleQuickAction(action.label)}
+              />
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {showSecondaryAdminHomeSections ? (
         <>
           <ReportsSummaryCard
-            onPress={() => reportsModal.present()}
+            onPress={openReports}
             pendingSyncCount={openSyncEventCount}
             stockUnitCount={stockUnitCount}
             todaySalesCount={dashboardTodaySalesCount}
@@ -2001,63 +2600,62 @@ export default function DashboardRoute() {
           <CloseoutSummaryCard
             latestCloseout={closeouts[0] ?? null}
             onPress={() =>
-              firstProduct ? closeoutModal.present() : setupModal.present()
+              firstProduct ? openCloseout() : openFirstProductSetup()
             }
             openSalesCount={openCloseoutSales.length}
             paymentTotals={closeoutPaymentTotals}
           />
         </>
-      )}
+      ) : null}
 
-      <View className="gap-3">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-lg font-bold text-foreground">Low stock</Text>
-        </View>
+      {showSecondaryAdminHomeSections ? (
         <View className="gap-3">
-          {lowStockAlerts.length > 0 ? (
-            <>
-              {visibleLowStockAlerts.map((item) => (
-                <View
-                  className="flex-row items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4"
-                  key={item.id}
-                >
-                  <View className="flex-1 gap-1">
-                    <Text className="font-semibold text-foreground">
-                      {item.name}
-                    </Text>
-                    <Text className="text-sm text-muted-foreground">
-                      {item.remaining} remaining
-                    </Text>
-                  </View>
-                  <StatusBadge
+          <View className="flex-row items-center justify-between">
+            <Text className="text-lg font-bold text-foreground">Low stock</Text>
+          </View>
+          <View className="gap-3">
+            {lowStockAlerts.length > 0 ? (
+              <>
+                {visibleLowStockAlerts.map((item) => (
+                  <DashboardRecordRow
+                    detail={`${item.remaining} remaining`}
                     icon={item.status === "Out" ? "TriangleAlert" : "Clock"}
-                    label={item.status}
-                    tone="warning"
+                    key={item.id}
+                    title={item.name}
+                    trailing={
+                      <StatusBadge
+                        icon={
+                          item.status === "Out" ? "TriangleAlert" : "Clock"
+                        }
+                        label={item.status}
+                        tone="warning"
+                      />
+                    }
                   />
-                </View>
-              ))}
-              {lowStockAlerts.length > visibleLowStockAlerts.length ? (
-                <Text className="text-xs font-semibold text-muted-foreground">
-                  Showing first {visibleLowStockAlerts.length} of{" "}
-                  {lowStockAlerts.length} low-stock alerts.
-                </Text>
-              ) : null}
-            </>
-          ) : (
-            <EmptyState
-              icon="Warehouse"
-              message={
-                products.length > 0
-                  ? "Stock alerts will appear here when any unit drops near its reorder level."
-                  : "Add your first item to start tracking stock alerts."
-              }
-              title="No low-stock items"
-            />
-          )}
+                ))}
+                {lowStockAlerts.length > visibleLowStockAlerts.length ? (
+                  <Text className="text-xs font-semibold text-muted-foreground">
+                    Showing first {visibleLowStockAlerts.length} of{" "}
+                    {lowStockAlerts.length} low-stock alerts.
+                  </Text>
+                ) : null}
+              </>
+            ) : (
+              <EmptyState
+                icon="Warehouse"
+                message={
+                  products.length > 0
+                    ? "Stock alerts will appear here when any unit drops near its reorder level."
+                    : "Add your first item to start tracking stock alerts."
+                }
+                title="No low-stock items"
+              />
+            )}
+          </View>
         </View>
-      </View>
+      ) : null}
 
-      {isAttendantDashboard ? null : (
+      {showSecondaryAdminHomeSections ? (
         <View className="gap-3">
           <View className="flex-row items-center justify-between gap-3">
             <Text className="text-lg font-bold text-foreground">
@@ -2066,7 +2664,7 @@ export default function DashboardRoute() {
             <Pressable
               className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
               haptic
-              onPress={() => staffModal.present()}
+              onPress={() => router.push("/staff-invite-modal")}
               transition
             >
               <Text className="text-xs font-bold text-primary">Invite</Text>
@@ -2087,16 +2685,18 @@ export default function DashboardRoute() {
           ) : (
             <EmptyState
               actionLabel="Invite attendant"
-              actionProps={{ onPress: () => staffModal.present() }}
+              actionProps={{
+                onPress: () => router.push("/staff-invite-modal"),
+              }}
               icon="UserPlus"
               message="Invite your first attendant when you are ready to share sales work."
               title="No attendants yet"
             />
           )}
         </View>
-      )}
+      ) : null}
 
-      {shareLinks.length > 0 ? (
+      {showSecondaryAdminHomeSections && shareLinks.length > 0 ? (
         <View className="gap-3">
           <View className="flex-row items-center justify-between gap-3">
             <Text className="text-lg font-bold text-foreground">
@@ -2105,7 +2705,7 @@ export default function DashboardRoute() {
             <Pressable
               className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
               haptic
-              onPress={() => shareModal.present()}
+              onPress={openProductShare}
               transition
             >
               <Text className="text-xs font-bold text-primary">New link</Text>
@@ -2117,7 +2717,7 @@ export default function DashboardRoute() {
                 key={link.id}
                 link={link}
                 onDeactivate={() => deactivateShareLink(link.id)}
-                onManage={() => shareModal.present()}
+                onManage={openProductShare}
               />
             ))}
             {shareLinks.length > visibleShareLinks.length ? (
@@ -2130,146 +2730,145 @@ export default function DashboardRoute() {
         </View>
       ) : null}
 
-      <View className="gap-3">
-        <View className="flex-row items-center justify-between gap-3">
-          <Text className="text-lg font-bold text-foreground">
-            Stock movements
-          </Text>
-          {canManageInventory ? (
-            <Pressable
-              className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
-              haptic
-              onPress={() =>
-                firstProduct ? stockModal.present() : setupModal.present()
-              }
-              transition
-            >
-              <Text className="text-xs font-bold text-primary">Record</Text>
-            </Pressable>
-          ) : null}
-        </View>
-        {stockMovements.length > 0 ? (
-          <View className="gap-3">
-            {visibleStockMovements.map((movement) => (
-              <StockMovementCard key={movement.id} movement={movement} />
-            ))}
-            {stockMovements.length > visibleStockMovements.length ? (
-              <Text className="text-xs font-semibold text-muted-foreground">
-                Showing first {visibleStockMovements.length} of{" "}
-                {stockMovements.length} stock movements.
-              </Text>
-            ) : null}
-          </View>
-        ) : (
-          <EmptyState
-            icon="ListChecks"
-            message="Opening stock, restocks, adjustments, conversions, and sales will appear here."
-            title="No stock movement yet"
-          />
-        )}
-      </View>
-
-      <View className="gap-3">
-        <View className="flex-row items-center justify-between gap-3">
-          <Text className="text-lg font-bold text-foreground">
-            Customer book
-          </Text>
-          <Pressable
-            className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
-            haptic
-            onPress={() => customerModal.present()}
-            transition
-          >
-            <Text className="text-xs font-bold text-primary">View all</Text>
-          </Pressable>
-        </View>
-        {visibleCustomerPreview.length > 0 ? (
-          <View className="gap-3">
-            {visibleCustomerPreview.map((customer) => (
-              <CustomerCard customer={customer} key={customer.id} />
-            ))}
-            {customerPreviewRows.length > visibleCustomerPreview.length ? (
-              <Text className="text-xs font-semibold text-muted-foreground">
-                Showing first {visibleCustomerPreview.length} of{" "}
-                {customerPreviewRows.length} customers.
-              </Text>
-            ) : null}
-          </View>
-        ) : (
-          <EmptyState
-            icon="Users"
-            message="Customer names from completed sales will appear here."
-            title="No saved customers yet"
-          />
-        )}
-      </View>
-
-      <View className="gap-3">
-        <Text className="text-lg font-bold text-foreground">Recent sales</Text>
+      {showSecondaryAdminHomeSections ? (
         <View className="gap-3">
-          {visibleRecentSales.length > 0 ? (
-            <>
-              {visibleRecentSales.map((sale) => (
-                <RecentSaleCard key={sale.id} sale={sale} />
+          <View className="flex-row items-center justify-between gap-3">
+            <Text className="text-lg font-bold text-foreground">
+              Stock movements
+            </Text>
+            {canManageInventory ? (
+              <Pressable
+                className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
+                haptic
+                onPress={() =>
+                  firstProduct ? openStockIntake() : openFirstProductSetup()
+                }
+                transition
+              >
+                <Text className="text-xs font-bold text-primary">Record</Text>
+              </Pressable>
+            ) : null}
+          </View>
+          {stockMovements.length > 0 ? (
+            <View className="gap-3">
+              {visibleStockMovements.map((movement) => (
+                <StockMovementCard key={movement.id} movement={movement} />
               ))}
-              {recentSalePreviewRows.length > visibleRecentSales.length ? (
+              {stockMovements.length > visibleStockMovements.length ? (
                 <Text className="text-xs font-semibold text-muted-foreground">
-                  Showing first {visibleRecentSales.length} of{" "}
-                  {recentSalePreviewRows.length} recent sales.
+                  Showing first {visibleStockMovements.length} of{" "}
+                  {stockMovements.length} stock movements.
                 </Text>
               ) : null}
-            </>
+            </View>
           ) : (
             <EmptyState
-              icon="ReceiptText"
-              message="Completed sales will appear here as soon as they are recorded."
-              title="No sales yet"
+              icon="ListChecks"
+              message="Opening stock, restocks, adjustments, conversions, and sales will appear here."
+              title="No stock movement yet"
             />
           )}
         </View>
-      </View>
+      ) : null}
 
-      <FirstProductSetupSheet
-        onComplete={setupModal.dismiss}
-        ref={setupModal.ref}
+      {isAttendantDashboard ? (
+        <>
+          <View className="gap-3">
+            <View className="flex-row items-center justify-between gap-3">
+              <Text className="text-lg font-bold text-foreground">
+                Customer book
+              </Text>
+              <Pressable
+                className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
+                haptic
+                onPress={openCustomerBook}
+                transition
+              >
+                <Text className="text-xs font-bold text-primary">View all</Text>
+              </Pressable>
+            </View>
+            {visibleCustomerPreview.length > 0 ? (
+              <View className="gap-3">
+                {visibleCustomerPreview.map((customer) => (
+                  <CustomerCard customer={customer} key={customer.id} />
+                ))}
+                {customerPreviewRows.length > visibleCustomerPreview.length ? (
+                  <Text className="text-xs font-semibold text-muted-foreground">
+                    Showing first {visibleCustomerPreview.length} of{" "}
+                    {customerPreviewRows.length} customers.
+                  </Text>
+                ) : null}
+              </View>
+            ) : (
+              <EmptyState
+                icon="Users"
+                message="Customer names from completed sales will appear here."
+                title="No saved customers yet"
+              />
+            )}
+          </View>
+
+          <View className="gap-3">
+            <Text className="text-lg font-bold text-foreground">
+              Recent sales
+            </Text>
+            <View className="gap-3">
+              {visibleRecentSales.length > 0 ? (
+                <>
+                  {visibleRecentSales.map((sale) => (
+                    <RecentSaleCard key={sale.id} sale={sale} />
+                  ))}
+                  {recentSalePreviewRows.length > visibleRecentSales.length ? (
+                    <Text className="text-xs font-semibold text-muted-foreground">
+                      Showing first {visibleRecentSales.length} of{" "}
+                      {recentSalePreviewRows.length} recent sales.
+                    </Text>
+                  ) : null}
+                </>
+              ) : (
+                <EmptyState
+                  icon="ReceiptText"
+                  message="Completed sales will appear here as soon as they are recorded."
+                  title="No sales yet"
+                />
+              )}
+            </View>
+          </View>
+        </>
+      ) : null}
+
+      <DashboardActionPickerSheet
+        items={actionPickerItems}
+        modal={actionModal}
       />
-      <BusinessSwitchSheet
-        onComplete={businessModal.dismiss}
-        ref={businessModal.ref}
+      <DashboardMoreSheet items={moreNavigationItems} modal={moreModal} />
+      <DashboardSettingsSheet
+        items={settingsNavigationItems}
+        modal={settingsModal}
       />
-      <CloseoutSheet
-        attendantName={attendantName}
-        onComplete={closeoutModal.dismiss}
-        ref={closeoutModal.ref}
+      <DashboardThemeSheet
+        colorScheme={colorScheme}
+        modal={themeModal}
+        onSelect={handleThemeSelection}
       />
-      <CreateSaleSheet
-        attendantName={attendantName}
-        onComplete={saleModal.dismiss}
-        ref={saleModal.ref}
-      />
-      <CustomerBookSheet
-        onComplete={customerModal.dismiss}
-        ref={customerModal.ref}
-      />
-      <ProductShareSheet onComplete={shareModal.dismiss} ref={shareModal.ref} />
-      <RepClockInSheet
-        attendantName={attendantName}
-        onComplete={sessionModal.dismiss}
-        ref={sessionModal.ref}
-      />
-      <ReportsSheet onComplete={reportsModal.dismiss} ref={reportsModal.ref} />
-      <StaffInviteSheet onComplete={staffModal.dismiss} ref={staffModal.ref} />
-      <StockIntakeSheet onComplete={stockModal.dismiss} ref={stockModal.ref} />
-      <SubscriptionPlanSheet
-        onComplete={subscriptionModal.dismiss}
-        ref={subscriptionModal.ref}
-        usage={subscriptionUsage}
-      />
-      <UnitConversionSheet
-        onComplete={conversionModal.dismiss}
-        ref={conversionModal.ref}
-      />
-      <SyncStatusSheet onComplete={syncModal.dismiss} ref={syncModal.ref} />
     </MobileAppShell>
+  )
+}
+
+export default function DashboardRoute() {
+  const { isAuthenticated, profile } = useAuthContext()
+
+  if (!isAuthenticated) {
+    return <Redirect href="/login" />
+  }
+
+  if (isInvitedStaffProfile(profile)) {
+    return <Redirect href="/staff-onboarding" />
+  }
+
+  return (
+    <Redirect
+      href={isSalesRepRole(profile?.role) ? "/sales-rep-home" : "/admin-home"}
+    />
   )
 }

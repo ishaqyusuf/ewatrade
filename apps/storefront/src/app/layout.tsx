@@ -1,20 +1,21 @@
 import type { Metadata } from "next"
 import "@ewatrade/ui/globals.css"
-import { Geist } from "next/font/google"
 import { cn } from "@/utils"
+import { Geist } from "next/font/google"
 
 const geist = Geist({
   subsets: ["latin"],
-  variable: "--font-sans"
+  variable: "--font-sans",
 })
 
 export const metadata: Metadata = {
   title: "ewatrade Storefront",
-  description: "Storefront application for merchant-branded customer experiences."
+  description:
+    "Storefront application for merchant-branded customer experiences.",
 }
 
 export default function RootLayout({
-  children
+  children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={cn("font-sans", geist.variable)}>

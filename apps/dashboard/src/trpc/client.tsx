@@ -1,10 +1,10 @@
 "use client"
 
 import type { AppRouter } from "@ewatrade/api/trpc/routers/_app"
+import { resolveTenantDomain } from "@ewatrade/utils"
 import { QueryClientProvider, isServer } from "@tanstack/react-query"
 import { createTRPCClient, httpBatchLink, loggerLink } from "@trpc/client"
 import { createTRPCContext } from "@trpc/tanstack-react-query"
-import { resolveTenantDomain } from "@ewatrade/utils"
 import { useState } from "react"
 import superjson from "superjson"
 import { makeQueryClient } from "./query-client"
@@ -28,10 +28,7 @@ function getTenantSlugFromBrowserHost() {
   }
 
   const result = resolveTenantDomain(window.location.host, {
-    platformDomain:
-      process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ??
-      process.env.NEXT_PUBLIC_EWATRADE_PLATFORM_DOMAIN ??
-      "ewatrade.com",
+    platformDomain: process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com",
   })
 
   return result.kind === "tenant" ? result.tenantSlug : null

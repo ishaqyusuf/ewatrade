@@ -11,22 +11,24 @@ const MOBILE_PRODUCTION_ENV = join(MOBILE_DIR, ".env.production")
 const MOBILE_EXAMPLE_ENV = join(MOBILE_DIR, ".env.example")
 const BANNED_ENV_MARKERS = [/gnd/i, /gndprodesk/i, /versadesk/i]
 const ROOT_EXAMPLE_KEYS = [
-  "EWATRADE_API_URL",
+  "API_URL",
   "NEXT_PUBLIC_API_URL",
-  "EWATRADE_STOREFRONT_URL",
+  "STOREFRONT_URL",
   "NEXT_PUBLIC_STOREFRONT_URL",
   "NEXT_PUBLIC_APP_URL",
-  "EWATRADE_MOBILE_APP_URL",
+  "MOBILE_APP_URL",
   "NEXT_PUBLIC_MARKETING_URL",
   "NEXT_PUBLIC_DASHBOARD_URL",
   "NEXT_PUBLIC_PLATFORM_DOMAIN",
-  "EWATRADE_PLATFORM_DOMAIN",
-  "NEXT_PUBLIC_EWATRADE_PLATFORM_DOMAIN",
+  "PLATFORM_DOMAIN",
   "ALLOWED_API_ORIGINS",
   "BETTER_AUTH_TRUSTED_ORIGINS",
   "EMAIL_FROM",
   "EMAIL_REPLY_TO",
   "MARKETING_INBOX_EMAILS",
+  "RESEND_API_KEY",
+  "TEST_EMAILS",
+  "TEST_EMAIL",
 ]
 const MOBILE_EXAMPLE_KEYS = [
   "APP_VARIANT",
@@ -40,7 +42,7 @@ const MOBILE_EXAMPLE_KEYS = [
   "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID",
   "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID",
   "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID",
-  "EWATRADE_EXPO_PORT",
+  "EXPO_PORT",
 ]
 const EXPECTED = [
   {
@@ -57,21 +59,22 @@ const EXPECTED = [
       ]),
       EMAIL_FROM: nonLocalEmailLike,
       EMAIL_REPLY_TO: nonLocalEmailLike,
-      EWATRADE_API_URL: equals("http://localhost:3095"),
-      EWATRADE_MOBILE_APP_URL: equals("http://localhost:3002"),
-      EWATRADE_PLATFORM_DOMAIN: equals("localhost:3092"),
-      EWATRADE_STOREFRONT_URL: equals("http://localhost:3092"),
+      RESEND_API_KEY: startsWith("re_"),
+      API_URL: equals("http://localhost:3095"),
+      MOBILE_APP_URL: equals("http://localhost:3096"),
+      PLATFORM_DOMAIN: equals("localhost:3092"),
+      STOREFRONT_URL: equals("http://localhost:3092"),
       MARKETING_INBOX_EMAILS: nonLocalEmailLike,
       NEXT_PUBLIC_API_URL: equals("http://localhost:3095"),
       NEXT_PUBLIC_APP_URL: equals("http://localhost:3092"),
       NEXT_PUBLIC_DASHBOARD_URL: equals("http://localhost:3094"),
-      NEXT_PUBLIC_EWATRADE_PLATFORM_DOMAIN: equals("localhost:3092"),
-      NEXT_PUBLIC_MARKETING_URL: equals("http://localhost:3092"),
       NEXT_PUBLIC_PLATFORM_DOMAIN: equals("localhost:3092"),
+      NEXT_PUBLIC_MARKETING_URL: equals("http://localhost:3092"),
       NEXT_PUBLIC_STOREFRONT_URL: equals("http://localhost:3092"),
     },
     file: ROOT_LOCAL_ENV,
     label: "root local env",
+    testEmailRecipients: testEmailRecipients(nonLocalEmailLike),
   },
   {
     checks: {
@@ -85,27 +88,28 @@ const EXPECTED = [
       ]),
       EMAIL_FROM: productionEmail,
       EMAIL_REPLY_TO: productionEmail,
-      EWATRADE_API_URL: equals("https://ewatrade.com"),
-      EWATRADE_MOBILE_APP_URL: equals("https://ewatrade.com/download"),
-      EWATRADE_PLATFORM_DOMAIN: equals("ewatrade.com"),
-      EWATRADE_STOREFRONT_URL: equals("https://ewatrade.com"),
+      RESEND_API_KEY: startsWith("re_"),
+      API_URL: equals("https://ewatrade.com"),
+      MOBILE_APP_URL: equals("https://ewatrade.com/download"),
+      PLATFORM_DOMAIN: equals("ewatrade.com"),
+      STOREFRONT_URL: equals("https://ewatrade.com"),
       MARKETING_INBOX_EMAILS: productionEmail,
       NEXT_PUBLIC_API_URL: equals("https://ewatrade.com"),
       NEXT_PUBLIC_APP_URL: equals("https://ewatrade.com"),
       NEXT_PUBLIC_DASHBOARD_URL: equals("https://dashboard.ewatrade.com"),
-      NEXT_PUBLIC_EWATRADE_PLATFORM_DOMAIN: equals("ewatrade.com"),
-      NEXT_PUBLIC_MARKETING_URL: equals("https://ewatrade.com"),
       NEXT_PUBLIC_PLATFORM_DOMAIN: equals("ewatrade.com"),
+      NEXT_PUBLIC_MARKETING_URL: equals("https://ewatrade.com"),
       NEXT_PUBLIC_SIGNUP_ENABLED: equals("true"),
       NEXT_PUBLIC_STOREFRONT_URL: equals("https://ewatrade.com"),
     },
     file: ROOT_PRODUCTION_ENV,
     label: "root production env",
+    testEmailRecipients: testEmailRecipients(productionEmail),
   },
   {
     checks: {
       APP_VARIANT: equals("development"),
-      EWATRADE_EXPO_PORT: equals("3002"),
+      EXPO_PORT: equals("3096"),
       EXPO_PUBLIC_API_PORT: equals("3095"),
       EXPO_PUBLIC_API_URL: equals("http://localhost:3095"),
       EXPO_PUBLIC_APP_VARIANT: equals("development"),
@@ -143,6 +147,14 @@ for (const config of EXPECTED) {
     const result = check(env[key])
     if (result !== true) {
       failures.push(`${config.label}: ${key} ${result}`)
+    }
+  }
+
+  if (config.testEmailRecipients) {
+    const result = config.testEmailRecipients(env)
+
+    if (result !== true) {
+      failures.push(`${config.label}: ${result}`)
     }
   }
 }
@@ -226,6 +238,40 @@ function includesAll(expectedValues) {
     )
 
     return missing.length === 0 ? true : `must include ${missing.join(", ")}.`
+  }
+}
+
+function startsWith(expectedPrefix) {
+  return (value) =>
+    value.trim().startsWith(expectedPrefix)
+      ? true
+      : `must start with ${expectedPrefix}.`
+}
+
+function testEmailRecipients(checkEmail) {
+  return (env) => {
+    const configured = hasValue(env.TEST_EMAILS)
+      ? env.TEST_EMAILS
+      : env.TEST_EMAIL
+    const recipients =
+      configured
+        ?.split(",")
+        .map((item) => item.trim())
+        .filter(Boolean) ?? []
+
+    if (recipients.length === 0) {
+      return "TEST_EMAILS or TEST_EMAIL is missing."
+    }
+
+    for (const recipient of recipients) {
+      const result = checkEmail(recipient)
+
+      if (result !== true) {
+        return `TEST_EMAILS/TEST_EMAIL recipient ${recipient} ${result}`
+      }
+    }
+
+    return true
   }
 }
 

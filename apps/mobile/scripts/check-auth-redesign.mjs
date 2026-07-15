@@ -6,9 +6,21 @@ const SOURCE_DIR = join(MOBILE_DIR, "src")
 
 const requiredMarkers = [
   {
+    file: "components/mobile/form-field.tsx",
+    markers: [
+      'variant?: "auth" | "filled" | "line"',
+      "leadingIcon",
+      "trailingIcon",
+      "backgroundColor: colors.card",
+      "borderWidth: isFocused || error ? 1.5 : 1",
+      "minHeight: isMultiline ? 92 : 50",
+      "accessibilityLabel={inputProps.accessibilityLabel ?? label}",
+    ],
+  },
+  {
     file: "components/mobile/auth-header.tsx",
     markers: [
-      "AuthHeader",
+      "AuthBrandHeader",
       "AuthMethodButton",
       'align?: "center" | "start"',
       "Pressable",
@@ -19,7 +31,7 @@ const requiredMarkers = [
   },
   {
     file: "components/mobile/index.ts",
-    markers: ["AuthHeader", "AuthMethodButton"],
+    markers: ["AuthBrandHeader", "AuthHeader", "AuthMethodButton"],
   },
   {
     file: "app/index.tsx",
@@ -33,10 +45,11 @@ const requiredMarkers = [
   {
     file: "app/login.tsx",
     markers: [
-      "AuthHeader",
+      "AuthBrandHeader",
       "AuthMethodButton",
       "StatusBanner",
-      "Continue with Google",
+      "Or Continue With",
+      'label="Google"',
       "Send login code",
       "Create your business account",
       'placeholder="Enter your email address"',
@@ -46,10 +59,11 @@ const requiredMarkers = [
   {
     file: "app/sign-up.tsx",
     markers: [
-      "AuthHeader",
+      "AuthBrandHeader",
       "AuthMethodButton",
       "StatusBanner",
-      "Sign up with Google",
+      "Or Continue With",
+      'label="Google"',
       "Send verification code",
       'placeholder="Enter your business name"',
       'placeholder="Enter your full name"',
@@ -60,14 +74,15 @@ const requiredMarkers = [
   {
     file: "app/verify-email.tsx",
     markers: [
-      "AuthHeader",
-      "StatusBadge",
-      "StatusBanner",
-      "OtpInput",
-      "6 digit OTP",
+      "AuthArtwork",
+      "OtpCodeCells",
+      "OtpKey",
+      "ClipboardList",
+      "KEYPAD_ROWS",
+      "Email verification",
       "Local fallback",
       "Resend code",
-      "Verify and continue",
+      "Use another email",
     ],
   },
 ]

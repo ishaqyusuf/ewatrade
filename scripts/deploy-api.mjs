@@ -10,25 +10,26 @@ process.chdir(rootDir)
 const defaultEnvKeys = [
   "DATABASE_URL",
   "BETTER_AUTH_SECRET",
-  "EWATRADE_AUTH_SECRET",
   "AUTH_SECRET",
   "BETTER_AUTH_URL",
   "BETTER_AUTH_PRODUCTION_URL",
-  "EWATRADE_API_URL",
+  "API_URL",
   "NEXT_PUBLIC_API_URL",
   "ALLOWED_API_ORIGINS",
   "BETTER_AUTH_TRUSTED_ORIGINS",
   "INTERNAL_API_KEY",
   "NEXT_PUBLIC_PLATFORM_DOMAIN",
-  "EWATRADE_PLATFORM_DOMAIN",
-  "NEXT_PUBLIC_EWATRADE_PLATFORM_DOMAIN",
+  "PLATFORM_DOMAIN",
   "NEXT_PUBLIC_MARKETING_URL",
   "NEXT_PUBLIC_DASHBOARD_URL",
-  "EWATRADE_MARKETING_URL",
-  "EWATRADE_DASHBOARD_URL",
+  "MARKETING_URL",
+  "DASHBOARD_URL",
   "EMAIL_FROM",
   "EMAIL_REPLY_TO",
   "MARKETING_INBOX_EMAILS",
+  "RESEND_API_KEY",
+  "TEST_EMAILS",
+  "TEST_EMAIL",
   "TRIGGER_SECRET_KEY",
   "NEXT_PUBLIC_SIGNUP_ENABLED",
   "DEBUG_PERF",
@@ -41,7 +42,7 @@ Deploys @ewatrade/api to Vercel using one-time config from ${envFile}.
 
 Required in ${envFile}:
   DATABASE_URL
-  BETTER_AUTH_SECRET, EWATRADE_AUTH_SECRET, or AUTH_SECRET
+  BETTER_AUTH_SECRET or AUTH_SECRET
 
 Optional deployment config in ${envFile}:
   VERCEL_SCOPE=<account-or-team-slug>
@@ -160,14 +161,8 @@ const envKeys = (env.VERCEL_API_ENV_KEYS?.split(",") ?? defaultEnvKeys)
 
 requireValue(env, "DATABASE_URL")
 
-if (
-  !env.BETTER_AUTH_SECRET?.trim() &&
-  !env.EWATRADE_AUTH_SECRET?.trim() &&
-  !env.AUTH_SECRET?.trim()
-) {
-  console.error(
-    `Set BETTER_AUTH_SECRET, EWATRADE_AUTH_SECRET, or AUTH_SECRET in ${envFile}.`,
-  )
+if (!env.BETTER_AUTH_SECRET?.trim() && !env.AUTH_SECRET?.trim()) {
+  console.error(`Set BETTER_AUTH_SECRET or AUTH_SECRET in ${envFile}.`)
   process.exit(1)
 }
 
@@ -228,7 +223,6 @@ for (const key of envKeys) {
   if (
     key === "DATABASE_URL" ||
     key === "BETTER_AUTH_SECRET" ||
-    key === "EWATRADE_AUTH_SECRET" ||
     key === "AUTH_SECRET"
   ) {
     deployArgs.push("--build-env", `${key}=${value}`)

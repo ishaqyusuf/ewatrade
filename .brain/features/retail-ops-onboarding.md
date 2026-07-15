@@ -14,6 +14,8 @@ Marketing signup creates the tenant/business and stores owner, country, currency
 - team size
 - optional support email
 
+Marketing signup dispatches the welcome email through `@ewatrade/email` after tenant creation. The signup response includes `emailDeliveryStatus` so the success UI can distinguish a sent confirmation from a provider failure instead of claiming delivery unconditionally.
+
 `POST /api/stores` and protected tRPC `tenant.createStore` accept the same onboarding payload. Both paths call `createTenantStore`, which stores cleaned values in `Store.metadata.retailOps.onboarding` with source, captured timestamp, currency code, and the effective business-template snapshot. It also writes `Store.metadata.retailOps.businessTemplate` and a completed `OnboardingSession` for the tenant/user with the created store snapshot and the same setup payload. This keeps first-store setup reusable for dashboard and API clients while preserving a durable setup-completion record.
 
 Dry Cleaning / Laundry stores also receive an empty metadata-backed dry-cleaning workspace under `Store.metadata.retailOps.dryCleaning`. Other business submissions store unsupported-demand metadata that the internal ranking procedure can aggregate from completed onboarding sessions.

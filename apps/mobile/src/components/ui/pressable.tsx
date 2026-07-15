@@ -1,27 +1,29 @@
-import { useColors } from "@/hooks/use-color";
-import { cn } from "@/lib/utils";
-import { hexToRgba } from "@ewatrade/utils/colors";
-import * as Haptics from "expo-haptics";
-import { type LinkProps, useRouter } from "expo-router";
+import { useColors } from "@/hooks/use-color"
+import { cn } from "@/lib/utils"
+import { hexToRgba } from "@ewatrade/utils/colors"
+import * as Haptics from "expo-haptics"
+import { type LinkProps, useRouter } from "expo-router"
 import {
   Pressable as BasePressable,
   type PressableProps as BasePressableProps,
-} from "react-native";
+} from "react-native"
 
 type Props = BasePressableProps & {
-  href?: LinkProps["href"];
-  haptic?: boolean;
-  noRipple?: boolean;
-  rippleColor?: keyof ReturnType<typeof useColors>;
-  rippleOpacity?: number;
-  transition?: boolean;
+  href?: LinkProps["href"]
+  allowOverflow?: boolean
+  haptic?: boolean
+  noRipple?: boolean
+  rippleColor?: keyof ReturnType<typeof useColors>
+  rippleOpacity?: number
+  transition?: boolean
   // onPress?: (event: GestureResponderEvent) => void;
-};
+}
 
 export function Pressable({
   children,
   className,
   href,
+  allowOverflow,
   haptic,
   onPress,
   android_ripple,
@@ -31,21 +33,22 @@ export function Pressable({
   transition,
   ...props
 }: Props) {
-  const router = useRouter();
-  const colors = useColors();
+  const router = useRouter()
+  const colors = useColors()
   return (
     <BasePressable
       className={cn(
+        !allowOverflow ? "overflow-hidden" : undefined,
         className,
-        "overflow-hidden",
         !props.disabled && transition
           ? "active:scale-[0.98] transition-all"
           : undefined,
+          
       )}
       onPress={(event) => {
-        if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        onPress?.(event);
-        if (href) router.push(href);
+        if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+        onPress?.(event)
+        if (href) router.push(href)
       }}
       android_ripple={
         noRipple || props.disabled
@@ -64,5 +67,5 @@ export function Pressable({
     >
       {children}
     </BasePressable>
-  );
+  )
 }

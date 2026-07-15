@@ -19,7 +19,7 @@ export type SharedLinkCustomerErrorCode =
 
 export function getStorefrontBaseUrl() {
   return (
-    process.env.EWATRADE_STOREFRONT_URL ??
+    process.env.STOREFRONT_URL ??
     process.env.NEXT_PUBLIC_STOREFRONT_URL ??
     process.env.NEXT_PUBLIC_APP_URL ??
     "https://ewatrade.com"

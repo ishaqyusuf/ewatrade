@@ -3,14 +3,14 @@ import {
   DeliveryTruck01Icon,
   Store04Icon,
   WhatsappIcon,
-} from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
+} from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 
-import { Button } from "@ewatrade/ui";
+import { Button } from "@ewatrade/ui"
 
-import { AnimateIn } from "@/components/animate-in";
-import { LeadCaptureForm } from "@/components/lead-capture-form";
-import { prisma } from "@ewatrade/db";
+import { AnimateIn } from "@/components/animate-in"
+import { LeadCaptureForm } from "@/components/lead-capture-form"
+import { prisma } from "@ewatrade/db"
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -39,7 +39,7 @@ const valuePillars = [
     bar: "bg-emerald-500",
     glow: "shadow-emerald-500/20",
   },
-];
+]
 
 const platformSurfaces = [
   {
@@ -57,7 +57,7 @@ const platformSurfaces = [
     title: "In-store without the extra complexity",
     body: "Cashier workflows, barcode scanning, and receipts connected directly to the same product and order model.",
   },
-];
+]
 
 const workflowSteps = [
   {
@@ -76,26 +76,26 @@ const workflowSteps = [
     heading: "Stay aligned",
     body: "Keep merchant teams, cashiers, and dispatch providers synchronized in one platform with no manual bridging.",
   },
-];
+]
 
 const stats = [
   { value: "4", label: "Core surfaces" },
   { value: "Multi-store", label: "Merchant scope" },
   { value: "Commerce + logistics", label: "Operational model" },
   { value: "WhatsApp-ready", label: "Messaging layer" },
-];
+]
 
 // ─── Shared animation style helper ───────────────────────────────────────────
 
 function heroStyle(delay: number): React.CSSProperties {
-  return { animationDelay: `${delay}ms`, animationFillMode: "both" };
+  return { animationDelay: `${delay}ms`, animationFillMode: "both" }
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function HomePage() {
-  const dbTest = await prisma.account.count();
-  console.log("DB Test: ", dbTest);
+  const dbTest = await prisma.account.count()
+  console.log("DB Test: ", dbTest)
   return (
     <div className="min-h-screen">
       {/* ── Nav ── */}
@@ -693,5 +693,5 @@ export default async function HomePage() {
         </div>
       </footer>
     </div>
-  );
+  )
 }

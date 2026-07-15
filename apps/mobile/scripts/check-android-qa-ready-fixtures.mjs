@@ -54,11 +54,11 @@ for (const testCase of CASES) {
       encoding: "utf8",
       env: {
         ...process.env,
-        EWATRADE_ANDROID_ADB_DEVICES_OUTPUT: testCase.adbDevicesOutput,
-        EWATRADE_ANDROID_ADB_PATH: adbPath,
-        EWATRADE_ANDROID_AVD: REQUIRED_AVD,
-        EWATRADE_ANDROID_AVD_LIST_OUTPUT: testCase.avdListOutput,
-        EWATRADE_ANDROID_EMULATOR_PATH: emulatorPath,
+        ANDROID_ADB_DEVICES_OUTPUT: testCase.adbDevicesOutput,
+        ANDROID_ADB_PATH: adbPath,
+        ANDROID_AVD: REQUIRED_AVD,
+        ANDROID_AVD_LIST_OUTPUT: testCase.avdListOutput,
+        ANDROID_EMULATOR_PATH: emulatorPath,
       },
     })
     const output = `${result.stdout ?? ""}${result.stderr ?? ""}`

@@ -28,7 +28,7 @@ const REQUIRED_RETAIL_OPS_MIGRATIONS = [
   "20260711153000_retail_ops_product_units_price_history_foundation",
   "20260711160000_retail_ops_staff_profile_audit_foundation",
   "20260711163000_retail_ops_billing_checkout_foundation",
-  "20260711170000_retail_ops_share_link_operations_foundation"
+  "20260711170000_retail_ops_share_link_operations_foundation",
 ]
 
 const EXPECTED_RETAIL_OPS_TABLES = [
@@ -62,7 +62,7 @@ const EXPECTED_RETAIL_OPS_TABLES = [
   "StaffStockWallet",
   "RetailOpsStaffProfile",
   "RetailOpsStaffInviteToken",
-  "RetailOpsStaffLifecycleEvent"
+  "RetailOpsStaffLifecycleEvent",
 ]
 
 const REQUIRED_PLAN_KEYS = ["starter", "growth", "pro"]
@@ -70,7 +70,7 @@ const REQUIRED_PLAN_KEYS = ["starter", "growth", "pro"]
 async function loadDatabaseClient(): Promise<PrismaClient> {
   if (!process.env.DATABASE_URL) {
     throw new Error(
-      "DATABASE_URL must point to an intentional validation database before running Retail Ops live validation."
+      "DATABASE_URL must point to an intentional validation database before running Retail Ops live validation.",
     )
   }
 
@@ -79,15 +79,27 @@ async function loadDatabaseClient(): Promise<PrismaClient> {
   return prisma
 }
 
-function pass(name: string, detail: string, evidence?: unknown): ValidationCheck {
+function pass(
+  name: string,
+  detail: string,
+  evidence?: unknown,
+): ValidationCheck {
   return { name, status: "pass", detail, evidence }
 }
 
-function warn(name: string, detail: string, evidence?: unknown): ValidationCheck {
+function warn(
+  name: string,
+  detail: string,
+  evidence?: unknown,
+): ValidationCheck {
   return { name, status: "warn", detail, evidence }
 }
 
-function fail(name: string, detail: string, evidence?: unknown): ValidationCheck {
+function fail(
+  name: string,
+  detail: string,
+  evidence?: unknown,
+): ValidationCheck {
   return { name, status: "fail", detail, evidence }
 }
 
@@ -101,7 +113,7 @@ function formatError(error: unknown) {
 
 async function runRequiredCheck(
   name: string,
-  check: () => Promise<ValidationCheck>
+  check: () => Promise<ValidationCheck>,
 ): Promise<ValidationCheck> {
   try {
     return await check()
@@ -125,7 +137,10 @@ async function tableExists(db: PrismaClient, tableName: string) {
 async function checkConnection(db: PrismaClient) {
   await db.$connect()
 
-  return pass("database connection", "Connected to the configured validation database.")
+  return pass(
+    "database connection",
+    "Connected to the configured validation database.",
+  )
 }
 
 async function checkMigrations(db: PrismaClient) {
@@ -134,7 +149,7 @@ async function checkMigrations(db: PrismaClient) {
   if (!migrationTableExists) {
     return fail(
       "retail ops migration records",
-      "The _prisma_migrations table is missing on the selected database."
+      "The _prisma_migrations table is missing on the selected database.",
     )
   }
 
@@ -146,21 +161,21 @@ async function checkMigrations(db: PrismaClient) {
   `)
   const applied = new Set(rows.map((row) => row.migrationName))
   const missing = REQUIRED_RETAIL_OPS_MIGRATIONS.filter(
-    (migrationName) => !applied.has(migrationName)
+    (migrationName) => !applied.has(migrationName),
   )
 
   if (missing.length > 0) {
     return fail(
       "retail ops migration records",
       "One or more required Retail Ops migrations have not been applied.",
-      { missing, applied: rows.map((row) => row.migrationName) }
+      { missing, applied: rows.map((row) => row.migrationName) },
     )
   }
 
   return pass(
     "retail ops migration records",
     "All required Retail Ops migrations are recorded as applied.",
-    { applied: rows.map((row) => row.migrationName) }
+    { applied: rows.map((row) => row.migrationName) },
   )
 }
 
@@ -177,14 +192,14 @@ async function checkExpectedTables(db: PrismaClient) {
     return fail(
       "retail ops table presence",
       "One or more required Retail Ops tables are missing from the selected database.",
-      { missing }
+      { missing },
     )
   }
 
   return pass(
     "retail ops table presence",
     "All expected Retail Ops foundation tables are present.",
-    { count: EXPECTED_RETAIL_OPS_TABLES.length }
+    { count: EXPECTED_RETAIL_OPS_TABLES.length },
   )
 }
 
@@ -198,13 +213,13 @@ async function checkDelegateCounts(db: PrismaClient) {
     shareLinks: await db.productShareLink.count(),
     staffProfiles: await db.retailOpsStaffProfile.count(),
     staffStockWallets: await db.staffStockWallet.count(),
-    syncRuns: await db.retailOpsSyncRun.count()
+    syncRuns: await db.retailOpsSyncRun.count(),
   }
 
   return pass(
     "retail ops delegate read probes",
     "Core Retail Ops Prisma delegates can read their durable tables.",
-    counts
+    counts,
   )
 }
 
@@ -212,34 +227,36 @@ async function checkSubscriptionPlans(db: PrismaClient) {
   const plans = await db.subscriptionPlan.findMany({
     where: {
       key: {
-        in: REQUIRED_PLAN_KEYS
-      }
+        in: REQUIRED_PLAN_KEYS,
+      },
     },
     select: {
       key: true,
-      isActive: true
+      isActive: true,
     },
     orderBy: {
-      key: "asc"
-    }
+      key: "asc",
+    },
   })
   const activeKeys = new Set(
-    plans.filter((plan) => plan.isActive).map((plan) => plan.key)
+    plans.filter((plan) => plan.isActive).map((plan) => plan.key),
   )
-  const missingActiveKeys = REQUIRED_PLAN_KEYS.filter((key) => !activeKeys.has(key))
+  const missingActiveKeys = REQUIRED_PLAN_KEYS.filter(
+    (key) => !activeKeys.has(key),
+  )
 
   if (missingActiveKeys.length > 0) {
     return fail(
       "retail ops subscription plan reference data",
       "The validation database is missing active Starter, Growth, or Pro plan rows.",
-      { missingActiveKeys, plans }
+      { missingActiveKeys, plans },
     )
   }
 
   return pass(
     "retail ops subscription plan reference data",
     "Active Starter, Growth, and Pro plan rows exist.",
-    { plans }
+    { plans },
   )
 }
 
@@ -247,51 +264,55 @@ async function checkUnitTemplateReferenceData(db: PrismaClient) {
   const templates = await db.productUnitTemplate.findMany({
     where: {
       isActive: true,
-      isSystem: true
+      isSystem: true,
     },
     select: {
       key: true,
-      name: true
+      name: true,
     },
     orderBy: [
       {
-        sortOrder: "asc"
+        sortOrder: "asc",
       },
       {
-        key: "asc"
-      }
+        key: "asc",
+      },
     ],
-    take: 20
+    take: 20,
   })
 
   if (templates.length === 0) {
     return warn(
       "retail ops unit-template reference data",
-      "No active system ProductUnitTemplate rows were found; app fallback presets must be documented for this validation run."
+      "No active system ProductUnitTemplate rows were found; app fallback presets must be documented for this validation run.",
     )
   }
 
   return pass(
     "retail ops unit-template reference data",
     "Active system ProductUnitTemplate rows exist.",
-    { templates }
+    { templates },
   )
 }
 
 async function buildValidationReport(db: PrismaClient) {
   const checks = [
     await runRequiredCheck("database connection", () => checkConnection(db)),
-    await runRequiredCheck("retail ops migration records", () => checkMigrations(db)),
-    await runRequiredCheck("retail ops table presence", () => checkExpectedTables(db)),
+    await runRequiredCheck("retail ops migration records", () =>
+      checkMigrations(db),
+    ),
+    await runRequiredCheck("retail ops table presence", () =>
+      checkExpectedTables(db),
+    ),
     await runRequiredCheck("retail ops delegate read probes", () =>
-      checkDelegateCounts(db)
+      checkDelegateCounts(db),
     ),
     await runRequiredCheck("retail ops subscription plan reference data", () =>
-      checkSubscriptionPlans(db)
+      checkSubscriptionPlans(db),
     ),
     await runRequiredCheck("retail ops unit-template reference data", () =>
-      checkUnitTemplateReferenceData(db)
-    )
+      checkUnitTemplateReferenceData(db),
+    ),
   ]
   const failed = checks.filter((check) => check.status === "fail")
   const warnings = checks.filter((check) => check.status === "warn")
@@ -304,8 +325,8 @@ async function buildValidationReport(db: PrismaClient) {
     summary: {
       failed: failed.length,
       passed: checks.filter((check) => check.status === "pass").length,
-      warnings: warnings.length
-    }
+      warnings: warnings.length,
+    },
   }
 }
 
@@ -333,20 +354,17 @@ main().catch((error) => {
         generatedAt: new Date().toISOString(),
         readOnly: true,
         checks: [
-          fail(
-            "retail ops live validation bootstrap",
-            formatError(error)
-          )
+          fail("retail ops live validation bootstrap", formatError(error)),
         ],
         summary: {
           failed: 1,
           passed: 0,
-          warnings: 0
-        }
+          warnings: 0,
+        },
       },
       null,
-      2
-    )
+      2,
+    ),
   )
   process.exitCode = 1
 })

@@ -1,18 +1,18 @@
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { View } from "@/components/ui/view"
 import type { MobileDesignStatusTone } from "@/lib/design-foundation"
 import { cn } from "@/lib/utils"
 import type { ReactNode } from "react"
-import { View } from "react-native"
 
 const statusBannerContainerClasses: Record<MobileDesignStatusTone, string> = {
-  default: "border-border bg-card",
-  destructive: "border-destructive/30 bg-destructive/10",
-  muted: "border-border bg-muted",
-  primary: "border-primary/30 bg-primary/10",
-  success: "border-success/30 bg-success/10",
-  warning: "border-warn/30 bg-warn/10",
+  default: "bg-card",
+  destructive: "bg-destructive/10",
+  muted: "bg-muted/60",
+  primary: "bg-primary/10",
+  success: "bg-success/10",
+  warning: "bg-warn/10",
 }
 
 const statusBannerTextClasses: Record<MobileDesignStatusTone, string> = {
@@ -51,7 +51,7 @@ export function StatusBanner({
   return (
     <View
       accessibilityLabel={[title, message].filter(Boolean).join(". ")}
-      className={cn("rounded-2xl border p-4", containerClassName, className)}
+      className={cn("rounded-2xl p-4", containerClassName, className)}
     >
       <View className="flex-row gap-3">
         {icon ? (

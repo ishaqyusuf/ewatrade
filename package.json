@@ -15,11 +15,7 @@
   "overrides": {
     "lightningcss": "1.30.1"
   },
-  "workspaces": [
-    "apps/*",
-    "packages/*",
-    "tooling/*"
-  ],
+  "workspaces": ["apps/*", "packages/*", "tooling/*"],
   "scripts": {
     "build": "turbo build",
     "clean": "git clean -xdf node_modules",
@@ -37,22 +33,18 @@
     "kill:ports": "node ./scripts/with-workspace-env.mjs sh ./scripts/kill-port.sh",
     "killports": "bun run kill:ports",
     "dev:prepare": "bun run kill:ports && bun run db:start && bun run db:generate && bun run db:migrate:deploy",
-    "dev": "bun run dev:prepare && turbo dev --parallel",
-    "dev:portless": "bun run dev:prepare && turbo dev:portless --parallel",
+    "dev": "bun scripts/dev.ts",
     "dev:storefront": "bun run dev:prepare && turbo dev --filter=@ewatrade/storefront",
-    "dev:storefront:portless": "bun run dev:prepare && turbo dev:portless --filter=@ewatrade/storefront",
     "dev:marketing": "bun run dev:prepare && turbo dev --filter=@ewatrade/marketing",
-    "dev:marketing:portless": "bun run dev:prepare && turbo dev:portless --filter=@ewatrade/marketing",
     "dev:pos": "bun run dev:prepare && turbo dev --filter=@ewatrade/pos",
-    "dev:pos:portless": "bun run dev:prepare && turbo dev:portless --filter=@ewatrade/pos",
     "dev:dashboard": "bun run dev:prepare && turbo dev --filter=@ewatrade/dashboard",
-    "dev:dashboard:portless": "bun run dev:prepare && turbo dev:portless --filter=@ewatrade/dashboard",
     "dev:api": "bun run dev:prepare && turbo dev --filter=@ewatrade/api",
-    "dev:api:portless": "bun run dev:prepare && turbo dev:portless --filter=@ewatrade/api",
     "eas-build:dev": "bun ./scripts/eas-account-runner.ts eas-build:dev",
     "eas-build:preview": "bun ./scripts/eas-account-runner.ts eas-build:preview",
     "api:deploy": "bun scripts/deploy-api.mjs",
     "deploy:api": "bun run api:deploy",
+    "email:test": "node ./scripts/with-workspace-env.mjs bun scripts/send-test-email.mjs",
+    "jobs:deploy": "bun --filter @ewatrade/jobs deploy",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "format": "biome format --write .",

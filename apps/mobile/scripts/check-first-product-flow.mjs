@@ -30,7 +30,10 @@ const CONTRACTS = [
     file: FILES.firstProduct,
     markers: [
       "BottomSheetKeyboardAwareScrollView",
-      "StatusBadge",
+      "SetupFlowHeader",
+      "SetupInlineNotice",
+      "SetupSection",
+      "SetupSummaryRow",
       "StatusBanner",
       "QuantityStepper",
       'type FirstProductSetupStep = "details" | "stock"',

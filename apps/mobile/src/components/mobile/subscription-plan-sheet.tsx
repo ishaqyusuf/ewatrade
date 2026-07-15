@@ -1,12 +1,13 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import {
+  SecondaryOperationalRow,
+  SecondarySheetHeader,
+} from "@/components/mobile/secondary-operations"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
-import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
-import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
-import { cn } from "@/lib/utils"
 import { useBusinessStore } from "@/store/businessStore"
 import { useRetailOpsStore } from "@/store/retailOpsStore"
 import {
@@ -24,6 +25,7 @@ import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { forwardRef, useMemo, useState } from "react"
 import { Linking, View } from "react-native"
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
 type SubscriptionPlanSheetProps = {
   onComplete?: () => void
@@ -32,6 +34,10 @@ type SubscriptionPlanSheetProps = {
     products: number
     staff: number
   }
+}
+
+type SubscriptionPlanContentProps = SubscriptionPlanSheetProps & {
+  presentation?: "screen" | "sheet"
 }
 
 type ProductionSubscriptionSnapshot = {
@@ -103,13 +109,16 @@ function UsageRow({
   const limitState = getUsageLimitState(used, limit)
 
   return (
-    <View className="flex-row items-center justify-between gap-3 rounded-xl bg-muted px-3 py-2">
-      <Text className="text-sm font-semibold text-foreground">{label}</Text>
-      <StatusBadge
-        label={limitState.label}
-        tone={limitState.isAtLimit ? "destructive" : "muted"}
-      />
-    </View>
+    <SecondaryOperationalRow
+      detail={`${used} of ${limit} used`}
+      title={label}
+      trailing={
+        <StatusBadge
+          label={limitState.label}
+          tone={limitState.isAtLimit ? "destructive" : "muted"}
+        />
+      }
+    />
   )
 }
 
@@ -121,10 +130,11 @@ function PlanLimitRow({
   value: string
 }) {
   return (
-    <View className="flex-row items-center justify-between gap-3 rounded-xl bg-muted px-3 py-2">
-      <Text className="text-sm font-semibold text-foreground">{label}</Text>
-      <StatusBadge label={value} tone="muted" />
-    </View>
+    <SecondaryOperationalRow
+      detail="Included in this plan"
+      title={label}
+      trailing={<StatusBadge label={value} tone="muted" />}
+    />
   )
 }
 
@@ -142,32 +152,21 @@ function PlanCard({
   plan: RetailOpsPlan
 }) {
   return (
-    <Pressable
-      className={cn(
-        "gap-4 rounded-2xl border border-border bg-card p-4 active:bg-accent",
-        current && "border-primary bg-primary/10",
-        disabled && "opacity-70",
-      )}
+    <SecondaryOperationalRow
       disabled={disabled}
-      haptic
+      detail={plan.description}
+      icon="ShieldCheck"
+      metadata={plan.supportLabel}
       onPress={onSelect}
-      transition
-    >
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="text-base font-bold text-foreground">
-            {plan.name}
-          </Text>
-          <Text className="text-sm leading-5 text-muted-foreground">
-            {plan.description}
-          </Text>
-        </View>
+      selected={current}
+      title={plan.name}
+      trailing={
         <StatusBadge
           label={current ? "Current" : plan.priceLabel}
           tone={current ? "primary" : "muted"}
         />
-      </View>
-
+      }
+    >
       <View className="gap-2">
         <PlanLimitRow
           label="Businesses"
@@ -179,15 +178,8 @@ function PlanCard({
         />
         <PlanLimitRow label="Staff" value={`Up to ${plan.limits.staff}`} />
       </View>
-
-      <View className="flex-row items-center gap-2">
-        <Icon className="size-sm text-primary" name="ShieldCheck" />
-        <Text className="flex-1 text-xs font-semibold text-muted-foreground">
-          {plan.supportLabel}
-        </Text>
-        <Text className="text-xs font-bold text-primary">{actionLabel}</Text>
-      </View>
-    </Pressable>
+      <Text className="text-xs font-extrabold text-primary">{actionLabel}</Text>
+    </SecondaryOperationalRow>
   )
 }
 
@@ -202,10 +194,11 @@ function CheckoutIntentNotice({ intent }: { intent: CheckoutIntent }) {
   )
 }
 
-export const SubscriptionPlanSheet = forwardRef<
-  BottomSheetModal,
-  SubscriptionPlanSheetProps
->(({ onComplete, usage }, ref) => {
+export function SubscriptionPlanContent({
+  onComplete,
+  presentation = "sheet",
+  usage,
+}: SubscriptionPlanContentProps) {
   const trpc = useTRPC()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
   const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
@@ -328,33 +321,13 @@ export const SubscriptionPlanSheet = forwardRef<
     return labels
   }, [currentPlan.id, isCheckoutPending, plans, shouldUseProductionSnapshot])
 
-  return (
-    <Modal
-      enableDynamicSizing
-      ref={ref}
-      snapPoints={["90%"]}
-      title="Subscription"
-    >
-      <BottomSheetKeyboardAwareScrollView
-        bottomOffset={112}
-        contentContainerStyle={{ paddingBottom: 32 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View className="gap-5 px-5 pb-6">
-          <View className="gap-3">
-            <View className="h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
-              <Icon className="size-base text-primary" name="CreditCard" />
-            </View>
-            <View className="gap-2">
-              <Text className="text-xl font-bold text-foreground">
-                Business plan
-              </Text>
-              <Text className="text-sm leading-5 text-muted-foreground">
-                Plan limits are business-scoped and upgrade requests stay behind
-                the billing provider boundary.
-              </Text>
-            </View>
-          </View>
+  const content = (
+    <View className="gap-5 px-5 pb-6">
+          <SecondarySheetHeader
+            description="Plan limits are business-scoped and upgrade requests stay behind the billing provider boundary."
+            icon="CreditCard"
+            title="Business plan"
+          />
 
           <StatusBanner
             icon={sourceLabel === "Online" ? "CircleCheck" : "Clock"}
@@ -389,10 +362,10 @@ export const SubscriptionPlanSheet = forwardRef<
             />
           ) : null}
 
-          <View className="gap-3 rounded-2xl border border-border bg-card p-4">
+          <View className="gap-3">
             <View className="flex-row items-start justify-between gap-3">
               <View className="flex-1 gap-1">
-                <Text className="font-bold text-foreground">
+                <Text className="font-extrabold text-foreground">
                   {currentPlan.name}
                 </Text>
                 <Text className="text-sm text-muted-foreground">
@@ -454,11 +427,50 @@ export const SubscriptionPlanSheet = forwardRef<
             ))}
           </View>
 
-          <ActionButton onPress={onComplete} variant="outline">
-            Done
-          </ActionButton>
-        </View>
-      </BottomSheetKeyboardAwareScrollView>
+      <ActionButton onPress={onComplete} variant="outline">
+        Done
+      </ActionButton>
+    </View>
+  )
+
+  if (presentation === "screen") {
+    return (
+      <KeyboardAwareScrollView
+        className="flex-1"
+        bottomOffset={140}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        disableScrollOnKeyboardHide
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+      >
+        {content}
+      </KeyboardAwareScrollView>
+    )
+  }
+
+  return (
+    <BottomSheetKeyboardAwareScrollView
+      bottomOffset={112}
+      contentContainerStyle={{ paddingBottom: 32 }}
+      keyboardShouldPersistTaps="handled"
+    >
+      {content}
+    </BottomSheetKeyboardAwareScrollView>
+  )
+}
+
+export const SubscriptionPlanSheet = forwardRef<
+  BottomSheetModal,
+  SubscriptionPlanSheetProps
+>((props, ref) => {
+  return (
+    <Modal
+      enableDynamicSizing
+      ref={ref}
+      snapPoints={["90%"]}
+      title="Subscription"
+    >
+      <SubscriptionPlanContent {...props} presentation="sheet" />
     </Modal>
   )
 })

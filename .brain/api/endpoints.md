@@ -10,6 +10,8 @@ Track current and planned API surface areas.
 - `apps/marketing` exposes public POST routes for marketing lead capture:
   - `POST /api/early-access`
   - `POST /api/waitlist`
+- `apps/marketing` exposes public owner signup:
+  - `POST /api/auth/signup`
 - `apps/dashboard` exposes retained migration bridge routes for dashboard shell behavior:
   - `POST /api/auth/logout` signs out the Better Auth session for the dashboard surface.
   - `POST /api/tenants/active` stores the active tenant slug after verifying the user belongs to the requested tenant.

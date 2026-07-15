@@ -21,8 +21,8 @@ const VALID_PNG_BYTES = Buffer.from([
 ])
 const VALID_JPEG_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xdb])
 const PRODUCTION_PUBLIC_CONFIGURED_VALUES = {
-  EWATRADE_API_URL: "https://ewatrade.com",
-  EWATRADE_STOREFRONT_URL: "https://ewatrade.com",
+  API_URL: "https://ewatrade.com",
+  STOREFRONT_URL: "https://ewatrade.com",
   EXPO_PUBLIC_API_URL: "https://ewatrade.com",
   EXPO_PUBLIC_BASE_URL: "https://ewatrade.com",
   EXPO_PUBLIC_WEB_URL: "https://ewatrade.com",
@@ -39,7 +39,7 @@ const LIVE_BLOCKER_REPORT_SECTIONS = [
 ]
 const BLOCKER_REPORT_MISSING_REQUIRED_ROWS = [
   {
-    keys: ["EWATRADE_SHARED_LINK_PREVIEW_URL"],
+    keys: ["SHARED_LINK_PREVIEW_URL"],
     label: "Deployed share URL",
     section: "Shared-Link Public Preview",
   },
@@ -965,7 +965,7 @@ runScenario({
     readinessPassed: false,
   },
   shouldInclude: [
-    "Release Gate Summary Live blocker report publicConfiguredValues must include EWATRADE_API_URL=https://ewatrade.com for production QA.",
+    "Release Gate Summary Live blocker report publicConfiguredValues must include API_URL=https://ewatrade.com for production QA.",
   ],
   body: ({ fixtureDir, preflightArtifacts, sectionArtifacts }) => {
     const artifacts = createReleaseArtifacts(fixtureDir)
@@ -980,7 +980,7 @@ runScenario({
         generatedAt: "2026-07-12T10:00:00.000Z",
         publicConfiguredValues: {
           ...PRODUCTION_PUBLIC_CONFIGURED_VALUES,
-          EWATRADE_API_URL: "https://api.ewatrade.test",
+          API_URL: "https://api.ewatrade.test",
         },
       }),
     )
@@ -1085,7 +1085,7 @@ runScenario({
     readinessPassed: false,
   },
   shouldInclude: [
-    "Release Gate Summary Live blocker report publicConfiguredValues must include EWATRADE_API_URL=https://ewatrade.com for production QA.",
+    "Release Gate Summary Live blocker report publicConfiguredValues must include API_URL=https://ewatrade.com for production QA.",
   ],
   body: ({ fixtureDir, preflightArtifacts, sectionArtifacts }) => {
     const artifacts = createReleaseArtifacts(fixtureDir)

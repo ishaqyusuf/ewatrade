@@ -22,7 +22,7 @@ function Input({
   expand,
   inputTextAlign,
   placeholderClassName,
-  style: _style,
+  style,
   ...props
 }: InputProps) {
   const colors = useColors()
@@ -86,6 +86,17 @@ function Input({
       placeholderTextColor={
         props.placeholderTextColor ?? colors.mutedForeground
       }
+      selectionColor={props.selectionColor ?? colors.primary}
+      style={[
+        {
+          color: colors.foreground,
+          textAlign: inputTextAlign ?? "left",
+          ...(expand
+            ? { flexBasis: 0, flexGrow: 1, flexShrink: 1 }
+            : undefined),
+        },
+        style,
+      ]}
       {...props}
     />
   )

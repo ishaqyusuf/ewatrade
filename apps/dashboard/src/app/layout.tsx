@@ -1,8 +1,8 @@
 import type { Metadata } from "next"
 import "@ewatrade/ui/globals.css"
 import { cn } from "@/utils"
-import { Providers } from "./providers"
 import { Geist } from "next/font/google"
+import { Providers } from "./providers"
 
 const geist = Geist({
   subsets: ["latin"],

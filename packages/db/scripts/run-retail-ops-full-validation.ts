@@ -25,12 +25,12 @@ type ValidationStepResult = {
   writesSource: boolean
 }
 
-const CONFIRMATION_ENV = "EWATRADE_CONFIRM_RETAIL_OPS_FULL_VALIDATION"
-const TARGET_ENV = "EWATRADE_RETAIL_OPS_VALIDATION_TARGET"
-const ALLOW_PRODUCTION_ENV = "EWATRADE_ALLOW_PRODUCTION_RETAIL_OPS_VALIDATION"
-const DRY_RUN_ENV = "EWATRADE_RETAIL_OPS_VALIDATION_DRY_RUN"
-const REPORT_PATH_ENV = "EWATRADE_RETAIL_OPS_VALIDATION_REPORT_PATH"
-const SKIP_REFERENCE_SEED_ENV = "EWATRADE_SKIP_RETAIL_OPS_REFERENCE_SEED"
+const CONFIRMATION_ENV = "CONFIRM_RETAIL_OPS_FULL_VALIDATION"
+const TARGET_ENV = "RETAIL_OPS_VALIDATION_TARGET"
+const ALLOW_PRODUCTION_ENV = "ALLOW_PRODUCTION_RETAIL_OPS_VALIDATION"
+const DRY_RUN_ENV = "RETAIL_OPS_VALIDATION_DRY_RUN"
+const REPORT_PATH_ENV = "RETAIL_OPS_VALIDATION_REPORT_PATH"
+const SKIP_REFERENCE_SEED_ENV = "SKIP_RETAIL_OPS_REFERENCE_SEED"
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 const packageDir = path.resolve(scriptDir, "..")
@@ -38,13 +38,13 @@ const packageDir = path.resolve(scriptDir, "..")
 function requireValidationEnvironment() {
   if (process.env[CONFIRMATION_ENV] !== "1") {
     throw new Error(
-      `${CONFIRMATION_ENV}=1 must be set before running the full Retail Ops validation sequence.`
+      `${CONFIRMATION_ENV}=1 must be set before running the full Retail Ops validation sequence.`,
     )
   }
 
   if (!process.env.DATABASE_URL) {
     throw new Error(
-      "DATABASE_URL must point to an intentional validation database before running the full Retail Ops validation sequence."
+      "DATABASE_URL must point to an intentional validation database before running the full Retail Ops validation sequence.",
     )
   }
 
@@ -52,18 +52,19 @@ function requireValidationEnvironment() {
 
   if (!target) {
     throw new Error(
-      `${TARGET_ENV} must name the selected validation target, for example "neon-retail-ops-validation".`
+      `${TARGET_ENV} must name the selected validation target, for example "neon-retail-ops-validation".`,
     )
   }
 
-  const productionSignals = `${target} ${process.env.DATABASE_URL}`.toLowerCase()
+  const productionSignals =
+    `${target} ${process.env.DATABASE_URL}`.toLowerCase()
 
   if (
     process.env[ALLOW_PRODUCTION_ENV] !== "1" &&
     /\b(prod|production)\b/.test(productionSignals)
   ) {
     throw new Error(
-      `The selected validation target looks production-like. Set ${ALLOW_PRODUCTION_ENV}=1 only with an approved production rollout window and backup.`
+      `The selected validation target looks production-like. Set ${ALLOW_PRODUCTION_ENV}=1 only with an approved production rollout window and backup.`,
     )
   }
 
@@ -77,21 +78,21 @@ function buildValidationSteps(): ValidationStep[] {
         "node_modules/prisma/build/index.js",
         "generate",
         "--config",
-        "prisma.config.ts"
+        "prisma.config.ts",
       ],
       command: "node",
       name: "Generate Prisma Client",
-      writesSource: true
+      writesSource: true,
     },
     {
       args: [
         "node_modules/prisma/build/index.js",
         "validate",
         "--config",
-        "prisma.config.ts"
+        "prisma.config.ts",
       ],
       command: "node",
-      name: "Validate Prisma Schema"
+      name: "Validate Prisma Schema",
     },
     {
       args: [
@@ -99,11 +100,11 @@ function buildValidationSteps(): ValidationStep[] {
         "migrate",
         "deploy",
         "--config",
-        "prisma.config.ts"
+        "prisma.config.ts",
       ],
       command: "node",
       name: "Apply Committed Migrations",
-      writesDatabase: true
+      writesDatabase: true,
     },
     {
       args: [
@@ -111,11 +112,11 @@ function buildValidationSteps(): ValidationStep[] {
         "migrate",
         "status",
         "--config",
-        "prisma.config.ts"
+        "prisma.config.ts",
       ],
       command: "node",
-      name: "Check Migration Status"
-    }
+      name: "Check Migration Status",
+    },
   ]
 
   if (process.env[SKIP_REFERENCE_SEED_ENV] !== "1") {
@@ -123,10 +124,10 @@ function buildValidationSteps(): ValidationStep[] {
       args: ["scripts/seed-retail-ops-reference-data.ts"],
       command: "bun",
       env: {
-        EWATRADE_CONFIRM_RETAIL_OPS_REFERENCE_SEED: "1"
+        CONFIRM_RETAIL_OPS_REFERENCE_SEED: "1",
       },
       name: "Seed Retail Ops Reference Data",
-      writesDatabase: true
+      writesDatabase: true,
     })
   }
 
@@ -134,17 +135,17 @@ function buildValidationSteps(): ValidationStep[] {
     {
       args: ["scripts/retail-ops-live-validation.ts"],
       command: "bun",
-      name: "Validate Retail Ops Live Schema And Reference Data"
+      name: "Validate Retail Ops Live Schema And Reference Data",
     },
     {
       args: ["scripts/validate-retail-ops-workflows.ts"],
       command: "bun",
       env: {
-        EWATRADE_CONFIRM_RETAIL_OPS_WORKFLOW_VALIDATION: "1"
+        CONFIRM_RETAIL_OPS_WORKFLOW_VALIDATION: "1",
       },
       name: "Validate Retail Ops Migrated Workflows",
-      writesDatabase: true
-    }
+      writesDatabase: true,
+    },
   )
 
   return steps
@@ -159,7 +160,7 @@ function summarizePlannedStep(step: ValidationStep) {
     command: summarizeCommand(step),
     name: step.name,
     writesDatabase: Boolean(step.writesDatabase),
-    writesSource: Boolean(step.writesSource)
+    writesSource: Boolean(step.writesSource),
   }
 }
 
@@ -173,9 +174,9 @@ function runStep(step: ValidationStep): Promise<ValidationStepResult> {
       cwd: packageDir,
       env: {
         ...process.env,
-        ...step.env
+        ...step.env,
       },
-      stdio: ["ignore", "pipe", "pipe"]
+      stdio: ["ignore", "pipe", "pipe"],
     })
 
     child.stdout.on("data", (chunk: Buffer) => {
@@ -207,7 +208,7 @@ function runStep(step: ValidationStep): Promise<ValidationStepResult> {
         stderr,
         stdout,
         writesDatabase: Boolean(step.writesDatabase),
-        writesSource: Boolean(step.writesSource)
+        writesSource: Boolean(step.writesSource),
       })
     })
   })
@@ -243,7 +244,7 @@ async function main() {
       target,
       totalDurationMs: Date.now() - startedAt.getTime(),
       writesDatabase: steps.some((step) => step.writesDatabase),
-      writesSource: steps.some((step) => step.writesSource)
+      writesSource: steps.some((step) => step.writesSource),
     }
     const reportPath = await writeReport(report)
 
@@ -254,11 +255,11 @@ async function main() {
           ok: true,
           plannedSteps: report.plannedSteps,
           reportPath,
-          target
+          target,
         },
         null,
-        2
-      )
+        2,
+      ),
     )
 
     return
@@ -283,7 +284,7 @@ async function main() {
     totalDurationMs: Date.now() - startedAt.getTime(),
     writesDatabase: steps.some((step) => step.writesDatabase),
     writesSource: steps.some((step) => step.writesSource),
-    steps: results
+    steps: results,
   }
   const reportPath = await writeReport(report)
 
@@ -293,11 +294,11 @@ async function main() {
         ok: report.ok,
         reportPath,
         target,
-        totalDurationMs: report.totalDurationMs
+        totalDurationMs: report.totalDurationMs,
       },
       null,
-      2
-    )
+      2,
+    ),
   )
 
   if (!report.ok) {
@@ -310,11 +311,11 @@ main().catch((error) => {
     JSON.stringify(
       {
         error: error instanceof Error ? error.message : String(error),
-        ok: false
+        ok: false,
       },
       null,
-      2
-    )
+      2,
+    ),
   )
   process.exitCode = 1
 })

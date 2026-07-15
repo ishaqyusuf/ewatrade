@@ -1,10 +1,13 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
+import {
+  SecondaryOperationalRow,
+  SecondarySheetHeader,
+} from "@/components/mobile/secondary-operations"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetInputProvider } from "@/components/ui/bottom-sheet-input-context"
-import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { useBusinessStore } from "@/store/businessStore"
@@ -19,10 +22,14 @@ import {
 } from "@gorhom/bottom-sheet"
 import { useQuery } from "@tanstack/react-query"
 import { forwardRef, useMemo, useState } from "react"
-import { View } from "react-native"
+import { FlatList, View } from "react-native"
 
 type CustomerBookSheetProps = {
   onComplete?: () => void
+}
+
+type CustomerBookContentProps = CustomerBookSheetProps & {
+  presentation?: "screen" | "sheet"
 }
 
 type ProductionCustomerBookEntry = {
@@ -103,30 +110,20 @@ function mapLocalCustomer(customer: RetailOpsCustomer): CustomerBookRow {
 
 function CustomerRow({ customer }: { customer: CustomerBookRow }) {
   return (
-    <View className="gap-3 rounded-2xl border border-border bg-card p-4">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-semibold text-foreground">{customer.name}</Text>
-          <Text className="text-sm text-muted-foreground">
-            {customer.detail} - {formatLastSeen(customer.lastSeenAt)}
-          </Text>
-        </View>
+    <SecondaryOperationalRow
+      detail={`${customer.detail} - ${formatLastSeen(customer.lastSeenAt)}`}
+      icon="User"
+      metadata={[customer.email, customer.phone].filter(Boolean).join(" - ")}
+      title={customer.name}
+      trailing={
         <StatusBadge
           label={`${customer.totalOrders} order${customer.totalOrders === 1 ? "" : "s"}`}
           tone="primary"
         />
-      </View>
-      {customer.email || customer.phone ? (
-        <Text className="text-xs leading-4 text-muted-foreground">
-          {[customer.email, customer.phone].filter(Boolean).join(" - ")}
-        </Text>
-      ) : null}
+      }
+    >
       {customer.source === "production" ? (
-        <StatusBadge
-          className="self-start"
-          label="Synced customer"
-          tone="success"
-        />
+        <StatusBadge label="Synced customer" tone="success" />
       ) : null}
       {customer.status === "pending" ? (
         <StatusBadge
@@ -136,14 +133,14 @@ function CustomerRow({ customer }: { customer: CustomerBookRow }) {
           tone="warning"
         />
       ) : null}
-    </View>
+    </SecondaryOperationalRow>
   )
 }
 
-export const CustomerBookSheet = forwardRef<
-  BottomSheetModal,
-  CustomerBookSheetProps
->(({ onComplete }, ref) => {
+export function CustomerBookContent({
+  onComplete,
+  presentation = "sheet",
+}: CustomerBookContentProps) {
   const trpc = useTRPC()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
   const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
@@ -226,6 +223,72 @@ export const CustomerBookSheet = forwardRef<
         ? "Refreshing production customers."
         : "Production customer book includes sales and shared-link requests."
 
+  const listProps = {
+    contentContainerStyle: { paddingBottom: 240 },
+    data: visibleCustomers,
+    keyExtractor: (customer: CustomerBookRow) => customer.id,
+    keyboardShouldPersistTaps: "handled" as const,
+    ListEmptyComponent: (
+      <EmptyState
+        className="mx-5"
+        icon="Users"
+        message="New customers appear here after a sale or shared-link request."
+        title="No customers found"
+      />
+    ),
+    ListFooterComponent: (
+      <View className="px-5 pt-3 pb-6">
+        <ActionButton onPress={onComplete} variant="outline">
+          Done
+        </ActionButton>
+      </View>
+    ),
+    ListHeaderComponent: (
+      <View className="gap-5 px-5 pt-1 pb-4">
+        <SecondarySheetHeader
+          description="Repeat customers are saved from sales and shared product links."
+          icon="Users"
+          title="Customer book"
+        />
+
+        <StatusBanner
+          icon={sourceLabel === "Online" ? "CircleCheck" : "Clock"}
+          message={sourceDetail}
+          title={`Customer source: ${sourceLabel}`}
+          tone={sourceLabel === "Online" ? "success" : "warning"}
+        />
+
+        <FormField
+          autoCapitalize="words"
+          label="Find customer"
+          onChangeText={setQuery}
+          placeholder="Search by name or email"
+          value={query}
+        />
+      </View>
+    ),
+    renderItem: ({ item }: { item: CustomerBookRow }) => (
+      <View className="px-5">
+        <CustomerRow customer={item} />
+      </View>
+    ),
+  }
+
+  if (presentation === "screen") {
+    return <FlatList<CustomerBookRow> {...listProps} className="flex-1" />
+  }
+
+  return (
+    <BottomSheetInputProvider>
+      <BottomSheetFlatList<CustomerBookRow> {...listProps} />
+    </BottomSheetInputProvider>
+  )
+}
+
+export const CustomerBookSheet = forwardRef<
+  BottomSheetModal,
+  CustomerBookSheetProps
+>((props, ref) => {
   return (
     <Modal
       enableDynamicSizing
@@ -233,67 +296,7 @@ export const CustomerBookSheet = forwardRef<
       snapPoints={["84%"]}
       title="Customer book"
     >
-      <BottomSheetInputProvider>
-        <BottomSheetFlatList<CustomerBookRow>
-          contentContainerStyle={{ paddingBottom: 240 }}
-          data={visibleCustomers}
-          keyExtractor={(customer) => customer.id}
-          keyboardShouldPersistTaps="handled"
-          ListEmptyComponent={
-            <EmptyState
-              className="mx-5"
-              icon="Users"
-              message="New customers appear here after a sale or shared-link request."
-              title="No customers found"
-            />
-          }
-          ListFooterComponent={
-            <View className="px-5 pt-3 pb-6">
-              <ActionButton onPress={onComplete} variant="outline">
-                Done
-              </ActionButton>
-            </View>
-          }
-          ListHeaderComponent={
-            <View className="gap-5 px-5 pt-1 pb-4">
-              <View className="gap-3">
-                <View className="h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
-                  <Icon className="size-base text-primary" name="Users" />
-                </View>
-                <View className="gap-2">
-                  <Text className="text-xl font-bold text-foreground">
-                    Customer book
-                  </Text>
-                  <Text className="text-sm leading-5 text-muted-foreground">
-                    Repeat customers are saved from sales and shared product
-                    links.
-                  </Text>
-                </View>
-              </View>
-
-              <StatusBanner
-                icon={sourceLabel === "Online" ? "CircleCheck" : "Clock"}
-                message={sourceDetail}
-                title={`Customer source: ${sourceLabel}`}
-                tone={sourceLabel === "Online" ? "success" : "warning"}
-              />
-
-              <FormField
-                autoCapitalize="words"
-                label="Find customer"
-                onChangeText={setQuery}
-                placeholder="Search by name or email"
-                value={query}
-              />
-            </View>
-          }
-          renderItem={({ item }) => (
-            <View className="px-5 pb-3">
-              <CustomerRow customer={item} />
-            </View>
-          )}
-        />
-      </BottomSheetInputProvider>
+      <CustomerBookContent {...props} presentation="sheet" />
     </Modal>
   )
 })

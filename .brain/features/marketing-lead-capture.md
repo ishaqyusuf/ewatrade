@@ -38,6 +38,8 @@ Capture public marketing interest from merchants and partners through the market
 - `@ewatrade/notifications/payload-utils` provides typed event builders, author resolution, recipient normalization, and channel trigger helpers.
 - `@ewatrade/notifications/services` provides the notification service interface and email dispatch service.
 - `@ewatrade/email/templates` provides separate admin and customer email templates for early access and waitlist submissions.
+- `@ewatrade/email` uses Resend as the default transport when `RESEND_API_KEY` is configured, and falls back to console delivery only when no provider key exists.
+- `TEST_EMAILS` is the primary comma-separated smoke-test and local/dev safety recipient list for signup email delivery, with `TEST_EMAIL` kept as a single-recipient fallback for older environments.
 
 ## UI
 - Hero CTA links jump to the relevant lead capture forms.
@@ -56,8 +58,7 @@ Capture public marketing interest from merchants and partners through the market
 
 ## Future Improvements
 - Add anti-spam protection and rate limiting.
-- Replace the current in-memory job fallback with a real Trigger.dev-backed execution path.
-- Replace the console email transport with a production email provider adapter.
+- Continue tightening the Trigger.dev-backed execution path until all notification producers enqueue remote jobs in configured environments.
 - Add CRM or email automation integration.
 - Add lead source attribution and campaign metadata.
 - Add admin tooling for reviewing captured leads.

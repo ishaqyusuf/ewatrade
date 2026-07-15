@@ -7,17 +7,22 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "dev": "node ../../scripts/with-workspace-env.mjs DEV_PROFILE=local bun ../../scripts/with-trigger-profile.mjs -- trigger dev",
+    "deploy": "node ../../scripts/with-workspace-env.mjs APP_ENV=production REQUIRE_PROD_DATABASE_URL=1 bun ../../scripts/with-trigger-profile.mjs -- trigger deploy",
     "lint": "biome check .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@ewatrade/db": "workspace:*",
     "@ewatrade/email": "workspace:*",
-    "@ewatrade/notifications": "workspace:*"
+    "@ewatrade/notifications": "workspace:*",
+    "@trigger.dev/build": "4.0.1",
+    "@trigger.dev/sdk": "4.0.1"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",
     "@types/node": "^24.6.0",
+    "trigger.dev": "4.0.1",
     "typescript": "catalog:"
   }
 }

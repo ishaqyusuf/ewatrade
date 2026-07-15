@@ -1,6 +1,8 @@
 import {
-  ActionButton,
-  AuthHeader,
+  AuthActionButton,
+  AuthBrandHeader,
+  AuthDivider,
+  AuthFooterAction,
   AuthMethodButton,
   FormField,
   MobileScreen,
@@ -8,13 +10,32 @@ import {
 } from "@/components/mobile"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
+import { View } from "@/components/ui/view"
 import { useMobileGoogleAuth } from "@/hooks/use-mobile-google-auth"
+import { shouldShowInternalDesignSystemEntry } from "@/lib/app-variant"
 import { useTRPC } from "@/trpc/client"
 import { useMutation } from "@tanstack/react-query"
 import { useLocalSearchParams, useRouter } from "expo-router"
 import { useState } from "react"
-import { View } from "react-native"
+
+function DevDesignSystemShortcut() {
+  if (!shouldShowInternalDesignSystemEntry()) return null
+
+  return (
+    <View className="items-end">
+      <Pressable
+        accessibilityLabel="Open design system"
+        accessibilityRole="button"
+        className="size-11 items-center justify-center rounded-full bg-muted/70 active:bg-accent"
+        haptic
+        href="/design-system"
+        transition
+      >
+        <Icon className="size-base text-primary" name="SlidersHorizontal" />
+      </Pressable>
+    </View>
+  )
+}
 
 export default function LoginRoute() {
   const router = useRouter()
@@ -72,45 +93,33 @@ export default function LoginRoute() {
   }
 
   return (
-    <MobileScreen contentClassName="justify-center gap-8">
-      <AuthHeader
-        badge="Retail ops"
-        icon="Building2"
-        subtitle="Sign in to continue managing sales, stock, and staff from your phone."
-        title="Welcome back"
+    <MobileScreen contentClassName="justify-center gap-7">
+      <DevDesignSystemShortcut />
+      <AuthBrandHeader
+        subtitle="Welcome back. Select method to log in and continue managing sales, stock, and staff."
+        title="Sign in to your account"
       />
-
-      <View className="gap-3">
-        <AuthMethodButton
-          disabled={googleAuth.isPending}
-          icon="Globe"
-          label="Continue with Google"
-          loadingLabel="Connecting to Google"
-          onPress={continueWithGoogle}
-          pending={googleAuth.isPending}
-        />
-        <View className="flex-row items-center gap-3">
-          <View className="h-px flex-1 bg-border" />
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">
-            or
-          </Text>
-          <View className="h-px flex-1 bg-border" />
-        </View>
-      </View>
 
       <View className="gap-4">
         <FormField
           autoCapitalize="none"
           keyboardType="email-address"
           label="Email address"
+          leadingIcon="Mail"
           onChangeText={setEmail}
           placeholder="Enter your email address"
           textContentType="emailAddress"
           value={email}
+          variant="auth"
         />
-        <ActionButton disabled={!normalizedEmail} onPress={continueWithEmail}>
-          {requestOtpMutation.isPending ? "Sending code" : "Send login code"}
-        </ActionButton>
+        <AuthActionButton
+          disabled={!normalizedEmail}
+          isLoading={requestOtpMutation.isPending}
+          loadingLabel="Sending code"
+          onPress={continueWithEmail}
+        >
+          Send login code
+        </AuthActionButton>
         {error ? (
           <StatusBanner
             icon="TriangleAlert"
@@ -119,29 +128,22 @@ export default function LoginRoute() {
             tone="destructive"
           />
         ) : null}
+        <AuthDivider label="Or Continue With" />
+        <AuthMethodButton
+          brandIcon="google"
+          disabled={googleAuth.isPending}
+          label="Google"
+          loadingLabel="Connecting to Google"
+          onPress={continueWithGoogle}
+          pending={googleAuth.isPending}
+        />
       </View>
 
-      <Pressable
-        className="items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 p-4 active:bg-primary/10"
-        haptic
+      <AuthFooterAction
+        eyebrow="New to Ewatrade?"
         href="/sign-up"
-        transition
-      >
-        <View className="flex-row items-center gap-3">
-          <View className="h-11 w-11 items-center justify-center rounded-full bg-primary">
-            <Icon className="size-base text-primary-foreground" name="Plus" />
-          </View>
-          <View className="min-w-0 flex-1">
-            <Text className="text-sm leading-5 text-muted-foreground">
-              New to Ewatrade?
-            </Text>
-            <Text className="text-lg font-bold text-primary">
-              Create your business account
-            </Text>
-          </View>
-          <Icon className="size-sm text-primary" name="ChevronRight" />
-        </View>
-      </Pressable>
+        label="Create your business account"
+      />
     </MobileScreen>
   )
 }

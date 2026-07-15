@@ -1,13 +1,13 @@
 import {
-  ActionButton,
-  AuthHeader,
+  AuthActionButton,
+  AuthBrandHeader,
+  AuthDivider,
+  AuthFooterAction,
   AuthMethodButton,
   FormField,
   MobileScreen,
   StatusBanner,
 } from "@/components/mobile"
-import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
 import { useMobileGoogleAuth } from "@/hooks/use-mobile-google-auth"
 import { useTRPC } from "@/trpc/client"
 import { useMutation } from "@tanstack/react-query"
@@ -88,70 +88,55 @@ export default function SignUpRoute() {
 
   return (
     <MobileScreen
-      contentClassName="justify-center gap-8"
+      contentClassName="justify-center gap-7"
       keyboardBottomOffset={420}
     >
-      <AuthHeader
-        badge="New business"
-        icon="Building2"
+      <AuthBrandHeader
         subtitle="Start with only the details needed to create your retail workspace."
-        title="Create your account"
+        title="Create your business account"
       />
 
       <View className="gap-3">
         <FormField
           helper="This is the business customers and attendants will see."
           label="Business name"
+          leadingIcon="Building2"
           onChangeText={setBusinessName}
           placeholder="Enter your business name"
           value={businessName}
+          variant="auth"
         />
-        <AuthMethodButton
-          disabled={googleAuth.isPending || !canContinueWithGoogle}
-          icon="Globe"
-          label="Sign up with Google"
-          loadingLabel="Connecting to Google"
-          onPress={continueWithGoogle}
-          pending={googleAuth.isPending}
-          tone="primary"
-        />
-        <View className="flex-row items-center gap-3">
-          <View className="h-px flex-1 bg-border" />
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">
-            or
-          </Text>
-          <View className="h-px flex-1 bg-border" />
-        </View>
-      </View>
-
-      <View className="gap-4">
         <FormField
           label="Your name"
+          leadingIcon="User"
           onChangeText={setName}
           placeholder="Enter your full name"
           textContentType="name"
           value={name}
+          variant="auth"
         />
         <FormField
           autoCapitalize="none"
           keyboardType="email-address"
           label="Email address"
+          leadingIcon="Mail"
           onChangeText={setEmail}
           placeholder="Enter your email address"
           textContentType="emailAddress"
           value={email}
+          variant="auth"
         />
       </View>
 
       <View className="gap-4">
-        <ActionButton
+        <AuthActionButton
           disabled={!canContinueWithEmail}
+          isLoading={requestOtpMutation.isPending}
+          loadingLabel="Sending code"
           onPress={continueWithEmail}
         >
-          {requestOtpMutation.isPending
-            ? "Sending code"
-            : "Send verification code"}
-        </ActionButton>
+          Send verification code
+        </AuthActionButton>
         {error ? (
           <StatusBanner
             icon="TriangleAlert"
@@ -160,11 +145,20 @@ export default function SignUpRoute() {
             tone="destructive"
           />
         ) : null}
-        <Pressable className="items-center" haptic href="/login" transition>
-          <Text className="text-sm font-semibold text-muted-foreground">
-            I already have an account
-          </Text>
-        </Pressable>
+        <AuthDivider label="Or Continue With" />
+        <AuthMethodButton
+          brandIcon="google"
+          disabled={googleAuth.isPending || !canContinueWithGoogle}
+          label="Google"
+          loadingLabel="Connecting to Google"
+          onPress={continueWithGoogle}
+          pending={googleAuth.isPending}
+        />
+        <AuthFooterAction
+          eyebrow="Already have an account?"
+          href="/login"
+          label="Sign in instead"
+        />
       </View>
     </MobileScreen>
   )

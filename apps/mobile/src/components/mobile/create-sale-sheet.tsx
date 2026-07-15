@@ -2,6 +2,11 @@ import { ActionButton } from "@/components/mobile/action-button"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
 import { QuantityStepper } from "@/components/mobile/quantity-stepper"
+import {
+  SaleSegmentOption,
+  SaleSelectableRow,
+  SaleTotalSummary,
+} from "@/components/mobile/sale-flow"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetInputProvider } from "@/components/ui/bottom-sheet-input-context"
@@ -27,11 +32,15 @@ import {
 } from "@gorhom/bottom-sheet"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { forwardRef, useMemo, useRef, useState } from "react"
-import { View } from "react-native"
+import { SectionList, View } from "react-native"
 
 type CreateSaleSheetProps = {
   attendantName?: string
   onComplete?: () => void
+}
+
+type CreateSaleContentProps = CreateSaleSheetProps & {
+  presentation?: "screen" | "sheet"
 }
 
 type SellableItem = {
@@ -138,31 +147,7 @@ function PaymentOption({
   selected: boolean
 }) {
   return (
-    <Pressable
-      className={cn(
-        "flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-border bg-card p-3 active:bg-accent",
-        selected && "border-primary bg-primary/10",
-      )}
-      haptic
-      onPress={onPress}
-      transition
-    >
-      <Icon
-        className={cn(
-          "size-sm text-muted-foreground",
-          selected && "text-primary",
-        )}
-        name="CheckCircle2"
-      />
-      <Text
-        className={cn(
-          "text-sm font-bold text-muted-foreground",
-          selected && "text-primary",
-        )}
-      >
-        {label}
-      </Text>
-    </Pressable>
+    <SaleSegmentOption label={label} onPress={onPress} selected={selected} />
   )
 }
 
@@ -179,60 +164,32 @@ function SellableOption({
 
   if (selected) {
     return (
-      <Pressable
-        className="rounded-xl border border-primary bg-primary/10 px-3 py-2 active:bg-accent"
-        haptic
+      <SaleSelectableRow
+        accessory="Selected"
+        meta={`${item.productName} - ${item.stock} available`}
         onPress={onPress}
-        transition
-      >
-        <View className="flex-row items-center justify-between gap-3">
-          <View className="min-w-0 flex-1">
-            <Text className="font-semibold text-foreground">
-              {item.unitName}
-            </Text>
-            <Text className="text-xs text-muted-foreground" numberOfLines={1}>
-              {item.productName} - {item.stock} available - selected
-            </Text>
-          </View>
-          <Text className="font-bold text-foreground">
-            {formatMoney(item.unitPrice, "NGN")}
-          </Text>
-        </View>
-      </Pressable>
+        selected
+        title={item.unitName}
+        value={formatMoney(item.unitPrice, "NGN")}
+      />
     )
   }
 
   return (
-    <Pressable
-      className={cn(
-        "gap-2 rounded-xl border border-border bg-card p-3 active:bg-accent",
-        isOutOfStock && "opacity-50",
-      )}
+    <SaleSelectableRow
+      accessory={`${item.stock} available`}
       disabled={isOutOfStock}
-      haptic
+      meta={item.productName}
       onPress={onPress}
-      transition
+      title={item.unitName}
+      value={formatMoney(item.unitPrice, "NGN")}
     >
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-semibold text-foreground">{item.unitName}</Text>
-          <Text className="text-xs font-medium text-muted-foreground">
-            {item.productName}
-          </Text>
-          <Text className="text-xs text-muted-foreground">
-            {item.stock} available
-          </Text>
-        </View>
-        <Text className="font-bold text-foreground">
-          {formatMoney(item.unitPrice, "NGN")}
-        </Text>
-      </View>
       {selected ? (
         <View className="self-start rounded-full bg-primary/10 px-3 py-1">
           <Text className="text-xs font-bold text-primary">Selected</Text>
         </View>
       ) : null}
-    </Pressable>
+    </SaleSelectableRow>
   )
 }
 
@@ -311,21 +268,24 @@ function CustomerOptionChip({
   return (
     <Pressable
       className={cn(
-        "max-w-full rounded-2xl border border-border bg-card px-3 py-2 active:bg-accent",
-        selected && "border-primary bg-primary/10",
+        "max-w-full gap-1 border-t border-border py-3 active:bg-accent",
+        selected && "border-primary",
       )}
       haptic
       onPress={onPress}
       transition
     >
-      <Text
-        className={cn(
-          "text-xs font-bold text-foreground",
-          selected && "text-primary",
-        )}
-      >
-        {customer.name}
-      </Text>
+      <View className="flex-row items-center gap-2">
+        {selected ? <View className="h-2 w-2 rounded-full bg-primary" /> : null}
+        <Text
+          className={cn(
+            "text-xs font-bold text-foreground",
+            selected && "text-primary",
+          )}
+        >
+          {customer.name}
+        </Text>
+      </View>
       <Text className="text-xs text-muted-foreground">{customer.detail}</Text>
       {customer.email || customer.phone ? (
         <Text className="text-xs text-muted-foreground">
@@ -339,12 +299,16 @@ function CustomerOptionChip({
   )
 }
 
-export const CreateSaleSheet = forwardRef<
-  BottomSheetModal,
-  CreateSaleSheetProps
->(({ attendantName = "Store Owner", onComplete }, ref) => {
+export function CreateSaleContent({
+  attendantName = "Store Owner",
+  onComplete,
+  presentation = "sheet",
+}: CreateSaleContentProps) {
   const trpc = useTRPC()
-  const checkoutListRef = useRef<BottomSheetSectionListMethods>(null)
+  const checkoutBottomSheetListRef =
+    useRef<BottomSheetSectionListMethods>(null)
+  const checkoutScreenListRef =
+    useRef<SectionList<SaleListItem, SaleListSection>>(null)
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
   const createSale = useRetailOpsStore((state) => state.createSale)
   const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
@@ -554,7 +518,12 @@ export const CreateSaleSheet = forwardRef<
   ) => {
     setTimeout(() => {
       if (checkoutSectionIndex >= 0 && itemIndex >= 0) {
-        checkoutListRef.current?.scrollToLocation({
+        const checkoutList =
+          presentation === "screen"
+            ? checkoutScreenListRef.current
+            : checkoutBottomSheetListRef.current
+
+        checkoutList?.scrollToLocation({
           animated: true,
           itemIndex,
           sectionIndex: checkoutSectionIndex,
@@ -644,21 +613,12 @@ export const CreateSaleSheet = forwardRef<
     onComplete?.()
   }
 
-  return (
-    <Modal
-      enableDynamicSizing
-      ref={ref}
-      snapPoints={["90%"]}
-      title="Create sale"
-    >
-      <BottomSheetInputProvider>
-        <BottomSheetSectionList<SaleListItem, SaleListSection>
-          contentContainerStyle={{ paddingBottom: 240, paddingHorizontal: 20 }}
-          keyExtractor={(item) =>
-            item.kind === "sellable" ? item.item.id : item.kind
-          }
-          keyboardShouldPersistTaps="handled"
-          ListHeaderComponent={
+  const listProps = {
+    contentContainerStyle: { paddingBottom: 240, paddingHorizontal: 20 },
+    keyExtractor: (item: SaleListItem) =>
+      item.kind === "sellable" ? item.item.id : item.kind,
+    keyboardShouldPersistTaps: "handled" as const,
+    ListHeaderComponent: (
             <View className="gap-5 pt-1 pb-4">
               <View className="gap-2">
                 <Text className="text-xl font-bold text-foreground">
@@ -685,9 +645,8 @@ export const CreateSaleSheet = forwardRef<
                 />
               ) : null}
             </View>
-          }
-          ref={checkoutListRef}
-          renderItem={({ item }) => {
+    ),
+    renderItem: ({ item }: { item: SaleListItem }) => {
             if (item.kind === "sellable") {
               return (
                 <View className="pb-3">
@@ -755,14 +714,11 @@ export const CreateSaleSheet = forwardRef<
             if (item.kind === "total") {
               return (
                 <View className="pb-5">
-                  <View className="gap-3 rounded-2xl border border-border bg-card p-4">
-                    <Text className="text-sm font-semibold text-muted-foreground">
-                      Total
-                    </Text>
-                    <Text className="text-3xl font-bold text-foreground">
-                      {formatMoney(total, "NGN")}
-                    </Text>
-                  </View>
+                  <SaleTotalSummary
+                    helper={selectedItem?.unitName}
+                    label="Total"
+                    value={formatMoney(total, "NGN")}
+                  />
                 </View>
               )
             }
@@ -857,20 +813,51 @@ export const CreateSaleSheet = forwardRef<
             }
 
             return null
-          }}
-          renderSectionHeader={({ section }) =>
+          },
+    renderSectionHeader: ({ section }: { section: SaleListSection }) =>
             section.product &&
             !section.data.some(
               (row) =>
                 row.kind === "sellable" && row.item.id === selectedItemId,
             ) ? (
               <ProductSectionHeader product={section.product} />
-            ) : null
-          }
-          sections={saleSections}
-          stickySectionHeadersEnabled={false}
-        />
-      </BottomSheetInputProvider>
+            ) : null,
+    sections: saleSections,
+    stickySectionHeadersEnabled: false,
+  }
+
+  if (presentation === "screen") {
+    return (
+      <SectionList<SaleListItem, SaleListSection>
+        {...listProps}
+        className="flex-1"
+        ref={checkoutScreenListRef}
+      />
+    )
+  }
+
+  return (
+    <BottomSheetInputProvider>
+      <BottomSheetSectionList<SaleListItem, SaleListSection>
+        {...listProps}
+        ref={checkoutBottomSheetListRef}
+      />
+    </BottomSheetInputProvider>
+  )
+}
+
+export const CreateSaleSheet = forwardRef<
+  BottomSheetModal,
+  CreateSaleSheetProps
+>((props, ref) => {
+  return (
+    <Modal
+      enableDynamicSizing
+      ref={ref}
+      snapPoints={["90%"]}
+      title="Create sale"
+    >
+      <CreateSaleContent {...props} presentation="sheet" />
     </Modal>
   )
 })

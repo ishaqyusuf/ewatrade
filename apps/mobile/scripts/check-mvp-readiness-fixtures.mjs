@@ -78,8 +78,8 @@ runScenario({
     "Mobile MVP readiness check failed.",
     "Failing gates: Android device readiness, Google OAuth live API readiness, Shared-link live readiness, Shared-link public preview, Shared-link browser checkout readiness",
     "Required missing value summary:",
-    "- Google OAuth Live API QA: Google ID token (EWATRADE_GOOGLE_LIVE_ID_TOKEN)",
-    "- Shared-Link Public Preview: Deployed share URL (EWATRADE_SHARED_LINK_PREVIEW_URL)",
+    "- Google OAuth Live API QA: Google ID token (GOOGLE_LIVE_ID_TOKEN)",
+    "- Shared-Link Public Preview: Deployed share URL (SHARED_LINK_PREVIEW_URL)",
     "Recommended next commands:",
     "bun run --cwd apps/mobile qa:mvp-local-readiness",
     "bun run --cwd apps/mobile qa:mvp-live-env-checklist",
@@ -121,7 +121,7 @@ function runScenario(input) {
   const envFile = join(fixtureDir, "selected.env")
 
   try {
-    writeFileSync(envFile, "EWATRADE_API_URL=https://api.ewatrade.test\n")
+    writeFileSync(envFile, "API_URL=https://api.ewatrade.test\n")
     for (const scriptName of CHECK_SCRIPT_NAMES) {
       writeFileSync(
         join(fixtureDir, scriptName),
@@ -173,8 +173,8 @@ function requiredMissingChecklistScript() {
   return [
     'console.log("Mobile Retail Ops MVP live environment checklist")',
     'console.log("Required missing values:")',
-    'console.log("- Google OAuth Live API QA: Google ID token (EWATRADE_GOOGLE_LIVE_ID_TOKEN)")',
-    'console.log("- Shared-Link Public Preview: Deployed share URL (EWATRADE_SHARED_LINK_PREVIEW_URL)")',
+    'console.log("- Google OAuth Live API QA: Google ID token (GOOGLE_LIVE_ID_TOKEN)")',
+    'console.log("- Shared-Link Public Preview: Deployed share URL (SHARED_LINK_PREVIEW_URL)")',
     'console.log("Verification commands:")',
     'console.log("- bun run --cwd apps/mobile qa:google-oauth-live-run")',
     'console.log("No secret values were printed.")',

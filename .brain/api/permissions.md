@@ -12,6 +12,12 @@ Define authorization and visibility rules for APIs.
 - Public marketplace and storefront endpoints expose only explicitly published data.
 - Internal tooling permissions remain separate from Retail Ops tenant roles.
 
+## Public Signup Rules
+- `POST /api/auth/signup` is public but gated by `NEXT_PUBLIC_SIGNUP_ENABLED`.
+- Signup must reject duplicate owner emails and duplicate tenant slugs before creating the auth user and tenant.
+- Signup sends the welcome email after tenant persistence through the shared email package; local/dev email delivery routes to `TEST_EMAILS` or the legacy `TEST_EMAIL` fallback for smoke safety.
+- Mobile owner OTP email delivery must use the same safety routing when `NODE_ENV` is not production or the submitted email domain is exactly `test.com`, while preserving the submitted email for verification and account identity.
+
 ## Tenant Store Mutation Rules
 - `tenant.createStore` is a protected tRPC procedure.
 - The dashboard `POST /api/stores` route is an authenticated store-creation bridge for the dashboard app.

@@ -2,6 +2,12 @@ import { signupPayloadSchema } from "@/lib/signup-schemas"
 import { auth } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
 import {
+  createEmailMessage,
+  createTestRoutedEmailMessages,
+  dispatchEmailMessages,
+  getTestEmailRouting,
+} from "@ewatrade/email"
+import {
   buildCustomTenantHostname,
   buildInternalTenantHostname,
   provisionTenantVercelDomains,
@@ -13,16 +19,32 @@ const PLATFORM_DOMAIN =
   process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com"
 const IS_DEV = process.env.NODE_ENV === "development"
 
+function getEmailFromAddress() {
+  return process.env.EMAIL_FROM?.trim() || "Ewatrade <noreply@ewatrade.com>"
+}
+
+function getEmailReplyToAddress() {
+  return process.env.EMAIL_REPLY_TO?.trim() || undefined
+}
+
 // ─── Dev email builder ────────────────────────────────────────────────────────
 
 function buildWelcomeEmailHtml(params: {
   firstName: string
   email: string
+  deliveryEmail: string
   businessName: string
   tenantSlug: string
   dashboardUrl: string
 }) {
-  const { firstName, email, businessName, tenantSlug, dashboardUrl } = params
+  const {
+    firstName,
+    email,
+    deliveryEmail,
+    businessName,
+    tenantSlug,
+    dashboardUrl,
+  } = params
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -49,7 +71,7 @@ function buildWelcomeEmailHtml(params: {
 </head>
 <body>
   <div class="card">
-    ${IS_DEV ? `<div class="dev-banner">⚠️ <strong>DEV MODE</strong> — This email was not actually sent. Recipient: <strong>${email}</strong></div>` : ""}
+    ${IS_DEV ? `<div class="dev-banner"><strong>DEV MODE</strong> - Signup email for <strong>${email}</strong>. Delivery target: <strong>${deliveryEmail}</strong></div>` : ""}
 
     <div class="logo">ewatrade</div>
 
@@ -91,6 +113,27 @@ function buildWelcomeEmailHtml(params: {
   </div>
 </body>
 </html>`
+}
+
+function buildWelcomeEmailText(params: {
+  firstName: string
+  businessName: string
+  tenantSlug: string
+  dashboardUrl: string
+}) {
+  const { firstName, businessName, tenantSlug, dashboardUrl } = params
+
+  return [
+    `Your workspace is ready, ${firstName}.`,
+    "",
+    `${businessName} has been created on ewatrade.`,
+    "",
+    `Storefront: ${tenantSlug}.${PLATFORM_DOMAIN}`,
+    `POS: ${tenantSlug}-pos.${PLATFORM_DOMAIN}`,
+    `Dashboard: ${tenantSlug}-dashboard.${PLATFORM_DOMAIN}`,
+    "",
+    `Open your dashboard: ${dashboardUrl}`,
+  ].join("\n")
 }
 
 // ─── Signup route ─────────────────────────────────────────────────────────────
@@ -160,6 +203,24 @@ export async function POST(request: NextRequest) {
   const normalizedEmail = email.toLowerCase()
   const normalizedPhone = phone.replace(/\s+/g, "")
   const displayName = `${firstName} ${lastName}`.trim()
+  const signupEmailRouting = (() => {
+    try {
+      return getTestEmailRouting({ to: normalizedEmail })
+    } catch (error) {
+      console.error("[signup] Email safety routing is not configured", error)
+      return null
+    }
+  })()
+
+  if (!signupEmailRouting) {
+    return NextResponse.json(
+      {
+        message:
+          "Email delivery safety routing is not configured. Set TEST_EMAILS or TEST_EMAIL.",
+      },
+      { status: 503 },
+    )
+  }
 
   // ── 3. Create Better Auth user/session ──────────────────────────────────
   const signUpResult = await auth.api
@@ -231,8 +292,6 @@ export async function POST(request: NextRequest) {
         select: { id: true },
       })
 
-      // Create tenant
-      // biome-ignore lint/suspicious/noExplicitAny: enabledModes added in migration; Prisma client not regenerated yet
       const tenant = await (
         tx.tenant.create as unknown as (
           args: unknown,
@@ -343,16 +402,48 @@ export async function POST(request: NextRequest) {
   }
 
   // ── 8. Build email HTML ──────────────────────────────────────────────────
+  const signupEmailRecipients = signupEmailRouting.recipients.join(", ")
   const emailHtml = buildWelcomeEmailHtml({
     firstName,
     email: email.toLowerCase(),
+    deliveryEmail: signupEmailRecipients,
     businessName,
     tenantSlug: subdomain,
     dashboardUrl,
   })
+  const emailText = buildWelcomeEmailText({
+    firstName,
+    businessName,
+    tenantSlug: subdomain,
+    dashboardUrl,
+  })
+  const emailDeliveries = await dispatchEmailMessages(
+    createTestRoutedEmailMessages(
+      createEmailMessage({
+        from: getEmailFromAddress(),
+        html: emailHtml,
+        replyTo: getEmailReplyToAddress(),
+        subject: `Welcome to ewatrade - verify your ${businessName} workspace`,
+        text: emailText,
+        to: normalizedEmail,
+      }),
+    ),
+  )
+  const failedEmailDelivery = emailDeliveries.find(
+    (delivery) => delivery.status === "failed",
+  )
+  const emailDeliveryStatus = failedEmailDelivery ? "failed" : "sent"
 
   if (IS_DEV) {
     console.info(`\n[signup] Welcome email for ${email}:\n${dashboardUrl}\n`)
+  }
+
+  if (failedEmailDelivery) {
+    console.error("[signup] Welcome email delivery failed", {
+      error: failedEmailDelivery.error,
+      email: normalizedEmail,
+      tenantSlug: tenant.slug,
+    })
   }
 
   // ── 9. Return signup result ──────────────────────────────────────────────
@@ -360,6 +451,7 @@ export async function POST(request: NextRequest) {
     success: true,
     tenantSlug: tenant.slug,
     dashboardUrl,
+    emailDeliveryStatus,
     ...(IS_DEV ? { devEmailHtml: emailHtml } : {}),
   })
 }

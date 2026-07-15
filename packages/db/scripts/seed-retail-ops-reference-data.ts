@@ -19,7 +19,7 @@ type SeededUnitTemplate = {
   }>
 }
 
-const CONFIRMATION_ENV = "EWATRADE_CONFIRM_RETAIL_OPS_REFERENCE_SEED"
+const CONFIRMATION_ENV = "CONFIRM_RETAIL_OPS_REFERENCE_SEED"
 
 const RETAIL_OPS_UNIT_TEMPLATES = [
   {
@@ -35,7 +35,7 @@ const RETAIL_OPS_UNIT_TEMPLATES = [
         name: "Bag",
         ratioDenominator: 1,
         ratioNumerator: 1,
-        sortOrder: 10
+        sortOrder: 10,
       },
       {
         isBase: false,
@@ -43,7 +43,7 @@ const RETAIL_OPS_UNIT_TEMPLATES = [
         name: "Half bag",
         ratioDenominator: 2,
         ratioNumerator: 1,
-        sortOrder: 20
+        sortOrder: 20,
       },
       {
         isBase: false,
@@ -51,9 +51,9 @@ const RETAIL_OPS_UNIT_TEMPLATES = [
         name: "Quarter bag",
         ratioDenominator: 4,
         ratioNumerator: 1,
-        sortOrder: 30
-      }
-    ]
+        sortOrder: 30,
+      },
+    ],
   },
   {
     baseUnitName: "Kilogram",
@@ -68,7 +68,7 @@ const RETAIL_OPS_UNIT_TEMPLATES = [
         name: "Kilogram",
         ratioDenominator: 1,
         ratioNumerator: 1,
-        sortOrder: 10
+        sortOrder: 10,
       },
       {
         isBase: false,
@@ -76,7 +76,7 @@ const RETAIL_OPS_UNIT_TEMPLATES = [
         name: "Half kilogram",
         ratioDenominator: 2,
         ratioNumerator: 1,
-        sortOrder: 20
+        sortOrder: 20,
       },
       {
         isBase: false,
@@ -84,10 +84,10 @@ const RETAIL_OPS_UNIT_TEMPLATES = [
         name: "Quarter kilogram",
         ratioDenominator: 4,
         ratioNumerator: 1,
-        sortOrder: 30
-      }
-    ]
-  }
+        sortOrder: 30,
+      },
+    ],
+  },
 ]
 
 function referenceMetadata(kind: "plan" | "unit_template" | "unit") {
@@ -95,21 +95,21 @@ function referenceMetadata(kind: "plan" | "unit_template" | "unit") {
     retailOpsReferenceData: {
       kind,
       source: "seed-retail-ops-reference-data",
-      version: 1
-    }
+      version: 1,
+    },
   } as Prisma.InputJsonValue
 }
 
 async function loadDatabaseClient(): Promise<PrismaClient> {
   if (process.env[CONFIRMATION_ENV] !== "1") {
     throw new Error(
-      `${CONFIRMATION_ENV}=1 must be set before seeding Retail Ops reference data.`
+      `${CONFIRMATION_ENV}=1 must be set before seeding Retail Ops reference data.`,
     )
   }
 
   if (!process.env.DATABASE_URL) {
     throw new Error(
-      "DATABASE_URL must point to an intentional validation database before seeding Retail Ops reference data."
+      "DATABASE_URL must point to an intentional validation database before seeding Retail Ops reference data.",
     )
   }
 
@@ -124,7 +124,7 @@ async function seedSubscriptionPlans(db: PrismaClient): Promise<SeededPlan[]> {
   for (const [index, plan] of RETAIL_OPS_SUBSCRIPTION_PLANS.entries()) {
     const seededPlan = await db.subscriptionPlan.upsert({
       where: {
-        key: plan.id
+        key: plan.id,
       },
       create: {
         currencyCode: "NGN",
@@ -138,7 +138,7 @@ async function seedSubscriptionPlans(db: PrismaClient): Promise<SeededPlan[]> {
         priceLabel: plan.priceLabel,
         sortOrder: (index + 1) * 10,
         supportLabel: plan.supportLabel,
-        yearlyPriceMinor: null
+        yearlyPriceMinor: null,
       },
       update: {
         currencyCode: "NGN",
@@ -151,14 +151,14 @@ async function seedSubscriptionPlans(db: PrismaClient): Promise<SeededPlan[]> {
         priceLabel: plan.priceLabel,
         sortOrder: (index + 1) * 10,
         supportLabel: plan.supportLabel,
-        yearlyPriceMinor: null
+        yearlyPriceMinor: null,
       },
       select: {
         id: true,
         isActive: true,
         key: true,
-        name: true
-      }
+        name: true,
+      },
     })
 
     seededPlans.push(seededPlan)
@@ -167,13 +167,15 @@ async function seedSubscriptionPlans(db: PrismaClient): Promise<SeededPlan[]> {
   return seededPlans
 }
 
-async function seedUnitTemplates(db: PrismaClient): Promise<SeededUnitTemplate[]> {
+async function seedUnitTemplates(
+  db: PrismaClient,
+): Promise<SeededUnitTemplate[]> {
   const seededTemplates: SeededUnitTemplate[] = []
 
   for (const template of RETAIL_OPS_UNIT_TEMPLATES) {
     const seededTemplate = await db.productUnitTemplate.upsert({
       where: {
-        key: template.key
+        key: template.key,
       },
       create: {
         baseUnitName: template.baseUnitName,
@@ -184,7 +186,7 @@ async function seedUnitTemplates(db: PrismaClient): Promise<SeededUnitTemplate[]
         metadata: referenceMetadata("unit_template"),
         name: template.name,
         sortOrder: template.sortOrder,
-        tenantId: null
+        tenantId: null,
       },
       update: {
         baseUnitName: template.baseUnitName,
@@ -194,13 +196,13 @@ async function seedUnitTemplates(db: PrismaClient): Promise<SeededUnitTemplate[]
         metadata: referenceMetadata("unit_template"),
         name: template.name,
         sortOrder: template.sortOrder,
-        tenantId: null
+        tenantId: null,
       },
       select: {
         id: true,
         key: true,
-        name: true
-      }
+        name: true,
+      },
     })
     const seededUnits = []
 
@@ -209,8 +211,8 @@ async function seedUnitTemplates(db: PrismaClient): Promise<SeededUnitTemplate[]
         where: {
           templateId_key: {
             key: unit.key,
-            templateId: seededTemplate.id
-          }
+            templateId: seededTemplate.id,
+          },
         },
         create: {
           isBase: unit.isBase,
@@ -220,7 +222,7 @@ async function seedUnitTemplates(db: PrismaClient): Promise<SeededUnitTemplate[]
           ratioDenominator: unit.ratioDenominator,
           ratioNumerator: unit.ratioNumerator,
           sortOrder: unit.sortOrder,
-          templateId: seededTemplate.id
+          templateId: seededTemplate.id,
         },
         update: {
           isBase: unit.isBase,
@@ -228,13 +230,13 @@ async function seedUnitTemplates(db: PrismaClient): Promise<SeededUnitTemplate[]
           name: unit.name,
           ratioDenominator: unit.ratioDenominator,
           ratioNumerator: unit.ratioNumerator,
-          sortOrder: unit.sortOrder
+          sortOrder: unit.sortOrder,
         },
         select: {
           id: true,
           key: true,
-          name: true
-        }
+          name: true,
+        },
       })
 
       seededUnits.push(seededUnit)
@@ -242,7 +244,7 @@ async function seedUnitTemplates(db: PrismaClient): Promise<SeededUnitTemplate[]
 
     seededTemplates.push({
       ...seededTemplate,
-      units: seededUnits
+      units: seededUnits,
     })
   }
 
@@ -263,12 +265,12 @@ async function main() {
           generatedAt: new Date().toISOString(),
           seeded: {
             plans,
-            unitTemplates
-          }
+            unitTemplates,
+          },
         },
         null,
-        2
-      )
+        2,
+      ),
     )
   } finally {
     await db.$disconnect()
@@ -283,11 +285,11 @@ main().catch((error) => {
       {
         ok: false,
         error: message,
-        generatedAt: new Date().toISOString()
+        generatedAt: new Date().toISOString(),
       },
       null,
-      2
-    )
+      2,
+    ),
   )
   process.exitCode = 1
 })

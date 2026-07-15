@@ -32,6 +32,7 @@ The destination is a plan and decision trail, not implementation. No dashboard c
 - [ ] [Decide search-anything scope and command behavior](10-decide-search-anything-scope-and-command-behavior.md)
 - [ ] [Decide desktop wrapper strategy using Midday desktop](11-decide-desktop-wrapper-strategy-using-midday-desktop.md)
 - [ ] [Assemble implementation phases, QA gates, and acceptance criteria](12-assemble-implementation-phases-qa-gates-and-acceptance-criteria.md)
+- [ ] [Define low-stock level alert workflow](13-low-stock-level-alert-workflow.md)
 
 ## Decisions so far
 
@@ -45,6 +46,7 @@ The destination is a plan and decision trail, not implementation. No dashboard c
 - Final payroll/payout scope for the first dashboard implementation.
 - Exact search result sources, keyboard shortcuts, and permission filters.
 - Exact charting primitives and analytics query boundaries.
+- Exact low-stock alert lifecycle, notification channels, snooze behavior, and threshold source of truth.
 - Exact desktop bundle identifiers, signing/notarization setup, updater behavior, and release profiles.
 - Whether the implementation should be one scaffold migration followed by feature tickets, or a route-by-route migration that keeps the current dashboard working throughout.
 

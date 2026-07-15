@@ -1,16 +1,8 @@
-import { useColorScheme, useColors } from "@/hooks/use-color"
 import { cn } from "@/lib/utils"
-import { camel } from "@ewatrade/utils"
 import * as Slot from "@rn-primitives/slot"
 import { type VariantProps, cva } from "class-variance-authority"
 import * as React from "react"
-import {
-  Platform,
-  Text as RNText,
-  type Role,
-  type StyleProp,
-  type TextStyle,
-} from "react-native"
+import { Platform, Text as RNText, type Role } from "react-native"
 
 const textVariants = cva(
   cn(
@@ -83,154 +75,11 @@ const ARIA_LEVEL: Partial<Record<TextVariant, string>> = {
 
 const TextClassContext = React.createContext<string | undefined>(undefined)
 
-const textSizeAndLayoutTokens = new Set([
-  "2xl",
-  "3xl",
-  "4xl",
-  "5xl",
-  "6xl",
-  "7xl",
-  "8xl",
-  "9xl",
-  "base",
-  "balance",
-  "center",
-  "justify",
-  "left",
-  "lg",
-  "nowrap",
-  "pretty",
-  "right",
-  "sm",
-  "start",
-  "end",
-  "wrap",
-  "xl",
-  "xs",
-])
-
-const fixedTextColors: Record<string, string> = {
-  "amber-500": "rgb(245, 158, 11)",
-  "amber-600": "rgb(217, 119, 6)",
-  "amber-700": "rgb(180, 83, 9)",
-  black: "rgb(0, 0, 0)",
-  "blue-700": "rgb(29, 78, 216)",
-  "blue-800": "rgb(30, 64, 175)",
-  "emerald-600": "rgb(5, 150, 105)",
-  "emerald-700": "rgb(4, 120, 87)",
-  "gray-100": "rgb(243, 244, 246)",
-  "gray-400": "rgb(156, 163, 175)",
-  "gray-500": "rgb(107, 114, 128)",
-  "gray-800": "rgb(31, 41, 55)",
-  "green-900": "rgb(20, 83, 45)",
-  "red-700": "rgb(185, 28, 28)",
-  "red-900": "rgb(127, 29, 29)",
-  white: "rgb(255, 255, 255)",
-}
-
-function getFixedTextColor({
-  colorScheme,
-  colorToken,
-  colors,
-}: {
-  colorScheme: "dark" | "light"
-  colorToken: string
-  colors: ReturnType<typeof useColors>
-}) {
-  if (colorScheme === "dark") {
-    if (colorToken.startsWith("amber-")) return colors.warn
-
-    if (colorToken.startsWith("emerald-") || colorToken.startsWith("green-")) {
-      return colors.success
-    }
-
-    if (colorToken.startsWith("red-")) return "rgb(248, 113, 113)"
-    if (colorToken === "black") return colors.foreground
-  }
-
-  return fixedTextColors[colorToken]
-}
-
-function withOpacity(color: string, opacity?: number) {
-  if (opacity === undefined) return color
-
-  const match = color.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/)
-
-  if (!match) return color
-
-  return `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${opacity})`
-}
-
-function getTokenOpacity(token: string) {
-  const [, opacityToken] = token.split("/")
-  const parsedOpacity = opacityToken ? Number(opacityToken) : undefined
-
-  if (parsedOpacity === undefined || Number.isNaN(parsedOpacity)) {
-    return undefined
-  }
-
-  return parsedOpacity > 1 ? parsedOpacity / 100 : parsedOpacity
-}
-
-function getTextColorFromClassName({
-  className,
-  colors,
-  colorScheme,
-}: {
-  className?: string
-  colors: ReturnType<typeof useColors>
-  colorScheme: "dark" | "light"
-}) {
-  const tokens = className?.split(/\s+/).filter(Boolean) ?? []
-
-  for (const token of [...tokens].reverse()) {
-    if (token.includes(":")) {
-      const [prefix, value] = token.split(":")
-
-      if (prefix !== "dark" || colorScheme !== "dark") continue
-      if (!value?.startsWith("text-")) continue
-
-      const colorToken = value.slice("text-".length).split("/")[0]
-      const color = getFixedTextColor({
-        colorScheme,
-        colorToken,
-        colors,
-      })
-
-      if (color) return withOpacity(color, getTokenOpacity(value))
-      continue
-    }
-
-    if (!token.startsWith("text-")) continue
-
-    const textToken = token.slice("text-".length)
-    const colorToken = textToken.split("/")[0]
-
-    if (!colorToken || textSizeAndLayoutTokens.has(colorToken)) continue
-    const fixedColor = getFixedTextColor({
-      colorScheme,
-      colorToken,
-      colors,
-    })
-
-    if (fixedColor) {
-      return withOpacity(fixedColor, getTokenOpacity(textToken))
-    }
-
-    const themeColor = colors[camel(colorToken.split("-").join(" "))]
-
-    if (themeColor) return withOpacity(themeColor, getTokenOpacity(textToken))
-  }
-
-  return undefined
-}
-
 function Text({
   className,
   asChild = false,
   variant = "default",
   color,
-  style,
   ref,
   ...props
 }: React.ComponentProps<typeof RNText> &
@@ -239,28 +88,11 @@ function Text({
     asChild?: boolean
   }) {
   const textClass = React.useContext(TextClassContext)
-  const colors = useColors()
-  const { colorScheme } = useColorScheme()
-  const resolvedClassName = cn(
-    textVariants({ variant, color }),
-    textClass,
-    className,
-  )
-  const resolvedColor = getTextColorFromClassName({
-    className: resolvedClassName,
-    colors,
-    colorScheme,
-  })
-  const colorStyle: StyleProp<TextStyle> = resolvedColor
-    ? { color: resolvedColor }
-    : undefined
-  const resolvedStyle = colorStyle || style ? [colorStyle, style] : undefined
 
   const textProps = {
     "aria-level": variant ? ARIA_LEVEL[variant] : undefined,
-    className: resolvedClassName,
+    className: cn(textVariants({ variant, color }), textClass, className),
     role: variant ? ROLE[variant] : undefined,
-    ...(resolvedStyle ? { style: resolvedStyle } : {}),
     ...props,
   }
 

@@ -1,13 +1,15 @@
 import {
   ActionButton,
   MobileScreen,
+  SecondaryOperationalRow,
+  SecondarySheetHeader,
   StatusBadge,
   StatusBanner,
 } from "@/components/mobile"
 import { FormField } from "@/components/mobile/form-field"
-import { Icon } from "@/components/ui/icon"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
+import { getMobileRoleLabel, isInvitedStaffProfile } from "@/lib/mobile-roles"
 import { useBusinessStore } from "@/store/businessStore"
 import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery } from "@tanstack/react-query"
@@ -43,30 +45,10 @@ type ResolvedStaffInvite = {
   }
 }
 
-function isInvitedStaff(profile: { role?: string; status?: string } | null) {
-  const role = profile?.role?.trim().toUpperCase()
-  const status = profile?.status?.trim().toUpperCase()
-
-  return (
-    status === "INVITED" &&
-    (role === "CASHIER" || role === "MANAGER" || role === "OPERATOR")
-  )
-}
-
 function getSearchParam(value: string | string[] | undefined) {
   if (Array.isArray(value)) return value[0] ?? null
 
   return value ?? null
-}
-
-function getRoleLabel(role: string | undefined) {
-  const normalizedRole = role?.trim().toUpperCase()
-
-  if (normalizedRole === "CASHIER") return "Attendant"
-  if (normalizedRole === "OPERATOR") return "Operator"
-  if (normalizedRole === "MANAGER") return "Manager"
-
-  return role ?? "Staff"
 }
 
 export default function StaffOnboardingRoute() {
@@ -134,51 +116,42 @@ export default function StaffOnboardingRoute() {
   if (!isAuthenticated && inviteToken) {
     return (
       <MobileScreen contentClassName="justify-center gap-6">
-        <View className="gap-4">
-          <View className="h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-            <Icon className="size-xl text-primary" name="ShieldCheck" />
-          </View>
-          <View className="gap-2">
-            <Text className="text-3xl font-bold text-foreground">
-              Staff invitation
-            </Text>
-            <Text className="text-base leading-6 text-muted-foreground">
-              Sign in with your invited email address to accept this staff
-              access.
-            </Text>
-          </View>
-        </View>
+        <SecondarySheetHeader
+          description="Sign in with your invited email address to accept this staff access."
+          icon="ShieldCheck"
+          title="Staff invitation"
+        />
 
-        <View className="gap-3 rounded-2xl border border-border bg-card p-4">
-          {inviteQuery.isPending ? (
+        {inviteQuery.isPending ? (
+          <View className="border-y border-border py-5">
             <StatusBadge
               icon="Clock"
               label="Checking invitation"
               tone="muted"
             />
-          ) : inviteQuery.isError ? (
-            <StatusBanner
-              icon="TriangleAlert"
-              message={inviteQuery.error.message}
-              title="Invitation unavailable"
-              tone="destructive"
-            />
-          ) : resolvedInvite ? (
-            <>
-              <Text className="text-base font-bold text-foreground">
-                {resolvedInvite.tenant.name}
-              </Text>
-              <Text className="text-sm text-muted-foreground">
-                {resolvedInvite.email}
-              </Text>
+          </View>
+        ) : inviteQuery.isError ? (
+          <StatusBanner
+            icon="TriangleAlert"
+            message={inviteQuery.error.message}
+            title="Invitation unavailable"
+            tone="destructive"
+          />
+        ) : resolvedInvite ? (
+          <SecondaryOperationalRow
+            className="border-y"
+            detail={resolvedInvite.email}
+            icon="Mail"
+            title={resolvedInvite.tenant.name}
+            trailing={
               <StatusBadge
                 className="self-start"
-                label={getRoleLabel(resolvedInvite.role)}
+                label={getMobileRoleLabel(resolvedInvite.role)}
                 tone="primary"
               />
-            </>
-          ) : null}
-        </View>
+            }
+          />
+        ) : null}
 
         <ActionButton
           disabled={inviteQuery.isPending}
@@ -201,24 +174,15 @@ export default function StaffOnboardingRoute() {
     return <Redirect href="/login" />
   }
 
-  if (!isInvitedStaff(profile)) {
+  if (!isInvitedStaffProfile(profile)) {
     if (inviteToken) {
       return (
         <MobileScreen contentClassName="justify-center gap-6">
-          <View className="gap-4">
-            <View className="h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-              <Icon className="size-xl text-primary" name="ShieldCheck" />
-            </View>
-            <View className="gap-2">
-              <Text className="text-3xl font-bold text-foreground">
-                Wrong account
-              </Text>
-              <Text className="text-base leading-6 text-muted-foreground">
-                This invite must be accepted with the email address that was
-                added by the business owner.
-              </Text>
-            </View>
-          </View>
+          <SecondarySheetHeader
+            description="This invite must be accepted with the email address that was added by the business owner."
+            icon="ShieldCheck"
+            title="Wrong account"
+          />
 
           <ActionButton onPress={() => router.replace("/login")}>
             Sign in with invited email
@@ -248,19 +212,26 @@ export default function StaffOnboardingRoute() {
 
   return (
     <MobileScreen contentClassName="justify-center gap-6">
-      <View className="gap-4">
-        <View className="h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-          <Icon className="size-xl text-primary" name="ShieldCheck" />
-        </View>
-        <View className="gap-2">
-          <Text className="text-3xl font-bold text-foreground">
-            Finish staff setup
-          </Text>
-          <Text className="text-base leading-6 text-muted-foreground">
-            Confirm the name your team will see when you record sales.
-          </Text>
-        </View>
-      </View>
+      <SecondarySheetHeader
+        description="Confirm the name your team will see when you record sales."
+        icon="ShieldCheck"
+        title="Finish staff setup"
+      />
+
+      <SecondaryOperationalRow
+        className="border-y"
+        detail={profile?.email ?? "Invited email account"}
+        icon="User"
+        metadata="Your role and access stay tied to this account."
+        title={profile?.businessName ?? "Invited workspace"}
+        trailing={
+          <StatusBadge
+            className="self-start"
+            label={getMobileRoleLabel(profile?.role)}
+            tone="primary"
+          />
+        }
+      />
 
       <View className="gap-4">
         <FormField

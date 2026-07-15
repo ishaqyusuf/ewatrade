@@ -10,6 +10,10 @@ const FILES = {
     "apps/api/src/trpc/routers/retail-ops-subscriptions.ts",
   ),
   subscriptionLib: join(MOBILE_DIR, "src/lib/retail-ops-subscription.ts"),
+  secondaryOperations: join(
+    MOBILE_DIR,
+    "src/components/mobile/secondary-operations.tsx",
+  ),
   subscriptionSheet: join(
     MOBILE_DIR,
     "src/components/mobile/subscription-plan-sheet.tsx",
@@ -56,6 +60,8 @@ const CONTRACTS = [
     file: FILES.subscriptionSheet,
     markers: [
       "BottomSheetKeyboardAwareScrollView",
+      "SecondaryOperationalRow",
+      "SecondarySheetHeader",
       "StatusBadge",
       "StatusBanner",
       "trpc.retailOps.subscription",
@@ -73,7 +79,20 @@ const CONTRACTS = [
       "Linking.openURL",
     ],
     reason:
-      "subscription sheet must keep production snapshot reads, local fallback, three-tier plan cards, provider-neutral checkout handoff, and safe link opening",
+      "subscription sheet must keep production snapshot reads, local fallback, reusable secondary operation rows, three-tier plan comparison, provider-neutral checkout handoff, and safe link opening",
+  },
+  {
+    file: FILES.secondaryOperations,
+    markers: [
+      "SecondarySheetHeader",
+      "SecondaryOperationalRow",
+      "onPress",
+      "selected",
+      "border-t border-border py-4",
+      "rounded-full bg-primary/10",
+    ],
+    reason:
+      "secondary operational screens must share flat headers and selectable divider rows for plan and settings-style surfaces",
   },
   {
     file: FILES.dashboard,

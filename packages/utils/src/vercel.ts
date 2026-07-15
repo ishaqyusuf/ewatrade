@@ -18,18 +18,19 @@ export async function addVercelDomain(
   projectId: string,
 ): Promise<VercelAddDomainResult> {
   const token = readEnv("VERCEL_API_TOKEN")
+  const trimmedProjectId = projectId.trim()
 
   if (!token) {
     return { ok: false, error: "VERCEL_API_TOKEN is not set" }
   }
 
-  if (!projectId) {
+  if (!trimmedProjectId) {
     return { ok: false, error: "projectId is required" }
   }
 
   try {
     const response = await fetch(
-      `${VERCEL_API_BASE}/v10/projects/${projectId}/domains`,
+      `${VERCEL_API_BASE}/v10/projects/${trimmedProjectId}/domains`,
       {
         method: "POST",
         headers: {
@@ -72,18 +73,40 @@ export async function provisionTenantVercelDomains(params: {
   posDomain: string
   dashboardDomain: string
 }): Promise<void> {
+  const token = readEnv("VERCEL_API_TOKEN")?.trim()
+
+  if (!token) {
+    console.warn(
+      "[vercel] VERCEL_API_TOKEN is not set; skipping tenant domain provisioning.",
+    )
+    return
+  }
+
   const storefrontProjectId = readEnv("VERCEL_STOREFRONT_PROJECT_ID") ?? ""
   const posProjectId = readEnv("VERCEL_POS_PROJECT_ID") ?? ""
   const dashboardProjectId = readEnv("VERCEL_DASHBOARD_PROJECT_ID") ?? ""
+  const configuredDomains = [
+    {
+      surface: "storefront",
+      domain: params.storefrontDomain,
+      projectId: storefrontProjectId,
+    },
+    { surface: "pos", domain: params.posDomain, projectId: posProjectId },
+    {
+      surface: "dashboard",
+      domain: params.dashboardDomain,
+      projectId: dashboardProjectId,
+    },
+  ].filter(({ projectId }) => projectId.trim().length > 0)
 
-  const results = await Promise.allSettled([
-    addVercelDomain(params.storefrontDomain, storefrontProjectId),
-    addVercelDomain(params.posDomain, posProjectId),
-    addVercelDomain(params.dashboardDomain, dashboardProjectId),
-  ])
+  const results = await Promise.allSettled(
+    configuredDomains.map(({ domain, projectId }) =>
+      addVercelDomain(domain, projectId),
+    ),
+  )
 
   for (const [index, result] of results.entries()) {
-    const surface = ["storefront", "pos", "dashboard"][index]
+    const surface = configuredDomains[index]?.surface ?? "unknown"
 
     if (result.status === "rejected") {
       console.error(`[vercel] Failed to add ${surface} domain:`, result.reason)

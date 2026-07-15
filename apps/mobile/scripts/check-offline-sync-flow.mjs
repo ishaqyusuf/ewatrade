@@ -8,6 +8,7 @@ const FILES = {
   reports: join(MOBILE_DIR, "src/components/mobile/reports-sheet.tsx"),
   store: join(MOBILE_DIR, "src/store/retailOpsStore.ts"),
   syncBuilder: join(MOBILE_DIR, "src/lib/retail-ops-sync.ts"),
+  syncFlow: join(MOBILE_DIR, "src/components/mobile/sync-flow.tsx"),
   syncSheet: join(MOBILE_DIR, "src/components/mobile/sync-status-sheet.tsx"),
 }
 
@@ -84,10 +85,18 @@ const CONTRACTS = [
     file: FILES.syncSheet,
     markers: [
       "BottomSheetKeyboardAwareScrollView",
+      "SyncReliabilityAction",
+      "SyncReliabilityPanel",
+      "SyncReliabilityRow",
+      "SyncReliabilityStat",
+      "SyncReliabilityToggle",
       "StatusBadge",
       "StatusBanner",
       "EmptyState",
       "Offline mode",
+      "Device management",
+      "Last sync",
+      "Server history",
       "Changes stay on this device and will be applied when next you connect.",
       "retail-offline-toggle",
       "retail-offline-device",
@@ -99,7 +108,26 @@ const CONTRACTS = [
       "SYNC_QUEUE_PREVIEW_LIMIT",
     ],
     reason:
-      "sync UI must keep the keyboard-safe sheet, offline copy, stable QA selectors, queue counts, and bounded queue rows",
+      "sync UI must keep the keyboard-safe sheet, reusable reliability panels/rows/actions/stats/toggle, offline copy, stable QA selectors, queue counts, and bounded queue rows",
+  },
+  {
+    file: FILES.syncFlow,
+    markers: [
+      "SyncReliabilityPanel",
+      "SyncReliabilityRow",
+      "SyncReliabilityStat",
+      "SyncReliabilityToggle",
+      "SyncReliabilityAction",
+      "border-t border-border py-4",
+      "text-success",
+      "text-warn",
+      "text-primary-foreground",
+      'tone?: "destructive" | "muted" | "primary"',
+      "haptic={!disabled && !!onPress}",
+      "haptic",
+    ],
+    reason:
+      "offline sync screens must use reusable flat reliability panels, rows, stats, toggles, and haptic actions instead of local card-heavy sync widgets",
   },
   {
     file: FILES.dashboard,

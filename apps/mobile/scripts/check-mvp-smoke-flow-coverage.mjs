@@ -479,9 +479,9 @@ if (
 }
 
 for (const marker of [
-  "EWATRADE_EXPO_ENV_VERIFY_LIVE",
-  "EWATRADE_EXPO_ENV_LIST_DEVELOPMENT_FILE",
-  "EWATRADE_EXPO_ENV_LIST_PRODUCTION_FILE",
+  "EXPO_ENV_VERIFY_LIVE",
+  "EXPO_ENV_LIST_DEVELOPMENT_FILE",
+  "EXPO_ENV_LIST_PRODUCTION_FILE",
   "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b",
   "cipron-startups",
   "ewatrade",
@@ -503,7 +503,7 @@ for (const marker of [
   "twitterImageAlt",
   "Open Graph image alt text does not include the product name.",
   "Twitter image alt text does not include the product name.",
-  "EWATRADE_SHARED_LINK_LIVE_EVIDENCE_PATH",
+  "SHARED_LINK_LIVE_EVIDENCE_PATH",
   "writeLiveEvidence",
   "Shared-link live evidence:",
 ]) {
@@ -515,7 +515,7 @@ for (const marker of [
 }
 
 for (const marker of [
-  "EWATRADE_GOOGLE_LIVE_EVIDENCE_PATH",
+  "GOOGLE_LIVE_EVIDENCE_PATH",
   "writeLiveEvidence",
   "Google OAuth live evidence:",
   "emailMatched",
@@ -530,7 +530,7 @@ for (const marker of [
 }
 
 for (const marker of [
-  "EWATRADE_SHARED_LINK_PREVIEW_EVIDENCE_PATH",
+  "SHARED_LINK_PREVIEW_EVIDENCE_PATH",
   "writePreviewEvidence",
   "Shared-link public preview evidence:",
   "metadata",

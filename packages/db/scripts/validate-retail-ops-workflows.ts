@@ -53,20 +53,20 @@ type WorkflowValidationState = {
   workspace?: ValidationWorkspace
 }
 
-const CONFIRMATION_ENV = "EWATRADE_CONFIRM_RETAIL_OPS_WORKFLOW_VALIDATION"
-const KEEP_DATA_ENV = "EWATRADE_KEEP_RETAIL_OPS_WORKFLOW_VALIDATION_DATA"
+const CONFIRMATION_ENV = "CONFIRM_RETAIL_OPS_WORKFLOW_VALIDATION"
+const KEEP_DATA_ENV = "KEEP_RETAIL_OPS_WORKFLOW_VALIDATION_DATA"
 const REQUIRED_PLAN_KEYS = ["starter", "growth", "pro"]
 
 async function loadDatabaseClient(): Promise<PrismaClient> {
   if (process.env[CONFIRMATION_ENV] !== "1") {
     throw new Error(
-      `${CONFIRMATION_ENV}=1 must be set before running Retail Ops workflow validation.`
+      `${CONFIRMATION_ENV}=1 must be set before running Retail Ops workflow validation.`,
     )
   }
 
   if (!process.env.DATABASE_URL) {
     throw new Error(
-      "DATABASE_URL must point to an intentional validation database before running Retail Ops workflow validation."
+      "DATABASE_URL must point to an intentional validation database before running Retail Ops workflow validation.",
     )
   }
 
@@ -79,8 +79,8 @@ function validationMetadata(runId: string, kind: string) {
   return {
     retailOpsWorkflowValidation: {
       kind,
-      runId
-    }
+      runId,
+    },
   } as Prisma.InputJsonValue
 }
 
@@ -109,7 +109,9 @@ function requireStateValue<T>(value: T | undefined, label: string): T {
 }
 
 function requireUnit(product: CreatedRetailOpsProduct, unitName: string) {
-  const unit = product.units.find((currentUnit) => currentUnit.name === unitName)
+  const unit = product.units.find(
+    (currentUnit) => currentUnit.name === unitName,
+  )
 
   if (!unit) {
     throw new Error(`Expected product unit "${unitName}" to be created.`)
@@ -121,7 +123,7 @@ function requireUnit(product: CreatedRetailOpsProduct, unitName: string) {
 async function runWorkflowCheck(
   checks: WorkflowCheck[],
   name: string,
-  check: () => Promise<WorkflowCheck>
+  check: () => Promise<WorkflowCheck>,
 ) {
   try {
     const result = await check()
@@ -141,38 +143,40 @@ async function assertReferenceData(db: PrismaClient) {
       where: {
         isActive: true,
         key: {
-          in: REQUIRED_PLAN_KEYS
-        }
+          in: REQUIRED_PLAN_KEYS,
+        },
       },
       select: {
-        key: true
-      }
+        key: true,
+      },
     }),
     db.productUnitTemplate.findUnique({
       where: {
-        key: "bag_fractions"
+        key: "bag_fractions",
       },
       select: {
         id: true,
         key: true,
         units: {
           select: {
-            key: true
-          }
-        }
-      }
-    })
+            key: true,
+          },
+        },
+      },
+    }),
   ])
   const activePlanKeys = new Set(activePlans.map((plan) => plan.key))
-  const missingPlans = REQUIRED_PLAN_KEYS.filter((key) => !activePlanKeys.has(key))
+  const missingPlans = REQUIRED_PLAN_KEYS.filter(
+    (key) => !activePlanKeys.has(key),
+  )
   const unitKeys = new Set(unitTemplate?.units.map((unit) => unit.key) ?? [])
   const missingUnitKeys = ["bag", "half_bag", "quarter_bag"].filter(
-    (key) => !unitKeys.has(key)
+    (key) => !unitKeys.has(key),
   )
 
   if (missingPlans.length > 0 || !unitTemplate || missingUnitKeys.length > 0) {
     throw new Error(
-      "Retail Ops reference rows are missing. Run EWATRADE_CONFIRM_RETAIL_OPS_REFERENCE_SEED=1 bun run db:seed:retail-ops-reference before workflow validation."
+      "Retail Ops reference rows are missing. Run CONFIRM_RETAIL_OPS_REFERENCE_SEED=1 bun run db:seed:retail-ops-reference before workflow validation.",
     )
   }
 
@@ -182,14 +186,14 @@ async function assertReferenceData(db: PrismaClient) {
     {
       activePlanKeys: [...activePlanKeys].sort(),
       unitTemplateId: unitTemplate.id,
-      unitTemplateKey: unitTemplate.key
-    }
+      unitTemplateKey: unitTemplate.key,
+    },
   )
 }
 
 async function createValidationWorkspace(
   db: PrismaClient,
-  runId: string
+  runId: string,
 ): Promise<WorkflowCheck & { workspace: ValidationWorkspace }> {
   const workspace = await db.$transaction(async (tx) => {
     const now = new Date()
@@ -201,11 +205,11 @@ async function createValidationWorkspace(
         emailVerified: true,
         emailVerifiedAt: now,
         metadata: validationMetadata(runId, "user"),
-        name: "Retail Ops Validation Owner"
+        name: "Retail Ops Validation Owner",
       },
       select: {
-        id: true
-      }
+        id: true,
+      },
     })
     const tenant = await tx.tenant.create({
       data: {
@@ -215,11 +219,11 @@ async function createValidationWorkspace(
         metadata: validationMetadata(runId, "tenant"),
         name: "Retail Ops Validation Business",
         slug,
-        type: TenantType.MERCHANT
+        type: TenantType.MERCHANT,
       },
       select: {
-        id: true
-      }
+        id: true,
+      },
     })
     const membership = await tx.membership.create({
       data: {
@@ -227,11 +231,11 @@ async function createValidationWorkspace(
         role: MembershipRole.OWNER,
         status: MembershipStatus.ACTIVE,
         tenantId: tenant.id,
-        userId: user.id
+        userId: user.id,
       },
       select: {
-        id: true
-      }
+        id: true,
+      },
     })
     const store = await tx.store.create({
       data: {
@@ -240,11 +244,11 @@ async function createValidationWorkspace(
         name: "Retail Ops Validation Store",
         slug: "main",
         status: StoreStatus.ACTIVE,
-        tenantId: tenant.id
+        tenantId: tenant.id,
       },
       select: {
-        id: true
-      }
+        id: true,
+      },
     })
 
     await tx.retailOpsStaffProfile.create({
@@ -257,11 +261,11 @@ async function createValidationWorkspace(
         roleSnapshot: MembershipRole.OWNER,
         statusSnapshot: MembershipStatus.ACTIVE,
         tenantId: tenant.id,
-        userId: user.id
+        userId: user.id,
       },
       select: {
-        id: true
-      }
+        id: true,
+      },
     })
 
     return {
@@ -269,7 +273,7 @@ async function createValidationWorkspace(
       runId,
       storeId: store.id,
       tenantId: tenant.id,
-      userId: user.id
+      userId: user.id,
     }
   })
 
@@ -277,15 +281,15 @@ async function createValidationWorkspace(
     ...pass(
       "validation workspace",
       "Created an isolated tenant, owner user, membership, store, and staff profile.",
-      workspace
+      workspace,
     ),
-    workspace
+    workspace,
   }
 }
 
 async function validateProductSetup(
   db: PrismaClient,
-  workspace: ValidationWorkspace
+  workspace: ValidationWorkspace,
 ): Promise<WorkflowCheck & { product: CreatedRetailOpsProduct }> {
   const product = await createRetailOpsProduct(db, {
     actorUserId: workspace.userId,
@@ -302,21 +306,21 @@ async function validateProductSetup(
         conversionMultiplier: 0.5,
         name: "Half bag",
         openingStockQuantity: 0,
-        priceMinor: 5500
+        priceMinor: 5500,
       },
       {
         conversionMultiplier: 0.25,
         name: "Quarter bag",
         openingStockQuantity: 0,
-        priceMinor: 3000
-      }
-    ]
+        priceMinor: 3000,
+      },
+    ],
   })
   const durableProduct = await db.product.findFirst({
     where: {
       id: product.product.id,
       storeId: workspace.storeId,
-      tenantId: workspace.tenantId
+      tenantId: workspace.tenantId,
     },
     select: {
       id: true,
@@ -324,18 +328,22 @@ async function validateProductSetup(
       variants: {
         select: {
           id: true,
-          unitTemplateUnitId: true
-        }
-      }
-    }
+          unitTemplateUnitId: true,
+        },
+      },
+    },
   })
 
   if (!durableProduct?.unitTemplateId) {
-    throw new Error("Product was created without durable unit-template linkage.")
+    throw new Error(
+      "Product was created without durable unit-template linkage.",
+    )
   }
 
   if (durableProduct.variants.some((variant) => !variant.unitTemplateUnitId)) {
-    throw new Error("One or more product units are missing unit-template linkage.")
+    throw new Error(
+      "One or more product units are missing unit-template linkage.",
+    )
   }
 
   return {
@@ -345,10 +353,10 @@ async function validateProductSetup(
       {
         productId: product.product.id,
         unitCount: product.units.length,
-        unitTemplateId: durableProduct.unitTemplateId
-      }
+        unitTemplateId: durableProduct.unitTemplateId,
+      },
     ),
-    product
+    product,
   }
 }
 
@@ -357,7 +365,7 @@ async function validatePriceHistory(
   input: {
     product: CreatedRetailOpsProduct
     workspace: ValidationWorkspace
-  }
+  },
 ) {
   const bagUnit = requireUnit(input.product, "Bag")
   const priceUpdate = await updateRetailOpsProductUnitPrice(db, {
@@ -366,14 +374,14 @@ async function validatePriceHistory(
     productVariantId: bagUnit.id,
     reason: "Retail Ops workflow validation",
     storeId: input.workspace.storeId,
-    tenantId: input.workspace.tenantId
+    tenantId: input.workspace.tenantId,
   })
   const priceHistoryCount = await db.productUnitPriceHistory.count({
     where: {
       productVariantId: bagUnit.id,
       storeId: input.workspace.storeId,
-      tenantId: input.workspace.tenantId
-    }
+      tenantId: input.workspace.tenantId,
+    },
   })
 
   if (priceHistoryCount < 2) {
@@ -386,8 +394,8 @@ async function validatePriceHistory(
     {
       priceHistoryCount,
       productVariantId: bagUnit.id,
-      updatedPriceMinor: priceUpdate.unit.priceMinor
-    }
+      updatedPriceMinor: priceUpdate.unit.priceMinor,
+    },
   )
 }
 
@@ -396,7 +404,7 @@ async function validateStockWorkflows(
   input: {
     product: CreatedRetailOpsProduct
     workspace: ValidationWorkspace
-  }
+  },
 ) {
   const bagUnit = requireUnit(input.product, "Bag")
   const halfBagUnit = requireUnit(input.product, "Half bag")
@@ -409,7 +417,7 @@ async function validateStockWorkflows(
     quantity: 4,
     sourceName: "Validation supplier",
     storeId: input.workspace.storeId,
-    tenantId: input.workspace.tenantId
+    tenantId: input.workspace.tenantId,
   })
   await recordRetailOpsUnitConversion(db, {
     actorUserId: input.workspace.userId,
@@ -420,7 +428,7 @@ async function validateStockWorkflows(
     storeId: input.workspace.storeId,
     targetProductVariantId: halfBagUnit.id,
     targetQuantity: 4,
-    tenantId: input.workspace.tenantId
+    tenantId: input.workspace.tenantId,
   })
   await recordRetailOpsStockAdjustment(db, {
     actorUserId: input.workspace.userId,
@@ -432,32 +440,32 @@ async function validateStockWorkflows(
     reason: "damage",
     sourceName: "Validation count",
     storeId: input.workspace.storeId,
-    tenantId: input.workspace.tenantId
+    tenantId: input.workspace.tenantId,
   })
 
   const [movementCount, bagInventory, halfBagInventory] = await Promise.all([
     db.inventoryMovement.count({
       where: {
         storeId: input.workspace.storeId,
-        tenantId: input.workspace.tenantId
-      }
+        tenantId: input.workspace.tenantId,
+      },
     }),
     db.inventoryItem.findUnique({
       where: {
-        productVariantId: bagUnit.id
+        productVariantId: bagUnit.id,
       },
       select: {
-        onHandQuantity: true
-      }
+        onHandQuantity: true,
+      },
     }),
     db.inventoryItem.findUnique({
       where: {
-        productVariantId: halfBagUnit.id
+        productVariantId: halfBagUnit.id,
       },
       select: {
-        onHandQuantity: true
-      }
-    })
+        onHandQuantity: true,
+      },
+    }),
   ])
 
   if (movementCount < 4) {
@@ -470,8 +478,8 @@ async function validateStockWorkflows(
     {
       bagOnHandQuantity: bagInventory?.onHandQuantity ?? null,
       halfBagOnHandQuantity: halfBagInventory?.onHandQuantity ?? null,
-      movementCount
-    }
+      movementCount,
+    },
   )
 }
 
@@ -480,16 +488,16 @@ async function validateCloseoutWorkflow(
   input: {
     product: CreatedRetailOpsProduct
     workspace: ValidationWorkspace
-  }
+  },
 ): Promise<WorkflowCheck & { sessionId: string }> {
   const bagUnit = requireUnit(input.product, "Bag")
   const bagInventory = await db.inventoryItem.findUnique({
     where: {
-      productVariantId: bagUnit.id
+      productVariantId: bagUnit.id,
     },
     select: {
-      onHandQuantity: true
-    }
+      onHandQuantity: true,
+    },
   })
   const countedQuantity = bagInventory?.onHandQuantity ?? 0
   const openedSession = await openRetailOpsSession(db, {
@@ -499,14 +507,14 @@ async function validateCloseoutWorkflow(
       {
         countedQuantity,
         note: "Retail Ops workflow validation opening count",
-        productVariantId: bagUnit.id
-      }
+        productVariantId: bagUnit.id,
+      },
     ],
     notes: "Retail Ops workflow validation session",
     openedAt: new Date(),
     openingFloatMinor: 0,
     storeId: input.workspace.storeId,
-    tenantId: input.workspace.tenantId
+    tenantId: input.workspace.tenantId,
   })
 
   await closeRetailOpsSession(db, {
@@ -518,12 +526,12 @@ async function validateCloseoutWorkflow(
       {
         countedQuantity,
         note: "Retail Ops workflow validation closing count",
-        productVariantId: bagUnit.id
-      }
+        productVariantId: bagUnit.id,
+      },
     ],
     notes: "Retail Ops workflow validation closeout",
     storeId: input.workspace.storeId,
-    tenantId: input.workspace.tenantId
+    tenantId: input.workspace.tenantId,
   })
   await reviewRetailOpsCloseoutSession(db, {
     actorUserId: input.workspace.userId,
@@ -531,7 +539,7 @@ async function validateCloseoutWorkflow(
     note: "Retail Ops workflow validation approval",
     status: "approved",
     storeId: input.workspace.storeId,
-    tenantId: input.workspace.tenantId
+    tenantId: input.workspace.tenantId,
   })
 
   const [closeoutCount, paymentDeclarationCount, stockDeclarationCount] =
@@ -539,24 +547,28 @@ async function validateCloseoutWorkflow(
       db.retailOpsCloseout.count({
         where: {
           cashierSessionId: openedSession.id,
-          tenantId: input.workspace.tenantId
-        }
+          tenantId: input.workspace.tenantId,
+        },
       }),
       db.retailOpsPaymentDeclaration.count({
         where: {
           cashierSessionId: openedSession.id,
-          tenantId: input.workspace.tenantId
-        }
+          tenantId: input.workspace.tenantId,
+        },
       }),
       db.retailOpsStockDeclaration.count({
         where: {
           cashierSessionId: openedSession.id,
-          tenantId: input.workspace.tenantId
-        }
-      })
+          tenantId: input.workspace.tenantId,
+        },
+      }),
     ])
 
-  if (closeoutCount < 1 || paymentDeclarationCount < 1 || stockDeclarationCount < 1) {
+  if (
+    closeoutCount < 1 ||
+    paymentDeclarationCount < 1 ||
+    stockDeclarationCount < 1
+  ) {
     throw new Error("Durable closeout declaration rows were not recorded.")
   }
 
@@ -568,16 +580,16 @@ async function validateCloseoutWorkflow(
         cashierSessionId: openedSession.id,
         closeoutCount,
         paymentDeclarationCount,
-        stockDeclarationCount
-      }
+        stockDeclarationCount,
+      },
     ),
-    sessionId: openedSession.id
+    sessionId: openedSession.id,
   }
 }
 
 async function validateSyncWorkflow(
   db: PrismaClient,
-  workspace: ValidationWorkspace
+  workspace: ValidationWorkspace,
 ) {
   const device = await import("../src/queries/retail-ops-subscriptions").then(
     ({ registerRetailOpsOfflineDevice }) =>
@@ -588,8 +600,8 @@ async function validateSyncWorkflow(
         deviceName: "Workflow validation device",
         platform: "web",
         storeId: workspace.storeId,
-        tenantId: workspace.tenantId
-      })
+        tenantId: workspace.tenantId,
+      }),
   )
 
   await recordRetailOpsSyncRun(db, {
@@ -599,43 +611,45 @@ async function validateSyncWorkflow(
       {
         eventId: `${workspace.runId}:sync-applied`,
         status: "applied",
-        type: "product_setup_created"
+        type: "product_setup_created",
       },
       {
         error: {
           code: "VALIDATION_CONFLICT",
-          message: "Validation stock conflict"
+          message: "Validation stock conflict",
         },
         eventId: `${workspace.runId}:sync-conflict`,
         status: "failed",
-        type: "sale_created"
-      }
+        type: "sale_created",
+      },
     ],
-    tenantId: workspace.tenantId
+    tenantId: workspace.tenantId,
   })
 
   const [deviceCount, syncRunCount, failedEventCount] = await Promise.all([
     db.offlineDevice.count({
       where: {
         deviceId: device.deviceId,
-        tenantId: workspace.tenantId
-      }
+        tenantId: workspace.tenantId,
+      },
     }),
     db.retailOpsSyncRun.count({
       where: {
-        tenantId: workspace.tenantId
-      }
+        tenantId: workspace.tenantId,
+      },
     }),
     db.retailOpsSyncEvent.count({
       where: {
         status: "FAILED",
-        tenantId: workspace.tenantId
-      }
-    })
+        tenantId: workspace.tenantId,
+      },
+    }),
   ])
 
   if (deviceCount < 1 || syncRunCount < 1 || failedEventCount < 1) {
-    throw new Error("Durable offline-device or sync-run rows were not recorded.")
+    throw new Error(
+      "Durable offline-device or sync-run rows were not recorded.",
+    )
   }
 
   return pass(
@@ -644,27 +658,27 @@ async function validateSyncWorkflow(
     {
       deviceId: device.deviceId,
       failedEventCount,
-      syncRunCount
-    }
+      syncRunCount,
+    },
   )
 }
 
 async function validateBillingWorkflow(
   db: PrismaClient,
-  workspace: ValidationWorkspace
+  workspace: ValidationWorkspace,
 ): Promise<WorkflowCheck & { checkoutIntentId: string }> {
   const checkoutIntent = await createRetailOpsSubscriptionCheckoutIntent(db, {
     planId: "growth",
     requestedByUserId: workspace.userId,
     surface: "dashboard",
-    tenantId: workspace.tenantId
+    tenantId: workspace.tenantId,
   })
   const providerEvent = await processRetailOpsBillingProviderEvent(db, {
     checkout: {
       completedAt: new Date(),
       externalId: checkoutIntent.intent.id,
       status: "completed",
-      tenantId: workspace.tenantId
+      tenantId: workspace.tenantId,
     },
     eventId: `${workspace.runId}:billing-provider-event`,
     invoice: {
@@ -675,10 +689,10 @@ async function validateBillingWorkflow(
       planId: "growth",
       providerInvoiceId: `${workspace.runId}:invoice`,
       status: "paid",
-      tenantId: workspace.tenantId
+      tenantId: workspace.tenantId,
     },
     payload: {
-      validationRunId: workspace.runId
+      validationRunId: workspace.runId,
     },
     provider: "manual",
     subscription: {
@@ -688,34 +702,34 @@ async function validateBillingWorkflow(
       currentPeriodStartsAt: new Date(),
       planId: "growth",
       status: "active",
-      tenantId: workspace.tenantId
+      tenantId: workspace.tenantId,
     },
     tenantId: workspace.tenantId,
-    type: "checkout_completed"
+    type: "checkout_completed",
   })
   const [checkoutSessionCount, subscriptionCount, invoiceCount, eventCount] =
     await Promise.all([
       db.billingCheckoutSession.count({
         where: {
-          tenantId: workspace.tenantId
-        }
+          tenantId: workspace.tenantId,
+        },
       }),
       db.tenantSubscription.count({
         where: {
-          tenantId: workspace.tenantId
-        }
+          tenantId: workspace.tenantId,
+        },
       }),
       db.billingInvoice.count({
         where: {
-          tenantId: workspace.tenantId
-        }
+          tenantId: workspace.tenantId,
+        },
       }),
       db.billingProviderEvent.count({
         where: {
           eventId: `${workspace.runId}:billing-provider-event`,
-          tenantId: workspace.tenantId
-        }
-      })
+          tenantId: workspace.tenantId,
+        },
+      }),
     ])
 
   if (
@@ -736,42 +750,42 @@ async function validateBillingWorkflow(
         checkoutSessionCount,
         eventStatus: providerEvent.providerEvent.status,
         invoiceCount,
-        subscriptionCount
-      }
+        subscriptionCount,
+      },
     ),
-    checkoutIntentId: checkoutIntent.intent.id
+    checkoutIntentId: checkoutIntent.intent.id,
   }
 }
 
 async function cleanupValidationWorkspace(
   db: PrismaClient,
-  workspace: ValidationWorkspace | undefined
+  workspace: ValidationWorkspace | undefined,
 ) {
   if (!workspace || process.env[KEEP_DATA_ENV] === "1") {
     return {
       kept: Boolean(workspace),
       tenantDeleted: false,
-      userDeleted: false
+      userDeleted: false,
     }
   }
 
   const result = {
     kept: false,
     tenantDeleted: false,
-    userDeleted: false
+    userDeleted: false,
   }
 
   await db.tenant.delete({
     where: {
-      id: workspace.tenantId
-    }
+      id: workspace.tenantId,
+    },
   })
   result.tenantDeleted = true
 
   await db.user.delete({
     where: {
-      id: workspace.userId
-    }
+      id: workspace.userId,
+    },
   })
   result.userDeleted = true
 
@@ -785,7 +799,7 @@ async function buildValidationReport(db: PrismaClient) {
 
   if (
     !(await runWorkflowCheck(checks, "reference data preconditions", () =>
-      assertReferenceData(db)
+      assertReferenceData(db),
     ))
   ) {
     return { checks, cleanup: null, ok: false, runId }
@@ -812,61 +826,64 @@ async function buildValidationReport(db: PrismaClient) {
       run: async () => {
         const result = await validateProductSetup(
           db,
-          requireStateValue(state.workspace, "workspace")
+          requireStateValue(state.workspace, "workspace"),
         )
 
         state.product = result.product
 
         return result
-      }
+      },
     },
     {
       name: "price history workflow",
       run: () =>
         validatePriceHistory(db, {
           product: requireStateValue(state.product, "product"),
-          workspace: requireStateValue(state.workspace, "workspace")
-        })
+          workspace: requireStateValue(state.workspace, "workspace"),
+        }),
     },
     {
       name: "stock movement workflows",
       run: () =>
         validateStockWorkflows(db, {
           product: requireStateValue(state.product, "product"),
-          workspace: requireStateValue(state.workspace, "workspace")
-        })
+          workspace: requireStateValue(state.workspace, "workspace"),
+        }),
     },
     {
       name: "closeout workflow",
       run: async () => {
         const result = await validateCloseoutWorkflow(db, {
           product: requireStateValue(state.product, "product"),
-          workspace: requireStateValue(state.workspace, "workspace")
+          workspace: requireStateValue(state.workspace, "workspace"),
         })
 
         state.sessionId = result.sessionId
 
         return result
-      }
+      },
     },
     {
       name: "offline sync workflow",
       run: () =>
-        validateSyncWorkflow(db, requireStateValue(state.workspace, "workspace"))
+        validateSyncWorkflow(
+          db,
+          requireStateValue(state.workspace, "workspace"),
+        ),
     },
     {
       name: "billing provider workflow",
       run: async () => {
         const result = await validateBillingWorkflow(
           db,
-          requireStateValue(state.workspace, "workspace")
+          requireStateValue(state.workspace, "workspace"),
         )
 
         state.checkoutIntentId = result.checkoutIntentId
 
         return result
-      }
-    }
+      },
+    },
   ]
 
   for (const step of workflowSteps) {
@@ -881,7 +898,7 @@ async function buildValidationReport(db: PrismaClient) {
     checks,
     cleanup,
     ok: checks.every((check) => check.status === "pass"),
-    runId
+    runId,
   }
 }
 
@@ -896,11 +913,11 @@ async function main() {
         {
           ...report,
           generatedAt: new Date().toISOString(),
-          writesValidationData: true
+          writesValidationData: true,
         },
         null,
-        2
-      )
+        2,
+      ),
     )
 
     if (!report.ok) {
@@ -918,11 +935,11 @@ main().catch((error) => {
         error: formatError(error),
         generatedAt: new Date().toISOString(),
         ok: false,
-        writesValidationData: true
+        writesValidationData: true,
       },
       null,
-      2
-    )
+      2,
+    ),
   )
   process.exitCode = 1
 })

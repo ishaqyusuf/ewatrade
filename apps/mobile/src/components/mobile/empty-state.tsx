@@ -1,9 +1,9 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Text } from "@/components/ui/text"
+import { View } from "@/components/ui/view"
 import { cn } from "@/lib/utils"
 import type { ComponentProps, ReactNode } from "react"
-import { View } from "react-native"
 
 type EmptyStateProps = {
   actionLabel?: string
@@ -29,7 +29,7 @@ export function EmptyState({
   return (
     <View
       className={cn(
-        "items-center gap-4 rounded-2xl border border-border bg-card p-6",
+        "items-center gap-4 rounded-2xl bg-card p-6",
         className,
       )}
     >

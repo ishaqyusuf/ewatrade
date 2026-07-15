@@ -1,13 +1,15 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
+import {
+  SecondaryOperationalRow,
+  SecondarySheetHeader,
+} from "@/components/mobile/secondary-operations"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Modal } from "@/components/ui/modal"
-import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
-import { cn } from "@/lib/utils"
 import { type RetailOpsBusiness, useBusinessStore } from "@/store/businessStore"
 import {
   getBusinessSubscription,
@@ -17,9 +19,14 @@ import {
 import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { forwardRef, useMemo, useState } from "react"
 import { View } from "react-native"
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
 type BusinessSwitchSheetProps = {
   onComplete?: () => void
+}
+
+type BusinessSwitchContentProps = BusinessSwitchSheetProps & {
+  presentation?: "screen" | "sheet"
 }
 
 const BUSINESS_PREVIEW_LIMIT = 8
@@ -33,37 +40,37 @@ function BusinessRow({
   onPress: () => void
   selected: boolean
 }) {
+  const metadata = [business.category, business.country, business.salesMethod]
+    .filter(Boolean)
+    .join(" - ")
+
   return (
-    <Pressable
-      className={cn(
-        "gap-3 rounded-2xl border border-border bg-card p-4 active:bg-accent",
-        selected && "border-primary bg-primary/10",
-      )}
-      haptic
+    <SecondaryOperationalRow
+      detail={`${business.type ?? "Retail"} - ${business.currency ?? "NGN"}`}
+      icon="Building2"
+      metadata={metadata}
       onPress={onPress}
-      transition
-    >
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-semibold text-foreground">{business.name}</Text>
-          <Text className="text-sm text-muted-foreground">
-            {business.type ?? "Retail"} - {business.currency ?? "NGN"}
-          </Text>
-        </View>
+      selected={selected}
+      title={business.name}
+      trailing={
         <StatusBadge
           icon={selected ? "CircleCheck" : "Building2"}
           label={selected ? "Active" : (business.currency ?? "NGN")}
           tone={selected ? "primary" : "muted"}
         />
-      </View>
-    </Pressable>
+      }
+    >
+      {selected ? (
+        <StatusBadge label="Current workspace" tone="success" />
+      ) : null}
+    </SecondaryOperationalRow>
   )
 }
 
-export const BusinessSwitchSheet = forwardRef<
-  BottomSheetModal,
-  BusinessSwitchSheetProps
->(({ onComplete }, ref) => {
+export function BusinessSwitchContent({
+  onComplete,
+  presentation = "sheet",
+}: BusinessSwitchContentProps) {
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
   const businesses = useBusinessStore((state) => state.businesses)
   const createBusiness = useBusinessStore((state) => state.createBusiness)
@@ -123,28 +130,13 @@ export const BusinessSwitchSheet = forwardRef<
     setType("Retail")
   }
 
-  return (
-    <Modal
-      enableDynamicSizing
-      ref={ref}
-      snapPoints={["90%"]}
-      title="Businesses"
-    >
-      <BottomSheetKeyboardAwareScrollView
-        bottomOffset={320}
-        contentContainerStyle={{ paddingBottom: 240 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View className="gap-5 px-5 pb-6">
-          <View className="gap-2">
-            <Text className="text-xl font-bold text-foreground">
-              Business workspace
-            </Text>
-            <Text className="text-sm leading-5 text-muted-foreground">
-              Switch between businesses or add another business under this
-              account.
-            </Text>
-          </View>
+  const content = (
+    <View className="gap-5 px-5 pb-6">
+          <SecondarySheetHeader
+            description="Switch between businesses or add another business under this account."
+            icon="Building2"
+            title="Business workspace"
+          />
 
           <View className="gap-3">
             <Text className="text-base font-bold text-foreground">
@@ -254,11 +246,50 @@ export const BusinessSwitchSheet = forwardRef<
           <ActionButton disabled={!canCreate} onPress={submit}>
             Add business
           </ActionButton>
-          <ActionButton onPress={onComplete} variant="outline">
-            Done
-          </ActionButton>
-        </View>
-      </BottomSheetKeyboardAwareScrollView>
+      <ActionButton onPress={onComplete} variant="outline">
+        Done
+      </ActionButton>
+    </View>
+  )
+
+  if (presentation === "screen") {
+    return (
+      <KeyboardAwareScrollView
+        className="flex-1"
+        bottomOffset={320}
+        contentContainerStyle={{ paddingBottom: 240 }}
+        disableScrollOnKeyboardHide
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+      >
+        {content}
+      </KeyboardAwareScrollView>
+    )
+  }
+
+  return (
+    <BottomSheetKeyboardAwareScrollView
+      bottomOffset={320}
+      contentContainerStyle={{ paddingBottom: 240 }}
+      keyboardShouldPersistTaps="handled"
+    >
+      {content}
+    </BottomSheetKeyboardAwareScrollView>
+  )
+}
+
+export const BusinessSwitchSheet = forwardRef<
+  BottomSheetModal,
+  BusinessSwitchSheetProps
+>((props, ref) => {
+  return (
+    <Modal
+      enableDynamicSizing
+      ref={ref}
+      snapPoints={["90%"]}
+      title="Businesses"
+    >
+      <BusinessSwitchContent {...props} presentation="sheet" />
     </Modal>
   )
 })

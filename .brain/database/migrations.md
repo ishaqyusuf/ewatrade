@@ -36,11 +36,11 @@ Document migration ownership and safety rules.
 - `bunx prisma migrate diff --from-empty --to-schema prisma --script --output prisma/migrations/0001_init/migration.sql` - refresh the baseline SQL migration without a running database
 - `bun run db:migrate` / `bun run db:migrate:dev` - create and apply a development migration after starting local PostgreSQL
 - `bun run db:migrate:deploy` - apply committed migrations in deployed environments
-- `EWATRADE_CONFIRM_RETAIL_OPS_REFERENCE_SEED=1 bun run db:seed:retail-ops-reference` - upsert active Retail Ops Starter/Growth/Pro plan rows and system unit-template rows into a selected validation database
-- `EWATRADE_CONFIRM_RETAIL_OPS_FULL_VALIDATION=1 EWATRADE_RETAIL_OPS_VALIDATION_TARGET=<target> bun run db:validate:retail-ops-full` - run the guarded full Retail Ops validation sequence, including generation, schema validation, migration deploy/status, reference seeding, live validation, workflow validation, and optional JSON evidence output
-- `EWATRADE_CONFIRM_RETAIL_OPS_FULL_VALIDATION=1 EWATRADE_RETAIL_OPS_VALIDATION_TARGET=<target> EWATRADE_RETAIL_OPS_VALIDATION_DRY_RUN=1 bun run db:validate:retail-ops-full` - validate the full runner guard inputs and print the planned validation sequence without running any validation step
+- `CONFIRM_RETAIL_OPS_REFERENCE_SEED=1 bun run db:seed:retail-ops-reference` - upsert active Retail Ops Starter/Growth/Pro plan rows and system unit-template rows into a selected validation database
+- `CONFIRM_RETAIL_OPS_FULL_VALIDATION=1 RETAIL_OPS_VALIDATION_TARGET=<target> bun run db:validate:retail-ops-full` - run the guarded full Retail Ops validation sequence, including generation, schema validation, migration deploy/status, reference seeding, live validation, workflow validation, and optional JSON evidence output
+- `CONFIRM_RETAIL_OPS_FULL_VALIDATION=1 RETAIL_OPS_VALIDATION_TARGET=<target> RETAIL_OPS_VALIDATION_DRY_RUN=1 bun run db:validate:retail-ops-full` - validate the full runner guard inputs and print the planned validation sequence without running any validation step
 - `bun run db:validate:retail-ops-live` - read-only Retail Ops live validation against a selected migrated database
-- `EWATRADE_CONFIRM_RETAIL_OPS_WORKFLOW_VALIDATION=1 bun run db:validate:retail-ops-workflows` - write isolated Retail Ops validation data, exercise migrated repository workflows, and clean up the validation tenant/user unless `EWATRADE_KEEP_RETAIL_OPS_WORKFLOW_VALIDATION_DATA=1` is set
+- `CONFIRM_RETAIL_OPS_WORKFLOW_VALIDATION=1 bun run db:validate:retail-ops-workflows` - write isolated Retail Ops validation data, exercise migrated repository workflows, and clean up the validation tenant/user unless `KEEP_RETAIL_OPS_WORKFLOW_VALIDATION_DATA=1` is set
 - `bun run db:push --local|--remote-dev|--prod` - run Prisma db push against the selected database profile
 - `bun run db:studio` - open Prisma Studio against the configured database
 
@@ -55,7 +55,7 @@ Document migration ownership and safety rules.
 
 Use this only when a real validation database is intentionally selected and `DATABASE_URL` points to that target. Do not run these commands against production without a backup and an approved rollout window.
 
-For a safe command-plan preview, use `EWATRADE_CONFIRM_RETAIL_OPS_FULL_VALIDATION=1 EWATRADE_RETAIL_OPS_VALIDATION_TARGET=<target> EWATRADE_RETAIL_OPS_VALIDATION_DRY_RUN=1 bun run db:validate:retail-ops-full`. For a one-command evidence run on a validation database, use `EWATRADE_CONFIRM_RETAIL_OPS_FULL_VALIDATION=1 EWATRADE_RETAIL_OPS_VALIDATION_TARGET=<target> EWATRADE_RETAIL_OPS_VALIDATION_REPORT_PATH=retail-ops-validation-report.json bun run db:validate:retail-ops-full`. The full runner refuses likely production targets unless `EWATRADE_ALLOW_PRODUCTION_RETAIL_OPS_VALIDATION=1` is also set, and it stops at the first failed step.
+For a safe command-plan preview, use `CONFIRM_RETAIL_OPS_FULL_VALIDATION=1 RETAIL_OPS_VALIDATION_TARGET=<target> RETAIL_OPS_VALIDATION_DRY_RUN=1 bun run db:validate:retail-ops-full`. For a one-command evidence run on a validation database, use `CONFIRM_RETAIL_OPS_FULL_VALIDATION=1 RETAIL_OPS_VALIDATION_TARGET=<target> RETAIL_OPS_VALIDATION_REPORT_PATH=retail-ops-validation-report.json bun run db:validate:retail-ops-full`. The full runner refuses likely production targets unless `ALLOW_PRODUCTION_RETAIL_OPS_VALIDATION=1` is also set, and it stops at the first failed step.
 
 1. Preflight the local source:
    - Run `bun run db:generate`.
@@ -71,11 +71,11 @@ For a safe command-plan preview, use `EWATRADE_CONFIRM_RETAIL_OPS_FULL_VALIDATIO
 3. Verify reference data:
    - Confirm active Starter, Growth, and Pro `SubscriptionPlan` rows exist or create them through the approved seed/admin path.
    - Confirm any desired system `ProductUnitTemplate` rows exist, or document that the app is intentionally using fallback unit-template presets.
-   - If the selected validation database needs the standard MVP reference rows, run `EWATRADE_CONFIRM_RETAIL_OPS_REFERENCE_SEED=1 bun run db:seed:retail-ops-reference`.
+   - If the selected validation database needs the standard MVP reference rows, run `CONFIRM_RETAIL_OPS_REFERENCE_SEED=1 bun run db:seed:retail-ops-reference`.
    - Expected evidence: `bun run db:validate:retail-ops-live` passes the subscription-plan check, warns or passes the unit-template check, `retailOps.subscription` uses durable plan rows when present, and `retailOps.unitTemplates` returns durable templates or documented fallback presets.
 
 4. Run migrated workflow checks:
-   - Run `EWATRADE_CONFIRM_RETAIL_OPS_WORKFLOW_VALIDATION=1 bun run db:validate:retail-ops-workflows` after migrations and reference data are in place.
+   - Run `CONFIRM_RETAIL_OPS_WORKFLOW_VALIDATION=1 bun run db:validate:retail-ops-workflows` after migrations and reference data are in place.
    - Product setup with unit-template linkage writes product, variant, inventory, conversion ratio, and optional template ids.
    - Price update and sale-at-time lookup read/write durable `ProductUnitPriceHistory`.
    - Unit conversion and stock adjustment create durable `InventoryMovement` rows for external-id-backed requests.

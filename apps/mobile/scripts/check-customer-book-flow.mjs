@@ -16,6 +16,10 @@ const FILES = {
   dashboard: join(MOBILE_DIR, "src/app/dashboard.tsx"),
   router: join(REPO_ROOT, "apps/api/src/trpc/routers/retail-ops.ts"),
   schemas: join(REPO_ROOT, "apps/api/src/schemas/retail-ops.ts"),
+  secondaryOperations: join(
+    MOBILE_DIR,
+    "src/components/mobile/secondary-operations.tsx",
+  ),
   store: join(MOBILE_DIR, "src/store/retailOpsStore.ts"),
 }
 
@@ -44,6 +48,8 @@ const CONTRACTS = [
     file: FILES.customerBook,
     markers: [
       "BottomSheetFlatList",
+      "SecondaryOperationalRow",
+      "SecondarySheetHeader",
       "StatusBadge",
       "StatusBanner",
       "EmptyState",
@@ -58,7 +64,19 @@ const CONTRACTS = [
       "New customers appear here after a sale or shared-link request.",
     ],
     reason:
-      "customer book sheet must stay virtualized and keep production/local merged rows, offline fallback copy, empty state, and shared-link customer visibility",
+      "customer book sheet must stay virtualized, use flat reusable secondary operation rows, and keep production/local merged rows, offline fallback copy, empty state, and shared-link customer visibility",
+  },
+  {
+    file: FILES.secondaryOperations,
+    markers: [
+      "SecondarySheetHeader",
+      "SecondaryOperationalRow",
+      "border-t border-border py-4",
+      "rounded-full bg-primary/10",
+      "flex-row flex-wrap items-center gap-2",
+    ],
+    reason:
+      "secondary operational screens must share flat headers and divider-based list rows instead of local card-heavy rows",
   },
   {
     file: FILES.dashboard,

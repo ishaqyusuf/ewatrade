@@ -1,7 +1,15 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
+import {
+  SessionInventoryLine,
+  SessionSectionHeader,
+  SessionSourcePanel,
+  SessionStatTile,
+  SessionVarianceRow,
+} from "@/components/mobile/session-flow"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
-import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import {
@@ -9,7 +17,6 @@ import {
   normalizeWholeNumberInput,
   parseWholeQuantity,
 } from "@/lib/quantity"
-import { cn } from "@/lib/utils"
 import { useBusinessStore } from "@/store/businessStore"
 import {
   type RetailOpsCloseout,
@@ -24,10 +31,15 @@ import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useMutation } from "@tanstack/react-query"
 import { forwardRef, useEffect, useMemo, useState } from "react"
 import { View } from "react-native"
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
 type CloseoutSheetProps = {
   attendantName?: string
   onComplete?: () => void
+}
+
+type CloseoutContentProps = CloseoutSheetProps & {
+  presentation?: "screen" | "sheet"
 }
 
 type InventoryDraftLine = {
@@ -123,53 +135,11 @@ function getInventoryLines(products: RetailOpsProduct[]): InventoryDraftLine[] {
   })
 }
 
-function SummaryStat({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
-  return (
-    <View className="flex-1 rounded-2xl bg-muted p-3">
-      <Text className="text-xs font-semibold uppercase text-muted-foreground">
-        {label}
-      </Text>
-      <Text className="mt-1 text-base font-bold text-foreground">{value}</Text>
-    </View>
-  )
-}
-
-function VarianceRow({
-  label,
-  value,
-}: {
-  label: string
-  value: number
-}) {
-  const isBalanced = value === 0
-
-  return (
-    <View className="flex-row items-center justify-between gap-3 rounded-xl bg-muted px-3 py-2">
-      <Text className="text-sm font-semibold text-foreground">{label}</Text>
-      <Text
-        className={cn(
-          "text-sm font-bold",
-          isBalanced
-            ? "text-emerald-700"
-            : value > 0
-              ? "text-primary"
-              : "text-destructive",
-        )}
-      >
-        {formatVariance(value)}
-      </Text>
-    </View>
-  )
-}
-
-export const CloseoutSheet = forwardRef<BottomSheetModal, CloseoutSheetProps>(
-  ({ attendantName = "Store Owner", onComplete }, ref) => {
+export function CloseoutContent({
+  attendantName = "Store Owner",
+  onComplete,
+  presentation = "sheet",
+}: CloseoutContentProps) {
     const trpc = useTRPC()
     const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
     const allCloseouts = useRetailOpsStore((state) => state.closeouts)
@@ -402,19 +372,8 @@ export const CloseoutSheet = forwardRef<BottomSheetModal, CloseoutSheetProps>(
       completeLocalCloseout("pending")
     }
 
-    return (
-      <Modal
-        enableDynamicSizing
-        ref={ref}
-        snapPoints={["92%"]}
-        title="Close day"
-      >
-        <BottomSheetKeyboardAwareScrollView
-          bottomOffset={320}
-          contentContainerStyle={{ paddingBottom: 240 }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View className="gap-5 px-5 pb-6">
+    const content = (
+      <View className="gap-5 px-5 pb-6">
             <View className="gap-2">
               <Text className="text-xl font-bold text-foreground">
                 End-of-day closeout
@@ -425,62 +384,52 @@ export const CloseoutSheet = forwardRef<BottomSheetModal, CloseoutSheetProps>(
               </Text>
             </View>
 
-            <View className="rounded-2xl border border-border bg-card p-4">
-              <View className="flex-row items-start justify-between gap-3">
-                <View className="flex-1 gap-1">
-                  <Text className="font-semibold text-foreground">
-                    Closeout source
-                  </Text>
-                  <Text className="text-sm leading-5 text-muted-foreground">
-                    {sourceDetail}
-                  </Text>
-                </View>
-                <View className="rounded-full bg-muted px-3 py-1">
-                  <Text className="text-xs font-bold text-muted-foreground">
-                    {sourceLabel}
-                  </Text>
-                </View>
-              </View>
-            </View>
+            <SessionSourcePanel
+              detail={sourceDetail}
+              label={sourceLabel}
+              title="Closeout source"
+              tone={canCloseProductionSession ? "success" : "warning"}
+            />
 
-            <View className="gap-3 rounded-2xl border border-border bg-card p-4">
-              <View className="flex-row items-center gap-2">
-                <Icon className="size-base text-primary" name="ReceiptText" />
-                <Text className="font-bold text-foreground">
-                  Sales to close
-                </Text>
-              </View>
+            <View className="gap-3">
+              <SessionSectionHeader icon="ReceiptText" title="Sales to close" />
               <View className="flex-row gap-3">
-                <SummaryStat label="Sales" value={String(openSales.length)} />
-                <SummaryStat
+                <SessionStatTile
+                  label="Sales"
+                  value={String(openSales.length)}
+                />
+                <SessionStatTile
                   label="Gross"
                   value={formatMoney(paymentTotals.gross, "NGN")}
                 />
               </View>
               <View className="flex-row gap-3">
-                <SummaryStat
+                <SessionStatTile
                   label="Cash"
                   value={formatMoney(paymentTotals.cash, "NGN")}
                 />
-                <SummaryStat
+                <SessionStatTile
                   label="Transfer"
                   value={formatMoney(paymentTotals.transfer, "NGN")}
                 />
               </View>
               {pendingSyncCount > 0 ? (
-                <View className="rounded-2xl bg-amber-500/10 p-3">
-                  <Text className="text-sm font-semibold text-amber-700">
-                    {pendingSyncCount} local change
-                    {pendingSyncCount === 1 ? "" : "s"} still pending sync.
-                  </Text>
-                </View>
+                <StatusBanner
+                  icon="Zap"
+                  message={`${pendingSyncCount} local change${
+                    pendingSyncCount === 1 ? "" : "s"
+                  } still pending sync.`}
+                  title="Pending sync"
+                  tone="warning"
+                />
               ) : null}
               {!hasCloseoutWork ? (
-                <View className="rounded-2xl bg-muted p-3">
-                  <Text className="text-sm font-semibold text-muted-foreground">
-                    No new sales have been recorded since the last closeout.
-                  </Text>
-                </View>
+                <StatusBanner
+                  icon="Info"
+                  message="No new sales have been recorded since the last closeout."
+                  title="No closeout sales"
+                  tone="muted"
+                />
               ) : null}
             </View>
 
@@ -502,18 +451,33 @@ export const CloseoutSheet = forwardRef<BottomSheetModal, CloseoutSheetProps>(
                 value={declaredTransfer}
               />
               <View className="gap-2">
-                <VarianceRow label="Cash variance" value={cashVariance} />
-                <VarianceRow
+                <SessionVarianceRow
+                  label="Cash variance"
+                  tone={
+                    cashVariance === 0
+                      ? "success"
+                      : cashVariance > 0
+                        ? "primary"
+                        : "destructive"
+                  }
+                  value={formatVariance(cashVariance)}
+                />
+                <SessionVarianceRow
                   label="Transfer variance"
-                  value={transferVariance}
+                  tone={
+                    transferVariance === 0
+                      ? "success"
+                      : transferVariance > 0
+                        ? "primary"
+                        : "destructive"
+                  }
+                  value={formatVariance(transferVariance)}
                 />
               </View>
             </View>
 
             <View className="gap-3">
-              <Text className="text-base font-bold text-foreground">
-                Closing stock
-              </Text>
+              <SessionSectionHeader icon="Warehouse" title="Closing stock" />
               {inventoryLines.length > 0 ? (
                 <View className="gap-3">
                   {inventoryLines.length > 8 ? (
@@ -532,23 +496,24 @@ export const CloseoutSheet = forwardRef<BottomSheetModal, CloseoutSheetProps>(
                       const variance = declaredQuantity - line.expectedQuantity
 
                       return (
-                        <View
-                          className="gap-3 rounded-2xl border border-border bg-card p-4"
+                        <SessionInventoryLine
+                          expectedLabel={`Expected ${formatQuantity(
+                            line.expectedQuantity,
+                          )}`}
                           key={line.id}
+                          productName={line.productName}
+                          unitName={line.unitName}
+                          varianceLabel={
+                            variance === 0
+                              ? "Stock balanced"
+                              : `${variance > 0 ? "+" : ""}${formatQuantity(
+                                  variance,
+                                )} variance`
+                          }
+                          varianceTone={
+                            variance === 0 ? "success" : "destructive"
+                          }
                         >
-                          <View className="flex-row items-start justify-between gap-3">
-                            <View className="flex-1 gap-1">
-                              <Text className="font-semibold text-foreground">
-                                {line.productName}
-                              </Text>
-                              <Text className="text-xs font-semibold uppercase text-muted-foreground">
-                                {line.unitName}
-                              </Text>
-                            </View>
-                            <Text className="text-xs font-bold text-muted-foreground">
-                              Expected {formatQuantity(line.expectedQuantity)}
-                            </Text>
-                          </View>
                           <FormField
                             inputMode="numeric"
                             keyboardType="numeric"
@@ -559,32 +524,15 @@ export const CloseoutSheet = forwardRef<BottomSheetModal, CloseoutSheetProps>(
                             placeholder="Enter counted stock"
                             value={inventoryDraft[line.id] ?? ""}
                           />
-                          <Text
-                            className={cn(
-                              "text-xs font-bold",
-                              variance === 0
-                                ? "text-emerald-700"
-                                : "text-destructive",
-                            )}
-                          >
-                            {variance === 0
-                              ? "Stock balanced"
-                              : `${variance > 0 ? "+" : ""}${formatQuantity(
-                                  variance,
-                                )} variance`}
-                          </Text>
-                        </View>
+                        </SessionInventoryLine>
                       )
                     })
                   ) : (
-                    <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-                      <Text className="font-semibold text-foreground">
-                        No matching stock lines
-                      </Text>
-                      <Text className="text-sm leading-5 text-muted-foreground">
-                        Try another product or unit name.
-                      </Text>
-                    </View>
+                    <EmptyState
+                      icon="Search"
+                      message="Try another product or unit name."
+                      title="No matching stock lines"
+                    />
                   )}
                   {filteredInventoryLines.length >
                   visibleInventoryLines.length ? (
@@ -595,14 +543,11 @@ export const CloseoutSheet = forwardRef<BottomSheetModal, CloseoutSheetProps>(
                   ) : null}
                 </View>
               ) : (
-                <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-                  <Text className="font-semibold text-foreground">
-                    Add inventory first
-                  </Text>
-                  <Text className="text-sm leading-5 text-muted-foreground">
-                    Closeout needs at least one inventory item to confirm.
-                  </Text>
-                </View>
+                <EmptyState
+                  icon="Warehouse"
+                  message="Closeout needs at least one inventory item to confirm."
+                  title="Add inventory first"
+                />
               )}
             </View>
 
@@ -614,11 +559,12 @@ export const CloseoutSheet = forwardRef<BottomSheetModal, CloseoutSheetProps>(
             />
 
             {submitError ? (
-              <View className="rounded-2xl bg-destructive/10 p-3">
-                <Text className="text-sm font-semibold text-destructive">
-                  {submitError}
-                </Text>
-              </View>
+              <StatusBanner
+                icon="TriangleAlert"
+                message={submitError}
+                title="Closeout failed"
+                tone="destructive"
+              />
             ) : null}
 
             <ActionButton disabled={!canSubmit} onPress={submit}>
@@ -627,11 +573,48 @@ export const CloseoutSheet = forwardRef<BottomSheetModal, CloseoutSheetProps>(
                 : "Submit closeout"}
             </ActionButton>
 
-            <ActionButton onPress={onComplete} variant="outline">
-              Done
-            </ActionButton>
-          </View>
-        </BottomSheetKeyboardAwareScrollView>
+        <ActionButton onPress={onComplete} variant="outline">
+          Done
+        </ActionButton>
+      </View>
+    )
+
+    if (presentation === "screen") {
+      return (
+        <KeyboardAwareScrollView
+          className="flex-1"
+          bottomOffset={320}
+          contentContainerStyle={{ paddingBottom: 240 }}
+          disableScrollOnKeyboardHide
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+        >
+          {content}
+        </KeyboardAwareScrollView>
+      )
+    }
+
+    return (
+      <BottomSheetKeyboardAwareScrollView
+        bottomOffset={320}
+        contentContainerStyle={{ paddingBottom: 240 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {content}
+      </BottomSheetKeyboardAwareScrollView>
+    )
+}
+
+export const CloseoutSheet = forwardRef<BottomSheetModal, CloseoutSheetProps>(
+  (props, ref) => {
+    return (
+      <Modal
+        enableDynamicSizing
+        ref={ref}
+        snapPoints={["92%"]}
+        title="Close day"
+      >
+        <CloseoutContent {...props} presentation="sheet" />
       </Modal>
     )
   },

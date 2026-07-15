@@ -2,12 +2,14 @@ import { Icon } from "@/components/ui/icon"
 import { Input } from "@/components/ui/input-2"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { useColors } from "@/hooks/use-color"
 import {
   formatWholeQuantity,
   normalizeWholeNumberInput,
   parseWholeQuantity,
 } from "@/lib/quantity"
 import { cn } from "@/lib/utils"
+import { useState } from "react"
 import { View } from "react-native"
 
 type QuantityStepperProps = {
@@ -29,6 +31,8 @@ export function QuantityStepper({
   step = 1,
   value,
 }: QuantityStepperProps) {
+  const colors = useColors()
+  const [isFocused, setIsFocused] = useState(false)
   const quantity = parseWholeQuantity(value)
   const canDecrease = quantity > min
 
@@ -58,9 +62,21 @@ export function QuantityStepper({
         >
           <Icon className="size-base text-foreground" name="Minus" />
         </Pressable>
-        <View className="min-w-0 flex-1">
+        <View
+          style={{
+            alignItems: "center",
+            backgroundColor: colors.card,
+            borderColor: isFocused ? colors.primary : colors.border,
+            borderRadius: 12,
+            borderWidth: isFocused ? 1.5 : 1,
+            flex: 1,
+            minHeight: 50,
+            minWidth: 0,
+            paddingHorizontal: 14,
+          }}
+        >
           <Input
-            className="h-12 rounded-xl border-border bg-card px-4 text-lg font-bold"
+            className="h-[48px] border-0 bg-transparent px-0 text-lg font-bold"
             expand
             inputTextAlign="center"
             inputMode="numeric"
@@ -68,7 +84,11 @@ export function QuantityStepper({
             onChangeText={(nextValue) =>
               onChangeText(normalizeWholeNumberInput(nextValue))
             }
-            onFocus={onFocus}
+            onBlur={() => setIsFocused(false)}
+            onFocus={() => {
+              setIsFocused(true)
+              onFocus?.()
+            }}
             onPressIn={onFocus}
             value={value}
           />

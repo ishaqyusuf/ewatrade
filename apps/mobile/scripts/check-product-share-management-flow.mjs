@@ -19,6 +19,7 @@ const FILES = {
   ),
   contractRunner: join(MOBILE_DIR, "scripts/run-mvp-contract-tests.mjs"),
   shareSheet: join(MOBILE_DIR, "src/components/mobile/product-share-sheet.tsx"),
+  shareLinkFlow: join(MOBILE_DIR, "src/components/mobile/share-link-flow.tsx"),
   store: join(MOBILE_DIR, "src/store/retailOpsStore.ts"),
 }
 
@@ -28,6 +29,11 @@ const CONTRACTS = [
     markers: [
       "BottomSheetKeyboardAwareScrollView",
       "InventoryProductCard",
+      "ShareLinkActionButton",
+      "ShareLinkMetricTile",
+      "ShareLinkOptionPill",
+      "ShareLinkPanel",
+      "ShareLinkRecordRow",
       "StatusBadge",
       "StatusBanner",
       "EmptyState",
@@ -64,7 +70,23 @@ const CONTRACTS = [
       "Delivery follow-up",
     ],
     reason:
-      "product share sheet must keep keyboard safety, product/link lists, share creation/deactivation, pending order requests, delivery follow-up, and native share handoff",
+      "product share sheet must keep keyboard safety, reusable share-link rows/metrics/actions, product/link lists, share creation/deactivation, pending order requests, delivery follow-up, and native share handoff",
+  },
+  {
+    file: FILES.shareLinkFlow,
+    markers: [
+      "ShareLinkMetricTile",
+      "ShareLinkOptionPill",
+      "ShareLinkPanel",
+      "ShareLinkRecordRow",
+      "ShareLinkActionButton",
+      "border-t border-border py-4",
+      "rounded-full bg-muted",
+      "bg-destructive/10",
+      "haptic",
+    ],
+    reason:
+      "share-link management must use reusable flat metric tiles, generated-link rows, and native action buttons instead of local card-heavy widgets",
   },
   {
     file: FILES.shareSheet,
@@ -72,6 +94,11 @@ const CONTRACTS = [
       "paymentMethodOptions",
       "fulfillmentStatusOptions",
       "fulfillmentMethodOptions",
+      "SharedLinkOrderRequestRow",
+      "DeliveryRequestRow",
+      "ShareLinkRecordRow",
+      "ShareLinkActionButton",
+      "border-y border-border py-3",
       "paymentMethod",
       "fulfillmentStatus",
       "fulfillmentMethod",
@@ -82,7 +109,7 @@ const CONTRACTS = [
       "updateOrderRequestStatusMutation.isPending",
     ],
     reason:
-      "order and delivery follow-up must keep payment, fulfillment, complete/cancel, and pending-operation protections",
+      "order and delivery follow-up must keep reusable flat record/action rows, payment, fulfillment, complete/cancel, and pending-operation protections",
   },
   {
     file: FILES.shareRouter,

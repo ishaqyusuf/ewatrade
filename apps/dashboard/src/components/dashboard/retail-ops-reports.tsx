@@ -806,12 +806,10 @@ export function RetailOpsReports({ defaultStoreId, stores, tenant }: Props) {
   )
   const syncDeviceOptions = useMemo(
     () =>
-      getUniqueOptions(
-        [
-          ...syncHistoryRows.map((row) => row.deviceId ?? "unknown device"),
-          ...syncConflictRows.map((row) => row.deviceId ?? "unknown device"),
-        ],
-      ),
+      getUniqueOptions([
+        ...syncHistoryRows.map((row) => row.deviceId ?? "unknown device"),
+        ...syncConflictRows.map((row) => row.deviceId ?? "unknown device"),
+      ]),
     [syncConflictRows, syncHistoryRows],
   )
   const filteredSalesByRepRows = useMemo(

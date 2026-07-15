@@ -131,9 +131,9 @@ Google auth is not complete until:
 - Expo project environment variables are configured for development, preview, and production as of 2026-07-12.
 - `bun run --cwd apps/mobile qa:google-oauth-ready` passes against the root local env, root production env, mobile local env, and mobile production env.
 - A fresh Google ID token was generated from the web client for `ishaqyusuf024@gmail.com` on 2026-07-12, proving the consent/test-user path can issue an ID token for the configured EwaTrade app. The token is short-lived and should not be stored in docs.
-- For live sign-up QA, also set `EWATRADE_GOOGLE_LIVE_NAME` and `EWATRADE_GOOGLE_LIVE_BUSINESS_NAME` to disposable values. They are ignored for login mode, but the live readiness gate requires them when `EWATRADE_GOOGLE_LIVE_MODE=sign_up` so the new-owner path can create the first business context intentionally.
+- For live sign-up QA, also set `GOOGLE_LIVE_NAME` and `GOOGLE_LIVE_BUSINESS_NAME` to disposable values. They are ignored for login mode, but the live readiness gate requires them when `GOOGLE_LIVE_MODE=sign_up` so the new-owner path can create the first business context intentionally.
 - The readiness script intentionally does not print configured values. It checks that configured values look like Google OAuth client IDs ending in `.apps.googleusercontent.com`, and that the API audience keys include the same client IDs used by the Expo mobile keys:
   - `GOOGLE_ANDROID_CLIENT_ID` must include `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`.
   - `GOOGLE_IOS_CLIENT_ID` must include `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`.
   - `GOOGLE_WEB_CLIENT_ID` or `GOOGLE_CLIENT_ID` must include the Expo web/generic client ID.
-- Live provider/API QA still requires a fresh `EWATRADE_GOOGLE_LIVE_ID_TOKEN`, an approved API URL, expected email, auth mode, and explicit `EWATRADE_GOOGLE_LIVE_CONFIRM_AUTH=1`.
+- Live provider/API QA still requires a fresh `GOOGLE_LIVE_ID_TOKEN`, an approved API URL, expected email, auth mode, and explicit `GOOGLE_LIVE_CONFIRM_AUTH=1`.

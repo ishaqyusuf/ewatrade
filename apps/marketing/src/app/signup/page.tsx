@@ -27,6 +27,7 @@ type SuccessState = {
   tenantSlug: string
   businessName: string
   devEmailHtml?: string
+  emailDeliveryStatus?: "failed" | "sent"
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -87,6 +88,7 @@ export default function SignupPage() {
         tenantSlug?: string
         dashboardUrl?: string
         devEmailHtml?: string
+        emailDeliveryStatus?: "failed" | "sent"
       }
 
       if (!response.ok) {
@@ -101,6 +103,7 @@ export default function SignupPage() {
         tenantSlug: result.tenantSlug ?? payload.subdomain,
         businessName: payload.businessName,
         devEmailHtml: result.devEmailHtml,
+        emailDeliveryStatus: result.emailDeliveryStatus,
       })
       setStep(5)
     } catch {
@@ -163,6 +166,7 @@ export default function SignupPage() {
               tenantSlug={success.tenantSlug}
               businessName={success.businessName}
               devEmailHtml={success.devEmailHtml}
+              emailDeliveryStatus={success.emailDeliveryStatus}
             />
           )}
         </div>

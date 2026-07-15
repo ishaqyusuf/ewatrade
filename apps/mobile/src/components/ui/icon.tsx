@@ -75,6 +75,7 @@ const Clock = hugeIcon("Clock");
 const CreditCard = hugeIcon("CreditCard");
 const Delete = hugeIcon("Delete");
 const DoorOpen = hugeIcon("Door01Icon");
+const Download = hugeIcon("Download01Icon");
 const Eye = hugeIcon("EyeIcon");
 const EyeOff = hugeIcon("ViewOffIcon");
 const Fence = hugeIcon("FenceIcon");
@@ -111,6 +112,7 @@ const Plus = hugeIcon("Plus");
 const PlusCircle = hugeIcon("PlusSignCircleIcon");
 const Receipt = hugeIcon("Receipt");
 const ReceiptText = hugeIcon("ReceiptTextIcon");
+const RefreshCw = hugeIcon("RefreshIcon");
 const Search = hugeIcon("Search");
 const Settings = hugeIcon("Settings");
 const Share = hugeIcon("Share");
@@ -135,6 +137,7 @@ const X = hugeIcon("X");
 const XCircle = hugeIcon("XCircle");
 const Zap = hugeIcon("Zap");
 const Route = hugeIcon("RouteIcon");
+const RotateCw = hugeIcon("RotateClockwiseIcon");
 const Ban = hugeIcon("CancelSquareIcon");
 // type T = IconProps['strokeWidth']
 const iconSizes = {
@@ -282,6 +285,7 @@ const appIcons = {
   CreditCard,
   Delete,
   DoorOpen,
+  Download,
   Eye,
   EyeOff,
   Fence,
@@ -322,7 +326,9 @@ const appIcons = {
   PlusCircle,
   Receipt,
   ReceiptText,
+  RefreshCw,
   Route,
+  RotateCw,
   Search,
   settings: Settings,
   Settings,

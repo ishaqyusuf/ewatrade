@@ -31,17 +31,13 @@ function uniq(values: Array<string | null | undefined>) {
 function getPlatformDomain() {
   return (
     process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ??
-    process.env.EWATRADE_PLATFORM_DOMAIN ??
-    process.env.NEXT_PUBLIC_EWATRADE_PLATFORM_DOMAIN ??
+    process.env.PLATFORM_DOMAIN ??
     "ewatrade.com"
   )
 }
 
 function getAuthSecret() {
-  const secret =
-    process.env.BETTER_AUTH_SECRET ??
-    process.env.EWATRADE_AUTH_SECRET ??
-    process.env.AUTH_SECRET
+  const secret = process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET
 
   if (secret?.trim()) {
     return secret.trim()
@@ -57,9 +53,8 @@ function getAuthSecret() {
 function getDefaultBaseUrl() {
   return (
     process.env.BETTER_AUTH_URL ??
-    process.env.EWATRADE_API_URL ??
-    process.env.NEXT_PUBLIC_API_URL ??
     process.env.API_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
     "http://localhost:3095"
   )
 }
@@ -67,7 +62,7 @@ function getDefaultBaseUrl() {
 function getDefaultProductionUrl(platformDomain = getPlatformDomain()) {
   return (
     process.env.BETTER_AUTH_PRODUCTION_URL ??
-    process.env.EWATRADE_API_URL ??
+    process.env.API_URL ??
     process.env.NEXT_PUBLIC_API_URL ??
     `https://api.${stripPort(platformDomain)}`
   )
@@ -127,9 +122,9 @@ function getTrustedOrigins(input: {
     process.env.NEXT_PUBLIC_MARKETING_URL,
     process.env.NEXT_PUBLIC_DASHBOARD_URL,
     process.env.NEXT_PUBLIC_API_URL,
-    process.env.EWATRADE_MARKETING_URL,
-    process.env.EWATRADE_DASHBOARD_URL,
-    process.env.EWATRADE_API_URL,
+    process.env.MARKETING_URL,
+    process.env.DASHBOARD_URL,
+    process.env.API_URL,
     requestUrlOrigin,
     requestOrigin,
     ...splitEnvList(process.env.BETTER_AUTH_TRUSTED_ORIGINS),

@@ -1,14 +1,14 @@
 import "server-only"
 
 import type { AppRouter } from "@ewatrade/api/trpc/routers/_app"
-import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
+import { resolveTenantDomain } from "@ewatrade/utils"
+import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { createTRPCClient, loggerLink } from "@trpc/client"
 import { httpBatchLink } from "@trpc/client/links/httpBatchLink"
 import {
-  createTRPCOptionsProxy,
   type TRPCQueryOptions,
+  createTRPCOptionsProxy,
 } from "@trpc/tanstack-react-query"
-import { resolveTenantDomain } from "@ewatrade/utils"
 import { headers } from "next/headers"
 import { cache } from "react"
 import superjson from "superjson"
@@ -49,8 +49,7 @@ async function getTenantSlugFromRequest() {
   const result = resolveTenantDomain(host, {
     platformDomain:
       process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ??
-      process.env.NEXT_PUBLIC_EWATRADE_PLATFORM_DOMAIN ??
-      process.env.EWATRADE_PLATFORM_DOMAIN ??
+      process.env.PLATFORM_DOMAIN ??
       "ewatrade.com",
   })
 

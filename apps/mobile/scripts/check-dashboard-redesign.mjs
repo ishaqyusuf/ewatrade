@@ -13,6 +13,10 @@ const requiredMarkers = [
       "StatusBadge",
       "MetricCard",
       "QuickAction",
+      "DashboardPanel",
+      "DashboardRecordRow",
+      "DashboardStatTile",
+      "DashboardInlineStatus",
       "visibleQuickActions",
       "isAttendantDashboard ? null",
       "canManageInventory",
@@ -35,6 +39,21 @@ const requiredMarkers = [
   {
     file: "components/mobile/status-badge.tsx",
     markers: ["StatusBadge", "MobileDesignStatusTone", "min-h-8"],
+  },
+  {
+    file: "components/mobile/dashboard-kit.tsx",
+    markers: [
+      "DashboardMetricCard",
+      "DashboardQuickAction",
+      "DashboardPanel",
+      "DashboardRecordRow",
+      "DashboardStatTile",
+      "DashboardInlineStatus",
+      "DashboardMetricTone",
+      "border-t border-border",
+      "bg-success/10",
+      "bg-warn/10",
+    ],
   },
 ]
 

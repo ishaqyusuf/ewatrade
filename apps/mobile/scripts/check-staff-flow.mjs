@@ -13,9 +13,14 @@ const FILES = {
     REPO_ROOT,
     "packages/notifications/src/types/retail-ops-staff-invited.ts",
   ),
+  secondaryOperations: join(
+    MOBILE_DIR,
+    "src/components/mobile/secondary-operations.tsx",
+  ),
   router: join(REPO_ROOT, "apps/api/src/trpc/routers/retail-ops.ts"),
   staffRouter: join(REPO_ROOT, "apps/api/src/trpc/routers/retail-ops-staff.ts"),
   staffInvite: join(MOBILE_DIR, "src/components/mobile/staff-invite-sheet.tsx"),
+  staffInviteModal: join(MOBILE_DIR, "src/app/staff-invite-modal.tsx"),
   staffOnboarding: join(MOBILE_DIR, "src/app/staff-onboarding.tsx"),
   store: join(MOBILE_DIR, "src/store/retailOpsStore.ts"),
 }
@@ -25,11 +30,15 @@ const CONTRACTS = [
     file: FILES.staffInvite,
     markers: [
       "BottomSheetKeyboardAwareScrollView",
+      "SecondaryOperationalRow",
+      "SecondarySheetHeader",
       "StatusBadge",
       "StatusBanner",
       "EmptyState",
       "trpc.retailOps.staff",
       "trpc.retailOps.inviteStaff",
+      "ctaPlacement",
+      "absolute bottom-0 left-0 right-0",
       "inviteStaff(",
       "usesLocalStaffFallback",
       "STAFF_PREVIEW_LIMIT",
@@ -41,12 +50,27 @@ const CONTRACTS = [
       'role: "cashier"',
     ],
     reason:
-      "staff invite sheet must keep keyboard safety, production invite/list, local fallback, staff limits, bounded rows, and cashier role submission",
+      "staff invite sheet must keep keyboard safety, reusable flat secondary operation rows, production invite/list, local fallback, staff limits, bounded rows, and cashier role submission",
+  },
+  {
+    file: FILES.secondaryOperations,
+    markers: [
+      "SecondarySheetHeader",
+      "SecondaryOperationalRow",
+      "rounded-2xl bg-muted/40 p-4",
+      "h-11 w-11 items-center justify-center rounded-full bg-primary/10",
+      "flex-row flex-wrap items-center gap-2",
+    ],
+    reason:
+      "secondary operational screens must share flat headers and divider-based list rows instead of local card-heavy rows",
   },
   {
     file: FILES.staffOnboarding,
     markers: [
       "MobileScreen",
+      "SecondaryOperationalRow",
+      "SecondarySheetHeader",
+      'className="border-y"',
       "StatusBadge",
       "StatusBanner",
       "resolveStaffInviteToken",
@@ -65,10 +89,21 @@ const CONTRACTS = [
       "staff onboarding must keep invite-token resolution, invited-account enforcement, compact profile fields, and session/business activation",
   },
   {
+    file: FILES.staffInviteModal,
+    markers: [
+      "StaffInviteContent",
+      'ctaPlacement="sticky"',
+      "isInvitedStaffProfile(profile) || isSalesRepRole(profile?.role)",
+      "router.replace(\"/dashboard\")",
+      "scroll={false}",
+    ],
+    reason:
+      "staff invite must be available as a guarded full-screen route with a sticky CTA mode",
+  },
+  {
     file: FILES.dashboard,
     markers: [
-      "StaffInviteSheet",
-      "staffModal.present",
+      'router.push("/staff-invite-modal")',
       "isAttendantDashboard",
       "canManageInventory",
       "isInvitedStaffProfile",
@@ -77,7 +112,7 @@ const CONTRACTS = [
       "Invite your first attendant",
     ],
     reason:
-      "dashboard must keep staff invite entry points, invited-staff redirect, and attendant role gating",
+      "dashboard must keep full-screen staff invite entry points, invited-staff redirect, and attendant role gating",
   },
   {
     file: FILES.store,

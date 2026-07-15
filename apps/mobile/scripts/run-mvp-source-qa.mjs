@@ -45,6 +45,10 @@ const CHECKS = [
     script: "check-design-foundation.mjs",
   },
   {
+    label: "Design-system playground",
+    script: "check-design-system-playground.mjs",
+  },
+  {
     label: "First-product flow",
     script: "check-first-product-flow.mjs",
   },

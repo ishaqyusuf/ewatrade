@@ -39,12 +39,12 @@ const ANDROID_DEV_SHA1 =
   "A7:A1:5D:42:BD:71:31:81:D3:F0:B0:57:75:F5:3C:9C:22:A1:99:34"
 const IOS_BUNDLE_IDS = ["com.ewatrade.dev", "com.ewatrade.app"]
 const PUBLIC_REPORT_VALUE_KEYS = new Set([
-  "EWATRADE_API_URL",
+  "API_URL",
   "NEXT_PUBLIC_API_URL",
   "EXPO_PUBLIC_API_URL",
   "EXPO_PUBLIC_BASE_URL",
   "EXPO_PUBLIC_WEB_URL",
-  "EWATRADE_STOREFRONT_URL",
+  "STOREFRONT_URL",
   "NEXT_PUBLIC_STOREFRONT_URL",
   "NEXT_PUBLIC_APP_URL",
 ])
@@ -93,11 +93,7 @@ const SECTIONS = [
     items: [
       {
         hint: "Live API base URL for the auth.verifyMobileGoogle tRPC call.",
-        keys: [
-          "EWATRADE_API_URL",
-          "NEXT_PUBLIC_API_URL",
-          "EXPO_PUBLIC_API_URL",
-        ],
+        keys: ["API_URL", "NEXT_PUBLIC_API_URL", "EXPO_PUBLIC_API_URL"],
         label: "Live API URL",
       },
       {
@@ -112,44 +108,44 @@ const SECTIONS = [
       },
       {
         hint: "Set to 1 only for an intentional Google auth verification against the selected API/database.",
-        key: "EWATRADE_GOOGLE_LIVE_CONFIRM_AUTH",
+        key: "GOOGLE_LIVE_CONFIRM_AUTH",
         label: "Google auth confirmation",
       },
       {
         hint: "Fresh Google ID token from the configured mobile client.",
-        key: "EWATRADE_GOOGLE_LIVE_ID_TOKEN",
+        key: "GOOGLE_LIVE_ID_TOKEN",
         label: "Google ID token",
       },
       {
         hint: "Use login for an existing owner or sign_up for a disposable new business.",
-        key: "EWATRADE_GOOGLE_LIVE_MODE",
+        key: "GOOGLE_LIVE_MODE",
         label: "Google auth mode",
       },
       {
         hint: "Email expected in the returned mobile auth profile.",
-        key: "EWATRADE_GOOGLE_LIVE_EXPECTED_EMAIL",
+        key: "GOOGLE_LIVE_EXPECTED_EMAIL",
         label: "Expected profile email",
       },
       {
         hint: "Required absolute .json output path for value-safe Google OAuth live evidence.",
-        key: "EWATRADE_GOOGLE_LIVE_EVIDENCE_PATH",
+        key: "GOOGLE_LIVE_EVIDENCE_PATH",
         label: "Google live evidence path",
       },
       {
-        hint: "Required only when EWATRADE_GOOGLE_LIVE_MODE is sign_up. Use a disposable owner name.",
-        key: "EWATRADE_GOOGLE_LIVE_NAME",
+        hint: "Required only when GOOGLE_LIVE_MODE is sign_up. Use a disposable owner name.",
+        key: "GOOGLE_LIVE_NAME",
         label: "Google sign-up owner name",
         optional: true,
       },
       {
-        hint: "Required only when EWATRADE_GOOGLE_LIVE_MODE is sign_up. Use a disposable business name.",
-        key: "EWATRADE_GOOGLE_LIVE_BUSINESS_NAME",
+        hint: "Required only when GOOGLE_LIVE_MODE is sign_up. Use a disposable business name.",
+        key: "GOOGLE_LIVE_BUSINESS_NAME",
         label: "Google sign-up business name",
         optional: true,
       },
       {
         hint: "Optional. Set to 1 only for local live OAuth rehearsals, not production QA.",
-        key: "EWATRADE_GOOGLE_LIVE_ALLOW_LOCALHOST",
+        key: "GOOGLE_LIVE_ALLOW_LOCALHOST",
         label: "Google live localhost allowance",
         optional: true,
       },
@@ -161,17 +157,13 @@ const SECTIONS = [
     items: [
       {
         hint: "Live API base URL for protected tRPC calls.",
-        keys: [
-          "EWATRADE_API_URL",
-          "NEXT_PUBLIC_API_URL",
-          "EXPO_PUBLIC_API_URL",
-        ],
+        keys: ["API_URL", "NEXT_PUBLIC_API_URL", "EXPO_PUBLIC_API_URL"],
         label: "Live API URL",
       },
       {
         hint: "Live storefront base URL for the public product page.",
         keys: [
-          "EWATRADE_STOREFRONT_URL",
+          "STOREFRONT_URL",
           "NEXT_PUBLIC_STOREFRONT_URL",
           "NEXT_PUBLIC_APP_URL",
         ],
@@ -179,58 +171,58 @@ const SECTIONS = [
       },
       {
         hint: "Set to 1 only for an intentional write against the selected database.",
-        key: "EWATRADE_SHARED_LINK_LIVE_CONFIRM_WRITES",
+        key: "SHARED_LINK_LIVE_CONFIRM_WRITES",
         label: "Write confirmation",
       },
       {
         hint: "Set to 1 only when email delivery is ready to verify.",
-        key: "EWATRADE_SHARED_LINK_LIVE_CONFIRM_EMAIL_DELIVERY",
+        key: "SHARED_LINK_LIVE_CONFIRM_EMAIL_DELIVERY",
         label: "Email delivery confirmation",
       },
       {
         hint: "Short-lived owner/manager bearer token.",
-        key: "EWATRADE_SHARED_LINK_LIVE_OWNER_BEARER_TOKEN",
+        key: "SHARED_LINK_LIVE_OWNER_BEARER_TOKEN",
         label: "Owner bearer token",
       },
       {
         hint: "Synced product id with sellable stock.",
-        key: "EWATRADE_SHARED_LINK_LIVE_PRODUCT_ID",
+        key: "SHARED_LINK_LIVE_PRODUCT_ID",
         label: "Product id",
       },
       {
         hint: "Disposable QA customer name.",
-        key: "EWATRADE_SHARED_LINK_LIVE_CUSTOMER_NAME",
+        key: "SHARED_LINK_LIVE_CUSTOMER_NAME",
         label: "Customer name",
       },
       {
         hint: "Inbox that can receive the customer confirmation.",
-        key: "EWATRADE_SHARED_LINK_LIVE_CUSTOMER_EMAIL",
+        key: "SHARED_LINK_LIVE_CUSTOMER_EMAIL",
         label: "Customer email",
       },
       {
         hint: "Disposable password for register/login branch.",
-        key: "EWATRADE_SHARED_LINK_LIVE_CUSTOMER_PASSWORD",
+        key: "SHARED_LINK_LIVE_CUSTOMER_PASSWORD",
         label: "Customer password",
       },
       {
         hint: "Use complete or cancel so QA does not leave ambiguous pending orders.",
-        key: "EWATRADE_SHARED_LINK_LIVE_FOLLOW_UP_MODE",
+        key: "SHARED_LINK_LIVE_FOLLOW_UP_MODE",
         label: "Follow-up mode",
       },
       {
         hint: "Required absolute .json output path for value-safe shared-link live evidence.",
-        key: "EWATRADE_SHARED_LINK_LIVE_EVIDENCE_PATH",
+        key: "SHARED_LINK_LIVE_EVIDENCE_PATH",
         label: "Shared-link live evidence path",
       },
       {
         hint: "Optional whole-number quantity. Defaults to 1 when unset.",
-        key: "EWATRADE_SHARED_LINK_LIVE_QUANTITY",
+        key: "SHARED_LINK_LIVE_QUANTITY",
         label: "Shared-link live quantity",
         optional: true,
       },
       {
         hint: "Optional. Set to 1 only for local shared-link live rehearsals, not production QA.",
-        key: "EWATRADE_SHARED_LINK_LIVE_ALLOW_LOCALHOST",
+        key: "SHARED_LINK_LIVE_ALLOW_LOCALHOST",
         label: "Shared-link live localhost allowance",
         optional: true,
       },
@@ -252,32 +244,32 @@ const SECTIONS = [
     items: [
       {
         hint: "Full public /p/... URL including the share token.",
-        key: "EWATRADE_SHARED_LINK_PREVIEW_URL",
+        key: "SHARED_LINK_PREVIEW_URL",
         label: "Deployed share URL",
       },
       {
         hint: "Expected business subdomain or verified storefront host.",
-        key: "EWATRADE_SHARED_LINK_PREVIEW_EXPECTED_HOST",
+        key: "SHARED_LINK_PREVIEW_EXPECTED_HOST",
         label: "Expected host",
       },
       {
         hint: "Product name expected in preview metadata.",
-        key: "EWATRADE_SHARED_LINK_PREVIEW_EXPECTED_PRODUCT_NAME",
+        key: "SHARED_LINK_PREVIEW_EXPECTED_PRODUCT_NAME",
         label: "Expected product name",
       },
       {
         hint: "Business/store name expected in preview image metadata.",
-        key: "EWATRADE_SHARED_LINK_PREVIEW_EXPECTED_BUSINESS_NAME",
+        key: "SHARED_LINK_PREVIEW_EXPECTED_BUSINESS_NAME",
         label: "Expected business name",
       },
       {
         hint: "Required absolute .json output path for value-safe public preview evidence.",
-        key: "EWATRADE_SHARED_LINK_PREVIEW_EVIDENCE_PATH",
+        key: "SHARED_LINK_PREVIEW_EVIDENCE_PATH",
         label: "Public preview evidence path",
       },
       {
         hint: "Optional. Set to 1 only for local preview fixtures, not production QA.",
-        key: "EWATRADE_SHARED_LINK_PREVIEW_ALLOW_LOCALHOST",
+        key: "SHARED_LINK_PREVIEW_ALLOW_LOCALHOST",
         label: "Preview localhost allowance",
         optional: true,
       },
@@ -289,66 +281,66 @@ const SECTIONS = [
     items: [
       {
         hint: "Same full public /p/... URL with share token used by the preview gate.",
-        key: "EWATRADE_SHARED_LINK_PREVIEW_URL",
+        key: "SHARED_LINK_PREVIEW_URL",
         label: "Deployed share URL",
       },
       {
         hint: "Set to 1 only when the public link may receive a disposable browser checkout order request.",
-        key: "EWATRADE_SHARED_LINK_BROWSER_CONFIRM_ORDER",
+        key: "SHARED_LINK_BROWSER_CONFIRM_ORDER",
         label: "Browser order confirmation",
       },
       {
         hint: "Use register for a new disposable customer or login for an existing disposable customer.",
-        key: "EWATRADE_SHARED_LINK_BROWSER_AUTH_MODE",
+        key: "SHARED_LINK_BROWSER_AUTH_MODE",
         label: "Customer auth mode",
       },
       {
         hint: "Disposable browser-checkout customer name.",
-        key: "EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_NAME",
+        key: "SHARED_LINK_BROWSER_CUSTOMER_NAME",
         label: "Browser customer name",
       },
       {
         hint: "Disposable inbox for the browser checkout order request.",
-        key: "EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_EMAIL",
+        key: "SHARED_LINK_BROWSER_CUSTOMER_EMAIL",
         label: "Browser customer email",
       },
       {
         hint: "Disposable password for the register/login branch.",
-        key: "EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_PASSWORD",
+        key: "SHARED_LINK_BROWSER_CUSTOMER_PASSWORD",
         label: "Browser customer password",
       },
       {
         hint: "Optional whole-number quantity. Defaults to 1 when unset.",
-        key: "EWATRADE_SHARED_LINK_BROWSER_QUANTITY",
+        key: "SHARED_LINK_BROWSER_QUANTITY",
         label: "Browser quantity",
         optional: true,
       },
       {
         hint: "Optional disposable customer phone for the public form.",
-        key: "EWATRADE_SHARED_LINK_BROWSER_CUSTOMER_PHONE",
+        key: "SHARED_LINK_BROWSER_CUSTOMER_PHONE",
         label: "Browser customer phone",
         optional: true,
       },
       {
         hint: "Optional checkout note. Defaults to a QA note when unset.",
-        key: "EWATRADE_SHARED_LINK_BROWSER_NOTES",
+        key: "SHARED_LINK_BROWSER_NOTES",
         label: "Browser checkout notes",
         optional: true,
       },
       {
         hint: "Required absolute .png output path for browser checkout release evidence.",
-        key: "EWATRADE_SHARED_LINK_BROWSER_SCREENSHOT_PATH",
+        key: "SHARED_LINK_BROWSER_SCREENSHOT_PATH",
         label: "Browser screenshot path",
       },
       {
         hint: "Optional. Set to 1 only when you want Playwright to run visibly.",
-        key: "EWATRADE_SHARED_LINK_BROWSER_HEADFUL",
+        key: "SHARED_LINK_BROWSER_HEADFUL",
         label: "Browser headful mode",
         optional: true,
       },
       {
         hint: "Optional. Set to 1 only for local browser fixtures, not production QA.",
-        key: "EWATRADE_SHARED_LINK_BROWSER_ALLOW_LOCALHOST",
+        key: "SHARED_LINK_BROWSER_ALLOW_LOCALHOST",
         label: "Browser localhost allowance",
         optional: true,
       },

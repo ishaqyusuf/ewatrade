@@ -19,6 +19,7 @@
 - Added `/inventory` as a shell route with a Midday-style table/filter surface, summary cards, movement history, and right-side sheets for stock intake, stock adjustment, and unit conversion.
 - Added `GET /api/inventory` and `POST /api/inventory` dashboard bridge routes. The routes resolve the authenticated dashboard session, active tenant, and selected or active store before returning inventory/movement data or recording stock operations through the existing Retail Ops stock query helpers.
 - Added shared inventory helpers for POS-capable permission checks, stock-state calculation, inventory row mapping, movement labels, and signed movement quantities.
+- Follow-up Wayfinder scope now separates a full low-stock level alert workflow from the existing stock-state badge/filter behavior. See `13-low-stock-level-alert-workflow.md` for threshold ownership, alert lifecycle, dashboard placement, notification settings, permissions, and QA expectations.
 - QA evidence:
   - Authenticated `/inventory` returned `200`.
   - Logged-out `/inventory` redirected to marketing login with `next=/inventory`.

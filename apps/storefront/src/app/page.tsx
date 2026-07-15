@@ -17,11 +17,13 @@ export default function HomePage() {
                 className="max-w-4xl text-5xl leading-none sm:text-6xl lg:text-7xl"
                 style={{ fontFamily: "var(--font-display)" }}
               >
-                Merchant storefronts with branded tenant domains and customer-facing commerce flows.
+                Merchant storefronts with branded tenant domains and
+                customer-facing commerce flows.
               </h1>
               <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                This app is the storefront entrypoint for merchant experiences and will resolve
-                hostnames such as `tenant.ewatrade.com` and `tenant.com`.
+                This app is the storefront entrypoint for merchant experiences
+                and will resolve hostnames such as `tenant.ewatrade.com` and
+                `tenant.com`.
               </p>
             </div>
           </div>
@@ -45,11 +47,16 @@ export default function HomePage() {
           </div>
           <div>
             <p className="font-medium text-foreground">Shared styling</p>
-            <p>`packages/ui` owns the shared Tailwind 4 CSS and UI primitives.</p>
+            <p>
+              `packages/ui` owns the shared Tailwind 4 CSS and UI primitives.
+            </p>
           </div>
           <div>
             <p className="font-medium text-foreground">Routing</p>
-            <p>Tenant hostnames can map this surface independently from POS and dashboard.</p>
+            <p>
+              Tenant hostnames can map this surface independently from POS and
+              dashboard.
+            </p>
           </div>
         </section>
       </div>

@@ -28,10 +28,7 @@ function getTenantSlugFromBrowserHost() {
   }
 
   const result = resolveTenantDomain(window.location.host, {
-    platformDomain:
-      process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ??
-      process.env.NEXT_PUBLIC_EWATRADE_PLATFORM_DOMAIN ??
-      "ewatrade.com",
+    platformDomain: process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com",
   })
 
   return result.kind === "tenant" ? result.tenantSlug : null

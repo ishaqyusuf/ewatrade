@@ -1,10 +1,13 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
+import {
+  SecondaryOperationalRow,
+  SecondarySheetHeader,
+} from "@/components/mobile/secondary-operations"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
-import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { useBusinessStore } from "@/store/businessStore"
@@ -22,8 +25,14 @@ import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { forwardRef, useMemo, useState } from "react"
 import { View } from "react-native"
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
 type StaffInviteSheetProps = {
+  onComplete?: () => void
+}
+
+type StaffInviteContentProps = {
+  ctaPlacement?: "inline" | "sticky"
   onComplete?: () => void
 }
 
@@ -134,32 +143,31 @@ function mapLocalStaff(staff: RetailOpsStaffMember): StaffRow {
 
 function StaffRowItem({ staff }: { staff: StaffRow }) {
   return (
-    <View className="gap-2 rounded-2xl border border-border bg-card p-4">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <Text className="font-semibold text-foreground">{staff.name}</Text>
-          <Text className="text-xs text-muted-foreground">{staff.email}</Text>
-          <Text className="text-xs text-muted-foreground">{staff.detail}</Text>
-        </View>
+    <SecondaryOperationalRow
+      detail={staff.detail}
+      icon="User"
+      metadata={staff.email}
+      title={staff.name}
+      trailing={
         <StatusBadge
           label={staff.statusLabel}
           tone={staff.statusLabel === "Active" ? "success" : "warning"}
         />
-      </View>
+      }
+    >
       <StatusBadge
-        className="self-start"
         icon={staff.source === "production" ? "CircleCheck" : "Clock"}
         label={staff.sourceLabel}
         tone={staff.source === "production" ? "success" : "warning"}
       />
-    </View>
+    </SecondaryOperationalRow>
   )
 }
 
-export const StaffInviteSheet = forwardRef<
-  BottomSheetModal,
-  StaffInviteSheetProps
->(({ onComplete }, ref) => {
+export function StaffInviteContent({
+  ctaPlacement = "inline",
+  onComplete,
+}: StaffInviteContentProps) {
   const trpc = useTRPC()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
   const inviteStaff = useRetailOpsStore((state) => state.inviteStaff)
@@ -277,6 +285,124 @@ export const StaffInviteSheet = forwardRef<
     onComplete?.()
   }
 
+  const action = (
+    <ActionButton disabled={!canSubmit} onPress={submit}>
+      {inviteStaffMutation.isPending ? "Sending invite..." : "Send invite"}
+    </ActionButton>
+  )
+  const body = (
+    <View className="gap-5 px-5 pb-6">
+      <SecondarySheetHeader
+        description="Send access to an attendant for sales and inventory work."
+        icon="UserPlus"
+        title="Add staff"
+      />
+
+      <View className="gap-4">
+        <FormField
+          label="Attendant name"
+          onChangeText={setName}
+          placeholder="Enter attendant name"
+          value={name}
+        />
+        <FormField
+          autoCapitalize="none"
+          autoCorrect={false}
+          inputMode="email"
+          keyboardType="email-address"
+          label="Email address"
+          onChangeText={setEmail}
+          placeholder="Enter attendant email address"
+          value={email}
+        />
+      </View>
+
+      <StatusBanner
+        icon="Mail"
+        message="The attendant receives download instructions, signs in with their own email OTP, then confirms their sales profile."
+        title="Email invite"
+        tone="primary"
+      />
+
+      <StatusBanner
+        icon={sourceLabel === "Online" ? "CircleCheck" : "Clock"}
+        message={sourceDetail}
+        title={`Staff source: ${sourceLabel}`}
+        tone={sourceLabel === "Online" ? "success" : "warning"}
+      />
+
+      {isAtStaffLimit ? (
+        <StatusBanner
+          icon="TriangleAlert"
+          message={`${plan.name} allows ${plan.limits.staff} attendants. Upgrade before inviting more staff.`}
+          title="Staff limit reached"
+          tone="destructive"
+        />
+      ) : null}
+
+      {submitError ? (
+        <StatusBanner
+          icon="TriangleAlert"
+          message={submitError}
+          title="Invite was not sent"
+          tone="destructive"
+        />
+      ) : null}
+
+      <View className="gap-3">
+        <Text className="text-base font-bold text-foreground">Staff</Text>
+        {staffRows.length > 0 ? (
+          <>
+            {visibleStaffRows.map((staffMember) => (
+              <StaffRowItem key={staffMember.id} staff={staffMember} />
+            ))}
+            {staffRows.length > visibleStaffRows.length ? (
+              <Text className="text-xs font-semibold text-muted-foreground">
+                Showing first {visibleStaffRows.length} of {staffRows.length}{" "}
+                attendants.
+              </Text>
+            ) : null}
+          </>
+        ) : (
+          <EmptyState
+            icon="UserPlus"
+            message="Invited attendants appear here after you send their access."
+            title="No attendants yet"
+          />
+        )}
+      </View>
+
+      {ctaPlacement === "inline" ? action : null}
+    </View>
+  )
+
+  if (ctaPlacement === "sticky") {
+    return (
+      <View className="flex-1">
+        <KeyboardAwareScrollView
+          className="flex-1"
+          bottomOffset={160}
+          contentContainerStyle={{ paddingBottom: 120 }}
+          disableScrollOnKeyboardHide
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+        >
+          {body}
+        </KeyboardAwareScrollView>
+        <View className="absolute bottom-0 left-0 right-0 border-t border-border bg-background px-5 pb-5 pt-3">
+          {action}
+        </View>
+      </View>
+    )
+  }
+
+  return body
+}
+
+export const StaffInviteSheet = forwardRef<
+  BottomSheetModal,
+  StaffInviteSheetProps
+>(({ onComplete }, ref) => {
   return (
     <Modal
       enableDynamicSizing
@@ -289,101 +415,7 @@ export const StaffInviteSheet = forwardRef<
         contentContainerStyle={{ paddingBottom: 240 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View className="gap-5 px-5 pb-6">
-          <View className="gap-3">
-            <View className="h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
-              <Icon className="size-base text-primary" name="UserPlus" />
-            </View>
-            <View className="gap-2">
-              <Text className="text-xl font-bold text-foreground">
-                Add staff
-              </Text>
-              <Text className="text-sm leading-5 text-muted-foreground">
-                Send access to an attendant for sales and inventory work.
-              </Text>
-            </View>
-          </View>
-
-          <View className="gap-4">
-            <FormField
-              label="Attendant name"
-              onChangeText={setName}
-              placeholder="Enter attendant name"
-              value={name}
-            />
-            <FormField
-              autoCapitalize="none"
-              autoCorrect={false}
-              inputMode="email"
-              keyboardType="email-address"
-              label="Email address"
-              onChangeText={setEmail}
-              placeholder="Enter attendant email address"
-              value={email}
-            />
-          </View>
-
-          <StatusBanner
-            icon="Mail"
-            message="The attendant receives download instructions, signs in with their own email OTP, then confirms their sales profile."
-            title="Email invite"
-            tone="primary"
-          />
-
-          <StatusBanner
-            icon={sourceLabel === "Online" ? "CircleCheck" : "Clock"}
-            message={sourceDetail}
-            title={`Staff source: ${sourceLabel}`}
-            tone={sourceLabel === "Online" ? "success" : "warning"}
-          />
-
-          {isAtStaffLimit ? (
-            <StatusBanner
-              icon="TriangleAlert"
-              message={`${plan.name} allows ${plan.limits.staff} attendants. Upgrade before inviting more staff.`}
-              title="Staff limit reached"
-              tone="destructive"
-            />
-          ) : null}
-
-          {submitError ? (
-            <StatusBanner
-              icon="TriangleAlert"
-              message={submitError}
-              title="Invite was not sent"
-              tone="destructive"
-            />
-          ) : null}
-
-          <View className="gap-3">
-            <Text className="text-base font-bold text-foreground">Staff</Text>
-            {staffRows.length > 0 ? (
-              <>
-                {visibleStaffRows.map((staffMember) => (
-                  <StaffRowItem key={staffMember.id} staff={staffMember} />
-                ))}
-                {staffRows.length > visibleStaffRows.length ? (
-                  <Text className="text-xs font-semibold text-muted-foreground">
-                    Showing first {visibleStaffRows.length} of{" "}
-                    {staffRows.length} attendants.
-                  </Text>
-                ) : null}
-              </>
-            ) : (
-              <EmptyState
-                icon="UserPlus"
-                message="Invited attendants appear here after you send their access."
-                title="No attendants yet"
-              />
-            )}
-          </View>
-
-          <ActionButton disabled={!canSubmit} onPress={submit}>
-            {inviteStaffMutation.isPending
-              ? "Sending invite..."
-              : "Send invite"}
-          </ActionButton>
-        </View>
+        <StaffInviteContent onComplete={onComplete} />
       </BottomSheetKeyboardAwareScrollView>
     </Modal>
   )

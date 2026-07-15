@@ -16,9 +16,14 @@ Track important request/response shapes and contract rules.
   - `POST /api/early-access` accepts `fullName`, `email`, and optional `companyName`, `roleTitle`, `phone`, `message`
   - `POST /api/waitlist` accepts `fullName` and `email`
   - Both routes return a simple success `message` on success and still keep notification/email side effects server-side
+- Marketing owner signup contracts:
+  - `POST /api/auth/signup` accepts account modes, workspace subdomain/custom domain, business details, owner name/email/phone, and password from the marketing signup stepper.
+  - The route creates the Better Auth user, tenant, tenant hostnames, and owner membership, then dispatches the welcome email through `@ewatrade/email`.
+  - Successful responses include `tenantSlug`, `dashboardUrl`, and `emailDeliveryStatus` (`sent` or `failed`). Development responses may also include `devEmailHtml` for local preview.
 - Mobile auth contracts:
   - `auth.requestMobileOwnerOtp` accepts mode `login` or `sign_up`, normalized email, and optional owner name plus business name for sign-up
   - The request mutation writes a short-lived six-digit OTP to the shared `Verification` table and dispatches the OTP email through the shared email package
+  - In local/dev environments, or when the submitted email domain is exactly `test.com`, the outbound OTP email is routed to comma-separated `TEST_EMAILS` recipients with `TEST_EMAIL` fallback; the OTP identity email in the request, response, and verification record remains the submitted email
   - `auth.verifyMobileOwnerOtp` accepts the same identity payload plus a six-digit code, verifies the latest unexpired OTP, marks the email verified, creates or resumes the owner user, resolves or creates the first tenant/business context for sign-up, and returns a bearer session token plus mobile profile and tenant summary
   - For login mode, `auth.verifyMobileOwnerOtp` can also resolve an invited cashier/operator/manager membership and return mobile profile role/status so the app can route the staff user into `retailOps.completeStaffOnboarding`
   - Mobile tRPC accepts bearer sessions from either `Authorization` or `x-app-authorization` so the Expo client can authenticate production reads and mutations after OTP verification
