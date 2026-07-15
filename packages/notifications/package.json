@@ -9,6 +9,7 @@
     "./core-types": "./src/core-types.ts",
     "./delivery": "./src/delivery.ts",
     "./payload-utils": "./src/payload-utils/index.ts",
+    "./services/email-service": "./src/services/email-service.ts",
     "./services": "./src/services/triggers.ts",
     "./types": "./src/types.ts"
   },

@@ -323,6 +323,11 @@ export const retailOpsDryCleaningListServiceItemsSchema =
     includeArchived: z.boolean().default(false),
   })
 
+export const retailOpsDryCleaningUpdateSettingsSchema =
+  retailOpsStoreScopeSchema.extend({
+    expressSurchargePercent: z.coerce.number().int().min(0).max(500),
+  })
+
 export const retailOpsDryCleaningPaymentStatusSchema = z.enum([
   "paid",
   "partial",
@@ -360,6 +365,15 @@ export const retailOpsDryCleaningCreateServiceOrderSchema =
   retailOpsStoreScopeSchema.extend({
     customer: retailOpsDryCleaningCustomerSchema,
     dueAt: z.coerce.date().optional(),
+    evidence: z
+      .array(
+        z.object({
+          label: z.string().trim().max(120).optional(),
+          url: z.string().trim().url().max(2_000),
+        }),
+      )
+      .max(20)
+      .default([]),
     lines: z.array(retailOpsDryCleaningServiceLineInputSchema).min(1).max(100),
     notes: z.string().trim().max(1_000).optional(),
     paymentStatus: retailOpsDryCleaningPaymentStatusSchema.default("unpaid"),

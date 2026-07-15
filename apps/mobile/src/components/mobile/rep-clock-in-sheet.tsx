@@ -325,6 +325,7 @@ export function RepClockInContent({
               {openingInventoryLines.length > 8 ? (
                 <FormField
                   label="Find stock line"
+                  leadingIcon="Search"
                   onChangeText={setInventoryLineQuery}
                   placeholder="Search products or units"
                   value={inventoryLineQuery}
@@ -358,6 +359,7 @@ export function RepClockInContent({
                         inputMode="numeric"
                         keyboardType="numeric"
                         label="Confirmed opening stock"
+                        leadingIcon="Hash"
                         onChangeText={(value) =>
                           updateInventoryLine(line.id, value)
                         }
@@ -387,6 +389,7 @@ export function RepClockInContent({
           {!openSession ? (
             <FormField
               label="Opening note"
+              leadingIcon="StickyNote"
               onChangeText={setNote}
               placeholder="Enter variance or handover note"
               value={note}
@@ -402,10 +405,13 @@ export function RepClockInContent({
             />
           ) : null}
 
-          <ActionButton disabled={!canSubmit} onPress={submit}>
-            {openSessionMutation.isPending
-              ? "Opening session..."
-              : "Clock in and start selling"}
+          <ActionButton
+            disabled={!canSubmit}
+            isLoading={openSessionMutation.isPending}
+            loadingLabel="Opening session"
+            onPress={submit}
+          >
+            Clock in and start selling
           </ActionButton>
 
       <ActionButton onPress={onComplete} variant="outline">

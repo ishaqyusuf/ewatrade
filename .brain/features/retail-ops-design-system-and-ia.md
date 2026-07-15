@@ -64,7 +64,7 @@ Admin/owner home rules:
 - The center `+` opens a compact Create sheet for deliberate actions instead of crowding the first screen with every CTA.
 - `More` opens a short icon list for `Sales Reps`, `Customers`, `Settings`, and `Theme`; Settings opens a dedicated settings navigation sheet, and Theme opens an explicit theme picker.
 - Long owner workflows use full-screen stack modal routes: Sales Reps (`/staff-invite-modal`), business switching (`/business-switch-modal`), first product setup (`/first-product-setup-modal`), stock intake (`/stock-intake-modal`), product links (`/product-share-modal`), reports (`/reports-modal`), subscription (`/subscription-modal`), and unit conversion (`/unit-conversion-modal`).
-- Long shared operational workflows use full-screen stack modal routes with sales-rep access where appropriate: create sale (`/create-sale-modal`), customer book (`/customer-book-modal`), rep clock-in (`/rep-clock-in-modal`), closeout (`/closeout-modal`), and sync status (`/sync-status-modal`).
+- Long shared operational workflows use full-screen stack modal routes with sales-rep access where appropriate: create sale (`/create-sale-modal`), customer book (`/customer-book-modal`), service orders (`/service-orders-modal`), rep clock-in (`/rep-clock-in-modal`), closeout (`/closeout-modal`), and sync status (`/sync-status-modal`).
 - The floating theme FAB is only for dev/preview UI testing variants; production theme access is through More.
 
 Sales-rep home rules:
@@ -74,6 +74,7 @@ Sales-rep home rules:
 
 Form and modal rules:
 - Canonical mobile inputs flow through `FormField`, which reuses the stable `Input` from `@/components/ui/input-2`.
+- Service-order setup and intake should reuse the canonical `FormField`, `ActionButton`, `QuantityStepper`, `SecondaryOperationalRow`, `StatusBanner`, and keyboard-safe full-screen modal primitives rather than introducing local input or button treatments.
 - Bottom sheets are for short, focused choices and quick actions.
 - Workflows that are over half-screen, multi-section, or keyboard-heavy should use full-screen stack modal routes with `MobileScreen` keyboard-safe layout and sticky primary CTA placement where the form is long.
 - Touched forms should prefer spacing, labels, helper text, status banners, and operational rows over repeated nested card/border wrappers.

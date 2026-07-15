@@ -1,10 +1,11 @@
 import { Icon, type IconKeys } from "@/components/ui/icon"
+import { Pressable } from "@/components/ui/pressable"
 import { useColorScheme } from "@/hooks/use-color"
 import { useColors } from "@/hooks/use-color"
 import { setThemeOverride } from "@/lib/theme-preference"
 import { type LinkProps, useRouter } from "expo-router"
 import { useEffect } from "react"
-import { Pressable as RNPressable, View as RNView } from "react-native"
+import { View as RNView } from "react-native"
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -119,9 +120,10 @@ function ReferenceFabButton({
         width: 56,
       }}
     >
-      <RNPressable
+      <Pressable
         accessibilityLabel={accessibilityLabel}
         accessibilityRole="button"
+        haptic
         onPress={() => {
           onPress?.()
           if (href) routerPush(href)
@@ -138,9 +140,10 @@ function ReferenceFabButton({
           shadowRadius: 18,
           width: 56,
         }}
+        transition
       >
         <Icon className={`size-base ${foregroundClassName}`} name={icon} />
-      </RNPressable>
+      </Pressable>
     </RNView>
   )
 }

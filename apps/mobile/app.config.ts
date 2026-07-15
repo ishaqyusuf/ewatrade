@@ -1,6 +1,6 @@
 import type { ExpoConfig } from "expo/config"
 
-export const UPDATE_VERSION = "2026.07.07"
+export const UPDATE_VERSION = "2026.07.15"
 const PROJECT_ID = "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b"
 const appVariant =
   process.env.APP_VARIANT ??
@@ -15,6 +15,21 @@ const autoUpdateOnForeground =
 const autoUpdateForegroundCooldownMs = Number(
   process.env.EXPO_PUBLIC_AUTO_UPDATE_FOREGROUND_COOLDOWN_MS ?? 5 * 60 * 1000,
 )
+const googleIosUrlScheme = getGoogleIosUrlScheme(
+  process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ??
+    process.env.GOOGLE_IOS_CLIENT_ID,
+)
+const googleSignInPlugin: NonNullable<ExpoConfig["plugins"]> =
+  googleIosUrlScheme
+    ? [
+        [
+          "@react-native-google-signin/google-signin",
+          {
+            iosUrlScheme: googleIosUrlScheme,
+          },
+        ],
+      ]
+    : []
 
 const variantConfig = isDevelopmentBuild
   ? {
@@ -98,6 +113,18 @@ const config: ExpoConfig = {
     "expo-font",
     "expo-web-browser",
     [
+      "expo-image-picker",
+      {
+        cameraPermission:
+          "Allow $(PRODUCT_NAME) to capture intake photos for service orders.",
+        microphonePermission:
+          "Allow $(PRODUCT_NAME) to record short intake videos for service orders.",
+        photosPermission:
+          "Allow $(PRODUCT_NAME) to attach intake media to service orders.",
+      },
+    ],
+    ...googleSignInPlugin,
+    [
       "expo-navigation-bar",
       {
         enforceContrast: false,
@@ -146,3 +173,21 @@ const config: ExpoConfig = {
 }
 
 export default config
+
+function getPrimaryGoogleClientId(value?: string) {
+  return (
+    value
+      ?.split(",")
+      .map((item) => item.trim())
+      .find(Boolean) ?? ""
+  )
+}
+
+function getGoogleIosUrlScheme(value?: string) {
+  const clientId = getPrimaryGoogleClientId(value)
+  const googleSuffix = ".apps.googleusercontent.com"
+
+  if (!clientId.endsWith(googleSuffix)) return undefined
+
+  return `com.googleusercontent.apps.${clientId.slice(0, -googleSuffix.length)}`
+}

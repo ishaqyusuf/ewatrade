@@ -758,6 +758,7 @@ export function CreateSaleContent({
                           : "Type a new name or pick a saved customer."
                     }
                     label="Customer"
+                    leadingIcon="User"
                     onChangeText={updateCustomerName}
                     onFocus={scrollToCustomerInput}
                     placeholder="Enter customer name"
@@ -803,10 +804,13 @@ export function CreateSaleContent({
             if (item.kind === "submit") {
               return (
                 <View className="pb-6">
-                  <ActionButton disabled={!canSubmit} onPress={submit}>
-                    {createProductionSaleMutation.isPending
-                      ? "Recording sale..."
-                      : "Complete transaction"}
+                  <ActionButton
+                    disabled={!canSubmit}
+                    isLoading={createProductionSaleMutation.isPending}
+                    loadingLabel="Recording sale"
+                    onPress={submit}
+                  >
+                    Complete transaction
                   </ActionButton>
                 </View>
               )

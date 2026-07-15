@@ -1,6 +1,8 @@
 import { renderMarketingEmailTemplate } from "./shared"
 
 export type MarketingLeadEmailInput = {
+  accessExpiresAt?: string | null
+  accessUrl?: string | null
   companyName?: string | null
   email: string
   fullName: string
@@ -10,18 +12,23 @@ export type MarketingLeadEmailInput = {
   roleTitle?: string | null
 }
 
-export function renderMarketingEarlyAccessAdminTemplate(input: MarketingLeadEmailInput) {
+export function renderMarketingEarlyAccessAdminTemplate(
+  input: MarketingLeadEmailInput,
+) {
   return renderMarketingEmailTemplate({
-    intro: "A merchant or operator requested early access from the ewatrade marketing site.",
+    intro:
+      "A merchant or operator requested early access from the ewatrade marketing site.",
     sections: [
       { label: "Lead ID", value: input.id },
       { label: "Name", value: input.fullName },
       { label: "Email", value: input.email },
+      { label: "Access link", value: input.accessUrl },
+      { label: "Access link expires", value: input.accessExpiresAt },
       { label: "Company", value: input.companyName },
       { label: "Role", value: input.roleTitle },
       { label: "Phone", value: input.phone },
-      { label: "Message", value: input.message }
+      { label: "Message", value: input.message },
     ],
-    title: "New early access request"
+    title: "New early access request",
   })
 }

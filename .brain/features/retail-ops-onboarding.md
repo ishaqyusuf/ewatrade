@@ -6,6 +6,10 @@ Give new owners a lightweight path from signup to first usable Retail Ops worksp
 ## Current Phase
 Marketing signup creates the tenant/business and stores owner, country, currency, industry, and business-size context. Dashboard first-store setup now captures the production Retail Ops setup profile before the owner starts operating:
 
+Early-access signup can now start from a secure marketing access link. The early-access route creates an expiring one-time `OnboardingSession`; `/signup?access_token=...` verifies it, prefills the owner/business fields that came from the lead, and `POST /api/auth/signup` consumes that session exactly once while linking it to the created tenant and owner.
+
+Local signup uses tenant-specific local surface hostnames such as `<tenant>-storefront.localhost`, `<tenant>-pos.localhost`, and `<tenant>-dashboard.localhost` for DB hostname records. Production keeps the public `<tenant>.ewatrade.com`, `<tenant>-pos.ewatrade.com`, and `<tenant>-dashboard.ewatrade.com` shape.
+
 - store name
 - business template: Product Sales, Dry Cleaning / Laundry, or Other business
 - country and currency

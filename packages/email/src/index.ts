@@ -59,6 +59,7 @@ export type EmailTransport = {
 }
 
 export type EmailRoutingEnv = {
+  EMAIL_CAPTURE_FILE?: string
   NODE_ENV?: string
   TEST_EMAIL?: string
   TEST_EMAILS?: string
@@ -362,6 +363,49 @@ export const consoleEmailTransport: EmailTransport = {
   },
 }
 
+function getEmailCaptureFile() {
+  const value = process.env.EMAIL_CAPTURE_FILE?.trim()
+
+  return value ? value : undefined
+}
+
+async function appendCapturedEmail(captureFile: string, message: EmailMessage) {
+  const { appendFile } = await import("node:fs/promises")
+  const capturedAt = new Date().toISOString()
+
+  await appendFile(
+    captureFile,
+    `${JSON.stringify({
+      capturedAt,
+      from: message.from,
+      html: message.html,
+      replyTo: message.replyTo ?? null,
+      subject: message.subject,
+      text: message.text,
+      to: message.to,
+    })}\n`,
+  )
+
+  return capturedAt
+}
+
+export const captureEmailTransport: EmailTransport = {
+  async send(message) {
+    const captureFile = getEmailCaptureFile()
+
+    if (!captureFile) {
+      throw new Error("EMAIL_CAPTURE_FILE is not configured.")
+    }
+
+    const capturedAt = await appendCapturedEmail(captureFile, message)
+
+    return {
+      provider: "capture",
+      providerMessageId: `capture:${capturedAt}:${message.to}`,
+    }
+  },
+}
+
 function getResendApiKey() {
   const value = process.env.RESEND_API_KEY?.trim()
 
@@ -423,6 +467,10 @@ export const resendEmailTransport: EmailTransport = {
 }
 
 export function getDefaultEmailTransport() {
+  if (getEmailCaptureFile()) {
+    return captureEmailTransport
+  }
+
   return getResendApiKey() ? resendEmailTransport : consoleEmailTransport
 }
 

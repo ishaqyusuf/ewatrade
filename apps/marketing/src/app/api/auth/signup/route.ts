@@ -15,6 +15,8 @@ import {
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
+import { parseEarlyAccessOnboardingFormData } from "@/lib/early-access-onboarding"
+
 const PLATFORM_DOMAIN =
   process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com"
 const IS_DEV = process.env.NODE_ENV === "development"
@@ -34,16 +36,20 @@ function buildWelcomeEmailHtml(params: {
   email: string
   deliveryEmail: string
   businessName: string
-  tenantSlug: string
+  dashboardHostname: string
   dashboardUrl: string
+  posHostname: string
+  storefrontHostname: string
 }) {
   const {
     firstName,
     email,
     deliveryEmail,
     businessName,
-    tenantSlug,
+    dashboardHostname,
     dashboardUrl,
+    posHostname,
+    storefrontHostname,
   } = params
 
   return `<!DOCTYPE html>
@@ -87,15 +93,15 @@ function buildWelcomeEmailHtml(params: {
     <div class="domain-list">
       <div class="domain-row">
         <span class="domain-label">Storefront</span>
-        <span class="domain-value">${tenantSlug}.${PLATFORM_DOMAIN}</span>
+        <span class="domain-value">${storefrontHostname}</span>
       </div>
       <div class="domain-row">
         <span class="domain-label">POS</span>
-        <span class="domain-value">${tenantSlug}-pos.${PLATFORM_DOMAIN}</span>
+        <span class="domain-value">${posHostname}</span>
       </div>
       <div class="domain-row">
         <span class="domain-label">Dashboard</span>
-        <span class="domain-value">${tenantSlug}-dashboard.${PLATFORM_DOMAIN}</span>
+        <span class="domain-value">${dashboardHostname}</span>
       </div>
     </div>
 
@@ -118,19 +124,28 @@ function buildWelcomeEmailHtml(params: {
 function buildWelcomeEmailText(params: {
   firstName: string
   businessName: string
-  tenantSlug: string
+  dashboardHostname: string
   dashboardUrl: string
+  posHostname: string
+  storefrontHostname: string
 }) {
-  const { firstName, businessName, tenantSlug, dashboardUrl } = params
+  const {
+    firstName,
+    businessName,
+    dashboardHostname,
+    dashboardUrl,
+    posHostname,
+    storefrontHostname,
+  } = params
 
   return [
     `Your workspace is ready, ${firstName}.`,
     "",
     `${businessName} has been created on ewatrade.`,
     "",
-    `Storefront: ${tenantSlug}.${PLATFORM_DOMAIN}`,
-    `POS: ${tenantSlug}-pos.${PLATFORM_DOMAIN}`,
-    `Dashboard: ${tenantSlug}-dashboard.${PLATFORM_DOMAIN}`,
+    `Storefront: ${storefrontHostname}`,
+    `POS: ${posHostname}`,
+    `Dashboard: ${dashboardHostname}`,
     "",
     `Open your dashboard: ${dashboardUrl}`,
   ].join("\n")
@@ -160,6 +175,7 @@ export async function POST(request: NextRequest) {
   }
 
   const {
+    accessToken,
     modes,
     subdomain,
     customDomain,
@@ -203,6 +219,54 @@ export async function POST(request: NextRequest) {
   const normalizedEmail = email.toLowerCase()
   const normalizedPhone = phone.replace(/\s+/g, "")
   const displayName = `${firstName} ${lastName}`.trim()
+  const accessSession = accessToken
+    ? await prisma.onboardingSession.findUnique({
+        where: { token: accessToken },
+        select: {
+          completed: true,
+          expiresAt: true,
+          formData: true,
+          id: true,
+        },
+      })
+    : null
+  const accessSessionFormData = parseEarlyAccessOnboardingFormData(
+    accessSession?.formData,
+  )
+
+  if (accessToken && (!accessSession || !accessSessionFormData)) {
+    return NextResponse.json(
+      { message: "This early access link is invalid." },
+      { status: 404 },
+    )
+  }
+
+  if (accessToken && accessSession?.completed) {
+    return NextResponse.json(
+      { message: "This early access link has already been used." },
+      { status: 410 },
+    )
+  }
+
+  if (accessToken && accessSession && accessSession.expiresAt <= new Date()) {
+    return NextResponse.json(
+      { message: "This early access link has expired." },
+      { status: 410 },
+    )
+  }
+
+  if (
+    accessToken &&
+    accessSessionFormData?.email.toLowerCase() !== normalizedEmail
+  ) {
+    return NextResponse.json(
+      {
+        message:
+          "Use the same email address that received this early access link.",
+      },
+      { status: 400 },
+    )
+  }
   const signupEmailRouting = (() => {
     try {
       return getTestEmailRouting({ to: normalizedEmail })
@@ -258,21 +322,27 @@ export async function POST(request: NextRequest) {
 
   // ── 5. Build hostnames ───────────────────────────────────────────────────
   const storefrontHostname = buildInternalTenantHostname({
+    localProjectSlug: subdomain,
     tenantSlug: subdomain,
     surface: "storefront",
     platformDomain: PLATFORM_DOMAIN,
   })
   const posHostname = buildInternalTenantHostname({
+    localProjectSlug: subdomain,
     tenantSlug: subdomain,
     surface: "pos",
     platformDomain: PLATFORM_DOMAIN,
   })
   const dashboardHostname = buildInternalTenantHostname({
+    localProjectSlug: subdomain,
     tenantSlug: subdomain,
     surface: "dashboard",
     platformDomain: PLATFORM_DOMAIN,
   })
-  const dashboardUrl = `https://${dashboardHostname}`
+  const urlProtocol = process.env.NODE_ENV === "production" ? "https" : "http"
+  const dashboardUrl = `${urlProtocol}://${dashboardHostname}`
+  const posUrl = `${urlProtocol}://${posHostname}`
+  const storefrontUrl = `${urlProtocol}://${storefrontHostname}`
 
   // ── 6. Transactional DB writes ───────────────────────────────────────────
   const { tenant } = await prisma
@@ -385,6 +455,35 @@ export async function POST(request: NextRequest) {
         },
       })
 
+      if (accessSession?.id && accessSessionFormData) {
+        const updated = await tx.onboardingSession.updateMany({
+          data: {
+            completed: true,
+            formData: {
+              ...accessSessionFormData,
+              completedAt: new Date().toISOString(),
+              tenantId: tenant.id,
+              tenantSlug: tenant.slug,
+              userId: user.id,
+            },
+            step: 4,
+            tenantId: tenant.id,
+            userId: user.id,
+          },
+          where: {
+            completed: false,
+            expiresAt: {
+              gt: new Date(),
+            },
+            id: accessSession.id,
+          },
+        })
+
+        if (updated.count !== 1) {
+          throw new Error("Early access link could not be consumed.")
+        }
+      }
+
       return { tenant }
     })
     .catch(async (error: unknown) => {
@@ -408,14 +507,18 @@ export async function POST(request: NextRequest) {
     email: email.toLowerCase(),
     deliveryEmail: signupEmailRecipients,
     businessName,
-    tenantSlug: subdomain,
+    dashboardHostname,
     dashboardUrl,
+    posHostname,
+    storefrontHostname,
   })
   const emailText = buildWelcomeEmailText({
     firstName,
     businessName,
-    tenantSlug: subdomain,
+    dashboardHostname,
     dashboardUrl,
+    posHostname,
+    storefrontHostname,
   })
   const emailDeliveries = await dispatchEmailMessages(
     createTestRoutedEmailMessages(
@@ -451,6 +554,8 @@ export async function POST(request: NextRequest) {
     success: true,
     tenantSlug: tenant.slug,
     dashboardUrl,
+    posUrl,
+    storefrontUrl,
     emailDeliveryStatus,
     ...(IS_DEV ? { devEmailHtml: emailHtml } : {}),
   })

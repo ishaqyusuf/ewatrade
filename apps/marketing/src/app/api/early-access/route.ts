@@ -3,6 +3,12 @@ import { NextResponse } from "next/server"
 import { LeadCaptureType, prisma } from "@ewatrade/db"
 import { enqueueMarketingLeadNotification } from "@ewatrade/jobs"
 
+import {
+  EARLY_ACCESS_ONBOARDING_KIND,
+  buildEarlyAccessSignupUrl,
+  generateEarlyAccessToken,
+  getEarlyAccessExpiresAt,
+} from "@/lib/early-access-onboarding"
 import { earlyAccessSchema, toLeadCapturePayload } from "@/lib/lead-capture"
 
 export async function POST(request: Request) {
@@ -16,11 +22,42 @@ export async function POST(request: Request) {
     )
   }
 
-  const lead = await prisma.leadCapture.create({
-    data: toLeadCapturePayload(LeadCaptureType.EARLY_ACCESS, result.data),
+  const requestedAt = new Date()
+  const accessToken = generateEarlyAccessToken()
+  const accessUrl = buildEarlyAccessSignupUrl({
+    requestUrl: request.url,
+    token: accessToken,
+  })
+  const expiresAt = getEarlyAccessExpiresAt(requestedAt)
+  const { lead } = await prisma.$transaction(async (tx) => {
+    const lead = await tx.leadCapture.create({
+      data: toLeadCapturePayload(LeadCaptureType.EARLY_ACCESS, result.data),
+    })
+
+    await tx.onboardingSession.create({
+      data: {
+        expiresAt,
+        formData: {
+          accessUrl,
+          companyName: lead.companyName,
+          email: lead.email,
+          fullName: lead.fullName,
+          kind: EARLY_ACCESS_ONBOARDING_KIND,
+          leadId: lead.id,
+          phone: lead.phone,
+          requestedAt: requestedAt.toISOString(),
+          roleTitle: lead.roleTitle,
+        },
+        token: accessToken,
+      },
+    })
+
+    return { lead }
   })
 
   await enqueueMarketingLeadNotification({
+    accessExpiresAt: expiresAt.toISOString(),
+    accessUrl,
     companyName: lead.companyName,
     email: lead.email,
     fullName: lead.fullName,
@@ -32,6 +69,7 @@ export async function POST(request: Request) {
   })
 
   return NextResponse.json({
-    message: "Your early access request has been received.",
+    message:
+      "Your early access request has been received. Check your email for your secure signup link.",
   })
 }

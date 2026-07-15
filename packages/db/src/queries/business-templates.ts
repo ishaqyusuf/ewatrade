@@ -48,6 +48,11 @@ export type DryCleaningServiceRequestStatus =
 
 type JsonRecord = Record<string, unknown>
 
+export type DryCleaningSettings = {
+  expressSurchargePercent: number
+  updatedAt: string | null
+}
+
 export type DryCleaningServiceItemVariant = {
   id: string
   name: string
@@ -347,6 +352,18 @@ function withRetailOpsMetadata(
 
 function getDryCleaningMetadata(metadata: unknown) {
   return asRecord(getRetailOpsMetadata(metadata).dryCleaning)
+}
+
+function getDryCleaningSettings(metadata: unknown): DryCleaningSettings {
+  const settings = asRecord(getDryCleaningMetadata(metadata).settings)
+  const expressSurchargePercent = cleanNonNegativeInteger(
+    settings.expressSurchargePercent,
+  )
+
+  return {
+    expressSurchargePercent: Math.min(expressSurchargePercent ?? 0, 500),
+    updatedAt: normalizeIsoDate(settings.updatedAt),
+  }
 }
 
 function normalizeTemplateKey(value: unknown): BusinessTemplateKey | null {
@@ -776,6 +793,7 @@ function buildDryCleaningMetadata(input: {
   serviceOrders?: DryCleaningServiceOrder[]
   serviceRequestLinks?: DryCleaningServiceRequestLink[]
   serviceRequests?: DryCleaningServiceRequest[]
+  settings?: DryCleaningSettings
 }) {
   return {
     notificationIntents: input.notificationIntents ?? [],
@@ -783,6 +801,10 @@ function buildDryCleaningMetadata(input: {
     serviceOrders: input.serviceOrders ?? [],
     serviceRequestLinks: input.serviceRequestLinks ?? [],
     serviceRequests: input.serviceRequests ?? [],
+    settings: input.settings ?? {
+      expressSurchargePercent: 0,
+      updatedAt: null,
+    },
   }
 }
 
@@ -899,6 +921,10 @@ function buildOrder(input: {
   currencyCode: string
   customer: DryCleaningCustomerSnapshot
   dueAt?: Date | null
+  evidence?: Array<{
+    label?: string | null
+    url: string
+  }>
   lines: DryCleaningServiceLine[]
   notes?: string | null
   paymentStatus?: DryCleaningPaymentStatus
@@ -917,7 +943,21 @@ function buildOrder(input: {
     currencyCode: input.currencyCode,
     customer: input.customer,
     dueAt: input.dueAt ? input.dueAt.toISOString() : null,
-    evidence: [],
+    evidence: (input.evidence ?? []).flatMap((entry) => {
+      const url = cleanText(entry.url)
+
+      return url
+        ? [
+            {
+              actorUserId: cleanText(input.actorUserId),
+              addedAt: input.createdAt,
+              id: createId("dc_evidence"),
+              label: cleanText(entry.label),
+              url,
+            },
+          ]
+        : []
+    }),
     events: [
       {
         actorUserId: cleanText(input.actorUserId),
@@ -1137,6 +1177,57 @@ export async function listDryCleaningServiceItems(
     .sort((left, right) => left.name.localeCompare(right.name))
 }
 
+export async function getDryCleaningStoreSettings(
+  db: DbClient,
+  input: {
+    storeId: string
+    tenantId: string
+  },
+) {
+  const store = await getStoreOrThrow(db, input)
+  assertDryCleaningTemplate(store.metadata)
+
+  return getDryCleaningSettings(store.metadata)
+}
+
+export async function updateDryCleaningStoreSettings(
+  db: DbClient,
+  input: {
+    expressSurchargePercent: number
+    storeId: string
+    tenantId: string
+  },
+) {
+  const store = await getStoreOrThrow(db, input)
+  assertDryCleaningTemplate(store.metadata)
+
+  const retailOps = cloneJsonRecord(getRetailOpsMetadata(store.metadata))
+  const dryCleaning = getDryCleaningMetadata(store.metadata)
+  const nextSettings = {
+    expressSurchargePercent: Math.min(
+      500,
+      Math.max(0, Math.trunc(input.expressSurchargePercent)),
+    ),
+    updatedAt: new Date().toISOString(),
+  } satisfies DryCleaningSettings
+
+  retailOps.dryCleaning = {
+    ...buildDryCleaningMetadata({
+      notificationIntents: getDryCleaningNotificationIntents(store.metadata),
+      serviceItems: getDryCleaningServiceItems(store.metadata),
+      serviceOrders: getDryCleaningServiceOrders(store.metadata),
+      serviceRequestLinks: getDryCleaningRequestLinks(store.metadata),
+      serviceRequests: getDryCleaningServiceRequests(store.metadata),
+      settings: nextSettings,
+    }),
+    ...dryCleaning,
+    settings: nextSettings,
+  }
+  await updateStoreRetailOpsMetadata(db, store, retailOps)
+
+  return nextSettings
+}
+
 export async function createDryCleaningServiceItem(
   db: DbClient,
   input: {
@@ -1184,6 +1275,7 @@ export async function createDryCleaningServiceItem(
     serviceOrders: getDryCleaningServiceOrders(store.metadata),
     serviceRequestLinks: getDryCleaningRequestLinks(store.metadata),
     serviceRequests: getDryCleaningServiceRequests(store.metadata),
+    settings: getDryCleaningSettings(store.metadata),
   })
 
   retailOps.dryCleaning = dryCleaning
@@ -1266,6 +1358,7 @@ export async function updateDryCleaningServiceItem(
     serviceOrders: getDryCleaningServiceOrders(store.metadata),
     serviceRequestLinks: getDryCleaningRequestLinks(store.metadata),
     serviceRequests: getDryCleaningServiceRequests(store.metadata),
+    settings: getDryCleaningSettings(store.metadata),
   })
   await updateStoreRetailOpsMetadata(db, store, retailOps)
 
@@ -1278,6 +1371,10 @@ export async function createDryCleaningServiceOrder(
     actorUserId?: string | null
     customer: DryCleaningCustomerSnapshot
     dueAt?: Date | null
+    evidence?: Array<{
+      label?: string | null
+      url: string
+    }>
     lines: Array<{
       note?: string | null
       quantity: number
@@ -1307,6 +1404,7 @@ export async function createDryCleaningServiceOrder(
       phone: cleanText(input.customer.phone),
     },
     dueAt: input.dueAt,
+    evidence: input.evidence,
     lines,
     notes: input.notes,
     paymentStatus: input.paymentStatus,
@@ -1323,6 +1421,7 @@ export async function createDryCleaningServiceOrder(
     ].slice(0, 1_000),
     serviceRequestLinks: getDryCleaningRequestLinks(store.metadata),
     serviceRequests: getDryCleaningServiceRequests(store.metadata),
+    settings: getDryCleaningSettings(store.metadata),
   })
   await updateStoreRetailOpsMetadata(db, store, retailOps)
 
@@ -1500,6 +1599,7 @@ export async function updateDryCleaningServiceOrderStatus(
     ),
     serviceRequestLinks: getDryCleaningRequestLinks(store.metadata),
     serviceRequests: getDryCleaningServiceRequests(store.metadata),
+    settings: getDryCleaningSettings(store.metadata),
   })
   await updateStoreRetailOpsMetadata(db, store, retailOps)
 
@@ -1543,10 +1643,26 @@ export async function createDryCleaningServiceRequestLink(
       ...getDryCleaningRequestLinks(store.metadata),
     ].slice(0, 100),
     serviceRequests: getDryCleaningServiceRequests(store.metadata),
+    settings: getDryCleaningSettings(store.metadata),
   })
   await updateStoreRetailOpsMetadata(db, store, retailOps)
 
   return link
+}
+
+export async function listDryCleaningServiceRequestLinks(
+  db: DbClient,
+  input: {
+    storeId: string
+    tenantId: string
+  },
+) {
+  const store = await getStoreOrThrow(db, input)
+  assertDryCleaningTemplate(store.metadata)
+
+  return getDryCleaningRequestLinks(store.metadata).sort((left, right) =>
+    right.createdAt.localeCompare(left.createdAt),
+  )
 }
 
 async function findStoreByDryCleaningToken(
@@ -1693,6 +1809,7 @@ export async function createDryCleaningPublicServiceRequest(
       request,
       ...getDryCleaningServiceRequests(store.metadata),
     ].slice(0, 1_000),
+    settings: getDryCleaningSettings(store.metadata),
   })
   await updateStoreRetailOpsMetadata(db, store, retailOps)
 
@@ -1753,6 +1870,7 @@ export async function updateDryCleaningServiceRequestStatus(
     serviceRequests: requests.map((request) =>
       request.id === updated.id ? updated : request,
     ),
+    settings: getDryCleaningSettings(store.metadata),
   })
   await updateStoreRetailOpsMetadata(db, store, retailOps)
 
@@ -1811,6 +1929,7 @@ export async function convertDryCleaningServiceRequestToOrder(
     serviceRequests: requests.map((request) =>
       request.id === updatedRequest.id ? updatedRequest : request,
     ),
+    settings: getDryCleaningSettings(store.metadata),
   })
   await updateStoreRetailOpsMetadata(db, store, retailOps)
 

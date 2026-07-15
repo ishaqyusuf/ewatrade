@@ -128,6 +128,7 @@ export type OwnerValues = z.infer<typeof ownerSchema>
 // ─── Full Signup Payload ──────────────────────────────────────────────────────
 
 export const signupPayloadSchema = z.object({
+  accessToken: z.string().trim().min(1).optional(),
   modes: z.array(z.enum(TENANT_MODES)).min(1),
   subdomain: z.string().min(3).max(32),
   customDomain: z.string().optional().or(z.literal("")),

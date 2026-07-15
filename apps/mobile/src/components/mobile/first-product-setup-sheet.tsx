@@ -446,9 +446,9 @@ export function FirstProductSetupContent({
               >
                 <FormField
                   label="Item name"
+                  leadingIcon="FileText"
                   onChangeText={setName}
                   placeholder="Enter item name"
-                  variant="line"
                   value={name}
                 />
                 <FormField
@@ -459,10 +459,10 @@ export function FirstProductSetupContent({
                   }
                   helper="Optional. This appears in the shared product page and link preview."
                   label="Product description"
+                  leadingIcon="StickyNote"
                   multiline
                   onChangeText={setDescription}
                   placeholder="Enter product description"
-                  variant="line"
                   value={description}
                 />
                 <View className="gap-2">
@@ -497,18 +497,18 @@ export function FirstProductSetupContent({
                 </View>
                 <FormField
                   label="Primary unit"
+                  leadingIcon="Hash"
                   onChangeText={setUnitName}
                   placeholder="Enter unit name"
-                  variant="line"
                   value={unitName}
                 />
                 <FormField
                   inputMode="decimal"
                   keyboardType="numeric"
                   label="Price per unit"
+                  leadingIcon="CircleDollarSign"
                   onChangeText={setPrice}
                   placeholder="Enter unit price"
-                  variant="line"
                   value={price}
                 />
                 <FormField
@@ -523,9 +523,9 @@ export function FirstProductSetupContent({
                   inputMode="url"
                   keyboardType="url"
                   label="Product image link"
+                  leadingIcon="Globe"
                   onChangeText={setImageUrl}
                   placeholder="Enter product image link"
-                  variant="line"
                   value={imageUrl}
                 />
               </SetupSection>
@@ -601,11 +601,11 @@ export function FirstProductSetupContent({
                         </View>
                         <FormField
                           label="Variant name"
+                          leadingIcon="FileText"
                           onChangeText={(value) =>
                             updateVariant(variant.id, "name", value)
                           }
                           placeholder="Enter variant name"
-                          variant="line"
                           value={variant.name}
                         />
                         <FormField
@@ -617,6 +617,7 @@ export function FirstProductSetupContent({
                           inputMode="decimal"
                           keyboardType="numeric"
                           label={`Portion of 1 ${unitName.trim() || "primary unit"}`}
+                          leadingIcon="Hash"
                           onChangeText={(value) =>
                             updateVariant(
                               variant.id,
@@ -625,18 +626,17 @@ export function FirstProductSetupContent({
                             )
                           }
                           placeholder="Enter portion"
-                          variant="line"
                           value={variant.conversionMultiplier}
                         />
                         <FormField
                           inputMode="decimal"
                           keyboardType="numeric"
                           label="Variant price"
+                          leadingIcon="CircleDollarSign"
                           onChangeText={(value) =>
                             updateVariant(variant.id, "price", value)
                           }
                           placeholder="Enter variant price"
-                          variant="line"
                           value={variant.price}
                         />
                       </View>
@@ -676,20 +676,13 @@ export function FirstProductSetupContent({
                   value={startingStock}
                 />
               </SetupSection>
-              <Pressable
-                className="flex-row items-center justify-center gap-2 rounded-full border border-border bg-background px-3 py-3"
-                haptic
+              <ActionButton
+                icon="ArrowLeft"
                 onPress={() => setSetupStep("details")}
-                transition
+                variant="outline"
               >
-                <Icon
-                  className="size-sm text-muted-foreground"
-                  name="ArrowLeft"
-                />
-                <Text className="text-sm font-bold text-foreground">
-                  Back to item details
-                </Text>
-              </Pressable>
+                Back to item details
+              </ActionButton>
             </>
           )}
 
@@ -715,13 +708,11 @@ export function FirstProductSetupContent({
             disabled={
               setupStep === "details" ? !canContinueToStock : !canSubmit
             }
+            isLoading={setupStep === "stock" && createProductMutation.isPending}
+            loadingLabel="Adding item"
             onPress={setupStep === "details" ? continueToStock : submit}
           >
-            {setupStep === "details"
-              ? "Continue to stock"
-              : createProductMutation.isPending
-                ? "Adding item..."
-                : "Add item and stock"}
+            {setupStep === "details" ? "Continue to stock" : "Add item and stock"}
           </ActionButton>
     </View>
   )

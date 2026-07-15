@@ -1,10 +1,7 @@
+import type { Prisma } from "@ewatrade/db"
 import { prisma } from "@ewatrade/db/client"
+import { recordRetailOpsSharedLinkNotificationDispatch } from "@ewatrade/db/queries"
 import {
-  recordRetailOpsSharedLinkNotificationDispatch,
-} from "@ewatrade/db/queries"
-import {
-  EmailService,
-  type EmailServiceDeliveryResult,
   type MarketingEarlyAccessRequestedPayload,
   type MarketingWaitlistJoinedPayload,
   type RetailOpsSharedLinkOrderRequestedPayload,
@@ -13,35 +10,38 @@ import {
   createMarketingWaitlistDispatch,
   createRetailOpsSharedLinkOrderDispatch,
   createRetailOpsStaffInviteDispatch,
-  planNotificationDeliveries
+  planNotificationDeliveries,
 } from "@ewatrade/notifications"
+import {
+  EmailService,
+  type EmailServiceDeliveryResult,
+} from "@ewatrade/notifications/services/email-service"
 
 export type NotificationDispatchDeliveryOptions = {
   baseDelayMs?: number
   maxAttempts?: number
 }
 
-export type NotificationDispatchPayload =
-  (
-    | {
-        type: "marketing_early_access_requested"
-        payload: MarketingEarlyAccessRequestedPayload
-      }
-    | {
-        type: "marketing_waitlist_joined"
-        payload: MarketingWaitlistJoinedPayload
-      }
-    | {
-        type: "retail_ops_shared_link_order_requested"
-        payload: RetailOpsSharedLinkOrderRequestedPayload
-      }
-    | {
-        type: "retail_ops_staff_invited"
-        payload: RetailOpsStaffInvitedPayload
-      }
-  ) & {
-    delivery?: NotificationDispatchDeliveryOptions
-  }
+export type NotificationDispatchPayload = (
+  | {
+      type: "marketing_early_access_requested"
+      payload: MarketingEarlyAccessRequestedPayload
+    }
+  | {
+      type: "marketing_waitlist_joined"
+      payload: MarketingWaitlistJoinedPayload
+    }
+  | {
+      type: "retail_ops_shared_link_order_requested"
+      payload: RetailOpsSharedLinkOrderRequestedPayload
+    }
+  | {
+      type: "retail_ops_staff_invited"
+      payload: RetailOpsStaffInvitedPayload
+    }
+) & {
+  delivery?: NotificationDispatchDeliveryOptions
+}
 
 function createDispatchForNotification(input: NotificationDispatchPayload) {
   switch (input.type) {
@@ -69,12 +69,12 @@ function getNextRetryAt(input: NotificationDispatchPayload, attempt: number) {
 }
 
 function toSharedLinkDeliveryReceipts(
-  deliveries: EmailServiceDeliveryResult[]
+  deliveries: EmailServiceDeliveryResult[],
 ) {
   return deliveries
     .filter(
       (delivery) =>
-        delivery.notificationType === "retail_ops_shared_link_order_requested"
+        delivery.notificationType === "retail_ops_shared_link_order_requested",
     )
     .map((delivery) => ({
       deliveryRole: delivery.deliveryRole,
@@ -85,8 +85,94 @@ function toSharedLinkDeliveryReceipts(
       recipientEmail: delivery.recipientEmail,
       sentAt: delivery.sentAt ?? null,
       status: delivery.status,
-      subject: delivery.subject
+      subject: delivery.subject,
     }))
+}
+
+function toMarketingLeadDeliveryReceipts(
+  deliveries: EmailServiceDeliveryResult[],
+) {
+  return deliveries
+    .filter((delivery) =>
+      [
+        "marketing_early_access_requested",
+        "marketing_waitlist_joined",
+      ].includes(delivery.notificationType),
+    )
+    .map((delivery) => ({
+      deliveryRole: delivery.deliveryRole,
+      error: delivery.error ?? null,
+      failedAt: delivery.failedAt ?? null,
+      provider: delivery.provider ?? null,
+      providerMessageId: delivery.providerMessageId ?? null,
+      recipientEmail: delivery.recipientEmail,
+      sentAt: delivery.sentAt ?? null,
+      status: delivery.status,
+      subject: delivery.subject,
+    }))
+}
+
+function toObjectMetadata(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {}
+  }
+
+  return { ...(value as Record<string, unknown>) }
+}
+
+function toJsonArray(value: unknown): Prisma.InputJsonValue[] {
+  return Array.isArray(value)
+    ? (value.filter((entry) => entry !== undefined) as Prisma.InputJsonValue[])
+    : []
+}
+
+async function recordMarketingLeadDeliveryResult(input: {
+  dispatch: NotificationDispatchPayload
+  failed: number
+  receipts: ReturnType<typeof toMarketingLeadDeliveryReceipts>
+  sent: number
+  skipped: number
+}) {
+  if (
+    input.dispatch.type !== "marketing_early_access_requested" &&
+    input.dispatch.type !== "marketing_waitlist_joined"
+  ) {
+    return
+  }
+
+  const lead = await prisma.leadCapture.findUnique({
+    where: { id: input.dispatch.payload.id },
+    select: { metadata: true },
+  })
+
+  if (!lead) return
+
+  const metadata = toObjectMetadata(lead.metadata) as Prisma.InputJsonObject
+  const previousDispatches = toJsonArray(metadata.notificationDispatches)
+  const status = input.failed > 0 ? "failed" : "sent"
+  const nextDispatch = {
+    failed: input.failed,
+    notificationType: input.dispatch.type,
+    providerStatuses: input.receipts.map((receipt) => receipt.status),
+    receipts: input.receipts,
+    recordedAt: new Date().toISOString(),
+    sent: input.sent,
+    skipped: input.skipped,
+    status,
+  } satisfies Prisma.InputJsonObject
+  const nextDispatches = [...previousDispatches, nextDispatch].slice(-10)
+  const latestDispatch = nextDispatches[nextDispatches.length - 1] ?? null
+
+  await prisma.leadCapture.update({
+    data: {
+      metadata: {
+        ...metadata,
+        lastNotificationDispatch: latestDispatch,
+        notificationDispatches: nextDispatches,
+      } satisfies Prisma.InputJsonValue,
+    },
+    where: { id: input.dispatch.payload.id },
+  })
 }
 
 async function recordSharedLinkOrderDeliveryResult(input: {
@@ -116,26 +202,35 @@ async function recordSharedLinkOrderDeliveryResult(input: {
     nextRetryAt,
     notification: input.dispatch.payload,
     orderId: input.dispatch.payload.orderId,
-    status
+    status,
   })
 }
 
 export async function notificationDispatchHandler(
   input: NotificationDispatchPayload,
-  attempt: number
+  attempt: number,
 ) {
   const dispatch = createDispatchForNotification(input)
   const deliveryPlan = planNotificationDeliveries(dispatch)
   const emailService = new EmailService()
   const result = await emailService.sendBulk(deliveryPlan.dispatches)
+  const marketingReceipts = toMarketingLeadDeliveryReceipts(result.deliveries)
   const receipts = toSharedLinkDeliveryReceipts(result.deliveries)
+
+  await recordMarketingLeadDeliveryResult({
+    dispatch: input,
+    failed: result.failed,
+    receipts: marketingReceipts,
+    sent: result.sent,
+    skipped: result.skipped,
+  })
 
   await recordSharedLinkOrderDeliveryResult({
     attempt,
     dispatch: input,
     failed: result.failed,
     receipts,
-    sent: result.sent
+    sent: result.sent,
   })
 
   if (
@@ -144,7 +239,7 @@ export async function notificationDispatchHandler(
     result.sent === 0
   ) {
     throw new Error(
-      "All shared-link notification email deliveries failed for this attempt."
+      "All shared-link notification email deliveries failed for this attempt.",
     )
   }
 }

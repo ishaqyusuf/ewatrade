@@ -36,11 +36,15 @@ export default async function ShellLayout({
 
   const pathname = headerStore.get("x-pathname") ?? "/"
 
-  if (!canAccessDashboardPath(pathname, ctx.membership.role)) {
+  const navContext = {
+    storeBusinessTemplateKey: ctx.activeStore?.businessTemplateKey,
+  }
+
+  if (!canAccessDashboardPath(pathname, ctx.membership.role, navContext)) {
     redirect("/")
   }
 
-  const navItems = getDashboardNavigation(ctx.membership.role)
+  const navItems = getDashboardNavigation(ctx.membership.role, navContext)
 
   return (
     <div className="min-h-screen bg-muted/30">

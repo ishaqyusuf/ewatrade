@@ -367,6 +367,7 @@ export function UnitConversionContent({
               {convertibleProducts.length > 8 ? (
                 <FormField
                   label="Find product"
+                  leadingIcon="Search"
                   onChangeText={setProductQuery}
                   placeholder="Search products or variants"
                   value={productQuery}
@@ -413,6 +414,7 @@ export function UnitConversionContent({
               CONVERSION_VARIANT_PREVIEW_LIMIT ? (
                 <FormField
                   label="Find variant"
+                  leadingIcon="Search"
                   onChangeText={setVariantQuery}
                   placeholder="Search variants"
                   value={variantQuery}
@@ -468,6 +470,7 @@ export function UnitConversionContent({
 
           <FormField
             label="Conversion note"
+            leadingIcon="StickyNote"
             onChangeText={setNote}
             placeholder="Enter conversion note"
             value={note}
@@ -482,10 +485,13 @@ export function UnitConversionContent({
             />
           ) : null}
 
-          <ActionButton disabled={!canSubmit} onPress={submit}>
-            {unitConversionMutation.isPending
-              ? "Recording conversion..."
-              : "Record conversion"}
+          <ActionButton
+            disabled={!canSubmit}
+            isLoading={unitConversionMutation.isPending}
+            loadingLabel="Recording conversion"
+            onPress={submit}
+          >
+            Record conversion
           </ActionButton>
 
       <ActionButton onPress={onComplete} variant="outline">

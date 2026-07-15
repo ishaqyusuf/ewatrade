@@ -17,6 +17,7 @@ const MARKETING_URL =
 
 function buildDashboardUrl(tenantSlug: string): string {
   const hostname = buildInternalTenantHostname({
+    localProjectSlug: tenantSlug,
     tenantSlug,
     surface: "dashboard",
     platformDomain: PLATFORM_DOMAIN,

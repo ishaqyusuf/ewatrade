@@ -16,6 +16,7 @@ Track important request/response shapes and contract rules.
   - `POST /api/early-access` accepts `fullName`, `email`, and optional `companyName`, `roleTitle`, `phone`, `message`
   - `POST /api/waitlist` accepts `fullName` and `email`
   - Both routes return a simple success `message` on success and still keep notification/email side effects server-side
+  - Marketing notification dispatches record bounded delivery receipts on `LeadCapture.metadata.lastNotificationDispatch` and `LeadCapture.metadata.notificationDispatches`, including delivery role, recipient, provider status, provider message id when available, subject, and sent/failed timestamps
 - Marketing owner signup contracts:
   - `POST /api/auth/signup` accepts account modes, workspace subdomain/custom domain, business details, owner name/email/phone, and password from the marketing signup stepper.
   - The route creates the Better Auth user, tenant, tenant hostnames, and owner membership, then dispatches the welcome email through `@ewatrade/email`.
@@ -33,10 +34,13 @@ Track important request/response shapes and contract rules.
   - `tenant.createStore` returns the created store id, slug, name, and status after enforcing owner/admin permission and the tenant's business/store entitlement
   - Business template reads return system-owned definitions keyed by `product_sales`, `dry_cleaning_laundry`, and `other_generic`
   - Template changes accept `nextTemplateKey`, optional `reason`, optional `storeId`, and an explicit `allowOperationalDataChange` flag; unsafe changes are blocked by default when Product Sales records, service records, or order records already exist
+  - Dry-cleaning settings reads return metadata-backed store settings. Updates currently accept an optional express surcharge percentage so the dashboard can apply express pricing without hard-coding it in the UI.
   - Dry-cleaning service item mutations accept optional `storeId`, service name/category/description, base `priceMinor`, optional turnaround hours, active/archive status, and optional bounded variants with labels and prices
-  - Dry-cleaning service orders accept customer name/email/phone, one or more service lines with service item id, optional variant id, quantity, optional line note, optional override price, optional due time, notes, and payment state `unpaid`, `paid`, `partial`, `pay_on_collection`, or `pay_on_delivery`
+  - Dry-cleaning service orders accept customer name/email/phone, one or more service lines with service item id, optional variant id, quantity, optional line note, optional override price, optional due time, notes, intake evidence label/URL entries, express flag/pricing snapshot, and payment state `unpaid`, `paid`, `partial`, `pay_on_collection`, or `pay_on_delivery`
   - Dry-cleaning status updates accept an order id, next status, optional note, optional evidence URLs/labels, and a `notifyCustomer` flag; valid statuses are `received`, `in_progress`, `ready`, `delayed`, `pickup_pending`, `delivery_pending`, `completed`, and `cancelled`
+  - Dry-cleaning request-link reads return active/inactive opaque tokens, titles, descriptions, creation timestamps, and aggregate view/order fields for the dashboard link-management view.
   - Public dry-cleaning service-request links use opaque tokens. Public submissions accept customer details, service lines, and notes, then create pending service requests that staff can confirm, reject, cancel, or convert into service orders.
+  - Public dry-cleaning request pages must expose share-preview metadata for messaging apps, including Open Graph title, description, image, and Twitter card fields. The early route is available on both marketing and storefront apps so the current marketing-hosted production surface can serve shared links.
   - Dry-cleaning tracking accepts an opaque token and returns only bounded public status data, not private evidence.
   - Dry-cleaning operational reports summarize selected-store service orders by status, payment state, completed revenue, popular service items, average completion hours, request count, and request conversion rate.
   - `retailOps.summary` accepts optional `storeId`, `from`, and `to`

@@ -1,13 +1,13 @@
 // @ts-expect-error Bun test runtime types are outside the notifications package tsconfig.
-import { describe, expect, test } from "bun:test"
+import { afterEach, describe, expect, test } from "bun:test"
 
 import type { EmailMessage } from "@ewatrade/email"
 
 import {
-  EmailService,
   createRetailOpsSharedLinkOrderDispatch,
   planNotificationDeliveries,
 } from "../index"
+import { EmailService } from "./email-service"
 
 const sharedLinkOrderPayload = {
   businessName: "Ewa Store",
@@ -34,8 +34,35 @@ const sharedLinkOrderPayload = {
   unitName: "Bag",
 }
 
+const originalNodeEnv = process.env.NODE_ENV
+const originalTestEmail = process.env.TEST_EMAIL
+const originalTestEmails = process.env.TEST_EMAILS
+
+afterEach(() => {
+  restoreEnv("NODE_ENV", originalNodeEnv)
+  restoreEnv("TEST_EMAIL", originalTestEmail)
+  restoreEnv("TEST_EMAILS", originalTestEmails)
+})
+
+function restoreEnv(key: string, value: string | undefined) {
+  if (value === undefined) {
+    Reflect.deleteProperty(process.env, key)
+    return
+  }
+
+  process.env[key] = value
+}
+
+function useProductionEmailRouting() {
+  process.env.NODE_ENV = "production"
+  Reflect.deleteProperty(process.env, "TEST_EMAIL")
+  Reflect.deleteProperty(process.env, "TEST_EMAILS")
+}
+
 describe("EmailService shared-link order dispatch", () => {
   test("sends customer and merchant shared-link order emails", async () => {
+    useProductionEmailRouting()
+
     const sentMessages: EmailMessage[] = []
     const notification = createRetailOpsSharedLinkOrderDispatch(
       sharedLinkOrderPayload,
@@ -97,6 +124,8 @@ describe("EmailService shared-link order dispatch", () => {
   })
 
   test("records failed recipient delivery without throwing the dispatch", async () => {
+    useProductionEmailRouting()
+
     const notification = createRetailOpsSharedLinkOrderDispatch(
       sharedLinkOrderPayload,
     )
@@ -139,5 +168,52 @@ describe("EmailService shared-link order dispatch", () => {
       "buyer@example.com",
       "owner@example.com",
     ])
+  })
+
+  test("routes production @test.com notification email through TEST_EMAILS", async () => {
+    process.env.NODE_ENV = "production"
+    process.env.TEST_EMAILS = "founders@ewatrade.com"
+    Reflect.deleteProperty(process.env, "TEST_EMAIL")
+
+    const sentMessages: EmailMessage[] = []
+    const notification = createRetailOpsSharedLinkOrderDispatch({
+      ...sharedLinkOrderPayload,
+      customerEmail: "buyer@test.com",
+      merchantRecipients: [
+        {
+          displayName: "Owner",
+          email: "owner@test.com",
+        },
+      ],
+    })
+    const deliveryPlan = planNotificationDeliveries(notification)
+    const service = new EmailService()
+
+    const result = await service.sendBulk(deliveryPlan.dispatches, {
+      async send(message) {
+        sentMessages.push(message)
+
+        return {
+          provider: "test",
+          providerMessageId: `message-${sentMessages.length}`,
+        }
+      },
+    })
+
+    expect(result.failed).toBe(0)
+    expect(result.sent).toBe(2)
+    expect(sentMessages.map((message) => message.to)).toEqual([
+      "founders@ewatrade.com",
+      "founders@ewatrade.com",
+    ])
+    expect(sentMessages[0]?.text).toContain(
+      "Original recipient: buyer@test.com",
+    )
+    expect(sentMessages[1]?.text).toContain(
+      "Original recipient: owner@test.com",
+    )
+    expect(
+      result.deliveries.map((delivery) => delivery.recipientEmail),
+    ).toEqual(["founders@ewatrade.com", "founders@ewatrade.com"])
   })
 })

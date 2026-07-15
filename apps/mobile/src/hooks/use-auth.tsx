@@ -45,10 +45,13 @@ export const useCreateAuthContext = () => {
   )
   const router = useRouter()
 
-  const applySession = (nextSession: MobileSession) => {
+  const applySession = (
+    nextSession: MobileSession,
+    redirectHref = "/dashboard",
+  ) => {
     setSession(nextSession)
     setSessionState(nextSession)
-    router.replace("/dashboard")
+    router.replace(redirectHref as never)
   }
 
   return {
@@ -56,8 +59,11 @@ export const useCreateAuthContext = () => {
     profile: session?.profile ?? null,
     token: session?.token ?? null,
     isAuthenticated: !!session?.token,
-    applyAuthenticatedSession(nextSession: MobileSession) {
-      applySession(nextSession)
+    applyAuthenticatedSession(
+      nextSession: MobileSession,
+      redirectHref?: string,
+    ) {
+      applySession(nextSession, redirectHref)
     },
     signInLocal(input?: LocalAuthInput) {
       applySession(createLocalSession(input))

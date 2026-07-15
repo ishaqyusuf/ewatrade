@@ -42,7 +42,8 @@ Track the conceptual schema and schema ownership rules for the platform.
 - Dashboard first-store setup and protected tRPC `tenant.createStore` accept a compact onboarding payload for the effective business template, country code, product/service/offering category, sales/operating model, team size, support contact, and Other-business demand details.
 - `createTenantStore` persists cleaned first-store setup values under `Store.metadata.retailOps.onboarding` with source, captured timestamp, currency code, and the selected template snapshot.
 - `Store.metadata.retailOps.businessTemplate` stores the effective v1 template key and label. Existing stores without explicit template metadata resolve to Product Sales.
-- Dry Cleaning / Laundry stores receive an empty `Store.metadata.retailOps.dryCleaning` workspace for metadata-backed service items, service orders, service request links, service requests, and notification intents.
+- Dry Cleaning / Laundry stores receive a `Store.metadata.retailOps.dryCleaning` workspace for metadata-backed settings, service items, service orders, service request links, service requests, and notification intents.
+- Dry-cleaning settings currently store express surcharge percentage in metadata; service orders snapshot express line pricing and evidence metadata so later setting or catalog edits do not rewrite historical orders.
 - Other business submissions store unsupported-demand metadata under `Store.metadata.retailOps.unsupportedBusinessDemand`, while completed `OnboardingSession.formData.onboarding` preserves the raw answers for internal ranking.
 - The shared store helper writes a completed `OnboardingSession` for onboarding submissions with tenant id, actor user id, completed status, expiry, created store snapshot, source, captured timestamp, currency, template, and setup answers. Multi-step setup state, onboarding analytics, normalized onboarding field tables, and dedicated dry-cleaning Prisma tables remain planned.
 

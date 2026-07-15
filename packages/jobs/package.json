@@ -7,6 +7,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "check:marketing-onboarding-e2e": "bun scripts/check-marketing-onboarding-e2e.ts",
     "dev": "node ../../scripts/with-workspace-env.mjs DEV_PROFILE=local bun ../../scripts/with-trigger-profile.mjs -- trigger dev",
     "deploy": "node ../../scripts/with-workspace-env.mjs APP_ENV=production REQUIRE_PROD_DATABASE_URL=1 bun ../../scripts/with-trigger-profile.mjs -- trigger deploy",
     "lint": "biome check .",

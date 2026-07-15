@@ -155,6 +155,8 @@ export default function StaffOnboardingRoute() {
 
         <ActionButton
           disabled={inviteQuery.isPending}
+          isLoading={inviteQuery.isPending}
+          loadingLabel="Checking invitation"
           onPress={() =>
             router.push({
               pathname: "/login",
@@ -237,6 +239,7 @@ export default function StaffOnboardingRoute() {
         <FormField
           autoCapitalize="words"
           label="Full name"
+          leadingIcon="User"
           onChangeText={setName}
           placeholder="Enter your full name"
           value={name}
@@ -245,6 +248,7 @@ export default function StaffOnboardingRoute() {
           autoCapitalize="words"
           helper="Optional. This can be the short name shown on sales."
           label="Display name"
+          leadingIcon="User"
           onChangeText={setDisplayName}
           placeholder="Enter your display name"
           value={displayName}
@@ -262,11 +266,11 @@ export default function StaffOnboardingRoute() {
       <View className="gap-3">
         <ActionButton
           disabled={!canSubmit || completeStaffOnboardingMutation.isPending}
+          isLoading={completeStaffOnboardingMutation.isPending}
+          loadingLabel="Activating"
           onPress={submit}
         >
-          {completeStaffOnboardingMutation.isPending
-            ? "Activating..."
-            : "Start selling"}
+          Start selling
         </ActionButton>
         <Text className="text-center text-xs leading-5 text-muted-foreground">
           Your access stays tied to your own email account.

@@ -3,6 +3,10 @@ import { homedir } from "node:os"
 import { join, resolve } from "node:path"
 
 const REPO_ROOT = resolve(new URL("../../..", import.meta.url).pathname)
+const MOBILE_ROOT = resolve(REPO_ROOT, "apps/mobile")
+const APP_CONFIG_FILE = join(MOBILE_ROOT, "app.config.ts")
+const HOOK_FILE = join(MOBILE_ROOT, "src/hooks/use-mobile-google-auth.ts")
+const PACKAGE_JSON_FILE = join(MOBILE_ROOT, "package.json")
 const ENV_FILE =
   process.env.GOOGLE_OAUTH_READY_ENV_FILE ?? join(REPO_ROOT, ".env")
 const EXAMPLE_ENV_FILE =
@@ -83,6 +87,9 @@ const configuredGoogleKeys = REQUIRED_ENV_KEYS.filter((key) =>
 )
 
 const failures = []
+const packageJson = readTextFile(PACKAGE_JSON_FILE)
+const appConfigSource = readTextFile(APP_CONFIG_FILE)
+const hookSource = readTextFile(HOOK_FILE)
 
 if (!existsSync(ENV_FILE)) {
   failures.push("Missing repo .env file.")
@@ -90,6 +97,44 @@ if (!existsSync(ENV_FILE)) {
 
 if (!existsSync(EXAMPLE_ENV_FILE)) {
   failures.push("Missing repo .env.example file.")
+}
+
+if (!packageJson.includes('"@react-native-google-signin/google-signin"')) {
+  failures.push(
+    "apps/mobile/package.json must include @react-native-google-signin/google-signin for native Android/iOS Google auth.",
+  )
+}
+
+if (
+  !appConfigSource.includes("@react-native-google-signin/google-signin") ||
+  !appConfigSource.includes("iosUrlScheme") ||
+  !appConfigSource.includes("getGoogleIosUrlScheme")
+) {
+  failures.push(
+    "apps/mobile/app.config.ts must register the native Google Sign-In config plugin and derive the iOS URL scheme.",
+  )
+}
+
+for (const requiredMarker of [
+  "@react-native-google-signin/google-signin",
+  "usesWebGoogleAuth",
+  "GoogleSignin.configure",
+  "GoogleSignin.hasPlayServices",
+  "GoogleSignin.signIn",
+  "GoogleSignin.getTokens",
+  "isSuccessResponse",
+]) {
+  if (!hookSource.includes(requiredMarker)) {
+    failures.push(
+      `apps/mobile/src/hooks/use-mobile-google-auth.ts is missing native Google Sign-In marker: ${requiredMarker}.`,
+    )
+  }
+}
+
+if (hookSource.includes("androidClientId:")) {
+  failures.push(
+    "Android mobile auth must not pass androidClientId to Expo AuthSession; use native Google Sign-In to avoid Google's custom URI scheme block.",
+  )
 }
 
 if (missingExampleKeys.length > 0) {
@@ -214,6 +259,12 @@ function readEnvFile(filePath) {
   }
 
   return values
+}
+
+function readTextFile(filePath) {
+  if (!existsSync(filePath)) return ""
+
+  return readFileSync(filePath, "utf8")
 }
 
 function stripQuotes(value) {

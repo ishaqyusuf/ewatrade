@@ -1,7 +1,12 @@
+import { mkdtemp, readFile, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+
 // @ts-expect-error Bun test runtime types are outside the email package tsconfig.
 import { afterEach, describe, expect, test } from "bun:test"
 
 import {
+  captureEmailTransport,
   createTestRoutedEmailMessages,
   dispatchEmailMessages,
   getDefaultEmailTransport,
@@ -9,6 +14,7 @@ import {
 } from "./index"
 
 const originalNodeEnv = process.env.NODE_ENV
+const originalEmailCaptureFile = process.env.EMAIL_CAPTURE_FILE
 const originalResendApiKey = process.env.RESEND_API_KEY
 const originalTestEmail = process.env.TEST_EMAIL
 const originalTestEmails = process.env.TEST_EMAILS
@@ -16,6 +22,7 @@ const originalFetch = globalThis.fetch
 
 afterEach(() => {
   restoreEnv("NODE_ENV", originalNodeEnv)
+  restoreEnv("EMAIL_CAPTURE_FILE", originalEmailCaptureFile)
   restoreEnv("RESEND_API_KEY", originalResendApiKey)
   restoreEnv("TEST_EMAIL", originalTestEmail)
   restoreEnv("TEST_EMAILS", originalTestEmails)
@@ -48,6 +55,46 @@ function createBaseMessage(to = "owner@example.com") {
 }
 
 describe("Resend email transport", () => {
+  test("uses the capture transport when EMAIL_CAPTURE_FILE is configured", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "ewatrade-email-capture-"))
+    const captureFile = join(directory, "messages.jsonl")
+
+    try {
+      process.env.EMAIL_CAPTURE_FILE = captureFile
+      process.env.RESEND_API_KEY = "re_test_key"
+
+      expect(getDefaultEmailTransport()).toBe(captureEmailTransport)
+
+      const [result] = await dispatchEmailMessages([
+        {
+          from: "Ewatrade <noreply@ewatrade.com>",
+          html: "<p>Hello</p>",
+          subject: "Captured hello",
+          text: "Hello",
+          to: "customer@example.com",
+        },
+      ])
+
+      expect(result).toMatchObject({
+        provider: "capture",
+        status: "sent",
+      })
+
+      const [line] = (await readFile(captureFile, "utf8")).trim().split("\n")
+      const captured = JSON.parse(line ?? "{}") as {
+        subject?: string
+        to?: string
+      }
+
+      expect(captured).toMatchObject({
+        subject: "Captured hello",
+        to: "customer@example.com",
+      })
+    } finally {
+      await rm(directory, { force: true, recursive: true })
+    }
+  })
+
   test("uses Resend as the default transport when RESEND_API_KEY is configured", async () => {
     process.env.RESEND_API_KEY = "re_test_key"
 

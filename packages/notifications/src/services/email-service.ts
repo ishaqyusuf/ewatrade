@@ -12,6 +12,7 @@ import {
   createRetailOpsSharedLinkOrderCustomerEmail,
   createRetailOpsSharedLinkOrderMerchantEmail,
   createRetailOpsStaffInviteEmail,
+  createTestRoutedEmailMessages,
   defaultMarketingEarlyAccessAdminSubject,
   defaultMarketingEarlyAccessConfirmationSubject,
   defaultMarketingWaitlistAdminSubject,
@@ -52,15 +53,14 @@ function getEmailReplyTo() {
   return process.env.EMAIL_REPLY_TO
 }
 
-function isEmailRecipient(recipient: NotificationContact): recipient is Extract<
-  NotificationContact,
-  { kind: "email" }
-> {
+function isEmailRecipient(
+  recipient: NotificationContact,
+): recipient is Extract<NotificationContact, { kind: "email" }> {
   return recipient.kind === "email"
 }
 
 function planEmailMessagesForDispatch(
-  dispatch: NotificationChannelDispatch
+  dispatch: NotificationChannelDispatch,
 ): PlannedEmailMessage[] {
   const from = getEmailFrom()
   const replyTo = getEmailReplyTo()
@@ -70,7 +70,7 @@ function planEmailMessagesForDispatch(
     case "marketing_early_access_requested": {
       const payload = {
         ...(dispatch.payload as Omit<MarketingEmailInput, "type">),
-        type: "EARLY_ACCESS"
+        type: "EARLY_ACCESS",
       } satisfies MarketingEmailInput
 
       return emailRecipients.map((recipient) =>
@@ -82,9 +82,9 @@ function planEmailMessagesForDispatch(
                 input: payload,
                 replyTo,
                 subject: defaultMarketingEarlyAccessConfirmationSubject(),
-                to: recipient.email
+                to: recipient.email,
               }),
-              recipientEmail: recipient.email
+              recipientEmail: recipient.email,
             }
           : {
               deliveryRole: "admin",
@@ -93,16 +93,16 @@ function planEmailMessagesForDispatch(
                 input: payload,
                 replyTo,
                 subject: defaultMarketingEarlyAccessAdminSubject(),
-                to: recipient.email
+                to: recipient.email,
               }),
-              recipientEmail: recipient.email
-            }
+              recipientEmail: recipient.email,
+            },
       )
     }
     case "marketing_waitlist_joined": {
       const payload = {
         ...(dispatch.payload as Omit<MarketingEmailInput, "type">),
-        type: "WAITLIST"
+        type: "WAITLIST",
       } satisfies MarketingEmailInput
 
       return emailRecipients.map((recipient) =>
@@ -114,9 +114,9 @@ function planEmailMessagesForDispatch(
                 input: payload,
                 replyTo,
                 subject: defaultMarketingWaitlistConfirmationSubject(),
-                to: recipient.email
+                to: recipient.email,
               }),
-              recipientEmail: recipient.email
+              recipientEmail: recipient.email,
             }
           : {
               deliveryRole: "admin",
@@ -125,10 +125,10 @@ function planEmailMessagesForDispatch(
                 input: payload,
                 replyTo,
                 subject: defaultMarketingWaitlistAdminSubject(),
-                to: recipient.email
+                to: recipient.email,
               }),
-              recipientEmail: recipient.email
-            }
+              recipientEmail: recipient.email,
+            },
       )
     }
     case "retail_ops_shared_link_order_requested": {
@@ -143,11 +143,11 @@ function planEmailMessagesForDispatch(
                 input: payload,
                 replyTo,
                 subject: defaultRetailOpsSharedLinkOrderCustomerSubject({
-                  orderNumber: payload.orderNumber
+                  orderNumber: payload.orderNumber,
                 }),
-                to: recipient.email
+                to: recipient.email,
               }),
-              recipientEmail: recipient.email
+              recipientEmail: recipient.email,
             }
           : {
               deliveryRole: "admin",
@@ -156,34 +156,35 @@ function planEmailMessagesForDispatch(
                 input: payload,
                 replyTo,
                 subject: defaultRetailOpsSharedLinkOrderMerchantSubject({
-                  orderNumber: payload.orderNumber
+                  orderNumber: payload.orderNumber,
                 }),
-                to: recipient.email
+                to: recipient.email,
               }),
-              recipientEmail: recipient.email
-            }
+              recipientEmail: recipient.email,
+            },
       )
     }
     case "retail_ops_staff_invited": {
       const payload = dispatch.payload as RetailOpsStaffInviteEmailInput
 
       return emailRecipients.map((recipient) => ({
-        deliveryRole:
-          recipient.deliveryRole === "admin" ? "admin" : "customer",
+        deliveryRole: recipient.deliveryRole === "admin" ? "admin" : "customer",
         message: createRetailOpsStaffInviteEmail({
           from,
           input: payload,
           replyTo,
           subject: defaultRetailOpsStaffInviteSubject({
-            businessName: payload.businessName
+            businessName: payload.businessName,
           }),
-          to: recipient.email
+          to: recipient.email,
         }),
-        recipientEmail: recipient.email
+        recipientEmail: recipient.email,
       }))
     }
     default:
-      throw new Error(`Unsupported email notification type: ${dispatch.notificationType}`)
+      throw new Error(
+        `Unsupported email notification type: ${dispatch.notificationType}`,
+      )
   }
 }
 
@@ -202,20 +203,25 @@ function toEmailServiceDeliveryResult(input: {
     recipientEmail: input.planned.recipientEmail,
     sentAt: input.result.sentAt,
     status: input.result.status,
-    subject: input.planned.message.subject
+    subject: input.planned.message.subject,
   }
 }
 
 export class EmailService {
-  async sendBulk(dispatches: NotificationChannelDispatch[], transport?: EmailTransport) {
-    const emailDispatches = dispatches.filter((dispatch) => dispatch.channel === "email")
+  async sendBulk(
+    dispatches: NotificationChannelDispatch[],
+    transport?: EmailTransport,
+  ) {
+    const emailDispatches = dispatches.filter(
+      (dispatch) => dispatch.channel === "email",
+    )
 
     if (!emailDispatches.length) {
       return {
         deliveries: [] satisfies EmailServiceDeliveryResult[],
         failed: 0,
         sent: 0,
-        skipped: dispatches.length
+        skipped: dispatches.length,
       }
     }
 
@@ -232,13 +238,20 @@ export class EmailService {
         continue
       }
 
+      const routedPlannedMessages = plannedMessages.flatMap((planned) =>
+        createTestRoutedEmailMessages(planned.message).map((message) => ({
+          ...planned,
+          message,
+          recipientEmail: message.to,
+        })),
+      )
       const results = await dispatchEmailMessages(
-        plannedMessages.map((planned) => planned.message),
-        transport
+        routedPlannedMessages.map((planned) => planned.message),
+        transport,
       )
 
       for (const [index, result] of results.entries()) {
-        const planned = plannedMessages[index]
+        const planned = routedPlannedMessages[index]
 
         if (!planned) continue
 
@@ -252,8 +265,8 @@ export class EmailService {
           toEmailServiceDeliveryResult({
             dispatch,
             planned,
-            result
-          })
+            result,
+          }),
         )
       }
     }
@@ -262,7 +275,7 @@ export class EmailService {
       deliveries,
       failed,
       sent,
-      skipped
+      skipped,
     }
   }
 }

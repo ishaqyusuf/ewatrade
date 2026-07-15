@@ -10,8 +10,10 @@ Track current and planned API surface areas.
 - `apps/marketing` exposes public POST routes for marketing lead capture:
   - `POST /api/early-access`
   - `POST /api/waitlist`
+- `apps/marketing` exposes public early-access link verification:
+  - `GET /api/early-access/session?token=...` validates a one-time early access onboarding token and returns safe prefill context for the signup page.
 - `apps/marketing` exposes public owner signup:
-  - `POST /api/auth/signup`
+  - `POST /api/auth/signup` creates the owner, tenant, membership, and hostnames. When `accessToken` is present, it validates expiry/email, consumes the matching `OnboardingSession` exactly once, and links it to the new tenant/user.
 - `apps/dashboard` exposes retained migration bridge routes for dashboard shell behavior:
   - `POST /api/auth/logout` signs out the Better Auth session for the dashboard surface.
   - `POST /api/tenants/active` stores the active tenant slug after verifying the user belongs to the requested tenant.
@@ -36,6 +38,7 @@ Track current and planned API surface areas.
 - `apps/dashboard` exposes a temporary search bridge route for the dashboard command surface:
   - `GET /api/search` returns active tenant/store and role-scoped dashboard search records for products, customers, staff, sales, and generated links. It accepts optional `q` and `storeId` query parameters.
 - Both marketing lead routes persist a `LeadCapture` record and enqueue a shared notification dispatch job through `@ewatrade/jobs`.
+- Marketing lead notification dispatch now mirrors email delivery receipts back to the related `LeadCapture.metadata` record so smoke tests and support review can distinguish sent, failed, and skipped delivery states after route success.
 - `apps/api` exposes the authenticated tRPC app router.
 - `apps/api` exposes public self-service store detection:
   - `POST /api/self-service/store-detection/resolve` accepts device coordinates and optional accuracy, resolves enabled store geofences from store metadata, and returns ranked candidates plus a `confirmed`, `needs_confirmation`, or `manual_required` status for the POS/self-service launch flow.
@@ -49,9 +52,10 @@ Track current and planned API surface areas.
   - `retailOps.storeBusinessTemplate` returns the effective template for the selected tenant store, defaulting stores without explicit metadata to Product Sales.
   - `retailOps.updateBusinessTemplate` lets owner/admin tenant managers correct a store template with operational-data guardrails and audit metadata.
   - `retailOps.unsupportedBusinessDemand` is an internal procedure that ranks Other-business onboarding submissions from completed onboarding sessions.
+  - `retailOps.dryCleaningSettings` and `retailOps.updateDryCleaningSettings` read and update metadata-backed Dry Cleaning / Laundry settings such as express surcharge percentage.
   - `retailOps.dryCleaningServiceItems`, `retailOps.createDryCleaningServiceItem`, and `retailOps.updateDryCleaningServiceItem` manage metadata-backed Dry Cleaning / Laundry service catalog entries and variants.
-  - `retailOps.dryCleaningServiceOrders`, `retailOps.createDryCleaningServiceOrder`, and `retailOps.updateDryCleaningServiceOrderStatus` manage metadata-backed dry-cleaning service orders, status events, evidence, notes, and ready/delay notification intents.
-  - `retailOps.createDryCleaningServiceRequestLink`, `retailOps.dryCleaningServiceRequests`, `retailOps.updateDryCleaningServiceRequestStatus`, and `retailOps.convertDryCleaningServiceRequest` manage protected dry-cleaning public request intake.
+  - `retailOps.dryCleaningServiceOrders`, `retailOps.createDryCleaningServiceOrder`, and `retailOps.updateDryCleaningServiceOrderStatus` manage metadata-backed dry-cleaning service orders, intake/status evidence, notes, express pricing snapshots, and ready/delay notification intents.
+  - `retailOps.createDryCleaningServiceRequestLink`, `retailOps.dryCleaningServiceRequestLinks`, `retailOps.dryCleaningServiceRequests`, `retailOps.updateDryCleaningServiceRequestStatus`, and `retailOps.convertDryCleaningServiceRequest` manage protected dry-cleaning public request intake and link visibility.
   - `retailOps.dryCleaningOperationalReport` returns dry-cleaning order, payment-state, service-item, request-conversion, and completion metrics for the selected store/range.
   - `retailOps.dryCleaningServiceRequestLink`, `retailOps.createDryCleaningPublicServiceRequest`, and `retailOps.dryCleaningTracking` are public procedures for opaque dry-cleaning request links and accountless customer tracking.
   - `retailOps.sharedProduct` publicly returns an active shared product link payload for a tenant/store/product slug and share token.
@@ -104,6 +108,10 @@ Track current and planned API surface areas.
   - `retailOps.staffStockWallets` lists first-phase staff stock custody balances for a store.
   - `retailOps.assignStaffStock` assigns unassigned store stock to active sales staff and records a metadata-backed wallet balance.
   - `retailOps.returnStaffStock` returns assigned staff stock to central store inventory and records a metadata-backed return event.
+
+## Current Web Routes
+- `apps/dashboard` exposes `/services` for Dry Cleaning / Laundry stores. The route is owner/admin/manager/cashier/operator accessible through POS-capable navigation only when the selected store resolves to the Dry Cleaning / Laundry template.
+- `apps/marketing` and `apps/storefront` expose `GET /service-request/[token]` for public dry-cleaning request links. The duplicated route is intentional while early production serves customer-facing links from the marketing Vercel project and the storefront app remains the longer-term customer surface.
 
 ## Planned Domains
 - Live Google/Gmail OAuth provider QA with a fresh short-lived ID token and approved API/database target

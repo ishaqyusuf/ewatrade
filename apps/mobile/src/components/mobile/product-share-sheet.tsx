@@ -703,6 +703,7 @@ function SharedLinkOrderRequestRow({
           </Text>
           <FormField
             label="Pickup address"
+            leadingIcon="MapPin"
             onChangeText={(pickupAddress) =>
               onDeliveryDraftChange({ pickupAddress })
             }
@@ -712,6 +713,7 @@ function SharedLinkOrderRequestRow({
           <View className="gap-3">
             <FormField
               label="Pickup name"
+              leadingIcon="User"
               onChangeText={(pickupName) =>
                 onDeliveryDraftChange({ pickupName })
               }
@@ -721,6 +723,7 @@ function SharedLinkOrderRequestRow({
             <FormField
               keyboardType="phone-pad"
               label="Pickup phone"
+              leadingIcon="Phone"
               onChangeText={(pickupPhone) =>
                 onDeliveryDraftChange({ pickupPhone })
               }
@@ -730,6 +733,7 @@ function SharedLinkOrderRequestRow({
           </View>
           <FormField
             label="Dropoff address"
+            leadingIcon="MapPin"
             onChangeText={(dropoffAddress) =>
               onDeliveryDraftChange({ dropoffAddress })
             }
@@ -739,6 +743,7 @@ function SharedLinkOrderRequestRow({
           <View className="gap-3">
             <FormField
               label="Dropoff name"
+              leadingIcon="User"
               onChangeText={(dropoffName) =>
                 onDeliveryDraftChange({ dropoffName })
               }
@@ -748,6 +753,7 @@ function SharedLinkOrderRequestRow({
             <FormField
               keyboardType="phone-pad"
               label="Dropoff phone"
+              leadingIcon="Phone"
               onChangeText={(dropoffPhone) =>
                 onDeliveryDraftChange({ dropoffPhone })
               }
@@ -757,6 +763,7 @@ function SharedLinkOrderRequestRow({
           </View>
           <FormField
             label="Delivery note"
+            leadingIcon="StickyNote"
             onChangeText={(notes) => onDeliveryDraftChange({ notes })}
             placeholder="Enter delivery instructions"
             value={resolvedDeliveryDraft.notes}
@@ -764,11 +771,9 @@ function SharedLinkOrderRequestRow({
           <ShareLinkActionButton
             disabled={!canCreateDeliveryRequest || isDeliveryCreationDisabled}
             icon="Truck"
-            label={
-              isCreatingDelivery
-                ? "Creating request"
-                : "Create delivery request"
-            }
+            isLoading={isCreatingDelivery}
+            label="Create delivery request"
+            loadingLabel="Creating request"
             onPress={onCreateDeliveryRequest}
           />
         </View>
@@ -777,14 +782,18 @@ function SharedLinkOrderRequestRow({
         <ShareLinkActionButton
           disabled={isUpdating}
           icon="CheckCircle2"
-          label={activeStatus === "completed" ? "Completing" : "Complete"}
+          isLoading={activeStatus === "completed"}
+          label="Complete"
+          loadingLabel="Completing"
           onPress={onComplete}
         />
         <ShareLinkActionButton
           destructive
           disabled={isUpdating}
           icon="XCircle"
-          label={activeStatus === "cancelled" ? "Cancelling" : "Cancel"}
+          isLoading={activeStatus === "cancelled"}
+          label="Cancel"
+          loadingLabel="Cancelling"
           onPress={onCancel}
         />
       </View>
@@ -838,8 +847,10 @@ function DeliveryRequestRow({
             destructive={option.status === "cancelled"}
             disabled={isUpdating}
             icon={option.status === "cancelled" ? "XCircle" : "Truck"}
+            isLoading={activeStatus === option.status}
             key={option.status}
-            label={activeStatus === option.status ? "Updating" : option.label}
+            label={option.label}
+            loadingLabel="Updating"
             onPress={() =>
               onUpdateStatus(option.status as DeliveryRequestStatusUpdate)
             }
@@ -913,7 +924,9 @@ function ProductionShareLinkRow({
             destructive
             disabled={isUpdating}
             icon="Ban"
-            label={isDeactivating ? "Deactivating" : "Deactivate"}
+            isLoading={isDeactivating}
+            label="Deactivate"
+            loadingLabel="Deactivating"
             onPress={onDeactivate}
           />
         ) : null}
@@ -1395,6 +1408,7 @@ export function ProductShareContent({
                     : "Choose the product that should get a customer link."
                 }
                 label="Find product"
+                leadingIcon="Search"
                 onChangeText={setProductQuery}
                 placeholder="Search by product name"
                 value={productQuery}
@@ -1422,13 +1436,13 @@ export function ProductShareContent({
             disabled={
               !selectedProduct || createProductionShareLinkMutation.isPending
             }
+            isLoading={createProductionShareLinkMutation.isPending}
+            loadingLabel="Generating production link"
             onPress={generateLink}
           >
-            {createProductionShareLinkMutation.isPending
-              ? "Generating production link"
-              : !isOfflineMode && selectedProduct?.remoteId
-                ? "Generate production link"
-                : "Generate and share link"}
+            {!isOfflineMode && selectedProduct?.remoteId
+              ? "Generate production link"
+              : "Generate and share link"}
           </ActionButton>
           {!isOfflineMode && selectedProduct && !selectedProduct.remoteId ? (
             <StatusBanner

@@ -35,6 +35,28 @@ const requiredMarkers = [
     markers: ["StatusBadge", "MobileDesignStatusTone", "min-h-8"],
   },
   {
+    file: "components/ui/input-2.tsx",
+    markers: [
+      "unstyled",
+      "embeddedInputStyle",
+      "NativeBottomSheetTextInput",
+    ],
+  },
+  {
+    file: "components/mobile/form-field.tsx",
+    markers: [
+      "FormField",
+      "leadingIcon",
+      "trailingIcon",
+      "activeBorderColor",
+      "unstyled",
+    ],
+  },
+  {
+    file: "components/mobile/quantity-stepper.tsx",
+    markers: ["QuantityStepper", "unstyled", "inputTextAlign=\"center\""],
+  },
+  {
     file: "components/mobile/status-banner.tsx",
     markers: ["StatusBanner", "MobileDesignStatusTone", "Pressable", "haptic"],
   },

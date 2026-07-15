@@ -7,11 +7,13 @@ import {
   createDryCleaningServiceOrder,
   createDryCleaningServiceRequestLink,
   getDryCleaningOperationalReport,
+  getDryCleaningStoreSettings,
   getStoreBusinessTemplate,
   listBusinessTemplates,
   listUnsupportedBusinessDemand,
   resolveDryCleaningTrackingToken,
   updateDryCleaningServiceOrderStatus,
+  updateDryCleaningStoreSettings,
   updateStoreBusinessTemplate,
 } from "./business-templates"
 import type { DbClient } from "./types"
@@ -184,6 +186,12 @@ describe("business template queries", () => {
         name: "Ada Customer",
         phone: "08011111111",
       },
+      evidence: [
+        {
+          label: "Drop-off package",
+          url: "https://img.test/dropoff.jpg",
+        },
+      ],
       lines: [
         {
           quantity: 2,
@@ -198,6 +206,7 @@ describe("business template queries", () => {
 
     expect(order).toMatchObject({
       customer: { name: "Ada Customer" },
+      evidence: [expect.objectContaining({ label: "Drop-off package" })],
       lines: [
         expect.objectContaining({
           quantity: 2,
@@ -215,6 +224,41 @@ describe("business template queries", () => {
     expect(
       db.calls.some((call) => call.kind === "inventoryMovement.create"),
     ).toBe(false)
+  })
+
+  test("stores dry-cleaning express surcharge settings beside service records", async () => {
+    const db = createMockBusinessTemplateDb()
+
+    expect(
+      await getDryCleaningStoreSettings(db.client, {
+        storeId: "store_123",
+        tenantId: "tenant_123",
+      }),
+    ).toMatchObject({
+      expressSurchargePercent: 0,
+      updatedAt: null,
+    })
+
+    const settings = await updateDryCleaningStoreSettings(db.client, {
+      expressSurchargePercent: 35,
+      storeId: "store_123",
+      tenantId: "tenant_123",
+    })
+    const service = await createDryCleaningServiceItem(db.client, {
+      name: "Agbada",
+      priceMinor: 700_00,
+      storeId: "store_123",
+      tenantId: "tenant_123",
+    })
+
+    expect(settings).toMatchObject({ expressSurchargePercent: 35 })
+    expect(service.name).toBe("Agbada")
+    expect(
+      await getDryCleaningStoreSettings(db.client, {
+        storeId: "store_123",
+        tenantId: "tenant_123",
+      }),
+    ).toMatchObject({ expressSurchargePercent: 35 })
   })
 
   test("records status evidence and creates manual ready notification intents", async () => {

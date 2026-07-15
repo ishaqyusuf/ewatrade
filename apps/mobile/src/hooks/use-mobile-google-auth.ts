@@ -1,6 +1,7 @@
 import { useAuthContext } from "@/hooks/use-auth"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { useTRPC } from "@/trpc/client"
+import type * as GoogleSignIn from "@react-native-google-signin/google-signin"
 import { useMutation } from "@tanstack/react-query"
 import * as Google from "expo-auth-session/providers/google"
 import * as WebBrowser from "expo-web-browser"
@@ -16,6 +17,8 @@ const GOOGLE_ANDROID_CLIENT_ID =
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? ""
 const SAFE_MISSING_CLIENT_ID =
   "missing-google-client-id.apps.googleusercontent.com"
+const usesWebGoogleAuth = Platform.OS === "web"
+let nativeGoogleConfigured = false
 
 type MobileGoogleAuthMode = "login" | "sign_up"
 
@@ -26,15 +29,29 @@ type UseMobileGoogleAuthInput = {
   onError: (message: string) => void
 }
 
-function getPlatformGoogleClientId() {
-  if (Platform.OS === "android") return GOOGLE_ANDROID_CLIENT_ID
-  if (Platform.OS === "ios") return GOOGLE_IOS_CLIENT_ID
-  if (Platform.OS === "web") return GOOGLE_WEB_CLIENT_ID || GOOGLE_CLIENT_ID
+function getGoogleWebClientId() {
+  return GOOGLE_WEB_CLIENT_ID || GOOGLE_CLIENT_ID
+}
 
-  return GOOGLE_CLIENT_ID || GOOGLE_WEB_CLIENT_ID
+function getIsGoogleConfigured() {
+  if (usesWebGoogleAuth) return Boolean(getGoogleWebClientId())
+
+  if (Platform.OS === "android") {
+    return Boolean(GOOGLE_ANDROID_CLIENT_ID && getGoogleWebClientId())
+  }
+
+  if (Platform.OS === "ios") {
+    return Boolean(GOOGLE_IOS_CLIENT_ID && getGoogleWebClientId())
+  }
+
+  return false
 }
 
 function getMissingGoogleClientMessage() {
+  if (!usesWebGoogleAuth && !getGoogleWebClientId()) {
+    return "Google sign-in needs the web client ID for secure ID tokens. Use email code instead."
+  }
+
   if (Platform.OS === "android") {
     return "Google sign-in needs the Android client ID. Use email code instead."
   }
@@ -44,6 +61,30 @@ function getMissingGoogleClientMessage() {
   }
 
   return "Google sign-in is not configured yet. Use email code instead."
+}
+
+async function loadNativeGoogleSignIn() {
+  try {
+    return (await import(
+      "@react-native-google-signin/google-signin"
+    )) as typeof GoogleSignIn
+  } catch {
+    return null
+  }
+}
+
+function configureNativeGoogleSignIn(
+  GoogleSignin: typeof GoogleSignIn.GoogleSignin,
+) {
+  if (nativeGoogleConfigured) return
+
+  GoogleSignin.configure({
+    iosClientId: GOOGLE_IOS_CLIENT_ID || undefined,
+    offlineAccess: false,
+    scopes: ["email", "profile"],
+    webClientId: getGoogleWebClientId() || undefined,
+  })
+  nativeGoogleConfigured = true
 }
 
 export function useMobileGoogleAuth({
@@ -57,12 +98,9 @@ export function useMobileGoogleAuth({
     (state) => state.completeOnboarding,
   )
   const trpc = useTRPC()
-  const platformClientId = getPlatformGoogleClientId()
-  const isConfigured = Boolean(platformClientId)
+  const isConfigured = getIsGoogleConfigured()
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    androidClientId: GOOGLE_ANDROID_CLIENT_ID || undefined,
-    clientId: platformClientId || SAFE_MISSING_CLIENT_ID,
-    iosClientId: GOOGLE_IOS_CLIENT_ID || undefined,
+    clientId: getGoogleWebClientId() || SAFE_MISSING_CLIENT_ID,
     scopes: ["openid", "email", "profile"],
     selectAccount: true,
     webClientId: GOOGLE_WEB_CLIENT_ID || GOOGLE_CLIENT_ID || undefined,
@@ -94,8 +132,23 @@ export function useMobileGoogleAuth({
       },
     }),
   )
+  const submitGoogleIdToken = useCallback(
+    (idToken: string) => {
+      if (lastSubmittedIdToken.current === idToken) return
+      lastSubmittedIdToken.current = idToken
+
+      verifyGoogleMutation.mutate({
+        businessName,
+        idToken,
+        mode,
+        name,
+      })
+    },
+    [businessName, mode, name, verifyGoogleMutation],
+  )
 
   useEffect(() => {
+    if (!usesWebGoogleAuth) return
     if (!response) return
 
     if (response.type === "cancel" || response.type === "dismiss") {
@@ -115,20 +168,77 @@ export function useMobileGoogleAuth({
       return
     }
 
-    if (lastSubmittedIdToken.current === idToken) return
-    lastSubmittedIdToken.current = idToken
-
-    verifyGoogleMutation.mutate({
-      businessName,
-      idToken,
-      mode,
-      name,
-    })
-  }, [businessName, mode, name, onError, response, verifyGoogleMutation])
+    submitGoogleIdToken(idToken)
+  }, [onError, response, submitGoogleIdToken])
 
   const startGoogleAuth = useCallback(async () => {
     if (!isConfigured) {
       onError(getMissingGoogleClientMessage())
+      return
+    }
+
+    if (!usesWebGoogleAuth) {
+      const nativeGoogle = await loadNativeGoogleSignIn()
+
+      if (!nativeGoogle) {
+        onError(
+          "Google sign-in needs a development build. Use email code instead.",
+        )
+        return
+      }
+
+      try {
+        configureNativeGoogleSignIn(nativeGoogle.GoogleSignin)
+
+        if (Platform.OS === "android") {
+          await nativeGoogle.GoogleSignin.hasPlayServices({
+            showPlayServicesUpdateDialog: true,
+          })
+        }
+
+        const signInResponse = await nativeGoogle.GoogleSignin.signIn()
+
+        if (nativeGoogle.isCancelledResponse(signInResponse)) {
+          return
+        }
+
+        if (!nativeGoogle.isSuccessResponse(signInResponse)) {
+          onError("Google sign-in did not finish. Use email code instead.")
+          return
+        }
+
+        const tokens = signInResponse.data.idToken
+          ? { idToken: signInResponse.data.idToken }
+          : await nativeGoogle.GoogleSignin.getTokens()
+
+        if (!tokens.idToken) {
+          onError(
+            "Google did not return a verified sign-in token. Use email code instead.",
+          )
+          return
+        }
+
+        submitGoogleIdToken(tokens.idToken)
+      } catch (error) {
+        if (
+          nativeGoogle.isErrorWithCode(error) &&
+          error.code === nativeGoogle.statusCodes.SIGN_IN_CANCELLED
+        ) {
+          return
+        }
+
+        if (
+          nativeGoogle.isErrorWithCode(error) &&
+          error.code === nativeGoogle.statusCodes.PLAY_SERVICES_NOT_AVAILABLE
+        ) {
+          onError(
+            "Google Play Services is not available. Use email code instead.",
+          )
+          return
+        }
+
+        onError("Google sign-in could not open. Use email code instead.")
+      }
       return
     }
 
@@ -142,7 +252,7 @@ export function useMobileGoogleAuth({
     } catch {
       onError("Google sign-in could not open. Use email code instead.")
     }
-  }, [isConfigured, onError, promptAsync, request])
+  }, [isConfigured, onError, promptAsync, request, submitGoogleIdToken])
 
   return {
     isConfigured,

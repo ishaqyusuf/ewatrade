@@ -1,8 +1,10 @@
 import { prisma } from "@ewatrade/db"
+import type { BusinessTemplateKey } from "@ewatrade/db/queries"
 import { resolveTenantDomain } from "@ewatrade/utils"
 import { cookies, headers } from "next/headers"
 
 export type TenantStore = {
+  businessTemplateKey: BusinessTemplateKey
   id: string
   slug: string
   name: string
@@ -54,6 +56,27 @@ function getTenantSlugFromHost(host: string | null) {
   return result.kind === "tenant" ? result.tenantSlug : null
 }
 
+function getStoreBusinessTemplateKey(metadata: unknown): BusinessTemplateKey {
+  if (!metadata || typeof metadata !== "object") return "product_sales"
+
+  const retailOps = (metadata as { retailOps?: unknown }).retailOps
+  if (!retailOps || typeof retailOps !== "object") return "product_sales"
+
+  const businessTemplate = (retailOps as { businessTemplate?: unknown })
+    .businessTemplate
+  const onboarding = (retailOps as { onboarding?: unknown }).onboarding
+  const key =
+    businessTemplate && typeof businessTemplate === "object"
+      ? (businessTemplate as { key?: unknown }).key
+      : onboarding && typeof onboarding === "object"
+        ? (onboarding as { businessTemplateKey?: unknown }).businessTemplateKey
+        : null
+
+  return key === "dry_cleaning_laundry" || key === "other_generic"
+    ? key
+    : "product_sales"
+}
+
 export async function getActiveTenant(
   userId: string,
 ): Promise<TenantContext | null> {
@@ -92,6 +115,7 @@ export async function getActiveTenant(
           stores: {
             where: { status: { not: "ARCHIVED" } },
             select: {
+              metadata: true,
               id: true,
               slug: true,
               name: true,
@@ -119,7 +143,14 @@ export async function getActiveTenant(
     role: item.role,
     slug: item.tenant.slug,
   }))
-  const stores = membership.tenant.stores
+  const stores = membership.tenant.stores.map((store) => ({
+    businessTemplateKey: getStoreBusinessTemplateKey(store.metadata),
+    currencyCode: store.currencyCode,
+    id: store.id,
+    name: store.name,
+    slug: store.slug,
+    status: store.status,
+  }))
   const activeStore =
     stores.find((s) => s.id === activeStoreId) ??
     stores.find((s) => s.status === "ACTIVE") ??

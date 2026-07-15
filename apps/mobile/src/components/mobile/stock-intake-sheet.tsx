@@ -470,6 +470,7 @@ export function StockIntakeContent({
               {products.length > 8 ? (
                 <FormField
                   label="Find product"
+                  leadingIcon="Search"
                   onChangeText={setProductQuery}
                   placeholder="Search products or units"
                   value={productQuery}
@@ -518,6 +519,7 @@ export function StockIntakeContent({
               {unitOptions.length > STOCK_UNIT_PREVIEW_LIMIT ? (
                 <FormField
                   label="Find unit"
+                  leadingIcon="Search"
                   onChangeText={setUnitQuery}
                   placeholder="Search units or variants"
                   value={unitQuery}
@@ -641,6 +643,7 @@ export function StockIntakeContent({
 
           <FormField
             label={mode === "adjust" ? "Note" : "Source or note"}
+            leadingIcon="StickyNote"
             onChangeText={setNote}
             placeholder={
               mode === "adjust"
@@ -659,12 +662,13 @@ export function StockIntakeContent({
             />
           ) : null}
 
-          <ActionButton disabled={!canSubmit} onPress={submit}>
-            {isSubmitting
-              ? "Recording stock..."
-              : mode === "adjust"
-                ? "Record adjustment"
-                : "Add stock"}
+          <ActionButton
+            disabled={!canSubmit}
+            isLoading={isSubmitting}
+            loadingLabel="Recording stock"
+            onPress={submit}
+          >
+            {mode === "adjust" ? "Record adjustment" : "Add stock"}
           </ActionButton>
 
           <View className="gap-3">

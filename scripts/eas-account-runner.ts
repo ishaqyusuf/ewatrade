@@ -2,7 +2,7 @@ import { access, mkdir, readFile, realpath, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 
-type Action = "eas-build:dev" | "eas-build:preview"
+type Action = "eas-build:dev" | "eas-build:preview" | "update:preview"
 type CurrentIdentity = {
   email: string | null
   username: string | null
@@ -34,9 +34,11 @@ const ACTION_COMMANDS: Record<Action, string[]> = {
     "--profile",
     "preview",
   ],
+  "update:preview": ["node", "./scripts/update-preview.mjs"],
 }
 
 const action = process.argv[2] as Action | undefined
+const actionArgs = process.argv.slice(3)
 
 if (!action || !(action in ACTION_COMMANDS)) {
   console.error(getUsage())
@@ -49,9 +51,10 @@ const env = await loadEnvFiles({ ...Bun.env }, [
   path.join(APP_DIR, ".env"),
   path.join(APP_DIR, ".env.local"),
 ])
-delete env.EXPO_TOKEN
+env.EXPO_TOKEN = undefined
 
-const account = resolveAccount(action, env, process.argv.slice(3))
+const account = resolveAccount(action, env, actionArgs)
+const forwardedArgs = getForwardedArgs(actionArgs)
 
 const desiredIdentifiers = new Set(
   [account.login.toLowerCase(), account.username?.toLowerCase()].filter(
@@ -89,7 +92,7 @@ if (
   console.log(`Authenticated EAS session as ${session.username}.`)
 }
 
-await runOrExit(ACTION_COMMANDS[action], {
+await runOrExit([...ACTION_COMMANDS[action], ...forwardedArgs], {
   cwd: APP_DIR,
   env,
   stdio: "inherit",
@@ -163,6 +166,27 @@ function getAccountSelector(
   return sourceEnv.EAS_ACCOUNT?.trim() || null
 }
 
+function getForwardedArgs(args: string[]): string[] {
+  const forwardedArgs: string[] = []
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index]
+
+    if (arg === "--account" || arg === "-a") {
+      index += 1
+      continue
+    }
+
+    if (arg.startsWith("--account=")) {
+      continue
+    }
+
+    forwardedArgs.push(arg)
+  }
+
+  return forwardedArgs
+}
+
 function getFirstEnv(
   sourceEnv: NodeJS.ProcessEnv,
   keys: string[],
@@ -185,7 +209,7 @@ function toEnvKey(value: string): string {
 
 function getUsage(): string {
   return [
-    "Usage: bun ./scripts/eas-account-runner.ts <eas-build:dev|eas-build:preview> [--account <name>]",
+    "Usage: bun ./scripts/eas-account-runner.ts <eas-build:dev|eas-build:preview|update:preview> [--account <name>]",
     "",
     "Default credentials:",
     "  EAS_EMAIL or EAS_LOGIN",

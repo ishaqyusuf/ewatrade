@@ -145,6 +145,7 @@ export function BusinessSwitchContent({
             {businesses.length > BUSINESS_PREVIEW_LIMIT ? (
               <FormField
                 label="Find business"
+                leadingIcon="Search"
                 onChangeText={setBusinessQuery}
                 placeholder="Search businesses"
                 value={businessQuery}
@@ -190,6 +191,7 @@ export function BusinessSwitchContent({
             </Text>
             <FormField
               label="Business name"
+              leadingIcon="Building2"
               onChangeText={setBusinessName}
               placeholder="Enter business or branch name"
               value={businessName}
@@ -198,6 +200,7 @@ export function BusinessSwitchContent({
               <FormField
                 containerClassName="flex-1"
                 label="Type"
+                leadingIcon="FileText"
                 onChangeText={setType}
                 placeholder="Enter business type"
                 value={type}
@@ -205,6 +208,7 @@ export function BusinessSwitchContent({
               <FormField
                 containerClassName="flex-1"
                 label="Currency"
+                leadingIcon="CircleDollarSign"
                 onChangeText={setCurrency}
                 placeholder="Enter currency code"
                 value={currency}
@@ -214,6 +218,7 @@ export function BusinessSwitchContent({
               <FormField
                 containerClassName="flex-1"
                 label="Country"
+                leadingIcon="MapPin"
                 onChangeText={setCountry}
                 placeholder="Enter country"
                 value={country}
@@ -221,6 +226,7 @@ export function BusinessSwitchContent({
               <FormField
                 containerClassName="flex-1"
                 label="Category"
+                leadingIcon="List"
                 onChangeText={setCategory}
                 placeholder="Enter product category"
                 value={category}
@@ -228,6 +234,7 @@ export function BusinessSwitchContent({
             </View>
             <FormField
               label="Sales method"
+              leadingIcon="Wallet"
               onChangeText={setSalesMethod}
               placeholder="Enter sales method"
               value={salesMethod}

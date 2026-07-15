@@ -90,6 +90,7 @@ export function QuantityStepper({
               onFocus?.()
             }}
             onPressIn={onFocus}
+            unstyled
             value={value}
           />
         </View>

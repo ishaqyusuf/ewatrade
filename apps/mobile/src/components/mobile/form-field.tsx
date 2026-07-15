@@ -105,6 +105,7 @@ export function FormField({
             inputClassName,
           )}
           expand
+          unstyled
           {...sharedInputProps}
         />
         {trailingIcon ? (

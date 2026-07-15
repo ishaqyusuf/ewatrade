@@ -46,7 +46,7 @@ import { formatMoney } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
 import { Redirect, useRouter } from "expo-router"
 import { type ReactNode, useCallback, useEffect, useMemo, useRef } from "react"
-import { useWindowDimensions, View } from "react-native"
+import { View, useWindowDimensions } from "react-native"
 
 type DashboardMetric = {
   detail: string
@@ -1070,7 +1070,10 @@ function DashboardMoreSheet({
                 {item.description}
               </Text>
             </View>
-            <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
+            <Icon
+              className="size-sm text-muted-foreground"
+              name="ChevronRight"
+            />
           </Pressable>
         ))}
       </View>
@@ -1159,7 +1162,10 @@ function DashboardSettingsSheet({
                 {item.description}
               </Text>
             </View>
-            <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
+            <Icon
+              className="size-sm text-muted-foreground"
+              name="ChevronRight"
+            />
           </Pressable>
         ))}
       </View>
@@ -1236,9 +1242,7 @@ function DashboardThemeSheet({
                   {option.description}
                 </Text>
               </View>
-              {selected ? (
-                <StatusBadge label="Active" tone="success" />
-              ) : null}
+              {selected ? <StatusBadge label="Active" tone="success" /> : null}
             </Pressable>
           )
         })}
@@ -1388,6 +1392,7 @@ function AdminHomeOverview({
   onCustomers,
   onSales,
   onSalesReps,
+  onServices,
   onStocks,
   openRepSessionCount,
   openSalesCount,
@@ -1403,6 +1408,7 @@ function AdminHomeOverview({
   onCustomers: () => void
   onSales: () => void
   onSalesReps: () => void
+  onServices: () => void
   onStocks: () => void
   openRepSessionCount: number
   openSalesCount: number
@@ -1451,6 +1457,11 @@ function AdminHomeOverview({
               icon="UserPlus"
               label="Sales Reps"
               onPress={onSalesReps}
+            />
+            <AdminHomeCategory
+              icon="ClipboardList"
+              label="Services"
+              onPress={onServices}
             />
             <AdminHomeCategory
               icon="Users"
@@ -1552,6 +1563,7 @@ function SalesRepHomeOverview({
   onCloseout,
   onCreateSale,
   onCustomers,
+  onServiceOrders,
   openSalesCount,
   todaySalesCount,
   todayTotal,
@@ -1563,6 +1575,7 @@ function SalesRepHomeOverview({
   onCloseout: () => void
   onCreateSale: () => void
   onCustomers: () => void
+  onServiceOrders: () => void
   openSalesCount: number
   todaySalesCount: number
   todayTotal: number
@@ -1626,11 +1639,11 @@ function SalesRepHomeOverview({
         <Pressable
           className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-3 active:bg-primary/20"
           haptic
-          onPress={onCustomers}
+          onPress={onServiceOrders}
           transition
         >
-          <Icon className="size-sm text-primary" name="Users" />
-          <Text className="text-sm font-bold text-primary">Customers</Text>
+          <Icon className="size-sm text-primary" name="ClipboardList" />
+          <Text className="text-sm font-bold text-primary">Services</Text>
         </Pressable>
         <Pressable
           className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-3 active:bg-primary/20"
@@ -1642,6 +1655,15 @@ function SalesRepHomeOverview({
           <Text className="text-sm font-bold text-primary">Closeout</Text>
         </Pressable>
       </View>
+      <Pressable
+        className="min-h-11 flex-row items-center justify-center gap-2 rounded-xl bg-muted px-3 py-3 active:bg-accent"
+        haptic
+        onPress={onCustomers}
+        transition
+      >
+        <Icon className="size-sm text-foreground" name="Users" />
+        <Text className="text-sm font-bold text-foreground">Customers</Text>
+      </Pressable>
       <DashboardRecordRow
         detail={
           firstProduct
@@ -2168,6 +2190,9 @@ export function RetailOpsDashboardSurface({
   const openProductShare = useCallback(() => {
     router.push("/product-share-modal")
   }, [router])
+  const openServiceOrders = useCallback(() => {
+    router.push("/service-orders-modal")
+  }, [router])
 
   const handleQuickAction = (label: QuickActionProps["label"]) => {
     if (label === "Add item") {
@@ -2245,6 +2270,15 @@ export function RetailOpsDashboardSurface({
       },
     },
     {
+      description: "Receive dry-cleaning items and update due orders.",
+      icon: "ClipboardList",
+      label: "Service order",
+      onPress: () => {
+        actionModal.dismiss()
+        openServiceOrders()
+      },
+    },
+    {
       description: "Record restock, adjustment, or inventory movement.",
       icon: "Warehouse",
       label: "Stock entry",
@@ -2271,6 +2305,15 @@ export function RetailOpsDashboardSurface({
       onPress: () => {
         moreModal.dismiss()
         router.push("/staff-invite-modal")
+      },
+    },
+    {
+      description: "Set up services and manage dry-cleaning orders.",
+      icon: "ClipboardList",
+      label: "Services",
+      onPress: () => {
+        moreModal.dismiss()
+        openServiceOrders()
       },
     },
     {
@@ -2449,9 +2492,7 @@ export function RetailOpsDashboardSurface({
           headerAction={<Logout />}
           onBusinessPress={openBusinessSwitch}
           onPrimaryPress={() =>
-            isAttendantDashboard
-              ? handleQuickAction("New sale")
-              : openReports()
+            isAttendantDashboard ? handleQuickAction("New sale") : openReports()
           }
           onSearchPress={openCustomerBook}
           primaryActionLabel={
@@ -2501,14 +2542,11 @@ export function RetailOpsDashboardSurface({
           attendantName={attendantName}
           currentSession={currentRepSession}
           firstProduct={firstProduct ?? null}
-          onClockIn={() =>
-            firstProduct ? openRepClockIn() : undefined
-          }
-          onCloseout={() =>
-            firstProduct ? openCloseout() : undefined
-          }
+          onClockIn={() => (firstProduct ? openRepClockIn() : undefined)}
+          onCloseout={() => (firstProduct ? openCloseout() : undefined)}
           onCreateSale={() => handleQuickAction("New sale")}
           onCustomers={openCustomerBook}
+          onServiceOrders={openServiceOrders}
           openSalesCount={openCloseoutSales.length}
           todaySalesCount={dashboardTodaySalesCount}
           todayTotal={dashboardTodayTotal}
@@ -2523,6 +2561,7 @@ export function RetailOpsDashboardSurface({
           onCustomers={openCustomerBook}
           onSales={() => handleQuickAction("New sale")}
           onSalesReps={() => router.push("/staff-invite-modal")}
+          onServices={openServiceOrders}
           onStocks={() =>
             firstProduct ? openStockIntake() : openFirstProductSetup()
           }
@@ -2624,9 +2663,7 @@ export function RetailOpsDashboardSurface({
                     title={item.name}
                     trailing={
                       <StatusBadge
-                        icon={
-                          item.status === "Out" ? "TriangleAlert" : "Clock"
-                        }
+                        icon={item.status === "Out" ? "TriangleAlert" : "Clock"}
                         label={item.status}
                         tone="warning"
                       />

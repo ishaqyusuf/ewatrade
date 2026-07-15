@@ -2,7 +2,12 @@ import { useColors } from "@/hooks/use-color"
 import { cn } from "@/lib/utils"
 import { BottomSheetTextInput } from "@gorhom/bottom-sheet"
 import type { ComponentType } from "react"
-import { Platform, TextInput, type TextInputProps } from "react-native"
+import {
+  Platform,
+  TextInput,
+  type TextInputProps,
+  type TextStyle,
+} from "react-native"
 import { useBottomSheetInput } from "./bottom-sheet-input-context"
 
 type InputProps = TextInputProps &
@@ -11,6 +16,7 @@ type InputProps = TextInputProps &
     expand?: boolean
     inputTextAlign?: "auto" | "center" | "left" | "right"
     placeholderClassName?: string
+    unstyled?: boolean
   }
 
 const NativeTextInput = TextInput as ComponentType<InputProps>
@@ -23,10 +29,28 @@ function Input({
   inputTextAlign,
   placeholderClassName,
   style,
+  unstyled,
   ...props
 }: InputProps) {
   const colors = useColors()
   const isBottomSheetInput = useBottomSheetInput()
+  const embeddedSizingStyle: TextStyle = expand
+    ? { flexBasis: 0, flexGrow: 1, flexShrink: 1 }
+    : { width: "100%" }
+  const embeddedInputStyle: TextStyle = {
+    color: colors.foreground,
+    fontSize: 16,
+    lineHeight: 20,
+    minWidth: 0,
+    opacity: props.editable === false ? 0.5 : 1,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    textAlign: inputTextAlign ?? "left",
+    ...(props.multiline
+      ? { minHeight: 72, textAlignVertical: "top" as const }
+      : { height: 48 }),
+    ...embeddedSizingStyle,
+  }
 
   if (isBottomSheetInput) {
     return (
@@ -34,28 +58,49 @@ function Input({
         placeholderTextColor={
           props.placeholderTextColor ?? colors.mutedForeground
         }
-        style={{
-          alignItems: "center",
-          backgroundColor: colors.card,
-          borderColor: className?.includes("border-destructive")
-            ? colors.destructive
-            : colors.border,
-          borderRadius: 12,
-          borderWidth: 1,
-          color: colors.foreground,
-          flexDirection: "row",
-          fontSize: 16,
-          height: 48,
-          lineHeight: 20,
-          minWidth: 0,
-          opacity: props.editable === false ? 0.5 : 1,
-          paddingHorizontal: 16,
-          paddingVertical: 4,
-          textAlign: inputTextAlign ?? "left",
-          ...(expand
-            ? { flexBasis: 0, flexGrow: 1, flexShrink: 1 }
-            : { width: "100%" }),
-        }}
+        selectionColor={props.selectionColor ?? colors.primary}
+        style={
+          unstyled
+            ? [embeddedInputStyle, style]
+            : [
+                {
+                  alignItems: "center",
+                  backgroundColor: colors.card,
+                  borderColor: className?.includes("border-destructive")
+                    ? colors.destructive
+                    : colors.border,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  color: colors.foreground,
+                  flexDirection: "row",
+                  fontSize: 16,
+                  height: 48,
+                  lineHeight: 20,
+                  minWidth: 0,
+                  opacity: props.editable === false ? 0.5 : 1,
+                  paddingHorizontal: 16,
+                  paddingVertical: 4,
+                  textAlign: inputTextAlign ?? "left",
+                  ...(expand
+                    ? { flexBasis: 0, flexGrow: 1, flexShrink: 1 }
+                    : { width: "100%" }),
+                },
+                style,
+              ]
+        }
+        {...props}
+      />
+    )
+  }
+
+  if (unstyled) {
+    return (
+      <NativeTextInput
+        placeholderTextColor={
+          props.placeholderTextColor ?? colors.mutedForeground
+        }
+        selectionColor={props.selectionColor ?? colors.primary}
+        style={[embeddedInputStyle, style]}
         {...props}
       />
     )

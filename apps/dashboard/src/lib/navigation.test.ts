@@ -39,6 +39,25 @@ describe("dashboard navigation policy", () => {
     ])
   })
 
+  test("adds service orders only for dry-cleaning stores", () => {
+    expect(
+      getDashboardNavigation("OWNER", {
+        storeBusinessTemplateKey: "dry_cleaning_laundry",
+      }).map((item) => item.href),
+    ).toContain("/services")
+    expect(
+      getDashboardNavigation("OWNER", {
+        storeBusinessTemplateKey: "product_sales",
+      }).map((item) => item.href),
+    ).not.toContain("/services")
+    expect(
+      canAccessDashboardPath("/services", "CASHIER", {
+        storeBusinessTemplateKey: "dry_cleaning_laundry",
+      }),
+    ).toBe(true)
+    expect(canAccessDashboardPath("/services", "CASHIER")).toBe(false)
+  })
+
   test("shows attendants only permitted work surfaces", () => {
     const cashierItems = getDashboardNavigation("CASHIER").map(
       (item) => item.href,

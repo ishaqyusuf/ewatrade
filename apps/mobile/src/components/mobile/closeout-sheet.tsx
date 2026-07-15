@@ -438,6 +438,7 @@ export function CloseoutContent({
                 inputMode="decimal"
                 keyboardType="numeric"
                 label="Declared cash"
+                leadingIcon="CircleDollarSign"
                 onChangeText={setDeclaredCash}
                 placeholder="Enter counted cash"
                 value={declaredCash}
@@ -446,6 +447,7 @@ export function CloseoutContent({
                 inputMode="decimal"
                 keyboardType="numeric"
                 label="Declared transfer"
+                leadingIcon="Wallet"
                 onChangeText={setDeclaredTransfer}
                 placeholder="Enter counted transfer"
                 value={declaredTransfer}
@@ -483,6 +485,7 @@ export function CloseoutContent({
                   {inventoryLines.length > 8 ? (
                     <FormField
                       label="Find stock line"
+                      leadingIcon="Search"
                       onChangeText={setInventoryLineQuery}
                       placeholder="Search products or units"
                       value={inventoryLineQuery}
@@ -518,6 +521,7 @@ export function CloseoutContent({
                             inputMode="numeric"
                             keyboardType="numeric"
                             label="Declared closing stock"
+                            leadingIcon="Hash"
                             onChangeText={(value) =>
                               updateInventoryLine(line.id, value)
                             }
@@ -553,6 +557,7 @@ export function CloseoutContent({
 
             <FormField
               label="Closeout note"
+              leadingIcon="StickyNote"
               onChangeText={setNote}
               placeholder="Enter variance reason or handover note"
               value={note}
@@ -567,10 +572,13 @@ export function CloseoutContent({
               />
             ) : null}
 
-            <ActionButton disabled={!canSubmit} onPress={submit}>
-              {closeSessionMutation.isPending
-                ? "Submitting closeout..."
-                : "Submit closeout"}
+            <ActionButton
+              disabled={!canSubmit}
+              isLoading={closeSessionMutation.isPending}
+              loadingLabel="Submitting closeout"
+              onPress={submit}
+            >
+              Submit closeout
             </ActionButton>
 
         <ActionButton onPress={onComplete} variant="outline">

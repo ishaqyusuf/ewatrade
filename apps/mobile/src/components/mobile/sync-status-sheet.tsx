@@ -454,15 +454,15 @@ export function SyncStatusContent({
   const isSyncBusy =
     registerOfflineDeviceMutation.isPending || syncEventsMutation.isPending
   const canSync = syncInput.events.length > 0 && !isOfflineMode && !isSyncBusy
-  const syncButtonLabel = registerOfflineDeviceMutation.isPending
-    ? "Registering device..."
-    : syncEventsMutation.isPending
-      ? "Syncing..."
-      : syncInput.events.length === 0 && retryBackoffEvents.length > 0
-        ? "Waiting for retry timer"
-        : `Sync ${syncInput.events.length} supported event${
-            syncInput.events.length === 1 ? "" : "s"
-          }`
+  const syncButtonLoadingLabel = registerOfflineDeviceMutation.isPending
+    ? "Registering device"
+    : "Syncing"
+  const syncButtonLabel =
+    syncInput.events.length === 0 && retryBackoffEvents.length > 0
+      ? "Waiting for retry timer"
+      : `Sync ${syncInput.events.length} supported event${
+          syncInput.events.length === 1 ? "" : "s"
+        }`
 
   function retryFailedEvents(eventIds: string[]) {
     if (eventIds.length === 0 || isSyncBusy) return
@@ -1073,6 +1073,8 @@ export function SyncStatusContent({
 
           <ActionButton
             disabled={!canSync}
+            isLoading={isSyncBusy}
+            loadingLabel={syncButtonLoadingLabel}
             onPress={syncSupportedEvents}
             testID="retail-sync-now"
           >

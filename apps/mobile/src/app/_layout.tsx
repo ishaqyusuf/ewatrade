@@ -13,8 +13,8 @@ import {
 } from "@/hooks/use-auth"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 
-import { FloatingThemeToggle } from "@/components/mobile"
 import { AppAutoUpdateModal } from "@/components/app-auto-update-modal"
+import { FloatingThemeToggle } from "@/components/mobile"
 import { ToastProviderWithViewport } from "@/components/ui/toast"
 import { useColorScheme } from "@/hooks/use-color"
 import { shouldShowFloatingThemeToggle } from "@/lib/app-variant"
@@ -96,6 +96,11 @@ const InitialLayout = () => {
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="sign-up" options={{ headerShown: false }} />
           <Stack.Screen name="verify-email" options={{ headerShown: false }} />
+          <Stack.Screen name="qa-session" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="qa-session/[payload]"
+            options={{ headerShown: false }}
+          />
           <Stack.Screen name="design-system" options={{ headerShown: false }} />
           <Stack.Screen
             name="design-system/index"
@@ -170,6 +175,10 @@ const InitialLayout = () => {
             <Stack.Screen name="updates" options={{ headerShown: false }} />
             <Stack.Screen
               name="create-sale-modal"
+              options={{ headerShown: false, presentation: "modal" }}
+            />
+            <Stack.Screen
+              name="service-orders-modal"
               options={{ headerShown: false, presentation: "modal" }}
             />
             <Stack.Screen

@@ -1,16 +1,19 @@
+import {
+  type NotificationContact,
+  createEmailNotificationContact,
+} from "./contacts"
 import { planNotificationDeliveries } from "./delivery"
 import {
-  createEmailNotificationContact,
-  type NotificationContact
-} from "./contacts"
-import { createNotificationDispatchFromType, ewatradeNotificationTypes } from "./notification-types"
+  createNotificationDispatchFromType,
+  ewatradeNotificationTypes,
+} from "./notification-types"
 import type {
   MarketingEarlyAccessRequestedPayload,
   MarketingWaitlistJoinedPayload,
-  RetailOpsStaffInvitedPayload,
-  RetailOpsSharedLinkOrderRequestedPayload,
   NotificationDispatch,
-  NotificationInput
+  NotificationInput,
+  RetailOpsSharedLinkOrderRequestedPayload,
+  RetailOpsStaffInvitedPayload,
 } from "./types"
 
 export * from "./contacts"
@@ -19,7 +22,6 @@ export * from "./delivery"
 export * from "./memory-store"
 export * from "./notification-types"
 export * from "./payload-utils/index"
-export * from "./services/email-service"
 export * from "./services/triggers"
 export * from "./store"
 export * from "./types"
@@ -43,7 +45,7 @@ export function getMarketingNotificationInboxRecipients() {
       deliveryRole: "admin",
       displayName: "ewatrade Team",
       email,
-      kind: "email"
+      kind: "email",
     }))
   }
 
@@ -56,8 +58,8 @@ export function getMarketingNotificationInboxRecipients() {
       deliveryRole: "admin",
       displayName: "ewatrade Team",
       email: process.env.EMAIL_REPLY_TO,
-      kind: "email"
-    }
+      kind: "email",
+    },
   ] satisfies NotificationContact[]
 }
 
@@ -70,8 +72,8 @@ export function getMarketingLeadRecipients(input: {
     createEmailNotificationContact({
       deliveryRole: "customer",
       displayName: input.fullName,
-      email: input.email
-    })
+      email: input.email,
+    }),
   ]
 }
 
@@ -92,7 +94,7 @@ export function createMarketingLeadSubmittedNotification(input: {
       input.type === "EARLY_ACCESS"
         ? "Early access requested"
         : "Waitlist joined",
-    variant: "success"
+    variant: "success",
   } satisfies NotificationInput
 }
 
@@ -110,12 +112,12 @@ export function createMarketingLeadSubmissionFailedNotification(input: {
         ? "marketing.early_access.failed"
         : "marketing.waitlist.failed",
     title: "Submission failed",
-    variant: "error"
+    variant: "error",
   } satisfies NotificationInput
 }
 
 export function createMarketingEarlyAccessDispatch(
-  payload: MarketingEarlyAccessRequestedPayload
+  payload: MarketingEarlyAccessRequestedPayload,
 ) {
   return createNotificationDispatchFromType(
     ewatradeNotificationTypes,
@@ -124,14 +126,14 @@ export function createMarketingEarlyAccessDispatch(
     {
       recipients: getMarketingLeadRecipients({
         email: payload.email,
-        fullName: payload.fullName
-      })
-    }
+        fullName: payload.fullName,
+      }),
+    },
   )
 }
 
 export function createMarketingWaitlistDispatch(
-  payload: MarketingWaitlistJoinedPayload
+  payload: MarketingWaitlistJoinedPayload,
 ) {
   return createNotificationDispatchFromType(
     ewatradeNotificationTypes,
@@ -140,9 +142,9 @@ export function createMarketingWaitlistDispatch(
     {
       recipients: getMarketingLeadRecipients({
         email: payload.email,
-        fullName: payload.fullName
-      })
-    }
+        fullName: payload.fullName,
+      }),
+    },
   )
 }
 
@@ -151,7 +153,7 @@ function uniqueEmailRecipients(
     deliveryRole: "admin" | "customer"
     displayName?: string | null
     email: string
-  }>
+  }>,
 ) {
   const seen = new Set<string>()
 
@@ -168,44 +170,44 @@ function uniqueEmailRecipients(
       createEmailNotificationContact({
         deliveryRole: recipient.deliveryRole,
         displayName: recipient.displayName ?? undefined,
-        email: recipient.email
-      })
+        email: recipient.email,
+      }),
     ]
   })
 }
 
 export function getRetailOpsSharedLinkOrderRecipients(
-  payload: RetailOpsSharedLinkOrderRequestedPayload
+  payload: RetailOpsSharedLinkOrderRequestedPayload,
 ) {
   return uniqueEmailRecipients([
     {
       deliveryRole: "customer",
       displayName: payload.customerName,
-      email: payload.customerEmail
+      email: payload.customerEmail,
     },
     ...payload.merchantRecipients.map((recipient) => ({
       deliveryRole: "admin" as const,
       displayName: recipient.displayName ?? undefined,
-      email: recipient.email
-    }))
+      email: recipient.email,
+    })),
   ])
 }
 
 export function createRetailOpsSharedLinkOrderDispatch(
-  payload: RetailOpsSharedLinkOrderRequestedPayload
+  payload: RetailOpsSharedLinkOrderRequestedPayload,
 ) {
   return createNotificationDispatchFromType(
     ewatradeNotificationTypes,
     "retail_ops_shared_link_order_requested",
     payload,
     {
-      recipients: getRetailOpsSharedLinkOrderRecipients(payload)
-    }
+      recipients: getRetailOpsSharedLinkOrderRecipients(payload),
+    },
   )
 }
 
 export function createRetailOpsStaffInviteDispatch(
-  payload: RetailOpsStaffInvitedPayload
+  payload: RetailOpsStaffInvitedPayload,
 ) {
   return createNotificationDispatchFromType(
     ewatradeNotificationTypes,
@@ -216,21 +218,21 @@ export function createRetailOpsStaffInviteDispatch(
         createEmailNotificationContact({
           deliveryRole: "customer",
           displayName: payload.inviteeName ?? undefined,
-          email: payload.inviteeEmail
-        })
-      ]
-    }
+          email: payload.inviteeEmail,
+        }),
+      ],
+    },
   )
 }
 
 export function planMarketingEarlyAccessDeliveries(
-  payload: MarketingEarlyAccessRequestedPayload
+  payload: MarketingEarlyAccessRequestedPayload,
 ) {
   return planNotificationDeliveries(createMarketingEarlyAccessDispatch(payload))
 }
 
 export function planMarketingWaitlistDeliveries(
-  payload: MarketingWaitlistJoinedPayload
+  payload: MarketingWaitlistJoinedPayload,
 ) {
   return planNotificationDeliveries(createMarketingWaitlistDispatch(payload))
 }
@@ -244,7 +246,7 @@ export function createMarketingLeadCapturedNotification(
     | {
         payload: MarketingWaitlistJoinedPayload
         type: "marketing_waitlist_joined"
-      }
+      },
 ): NotificationDispatch {
   return input.type === "marketing_early_access_requested"
     ? createMarketingEarlyAccessDispatch(input.payload)

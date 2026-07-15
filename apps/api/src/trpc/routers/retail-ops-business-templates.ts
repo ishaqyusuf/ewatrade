@@ -13,10 +13,12 @@ import {
   createDryCleaningServiceOrder,
   createDryCleaningServiceRequestLink,
   getDryCleaningOperationalReport,
+  getDryCleaningStoreSettings,
   getStoreBusinessTemplate,
   listBusinessTemplates,
   listDryCleaningServiceItems,
   listDryCleaningServiceOrders,
+  listDryCleaningServiceRequestLinks,
   listDryCleaningServiceRequests,
   listUnsupportedBusinessDemand,
   resolveDryCleaningServiceRequestLink,
@@ -24,6 +26,7 @@ import {
   updateDryCleaningServiceItem,
   updateDryCleaningServiceOrderStatus,
   updateDryCleaningServiceRequestStatus,
+  updateDryCleaningStoreSettings,
   updateStoreBusinessTemplate,
 } from "@ewatrade/db/queries"
 import { TRPCError } from "@trpc/server"
@@ -40,6 +43,7 @@ import {
   retailOpsDryCleaningUpdateServiceItemSchema,
   retailOpsDryCleaningUpdateServiceOrderStatusSchema,
   retailOpsDryCleaningUpdateServiceRequestStatusSchema,
+  retailOpsDryCleaningUpdateSettingsSchema,
   retailOpsStoreScopeSchema,
   retailOpsUnsupportedBusinessDemandSchema,
   retailOpsUpdateBusinessTemplateSchema,
@@ -250,6 +254,39 @@ export const retailOpsBusinessTemplatesRouter = createTRPCRouter({
       }
     }),
 
+  dryCleaningSettings: protectedProcedure
+    .input(retailOpsStoreScopeSchema)
+    .query(async ({ ctx, input }) => {
+      const store = getScopedStore(ctx, input)
+
+      try {
+        return await getDryCleaningStoreSettings(ctx.db, {
+          storeId: store.id,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        rethrowTemplateError(error)
+      }
+    }),
+
+  updateDryCleaningSettings: protectedProcedure
+    .input(retailOpsDryCleaningUpdateSettingsSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanManageDryCleaningCatalog(ctx.tenantContext.membership.role)
+
+      const store = getScopedStore(ctx, input)
+
+      try {
+        return await updateDryCleaningStoreSettings(ctx.db, {
+          expressSurchargePercent: input.expressSurchargePercent,
+          storeId: store.id,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        rethrowTemplateError(error)
+      }
+    }),
+
   createDryCleaningServiceItem: protectedProcedure
     .input(retailOpsDryCleaningCreateServiceItemSchema)
     .mutation(async ({ ctx, input }) => {
@@ -329,6 +366,7 @@ export const retailOpsBusinessTemplatesRouter = createTRPCRouter({
           actorUserId: ctx.session.user.id,
           customer: normalizeDryCleaningCustomer(input.customer),
           dueAt: input.dueAt,
+          evidence: input.evidence,
           lines: input.lines,
           notes: input.notes,
           paymentStatus: input.paymentStatus,
@@ -374,6 +412,21 @@ export const retailOpsBusinessTemplatesRouter = createTRPCRouter({
         return await createDryCleaningServiceRequestLink(ctx.db, {
           createdByUserId: ctx.session.user.id,
           label: input.label,
+          storeId: store.id,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        rethrowTemplateError(error)
+      }
+    }),
+
+  dryCleaningServiceRequestLinks: protectedProcedure
+    .input(retailOpsStoreScopeSchema)
+    .query(async ({ ctx, input }) => {
+      const store = getScopedStore(ctx, input)
+
+      try {
+        return await listDryCleaningServiceRequestLinks(ctx.db, {
           storeId: store.id,
           tenantId: ctx.tenantContext.tenant.id,
         })

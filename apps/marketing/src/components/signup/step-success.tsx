@@ -18,8 +18,11 @@ const PLATFORM_DOMAIN =
 type StepSuccessProps = {
   tenantSlug: string
   businessName: string
+  dashboardUrl?: string
   devEmailHtml?: string
   emailDeliveryStatus?: "failed" | "sent"
+  posUrl?: string
+  storefrontUrl?: string
 }
 
 function ConfettiDot({ style }: { style: React.CSSProperties }) {
@@ -40,11 +43,22 @@ const CONFETTI_PIECES = [
   { top: "15%", left: "70%", bg: "oklch(0.7 0.2 140)", delay: "100ms" },
 ]
 
+function getDisplayHost(url: string) {
+  try {
+    return new URL(url).host
+  } catch {
+    return url.replace(/^https?:\/\//, "")
+  }
+}
+
 export function StepSuccess({
   tenantSlug,
   businessName,
+  dashboardUrl,
   devEmailHtml,
   emailDeliveryStatus = "sent",
+  posUrl,
+  storefrontUrl,
 }: StepSuccessProps) {
   const [visible, setVisible] = useState(false)
 
@@ -53,13 +67,20 @@ export function StepSuccess({
     return () => clearTimeout(t)
   }, [])
 
+  const resolvedStorefrontUrl =
+    storefrontUrl ?? `https://${tenantSlug}.${PLATFORM_DOMAIN}`
+  const resolvedPosUrl =
+    posUrl ?? `https://${tenantSlug}-pos.${PLATFORM_DOMAIN}`
+  const resolvedDashboardUrl =
+    dashboardUrl ?? `https://${tenantSlug}-dashboard.${PLATFORM_DOMAIN}`
+
   const surfaces = [
     {
       icon: Store04Icon,
       label: "Storefront",
       description: "Your public merchant store",
-      href: `https://${tenantSlug}.${PLATFORM_DOMAIN}`,
-      domain: `${tenantSlug}.${PLATFORM_DOMAIN}`,
+      href: resolvedStorefrontUrl,
+      domain: getDisplayHost(resolvedStorefrontUrl),
       color: "text-primary",
       bg: "bg-primary/8",
       hoverBorder: "hover:border-primary/40",
@@ -68,8 +89,8 @@ export function StepSuccess({
       icon: CashierIcon,
       label: "POS",
       description: "Cashier & in-store checkout",
-      href: `https://${tenantSlug}-pos.${PLATFORM_DOMAIN}`,
-      domain: `${tenantSlug}-pos.${PLATFORM_DOMAIN}`,
+      href: resolvedPosUrl,
+      domain: getDisplayHost(resolvedPosUrl),
       color: "text-amber-700",
       bg: "bg-amber-500/8",
       hoverBorder: "hover:border-amber-400/50",
@@ -78,15 +99,13 @@ export function StepSuccess({
       icon: DashboardCircleIcon,
       label: "Dashboard",
       description: "Operations & settings",
-      href: `https://${tenantSlug}-dashboard.${PLATFORM_DOMAIN}`,
-      domain: `${tenantSlug}-dashboard.${PLATFORM_DOMAIN}`,
+      href: resolvedDashboardUrl,
+      domain: getDisplayHost(resolvedDashboardUrl),
       color: "text-emerald-700",
       bg: "bg-emerald-500/8",
       hoverBorder: "hover:border-emerald-400/50",
     },
   ]
-
-  const dashboardUrl = `https://${tenantSlug}-dashboard.${PLATFORM_DOMAIN}`
 
   return (
     <div
@@ -180,7 +199,7 @@ export function StepSuccess({
         <Button
           size="lg"
           className="gap-2 rounded-full px-8"
-          render={<a href={dashboardUrl}>Go to dashboard</a>}
+          render={<a href={resolvedDashboardUrl}>Go to dashboard</a>}
         >
           Go to dashboard
           <HugeiconsIcon

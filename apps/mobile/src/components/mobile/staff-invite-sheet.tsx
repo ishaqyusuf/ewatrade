@@ -286,8 +286,13 @@ export function StaffInviteContent({
   }
 
   const action = (
-    <ActionButton disabled={!canSubmit} onPress={submit}>
-      {inviteStaffMutation.isPending ? "Sending invite..." : "Send invite"}
+    <ActionButton
+      disabled={!canSubmit}
+      isLoading={inviteStaffMutation.isPending}
+      loadingLabel="Sending invite"
+      onPress={submit}
+    >
+      Send invite
     </ActionButton>
   )
   const body = (
@@ -301,6 +306,7 @@ export function StaffInviteContent({
       <View className="gap-4">
         <FormField
           label="Attendant name"
+          leadingIcon="User"
           onChangeText={setName}
           placeholder="Enter attendant name"
           value={name}
@@ -311,6 +317,7 @@ export function StaffInviteContent({
           inputMode="email"
           keyboardType="email-address"
           label="Email address"
+          leadingIcon="Mail"
           onChangeText={setEmail}
           placeholder="Enter attendant email address"
           value={email}

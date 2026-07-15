@@ -12,7 +12,10 @@ export {
   AuthHeader,
   AuthMethodButton,
 } from "./auth-header"
-export { BusinessSwitchContent, BusinessSwitchSheet } from "./business-switch-sheet"
+export {
+  BusinessSwitchContent,
+  BusinessSwitchSheet,
+} from "./business-switch-sheet"
 export {
   MobileBottomTabs,
   type MobileBottomTab,
@@ -71,6 +74,7 @@ export {
   SecondaryOperationalRow,
   SecondarySheetHeader,
 } from "./secondary-operations"
+export { ServiceOrdersContent } from "./service-orders-sheet"
 export {
   SessionInventoryLine,
   SessionSectionHeader,

@@ -261,6 +261,7 @@ export function CustomerBookContent({
         <FormField
           autoCapitalize="words"
           label="Find customer"
+          leadingIcon="Search"
           onChangeText={setQuery}
           placeholder="Search by name or email"
           value={query}

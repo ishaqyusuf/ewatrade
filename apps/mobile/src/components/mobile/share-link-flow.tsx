@@ -2,8 +2,10 @@ import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useColors } from "@/hooks/use-color"
 import { cn } from "@/lib/utils"
 import type { ReactNode } from "react"
+import { ActivityIndicator } from "react-native"
 
 type ShareLinkMetricTileProps = {
   icon: IconKeys
@@ -23,7 +25,9 @@ type ShareLinkActionButtonProps = {
   destructive?: boolean
   disabled?: boolean
   icon: IconKeys
+  isLoading?: boolean
   label: string
+  loadingLabel?: string
   onPress: () => void
 }
 
@@ -161,36 +165,49 @@ export function ShareLinkActionButton({
   destructive = false,
   disabled = false,
   icon,
+  isLoading = false,
   label,
+  loadingLabel,
   onPress,
 }: ShareLinkActionButtonProps) {
+  const colors = useColors()
+  const isDisabled = disabled || isLoading
+
   return (
     <Pressable
+      accessibilityState={{ busy: isLoading, disabled: isDisabled }}
       className={cn(
         "min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-full px-3",
         destructive ? "bg-destructive/10" : "bg-primary/10",
         destructive ? "active:bg-destructive/20" : "active:bg-primary/20",
-        disabled && "opacity-60",
+        isDisabled && "opacity-60",
       )}
-      disabled={disabled}
-      haptic
+      disabled={isDisabled}
+      haptic={!isDisabled}
       onPress={onPress}
       transition
     >
-      <Icon
-        className={cn(
-          "size-sm",
-          destructive ? "text-destructive" : "text-primary",
-        )}
-        name={icon}
-      />
+      {isLoading ? (
+        <ActivityIndicator
+          color={destructive ? colors.destructive : colors.primary}
+          size="small"
+        />
+      ) : (
+        <Icon
+          className={cn(
+            "size-sm",
+            destructive ? "text-destructive" : "text-primary",
+          )}
+          name={icon}
+        />
+      )}
       <Text
         className={cn(
           "text-sm font-extrabold",
           destructive ? "text-destructive" : "text-primary",
         )}
       >
-        {label}
+        {isLoading && loadingLabel ? loadingLabel : label}
       </Text>
     </Pressable>
   )

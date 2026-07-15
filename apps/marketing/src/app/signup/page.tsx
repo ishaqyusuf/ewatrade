@@ -12,22 +12,38 @@ import type {
   OwnerValues,
   WorkspaceValues,
 } from "@/lib/signup-schemas"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 // ─── Accumulated form state ───────────────────────────────────────────────────
 
 type SignupFormState = {
-  accountType?: AccountTypeValues
-  workspace?: WorkspaceValues
-  business?: BusinessValues
-  owner?: OwnerValues
+  accountType?: Partial<AccountTypeValues>
+  workspace?: Partial<WorkspaceValues>
+  business?: Partial<BusinessValues>
+  owner?: Partial<OwnerValues>
+}
+
+type EarlyAccessSessionResponse = {
+  accessToken: string
+  expiresAt: string
+  lead: {
+    businessName: string
+    email: string
+    firstName: string
+    fullName: string
+    lastName: string
+    phone: string
+  }
 }
 
 type SuccessState = {
   tenantSlug: string
   businessName: string
+  dashboardUrl?: string
   devEmailHtml?: string
   emailDeliveryStatus?: "failed" | "sent"
+  posUrl?: string
+  storefrontUrl?: string
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -38,6 +54,76 @@ export default function SignupPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState("")
   const [success, setSuccess] = useState<SuccessState | null>(null)
+  const [accessToken, setAccessToken] = useState<string | null>(null)
+  const [accessNotice, setAccessNotice] = useState<string | null>(null)
+
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search)
+      .get("access_token")
+      ?.trim()
+
+    if (!token) return
+
+    const earlyAccessToken = token
+    let cancelled = false
+    setAccessToken(earlyAccessToken)
+    setAccessNotice("Checking your early access link…")
+
+    async function loadAccessSession() {
+      const response = await fetch(
+        `/api/early-access/session?token=${encodeURIComponent(earlyAccessToken)}`,
+      )
+      const body = (await response.json().catch(() => null)) as
+        | EarlyAccessSessionResponse
+        | { message?: string }
+        | null
+
+      if (cancelled) return
+
+      if (!response.ok || !body || !("lead" in body)) {
+        const message =
+          body && "message" in body
+            ? body.message
+            : "This early access link could not be verified."
+
+        setAccessNotice(
+          message ?? "This early access link could not be verified.",
+        )
+        return
+      }
+
+      setAccessNotice(
+        "Early access link verified. Finish your workspace setup.",
+      )
+      setFormState((current) => ({
+        ...current,
+        business: {
+          ...current.business,
+          businessName:
+            body.lead.businessName || current.business?.businessName || "",
+          phone: body.lead.phone || current.business?.phone || "",
+        },
+        owner: {
+          ...current.owner,
+          confirmPassword: current.owner?.confirmPassword ?? "",
+          email: body.lead.email,
+          firstName: body.lead.firstName || current.owner?.firstName || "",
+          lastName: body.lead.lastName || current.owner?.lastName || "",
+          password: current.owner?.password ?? "",
+        },
+      }))
+    }
+
+    void loadAccessSession().catch(() => {
+      if (!cancelled) {
+        setAccessNotice("This early access link could not be verified.")
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // ── Step handlers ──────────────────────────────────────────────────────────
 
@@ -62,6 +148,7 @@ export default function SignupPage() {
 
     try {
       const payload = {
+        accessToken: accessToken ?? undefined,
         modes: formState.accountType?.modes ?? [],
         subdomain: formState.workspace?.subdomain ?? "",
         customDomain: formState.workspace?.customDomain ?? "",
@@ -89,6 +176,8 @@ export default function SignupPage() {
         dashboardUrl?: string
         devEmailHtml?: string
         emailDeliveryStatus?: "failed" | "sent"
+        posUrl?: string
+        storefrontUrl?: string
       }
 
       if (!response.ok) {
@@ -102,8 +191,11 @@ export default function SignupPage() {
       setSuccess({
         tenantSlug: result.tenantSlug ?? payload.subdomain,
         businessName: payload.businessName,
+        dashboardUrl: result.dashboardUrl,
         devEmailHtml: result.devEmailHtml,
         emailDeliveryStatus: result.emailDeliveryStatus,
+        posUrl: result.posUrl,
+        storefrontUrl: result.storefrontUrl,
       })
       setStep(5)
     } catch {
@@ -128,6 +220,12 @@ export default function SignupPage() {
           className="animate-in fade-in slide-in-from-bottom-4 rounded-[2rem] border border-border/70 bg-background/95 p-6 shadow-[0_32px_100px_rgba(39,28,14,0.09)] duration-500 sm:p-8"
           key={step}
         >
+          {accessNotice && step < 5 && (
+            <div className="mb-5 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+              {accessNotice}
+            </div>
+          )}
+
           {step === 1 && (
             <StepAccountType
               defaultValues={formState.accountType}
@@ -165,8 +263,11 @@ export default function SignupPage() {
             <StepSuccess
               tenantSlug={success.tenantSlug}
               businessName={success.businessName}
+              dashboardUrl={success.dashboardUrl}
               devEmailHtml={success.devEmailHtml}
               emailDeliveryStatus={success.emailDeliveryStatus}
+              posUrl={success.posUrl}
+              storefrontUrl={success.storefrontUrl}
             />
           )}
         </div>
