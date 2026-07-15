@@ -1,5 +1,15 @@
 # Progress
 
+## 2026-07-15
+
+### Dashboard Vercel Production Project
+- Source Mode: Direct user request to create the dashboard project on Vercel using Chrome, add production envs, deploy successfully, and run tests.
+- Completed: Created the `ewatrade-dashboard` Vercel project under `ishaqyusufs-projects`, configured it as a Next.js monorepo project rooted at `apps/dashboard` on Node 24.x, added the required production runtime/build env values from `.env.production`, attached and verified `dashboard.ewatrade.com`, and deployed production successfully. The first deployment exposed a hostname-resolution bug where `dashboard.ewatrade.com` was treated as a storefront tenant slug; fixed domain resolution so reserved platform app subdomains such as `dashboard.ewatrade.com` resolve to the global dashboard surface while tenant-scoped hosts such as `demo-dashboard.ewatrade.com` still resolve to that tenant dashboard.
+- Changed Source Files: `packages/utils/src/domain.ts`, `packages/utils/src/domain.test.ts`, `turbo.json`, `.brain/progress.md`. Local Production Config Updated: `.env.production` now has `VERCEL_DASHBOARD_PROJECT_ID=prj_KPSnNRftlTWRgW67OsnH2vUHzLYO`.
+- Brain Files Updated: `.brain/progress.md`.
+- Checks Run: `bun test packages/utils/src/domain.test.ts`; `bun --filter @ewatrade/utils typecheck`; `bun --filter @ewatrade/dashboard typecheck`; `node ./scripts/with-workspace-env.mjs APP_ENV=production bun --filter @ewatrade/dashboard build`; Vercel production deploy for `ewatrade-dashboard`; deployed domain/API curl checks; Chrome validation of the Vercel project/deployment and deployed dashboard domain.
+- Skipped Checks Or Unresolved Issues: None for the dashboard Vercel project creation and production deployment pass.
+
 ## 2026-07-14
 
 ### Mobile Navigation And Home Cleanup

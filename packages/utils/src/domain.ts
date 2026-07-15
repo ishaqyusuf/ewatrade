@@ -10,7 +10,9 @@ export type TenantHostnameRecord = {
   verifiedAt?: Date | string | null
 }
 
-export type TenantHostLookup = Partial<Record<TenantSurface, TenantHostnameRecord[]>>
+export type TenantHostLookup = Partial<
+  Record<TenantSurface, TenantHostnameRecord[]>
+>
 
 export type DomainResolutionResult =
   | {
@@ -36,20 +38,26 @@ export type ResolveTenantDomainOptions = {
   localProjectSlug?: string
 }
 
-const SURFACE_PREFIX_BY_KIND: Record<Exclude<TenantSurface, "storefront">, string> = {
+const SURFACE_PREFIX_BY_KIND: Record<
+  Exclude<TenantSurface, "storefront">,
+  string
+> = {
   pos: "pos",
-  dashboard: "dashboard"
+  dashboard: "dashboard",
 }
 
-const SURFACE_SUFFIX_BY_KIND: Record<Exclude<TenantSurface, "storefront">, string> = {
+const SURFACE_SUFFIX_BY_KIND: Record<
+  Exclude<TenantSurface, "storefront">,
+  string
+> = {
   pos: "-pos",
-  dashboard: "-dashboard"
+  dashboard: "-dashboard",
 }
 
 const LOCAL_SURFACE_LABELS: Record<TenantSurface, string> = {
   storefront: "storefront",
   pos: "pos",
-  dashboard: "dashboard"
+  dashboard: "dashboard",
 }
 
 function uniqueHostnames(values: Array<string | null | undefined>) {
@@ -173,7 +181,9 @@ export function buildInternalTenantHostname(params: {
     return getLocalSurfaceHostname({
       surface: params.surface,
       platformDomain,
-      localProjectSlug: (params.localProjectSlug ?? "ewatrade").trim().toLowerCase()
+      localProjectSlug: (params.localProjectSlug ?? "ewatrade")
+        .trim()
+        .toLowerCase(),
     })
   }
 
@@ -203,11 +213,11 @@ export function getTenantDomain(
   options?: {
     preferCustom?: boolean
     requireVerified?: boolean
-  }
+  },
 ) {
   const records = Array.isArray(hostnames)
     ? hostnames.filter((record) => record.surface === surface)
-    : hostnames[surface] ?? []
+    : (hostnames[surface] ?? [])
 
   const normalizedRecords = records.filter((record) => {
     if (!record.hostname) {
@@ -239,7 +249,7 @@ export function getTenantDomain(
       }
 
       return normalizeHostname(left.hostname).localeCompare(
-        normalizeHostname(right.hostname)
+        normalizeHostname(right.hostname),
       )
     })
     .at(0)
@@ -251,13 +261,13 @@ export function getTenantDomainsBySurface(hostnames: TenantHostnameRecord[]) {
   return {
     storefront: getTenantDomain(hostnames, "storefront"),
     pos: getTenantDomain(hostnames, "pos"),
-    dashboard: getTenantDomain(hostnames, "dashboard")
+    dashboard: getTenantDomain(hostnames, "dashboard"),
   }
 }
 
 export function extractTenantSlugFromPlatformHostname(
   hostname: string,
-  platformDomain: string
+  platformDomain: string,
 ) {
   const normalizedHostname = stripPort(hostname)
   const normalizedPlatformDomain = stripPort(platformDomain)
@@ -281,6 +291,13 @@ export function extractTenantSlugFromPlatformHostname(
     return null
   }
 
+  if (
+    subdomain === SURFACE_PREFIX_BY_KIND.pos ||
+    subdomain === SURFACE_PREFIX_BY_KIND.dashboard
+  ) {
+    return null
+  }
+
   if (subdomain.endsWith(SURFACE_SUFFIX_BY_KIND.pos)) {
     return subdomain.slice(0, -SURFACE_SUFFIX_BY_KIND.pos.length) || null
   }
@@ -295,7 +312,7 @@ export function extractTenantSlugFromPlatformHostname(
 export function inferTenantSurfaceFromHostname(
   hostname: string,
   platformDomain: string,
-  localProjectSlug = "ewatrade"
+  localProjectSlug = "ewatrade",
 ): TenantSurface | null {
   const normalizedHostname = normalizeHostname(hostname)
   const normalizedPlatformDomain = normalizeHostname(platformDomain)
@@ -307,22 +324,22 @@ export function inferTenantSurfaceFromHostname(
       getLocalSurfaceHostname({
         surface: "storefront",
         platformDomain: normalizedPlatformDomain,
-        localProjectSlug
-      })
+        localProjectSlug,
+      }),
     )
     const localPosHost = stripPort(
       getLocalSurfaceHostname({
         surface: "pos",
         platformDomain: normalizedPlatformDomain,
-        localProjectSlug
-      })
+        localProjectSlug,
+      }),
     )
     const localDashboardHost = stripPort(
       getLocalSurfaceHostname({
         surface: "dashboard",
         platformDomain: normalizedPlatformDomain,
-        localProjectSlug
-      })
+        localProjectSlug,
+      }),
     )
 
     if (
@@ -345,7 +362,18 @@ export function inferTenantSurfaceFromHostname(
     hostnameWithoutPort !== platformWithoutPort &&
     hostnameWithoutPort.endsWith(`.${platformWithoutPort}`)
   ) {
-    const subdomain = hostnameWithoutPort.slice(0, -(platformWithoutPort.length + 1))
+    const subdomain = hostnameWithoutPort.slice(
+      0,
+      -(platformWithoutPort.length + 1),
+    )
+
+    if (subdomain === SURFACE_PREFIX_BY_KIND.pos) {
+      return "pos"
+    }
+
+    if (subdomain === SURFACE_PREFIX_BY_KIND.dashboard) {
+      return "dashboard"
+    }
 
     if (subdomain.endsWith(SURFACE_SUFFIX_BY_KIND.pos)) {
       return "pos"
@@ -373,7 +401,7 @@ export function inferTenantSurfaceFromHostname(
 
 export function isMarketingHostname(
   hostname: string,
-  options: ResolveTenantDomainOptions
+  options: ResolveTenantDomainOptions,
 ) {
   const normalizedHostname = normalizeHostname(hostname)
   const platformDomain = normalizeHostname(options.platformDomain)
@@ -381,9 +409,11 @@ export function isMarketingHostname(
 
   const marketingHosts = uniqueHostnames([
     platformDomain,
-    isLocalHostname(platformDomain) ? `${localProjectSlug}-marketing.${platformDomain}` : null,
+    isLocalHostname(platformDomain)
+      ? `${localProjectSlug}-marketing.${platformDomain}`
+      : null,
     `www.${platformDomain}`,
-    ...(options.marketingHosts ?? [])
+    ...(options.marketingHosts ?? []),
   ])
 
   return marketingHosts.includes(normalizedHostname)
@@ -391,20 +421,20 @@ export function isMarketingHostname(
 
 export function matchTenantHostname(
   hostname: string,
-  hostnames: TenantHostnameRecord[]
+  hostnames: TenantHostnameRecord[],
 ) {
   const normalizedHostname = normalizeHostname(hostname)
 
   return (
     hostnames.find(
-      (record) => normalizeHostname(record.hostname) === normalizedHostname
+      (record) => normalizeHostname(record.hostname) === normalizedHostname,
     ) ?? null
   )
 }
 
 export function resolveTenantDomain(
   hostname: string,
-  options: ResolveTenantDomainOptions
+  options: ResolveTenantDomainOptions,
 ): DomainResolutionResult {
   const normalizedHostname = normalizeHostname(hostname)
   const isLocalhost = isLocalHostname(normalizedHostname)
@@ -417,7 +447,7 @@ export function resolveTenantDomain(
       surface: null,
       tenantSlug: null,
       isCustomDomain: false,
-      isLocalhost
+      isLocalhost,
     }
   }
 
@@ -425,11 +455,17 @@ export function resolveTenantDomain(
     inferTenantSurfaceFromHostname(
       normalizedHostname,
       options.platformDomain,
-      localProjectSlug
+      localProjectSlug,
     ) ?? "storefront"
 
-  const tenantSlug = isPlatformHostname(normalizedHostname, options.platformDomain)
-    ? extractTenantSlugFromPlatformHostname(normalizedHostname, options.platformDomain)
+  const tenantSlug = isPlatformHostname(
+    normalizedHostname,
+    options.platformDomain,
+  )
+    ? extractTenantSlugFromPlatformHostname(
+        normalizedHostname,
+        options.platformDomain,
+      )
     : null
 
   return {
@@ -437,7 +473,10 @@ export function resolveTenantDomain(
     hostname: normalizedHostname,
     surface,
     tenantSlug,
-    isCustomDomain: !isPlatformHostname(normalizedHostname, options.platformDomain),
-    isLocalhost
+    isCustomDomain: !isPlatformHostname(
+      normalizedHostname,
+      options.platformDomain,
+    ),
+    isLocalhost,
   }
 }
