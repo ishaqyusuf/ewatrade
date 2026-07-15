@@ -3,6 +3,9 @@
 ## Goal
 Help the self-service app infer which store a customer is currently inside when the app opens so the customer can start checkout faster with less manual store selection.
 
+## Current Status
+Implemented v1 on the POS/self-service launch surface. The app requests browser geolocation, calls the public store-detection endpoint, shows ranked store candidates when available, requires explicit customer confirmation, and falls back to manual store-code entry when geolocation is unavailable, denied, or too uncertain.
+
 ## User Flow
 1. Customer opens the self-service app while physically inside or near a supported store.
 2. App requests or uses previously granted location permission.
@@ -15,15 +18,25 @@ Help the self-service app infer which store a customer is currently inside when 
 ## Data Model
 - `store`
 - `tenant`
-- TODO: Define how store geolocation is modeled, such as latitude/longitude, geofence polygon, accuracy radius, floor/branch metadata, and active self-service eligibility.
+- Store geolocation is modeled in `Store.metadata.retailOps.selfServiceDetection` for v1:
+  - `enabled: boolean`
+  - `latitude: number`
+  - `longitude: number`
+  - `radiusMeters: number`
+- The resolver also accepts the legacy-compatible metadata path `Store.metadata.selfServiceStoreDetection`.
 - TODO: Define whether location-resolution events should be stored for analytics, abuse detection, or support debugging.
 
 ## API Endpoints
-- TODO: Add a self-service app endpoint or procedure to resolve the current store from device coordinates.
-- TODO: Add contract details for confidence score, fallback candidates, and permission-denied responses once the API exists.
+- `POST /api/self-service/store-detection/resolve`
+  - Request: `latitude`, `longitude`, optional `accuracyMeters`, optional `maxCandidates`.
+  - Response: `status`, `match`, and ranked `candidates`.
+  - Status values:
+    - `confirmed`: the top match is inside the configured radius with high confidence and acceptable device accuracy.
+    - `needs_confirmation`: candidates exist, but the match should be confirmed by the customer.
+    - `manual_required`: no enabled geofence produced a usable match.
 
 ## UI Screens
-- Self-service app launch/loading screen
+- POS/self-service app launch panel in `apps/pos`
 - Store detection confirmation sheet or screen
 - Manual store selection fallback screen
 - Self-service cart or checkout home screen

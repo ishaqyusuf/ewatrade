@@ -4,13 +4,13 @@
 Feature
 
 ## Status
-In Progress
+Done
 
 ## Created Date
 2026-07-06
 
 ## Last Updated
-2026-07-11
+2026-07-15
 
 ## Intake
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
@@ -100,6 +100,7 @@ Lower agent must report:
 - 2026-07-11: Added durable-first staff stock wallet balance reads. `retailOps.staffStockWallets` now reads positive `StaffStockWallet` balances with staff/product/unit snapshots when the migration is available, merges legacy store-metadata balances during rollout, and keeps the existing staff filter/limit behavior. Return approvals, wallet reconciliation, migration application, and live DB validation remain pending.
 - 2026-07-11: Added the first durable staff profile, invite-token, and lifecycle-audit write bridge. `retailOps.inviteStaff` now upserts `RetailOpsStaffProfile`, writes or refreshes a hashed `RetailOpsStaffInviteToken`, and records invite lifecycle events when the migration is available; `retailOps.updateStaffStatus` records suspended/reactivated profile snapshots and lifecycle events; `retailOps.completeStaffOnboarding` accepts active invite tokens and records onboarding completion events. Membership/user reads, secure token acceptance URLs, real email provider configuration, return approvals, wallet reconciliation, migration application, and live DB validation remain pending.
 - 2026-07-11: Added durable-first staff profile reads. `retailOps.staff` now reads `RetailOpsStaffProfile` rows with user and membership snapshots when the migration is available, then merges legacy membership/user rows so owner/admin rows and pre-cutover staff remain visible during rollout. Secure token acceptance URLs, real email provider configuration, return approvals, wallet reconciliation, migration application, and live DB validation remain pending.
+- 2026-07-15: Marked implementation ticket complete. Core acceptance is covered by permissioned staff invite/status flows, staff onboarding completion, central-to-wallet assignment/return, staff-wallet sale deduction, durable staff profile/invite/lifecycle rows, durable wallet rows, and durable-first wallet reads. Return approval workflows and live provider/email hardening remain follow-up work.
 
 ## Linked Task
 - Task Title: Sales Rep Management And Stock Wallets

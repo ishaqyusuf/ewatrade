@@ -37,6 +37,8 @@ Track current and planned API surface areas.
   - `GET /api/search` returns active tenant/store and role-scoped dashboard search records for products, customers, staff, sales, and generated links. It accepts optional `q` and `storeId` query parameters.
 - Both marketing lead routes persist a `LeadCapture` record and enqueue a shared notification dispatch job through `@ewatrade/jobs`.
 - `apps/api` exposes the authenticated tRPC app router.
+- `apps/api` exposes public self-service store detection:
+  - `POST /api/self-service/store-detection/resolve` accepts device coordinates and optional accuracy, resolves enabled store geofences from store metadata, and returns ranked candidates plus a `confirmed`, `needs_confirmation`, or `manual_required` status for the POS/self-service launch flow.
 - Current tRPC procedure groups:
   - `auth.requestMobileOwnerOtp` sends a six-digit owner login/sign-up OTP email for the mobile app.
   - `auth.verifyMobileOwnerOtp` verifies the mobile OTP and returns a bearer session plus active business context.

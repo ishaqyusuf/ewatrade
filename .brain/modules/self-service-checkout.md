@@ -14,9 +14,10 @@ resolved."
 See `.brain/features/retail-ops-scan-price-resolution.md` for the missing-price,
 unknown-product, photo-capture, admin-notification, and unavailable-item flow.
 
-Planned entry optimization:
-- On app launch, attempt to infer the active store from device geolocation.
-- Require confirmation or fallback selection when location confidence is low.
+Implemented entry optimization:
+- On app launch, the POS/self-service surface can request browser geolocation and call `POST /api/self-service/store-detection/resolve`.
+- The resolver reads enabled store detection settings from `Store.metadata.retailOps.selfServiceDetection`, ranks nearby enabled stores by distance/confidence, and returns `confirmed`, `needs_confirmation`, or `manual_required`.
+- The customer-facing launch panel always requires customer confirmation before continuing with a detected store and provides a manual store-code fallback when geolocation is denied, unavailable, or low confidence.
 
 States:
 

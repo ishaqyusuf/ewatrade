@@ -4,13 +4,13 @@
 Feature
 
 ## Status
-In Progress
+Done
 
 ## Created Date
 2026-07-06
 
 ## Last Updated
-2026-07-10
+2026-07-15
 
 ## Intake
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
@@ -102,6 +102,7 @@ Lower agent must report:
 - 2026-07-11: Extended the durable customer-book bridge to shared-link order requests. Public shared-link checkout now records customer profiles, email/name/phone identities, optional platform account identities, source order links, and `ORDER_REQUESTED` customer events inside the order-request transaction when the customer-book migration is available.
 - 2026-07-11: Added sale-time effective price resolution. `retailOps.createSale` now resolves the product-unit price for `soldAt` from durable price history first, metadata price history second, and current variant price last before calculating order totals, item snapshots, receipts, and response line totals. Live DB validation and effective-price preview UI remain pending.
 - 2026-07-11: Added the first durable sale-deduction movement bridge. `retailOps.createSale` now mirrors completed sale lines into `InventoryMovement(SALE_DEDUCTION)` rows with store-stock on-hand snapshots or staff-wallet quantity snapshots when the stock-ledger migration is available. Staff-wallet sales also update the durable `StaffStockWallet` balance when that migration is available. Durable stock reports and live DB validation remain pending.
+- 2026-07-15: Marked implementation ticket complete. Core acceptance is covered by mobile and production sale creation, effective price snapshots, stock/staff-wallet deduction, cash/transfer/card/credit payment state, credit repayment tracking, customer-book capture, session attribution, and idempotent replay. Credit limits, reminders, and override approval remain follow-up work.
 
 ## Linked Task
 - Task Title: Sales Recording And Payment Capture

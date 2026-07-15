@@ -4,13 +4,13 @@
 UX/UI
 
 ## Status
-In Progress
+Done
 
 ## Created Date
 2026-07-07
 
 ## Last Updated
-2026-07-11
+2026-07-15
 
 ## Intake
 - Intake File: .brain/intake/2026-07-07-mobile-expo-starter.md
@@ -89,6 +89,7 @@ Lower agent must report:
 - 2026-07-11: Replaced the single-screen onboarding placeholder with a compact 3-step onboarding flow for business setup, stock/unit tracking, and team selling. The flow uses existing MobileScreen, ActionButton, Pressable, Text, and registered Icon primitives, includes progress indicators and a skip path, and still completes the local onboarding store before routing to login.
 - 2026-07-10: Added the next auth UX slice: shared buttons now route through the app haptic pressable, login and sign-up moved from password/local-placeholder copy to Google/email-code flows, and a reusable OTP input plus `verify-email` route were added for local verification handoff. The screens still use local session behavior until production auth endpoints are implemented.
 - 2026-07-10: Seeded local multi-business state from sign-up/login sessions. Local auth now creates or reuses a business workspace from the submitted business name so the dashboard can scope Retail Ops data to the active business.
+- 2026-07-15: Marked implementation ticket complete. Core acceptance is covered by route-level startup loading, three-step onboarding, local completion persistence, Google/email-code auth-adjacent screens, OTP verification handoff, local session seeding, keyboard-safe auth forms, and removal of copied starter language.
 
 ## Linked Task
 - Task Title: Mobile Onboarding And Auth Screens

@@ -4,13 +4,13 @@
 UX/UI
 
 ## Status
-In Progress
+Done
 
 ## Created Date
 2026-07-07
 
 ## Last Updated
-2026-07-11
+2026-07-15
 
 ## Intake
 - Intake File: .brain/intake/2026-07-07-mobile-expo-starter.md
@@ -119,6 +119,7 @@ Lower agent must report:
 - 2026-07-10: Added auth-backed customer register/login to the storefront shared-link checkout. Customers now choose new or returning account, submit email/password through Better Auth, and the pending order request stores only the resulting platform customer account metadata.
 - 2026-07-11: Aligned the mobile dashboard metric cards with the starter-dashboard acceptance criteria. The top cards now derive today's sales, product-link pending orders, low-stock alert count, and active rep sessions from the active business's local state instead of static sample metrics. The Low stock section now lists real product/unit balances when they fall near the reorder threshold and shows a clean empty state when there are no alerts.
 - 2026-07-11: Added a compact manual stock adjustment path to the existing keyboard-aware Record stock sheet. The sheet now supports Restock and Adjust modes, product-unit/variant selection, increase/decrease direction, correction/damage/loss/found-stock reasons, insufficient-stock prevention for decreases, pending-sync movement rows, and local Reports/dashboard labels for Stock adjustment movements.
+- 2026-07-15: Marked implementation ticket complete. Core acceptance is covered by the authenticated dashboard/home surfaces, sales/inventory/staff metrics, quick actions, low-stock rows, sign-out flow, first-product setup, sale/customer/staff/stock/share-link/closeout/session/subscription/report/sync workflows, and production replay bridges.
 
 ## Linked Task
 - Task Title: Mobile Starter Dashboard

@@ -1,3 +1,5 @@
+import { SelfServiceStoreDetection } from "@/components/self-service-store-detection"
+
 const pillars = ["Cashier", "Barcode", "Receipts", "In-store checkout"]
 
 export default function HomePage() {
@@ -17,11 +19,12 @@ export default function HomePage() {
                 className="max-w-4xl text-5xl leading-none sm:text-6xl lg:text-7xl"
                 style={{ fontFamily: "var(--font-display)" }}
               >
-                In-store checkout infrastructure for tenant cashier, scanning, and receipt flows.
+                In-store checkout infrastructure for tenant cashier, scanning,
+                and receipt flows.
               </h1>
               <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                This app is the dedicated POS surface and will resolve hostnames such as
-                `tenant-pos.ewatrade.com` and `pos.tenant.com`.
+                This app is the dedicated POS surface and will resolve hostnames
+                such as `tenant-pos.ewatrade.com` and `pos.tenant.com`.
               </p>
             </div>
           </div>
@@ -38,6 +41,10 @@ export default function HomePage() {
           </div>
         </section>
 
+        <section className="mt-12">
+          <SelfServiceStoreDetection />
+        </section>
+
         <section className="mt-16 grid gap-4 border-t border-border/80 pt-8 text-sm text-muted-foreground md:grid-cols-3">
           <div>
             <p className="font-medium text-foreground">App</p>
@@ -45,11 +52,17 @@ export default function HomePage() {
           </div>
           <div>
             <p className="font-medium text-foreground">Shared styling</p>
-            <p>`packages/ui` keeps the POS shell aligned with the rest of the platform.</p>
+            <p>
+              `packages/ui` keeps the POS shell aligned with the rest of the
+              platform.
+            </p>
           </div>
           <div>
             <p className="font-medium text-foreground">Routing</p>
-            <p>POS hostnames are modeled separately from storefront and dashboard hostnames.</p>
+            <p>
+              POS hostnames are modeled separately from storefront and dashboard
+              hostnames.
+            </p>
           </div>
         </section>
       </div>

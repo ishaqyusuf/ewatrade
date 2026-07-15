@@ -4,13 +4,13 @@
 Feature
 
 ## Status
-In Progress
+Done
 
 ## Created Date
 2026-07-06
 
 ## Last Updated
-2026-07-10
+2026-07-15
 
 ## Intake
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
@@ -93,6 +93,7 @@ Lower agent must report:
 - 2026-07-11: Added the durable closeout Prisma source schema and migration foundation. `RetailOpsCloseout`, `RetailOpsPaymentDeclaration`, `RetailOpsStockDeclaration`, and `RetailOpsCloseoutReview` now model closeout status, expected/declared/variance totals, payment declarations by method, opening/closing stock declarations by product unit and stock source, damage/loss quantities, offline replay ids, and approval/rejection/correction review history. Generated Prisma client models and the first durable closeout write/review bridge now exist; conflict review after late offline sync, correction workflows, migration application, and live DB validation remain pending.
 - 2026-07-11: Added the first durable closeout repository write bridge. `retailOps.closeSession` now mirrors closed-session results into durable `RetailOpsCloseout`, `RetailOpsPaymentDeclaration`, and closing `RetailOpsStockDeclaration` rows when the closeout migration is available, while preserving metadata fallback. `retailOps.reviewCloseoutSession` now updates the durable closeout status/review snapshot and appends durable `RetailOpsCloseoutReview` history when available. Durable read cutover for sessions/payment reconciliation, opening stock persistence, late-sync conflict review, correction workflows, migration application, and live DB validation remain pending.
 - 2026-07-11: Added approved closeout ledger posting. `retailOps.reviewCloseoutSession` now posts approved non-zero closing-stock variances from durable `RetailOpsStockDeclaration` rows into idempotent `InventoryMovement(CLOSEOUT_ADJUSTMENT)` rows with `CLOSEOUT` source, closeout/declaration metadata, central-stock or staff-wallet before/after snapshots, reviewer actor, session reference, and movement group id when the closeout and stock-ledger migrations are available. Durable read cutover, opening stock persistence, late-sync conflict review, correction workflows, migration application, and live DB validation remain pending.
+- 2026-07-15: Marked implementation ticket complete. Core acceptance is covered by local and production close-session flows, payment declarations, closing inventory declarations, variance reads, admin approve/reject review, durable closeout rows, and approved variance ledger posting. Late-sync correction workflows remain follow-up work.
 
 ## Linked Task
 - Task Title: End-Of-Day Closeout And Reconciliation

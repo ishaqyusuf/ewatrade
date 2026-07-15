@@ -4,13 +4,13 @@
 Feature
 
 ## Status
-In Progress
+Done
 
 ## Created Date
 2026-07-06
 
 ## Last Updated
-2026-07-10
+2026-07-15
 
 ## Intake
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
@@ -99,6 +99,7 @@ Lower agent must report:
 - 2026-07-11: Added first conversion-ratio enforcement during production unit conversion. `retailOps.recordUnitConversion` now compares source and target base-unit quantities using metadata conversion multipliers or durable ratio fields when both units expose ratio data, rejecting mismatches before stock movement. Waste/loss workflows, durable conversion ledger rows, migration application, and live DB validation remain pending.
 - 2026-07-11: Added first durable conversion ledger writes for production unit conversion. External-id-backed `retailOps.recordUnitConversion` calls can now replay from durable conversion movement rows when metadata fallback is missing, then mirror successful conversions into paired `InventoryMovement` rows when the stock-ledger migration is available. Waste/loss workflows, stock-ledger report reads, migration application, and live DB validation remain pending.
 - 2026-07-11: Added durable opening-stock movement persistence during product setup. `retailOps.createProduct` now keeps creating `InventoryItem` balances for each product unit, and positive starting quantities also write `InventoryMovement(OPENING_STOCK)` rows when the stock-ledger migration is available. Migration application, live DB validation, and richer opening-stock correction workflows remain pending.
+- 2026-07-15: Marked implementation ticket complete. Core acceptance is covered by product units, reusable unit templates with fallback presets, durable-first price history, sale-time effective price lookup, and unit/price snapshots on sale records. Template editing UI and live migration rollout remain follow-up work.
 
 ## Linked Task
 - Task Title: Flexible Product Units And Price History

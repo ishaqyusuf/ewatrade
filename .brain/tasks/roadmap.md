@@ -26,8 +26,8 @@ Longer-horizon sequencing across major implementation phases.
 - Priority: High
 - Description: Track plan in `.brain/plans/2026-07-06-feature-multi-business-signup-and-onboarding.md`.
 - Related Feature: Retail Ops onboarding
-- Status: In Progress
-- Plan Status: In Progress
+- Status: Done
+- Plan Status: Done
 - Plan File: .brain/plans/2026-07-06-feature-multi-business-signup-and-onboarding.md
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
 - Created Date: 2026-07-06
@@ -36,8 +36,8 @@ Longer-horizon sequencing across major implementation phases.
 - Priority: High
 - Description: Track plan in `.brain/plans/2026-07-06-feature-flexible-product-units-and-price-history.md`.
 - Related Feature: Product units and pricing
-- Status: In Progress
-- Plan Status: In Progress
+- Status: Done
+- Plan Status: Done
 - Plan File: .brain/plans/2026-07-06-feature-flexible-product-units-and-price-history.md
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
 - Created Date: 2026-07-06
@@ -46,8 +46,8 @@ Longer-horizon sequencing across major implementation phases.
 - Priority: High
 - Description: Track plan in `.brain/plans/2026-07-06-feature-stock-intake-and-unit-conversion-ledger.md`.
 - Related Feature: Inventory ledger
-- Status: In Progress
-- Plan Status: In Progress
+- Status: Done
+- Plan Status: Done
 - Plan File: .brain/plans/2026-07-06-feature-stock-intake-and-unit-conversion-ledger.md
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
 - Created Date: 2026-07-06
@@ -56,8 +56,8 @@ Longer-horizon sequencing across major implementation phases.
 - Priority: High
 - Description: Track plan in `.brain/plans/2026-07-06-feature-sales-rep-management-and-stock-wallets.md`.
 - Related Feature: Sales reps
-- Status: In Progress
-- Plan Status: In Progress
+- Status: Done
+- Plan Status: Done
 - Plan File: .brain/plans/2026-07-06-feature-sales-rep-management-and-stock-wallets.md
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
 - Created Date: 2026-07-06
@@ -66,8 +66,8 @@ Longer-horizon sequencing across major implementation phases.
 - Priority: High
 - Description: Track plan in `.brain/plans/2026-07-06-feature-rep-clock-in-and-opening-inventory.md`.
 - Related Feature: Daily rep sessions
-- Status: In Progress
-- Plan Status: In Progress
+- Status: Done
+- Plan Status: Done
 - Plan File: .brain/plans/2026-07-06-feature-rep-clock-in-and-opening-inventory.md
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
 - Created Date: 2026-07-06
@@ -76,8 +76,8 @@ Longer-horizon sequencing across major implementation phases.
 - Priority: High
 - Description: Track plan in `.brain/plans/2026-07-06-feature-sales-recording-and-payment-capture.md`.
 - Related Feature: Sales recording
-- Status: In Progress
-- Plan Status: In Progress
+- Status: Done
+- Plan Status: Done
 - Plan File: .brain/plans/2026-07-06-feature-sales-recording-and-payment-capture.md
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
 - Created Date: 2026-07-06
@@ -86,8 +86,8 @@ Longer-horizon sequencing across major implementation phases.
 - Priority: High
 - Description: Track plan in `.brain/plans/2026-07-06-feature-end-of-day-closeout-and-reconciliation.md`.
 - Related Feature: Reconciliation
-- Status: In Progress
-- Plan Status: In Progress
+- Status: Done
+- Plan Status: Done
 - Plan File: .brain/plans/2026-07-06-feature-end-of-day-closeout-and-reconciliation.md
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
 - Created Date: 2026-07-06
@@ -96,8 +96,8 @@ Longer-horizon sequencing across major implementation phases.
 - Priority: High
 - Description: Track plan in `.brain/plans/2026-07-06-feature-offline-first-sales-sync.md`.
 - Related Feature: Offline sync
-- Status: In Progress
-- Plan Status: In Progress
+- Status: Done
+- Plan Status: Done
 - Plan File: .brain/plans/2026-07-06-feature-offline-first-sales-sync.md
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
 - Created Date: 2026-07-06
@@ -106,8 +106,8 @@ Longer-horizon sequencing across major implementation phases.
 - Priority: Medium
 - Description: Track plan in `.brain/plans/2026-07-06-feature-retail-ops-dashboard-reports.md`.
 - Related Feature: Retail Ops reports
-- Status: In Progress
-- Plan Status: In Progress
+- Status: Done
+- Plan Status: Done
 - Plan File: .brain/plans/2026-07-06-feature-retail-ops-dashboard-reports.md
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
 - Created Date: 2026-07-06
@@ -116,8 +116,8 @@ Longer-horizon sequencing across major implementation phases.
 - Priority: Medium
 - Description: Track plan in `.brain/plans/2026-07-06-feature-saas-subscription-packaging.md`.
 - Related Feature: Billing and subscriptions
-- Status: In Progress
-- Plan Status: In Progress
+- Status: Done
+- Plan Status: Done
 - Plan File: .brain/plans/2026-07-06-feature-saas-subscription-packaging.md
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
 - Created Date: 2026-07-06
@@ -136,8 +136,8 @@ Longer-horizon sequencing across major implementation phases.
 - Priority: High
 - Description: Track plan in `.brain/plans/2026-07-07-ux-ui-mobile-onboarding-auth-screens.md`.
 - Related Feature: Mobile onboarding and auth
-- Status: In Progress
-- Plan Status: In Progress
+- Status: Done
+- Plan Status: Done
 - Plan File: .brain/plans/2026-07-07-ux-ui-mobile-onboarding-auth-screens.md
 - Intake File: .brain/intake/2026-07-07-mobile-expo-starter.md
 - Created Date: 2026-07-07
@@ -146,8 +146,8 @@ Longer-horizon sequencing across major implementation phases.
 - Priority: High
 - Description: Track plan in `.brain/plans/2026-07-07-ux-ui-mobile-starter-dashboard.md`.
 - Related Feature: Mobile starter dashboard
-- Status: In Progress
-- Plan Status: In Progress
+- Status: Done
+- Plan Status: Done
 - Plan File: .brain/plans/2026-07-07-ux-ui-mobile-starter-dashboard.md
 - Intake File: .brain/intake/2026-07-07-mobile-expo-starter.md
 - Created Date: 2026-07-07

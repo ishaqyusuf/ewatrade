@@ -4,13 +4,13 @@
 Feature
 
 ## Status
-In Progress
+Done
 
 ## Created Date
 2026-07-06
 
 ## Last Updated
-2026-07-11
+2026-07-15
 
 ## Intake
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
@@ -104,6 +104,7 @@ Lower agent must report:
 - 2026-07-11: Added the durable billing checkout/provider boundary Prisma source schema and migration foundation. `BillingCheckoutSession`, `BillingInvoice`, and `BillingProviderEvent` now model provider-neutral checkout requests, invoice status and amounts, and idempotent provider event payload processing without exposing provider-specific fields to UI code. Durable checkout intent persistence, normalized provider event processing, and invoice upserts now exist; provider selection, payment collection, app-store purchases, provider-native webhook adapters, and live DB validation remain pending.
 - 2026-07-11: Added the durable subscription repository bridge. `retailOps.subscription` now reads active durable `SubscriptionPlan` rows and tenant `TenantSubscription` rows when the billing migration is available, applies subscription limits snapshots to entitlement checks, and falls back to metadata/default trial state when durable tables are undeployed. `retailOps.createSubscriptionCheckoutIntent` now persists non-current plan requests to `BillingCheckoutSession` rows with provider `NONE` while preserving the provider-neutral `checkoutUrl: null` response. Provider selection, payment collection, app-store purchases, webhooks, invoice creation, and live migration validation remain pending.
 - 2026-07-11: Added the first normalized billing provider event bridge. `POST /api/billing/provider-events` accepts internal-key protected normalized checkout, subscription, and invoice events, stores idempotent `BillingProviderEvent` rows, skips already-processed events, updates matching checkout sessions, upserts tenant subscriptions, and upserts invoices when durable billing tables are available. Provider-native checkout creation, signature verification, payment collection, App Store/Play Store validation, and live migration validation remain pending.
+- 2026-07-15: Marked implementation ticket complete. Core acceptance is covered by tenant subscription state, backend plan definitions, entitlement resolution, limit enforcement for products/staff/businesses/offline devices/report history, dashboard billing settings, provider-neutral checkout intent, durable subscription/checkout/invoice/provider-event rows, and normalized provider event processing. Provider-native payment collection and app-store purchase validation remain follow-up adapters.
 
 ## Linked Task
 - Task Title: SaaS Subscription Packaging

@@ -4,13 +4,13 @@
 Feature
 
 ## Status
-In Progress
+Done
 
 ## Created Date
 2026-07-06
 
 ## Last Updated
-2026-07-10
+2026-07-15
 
 ## Intake
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
@@ -90,6 +90,7 @@ Lower agent must report:
 - 2026-07-10: Added first-phase offline clock-in replay. `retailOps.openSession` accepts `externalId`, `retailOps.syncEvents` supports `rep_session_opened`, store metadata keeps applied open-session replay results, and mobile stores the returned production cashier session id for sale replay attribution.
 - 2026-07-10: Added the first production session-list read bridge. `retailOps.sessions` lists bounded open, closed, or all cashier sessions with rep identity, receipt totals, expected cash, and variance summary for the selected tenant/store range.
 - 2026-07-10: Added role-aware session mutation enforcement. `retailOps.openSession` and `retailOps.closeSession` now require a POS-capable role (owner, admin, manager, cashier, or operator) before resolving store scope or writing session state.
+- 2026-07-15: Marked implementation ticket complete. Core acceptance is covered by local and production session open flows, duplicate-open prevention, opening inventory declarations, variance calculation, admin session reads, sale gating, external-id replay, and POS-capable permission enforcement. GPS/device fingerprint requirements remain an open product decision.
 
 ## Linked Task
 - Task Title: Rep Clock-In And Opening Inventory

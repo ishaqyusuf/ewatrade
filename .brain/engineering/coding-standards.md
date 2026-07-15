@@ -34,11 +34,15 @@ Shared engineering rules for future implementation work.
 - Keep application env names short and product-neutral. Do not add the `EWATRADE_` prefix to repository env keys; prefer names such as `API_URL`, `STOREFRONT_URL`, `PLATFORM_DOMAIN`, `GOOGLE_LIVE_*`, and `SHARED_LINK_*`.
 
 ## Midday Implementation Standard
+- Web UI and dashboard implementation must strictly follow Midday architecture, UX composition, filesystem naming, state management, validation, and QA patterns. This is non-negotiable for every dashboard, marketing, POS, storefront, and shared web UI change.
+- Before editing a web UI/dashboard feature, inspect the closest analogue in `/Users/M1PRO/Documents/code/_kitchen_sink/midday` and copy the local pattern for route composition, components, hooks, params, schemas, queries, mutations, loading/error/empty states, and tests.
+- For any page, route, table, sheet, modal, or feature migration/rebuild, use the Midday migration-planner workflow first: compare the target to the closest Midday reference and produce or follow a file-level teardown/rebuild checklist before implementation.
 - Pages, tables, modals, sheets, forms, onboarding, sidebar, sign-out, and shared dashboard components must follow Midday architecture, file naming, and coding patterns.
 - Tables should follow the Midday domain table pattern: `components/tables/core`, `components/tables/<domain>/columns.tsx`, `data-table.tsx`, `table-header.tsx`, `skeleton.tsx`, `empty-states.tsx`, and `bottom-bar.tsx` or `action-menu.tsx` when needed.
 - Sheets should follow the Midday global sheets pattern: `components/sheets/global-sheets.tsx`, `components/sheets/global-sheets-provider.tsx`, and domain sheet files under `components/sheets/`.
 - Forms must follow Midday validation, error handling, and mutation patterns.
 - Data fetching and mutations must use the standard Midday tRPC patterns, including invalidation, loading states, errors, and caching behavior.
+- Do not accept dashboard/web UI shortcuts that skip Midday details such as URL params, open buttons, global sheet ownership, table headers, column definitions, skeletons, empty states, action menus, bottom bars, mutation invalidation, or browser QA when those patterns exist in the Midday reference.
 - Prisma schema changes must be followed by the repository Prisma migration/deploy workflow. Do not manually create migration files.
 
 ## Global Personal Coding Rules

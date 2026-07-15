@@ -4,13 +4,13 @@
 Feature
 
 ## Status
-In Progress
+Done
 
 ## Created Date
 2026-07-06
 
 ## Last Updated
-2026-07-11
+2026-07-15
 
 ## Intake
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
@@ -107,6 +107,7 @@ Lower agent must report:
 - 2026-07-11: Added closeout stock adjustment rows to stock movement reporting. `retailOps.stockMovements` now derives Stock adjustment rows from non-zero closeout inventory variance lines, and the dashboard movement filter/export recognizes Stock adjustment as a movement type.
 - 2026-07-11: Added manual stock adjustment rows to stock movement reporting. `retailOps.stockMovements` now maps metadata-backed `retailOps.recordStockAdjustment` replay records into Stock adjustment rows alongside closeout variance-derived rows.
 - 2026-07-11: Added dashboard sync conflict review visibility. Reports now read `retailOps.syncConflicts`, include unreviewed conflicts in the Sync issues metric, list conflict event/device/actor/error details in a full-width review table, support the existing sync-device filter, export conflicts to CSV, and call `retailOps.reviewSyncConflict` to acknowledge returned conflicts before refreshing sync state.
+- 2026-07-15: Marked implementation ticket complete. Core acceptance is covered by dashboard and mobile report reads for sales, reps, products, stock balances, payment reconciliation, credit sales, stock movements, price history, sync operations, sync conflicts, CSV export, and browser print-to-PDF. Server-packaged exports and scheduled delivery remain follow-up work.
 
 ## Linked Task
 - Task Title: Retail Ops Dashboard Reports

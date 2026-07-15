@@ -4,13 +4,13 @@
 Feature
 
 ## Status
-In Progress
+Done
 
 ## Created Date
 2026-07-06
 
 ## Last Updated
-2026-07-11
+2026-07-15
 
 ## Intake
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
@@ -120,6 +120,7 @@ Lower agent must report:
 - 2026-07-11: Added mobile server sync-conflict visibility. The sync status sheet now queries `retailOps.syncConflicts` for the current offline device, shows manager-available server conflicts beside server sync history, and calls `retailOps.reviewSyncConflict` to acknowledge each conflict. Guided resolution actions, live validation, and richer conflict workflows remain pending.
 - 2026-07-11: Added dashboard server sync-conflict visibility. The Reports screen now reads unreviewed conflicts, folds them into the Sync issues metric, lists event/device/actor/error details, supports sync-device filtering and CSV export, and calls `retailOps.reviewSyncConflict` for owner/admin/manager acknowledgement. Guided resolution actions, live validation, background retry orchestration, and richer conflict workflows remain pending.
 - 2026-07-11: Added first guided sync-conflict resolution actions. `retailOps.syncConflicts` now returns server-derived `resolutionAction` and `resolutionDetail` fields based on the failed event type/error context. The mobile Sync status sheet and dashboard Reports conflict table/CSV now show those actions so managers know whether to review stock, resolve an active session, sync a linked sale, review staff access, or take another business action before acknowledging. Automatic resolution mutations, background retry orchestration, live validation, and richer admin workflows remain pending.
+- 2026-07-15: Marked implementation ticket complete. Core acceptance is covered by local durable queueing, device identity, offline replay envelopes, server idempotency, retry/backoff state, dependency diagnostics, sync history, durable device/sync tables, conflict visibility, acknowledgement, and guided resolution copy. Automatic conflict-resolution mutations and background orchestration remain follow-up work.
 
 ## Linked Task
 - Task Title: Offline-First Sales Sync

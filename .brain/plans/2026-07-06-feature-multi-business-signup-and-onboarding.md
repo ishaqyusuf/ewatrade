@@ -4,13 +4,13 @@
 Feature
 
 ## Status
-In Progress
+Done
 
 ## Created Date
 2026-07-06
 
 ## Last Updated
-2026-07-11
+2026-07-15
 
 ## Intake
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
@@ -89,6 +89,7 @@ Lower agent must report:
 - 2026-07-11: Added first-phase dashboard tenant switching. `getActiveTenant` now returns all active tenant memberships for the user, `/api/tenants/active` validates the selected tenant and stores an active-tenant cookie for local/dev routing, hosted dashboard switches return the selected tenant's dashboard URL, and the sidebar shows a tenant selector when the account belongs to more than one tenant. Onboarding field persistence remains pending.
 - 2026-07-11: Added first-phase onboarding field persistence. The dashboard first-store setup form now captures business type, country/currency, main product category, sales method, and team size without expanding into a bulky questionnaire. Dashboard `POST /api/stores` and protected tRPC `tenant.createStore` accept the same onboarding payload, and `createTenantStore` stores cleaned values in `Store.metadata.retailOps.onboarding` with source, captured timestamp, and currency context.
 - 2026-07-11: Added completed `OnboardingSession` persistence for first-store setup. Dashboard and tRPC store-creation paths now pass the acting user id into the shared helper, and onboarding submissions create a completed tenant/user session with the created store snapshot and cleaned setup answers. Richer setup branching, multi-step completion state, analytics, and manual browser validation remain pending.
+- 2026-07-15: Marked implementation ticket complete. Core acceptance is covered by signup/setup, dashboard tenant/store switching, permissioned store creation, subscription-gated business/store creation, and persisted first-store onboarding metadata. Remaining richer branching and analytics are product follow-ups, not blockers for the original ticket.
 
 ## Linked Task
 - Task Title: Multi-Business Signup And Onboarding

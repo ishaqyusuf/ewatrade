@@ -46,6 +46,13 @@ Track the conceptual schema and schema ownership rules for the platform.
 - Other business submissions store unsupported-demand metadata under `Store.metadata.retailOps.unsupportedBusinessDemand`, while completed `OnboardingSession.formData.onboarding` preserves the raw answers for internal ranking.
 - The shared store helper writes a completed `OnboardingSession` for onboarding submissions with tenant id, actor user id, completed status, expiry, created store snapshot, source, captured timestamp, currency, template, and setup answers. Multi-step setup state, onboarding analytics, normalized onboarding field tables, and dedicated dry-cleaning Prisma tables remain planned.
 
+## Current Self-Service Store Detection Mapping
+- Store-level self-service geolocation detection uses `Store.metadata.retailOps.selfServiceDetection` in the v1 bridge instead of a schema migration.
+- Supported metadata fields are `enabled`, `latitude`, `longitude`, and `radiusMeters`.
+- `packages/db/src/queries/self-service-store-detection.ts` reads active stores with active tenants, extracts enabled geofence metadata, computes distance and confidence, and returns ranked candidates to the public API.
+- The legacy-compatible metadata path `Store.metadata.selfServiceStoreDetection` is also read during rollout.
+- Durable location-resolution event logging, geofence polygons, floor/branch metadata, and admin store-location management remain planned extensions.
+
 ## Current Retail Ops Product Mapping
 - First-phase production product setup uses existing `Product`, `ProductVariant`, and `InventoryItem` records.
 - The primary unit is represented as the default `ProductVariant`.

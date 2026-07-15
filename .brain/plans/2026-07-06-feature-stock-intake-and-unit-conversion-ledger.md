@@ -4,13 +4,13 @@
 Feature
 
 ## Status
-In Progress
+Done
 
 ## Created Date
 2026-07-06
 
 ## Last Updated
-2026-07-11
+2026-07-15
 
 ## Intake
 - Intake File: .brain/intake/2026-07-06-sales-management-saas-mvp.md
@@ -108,6 +108,7 @@ Lower agent must report:
 - 2026-07-11: Added durable-first stock movement history reads. `retailOps.stockMovements` now queries `InventoryMovement` rows first for stock intake, adjustment/damage/loss, conversion, sale deductions, staff assignment/return, opening stock, sync correction, and closeout adjustment history, maps them into the existing movement-history DTO, and de-dupes against legacy metadata/order/session fallback rows. Durable delivery headers/lines, migration application, and live DB validation remain pending.
 - 2026-07-11: Added durable stock delivery header/line persistence for external-id-backed stock intake. `retailOps.recordStockIntake` now upserts a received `StockDelivery` using the intake external id as the reference number, creates or updates the matching `StockDeliveryLine`, and links the durable `STOCK_INTAKE` movement to both records. Migration application, live DB validation, richer delivery source modeling, and multi-line delivery workflows remain pending.
 - 2026-07-11: Added durable opening-stock movement persistence during product setup. `retailOps.createProduct` now writes `InventoryMovement(OPENING_STOCK)` rows for positive starting quantities when the stock-ledger migration is available, using `PRODUCT_SETUP` source, zero-to-opening balance snapshots, actor/setup metadata, and product/variant/inventory links. Migration application, live DB validation, and richer opening-stock correction workflows remain pending.
+- 2026-07-15: Marked implementation ticket complete. Core acceptance is covered by stock intake, adjustment, conversion validation, durable movement mirroring, stock delivery headers/lines, and durable-first stock movement reads. Waste/loss category depth, multi-line delivery workflows, and live migration rollout remain follow-up work.
 
 ## Linked Task
 - Task Title: Stock Intake And Unit Conversion Ledger
