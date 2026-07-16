@@ -2,15 +2,13 @@ import { MobileScreen, OtpInput, OtpKeypad } from "@/components/mobile"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
-import { Toast } from "@/components/ui/toast"
 import { useAuthContext } from "@/hooks/use-auth"
-import { DEV_SKIP_OTP_CODE, isSkipOtpEnabled } from "@/lib/feature-flags"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { useTRPC } from "@/trpc/client"
 import { useMutation } from "@tanstack/react-query"
 import * as Clipboard from "expo-clipboard"
 import { Link, useLocalSearchParams } from "expo-router"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { View } from "react-native"
 
 const OTP_LENGTH = 6
@@ -31,48 +29,24 @@ export default function VerifyEmailRoute() {
     (state) => state.completeOnboarding,
   )
   const params = useLocalSearchParams<{
-    businessId?: string
     businessName?: string
     email?: string
-    fallback?: "local"
-    id?: string
     mode?: "login" | "sign-up"
     name?: string
-    role?: string
-    status?: string
   }>()
   const email = firstParam(params.email)?.trim() ?? ""
   const mode = firstParam(params.mode) === "login" ? "login" : "sign-up"
   const apiMode = mode === "login" ? "login" : "sign_up"
-  const isLocalFallback = firstParam(params.fallback) === "local"
-  const skipOtpEnabled = isSkipOtpEnabled()
-  const shouldUseDevSkipOtp = skipOtpEnabled
-  const emailDeliveryLabel =
-    isLocalFallback && shouldUseDevSkipOtp
-      ? "your selected business"
-      : email || "your email address"
+  const emailDeliveryLabel = email || "your email address"
   const name = firstParam(params.name) ?? "Store Owner"
   const businessName = firstParam(params.businessName) ?? "My Business"
   const authEntryHref = mode === "login" ? "/login" : "/sign-up"
-  const localProfileOverrides = useMemo(
-    () =>
-      isLocalFallback
-        ? {
-            businessId: firstParam(params.businessId),
-            id: firstParam(params.id),
-            role: firstParam(params.role),
-            status: firstParam(params.status),
-          }
-        : {},
-    [isLocalFallback, params.businessId, params.id, params.role, params.status],
-  )
   const trpc = useTRPC()
   const [code, setCode] = useState("")
   const [status, setStatus] = useState<
     "idle" | "resent" | "verifying" | "error"
   >("idle")
   const [message, setMessage] = useState<string | null>(null)
-  const didShowSkipOtpToast = useRef(false)
   const requestOtpMutation = useMutation(
     trpc.auth.requestMobileOwnerOtp.mutationOptions({
       onError(error) {
@@ -81,17 +55,7 @@ export default function VerifyEmailRoute() {
       },
       onSuccess() {
         setStatus("resent")
-        setMessage(
-          shouldUseDevSkipOtp
-            ? `Use ${DEV_SKIP_OTP_CODE} in development mode.`
-            : "Code sent again",
-        )
-        if (shouldUseDevSkipOtp) {
-          Toast.show("use 123456", {
-            position: "top",
-            type: "info",
-          })
-        }
+        setMessage("Code sent again")
       },
     }),
   )
@@ -127,39 +91,6 @@ export default function VerifyEmailRoute() {
 
     setStatus("verifying")
 
-    if (shouldUseDevSkipOtp && code !== DEV_SKIP_OTP_CODE) {
-      setStatus("error")
-      setCode("")
-      setMessage(`Use ${DEV_SKIP_OTP_CODE} in development mode.`)
-      Toast.show("use 123456", {
-        position: "top",
-        type: "info",
-      })
-      return
-    }
-
-    if (isLocalFallback) {
-      completeOnboarding(true)
-
-      if (mode === "login") {
-        auth.signInLocal({
-          email,
-          name,
-          businessName,
-          ...localProfileOverrides,
-        })
-        return
-      }
-
-      auth.signUpLocal({
-        email,
-        name,
-        businessName,
-        ...localProfileOverrides,
-      })
-      return
-    }
-
     verifyOtpMutation.mutate({
       businessName,
       code,
@@ -167,31 +98,7 @@ export default function VerifyEmailRoute() {
       mode: apiMode,
       name,
     })
-  }, [
-    apiMode,
-    auth,
-    businessName,
-    code,
-    completeOnboarding,
-    email,
-    isLocalFallback,
-    localProfileOverrides,
-    mode,
-    name,
-    shouldUseDevSkipOtp,
-    status,
-    verifyOtpMutation,
-  ])
-
-  useEffect(() => {
-    if (!shouldUseDevSkipOtp || didShowSkipOtpToast.current) return
-
-    didShowSkipOtpToast.current = true
-    Toast.show("use 123456", {
-      position: "top",
-      type: "info",
-    })
-  }, [shouldUseDevSkipOtp])
+  }, [apiMode, businessName, code, email, name, status, verifyOtpMutation])
 
   useEffect(() => {
     if (code.length === OTP_LENGTH) {
@@ -245,38 +152,13 @@ export default function VerifyEmailRoute() {
   const resendCode = useCallback(() => {
     if (requestOtpMutation.isPending || isVerifying) return
 
-    if (isLocalFallback) {
-      setStatus("resent")
-      setMessage(
-        shouldUseDevSkipOtp
-          ? `Use ${DEV_SKIP_OTP_CODE} in development mode.`
-          : "Local fallback active. Any 6-digit code will continue.",
-      )
-      if (shouldUseDevSkipOtp) {
-        Toast.show("use 123456", {
-          position: "top",
-          type: "info",
-        })
-      }
-      return
-    }
-
     requestOtpMutation.mutate({
       businessName,
       email,
       mode: apiMode,
       name,
     })
-  }, [
-    apiMode,
-    businessName,
-    email,
-    isLocalFallback,
-    isVerifying,
-    name,
-    requestOtpMutation,
-    shouldUseDevSkipOtp,
-  ])
+  }, [apiMode, businessName, email, isVerifying, name, requestOtpMutation])
 
   return (
     <MobileScreen contentClassName="px-5 py-5" keyboardBottomOffset={40}>
@@ -336,17 +218,6 @@ export default function VerifyEmailRoute() {
               wasResent={status === "resent"}
             />
           </View>
-
-          {isLocalFallback || shouldUseDevSkipOtp ? (
-            <View className="max-w-[280px] flex-row items-center gap-2 rounded-full bg-muted px-3 py-2">
-              <Icon className="size-sm text-warn" name="Info" />
-              <Text className="shrink text-[11px] font-medium leading-4 text-muted-foreground">
-                {shouldUseDevSkipOtp
-                  ? `Development mode: use ${DEV_SKIP_OTP_CODE}.`
-                  : "Local fallback: any 6 digits work."}
-              </Text>
-            </View>
-          ) : null}
         </View>
 
         <View className="gap-4 pb-8">

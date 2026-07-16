@@ -130,9 +130,9 @@ function hasExactTestComDomain(email: string) {
 
 export function shouldRouteEmailToTestRecipients(
   recipient: string,
-  env: EmailRoutingEnv = process.env,
+  _env: EmailRoutingEnv = process.env,
 ) {
-  return env.NODE_ENV !== "production" || hasExactTestComDomain(recipient)
+  return hasExactTestComDomain(recipient)
 }
 
 export function getTestEmailRouting(input: {
@@ -155,7 +155,7 @@ export function getTestEmailRouting(input: {
 
   if (recipients.length === 0) {
     throw new Error(
-      "TEST_EMAILS or TEST_EMAIL must be configured for local/dev or @test.com email delivery.",
+      "TEST_EMAILS or TEST_EMAIL must be configured for @test.com email delivery.",
     )
   }
 

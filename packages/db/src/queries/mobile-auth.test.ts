@@ -408,36 +408,6 @@ describe("mobile auth queries", () => {
     expect(payload.codeHash).not.toBe(otp.code)
   })
 
-  test("creates a normalized OTP verification with an explicit development code", async () => {
-    const db = createMockMobileAuthDb()
-
-    const otp = await createMobileOwnerOtp(db.client, {
-      code: "123456",
-      email: " OWNER@Example.COM ",
-      mode: "sign_up",
-    })
-
-    expect(otp.email).toBe("owner@example.com")
-    expect(otp.code).toBe("123456")
-    expect(db.verifications).toHaveLength(1)
-    expect(db.verifications[0]?.value).not.toContain("123456")
-
-    await expect(
-      verifyMobileOwnerOtp(db.client, {
-        businessName: "Main Market Store",
-        code: "123456",
-        email: "owner@example.com",
-        mode: "sign_up",
-        name: "Store Owner",
-      }),
-    ).resolves.toMatchObject({
-      profile: {
-        businessName: "Main Market Store",
-        email: "owner@example.com",
-      },
-    })
-  })
-
   test("does not create a login OTP when no account exists for the email", async () => {
     const db = createMockMobileAuthDb()
 

@@ -51,7 +51,7 @@ Capture public marketing interest from merchants and partners through the market
 - `@ewatrade/email/templates` provides separate admin and customer email templates for early access and waitlist submissions.
 - `@ewatrade/email` uses Resend as the default transport when `RESEND_API_KEY` is configured, and falls back to console delivery only when no provider key exists.
 - `EMAIL_CAPTURE_FILE` enables a local JSONL capture transport for E2E tests. It must remain a server/runtime-only path and must not be imported into client notification bundles.
-- `TEST_EMAILS` is the primary comma-separated smoke-test and local/dev safety recipient list for signup and notification email delivery, with `TEST_EMAIL` kept as a single-recipient fallback for older environments. Production recipients at the exact `@test.com` domain are routed to these test inboxes instead of the original disposable address.
+- `TEST_EMAILS` is the primary comma-separated safety recipient list for exact `@test.com` signup and notification email delivery, with `TEST_EMAIL` kept as a single-recipient fallback for older environments. Recipients at the exact `@test.com` domain are routed to these test inboxes instead of the original disposable address.
 
 ## E2E Verification
 - `bun run qa:marketing-onboarding-e2e` runs the local website onboarding proof after `CONFIRM_MARKETING_ONBOARDING_E2E=1` is set.

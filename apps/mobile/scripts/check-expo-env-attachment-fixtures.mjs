@@ -22,7 +22,6 @@ const DEVELOPMENT_KEYS = [
   "GOOGLE_WEB_CLIENT_ID",
   "GOOGLE_ANDROID_CLIENT_ID",
   "GOOGLE_IOS_CLIENT_ID",
-  "SKIP_OTP",
   "EXPO_PORT",
 ]
 const PRODUCTION_KEYS = DEVELOPMENT_KEYS.filter(
@@ -185,17 +184,12 @@ function easJson() {
         development: {
           env: {
             APP_VARIANT: "development",
-            SKIP_OTP: "1",
           },
         },
         preview: {
           channel: "preview",
         },
-        production: {
-          env: {
-            SKIP_OTP: "0",
-          },
-        },
+        production: {},
       },
     },
     null,
@@ -218,7 +212,6 @@ function envValues(environment, includePorts) {
     GOOGLE_CLIENT_ID: "web.apps.googleusercontent.com",
     GOOGLE_IOS_CLIENT_ID: "ios.apps.googleusercontent.com",
     GOOGLE_WEB_CLIENT_ID: "web.apps.googleusercontent.com",
-    SKIP_OTP: environment === "production" ? "0" : "1",
   }
 
   if (includePorts) {

@@ -37,7 +37,6 @@ const ENVIRONMENTS = [
       "GOOGLE_WEB_CLIENT_ID",
       "GOOGLE_ANDROID_CLIENT_ID",
       "GOOGLE_IOS_CLIENT_ID",
-      "SKIP_OTP",
       "EXPO_PORT",
     ],
     valueCheckedKeys: [
@@ -48,7 +47,6 @@ const ENVIRONMENTS = [
       "EXPO_PUBLIC_API_PORT",
       "EXPO_PUBLIC_WEB_URL",
       "EXPO_PUBLIC_WEB_PORT",
-      "SKIP_OTP",
       "EXPO_PORT",
     ],
   },
@@ -70,7 +68,6 @@ const ENVIRONMENTS = [
       "GOOGLE_WEB_CLIENT_ID",
       "GOOGLE_ANDROID_CLIENT_ID",
       "GOOGLE_IOS_CLIENT_ID",
-      "SKIP_OTP",
     ],
     valueCheckedKeys: [
       "APP_VARIANT",
@@ -78,7 +75,6 @@ const ENVIRONMENTS = [
       "EXPO_PUBLIC_BASE_URL",
       "EXPO_PUBLIC_API_URL",
       "EXPO_PUBLIC_WEB_URL",
-      "SKIP_OTP",
     ],
   },
 ]
@@ -148,16 +144,8 @@ function checkEasJson() {
     )
   }
 
-  if (parsed?.build?.development?.env?.SKIP_OTP !== "1") {
-    failures.push("eas.json development build must set SKIP_OTP=1.")
-  }
-
   if (parsed?.build?.production == null) {
     failures.push("eas.json must keep a production build profile.")
-  }
-
-  if (parsed?.build?.production?.env?.SKIP_OTP !== "0") {
-    failures.push("eas.json production build must set SKIP_OTP=0.")
   }
 
   if (parsed?.build?.preview?.channel !== "preview") {

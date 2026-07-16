@@ -15,9 +15,6 @@ const autoUpdateOnForeground =
 const autoUpdateForegroundCooldownMs = Number(
   process.env.EXPO_PUBLIC_AUTO_UPDATE_FOREGROUND_COOLDOWN_MS ?? 5 * 60 * 1000,
 )
-const skipOtp = isTruthyEnvFlag(
-  process.env.SKIP_OTP ?? process.env.EXPO_PUBLIC_SKIP_OTP,
-)
 const googleIosUrlScheme = getGoogleIosUrlScheme(
   process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ??
     process.env.GOOGLE_IOS_CLIENT_ID,
@@ -166,7 +163,6 @@ const config: ExpoConfig = {
     )
       ? autoUpdateForegroundCooldownMs
       : 5 * 60 * 1000,
-    skipOtp,
     updateVersion: UPDATE_VERSION,
     eas: {
       projectId: PROJECT_ID,
@@ -201,10 +197,4 @@ function getGoogleIosUrlScheme(value?: string) {
   if (!clientId.endsWith(googleSuffix)) return undefined
 
   return `com.googleusercontent.apps.${clientId.slice(0, -googleSuffix.length)}`
-}
-
-function isTruthyEnvFlag(value: string | undefined) {
-  if (!value) return false
-
-  return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase())
 }

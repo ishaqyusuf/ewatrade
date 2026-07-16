@@ -79,7 +79,7 @@ const requiredMarkers = [
       "OtpKeypad",
       "Enter the code we sent you",
       "Email verification",
-      "Local fallback",
+      "We sent a 6-digit code",
       "Resend code",
       "Verify and continue",
       "Use another email",

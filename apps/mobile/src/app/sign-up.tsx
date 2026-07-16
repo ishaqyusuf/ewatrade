@@ -38,18 +38,8 @@ export default function SignUpRoute() {
       onError(error) {
         setError(
           error.message ||
-            "We could not send a production code. You can continue locally while the service is unavailable.",
+            "We could not send the verification code. Try again.",
         )
-        router.push({
-          pathname: "/verify-email",
-          params: {
-            businessName: normalizedBusinessName,
-            email: normalizedEmail,
-            fallback: "local",
-            mode: "sign-up",
-            name: name.trim(),
-          },
-        })
       },
       onSuccess() {
         setError(null)

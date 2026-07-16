@@ -143,24 +143,32 @@ describe("Resend email transport", () => {
 })
 
 describe("test email safety routing", () => {
-  test("routes non-production email to TEST_EMAILS recipients", () => {
+  test("keeps non-test email on the original recipient outside production", () => {
+    process.env.NODE_ENV = "development"
+    process.env.TEST_EMAILS = "qa-one@example.com, qa-two@example.com"
+    clearEnv("TEST_EMAIL")
+
+    const message = createBaseMessage("owner@business.com")
+
+    expect(createTestRoutedEmailMessages(message)).toEqual([message])
+  })
+
+  test("routes exact @test.com email to TEST_EMAILS recipients", () => {
     process.env.NODE_ENV = "development"
     process.env.TEST_EMAILS = "qa-one@example.com, qa-two@example.com"
     clearEnv("TEST_EMAIL")
 
     const messages = createTestRoutedEmailMessages(
-      createBaseMessage("owner@business.com"),
+      createBaseMessage("owner@test.com"),
     )
 
     expect(messages.map((message) => message.to)).toEqual([
       "qa-one@example.com",
       "qa-two@example.com",
     ])
-    expect(messages[0]?.text).toContain(
-      "Original recipient: owner@business.com",
-    )
+    expect(messages[0]?.text).toContain("Original recipient: owner@test.com")
     expect(messages[0]?.html).toContain("Original recipient:")
-    expect(messages[0]?.html).toContain("owner@business.com")
+    expect(messages[0]?.html).toContain("owner@test.com")
   })
 
   test("routes production @test.com email to TEST_EMAILS recipients", () => {
@@ -186,13 +194,23 @@ describe("test email safety routing", () => {
     expect(createTestRoutedEmailMessages(message)).toEqual([message])
   })
 
+  test("does not route test.com subdomains", () => {
+    process.env.NODE_ENV = "development"
+    process.env.TEST_EMAILS = "qa@example.com"
+    clearEnv("TEST_EMAIL")
+
+    const message = createBaseMessage("owner@qa.test.com")
+
+    expect(createTestRoutedEmailMessages(message)).toEqual([message])
+  })
+
   test("uses TEST_EMAIL as a compatibility fallback", () => {
     process.env.NODE_ENV = "development"
     clearEnv("TEST_EMAILS")
     process.env.TEST_EMAIL = "fallback@example.com"
 
     const messages = createTestRoutedEmailMessages(
-      createBaseMessage("owner@example.com"),
+      createBaseMessage("owner@test.com"),
     )
 
     expect(messages.map((message) => message.to)).toEqual([
@@ -216,6 +234,6 @@ describe("test email safety routing", () => {
 
     expect(() =>
       createTestRoutedEmailMessages(createBaseMessage("owner@example.com")),
-    ).toThrow("TEST_EMAILS or TEST_EMAIL")
+    ).not.toThrow()
   })
 })

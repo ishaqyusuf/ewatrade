@@ -27,7 +27,6 @@ const ROOT_EXAMPLE_KEYS = [
   "EMAIL_REPLY_TO",
   "MARKETING_INBOX_EMAILS",
   "RESEND_API_KEY",
-  "SKIP_OTP",
   "TEST_EMAILS",
   "TEST_EMAIL",
 ]
@@ -43,7 +42,6 @@ const MOBILE_EXAMPLE_KEYS = [
   "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID",
   "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID",
   "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID",
-  "SKIP_OTP",
   "EXPO_PORT",
 ]
 const EXPECTED = [
@@ -65,7 +63,6 @@ const EXPECTED = [
       API_URL: equals("http://localhost:3095"),
       MOBILE_APP_URL: equals("http://localhost:3096"),
       PLATFORM_DOMAIN: equals("localhost:3092"),
-      SKIP_OTP: equals("1"),
       STOREFRONT_URL: equals("http://localhost:3092"),
       MARKETING_INBOX_EMAILS: nonLocalEmailLike,
       NEXT_PUBLIC_API_URL: equals("http://localhost:3095"),
@@ -95,7 +92,6 @@ const EXPECTED = [
       API_URL: equals("https://ewatrade.com"),
       MOBILE_APP_URL: equals("https://ewatrade.com/download"),
       PLATFORM_DOMAIN: equals("ewatrade.com"),
-      SKIP_OTP: equals("0"),
       STOREFRONT_URL: equals("https://ewatrade.com"),
       MARKETING_INBOX_EMAILS: productionEmail,
       NEXT_PUBLIC_API_URL: equals("https://ewatrade.com"),
@@ -120,7 +116,6 @@ const EXPECTED = [
       EXPO_PUBLIC_BASE_URL: equals("http://localhost:3092"),
       EXPO_PUBLIC_WEB_PORT: equals("3092"),
       EXPO_PUBLIC_WEB_URL: equals("http://localhost:3092"),
-      SKIP_OTP: equals("1"),
     },
     file: MOBILE_LOCAL_ENV,
     label: "mobile local env",
@@ -132,7 +127,6 @@ const EXPECTED = [
       EXPO_PUBLIC_APP_VARIANT: equals("production"),
       EXPO_PUBLIC_BASE_URL: equals("https://ewatrade.com"),
       EXPO_PUBLIC_WEB_URL: equals("https://ewatrade.com"),
-      SKIP_OTP: equals("0"),
     },
     file: MOBILE_PRODUCTION_ENV,
     label: "mobile production env",

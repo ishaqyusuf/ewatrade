@@ -74,18 +74,6 @@ function createOtpCode() {
   return randomInt(0, 1_000_000).toString().padStart(6, "0")
 }
 
-function resolveOtpCode(code: string | null | undefined) {
-  const cleanedCode = cleanText(code)
-
-  if (!cleanedCode) return createOtpCode()
-
-  if (!/^\d{6}$/.test(cleanedCode)) {
-    throw new Error("Development OTP codes must contain exactly 6 digits.")
-  }
-
-  return cleanedCode
-}
-
 function createSessionToken() {
   return randomBytes(32).toString("hex")
 }
@@ -286,7 +274,6 @@ export async function createMobileOwnerOtp(
   db: DbClient,
   input: {
     businessName?: string | null
-    code?: string | null
     email: string
     mode: MobileAuthMode
     name?: string | null
@@ -312,7 +299,7 @@ export async function createMobileOwnerOtp(
     }
   }
 
-  const code = resolveOtpCode(input.code)
+  const code = createOtpCode()
   const now = new Date()
   const expiresAt = addMinutes(now, OTP_TTL_MINUTES)
   const identifier = buildOtpIdentifier({ email, mode: input.mode })

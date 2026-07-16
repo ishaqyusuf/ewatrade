@@ -2,6 +2,12 @@
 
 ## 2026-07-16
 
+### Mobile OTP Bypass Removal
+- Source Mode: Direct user implementation request to remove OTP bypasses while keeping exact `@test.com` test-recipient routing.
+- Completed: Removed the env-controlled fixed-code OTP path from the API, removed explicit OTP-code injection from the DB query helper, removed mobile local OTP fallback sign-in/sign-up behavior, removed the dev business picker bypass, removed OTP bypass env keys from mobile/EAS examples and guards, and narrowed shared email safety routing so only exact `@test.com` recipients route to configured `TEST_EMAILS` or legacy `TEST_EMAIL`.
+- Changed Source Files: `apps/api/src/trpc/routers/auth.ts`, `packages/db/src/queries/mobile-auth.ts`, `packages/email/src/index.ts`, `apps/mobile/src/app/login.tsx`, `apps/mobile/src/app/sign-up.tsx`, `apps/mobile/src/app/verify-email.tsx`, `apps/mobile/app.config.ts`, `apps/mobile/eas.json`, env examples, mobile guard scripts, and focused tests.
+- Brain Files Updated: `.brain/api/contracts.md`, `.brain/api/permissions.md`, `.brain/engineering/coding-standards.md`, `.brain/features/mobile-retail-ops-mvp-spec.md`, `.brain/features/marketing-lead-capture.md`, `.brain/progress.md`.
+
 ### Mobile Dashboard Immersive Header Correction
 - Source Mode: Direct user implementation request to close the dashboard top-area gap against the approved Design 01 reference.
 - Completed: Refactored `MobileAppShell` to own the immersive scroll/status-bar shell directly, switched the dashboard hero to a full-bleed primary surface with safe-area-aware top padding and bottom-only corners, made dashboard logout hero-aware, restored bottom-tab hide/restore on scroll, and tightened source QA guards against the old padded/fixed-tab behavior. Also fixed the idempotency blocker encountered during emulator proof in the QA-session importer.
@@ -11,10 +17,10 @@
 - Visual Evidence: ADB screenshots were captured at `/private/tmp/ewatrade-admin-rest-light.png`, `/private/tmp/ewatrade-admin-scroll-light.png`, `/private/tmp/ewatrade-admin-up-light.png`, `/private/tmp/ewatrade-admin-rest-dark.png`, `/private/tmp/ewatrade-admin-scroll-dark.png`, `/private/tmp/ewatrade-sales-rest.png`, `/private/tmp/ewatrade-sales-rest-light.png`, `/private/tmp/ewatrade-sales-scroll-light.png`, and `/private/tmp/ewatrade-sales-up-light.png`.
 - Skipped Checks Or Unresolved Issues: No known unresolved issue for this change. Metro still logs existing route-registration warnings for design-system reference route names and a web bundling warning unrelated to the Android dashboard path.
 
-### Mobile Dev Business Login And Skip OTP
+### Mobile Dev Business Login Bypass (Superseded)
 - Source Mode: Direct user request for dev-mode business selection and fixed OTP behavior.
-- Completed: Added a reusable `FeatureFlag` wrapper for dev/preview fallback rendering, replaced the dev login email field with a floating bottom-sheet business picker, routed selected local businesses directly to the OTP screen, exposed `SKIP_OTP` through Expo config/envs, and made the API skip real OTP email dispatch outside production by writing the fixed development code `123456`. The OTP screen now shows a `use 123456` toast when the flag is enabled and rejects other local fallback codes in that mode.
-- Changed Source Files: `apps/mobile/src/components/mobile/feature-flag.tsx`, `apps/mobile/src/components/mobile/dev-business-login-picker.tsx`, `apps/mobile/src/lib/feature-flags.ts`, `apps/mobile/src/app/login.tsx`, `apps/mobile/src/app/verify-email.tsx`, `apps/mobile/app.config.ts`, mobile env/example/EAS files, `apps/api/src/trpc/routers/auth.ts`, `packages/db/src/queries/mobile-auth.ts`, and focused guards/tests.
+- Completed: This earlier dev-mode business picker and fixed-code OTP bypass was superseded on 2026-07-16 by the Mobile OTP Bypass Removal work. Mobile auth now uses generated emailed OTPs in all environments, with only exact `@test.com` recipient routing retained for safe test delivery.
+- Changed Source Files: Superseded historical work touched the mobile auth screens/config, API auth router, DB mobile-auth query, and focused guards/tests.
 - Brain Files Updated: `.brain/api/contracts.md`, `.brain/features/mobile-retail-ops-mvp-spec.md`, `.brain/engineering/coding-standards.md`, `.brain/progress.md`.
 - Checks Run: `bunx biome check --write <focused dev-auth files>`; `bun test packages/db/src/queries/mobile-auth.test.ts`; `bun test apps/api/src/trpc/routers/auth.test.ts`; `bun --cwd apps/mobile qa:auth-onboarding`; `bun --cwd apps/mobile qa:mobile-auth-api-boundary`; `bun --cwd apps/mobile qa:mobile-env-config`; `bun --cwd apps/mobile qa:expo-env-attachment-fixtures`; `bun --cwd apps/mobile qa:prompt-placeholders`; `bun --cwd apps/mobile qa:nativewind-style`; `bun --cwd apps/mobile qa:auth-redesign`; `bun --cwd apps/mobile qa:android-ready`; `bun --cwd apps/mobile qa:mvp-typechecks`; `git diff --check`.
 - Skipped Checks Or Unresolved Issues: `bun --cwd apps/mobile qa:keyboard-coverage` still fails on existing quantity-stepper/create-sale/customer-book markers unrelated to this change. Full real-session mobile QA was not run because it creates disposable backend records and was not needed for this dev-only login fallback.

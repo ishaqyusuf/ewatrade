@@ -19,7 +19,6 @@ const ROUTER_MARKERS = [
   "verifyGoogleIdToken",
   "createEmailMessage",
   "dispatchEmailMessages",
-  "shouldSkipMobileOwnerOtpEmail",
   "requestMobileOwnerOtpSchema",
   "verifyMobileOwnerOtpSchema",
   "verifyMobileGoogleSchema",
@@ -29,8 +28,6 @@ const ROUTER_MARKERS = [
   ".input(requestMobileOwnerOtpSchema)",
   ".input(verifyMobileOwnerOtpSchema)",
   ".input(verifyMobileGoogleSchema)",
-  'SKIP_OTP_CODE = "123456"',
-  "skipOtpEmail",
   'devCode: process.env.NODE_ENV === "production" ? null : otp.code',
 ]
 const QUERY_MARKERS = [
@@ -38,7 +35,6 @@ const QUERY_MARKERS = [
   "SESSION_TTL_DAYS = 90",
   "hashOtp",
   "createOtpCode",
-  "resolveOtpCode",
   "createSessionToken",
   "createUniqueTenant",
   "ensureOwnerTenant",

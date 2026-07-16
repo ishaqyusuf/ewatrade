@@ -1,7 +1,4 @@
-import Constants from "expo-constants"
 import { getAppVariant } from "./app-variant"
-
-export const DEV_SKIP_OTP_CODE = "123456"
 
 export type FeatureFlagMode =
   | "dev"
@@ -26,14 +23,6 @@ function getModeMatches(mode: FeatureFlagMode) {
   return MODE_ALIASES[normalizedMode] ?? [normalizedMode]
 }
 
-function isTruthyFlag(value: unknown) {
-  if (typeof value === "boolean") return value
-  if (typeof value === "number") return value === 1
-  if (typeof value !== "string") return false
-
-  return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase())
-}
-
 export function shouldUseFeatureFallback(
   fallbackModes: FeatureFlagMode[] = ["dev"],
 ) {
@@ -45,14 +34,4 @@ export function shouldUseFeatureFallback(
 
 export function isDevLikeMode() {
   return shouldUseFeatureFallback(["dev", "preview"])
-}
-
-export function isSkipOtpEnabled() {
-  const extra = Constants.expoConfig?.extra as
-    | { skipOtp?: boolean | number | string }
-    | undefined
-
-  return isTruthyFlag(
-    extra?.skipOtp ?? process.env.EXPO_PUBLIC_SKIP_OTP ?? process.env.SKIP_OTP,
-  )
 }
