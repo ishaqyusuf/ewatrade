@@ -80,6 +80,10 @@ May be captured during in-person sales or through a shared product link. The cus
 - Reports for daily sales, stock, payments, reps, variances, and pending sync.
 - Three-tier subscription packaging and business-scoped entitlements.
 
+### Active Planning
+
+- Operational lock planning is active through `.scratch/wayfinder-retail-ops-operational-lock/map.md`. The effort covers admin manual close/reopen, scheduled closure windows, sales-rep suspension interaction, local cached lock state, and online/offline enforcement of sales-rep operational writes.
+
 ### Later Extensions
 
 - Complete production tRPC workflow APIs beyond the first sale/reporting procedures.
@@ -213,6 +217,7 @@ See `.brain/features/retail-ops-subscription-packaging.md` for tier details.
 - `.brain/features/retail-ops-reporting.md`
 - `.brain/features/retail-ops-scan-price-resolution.md`
 - `.brain/features/retail-ops-subscription-packaging.md`
+- `.scratch/wayfinder-retail-ops-operational-lock/map.md`
 - `.brain/workflows/retail-ops-stock-to-closeout-flow.md`
 - `.brain/modules/merchant-system.md`
 - `.brain/modules/pos-cashier.md`

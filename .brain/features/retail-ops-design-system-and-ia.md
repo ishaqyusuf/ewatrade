@@ -60,9 +60,11 @@ The mobile Retail Ops dashboard now uses role-specific route surfaces instead of
 Admin/owner home rules:
 - Bottom navigation is `Home`, `Sales`, center `+`, `Stocks`, and `More`.
 - The app shell uses the shared `MobileBottomTabs` primitive in the Design 01/reference tab style with a raised center `+`.
+- Home surfaces with the primary colored hero use the same immersive shell behavior as the approved Design 01 reference: the hero owns the status-bar background at rest, critical hero content is padded below the unsafe status area, the status bar switches back to the active theme card surface on scroll, and the floating bottom tabs hide on scroll down and return on scroll up.
 - Admin Home uses a Design 01-style primary hero with business selection, workspace search, daily snapshot, reports CTA, service categories, and current-operation summaries. Detailed staff, stock, customer, share-link, report, and subscription lists should stay behind their explicit navigation/actions instead of filling the first screen.
 - The center `+` opens a compact Create sheet for deliberate actions instead of crowding the first screen with every CTA.
 - `More` opens a short icon list for `Sales Reps`, `Customers`, `Settings`, and `Theme`; Settings opens a dedicated settings navigation sheet, and Theme opens an explicit theme picker.
+- Settings includes App lock, which opens a full-screen post-login PIN setup/manage flow for device-local protection after normal account login.
 - Long owner workflows use full-screen stack modal routes: Sales Reps (`/staff-invite-modal`), business switching (`/business-switch-modal`), first product setup (`/first-product-setup-modal`), stock intake (`/stock-intake-modal`), product links (`/product-share-modal`), reports (`/reports-modal`), subscription (`/subscription-modal`), and unit conversion (`/unit-conversion-modal`).
 - Long shared operational workflows use full-screen stack modal routes with sales-rep access where appropriate: create sale (`/create-sale-modal`), customer book (`/customer-book-modal`), service orders (`/service-orders-modal`), rep clock-in (`/rep-clock-in-modal`), closeout (`/closeout-modal`), and sync status (`/sync-status-modal`).
 - The floating theme FAB is only for dev/preview UI testing variants; production theme access is through More.
@@ -75,6 +77,7 @@ Sales-rep home rules:
 Form and modal rules:
 - Canonical mobile inputs flow through `FormField`, which reuses the stable `Input` from `@/components/ui/input-2`.
 - Service-order setup and intake should reuse the canonical `FormField`, `ActionButton`, `QuantityStepper`, `SecondaryOperationalRow`, `StatusBanner`, and keyboard-safe full-screen modal primitives rather than introducing local input or button treatments.
+- App-lock PIN screens follow the provided dark wallet-style reference: compact top title, optional close control in setup/manage, segmented 6-digit choice treatment, circular PIN cells, sparse numeric keypad, fingerprint action in the bottom-left keypad slot when available, and delete in the bottom-right slot.
 - Bottom sheets are for short, focused choices and quick actions.
 - Workflows that are over half-screen, multi-section, or keyboard-heavy should use full-screen stack modal routes with `MobileScreen` keyboard-safe layout and sticky primary CTA placement where the form is long.
 - Touched forms should prefer spacing, labels, helper text, status banners, and operational rows over repeated nested card/border wrappers.
@@ -472,7 +475,8 @@ Splash, login, sign-up, and OTP verification use shared auth primitives so the e
 - `AuthMethodButton` owns haptic third-party auth choices such as Google sign-up/sign-in.
 - Owner sign-up remains intentionally short: business name, full name, and email address for email OTP, with Google available after business name entry.
 - Login keeps the new-user CTA visually stronger than a plain text link.
-- OTP verification follows a flat PIN-style pattern with separated display cells, an in-screen numeric keypad, clipboard paste, resend/loading/error feedback, and a compact local fallback note for dev/test paths.
+- OTP verification follows the approved reference-led PIN pattern: off-white/light or matte dark screen canvas, a small circular back action, centered headline and delivery copy, six separated display cells, an in-screen rounded numeric keypad with phone-letter hints, clipboard paste, delete, resend/loading/error feedback, and a compact local fallback note for dev/test paths.
+- The OTP route should keep logic thin by using shared `OtpInput` and `OtpKeypad` primitives instead of local keypad/cell implementations. The reference variant may suppress the system keyboard while preserving the older numeric TextInput OTP behavior for other flows.
 - `qa:auth-redesign` is part of mobile source QA and protects prompt-style placeholders instead of sample email examples.
 
 ## First Product Setup Redesign

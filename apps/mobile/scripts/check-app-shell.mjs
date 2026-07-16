@@ -16,6 +16,13 @@ const requiredMarkers = [
       "MOBILE_DESIGN_FOUNDATION.layout.floatingControlRadiusClass",
       'role === "owner" || !item.ownerOnly',
       "useSafeAreaInsets",
+      "StatusBar",
+      "statusBarColor",
+      "mobile-shell-status-bar-background",
+      "hasStartedScroll",
+      "isBottomTabHidden",
+      "onScroll={handleScroll}",
+      "hideOnScroll",
       "paddingBottom: Math.max(insets.bottom + 116, 152)",
       'pointerEvents="box-none"',
     ],
@@ -39,6 +46,13 @@ const requiredMarkers = [
   },
 ]
 
+const forbiddenMarkers = [
+  {
+    file: "components/mobile/app-shell.tsx",
+    markers: ["hideOnScroll={false}"],
+  },
+]
+
 const failures = []
 
 for (const check of requiredMarkers) {
@@ -51,6 +65,20 @@ for (const check of requiredMarkers) {
     failures.push({
       file: relative(MOBILE_DIR, filePath),
       marker,
+    })
+  }
+}
+
+for (const check of forbiddenMarkers) {
+  const filePath = join(SOURCE_DIR, check.file)
+  const contents = readFileSync(filePath, "utf8")
+
+  for (const marker of check.markers) {
+    if (!contents.includes(marker)) continue
+
+    failures.push({
+      file: relative(MOBILE_DIR, filePath),
+      marker: `forbidden marker present: ${marker}`,
     })
   }
 }

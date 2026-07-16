@@ -74,6 +74,18 @@ function createOtpCode() {
   return randomInt(0, 1_000_000).toString().padStart(6, "0")
 }
 
+function resolveOtpCode(code: string | null | undefined) {
+  const cleanedCode = cleanText(code)
+
+  if (!cleanedCode) return createOtpCode()
+
+  if (!/^\d{6}$/.test(cleanedCode)) {
+    throw new Error("Development OTP codes must contain exactly 6 digits.")
+  }
+
+  return cleanedCode
+}
+
 function createSessionToken() {
   return randomBytes(32).toString("hex")
 }
@@ -274,13 +286,33 @@ export async function createMobileOwnerOtp(
   db: DbClient,
   input: {
     businessName?: string | null
+    code?: string | null
     email: string
     mode: MobileAuthMode
     name?: string | null
   },
 ): Promise<MobileOwnerOtpResult> {
   const email = normalizeEmail(input.email)
-  const code = createOtpCode()
+  if (input.mode === "login") {
+    const existingUser = await db.user.findUnique({
+      where: { email },
+      select: { id: true },
+    })
+
+    if (!existingUser) {
+      throw new Error("No owner account exists for this email yet.")
+    }
+
+    const tenant = await getFirstActiveTenantForUser(db, {
+      userId: existingUser.id,
+    })
+
+    if (!tenant) {
+      throw new Error("No active business is available for this account.")
+    }
+  }
+
+  const code = resolveOtpCode(input.code)
   const now = new Date()
   const expiresAt = addMinutes(now, OTP_TTL_MINUTES)
   const identifier = buildOtpIdentifier({ email, mode: input.mode })

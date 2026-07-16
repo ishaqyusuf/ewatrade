@@ -1,0 +1,124 @@
+{
+  "apiUrl": "http://127.0.0.1:3095",
+  "businessName": "Alijawda",
+  "email": "alijawda-mobile-2026071512453210962@test.com",
+  "importLinks": {
+    "createSale": "exp://192.168.18.7:3096/--/qa-session/%7B%22businessId%22%3A%22cmrm2pdr600274hs0jdpft3v1%22%2C%22businessName%22%3A%22Alijawda%22%2C%22email%22%3A%22alijawda-mobile-2026071512453210962%40test.com%22%2C%22expiresAt%22%3A%222026-10-13T12%3A45%3A32.541Z%22%2C%22name%22%3A%22Ali%20Jawda%22%2C%22next%22%3A%22%2Fcreate-sale-modal%22%2C%22role%22%3A%22OWNER%22%2C%22status%22%3A%22ACTIVE%22%2C%22token%22%3A%224cfb5a4d8a66f6c04f88ad02a019720469fe3718069f37ad3f7b48a2e0d1967d%22%2C%22userId%22%3A%22cmrm2pdqm00264hs0leoahne1%22%2C%22localOpenSession%22%3A%7B%22remoteId%22%3A%22cmrm2pdvl00334hs0fu43u7u5%22%7D%2C%22localProducts%22%3A%5B%7B%22currentStock%22%3A5%2C%22name%22%3A%22Rabbit%20feed%22%2C%22price%22%3A1800000%2C%22remoteId%22%3A%22cmrm2pdt2002d4hs01qh2rsix%22%2C%22remoteVariantId%22%3A%22cmrm2pdt4002e4hs04st87yw9%22%2C%22startingStock%22%3A5%2C%22unitName%22%3A%22Bag%22%2C%22variants%22%3A%5B%7B%22currentStock%22%3A5%2C%22name%22%3A%22Half%20bag%22%2C%22price%22%3A950000%2C%22remoteId%22%3A%22cmrm2pdt5002f4hs0yrf8q4o2%22%2C%22startingStock%22%3A5%7D%2C%7B%22currentStock%22%3A5%2C%22name%22%3A%22Quarter%20bag%22%2C%22price%22%3A500000%2C%22remoteId%22%3A%22cmrm2pdt6002g4hs00019h3u1%22%2C%22startingStock%22%3A5%7D%2C%7B%22currentStock%22%3A5%2C%22name%22%3A%22Kilo%22%2C%22price%22%3A80000%2C%22remoteId%22%3A%22cmrm2pdt6002h4hs00m63jv02%22%2C%22startingStock%22%3A5%7D%5D%7D%2C%7B%22currentStock%22%3A5%2C%22name%22%3A%22Chicken%20feed%22%2C%22price%22%3A2200000%2C%22remoteId%22%3A%22cmrm2pduj002q4hs008xl4zrf%22%2C%22remoteVariantId%22%3A%22cmrm2pduk002r4hs0aq9m7w0w%22%2C%22startingStock%22%3A5%2C%22unitName%22%3A%22Bag%22%2C%22variants%22%3A%5B%7B%22currentStock%22%3A5%2C%22name%22%3A%22Half%20bag%22%2C%22price%22%3A1150000%2C%22remoteId%22%3A%22cmrm2pdul002s4hs0kvtnnoq5%22%2C%22startingStock%22%3A5%7D%2C%7B%22currentStock%22%3A5%2C%22name%22%3A%22Quarter%20bag%22%2C%22price%22%3A600000%2C%22remoteId%22%3A%22cmrm2pdul002t4hs00zfkv5zp%22%2C%22startingStock%22%3A5%7D%2C%7B%22currentStock%22%3A5%2C%22name%22%3A%22Kilo%22%2C%22price%22%3A95000%2C%22remoteId%22%3A%22cmrm2pdum002u4hs0uzr2ud25%22%2C%22startingStock%22%3A5%7D%5D%7D%5D%7D",
+    "dashboard": "exp://192.168.18.7:3096/--/qa-session/%7B%22businessId%22%3A%22cmrm2pdr600274hs0jdpft3v1%22%2C%22businessName%22%3A%22Alijawda%22%2C%22email%22%3A%22alijawda-mobile-2026071512453210962%40test.com%22%2C%22expiresAt%22%3A%222026-10-13T12%3A45%3A32.541Z%22%2C%22name%22%3A%22Ali%20Jawda%22%2C%22next%22%3A%22%2Fadmin-home%22%2C%22role%22%3A%22OWNER%22%2C%22status%22%3A%22ACTIVE%22%2C%22token%22%3A%224cfb5a4d8a66f6c04f88ad02a019720469fe3718069f37ad3f7b48a2e0d1967d%22%2C%22userId%22%3A%22cmrm2pdqm00264hs0leoahne1%22%2C%22localOpenSession%22%3A%7B%22remoteId%22%3A%22cmrm2pdvl00334hs0fu43u7u5%22%7D%2C%22localProducts%22%3A%5B%7B%22currentStock%22%3A5%2C%22name%22%3A%22Rabbit%20feed%22%2C%22price%22%3A1800000%2C%22remoteId%22%3A%22cmrm2pdt2002d4hs01qh2rsix%22%2C%22remoteVariantId%22%3A%22cmrm2pdt4002e4hs04st87yw9%22%2C%22startingStock%22%3A5%2C%22unitName%22%3A%22Bag%22%2C%22variants%22%3A%5B%7B%22currentStock%22%3A5%2C%22name%22%3A%22Half%20bag%22%2C%22price%22%3A950000%2C%22remoteId%22%3A%22cmrm2pdt5002f4hs0yrf8q4o2%22%2C%22startingStock%22%3A5%7D%2C%7B%22currentStock%22%3A5%2C%22name%22%3A%22Quarter%20bag%22%2C%22price%22%3A500000%2C%22remoteId%22%3A%22cmrm2pdt6002g4hs00019h3u1%22%2C%22startingStock%22%3A5%7D%2C%7B%22currentStock%22%3A5%2C%22name%22%3A%22Kilo%22%2C%22price%22%3A80000%2C%22remoteId%22%3A%22cmrm2pdt6002h4hs00m63jv02%22%2C%22startingStock%22%3A5%7D%5D%7D%2C%7B%22currentStock%22%3A5%2C%22name%22%3A%22Chicken%20feed%22%2C%22price%22%3A2200000%2C%22remoteId%22%3A%22cmrm2pduj002q4hs008xl4zrf%22%2C%22remoteVariantId%22%3A%22cmrm2pduk002r4hs0aq9m7w0w%22%2C%22startingStock%22%3A5%2C%22unitName%22%3A%22Bag%22%2C%22variants%22%3A%5B%7B%22currentStock%22%3A5%2C%22name%22%3A%22Half%20bag%22%2C%22price%22%3A1150000%2C%22remoteId%22%3A%22cmrm2pdul002s4hs0kvtnnoq5%22%2C%22startingStock%22%3A5%7D%2C%7B%22currentStock%22%3A5%2C%22name%22%3A%22Quarter%20bag%22%2C%22price%22%3A600000%2C%22remoteId%22%3A%22cmrm2pdul002t4hs00zfkv5zp%22%2C%22startingStock%22%3A5%7D%2C%7B%22currentStock%22%3A5%2C%22name%22%3A%22Kilo%22%2C%22price%22%3A95000%2C%22remoteId%22%3A%22cmrm2pdum002u4hs0uzr2ud25%22%2C%22startingStock%22%3A5%7D%5D%7D%5D%7D",
+    "firstProductSetup": "exp://192.168.18.7:3096/--/qa-session/%7B%22businessId%22%3A%22cmrm2pdr600274hs0jdpft3v1%22%2C%22businessName%22%3A%22Alijawda%22%2C%22email%22%3A%22alijawda-mobile-2026071512453210962%40test.com%22%2C%22expiresAt%22%3A%222026-10-13T12%3A45%3A32.541Z%22%2C%22name%22%3A%22Ali%20Jawda%22%2C%22next%22%3A%22%2Ffirst-product-setup-modal%22%2C%22role%22%3A%22OWNER%22%2C%22status%22%3A%22ACTIVE%22%2C%22token%22%3A%224cfb5a4d8a66f6c04f88ad02a019720469fe3718069f37ad3f7b48a2e0d1967d%22%2C%22userId%22%3A%22cmrm2pdqm00264hs0leoahne1%22%2C%22localOpenSession%22%3A%7B%22remoteId%22%3A%22cmrm2pdvl00334hs0fu43u7u5%22%7D%2C%22localProducts%22%3A%5B%7B%22currentStock%22%3A5%2C%22name%22%3A%22Rabbit%20feed%22%2C%22price%22%3A1800000%2C%22remoteId%22%3A%22cmrm2pdt2002d4hs01qh2rsix%22%2C%22remoteVariantId%22%3A%22cmrm2pdt4002e4hs04st87yw9%22%2C%22startingStock%22%3A5%2C%22unitName%22%3A%22Bag%22%2C%22variants%22%3A%5B%7B%22currentStock%22%3A5%2C%22name%22%3A%22Half%20bag%22%2C%22price%22%3A950000%2C%22remoteId%22%3A%22cmrm2pdt5002f4hs0yrf8q4o2%22%2C%22startingStock%22%3A5%7D%2C%7B%22currentStock%22%3A5%2C%22name%22%3A%22Quarter%20bag%22%2C%22price%22%3A500000%2C%22remoteId%22%3A%22cmrm2pdt6002g4hs00019h3u1%22%2C%22startingStock%22%3A5%7D%2C%7B%22currentStock%22%3A5%2C%22name%22%3A%22Kilo%22%2C%22price%22%3A80000%2C%22remoteId%22%3A%22cmrm2pdt6002h4hs00m63jv02%22%2C%22startingStock%22%3A5%7D%5D%7D%2C%7B%22currentStock%22%3A5%2C%22name%22%3A%22Chicken%20feed%22%2C%22price%22%3A2200000%2C%22remoteId%22%3A%22cmrm2pduj002q4hs008xl4zrf%22%2C%22remoteVariantId%22%3A%22cmrm2pduk002r4hs0aq9m7w0w%22%2C%22startingStock%22%3A5%2C%22unitName%22%3A%22Bag%22%2C%22variants%22%3A%5B%7B%22currentStock%22%3A5%2C%22name%22%3A%22Half%20bag%22%2C%22price%22%3A1150000%2C%22remoteId%22%3A%22cmrm2pdul002s4hs0kvtnnoq5%22%2C%22startingStock%22%3A5%7D%2C%7B%22currentStock%22%3A5%2C%22name%22%3A%22Quarter%20bag%22%2C%22price%22%3A600000%2C%22remoteId%22%3A%22cmrm2pdul002t4hs00zfkv5zp%22%2C%22startingStock%22%3A5%7D%2C%7B%22currentStock%22%3A5%2C%22name%22%3A%22Kilo%22%2C%22price%22%3A95000%2C%22remoteId%22%3A%22cmrm2pdum002u4hs0uzr2ud25%22%2C%22startingStock%22%3A5%7D%5D%7D%5D%7D"
+  },
+  "inventory": [
+    {
+      "onHandQuantity": 5,
+      "productName": "Rabbit feed",
+      "unitName": "Bag"
+    },
+    {
+      "onHandQuantity": 5,
+      "productName": "Rabbit feed",
+      "unitName": "Half bag"
+    },
+    {
+      "onHandQuantity": 5,
+      "productName": "Rabbit feed",
+      "unitName": "Quarter bag"
+    },
+    {
+      "onHandQuantity": 5,
+      "productName": "Rabbit feed",
+      "unitName": "Kilo"
+    },
+    {
+      "onHandQuantity": 5,
+      "productName": "Chicken feed",
+      "unitName": "Bag"
+    },
+    {
+      "onHandQuantity": 5,
+      "productName": "Chicken feed",
+      "unitName": "Half bag"
+    },
+    {
+      "onHandQuantity": 5,
+      "productName": "Chicken feed",
+      "unitName": "Quarter bag"
+    },
+    {
+      "onHandQuantity": 5,
+      "productName": "Chicken feed",
+      "unitName": "Kilo"
+    }
+  ],
+  "openSessionId": "cmrm2pdvl00334hs0fu43u7u5",
+  "products": [
+    {
+      "id": "cmrm2pdt2002d4hs01qh2rsix",
+      "name": "Rabbit feed",
+      "units": [
+        {
+          "id": "cmrm2pdt4002e4hs04st87yw9",
+          "isDefault": true,
+          "name": "Bag",
+          "openingStockQuantity": 5,
+          "priceMinor": 1800000
+        },
+        {
+          "id": "cmrm2pdt5002f4hs0yrf8q4o2",
+          "isDefault": false,
+          "name": "Half bag",
+          "openingStockQuantity": 5,
+          "priceMinor": 950000
+        },
+        {
+          "id": "cmrm2pdt6002g4hs00019h3u1",
+          "isDefault": false,
+          "name": "Quarter bag",
+          "openingStockQuantity": 5,
+          "priceMinor": 500000
+        },
+        {
+          "id": "cmrm2pdt6002h4hs00m63jv02",
+          "isDefault": false,
+          "name": "Kilo",
+          "openingStockQuantity": 5,
+          "priceMinor": 80000
+        }
+      ]
+    },
+    {
+      "id": "cmrm2pduj002q4hs008xl4zrf",
+      "name": "Chicken feed",
+      "units": [
+        {
+          "id": "cmrm2pduk002r4hs0aq9m7w0w",
+          "isDefault": true,
+          "name": "Bag",
+          "openingStockQuantity": 5,
+          "priceMinor": 2200000
+        },
+        {
+          "id": "cmrm2pdul002s4hs0kvtnnoq5",
+          "isDefault": false,
+          "name": "Half bag",
+          "openingStockQuantity": 5,
+          "priceMinor": 1150000
+        },
+        {
+          "id": "cmrm2pdul002t4hs00zfkv5zp",
+          "isDefault": false,
+          "name": "Quarter bag",
+          "openingStockQuantity": 5,
+          "priceMinor": 600000
+        },
+        {
+          "id": "cmrm2pdum002u4hs0uzr2ud25",
+          "isDefault": false,
+          "name": "Kilo",
+          "openingStockQuantity": 5,
+          "priceMinor": 95000
+        }
+      ]
+    }
+  ],
+  "runId": "2026071512453210962"
+}

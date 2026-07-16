@@ -296,7 +296,7 @@ export default function UpdatesScreen() {
               transition
             >
               {isChecking || action === "checking" ? (
-                <ActivityIndicator color="white" />
+                <ActivityIndicator color={colors.primaryForeground} />
               ) : (
                 <Icon
                   className="size-sm text-primary-foreground"

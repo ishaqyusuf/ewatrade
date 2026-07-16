@@ -74,15 +74,25 @@ const requiredMarkers = [
   {
     file: "app/verify-email.tsx",
     markers: [
-      "AuthArtwork",
-      "OtpCodeCells",
-      "OtpKey",
-      "ClipboardList",
-      "KEYPAD_ROWS",
+      "MobileScreen",
+      "OtpInput",
+      "OtpKeypad",
+      "Enter the code we sent you",
       "Email verification",
       "Local fallback",
       "Resend code",
+      "Verify and continue",
       "Use another email",
+    ],
+  },
+  {
+    file: "components/mobile/otp-keypad.tsx",
+    markers: [
+      "OTP_KEYPAD_ROWS",
+      "ClipboardList",
+      "Delete last digit",
+      "Enter digit",
+      "haptic",
     ],
   },
 ]

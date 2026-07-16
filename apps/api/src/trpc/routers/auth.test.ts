@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import {
   createMobileOwnerOtpEmailMessages,
   requestMobileOwnerOtpSchema,
+  shouldSkipMobileOwnerOtpEmail,
   verifyMobileGoogleSchema,
   verifyMobileOwnerOtpSchema,
 } from "./auth"
@@ -134,5 +135,43 @@ describe("mobile auth router schemas", () => {
     expect(messages.every((message) => message.text.includes("123456"))).toBe(
       true,
     )
+  })
+
+  test("only skips mobile OTP email dispatch outside production when SKIP_OTP is enabled", () => {
+    expect(
+      shouldSkipMobileOwnerOtpEmail({
+        APP_ENV: "local",
+        NODE_ENV: "development",
+        SKIP_OTP: "1",
+      }),
+    ).toBe(true)
+    expect(
+      shouldSkipMobileOwnerOtpEmail({
+        APP_ENV: "local",
+        NODE_ENV: "test",
+        SKIP_OTP: "true",
+      }),
+    ).toBe(true)
+    expect(
+      shouldSkipMobileOwnerOtpEmail({
+        APP_ENV: "production",
+        NODE_ENV: "development",
+        SKIP_OTP: "1",
+      }),
+    ).toBe(false)
+    expect(
+      shouldSkipMobileOwnerOtpEmail({
+        APP_ENV: "production",
+        NODE_ENV: "production",
+        SKIP_OTP: "1",
+      }),
+    ).toBe(false)
+    expect(
+      shouldSkipMobileOwnerOtpEmail({
+        APP_ENV: "local",
+        NODE_ENV: "development",
+        SKIP_OTP: "",
+      }),
+    ).toBe(false)
   })
 })

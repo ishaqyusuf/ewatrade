@@ -4,6 +4,8 @@ import {
   AuthDivider,
   AuthFooterAction,
   AuthMethodButton,
+  DevBusinessLoginPicker,
+  FeatureFlag,
   FormField,
   MobileScreen,
   StatusBanner,
@@ -17,6 +19,13 @@ import { useTRPC } from "@/trpc/client"
 import { useMutation } from "@tanstack/react-query"
 import { useLocalSearchParams, useRouter } from "expo-router"
 import { useState } from "react"
+
+function shouldUseLocalOtpFallback(message: string | undefined) {
+  return ![
+    "No owner account exists for this email yet.",
+    "No active business is available for this account.",
+  ].includes(message ?? "")
+}
 
 function DevDesignSystemShortcut() {
   if (!shouldShowInternalDesignSystemEntry()) return null
@@ -53,10 +62,16 @@ export default function LoginRoute() {
   const requestOtpMutation = useMutation(
     trpc.auth.requestMobileOwnerOtp.mutationOptions({
       onError(error) {
-        setError(
+        const message =
           error.message ||
-            "We could not send a production code. You can continue locally while the service is unavailable.",
-        )
+          "We could not send a production code. You can continue locally while the service is unavailable."
+
+        setError(message)
+
+        if (!shouldUseLocalOtpFallback(error.message)) {
+          return
+        }
+
         router.push({
           pathname: "/verify-email",
           params: {
@@ -101,25 +116,30 @@ export default function LoginRoute() {
       />
 
       <View className="gap-4">
-        <FormField
-          autoCapitalize="none"
-          keyboardType="email-address"
-          label="Email address"
-          leadingIcon="Mail"
-          onChangeText={setEmail}
-          placeholder="Enter your email address"
-          textContentType="emailAddress"
-          value={email}
-          variant="auth"
-        />
-        <AuthActionButton
-          disabled={!normalizedEmail}
-          isLoading={requestOtpMutation.isPending}
-          loadingLabel="Sending code"
-          onPress={continueWithEmail}
+        <FeatureFlag
+          fallbackModes={["dev"]}
+          Fallback={<DevBusinessLoginPicker />}
         >
-          Send login code
-        </AuthActionButton>
+          <FormField
+            autoCapitalize="none"
+            keyboardType="email-address"
+            label="Email address"
+            leadingIcon="Mail"
+            onChangeText={setEmail}
+            placeholder="Enter your email address"
+            textContentType="emailAddress"
+            value={email}
+            variant="auth"
+          />
+          <AuthActionButton
+            disabled={!normalizedEmail}
+            isLoading={requestOtpMutation.isPending}
+            loadingLabel="Sending code"
+            onPress={continueWithEmail}
+          >
+            Send login code
+          </AuthActionButton>
+        </FeatureFlag>
         {error ? (
           <StatusBanner
             icon="TriangleAlert"

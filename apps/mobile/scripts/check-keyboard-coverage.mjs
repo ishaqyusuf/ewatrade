@@ -127,9 +127,9 @@ const CONTRACTS = [
   },
   {
     file: FILES.verifyEmail,
-    markers: ["MobileScreen", "OtpInput", "Verify and continue"],
+    markers: ["MobileScreen", "OtpInput", "OtpKeypad", "Verify and continue"],
     reason:
-      "OTP route must keep the shared OTP input on a keyboard-aware route",
+      "OTP route must keep the shared OTP cells and keypad on a keyboard-aware route",
   },
   {
     file: FILES.otpInput,

@@ -18,7 +18,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { quickActions } from "@/data/retail-ops-dashboard-data"
 import { useAuthContext } from "@/hooks/use-auth"
-import { useColorScheme } from "@/hooks/use-color"
+import { useColorScheme, useColors } from "@/hooks/use-color"
 import { isInvitedStaffProfile, isSalesRepRole } from "@/lib/mobile-roles"
 import { cn } from "@/lib/utils"
 import { useBusinessStore } from "@/store/businessStore"
@@ -46,7 +46,8 @@ import { formatMoney } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
 import { Redirect, useRouter } from "expo-router"
 import { type ReactNode, useCallback, useEffect, useMemo, useRef } from "react"
-import { View, useWindowDimensions } from "react-native"
+import { View as RNView, View, useWindowDimensions } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 type DashboardMetric = {
   detail: string
@@ -72,6 +73,36 @@ const DASHBOARD_SHARE_LINK_PREVIEW_LIMIT = 3
 const DASHBOARD_STOCK_MOVEMENT_PREVIEW_LIMIT = 3
 const DASHBOARD_CUSTOMER_PREVIEW_LIMIT = 3
 const DASHBOARD_RECENT_SALE_PREVIEW_LIMIT = 5
+
+function colorWithAlpha(color: string, opacity: number) {
+  const normalizedOpacity = Math.min(1, Math.max(0, opacity))
+  const rgbMatch = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/.exec(
+    color,
+  )
+
+  if (rgbMatch) {
+    return `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, ${normalizedOpacity})`
+  }
+
+  const normalizedHex = color.replace("#", "").trim()
+  const expandedHex =
+    normalizedHex.length === 3
+      ? normalizedHex
+          .split("")
+          .map((character) => `${character}${character}`)
+          .join("")
+      : normalizedHex
+
+  if (/^[0-9a-fA-F]{6}$/.test(expandedHex)) {
+    const red = Number.parseInt(expandedHex.slice(0, 2), 16)
+    const green = Number.parseInt(expandedHex.slice(2, 4), 16)
+    const blue = Number.parseInt(expandedHex.slice(4, 6), 16)
+
+    return `rgba(${red}, ${green}, ${blue}, ${normalizedOpacity})`
+  }
+
+  return color
+}
 
 function getStockStatus(stock: number): LowStockAlert["status"] {
   if (stock <= 0) return "Out"
@@ -1136,7 +1167,7 @@ function DashboardSettingsSheet({
     <Modal
       accessibilityLabel="Workspace settings"
       ref={modal.ref}
-      snapPoints={["54%"]}
+      snapPoints={["64%"]}
       title="Settings"
     >
       <View className="gap-2 px-4 pb-5">
@@ -1276,112 +1307,150 @@ function RetailOpsHomeHero({
   summaryLabel: string
   summaryValue: string
 }) {
+  const colors = useColors()
+  const insets = useSafeAreaInsets()
   const { width } = useWindowDimensions()
   const isCompact = width < 380
+  const heroControlBackground = colorWithAlpha(colors.primaryForeground, 0.15)
+  const heroPanelBackground = colorWithAlpha(colors.primaryForeground, 0.12)
 
   return (
-    <View
-      className={cn(
-        "gap-5 rounded-[32px] bg-primary",
-        isCompact ? "p-4" : "p-5",
-      )}
+    <RNView
+      style={{
+        backgroundColor: colors.primary,
+        borderBottomLeftRadius: 36,
+        borderBottomRightRadius: 36,
+        overflow: "hidden",
+      }}
     >
-      <View className="flex-row items-center justify-between gap-4">
-        <Pressable
-          accessibilityRole="button"
-          className="min-w-0 flex-1 gap-1 active:opacity-85"
-          haptic
-          onPress={onBusinessPress}
-          transition
-        >
-          <Text className="text-xs font-bold uppercase tracking-[1px] text-primary-foreground">
-            {roleLabel}
-          </Text>
-          <View className="flex-row items-center gap-2">
-            <Icon className="size-sm text-primary-foreground" name="MapPin" />
-            <Text
-              className="text-lg font-extrabold text-primary-foreground"
-              numberOfLines={1}
-            >
-              {businessName}
-            </Text>
-            <Icon
-              className="size-sm text-primary-foreground"
-              name="ChevronDown"
-            />
-          </View>
-        </Pressable>
-        {headerAction}
-      </View>
-
-      <Pressable
-        accessibilityLabel="Search workspace"
-        accessibilityRole="button"
-        className="h-12 flex-row items-center gap-3 rounded-full bg-background px-4 active:opacity-90"
-        haptic
-        onPress={onSearchPress}
-        transition
+      <RNView
+        style={{
+          paddingBottom: isCompact ? 24 : 28,
+          paddingLeft: 24,
+          paddingRight: 24,
+          paddingTop: insets.top + 18,
+        }}
       >
-        <Icon className="size-sm text-muted-foreground" name="Search" />
-        <Text
-          className="min-w-0 flex-1 text-sm font-semibold text-muted-foreground"
-          numberOfLines={2}
-        >
-          {searchPlaceholder}
-        </Text>
-      </Pressable>
-
-      <View
-        className={cn(
-          "rounded-[28px] bg-background",
-          isCompact ? "p-3" : "p-4",
-        )}
-      >
-        <View className="flex-row items-center gap-4">
-          <View className="min-w-0 flex-1 gap-2">
-            <Text
-              className="text-xs font-bold uppercase tracking-[1px] text-muted-foreground"
-              numberOfLines={1}
-            >
-              {summaryLabel}
-            </Text>
-            <Text
-              adjustsFontSizeToFit
-              className={cn(
-                "font-extrabold text-foreground",
-                isCompact ? "text-2xl leading-8" : "text-3xl leading-9",
-              )}
-              minimumFontScale={0.7}
-              numberOfLines={1}
-            >
-              {summaryValue}
-            </Text>
-            <Text
-              className="text-sm leading-5 text-muted-foreground"
-              numberOfLines={isCompact ? 3 : 2}
-            >
-              {summaryDetail}
-            </Text>
+        <View className="gap-5">
+          <View className="flex-row items-center justify-between gap-4">
             <Pressable
               accessibilityRole="button"
-              className="self-start rounded-full bg-primary px-4 py-2 active:opacity-90"
+              className="min-w-0 flex-1 gap-1 active:opacity-85"
               haptic
-              onPress={onPrimaryPress}
+              onPress={onBusinessPress}
               transition
             >
-              <Text className="text-xs font-extrabold text-primary-foreground">
-                {primaryActionLabel}
+              <Text className="text-xs font-bold uppercase tracking-[1px] text-primary-foreground">
+                {roleLabel}
               </Text>
+              <View className="flex-row items-center gap-2">
+                <Icon
+                  className="size-sm text-primary-foreground"
+                  name="MapPin"
+                />
+                <Text
+                  className="text-lg font-extrabold text-primary-foreground"
+                  numberOfLines={1}
+                >
+                  {businessName}
+                </Text>
+                <Icon
+                  className="size-sm text-primary-foreground"
+                  name="ChevronDown"
+                />
+              </View>
             </Pressable>
+            {headerAction ? (
+              <RNView
+                style={{
+                  alignItems: "center",
+                  backgroundColor: heroControlBackground,
+                  borderRadius: 999,
+                  height: 44,
+                  justifyContent: "center",
+                  width: 44,
+                }}
+              >
+                {headerAction}
+              </RNView>
+            ) : null}
           </View>
-          {isCompact ? null : (
-            <View className="h-24 w-24 items-center justify-center rounded-[28px] bg-muted">
-              <Icon className="size-2xl text-primary" name="BarChart3" />
+
+          <Pressable
+            accessibilityLabel="Search workspace"
+            accessibilityRole="button"
+            className="h-12 flex-row items-center gap-3 rounded-full bg-background px-4 active:opacity-90"
+            haptic
+            onPress={onSearchPress}
+            transition
+          >
+            <Icon className="size-sm text-muted-foreground" name="Search" />
+            <Text
+              className="min-w-0 flex-1 text-sm font-semibold text-muted-foreground"
+              numberOfLines={2}
+            >
+              {searchPlaceholder}
+            </Text>
+          </Pressable>
+
+          <RNView
+            style={{
+              backgroundColor: heroPanelBackground,
+              borderRadius: 30,
+            }}
+          >
+            <View
+              className={cn(
+                "flex-row items-center gap-4",
+                isCompact ? "p-3" : "p-4",
+              )}
+            >
+              <View className="min-w-0 flex-1 gap-2">
+                <Text
+                  className="text-xs font-bold uppercase tracking-[1px] text-primary-foreground"
+                  numberOfLines={1}
+                >
+                  {summaryLabel}
+                </Text>
+                <Text
+                  adjustsFontSizeToFit
+                  className={cn(
+                    "font-extrabold text-primary-foreground",
+                    isCompact ? "text-2xl leading-8" : "text-3xl leading-9",
+                  )}
+                  minimumFontScale={0.7}
+                  numberOfLines={1}
+                >
+                  {summaryValue}
+                </Text>
+                <Text
+                  className="text-sm leading-5 text-primary-foreground"
+                  numberOfLines={isCompact ? 3 : 2}
+                >
+                  {summaryDetail}
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  className="self-start rounded-full bg-primary-foreground px-4 py-2 active:opacity-90"
+                  haptic
+                  onPress={onPrimaryPress}
+                  transition
+                >
+                  <Text className="text-xs font-extrabold text-primary">
+                    {primaryActionLabel}
+                  </Text>
+                </Pressable>
+              </View>
+              {isCompact ? null : (
+                <View className="h-24 w-24 items-center justify-center rounded-[28px] bg-primary-foreground">
+                  <Icon className="size-2xl text-primary" name="BarChart3" />
+                </View>
+              )}
             </View>
-          )}
+          </RNView>
         </View>
-      </View>
-    </View>
+      </RNView>
+    </RNView>
   )
 }
 
@@ -1697,6 +1766,7 @@ export function RetailOpsDashboardSurface({
   const trpc = useTRPC()
   const { isAuthenticated, profile } = useAuthContext()
   const { colorScheme, setColorScheme } = useColorScheme()
+  const colors = useColors()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
   const businesses = useBusinessStore((state) => state.businesses)
   const ensureBusiness = useBusinessStore((state) => state.ensureBusiness)
@@ -2382,6 +2452,15 @@ export function RetailOpsDashboardSurface({
       },
     },
     {
+      description: "Set a PIN and fingerprint unlock for this phone.",
+      icon: "Lock",
+      label: "App lock",
+      onPress: () => {
+        settingsModal.dismiss()
+        router.push("/app-lock-modal" as never)
+      },
+    },
+    {
       description: "Check the installed build, channel, runtime, and updates.",
       icon: "Download",
       label: "App updates",
@@ -2489,7 +2568,7 @@ export function RetailOpsDashboardSurface({
       hero={
         <RetailOpsHomeHero
           businessName={businessDisplayName}
-          headerAction={<Logout />}
+          headerAction={<Logout tone="hero" />}
           onBusinessPress={openBusinessSwitch}
           onPrimaryPress={() =>
             isAttendantDashboard ? handleQuickAction("New sale") : openReports()
@@ -2533,7 +2612,9 @@ export function RetailOpsDashboardSurface({
       navItems={shellNavItems}
       onBusinessPress={openBusinessSwitch}
       role={isAttendantDashboard ? "attendant" : "owner"}
+      scrolledStatusBarColor={colors.card}
       showHeader={false}
+      statusBarColor={colors.primary}
       syncBanner={syncBanner}
       title="Dashboard"
     >

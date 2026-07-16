@@ -17,6 +17,7 @@ import { createTRPCRouter, publicProcedure } from "../init"
 const emailSchema = z.string().trim().toLowerCase().pipe(z.email())
 
 const mobileAuthModeSchema = z.enum(["login", "sign_up"])
+const SKIP_OTP_CODE = "123456"
 
 export const requestMobileOwnerOtpSchema = z
   .object({
@@ -45,6 +46,24 @@ export const verifyMobileGoogleSchema = z
 
 function getEmailFromAddress() {
   return process.env.EMAIL_FROM ?? "Ewatrade <noreply@ewatrade.com>"
+}
+
+function isTruthyEnvFlag(value: string | undefined) {
+  if (!value) return false
+
+  return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase())
+}
+
+export function shouldSkipMobileOwnerOtpEmail(
+  env: Partial<
+    Record<"APP_ENV" | "NODE_ENV" | "SKIP_OTP", string>
+  > = process.env,
+) {
+  return (
+    env.NODE_ENV !== "production" &&
+    env.APP_ENV !== "production" &&
+    isTruthyEnvFlag(env.SKIP_OTP)
+  )
 }
 
 function renderOtpEmail(input: {
@@ -98,7 +117,31 @@ export const authRouter = createTRPCRouter({
   requestMobileOwnerOtp: publicProcedure
     .input(requestMobileOwnerOtpSchema)
     .mutation(async ({ ctx, input }) => {
-      const otp = await createMobileOwnerOtp(ctx.db, input)
+      const skipOtpEmail = shouldSkipMobileOwnerOtpEmail()
+      const otp = await (async () => {
+        try {
+          return await createMobileOwnerOtp(ctx.db, {
+            ...input,
+            code: skipOtpEmail ? SKIP_OTP_CODE : undefined,
+          })
+        } catch (error) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              error instanceof Error
+                ? error.message
+                : "We could not create the verification code.",
+          })
+        }
+      })()
+      if (skipOtpEmail) {
+        return {
+          devCode: process.env.NODE_ENV === "production" ? null : otp.code,
+          email: otp.email,
+          expiresAt: otp.expiresAt,
+        }
+      }
+
       const emailMessages = (() => {
         try {
           return createMobileOwnerOtpEmailMessages({

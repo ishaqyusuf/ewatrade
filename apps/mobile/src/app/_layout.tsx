@@ -11,9 +11,11 @@ import {
   useAuthContext,
   useCreateAuthContext,
 } from "@/hooks/use-auth"
+import { AppLockProvider } from "@/hooks/use-app-lock"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 
 import { AppAutoUpdateModal } from "@/components/app-auto-update-modal"
+import { AppLockGate } from "@/components/mobile/app-lock-gate"
 import { FloatingThemeToggle } from "@/components/mobile"
 import { ToastProviderWithViewport } from "@/components/ui/toast"
 import { useColorScheme } from "@/hooks/use-color"
@@ -172,6 +174,10 @@ const InitialLayout = () => {
             />
           </Stack.Protected>
           <Stack.Protected guard={isAuthenticated && !isInvitedStaff}>
+            <Stack.Screen
+              name="app-lock-modal"
+              options={{ headerShown: false, presentation: "modal" }}
+            />
             <Stack.Screen name="updates" options={{ headerShown: false }} />
             <Stack.Screen
               name="create-sale-modal"
@@ -234,16 +240,19 @@ function RootLayoutNav() {
           <View className="flex-1 bg-background">
             <ThemeProvider value={navigationTheme}>
               <AuthProvider value={auth}>
-                <ToastProviderWithViewport>
-                  <BottomSheetModalProvider>
-                    <FlashMessage position="top" />
-                    <InitialLayout />
-                    <AppAutoUpdateModal />
-                    {shouldShowFloatingThemeToggle() ? (
-                      <FloatingThemeToggle />
-                    ) : null}
-                  </BottomSheetModalProvider>
-                </ToastProviderWithViewport>
+                <AppLockProvider>
+                  <ToastProviderWithViewport>
+                    <BottomSheetModalProvider>
+                      <FlashMessage position="top" />
+                      <InitialLayout />
+                      <AppLockGate />
+                      <AppAutoUpdateModal />
+                      {shouldShowFloatingThemeToggle() ? (
+                        <FloatingThemeToggle />
+                      ) : null}
+                    </BottomSheetModalProvider>
+                  </ToastProviderWithViewport>
+                </AppLockProvider>
               </AuthProvider>
             </ThemeProvider>
           </View>

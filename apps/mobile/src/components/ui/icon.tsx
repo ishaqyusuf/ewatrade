@@ -82,6 +82,8 @@ const Fence = hugeIcon("FenceIcon");
 const FilePenLine = hugeIcon("FileEditIcon");
 const FileText = hugeIcon("File02Icon");
 const FolderPlus = hugeIcon("FolderAddIcon");
+const FingerPrint = hugeIcon("FingerPrintIcon");
+const FingerPrintScan = hugeIcon("FingerPrintScanIcon");
 const Gavel = hugeIcon("JudgeIcon");
 const Globe = hugeIcon("Globe");
 const GripHorizontal = hugeIcon("DragDropHorizontalIcon");
@@ -117,6 +119,7 @@ const Search = hugeIcon("Search");
 const Settings = hugeIcon("Settings");
 const Share = hugeIcon("Share");
 const ShieldCheck = hugeIcon("SecurityCheckIcon");
+const SecurityPassword = hugeIcon("SecurityPasswordIcon");
 const SlidersHorizontal = hugeIcon("FilterHorizontalIcon");
 const StickyNote = hugeIcon("StickyNote");
 const Trash = hugeIcon("Trash");
@@ -291,6 +294,8 @@ const appIcons = {
   Fence,
   FilePenLine,
   FileText,
+  FingerPrint,
+  FingerPrintScan,
   FolderPlus,
   Gavel,
   Globe,
@@ -334,6 +339,7 @@ const appIcons = {
   Settings,
   Share,
   ShieldCheck,
+  SecurityPassword,
   SlidersHorizontal,
   StickyNote,
   Trash,

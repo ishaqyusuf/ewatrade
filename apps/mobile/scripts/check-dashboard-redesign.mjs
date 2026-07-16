@@ -18,7 +18,8 @@ const requiredMarkers = [
       "DashboardStatTile",
       "DashboardInlineStatus",
       "visibleQuickActions",
-      "isAttendantDashboard ? null",
+      "showSecondaryAdminHomeSections = false",
+      "showSecondaryAdminHomeSections ? (",
       "canManageInventory",
       "No low-stock items",
       "No attendants yet",
@@ -30,6 +31,24 @@ const requiredMarkers = [
       "Product links",
       "PlanStatusCard",
       "RepSessionStatusCard",
+      'headerAction={<Logout tone="hero" />}',
+      "statusBarColor={colors.primary}",
+      "scrolledStatusBarColor={colors.card}",
+      "useSafeAreaInsets",
+      "colorWithAlpha",
+      "borderBottomLeftRadius: 36",
+    ],
+  },
+  {
+    file: "components/mobile/app-shell.tsx",
+    markers: [
+      "StatusBar",
+      "statusBarColor",
+      "mobile-shell-status-bar-background",
+      "hasStartedScroll",
+      "isBottomTabHidden",
+      "onScroll={handleScroll}",
+      "hideOnScroll",
     ],
   },
   {
@@ -50,7 +69,7 @@ const requiredMarkers = [
       "DashboardStatTile",
       "DashboardInlineStatus",
       "DashboardMetricTone",
-      "border-t border-border",
+      "flex-row flex-wrap items-center gap-2",
       "bg-success/10",
       "bg-warn/10",
     ],
@@ -61,6 +80,7 @@ const forbiddenDashboardMarkers = [
   "No sales yet\n              </Text>",
   "No saved customers yet\n            </Text>",
 ]
+const forbiddenShellMarkers = ["hideOnScroll={false}"]
 
 const failures = []
 
@@ -89,6 +109,20 @@ for (const marker of forbiddenDashboardMarkers) {
   failures.push({
     file: "src/app/dashboard.tsx",
     message: `contains old inline empty-state marker: ${marker}`,
+  })
+}
+
+const appShellSource = readFileSync(
+  join(SOURCE_DIR, "components/mobile/app-shell.tsx"),
+  "utf8",
+)
+
+for (const marker of forbiddenShellMarkers) {
+  if (!appShellSource.includes(marker)) continue
+
+  failures.push({
+    file: "src/components/mobile/app-shell.tsx",
+    message: `contains old fixed-tab marker: ${marker}`,
   })
 }
 

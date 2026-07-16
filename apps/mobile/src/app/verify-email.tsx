@@ -1,35 +1,32 @@
+import { MobileScreen, OtpInput, OtpKeypad } from "@/components/mobile"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { Toast } from "@/components/ui/toast"
 import { useAuthContext } from "@/hooks/use-auth"
-import { useColors } from "@/hooks/use-color"
+import { DEV_SKIP_OTP_CODE, isSkipOtpEnabled } from "@/lib/feature-flags"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { useTRPC } from "@/trpc/client"
 import { useMutation } from "@tanstack/react-query"
 import * as Clipboard from "expo-clipboard"
-import { LinearGradient } from "expo-linear-gradient"
 import { Link, useLocalSearchParams } from "expo-router"
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { StyleSheet, View } from "react-native"
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { View } from "react-native"
 
 const OTP_LENGTH = 6
-const KEYPAD_ROWS = [
-  ["1", "2", "3"],
-  ["4", "5", "6"],
-  ["7", "8", "9"],
-  ["paste", "0", "delete"],
-] as const
+const RESEND_ACTION_LABEL = "Resend code"
+const VERIFY_ACTION_LABEL = "Verify and continue"
 
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value
 }
 
+function normalizeOtpCode(value: string) {
+  return value.replace(/\D/g, "").slice(0, OTP_LENGTH)
+}
+
 export default function VerifyEmailRoute() {
   const auth = useAuthContext()
-  const colors = useColors()
-  const insets = useSafeAreaInsets()
   const completeOnboarding = useOnboardingStore(
     (state) => state.completeOnboarding,
   )
@@ -45,12 +42,18 @@ export default function VerifyEmailRoute() {
     status?: string
   }>()
   const email = firstParam(params.email)?.trim() ?? ""
-  const emailDeliveryLabel = email || "your email address"
   const mode = firstParam(params.mode) === "login" ? "login" : "sign-up"
   const apiMode = mode === "login" ? "login" : "sign_up"
   const isLocalFallback = firstParam(params.fallback) === "local"
+  const skipOtpEnabled = isSkipOtpEnabled()
+  const shouldUseDevSkipOtp = skipOtpEnabled
+  const emailDeliveryLabel =
+    isLocalFallback && shouldUseDevSkipOtp
+      ? "your selected business"
+      : email || "your email address"
   const name = firstParam(params.name) ?? "Store Owner"
   const businessName = firstParam(params.businessName) ?? "My Business"
+  const authEntryHref = mode === "login" ? "/login" : "/sign-up"
   const localProfileOverrides = useMemo(
     () =>
       isLocalFallback
@@ -61,13 +64,7 @@ export default function VerifyEmailRoute() {
             status: firstParam(params.status),
           }
         : {},
-    [
-      isLocalFallback,
-      params.businessId,
-      params.id,
-      params.role,
-      params.status,
-    ],
+    [isLocalFallback, params.businessId, params.id, params.role, params.status],
   )
   const trpc = useTRPC()
   const [code, setCode] = useState("")
@@ -75,6 +72,7 @@ export default function VerifyEmailRoute() {
     "idle" | "resent" | "verifying" | "error"
   >("idle")
   const [message, setMessage] = useState<string | null>(null)
+  const didShowSkipOtpToast = useRef(false)
   const requestOtpMutation = useMutation(
     trpc.auth.requestMobileOwnerOtp.mutationOptions({
       onError(error) {
@@ -83,7 +81,17 @@ export default function VerifyEmailRoute() {
       },
       onSuccess() {
         setStatus("resent")
-        setMessage("Code sent again")
+        setMessage(
+          shouldUseDevSkipOtp
+            ? `Use ${DEV_SKIP_OTP_CODE} in development mode.`
+            : "Code sent again",
+        )
+        if (shouldUseDevSkipOtp) {
+          Toast.show("use 123456", {
+            position: "top",
+            type: "info",
+          })
+        }
       },
     }),
   )
@@ -112,11 +120,23 @@ export default function VerifyEmailRoute() {
       },
     }),
   )
+  const isVerifying = status === "verifying" || verifyOtpMutation.isPending
 
   const verifyCode = useCallback(() => {
     if (code.length !== OTP_LENGTH || status === "verifying") return
 
     setStatus("verifying")
+
+    if (shouldUseDevSkipOtp && code !== DEV_SKIP_OTP_CODE) {
+      setStatus("error")
+      setCode("")
+      setMessage(`Use ${DEV_SKIP_OTP_CODE} in development mode.`)
+      Toast.show("use 123456", {
+        position: "top",
+        type: "info",
+      })
+      return
+    }
 
     if (isLocalFallback) {
       completeOnboarding(true)
@@ -152,16 +172,26 @@ export default function VerifyEmailRoute() {
     auth,
     businessName,
     code,
-    code.length,
     completeOnboarding,
     email,
     isLocalFallback,
     localProfileOverrides,
     mode,
     name,
+    shouldUseDevSkipOtp,
     status,
     verifyOtpMutation,
   ])
+
+  useEffect(() => {
+    if (!shouldUseDevSkipOtp || didShowSkipOtpToast.current) return
+
+    didShowSkipOtpToast.current = true
+    Toast.show("use 123456", {
+      position: "top",
+      type: "info",
+    })
+  }, [shouldUseDevSkipOtp])
 
   useEffect(() => {
     if (code.length === OTP_LENGTH) {
@@ -169,39 +199,39 @@ export default function VerifyEmailRoute() {
     }
   }, [code.length, verifyCode])
 
-  const helperText = useMemo(() => {
-    if (message) return message
-    if (status === "verifying" || verifyOtpMutation.isPending) {
-      return "Verifying code"
-    }
-    if (status === "resent") return "Code sent again"
-    return "Resend code"
-  }, [message, status, verifyOtpMutation.isPending])
-
-  const appendDigit = useCallback((digit: string) => {
-    setCode((currentCode) => {
-      if (currentCode.length >= OTP_LENGTH) return currentCode
-      return `${currentCode}${digit}`
-    })
+  const clearEntryFeedback = useCallback(() => {
     setMessage(null)
     setStatus((currentStatus) =>
       currentStatus === "error" ? "idle" : currentStatus,
     )
   }, [])
+
+  const updateCode = useCallback(
+    (nextCode: string) => {
+      setCode(normalizeOtpCode(nextCode))
+      clearEntryFeedback()
+    },
+    [clearEntryFeedback],
+  )
+
+  const appendDigit = useCallback(
+    (digit: string) => {
+      setCode((currentCode) => normalizeOtpCode(`${currentCode}${digit}`))
+      clearEntryFeedback()
+    },
+    [clearEntryFeedback],
+  )
 
   const removeLastDigit = useCallback(() => {
     setCode((currentCode) => currentCode.slice(0, -1))
-    setMessage(null)
-    setStatus((currentStatus) =>
-      currentStatus === "error" ? "idle" : currentStatus,
-    )
-  }, [])
+    clearEntryFeedback()
+  }, [clearEntryFeedback])
 
   const pasteCode = useCallback(async () => {
     const clipboardValue = await Clipboard.getStringAsync()
-    const digits = clipboardValue.replace(/\D/g, "").slice(0, OTP_LENGTH)
+    const digits = normalizeOtpCode(clipboardValue)
 
-    if (!digits) {
+    if (digits.length !== OTP_LENGTH) {
       setStatus("error")
       setMessage("No 6-digit code found on clipboard.")
       return
@@ -213,11 +243,21 @@ export default function VerifyEmailRoute() {
   }, [])
 
   const resendCode = useCallback(() => {
-    if (requestOtpMutation.isPending) return
+    if (requestOtpMutation.isPending || isVerifying) return
 
     if (isLocalFallback) {
       setStatus("resent")
-      setMessage("Local fallback active. Any 6-digit code will continue.")
+      setMessage(
+        shouldUseDevSkipOtp
+          ? `Use ${DEV_SKIP_OTP_CODE} in development mode.`
+          : "Local fallback active. Any 6-digit code will continue.",
+      )
+      if (shouldUseDevSkipOtp) {
+        Toast.show("use 123456", {
+          position: "top",
+          type: "info",
+        })
+      }
       return
     }
 
@@ -227,251 +267,151 @@ export default function VerifyEmailRoute() {
       mode: apiMode,
       name,
     })
-  }, [apiMode, businessName, email, isLocalFallback, name, requestOtpMutation])
+  }, [
+    apiMode,
+    businessName,
+    email,
+    isLocalFallback,
+    isVerifying,
+    name,
+    requestOtpMutation,
+    shouldUseDevSkipOtp,
+  ])
 
   return (
-    <View
-      style={[
-        styles.screen,
-        {
-          backgroundColor: colors.background,
-          paddingBottom: Math.max(insets.bottom, 12),
-          paddingTop: insets.top,
-        },
-      ]}
-    >
-      <AuthArtwork />
-      <KeyboardAwareScrollView
-        bottomOffset={40}
-        contentContainerStyle={styles.scrollContent}
-        disableScrollOnKeyboardHide
-        keyboardDismissMode="interactive"
-        keyboardShouldPersistTaps="handled"
-      >
-        <View className="min-h-full justify-between px-7 py-8">
-          <View className="items-center gap-8">
-            <View className="w-full items-center gap-2 pt-10">
-              <Text className="text-center text-[17px] font-extrabold uppercase leading-5 text-foreground">
-                {mode === "login" ? "Login code" : "Email verification"}
-              </Text>
-              <Text className="text-center text-[12px] leading-5 text-muted-foreground">
-                Enter the code sent to {emailDeliveryLabel}
-              </Text>
-            </View>
+    <MobileScreen contentClassName="px-5 py-5" keyboardBottomOffset={40}>
+      <View className="min-h-full justify-between gap-8">
+        <View className="flex-row items-center justify-between">
+          <Link href={authEntryHref} asChild>
+            <Pressable
+              accessibilityLabel="Use another email"
+              className="h-12 w-12 items-center justify-center rounded-full bg-muted active:bg-accent"
+              haptic
+              transition
+            >
+              <Icon className="size-base text-foreground" name="ChevronLeft" />
+            </Pressable>
+          </Link>
 
-            <OtpCodeCells value={code} />
-
-            <View className="items-center gap-3">
-              <Pressable
-                className="min-h-8 items-center justify-center px-4"
-                disabled={
-                  requestOtpMutation.isPending || status === "verifying"
-                }
-                haptic
-                onPress={resendCode}
-                transition
-              >
-                <Text
-                  className={
-                    status === "error"
-                      ? "text-center text-[12px] font-semibold text-destructive"
-                      : "text-center text-[12px] text-muted-foreground"
-                  }
-                >
-                  {requestOtpMutation.isPending ? "Sending code" : helperText}
-                </Text>
-              </Pressable>
-
-              {isLocalFallback ? (
-                <View className="flex-row items-center gap-2 border-y border-border py-2">
-                  <Icon className="size-sm text-warn" name="Info" />
-                  <Text className="text-[11px] font-medium text-muted-foreground">
-                    Local fallback: any 6 digits work.
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-          </View>
-
-          <View className="gap-4 pb-1">
-            <View className="overflow-hidden border-t border-l border-border">
-              {KEYPAD_ROWS.map((row) => (
-                <View className="flex-row" key={row.join("-")}>
-                  {row.map((key) => (
-                    <OtpKey
-                      disabled={status === "verifying"}
-                      key={key}
-                      label={key}
-                      onDigitPress={appendDigit}
-                      onDeletePress={removeLastDigit}
-                      onPastePress={pasteCode}
-                    />
-                  ))}
-                </View>
-              ))}
-            </View>
-
-            <Link href={mode === "login" ? "/login" : "/sign-up"} asChild>
-              <Pressable
-                className="min-h-9 items-center justify-center"
-                haptic
-                transition
-              >
-                <Text className="text-[12px] font-semibold text-muted-foreground">
-                  Use another email
-                </Text>
-              </Pressable>
-            </Link>
-          </View>
-        </View>
-      </KeyboardAwareScrollView>
-    </View>
-  )
-}
-
-function AuthArtwork() {
-  return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <LinearGradient
-        colors={["rgba(38, 239, 255, 0.95)", "rgba(46, 102, 255, 0.65)"]}
-        end={{ x: 1, y: 1 }}
-        start={{ x: 0, y: 0 }}
-        style={[styles.artFold, styles.artFoldLeft]}
-      />
-      <LinearGradient
-        colors={["rgba(252, 236, 114, 0.9)", "rgba(80, 97, 255, 0.74)"]}
-        end={{ x: 0, y: 1 }}
-        start={{ x: 1, y: 0 }}
-        style={[styles.artFold, styles.artFoldRight]}
-      />
-      <LinearGradient
-        colors={["rgba(42, 112, 255, 0.7)", "rgba(37, 244, 218, 0.42)"]}
-        end={{ x: 1, y: 0 }}
-        start={{ x: 0, y: 1 }}
-        style={[styles.artFold, styles.artFoldBottom]}
-      />
-    </View>
-  )
-}
-
-function OtpCodeCells({ value }: { value: string }) {
-  return (
-    <View className="flex-row gap-2.5">
-      {Array.from({ length: OTP_LENGTH }, (_, index) => {
-        const digit = value[index]
-        const isActive = index === value.length && value.length < OTP_LENGTH
-
-        return (
-          <View
-            className={
-              isActive || digit
-                ? "h-10 w-10 items-center justify-center rounded-lg border border-primary/70 bg-primary/10"
-                : "h-10 w-10 items-center justify-center rounded-lg border border-border bg-card/70"
-            }
-            key={`otp-cell-${index + 1}`}
+          <Text
+            className="max-w-[190px] text-center text-[11px] font-bold uppercase tracking-[1.3px] text-primary"
+            numberOfLines={1}
           >
-            <Text className="text-[18px] font-bold text-foreground">
-              {digit ? digit : ""}
+            {mode === "login" ? "Login code" : "Email verification"}
+          </Text>
+
+          <View className="h-12 w-12" />
+        </View>
+
+        <View className="items-center gap-7 py-4">
+          <View className="items-center gap-3">
+            <Text className="max-w-[280px] text-center text-[25px] font-extrabold leading-[31px] text-foreground">
+              Enter the code we sent you
             </Text>
-            {digit ? null : (
-              <View className="h-2 w-2 rounded-full bg-muted-foreground" />
-            )}
+            <Text className="max-w-[285px] text-center text-[13px] leading-5 text-muted-foreground">
+              We sent a 6-digit code to {emailDeliveryLabel}.
+            </Text>
           </View>
-        )
-      })}
-    </View>
+
+          <View
+            accessibilityLabel={VERIFY_ACTION_LABEL}
+            className="items-center gap-4"
+          >
+            <OtpInput
+              className="justify-center gap-1.5"
+              disableSystemKeyboard
+              length={OTP_LENGTH}
+              onChange={updateCode}
+              value={code}
+              variant="reference"
+            />
+
+            <VerificationResendLine
+              disabled={requestOtpMutation.isPending || isVerifying}
+              isError={status === "error"}
+              isSending={requestOtpMutation.isPending}
+              isVerifying={isVerifying}
+              message={message}
+              onPress={resendCode}
+              wasResent={status === "resent"}
+            />
+          </View>
+
+          {isLocalFallback || shouldUseDevSkipOtp ? (
+            <View className="max-w-[280px] flex-row items-center gap-2 rounded-full bg-muted px-3 py-2">
+              <Icon className="size-sm text-warn" name="Info" />
+              <Text className="shrink text-[11px] font-medium leading-4 text-muted-foreground">
+                {shouldUseDevSkipOtp
+                  ? `Development mode: use ${DEV_SKIP_OTP_CODE}.`
+                  : "Local fallback: any 6 digits work."}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+
+        <View className="gap-4 pb-8">
+          <OtpKeypad
+            disabled={isVerifying}
+            onDeletePress={removeLastDigit}
+            onDigitPress={appendDigit}
+            onPastePress={pasteCode}
+          />
+        </View>
+      </View>
+    </MobileScreen>
   )
 }
 
-function OtpKey({
+function VerificationResendLine({
   disabled,
-  label,
-  onDeletePress,
-  onDigitPress,
-  onPastePress,
+  isError,
+  isSending,
+  isVerifying,
+  message,
+  onPress,
+  wasResent,
 }: {
   disabled: boolean
-  label: (typeof KEYPAD_ROWS)[number][number]
-  onDeletePress: () => void
-  onDigitPress: (digit: string) => void
-  onPastePress: () => void
+  isError: boolean
+  isSending: boolean
+  isVerifying: boolean
+  message: string | null
+  onPress: () => void
+  wasResent: boolean
 }) {
-  const isDigit = /^\d$/.test(label)
+  const leadCopy = useMemo(() => {
+    if (isSending) return "Sending code"
+    if (isVerifying) return "Verifying code"
+    if (isError && message) return message
+    if (wasResent) return "Code sent again"
+    return "Didn't receive it?"
+  }, [isError, isSending, isVerifying, message, wasResent])
 
-  if (label === "paste") {
-    return (
-      <Pressable
-        accessibilityLabel="Paste verification code"
-        className="h-[70px] flex-1 items-center justify-center border-r border-b border-border active:bg-accent"
-        disabled={disabled}
-        haptic
-        onPress={onPastePress}
-        transition
-      >
-        <Icon
-          className="size-base text-muted-foreground"
-          name="ClipboardList"
-        />
-      </Pressable>
-    )
-  }
-
-  if (label === "delete") {
-    return (
-      <Pressable
-        className="h-[70px] flex-1 items-center justify-center border-r border-b border-border active:bg-accent"
-        disabled={disabled}
-        haptic
-        onPress={onDeletePress}
-        transition
-      >
-        <Icon className="size-base text-foreground" name="Delete" />
-      </Pressable>
-    )
-  }
+  const actionCopy = isSending || isVerifying ? null : "tap to resend"
 
   return (
     <Pressable
-      className="h-[70px] flex-1 items-center justify-center border-r border-b border-border active:bg-accent"
-      disabled={disabled || !isDigit}
+      accessibilityLabel={RESEND_ACTION_LABEL}
+      className="min-h-8 flex-row flex-wrap items-center justify-center gap-1 px-3"
+      disabled={disabled}
       haptic
-      onPress={() => onDigitPress(label)}
+      onPress={onPress}
       transition
     >
-      <Text className="text-[16px] font-medium text-foreground">{label}</Text>
+      <Text
+        className={
+          isError
+            ? "text-center text-[12px] font-semibold leading-5 text-destructive"
+            : "text-center text-[12px] leading-5 text-muted-foreground"
+        }
+      >
+        {leadCopy}
+      </Text>
+      {actionCopy ? (
+        <Text className="text-center text-[12px] font-bold leading-5 text-foreground">
+          {actionCopy}
+        </Text>
+      ) : null}
     </Pressable>
   )
 }
-
-const styles = StyleSheet.create({
-  artFold: {
-    borderRadius: 34,
-    height: 128,
-    opacity: 0.9,
-    position: "absolute",
-    width: 88,
-  },
-  artFoldBottom: {
-    bottom: 66,
-    height: 144,
-    left: -42,
-    transform: [{ rotate: "-28deg" }],
-    width: 108,
-  },
-  artFoldLeft: {
-    left: -36,
-    top: 28,
-    transform: [{ rotate: "38deg" }],
-  },
-  artFoldRight: {
-    right: -36,
-    top: 118,
-    transform: [{ rotate: "-35deg" }],
-  },
-  screen: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-})

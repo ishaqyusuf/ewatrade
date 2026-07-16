@@ -16,8 +16,9 @@ const SURFACE_CONTRACTS = [
   },
   {
     file: "src/app/verify-email.tsx",
-    markers: ["MobileScreen", "OtpInput", "ActionButton"],
-    reason: "OTP entry must stay keyboard-safe and use the shared OTP cells",
+    markers: ["MobileScreen", "OtpInput", "OtpKeypad"],
+    reason:
+      "OTP entry must stay keyboard-safe and use the shared OTP cells/keypad",
   },
   {
     file: "src/app/staff-onboarding.tsx",

@@ -1,6 +1,6 @@
 import type { ExpoConfig } from "expo/config"
 
-export const UPDATE_VERSION = "2026.07.15"
+export const UPDATE_VERSION = "2026.07.16"
 const PROJECT_ID = "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b"
 const appVariant =
   process.env.APP_VARIANT ??
@@ -14,6 +14,9 @@ const autoUpdateOnForeground =
   process.env.EXPO_PUBLIC_AUTO_UPDATE_ON_FOREGROUND !== "false"
 const autoUpdateForegroundCooldownMs = Number(
   process.env.EXPO_PUBLIC_AUTO_UPDATE_FOREGROUND_COOLDOWN_MS ?? 5 * 60 * 1000,
+)
+const skipOtp = isTruthyEnvFlag(
+  process.env.SKIP_OTP ?? process.env.EXPO_PUBLIC_SKIP_OTP,
 )
 const googleIosUrlScheme = getGoogleIosUrlScheme(
   process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ??
@@ -113,6 +116,13 @@ const config: ExpoConfig = {
     "expo-font",
     "expo-web-browser",
     [
+      "expo-local-authentication",
+      {
+        faceIDPermission:
+          "Allow $(PRODUCT_NAME) to use Face ID to unlock your EwaTrade workspace.",
+      },
+    ],
+    [
       "expo-image-picker",
       {
         cameraPermission:
@@ -156,6 +166,7 @@ const config: ExpoConfig = {
     )
       ? autoUpdateForegroundCooldownMs
       : 5 * 60 * 1000,
+    skipOtp,
     updateVersion: UPDATE_VERSION,
     eas: {
       projectId: PROJECT_ID,
@@ -190,4 +201,10 @@ function getGoogleIosUrlScheme(value?: string) {
   if (!clientId.endsWith(googleSuffix)) return undefined
 
   return `com.googleusercontent.apps.${clientId.slice(0, -googleSuffix.length)}`
+}
+
+function isTruthyEnvFlag(value: string | undefined) {
+  if (!value) return false
+
+  return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase())
 }

@@ -408,8 +408,140 @@ describe("mobile auth queries", () => {
     expect(payload.codeHash).not.toBe(otp.code)
   })
 
-  test("rejects an incorrect OTP without consuming the pending verification", async () => {
+  test("creates a normalized OTP verification with an explicit development code", async () => {
     const db = createMockMobileAuthDb()
+
+    const otp = await createMobileOwnerOtp(db.client, {
+      code: "123456",
+      email: " OWNER@Example.COM ",
+      mode: "sign_up",
+    })
+
+    expect(otp.email).toBe("owner@example.com")
+    expect(otp.code).toBe("123456")
+    expect(db.verifications).toHaveLength(1)
+    expect(db.verifications[0]?.value).not.toContain("123456")
+
+    await expect(
+      verifyMobileOwnerOtp(db.client, {
+        businessName: "Main Market Store",
+        code: "123456",
+        email: "owner@example.com",
+        mode: "sign_up",
+        name: "Store Owner",
+      }),
+    ).resolves.toMatchObject({
+      profile: {
+        businessName: "Main Market Store",
+        email: "owner@example.com",
+      },
+    })
+  })
+
+  test("does not create a login OTP when no account exists for the email", async () => {
+    const db = createMockMobileAuthDb()
+
+    await expect(
+      createMobileOwnerOtp(db.client, {
+        email: "missing-owner@example.com",
+        mode: "login",
+      }),
+    ).rejects.toThrow("No owner account exists for this email yet.")
+
+    expect(db.verifications).toHaveLength(0)
+  })
+
+  test("creates a login OTP only after the account has business access", async () => {
+    const user = {
+      email: "owner@example.com",
+      id: "user_owner",
+      name: "Owner Name",
+    }
+    const db = createMockMobileAuthDb({
+      memberships: [
+        {
+          role: "OWNER",
+          status: "ACTIVE",
+          tenant: {
+            id: "tenant_123",
+            name: "Main Market Store",
+            slug: "main-market-store",
+            stores: [
+              {
+                id: "store_123",
+                name: "Main Market Store",
+                status: "ACTIVE",
+              },
+            ],
+          },
+          userId: user.id,
+        },
+      ],
+      users: [user],
+    })
+
+    const otp = await createMobileOwnerOtp(db.client, {
+      email: "OWNER@example.com",
+      mode: "login",
+    })
+
+    expect(otp.email).toBe("owner@example.com")
+    expect(otp.code).toMatch(/^\d{6}$/)
+    expect(db.verifications).toHaveLength(1)
+    expect(db.verifications[0]?.identifier).toBe(
+      "mobile-owner-auth:login:owner@example.com",
+    )
+  })
+
+  test("does not create a login OTP when the account has no active business", async () => {
+    const db = createMockMobileAuthDb({
+      users: [
+        {
+          email: "owner@example.com",
+          id: "user_owner",
+          name: "Owner Name",
+        },
+      ],
+    })
+
+    await expect(
+      createMobileOwnerOtp(db.client, {
+        email: "owner@example.com",
+        mode: "login",
+      }),
+    ).rejects.toThrow("No active business is available for this account.")
+
+    expect(db.verifications).toHaveLength(0)
+  })
+
+  test("rejects an incorrect OTP without consuming the pending verification", async () => {
+    const user = {
+      email: "owner@example.com",
+      id: "user_owner",
+      name: "Owner Name",
+    }
+    const db = createMockMobileAuthDb({
+      memberships: [
+        {
+          role: "OWNER",
+          status: "ACTIVE",
+          tenant: {
+            id: "tenant_123",
+            name: "Main Market Store",
+            slug: "main-market-store",
+            stores: [
+              {
+                id: "store_123",
+                name: "Main Market Store",
+                status: "ACTIVE",
+              },
+            ],
+          },
+          userId: user.id,
+        },
+      ],
+      users: [user],
+    })
     const otp = await createMobileOwnerOtp(db.client, {
       email: "owner@example.com",
       mode: "login",
