@@ -222,6 +222,13 @@ export function CustomerBookContent({
       : productionCustomersQuery.isFetching
         ? "Refreshing production customers."
         : "Production customer book includes sales and shared-link requests."
+  const shouldShowSourceNotice =
+    sourceLabel !== "Online" && sourceLabel !== "Refreshing"
+  const emptyStateClassName = presentation === "screen" ? "mx-4" : "mx-5"
+  const listFooterClassName =
+    presentation === "screen" ? "px-4 pt-3 pb-6" : "px-5 pt-3 pb-6"
+  const listHeaderClassName =
+    presentation === "screen" ? "gap-5 px-4 pt-1 pb-4" : "gap-5 px-5 pt-1 pb-4"
 
   const listProps = {
     contentContainerStyle: { paddingBottom: 240 },
@@ -230,33 +237,35 @@ export function CustomerBookContent({
     keyboardShouldPersistTaps: "handled" as const,
     ListEmptyComponent: (
       <EmptyState
-        className="mx-5"
+        className={emptyStateClassName}
         icon="Users"
         message="New customers appear here after a sale or shared-link request."
         title="No customers found"
       />
     ),
     ListFooterComponent: (
-      <View className="px-5 pt-3 pb-6">
+      <View className={listFooterClassName}>
         <ActionButton onPress={onComplete} variant="outline">
           Done
         </ActionButton>
       </View>
     ),
     ListHeaderComponent: (
-      <View className="gap-5 px-5 pt-1 pb-4">
+      <View className={listHeaderClassName}>
         <SecondarySheetHeader
           description="Repeat customers are saved from sales and shared product links."
           icon="Users"
           title="Customer book"
         />
 
-        <StatusBanner
-          icon={sourceLabel === "Online" ? "CircleCheck" : "Clock"}
-          message={sourceDetail}
-          title={`Customer source: ${sourceLabel}`}
-          tone={sourceLabel === "Online" ? "success" : "warning"}
-        />
+        {shouldShowSourceNotice ? (
+          <StatusBanner
+            icon="Clock"
+            message={sourceDetail}
+            title={sourceLabel}
+            tone="warning"
+          />
+        ) : null}
 
         <FormField
           autoCapitalize="words"

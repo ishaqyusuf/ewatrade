@@ -156,12 +156,14 @@ Subscription support is included as a plan and entitlement foundation with three
 - After first authenticated entry, the app checks whether the active business has at least one sellable product/inventory setup.
 - If the business has no sellable product/inventory setup, the app shows a first-product modal/wizard before normal dashboard use.
 - The mobile dashboard now auto-opens the first-product setup sheet once per active empty business, using production summary inventory counts when online and local empty-inventory state as the offline or production-unavailable fallback.
-- The first-product wizard is intentionally short: item name, primary unit name, primary unit price, optional sub-units/variants with prices, then starting stock.
-- The first-product wizard should use a flat guided setup treatment with progress, line-style inputs, template pills, optional variant divider rows, and compact stock summary rows rather than decorative nested cards.
+- The first-product wizard is intentionally short: item name, media, then either a primary unit with price/current stock or variant rows with their own price/current stock.
+- The first-product wizard should use a flat guided setup treatment with progress, line-style inputs, manual unit entry, optional variant divider rows, and compact stock summary rows rather than decorative nested cards.
 - The mobile first-product wizard should create the product through `retailOps.createProduct` when online, persist returned product/unit ids into local state as synced, and use the local queued product setup path only while offline.
-- Unit suggestions for the first-product wizard should come from `retailOps.unitTemplates` when online, with local bag/weight defaults as the offline fallback until the mobile picker is wired.
-- When the user chooses an online durable unit template, the first-product wizard should pass its `unitTemplateKey` to `retailOps.createProduct` while still allowing manual unit names/prices.
-- The first mobile unit-template picker now reads `retailOps.unitTemplates` when online, falls back to local bag/kilogram presets offline, pre-fills common sub-unit names, keeps prices manual, and passes `unitTemplateKey` through the production product setup mutation when a template is selected.
+- The first-product wizard no longer shows unit-template choices or sends `unitTemplateKey`; owners enter the primary unit manually only when there are no variants, and add optional manual variants/sub-units with their own prices, stock, and conversion multipliers.
+- Once at least one variant exists, primary-unit fields are hidden and no longer required in the mobile UI; product creation still sends an internal non-conflicting parent unit with zero stock to satisfy the current backend product setup contract.
+- When the primary unit field is focused, the mobile wizard shows a horizontal keyboard accessory of quick unit suggestions, filtered by typed text and falling back to the full suggestion list when empty or unmatched.
+- System-suggested variant labels such as Size, Color, Unit, Material, Package, Quality, Service level, and Turnaround should open a compact value-entry sheet with common value chips mapped from the selected label.
+- `retailOps.unitTemplates` remains part of the product-unit API for reusable template infrastructure outside this first-product mobile setup surface.
 - Product is the parent entity. A sellable unit or variant is the selectable sale entity.
 - If a product has variants, the product parent row appears as a label/header and is not directly selectable in create-sale.
 - If a product has no variants, the default primary unit row is selectable in create-sale.

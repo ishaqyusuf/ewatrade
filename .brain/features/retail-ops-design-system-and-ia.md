@@ -80,6 +80,7 @@ Form and modal rules:
 - App-lock PIN screens follow the provided dark wallet-style reference: compact top title, optional close control in setup/manage, segmented 6-digit choice treatment, circular PIN cells, sparse numeric keypad, fingerprint action in the bottom-left keypad slot when available, and delete in the bottom-right slot.
 - Bottom sheets are for short, focused choices and quick actions.
 - Workflows that are over half-screen, multi-section, or keyboard-heavy should use full-screen stack modal routes with `MobileScreen` keyboard-safe layout and sticky primary CTA placement where the form is long.
+- Full-screen stack workflow routes must use `WorkflowModalScreen` so authentication/role redirects, close-header geometry, compact horizontal padding, status-bar background, and light/dark status-bar icon style stay consistent across item setup, stock, staff, sales, reports, links, and settings flows. The shell should show the workflow title directly without an extra decorative eyebrow, and reused sheet bodies should use tighter screen-mode horizontal padding than bottom-sheet mode.
 - Touched forms should prefer spacing, labels, helper text, status banners, and operational rows over repeated nested card/border wrappers.
 
 ## Primary Roles
@@ -483,12 +484,13 @@ Splash, login, sign-up, and OTP verification use shared auth primitives so the e
 
 The first-product setup sheet is the empty-business bridge after auth/business entry.
 
-- The setup remains a staged bottom sheet: item details first, starting stock second.
+- The setup remains a single guided form: item details, media, and either primary-unit price/stock or variant price/stock rows.
 - Guided setup sheets should use reusable setup-flow primitives for the progress rail, section framing, selectable pills, inline notices, and compact summary rows instead of rebuilding one-off card stacks.
-- First-product setup uses flat line-style fields, unit-template pills, divider-based variant rows, and stock summary rows so the flow stays lightweight while remaining operationally clear.
-- Setup source, product-limit, and submission error states use shared status banners.
-- Current stock uses the shared `QuantityStepper` so users get plus, minus, and numeric keyboard entry.
-- Unit templates remain available for common sub-units, while manual variants stay optional.
+- First-product setup uses flat line-style fields, manual unit entry with a focused keyboard suggestion bar, divider-based variant rows, and inline stock fields so the flow stays lightweight while remaining operationally clear.
+- Setup source, product-limit, and submission error states use shared status banners, but normal online/production-ready paths should not show redundant confirmation copy.
+- Current stock is captured inline beside the primary price when there are no variants, or inside each variant row when variants exist.
+- Manual sub-units and variants stay optional; the first-product setup surface does not show reusable unit-template choices. Primary-unit suggestions appear only as compact keyboard-time chips that write into the manual field.
+- Variant value entry should use a compact bottom sheet sized to the needed editor content, with mapped common-value chips for system variant labels before the manual value field.
 - Empty variant copy must make it clear that users can skip variants and continue with only the primary unit.
 - Production product creation, local/offline fallback, opening-stock movement, and sync queue behavior stay unchanged.
 
@@ -512,7 +514,7 @@ Clock-in and closeout are daily operational checkpoints, so they should feel lik
 - `SessionSourcePanel`, `SessionStatTile`, `SessionInventoryLine`, `SessionVarianceRow`, and `SessionSectionHeader` are the shared primitives for opening sessions, closing sessions, stock declarations, payment variance, and session source state.
 - Opening and closing stock rows should use flat divider treatment, compact expected-stock badges, keyboard-safe quantity inputs, and semantic success/destructive variance text.
 - Payment totals and cash/transfer variance rows should use the same divider-based summary and variance primitives instead of local metric cards.
-- Pending-sync, no-sales, production/local source, submit-error, empty-inventory, and empty-search states should use shared `StatusBanner` or `EmptyState` primitives with semantic warning/destructive/success tokens.
+- Pending-sync, no-sales, degraded/local source, submit-error, empty-inventory, and empty-search states should use shared `StatusBanner` or `EmptyState` primitives with semantic warning/destructive/success tokens. Normal online/production-ready source states should stay quiet unless the user needs to act.
 - Production open-session, production close-session, local/offline fallback, pending-sync protection, and bounded opening/closing inventory rows must remain unchanged while the visual layer evolves.
 - `qa:inventory-operations-flow` protects session reconciliation primitives, production/local session behavior, bounded rows, and semantic shared UI usage.
 
@@ -523,11 +525,11 @@ The create-sale workflow is the core mobile POS path and should stay optimized f
 - Product and variant selection remains virtualized with `BottomSheetSectionList`; product parents with variants stay display-only while primary units and variant rows are selectable.
 - Item rows, payment choices, customer options, and total preview use reusable sale-flow primitives for selectable rows, segmented choices, and ticket-like total summaries instead of local card-heavy widgets.
 - The visual rhythm should stay flat and fast: divider-based sellable rows, rounded selected indicators, semantic stock/payment/customer status, and a prominent total before payment/customer confirmation.
-- Sale source, rep session, insufficient stock, submit error, and empty-product states use shared `StatusBanner` and `EmptyState` primitives.
+- Sale sync-required/offline, rep session, insufficient stock, submit error, and empty-product states use shared `StatusBanner` and `EmptyState` primitives.
 - Stock, selected-customer, and customer-source labels use `StatusBadge` so operational status treatment is consistent with dashboards and setup sheets.
 - Checkout keeps the shared `QuantityStepper`, nearby total preview, cash/transfer selector, customer book lookup, and typed new-customer fallback together in the same keyboard-safe sheet.
 - Production sale creation, local/offline fallback recording, rep session validation, and sync queue behavior must remain unchanged when the visual layer is updated.
-- `qa:create-sale-flow` continues to protect the sale list, quantity, payment, customer, offline/local fallback, and source status coverage.
+- `qa:create-sale-flow` continues to protect the sale list, quantity, payment, customer, offline/local fallback, and sync-required status coverage.
 
 ## Product And Inventory Management Redesign
 
@@ -538,7 +540,7 @@ Inventory management surfaces should reuse one compact flat product-row vocabula
 - Product rows should identify the parent item, primary unit, variant count, and stock status without making parent rows look like hidden variants.
 - Variant/sub-unit rows should read as sellable or convertible units with their own stock and price/conversion labels.
 - Stock intake uses the same flat segmented controls for restock/adjust and adjustment direction/reason choices so inventory operations feel like one focused tool.
-- Stock intake and unit conversion sheets use shared `StatusBanner` and `EmptyState` for online/local source, shortage, empty inventory, empty search, and submit error states.
+- Stock intake and unit conversion sheets use shared `StatusBanner` and `EmptyState` for offline/sync-required source states, shortage, empty inventory, empty search, and submit error states.
 - Low and empty stock states should use warning/destructive status tones; healthy stock should use success treatment.
 - Production stock intake, stock adjustment, unit conversion, local/offline fallback, and stock movement ledger behavior must stay unchanged while the visual layer evolves.
 - `qa:inventory-operations-flow` protects the reusable flat inventory primitives, source states, bounded product/unit/variant lists, stock shortages, tRPC mutations, and local queue behavior.
@@ -550,12 +552,12 @@ Staff, customer, subscription, and business settings surfaces should feel like c
 - `SecondarySheetHeader` and `SecondaryOperationalRow` are the shared primitives for secondary mobile sheets that need a compact header plus staff, customer, business, subscription, or settings rows.
 - Secondary rows should use flat divider treatment, round muted icons, strong primary labels, compact metadata, and semantic badges instead of local card-heavy row widgets.
 - Selectable secondary rows support haptic press feedback, selected border treatment, disabled opacity, and active background feedback so business and plan choices do not need local pressable card implementations.
-- Staff invite stays short: attendant name, email address, cashier role submission, clear email invite guidance, and source/limit/error states through `StatusBanner`.
+- Staff invite stays short: attendant name, email address, cashier role submission, clear email invite guidance, and degraded source/limit/error states through `StatusBanner`.
 - Staff list rows use `SecondaryOperationalRow` for name, email, role/invite metadata, production/local source, and active/pending status.
 - Staff onboarding uses `SecondarySheetHeader`, `SecondaryOperationalRow`, shared status badges, and status banners for invite lookup, wrong-account handling, role label, account context, and setup errors while keeping only the required name/display-name fields.
 - `qa:staff-flow` must continue to protect the staff onboarding screen from reverting to local card-heavy invite summaries.
 - Customer book remains virtualized and uses `SecondaryOperationalRow` plus shared badges for order count, synced customer, and pending sync states.
-- Customer book source, empty search, and offline/local fallback states use shared banners and empty states.
+- Customer book degraded source, empty search, and offline/local fallback states use shared banners and empty states.
 - Subscription plan management shows current plan, usage, tier comparison, and provider-neutral upgrade handoff with `SecondaryOperationalRow` and status badges instead of landing-page copy or local plan cards.
 - Business switching groups current businesses, search, active status, business creation, and plan-limit warnings in the same calm sheet vocabulary, using selectable secondary rows for business workspaces.
 - `qa:customer-book-flow`, `qa:staff-flow`, and `qa:subscription-flow` protect these shared primitives, production/local fallbacks, bounded rows, and role/billing boundaries.

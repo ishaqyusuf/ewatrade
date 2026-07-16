@@ -439,7 +439,7 @@ export function ServiceOrdersContent() {
   return (
     <KeyboardAwareScrollView
       className="flex-1"
-      contentContainerClassName="gap-5 px-5 pb-10"
+      contentContainerClassName="gap-5 px-4 pb-10"
       disableScrollOnKeyboardHide
       keyboardDismissMode="interactive"
       keyboardShouldPersistTaps="handled"

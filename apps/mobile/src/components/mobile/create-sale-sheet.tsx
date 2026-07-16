@@ -305,8 +305,7 @@ export function CreateSaleContent({
   presentation = "sheet",
 }: CreateSaleContentProps) {
   const trpc = useTRPC()
-  const checkoutBottomSheetListRef =
-    useRef<BottomSheetSectionListMethods>(null)
+  const checkoutBottomSheetListRef = useRef<BottomSheetSectionListMethods>(null)
   const checkoutScreenListRef =
     useRef<SectionList<SaleListItem, SaleListSection>>(null)
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
@@ -405,16 +404,9 @@ export function CreateSaleContent({
     quantityValue > 0 &&
     hasEnoughStock &&
     !createProductionSaleMutation.isPending
-  const sourceLabel = canCreateProductionSale
-    ? "Online"
-    : isOfflineMode
-      ? "Local"
-      : "Local queue"
-  const sourceDetail = canCreateProductionSale
-    ? "This sale will be recorded in production immediately."
-    : isOfflineMode
-      ? "This sale will be queued locally and synced later."
-      : "Waiting for the product unit or rep session to sync before direct production sale."
+  const sourceDetail = isOfflineMode
+    ? "This sale will sync when connection is ready."
+    : "Waiting for the product unit or rep session to sync before direct production sale."
   const localCustomerOptions = useMemo(() => {
     const normalizedSearch = normalizedCustomerSearch.toLowerCase()
     const localCustomers = normalizedSearch
@@ -614,218 +606,220 @@ export function CreateSaleContent({
   }
 
   const listProps = {
-    contentContainerStyle: { paddingBottom: 240, paddingHorizontal: 20 },
+    contentContainerStyle: {
+      paddingBottom: 240,
+      paddingHorizontal: presentation === "screen" ? 16 : 20,
+    },
     keyExtractor: (item: SaleListItem) =>
       item.kind === "sellable" ? item.item.id : item.kind,
     keyboardShouldPersistTaps: "handled" as const,
     ListHeaderComponent: (
-            <View className="gap-5 pt-1 pb-4">
-              <View className="gap-2">
-                <Text className="text-xl font-bold text-foreground">
-                  Select item
-                </Text>
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  Choose a product unit or variant, set quantity, then confirm
-                  payment and customer.
-                </Text>
-              </View>
+      <View className="gap-5 pt-1 pb-4">
+        <View className="gap-2">
+          <Text className="text-xl font-bold text-foreground">Select item</Text>
+          <Text className="text-sm leading-5 text-muted-foreground">
+            Choose a product unit or variant, set quantity, then confirm payment
+            and customer.
+          </Text>
+        </View>
 
-              <StatusBanner
-                icon={canCreateProductionSale ? "CircleCheck" : "Clock"}
-                message={sourceDetail}
-                title={`Sale source: ${sourceLabel}`}
-                tone={canCreateProductionSale ? "success" : "warning"}
-              />
+        {!canCreateProductionSale ? (
+          <StatusBanner
+            icon="Clock"
+            message={sourceDetail}
+            title={isOfflineMode ? "Offline sale" : "Sync required"}
+            tone="warning"
+          />
+        ) : null}
 
-              {products.length === 0 ? (
-                <EmptyState
-                  icon="Warehouse"
-                  message="Create at least one item before recording a sale."
-                  title="Add inventory first"
-                />
-              ) : null}
-            </View>
+        {products.length === 0 ? (
+          <EmptyState
+            icon="Warehouse"
+            message="Create at least one item before recording a sale."
+            title="Add inventory first"
+          />
+        ) : null}
+      </View>
     ),
     renderItem: ({ item }: { item: SaleListItem }) => {
-            if (item.kind === "sellable") {
-              return (
-                <View className="pb-3">
-                  <SellableOption
-                    item={item.item}
-                    onPress={() => selectItem(item.item)}
-                    selected={selectedItemId === item.item.id}
-                  />
-                </View>
-              )
-            }
+      if (item.kind === "sellable") {
+        return (
+          <View className="pb-3">
+            <SellableOption
+              item={item.item}
+              onPress={() => selectItem(item.item)}
+              selected={selectedItemId === item.item.id}
+            />
+          </View>
+        )
+      }
 
-            if (item.kind === "quantity") {
-              return (
-                <View className="pt-5 pb-3">
-                  <QuantityStepper
-                    helper={selectedItem ? selectedItem.unitName : undefined}
-                    onChangeText={setQuantity}
-                    onFocus={scrollToQuantityInput}
-                    value={quantity}
-                  />
-                </View>
-              )
-            }
+      if (item.kind === "quantity") {
+        return (
+          <View className="pt-5 pb-3">
+            <QuantityStepper
+              helper={selectedItem ? selectedItem.unitName : undefined}
+              onChangeText={setQuantity}
+              onFocus={scrollToQuantityInput}
+              value={quantity}
+            />
+          </View>
+        )
+      }
 
-            if (item.kind === "stock-warning" && selectedItem) {
-              return (
-                <View className="pb-3">
-                  <StatusBanner
-                    icon="TriangleAlert"
-                    message={`Only ${selectedItem.stock} ${selectedItem.unitName} available.`}
-                    title="Insufficient stock"
-                    tone="destructive"
-                  />
-                </View>
-              )
-            }
+      if (item.kind === "stock-warning" && selectedItem) {
+        return (
+          <View className="pb-3">
+            <StatusBanner
+              icon="TriangleAlert"
+              message={`Only ${selectedItem.stock} ${selectedItem.unitName} available.`}
+              title="Insufficient stock"
+              tone="destructive"
+            />
+          </View>
+        )
+      }
 
-            if (item.kind === "session-warning") {
-              return (
-                <View className="pb-3">
-                  <StatusBanner
-                    icon="TriangleAlert"
-                    message="Clock in and confirm opening stock before completing a sale."
-                    title="Rep session required"
-                    tone="warning"
-                  />
-                </View>
-              )
-            }
+      if (item.kind === "session-warning") {
+        return (
+          <View className="pb-3">
+            <StatusBanner
+              icon="TriangleAlert"
+              message="Clock in and confirm opening stock before completing a sale."
+              title="Rep session required"
+              tone="warning"
+            />
+          </View>
+        )
+      }
 
-            if (item.kind === "submit-error" && submitError) {
-              return (
-                <View className="pb-3">
-                  <StatusBanner
-                    icon="TriangleAlert"
-                    message={submitError}
-                    title="Sale was not completed"
-                    tone="destructive"
-                  />
-                </View>
-              )
-            }
+      if (item.kind === "submit-error" && submitError) {
+        return (
+          <View className="pb-3">
+            <StatusBanner
+              icon="TriangleAlert"
+              message={submitError}
+              title="Sale was not completed"
+              tone="destructive"
+            />
+          </View>
+        )
+      }
 
-            if (item.kind === "total") {
-              return (
-                <View className="pb-5">
-                  <SaleTotalSummary
-                    helper={selectedItem?.unitName}
-                    label="Total"
-                    value={formatMoney(total, "NGN")}
-                  />
-                </View>
-              )
-            }
+      if (item.kind === "total") {
+        return (
+          <View className="pb-5">
+            <SaleTotalSummary
+              helper={selectedItem?.unitName}
+              label="Total"
+              value={formatMoney(total, "NGN")}
+            />
+          </View>
+        )
+      }
 
-            if (item.kind === "payment") {
-              return (
-                <View className="gap-3 pb-5">
-                  <Text className="text-sm font-semibold text-foreground">
-                    Payment method
+      if (item.kind === "payment") {
+        return (
+          <View className="gap-3 pb-5">
+            <Text className="text-sm font-semibold text-foreground">
+              Payment method
+            </Text>
+            <View className="flex-row gap-3">
+              <PaymentOption
+                label="Cash"
+                onPress={() => setPaymentMethod("cash")}
+                selected={paymentMethod === "cash"}
+              />
+              <PaymentOption
+                label="Transfer"
+                onPress={() => setPaymentMethod("transfer")}
+                selected={paymentMethod === "transfer"}
+              />
+            </View>
+          </View>
+        )
+      }
+
+      if (item.kind === "customer") {
+        return (
+          <View className="gap-3 pb-5">
+            <FormField
+              autoCapitalize="words"
+              helper={
+                isOfflineMode
+                  ? "Searching customers saved on this device."
+                  : productionCustomersQuery.isError
+                    ? "Production customer search is unavailable, showing local customers."
+                    : "Type a new name or pick a saved customer."
+              }
+              label="Customer"
+              leadingIcon="User"
+              onChangeText={updateCustomerName}
+              onFocus={scrollToCustomerInput}
+              placeholder="Enter customer name"
+              value={customerName}
+            />
+            {visibleCustomerOptions.length > 0 ? (
+              <View className="gap-2">
+                <View className="flex-row items-center justify-between gap-3">
+                  <Text className="text-xs font-bold uppercase text-muted-foreground">
+                    Customer book
                   </Text>
-                  <View className="flex-row gap-3">
-                    <PaymentOption
-                      label="Cash"
-                      onPress={() => setPaymentMethod("cash")}
-                      selected={paymentMethod === "cash"}
-                    />
-                    <PaymentOption
-                      label="Transfer"
-                      onPress={() => setPaymentMethod("transfer")}
-                      selected={paymentMethod === "transfer"}
-                    />
-                  </View>
-                </View>
-              )
-            }
-
-            if (item.kind === "customer") {
-              return (
-                <View className="gap-3 pb-5">
-                  <FormField
-                    autoCapitalize="words"
-                    helper={
-                      isOfflineMode
-                        ? "Searching customers saved on this device."
-                        : productionCustomersQuery.isError
-                          ? "Production customer search is unavailable, showing local customers."
-                          : "Type a new name or pick a saved customer."
+                  <StatusBadge
+                    label={
+                      isOfflineMode || productionCustomersQuery.isError
+                        ? "Local"
+                        : productionCustomersQuery.isFetching
+                          ? "Refreshing"
+                          : "Online"
                     }
-                    label="Customer"
-                    leadingIcon="User"
-                    onChangeText={updateCustomerName}
-                    onFocus={scrollToCustomerInput}
-                    placeholder="Enter customer name"
-                    value={customerName}
+                    tone={
+                      isOfflineMode || productionCustomersQuery.isError
+                        ? "warning"
+                        : "success"
+                    }
                   />
-                  {visibleCustomerOptions.length > 0 ? (
-                    <View className="gap-2">
-                      <View className="flex-row items-center justify-between gap-3">
-                        <Text className="text-xs font-bold uppercase text-muted-foreground">
-                          Customer book
-                        </Text>
-                        <StatusBadge
-                          label={
-                            isOfflineMode || productionCustomersQuery.isError
-                              ? "Local"
-                              : productionCustomersQuery.isFetching
-                                ? "Refreshing"
-                                : "Online"
-                          }
-                          tone={
-                            isOfflineMode || productionCustomersQuery.isError
-                              ? "warning"
-                              : "success"
-                          }
-                        />
-                      </View>
-                      <View className="flex-row flex-wrap gap-2">
-                        {visibleCustomerOptions.map((customer) => (
-                          <CustomerOptionChip
-                            customer={customer}
-                            key={customer.id}
-                            onPress={() => selectCustomer(customer)}
-                            selected={selectedCustomer?.id === customer.id}
-                          />
-                        ))}
-                      </View>
-                    </View>
-                  ) : null}
                 </View>
-              )
-            }
-
-            if (item.kind === "submit") {
-              return (
-                <View className="pb-6">
-                  <ActionButton
-                    disabled={!canSubmit}
-                    isLoading={createProductionSaleMutation.isPending}
-                    loadingLabel="Recording sale"
-                    onPress={submit}
-                  >
-                    Complete transaction
-                  </ActionButton>
+                <View className="flex-row flex-wrap gap-2">
+                  {visibleCustomerOptions.map((customer) => (
+                    <CustomerOptionChip
+                      customer={customer}
+                      key={customer.id}
+                      onPress={() => selectCustomer(customer)}
+                      selected={selectedCustomer?.id === customer.id}
+                    />
+                  ))}
                 </View>
-              )
-            }
+              </View>
+            ) : null}
+          </View>
+        )
+      }
 
-            return null
-          },
+      if (item.kind === "submit") {
+        return (
+          <View className="pb-6">
+            <ActionButton
+              disabled={!canSubmit}
+              isLoading={createProductionSaleMutation.isPending}
+              loadingLabel="Recording sale"
+              onPress={submit}
+            >
+              Complete transaction
+            </ActionButton>
+          </View>
+        )
+      }
+
+      return null
+    },
     renderSectionHeader: ({ section }: { section: SaleListSection }) =>
-            section.product &&
-            !section.data.some(
-              (row) =>
-                row.kind === "sellable" && row.item.id === selectedItemId,
-            ) ? (
-              <ProductSectionHeader product={section.product} />
-            ) : null,
+      section.product &&
+      !section.data.some(
+        (row) => row.kind === "sellable" && row.item.id === selectedItemId,
+      ) ? (
+        <ProductSectionHeader product={section.product} />
+      ) : null,
     sections: saleSections,
     stickySectionHeadersEnabled: false,
   }

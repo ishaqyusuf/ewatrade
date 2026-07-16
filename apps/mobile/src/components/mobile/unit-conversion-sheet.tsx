@@ -205,16 +205,9 @@ export function UnitConversionContent({
     outputQuantityValue > 0 &&
     hasEnoughSourceStock &&
     !unitConversionMutation.isPending
-  const sourceLabel = canRecordProductionConversion
-    ? "Online"
-    : isOfflineMode
-      ? "Local"
-      : "Local queue"
-  const sourceDetail = canRecordProductionConversion
-    ? "This conversion will be recorded in production immediately."
-    : isOfflineMode
-      ? "This conversion will be queued locally and synced later."
-      : "Waiting for the source and target units to sync before direct production conversion."
+  const sourceDetail = isOfflineMode
+    ? "This conversion will sync when connection is ready."
+    : "Waiting for the source and target units to sync before direct production conversion."
 
   useEffect(() => {
     if (convertibleProducts.length === 0) {
@@ -343,156 +336,158 @@ export function UnitConversionContent({
     completeLocalConversion("pending")
   }
 
+  const contentClassName =
+    presentation === "screen" ? "gap-5 px-4 pb-6" : "gap-5 px-5 pb-6"
+
   const content = (
-    <View className="gap-5 px-5 pb-6">
-          <View className="gap-2">
-            <Text className="text-xl font-bold text-foreground">
-              Convert stock
-            </Text>
-            <Text className="text-sm leading-5 text-muted-foreground">
-              Rebag primary units into sellable variants while keeping both
-              stock changes in the movement ledger.
-            </Text>
-          </View>
+    <View className={contentClassName}>
+      <View className="gap-2">
+        <Text className="text-xl font-bold text-foreground">Convert stock</Text>
+        <Text className="text-sm leading-5 text-muted-foreground">
+          Rebag primary units into sellable variants while keeping both stock
+          changes in the movement ledger.
+        </Text>
+      </View>
 
-          <StatusBanner
-            icon={canRecordProductionConversion ? "CircleCheck" : "Clock"}
-            message={sourceDetail}
-            title={`Conversion source: ${sourceLabel}`}
-            tone={canRecordProductionConversion ? "success" : "warning"}
-          />
+      {!canRecordProductionConversion ? (
+        <StatusBanner
+          icon="Clock"
+          message={sourceDetail}
+          title={isOfflineMode ? "Offline conversion" : "Sync required"}
+          tone="warning"
+        />
+      ) : null}
 
-          {convertibleProducts.length > 0 ? (
-            <View className="gap-3">
-              {convertibleProducts.length > 8 ? (
-                <FormField
-                  label="Find product"
-                  leadingIcon="Search"
-                  onChangeText={setProductQuery}
-                  placeholder="Search products or variants"
-                  value={productQuery}
-                />
-              ) : null}
-              {visibleConvertibleProducts.length > 0 ? (
-                visibleConvertibleProducts.map((product) => (
-                  <ProductOption
-                    key={product.id}
-                    onPress={() => selectProduct(product)}
-                    product={product}
-                    selected={selectedProductId === product.id}
-                  />
-                ))
-              ) : (
-                <EmptyState
-                  icon="Search"
-                  message="Try another product or variant name."
-                  title="No matching products"
-                />
-              )}
-              {filteredConvertibleProducts.length >
-              visibleConvertibleProducts.length ? (
-                <Text className="text-xs font-semibold text-muted-foreground">
-                  Showing first {visibleConvertibleProducts.length} of{" "}
-                  {filteredConvertibleProducts.length} matching products.
-                </Text>
-              ) : null}
-            </View>
+      {convertibleProducts.length > 0 ? (
+        <View className="gap-3">
+          {convertibleProducts.length > 8 ? (
+            <FormField
+              label="Find product"
+              leadingIcon="Search"
+              onChangeText={setProductQuery}
+              placeholder="Search products or variants"
+              value={productQuery}
+            />
+          ) : null}
+          {visibleConvertibleProducts.length > 0 ? (
+            visibleConvertibleProducts.map((product) => (
+              <ProductOption
+                key={product.id}
+                onPress={() => selectProduct(product)}
+                product={product}
+                selected={selectedProductId === product.id}
+              />
+            ))
           ) : (
             <EmptyState
-              icon="Warehouse"
-              message="Create half bag, quarter bag, or another variant before recording conversions."
-              title="Add variants first"
+              icon="Search"
+              message="Try another product or variant name."
+              title="No matching products"
             />
           )}
-
-          {selectedProduct ? (
-            <View className="gap-3">
-              <Text className="text-sm font-semibold text-foreground">
-                Convert into
-              </Text>
-              {selectedProduct.variants.length >
-              CONVERSION_VARIANT_PREVIEW_LIMIT ? (
-                <FormField
-                  label="Find variant"
-                  leadingIcon="Search"
-                  onChangeText={setVariantQuery}
-                  placeholder="Search variants"
-                  value={variantQuery}
-                />
-              ) : null}
-              {visibleSelectedVariants.length > 0 ? (
-                visibleSelectedVariants.map((variant) => (
-                  <VariantOption
-                    key={variant.id}
-                    onPress={() => selectVariant(variant)}
-                    selected={selectedVariantId === variant.id}
-                    variant={variant}
-                  />
-                ))
-              ) : (
-                <EmptyState
-                  icon="Search"
-                  message="Try another sub-unit or variant name."
-                  title="No matching variants"
-                />
-              )}
-              {filteredSelectedVariants.length >
-              visibleSelectedVariants.length ? (
-                <Text className="text-xs font-semibold text-muted-foreground">
-                  Showing first {visibleSelectedVariants.length} of{" "}
-                  {filteredSelectedVariants.length} matching variants.
-                </Text>
-              ) : null}
-            </View>
+          {filteredConvertibleProducts.length >
+          visibleConvertibleProducts.length ? (
+            <Text className="text-xs font-semibold text-muted-foreground">
+              Showing first {visibleConvertibleProducts.length} of{" "}
+              {filteredConvertibleProducts.length} matching products.
+            </Text>
           ) : null}
+        </View>
+      ) : (
+        <EmptyState
+          icon="Warehouse"
+          message="Create half bag, quarter bag, or another variant before recording conversions."
+          title="Add variants first"
+        />
+      )}
 
-          <QuantityStepper
-            helper={selectedProduct?.unitName}
-            label="Primary units used"
-            onChangeText={updateSourceQuantity}
-            value={sourceQuantity}
-          />
-          {!hasEnoughSourceStock ? (
-            <StatusBanner
-              icon="TriangleAlert"
-              message={`Only ${availableSourceStock} ${selectedProduct?.unitName} in primary stock.`}
-              title="Insufficient source stock"
-              tone="destructive"
+      {selectedProduct ? (
+        <View className="gap-3">
+          <Text className="text-sm font-semibold text-foreground">
+            Convert into
+          </Text>
+          {selectedProduct.variants.length >
+          CONVERSION_VARIANT_PREVIEW_LIMIT ? (
+            <FormField
+              label="Find variant"
+              leadingIcon="Search"
+              onChangeText={setVariantQuery}
+              placeholder="Search variants"
+              value={variantQuery}
             />
           ) : null}
-
-          <QuantityStepper
-            helper={selectedVariant?.name}
-            label="Variant units produced"
-            onChangeText={setOutputQuantity}
-            value={outputQuantity}
-          />
-
-          <FormField
-            label="Conversion note"
-            leadingIcon="StickyNote"
-            onChangeText={setNote}
-            placeholder="Enter conversion note"
-            value={note}
-          />
-
-          {submitError ? (
-            <StatusBanner
-              icon="TriangleAlert"
-              message={submitError}
-              title="Conversion was not recorded"
-              tone="destructive"
+          {visibleSelectedVariants.length > 0 ? (
+            visibleSelectedVariants.map((variant) => (
+              <VariantOption
+                key={variant.id}
+                onPress={() => selectVariant(variant)}
+                selected={selectedVariantId === variant.id}
+                variant={variant}
+              />
+            ))
+          ) : (
+            <EmptyState
+              icon="Search"
+              message="Try another sub-unit or variant name."
+              title="No matching variants"
             />
+          )}
+          {filteredSelectedVariants.length > visibleSelectedVariants.length ? (
+            <Text className="text-xs font-semibold text-muted-foreground">
+              Showing first {visibleSelectedVariants.length} of{" "}
+              {filteredSelectedVariants.length} matching variants.
+            </Text>
           ) : null}
+        </View>
+      ) : null}
 
-          <ActionButton
-            disabled={!canSubmit}
-            isLoading={unitConversionMutation.isPending}
-            loadingLabel="Recording conversion"
-            onPress={submit}
-          >
-            Record conversion
-          </ActionButton>
+      <QuantityStepper
+        helper={selectedProduct?.unitName}
+        label="Primary units used"
+        onChangeText={updateSourceQuantity}
+        value={sourceQuantity}
+      />
+      {!hasEnoughSourceStock ? (
+        <StatusBanner
+          icon="TriangleAlert"
+          message={`Only ${availableSourceStock} ${selectedProduct?.unitName} in primary stock.`}
+          title="Insufficient source stock"
+          tone="destructive"
+        />
+      ) : null}
+
+      <QuantityStepper
+        helper={selectedVariant?.name}
+        label="Variant units produced"
+        onChangeText={setOutputQuantity}
+        value={outputQuantity}
+      />
+
+      <FormField
+        label="Conversion note"
+        leadingIcon="StickyNote"
+        onChangeText={setNote}
+        placeholder="Enter conversion note"
+        value={note}
+      />
+
+      {submitError ? (
+        <StatusBanner
+          icon="TriangleAlert"
+          message={submitError}
+          title="Conversion was not recorded"
+          tone="destructive"
+        />
+      ) : null}
+
+      <ActionButton
+        disabled={!canSubmit}
+        isLoading={unitConversionMutation.isPending}
+        loadingLabel="Recording conversion"
+        onPress={submit}
+      >
+        Record conversion
+      </ActionButton>
 
       <ActionButton onPress={onComplete} variant="outline">
         Done

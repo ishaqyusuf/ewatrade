@@ -632,516 +632,511 @@ export function SyncStatusContent({
     })
   }
 
+  const contentClassName =
+    presentation === "screen" ? "gap-5 px-4 pb-6" : "gap-5 px-5 pb-6"
+
   const content = (
-    <View className="gap-5 px-5 pb-6">
-          <SyncReliabilityPanel
-            description={
-              isOfflineMode
-                ? "Changes stay on this device and will be applied when next you connect."
-                : "Supported sales and stock changes can sync to production now."
-            }
-            icon={isOfflineMode ? "Wind" : "CircleCheck"}
-            statusIcon={isOfflineMode ? "Wind" : "CircleCheck"}
-            statusLabel={isOfflineMode ? "Offline" : "Online"}
-            statusTone={isOfflineMode ? "warning" : "success"}
-            title={isOfflineMode ? "Offline mode" : "Online mode"}
-          />
+    <View className={contentClassName}>
+      <SyncReliabilityPanel
+        description={
+          isOfflineMode
+            ? "Changes stay on this device and will be applied when next you connect."
+            : "Supported sales and stock changes can sync to production now."
+        }
+        icon={isOfflineMode ? "Wind" : "CircleCheck"}
+        statusIcon={isOfflineMode ? "Wind" : "CircleCheck"}
+        statusLabel={isOfflineMode ? "Offline" : "Online"}
+        statusTone={isOfflineMode ? "warning" : "success"}
+        title={isOfflineMode ? "Offline mode" : "Online mode"}
+      />
 
-          <SyncReliabilityToggle
-            active={isOfflineMode}
-            description="Keep selling during poor network. Sync resumes when online."
-            label="Offline mode"
-            onPress={() => setOfflineMode(!isOfflineMode)}
-            testID="retail-offline-toggle"
-          />
+      <SyncReliabilityToggle
+        active={isOfflineMode}
+        description="Keep selling during poor network. Sync resumes when online."
+        label="Offline mode"
+        onPress={() => setOfflineMode(!isOfflineMode)}
+        testID="retail-offline-toggle"
+      />
 
-          <SyncReliabilityPanel
-            description={offlineDeviceId}
-            icon="AppWindow"
-            statusLabel={`Device ${shortOfflineDeviceId}`}
-            statusTone="muted"
-            testID="retail-offline-device"
-            title="Offline device"
-          />
+      <SyncReliabilityPanel
+        description={offlineDeviceId}
+        icon="AppWindow"
+        statusLabel={`Device ${shortOfflineDeviceId}`}
+        statusTone="muted"
+        testID="retail-offline-device"
+        title="Offline device"
+      />
 
-          {shouldShowDeviceManagement ? (
-            <SyncReliabilityPanel
-              description="Registered and revoked offline devices for this business."
-              icon="AppWindow"
-              statusIcon="AppWindow"
-              statusLabel={
-                offlineDevicesQuery.isFetching ||
-                revokedOfflineDevicesQuery.isFetching
-                  ? "Loading"
-                  : "Devices"
-              }
-              statusTone={
-                offlineDevicesQuery.isFetching ||
-                revokedOfflineDevicesQuery.isFetching
-                  ? "primary"
-                  : "muted"
-              }
-              title="Device management"
-            >
-              {offlineDevicesQuery.isFetching &&
-              revokedOfflineDevicesQuery.isFetching ? (
-                <Text className="text-xs leading-4 text-muted-foreground">
-                  Loading devices...
-                </Text>
-              ) : (
-                <View className="gap-4">
-                  <View>
-                    <Text className="text-xs font-semibold uppercase text-muted-foreground">
-                      Active
-                    </Text>
-                    {visibleActiveOfflineDevices.length > 0 ? (
-                      visibleActiveOfflineDevices.map((device) => {
-                        const isCurrentDevice =
-                          device.deviceId === offlineDeviceId
-
-                        return (
-                          <SyncReliabilityRow
-                            detail={`${device.platform} - seen ${formatEventTime(
-                              device.lastSeenAt,
-                            )}`}
-                            key={device.deviceId}
-                            statusIcon={
-                              isCurrentDevice ? "CircleCheck" : "AppWindow"
-                            }
-                            statusLabel={isCurrentDevice ? "Current" : "Active"}
-                            statusTone={isCurrentDevice ? "success" : "muted"}
-                            title={device.deviceName ?? device.platform}
-                          >
-                            {!isCurrentDevice ? (
-                              <SyncReliabilityAction
-                                icon="Ban"
-                                label="Revoke"
-                                onPress={() => revokeDevice(device.deviceId)}
-                                tone="destructive"
-                              />
-                            ) : null}
-                          </SyncReliabilityRow>
-                        )
-                      })
-                    ) : (
-                      <Text className="text-xs leading-4 text-muted-foreground">
-                        No registered offline devices returned.
-                      </Text>
-                    )}
-                    {activeOfflineDevices.length >
-                    visibleActiveOfflineDevices.length ? (
-                      <Text className="text-xs font-medium text-muted-foreground">
-                        Showing first {visibleActiveOfflineDevices.length} of{" "}
-                        {activeOfflineDevices.length} active devices.
-                      </Text>
-                    ) : null}
-                  </View>
-
-                  {revokedOfflineDevices.length > 0 ? (
-                    <View>
-                      <Text className="text-xs font-semibold uppercase text-muted-foreground">
-                        Revoked
-                      </Text>
-                      {visibleRevokedOfflineDevices.map((device) => (
-                        <SyncReliabilityRow
-                          detail={`Revoked ${formatEventTime(
-                            device.revokedAt,
-                          )}`}
-                          key={device.deviceId}
-                          statusIcon="Ban"
-                          statusLabel="Revoked"
-                          statusTone="muted"
-                          title={device.deviceName ?? device.platform}
-                        >
-                          <SyncReliabilityAction
-                            icon="Activity"
-                            label="Restore"
-                            onPress={() => restoreDevice(device.deviceId)}
-                          />
-                        </SyncReliabilityRow>
-                      ))}
-                      {revokedOfflineDevices.length >
-                      visibleRevokedOfflineDevices.length ? (
-                        <Text className="text-xs font-medium text-muted-foreground">
-                          Showing first {visibleRevokedOfflineDevices.length} of{" "}
-                          {revokedOfflineDevices.length} revoked devices.
-                        </Text>
-                      ) : null}
-                    </View>
-                  ) : null}
-
-                  {revokeOfflineDeviceMutation.isError ||
-                  restoreOfflineDeviceMutation.isError ? (
-                    <Text className="text-xs leading-4 text-destructive">
-                      {revokeOfflineDeviceMutation.error?.message ??
-                        restoreOfflineDeviceMutation.error?.message ??
-                        "Device management failed."}
-                    </Text>
-                  ) : null}
-                </View>
-              )}
-            </SyncReliabilityPanel>
-          ) : null}
-
-          {lastSyncSummary ? (
-            <SyncReliabilityPanel
-              description={`${formatEventTime(
-                lastSyncSummary.completedAt,
-              )} on ${lastSyncSummary.deviceId}`}
-              icon="Clock"
-              statusLabel={lastSyncSummary.status}
-              statusTone={
-                lastSyncSummary.status === "failed"
-                  ? "destructive"
-                  : lastSyncSummary.status === "partial"
-                    ? "warning"
-                    : "success"
-              }
-              title="Last sync"
-            >
-              <Text className="text-xs leading-4 text-muted-foreground">
-                Applied {lastSyncSummary.appliedCount} of{" "}
-                {lastSyncSummary.totalCount}; failed{" "}
-                {lastSyncSummary.failedCount}, skipped{" "}
-                {lastSyncSummary.skippedCount}.
-              </Text>
-              {lastSyncSummary.errorMessage ? (
-                <Text className="text-xs leading-4 text-destructive">
-                  {lastSyncSummary.errorMessage}
-                </Text>
-              ) : null}
-            </SyncReliabilityPanel>
-          ) : null}
-
-          <SyncReliabilityPanel
-            description="Recent sync runs recorded by production for this device."
-            icon="Clock"
-            statusIcon="Clock"
-            statusLabel={syncHistoryQuery.isFetching ? "Loading" : "History"}
-            statusTone={syncHistoryQuery.isFetching ? "primary" : "muted"}
-            title="Server history"
-          >
-            {syncHistoryQuery.isError ? (
-              <Text className="text-xs leading-4 text-destructive">
-                Server sync history is unavailable right now.
-              </Text>
-            ) : serverSyncHistory.length ? (
+      {shouldShowDeviceManagement ? (
+        <SyncReliabilityPanel
+          description="Registered and revoked offline devices for this business."
+          icon="AppWindow"
+          statusIcon="AppWindow"
+          statusLabel={
+            offlineDevicesQuery.isFetching ||
+            revokedOfflineDevicesQuery.isFetching
+              ? "Loading"
+              : "Devices"
+          }
+          statusTone={
+            offlineDevicesQuery.isFetching ||
+            revokedOfflineDevicesQuery.isFetching
+              ? "primary"
+              : "muted"
+          }
+          title="Device management"
+        >
+          {offlineDevicesQuery.isFetching &&
+          revokedOfflineDevicesQuery.isFetching ? (
+            <Text className="text-xs leading-4 text-muted-foreground">
+              Loading devices...
+            </Text>
+          ) : (
+            <View className="gap-4">
               <View>
-                {visibleServerSyncHistory.map((syncRun) => (
-                  <SyncReliabilityRow
-                    detail={`${syncRun.appliedCount} applied, ${syncRun.failedCount} failed, ${syncRun.skippedCount} skipped`}
-                    key={syncRun.id}
-                    statusLabel={formatSyncRunStatus(syncRun.status)}
-                    statusTone={
-                      syncRun.status === "failed"
-                        ? "destructive"
-                        : syncRun.status === "partial" ||
-                            syncRun.status === "skipped"
-                          ? "warning"
-                          : "success"
-                    }
-                    title={formatEventTime(syncRun.completedAt)}
-                  >
-                    {syncRun.events.some((event) => event.errorMessage) ? (
-                      <Text className="text-xs leading-4 text-muted-foreground">
-                        {
-                          syncRun.events.find((event) => event.errorMessage)
-                            ?.errorMessage
+                <Text className="text-xs font-semibold uppercase text-muted-foreground">
+                  Active
+                </Text>
+                {visibleActiveOfflineDevices.length > 0 ? (
+                  visibleActiveOfflineDevices.map((device) => {
+                    const isCurrentDevice = device.deviceId === offlineDeviceId
+
+                    return (
+                      <SyncReliabilityRow
+                        detail={`${device.platform} - seen ${formatEventTime(
+                          device.lastSeenAt,
+                        )}`}
+                        key={device.deviceId}
+                        statusIcon={
+                          isCurrentDevice ? "CircleCheck" : "AppWindow"
                         }
-                      </Text>
-                    ) : null}
-                  </SyncReliabilityRow>
-                ))}
-                {serverSyncHistory.length > visibleServerSyncHistory.length ? (
-                  <Text className="mt-2 text-xs font-medium text-muted-foreground">
-                    Showing first {visibleServerSyncHistory.length} of{" "}
-                    {serverSyncHistory.length} sync runs.
+                        statusLabel={isCurrentDevice ? "Current" : "Active"}
+                        statusTone={isCurrentDevice ? "success" : "muted"}
+                        title={device.deviceName ?? device.platform}
+                      >
+                        {!isCurrentDevice ? (
+                          <SyncReliabilityAction
+                            icon="Ban"
+                            label="Revoke"
+                            onPress={() => revokeDevice(device.deviceId)}
+                            tone="destructive"
+                          />
+                        ) : null}
+                      </SyncReliabilityRow>
+                    )
+                  })
+                ) : (
+                  <Text className="text-xs leading-4 text-muted-foreground">
+                    No registered offline devices returned.
+                  </Text>
+                )}
+                {activeOfflineDevices.length >
+                visibleActiveOfflineDevices.length ? (
+                  <Text className="text-xs font-medium text-muted-foreground">
+                    Showing first {visibleActiveOfflineDevices.length} of{" "}
+                    {activeOfflineDevices.length} active devices.
                   </Text>
                 ) : null}
               </View>
-            ) : (
-              <Text className="text-xs leading-4 text-muted-foreground">
-                No server-recorded sync runs for this device yet.
-              </Text>
-            )}
-          </SyncReliabilityPanel>
 
-          {shouldShowServerConflicts ? (
-            <SyncReliabilityPanel
-              description="Unreviewed production conflicts for this device and the wider business."
-              icon="TriangleAlert"
-              statusIcon="TriangleAlert"
-              statusLabel={
-                syncConflictsQuery.isFetching ||
-                tenantSyncConflictsQuery.isFetching
-                  ? "Loading"
-                  : "Conflicts"
-              }
-              statusTone={
-                syncConflictsQuery.isFetching ||
-                tenantSyncConflictsQuery.isFetching
-                  ? "primary"
-                  : tenantSyncConflicts.length > 0
-                    ? "warning"
-                    : "success"
-              }
-              title="Server conflicts"
-            >
-              <View className="flex-row gap-3">
-                <SyncReliabilityStat
-                  label="This device"
-                  tone={serverSyncConflicts.length > 0 ? "warning" : "success"}
-                  value={String(serverSyncConflicts.length)}
-                />
-                <SyncReliabilityStat
-                  label="Business"
-                  tone={tenantSyncConflicts.length > 0 ? "warning" : "success"}
-                  value={String(tenantSyncConflicts.length)}
-                />
-              </View>
-
-              {syncConflictsQuery.isFetching ||
-              tenantSyncConflictsQuery.isFetching ? (
-                <Text className="text-xs leading-4 text-muted-foreground">
-                  Loading conflicts...
-                </Text>
-              ) : tenantSyncConflicts.length > 0 ? (
+              {revokedOfflineDevices.length > 0 ? (
                 <View>
-                  {visibleTenantSyncConflicts.map((conflict) => (
+                  <Text className="text-xs font-semibold uppercase text-muted-foreground">
+                    Revoked
+                  </Text>
+                  {visibleRevokedOfflineDevices.map((device) => (
                     <SyncReliabilityRow
-                      detail={`${
-                        conflict.processedAt
-                          ? formatEventTime(conflict.processedAt)
-                          : "Waiting for review"
-                      } - ${formatDeviceLabel(conflict.deviceId)}`}
-                      key={conflict.id}
-                      statusIcon="TriangleAlert"
-                      statusLabel="Review"
-                      statusTone="warning"
-                      title={formatSyncEventType(conflict.type)}
+                      detail={`Revoked ${formatEventTime(device.revokedAt)}`}
+                      key={device.deviceId}
+                      statusIcon="Ban"
+                      statusLabel="Revoked"
+                      statusTone="muted"
+                      title={device.deviceName ?? device.platform}
                     >
-                      {conflict.errorMessage ? (
-                        <Text className="text-xs leading-4 text-warn">
-                          {conflict.errorMessage}
-                        </Text>
-                      ) : null}
-                      <View className="gap-1 border-t border-warn/20 pt-3">
-                        <Text className="text-xs leading-4 text-muted-foreground">
-                          Impact:{" "}
-                          {getSyncConflictBusinessImpact({
-                            errorMessage: conflict.errorMessage,
-                            type: conflict.type,
-                          })}
-                        </Text>
-                        <Text className="text-xs font-bold text-foreground">
-                          {conflict.resolutionAction}
-                        </Text>
-                        <Text className="mt-1 text-xs leading-4 text-muted-foreground">
-                          {conflict.resolutionDetail}
-                        </Text>
-                      </View>
                       <SyncReliabilityAction
-                        disabled={reviewSyncConflictMutation.isPending}
-                        icon="Check"
-                        label="Review"
-                        onPress={() => reviewServerConflict(conflict.eventId)}
+                        icon="Activity"
+                        label="Restore"
+                        onPress={() => restoreDevice(device.deviceId)}
                       />
                     </SyncReliabilityRow>
                   ))}
-                  {tenantSyncConflicts.length >
-                  visibleTenantSyncConflicts.length ? (
+                  {revokedOfflineDevices.length >
+                  visibleRevokedOfflineDevices.length ? (
                     <Text className="text-xs font-medium text-muted-foreground">
-                      Showing first {visibleTenantSyncConflicts.length} of{" "}
-                      {tenantSyncConflicts.length} server conflicts.
+                      Showing first {visibleRevokedOfflineDevices.length} of{" "}
+                      {revokedOfflineDevices.length} revoked devices.
                     </Text>
                   ) : null}
                 </View>
-              ) : (
-                <Text className="text-xs leading-4 text-muted-foreground">
-                  No unreviewed server conflicts for this business.
-                </Text>
-              )}
+              ) : null}
 
-              {reviewSyncConflictMutation.isError ? (
+              {revokeOfflineDeviceMutation.isError ||
+              restoreOfflineDeviceMutation.isError ? (
                 <Text className="text-xs leading-4 text-destructive">
-                  {reviewSyncConflictMutation.error.message}
+                  {revokeOfflineDeviceMutation.error?.message ??
+                    restoreOfflineDeviceMutation.error?.message ??
+                    "Device management failed."}
                 </Text>
               ) : null}
-            </SyncReliabilityPanel>
-          ) : null}
-
-          <View className="flex-row gap-3">
-            <SyncReliabilityStat
-              label="Pending"
-              testID="retail-sync-pending-count"
-              value={String(pendingEvents.length)}
-            />
-            <SyncReliabilityStat
-              label="Retry"
-              tone={failedEvents.length > 0 ? "destructive" : "default"}
-              testID="retail-sync-retry-count"
-              value={String(failedEvents.length)}
-            />
-            <SyncReliabilityStat
-              label="Review"
-              tone={conflictEvents.length > 0 ? "warning" : "default"}
-              testID="retail-sync-review-count"
-              value={String(conflictEvents.length)}
-            />
-          </View>
-
-          <View className="flex-row gap-3">
-            <SyncReliabilityStat
-              label="Total events"
-              value={String(syncEvents.length)}
-            />
-          </View>
-
-          {conflictEvents.length > 0 ? (
-            <View className="gap-3" testID="retail-sync-conflict-summary">
-              <StatusBanner
-                icon="TriangleAlert"
-                message="Conflicts usually mean stock, session, staff, or customer state changed on the server. Review the message before retrying."
-                title={`${conflictEvents.length} sync conflict${conflictEvents.length === 1 ? "" : "s"} need review`}
-                tone="warning"
-              />
-              <Pressable
-                className="h-11 flex-row items-center justify-center gap-2 rounded-full bg-primary px-4 active:bg-primary/90"
-                disabled={isSyncBusy}
-                haptic
-                onPress={() =>
-                  retryFailedEvents(conflictEvents.map((event) => event.id))
-                }
-                testID="retail-sync-conflicts-reviewed"
-                transition
-              >
-                <Icon className="size-sm text-primary-foreground" name="Zap" />
-                <Text className="text-sm font-bold text-primary-foreground">
-                  Move reviewed conflicts to pending
-                </Text>
-              </Pressable>
             </View>
-          ) : null}
+          )}
+        </SyncReliabilityPanel>
+      ) : null}
 
-          {failedEvents.length > 0 ? (
-            <View className="gap-3">
-              <StatusBanner
-                icon="TriangleAlert"
-                message={`Failed events stay on this device with the server message.${
-                  retryBackoffEvents.length > 0
-                    ? ` ${retryBackoffEvents.length} will wait for the retry timer unless you move them to pending now.`
-                    : " They can be moved to pending now."
-                }`}
-                title={`${failedEvents.length} event${failedEvents.length === 1 ? "" : "s"} need retry`}
-                tone="destructive"
-              />
-              <Pressable
-                className="h-11 flex-row items-center justify-center gap-2 rounded-full bg-primary px-4 active:bg-primary/90"
-                disabled={isSyncBusy}
-                haptic
-                onPress={() =>
-                  retryFailedEvents(failedEvents.map((event) => event.id))
-                }
-                testID="retail-sync-failed-retry"
-                transition
-              >
-                <Icon className="size-sm text-primary-foreground" name="Zap" />
-                <Text className="text-sm font-bold text-primary-foreground">
-                  Move failed events to pending
-                </Text>
-              </Pressable>
-            </View>
-          ) : null}
-
-          {syncEventsMutation.isError ? (
-            <StatusBanner
-              icon="TriangleAlert"
-              message={syncEventsMutation.error.message}
-              title="Sync failed"
-              tone="destructive"
-            />
-          ) : null}
-
-          {registerOfflineDeviceMutation.isError ? (
-            <StatusBanner
-              icon="TriangleAlert"
-              message={registerOfflineDeviceMutation.error.message}
-              title="Device registration failed"
-              tone="destructive"
-            />
-          ) : null}
-
-          <ActionButton
-            disabled={!canSync}
-            isLoading={isSyncBusy}
-            loadingLabel={syncButtonLoadingLabel}
-            onPress={syncSupportedEvents}
-            testID="retail-sync-now"
-          >
-            {syncButtonLabel}
-          </ActionButton>
-
-          {blockedEvents.length > 0 ? (
-            <View className="rounded-2xl border border-border bg-muted/40 p-4">
-              <StatusBanner
-                icon="Clock"
-                message={`${blockedEvents.length} event${blockedEvents.length === 1 ? "" : "s"} waiting for another local change to sync first.`}
-                title="Waiting on dependencies"
-                tone="muted"
-              />
-              <View className="mt-3 gap-2">
-                {visibleBlockedEvents.map((event) => (
-                  <SyncReliabilityRow
-                    detail="Dependency blocked"
-                    key={event.eventId}
-                    statusIcon="Clock"
-                    statusLabel="Blocked"
-                    statusTone="muted"
-                    title={event.label}
-                  >
-                    <Text className="text-xs leading-4 text-muted-foreground">
-                      {event.reason}
-                    </Text>
-                  </SyncReliabilityRow>
-                ))}
-                {blockedEvents.length > visibleBlockedEvents.length ? (
-                  <Text className="text-xs font-medium text-muted-foreground">
-                    Showing first {visibleBlockedEvents.length} of{" "}
-                    {blockedEvents.length} blocked events.
-                  </Text>
-                ) : null}
-              </View>
-            </View>
-          ) : null}
-
-          <View className="gap-3" testID="retail-sync-queue">
-            <Text className="text-base font-bold text-foreground">
-              Sync queue
+      {lastSyncSummary ? (
+        <SyncReliabilityPanel
+          description={`${formatEventTime(
+            lastSyncSummary.completedAt,
+          )} on ${lastSyncSummary.deviceId}`}
+          icon="Clock"
+          statusLabel={lastSyncSummary.status}
+          statusTone={
+            lastSyncSummary.status === "failed"
+              ? "destructive"
+              : lastSyncSummary.status === "partial"
+                ? "warning"
+                : "success"
+          }
+          title="Last sync"
+        >
+          <Text className="text-xs leading-4 text-muted-foreground">
+            Applied {lastSyncSummary.appliedCount} of{" "}
+            {lastSyncSummary.totalCount}; failed {lastSyncSummary.failedCount},
+            skipped {lastSyncSummary.skippedCount}.
+          </Text>
+          {lastSyncSummary.errorMessage ? (
+            <Text className="text-xs leading-4 text-destructive">
+              {lastSyncSummary.errorMessage}
             </Text>
-            {syncEvents.length > 0 ? (
-              <>
-                {visibleSyncEvents.map((event) => (
-                  <SyncEventRow
-                    event={event}
-                    key={event.id}
-                    onRetry={(eventId) => retryFailedEvents([eventId])}
-                  />
-                ))}
-                {syncEvents.length > visibleSyncEvents.length ? (
-                  <Text className="text-xs font-medium text-muted-foreground">
-                    Showing first {visibleSyncEvents.length} of{" "}
-                    {syncEvents.length} local sync events.
+          ) : null}
+        </SyncReliabilityPanel>
+      ) : null}
+
+      <SyncReliabilityPanel
+        description="Recent sync runs recorded by production for this device."
+        icon="Clock"
+        statusIcon="Clock"
+        statusLabel={syncHistoryQuery.isFetching ? "Loading" : "History"}
+        statusTone={syncHistoryQuery.isFetching ? "primary" : "muted"}
+        title="Server history"
+      >
+        {syncHistoryQuery.isError ? (
+          <Text className="text-xs leading-4 text-destructive">
+            Server sync history is unavailable right now.
+          </Text>
+        ) : serverSyncHistory.length ? (
+          <View>
+            {visibleServerSyncHistory.map((syncRun) => (
+              <SyncReliabilityRow
+                detail={`${syncRun.appliedCount} applied, ${syncRun.failedCount} failed, ${syncRun.skippedCount} skipped`}
+                key={syncRun.id}
+                statusLabel={formatSyncRunStatus(syncRun.status)}
+                statusTone={
+                  syncRun.status === "failed"
+                    ? "destructive"
+                    : syncRun.status === "partial" ||
+                        syncRun.status === "skipped"
+                      ? "warning"
+                      : "success"
+                }
+                title={formatEventTime(syncRun.completedAt)}
+              >
+                {syncRun.events.some((event) => event.errorMessage) ? (
+                  <Text className="text-xs leading-4 text-muted-foreground">
+                    {
+                      syncRun.events.find((event) => event.errorMessage)
+                        ?.errorMessage
+                    }
                   </Text>
                 ) : null}
-              </>
-            ) : (
-              <EmptyState
-                icon="CircleCheck"
-                message="No local changes are waiting to sync."
-                title="Sync queue is clear"
-              />
-            )}
+              </SyncReliabilityRow>
+            ))}
+            {serverSyncHistory.length > visibleServerSyncHistory.length ? (
+              <Text className="mt-2 text-xs font-medium text-muted-foreground">
+                Showing first {visibleServerSyncHistory.length} of{" "}
+                {serverSyncHistory.length} sync runs.
+              </Text>
+            ) : null}
           </View>
+        ) : (
+          <Text className="text-xs leading-4 text-muted-foreground">
+            No server-recorded sync runs for this device yet.
+          </Text>
+        )}
+      </SyncReliabilityPanel>
+
+      {shouldShowServerConflicts ? (
+        <SyncReliabilityPanel
+          description="Unreviewed production conflicts for this device and the wider business."
+          icon="TriangleAlert"
+          statusIcon="TriangleAlert"
+          statusLabel={
+            syncConflictsQuery.isFetching || tenantSyncConflictsQuery.isFetching
+              ? "Loading"
+              : "Conflicts"
+          }
+          statusTone={
+            syncConflictsQuery.isFetching || tenantSyncConflictsQuery.isFetching
+              ? "primary"
+              : tenantSyncConflicts.length > 0
+                ? "warning"
+                : "success"
+          }
+          title="Server conflicts"
+        >
+          <View className="flex-row gap-3">
+            <SyncReliabilityStat
+              label="This device"
+              tone={serverSyncConflicts.length > 0 ? "warning" : "success"}
+              value={String(serverSyncConflicts.length)}
+            />
+            <SyncReliabilityStat
+              label="Business"
+              tone={tenantSyncConflicts.length > 0 ? "warning" : "success"}
+              value={String(tenantSyncConflicts.length)}
+            />
+          </View>
+
+          {syncConflictsQuery.isFetching ||
+          tenantSyncConflictsQuery.isFetching ? (
+            <Text className="text-xs leading-4 text-muted-foreground">
+              Loading conflicts...
+            </Text>
+          ) : tenantSyncConflicts.length > 0 ? (
+            <View>
+              {visibleTenantSyncConflicts.map((conflict) => (
+                <SyncReliabilityRow
+                  detail={`${
+                    conflict.processedAt
+                      ? formatEventTime(conflict.processedAt)
+                      : "Waiting for review"
+                  } - ${formatDeviceLabel(conflict.deviceId)}`}
+                  key={conflict.id}
+                  statusIcon="TriangleAlert"
+                  statusLabel="Review"
+                  statusTone="warning"
+                  title={formatSyncEventType(conflict.type)}
+                >
+                  {conflict.errorMessage ? (
+                    <Text className="text-xs leading-4 text-warn">
+                      {conflict.errorMessage}
+                    </Text>
+                  ) : null}
+                  <View className="gap-1 border-t border-warn/20 pt-3">
+                    <Text className="text-xs leading-4 text-muted-foreground">
+                      Impact:{" "}
+                      {getSyncConflictBusinessImpact({
+                        errorMessage: conflict.errorMessage,
+                        type: conflict.type,
+                      })}
+                    </Text>
+                    <Text className="text-xs font-bold text-foreground">
+                      {conflict.resolutionAction}
+                    </Text>
+                    <Text className="mt-1 text-xs leading-4 text-muted-foreground">
+                      {conflict.resolutionDetail}
+                    </Text>
+                  </View>
+                  <SyncReliabilityAction
+                    disabled={reviewSyncConflictMutation.isPending}
+                    icon="Check"
+                    label="Review"
+                    onPress={() => reviewServerConflict(conflict.eventId)}
+                  />
+                </SyncReliabilityRow>
+              ))}
+              {tenantSyncConflicts.length >
+              visibleTenantSyncConflicts.length ? (
+                <Text className="text-xs font-medium text-muted-foreground">
+                  Showing first {visibleTenantSyncConflicts.length} of{" "}
+                  {tenantSyncConflicts.length} server conflicts.
+                </Text>
+              ) : null}
+            </View>
+          ) : (
+            <Text className="text-xs leading-4 text-muted-foreground">
+              No unreviewed server conflicts for this business.
+            </Text>
+          )}
+
+          {reviewSyncConflictMutation.isError ? (
+            <Text className="text-xs leading-4 text-destructive">
+              {reviewSyncConflictMutation.error.message}
+            </Text>
+          ) : null}
+        </SyncReliabilityPanel>
+      ) : null}
+
+      <View className="flex-row gap-3">
+        <SyncReliabilityStat
+          label="Pending"
+          testID="retail-sync-pending-count"
+          value={String(pendingEvents.length)}
+        />
+        <SyncReliabilityStat
+          label="Retry"
+          tone={failedEvents.length > 0 ? "destructive" : "default"}
+          testID="retail-sync-retry-count"
+          value={String(failedEvents.length)}
+        />
+        <SyncReliabilityStat
+          label="Review"
+          tone={conflictEvents.length > 0 ? "warning" : "default"}
+          testID="retail-sync-review-count"
+          value={String(conflictEvents.length)}
+        />
+      </View>
+
+      <View className="flex-row gap-3">
+        <SyncReliabilityStat
+          label="Total events"
+          value={String(syncEvents.length)}
+        />
+      </View>
+
+      {conflictEvents.length > 0 ? (
+        <View className="gap-3" testID="retail-sync-conflict-summary">
+          <StatusBanner
+            icon="TriangleAlert"
+            message="Conflicts usually mean stock, session, staff, or customer state changed on the server. Review the message before retrying."
+            title={`${conflictEvents.length} sync conflict${conflictEvents.length === 1 ? "" : "s"} need review`}
+            tone="warning"
+          />
+          <Pressable
+            className="h-11 flex-row items-center justify-center gap-2 rounded-full bg-primary px-4 active:bg-primary/90"
+            disabled={isSyncBusy}
+            haptic
+            onPress={() =>
+              retryFailedEvents(conflictEvents.map((event) => event.id))
+            }
+            testID="retail-sync-conflicts-reviewed"
+            transition
+          >
+            <Icon className="size-sm text-primary-foreground" name="Zap" />
+            <Text className="text-sm font-bold text-primary-foreground">
+              Move reviewed conflicts to pending
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {failedEvents.length > 0 ? (
+        <View className="gap-3">
+          <StatusBanner
+            icon="TriangleAlert"
+            message={`Failed events stay on this device with the server message.${
+              retryBackoffEvents.length > 0
+                ? ` ${retryBackoffEvents.length} will wait for the retry timer unless you move them to pending now.`
+                : " They can be moved to pending now."
+            }`}
+            title={`${failedEvents.length} event${failedEvents.length === 1 ? "" : "s"} need retry`}
+            tone="destructive"
+          />
+          <Pressable
+            className="h-11 flex-row items-center justify-center gap-2 rounded-full bg-primary px-4 active:bg-primary/90"
+            disabled={isSyncBusy}
+            haptic
+            onPress={() =>
+              retryFailedEvents(failedEvents.map((event) => event.id))
+            }
+            testID="retail-sync-failed-retry"
+            transition
+          >
+            <Icon className="size-sm text-primary-foreground" name="Zap" />
+            <Text className="text-sm font-bold text-primary-foreground">
+              Move failed events to pending
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {syncEventsMutation.isError ? (
+        <StatusBanner
+          icon="TriangleAlert"
+          message={syncEventsMutation.error.message}
+          title="Sync failed"
+          tone="destructive"
+        />
+      ) : null}
+
+      {registerOfflineDeviceMutation.isError ? (
+        <StatusBanner
+          icon="TriangleAlert"
+          message={registerOfflineDeviceMutation.error.message}
+          title="Device registration failed"
+          tone="destructive"
+        />
+      ) : null}
+
+      <ActionButton
+        disabled={!canSync}
+        isLoading={isSyncBusy}
+        loadingLabel={syncButtonLoadingLabel}
+        onPress={syncSupportedEvents}
+        testID="retail-sync-now"
+      >
+        {syncButtonLabel}
+      </ActionButton>
+
+      {blockedEvents.length > 0 ? (
+        <View className="rounded-2xl border border-border bg-muted/40 p-4">
+          <StatusBanner
+            icon="Clock"
+            message={`${blockedEvents.length} event${blockedEvents.length === 1 ? "" : "s"} waiting for another local change to sync first.`}
+            title="Waiting on dependencies"
+            tone="muted"
+          />
+          <View className="mt-3 gap-2">
+            {visibleBlockedEvents.map((event) => (
+              <SyncReliabilityRow
+                detail="Dependency blocked"
+                key={event.eventId}
+                statusIcon="Clock"
+                statusLabel="Blocked"
+                statusTone="muted"
+                title={event.label}
+              >
+                <Text className="text-xs leading-4 text-muted-foreground">
+                  {event.reason}
+                </Text>
+              </SyncReliabilityRow>
+            ))}
+            {blockedEvents.length > visibleBlockedEvents.length ? (
+              <Text className="text-xs font-medium text-muted-foreground">
+                Showing first {visibleBlockedEvents.length} of{" "}
+                {blockedEvents.length} blocked events.
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
+
+      <View className="gap-3" testID="retail-sync-queue">
+        <Text className="text-base font-bold text-foreground">Sync queue</Text>
+        {syncEvents.length > 0 ? (
+          <>
+            {visibleSyncEvents.map((event) => (
+              <SyncEventRow
+                event={event}
+                key={event.id}
+                onRetry={(eventId) => retryFailedEvents([eventId])}
+              />
+            ))}
+            {syncEvents.length > visibleSyncEvents.length ? (
+              <Text className="text-xs font-medium text-muted-foreground">
+                Showing first {visibleSyncEvents.length} of {syncEvents.length}{" "}
+                local sync events.
+              </Text>
+            ) : null}
+          </>
+        ) : (
+          <EmptyState
+            icon="CircleCheck"
+            message="No local changes are waiting to sync."
+            title="Sync queue is clear"
+          />
+        )}
+      </View>
 
       <ActionButton onPress={onComplete} variant="outline">
         Done

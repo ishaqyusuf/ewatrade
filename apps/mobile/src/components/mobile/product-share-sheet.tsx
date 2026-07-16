@@ -1355,487 +1355,472 @@ export function ProductShareContent({
     })
   }
 
+  const contentClassName =
+    presentation === "screen" ? "gap-5 px-4 pb-6" : "gap-5 px-5 pb-6"
+
   const content = (
-    <View className="gap-5 px-5 pb-6">
-          <View className="gap-2">
-            <Text className="text-xl font-bold text-foreground">
-              Product links
-            </Text>
-            <Text className="text-sm leading-5 text-muted-foreground">
-              Create customer-facing links and review link performance.
-            </Text>
-          </View>
+    <View className={contentClassName}>
+      <View className="gap-2">
+        <Text className="text-xl font-bold text-foreground">Product links</Text>
+        <Text className="text-sm leading-5 text-muted-foreground">
+          Create customer-facing links and review link performance.
+        </Text>
+      </View>
 
-          <View className="flex-row gap-3">
-            <ShareLinkMetricCard
-              icon="Globe"
-              label="Active"
-              value={`${activeLinkCount}/${shareLinks.length}`}
-            />
-            <ShareLinkMetricCard
-              icon="Eye"
-              label="Views"
-              value={String(totalViews)}
-            />
-          </View>
+      <View className="flex-row gap-3">
+        <ShareLinkMetricCard
+          icon="Globe"
+          label="Active"
+          value={`${activeLinkCount}/${shareLinks.length}`}
+        />
+        <ShareLinkMetricCard
+          icon="Eye"
+          label="Views"
+          value={String(totalViews)}
+        />
+      </View>
 
-          <View className="flex-row gap-3">
-            <ShareLinkMetricCard
-              icon="ReceiptText"
-              label="Orders"
-              value={String(totalOrders)}
-            />
-            <ShareLinkMetricCard
-              icon="Globe"
-              label="Products"
-              value={String(products.length)}
-            />
-          </View>
+      <View className="flex-row gap-3">
+        <ShareLinkMetricCard
+          icon="ReceiptText"
+          label="Orders"
+          value={String(totalOrders)}
+        />
+        <ShareLinkMetricCard
+          icon="Globe"
+          label="Products"
+          value={String(products.length)}
+        />
+      </View>
 
-          {products.length === 0 ? (
-            <EmptyState
-              icon="Warehouse"
-              message="Create at least one item before generating a product link."
-              title="Add inventory first"
-            />
-          ) : (
-            <View className="gap-3">
-              <FormField
-                autoCapitalize="words"
-                helper={
-                  hasMoreProducts
-                    ? "Showing the first matches. Search to find another product."
-                    : "Choose the product that should get a customer link."
-                }
-                label="Find product"
-                leadingIcon="Search"
-                onChangeText={setProductQuery}
-                placeholder="Search by product name"
-                value={productQuery}
-              />
-              {visibleProducts.length > 0 ? (
-                visibleProducts.map((product) => (
-                  <ProductOption
-                    key={product.id}
-                    onPress={() => setSelectedProductId(product.id)}
-                    product={product}
-                    selected={selectedProductId === product.id}
-                  />
-                ))
-              ) : (
-                <EmptyState
-                  icon="Search"
-                  message="Adjust the product search to generate a link."
-                  title="No products found"
-                />
-              )}
-            </View>
-          )}
-
-          <ActionButton
-            disabled={
-              !selectedProduct || createProductionShareLinkMutation.isPending
+      {products.length === 0 ? (
+        <EmptyState
+          icon="Warehouse"
+          message="Create at least one item before generating a product link."
+          title="Add inventory first"
+        />
+      ) : (
+        <View className="gap-3">
+          <FormField
+            autoCapitalize="words"
+            helper={
+              hasMoreProducts
+                ? "Showing the first matches. Search to find another product."
+                : "Choose the product that should get a customer link."
             }
-            isLoading={createProductionShareLinkMutation.isPending}
-            loadingLabel="Generating production link"
-            onPress={generateLink}
-          >
-            {!isOfflineMode && selectedProduct?.remoteId
-              ? "Generate production link"
-              : "Generate and share link"}
-          </ActionButton>
-          {!isOfflineMode && selectedProduct && !selectedProduct.remoteId ? (
-            <StatusBanner
-              icon="Clock"
-              message="This product will use the local link flow until product setup has synced to production."
-              title="Local link fallback"
-              tone="warning"
-            />
-          ) : null}
-          {createProductionShareLinkMutation.isError ? (
-            <StatusBanner
-              icon="TriangleAlert"
-              message={createProductionShareLinkMutation.error.message}
-              title="Link was not generated"
-              tone="destructive"
-            />
-          ) : null}
-
-          <View className="gap-3">
-            <Text className="text-base font-bold text-foreground">
-              All generated links
-            </Text>
-            {shareLinks.length > 0 ? (
-              <>
-                {visibleShareLinks.map((link) => (
-                  <ShareLinkRow
-                    isCopied={copiedShareLinkKey === `local:${link.id}`}
-                    key={link.id}
-                    link={link}
-                    onCopy={() =>
-                      copyGeneratedLink(`local:${link.id}`, link.url)
-                    }
-                    onDeactivate={() => deactivateShareLink(link.id)}
-                    onShare={() =>
-                      shareGeneratedLink({
-                        title: link.productName,
-                        url: link.url,
-                      })
-                    }
-                  />
-                ))}
-                {shareLinks.length > visibleShareLinks.length ? (
-                  <Text className="text-xs font-semibold text-muted-foreground">
-                    Showing first {visibleShareLinks.length} of{" "}
-                    {shareLinks.length} generated links.
-                  </Text>
-                ) : null}
-              </>
-            ) : (
-              <EmptyState
-                icon="Share"
-                message="Generated product links will appear here with views, orders, and deactivation controls."
-                title="No generated links yet"
+            label="Find product"
+            leadingIcon="Search"
+            onChangeText={setProductQuery}
+            placeholder="Search by product name"
+            value={productQuery}
+          />
+          {visibleProducts.length > 0 ? (
+            visibleProducts.map((product) => (
+              <ProductOption
+                key={product.id}
+                onPress={() => setSelectedProductId(product.id)}
+                product={product}
+                selected={selectedProductId === product.id}
               />
-            )}
-          </View>
+            ))
+          ) : (
+            <EmptyState
+              icon="Search"
+              message="Adjust the product search to generate a link."
+              title="No products found"
+            />
+          )}
+        </View>
+      )}
 
-          <View className="gap-3">
-            <View className="flex-row items-center justify-between gap-3">
-              <Text className="text-base font-bold text-foreground">
-                Production link performance
+      <ActionButton
+        disabled={
+          !selectedProduct || createProductionShareLinkMutation.isPending
+        }
+        isLoading={createProductionShareLinkMutation.isPending}
+        loadingLabel="Generating production link"
+        onPress={generateLink}
+      >
+        {!isOfflineMode && selectedProduct?.remoteId
+          ? "Generate production link"
+          : "Generate and share link"}
+      </ActionButton>
+      {!isOfflineMode && selectedProduct && !selectedProduct.remoteId ? (
+        <StatusBanner
+          icon="Clock"
+          message="This product will use the local link flow until product setup has synced to production."
+          title="Local link fallback"
+          tone="warning"
+        />
+      ) : null}
+      {createProductionShareLinkMutation.isError ? (
+        <StatusBanner
+          icon="TriangleAlert"
+          message={createProductionShareLinkMutation.error.message}
+          title="Link was not generated"
+          tone="destructive"
+        />
+      ) : null}
+
+      <View className="gap-3">
+        <Text className="text-base font-bold text-foreground">
+          All generated links
+        </Text>
+        {shareLinks.length > 0 ? (
+          <>
+            {visibleShareLinks.map((link) => (
+              <ShareLinkRow
+                isCopied={copiedShareLinkKey === `local:${link.id}`}
+                key={link.id}
+                link={link}
+                onCopy={() => copyGeneratedLink(`local:${link.id}`, link.url)}
+                onDeactivate={() => deactivateShareLink(link.id)}
+                onShare={() =>
+                  shareGeneratedLink({
+                    title: link.productName,
+                    url: link.url,
+                  })
+                }
+              />
+            ))}
+            {shareLinks.length > visibleShareLinks.length ? (
+              <Text className="text-xs font-semibold text-muted-foreground">
+                Showing first {visibleShareLinks.length} of {shareLinks.length}{" "}
+                generated links.
               </Text>
-              {!isOfflineMode ? (
-                <Pressable
-                  className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
-                  haptic
-                  onPress={() => {
-                    void productionLinksQuery.refetch()
-                    void productionLinkAnalyticsQuery.refetch()
-                  }}
-                  transition
-                >
-                  <Text className="text-xs font-bold text-primary">
-                    Refresh
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
+            ) : null}
+          </>
+        ) : (
+          <EmptyState
+            icon="Share"
+            message="Generated product links will appear here with views, orders, and deactivation controls."
+            title="No generated links yet"
+          />
+        )}
+      </View>
 
-            {isOfflineMode ? (
-              <StatusBanner
-                icon="Clock"
-                message="Production link analytics will refresh when this device is back online."
-                title="Analytics offline"
-                tone="warning"
-              />
-            ) : productionLinks.length > 0 ? (
-              <View className="gap-3">
-                <View className="flex-row gap-3">
-                  <ShareLinkMetricCard
-                    icon="Globe"
-                    label="Active"
-                    value={`${productionActiveLinkCount}/${productionLinks.length}`}
-                  />
-                  <ShareLinkMetricCard
-                    icon="Eye"
-                    label="Views"
-                    value={String(productionTotalViews)}
-                  />
-                </View>
-                <View className="flex-row gap-3">
-                  <ShareLinkMetricCard
-                    icon="ReceiptText"
-                    label="Orders"
-                    value={String(productionTotalOrders)}
-                  />
-                  <ShareLinkMetricCard
-                    icon="Globe"
-                    label="Synced"
-                    value={String(productionLinks.length)}
-                  />
-                </View>
-                {productionLinkAnalytics ? (
-                  <ShareLinkAnalyticsPanel
-                    analytics={productionLinkAnalytics}
-                  />
-                ) : productionLinkAnalyticsQuery.isFetching ? (
-                  <StatusBanner
-                    icon="Clock"
-                    message="Checking detailed generated-link analytics."
-                    title="Refreshing analytics"
-                    tone="muted"
-                  />
-                ) : productionLinkAnalyticsQuery.isError ? (
-                  <StatusBanner
-                    icon="TriangleAlert"
-                    message="Detailed generated-link analytics are unavailable for this session."
-                    title="Analytics unavailable"
-                    tone="warning"
-                  />
-                ) : null}
-                {visibleProductionLinks.map((link) => (
-                  <ProductionShareLinkRow
-                    isCopied={copiedShareLinkKey === `production:${link.id}`}
-                    isDeactivating={
-                      deactivatingProductionShareLinkId === link.id
-                    }
-                    isUpdating={
-                      deactivateProductionShareLinkMutation.isPending ||
-                      deactivatingProductionShareLinkId !== null
-                    }
-                    key={link.id}
-                    link={link}
-                    onCopy={() =>
-                      copyGeneratedLink(`production:${link.id}`, link.url)
-                    }
-                    onDeactivate={() => deactivateProductionShareLink(link)}
-                    onShare={() =>
-                      shareGeneratedLink({
-                        title: link.product.name,
-                        url: link.url,
-                      })
-                    }
-                  />
-                ))}
-                {productionLinks.length > visibleProductionLinks.length ? (
-                  <Text className="text-xs font-semibold text-muted-foreground">
-                    Showing first {visibleProductionLinks.length} of{" "}
-                    {productionLinks.length} production links.
-                  </Text>
-                ) : null}
-              </View>
-            ) : productionLinksQuery.isFetching ? (
-              <StatusBanner
-                icon="Clock"
-                message="Checking production for generated product links."
-                title="Refreshing links"
-                tone="muted"
-              />
-            ) : productionLinksQuery.isError ? (
-              <StatusBanner
-                icon="TriangleAlert"
-                message="Production link analytics are unavailable for this session."
-                title="Links unavailable"
-                tone="warning"
-              />
-            ) : (
-              <EmptyState
+      <View className="gap-3">
+        <View className="flex-row items-center justify-between gap-3">
+          <Text className="text-base font-bold text-foreground">
+            Production link performance
+          </Text>
+          {!isOfflineMode ? (
+            <Pressable
+              className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
+              haptic
+              onPress={() => {
+                void productionLinksQuery.refetch()
+                void productionLinkAnalyticsQuery.refetch()
+              }}
+              transition
+            >
+              <Text className="text-xs font-bold text-primary">Refresh</Text>
+            </Pressable>
+          ) : null}
+        </View>
+
+        {isOfflineMode ? (
+          <StatusBanner
+            icon="Clock"
+            message="Production link analytics will refresh when this device is back online."
+            title="Analytics offline"
+            tone="warning"
+          />
+        ) : productionLinks.length > 0 ? (
+          <View className="gap-3">
+            <View className="flex-row gap-3">
+              <ShareLinkMetricCard
                 icon="Globe"
-                message="Synced generated links will appear here with production views and order counts."
-                title="No production links yet"
+                label="Active"
+                value={`${productionActiveLinkCount}/${productionLinks.length}`}
               />
-            )}
-            {deactivateProductionShareLinkMutation.isError ? (
-              <StatusBanner
-                icon="TriangleAlert"
-                message={deactivateProductionShareLinkMutation.error.message}
-                title="Link was not deactivated"
-                tone="destructive"
+              <ShareLinkMetricCard
+                icon="Eye"
+                label="Views"
+                value={String(productionTotalViews)}
               />
-            ) : null}
-          </View>
-
-          <View className="gap-3">
-            <View className="flex-row items-center justify-between gap-3">
-              <Text className="text-base font-bold text-foreground">
-                Pending link orders
-              </Text>
-              {!isOfflineMode ? (
-                <Pressable
-                  className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
-                  haptic
-                  onPress={() => {
-                    void orderRequestsQuery.refetch()
-                  }}
-                  transition
-                >
-                  <Text className="text-xs font-bold text-primary">
-                    Refresh
-                  </Text>
-                </Pressable>
-              ) : null}
             </View>
-
-            {isOfflineMode ? (
-              <StatusBanner
-                icon="Clock"
-                message="Link orders will refresh when this device is back online."
-                title="Orders offline"
-                tone="warning"
-              />
-            ) : orderRequests.length > 0 ? (
-              <>
-                {visibleOrderRequests.map((order) => (
-                  <SharedLinkOrderRequestRow
-                    activeStatus={
-                      orderRequestStatusAction?.orderId === order.id
-                        ? orderRequestStatusAction.status
-                        : null
-                    }
-                    deliveryDraft={deliveryDrafts[order.id]}
-                    followUp={
-                      orderFollowUps[order.id] ??
-                      defaultSharedLinkFollowUpSelection
-                    }
-                    isCreatingDelivery={deliveryCreationOrderId === order.id}
-                    isDeliveryCreationDisabled={
-                      createDeliveryRequestMutation.isPending ||
-                      deliveryCreationOrderId !== null
-                    }
-                    isUpdating={
-                      updateOrderRequestStatusMutation.isPending ||
-                      orderRequestStatusAction !== null
-                    }
-                    key={order.id}
-                    onCancel={() =>
-                      updateOrderRequestStatus(order.id, "cancelled")
-                    }
-                    onCreateDeliveryRequest={() => createDeliveryRequest(order)}
-                    onDeliveryDraftChange={(patch) =>
-                      updateDeliveryDraft(order.id, patch)
-                    }
-                    onFollowUpChange={(patch) =>
-                      updateOrderFollowUp(order.id, patch)
-                    }
-                    onComplete={() =>
-                      updateOrderRequestStatus(order.id, "completed")
-                    }
-                    order={order}
-                  />
-                ))}
-                {orderRequests.length > visibleOrderRequests.length ? (
-                  <Text className="text-xs font-semibold text-muted-foreground">
-                    Showing first {visibleOrderRequests.length} of{" "}
-                    {orderRequests.length} pending orders.
-                  </Text>
-                ) : null}
-              </>
-            ) : orderRequestsQuery.isFetching ? (
-              <StatusBanner
-                icon="Clock"
-                message="Checking production for new link orders."
-                title="Refreshing orders"
-                tone="muted"
-              />
-            ) : orderRequestsQuery.isError ? (
-              <StatusBanner
-                icon="TriangleAlert"
-                message="Production link orders are unavailable for this session."
-                title="Orders unavailable"
-                tone="warning"
-              />
-            ) : (
-              <EmptyState
+            <View className="flex-row gap-3">
+              <ShareLinkMetricCard
                 icon="ReceiptText"
-                message="No pending customer requests from shared links yet."
-                title="No pending link orders"
+                label="Orders"
+                value={String(productionTotalOrders)}
               />
-            )}
-            {updateOrderRequestStatusMutation.isError ? (
-              <StatusBanner
-                icon="TriangleAlert"
-                message={updateOrderRequestStatusMutation.error.message}
-                title="Order follow-up failed"
-                tone="destructive"
+              <ShareLinkMetricCard
+                icon="Globe"
+                label="Synced"
+                value={String(productionLinks.length)}
               />
-            ) : null}
-            {createDeliveryRequestMutation.isError ? (
-              <StatusBanner
-                icon="TriangleAlert"
-                message={createDeliveryRequestMutation.error.message}
-                title="Delivery request failed"
-                tone="destructive"
-              />
-            ) : null}
-          </View>
-
-          <View className="gap-3">
-            <View className="flex-row items-center justify-between gap-3">
-              <Text className="text-base font-bold text-foreground">
-                Delivery follow-up
-              </Text>
-              {!isOfflineMode ? (
-                <Pressable
-                  className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
-                  haptic
-                  onPress={() => {
-                    void deliveryRequestsQuery.refetch()
-                  }}
-                  transition
-                >
-                  <Text className="text-xs font-bold text-primary">
-                    Refresh
-                  </Text>
-                </Pressable>
-              ) : null}
             </View>
-
-            {isOfflineMode ? (
+            {productionLinkAnalytics ? (
+              <ShareLinkAnalyticsPanel analytics={productionLinkAnalytics} />
+            ) : productionLinkAnalyticsQuery.isFetching ? (
               <StatusBanner
                 icon="Clock"
-                message="Delivery requests will refresh when this device is back online."
-                title="Delivery offline"
-                tone="warning"
-              />
-            ) : deliveryRequests.length > 0 ? (
-              <>
-                {visibleDeliveryRequests.map((request) => (
-                  <DeliveryRequestRow
-                    activeStatus={
-                      deliveryRequestStatusAction?.deliveryRequestId ===
-                      request.id
-                        ? deliveryRequestStatusAction.status
-                        : null
-                    }
-                    isUpdating={
-                      updateDeliveryRequestStatusMutation.isPending ||
-                      deliveryRequestStatusAction !== null
-                    }
-                    key={request.id}
-                    onUpdateStatus={(status) =>
-                      updateDeliveryRequestStatus(request.id, status)
-                    }
-                    request={request}
-                  />
-                ))}
-                {deliveryRequests.length > visibleDeliveryRequests.length ? (
-                  <Text className="text-xs font-semibold text-muted-foreground">
-                    Showing first {visibleDeliveryRequests.length} of{" "}
-                    {deliveryRequests.length} delivery requests.
-                  </Text>
-                ) : null}
-              </>
-            ) : deliveryRequestsQuery.isFetching ? (
-              <StatusBanner
-                icon="Clock"
-                message="Checking production for delivery requests."
-                title="Refreshing delivery"
+                message="Checking detailed generated-link analytics."
+                title="Refreshing analytics"
                 tone="muted"
               />
-            ) : deliveryRequestsQuery.isError ? (
+            ) : productionLinkAnalyticsQuery.isError ? (
               <StatusBanner
                 icon="TriangleAlert"
-                message="Delivery requests are unavailable for this session."
-                title="Delivery unavailable"
+                message="Detailed generated-link analytics are unavailable for this session."
+                title="Analytics unavailable"
                 tone="warning"
               />
-            ) : (
-              <EmptyState
-                icon="Truck"
-                message="Delivery requests created from shared-link orders will appear here."
-                title="No delivery requests yet"
+            ) : null}
+            {visibleProductionLinks.map((link) => (
+              <ProductionShareLinkRow
+                isCopied={copiedShareLinkKey === `production:${link.id}`}
+                isDeactivating={deactivatingProductionShareLinkId === link.id}
+                isUpdating={
+                  deactivateProductionShareLinkMutation.isPending ||
+                  deactivatingProductionShareLinkId !== null
+                }
+                key={link.id}
+                link={link}
+                onCopy={() =>
+                  copyGeneratedLink(`production:${link.id}`, link.url)
+                }
+                onDeactivate={() => deactivateProductionShareLink(link)}
+                onShare={() =>
+                  shareGeneratedLink({
+                    title: link.product.name,
+                    url: link.url,
+                  })
+                }
               />
-            )}
-            {updateDeliveryRequestStatusMutation.isError ? (
-              <StatusBanner
-                icon="TriangleAlert"
-                message={updateDeliveryRequestStatusMutation.error.message}
-                title="Delivery update failed"
-                tone="destructive"
-              />
+            ))}
+            {productionLinks.length > visibleProductionLinks.length ? (
+              <Text className="text-xs font-semibold text-muted-foreground">
+                Showing first {visibleProductionLinks.length} of{" "}
+                {productionLinks.length} production links.
+              </Text>
             ) : null}
           </View>
+        ) : productionLinksQuery.isFetching ? (
+          <StatusBanner
+            icon="Clock"
+            message="Checking production for generated product links."
+            title="Refreshing links"
+            tone="muted"
+          />
+        ) : productionLinksQuery.isError ? (
+          <StatusBanner
+            icon="TriangleAlert"
+            message="Production link analytics are unavailable for this session."
+            title="Links unavailable"
+            tone="warning"
+          />
+        ) : (
+          <EmptyState
+            icon="Globe"
+            message="Synced generated links will appear here with production views and order counts."
+            title="No production links yet"
+          />
+        )}
+        {deactivateProductionShareLinkMutation.isError ? (
+          <StatusBanner
+            icon="TriangleAlert"
+            message={deactivateProductionShareLinkMutation.error.message}
+            title="Link was not deactivated"
+            tone="destructive"
+          />
+        ) : null}
+      </View>
+
+      <View className="gap-3">
+        <View className="flex-row items-center justify-between gap-3">
+          <Text className="text-base font-bold text-foreground">
+            Pending link orders
+          </Text>
+          {!isOfflineMode ? (
+            <Pressable
+              className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
+              haptic
+              onPress={() => {
+                void orderRequestsQuery.refetch()
+              }}
+              transition
+            >
+              <Text className="text-xs font-bold text-primary">Refresh</Text>
+            </Pressable>
+          ) : null}
+        </View>
+
+        {isOfflineMode ? (
+          <StatusBanner
+            icon="Clock"
+            message="Link orders will refresh when this device is back online."
+            title="Orders offline"
+            tone="warning"
+          />
+        ) : orderRequests.length > 0 ? (
+          <>
+            {visibleOrderRequests.map((order) => (
+              <SharedLinkOrderRequestRow
+                activeStatus={
+                  orderRequestStatusAction?.orderId === order.id
+                    ? orderRequestStatusAction.status
+                    : null
+                }
+                deliveryDraft={deliveryDrafts[order.id]}
+                followUp={
+                  orderFollowUps[order.id] ?? defaultSharedLinkFollowUpSelection
+                }
+                isCreatingDelivery={deliveryCreationOrderId === order.id}
+                isDeliveryCreationDisabled={
+                  createDeliveryRequestMutation.isPending ||
+                  deliveryCreationOrderId !== null
+                }
+                isUpdating={
+                  updateOrderRequestStatusMutation.isPending ||
+                  orderRequestStatusAction !== null
+                }
+                key={order.id}
+                onCancel={() => updateOrderRequestStatus(order.id, "cancelled")}
+                onCreateDeliveryRequest={() => createDeliveryRequest(order)}
+                onDeliveryDraftChange={(patch) =>
+                  updateDeliveryDraft(order.id, patch)
+                }
+                onFollowUpChange={(patch) =>
+                  updateOrderFollowUp(order.id, patch)
+                }
+                onComplete={() =>
+                  updateOrderRequestStatus(order.id, "completed")
+                }
+                order={order}
+              />
+            ))}
+            {orderRequests.length > visibleOrderRequests.length ? (
+              <Text className="text-xs font-semibold text-muted-foreground">
+                Showing first {visibleOrderRequests.length} of{" "}
+                {orderRequests.length} pending orders.
+              </Text>
+            ) : null}
+          </>
+        ) : orderRequestsQuery.isFetching ? (
+          <StatusBanner
+            icon="Clock"
+            message="Checking production for new link orders."
+            title="Refreshing orders"
+            tone="muted"
+          />
+        ) : orderRequestsQuery.isError ? (
+          <StatusBanner
+            icon="TriangleAlert"
+            message="Production link orders are unavailable for this session."
+            title="Orders unavailable"
+            tone="warning"
+          />
+        ) : (
+          <EmptyState
+            icon="ReceiptText"
+            message="No pending customer requests from shared links yet."
+            title="No pending link orders"
+          />
+        )}
+        {updateOrderRequestStatusMutation.isError ? (
+          <StatusBanner
+            icon="TriangleAlert"
+            message={updateOrderRequestStatusMutation.error.message}
+            title="Order follow-up failed"
+            tone="destructive"
+          />
+        ) : null}
+        {createDeliveryRequestMutation.isError ? (
+          <StatusBanner
+            icon="TriangleAlert"
+            message={createDeliveryRequestMutation.error.message}
+            title="Delivery request failed"
+            tone="destructive"
+          />
+        ) : null}
+      </View>
+
+      <View className="gap-3">
+        <View className="flex-row items-center justify-between gap-3">
+          <Text className="text-base font-bold text-foreground">
+            Delivery follow-up
+          </Text>
+          {!isOfflineMode ? (
+            <Pressable
+              className="rounded-full bg-primary/10 px-3 py-2 active:bg-primary/20"
+              haptic
+              onPress={() => {
+                void deliveryRequestsQuery.refetch()
+              }}
+              transition
+            >
+              <Text className="text-xs font-bold text-primary">Refresh</Text>
+            </Pressable>
+          ) : null}
+        </View>
+
+        {isOfflineMode ? (
+          <StatusBanner
+            icon="Clock"
+            message="Delivery requests will refresh when this device is back online."
+            title="Delivery offline"
+            tone="warning"
+          />
+        ) : deliveryRequests.length > 0 ? (
+          <>
+            {visibleDeliveryRequests.map((request) => (
+              <DeliveryRequestRow
+                activeStatus={
+                  deliveryRequestStatusAction?.deliveryRequestId === request.id
+                    ? deliveryRequestStatusAction.status
+                    : null
+                }
+                isUpdating={
+                  updateDeliveryRequestStatusMutation.isPending ||
+                  deliveryRequestStatusAction !== null
+                }
+                key={request.id}
+                onUpdateStatus={(status) =>
+                  updateDeliveryRequestStatus(request.id, status)
+                }
+                request={request}
+              />
+            ))}
+            {deliveryRequests.length > visibleDeliveryRequests.length ? (
+              <Text className="text-xs font-semibold text-muted-foreground">
+                Showing first {visibleDeliveryRequests.length} of{" "}
+                {deliveryRequests.length} delivery requests.
+              </Text>
+            ) : null}
+          </>
+        ) : deliveryRequestsQuery.isFetching ? (
+          <StatusBanner
+            icon="Clock"
+            message="Checking production for delivery requests."
+            title="Refreshing delivery"
+            tone="muted"
+          />
+        ) : deliveryRequestsQuery.isError ? (
+          <StatusBanner
+            icon="TriangleAlert"
+            message="Delivery requests are unavailable for this session."
+            title="Delivery unavailable"
+            tone="warning"
+          />
+        ) : (
+          <EmptyState
+            icon="Truck"
+            message="Delivery requests created from shared-link orders will appear here."
+            title="No delivery requests yet"
+          />
+        )}
+        {updateDeliveryRequestStatusMutation.isError ? (
+          <StatusBanner
+            icon="TriangleAlert"
+            message={updateDeliveryRequestStatusMutation.error.message}
+            title="Delivery update failed"
+            tone="destructive"
+          />
+        ) : null}
+      </View>
 
       <ActionButton onPress={onComplete} variant="outline">
         Done

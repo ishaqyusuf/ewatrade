@@ -34,6 +34,7 @@ type StaffInviteSheetProps = {
 type StaffInviteContentProps = {
   ctaPlacement?: "inline" | "sticky"
   onComplete?: () => void
+  presentation?: "screen" | "sheet"
 }
 
 const STAFF_PREVIEW_LIMIT = 6
@@ -167,6 +168,7 @@ function StaffRowItem({ staff }: { staff: StaffRow }) {
 export function StaffInviteContent({
   ctaPlacement = "inline",
   onComplete,
+  presentation = "sheet",
 }: StaffInviteContentProps) {
   const trpc = useTRPC()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
@@ -257,6 +259,8 @@ export function StaffInviteContent({
       : productionStaffQuery.isFetching
         ? "Refreshing production staff."
         : "Production staff includes invited, active, and suspended attendant memberships."
+  const shouldShowSourceNotice =
+    sourceLabel !== "Online" && sourceLabel !== "Refreshing"
 
   const submit = () => {
     if (!canSubmit) return
@@ -295,8 +299,15 @@ export function StaffInviteContent({
       Send invite
     </ActionButton>
   )
+  const bodyClassName =
+    presentation === "screen" ? "gap-5 px-4 pb-6" : "gap-5 px-5 pb-6"
+  const stickyActionClassName =
+    presentation === "screen"
+      ? "absolute bottom-0 left-0 right-0 border-t border-border bg-background px-4 pb-5 pt-3"
+      : "absolute bottom-0 left-0 right-0 border-t border-border bg-background px-5 pb-5 pt-3"
+
   const body = (
-    <View className="gap-5 px-5 pb-6">
+    <View className={bodyClassName}>
       <SecondarySheetHeader
         description="Send access to an attendant for sales and inventory work."
         icon="UserPlus"
@@ -331,12 +342,14 @@ export function StaffInviteContent({
         tone="primary"
       />
 
-      <StatusBanner
-        icon={sourceLabel === "Online" ? "CircleCheck" : "Clock"}
-        message={sourceDetail}
-        title={`Staff source: ${sourceLabel}`}
-        tone={sourceLabel === "Online" ? "success" : "warning"}
-      />
+      {shouldShowSourceNotice ? (
+        <StatusBanner
+          icon="Clock"
+          message={sourceDetail}
+          title={sourceLabel}
+          tone="warning"
+        />
+      ) : null}
 
       {isAtStaffLimit ? (
         <StatusBanner
@@ -396,9 +409,7 @@ export function StaffInviteContent({
         >
           {body}
         </KeyboardAwareScrollView>
-        <View className="absolute bottom-0 left-0 right-0 border-t border-border bg-background px-5 pb-5 pt-3">
-          {action}
-        </View>
+        <View className={stickyActionClassName}>{action}</View>
       </View>
     )
   }

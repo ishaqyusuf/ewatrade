@@ -666,565 +666,562 @@ export function ReportsContent({
   onComplete,
   presentation = "sheet",
 }: ReportsContentProps) {
-    const trpc = useTRPC()
-    const [syncDeviceFilter, setSyncDeviceFilter] =
-      useState<SyncDeviceConflictFilter>("all")
-    const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
-    const allCloseouts = useRetailOpsStore((state) => state.closeouts)
-    const allProducts = useRetailOpsStore((state) => state.products)
-    const allSales = useRetailOpsStore((state) => state.sales)
-    const allStockMovements = useRetailOpsStore((state) => state.stockMovements)
-    const allSyncEvents = useRetailOpsStore((state) => state.syncEvents)
-    const closeouts = useMemo(
-      () =>
-        allCloseouts.filter((closeout) =>
-          isActiveBusinessRecord(closeout, activeBusinessId),
-        ),
-      [activeBusinessId, allCloseouts],
-    )
-    const products = useMemo(
-      () =>
-        allProducts.filter((product) =>
-          isActiveBusinessRecord(product, activeBusinessId),
-        ),
-      [activeBusinessId, allProducts],
-    )
-    const sales = useMemo(
-      () =>
-        allSales.filter((sale) =>
-          isActiveBusinessRecord(sale, activeBusinessId),
-        ),
-      [activeBusinessId, allSales],
-    )
-    const stockMovements = useMemo(
-      () =>
-        allStockMovements.filter((movement) =>
-          isActiveBusinessRecord(movement, activeBusinessId),
-        ),
-      [activeBusinessId, allStockMovements],
-    )
-    const syncEvents = useMemo(
-      () =>
-        allSyncEvents.filter((event) =>
-          isActiveBusinessRecord(event, activeBusinessId),
-        ),
-      [activeBusinessId, allSyncEvents],
-    )
-    const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
-    const lastSyncSummary = useRetailOpsStore((state) => state.lastSyncSummary)
-    const offlineDeviceId = useRetailOpsStore((state) => state.offlineDeviceId)
-    const reportRange = useMemo(() => {
-      const from = new Date()
-      from.setHours(0, 0, 0, 0)
+  const trpc = useTRPC()
+  const [syncDeviceFilter, setSyncDeviceFilter] =
+    useState<SyncDeviceConflictFilter>("all")
+  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
+  const allCloseouts = useRetailOpsStore((state) => state.closeouts)
+  const allProducts = useRetailOpsStore((state) => state.products)
+  const allSales = useRetailOpsStore((state) => state.sales)
+  const allStockMovements = useRetailOpsStore((state) => state.stockMovements)
+  const allSyncEvents = useRetailOpsStore((state) => state.syncEvents)
+  const closeouts = useMemo(
+    () =>
+      allCloseouts.filter((closeout) =>
+        isActiveBusinessRecord(closeout, activeBusinessId),
+      ),
+    [activeBusinessId, allCloseouts],
+  )
+  const products = useMemo(
+    () =>
+      allProducts.filter((product) =>
+        isActiveBusinessRecord(product, activeBusinessId),
+      ),
+    [activeBusinessId, allProducts],
+  )
+  const sales = useMemo(
+    () =>
+      allSales.filter((sale) => isActiveBusinessRecord(sale, activeBusinessId)),
+    [activeBusinessId, allSales],
+  )
+  const stockMovements = useMemo(
+    () =>
+      allStockMovements.filter((movement) =>
+        isActiveBusinessRecord(movement, activeBusinessId),
+      ),
+    [activeBusinessId, allStockMovements],
+  )
+  const syncEvents = useMemo(
+    () =>
+      allSyncEvents.filter((event) =>
+        isActiveBusinessRecord(event, activeBusinessId),
+      ),
+    [activeBusinessId, allSyncEvents],
+  )
+  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
+  const lastSyncSummary = useRetailOpsStore((state) => state.lastSyncSummary)
+  const offlineDeviceId = useRetailOpsStore((state) => state.offlineDeviceId)
+  const reportRange = useMemo(() => {
+    const from = new Date()
+    from.setHours(0, 0, 0, 0)
 
-      return {
-        from,
-        to: new Date(),
-      }
-    }, [])
-    const canReadProductionReports = !isOfflineMode
-    const summaryQuery = useQuery(
-      trpc.retailOps.summary.queryOptions(reportRange, {
+    return {
+      from,
+      to: new Date(),
+    }
+  }, [])
+  const canReadProductionReports = !isOfflineMode
+  const summaryQuery = useQuery(
+    trpc.retailOps.summary.queryOptions(reportRange, {
+      enabled: canReadProductionReports,
+      retry: false,
+    }),
+  )
+  const inventoryQuery = useQuery(
+    trpc.retailOps.inventory.queryOptions(
+      {},
+      {
         enabled: canReadProductionReports,
         retry: false,
-      }),
-    )
-    const inventoryQuery = useQuery(
-      trpc.retailOps.inventory.queryOptions(
-        {},
-        {
-          enabled: canReadProductionReports,
-          retry: false,
-        },
-      ),
-    )
-    const salesByRepQuery = useQuery(
-      trpc.retailOps.salesByRep.queryOptions(reportRange, {
+      },
+    ),
+  )
+  const salesByRepQuery = useQuery(
+    trpc.retailOps.salesByRep.queryOptions(reportRange, {
+      enabled: canReadProductionReports,
+      retry: false,
+    }),
+  )
+  const salesByProductQuery = useQuery(
+    trpc.retailOps.salesByProduct.queryOptions(reportRange, {
+      enabled: canReadProductionReports,
+      retry: false,
+    }),
+  )
+  const creditSalesQuery = useQuery(
+    trpc.retailOps.creditSales.queryOptions(
+      {
+        ...reportRange,
+        limit: 8,
+      },
+      {
         enabled: canReadProductionReports,
         retry: false,
-      }),
-    )
-    const salesByProductQuery = useQuery(
-      trpc.retailOps.salesByProduct.queryOptions(reportRange, {
+      },
+    ),
+  )
+  const paymentReconciliationQuery = useQuery(
+    trpc.retailOps.paymentReconciliation.queryOptions(reportRange, {
+      enabled: canReadProductionReports,
+      retry: false,
+    }),
+  )
+  const syncConflictsQuery = useQuery(
+    trpc.retailOps.syncConflicts.queryOptions(
+      {
+        deviceId: syncDeviceFilter === "current" ? offlineDeviceId : undefined,
+        limit: 12,
+      },
+      {
         enabled: canReadProductionReports,
         retry: false,
-      }),
-    )
-    const creditSalesQuery = useQuery(
-      trpc.retailOps.creditSales.queryOptions(
-        {
-          ...reportRange,
-          limit: 8,
-        },
-        {
-          enabled: canReadProductionReports,
-          retry: false,
-        },
-      ),
-    )
-    const paymentReconciliationQuery = useQuery(
-      trpc.retailOps.paymentReconciliation.queryOptions(reportRange, {
+      },
+    ),
+  )
+  const tenantSyncConflictsCountQuery = useQuery(
+    trpc.retailOps.syncConflicts.queryOptions(
+      {
+        limit: 50,
+      },
+      {
         enabled: canReadProductionReports,
         retry: false,
-      }),
-    )
-    const syncConflictsQuery = useQuery(
-      trpc.retailOps.syncConflicts.queryOptions(
-        {
-          deviceId:
-            syncDeviceFilter === "current" ? offlineDeviceId : undefined,
-          limit: 12,
-        },
-        {
-          enabled: canReadProductionReports,
-          retry: false,
-        },
-      ),
-    )
-    const tenantSyncConflictsCountQuery = useQuery(
-      trpc.retailOps.syncConflicts.queryOptions(
-        {
-          limit: 50,
-        },
-        {
-          enabled: canReadProductionReports,
-          retry: false,
-        },
-      ),
-    )
-    const todaySales = useMemo(
-      () => sales.filter((sale) => isToday(sale.createdAt)),
-      [sales],
-    )
-    const todayTotals = useMemo(
-      () => getPaymentTotals(todaySales),
-      [todaySales],
-    )
-    const latestCloseout = closeouts[0] ?? null
-    const pendingSyncCount = syncEvents.filter(
-      (event) => event.status === "pending",
-    ).length
-    const failedSyncCount = syncEvents.filter(
-      (event) => event.status === "failed",
-    ).length
-    const conflictSyncCount = syncEvents.filter(
-      (event) => event.status === "conflict",
-    ).length
-    const openSyncCount = pendingSyncCount + failedSyncCount + conflictSyncCount
-    const summary = summaryQuery.data
-    const reconciliationRows = useMemo(
-      () => paymentReconciliationQuery.data ?? [],
-      [paymentReconciliationQuery.data],
-    )
-    const latestProductionCloseout = reconciliationRows[0] ?? null
-    const productStockRows = useMemo(
-      () =>
-        inventoryQuery.data?.length
-          ? getProductionStockRows(inventoryQuery.data)
-          : getProductStockRows(products),
-      [inventoryQuery.data, products],
-    )
-    const salesByRepRows = useMemo(
-      () =>
-        salesByRepQuery.data?.length
-          ? getProductionSalesByRepRows(salesByRepQuery.data)
-          : getSalesByRepRows(todaySales),
-      [salesByRepQuery.data, todaySales],
-    )
-    const salesByProductRows = useMemo(
-      () =>
-        salesByProductQuery.data?.length
-          ? getProductionSalesByProductRows(salesByProductQuery.data)
-          : getSalesByProductRows(todaySales),
-      [salesByProductQuery.data, todaySales],
-    )
-    const creditSaleRows = useMemo(
-      () => getProductionCreditSaleRows(creditSalesQuery.data ?? []),
-      [creditSalesQuery.data],
-    )
-    const movementRows = useMemo(
-      () => getMovementRows(stockMovements),
-      [stockMovements],
-    )
-    const varianceRows = useMemo(
-      () =>
-        reconciliationRows.length > 0
-          ? getProductionVarianceRows(reconciliationRows)
-          : getVarianceRows(closeouts),
-      [closeouts, reconciliationRows],
-    )
-    const syncOperationRows = useMemo(
-      () =>
-        getSyncOperationRows({
-          conflictSyncCount,
-          failedSyncCount,
-          isOfflineMode,
-          lastSyncSummary,
-          offlineDeviceId,
-          pendingSyncCount,
-        }),
-      [
+      },
+    ),
+  )
+  const todaySales = useMemo(
+    () => sales.filter((sale) => isToday(sale.createdAt)),
+    [sales],
+  )
+  const todayTotals = useMemo(() => getPaymentTotals(todaySales), [todaySales])
+  const latestCloseout = closeouts[0] ?? null
+  const pendingSyncCount = syncEvents.filter(
+    (event) => event.status === "pending",
+  ).length
+  const failedSyncCount = syncEvents.filter(
+    (event) => event.status === "failed",
+  ).length
+  const conflictSyncCount = syncEvents.filter(
+    (event) => event.status === "conflict",
+  ).length
+  const openSyncCount = pendingSyncCount + failedSyncCount + conflictSyncCount
+  const summary = summaryQuery.data
+  const reconciliationRows = useMemo(
+    () => paymentReconciliationQuery.data ?? [],
+    [paymentReconciliationQuery.data],
+  )
+  const latestProductionCloseout = reconciliationRows[0] ?? null
+  const productStockRows = useMemo(
+    () =>
+      inventoryQuery.data?.length
+        ? getProductionStockRows(inventoryQuery.data)
+        : getProductStockRows(products),
+    [inventoryQuery.data, products],
+  )
+  const salesByRepRows = useMemo(
+    () =>
+      salesByRepQuery.data?.length
+        ? getProductionSalesByRepRows(salesByRepQuery.data)
+        : getSalesByRepRows(todaySales),
+    [salesByRepQuery.data, todaySales],
+  )
+  const salesByProductRows = useMemo(
+    () =>
+      salesByProductQuery.data?.length
+        ? getProductionSalesByProductRows(salesByProductQuery.data)
+        : getSalesByProductRows(todaySales),
+    [salesByProductQuery.data, todaySales],
+  )
+  const creditSaleRows = useMemo(
+    () => getProductionCreditSaleRows(creditSalesQuery.data ?? []),
+    [creditSalesQuery.data],
+  )
+  const movementRows = useMemo(
+    () => getMovementRows(stockMovements),
+    [stockMovements],
+  )
+  const varianceRows = useMemo(
+    () =>
+      reconciliationRows.length > 0
+        ? getProductionVarianceRows(reconciliationRows)
+        : getVarianceRows(closeouts),
+    [closeouts, reconciliationRows],
+  )
+  const syncOperationRows = useMemo(
+    () =>
+      getSyncOperationRows({
         conflictSyncCount,
         failedSyncCount,
         isOfflineMode,
         lastSyncSummary,
         offlineDeviceId,
         pendingSyncCount,
-      ],
-    )
-    const syncConflictRows = useMemo(
-      () => getSyncConflictRows(syncConflictsQuery.data ?? []),
-      [syncConflictsQuery.data],
-    )
-    const reportSourceRows = useMemo(() => {
-      const queryErrors = [
-        summaryQuery.isError,
-        inventoryQuery.isError,
-        salesByRepQuery.isError,
-        salesByProductQuery.isError,
-        creditSalesQuery.isError,
-        paymentReconciliationQuery.isError,
-        syncConflictsQuery.isError,
-      ].filter(Boolean).length
-      const queryFetching = [
-        summaryQuery.isFetching,
-        inventoryQuery.isFetching,
-        salesByRepQuery.isFetching,
-        salesByProductQuery.isFetching,
-        creditSalesQuery.isFetching,
-        paymentReconciliationQuery.isFetching,
-        syncConflictsQuery.isFetching,
-      ].some(Boolean)
-
-      return [
-        {
-          detail: isOfflineMode
-            ? "Local reports are shown while this device is offline."
-            : queryErrors > 0
-              ? `${queryErrors} production report request${
-                  queryErrors === 1 ? "" : "s"
-                } could not load. Local data is shown where available.`
-              : queryFetching
-                ? "Refreshing production report data."
-                : "Production report data is current for this session.",
-          id: "report-source",
-          label: "Report source",
-          tone: isOfflineMode || queryErrors > 0 ? "warning" : "success",
-          value: isOfflineMode ? "Local" : queryErrors > 0 ? "Mixed" : "Online",
-        },
-      ] satisfies ReportRowItem[]
-    }, [
-      creditSalesQuery.isError,
-      creditSalesQuery.isFetching,
-      inventoryQuery.isError,
-      inventoryQuery.isFetching,
+      }),
+    [
+      conflictSyncCount,
+      failedSyncCount,
       isOfflineMode,
-      paymentReconciliationQuery.isError,
-      paymentReconciliationQuery.isFetching,
-      salesByProductQuery.isError,
-      salesByProductQuery.isFetching,
-      salesByRepQuery.isError,
-      salesByRepQuery.isFetching,
+      lastSyncSummary,
+      offlineDeviceId,
+      pendingSyncCount,
+    ],
+  )
+  const syncConflictRows = useMemo(
+    () => getSyncConflictRows(syncConflictsQuery.data ?? []),
+    [syncConflictsQuery.data],
+  )
+  const reportSourceRows = useMemo(() => {
+    const queryErrors = [
       summaryQuery.isError,
-      summaryQuery.isFetching,
+      inventoryQuery.isError,
+      salesByRepQuery.isError,
+      salesByProductQuery.isError,
+      creditSalesQuery.isError,
+      paymentReconciliationQuery.isError,
       syncConflictsQuery.isError,
+    ].filter(Boolean).length
+    const queryFetching = [
+      summaryQuery.isFetching,
+      inventoryQuery.isFetching,
+      salesByRepQuery.isFetching,
+      salesByProductQuery.isFetching,
+      creditSalesQuery.isFetching,
+      paymentReconciliationQuery.isFetching,
       syncConflictsQuery.isFetching,
-    ])
-    const reportSource = reportSourceRows[0]?.value ?? "Local"
-    const reportCsvSections = useMemo(
-      () => [
-        {
-          rows: reportSourceRows,
-          title: "Source",
-        },
-        {
-          rows: syncConflictRows,
-          title: "Server sync conflicts",
-        },
-        {
-          rows: syncOperationRows,
-          title: "Sync operations",
-        },
-        {
-          rows: salesByRepRows,
-          title: "Sales by attendant",
-        },
-        {
-          rows: salesByProductRows,
-          title: "Sales by product and unit",
-        },
-        {
-          rows: creditSaleRows,
-          title: "Credit sales",
-        },
-        {
-          rows: productStockRows,
-          title: "Stock balances and price snapshot",
-        },
-        {
-          rows: movementRows,
-          title: "Stock movement history",
-        },
-        {
-          rows: varianceRows,
-          title: "Cash and stock variance",
-        },
-      ],
-      [
-        creditSaleRows,
-        movementRows,
-        productStockRows,
-        reportSourceRows,
-        salesByProductRows,
-        salesByRepRows,
-        syncConflictRows,
-        syncOperationRows,
-        varianceRows,
-      ],
-    )
+    ].some(Boolean)
 
-    async function exportReportCsv() {
-      const csv = buildRetailOpsReportCsv({
-        businessId: activeBusinessId,
-        generatedAt: new Date(),
-        sections: reportCsvSections,
-        source: reportSource,
-        syncDeviceFilter:
-          syncDeviceFilter === "current"
-            ? `current device ${formatDeviceFilterLabel(offlineDeviceId)}`
-            : "all devices",
-      })
+    return [
+      {
+        detail: isOfflineMode
+          ? "Local reports are shown while this device is offline."
+          : queryErrors > 0
+            ? `${queryErrors} production report request${
+                queryErrors === 1 ? "" : "s"
+              } could not load. Local data is shown where available.`
+            : queryFetching
+              ? "Refreshing production report data."
+              : "Production report data is current for this session.",
+        id: "report-source",
+        label: "Report source",
+        tone: isOfflineMode || queryErrors > 0 ? "warning" : "success",
+        value: isOfflineMode ? "Local" : queryErrors > 0 ? "Mixed" : "Online",
+      },
+    ] satisfies ReportRowItem[]
+  }, [
+    creditSalesQuery.isError,
+    creditSalesQuery.isFetching,
+    inventoryQuery.isError,
+    inventoryQuery.isFetching,
+    isOfflineMode,
+    paymentReconciliationQuery.isError,
+    paymentReconciliationQuery.isFetching,
+    salesByProductQuery.isError,
+    salesByProductQuery.isFetching,
+    salesByRepQuery.isError,
+    salesByRepQuery.isFetching,
+    summaryQuery.isError,
+    summaryQuery.isFetching,
+    syncConflictsQuery.isError,
+    syncConflictsQuery.isFetching,
+  ])
+  const reportSource = reportSourceRows[0]?.value ?? "Local"
+  const reportCsvSections = useMemo(
+    () => [
+      {
+        rows: reportSourceRows,
+        title: "Source",
+      },
+      {
+        rows: syncConflictRows,
+        title: "Server sync conflicts",
+      },
+      {
+        rows: syncOperationRows,
+        title: "Sync operations",
+      },
+      {
+        rows: salesByRepRows,
+        title: "Sales by attendant",
+      },
+      {
+        rows: salesByProductRows,
+        title: "Sales by product and unit",
+      },
+      {
+        rows: creditSaleRows,
+        title: "Credit sales",
+      },
+      {
+        rows: productStockRows,
+        title: "Stock balances and price snapshot",
+      },
+      {
+        rows: movementRows,
+        title: "Stock movement history",
+      },
+      {
+        rows: varianceRows,
+        title: "Cash and stock variance",
+      },
+    ],
+    [
+      creditSaleRows,
+      movementRows,
+      productStockRows,
+      reportSourceRows,
+      salesByProductRows,
+      salesByRepRows,
+      syncConflictRows,
+      syncOperationRows,
+      varianceRows,
+    ],
+  )
 
-      await Share.share({
-        message: csv,
-        title: "Ewatrade retail reports.csv",
-      })
-    }
+  async function exportReportCsv() {
+    const csv = buildRetailOpsReportCsv({
+      businessId: activeBusinessId,
+      generatedAt: new Date(),
+      sections: reportCsvSections,
+      source: reportSource,
+      syncDeviceFilter:
+        syncDeviceFilter === "current"
+          ? `current device ${formatDeviceFilterLabel(offlineDeviceId)}`
+          : "all devices",
+    })
 
-    const content = (
-      <View className="gap-5 px-5 pb-6">
-            <View className="gap-3">
-              <View className="h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
-                <Icon className="size-base text-primary" name="BarChart3" />
-              </View>
-              <View className="gap-2">
-                <Text className="text-xl font-bold text-foreground">
-                  Retail reports
-                </Text>
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  Today, stock, payment, variance, and movement snapshots for
-                  the active business.
-                </Text>
-              </View>
-            </View>
+    await Share.share({
+      message: csv,
+      title: "Ewatrade retail reports.csv",
+    })
+  }
 
-            <ReportSection
-              empty="Report source is not available."
-              rows={reportSourceRows}
-              title="Source"
-            />
+  const contentClassName =
+    presentation === "screen" ? "gap-5 px-4 pb-6" : "gap-5 px-5 pb-6"
 
-            <View className="flex-row gap-3">
-              <ReportMetricTile
-                label="Today sales"
-                value={formatMoney(
-                  summary?.sales.totalMinor ?? todayTotals.gross,
-                  "NGN",
-                )}
-              />
-              <ReportMetricTile
-                label="Transactions"
-                value={String(summary?.sales.orderCount ?? todaySales.length)}
-              />
-            </View>
-
-            <View className="flex-row gap-3">
-              <ReportMetricTile
-                label="Expected cash"
-                value={formatMoney(
-                  latestProductionCloseout?.expectedCashMinor ??
-                    summary?.payments.cashMinor ??
-                    todayTotals.cash,
-                  "NGN",
-                )}
-              />
-              <ReportMetricTile
-                label="Transfer"
-                value={formatMoney(
-                  summary?.payments.transferMinor ?? todayTotals.transfer,
-                  "NGN",
-                )}
-              />
-            </View>
-
-            <View className="flex-row gap-3">
-              <ReportMetricTile
-                label="Open sync"
-                tone={openSyncCount > 0 ? "warning" : "success"}
-                value={String(openSyncCount)}
-              />
-              <ReportMetricTile
-                label="Last closeout"
-                tone={
-                  latestProductionCloseout?.review || latestCloseout
-                    ? "warning"
-                    : "default"
-                }
-                value={
-                  latestProductionCloseout?.review?.status.replace(/_/g, " ") ??
-                  latestCloseout?.approvalStatus.replace(/_/g, " ") ??
-                  "None"
-                }
-              />
-            </View>
-
-            <View className="flex-row gap-3">
-              <ReportMetricTile
-                label="Server conflicts"
-                tone={
-                  (tenantSyncConflictsCountQuery.data?.length ?? 0) > 0
-                    ? "danger"
-                    : "success"
-                }
-                value={String(tenantSyncConflictsCountQuery.data?.length ?? 0)}
-              />
-              <ReportMetricTile
-                label="Filtered conflicts"
-                tone={syncConflictRows.length > 0 ? "danger" : "success"}
-                value={String(syncConflictRows.length)}
-              />
-            </View>
-
-            <View className="gap-3">
-              <View className="flex-row items-start justify-between gap-3">
-                <View className="flex-1">
-                  <Text className="text-base font-bold text-foreground">
-                    Server sync conflicts
-                  </Text>
-                  <Text className="mt-1 text-sm leading-5 text-muted-foreground">
-                    Tenant-level unreviewed conflicts, with a current-device
-                    filter for field diagnosis.
-                  </Text>
-                </View>
-                <Icon
-                  className={cn(
-                    "size-sm",
-                    syncConflictsQuery.isFetching
-                      ? "text-primary"
-                      : "text-muted-foreground",
-                  )}
-                  name="TriangleAlert"
-                />
-              </View>
-
-              <SyncDeviceFilterControl
-                currentDeviceId={offlineDeviceId}
-                onChange={setSyncDeviceFilter}
-                value={syncDeviceFilter}
-              />
-
-              <ReportSection
-                empty={
-                  syncConflictsQuery.isError
-                    ? "Server conflicts are unavailable for this role or connection."
-                    : syncConflictsQuery.isFetching
-                      ? "Loading server conflicts..."
-                      : "No unreviewed server conflicts for this filter."
-                }
-                rows={syncConflictRows}
-                title="Conflict review"
-              />
-            </View>
-
-            <ReportSection
-              empty="No sync operations have been recorded on this device."
-              rows={syncOperationRows}
-              title="Sync operations"
-            />
-
-            <ReportSection
-              empty="No sales have been recorded today."
-              rows={salesByRepRows}
-              title="Sales by attendant"
-            />
-
-            <ReportSection
-              empty="No product sales have been recorded today."
-              rows={salesByProductRows}
-              title="Sales by product and unit"
-            />
-
-            <ReportSection
-              empty="No outstanding credit sales are visible for this range."
-              rows={creditSaleRows}
-              title="Credit sales"
-            />
-
-            <ReportSection
-              empty="Add inventory to see stock balances."
-              rows={productStockRows}
-              title="Stock balances and price snapshot"
-            />
-
-            <ReportSection
-              empty="No stock movement history yet."
-              rows={movementRows}
-              title="Stock movement history"
-            />
-
-            <ReportSection
-              empty="No closeout variance has been recorded."
-              rows={varianceRows}
-              title="Cash and stock variance"
-            />
-
-            <StatusBanner
-              icon="FileText"
-              message="CSV export includes the visible report rows, source state, and current sync-device conflict filter."
-              title="Export scope"
-              tone="muted"
-            />
-
-            <ActionButton
-              onPress={() => {
-                void exportReportCsv()
-              }}
-              testID="retail-reports-export-csv"
-              variant="outline"
-            >
-              Export CSV
-            </ActionButton>
-
-        <ActionButton onPress={onComplete} variant="outline">
-          Done
-        </ActionButton>
+  const content = (
+    <View className={contentClassName}>
+      <View className="gap-3">
+        <View className="h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
+          <Icon className="size-base text-primary" name="BarChart3" />
+        </View>
+        <View className="gap-2">
+          <Text className="text-xl font-bold text-foreground">
+            Retail reports
+          </Text>
+          <Text className="text-sm leading-5 text-muted-foreground">
+            Today, stock, payment, variance, and movement snapshots for the
+            active business.
+          </Text>
+        </View>
       </View>
-    )
 
-    if (presentation === "screen") {
-      return (
-        <KeyboardAwareScrollView
-          className="flex-1"
-          bottomOffset={140}
-          contentContainerStyle={{ paddingBottom: 120 }}
-          disableScrollOnKeyboardHide
-          keyboardDismissMode="interactive"
-          keyboardShouldPersistTaps="handled"
-        >
-          {content}
-        </KeyboardAwareScrollView>
-      )
-    }
+      <ReportSection
+        empty="Report source is not available."
+        rows={reportSourceRows}
+        title="Source"
+      />
 
+      <View className="flex-row gap-3">
+        <ReportMetricTile
+          label="Today sales"
+          value={formatMoney(
+            summary?.sales.totalMinor ?? todayTotals.gross,
+            "NGN",
+          )}
+        />
+        <ReportMetricTile
+          label="Transactions"
+          value={String(summary?.sales.orderCount ?? todaySales.length)}
+        />
+      </View>
+
+      <View className="flex-row gap-3">
+        <ReportMetricTile
+          label="Expected cash"
+          value={formatMoney(
+            latestProductionCloseout?.expectedCashMinor ??
+              summary?.payments.cashMinor ??
+              todayTotals.cash,
+            "NGN",
+          )}
+        />
+        <ReportMetricTile
+          label="Transfer"
+          value={formatMoney(
+            summary?.payments.transferMinor ?? todayTotals.transfer,
+            "NGN",
+          )}
+        />
+      </View>
+
+      <View className="flex-row gap-3">
+        <ReportMetricTile
+          label="Open sync"
+          tone={openSyncCount > 0 ? "warning" : "success"}
+          value={String(openSyncCount)}
+        />
+        <ReportMetricTile
+          label="Last closeout"
+          tone={
+            latestProductionCloseout?.review || latestCloseout
+              ? "warning"
+              : "default"
+          }
+          value={
+            latestProductionCloseout?.review?.status.replace(/_/g, " ") ??
+            latestCloseout?.approvalStatus.replace(/_/g, " ") ??
+            "None"
+          }
+        />
+      </View>
+
+      <View className="flex-row gap-3">
+        <ReportMetricTile
+          label="Server conflicts"
+          tone={
+            (tenantSyncConflictsCountQuery.data?.length ?? 0) > 0
+              ? "danger"
+              : "success"
+          }
+          value={String(tenantSyncConflictsCountQuery.data?.length ?? 0)}
+        />
+        <ReportMetricTile
+          label="Filtered conflicts"
+          tone={syncConflictRows.length > 0 ? "danger" : "success"}
+          value={String(syncConflictRows.length)}
+        />
+      </View>
+
+      <View className="gap-3">
+        <View className="flex-row items-start justify-between gap-3">
+          <View className="flex-1">
+            <Text className="text-base font-bold text-foreground">
+              Server sync conflicts
+            </Text>
+            <Text className="mt-1 text-sm leading-5 text-muted-foreground">
+              Tenant-level unreviewed conflicts, with a current-device filter
+              for field diagnosis.
+            </Text>
+          </View>
+          <Icon
+            className={cn(
+              "size-sm",
+              syncConflictsQuery.isFetching
+                ? "text-primary"
+                : "text-muted-foreground",
+            )}
+            name="TriangleAlert"
+          />
+        </View>
+
+        <SyncDeviceFilterControl
+          currentDeviceId={offlineDeviceId}
+          onChange={setSyncDeviceFilter}
+          value={syncDeviceFilter}
+        />
+
+        <ReportSection
+          empty={
+            syncConflictsQuery.isError
+              ? "Server conflicts are unavailable for this role or connection."
+              : syncConflictsQuery.isFetching
+                ? "Loading server conflicts..."
+                : "No unreviewed server conflicts for this filter."
+          }
+          rows={syncConflictRows}
+          title="Conflict review"
+        />
+      </View>
+
+      <ReportSection
+        empty="No sync operations have been recorded on this device."
+        rows={syncOperationRows}
+        title="Sync operations"
+      />
+
+      <ReportSection
+        empty="No sales have been recorded today."
+        rows={salesByRepRows}
+        title="Sales by attendant"
+      />
+
+      <ReportSection
+        empty="No product sales have been recorded today."
+        rows={salesByProductRows}
+        title="Sales by product and unit"
+      />
+
+      <ReportSection
+        empty="No outstanding credit sales are visible for this range."
+        rows={creditSaleRows}
+        title="Credit sales"
+      />
+
+      <ReportSection
+        empty="Add inventory to see stock balances."
+        rows={productStockRows}
+        title="Stock balances and price snapshot"
+      />
+
+      <ReportSection
+        empty="No stock movement history yet."
+        rows={movementRows}
+        title="Stock movement history"
+      />
+
+      <ReportSection
+        empty="No closeout variance has been recorded."
+        rows={varianceRows}
+        title="Cash and stock variance"
+      />
+
+      <StatusBanner
+        icon="FileText"
+        message="CSV export includes the visible report rows, source state, and current sync-device conflict filter."
+        title="Export scope"
+        tone="muted"
+      />
+
+      <ActionButton
+        onPress={() => {
+          void exportReportCsv()
+        }}
+        testID="retail-reports-export-csv"
+        variant="outline"
+      >
+        Export CSV
+      </ActionButton>
+
+      <ActionButton onPress={onComplete} variant="outline">
+        Done
+      </ActionButton>
+    </View>
+  )
+
+  if (presentation === "screen") {
     return (
-      <BottomSheetKeyboardAwareScrollView
-        bottomOffset={112}
-        contentContainerStyle={{ paddingBottom: 32 }}
+      <KeyboardAwareScrollView
+        className="flex-1"
+        bottomOffset={140}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        disableScrollOnKeyboardHide
+        keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
       >
         {content}
-      </BottomSheetKeyboardAwareScrollView>
+      </KeyboardAwareScrollView>
     )
+  }
+
+  return (
+    <BottomSheetKeyboardAwareScrollView
+      bottomOffset={112}
+      contentContainerStyle={{ paddingBottom: 32 }}
+      keyboardShouldPersistTaps="handled"
+    >
+      {content}
+    </BottomSheetKeyboardAwareScrollView>
+  )
 }
 
 export const ReportsSheet = forwardRef<BottomSheetModal, ReportsSheetProps>(

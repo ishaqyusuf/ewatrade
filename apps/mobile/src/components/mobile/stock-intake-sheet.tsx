@@ -297,16 +297,9 @@ export function StockIntakeContent({
     !directionWasAdjusted &&
     hasEnoughStock &&
     !isSubmitting
-  const sourceLabel = canRecordProductionStock
-    ? "Online"
-    : isOfflineMode
-      ? "Local"
-      : "Local queue"
-  const sourceDetail = canRecordProductionStock
-    ? "This stock change will be recorded in production immediately."
-    : isOfflineMode
-      ? "This stock change will be queued locally and synced later."
-      : "Waiting for the selected product unit to sync before direct production stock updates."
+  const sourceDetail = isOfflineMode
+    ? "This stock change will sync when connection is ready."
+    : "Waiting for the selected product unit to sync before direct production stock updates."
 
   useEffect(() => {
     if (products.length === 0) {
@@ -432,273 +425,272 @@ export function StockIntakeContent({
     onComplete?.()
   }
 
+  const contentClassName =
+    presentation === "screen" ? "gap-5 px-4 pb-6" : "gap-5 px-5 pb-6"
+
   const content = (
-    <View className="gap-5 px-5 pb-6">
-          <View className="gap-2">
-            <Text className="text-xl font-bold text-foreground">
-              {mode === "adjust" ? "Adjust stock" : "Stock intake"}
-            </Text>
-            <Text className="text-sm leading-5 text-muted-foreground">
-              {mode === "adjust"
-                ? "Correct counts, record loss, or add found stock without a bulky form."
-                : "Add delivered stock and keep an audit trail for inventory changes."}
-            </Text>
-          </View>
+    <View className={contentClassName}>
+      <View className="gap-2">
+        <Text className="text-xl font-bold text-foreground">
+          {mode === "adjust" ? "Adjust stock" : "Stock intake"}
+        </Text>
+        <Text className="text-sm leading-5 text-muted-foreground">
+          {mode === "adjust"
+            ? "Correct counts, record loss, or add found stock without a bulky form."
+            : "Add delivered stock and keep an audit trail for inventory changes."}
+        </Text>
+      </View>
 
-          <StatusBanner
-            icon={canRecordProductionStock ? "CircleCheck" : "Clock"}
-            message={sourceDetail}
-            title={`Stock source: ${sourceLabel}`}
-            tone={canRecordProductionStock ? "success" : "warning"}
-          />
+      {!canRecordProductionStock ? (
+        <StatusBanner
+          icon="Clock"
+          message={sourceDetail}
+          title={isOfflineMode ? "Offline stock" : "Sync required"}
+          tone="warning"
+        />
+      ) : null}
 
-          <View className="flex-row gap-2">
-            <InventorySegmentOption
-              label="Restock"
-              onPress={() => setMode("intake")}
-              selected={mode === "intake"}
+      <View className="flex-row gap-2">
+        <InventorySegmentOption
+          label="Restock"
+          onPress={() => setMode("intake")}
+          selected={mode === "intake"}
+        />
+        <InventorySegmentOption
+          label="Adjust"
+          onPress={() => setMode("adjust")}
+          selected={mode === "adjust"}
+        />
+      </View>
+
+      {products.length > 0 ? (
+        <View className="gap-3">
+          {products.length > 8 ? (
+            <FormField
+              label="Find product"
+              leadingIcon="Search"
+              onChangeText={setProductQuery}
+              placeholder="Search products or units"
+              value={productQuery}
             />
-            <InventorySegmentOption
-              label="Adjust"
-              onPress={() => setMode("adjust")}
-              selected={mode === "adjust"}
-            />
-          </View>
-
-          {products.length > 0 ? (
-            <View className="gap-3">
-              {products.length > 8 ? (
-                <FormField
-                  label="Find product"
-                  leadingIcon="Search"
-                  onChangeText={setProductQuery}
-                  placeholder="Search products or units"
-                  value={productQuery}
-                />
-              ) : null}
-              {visibleProducts.length > 0 ? (
-                visibleProducts.map((product) => (
-                  <ProductOption
-                    key={product.id}
-                    onPress={() => {
-                      setSelectedProductId(product.id)
-                      setSelectedUnitId("primary")
-                      setUnitQuery("")
-                    }}
-                    product={product}
-                    selected={selectedProductId === product.id}
-                  />
-                ))
-              ) : (
-                <EmptyState
-                  icon="Search"
-                  message="Try another product, unit, or variant name."
-                  title="No matching products"
-                />
-              )}
-              {filteredProducts.length > visibleProducts.length ? (
-                <Text className="text-xs font-semibold text-muted-foreground">
-                  Showing first {visibleProducts.length} of{" "}
-                  {filteredProducts.length} matching products.
-                </Text>
-              ) : null}
-            </View>
+          ) : null}
+          {visibleProducts.length > 0 ? (
+            visibleProducts.map((product) => (
+              <ProductOption
+                key={product.id}
+                onPress={() => {
+                  setSelectedProductId(product.id)
+                  setSelectedUnitId("primary")
+                  setUnitQuery("")
+                }}
+                product={product}
+                selected={selectedProductId === product.id}
+              />
+            ))
           ) : (
             <EmptyState
-              icon="Warehouse"
-              message="Create an item before recording delivered stock."
-              title="Add inventory first"
+              icon="Search"
+              message="Try another product, unit, or variant name."
+              title="No matching products"
             />
           )}
-
-          {selectedProduct && unitOptions.length > 0 ? (
-            <View className="gap-2">
-              <Text className="text-sm font-semibold text-foreground">
-                Unit
-              </Text>
-              {unitOptions.length > STOCK_UNIT_PREVIEW_LIMIT ? (
-                <FormField
-                  label="Find unit"
-                  leadingIcon="Search"
-                  onChangeText={setUnitQuery}
-                  placeholder="Search units or variants"
-                  value={unitQuery}
-                />
-              ) : null}
-              <View className="flex-row flex-wrap gap-2">
-                {visibleUnitOptions.length > 0 ? (
-                  visibleUnitOptions.map((unit) => (
-                    <InventoryUnitOption
-                      key={unit.id}
-                      label={unit.label}
-                      onPress={() => setSelectedUnitId(unit.id)}
-                      selected={selectedUnit?.id === unit.id}
-                      stockLabel={`${unit.stock} available`}
-                      stockTone={getInventoryStockTone(unit.stock)}
-                    />
-                  ))
-                ) : (
-                  <EmptyState
-                    className="flex-1"
-                    icon="Search"
-                    message="Try another unit or variant name."
-                    title="No matching units"
-                  />
-                )}
-              </View>
-              {filteredUnitOptions.length > visibleUnitOptions.length ? (
-                <Text className="text-xs font-semibold text-muted-foreground">
-                  Showing first {visibleUnitOptions.length} of{" "}
-                  {filteredUnitOptions.length} matching units.
-                </Text>
-              ) : null}
-            </View>
+          {filteredProducts.length > visibleProducts.length ? (
+            <Text className="text-xs font-semibold text-muted-foreground">
+              Showing first {visibleProducts.length} of{" "}
+              {filteredProducts.length} matching products.
+            </Text>
           ) : null}
+        </View>
+      ) : (
+        <EmptyState
+          icon="Warehouse"
+          message="Create an item before recording delivered stock."
+          title="Add inventory first"
+        />
+      )}
 
-          <QuantityStepper
-            helper={selectedUnit?.label}
-            label={
-              mode === "adjust" ? "Quantity to adjust" : "Quantity received"
-            }
-            onChangeText={setQuantity}
-            value={quantity}
-          />
-
-          {mode === "adjust" ? (
-            <View className="gap-3">
-              <View className="gap-2">
-                <Text className="text-sm font-semibold text-foreground">
-                  Direction
-                </Text>
-                <View className="flex-row gap-2">
-                  <InventorySegmentOption
-                    disabled={!canDecreaseAdjustment}
-                    label="Decrease"
-                    onPress={() => setDirection("decrease")}
-                    selected={direction === "decrease"}
-                  />
-                  <InventorySegmentOption
-                    disabled={!canIncreaseAdjustment}
-                    label="Increase"
-                    onPress={() => setDirection("increase")}
-                    selected={direction === "increase"}
-                  />
-                </View>
-                <Text className="text-xs leading-4 text-muted-foreground">
-                  {adjustmentDirectionHelper}
-                </Text>
-              </View>
-
-              <View className="gap-2">
-                <Text className="text-sm font-semibold text-foreground">
-                  Reason
-                </Text>
-                <View className="flex-row flex-wrap gap-2">
-                  {stockAdjustmentReasons.map((option) => (
-                    <Pressable
-                      key={option.value}
-                      className={cn(
-                        "rounded-full border px-4 py-2",
-                        reason === option.value
-                          ? "border-primary bg-primary"
-                          : "border-border bg-background active:bg-accent",
-                      )}
-                      haptic
-                      onPress={() => {
-                        setReason(option.value)
-                        setDirection(
-                          normalizeStockAdjustmentDirection({
-                            direction,
-                            reason: option.value,
-                          }),
-                        )
-                      }}
-                      transition
-                    >
-                      <Text
-                        className={cn(
-                          "text-sm font-extrabold",
-                          reason === option.value
-                            ? "text-primary-foreground"
-                            : "text-foreground",
-                        )}
-                      >
-                        {option.label}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-
-              {!hasEnoughStock ? (
-                <StatusBanner
-                  icon="TriangleAlert"
-                  message={`This unit only has ${selectedUnit?.stock ?? 0} available.`}
-                  title="Insufficient stock"
-                  tone="destructive"
-                />
-              ) : null}
-            </View>
-          ) : null}
-
-          <FormField
-            label={mode === "adjust" ? "Note" : "Source or note"}
-            leadingIcon="StickyNote"
-            onChangeText={setNote}
-            placeholder={
-              mode === "adjust"
-                ? "Enter adjustment reason"
-                : "Enter source note"
-            }
-            value={note}
-          />
-
-          {submitError ? (
-            <StatusBanner
-              icon="TriangleAlert"
-              message={submitError}
-              title="Stock was not recorded"
-              tone="destructive"
+      {selectedProduct && unitOptions.length > 0 ? (
+        <View className="gap-2">
+          <Text className="text-sm font-semibold text-foreground">Unit</Text>
+          {unitOptions.length > STOCK_UNIT_PREVIEW_LIMIT ? (
+            <FormField
+              label="Find unit"
+              leadingIcon="Search"
+              onChangeText={setUnitQuery}
+              placeholder="Search units or variants"
+              value={unitQuery}
             />
           ) : null}
-
-          <ActionButton
-            disabled={!canSubmit}
-            isLoading={isSubmitting}
-            loadingLabel="Recording stock"
-            onPress={submit}
-          >
-            {mode === "adjust" ? "Record adjustment" : "Add stock"}
-          </ActionButton>
-
-          <View className="gap-3">
-            <Text className="text-base font-bold text-foreground">
-              Recent movements
-            </Text>
-            {stockMovements.length > 0 ? (
-              <>
-                {visibleStockMovements.map((movement) => (
-                  <MovementRow key={movement.id} movement={movement} />
-                ))}
-                {stockMovements.length > visibleStockMovements.length ? (
-                  <Text className="text-xs font-semibold text-muted-foreground">
-                    Showing first {visibleStockMovements.length} of{" "}
-                    {stockMovements.length} stock movements.
-                  </Text>
-                ) : null}
-              </>
+          <View className="flex-row flex-wrap gap-2">
+            {visibleUnitOptions.length > 0 ? (
+              visibleUnitOptions.map((unit) => (
+                <InventoryUnitOption
+                  key={unit.id}
+                  label={unit.label}
+                  onPress={() => setSelectedUnitId(unit.id)}
+                  selected={selectedUnit?.id === unit.id}
+                  stockLabel={`${unit.stock} available`}
+                  stockTone={getInventoryStockTone(unit.stock)}
+                />
+              ))
             ) : (
               <EmptyState
-                icon="ListChecks"
-                message="No stock movements recorded yet."
-                title="No stock movement yet"
+                className="flex-1"
+                icon="Search"
+                message="Try another unit or variant name."
+                title="No matching units"
               />
             )}
           </View>
+          {filteredUnitOptions.length > visibleUnitOptions.length ? (
+            <Text className="text-xs font-semibold text-muted-foreground">
+              Showing first {visibleUnitOptions.length} of{" "}
+              {filteredUnitOptions.length} matching units.
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
 
-          <ActionButton onPress={onComplete} variant="outline">
-            Done
-          </ActionButton>
+      <QuantityStepper
+        helper={selectedUnit?.label}
+        label={mode === "adjust" ? "Quantity to adjust" : "Quantity received"}
+        onChangeText={setQuantity}
+        value={quantity}
+      />
+
+      {mode === "adjust" ? (
+        <View className="gap-3">
+          <View className="gap-2">
+            <Text className="text-sm font-semibold text-foreground">
+              Direction
+            </Text>
+            <View className="flex-row gap-2">
+              <InventorySegmentOption
+                disabled={!canDecreaseAdjustment}
+                label="Decrease"
+                onPress={() => setDirection("decrease")}
+                selected={direction === "decrease"}
+              />
+              <InventorySegmentOption
+                disabled={!canIncreaseAdjustment}
+                label="Increase"
+                onPress={() => setDirection("increase")}
+                selected={direction === "increase"}
+              />
+            </View>
+            <Text className="text-xs leading-4 text-muted-foreground">
+              {adjustmentDirectionHelper}
+            </Text>
+          </View>
+
+          <View className="gap-2">
+            <Text className="text-sm font-semibold text-foreground">
+              Reason
+            </Text>
+            <View className="flex-row flex-wrap gap-2">
+              {stockAdjustmentReasons.map((option) => (
+                <Pressable
+                  key={option.value}
+                  className={cn(
+                    "rounded-full border px-4 py-2",
+                    reason === option.value
+                      ? "border-primary bg-primary"
+                      : "border-border bg-background active:bg-accent",
+                  )}
+                  haptic
+                  onPress={() => {
+                    setReason(option.value)
+                    setDirection(
+                      normalizeStockAdjustmentDirection({
+                        direction,
+                        reason: option.value,
+                      }),
+                    )
+                  }}
+                  transition
+                >
+                  <Text
+                    className={cn(
+                      "text-sm font-extrabold",
+                      reason === option.value
+                        ? "text-primary-foreground"
+                        : "text-foreground",
+                    )}
+                  >
+                    {option.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          {!hasEnoughStock ? (
+            <StatusBanner
+              icon="TriangleAlert"
+              message={`This unit only has ${selectedUnit?.stock ?? 0} available.`}
+              title="Insufficient stock"
+              tone="destructive"
+            />
+          ) : null}
+        </View>
+      ) : null}
+
+      <FormField
+        label={mode === "adjust" ? "Note" : "Source or note"}
+        leadingIcon="StickyNote"
+        onChangeText={setNote}
+        placeholder={
+          mode === "adjust" ? "Enter adjustment reason" : "Enter source note"
+        }
+        value={note}
+      />
+
+      {submitError ? (
+        <StatusBanner
+          icon="TriangleAlert"
+          message={submitError}
+          title="Stock was not recorded"
+          tone="destructive"
+        />
+      ) : null}
+
+      <ActionButton
+        disabled={!canSubmit}
+        isLoading={isSubmitting}
+        loadingLabel="Recording stock"
+        onPress={submit}
+      >
+        {mode === "adjust" ? "Record adjustment" : "Add stock"}
+      </ActionButton>
+
+      <View className="gap-3">
+        <Text className="text-base font-bold text-foreground">
+          Recent movements
+        </Text>
+        {stockMovements.length > 0 ? (
+          <>
+            {visibleStockMovements.map((movement) => (
+              <MovementRow key={movement.id} movement={movement} />
+            ))}
+            {stockMovements.length > visibleStockMovements.length ? (
+              <Text className="text-xs font-semibold text-muted-foreground">
+                Showing first {visibleStockMovements.length} of{" "}
+                {stockMovements.length} stock movements.
+              </Text>
+            ) : null}
+          </>
+        ) : (
+          <EmptyState
+            icon="ListChecks"
+            message="No stock movements recorded yet."
+            title="No stock movement yet"
+          />
+        )}
+      </View>
+
+      <ActionButton onPress={onComplete} variant="outline">
+        Done
+      </ActionButton>
     </View>
   )
 

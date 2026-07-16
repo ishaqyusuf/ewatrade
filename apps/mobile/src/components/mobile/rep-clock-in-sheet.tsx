@@ -189,16 +189,10 @@ export function RepClockInContent({
     openingInventoryLines.length > 0 &&
     openingInventoryLines.every((line) => inventoryDraft[line.id]?.trim()) &&
     !openSessionMutation.isPending
-  const sourceLabel = canOpenProductionSession
-    ? "Online"
-    : isOfflineMode
-      ? "Local"
-      : "Local queue"
-  const sourceDetail = canOpenProductionSession
-    ? "This session will open in production immediately."
-    : isOfflineMode
-      ? "This clock-in will be queued locally and synced later."
-      : "Waiting for all product units to sync before direct production clock-in."
+  const sourceLabel = isOfflineMode ? "Offline mode" : "Sync required"
+  const sourceDetail = isOfflineMode
+    ? "This clock-in will sync when connection is ready."
+    : "Waiting for all product units to sync before direct production clock-in."
   const filteredOpeningInventoryLines = useMemo(() => {
     const normalizedQuery = inventoryLineQuery.trim().toLowerCase()
 
@@ -292,127 +286,130 @@ export function RepClockInContent({
     onComplete?.()
   }
 
+  const contentClassName =
+    presentation === "screen" ? "gap-5 px-4 pb-6" : "gap-5 px-5 pb-6"
+
   const content = (
-    <View className="gap-5 px-5 pb-6">
-          <View className="gap-2">
-            <Text className="text-xl font-bold text-foreground">
-              Start sales day
-            </Text>
-            <Text className="text-sm leading-5 text-muted-foreground">
-              Confirm opening stock before recording sales for this business.
-            </Text>
-          </View>
+    <View className={contentClassName}>
+      <View className="gap-2">
+        <Text className="text-xl font-bold text-foreground">
+          Start sales day
+        </Text>
+        <Text className="text-sm leading-5 text-muted-foreground">
+          Confirm opening stock before recording sales for this business.
+        </Text>
+      </View>
 
-          {!openSession ? (
-            <SessionSourcePanel
-              detail={sourceDetail}
-              label={sourceLabel}
-              title="Clock-in source"
-              tone={canOpenProductionSession ? "success" : "warning"}
-            />
-          ) : null}
+      {!openSession && !canOpenProductionSession ? (
+        <SessionSourcePanel
+          detail={sourceDetail}
+          label={sourceLabel}
+          title={sourceLabel}
+          tone="warning"
+        />
+      ) : null}
 
-          {openSession ? (
-            <OpenSessionSummary session={openSession} />
-          ) : products.length === 0 ? (
-            <EmptyState
-              icon="Warehouse"
-              message="A rep can clock in after at least one product unit exists."
-              title="Add inventory first"
-            />
-          ) : (
-            <View className="gap-4">
-              {openingInventoryLines.length > 8 ? (
-                <FormField
-                  label="Find stock line"
-                  leadingIcon="Search"
-                  onChangeText={setInventoryLineQuery}
-                  placeholder="Search products or units"
-                  value={inventoryLineQuery}
-                />
-              ) : null}
-              {visibleOpeningInventoryLines.length > 0 ? (
-                visibleOpeningInventoryLines.map((line) => {
-                  const confirmedQuantity = parseQuantity(
-                    inventoryDraft[line.id] ?? "0",
-                  )
-                  const variance = confirmedQuantity - line.expectedQuantity
-
-                  return (
-                    <SessionInventoryLine
-                      expectedLabel={`Expected ${formatQuantity(
-                        line.expectedQuantity,
-                      )}`}
-                      key={line.id}
-                      productName={line.productName}
-                      unitName={line.unitName}
-                      varianceLabel={
-                        variance === 0
-                          ? "Opening stock balanced"
-                          : `${variance > 0 ? "+" : ""}${formatQuantity(
-                              variance,
-                            )} variance`
-                      }
-                      varianceTone={variance === 0 ? "success" : "destructive"}
-                    >
-                      <FormField
-                        inputMode="numeric"
-                        keyboardType="numeric"
-                        label="Confirmed opening stock"
-                        leadingIcon="Hash"
-                        onChangeText={(value) =>
-                          updateInventoryLine(line.id, value)
-                        }
-                        placeholder="Enter counted stock"
-                        value={inventoryDraft[line.id] ?? ""}
-                      />
-                    </SessionInventoryLine>
-                  )
-                })
-              ) : (
-                <EmptyState
-                  icon="Search"
-                  message="Try another product or unit name."
-                  title="No matching stock lines"
-                />
-              )}
-              {filteredOpeningInventoryLines.length >
-              visibleOpeningInventoryLines.length ? (
-                <Text className="text-xs font-semibold text-muted-foreground">
-                  Showing first {visibleOpeningInventoryLines.length} of{" "}
-                  {filteredOpeningInventoryLines.length} stock lines.
-                </Text>
-              ) : null}
-            </View>
-          )}
-
-          {!openSession ? (
+      {openSession ? (
+        <OpenSessionSummary session={openSession} />
+      ) : products.length === 0 ? (
+        <EmptyState
+          icon="Warehouse"
+          message="A rep can clock in after at least one product unit exists."
+          title="Add inventory first"
+        />
+      ) : (
+        <View className="gap-4">
+          {openingInventoryLines.length > 8 ? (
             <FormField
-              label="Opening note"
-              leadingIcon="StickyNote"
-              onChangeText={setNote}
-              placeholder="Enter variance or handover note"
-              value={note}
+              label="Find stock line"
+              leadingIcon="Search"
+              onChangeText={setInventoryLineQuery}
+              placeholder="Search products or units"
+              value={inventoryLineQuery}
             />
           ) : null}
+          {visibleOpeningInventoryLines.length > 0 ? (
+            visibleOpeningInventoryLines.map((line) => {
+              const confirmedQuantity = parseQuantity(
+                inventoryDraft[line.id] ?? "0",
+              )
+              const variance = confirmedQuantity - line.expectedQuantity
 
-          {submitError ? (
-            <StatusBanner
-              icon="TriangleAlert"
-              message={submitError}
-              title="Clock-in failed"
-              tone="destructive"
+              return (
+                <SessionInventoryLine
+                  expectedLabel={`Expected ${formatQuantity(
+                    line.expectedQuantity,
+                  )}`}
+                  key={line.id}
+                  productName={line.productName}
+                  unitName={line.unitName}
+                  varianceLabel={
+                    variance === 0
+                      ? "Opening stock balanced"
+                      : `${variance > 0 ? "+" : ""}${formatQuantity(
+                          variance,
+                        )} variance`
+                  }
+                  varianceTone={variance === 0 ? "success" : "destructive"}
+                >
+                  <FormField
+                    inputMode="numeric"
+                    keyboardType="numeric"
+                    label="Confirmed opening stock"
+                    leadingIcon="Hash"
+                    onChangeText={(value) =>
+                      updateInventoryLine(line.id, value)
+                    }
+                    placeholder="Enter counted stock"
+                    value={inventoryDraft[line.id] ?? ""}
+                  />
+                </SessionInventoryLine>
+              )
+            })
+          ) : (
+            <EmptyState
+              icon="Search"
+              message="Try another product or unit name."
+              title="No matching stock lines"
             />
+          )}
+          {filteredOpeningInventoryLines.length >
+          visibleOpeningInventoryLines.length ? (
+            <Text className="text-xs font-semibold text-muted-foreground">
+              Showing first {visibleOpeningInventoryLines.length} of{" "}
+              {filteredOpeningInventoryLines.length} stock lines.
+            </Text>
           ) : null}
+        </View>
+      )}
 
-          <ActionButton
-            disabled={!canSubmit}
-            isLoading={openSessionMutation.isPending}
-            loadingLabel="Opening session"
-            onPress={submit}
-          >
-            Clock in and start selling
-          </ActionButton>
+      {!openSession ? (
+        <FormField
+          label="Opening note"
+          leadingIcon="StickyNote"
+          onChangeText={setNote}
+          placeholder="Enter variance or handover note"
+          value={note}
+        />
+      ) : null}
+
+      {submitError ? (
+        <StatusBanner
+          icon="TriangleAlert"
+          message={submitError}
+          title="Clock-in failed"
+          tone="destructive"
+        />
+      ) : null}
+
+      <ActionButton
+        disabled={!canSubmit}
+        isLoading={openSessionMutation.isPending}
+        loadingLabel="Opening session"
+        onPress={submit}
+      >
+        Clock in and start selling
+      </ActionButton>
 
       <ActionButton onPress={onComplete} variant="outline">
         Done

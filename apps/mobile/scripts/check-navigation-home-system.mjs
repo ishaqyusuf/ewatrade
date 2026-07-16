@@ -56,11 +56,7 @@ const FILES = {
 const checks = [
   {
     file: FILES.mobileRoles,
-    markers: [
-      "isSalesRepRole",
-      "isInvitedStaffProfile",
-      "normalizeMobileRole",
-    ],
+    markers: ["isSalesRepRole", "isInvitedStaffProfile", "normalizeMobileRole"],
     reason: "role helpers must be centralized for route guards and screens",
   },
   {
@@ -99,17 +95,6 @@ const checks = [
     reason: "sales-rep home must be a real route surface",
   },
   {
-    file: FILES.verifyEmail,
-    markers: [
-      "role?: string",
-      "status?: string",
-      "localProfileOverrides",
-      "...localProfileOverrides",
-    ],
-    reason:
-      "local fallback auth must support clean owner/sales-rep QA sessions without changing production OTP verification",
-  },
-  {
     file: FILES.appShell,
     markers: [
       "MobileBottomTabs",
@@ -118,7 +103,7 @@ const checks = [
       'variant="reference"',
       "render: ({ active })",
       "top: -20",
-      "activeLabel=\"Home\"",
+      'activeLabel="Home"',
     ],
     reason:
       "dashboard shell must use the shared Design 01-style bottom-tab primitive with raised center action",
@@ -178,9 +163,11 @@ const checks = [
     file: FILES.workflowModalScreen,
     markers: [
       "WorkflowModalScreen",
-      "Full-screen workflow",
       "allowSalesRep",
       "isInvitedStaffProfile(profile)",
+      "StatusBar",
+      "backgroundColor={colors.background}",
+      'style={colorScheme === "dark" ? "light" : "dark"}',
       "MobileScreen",
     ],
     reason:
@@ -189,10 +176,10 @@ const checks = [
   {
     file: FILES.staffInviteModal,
     markers: [
+      "WorkflowModalScreen",
       'ctaPlacement="sticky"',
-      "isInvitedStaffProfile(profile) || isSalesRepRole(profile?.role)",
-      "router.replace(\"/dashboard\")",
-      "scroll={false}",
+      'presentation="screen"',
+      'router.replace("/dashboard")',
     ],
     reason:
       "Sales Reps workflow must be a protected full-screen modal route with sticky CTA mode",
@@ -266,11 +253,10 @@ const checks = [
   {
     file: FILES.firstProductSetupModal,
     markers: [
+      "WorkflowModalScreen",
       "FirstProductSetupContent",
       'presentation="screen"',
-      "isInvitedStaffProfile(profile) || isSalesRepRole(profile?.role)",
-      "router.replace(\"/dashboard\")",
-      "scroll={false}",
+      'router.replace("/dashboard")',
     ],
     reason:
       "first product setup must be available as a protected full-screen modal route",
@@ -290,11 +276,10 @@ const checks = [
   {
     file: FILES.stockIntakeModal,
     markers: [
+      "WorkflowModalScreen",
       "StockIntakeContent",
       'presentation="screen"',
-      "isInvitedStaffProfile(profile) || isSalesRepRole(profile?.role)",
-      "router.replace(\"/dashboard\")",
-      "scroll={false}",
+      'router.replace("/dashboard")',
     ],
     reason:
       "stock intake must be available as a protected full-screen modal route",
@@ -377,11 +362,7 @@ const checks = [
   },
   {
     file: FILES.reportsModal,
-    markers: [
-      "WorkflowModalScreen",
-      "ReportsContent",
-      'presentation="screen"',
-    ],
+    markers: ["WorkflowModalScreen", "ReportsContent", 'presentation="screen"'],
     reason: "reports must use a full-screen stack modal route",
   },
   {

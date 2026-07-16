@@ -2,6 +2,55 @@
 
 ## 2026-07-16
 
+### Retail Ops Product Setup Transaction Serialization
+- Source Mode: Direct user error report from `retailOps.createProduct` showing `current transaction is aborted, commands ignored until end of transaction block` while adding an item with variants.
+- Completed: Serialized product setup unit creation inside the DB transaction instead of creating product variants, inventory items, and opening-stock movements through a concurrent `Promise.all`. This avoids overlapping transaction commands on the Prisma serverless adapter and prevents the generic aborted-transaction message from masking variant setup failures during product creation.
+- Changed Source Files: `packages/db/src/queries/retail-ops-products.ts`.
+- Brain Files Updated: `.brain/progress.md`.
+- Checks Run: `bun test packages/db/src/queries/retail-ops-products.test.ts`; `bun --filter @ewatrade/db typecheck`; `bun --cwd apps/mobile qa:first-product-flow`; `bun --cwd apps/mobile qa:nativewind-style`; `bun --cwd apps/mobile qa:mvp-typechecks`; `git diff --check`.
+
+### First-Product Single-Step Stock Flow
+- Source Mode: Direct user request with screenshot showing the now-unneeded Add stock step after variant stock was already configured.
+- Completed: Removed the separate first-product stock step and converted setup to a single Add item action. For no-variant products, primary unit remains visible and price/current stock are captured inline side by side. Once at least one variant exists, primary unit, primary price, and parent stock fields are hidden and no longer required; product creation sends a hidden non-conflicting parent unit with zero stock while variant rows carry the real price and stock values.
+- Changed Source Files: `apps/mobile/src/components/mobile/first-product-setup-sheet.tsx`, `apps/mobile/scripts/check-first-product-flow.mjs`.
+- Brain Files Updated: `.brain/features/mobile-retail-ops-mvp-spec.md`, `.brain/features/retail-ops-design-system-and-ia.md`, `.brain/progress.md`.
+- Checks Run: `bun --cwd apps/mobile qa:first-product-flow`; `bun --cwd apps/mobile qa:nativewind-style`; `bun --cwd apps/mobile qa:theme-colors`; `bun --cwd apps/mobile qa:mvp-typechecks`; `git diff --check`.
+
+### First-Product Variant Value Sheet Refinement
+- Source Mode: Direct user request with mobile screenshot showing the variant-value sheet using unnecessary full height.
+- Completed: Changed the variant-value editor from a full-height modal to a compact bottom sheet sized for the needed form content, removed the duplicate sheet title bar, tightened the empty state, and added `VARIANT_VALUE_SUGGESTIONS_BY_LABEL` so each system suggested variant label maps to common value chips in the selected-label editor.
+- Changed Source Files: `apps/mobile/src/components/mobile/first-product-setup-sheet.tsx`, `apps/mobile/scripts/check-first-product-flow.mjs`.
+- Brain Files Updated: `.brain/features/mobile-retail-ops-mvp-spec.md`, `.brain/features/retail-ops-design-system-and-ia.md`, `.brain/progress.md`.
+- Checks Run: `bun --cwd apps/mobile qa:first-product-flow`; `bun --cwd apps/mobile qa:nativewind-style`; `bun --cwd apps/mobile qa:theme-colors`; `bun --cwd apps/mobile qa:mvp-typechecks`; `git diff --check`.
+
+### First-Product Primary Unit Keyboard Suggestions
+- Source Mode: Direct user request with annotated mobile screenshot to show focused unit-name suggestions above the keyboard.
+- Completed: Added a compact keyboard-sticky horizontal suggestion bar for the primary unit field in first-product setup. The bar appears only while the primary unit input is focused, filters the retail-friendly unit chips as the user types, falls back to the full list when the field is empty or no match exists, and writes selected chips directly into the manual unit field without restoring the removed unit-template picker.
+- Changed Source Files: `apps/mobile/src/components/mobile/first-product-setup-sheet.tsx`, `apps/mobile/scripts/check-first-product-flow.mjs`.
+- Brain Files Updated: `.brain/features/mobile-retail-ops-mvp-spec.md`, `.brain/features/retail-ops-design-system-and-ia.md`, `.brain/progress.md`.
+- Checks Run: `bun --cwd apps/mobile qa:first-product-flow`; `bun --cwd apps/mobile qa:nativewind-style`; `bun --cwd apps/mobile qa:theme-colors`; `bun --cwd apps/mobile qa:mvp-typechecks`; `git diff --check`.
+
+### First-Product Unit Template Picker Removal
+- Source Mode: Direct user request to remove the visible Unit template / Bag fractions / Kilogram fractions section from first-product setup.
+- Completed: Removed the first-product setup unit-template picker, its local bag/kilogram fallback templates, the online `retailOps.unitTemplates` fetch, template-prefill state, and `unitTemplateKey` submission from the mobile first-product surface. The flow keeps manual primary unit entry, optional manually added units/variants, manual prices, stock entry, and conversion multiplier handling. Backend unit-template APIs remain available for broader product-unit infrastructure outside this mobile setup surface.
+- Changed Source Files: `apps/mobile/src/components/mobile/first-product-setup-sheet.tsx`, `apps/mobile/scripts/check-first-product-flow.mjs`.
+- Brain Files Updated: `.brain/features/mobile-retail-ops-mvp-spec.md`, `.brain/features/retail-ops-design-system-and-ia.md`, `.brain/progress.md`.
+- Checks Run: `bun --cwd apps/mobile qa:first-product-flow`; `bun --cwd apps/mobile qa:nativewind-style`; `bun --cwd apps/mobile qa:theme-colors`; `bun --cwd apps/mobile qa:mvp-typechecks`; `git diff --check`.
+
+### Full-Screen Workflow Status Bar Fix
+- Source Mode: Direct user report with light/dark screenshots showing unreadable status-bar icons on the first-product setup workflow.
+- Completed: Made the shared `WorkflowModalScreen` own its status bar with a theme-aware background and explicit safe-area backing strip, tightened full-screen workflow horizontal padding, then migrated first-product setup, stock intake, and staff invite modal routes away from copied headers to the shared workflow shell. Updated source guards so all long workflow routes protect the shared status-bar/header behavior.
+- Changed Source Files: `apps/mobile/src/components/mobile/workflow-modal-screen.tsx`, `apps/mobile/src/components/mobile/first-product-setup-sheet.tsx`, `apps/mobile/src/app/first-product-setup-modal.tsx`, `apps/mobile/src/app/stock-intake-modal.tsx`, `apps/mobile/src/app/staff-invite-modal.tsx`, `apps/mobile/scripts/check-navigation-home-system.mjs`, and focused docs.
+- Brain Files Updated: `.brain/features/retail-ops-design-system-and-ia.md`, `.brain/progress.md`.
+
+### Full-Screen Workflow Copy And Padding Cleanup
+- Source Mode: Direct user follow-up after first-product setup screenshots requesting removal of the irrelevant “Full-screen workflow” label and the same padding treatment across similar screens.
+- Completed: Removed the workflow eyebrow from the shared full-screen shell, kept compact screen-mode horizontal padding across all reused full-screen workflow bodies, made staff invite explicitly pass `presentation="screen"`, and changed source/status banners so normal online/production-ready states stay quiet while offline/sync-required/degraded states still surface actionable warnings.
+- Changed Source Files: `apps/mobile/src/components/mobile/workflow-modal-screen.tsx`, `apps/mobile/src/components/mobile/first-product-setup-sheet.tsx`, `apps/mobile/src/components/mobile/create-sale-sheet.tsx`, `apps/mobile/src/components/mobile/stock-intake-sheet.tsx`, `apps/mobile/src/components/mobile/unit-conversion-sheet.tsx`, `apps/mobile/src/components/mobile/rep-clock-in-sheet.tsx`, `apps/mobile/src/components/mobile/closeout-sheet.tsx`, `apps/mobile/src/components/mobile/staff-invite-sheet.tsx`, `apps/mobile/src/components/mobile/subscription-plan-sheet.tsx`, `apps/mobile/src/components/mobile/customer-book-sheet.tsx`, `apps/mobile/src/components/mobile/business-switch-sheet.tsx`, `apps/mobile/src/components/mobile/product-share-sheet.tsx`, `apps/mobile/src/components/mobile/reports-sheet.tsx`, `apps/mobile/src/components/mobile/sync-status-sheet.tsx`, `apps/mobile/src/components/mobile/service-orders-sheet.tsx`, `apps/mobile/src/app/staff-invite-modal.tsx`, and focused guard scripts.
+- Brain Files Updated: `.brain/features/retail-ops-design-system-and-ia.md`, `.brain/progress.md`.
+- Checks Run: `bun --cwd apps/mobile qa:navigation-home-system`; `bun --cwd apps/mobile qa:create-sale-flow`; `bun --cwd apps/mobile qa:first-product-flow`; `bun --cwd apps/mobile qa:staff-flow`; `bun --cwd apps/mobile qa:nativewind-style`; `bun --cwd apps/mobile qa:theme-colors`; `bun --cwd apps/mobile qa:mvp-typechecks`; `git diff --check`.
+- Skipped Checks Or Unresolved Issues: Broader legacy guards `qa:inventory-operations-flow`, `qa:customer-book-flow`, `qa:product-share-management`, `qa:reports-flow`, `qa:subscription-flow`, `qa:offline-sync-flow`, and `qa:session-offline-persistence` still fail on pre-existing/stale expectations in untouched files or older dashboard/bottom-sheet entry assumptions, not on the files changed for this cleanup.
+
 ### Mobile OTP Bypass Removal
 - Source Mode: Direct user implementation request to remove OTP bypasses while keeping exact `@test.com` test-recipient routing.
 - Completed: Removed the env-controlled fixed-code OTP path from the API, removed explicit OTP-code injection from the DB query helper, removed mobile local OTP fallback sign-in/sign-up behavior, removed the dev business picker bypass, removed OTP bypass env keys from mobile/EAS examples and guards, and narrowed shared email safety routing so only exact `@test.com` recipients route to configured `TEST_EMAILS` or legacy `TEST_EMAIL`.

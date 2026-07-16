@@ -1,12 +1,10 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
-import { QuantityStepper } from "@/components/mobile/quantity-stepper"
 import {
   SetupChoicePill,
   SetupFlowHeader,
   SetupInlineNotice,
   SetupSection,
-  SetupSummaryRow,
 } from "@/components/mobile/setup-flow"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
@@ -22,6 +20,7 @@ import {
   parseWholeQuantity,
 } from "@/lib/quantity"
 import { isLocalSessionToken } from "@/lib/session-store"
+import { cn } from "@/lib/utils"
 import { useBusinessStore } from "@/store/businessStore"
 import { useRetailOpsStore } from "@/store/retailOpsStore"
 import {
@@ -31,12 +30,15 @@ import {
 } from "@/store/subscriptionStore"
 import { useTRPC } from "@/trpc/client"
 import type { BottomSheetModal } from "@gorhom/bottom-sheet"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation } from "@tanstack/react-query"
 import { Image } from "expo-image"
 import * as ImagePicker from "expo-image-picker"
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react"
-import { Alert, View } from "react-native"
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import { Alert, ScrollView, View } from "react-native"
+import {
+  KeyboardAwareScrollView,
+  KeyboardStickyView,
+} from "react-native-keyboard-controller"
 
 type FirstProductSetupSheetProps = {
   onComplete?: () => void
@@ -59,7 +61,6 @@ type VariantDraft = {
   name: string
   price: string
   stock: string
-  templateConversionMultiplier?: number
   variantLabel: string
 }
 
@@ -98,7 +99,6 @@ type CreateProductInput = {
   openingStockQuantity: number
   priceMinor: number
   primaryUnitName: string
-  unitTemplateKey?: string
   variants: Array<{
     conversionMultiplier?: number
     enabled?: boolean
@@ -111,48 +111,8 @@ type CreateProductInput = {
   }>
 }
 
-type FirstProductSetupStep = "details" | "stock"
-const FIRST_PRODUCT_STEPS = ["Item", "Stock"]
-
-type UnitTemplate = {
-  baseUnitName: string
-  id: string
-  key: string
-  name: string
-  source: "durable" | "fallback"
-  units: Array<{
-    conversionMultiplier: number
-    isBase: boolean
-    name: string
-  }>
-}
-
-const LOCAL_UNIT_TEMPLATES: UnitTemplate[] = [
-  {
-    baseUnitName: "Bag",
-    id: "local:bag-fractions",
-    key: "bag_fractions",
-    name: "Bag fractions",
-    source: "fallback",
-    units: [
-      { conversionMultiplier: 1, isBase: true, name: "Bag" },
-      { conversionMultiplier: 0.5, isBase: false, name: "Half bag" },
-      { conversionMultiplier: 0.25, isBase: false, name: "Quarter bag" },
-    ],
-  },
-  {
-    baseUnitName: "Kilogram",
-    id: "local:kilogram-fractions",
-    key: "kilogram_fractions",
-    name: "Kilogram fractions",
-    source: "fallback",
-    units: [
-      { conversionMultiplier: 1, isBase: true, name: "Kilogram" },
-      { conversionMultiplier: 0.5, isBase: false, name: "Half kilogram" },
-      { conversionMultiplier: 0.25, isBase: false, name: "Quarter kilogram" },
-    ],
-  },
-]
+const FIRST_PRODUCT_STEPS = ["Item"]
+const HIDDEN_VARIANT_PARENT_UNIT_NAME = "Parent unit"
 
 const KNOWN_VARIANT_TYPES = [
   "Size",
@@ -167,17 +127,34 @@ const KNOWN_VARIANT_TYPES = [
   "Turnaround",
 ]
 
+const VARIANT_VALUE_SUGGESTIONS_BY_LABEL: Record<string, string[]> = {
+  Color: ["Black", "White", "Blue", "Red", "Green", "Yellow", "Brown", "Grey"],
+  Length: ["Short", "Regular", "Long", "Extra long"],
+  Material: ["Cotton", "Leather", "Denim", "Polyester", "Wool", "Silk"],
+  Package: ["Single", "Pack", "Carton", "Bundle", "Dozen", "Half pack"],
+  Quality: ["Standard", "Premium", "Grade A", "Grade B", "Economy"],
+  "Service level": ["Standard", "Express", "Same day", "Next day"],
+  Size: ["XS", "S", "M", "L", "XL", "XXL"],
+  Turnaround: ["Same day", "24 hours", "48 hours", "3 days", "1 week"],
+  Unit: ["Piece", "Pair", "Pack", "Box", "Carton", "Kg", "Gram", "Meter"],
+  Weight: ["Light", "Medium", "Heavy", "1 kg", "5 kg", "10 kg"],
+}
+
 const UNIT_SUGGESTIONS = [
   "Unit",
   "Bag",
   "Kg",
-  "Gram",
   "Piece",
-  "Crate",
   "Carton",
+  "Gram",
+  "Crate",
   "Bottle",
+  "Pack",
+  "Dozen",
+  "Box",
   "Meter",
-  "SM",
+  "Pair",
+  "Roll",
 ]
 
 function parseAmount(value: string) {
@@ -232,10 +209,6 @@ function inferConversionMultiplier(name: string) {
   if (normalizedName.includes("half")) return 0.5
 
   return 1
-}
-
-function formatMultiplier(value: number) {
-  return Number.isInteger(value) ? String(value) : String(value)
 }
 
 function getMatchingUnit(
@@ -322,7 +295,9 @@ function buildVariantGroups(values: VariantDraft[]) {
   return Array.from(groupsByLabel.values())
 }
 
-function buildVariantCombinationSeeds(groups: ReturnType<typeof buildVariantGroups>) {
+function buildVariantCombinationSeeds(
+  groups: ReturnType<typeof buildVariantGroups>,
+) {
   if (groups.length < 2) return []
 
   const combinations: Array<{
@@ -375,6 +350,99 @@ function buildVariantCombinationSeeds(groups: ReturnType<typeof buildVariantGrou
   return combinations
 }
 
+function getFilteredUnitSuggestions(value: string) {
+  const query = value.trim().toLowerCase()
+
+  if (!query) return UNIT_SUGGESTIONS
+
+  const matches = UNIT_SUGGESTIONS.filter((unit) =>
+    unit.toLowerCase().includes(query),
+  )
+
+  return matches.length > 0 ? matches : UNIT_SUGGESTIONS
+}
+
+function getHiddenVariantParentUnitName(variantNames: string[]) {
+  const usedNames = new Set(
+    variantNames.map((name) => name.trim().toLowerCase()),
+  )
+  let parentUnitName = HIDDEN_VARIANT_PARENT_UNIT_NAME
+  let index = 2
+
+  while (usedNames.has(parentUnitName.toLowerCase())) {
+    parentUnitName = `${HIDDEN_VARIANT_PARENT_UNIT_NAME} ${index}`
+    index += 1
+  }
+
+  return parentUnitName
+}
+
+function UnitSuggestionKeyboardBar({
+  onSelect,
+  suggestions,
+  value,
+  visible,
+}: {
+  onSelect: (unit: string) => void
+  suggestions: string[]
+  value: string
+  visible: boolean
+}) {
+  if (!visible) return null
+
+  const selectedUnit = value.trim().toLowerCase()
+
+  return (
+    <KeyboardStickyView
+      className="absolute bottom-0 left-0 right-0 z-50"
+      offset={{ closed: 88, opened: 0 }}
+      pointerEvents="box-none"
+    >
+      <View className="border-t border-border bg-background px-4 py-2">
+        <ScrollView
+          horizontal
+          keyboardShouldPersistTaps="always"
+          showsHorizontalScrollIndicator={false}
+        >
+          <View className="flex-row gap-2 pr-4">
+            {suggestions.map((unit) => {
+              const isSelected = unit.toLowerCase() === selectedUnit
+
+              return (
+                <Pressable
+                  accessibilityLabel={`Use ${unit} as primary unit`}
+                  className={cn(
+                    "min-h-9 items-center justify-center rounded-full border px-4",
+                    isSelected
+                      ? "border-primary bg-primary"
+                      : "border-border bg-card",
+                  )}
+                  haptic
+                  key={unit}
+                  onPress={() => onSelect(unit)}
+                  onPressIn={() => onSelect(unit)}
+                  transition
+                >
+                  <Text
+                    className={cn(
+                      "text-xs font-bold",
+                      isSelected
+                        ? "text-primary-foreground"
+                        : "text-foreground",
+                    )}
+                  >
+                    {unit}
+                  </Text>
+                </Pressable>
+              )
+            })}
+          </View>
+        </ScrollView>
+      </View>
+    </KeyboardStickyView>
+  )
+}
+
 export function FirstProductSetupContent({
   onComplete,
   presentation = "sheet",
@@ -395,14 +463,16 @@ export function FirstProductSetupContent({
     [activeBusinessId, allProducts],
   )
   const subscriptions = useSubscriptionStore((state) => state.subscriptions)
-  const unitSheetModalRef = useRef<BottomSheetModalRef>(null)
   const variantTypeModalRef = useRef<BottomSheetModalRef>(null)
   const variantValuesModalRef = useRef<BottomSheetModalRef>(null)
+  const unitSuggestionBlurTimerRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null)
   const [name, setName] = useState("")
   const [showDescription, setShowDescription] = useState(false)
   const [description, setDescription] = useState("")
   const [unitName, setUnitName] = useState("")
-  const [unitDraft, setUnitDraft] = useState("")
+  const [isUnitNameFocused, setIsUnitNameFocused] = useState(false)
   const [price, setPrice] = useState("")
   const [localImageUri, setLocalImageUri] = useState("")
   const [imageLinks, setImageLinks] = useState<string[]>([])
@@ -414,40 +484,28 @@ export function FirstProductSetupContent({
   const [variantSearch, setVariantSearch] = useState("")
   const [selectedVariantLabel, setSelectedVariantLabel] = useState("Size")
   const [variantValueName, setVariantValueName] = useState("")
-  const [unitTemplateKey, setUnitTemplateKey] = useState<string | null>(null)
-  const [setupStep, setSetupStep] = useState<FirstProductSetupStep>("details")
   const [submitError, setSubmitError] = useState<string | null>(null)
   const shouldUseLocalQueue = isOfflineMode || isLocalSessionToken(auth.token)
   const subscription = getBusinessSubscription(subscriptions, activeBusinessId)
   const plan = getPlan(subscription.planId)
   const isAtProductLimit = products.length >= plan.limits.products
-  const unitTemplatesQuery = useQuery(
-    trpc.retailOps.unitTemplates.queryOptions(undefined, {
-      enabled: !shouldUseLocalQueue,
-      retry: 1,
-    }),
-  )
-  const unitTemplates =
-    !shouldUseLocalQueue && unitTemplatesQuery.data?.length
-      ? (unitTemplatesQuery.data as UnitTemplate[])
-      : LOCAL_UNIT_TEMPLATES
-  const selectedUnitTemplate =
-    unitTemplates.find((template) => template.key === unitTemplateKey) ?? null
   const variantGroups = useMemo(() => buildVariantGroups(variants), [variants])
   const hasMultipleVariantDimensions = variantGroups.length > 1
   const generatedVariantCombinationSeeds = useMemo(
     () => buildVariantCombinationSeeds(variantGroups),
     [variantGroups],
   )
-  const generatedVariantCombinationSignature =
-    generatedVariantCombinationSeeds.map((seed) => seed.key).join("|")
+  const generatedVariantCombinationSignature = generatedVariantCombinationSeeds
+    .map((seed) => seed.key)
+    .join("|")
   const activeVariantRows = hasMultipleVariantDimensions
     ? variantCombinations.filter((variant) => variant.enabled)
     : variants.filter((variant) => variant.enabled)
   const visibleVariantRows = hasMultipleVariantDimensions
     ? variantCombinations
     : variants
-  const hasVariantPricing = activeVariantRows.length > 0
+  const hasVariantRows = variants.length > 0
+  const shouldUsePrimaryUnitFields = !hasVariantRows
   const filteredVariantTypes = useMemo(() => {
     const normalizedSearch = variantSearch.trim().toLowerCase()
 
@@ -466,6 +524,16 @@ export function FirstProductSetupContent({
   const selectedVariantValues = variants.filter(
     (variant) => variant.variantLabel === selectedVariantLabel,
   )
+  const selectedVariantValueSuggestions =
+    VARIANT_VALUE_SUGGESTIONS_BY_LABEL[selectedVariantLabel] ?? []
+  const filteredUnitSuggestions = useMemo(
+    () => getFilteredUnitSuggestions(unitName),
+    [unitName],
+  )
+  const shouldShowUnitSuggestions =
+    shouldUsePrimaryUnitFields &&
+    isUnitNameFocused &&
+    filteredUnitSuggestions.length > 0
   const createProductMutation = useMutation(
     trpc.retailOps.createProduct.mutationOptions({
       onError: (error) => {
@@ -514,7 +582,6 @@ export function FirstProductSetupContent({
         setShowDescription(false)
         setDescription("")
         setUnitName("")
-        setUnitDraft("")
         setPrice("")
         setLocalImageUri("")
         setImageLinks([])
@@ -523,8 +590,7 @@ export function FirstProductSetupContent({
         setVariantSearch("")
         setSelectedVariantLabel("Size")
         setVariantValueName("")
-        setUnitTemplateKey(null)
-        setSetupStep("details")
+        setIsUnitNameFocused(false)
         setSubmitError(null)
         onComplete?.()
       },
@@ -560,31 +626,60 @@ export function FirstProductSetupContent({
     hasMultipleVariantDimensions,
   ])
 
-  const canContinueToStock =
-    !isAtProductLimit &&
-    !createProductMutation.isPending &&
-    !!name.trim() &&
-    description.trim().length <= 1000 &&
-    !!unitName.trim() &&
-    areProductImageLinksValid(imageLinks) &&
-    (hasVariantPricing ||
-      (isNumberInput(price) && parseAmount(price) > 0)) &&
+  useEffect(() => {
+    return () => {
+      if (unitSuggestionBlurTimerRef.current) {
+        clearTimeout(unitSuggestionBlurTimerRef.current)
+      }
+    }
+  }, [])
+
+  const areActiveVariantRowsValid =
+    activeVariantRows.length > 0 &&
     activeVariantRows.every(
       (variant) =>
         !!variant.name.trim() &&
-        areProductImageLinksValid([
-          variant.imageUrl,
-          ...variant.imageLinks,
-        ]) &&
+        areProductImageLinksValid([variant.imageUrl, ...variant.imageLinks]) &&
         isNumberInput(variant.price) &&
         parseAmount(variant.price) > 0 &&
         isWholeNumberInput(variant.stock) &&
         parseWholeQuantity(variant.stock) >= 0,
     )
-  const canSubmit =
-    canContinueToStock &&
+  const arePrimaryUnitFieldsValid =
+    !!unitName.trim() &&
+    isNumberInput(price) &&
+    parseAmount(price) > 0 &&
     isWholeNumberInput(startingStock) &&
     parseWholeQuantity(startingStock) >= 0
+  const canSubmit =
+    !isAtProductLimit &&
+    !createProductMutation.isPending &&
+    !!name.trim() &&
+    description.trim().length <= 1000 &&
+    areProductImageLinksValid(imageLinks) &&
+    (shouldUsePrimaryUnitFields
+      ? arePrimaryUnitFieldsValid
+      : areActiveVariantRowsValid)
+
+  const showUnitSuggestionBar = () => {
+    if (unitSuggestionBlurTimerRef.current) {
+      clearTimeout(unitSuggestionBlurTimerRef.current)
+      unitSuggestionBlurTimerRef.current = null
+    }
+
+    setIsUnitNameFocused(true)
+  }
+
+  const hideUnitSuggestionBar = () => {
+    if (unitSuggestionBlurTimerRef.current) {
+      clearTimeout(unitSuggestionBlurTimerRef.current)
+    }
+
+    unitSuggestionBlurTimerRef.current = setTimeout(() => {
+      setIsUnitNameFocused(false)
+      unitSuggestionBlurTimerRef.current = null
+    }, 120)
+  }
 
   const updateVariant = (
     id: string,
@@ -623,33 +718,38 @@ export function FirstProductSetupContent({
   }
 
   const buildCreateProductInput = (): CreateProductInput => {
-    const selectedTemplate =
-      unitTemplates.find((template) => template.key === unitTemplateKey) ?? null
     const normalizedImageLinks = cleanImageLinks(imageLinks)
-    const primaryPriceMinor = hasVariantPricing
-      ? parseAmount(activeVariantRows[0]?.price ?? price)
-      : parseAmount(price)
+    const primaryPriceMinor = shouldUsePrimaryUnitFields
+      ? parseAmount(price)
+      : parseAmount(activeVariantRows[0]?.price ?? price)
+    const primaryUnitName = shouldUsePrimaryUnitFields
+      ? unitName.trim()
+      : getHiddenVariantParentUnitName(
+          activeVariantRows.map((variant) => variant.name),
+        )
 
     return {
       description: description.trim() || undefined,
       name: name.trim(),
       imageLinks: normalizedImageLinks,
       imageUrl: normalizedImageLinks[0],
-      openingStockQuantity: parseWholeQuantity(startingStock),
+      openingStockQuantity: shouldUsePrimaryUnitFields
+        ? parseWholeQuantity(startingStock)
+        : 0,
       priceMinor: primaryPriceMinor,
-      primaryUnitName: unitName.trim(),
-      unitTemplateKey: selectedTemplate?.key,
+      primaryUnitName,
       variants: activeVariantRows
         .filter(
           (variant) =>
-            variant.enabled && variant.name.trim() && parseAmount(variant.price),
+            variant.enabled &&
+            variant.name.trim() &&
+            parseAmount(variant.price),
         )
         .map((variant) => ({
           conversionMultiplier: hasMultipleVariantDimensions
             ? 1
-            : (variant as VariantDraft).templateConversionMultiplier ??
-              (parseAmount((variant as VariantDraft).conversionMultiplier) ||
-                inferConversionMultiplier(variant.name)),
+            : parseAmount((variant as VariantDraft).conversionMultiplier) ||
+              inferConversionMultiplier(variant.name),
           enabled: variant.enabled,
           imageLinks: cleanImageLinks(variant.imageLinks),
           imageUrl: variant.imageUrl.trim() || undefined,
@@ -659,39 +759,6 @@ export function FirstProductSetupContent({
           variantLabel: variant.variantLabel.trim() || undefined,
         })),
     }
-  }
-
-  const applyUnitTemplate = (template: UnitTemplate | null) => {
-    setUnitTemplateKey(template?.key ?? null)
-
-    if (!template) {
-      setVariants((current) =>
-        current.map(({ templateConversionMultiplier, ...variant }) => variant),
-      )
-      return
-    }
-
-    const baseUnit =
-      template.units.find((unit) => unit.isBase) ?? template.units[0]
-    setUnitName(baseUnit?.name ?? template.baseUnitName)
-    setVariants(
-      template.units
-        .filter((unit) => !unit.isBase)
-        .map((unit) => ({
-          conversionMultiplier: formatMultiplier(unit.conversionMultiplier),
-          enabled: true,
-          expanded: false,
-          id: `variant-${template.key}-${unit.name}`,
-          imageLinks: [],
-          imageUrl: "",
-          name: unit.name,
-          price: "",
-          stock: "0",
-          templateConversionMultiplier: unit.conversionMultiplier,
-          variantLabel: "Unit",
-        })),
-    )
-    setVariantCombinations([])
   }
 
   const addImageLink = () => {
@@ -834,8 +901,8 @@ export function FirstProductSetupContent({
     variantValuesModalRef.current?.present()
   }
 
-  const addVariantValue = () => {
-    const value = variantValueName.trim()
+  const addVariantValueByName = (name: string) => {
+    const value = name.trim()
     if (!value) return
 
     const exists = variants.some(
@@ -851,7 +918,10 @@ export function FirstProductSetupContent({
         createVariantDraft(selectedVariantLabel, value),
       ])
     }
+  }
 
+  const addVariantValue = () => {
+    addVariantValueByName(variantValueName)
     setVariantValueName("")
   }
 
@@ -998,7 +1068,6 @@ export function FirstProductSetupContent({
     setShowDescription(false)
     setDescription("")
     setUnitName("")
-    setUnitDraft("")
     setPrice("")
     setLocalImageUri("")
     setImageLinks([])
@@ -1008,479 +1077,392 @@ export function FirstProductSetupContent({
     setVariantSearch("")
     setSelectedVariantLabel("Size")
     setVariantValueName("")
-    setUnitTemplateKey(null)
-    setSetupStep("details")
+    setIsUnitNameFocused(false)
     onComplete?.()
   }
-
-  const continueToStock = () => {
-    if (!canContinueToStock) return
-    setSetupStep("stock")
-  }
+  const contentClassName =
+    presentation === "screen" ? "gap-7 px-4 pb-6 pt-1" : "gap-7 px-5 pb-6 pt-1"
 
   const content = (
     <>
-      <View className="gap-7 px-5 pb-6 pt-1">
+      <View className={contentClassName}>
         <SetupFlowHeader
-          badgeIcon={setupStep === "details" ? "FilePenLine" : "Warehouse"}
-          badgeLabel={setupStep === "details" ? "Item details" : "Starting stock"}
-          currentStep={setupStep === "details" ? 1 : 2}
-          description={
-            setupStep === "details"
-              ? "Add the item, default unit, media, and any variant prices."
-              : "Confirm the parent item and starting stock before saving."
-          }
+          badgeIcon="FilePenLine"
+          badgeLabel="Item details"
+          currentStep={1}
+          description="Add the item, media, and either a primary unit or variant prices."
           steps={FIRST_PRODUCT_STEPS}
-          title={setupStep === "details" ? "Set up item" : "Add stock"}
+          title="Set up item"
         />
 
-        <SetupInlineNotice
-          icon={shouldUseLocalQueue ? "Wind" : "CircleCheck"}
-          text={
-            shouldUseLocalQueue
-              ? "This item will be queued locally and synced later."
-              : "This item will be created in production immediately."
-          }
-          tone={shouldUseLocalQueue ? "warning" : "success"}
-        />
+        {shouldUseLocalQueue ? (
+          <SetupInlineNotice
+            icon="Wind"
+            text="This item will sync when connection is ready."
+            tone="warning"
+          />
+        ) : null}
 
-        {setupStep === "details" ? (
-          <>
-            <SetupSection
-              description="Only the item name, default unit, and a price path are required."
-              title="Item"
+        <SetupSection
+          description="Only the item name and one price path are required."
+          title="Item"
+        >
+          <FormField
+            label="Item name"
+            leadingIcon="FileText"
+            onChangeText={setName}
+            placeholder="Enter item name"
+            value={name}
+          />
+
+          {showDescription ? (
+            <FormField
+              error={
+                description.trim().length <= 1000
+                  ? undefined
+                  : "Keep the product description under 1000 characters."
+              }
+              helper="Optional. This appears in the shared product page and link preview."
+              label="Description"
+              leadingIcon="StickyNote"
+              multiline
+              onChangeText={setDescription}
+              placeholder="Enter product description"
+              value={description}
+            />
+          ) : (
+            <ActionButton
+              icon="Plus"
+              onPress={() => setShowDescription(true)}
+              variant="ghost"
             >
-              <FormField
-                label="Item name"
-                leadingIcon="FileText"
-                onChangeText={setName}
-                placeholder="Enter item name"
-                value={name}
-              />
+              Add Description
+            </ActionButton>
+          )}
+        </SetupSection>
 
-              {showDescription ? (
-                <FormField
-                  error={
-                    description.trim().length <= 1000
-                      ? undefined
-                      : "Keep the product description under 1000 characters."
-                  }
-                  helper="Optional. This appears in the shared product page and link preview."
-                  label="Description"
-                  leadingIcon="StickyNote"
-                  multiline
-                  onChangeText={setDescription}
-                  placeholder="Enter product description"
-                  value={description}
-                />
-              ) : (
+        <SetupSection
+          description="Use the camera, gallery, or public links. Public links are used for shared product previews."
+          title="Product image links"
+        >
+          <Pressable
+            accessibilityLabel="Pick or take item image"
+            className="min-h-32 items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-muted/40 p-4"
+            haptic
+            onPress={openImagePicker}
+            transition
+          >
+            {localImageUri ? (
+              <Image
+                className="h-24 w-24 rounded-xl"
+                contentFit="cover"
+                source={{ uri: localImageUri }}
+              />
+            ) : (
+              <View className="h-14 w-14 items-center justify-center rounded-full bg-card">
+                <Icon className="size-lg text-muted-foreground" name="Camera" />
+              </View>
+            )}
+            <Text className="text-center text-sm font-semibold text-foreground">
+              Pick image or take picture
+            </Text>
+            {localImageUri ? (
+              <Text className="text-center text-xs leading-5 text-muted-foreground">
+                Captured images stay on this device until upload support is
+                connected.
+              </Text>
+            ) : null}
+          </Pressable>
+
+          {imageLinks.length === 0 ? (
+            <ActionButton icon="Plus" onPress={addImageLink} variant="ghost">
+              Add image link
+            </ActionButton>
+          ) : (
+            <View className="gap-3">
+              {imageLinks.map((link, index) => (
+                <View className="flex-row items-end gap-2" key={index}>
+                  <View className="min-w-0 flex-1">
+                    <FormField
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      error={
+                        isProductImageUrlInput(link)
+                          ? undefined
+                          : "Enter a valid image link."
+                      }
+                      inputMode="url"
+                      keyboardType="url"
+                      label="Product image link"
+                      leadingIcon="Globe"
+                      onChangeText={(value) => updateImageLink(index, value)}
+                      placeholder="Enter product image link"
+                      value={link}
+                    />
+                  </View>
+                  <Pressable
+                    accessibilityLabel="Remove image link"
+                    className="mb-1 h-12 w-12 items-center justify-center rounded-xl bg-destructive/10"
+                    haptic
+                    onPress={() => removeImageLink(index)}
+                    transition
+                  >
+                    <Icon className="size-sm text-destructive" name="Trash" />
+                  </Pressable>
+                </View>
+              ))}
+              <View className="items-end">
                 <ActionButton
+                  className="w-auto px-4"
                   icon="Plus"
-                  onPress={() => setShowDescription(true)}
+                  onPress={addImageLink}
                   variant="ghost"
                 >
-                  Add Description
+                  Add more
                 </ActionButton>
-              )}
-            </SetupSection>
-
-            <SetupSection
-              description="Use the camera, gallery, or public links. Public links are used for shared product previews."
-              title="Product image links"
-            >
-              <Pressable
-                accessibilityLabel="Pick or take item image"
-                className="min-h-32 items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-muted/40 p-4"
-                haptic
-                onPress={openImagePicker}
-                transition
-              >
-                {localImageUri ? (
-                  <Image
-                    className="h-24 w-24 rounded-xl"
-                    contentFit="cover"
-                    source={{ uri: localImageUri }}
-                  />
-                ) : (
-                  <View className="h-14 w-14 items-center justify-center rounded-full bg-card">
-                    <Icon className="size-lg text-muted-foreground" name="Camera" />
-                  </View>
-                )}
-                <Text className="text-center text-sm font-semibold text-foreground">
-                  Pick image or take picture
-                </Text>
-                {localImageUri ? (
-                  <Text className="text-center text-xs leading-5 text-muted-foreground">
-                    Captured images stay on this device until upload support is
-                    connected.
-                  </Text>
-                ) : null}
-              </Pressable>
-
-              {imageLinks.length === 0 ? (
-                <ActionButton icon="Plus" onPress={addImageLink} variant="ghost">
-                  Add image link
-                </ActionButton>
-              ) : (
-                <View className="gap-3">
-                  {imageLinks.map((link, index) => (
-                    <View className="flex-row items-end gap-2" key={index}>
-                      <View className="min-w-0 flex-1">
-                        <FormField
-                          autoCapitalize="none"
-                          autoCorrect={false}
-                          error={
-                            isProductImageUrlInput(link)
-                              ? undefined
-                              : "Enter a valid image link."
-                          }
-                          inputMode="url"
-                          keyboardType="url"
-                          label="Product image link"
-                          leadingIcon="Globe"
-                          onChangeText={(value) =>
-                            updateImageLink(index, value)
-                          }
-                          placeholder="Enter product image link"
-                          value={link}
-                        />
-                      </View>
-                      <Pressable
-                        accessibilityLabel="Remove image link"
-                        className="mb-1 h-12 w-12 items-center justify-center rounded-xl bg-destructive/10"
-                        haptic
-                        onPress={() => removeImageLink(index)}
-                        transition
-                      >
-                        <Icon className="size-sm text-destructive" name="Trash" />
-                      </Pressable>
-                    </View>
-                  ))}
-                  <View className="items-end">
-                    <ActionButton
-                      className="w-auto px-4"
-                      icon="Plus"
-                      onPress={addImageLink}
-                      variant="ghost"
-                    >
-                      Add more
-                    </ActionButton>
-                  </View>
-                </View>
-              )}
-            </SetupSection>
-
-            <SetupSection
-              description="Default unit describes the base way this item is counted."
-              title="Default unit and price"
-            >
-              <View className="gap-2">
-                <Text className="text-sm font-semibold text-foreground">
-                  Unit template
-                </Text>
-                <View className="flex-row flex-wrap gap-2">
-                  {unitTemplates.map((template) => {
-                    const isSelected = template.key === unitTemplateKey
-
-                    return (
-                      <SetupChoicePill
-                        key={template.key}
-                        onPress={() => applyUnitTemplate(template)}
-                        selected={isSelected}
-                      >
-                        {template.name}
-                      </SetupChoicePill>
-                    )
-                  })}
-                  {selectedUnitTemplate ? (
-                    <SetupChoicePill onPress={() => applyUnitTemplate(null)}>
-                      Manual
-                    </SetupChoicePill>
-                  ) : null}
-                </View>
-                <Text className="text-xs leading-5 text-muted-foreground">
-                  {shouldUseLocalQueue || unitTemplatesQuery.isError
-                    ? "Using local unit suggestions until production templates are available."
-                    : "Templates come from production and still let you set your own prices."}
-                </Text>
               </View>
+            </View>
+          )}
+        </SetupSection>
 
-              <View className="flex-row items-end gap-2">
-                <View className="min-w-0 flex-1">
-                  <FormField
-                    label="Primary unit"
-                    leadingIcon="Hash"
-                    onChangeText={setUnitName}
-                    placeholder="Enter unit name"
-                    value={unitName}
-                  />
-                </View>
-                <Pressable
-                  accessibilityLabel="Add unit"
-                  className="mb-1 h-12 w-12 items-center justify-center rounded-xl bg-muted"
-                  haptic
-                  onPress={() => unitSheetModalRef.current?.present()}
-                  transition
+        {shouldUsePrimaryUnitFields ? (
+          <SetupSection
+            description="Use this path when the item has one selling unit."
+            title="Primary unit, price, and stock"
+          >
+            <FormField
+              autoCapitalize="words"
+              label="Primary unit"
+              leadingIcon="Hash"
+              onBlur={hideUnitSuggestionBar}
+              onChangeText={setUnitName}
+              onFocus={showUnitSuggestionBar}
+              placeholder="Enter unit name"
+              value={unitName}
+            />
+
+            <View className="flex-row gap-3">
+              <View className="min-w-0 flex-1">
+                <FormField
+                  inputMode="decimal"
+                  keyboardType="numeric"
+                  label="Price per unit"
+                  leadingIcon="CircleDollarSign"
+                  onChangeText={setPrice}
+                  placeholder="Enter price"
+                  value={price}
+                />
+              </View>
+              <View className="min-w-0 flex-1">
+                <FormField
+                  inputMode="numeric"
+                  keyboardType="numeric"
+                  label="Current stock"
+                  leadingIcon="Warehouse"
+                  onChangeText={(value) =>
+                    setStartingStock(normalizeWholeNumberInput(value))
+                  }
+                  placeholder="Enter stock"
+                  value={startingStock}
+                />
+              </View>
+            </View>
+          </SetupSection>
+        ) : null}
+
+        <SetupSection
+          description="Does this item have multiple prices based on different variants?"
+          title="Variants"
+        >
+          <ActionButton
+            icon="Plus"
+            onPress={() => variantTypeModalRef.current?.present()}
+            variant="outline"
+          >
+            Add variant
+          </ActionButton>
+
+          {variants.length === 0 ? (
+            <View className="gap-3 border-y border-border py-5">
+              <Text className="text-center font-semibold text-foreground">
+                No variants yet
+              </Text>
+              <Text className="text-center text-sm leading-5 text-muted-foreground">
+                You can skip this and continue with only the primary unit.
+              </Text>
+            </View>
+          ) : (
+            <View className="gap-4">
+              {hasMultipleVariantDimensions ? (
+                <SetupInlineNotice
+                  icon="ListChecks"
+                  text="Multiple variant labels generate sellable combination rows."
+                  tone="primary"
+                />
+              ) : null}
+              {visibleVariantRows.map((variant) => (
+                <View
+                  className="gap-3 border-t border-border pt-4"
+                  key={variant.id}
                 >
-                  <Icon className="size-sm text-foreground" name="Plus" />
-                </Pressable>
-              </View>
+                  <View className="flex-row items-center gap-3">
+                    <View className="min-w-0 flex-1">
+                      <Text className="text-xs font-bold uppercase tracking-[1px] text-muted-foreground">
+                        {variant.variantLabel}
+                      </Text>
+                      <Text className="font-semibold text-foreground">
+                        {variant.name || "New variant"}
+                      </Text>
+                    </View>
+                    <Switch
+                      checked={variant.enabled}
+                      onCheckedChange={(checked) =>
+                        toggleVariantRowEnabled(variant.id, checked)
+                      }
+                    />
+                    <Pressable
+                      accessibilityLabel="Expand variant"
+                      className="h-10 w-10 items-center justify-center rounded-full bg-muted"
+                      haptic
+                      onPress={() => toggleVariantRowExpanded(variant.id)}
+                      transition
+                    >
+                      <Icon
+                        className="size-sm text-foreground"
+                        name={variant.expanded ? "ChevronDown" : "ChevronRight"}
+                      />
+                    </Pressable>
+                    <Pressable
+                      accessibilityLabel="Delete variant"
+                      className="h-10 w-10 items-center justify-center rounded-full bg-destructive/10"
+                      haptic
+                      onPress={() => removeVariantRow(variant.id)}
+                      transition
+                    >
+                      <Icon className="size-sm text-destructive" name="Trash" />
+                    </Pressable>
+                  </View>
 
-              <FormField
-                editable={!hasVariantPricing}
-                helper={
-                  hasVariantPricing
-                    ? "Single price is disabled when variants set their own prices."
-                    : "Use this when the item has one selling price."
-                }
-                inputMode="decimal"
-                keyboardType="numeric"
-                label="Price per unit"
-                leadingIcon="CircleDollarSign"
-                onChangeText={setPrice}
-                placeholder="Enter unit price"
-                value={hasVariantPricing ? "" : price}
-              />
-            </SetupSection>
-
-            <SetupSection
-              description="Does this item have multiple prices based on different variants?"
-              title="Variants"
-            >
-              <ActionButton
-                icon="Plus"
-                onPress={() => variantTypeModalRef.current?.present()}
-                variant="outline"
-              >
-                Add variant
-              </ActionButton>
-
-              {variants.length === 0 ? (
-                <View className="gap-3 border-y border-border py-5">
-                  <Text className="text-center font-semibold text-foreground">
-                    No variants yet
-                  </Text>
-                  <Text className="text-center text-sm leading-5 text-muted-foreground">
-                    You can skip this and continue with only the primary unit.
-                  </Text>
-                </View>
-              ) : (
-                <View className="gap-4">
-                  {hasMultipleVariantDimensions ? (
-                    <SetupInlineNotice
-                      icon="ListChecks"
-                      text="Multiple variant labels generate sellable combination rows."
-                      tone="primary"
+                  {!hasMultipleVariantDimensions ? (
+                    <FormField
+                      label="Variant value name"
+                      leadingIcon="FileText"
+                      onChangeText={(value) =>
+                        updateVariant(variant.id, "name", value)
+                      }
+                      placeholder="Enter variant name"
+                      value={variant.name}
                     />
                   ) : null}
-                  {visibleVariantRows.map((variant) => (
-                    <View
-                      className="gap-3 border-t border-border pt-4"
-                      key={variant.id}
-                    >
-                      <View className="flex-row items-center gap-3">
-                        <View className="min-w-0 flex-1">
-                          <Text className="text-xs font-bold uppercase tracking-[1px] text-muted-foreground">
-                            {variant.variantLabel}
-                          </Text>
-                          <Text className="font-semibold text-foreground">
-                            {variant.name || "New variant"}
-                          </Text>
-                        </View>
-                        <Switch
-                          checked={variant.enabled}
-                          onCheckedChange={(checked) =>
-                            toggleVariantRowEnabled(variant.id, checked)
-                          }
-                        />
-                        <Pressable
-                          accessibilityLabel="Expand variant"
-                          className="h-10 w-10 items-center justify-center rounded-full bg-muted"
-                          haptic
-                          onPress={() => toggleVariantRowExpanded(variant.id)}
-                          transition
-                        >
-                          <Icon
-                            className="size-sm text-foreground"
-                            name={variant.expanded ? "ChevronDown" : "ChevronRight"}
-                          />
-                        </Pressable>
-                        <Pressable
-                          accessibilityLabel="Delete variant"
-                          className="h-10 w-10 items-center justify-center rounded-full bg-destructive/10"
-                          haptic
-                          onPress={() => removeVariantRow(variant.id)}
-                          transition
-                        >
-                          <Icon className="size-sm text-destructive" name="Trash" />
-                        </Pressable>
-                      </View>
-
-                      {!hasMultipleVariantDimensions ? (
-                        <FormField
-                          label="Variant value name"
-                          leadingIcon="FileText"
-                          onChangeText={(value) =>
-                            updateVariant(variant.id, "name", value)
-                          }
-                          placeholder="Enter variant name"
-                          value={variant.name}
-                        />
-                      ) : null}
-                      <View className="flex-row gap-3">
-                        <View className="min-w-0 flex-1">
-                          <FormField
-                            inputMode="decimal"
-                            keyboardType="numeric"
-                            label="Variant row price"
-                            leadingIcon="CircleDollarSign"
-                            onChangeText={(value) =>
-                              updateVariantRow(variant.id, "price", value)
-                            }
-                            placeholder="Enter price"
-                            value={variant.price}
-                          />
-                        </View>
-                        <View className="min-w-0 flex-1">
-                          <FormField
-                            inputMode="numeric"
-                            keyboardType="numeric"
-                            label="Variant row stock"
-                            leadingIcon="Warehouse"
-                            onChangeText={(value) =>
-                              updateVariantRow(
-                                variant.id,
-                                "stock",
-                                normalizeWholeNumberInput(value),
-                              )
-                            }
-                            placeholder="Enter stock"
-                            value={variant.stock}
-                          />
-                        </View>
-                      </View>
-
-                      {variant.expanded ? (
-                        <View className="gap-3 rounded-2xl bg-muted/40 p-3">
-                          <FormField
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                            error={
-                              isProductImageUrlInput(variant.imageUrl)
-                                ? undefined
-                                : "Enter a valid image link."
-                            }
-                            inputMode="url"
-                            keyboardType="url"
-                            label="Variant image link"
-                            leadingIcon="Globe"
-                            onChangeText={(value) =>
-                              updateVariantRow(variant.id, "imageUrl", value)
-                            }
-                            placeholder="Enter variant image link"
-                            value={variant.imageUrl}
-                          />
-                          {variant.imageLinks.map((link, index) => (
-                            <View className="flex-row items-end gap-2" key={index}>
-                              <View className="min-w-0 flex-1">
-                                <FormField
-                                  autoCapitalize="none"
-                                  autoCorrect={false}
-                                  error={
-                                    isProductImageUrlInput(link)
-                                      ? undefined
-                                      : "Enter a valid image link."
-                                  }
-                                  inputMode="url"
-                                  keyboardType="url"
-                                  label="Variant image link"
-                                  leadingIcon="Globe"
-                                  onChangeText={(value) =>
-                                    updateVariantRowImageLink(
-                                      variant.id,
-                                      index,
-                                      value,
-                                    )
-                                  }
-                                  placeholder="Enter variant image link"
-                                  value={link}
-                                />
-                              </View>
-                              <Pressable
-                                accessibilityLabel="Remove variant image link"
-                                className="mb-1 h-12 w-12 items-center justify-center rounded-xl bg-destructive/10"
-                                haptic
-                                onPress={() =>
-                                  removeVariantRowImageLink(variant.id, index)
-                                }
-                                transition
-                              >
-                                <Icon
-                                  className="size-sm text-destructive"
-                                  name="Trash"
-                                />
-                              </Pressable>
-                            </View>
-                          ))}
-                          <ActionButton
-                            icon="Plus"
-                            onPress={() => addVariantRowImageLink(variant.id)}
-                            variant="ghost"
-                          >
-                            Add image link
-                          </ActionButton>
-                        </View>
-                      ) : null}
+                  <View className="flex-row gap-3">
+                    <View className="min-w-0 flex-1">
+                      <FormField
+                        inputMode="decimal"
+                        keyboardType="numeric"
+                        label="Variant row price"
+                        leadingIcon="CircleDollarSign"
+                        onChangeText={(value) =>
+                          updateVariantRow(variant.id, "price", value)
+                        }
+                        placeholder="Enter price"
+                        value={variant.price}
+                      />
                     </View>
-                  ))}
+                    <View className="min-w-0 flex-1">
+                      <FormField
+                        inputMode="numeric"
+                        keyboardType="numeric"
+                        label="Variant row stock"
+                        leadingIcon="Warehouse"
+                        onChangeText={(value) =>
+                          updateVariantRow(
+                            variant.id,
+                            "stock",
+                            normalizeWholeNumberInput(value),
+                          )
+                        }
+                        placeholder="Enter stock"
+                        value={variant.stock}
+                      />
+                    </View>
+                  </View>
+
+                  {variant.expanded ? (
+                    <View className="gap-3 rounded-2xl bg-muted/40 p-3">
+                      <FormField
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        error={
+                          isProductImageUrlInput(variant.imageUrl)
+                            ? undefined
+                            : "Enter a valid image link."
+                        }
+                        inputMode="url"
+                        keyboardType="url"
+                        label="Variant image link"
+                        leadingIcon="Globe"
+                        onChangeText={(value) =>
+                          updateVariantRow(variant.id, "imageUrl", value)
+                        }
+                        placeholder="Enter variant image link"
+                        value={variant.imageUrl}
+                      />
+                      {variant.imageLinks.map((link, index) => (
+                        <View className="flex-row items-end gap-2" key={index}>
+                          <View className="min-w-0 flex-1">
+                            <FormField
+                              autoCapitalize="none"
+                              autoCorrect={false}
+                              error={
+                                isProductImageUrlInput(link)
+                                  ? undefined
+                                  : "Enter a valid image link."
+                              }
+                              inputMode="url"
+                              keyboardType="url"
+                              label="Variant image link"
+                              leadingIcon="Globe"
+                              onChangeText={(value) =>
+                                updateVariantRowImageLink(
+                                  variant.id,
+                                  index,
+                                  value,
+                                )
+                              }
+                              placeholder="Enter variant image link"
+                              value={link}
+                            />
+                          </View>
+                          <Pressable
+                            accessibilityLabel="Remove variant image link"
+                            className="mb-1 h-12 w-12 items-center justify-center rounded-xl bg-destructive/10"
+                            haptic
+                            onPress={() =>
+                              removeVariantRowImageLink(variant.id, index)
+                            }
+                            transition
+                          >
+                            <Icon
+                              className="size-sm text-destructive"
+                              name="Trash"
+                            />
+                          </Pressable>
+                        </View>
+                      ))}
+                      <ActionButton
+                        icon="Plus"
+                        onPress={() => addVariantRowImageLink(variant.id)}
+                        variant="ghost"
+                      >
+                        Add image link
+                      </ActionButton>
+                    </View>
+                  ) : null}
                 </View>
-              )}
-            </SetupSection>
-          </>
-        ) : (
-          <>
-            <SetupSection
-              description="Review the item, then enter parent-unit stock if this item still has stock outside variant rows."
-              title="Stock starting point"
-            >
-              <View className="border-t border-border">
-                <SetupSummaryRow label="Item" value={name.trim()} />
-                <SetupSummaryRow
-                  label="Unit"
-                  value={`${unitName.trim()} at ${
-                    hasVariantPricing ? "variant prices" : price.trim()
-                  }`}
-                />
-                <SetupSummaryRow
-                  label="Variants"
-                  value={
-                    activeVariantRows.length > 0
-                      ? `${activeVariantRows.length} enabled variant${
-                          activeVariantRows.length === 1 ? "" : "s"
-                        }`
-                      : "None"
-                  }
-                />
-              </View>
-              <QuantityStepper
-                helper={unitName.trim() || "units"}
-                label="Current stock"
-                min={0}
-                onChangeText={(value) =>
-                  setStartingStock(normalizeWholeNumberInput(value))
-                }
-                value={startingStock}
-              />
-            </SetupSection>
-            <ActionButton
-              icon="ArrowLeft"
-              onPress={() => setSetupStep("details")}
-              variant="outline"
-            >
-              Back to item details
-            </ActionButton>
-          </>
-        )}
+              ))}
+            </View>
+          )}
+        </SetupSection>
 
         {isAtProductLimit ? (
           <StatusBanner
@@ -1501,67 +1483,14 @@ export function FirstProductSetupContent({
         ) : null}
 
         <ActionButton
-          disabled={setupStep === "details" ? !canContinueToStock : !canSubmit}
-          isLoading={setupStep === "stock" && createProductMutation.isPending}
+          disabled={!canSubmit}
+          isLoading={createProductMutation.isPending}
           loadingLabel="Adding item"
-          onPress={setupStep === "details" ? continueToStock : submit}
+          onPress={submit}
         >
-          {setupStep === "details" ? "Continue to stock" : "Add item and stock"}
+          Add item
         </ActionButton>
       </View>
-
-      <Modal ref={unitSheetModalRef} snapPoints={["72%"]} title="Add unit">
-        <BottomSheetKeyboardAwareScrollView
-          bottomOffset={320}
-          contentContainerStyle={{ paddingBottom: 160 }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View className="gap-5 px-5 pb-6">
-            <View className="flex-row flex-wrap gap-2">
-              {UNIT_SUGGESTIONS.map((unit) => (
-                <SetupChoicePill
-                  key={unit}
-                  onPress={() => {
-                    setUnitName(unit)
-                    unitSheetModalRef.current?.dismiss()
-                  }}
-                  selected={unitName.trim().toLowerCase() === unit.toLowerCase()}
-                >
-                  {unit}
-                </SetupChoicePill>
-              ))}
-            </View>
-            <View className="flex-row items-end gap-2">
-              <View className="min-w-0 flex-1">
-                <FormField
-                  label="Unit name"
-                  leadingIcon="Hash"
-                  onChangeText={setUnitDraft}
-                  placeholder="Enter unit name"
-                  value={unitDraft}
-                />
-              </View>
-              <Pressable
-                accessibilityLabel="Save unit"
-                className="mb-1 h-12 w-12 items-center justify-center rounded-full bg-primary"
-                haptic
-                onPress={() => {
-                  const nextUnit = unitDraft.trim()
-
-                  if (nextUnit) {
-                    setUnitName(nextUnit)
-                    setUnitDraft("")
-                    unitSheetModalRef.current?.dismiss()
-                  }
-                }}
-                transition
-              >
-                <Icon className="size-sm text-primary-foreground" name="Plus" />
-              </Pressable>
-            </View>
-          </View>
-        </BottomSheetKeyboardAwareScrollView>
-      </Modal>
 
       <Modal
         ref={variantTypeModalRef}
@@ -1600,7 +1529,10 @@ export function FirstProductSetupContent({
                       Known variant type
                     </Text>
                   </View>
-                  <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
+                  <Icon
+                    className="size-sm text-muted-foreground"
+                    name="ChevronRight"
+                  />
                 </Pressable>
               ))}
               {canAddTypedVariant ? (
@@ -1628,20 +1560,22 @@ export function FirstProductSetupContent({
       </Modal>
 
       <Modal
+        hideHeader
         ref={variantValuesModalRef}
-        snapPoints={["100%"]}
+        snapPoints={["52%"]}
         title={`${selectedVariantLabel} Variants (${selectedVariantValues.length})`}
       >
         <BottomSheetKeyboardAwareScrollView
-          bottomOffset={320}
-          contentContainerStyle={{ paddingBottom: 160 }}
+          bottomOffset={280}
+          contentContainerStyle={{ paddingBottom: 48 }}
           keyboardShouldPersistTaps="handled"
         >
           <View className="gap-5 px-5 pb-6">
             <View className="flex-row items-center justify-between gap-3">
               <View className="min-w-0 flex-1">
                 <Text className="text-xl font-extrabold text-foreground">
-                  {selectedVariantLabel} Variants ({selectedVariantValues.length})
+                  {selectedVariantLabel} Variants (
+                  {selectedVariantValues.length})
                 </Text>
                 <Text className="text-sm text-muted-foreground">
                   Add values, then save to return to the item form.
@@ -1657,7 +1591,7 @@ export function FirstProductSetupContent({
             </View>
 
             {selectedVariantValues.length === 0 ? (
-              <View className="items-center justify-center py-12">
+              <View className="items-center justify-center rounded-2xl bg-muted/40 px-4 py-6">
                 <Text className="text-center font-semibold text-foreground">
                   Variant list is empty, start adding.
                 </Text>
@@ -1665,32 +1599,57 @@ export function FirstProductSetupContent({
             ) : (
               <View className="gap-4">
                 <View className="flex-row flex-wrap gap-2">
-                  {selectedVariantValues
-                    .map((variant) => (
-                      <SetupChoicePill key={variant.id} selected>
-                        {variant.name}
-                      </SetupChoicePill>
-                    ))}
-                </View>
-                {selectedVariantValues
-                  .map((variant) => (
-                    <View
-                      className="flex-row items-center justify-between gap-3 border-b border-border py-3"
-                      key={variant.id}
-                    >
-                      <Text className="font-semibold text-foreground">
-                        {variant.name}
-                      </Text>
-                      <Switch
-                        checked={variant.enabled}
-                        onCheckedChange={(checked) =>
-                          toggleVariantEnabled(variant.id, checked)
-                        }
-                      />
-                    </View>
+                  {selectedVariantValues.map((variant) => (
+                    <SetupChoicePill key={variant.id} selected>
+                      {variant.name}
+                    </SetupChoicePill>
                   ))}
+                </View>
+                {selectedVariantValues.map((variant) => (
+                  <View
+                    className="flex-row items-center justify-between gap-3 border-b border-border py-3"
+                    key={variant.id}
+                  >
+                    <Text className="font-semibold text-foreground">
+                      {variant.name}
+                    </Text>
+                    <Switch
+                      checked={variant.enabled}
+                      onCheckedChange={(checked) =>
+                        toggleVariantEnabled(variant.id, checked)
+                      }
+                    />
+                  </View>
+                ))}
               </View>
             )}
+
+            {selectedVariantValueSuggestions.length > 0 ? (
+              <View className="gap-3">
+                <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
+                  Common values
+                </Text>
+                <View className="flex-row flex-wrap gap-2">
+                  {selectedVariantValueSuggestions.map((value) => {
+                    const isSelected = selectedVariantValues.some(
+                      (variant) =>
+                        variant.name.trim().toLowerCase() ===
+                        value.toLowerCase(),
+                    )
+
+                    return (
+                      <SetupChoicePill
+                        key={value}
+                        onPress={() => addVariantValueByName(value)}
+                        selected={isSelected}
+                      >
+                        {value}
+                      </SetupChoicePill>
+                    )
+                  })}
+                </View>
+              </View>
+            ) : null}
 
             <View className="flex-row items-end gap-2">
               <View className="min-w-0 flex-1">
@@ -1717,6 +1676,14 @@ export function FirstProductSetupContent({
       </Modal>
     </>
   )
+  const unitSuggestionKeyboardBar = (
+    <UnitSuggestionKeyboardBar
+      onSelect={setUnitName}
+      suggestions={filteredUnitSuggestions}
+      value={unitName}
+      visible={shouldShowUnitSuggestions}
+    />
+  )
 
   if (presentation === "screen") {
     return (
@@ -1731,18 +1698,22 @@ export function FirstProductSetupContent({
         >
           {content}
         </KeyboardAwareScrollView>
+        {unitSuggestionKeyboardBar}
       </View>
     )
   }
 
   return (
-    <BottomSheetKeyboardAwareScrollView
-      bottomOffset={280}
-      contentContainerStyle={{ paddingBottom: 220 }}
-      keyboardShouldPersistTaps="handled"
-    >
-      {content}
-    </BottomSheetKeyboardAwareScrollView>
+    <>
+      <BottomSheetKeyboardAwareScrollView
+        bottomOffset={280}
+        contentContainerStyle={{ paddingBottom: 220 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {content}
+      </BottomSheetKeyboardAwareScrollView>
+      {unitSuggestionKeyboardBar}
+    </>
   )
 }
 

@@ -91,14 +91,16 @@ const CONTRACTS = [
   {
     file: FILES.staffInviteModal,
     markers: [
+      "WorkflowModalScreen",
       "StaffInviteContent",
       'ctaPlacement="sticky"',
-      "isInvitedStaffProfile(profile) || isSalesRepRole(profile?.role)",
-      "router.replace(\"/dashboard\")",
-      "scroll={false}",
+      'presentation="screen"',
+      'closeLabel="Close staff invite"',
+      'title="Sales reps"',
+      'router.replace("/dashboard")',
     ],
     reason:
-      "staff invite must be available as a guarded full-screen route with a sticky CTA mode",
+      "staff invite must use the shared guarded full-screen workflow shell with a sticky CTA mode",
   },
   {
     file: FILES.dashboard,

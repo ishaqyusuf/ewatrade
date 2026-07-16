@@ -1254,119 +1254,118 @@ export async function createRetailOpsProduct(
     })
 
     const createdAt = new Date()
-    const createdUnits = await Promise.all(
-      units.map(async (unit, unitNumber) => {
-        const templateUnit = findMatchingTemplateUnit(setupUnitTemplate, {
+    const createdUnits: CreatedRetailOpsProduct["units"] = []
+
+    for (const [unitNumber, unit] of units.entries()) {
+      const templateUnit = findMatchingTemplateUnit(setupUnitTemplate, {
+        isDefault: unitNumber === 0,
+        name: unit.name,
+      })
+      const durableTemplateUnit =
+        unitTemplate && templateUnit
+          ? (unitTemplate.units.find(
+              (durableUnit) => durableUnit.id === templateUnit.id,
+            ) ?? null)
+          : null
+      const conversionMultiplier = templateUnit
+        ? getTemplateUnitConversionMultiplier(templateUnit)
+        : unit.conversionMultiplier
+      const conversionRatio =
+        (templateUnit ? getTemplateUnitConversionRatio(templateUnit) : null) ??
+        toConversionRatio(conversionMultiplier)
+      const variant = await tx.productVariant.create({
+        data: {
+          conversionRatioDenominator: conversionRatio?.denominator ?? null,
+          conversionRatioNumerator: conversionRatio?.numerator ?? null,
+          isActive: unit.enabled !== false,
           isDefault: unitNumber === 0,
-          name: unit.name,
-        })
-        const durableTemplateUnit =
-          unitTemplate && templateUnit
-            ? (unitTemplate.units.find(
-                (durableUnit) => durableUnit.id === templateUnit.id,
-              ) ?? null)
-            : null
-        const conversionMultiplier = templateUnit
-          ? getTemplateUnitConversionMultiplier(templateUnit)
-          : unit.conversionMultiplier
-        const conversionRatio =
-          (templateUnit
-            ? getTemplateUnitConversionRatio(templateUnit)
-            : null) ?? toConversionRatio(conversionMultiplier)
-        const variant = await tx.productVariant.create({
-          data: {
-            conversionRatioDenominator: conversionRatio?.denominator ?? null,
-            conversionRatioNumerator: conversionRatio?.numerator ?? null,
-            isActive: unit.enabled !== false,
-            isDefault: unitNumber === 0,
-            metadata: {
-              retailOps: {
-                conversionMultiplier,
-                enabled: unit.enabled !== false,
-                imageLinks: unit.imageLinks ?? [],
-                imageUrl: unit.imageUrl?.trim() || null,
-                imagesUrl: unit.imageLinks ?? [],
-                openingStockQuantity: unit.openingStockQuantity,
-                priceHistory: [
-                  createPriceHistoryEntry({
-                    actorUserId: input.actorUserId,
-                    effectiveAt: createdAt,
-                    previousPriceMinor: null,
-                    priceMinor: unit.priceMinor,
-                    reason: "Initial product setup",
-                    source: "retail_ops_product_setup",
-                  }),
-                ],
-                source: "retail_ops_product_setup",
-                unitTemplateId: unitTemplate?.id ?? null,
-                unitTemplateKey:
-                  unitTemplate?.key ??
-                  fallbackUnitTemplate?.key ??
-                  unitTemplateKey,
-                unitTemplateSource: setupUnitTemplateSource,
-                unitTemplateUnitId: durableTemplateUnit?.id ?? null,
-                unitTemplateUnitKey: templateUnit?.key ?? null,
-                variantLabel: unit.variantLabel?.trim() || null,
-              },
+          metadata: {
+            retailOps: {
+              conversionMultiplier,
+              enabled: unit.enabled !== false,
+              imageLinks: unit.imageLinks ?? [],
+              imageUrl: unit.imageUrl?.trim() || null,
+              imagesUrl: unit.imageLinks ?? [],
+              openingStockQuantity: unit.openingStockQuantity,
+              priceHistory: [
+                createPriceHistoryEntry({
+                  actorUserId: input.actorUserId,
+                  effectiveAt: createdAt,
+                  previousPriceMinor: null,
+                  priceMinor: unit.priceMinor,
+                  reason: "Initial product setup",
+                  source: "retail_ops_product_setup",
+                }),
+              ],
+              source: "retail_ops_product_setup",
+              unitTemplateId: unitTemplate?.id ?? null,
+              unitTemplateKey:
+                unitTemplate?.key ??
+                fallbackUnitTemplate?.key ??
+                unitTemplateKey,
+              unitTemplateSource: setupUnitTemplateSource,
+              unitTemplateUnitId: durableTemplateUnit?.id ?? null,
+              unitTemplateUnitKey: templateUnit?.key ?? null,
+              variantLabel: unit.variantLabel?.trim() || null,
             },
-            name: normalizeUnitName(unit.name),
-            priceMinor: unit.priceMinor,
-            productId: product.id,
-            sku: createVariantSku({
-              productSlug,
-              unitName: unit.name,
-              unitNumber,
-            }),
-            ...(unitTemplate ? { unitTemplateId: unitTemplate.id } : {}),
-            ...(durableTemplateUnit
-              ? { unitTemplateUnitId: durableTemplateUnit.id }
-              : {}),
           },
-          select: {
-            id: true,
-            isDefault: true,
-            name: true,
-            priceMinor: true,
-            sku: true,
-          },
-        })
-
-        const inventoryItem = await tx.inventoryItem.create({
-          data: {
-            onHandQuantity: unit.openingStockQuantity,
-            productVariantId: variant.id,
-            storeId: input.storeId,
-            tenantId: input.tenantId,
-            updatedByUserId: input.actorUserId,
-          },
-          select: {
-            id: true,
-          },
-        })
-
-        await writeDurableOpeningStockMovement(tx, {
-          actorUserId: input.actorUserId,
-          externalId,
-          happenedAt: createdAt,
-          inventoryItemId: inventoryItem.id,
+          name: normalizeUnitName(unit.name),
+          priceMinor: unit.priceMinor,
           productId: product.id,
+          sku: createVariantSku({
+            productSlug,
+            unitName: unit.name,
+            unitNumber,
+          }),
+          ...(unitTemplate ? { unitTemplateId: unitTemplate.id } : {}),
+          ...(durableTemplateUnit
+            ? { unitTemplateUnitId: durableTemplateUnit.id }
+            : {}),
+        },
+        select: {
+          id: true,
+          isDefault: true,
+          name: true,
+          priceMinor: true,
+          sku: true,
+        },
+      })
+
+      const inventoryItem = await tx.inventoryItem.create({
+        data: {
+          onHandQuantity: unit.openingStockQuantity,
           productVariantId: variant.id,
-          quantity: unit.openingStockQuantity,
           storeId: input.storeId,
           tenantId: input.tenantId,
-        })
+          updatedByUserId: input.actorUserId,
+        },
+        select: {
+          id: true,
+        },
+      })
 
-        return {
-          conversionMultiplier,
-          id: variant.id,
-          isDefault: variant.isDefault,
-          name: variant.name,
-          openingStockQuantity: unit.openingStockQuantity,
-          priceMinor: variant.priceMinor,
-          sku: variant.sku,
-        }
-      }),
-    )
+      await writeDurableOpeningStockMovement(tx, {
+        actorUserId: input.actorUserId,
+        externalId,
+        happenedAt: createdAt,
+        inventoryItemId: inventoryItem.id,
+        productId: product.id,
+        productVariantId: variant.id,
+        quantity: unit.openingStockQuantity,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      })
+
+      createdUnits.push({
+        conversionMultiplier,
+        id: variant.id,
+        isDefault: variant.isDefault,
+        name: variant.name,
+        openingStockQuantity: unit.openingStockQuantity,
+        priceMinor: variant.priceMinor,
+        sku: variant.sku,
+      })
+    }
 
     return {
       created: true,

@@ -130,129 +130,132 @@ export function BusinessSwitchContent({
     setType("Retail")
   }
 
+  const contentClassName =
+    presentation === "screen" ? "gap-5 px-4 pb-6" : "gap-5 px-5 pb-6"
+
   const content = (
-    <View className="gap-5 px-5 pb-6">
-          <SecondarySheetHeader
-            description="Switch between businesses or add another business under this account."
-            icon="Building2"
-            title="Business workspace"
+    <View className={contentClassName}>
+      <SecondarySheetHeader
+        description="Switch between businesses or add another business under this account."
+        icon="Building2"
+        title="Business workspace"
+      />
+
+      <View className="gap-3">
+        <Text className="text-base font-bold text-foreground">
+          Your businesses
+        </Text>
+        {businesses.length > BUSINESS_PREVIEW_LIMIT ? (
+          <FormField
+            label="Find business"
+            leadingIcon="Search"
+            onChangeText={setBusinessQuery}
+            placeholder="Search businesses"
+            value={businessQuery}
           />
-
-          <View className="gap-3">
-            <Text className="text-base font-bold text-foreground">
-              Your businesses
-            </Text>
-            {businesses.length > BUSINESS_PREVIEW_LIMIT ? (
-              <FormField
-                label="Find business"
-                leadingIcon="Search"
-                onChangeText={setBusinessQuery}
-                placeholder="Search businesses"
-                value={businessQuery}
-              />
-            ) : null}
-            {businesses.length > 0 ? (
-              visibleBusinesses.length > 0 ? (
-                <>
-                  {visibleBusinesses.map((business) => (
-                    <BusinessRow
-                      business={business}
-                      key={business.id}
-                      onPress={() => setActiveBusiness(business.id)}
-                      selected={activeBusinessId === business.id}
-                    />
-                  ))}
-                  {filteredBusinesses.length > visibleBusinesses.length ? (
-                    <Text className="text-xs font-semibold text-muted-foreground">
-                      Showing first {visibleBusinesses.length} of{" "}
-                      {filteredBusinesses.length} matching businesses.
-                    </Text>
-                  ) : null}
-                </>
-              ) : (
-                <EmptyState
-                  icon="Search"
-                  message="Try another business, branch, currency, or category."
-                  title="No matching businesses"
+        ) : null}
+        {businesses.length > 0 ? (
+          visibleBusinesses.length > 0 ? (
+            <>
+              {visibleBusinesses.map((business) => (
+                <BusinessRow
+                  business={business}
+                  key={business.id}
+                  onPress={() => setActiveBusiness(business.id)}
+                  selected={activeBusinessId === business.id}
                 />
-              )
-            ) : (
-              <EmptyState
-                icon="Building2"
-                message="Create a business to scope inventory, staff, and sales."
-                title="No business yet"
-              />
-            )}
-          </View>
-
-          <View className="gap-4">
-            <Text className="text-base font-bold text-foreground">
-              Add business
-            </Text>
-            <FormField
-              label="Business name"
-              leadingIcon="Building2"
-              onChangeText={setBusinessName}
-              placeholder="Enter business or branch name"
-              value={businessName}
+              ))}
+              {filteredBusinesses.length > visibleBusinesses.length ? (
+                <Text className="text-xs font-semibold text-muted-foreground">
+                  Showing first {visibleBusinesses.length} of{" "}
+                  {filteredBusinesses.length} matching businesses.
+                </Text>
+              ) : null}
+            </>
+          ) : (
+            <EmptyState
+              icon="Search"
+              message="Try another business, branch, currency, or category."
+              title="No matching businesses"
             />
-            <View className="flex-row gap-3">
-              <FormField
-                containerClassName="flex-1"
-                label="Type"
-                leadingIcon="FileText"
-                onChangeText={setType}
-                placeholder="Enter business type"
-                value={type}
-              />
-              <FormField
-                containerClassName="flex-1"
-                label="Currency"
-                leadingIcon="CircleDollarSign"
-                onChangeText={setCurrency}
-                placeholder="Enter currency code"
-                value={currency}
-              />
-            </View>
-            <View className="flex-row gap-3">
-              <FormField
-                containerClassName="flex-1"
-                label="Country"
-                leadingIcon="MapPin"
-                onChangeText={setCountry}
-                placeholder="Enter country"
-                value={country}
-              />
-              <FormField
-                containerClassName="flex-1"
-                label="Category"
-                leadingIcon="List"
-                onChangeText={setCategory}
-                placeholder="Enter product category"
-                value={category}
-              />
-            </View>
-            <FormField
-              label="Sales method"
-              leadingIcon="Wallet"
-              onChangeText={setSalesMethod}
-              placeholder="Enter sales method"
-              value={salesMethod}
-            />
-          </View>
+          )
+        ) : (
+          <EmptyState
+            icon="Building2"
+            message="Create a business to scope inventory, staff, and sales."
+            title="No business yet"
+          />
+        )}
+      </View>
 
-          {isAtBusinessLimit ? (
-            <StatusBanner
-              icon="TriangleAlert"
-              message={`${plan.name} allows ${plan.limits.businesses} business${plan.limits.businesses === 1 ? "" : "es"}. Upgrade before adding another business.`}
-              title="Business limit reached"
-              tone="destructive"
-            />
-          ) : null}
+      <View className="gap-4">
+        <Text className="text-base font-bold text-foreground">
+          Add business
+        </Text>
+        <FormField
+          label="Business name"
+          leadingIcon="Building2"
+          onChangeText={setBusinessName}
+          placeholder="Enter business or branch name"
+          value={businessName}
+        />
+        <View className="flex-row gap-3">
+          <FormField
+            containerClassName="flex-1"
+            label="Type"
+            leadingIcon="FileText"
+            onChangeText={setType}
+            placeholder="Enter business type"
+            value={type}
+          />
+          <FormField
+            containerClassName="flex-1"
+            label="Currency"
+            leadingIcon="CircleDollarSign"
+            onChangeText={setCurrency}
+            placeholder="Enter currency code"
+            value={currency}
+          />
+        </View>
+        <View className="flex-row gap-3">
+          <FormField
+            containerClassName="flex-1"
+            label="Country"
+            leadingIcon="MapPin"
+            onChangeText={setCountry}
+            placeholder="Enter country"
+            value={country}
+          />
+          <FormField
+            containerClassName="flex-1"
+            label="Category"
+            leadingIcon="List"
+            onChangeText={setCategory}
+            placeholder="Enter product category"
+            value={category}
+          />
+        </View>
+        <FormField
+          label="Sales method"
+          leadingIcon="Wallet"
+          onChangeText={setSalesMethod}
+          placeholder="Enter sales method"
+          value={salesMethod}
+        />
+      </View>
 
-          <ActionButton disabled={!canCreate} onPress={submit}>
-            Add business
-          </ActionButton>
+      {isAtBusinessLimit ? (
+        <StatusBanner
+          icon="TriangleAlert"
+          message={`${plan.name} allows ${plan.limits.businesses} business${plan.limits.businesses === 1 ? "" : "es"}. Upgrade before adding another business.`}
+          title="Business limit reached"
+          tone="destructive"
+        />
+      ) : null}
+
+      <ActionButton disabled={!canCreate} onPress={submit}>
+        Add business
+      </ActionButton>
       <ActionButton onPress={onComplete} variant="outline">
         Done
       </ActionButton>

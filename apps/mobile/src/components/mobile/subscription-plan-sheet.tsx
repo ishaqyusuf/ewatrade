@@ -262,6 +262,8 @@ export function SubscriptionPlanContent({
       : subscriptionQuery.isFetching
         ? "Refreshing production plan and entitlement usage."
         : "Production billing controls the current plan, limits, and upgrade handoff."
+  const shouldShowSourceNotice =
+    sourceLabel !== "Online" && sourceLabel !== "Refreshing"
   const offlineDeviceUsage = shouldUseProductionSnapshot
     ? productionSnapshot.usage.offlineDevices
     : null
@@ -321,111 +323,112 @@ export function SubscriptionPlanContent({
     return labels
   }, [currentPlan.id, isCheckoutPending, plans, shouldUseProductionSnapshot])
 
+  const contentClassName =
+    presentation === "screen" ? "gap-5 px-4 pb-6" : "gap-5 px-5 pb-6"
+
   const content = (
-    <View className="gap-5 px-5 pb-6">
-          <SecondarySheetHeader
-            description="Plan limits are business-scoped and upgrade requests stay behind the billing provider boundary."
-            icon="CreditCard"
-            title="Business plan"
-          />
+    <View className={contentClassName}>
+      <SecondarySheetHeader
+        description="Plan limits are business-scoped and upgrade requests stay behind the billing provider boundary."
+        icon="CreditCard"
+        title="Business plan"
+      />
 
-          <StatusBanner
-            icon={sourceLabel === "Online" ? "CircleCheck" : "Clock"}
-            message={sourceDetail}
-            title={`Billing source: ${sourceLabel}`}
-            tone={sourceLabel === "Online" ? "success" : "warning"}
-          />
+      {shouldShowSourceNotice ? (
+        <StatusBanner
+          icon="Clock"
+          message={sourceDetail}
+          title={sourceLabel}
+          tone="warning"
+        />
+      ) : null}
 
-          {checkoutError || checkoutIntentMutation.error ? (
-            <StatusBanner
-              icon="TriangleAlert"
-              message={
-                checkoutError ??
-                checkoutIntentMutation.error?.message ??
-                "Try the upgrade request again."
-              }
-              title="Upgrade request failed"
-              tone="destructive"
-            />
-          ) : null}
+      {checkoutError || checkoutIntentMutation.error ? (
+        <StatusBanner
+          icon="TriangleAlert"
+          message={
+            checkoutError ??
+            checkoutIntentMutation.error?.message ??
+            "Try the upgrade request again."
+          }
+          title="Upgrade request failed"
+          tone="destructive"
+        />
+      ) : null}
 
-          {checkoutIntent ? (
-            <CheckoutIntentNotice intent={checkoutIntent} />
-          ) : null}
+      {checkoutIntent ? <CheckoutIntentNotice intent={checkoutIntent} /> : null}
 
-          {!shouldUseProductionSnapshot ? (
-            <StatusBanner
-              icon="TriangleAlert"
-              message="Local subscription data is shown only as a fallback. Reconnect to request an upgrade from the business account."
-              title="Upgrade requests need production billing"
-              tone="warning"
-            />
-          ) : null}
+      {!shouldUseProductionSnapshot ? (
+        <StatusBanner
+          icon="TriangleAlert"
+          message="Local subscription data is shown only as a fallback. Reconnect to request an upgrade from the business account."
+          title="Upgrade requests need production billing"
+          tone="warning"
+        />
+      ) : null}
 
-          <View className="gap-3">
-            <View className="flex-row items-start justify-between gap-3">
-              <View className="flex-1 gap-1">
-                <Text className="font-extrabold text-foreground">
-                  {currentPlan.name}
-                </Text>
-                <Text className="text-sm text-muted-foreground">
-                  {subscription.status === "trialing"
-                    ? `Trial ends ${formatDate(subscription.trialEndsAt)}`
-                    : `Renews ${formatDate(subscription.currentPeriodEndsAt)}`}
-                </Text>
-              </View>
-              <StatusBadge
-                label={subscriptionStatusLabel(subscription.status)}
-                tone={
-                  subscription.status === "past_due" ? "warning" : "success"
-                }
-              />
-            </View>
-            <UsageRow
-              label="Businesses"
-              limit={currentPlan.limits.businesses}
-              used={usageSnapshot.businesses}
-            />
-            <UsageRow
-              label="Products"
-              limit={currentPlan.limits.products}
-              used={usageSnapshot.products}
-            />
-            <UsageRow
-              label="Staff"
-              limit={currentPlan.limits.staff}
-              used={usageSnapshot.staff}
-            />
-            {offlineDeviceUsage === null ? null : (
-              <UsageRow
-                label="Offline devices"
-                limit={currentPlan.limits.offlineDevices}
-                used={offlineDeviceUsage}
-              />
-            )}
-            <PlanLimitRow
-              label="Report history"
-              value={`${reportHistoryLimit} days`}
-            />
+      <View className="gap-3">
+        <View className="flex-row items-start justify-between gap-3">
+          <View className="flex-1 gap-1">
+            <Text className="font-extrabold text-foreground">
+              {currentPlan.name}
+            </Text>
+            <Text className="text-sm text-muted-foreground">
+              {subscription.status === "trialing"
+                ? `Trial ends ${formatDate(subscription.trialEndsAt)}`
+                : `Renews ${formatDate(subscription.currentPeriodEndsAt)}`}
+            </Text>
           </View>
+          <StatusBadge
+            label={subscriptionStatusLabel(subscription.status)}
+            tone={subscription.status === "past_due" ? "warning" : "success"}
+          />
+        </View>
+        <UsageRow
+          label="Businesses"
+          limit={currentPlan.limits.businesses}
+          used={usageSnapshot.businesses}
+        />
+        <UsageRow
+          label="Products"
+          limit={currentPlan.limits.products}
+          used={usageSnapshot.products}
+        />
+        <UsageRow
+          label="Staff"
+          limit={currentPlan.limits.staff}
+          used={usageSnapshot.staff}
+        />
+        {offlineDeviceUsage === null ? null : (
+          <UsageRow
+            label="Offline devices"
+            limit={currentPlan.limits.offlineDevices}
+            used={offlineDeviceUsage}
+          />
+        )}
+        <PlanLimitRow
+          label="Report history"
+          value={`${reportHistoryLimit} days`}
+        />
+      </View>
 
-          <View className="gap-3">
-            <Text className="text-base font-bold text-foreground">Tiers</Text>
-            {plans.map((plan) => (
-              <PlanCard
-                actionLabel={planActionLabels[plan.id] ?? "Select"}
-                current={plan.id === subscription.planId}
-                disabled={
-                  plan.id === currentPlan.id ||
-                  isCheckoutPending ||
-                  !shouldUseProductionSnapshot
-                }
-                key={plan.id}
-                onSelect={() => selectPlan(plan)}
-                plan={plan}
-              />
-            ))}
-          </View>
+      <View className="gap-3">
+        <Text className="text-base font-bold text-foreground">Tiers</Text>
+        {plans.map((plan) => (
+          <PlanCard
+            actionLabel={planActionLabels[plan.id] ?? "Select"}
+            current={plan.id === subscription.planId}
+            disabled={
+              plan.id === currentPlan.id ||
+              isCheckoutPending ||
+              !shouldUseProductionSnapshot
+            }
+            key={plan.id}
+            onSelect={() => selectPlan(plan)}
+            plan={plan}
+          />
+        ))}
+      </View>
 
       <ActionButton onPress={onComplete} variant="outline">
         Done
