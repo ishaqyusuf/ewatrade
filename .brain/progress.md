@@ -1,6 +1,22 @@
 # Progress
 
+## 2026-07-17
+
+### First-Product Variant And Stock Workspace
+- Source Mode: Direct user implementation request for grouped variant management and separate stock editing after multiple values exist.
+- Completed: Added a compact `Variants` / `Stocks` tab workspace once more than one variant value exists, hiding the introductory variant title and description. The Variants tab groups values by label with label edit actions, value action pills, per-group add pills, and an active bottom `Add variant` action that opens and focuses the keyboard composer in one tap. Content-sized action sheets provide label edit/remove, value edit/remove/enable-disable, and stock enable-disable. Label and value editing reuse the keyboard-sticky composer with a check action, save on the action or keyboard Enter, close after save, and reject commas for single-value editing. The Stocks tab retains price, stock, and media controls, renames field labels to `Price` and `Stock`, replaces delete with a row options action, sorts explicitly or inherited-disabled rows after active rows while preserving independent generated-stock state, and owns the validation-aware final `Add item` action.
+- Changed Source Files: `apps/mobile/src/components/mobile/first-product-setup-sheet.tsx`, `apps/mobile/src/components/mobile/keyboard-inline-composer.tsx`, `apps/mobile/scripts/check-first-product-flow.mjs`.
+- Brain Files Updated: `.brain/features/mobile-retail-ops-mvp-spec.md`, `.brain/features/retail-ops-design-system-and-ia.md`, `.brain/progress.md`.
+- Checks Run: `bun --cwd apps/mobile qa:first-product-flow`; `bun --cwd apps/mobile qa:nativewind-style`; `bun --cwd apps/mobile qa:theme-colors`; `bun --cwd apps/mobile qa:mvp-typechecks`; `git diff --check`; Android Expo Go interaction QA on `emulator-5554` covering the Variants/Stocks tab split, active `Add variant`, one-tap keyboard focus, group/value/stock action surfaces, inherited-disabled row ordering, comma rejection, and Enter-to-save edit behavior.
+
 ## 2026-07-16
+
+### First-Product Inline Variant Composer
+- Source Mode: Direct user implementation request with chat-input reference screenshot for inline keyboard variant entry.
+- Completed: Added a reusable keyboard-sticky inline composer with horizontal pills, chat-style input, optional right submit action, disabled empty submit state, and removable selected pills. First-product `Add variant` now defaults to this inline composer behind `USE_INLINE_VARIANT_COMPOSER`, starts with filtered known variant-label suggestions, falls back to default suggestions on no match, then stays open for value entry with selected values first, common values mapped from the selected label, no plus button, comma-or-Enter entry that clears the input, and no duplicate variant-value-name row field. The composer is activated by `Add variant` and hides when the keyboard is dismissed or the user taps back into the form. Existing modal refs and modal bodies remain in code as the rollback path. The dev/preview floating theme toggle now hides while the keyboard is visible so it cannot overlap composer pills or inputs.
+- Changed Source Files: `apps/mobile/src/components/mobile/keyboard-inline-composer.tsx`, `apps/mobile/src/components/mobile/first-product-setup-sheet.tsx`, `apps/mobile/src/components/mobile/floating-theme-toggle.tsx`, `apps/mobile/scripts/check-first-product-flow.mjs`.
+- Brain Files Updated: `.brain/features/mobile-retail-ops-mvp-spec.md`, `.brain/features/retail-ops-design-system-and-ia.md`, `.brain/progress.md`.
+- Checks Run: `bun --cwd apps/mobile qa:first-product-flow`; `bun --cwd apps/mobile qa:nativewind-style`; `bun --cwd apps/mobile qa:theme-colors`; `bun --cwd apps/mobile qa:mvp-typechecks`; `git diff --check`.
 
 ### Retail Ops Product Setup Transaction Serialization
 - Source Mode: Direct user error report from `retailOps.createProduct` showing `current transaction is aborted, commands ignored until end of transaction block` while adding an item with variants.
@@ -50,6 +66,12 @@
 - Brain Files Updated: `.brain/features/retail-ops-design-system-and-ia.md`, `.brain/progress.md`.
 - Checks Run: `bun --cwd apps/mobile qa:navigation-home-system`; `bun --cwd apps/mobile qa:create-sale-flow`; `bun --cwd apps/mobile qa:first-product-flow`; `bun --cwd apps/mobile qa:staff-flow`; `bun --cwd apps/mobile qa:nativewind-style`; `bun --cwd apps/mobile qa:theme-colors`; `bun --cwd apps/mobile qa:mvp-typechecks`; `git diff --check`.
 - Skipped Checks Or Unresolved Issues: Broader legacy guards `qa:inventory-operations-flow`, `qa:customer-book-flow`, `qa:product-share-management`, `qa:reports-flow`, `qa:subscription-flow`, `qa:offline-sync-flow`, and `qa:session-offline-persistence` still fail on pre-existing/stale expectations in untouched files or older dashboard/bottom-sheet entry assumptions, not on the files changed for this cleanup.
+
+### First-Product Variant Value Modal Cleanup
+- Source Mode: Direct user screenshot showing the variant value bottom sheet poorly displayed above the keyboard.
+- Completed: Reworked the variant value editor so selected values render only as removable chips, removed the duplicate selected-value list, filtered common suggestions once selected, and adjusted the bottom-sheet keyboard offsets so the editor content stays visible while typing.
+- Changed Source Files: `apps/mobile/src/components/mobile/first-product-setup-sheet.tsx`, `apps/mobile/scripts/check-first-product-flow.mjs`.
+- Brain Files Updated: `.brain/features/retail-ops-design-system-and-ia.md`, `.brain/progress.md`.
 
 ### Mobile OTP Bypass Removal
 - Source Mode: Direct user implementation request to remove OTP bypasses while keeping exact `@test.com` test-recipient routing.

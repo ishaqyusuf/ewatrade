@@ -81,6 +81,7 @@ Form and modal rules:
 - Bottom sheets are for short, focused choices and quick actions.
 - Workflows that are over half-screen, multi-section, or keyboard-heavy should use full-screen stack modal routes with `MobileScreen` keyboard-safe layout and sticky primary CTA placement where the form is long.
 - Full-screen stack workflow routes must use `WorkflowModalScreen` so authentication/role redirects, close-header geometry, compact horizontal padding, status-bar background, and light/dark status-bar icon style stay consistent across item setup, stock, staff, sales, reports, links, and settings flows. The shell should show the workflow title directly without an extra decorative eyebrow, and reused sheet bodies should use tighter screen-mode horizontal padding than bottom-sheet mode.
+- Keyboard-sticky inline composers should sit as accessory surfaces directly above the keyboard only while activated, with horizontal suggestion chips above the input, a single right action only when the mode needs explicit submit, and removable selected chips for already-added values. They should close when the keyboard is dismissed or the user taps back into the form. Dev/preview-only floating controls should hide while the keyboard is visible so they do not cover composer pills or inputs.
 - Touched forms should prefer spacing, labels, helper text, status banners, and operational rows over repeated nested card/border wrappers.
 
 ## Primary Roles
@@ -490,7 +491,9 @@ The first-product setup sheet is the empty-business bridge after auth/business e
 - Setup source, product-limit, and submission error states use shared status banners, but normal online/production-ready paths should not show redundant confirmation copy.
 - Current stock is captured inline beside the primary price when there are no variants, or inside each variant row when variants exist.
 - Manual sub-units and variants stay optional; the first-product setup surface does not show reusable unit-template choices. Primary-unit suggestions appear only as compact keyboard-time chips that write into the manual field.
-- Variant value entry should use a compact bottom sheet sized to the needed editor content, with mapped common-value chips for system variant labels before the manual value field.
+- Variant entry should default to an inline keyboard-sticky composer rather than a modal: a horizontal pill rail sits above a chat-style input with one right-side submit action. The composer starts in variant-label mode with filtered known labels, then stays open in value-entry mode with selected removable chips first and mapped common-value suggestions after them. The older compact value sheet can remain in code as a rollback path during testing.
+- After a second variant value is added, replace the introductory variant section with a compact `Variants` / `Stocks` segmented control. The Variants view should use flat grouped rows with a label action, value pills, a trailing per-group add pill, and an active bottom `Add variant` action. The Stocks view should preserve editable price/stock rows, use one options icon instead of destructive row controls, and own the validation-aware final `Add item` action.
+- Variant group, value, and stock actions should use a content-sized bottom action sheet with title and Active/Inactive subtitle. Label/value edits return to the keyboard composer with a check action and close on save; disabled values and stock rows use muted treatment and sort after active content.
 - Empty variant copy must make it clear that users can skip variants and continue with only the primary unit.
 - Production product creation, local/offline fallback, opening-stock movement, and sync queue behavior stay unchanged.
 

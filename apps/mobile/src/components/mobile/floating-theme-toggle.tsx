@@ -8,7 +8,7 @@ import {
 } from "@/lib/theme-preference"
 import { usePathname } from "expo-router"
 import { useEffect, useState } from "react"
-import { Image, StyleSheet, View } from "react-native"
+import { Image, Keyboard, StyleSheet, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 const THEME_TOGGLE_IMAGES = {
@@ -23,6 +23,7 @@ export function FloatingThemeToggle() {
   const { colorScheme, setColorScheme } = useColorScheme()
   const [themeOverride, setThemeOverrideState] =
     useState<ThemeOverride>("system")
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false)
 
   useEffect(() => {
     ;(async () => {
@@ -31,8 +32,23 @@ export function FloatingThemeToggle() {
     })()
   }, [])
 
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener("keyboardDidShow", () => {
+      setIsKeyboardVisible(true)
+    })
+    const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
+      setIsKeyboardVisible(false)
+    })
+
+    return () => {
+      showSubscription.remove()
+      hideSubscription.remove()
+    }
+  }, [])
+
   if (
     !shouldShowFloatingThemeToggle() ||
+    isKeyboardVisible ||
     pathname.startsWith("/design-system") ||
     pathname.startsWith("/updates")
   ) {

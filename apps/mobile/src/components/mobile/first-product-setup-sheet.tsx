@@ -1,6 +1,10 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
 import {
+  KeyboardInlineComposer,
+  type KeyboardInlineComposerPill,
+} from "@/components/mobile/keyboard-inline-composer"
+import {
   SetupChoicePill,
   SetupFlowHeader,
   SetupInlineNotice,
@@ -11,7 +15,6 @@ import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet
 import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
-import { Switch } from "@/components/ui/switch"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
 import {
@@ -34,7 +37,14 @@ import { useMutation } from "@tanstack/react-query"
 import { Image } from "expo-image"
 import * as ImagePicker from "expo-image-picker"
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react"
-import { Alert, ScrollView, View } from "react-native"
+import {
+  Alert,
+  Keyboard,
+  Modal as NativeModal,
+  ScrollView,
+  type TextInput,
+  View,
+} from "react-native"
 import {
   KeyboardAwareScrollView,
   KeyboardStickyView,
@@ -77,6 +87,38 @@ type VariantCombinationDraft = {
   variantLabel: string
 }
 
+type VariantComposerMode =
+  | "edit-variant-label"
+  | "edit-variant-value"
+  | "variant-type"
+  | "variant-value"
+
+type VariantSetupTab = "stocks" | "variants"
+
+type VariantComposerEditTarget =
+  | {
+      label: string
+      type: "label"
+    }
+  | {
+      id: string
+      type: "value"
+    }
+
+type VariantActionTarget =
+  | {
+      label: string
+      type: "group"
+    }
+  | {
+      id: string
+      type: "stock"
+    }
+  | {
+      id: string
+      type: "value"
+    }
+
 type ProductionProduct = {
   product: {
     id: string
@@ -113,6 +155,8 @@ type CreateProductInput = {
 
 const FIRST_PRODUCT_STEPS = ["Item"]
 const HIDDEN_VARIANT_PARENT_UNIT_NAME = "Parent unit"
+const USE_INLINE_VARIANT_COMPOSER = true
+const VARIANT_COMPOSER_DEFAULT_SUGGESTION_COUNT = 5
 
 const KNOWN_VARIANT_TYPES = [
   "Size",
@@ -156,6 +200,17 @@ const UNIT_SUGGESTIONS = [
   "Pair",
   "Roll",
 ]
+
+function getVariantValueSuggestions(label: string) {
+  const normalizedLabel = label.trim().toLowerCase()
+  const suggestionLabel = Object.keys(VARIANT_VALUE_SUGGESTIONS_BY_LABEL).find(
+    (knownLabel) => knownLabel.toLowerCase() === normalizedLabel,
+  )
+
+  return suggestionLabel
+    ? VARIANT_VALUE_SUGGESTIONS_BY_LABEL[suggestionLabel]
+    : []
+}
 
 function parseAmount(value: string) {
   const amount = Number(value.replace(/[^\d.]/g, ""))
@@ -276,7 +331,7 @@ function buildVariantGroups(values: VariantDraft[]) {
     const label = value.variantLabel.trim()
     const name = value.name.trim()
 
-    if (!value.enabled || !label || !name) continue
+    if (!label || !name) continue
 
     const normalizedLabel = normalizeVariantDimension(label)
     const existingGroup = groupsByLabel.get(normalizedLabel)
@@ -465,6 +520,7 @@ export function FirstProductSetupContent({
   const subscriptions = useSubscriptionStore((state) => state.subscriptions)
   const variantTypeModalRef = useRef<BottomSheetModalRef>(null)
   const variantValuesModalRef = useRef<BottomSheetModalRef>(null)
+  const variantComposerInputRef = useRef<TextInput>(null)
   const unitSuggestionBlurTimerRef = useRef<ReturnType<
     typeof setTimeout
   > | null>(null)
@@ -484,6 +540,15 @@ export function FirstProductSetupContent({
   const [variantSearch, setVariantSearch] = useState("")
   const [selectedVariantLabel, setSelectedVariantLabel] = useState("Size")
   const [variantValueName, setVariantValueName] = useState("")
+  const [variantComposerMode, setVariantComposerMode] =
+    useState<VariantComposerMode | null>(null)
+  const [variantComposerText, setVariantComposerText] = useState("")
+  const [variantComposerEditTarget, setVariantComposerEditTarget] =
+    useState<VariantComposerEditTarget | null>(null)
+  const [variantActionTarget, setVariantActionTarget] =
+    useState<VariantActionTarget | null>(null)
+  const [variantSetupTab, setVariantSetupTab] =
+    useState<VariantSetupTab>("variants")
   const [submitError, setSubmitError] = useState<string | null>(null)
   const shouldUseLocalQueue = isOfflineMode || isLocalSessionToken(auth.token)
   const subscription = getBusinessSubscription(subscriptions, activeBusinessId)
@@ -495,17 +560,51 @@ export function FirstProductSetupContent({
     () => buildVariantCombinationSeeds(variantGroups),
     [variantGroups],
   )
-  const generatedVariantCombinationSignature = generatedVariantCombinationSeeds
-    .map((seed) => seed.key)
-    .join("|")
+  const disabledVariantDimensionKeys = useMemo(
+    () =>
+      new Set(
+        variants
+          .filter((variant) => !variant.enabled)
+          .map(
+            (variant) =>
+              `${normalizeVariantDimension(variant.variantLabel)}:${normalizeVariantDimension(
+                variant.name,
+              )}`,
+          ),
+      ),
+    [variants],
+  )
+  const isVariantRowEnabled = (
+    variant: VariantCombinationDraft | VariantDraft,
+  ) => {
+    if (!variant.enabled) return false
+
+    if (!hasMultipleVariantDimensions || !("key" in variant)) {
+      return true
+    }
+
+    return variant.key
+      .split("|")
+      .every((keyPart) => !disabledVariantDimensionKeys.has(keyPart))
+  }
   const activeVariantRows = hasMultipleVariantDimensions
-    ? variantCombinations.filter((variant) => variant.enabled)
-    : variants.filter((variant) => variant.enabled)
+    ? variantCombinations.filter(isVariantRowEnabled)
+    : variants.filter(isVariantRowEnabled)
   const visibleVariantRows = hasMultipleVariantDimensions
     ? variantCombinations
     : variants
+  const sortedVisibleVariantRows = [...visibleVariantRows].sort(
+    (left, right) =>
+      Number(isVariantRowEnabled(right)) - Number(isVariantRowEnabled(left)),
+  )
   const hasVariantRows = variants.length > 0
+  const shouldShowVariantTabs = variants.length > 1
   const shouldUsePrimaryUnitFields = !hasVariantRows
+  const isInlineVariantComposerVisible =
+    USE_INLINE_VARIANT_COMPOSER && !!variantComposerMode
+  const isVariantComposerEditMode =
+    variantComposerMode === "edit-variant-label" ||
+    variantComposerMode === "edit-variant-value"
   const filteredVariantTypes = useMemo(() => {
     const normalizedSearch = variantSearch.trim().toLowerCase()
 
@@ -525,7 +624,85 @@ export function FirstProductSetupContent({
     (variant) => variant.variantLabel === selectedVariantLabel,
   )
   const selectedVariantValueSuggestions =
-    VARIANT_VALUE_SUGGESTIONS_BY_LABEL[selectedVariantLabel] ?? []
+    getVariantValueSuggestions(selectedVariantLabel)
+  const availableVariantValueSuggestions =
+    selectedVariantValueSuggestions.filter(
+      (value) =>
+        !selectedVariantValues.some(
+          (variant) =>
+            variant.name.trim().toLowerCase() === value.trim().toLowerCase(),
+        ),
+    )
+  const inlineVariantTypeSuggestions = useMemo(() => {
+    const defaultSuggestions = KNOWN_VARIANT_TYPES.slice(
+      0,
+      VARIANT_COMPOSER_DEFAULT_SUGGESTION_COUNT,
+    )
+    const normalizedSearch = variantComposerText.trim().toLowerCase()
+
+    if (!normalizedSearch) return defaultSuggestions
+
+    const matches = KNOWN_VARIANT_TYPES.filter((variantType) =>
+      variantType.toLowerCase().includes(normalizedSearch),
+    ).slice(0, VARIANT_COMPOSER_DEFAULT_SUGGESTION_COUNT)
+
+    return matches.length > 0 ? matches : defaultSuggestions
+  }, [variantComposerText])
+  const inlineVariantValueSuggestions = useMemo(() => {
+    const defaultSuggestions = availableVariantValueSuggestions.slice(
+      0,
+      VARIANT_COMPOSER_DEFAULT_SUGGESTION_COUNT,
+    )
+    const normalizedSearch = variantComposerText.trim().toLowerCase()
+
+    if (!normalizedSearch) return defaultSuggestions
+
+    const matches = availableVariantValueSuggestions
+      .filter((value) => value.toLowerCase().includes(normalizedSearch))
+      .slice(0, VARIANT_COMPOSER_DEFAULT_SUGGESTION_COUNT)
+
+    return matches.length > 0 ? matches : defaultSuggestions
+  }, [availableVariantValueSuggestions, variantComposerText])
+  const variantComposerPills = useMemo<KeyboardInlineComposerPill[]>(() => {
+    if (isVariantComposerEditMode || variantComposerMode === "variant-type") {
+      return inlineVariantTypeSuggestions.map((variantType) => ({
+        id: `type-${variantType}`,
+        label: variantType,
+      }))
+    }
+
+    if (variantComposerMode === "variant-value") {
+      return [
+        ...selectedVariantValues.map((variant) => ({
+          id: variant.id,
+          label: variant.name,
+          removable: true,
+          selected: true,
+        })),
+        ...inlineVariantValueSuggestions.map((value) => ({
+          id: `value-${selectedVariantLabel}-${value}`,
+          label: value,
+        })),
+      ]
+    }
+
+    return []
+  }, [
+    inlineVariantTypeSuggestions,
+    inlineVariantValueSuggestions,
+    isVariantComposerEditMode,
+    selectedVariantLabel,
+    selectedVariantValues,
+    variantComposerMode,
+  ])
+  const variantComposerPlaceholder =
+    variantComposerMode === "edit-variant-label"
+      ? "Update variant name"
+      : variantComposerMode === "edit-variant-value"
+        ? "Update variant value"
+        : variantComposerMode === "variant-value"
+          ? `Enter ${selectedVariantLabel} values. Separate with comma or Enter`
+          : "Enter a variant name or click a suggestion above."
   const filteredUnitSuggestions = useMemo(
     () => getFilteredUnitSuggestions(unitName),
     [unitName],
@@ -533,7 +710,8 @@ export function FirstProductSetupContent({
   const shouldShowUnitSuggestions =
     shouldUsePrimaryUnitFields &&
     isUnitNameFocused &&
-    filteredUnitSuggestions.length > 0
+    filteredUnitSuggestions.length > 0 &&
+    !isInlineVariantComposerVisible
   const createProductMutation = useMutation(
     trpc.retailOps.createProduct.mutationOptions({
       onError: (error) => {
@@ -590,6 +768,11 @@ export function FirstProductSetupContent({
         setVariantSearch("")
         setSelectedVariantLabel("Size")
         setVariantValueName("")
+        setVariantComposerMode(null)
+        setVariantComposerText("")
+        setVariantComposerEditTarget(null)
+        setVariantActionTarget(null)
+        setVariantSetupTab("variants")
         setIsUnitNameFocused(false)
         setSubmitError(null)
         onComplete?.()
@@ -620,11 +803,7 @@ export function FirstProductSetupContent({
           : createVariantCombinationDraft(seed)
       })
     })
-  }, [
-    generatedVariantCombinationSeeds,
-    generatedVariantCombinationSignature,
-    hasMultipleVariantDimensions,
-  ])
+  }, [generatedVariantCombinationSeeds, hasMultipleVariantDimensions])
 
   useEffect(() => {
     return () => {
@@ -681,6 +860,97 @@ export function FirstProductSetupContent({
     }, 120)
   }
 
+  const focusVariantComposerInput = () => {
+    setTimeout(() => {
+      variantComposerInputRef.current?.focus()
+    }, 80)
+  }
+
+  const openInlineVariantComposer = () => {
+    setIsUnitNameFocused(false)
+    setVariantComposerMode("variant-type")
+    setVariantComposerText("")
+    setVariantComposerEditTarget(null)
+    focusVariantComposerInput()
+  }
+
+  const hideInlineVariantComposer = () => {
+    if (!isInlineVariantComposerVisible) return
+
+    setVariantComposerMode(null)
+    setVariantComposerText("")
+    setVariantComposerEditTarget(null)
+  }
+
+  useEffect(() => {
+    const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
+      setVariantComposerMode(null)
+      setVariantComposerText("")
+      setVariantComposerEditTarget(null)
+    })
+
+    return () => {
+      hideSubscription.remove()
+    }
+  }, [])
+
+  const openVariantComposer = () => {
+    if (USE_INLINE_VARIANT_COMPOSER) {
+      openInlineVariantComposer()
+      return
+    }
+
+    variantTypeModalRef.current?.present()
+  }
+
+  const selectInlineVariantLabel = (label: string) => {
+    setSelectedVariantLabel(label.trim() || "Variant")
+    setVariantComposerMode("variant-value")
+    setVariantComposerEditTarget(null)
+    setVariantComposerText("")
+    focusVariantComposerInput()
+  }
+
+  const closeVariantActionSheet = () => {
+    setVariantActionTarget(null)
+  }
+
+  const openVariantActionSheet = (target: VariantActionTarget) => {
+    Keyboard.dismiss()
+    setVariantActionTarget(target)
+  }
+
+  const openVariantLabelEditor = (label: string) => {
+    closeVariantActionSheet()
+    setTimeout(() => {
+      setVariantComposerEditTarget({ label, type: "label" })
+      setVariantComposerMode("edit-variant-label")
+      setVariantComposerText(label)
+      focusVariantComposerInput()
+    }, 320)
+  }
+
+  const openVariantValueEditor = (id: string) => {
+    const variant = variants.find((item) => item.id === id)
+    if (!variant) return
+
+    closeVariantActionSheet()
+    setTimeout(() => {
+      setSelectedVariantLabel(variant.variantLabel)
+      setVariantComposerEditTarget({ id, type: "value" })
+      setVariantComposerMode("edit-variant-value")
+      setVariantComposerText(variant.name)
+      focusVariantComposerInput()
+    }, 320)
+  }
+
+  const closeVariantComposer = () => {
+    setVariantComposerMode(null)
+    setVariantComposerText("")
+    setVariantComposerEditTarget(null)
+    Keyboard.dismiss()
+  }
+
   const updateVariant = (
     id: string,
     field: "conversionMultiplier" | "imageUrl" | "name" | "price" | "stock",
@@ -709,10 +979,44 @@ export function FirstProductSetupContent({
     setVariants((current) => current.filter((variant) => variant.id !== id))
   }
 
-  const removeVariantCombination = (id: string) => {
-    setVariantCombinations((current) =>
+  const removeVariantGroup = (label: string) => {
+    const normalizedLabel = normalizeVariantDimension(label)
+
+    setVariants((current) =>
+      current.filter(
+        (variant) =>
+          normalizeVariantDimension(variant.variantLabel) !== normalizedLabel,
+      ),
+    )
+  }
+
+  const renameVariantGroup = (label: string, nextLabel: string) => {
+    const trimmedLabel = nextLabel.trim()
+    if (!trimmedLabel) return
+
+    const normalizedLabel = normalizeVariantDimension(label)
+
+    setVariants((current) =>
       current.map((variant) =>
-        variant.id === id ? { ...variant, enabled: false } : variant,
+        normalizeVariantDimension(variant.variantLabel) === normalizedLabel
+          ? { ...variant, variantLabel: trimmedLabel }
+          : variant,
+      ),
+    )
+    setSelectedVariantLabel((current) =>
+      normalizeVariantDimension(current) === normalizedLabel
+        ? trimmedLabel
+        : current,
+    )
+  }
+
+  const renameVariantValue = (id: string, nextName: string) => {
+    const trimmedName = nextName.trim()
+    if (!trimmedName) return
+
+    setVariants((current) =>
+      current.map((variant) =>
+        variant.id === id ? { ...variant, name: trimmedName } : variant,
       ),
     )
   }
@@ -925,6 +1229,151 @@ export function FirstProductSetupContent({
     setVariantValueName("")
   }
 
+  const addInlineVariantValueByName = (name: string) => {
+    addVariantValueByName(name)
+    setVariantComposerText("")
+    focusVariantComposerInput()
+  }
+
+  const addInlineVariantValuesFromText = (text: string) => {
+    for (const part of text.split(",")) {
+      addVariantValueByName(part)
+    }
+    setVariantComposerText("")
+    focusVariantComposerInput()
+  }
+
+  const submitInlineVariantComposer = () => {
+    const value = variantComposerText.trim()
+    if (!value) return
+
+    if (
+      variantComposerMode === "edit-variant-label" &&
+      variantComposerEditTarget?.type === "label"
+    ) {
+      renameVariantGroup(variantComposerEditTarget.label, value)
+      closeVariantComposer()
+      return
+    }
+
+    if (
+      variantComposerMode === "edit-variant-value" &&
+      variantComposerEditTarget?.type === "value"
+    ) {
+      renameVariantValue(variantComposerEditTarget.id, value)
+      closeVariantComposer()
+      return
+    }
+
+    if (variantComposerMode === "variant-type") {
+      selectInlineVariantLabel(value)
+      return
+    }
+
+    if (variantComposerMode === "variant-value") {
+      addInlineVariantValuesFromText(value)
+    }
+  }
+
+  const changeVariantComposerText = (value: string) => {
+    if (variantComposerMode === "edit-variant-value") {
+      setVariantComposerText(value.replace(/,/g, ""))
+      return
+    }
+
+    if (variantComposerMode !== "variant-value" || !value.includes(",")) {
+      setVariantComposerText(value)
+      return
+    }
+
+    for (const part of value.split(",")) {
+      addVariantValueByName(part)
+    }
+    setVariantComposerText("")
+    focusVariantComposerInput()
+  }
+
+  const pressVariantComposerPill = (pill: KeyboardInlineComposerPill) => {
+    if (variantComposerMode === "edit-variant-label") {
+      setVariantComposerText(pill.label)
+      return
+    }
+
+    if (variantComposerMode === "variant-type") {
+      selectInlineVariantLabel(pill.label)
+      return
+    }
+
+    if (variantComposerMode === "variant-value") {
+      addInlineVariantValueByName(pill.label)
+    }
+  }
+
+  const removeVariantComposerPill = (pill: KeyboardInlineComposerPill) => {
+    if (!pill.removable) return
+
+    removeVariant(pill.id)
+    focusVariantComposerInput()
+  }
+
+  const openVariantValueComposer = (label: string) => {
+    closeVariantActionSheet()
+    setSelectedVariantLabel(label.trim() || "Variant")
+    setVariantComposerMode("variant-value")
+    setVariantComposerText("")
+    setVariantComposerEditTarget(null)
+    focusVariantComposerInput()
+  }
+
+  const toggleVariantValueEnabled = (id: string) => {
+    setVariants((current) =>
+      current.map((variant) =>
+        variant.id === id ? { ...variant, enabled: !variant.enabled } : variant,
+      ),
+    )
+  }
+
+  const removeVariantActionTarget = () => {
+    if (variantActionTarget?.type === "group") {
+      removeVariantGroup(variantActionTarget.label)
+    }
+
+    if (variantActionTarget?.type === "value") {
+      removeVariant(variantActionTarget.id)
+    }
+
+    closeVariantActionSheet()
+  }
+
+  const editVariantActionTarget = () => {
+    if (variantActionTarget?.type === "group") {
+      openVariantLabelEditor(variantActionTarget.label)
+      return
+    }
+
+    if (variantActionTarget?.type === "value") {
+      openVariantValueEditor(variantActionTarget.id)
+    }
+  }
+
+  const toggleVariantActionTarget = () => {
+    if (variantActionTarget?.type === "stock") {
+      const stockRow = visibleVariantRows.find(
+        (variant) => variant.id === variantActionTarget.id,
+      )
+
+      if (stockRow) {
+        toggleVariantRowEnabled(stockRow.id, !isVariantRowEnabled(stockRow))
+      }
+    }
+
+    if (variantActionTarget?.type === "value") {
+      toggleVariantValueEnabled(variantActionTarget.id)
+    }
+
+    closeVariantActionSheet()
+  }
+
   const toggleVariantEnabled = (id: string, enabled: boolean) => {
     setVariants((current) =>
       current.map((variant) =>
@@ -990,15 +1439,6 @@ export function FirstProductSetupContent({
     }
 
     toggleVariantExpanded(id)
-  }
-
-  const removeVariantRow = (id: string) => {
-    if (hasMultipleVariantDimensions) {
-      removeVariantCombination(id)
-      return
-    }
-
-    removeVariant(id)
   }
 
   const updateVariantRowImageLink = (
@@ -1077,11 +1517,364 @@ export function FirstProductSetupContent({
     setVariantSearch("")
     setSelectedVariantLabel("Size")
     setVariantValueName("")
+    setVariantComposerMode(null)
+    setVariantComposerText("")
+    setVariantComposerEditTarget(null)
+    setVariantActionTarget(null)
+    setVariantSetupTab("variants")
     setIsUnitNameFocused(false)
     onComplete?.()
   }
   const contentClassName =
     presentation === "screen" ? "gap-7 px-4 pb-6 pt-1" : "gap-7 px-5 pb-6 pt-1"
+  const selectedActionGroup =
+    variantActionTarget?.type === "group"
+      ? variantGroups.find(
+          (group) =>
+            normalizeVariantDimension(group.label) ===
+            normalizeVariantDimension(variantActionTarget.label),
+        )
+      : undefined
+  const selectedActionValue =
+    variantActionTarget?.type === "value"
+      ? variants.find((variant) => variant.id === variantActionTarget.id)
+      : undefined
+  const selectedActionStock =
+    variantActionTarget?.type === "stock"
+      ? visibleVariantRows.find(
+          (variant) => variant.id === variantActionTarget.id,
+        )
+      : undefined
+  const selectedActionIsEnabled =
+    variantActionTarget?.type === "group"
+      ? !!selectedActionGroup?.values.some((value) => value.enabled)
+      : variantActionTarget?.type === "value"
+        ? !!selectedActionValue?.enabled
+        : variantActionTarget?.type === "stock" && selectedActionStock
+          ? isVariantRowEnabled(selectedActionStock)
+          : false
+  const variantActionTitle =
+    selectedActionGroup?.label ??
+    selectedActionValue?.name ??
+    selectedActionStock?.name ??
+    "Variant"
+  const variantActionSubtitle = selectedActionIsEnabled ? "Active" : "Inactive"
+  const variantManagementTabs = (
+    <View className="flex-row rounded-full bg-muted p-1">
+      {(["variants", "stocks"] as VariantSetupTab[]).map((tab) => {
+        const isSelected = tab === variantSetupTab
+
+        return (
+          <Pressable
+            accessibilityLabel={`Show ${tab}`}
+            className={cn(
+              "min-h-10 flex-1 items-center justify-center rounded-full px-4",
+              isSelected ? "bg-background" : "bg-transparent",
+            )}
+            haptic
+            key={tab}
+            onPress={() => setVariantSetupTab(tab)}
+            transition
+          >
+            <Text
+              className={cn(
+                "text-sm font-extrabold capitalize",
+                isSelected ? "text-foreground" : "text-muted-foreground",
+              )}
+            >
+              {tab}
+            </Text>
+          </Pressable>
+        )
+      })}
+    </View>
+  )
+  const variantGroupsView = (
+    <View className="gap-5">
+      {variantGroups.map((group) => {
+        const sortedValues = [...group.values].sort(
+          (left, right) => Number(right.enabled) - Number(left.enabled),
+        )
+
+        return (
+          <View className="gap-3 border-b border-border pb-4" key={group.label}>
+            <View className="flex-row items-center justify-between gap-3">
+              <View className="min-w-0 flex-1">
+                <Text className="text-base font-extrabold text-foreground">
+                  {group.label}
+                </Text>
+                <Text className="text-xs text-muted-foreground">
+                  {group.values.some((value) => value.enabled)
+                    ? "Active"
+                    : "Inactive"}
+                </Text>
+              </View>
+              <Pressable
+                accessibilityLabel={`Open ${group.label} variant options`}
+                className="h-10 w-10 items-center justify-center rounded-full bg-muted"
+                haptic
+                onPress={() =>
+                  openVariantActionSheet({
+                    label: group.label,
+                    type: "group",
+                  })
+                }
+                transition
+              >
+                <Icon className="size-sm text-foreground" name="Pencil" />
+              </Pressable>
+            </View>
+
+            <View className="flex-row flex-wrap gap-2">
+              {sortedValues.map((variant) => (
+                <Pressable
+                  accessibilityLabel={`Open ${variant.name} variant value options`}
+                  className={cn(
+                    "min-h-10 flex-row items-center gap-2 rounded-full border px-3",
+                    variant.enabled
+                      ? "border-primary bg-primary"
+                      : "border-border bg-muted",
+                  )}
+                  haptic
+                  key={variant.id}
+                  onPress={() =>
+                    openVariantActionSheet({
+                      id: variant.id,
+                      type: "value",
+                    })
+                  }
+                  transition
+                >
+                  <Text
+                    className={cn(
+                      "text-xs font-bold",
+                      variant.enabled
+                        ? "text-primary-foreground"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {variant.name}
+                  </Text>
+                  <Icon
+                    className={cn(
+                      "size-xs",
+                      variant.enabled
+                        ? "text-primary-foreground"
+                        : "text-muted-foreground",
+                    )}
+                    name="X"
+                  />
+                </Pressable>
+              ))}
+              <Pressable
+                accessibilityLabel={`Add ${group.label} variant value`}
+                className="min-h-10 flex-row items-center gap-2 rounded-full border border-border bg-card px-3"
+                haptic
+                onPress={() => openVariantValueComposer(group.label)}
+                transition
+              >
+                <Icon className="size-xs text-foreground" name="Plus" />
+                <Text className="text-xs font-bold text-foreground">add</Text>
+              </Pressable>
+            </View>
+          </View>
+        )
+      })}
+    </View>
+  )
+  const stockRowsView = (
+    <View className="gap-4">
+      {hasMultipleVariantDimensions ? (
+        <SetupInlineNotice
+          icon="ListChecks"
+          text="Multiple variant labels generate sellable combination rows."
+          tone="primary"
+        />
+      ) : null}
+      {sortedVisibleVariantRows.map((variant) => {
+        const rowIsEnabled = isVariantRowEnabled(variant)
+
+        return (
+          <View
+            className={cn(
+              "gap-3 border-t border-border pt-4",
+              rowIsEnabled ? "opacity-100" : "opacity-60",
+            )}
+            key={variant.id}
+          >
+            <View className="flex-row items-center gap-3">
+              <View className="min-w-0 flex-1">
+                <Text className="text-xs font-bold uppercase tracking-[1px] text-muted-foreground">
+                  {variant.variantLabel}
+                </Text>
+                <Text className="font-semibold text-foreground">
+                  {variant.name || "New variant"}
+                </Text>
+              </View>
+              {!rowIsEnabled ? (
+                <Text className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-muted-foreground">
+                  Inactive
+                </Text>
+              ) : null}
+              <Pressable
+                accessibilityLabel="Expand stock row"
+                className="h-10 w-10 items-center justify-center rounded-full bg-muted"
+                haptic
+                onPress={() => toggleVariantRowExpanded(variant.id)}
+                transition
+              >
+                <Icon
+                  className="size-sm text-foreground"
+                  name={variant.expanded ? "ChevronDown" : "ChevronRight"}
+                />
+              </Pressable>
+              <Pressable
+                accessibilityLabel="Open stock row options"
+                className="h-10 w-10 items-center justify-center rounded-full bg-muted"
+                haptic
+                onPress={() =>
+                  openVariantActionSheet({
+                    id: variant.id,
+                    type: "stock",
+                  })
+                }
+                transition
+              >
+                <Icon className="size-sm text-foreground" name="Pencil" />
+              </Pressable>
+            </View>
+
+            <View className="flex-row gap-3">
+              <View className="min-w-0 flex-1">
+                <FormField
+                  inputMode="decimal"
+                  keyboardType="numeric"
+                  label="Price"
+                  leadingIcon="CircleDollarSign"
+                  onChangeText={(value) =>
+                    updateVariantRow(variant.id, "price", value)
+                  }
+                  placeholder="Enter price"
+                  value={variant.price}
+                />
+              </View>
+              <View className="min-w-0 flex-1">
+                <FormField
+                  inputMode="numeric"
+                  keyboardType="numeric"
+                  label="Stock"
+                  leadingIcon="Warehouse"
+                  onChangeText={(value) =>
+                    updateVariantRow(
+                      variant.id,
+                      "stock",
+                      normalizeWholeNumberInput(value),
+                    )
+                  }
+                  placeholder="Enter stock"
+                  value={variant.stock}
+                />
+              </View>
+            </View>
+
+            {variant.expanded ? (
+              <View className="gap-3 rounded-2xl bg-muted/40 p-3">
+                <FormField
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  error={
+                    isProductImageUrlInput(variant.imageUrl)
+                      ? undefined
+                      : "Enter a valid image link."
+                  }
+                  inputMode="url"
+                  keyboardType="url"
+                  label="Variant image link"
+                  leadingIcon="Globe"
+                  onChangeText={(value) =>
+                    updateVariantRow(variant.id, "imageUrl", value)
+                  }
+                  placeholder="Enter variant image link"
+                  value={variant.imageUrl}
+                />
+                {variant.imageLinks.map((link, index) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: editable link rows do not have persisted ids yet
+                  <View className="flex-row items-end gap-2" key={index}>
+                    <View className="min-w-0 flex-1">
+                      <FormField
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        error={
+                          isProductImageUrlInput(link)
+                            ? undefined
+                            : "Enter a valid image link."
+                        }
+                        inputMode="url"
+                        keyboardType="url"
+                        label="Variant image link"
+                        leadingIcon="Globe"
+                        onChangeText={(value) =>
+                          updateVariantRowImageLink(variant.id, index, value)
+                        }
+                        placeholder="Enter variant image link"
+                        value={link}
+                      />
+                    </View>
+                    <Pressable
+                      accessibilityLabel="Remove variant image link"
+                      className="mb-1 h-12 w-12 items-center justify-center rounded-xl bg-destructive/10"
+                      haptic
+                      onPress={() =>
+                        removeVariantRowImageLink(variant.id, index)
+                      }
+                      transition
+                    >
+                      <Icon className="size-sm text-destructive" name="Trash" />
+                    </Pressable>
+                  </View>
+                ))}
+                <ActionButton
+                  icon="Plus"
+                  onPress={() => addVariantRowImageLink(variant.id)}
+                  variant="ghost"
+                >
+                  Add image link
+                </ActionButton>
+              </View>
+            ) : null}
+          </View>
+        )
+      })}
+    </View>
+  )
+  const variantSetupContent = shouldShowVariantTabs ? (
+    <View className="gap-4">
+      {variantManagementTabs}
+      {variantSetupTab === "variants" ? variantGroupsView : stockRowsView}
+    </View>
+  ) : (
+    <SetupSection
+      description="Does this item have multiple prices based on different variants?"
+      title="Variants"
+    >
+      <ActionButton icon="Plus" onPress={openVariantComposer} variant="outline">
+        Add variant
+      </ActionButton>
+
+      {variants.length === 0 ? (
+        <View className="gap-3 border-y border-border py-5">
+          <Text className="text-center font-semibold text-foreground">
+            No variants yet
+          </Text>
+          <Text className="text-center text-sm leading-5 text-muted-foreground">
+            You can skip this and continue with only the primary unit.
+          </Text>
+        </View>
+      ) : (
+        stockRowsView
+      )}
+    </SetupSection>
+  )
 
   const content = (
     <>
@@ -1181,6 +1974,7 @@ export function FirstProductSetupContent({
           ) : (
             <View className="gap-3">
               {imageLinks.map((link, index) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: editable link rows do not have persisted ids yet
                 <View className="flex-row items-end gap-2" key={index}>
                   <View className="min-w-0 flex-1">
                     <FormField
@@ -1270,199 +2064,7 @@ export function FirstProductSetupContent({
           </SetupSection>
         ) : null}
 
-        <SetupSection
-          description="Does this item have multiple prices based on different variants?"
-          title="Variants"
-        >
-          <ActionButton
-            icon="Plus"
-            onPress={() => variantTypeModalRef.current?.present()}
-            variant="outline"
-          >
-            Add variant
-          </ActionButton>
-
-          {variants.length === 0 ? (
-            <View className="gap-3 border-y border-border py-5">
-              <Text className="text-center font-semibold text-foreground">
-                No variants yet
-              </Text>
-              <Text className="text-center text-sm leading-5 text-muted-foreground">
-                You can skip this and continue with only the primary unit.
-              </Text>
-            </View>
-          ) : (
-            <View className="gap-4">
-              {hasMultipleVariantDimensions ? (
-                <SetupInlineNotice
-                  icon="ListChecks"
-                  text="Multiple variant labels generate sellable combination rows."
-                  tone="primary"
-                />
-              ) : null}
-              {visibleVariantRows.map((variant) => (
-                <View
-                  className="gap-3 border-t border-border pt-4"
-                  key={variant.id}
-                >
-                  <View className="flex-row items-center gap-3">
-                    <View className="min-w-0 flex-1">
-                      <Text className="text-xs font-bold uppercase tracking-[1px] text-muted-foreground">
-                        {variant.variantLabel}
-                      </Text>
-                      <Text className="font-semibold text-foreground">
-                        {variant.name || "New variant"}
-                      </Text>
-                    </View>
-                    <Switch
-                      checked={variant.enabled}
-                      onCheckedChange={(checked) =>
-                        toggleVariantRowEnabled(variant.id, checked)
-                      }
-                    />
-                    <Pressable
-                      accessibilityLabel="Expand variant"
-                      className="h-10 w-10 items-center justify-center rounded-full bg-muted"
-                      haptic
-                      onPress={() => toggleVariantRowExpanded(variant.id)}
-                      transition
-                    >
-                      <Icon
-                        className="size-sm text-foreground"
-                        name={variant.expanded ? "ChevronDown" : "ChevronRight"}
-                      />
-                    </Pressable>
-                    <Pressable
-                      accessibilityLabel="Delete variant"
-                      className="h-10 w-10 items-center justify-center rounded-full bg-destructive/10"
-                      haptic
-                      onPress={() => removeVariantRow(variant.id)}
-                      transition
-                    >
-                      <Icon className="size-sm text-destructive" name="Trash" />
-                    </Pressable>
-                  </View>
-
-                  {!hasMultipleVariantDimensions ? (
-                    <FormField
-                      label="Variant value name"
-                      leadingIcon="FileText"
-                      onChangeText={(value) =>
-                        updateVariant(variant.id, "name", value)
-                      }
-                      placeholder="Enter variant name"
-                      value={variant.name}
-                    />
-                  ) : null}
-                  <View className="flex-row gap-3">
-                    <View className="min-w-0 flex-1">
-                      <FormField
-                        inputMode="decimal"
-                        keyboardType="numeric"
-                        label="Variant row price"
-                        leadingIcon="CircleDollarSign"
-                        onChangeText={(value) =>
-                          updateVariantRow(variant.id, "price", value)
-                        }
-                        placeholder="Enter price"
-                        value={variant.price}
-                      />
-                    </View>
-                    <View className="min-w-0 flex-1">
-                      <FormField
-                        inputMode="numeric"
-                        keyboardType="numeric"
-                        label="Variant row stock"
-                        leadingIcon="Warehouse"
-                        onChangeText={(value) =>
-                          updateVariantRow(
-                            variant.id,
-                            "stock",
-                            normalizeWholeNumberInput(value),
-                          )
-                        }
-                        placeholder="Enter stock"
-                        value={variant.stock}
-                      />
-                    </View>
-                  </View>
-
-                  {variant.expanded ? (
-                    <View className="gap-3 rounded-2xl bg-muted/40 p-3">
-                      <FormField
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        error={
-                          isProductImageUrlInput(variant.imageUrl)
-                            ? undefined
-                            : "Enter a valid image link."
-                        }
-                        inputMode="url"
-                        keyboardType="url"
-                        label="Variant image link"
-                        leadingIcon="Globe"
-                        onChangeText={(value) =>
-                          updateVariantRow(variant.id, "imageUrl", value)
-                        }
-                        placeholder="Enter variant image link"
-                        value={variant.imageUrl}
-                      />
-                      {variant.imageLinks.map((link, index) => (
-                        <View className="flex-row items-end gap-2" key={index}>
-                          <View className="min-w-0 flex-1">
-                            <FormField
-                              autoCapitalize="none"
-                              autoCorrect={false}
-                              error={
-                                isProductImageUrlInput(link)
-                                  ? undefined
-                                  : "Enter a valid image link."
-                              }
-                              inputMode="url"
-                              keyboardType="url"
-                              label="Variant image link"
-                              leadingIcon="Globe"
-                              onChangeText={(value) =>
-                                updateVariantRowImageLink(
-                                  variant.id,
-                                  index,
-                                  value,
-                                )
-                              }
-                              placeholder="Enter variant image link"
-                              value={link}
-                            />
-                          </View>
-                          <Pressable
-                            accessibilityLabel="Remove variant image link"
-                            className="mb-1 h-12 w-12 items-center justify-center rounded-xl bg-destructive/10"
-                            haptic
-                            onPress={() =>
-                              removeVariantRowImageLink(variant.id, index)
-                            }
-                            transition
-                          >
-                            <Icon
-                              className="size-sm text-destructive"
-                              name="Trash"
-                            />
-                          </Pressable>
-                        </View>
-                      ))}
-                      <ActionButton
-                        icon="Plus"
-                        onPress={() => addVariantRowImageLink(variant.id)}
-                        variant="ghost"
-                      >
-                        Add image link
-                      </ActionButton>
-                    </View>
-                  ) : null}
-                </View>
-              ))}
-            </View>
-          )}
-        </SetupSection>
+        {variantSetupContent}
 
         {isAtProductLimit ? (
           <StatusBanner
@@ -1482,14 +2084,25 @@ export function FirstProductSetupContent({
           />
         ) : null}
 
-        <ActionButton
-          disabled={!canSubmit}
-          isLoading={createProductMutation.isPending}
-          loadingLabel="Adding item"
-          onPress={submit}
-        >
-          Add item
-        </ActionButton>
+        {shouldShowVariantTabs && variantSetupTab === "variants" ? (
+          <ActionButton
+            icon="Plus"
+            key="add-variant"
+            onPress={openVariantComposer}
+          >
+            Add variant
+          </ActionButton>
+        ) : (
+          <ActionButton
+            disabled={!canSubmit}
+            isLoading={createProductMutation.isPending}
+            key="add-item"
+            loadingLabel="Adding item"
+            onPress={submit}
+          >
+            Add item
+          </ActionButton>
+        )}
       </View>
 
       <Modal
@@ -1562,23 +2175,23 @@ export function FirstProductSetupContent({
       <Modal
         hideHeader
         ref={variantValuesModalRef}
-        snapPoints={["52%"]}
+        snapPoints={["72%"]}
         title={`${selectedVariantLabel} Variants (${selectedVariantValues.length})`}
       >
         <BottomSheetKeyboardAwareScrollView
-          bottomOffset={280}
-          contentContainerStyle={{ paddingBottom: 48 }}
+          bottomOffset={120}
+          contentContainerStyle={{ paddingBottom: 24 }}
+          extraKeyboardSpace={96}
           keyboardShouldPersistTaps="handled"
         >
-          <View className="gap-5 px-5 pb-6">
+          <View className="gap-4 px-5 pb-5">
             <View className="flex-row items-center justify-between gap-3">
               <View className="min-w-0 flex-1">
                 <Text className="text-xl font-extrabold text-foreground">
-                  {selectedVariantLabel} Variants (
-                  {selectedVariantValues.length})
+                  {selectedVariantLabel} values
                 </Text>
                 <Text className="text-sm text-muted-foreground">
-                  Add values, then save to return to the item form.
+                  Add the values customers can choose from.
                 </Text>
               </View>
               <ActionButton
@@ -1586,67 +2199,47 @@ export function FirstProductSetupContent({
                 onPress={() => variantValuesModalRef.current?.dismiss()}
                 variant="ghost"
               >
-                save
+                Done
               </ActionButton>
             </View>
 
-            {selectedVariantValues.length === 0 ? (
-              <View className="items-center justify-center rounded-2xl bg-muted/40 px-4 py-6">
-                <Text className="text-center font-semibold text-foreground">
-                  Variant list is empty, start adding.
-                </Text>
-              </View>
-            ) : (
-              <View className="gap-4">
-                <View className="flex-row flex-wrap gap-2">
-                  {selectedVariantValues.map((variant) => (
-                    <SetupChoicePill key={variant.id} selected>
-                      {variant.name}
-                    </SetupChoicePill>
-                  ))}
-                </View>
+            {selectedVariantValues.length > 0 ? (
+              <View className="flex-row flex-wrap gap-2">
                 {selectedVariantValues.map((variant) => (
-                  <View
-                    className="flex-row items-center justify-between gap-3 border-b border-border py-3"
+                  <Pressable
+                    accessibilityLabel={`Remove ${variant.name} variant value`}
+                    className="min-h-10 flex-row items-center gap-2 rounded-full bg-primary px-3"
+                    haptic
                     key={variant.id}
+                    onPress={() => removeVariant(variant.id)}
+                    transition
                   >
-                    <Text className="font-semibold text-foreground">
+                    <Text className="text-xs font-bold text-primary-foreground">
                       {variant.name}
                     </Text>
-                    <Switch
-                      checked={variant.enabled}
-                      onCheckedChange={(checked) =>
-                        toggleVariantEnabled(variant.id, checked)
-                      }
+                    <Icon
+                      className="size-xs text-primary-foreground"
+                      name="X"
                     />
-                  </View>
+                  </Pressable>
                 ))}
               </View>
-            )}
+            ) : null}
 
-            {selectedVariantValueSuggestions.length > 0 ? (
+            {availableVariantValueSuggestions.length > 0 ? (
               <View className="gap-3">
                 <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
                   Common values
                 </Text>
                 <View className="flex-row flex-wrap gap-2">
-                  {selectedVariantValueSuggestions.map((value) => {
-                    const isSelected = selectedVariantValues.some(
-                      (variant) =>
-                        variant.name.trim().toLowerCase() ===
-                        value.toLowerCase(),
-                    )
-
-                    return (
-                      <SetupChoicePill
-                        key={value}
-                        onPress={() => addVariantValueByName(value)}
-                        selected={isSelected}
-                      >
-                        {value}
-                      </SetupChoicePill>
-                    )
-                  })}
+                  {availableVariantValueSuggestions.map((value) => (
+                    <SetupChoicePill
+                      key={value}
+                      onPress={() => addVariantValueByName(value)}
+                    >
+                      {value}
+                    </SetupChoicePill>
+                  ))}
                 </View>
               </View>
             ) : null}
@@ -1676,12 +2269,122 @@ export function FirstProductSetupContent({
       </Modal>
     </>
   )
+  const variantActionModal = (
+    <NativeModal
+      animationType="fade"
+      navigationBarTranslucent
+      onRequestClose={closeVariantActionSheet}
+      statusBarTranslucent
+      transparent
+      visible={!!variantActionTarget}
+    >
+      <View className="flex-1 justify-end bg-foreground/40 px-2 pb-5">
+        <Pressable
+          accessibilityLabel="Close variant options"
+          className="absolute inset-0"
+          onPress={closeVariantActionSheet}
+        />
+        <View className="gap-5 rounded-[28px] border border-border bg-card px-5 pb-6 pt-3">
+          <View className="h-1.5 w-12 self-center rounded-full bg-muted-foreground/25" />
+          <View className="gap-1">
+            <Text className="text-xl font-extrabold text-foreground">
+              {variantActionTitle}
+            </Text>
+            <Text className="text-sm text-muted-foreground">
+              {variantActionSubtitle}
+            </Text>
+          </View>
+
+          <View className="gap-1">
+            {variantActionTarget?.type === "group" ||
+            variantActionTarget?.type === "value" ? (
+              <Pressable
+                accessibilityLabel={`Edit ${variantActionTitle}`}
+                className="flex-row items-center gap-3 border-b border-border py-4"
+                haptic
+                onPress={editVariantActionTarget}
+                transition
+              >
+                <View className="h-10 w-10 items-center justify-center rounded-full bg-muted">
+                  <Icon className="size-sm text-foreground" name="Pencil" />
+                </View>
+                <Text className="font-semibold text-foreground">Edit</Text>
+              </Pressable>
+            ) : null}
+
+            {variantActionTarget?.type === "stock" ||
+            variantActionTarget?.type === "value" ? (
+              <Pressable
+                accessibilityLabel={
+                  selectedActionIsEnabled
+                    ? `Disable ${variantActionTitle}`
+                    : `Enable ${variantActionTitle}`
+                }
+                className="flex-row items-center gap-3 border-b border-border py-4"
+                haptic
+                onPress={toggleVariantActionTarget}
+                transition
+              >
+                <View className="h-10 w-10 items-center justify-center rounded-full bg-muted">
+                  <Icon
+                    className="size-sm text-foreground"
+                    name={selectedActionIsEnabled ? "EyeOff" : "Check"}
+                  />
+                </View>
+                <Text className="font-semibold text-foreground">
+                  {selectedActionIsEnabled ? "Disable" : "Enable"}
+                </Text>
+              </Pressable>
+            ) : null}
+
+            {variantActionTarget?.type === "group" ||
+            variantActionTarget?.type === "value" ? (
+              <Pressable
+                accessibilityLabel={`Remove ${variantActionTitle}`}
+                className="flex-row items-center gap-3 py-4"
+                haptic
+                onPress={removeVariantActionTarget}
+                transition
+              >
+                <View className="h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+                  <Icon className="size-sm text-destructive" name="Trash" />
+                </View>
+                <Text className="font-semibold text-destructive">Remove</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+      </View>
+    </NativeModal>
+  )
   const unitSuggestionKeyboardBar = (
     <UnitSuggestionKeyboardBar
       onSelect={setUnitName}
       suggestions={filteredUnitSuggestions}
       value={unitName}
       visible={shouldShowUnitSuggestions}
+    />
+  )
+  const variantKeyboardComposer = (
+    <KeyboardInlineComposer
+      hideSubmitButton={variantComposerMode === "variant-value"}
+      onChangeText={changeVariantComposerText}
+      onPillPress={pressVariantComposerPill}
+      onRemovePill={removeVariantComposerPill}
+      onSubmit={submitInlineVariantComposer}
+      pills={variantComposerPills}
+      placeholder={variantComposerPlaceholder}
+      ref={variantComposerInputRef}
+      submitAccessibilityLabel={
+        isVariantComposerEditMode
+          ? "Save variant edit"
+          : variantComposerMode === "variant-value"
+            ? "Add variant value"
+            : "Add variant"
+      }
+      submitIconName={isVariantComposerEditMode ? "Check" : "Plus"}
+      value={variantComposerText}
+      visible={isInlineVariantComposerVisible}
     />
   )
 
@@ -1695,10 +2398,13 @@ export function FirstProductSetupContent({
           disableScrollOnKeyboardHide
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
+          onTouchStart={hideInlineVariantComposer}
         >
           {content}
         </KeyboardAwareScrollView>
+        {variantActionModal}
         {unitSuggestionKeyboardBar}
+        {variantKeyboardComposer}
       </View>
     )
   }
@@ -1709,10 +2415,13 @@ export function FirstProductSetupContent({
         bottomOffset={280}
         contentContainerStyle={{ paddingBottom: 220 }}
         keyboardShouldPersistTaps="handled"
+        onTouchStart={hideInlineVariantComposer}
       >
         {content}
       </BottomSheetKeyboardAwareScrollView>
+      {variantActionModal}
       {unitSuggestionKeyboardBar}
+      {variantKeyboardComposer}
     </>
   )
 }
