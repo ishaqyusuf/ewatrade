@@ -131,6 +131,49 @@ export function SetupChoicePill({
   )
 }
 
+type SetupCheckboxRowProps = {
+  checked: boolean
+  description: string
+  label: string
+  onPress: () => void
+}
+
+export function SetupCheckboxRow({
+  checked,
+  description,
+  label,
+  onPress,
+}: SetupCheckboxRowProps) {
+  return (
+    <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      className="min-h-20 flex-row items-start gap-3 border-y border-border py-4"
+      haptic
+      onPress={onPress}
+      transition
+    >
+      <View
+        className={cn(
+          "mt-0.5 h-6 w-6 shrink-0 items-center justify-center rounded-md border",
+          checked ? "border-primary bg-primary" : "border-border bg-background",
+        )}
+      >
+        {checked ? (
+          <Icon className="size-sm text-primary-foreground" name="Check" />
+        ) : null}
+      </View>
+      <View className="min-w-0 flex-1 gap-1">
+        <Text className="font-semibold text-foreground">{label}</Text>
+        <Text className="text-sm leading-5 text-muted-foreground">
+          {description}
+        </Text>
+      </View>
+    </Pressable>
+  )
+}
+
 type SetupInlineNoticeProps = {
   icon: IconKeys
   text: string

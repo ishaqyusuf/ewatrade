@@ -5,6 +5,7 @@ import {
   type KeyboardInlineComposerPill,
 } from "@/components/mobile/keyboard-inline-composer"
 import {
+  SetupCheckboxRow,
   SetupChoicePill,
   SetupFlowHeader,
   SetupInlineNotice,
@@ -525,6 +526,7 @@ export function FirstProductSetupContent({
     typeof setTimeout
   > | null>(null)
   const [name, setName] = useState("")
+  const [usesMultiplePricing, setUsesMultiplePricing] = useState(false)
   const [showDescription, setShowDescription] = useState(false)
   const [description, setDescription] = useState("")
   const [unitName, setUnitName] = useState("")
@@ -597,9 +599,8 @@ export function FirstProductSetupContent({
     (left, right) =>
       Number(isVariantRowEnabled(right)) - Number(isVariantRowEnabled(left)),
   )
-  const hasVariantRows = variants.length > 0
   const shouldShowVariantTabs = variants.length > 1
-  const shouldUsePrimaryUnitFields = !hasVariantRows
+  const shouldUsePrimaryUnitFields = !usesMultiplePricing
   const isInlineVariantComposerVisible =
     USE_INLINE_VARIANT_COMPOSER && !!variantComposerMode
   const isVariantComposerEditMode =
@@ -712,6 +713,29 @@ export function FirstProductSetupContent({
     isUnitNameFocused &&
     filteredUnitSuggestions.length > 0 &&
     !isInlineVariantComposerVisible
+  const resetForm = () => {
+    setName("")
+    setUsesMultiplePricing(false)
+    setShowDescription(false)
+    setDescription("")
+    setUnitName("")
+    setPrice("")
+    setLocalImageUri("")
+    setImageLinks([])
+    setStartingStock("")
+    setVariants([])
+    setVariantCombinations([])
+    setVariantSearch("")
+    setSelectedVariantLabel("Size")
+    setVariantValueName("")
+    setVariantComposerMode(null)
+    setVariantComposerText("")
+    setVariantComposerEditTarget(null)
+    setVariantActionTarget(null)
+    setVariantSetupTab("variants")
+    setIsUnitNameFocused(false)
+    setSubmitError(null)
+  }
   const createProductMutation = useMutation(
     trpc.retailOps.createProduct.mutationOptions({
       onError: (error) => {
@@ -756,25 +780,7 @@ export function FirstProductSetupContent({
             }
           }),
         })
-        setName("")
-        setShowDescription(false)
-        setDescription("")
-        setUnitName("")
-        setPrice("")
-        setLocalImageUri("")
-        setImageLinks([])
-        setStartingStock("")
-        setVariants([])
-        setVariantSearch("")
-        setSelectedVariantLabel("Size")
-        setVariantValueName("")
-        setVariantComposerMode(null)
-        setVariantComposerText("")
-        setVariantComposerEditTarget(null)
-        setVariantActionTarget(null)
-        setVariantSetupTab("variants")
-        setIsUnitNameFocused(false)
-        setSubmitError(null)
+        resetForm()
         onComplete?.()
       },
     }),
@@ -858,6 +864,15 @@ export function FirstProductSetupContent({
       setIsUnitNameFocused(false)
       unitSuggestionBlurTimerRef.current = null
     }, 120)
+  }
+
+  const setMultiplePricingEnabled = (enabled: boolean) => {
+    setUsesMultiplePricing(enabled)
+    setIsUnitNameFocused(false)
+    setVariantComposerMode(null)
+    setVariantComposerText("")
+    setVariantComposerEditTarget(null)
+    setVariantActionTarget(null)
   }
 
   const focusVariantComposerInput = () => {
@@ -1042,26 +1057,28 @@ export function FirstProductSetupContent({
         : 0,
       priceMinor: primaryPriceMinor,
       primaryUnitName,
-      variants: activeVariantRows
-        .filter(
-          (variant) =>
-            variant.enabled &&
-            variant.name.trim() &&
-            parseAmount(variant.price),
-        )
-        .map((variant) => ({
-          conversionMultiplier: hasMultipleVariantDimensions
-            ? 1
-            : parseAmount((variant as VariantDraft).conversionMultiplier) ||
-              inferConversionMultiplier(variant.name),
-          enabled: variant.enabled,
-          imageLinks: cleanImageLinks(variant.imageLinks),
-          imageUrl: variant.imageUrl.trim() || undefined,
-          name: variant.name.trim(),
-          openingStockQuantity: parseWholeQuantity(variant.stock),
-          priceMinor: parseAmount(variant.price),
-          variantLabel: variant.variantLabel.trim() || undefined,
-        })),
+      variants: shouldUsePrimaryUnitFields
+        ? []
+        : activeVariantRows
+            .filter(
+              (variant) =>
+                variant.enabled &&
+                variant.name.trim() &&
+                parseAmount(variant.price),
+            )
+            .map((variant) => ({
+              conversionMultiplier: hasMultipleVariantDimensions
+                ? 1
+                : parseAmount((variant as VariantDraft).conversionMultiplier) ||
+                  inferConversionMultiplier(variant.name),
+              enabled: variant.enabled,
+              imageLinks: cleanImageLinks(variant.imageLinks),
+              imageUrl: variant.imageUrl.trim() || undefined,
+              name: variant.name.trim(),
+              openingStockQuantity: parseWholeQuantity(variant.stock),
+              priceMinor: parseAmount(variant.price),
+              variantLabel: variant.variantLabel.trim() || undefined,
+            })),
     }
   }
 
@@ -1504,25 +1521,7 @@ export function FirstProductSetupContent({
         variantLabel: variant.variantLabel,
       })),
     })
-    setName("")
-    setShowDescription(false)
-    setDescription("")
-    setUnitName("")
-    setPrice("")
-    setLocalImageUri("")
-    setImageLinks([])
-    setStartingStock("")
-    setVariants([])
-    setVariantCombinations([])
-    setVariantSearch("")
-    setSelectedVariantLabel("Size")
-    setVariantValueName("")
-    setVariantComposerMode(null)
-    setVariantComposerText("")
-    setVariantComposerEditTarget(null)
-    setVariantActionTarget(null)
-    setVariantSetupTab("variants")
-    setIsUnitNameFocused(false)
+    resetForm()
     onComplete?.()
   }
   const contentClassName =
@@ -1854,8 +1853,8 @@ export function FirstProductSetupContent({
     </View>
   ) : (
     <SetupSection
-      description="Does this item have multiple prices based on different variants?"
-      title="Variants"
+      description="Add each variant or type that has its own price."
+      title="Variant pricing"
     >
       <ActionButton icon="Plus" onPress={openVariantComposer} variant="outline">
         Add variant
@@ -1867,7 +1866,7 @@ export function FirstProductSetupContent({
             No variants yet
           </Text>
           <Text className="text-center text-sm leading-5 text-muted-foreground">
-            You can skip this and continue with only the primary unit.
+            Add at least one variant, then enter its price and current stock.
           </Text>
         </View>
       ) : (
@@ -1883,7 +1882,7 @@ export function FirstProductSetupContent({
           badgeIcon="FilePenLine"
           badgeLabel="Item details"
           currentStep={1}
-          description="Add the item, media, and either a primary unit or variant prices."
+          description="Add the item, media, and choose how it is priced."
           steps={FIRST_PRODUCT_STEPS}
           title="Set up item"
         />
@@ -1897,7 +1896,7 @@ export function FirstProductSetupContent({
         ) : null}
 
         <SetupSection
-          description="Only the item name and one price path are required."
+          description="Add a name and choose the right pricing setup."
           title="Item"
         >
           <FormField
@@ -1906,6 +1905,13 @@ export function FirstProductSetupContent({
             onChangeText={setName}
             placeholder="Enter item name"
             value={name}
+          />
+
+          <SetupCheckboxRow
+            checked={usesMultiplePricing}
+            description="Does this item have more than one price, different variants, or different types with different prices?"
+            label="Multiple pricing"
+            onPress={() => setMultiplePricingEnabled(!usesMultiplePricing)}
           />
 
           {showDescription ? (
@@ -2064,7 +2070,7 @@ export function FirstProductSetupContent({
           </SetupSection>
         ) : null}
 
-        {variantSetupContent}
+        {usesMultiplePricing ? variantSetupContent : null}
 
         {isAtProductLimit ? (
           <StatusBanner

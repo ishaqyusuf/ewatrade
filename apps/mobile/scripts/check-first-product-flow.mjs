@@ -13,6 +13,7 @@ const FILES = {
     MOBILE_DIR,
     "src/components/mobile/first-product-setup-sheet.tsx",
   ),
+  setupFlow: join(MOBILE_DIR, "src/components/mobile/setup-flow.tsx"),
   store: join(MOBILE_DIR, "src/store/retailOpsStore.ts"),
 }
 
@@ -40,6 +41,10 @@ const CONTRACTS = [
       "StatusBanner",
       'const FIRST_PRODUCT_STEPS = ["Item"]',
       "shouldUsePrimaryUnitFields",
+      "usesMultiplePricing",
+      "setMultiplePricingEnabled",
+      "SetupCheckboxRow",
+      "variants: shouldUsePrimaryUnitFields",
       "arePrimaryUnitFieldsValid",
       "areActiveVariantRowsValid",
       "getHiddenVariantParentUnitName",
@@ -79,7 +84,9 @@ const CONTRACTS = [
   {
     file: FILES.firstProduct,
     markers: [
-      "Does this item have multiple prices based on different variants?",
+      "Multiple pricing",
+      'description="Does this item have more than one price, different variants, or different types with different prices?"',
+      "{usesMultiplePricing ? variantSetupContent : null}",
       "Add variant",
       "USE_INLINE_VARIANT_COMPOSER",
       "KeyboardInlineComposer",
@@ -130,7 +137,6 @@ const CONTRACTS = [
       'submitIconName={isVariantComposerEditMode ? "Check" : "Plus"}',
       "enabled",
       "expanded",
-      "You can skip this and continue with only the primary",
       "createVariantDraft",
       "conversionMultiplier",
       "variantLabel",
@@ -138,10 +144,20 @@ const CONTRACTS = [
       "Multiple variant labels generate sellable combination rows.",
       "Variant image link",
       "No variants yet",
-      "You can skip this and continue with only the primary",
+      "Add at least one variant, then enter its price and current stock.",
     ],
     reason:
-      "first-product setup must keep optional manual variants, manual prices, and conversion multipliers",
+      "first-product setup must explicitly switch between single and multiple pricing while keeping manual variants, prices, and conversion multipliers",
+  },
+  {
+    file: FILES.setupFlow,
+    markers: [
+      "SetupCheckboxRow",
+      'accessibilityRole="checkbox"',
+      "accessibilityState={{ checked }}",
+    ],
+    reason:
+      "setup flows must keep the reusable multiple-pricing checkbox accessible",
   },
   {
     file: FILES.composer,
