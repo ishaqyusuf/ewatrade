@@ -4,7 +4,7 @@ import { Text } from "@/components/ui/text"
 import { useColors } from "@/hooks/use-color"
 import { cn } from "@/lib/utils"
 import { forwardRef } from "react"
-import { ScrollView, StyleSheet, TextInput, View } from "react-native"
+import { Keyboard, ScrollView, StyleSheet, TextInput, View } from "react-native"
 import { KeyboardStickyView } from "react-native-keyboard-controller"
 
 export type KeyboardInlineComposerPill = {
@@ -15,6 +15,7 @@ export type KeyboardInlineComposerPill = {
 }
 
 type KeyboardInlineComposerProps = {
+  dismissKeyboardOnSubmit?: boolean
   hideSubmitButton?: boolean
   onChangeText: (value: string) => void
   onPillPress: (pill: KeyboardInlineComposerPill) => void
@@ -33,6 +34,7 @@ export const KeyboardInlineComposer = forwardRef<
   KeyboardInlineComposerProps
 >(function KeyboardInlineComposer(
   {
+    dismissKeyboardOnSubmit = false,
     hideSubmitButton = false,
     onChangeText,
     onPillPress,
@@ -56,6 +58,9 @@ export const KeyboardInlineComposer = forwardRef<
     if (!canSubmit) return
 
     onSubmit()
+    if (dismissKeyboardOnSubmit) {
+      Keyboard.dismiss()
+    }
   }
 
   return (
@@ -124,7 +129,7 @@ export const KeyboardInlineComposer = forwardRef<
             <TextInput
               autoCapitalize="words"
               autoFocus
-              blurOnSubmit={false}
+              blurOnSubmit={dismissKeyboardOnSubmit}
               className="min-w-0 flex-1 text-sm text-foreground"
               onChangeText={onChangeText}
               onSubmitEditing={submit}
@@ -134,7 +139,9 @@ export const KeyboardInlineComposer = forwardRef<
               returnKeyType="done"
               selectionColor={colors.primary}
               showSoftInputOnFocus
-              submitBehavior="submit"
+              submitBehavior={
+                dismissKeyboardOnSubmit ? "blurAndSubmit" : "submit"
+              }
               value={value}
             />
           </View>

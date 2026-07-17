@@ -202,6 +202,7 @@ Track important request/response shapes and contract rules.
   - This is a read bridge for setup assistance. Template creation/editing, seed management UI, mobile picker UI, and conversion-ledger enforcement remain separate slices.
 - Retail Ops product setup contract:
   - `retailOps.createProduct` accepts optional `storeId`, optional `description`, optional public `imageUrl`, optional public `imageLinks`, optional `externalId`, optional `unitTemplateKey`, product `name`, `primaryUnitName`, primary `priceMinor`, primary `openingStockQuantity`, and up to 24 variant units
+  - Product, sellable-unit, and inventory-balance creation remain atomic. Optional durable opening-stock ledger mirroring runs only after that transaction commits so an environment whose ledger migration is behind can still create the product through the metadata/inventory fallback without leaving PostgreSQL in an aborted transaction.
   - Product setup is restricted to owner/admin/manager-level sales-management roles
   - Each variant unit accepts `name`, `priceMinor`, optional `openingStockQuantity`, optional `conversionMultiplier`, optional `enabled`, optional public `imageUrl`, optional public `imageLinks`, and optional `variantLabel`
   - When `externalId` is supplied, repeated product setup submissions with the same tenant/store external id return the existing product and unit ids without creating a duplicate product or consuming another product entitlement slot

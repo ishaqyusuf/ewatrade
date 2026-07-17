@@ -67,7 +67,7 @@ Admin/owner home rules:
 - Settings includes App lock, which opens a full-screen post-login PIN setup/manage flow for device-local protection after normal account login.
 - Long owner workflows use full-screen stack modal routes: Sales Reps (`/staff-invite-modal`), business switching (`/business-switch-modal`), first product setup (`/first-product-setup-modal`), stock intake (`/stock-intake-modal`), product links (`/product-share-modal`), reports (`/reports-modal`), subscription (`/subscription-modal`), and unit conversion (`/unit-conversion-modal`).
 - Long shared operational workflows use full-screen stack modal routes with sales-rep access where appropriate: create sale (`/create-sale-modal`), customer book (`/customer-book-modal`), service orders (`/service-orders-modal`), rep clock-in (`/rep-clock-in-modal`), closeout (`/closeout-modal`), and sync status (`/sync-status-modal`).
-- The floating theme FAB is only for dev/preview UI testing variants; production theme access is through More.
+- The compact floating theme FAB is only for development UI testing variants; preview and production builds omit it, and production theme access is through More.
 
 Sales-rep home rules:
 - Sales reps get a separate home composition focused on session status, quick sale, assigned stock, customer lookup, recent sales, sync status, and closeout queue.
@@ -81,7 +81,7 @@ Form and modal rules:
 - Bottom sheets are for short, focused choices and quick actions.
 - Workflows that are over half-screen, multi-section, or keyboard-heavy should use full-screen stack modal routes with `MobileScreen` keyboard-safe layout and sticky primary CTA placement where the form is long.
 - Full-screen stack workflow routes must use `WorkflowModalScreen` so authentication/role redirects, close-header geometry, compact horizontal padding, status-bar background, and light/dark status-bar icon style stay consistent across item setup, stock, staff, sales, reports, links, and settings flows. The shell should show the workflow title directly without an extra decorative eyebrow, and reused sheet bodies should use tighter screen-mode horizontal padding than bottom-sheet mode.
-- Keyboard-sticky inline composers should sit as accessory surfaces directly above the keyboard only while activated, with horizontal suggestion chips above the input, a single right action only when the mode needs explicit submit, and removable selected chips for already-added values. They should close when the keyboard is dismissed or the user taps back into the form. Dev/preview-only floating controls should hide while the keyboard is visible so they do not cover composer pills or inputs.
+- Keyboard-sticky inline composers should sit as accessory surfaces directly above the keyboard only while activated, with horizontal suggestion chips above the input, a single right action only when the mode needs explicit submit, and removable selected chips for already-added values. Delimiter-driven value modes may omit the right action: commas commit completed values, and keyboard Done commits remaining text before dismissing. They should close when the keyboard is dismissed or the user taps back into the form. Development-only floating controls should hide while the keyboard is visible so they do not cover composer pills or inputs.
 - Touched forms should prefer spacing, labels, helper text, status banners, and operational rows over repeated nested card/border wrappers.
 
 ## Primary Roles

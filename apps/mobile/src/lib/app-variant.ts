@@ -14,7 +14,7 @@ export function getAppVariant() {
 }
 
 export function shouldShowFloatingThemeToggle() {
-  return shouldShowInternalDesignSystemEntry()
+  return new Set(["dev", "development"]).has(getAppVariant())
 }
 
 export function shouldShowInternalDesignSystemEntry() {

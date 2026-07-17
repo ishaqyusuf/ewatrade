@@ -702,8 +702,8 @@ export function FirstProductSetupContent({
       : variantComposerMode === "edit-variant-value"
         ? "Update variant value"
         : variantComposerMode === "variant-value"
-          ? `Enter ${selectedVariantLabel} values. Separate with comma or Enter`
-          : "Enter a variant name or click a suggestion above."
+          ? `${selectedVariantLabel} values, separated by commas`
+          : "Variant name or choose a suggestion"
   const filteredUnitSuggestions = useMemo(
     () => getFilteredUnitSuggestions(unitName),
     [unitName],
@@ -1226,19 +1226,18 @@ export function FirstProductSetupContent({
     const value = name.trim()
     if (!value) return
 
-    const exists = variants.some(
-      (variant) =>
-        variant.variantLabel.trim().toLowerCase() ===
-          selectedVariantLabel.trim().toLowerCase() &&
-        variant.name.trim().toLowerCase() === value.toLowerCase(),
-    )
+    setVariants((current) => {
+      const exists = current.some(
+        (variant) =>
+          variant.variantLabel.trim().toLowerCase() ===
+            selectedVariantLabel.trim().toLowerCase() &&
+          variant.name.trim().toLowerCase() === value.toLowerCase(),
+      )
 
-    if (!exists) {
-      setVariants((current) => [
-        ...current,
-        createVariantDraft(selectedVariantLabel, value),
-      ])
-    }
+      return exists
+        ? current
+        : [...current, createVariantDraft(selectedVariantLabel, value)]
+    })
   }
 
   const addVariantValue = () => {
@@ -1248,14 +1247,6 @@ export function FirstProductSetupContent({
 
   const addInlineVariantValueByName = (name: string) => {
     addVariantValueByName(name)
-    setVariantComposerText("")
-    focusVariantComposerInput()
-  }
-
-  const addInlineVariantValuesFromText = (text: string) => {
-    for (const part of text.split(",")) {
-      addVariantValueByName(part)
-    }
     setVariantComposerText("")
     focusVariantComposerInput()
   }
@@ -1288,7 +1279,10 @@ export function FirstProductSetupContent({
     }
 
     if (variantComposerMode === "variant-value") {
-      addInlineVariantValuesFromText(value)
+      for (const part of value.split(",")) {
+        addVariantValueByName(part)
+      }
+      setVariantComposerText("")
     }
   }
 
@@ -1303,11 +1297,13 @@ export function FirstProductSetupContent({
       return
     }
 
-    for (const part of value.split(",")) {
+    const parts = value.split(",")
+    const unfinishedValue = parts.pop() ?? ""
+
+    for (const part of parts) {
       addVariantValueByName(part)
     }
-    setVariantComposerText("")
-    focusVariantComposerInput()
+    setVariantComposerText(unfinishedValue)
   }
 
   const pressVariantComposerPill = (pill: KeyboardInlineComposerPill) => {
@@ -1833,6 +1829,7 @@ export function FirstProductSetupContent({
                   </View>
                 ))}
                 <ActionButton
+                  className="w-auto self-center px-4"
                   icon="Plus"
                   onPress={() => addVariantRowImageLink(variant.id)}
                   variant="ghost"
@@ -1931,6 +1928,7 @@ export function FirstProductSetupContent({
             />
           ) : (
             <ActionButton
+              className="w-auto self-center px-4"
               icon="Plus"
               onPress={() => setShowDescription(true)}
               variant="ghost"
@@ -1974,7 +1972,12 @@ export function FirstProductSetupContent({
           </Pressable>
 
           {imageLinks.length === 0 ? (
-            <ActionButton icon="Plus" onPress={addImageLink} variant="ghost">
+            <ActionButton
+              className="w-auto self-center px-4"
+              icon="Plus"
+              onPress={addImageLink}
+              variant="ghost"
+            >
               Add image link
             </ActionButton>
           ) : (
@@ -2373,6 +2376,7 @@ export function FirstProductSetupContent({
   )
   const variantKeyboardComposer = (
     <KeyboardInlineComposer
+      dismissKeyboardOnSubmit={variantComposerMode === "variant-value"}
       hideSubmitButton={variantComposerMode === "variant-value"}
       onChangeText={changeVariantComposerText}
       onPillPress={pressVariantComposerPill}

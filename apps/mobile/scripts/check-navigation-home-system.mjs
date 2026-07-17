@@ -11,6 +11,7 @@ const SCRATCH_DIR = join(
 
 const FILES = {
   adminHome: join(SRC_DIR, "app/admin-home.tsx"),
+  appVariant: join(SRC_DIR, "lib/app-variant.ts"),
   appShell: join(SRC_DIR, "components/mobile/app-shell.tsx"),
   businessSwitch: join(SRC_DIR, "components/mobile/business-switch-sheet.tsx"),
   businessSwitchModal: join(SRC_DIR, "app/business-switch-modal.tsx"),
@@ -54,6 +55,15 @@ const FILES = {
 }
 
 const checks = [
+  {
+    file: FILES.appVariant,
+    markers: [
+      'new Set(["dev", "development"])',
+      "shouldShowFloatingThemeToggle",
+    ],
+    reason:
+      "the compact floating theme control must remain development-only and stay out of preview/production builds",
+  },
   {
     file: FILES.mobileRoles,
     markers: ["isSalesRepRole", "isInvitedStaffProfile", "normalizeMobileRole"],

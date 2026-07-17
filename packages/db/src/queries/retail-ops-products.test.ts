@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import type { PrismaClient } from "../../generated/prisma/client"
+import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
   createRetailOpsProduct,
   listRetailOpsProductUnitPriceHistory,
@@ -12,7 +12,9 @@ type ProductCall = {
   where?: unknown
 }
 
-function createMockProductSetupDb() {
+function createMockProductSetupDb(options?: {
+  stockLedgerUnavailable?: boolean
+}) {
   const calls: ProductCall[] = []
   const createdVariants: Array<{
     id: string
@@ -38,20 +40,6 @@ function createMockProductSetupDb() {
         return {
           id: `inventory_${String(data.productVariantId)}`,
         }
-      },
-    },
-    inventoryMovement: {
-      upsert: async ({ create, update, where }: Record<string, unknown>) => {
-        calls.push({
-          data: {
-            create,
-            update,
-          },
-          kind: "inventoryMovement.upsert",
-          where,
-        })
-
-        return { id: "movement_123" }
       },
     },
     membership: {
@@ -167,6 +155,30 @@ function createMockProductSetupDb() {
     $transaction: async <T>(
       callback: (transactionClient: typeof tx) => Promise<T>,
     ) => callback(tx),
+    inventoryMovement: {
+      upsert: async ({ create, update, where }: Record<string, unknown>) => {
+        calls.push({
+          data: {
+            create,
+            update,
+          },
+          kind: "inventoryMovement.upsert.afterCommit",
+          where,
+        })
+
+        if (options?.stockLedgerUnavailable) {
+          throw new Prisma.PrismaClientKnownRequestError(
+            "InventoryMovement is unavailable.",
+            {
+              clientVersion: "test",
+              code: "P2021",
+            },
+          )
+        }
+
+        return { id: "movement_123" }
+      },
+    },
     product: {
       findFirst: async ({ where }: { where: unknown }) => {
         calls.push({ kind: "product.findFirst.afterCreate", where })
@@ -687,7 +699,10 @@ describe("retail ops product queries", () => {
       ]),
     )
 
-    const movementUpserts = getCalls(db.calls, "inventoryMovement.upsert")
+    const movementUpserts = getCalls(
+      db.calls,
+      "inventoryMovement.upsert.afterCommit",
+    )
     expect(movementUpserts).toHaveLength(3)
     expect(movementUpserts[0]).toMatchObject({
       data: {
@@ -747,5 +762,31 @@ describe("retail ops product queries", () => {
         },
       },
     })
+  })
+
+  test("keeps product creation successful when the optional stock ledger is unavailable", async () => {
+    const db = createMockProductSetupDb({
+      stockLedgerUnavailable: true,
+    })
+
+    const result = await createRetailOpsProduct(db.client, {
+      actorUserId: "user_owner",
+      name: "Rabbit Feed",
+      openingStockQuantity: 2,
+      priceMinor: 250,
+      primaryUnitName: "Bag",
+      storeId: "store_123",
+      tenantId: "tenant_123",
+      variants: [],
+    })
+
+    expect(result.units[0]).toMatchObject({
+      name: "Bag",
+      openingStockQuantity: 2,
+      priceMinor: 250,
+    })
+    expect(
+      getCalls(db.calls, "inventoryMovement.upsert.afterCommit"),
+    ).toHaveLength(1)
   })
 })

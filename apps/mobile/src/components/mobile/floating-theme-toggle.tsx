@@ -16,6 +16,9 @@ const THEME_TOGGLE_IMAGES = {
   dark: require("@assets/images/theme-toggle-dark.png"),
 }
 
+const TOGGLE_SIZE = 40
+const TOGGLE_ICON_SIZE = 18
+
 export function FloatingThemeToggle() {
   const insets = useSafeAreaInsets()
   const colors = useColors()
@@ -75,7 +78,7 @@ export function FloatingThemeToggle() {
       style={[
         styles.container,
         {
-          bottom: Math.max(insets.bottom, 16) + 24,
+          bottom: Math.max(insets.bottom, 12) + 16,
         },
       ]}
     >
@@ -90,13 +93,13 @@ export function FloatingThemeToggle() {
           borderColor: colors.border,
           borderRadius: 999,
           borderWidth: 1,
-          height: 56,
+          height: TOGGLE_SIZE,
           justifyContent: "center",
           shadowColor: colors.foreground,
           shadowOffset: { height: 8, width: 0 },
           shadowOpacity: 0.18,
           shadowRadius: 16,
-          width: 56,
+          width: TOGGLE_SIZE,
         }}
       >
         <Image source={THEME_TOGGLE_IMAGES[colorScheme]} style={styles.icon} />
@@ -108,11 +111,11 @@ export function FloatingThemeToggle() {
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    right: 20,
+    right: 12,
     zIndex: 50,
   },
   icon: {
-    height: 24,
-    width: 24,
+    height: TOGGLE_ICON_SIZE,
+    width: TOGGLE_ICON_SIZE,
   },
 })

@@ -2,6 +2,27 @@
 
 ## 2026-07-17
 
+### First-Product Ghost Action Label Visibility
+- Source Mode: Direct user report that `Add image link` and `Add Description` labels were not visible in light mode.
+- Completed: Changed the affected full-width ghost actions, including the expanded variant-row image-link action, to content-sized centered commands so React Native measures the icon and label together. The shared `ActionButton` now applies explicit semantic label colors, fixing the separate dark-mode inheritance failure. The floating theme FAB is hidden from preview builds and reduced to a compact development-only control.
+- Changed Source Files: `apps/mobile/src/components/mobile/action-button.tsx`, `apps/mobile/src/components/mobile/first-product-setup-sheet.tsx`, `apps/mobile/src/components/mobile/floating-theme-toggle.tsx`, `apps/mobile/src/lib/app-variant.ts`, `apps/mobile/scripts/check-navigation-home-system.mjs`.
+- Brain Files Updated: `.brain/features/retail-ops-design-system-and-ia.md`, `.brain/progress.md`.
+- Checks Run: `bun --cwd apps/mobile qa:first-product-flow`; `bun --cwd apps/mobile qa:nativewind-style`; `bun --cwd apps/mobile qa:theme-colors`; Android Expo Go light/dark toggle validation confirming both action labels remain readable.
+
+### First-Product Comma And Done Entry
+- Source Mode: Direct user request to simplify variant-value input and close it through keyboard Done.
+- Completed: Shortened composer placeholders, kept the value-mode plus action hidden, made commas commit completed values without rendering in the field, and made keyboard Done save remaining text before dismissing. Moved duplicate detection into the functional variant state update so rapid typing and paste cannot enqueue duplicate values.
+- Changed Source Files: `apps/mobile/src/components/mobile/first-product-setup-sheet.tsx`, `apps/mobile/src/components/mobile/keyboard-inline-composer.tsx`, `apps/mobile/scripts/check-first-product-flow.mjs`.
+- Brain Files Updated: `.brain/features/mobile-retail-ops-mvp-spec.md`, `.brain/features/retail-ops-design-system-and-ia.md`, `.brain/progress.md`.
+- Checks Run: Android Expo Go interaction QA confirmed one-tap keyboard focus, exactly one each of `Bag`, `Half Bag`, `Quarter`, and `Kg`, and zero focused composer inputs after keyboard Done.
+
+### Product Setup Optional Ledger Compatibility
+- Source Mode: Direct user report that preview still failed product save with PostgreSQL `current transaction is aborted`.
+- Completed: Kept core product, unit, and inventory creation inside one transaction, but deferred optional durable opening-stock movement mirroring until after commit. A missing preview ledger table can now use the existing fallback without poisoning the core transaction.
+- Changed Source Files: `packages/db/src/queries/retail-ops-products.ts`, `packages/db/src/queries/retail-ops-products.test.ts`.
+- Brain Files Updated: `.brain/api/contracts.md`, `.brain/progress.md`.
+- Checks Run: `bun test packages/db/src/queries/retail-ops-products.test.ts`; `bun --cwd packages/db typecheck`; `git diff --check`.
+
 ### First-Product Variant And Stock Workspace
 - Source Mode: Direct user implementation request for grouped variant management and separate stock editing after multiple values exist.
 - Completed: Added a compact `Variants` / `Stocks` tab workspace once more than one variant value exists, hiding the introductory variant title and description. The Variants tab groups values by label with label edit actions, value action pills, per-group add pills, and an active bottom `Add variant` action that opens and focuses the keyboard composer in one tap. Content-sized action sheets provide label edit/remove, value edit/remove/enable-disable, and stock enable-disable. Label and value editing reuse the keyboard-sticky composer with a check action, save on the action or keyboard Enter, close after save, and reject commas for single-value editing. The Stocks tab retains price, stock, and media controls, renames field labels to `Price` and `Stock`, replaces delete with a row options action, sorts explicitly or inherited-disabled rows after active rows while preserving independent generated-stock state, and owns the validation-aware final `Add item` action.

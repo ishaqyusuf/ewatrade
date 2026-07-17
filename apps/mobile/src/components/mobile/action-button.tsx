@@ -1,10 +1,9 @@
 import { Button, type ButtonProps } from "@/components/ui/button"
 import { Icon, type IconKeys } from "@/components/ui/icon"
-import { Text } from "@/components/ui/text"
 import { useColors } from "@/hooks/use-color"
 import { cn } from "@/lib/utils"
 import type { ReactNode } from "react"
-import { ActivityIndicator } from "react-native"
+import { ActivityIndicator, Text as NativeText } from "react-native"
 
 type ActionButtonProps = ButtonProps & {
   children: ReactNode
@@ -39,6 +38,17 @@ export function ActionButton({
     variant === "ghost" && "text-foreground",
     variant === "link" && "text-primary",
   )
+  const foregroundColor = isDisabled
+    ? colors.mutedForeground
+    : isDefaultVariant
+      ? colors.primaryForeground
+      : isOutlineVariant || variant === "ghost"
+        ? colors.foreground
+        : variant === "destructive"
+          ? colors.destructive
+          : variant === "secondary"
+            ? colors.secondaryForeground
+            : colors.primary
   const iconClassName = cn("size-sm", foregroundClassName)
 
   return (
@@ -55,7 +65,8 @@ export function ActionButton({
             ? "bg-muted active:bg-muted"
             : "bg-primary active:bg-primary/90"),
         isOutlineVariant && "bg-muted/60 active:bg-accent",
-        variant === "destructive" && "bg-destructive/10 active:bg-destructive/20",
+        variant === "destructive" &&
+          "bg-destructive/10 active:bg-destructive/20",
         className,
       )}
       disabled={isDisabled}
@@ -71,9 +82,17 @@ export function ActionButton({
       ) : icon ? (
         <Icon className={iconClassName} name={icon} />
       ) : null}
-      <Text className={foregroundClassName} numberOfLines={1}>
+      <NativeText
+        numberOfLines={1}
+        style={{
+          color: foregroundColor,
+          fontSize: 14,
+          fontWeight: "700",
+          lineHeight: 20,
+        }}
+      >
         {isLoading && loadingLabel ? loadingLabel : children}
-      </Text>
+      </NativeText>
       {!isLoading && trailingIcon ? (
         <Icon className={iconClassName} name={trailingIcon} />
       ) : null}

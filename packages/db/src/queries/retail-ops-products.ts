@@ -1191,6 +1191,7 @@ export async function createRetailOpsProduct(
       if (existingProduct) {
         return {
           created: false,
+          openingStockMovements: [],
           product: toCreatedRetailOpsProduct(existingProduct),
         }
       }
@@ -1255,6 +1256,9 @@ export async function createRetailOpsProduct(
 
     const createdAt = new Date()
     const createdUnits: CreatedRetailOpsProduct["units"] = []
+    const openingStockMovements: Array<
+      Parameters<typeof writeDurableOpeningStockMovement>[1]
+    > = []
 
     for (const [unitNumber, unit] of units.entries()) {
       const templateUnit = findMatchingTemplateUnit(setupUnitTemplate, {
@@ -1344,7 +1348,7 @@ export async function createRetailOpsProduct(
         },
       })
 
-      await writeDurableOpeningStockMovement(tx, {
+      openingStockMovements.push({
         actorUserId: input.actorUserId,
         externalId,
         happenedAt: createdAt,
@@ -1369,6 +1373,7 @@ export async function createRetailOpsProduct(
 
     return {
       created: true,
+      openingStockMovements,
       product: {
         product,
         units: createdUnits,
@@ -1377,11 +1382,16 @@ export async function createRetailOpsProduct(
   })
 
   if (result.created) {
-    await writeDurableProductSetupPriceHistory(db, {
-      productId: result.product.product.id,
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-    })
+    await Promise.all([
+      ...result.openingStockMovements.map((movement) =>
+        writeDurableOpeningStockMovement(db, movement),
+      ),
+      writeDurableProductSetupPriceHistory(db, {
+        productId: result.product.product.id,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      }),
+    ])
   }
 
   return result.product
