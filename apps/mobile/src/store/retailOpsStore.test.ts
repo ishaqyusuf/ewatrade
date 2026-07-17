@@ -4,6 +4,7 @@ type RetailOpsStoreModule = typeof import("./retailOpsStore")
 type SubscriptionStoreModule = typeof import("./subscriptionStore")
 
 let useRetailOpsStore: RetailOpsStoreModule["useRetailOpsStore"]
+let migrateRetailOpsPersistedState: RetailOpsStoreModule["migrateRetailOpsPersistedState"]
 let useSubscriptionStore: SubscriptionStoreModule["useSubscriptionStore"]
 
 function installLocalStorageShim() {
@@ -65,7 +66,9 @@ function expectEventTypes(types: string[], expectedTypes: string[]) {
 describe("mobile retail ops local MVP smoke flow", () => {
   beforeAll(async () => {
     installLocalStorageShim()
-    ;({ useRetailOpsStore } = await import("./retailOpsStore"))
+    ;({ migrateRetailOpsPersistedState, useRetailOpsStore } = await import(
+      "./retailOpsStore"
+    ))
     ;({ useSubscriptionStore } = await import("./subscriptionStore"))
   })
 
@@ -86,7 +89,7 @@ describe("mobile retail ops local MVP smoke flow", () => {
         "https://cdn.example.com/products/rice-stack.png",
       ],
       name: "Rice",
-      price: 18_500,
+      priceMinor: 18_500,
       startingStock: 10,
       syncStatus: "pending",
       unitName: "Bag",
@@ -95,7 +98,7 @@ describe("mobile retail ops local MVP smoke flow", () => {
           enabled: true,
           imageLinks: ["https://cdn.example.com/products/rice-half.png"],
           name: "Half bag",
-          price: 9_500,
+          priceMinor: 9_500,
           startingStock: 0,
           variantLabel: "Size",
         },
@@ -121,7 +124,7 @@ describe("mobile retail ops local MVP smoke flow", () => {
       enabled: true,
       imageLinks: ["https://cdn.example.com/products/rice-half.png"],
       name: "Half bag",
-      price: 9_500,
+      priceMinor: 9_500,
       variantLabel: "Size",
     })
     expect(state.stockMovements[0]).toMatchObject({
@@ -165,7 +168,7 @@ describe("mobile retail ops local MVP smoke flow", () => {
       quantity: 2,
       syncStatus: "pending",
       unitName: product.unitName,
-      unitPrice: product.price,
+      unitPriceMinor: product.priceMinor,
     })
 
     state = useRetailOpsStore.getState()
@@ -195,7 +198,7 @@ describe("mobile retail ops local MVP smoke flow", () => {
       productId: product.id,
       quantity: 2,
       syncStatus: "pending",
-      total: 37_000,
+      totalMinor: 37_000,
     })
     expect(state.products[0].currentStock).toBe(8)
     expect(state.customers[0]).toMatchObject({
@@ -208,8 +211,8 @@ describe("mobile retail ops local MVP smoke flow", () => {
     useRetailOpsStore.getState().createCloseout({
       attendantName: "Ishaq",
       businessId,
-      declaredCash: 37_000,
-      declaredTransfer: 0,
+      declaredCashMinor: 37_000,
+      declaredTransferMinor: 0,
       inventoryLines: [
         {
           declaredQuantity: 8,
@@ -228,9 +231,9 @@ describe("mobile retail ops local MVP smoke flow", () => {
 
     expect(state.closeouts[0]).toMatchObject({
       approvalStatus: "pending_review",
-      cashVariance: 0,
-      expectedCash: 37_000,
-      grossSales: 37_000,
+      cashVarianceMinor: 0,
+      expectedCashMinor: 37_000,
+      grossSalesMinor: 37_000,
       salesCount: 1,
       syncStatus: "pending",
     })
@@ -311,7 +314,7 @@ describe("mobile retail ops local MVP smoke flow", () => {
     useRetailOpsStore.getState().addFirstProduct({
       businessId,
       name: "Rice",
-      price: 18_500,
+      priceMinor: 18_500,
       startingStock: 10,
       syncStatus: "synced",
       unitName: "Bag",
@@ -356,6 +359,48 @@ describe("mobile retail ops local MVP smoke flow", () => {
       quantity: 3,
       stockAdjustmentReason: "found_stock",
       type: "stock_adjustment",
+    })
+  })
+
+  test("migrates legacy persisted major-unit money into explicit minor units once", () => {
+    const migrated = migrateRetailOpsPersistedState({
+      closeouts: [
+        {
+          cashVariance: -5,
+          declaredCash: 100,
+          declaredTransfer: 50,
+          expectedCash: 105,
+          expectedTransfer: 50,
+          grossSales: 155,
+          transferVariance: 0,
+        },
+      ],
+      products: [
+        {
+          price: 1_234.5,
+          variants: [{ price: 500 }],
+        },
+      ],
+      sales: [{ total: 2_469, unitPrice: 1_234.5 }],
+    }) as {
+      closeouts: Array<Record<string, number>>
+      products: Array<{
+        priceMinor: number
+        variants: Array<{ priceMinor: number }>
+      }>
+      sales: Array<{ totalMinor: number; unitPriceMinor: number }>
+    }
+
+    expect(migrated.products[0]?.priceMinor).toBe(123_450)
+    expect(migrated.products[0]?.variants[0]?.priceMinor).toBe(50_000)
+    expect(migrated.sales[0]).toMatchObject({
+      totalMinor: 246_900,
+      unitPriceMinor: 123_450,
+    })
+    expect(migrated.closeouts[0]).toMatchObject({
+      cashVarianceMinor: -500,
+      declaredCashMinor: 10_000,
+      grossSalesMinor: 15_500,
     })
   })
 })

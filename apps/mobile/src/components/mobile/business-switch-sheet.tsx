@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { CurrencySelector } from "@/components/mobile/currency-selector"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
 import {
@@ -16,6 +17,7 @@ import {
   getPlan,
   useSubscriptionStore,
 } from "@/store/subscriptionStore"
+import type { OperatingCurrencyCode } from "@ewatrade/utils"
 import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { forwardRef, useMemo, useState } from "react"
 import { View } from "react-native"
@@ -80,7 +82,7 @@ export function BusinessSwitchContent({
   const [businessQuery, setBusinessQuery] = useState("")
   const [category, setCategory] = useState("")
   const [country, setCountry] = useState("Nigeria")
-  const [currency, setCurrency] = useState("NGN")
+  const [currency, setCurrency] = useState<OperatingCurrencyCode>("NGN")
   const [salesMethod, setSalesMethod] = useState("In-store sales")
   const [type, setType] = useState("Retail")
   const subscription = getBusinessSubscription(subscriptions, activeBusinessId)
@@ -199,24 +201,14 @@ export function BusinessSwitchContent({
           placeholder="Enter business or branch name"
           value={businessName}
         />
-        <View className="flex-row gap-3">
-          <FormField
-            containerClassName="flex-1"
-            label="Type"
-            leadingIcon="FileText"
-            onChangeText={setType}
-            placeholder="Enter business type"
-            value={type}
-          />
-          <FormField
-            containerClassName="flex-1"
-            label="Currency"
-            leadingIcon="CircleDollarSign"
-            onChangeText={setCurrency}
-            placeholder="Enter currency code"
-            value={currency}
-          />
-        </View>
+        <FormField
+          label="Type"
+          leadingIcon="FileText"
+          onChangeText={setType}
+          placeholder="Enter business type"
+          value={type}
+        />
+        <CurrencySelector onChange={setCurrency} value={currency} />
         <View className="flex-row gap-3">
           <FormField
             containerClassName="flex-1"

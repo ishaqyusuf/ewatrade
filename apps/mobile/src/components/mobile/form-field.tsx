@@ -14,6 +14,7 @@ type FormFieldProps = Omit<ComponentProps<typeof Input>, "className"> & {
   inputClassName?: string
   label: string
   leadingIcon?: IconKeys
+  leadingText?: string
   trailingIcon?: IconKeys
   variant?: "auth" | "filled" | "line"
 }
@@ -25,6 +26,7 @@ export function FormField({
   inputClassName,
   label,
   leadingIcon,
+  leadingText,
   onBlur,
   onFocus,
   trailingIcon,
@@ -95,6 +97,10 @@ export function FormField({
       >
         {leadingIcon ? (
           <Icon className={iconClassName} name={leadingIcon} />
+        ) : leadingText ? (
+          <Text className={cn("font-semibold", iconClassName)}>
+            {leadingText}
+          </Text>
         ) : null}
         <Input
           accessibilityLabel={inputProps.accessibilityLabel ?? label}

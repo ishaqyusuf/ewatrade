@@ -39,6 +39,16 @@ Track the conceptual schema and schema ownership rules for the platform.
 
 ## Current Retail Ops Onboarding Mapping
 - Marketing signup stores tenant-level business context on `Tenant` using country/currency columns plus first-phase metadata for industry and business size.
+- Marketing and mobile owner signup write the selected supported currency to
+  both `Tenant.currencyCode` and the first `Store.currencyCode`. Mobile OTP
+  verification preserves the selection in the short-lived verification JSON.
+- `Store.currencyCode` is the commerce source of truth. New stores inherit
+  tenant currency when the caller omits it, then fall back to NGN for legacy
+  contexts. Existing stored values are not converted.
+- Mobile offline state stores product, sale, and closeout money as integer
+  `*Minor` values. Zustand persist version 1 performs a client-only one-time
+  conversion from legacy local major-unit fields; it does not change database
+  rows.
 - Dashboard first-store setup and protected tRPC `tenant.createStore` accept a compact onboarding payload for the effective business template, country code, product/service/offering category, sales/operating model, team size, support contact, and Other-business demand details.
 - `createTenantStore` persists cleaned first-store setup values under `Store.metadata.retailOps.onboarding` with source, captured timestamp, currency code, and the selected template snapshot.
 - `Store.metadata.retailOps.businessTemplate` stores the effective v1 template key and label. Existing stores without explicit template metadata resolve to Product Sales.
@@ -46,6 +56,9 @@ Track the conceptual schema and schema ownership rules for the platform.
 - Dry-cleaning settings currently store express surcharge percentage in metadata; service orders snapshot express line pricing and evidence metadata so later setting or catalog edits do not rewrite historical orders.
 - Other business submissions store unsupported-demand metadata under `Store.metadata.retailOps.unsupportedBusinessDemand`, while completed `OnboardingSession.formData.onboarding` preserves the raw answers for internal ranking.
 - The shared store helper writes a completed `OnboardingSession` for onboarding submissions with tenant id, actor user id, completed status, expiry, created store snapshot, source, captured timestamp, currency, template, and setup answers. Multi-step setup state, onboarding analytics, normalized onboarding field tables, and dedicated dry-cleaning Prisma tables remain planned.
+- No Prisma schema or migration is required for operating currency because the
+  tenant, store, product, order, and billing currency/minor-unit columns already
+  exist.
 
 ## Current Self-Service Store Detection Mapping
 - Store-level self-service geolocation detection uses `Store.metadata.retailOps.selfServiceDetection` in the v1 bridge instead of a schema migration.

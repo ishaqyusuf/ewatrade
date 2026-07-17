@@ -38,6 +38,10 @@ export const tenantRouter = createTRPCRouter({
           createdByUserId: ctx.session.user.id,
           tenantId: ctx.tenantContext.tenant.id,
           ...storeInput,
+          currencyCode:
+            storeInput.currencyCode ??
+            ctx.tenantContext.tenant.currencyCode ??
+            "NGN",
           onboarding: onboarding
             ? { ...onboarding, source: "trpc_store_create" }
             : undefined,

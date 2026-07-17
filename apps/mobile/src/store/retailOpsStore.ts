@@ -10,7 +10,7 @@ export type RetailOpsVariant = {
   imageLinks?: string[]
   imageUrl?: string
   name: string
-  price: number
+  priceMinor: number
   remoteId?: string
   startingStock?: number
   variantLabel?: string
@@ -24,7 +24,7 @@ export type RetailOpsProduct = {
   id: string
   imageUrl?: string
   name: string
-  price: number
+  priceMinor: number
   remoteId?: string
   remoteVariantId?: string
   startingStock: number
@@ -56,9 +56,9 @@ export type RetailOpsSale = {
   remoteId?: string
   repSessionId?: string
   syncStatus: "pending" | "synced"
-  total: number
+  totalMinor: number
   unitName: string
-  unitPrice: number
+  unitPriceMinor: number
   variantId?: string
 }
 
@@ -136,20 +136,20 @@ export type RetailOpsCloseout = {
   approvalStatus: "pending_review" | "approved" | "flagged"
   attendantName: string
   businessId?: string
-  cashVariance: number
+  cashVarianceMinor: number
   createdAt: string
-  declaredCash: number
-  declaredTransfer: number
-  expectedCash: number
-  expectedTransfer: number
-  grossSales: number
+  declaredCashMinor: number
+  declaredTransferMinor: number
+  expectedCashMinor: number
+  expectedTransferMinor: number
+  grossSalesMinor: number
   id: string
   inventoryLines: RetailOpsCloseoutInventoryLine[]
   note?: string
   repSessionId?: string
   salesCount: number
   syncStatus: "pending" | "synced"
-  transferVariance: number
+  transferVarianceMinor: number
 }
 
 export type RetailOpsRepSessionInventoryLine = {
@@ -238,7 +238,7 @@ type FirstProductInput = {
   imageLinks?: string[]
   imageUrl?: string
   name: string
-  price: number
+  priceMinor: number
   remoteId?: string
   remoteVariantId?: string
   startingStock: number
@@ -251,7 +251,7 @@ type FirstProductInput = {
     imageLinks?: string[]
     imageUrl?: string
     name: string
-    price: number
+    priceMinor: number
     remoteId?: string
     startingStock?: number
     variantLabel?: string
@@ -269,7 +269,7 @@ type CreateSaleInput = {
   remoteId?: string
   syncStatus?: "pending" | "synced"
   unitName: string
-  unitPrice: number
+  unitPriceMinor: number
   variantId?: string
 }
 
@@ -322,8 +322,8 @@ type CreateCloseoutInput = {
   attendantName: string
   businessId?: string
   createdAt?: string
-  declaredCash: number
-  declaredTransfer: number
+  declaredCashMinor: number
+  declaredTransferMinor: number
   inventoryLines: Array<{
     declaredQuantity: number
     expectedQuantity: number
@@ -568,12 +568,12 @@ function getPaymentTotals(sales: RetailOpsSale[]) {
   return sales.reduce(
     (totals, sale) => {
       if (sale.paymentMethod === "cash") {
-        totals.cash += sale.total
+        totals.cash += sale.totalMinor
       } else {
-        totals.transfer += sale.total
+        totals.transfer += sale.totalMinor
       }
 
-      totals.gross += sale.total
+      totals.gross += sale.totalMinor
 
       return totals
     },
@@ -596,6 +596,94 @@ function getNextRetryAt(retryCount = 0) {
     retryDelaysMs[retryDelaysMs.length - 1]
 
   return new Date(Date.now() + delayMs).toISOString()
+}
+
+type PersistedRecord = Record<string, unknown>
+
+function record(value: unknown): PersistedRecord {
+  return value && typeof value === "object" ? (value as PersistedRecord) : {}
+}
+
+function legacyMajorToMinor(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.round(value * 100)
+    : 0
+}
+
+export function migrateRetailOpsPersistedState(persistedState: unknown) {
+  const state = record(persistedState)
+  const products = Array.isArray(state.products)
+    ? state.products.map((value) => {
+        const product = record(value)
+        return {
+          ...product,
+          priceMinor:
+            typeof product.priceMinor === "number"
+              ? product.priceMinor
+              : legacyMajorToMinor(product.price),
+          variants: Array.isArray(product.variants)
+            ? product.variants.map((variantValue) => {
+                const variant = record(variantValue)
+                return {
+                  ...variant,
+                  priceMinor:
+                    typeof variant.priceMinor === "number"
+                      ? variant.priceMinor
+                      : legacyMajorToMinor(variant.price),
+                  price: undefined,
+                }
+              })
+            : [],
+          price: undefined,
+        }
+      })
+    : []
+  const sales = Array.isArray(state.sales)
+    ? state.sales.map((value) => {
+        const sale = record(value)
+        return {
+          ...sale,
+          totalMinor:
+            typeof sale.totalMinor === "number"
+              ? sale.totalMinor
+              : legacyMajorToMinor(sale.total),
+          unitPriceMinor:
+            typeof sale.unitPriceMinor === "number"
+              ? sale.unitPriceMinor
+              : legacyMajorToMinor(sale.unitPrice),
+          total: undefined,
+          unitPrice: undefined,
+        }
+      })
+    : []
+  const closeouts = Array.isArray(state.closeouts)
+    ? state.closeouts.map((value) => {
+        const closeout = record(value)
+        const moneyFields = [
+          "cashVariance",
+          "declaredCash",
+          "declaredTransfer",
+          "expectedCash",
+          "expectedTransfer",
+          "grossSales",
+          "transferVariance",
+        ] as const
+        const migrated = { ...closeout }
+
+        for (const field of moneyFields) {
+          const minorField = `${field}Minor`
+          migrated[minorField] =
+            typeof closeout[minorField] === "number"
+              ? closeout[minorField]
+              : legacyMajorToMinor(closeout[field])
+          migrated[field] = undefined
+        }
+
+        return migrated
+      })
+    : []
+
+  return { ...state, closeouts, products, sales }
 }
 
 export const useRetailOpsStore = create<RetailOpsState>()(
@@ -634,7 +722,7 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                 id: productId,
                 imageUrl: input.imageUrl,
                 name: input.name,
-                price: input.price,
+                priceMinor: input.priceMinor,
                 remoteId: input.remoteId,
                 remoteVariantId: input.remoteVariantId,
                 startingStock,
@@ -871,7 +959,7 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                 businessId,
                 customerName: customerName || "Walk-in customer",
                 quantity,
-                total: input.unitPrice * quantity,
+                totalMinor: input.unitPriceMinor * quantity,
               },
               ...state.sales,
             ],
@@ -969,8 +1057,8 @@ export const useRetailOpsStore = create<RetailOpsState>()(
             ),
           )
           const paymentTotals = getPaymentTotals(openSales)
-          const declaredCash = Math.max(0, input.declaredCash)
-          const declaredTransfer = Math.max(0, input.declaredTransfer)
+          const declaredCashMinor = Math.max(0, input.declaredCashMinor)
+          const declaredTransferMinor = Math.max(0, input.declaredTransferMinor)
           const openSession = state.repSessions.find(
             (session) =>
               (session.businessId ?? businessId) === businessId &&
@@ -999,20 +1087,21 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                 approvalStatus: "pending_review",
                 attendantName: input.attendantName,
                 businessId,
-                cashVariance: declaredCash - paymentTotals.cash,
+                cashVarianceMinor: declaredCashMinor - paymentTotals.cash,
                 createdAt: now,
-                declaredCash,
-                declaredTransfer,
-                expectedCash: paymentTotals.cash,
-                expectedTransfer: paymentTotals.transfer,
-                grossSales: paymentTotals.gross,
+                declaredCashMinor,
+                declaredTransferMinor,
+                expectedCashMinor: paymentTotals.cash,
+                expectedTransferMinor: paymentTotals.transfer,
+                grossSalesMinor: paymentTotals.gross,
                 id: closeoutId,
                 inventoryLines,
                 note: input.note?.trim() || undefined,
                 repSessionId: openSession?.id,
                 salesCount: openSales.length,
                 syncStatus,
-                transferVariance: declaredTransfer - paymentTotals.transfer,
+                transferVarianceMinor:
+                  declaredTransferMinor - paymentTotals.transfer,
               },
               ...state.closeouts,
             ],
@@ -1892,6 +1981,10 @@ export const useRetailOpsStore = create<RetailOpsState>()(
       setHasHydrated: (hasHydrated) => set({ hasHydrated }),
     }),
     {
+      migrate: (persistedState) =>
+        migrateRetailOpsPersistedState(
+          persistedState,
+        ) as unknown as RetailOpsState,
       name: "ewatrade-mobile-retail-ops",
       storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
@@ -1911,6 +2004,7 @@ export const useRetailOpsStore = create<RetailOpsState>()(
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true)
       },
+      version: 1,
     },
   ),
 )

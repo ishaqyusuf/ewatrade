@@ -9,7 +9,7 @@ import {
   parseMajorCurrencyToMinor,
 } from "@/lib/product-catalog"
 import { cn } from "@/utils"
-import { Badge, Button } from "@ewatrade/ui"
+import { Badge, Button, CurrencyInput } from "@ewatrade/ui"
 import {
   Add01Icon,
   Edit02Icon,
@@ -581,13 +581,14 @@ export function ProductsPage({
               />
             </Field>
             <Field label={`Price (${store.currencyCode})`}>
-              <TextInput
-                inputMode="decimal"
+              <CurrencyInput
+                className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
+                currencyCode={store.currencyCode}
                 value={form.price}
-                onChange={(event) =>
+                onValueChange={(value) =>
                   setForm((current) => ({
                     ...current,
-                    price: event.target.value,
+                    price: value,
                   }))
                 }
                 required
@@ -635,13 +636,14 @@ export function ProductsPage({
                     />
                   </Field>
                   <Field label={`Variant price (${store.currencyCode})`}>
-                    <TextInput
-                      inputMode="decimal"
+                    <CurrencyInput
+                      className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      currencyCode={store.currencyCode}
                       value={form.variantPrice}
-                      onChange={(event) =>
+                      onValueChange={(value) =>
                         setForm((current) => ({
                           ...current,
-                          variantPrice: event.target.value,
+                          variantPrice: value,
                         }))
                       }
                     />

@@ -23,7 +23,7 @@ import {
   useRetailOpsStore,
 } from "@/store/retailOpsStore"
 import { useTRPC } from "@/trpc/client"
-import { formatMoney } from "@ewatrade/utils"
+import { formatMinorMoney } from "@ewatrade/utils"
 import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useQuery } from "@tanstack/react-query"
 import { forwardRef, useMemo, useState } from "react"
@@ -36,6 +36,23 @@ type ReportsSheetProps = {
 
 type ReportsContentProps = ReportsSheetProps & {
   presentation?: "screen" | "sheet"
+}
+
+function getActiveCurrencyCode() {
+  const state = useBusinessStore.getState()
+  return (
+    state.businesses.find((business) => business.id === state.activeBusinessId)
+      ?.currency ?? "NGN"
+  )
+}
+
+function formatMoney(valueMinor: number, currencyCode?: string) {
+  return formatMinorMoney(
+    valueMinor,
+    currencyCode === "NGN" || !currencyCode
+      ? getActiveCurrencyCode()
+      : currencyCode,
+  )
 }
 
 type ReportMetric = {
@@ -158,12 +175,12 @@ function getPaymentTotals(sales: RetailOpsSale[]) {
   return sales.reduce(
     (totals, sale) => {
       if (sale.paymentMethod === "cash") {
-        totals.cash += sale.total
+        totals.cash += sale.totalMinor
       } else {
-        totals.transfer += sale.total
+        totals.transfer += sale.totalMinor
       }
 
-      totals.gross += sale.total
+      totals.gross += sale.totalMinor
 
       return totals
     },
@@ -179,7 +196,7 @@ function getProductStockRows(products: RetailOpsProduct[]): ReportRowItem[] {
   return products.flatMap((product) => {
     const primaryStock = product.currentStock ?? product.startingStock ?? 0
     const primaryRow = {
-      detail: `${formatMoney(product.price, "NGN")} per ${product.unitName}`,
+      detail: `${formatMinorMoney(product.priceMinor, getActiveCurrencyCode())} per ${product.unitName}`,
       id: `${product.id}-primary`,
       label: `${product.name} - ${product.unitName}`,
       tone:
@@ -194,7 +211,7 @@ function getProductStockRows(products: RetailOpsProduct[]): ReportRowItem[] {
       const variantStock = variant.currentStock ?? variant.startingStock ?? 0
 
       return {
-        detail: `${formatMoney(variant.price, "NGN")} per ${variant.name}`,
+        detail: `${formatMinorMoney(variant.priceMinor, getActiveCurrencyCode())} per ${variant.name}`,
         id: `${product.id}-${variant.id}`,
         label: `${product.name} - ${variant.name}`,
         tone:
@@ -245,7 +262,7 @@ function getSalesByRepRows(sales: RetailOpsSale[]): ReportRowItem[] {
 
     grouped.set(sale.attendantName, {
       count: current.count + 1,
-      total: current.total + sale.total,
+      total: current.total + sale.totalMinor,
     })
   }
 
@@ -298,7 +315,7 @@ function getSalesByProductRows(sales: RetailOpsSale[]): ReportRowItem[] {
 
     grouped.set(key, {
       quantity: current.quantity + sale.quantity,
-      total: current.total + sale.total,
+      total: current.total + sale.totalMinor,
       unitName: sale.unitName,
     })
   }
@@ -369,24 +386,24 @@ function getVarianceRows(closeouts: RetailOpsCloseout[]): ReportRowItem[] {
       id: `${latestCloseout.id}-cash`,
       label: "Cash variance",
       tone:
-        latestCloseout.cashVariance === 0
+        latestCloseout.cashVarianceMinor === 0
           ? "success"
-          : latestCloseout.cashVariance < 0
+          : latestCloseout.cashVarianceMinor < 0
             ? "danger"
             : "warning",
-      value: formatMoney(latestCloseout.cashVariance, "NGN"),
+      value: formatMoney(latestCloseout.cashVarianceMinor, "NGN"),
     },
     {
       detail: "Expected versus declared transfer",
       id: `${latestCloseout.id}-transfer`,
       label: "Transfer variance",
       tone:
-        latestCloseout.transferVariance === 0
+        latestCloseout.transferVarianceMinor === 0
           ? "success"
-          : latestCloseout.transferVariance < 0
+          : latestCloseout.transferVarianceMinor < 0
             ? "danger"
             : "warning",
-      value: formatMoney(latestCloseout.transferVariance, "NGN"),
+      value: formatMoney(latestCloseout.transferVarianceMinor, "NGN"),
     },
   ] satisfies ReportRowItem[]
   const stockRows = latestCloseout.inventoryLines

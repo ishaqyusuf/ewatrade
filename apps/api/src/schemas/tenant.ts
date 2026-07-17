@@ -1,3 +1,4 @@
+import { OPERATING_CURRENCY_CODES } from "@ewatrade/utils"
 import { z } from "zod"
 
 const optionalText = (max: number) =>
@@ -14,6 +15,11 @@ const optionalEmailSchema = z
   .toLowerCase()
   .transform((value) => value || undefined)
   .pipe(z.email().optional())
+
+const operatingCurrencySchema = z.preprocess(
+  (value) => (typeof value === "string" ? value.trim().toUpperCase() : value),
+  z.enum(OPERATING_CURRENCY_CODES),
+)
 
 export const tenantBootstrapSchema = z.object({
   tenantSlug: optionalText(120),
@@ -42,12 +48,7 @@ const storeOnboardingSchema = z.object({
 
 export const createStoreSchema = z.object({
   name: z.string().trim().min(1).max(120),
-  currencyCode: z
-    .string()
-    .trim()
-    .length(3)
-    .default("NGN")
-    .transform((value) => value.toUpperCase()),
+  currencyCode: operatingCurrencySchema.optional(),
   onboarding: storeOnboardingSchema.optional(),
   supportEmail: optionalEmailSchema,
   supportPhone: optionalText(40),

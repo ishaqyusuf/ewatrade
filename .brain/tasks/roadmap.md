@@ -12,6 +12,15 @@ Longer-horizon sequencing across major implementation phases.
 
 ## Proposed Intake Tasks
 
+### Business Template Capability Gating And Service Architecture
+- Priority: High
+- Description: Track plan in `.brain/plans/2026-07-17-feature-business-template-capability-gating-and-service-architecture.md`.
+- Related Feature: Business type onboarding, capability gating, and service operations
+- Status: Roadmap
+- Plan Status: Proposed
+- Plan File: .brain/plans/2026-07-17-feature-business-template-capability-gating-and-service-architecture.md
+- Created Date: 2026-07-17
+
 ### Retail Ops Design System And IA
 - Priority: High
 - Description: Track plan in `.brain/plans/2026-07-06-ux-ui-retail-ops-design-system-and-ia.md`.

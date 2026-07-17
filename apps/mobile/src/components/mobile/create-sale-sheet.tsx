@@ -24,7 +24,7 @@ import {
   useRetailOpsStore,
 } from "@/store/retailOpsStore"
 import { useTRPC } from "@/trpc/client"
-import { formatMoney } from "@ewatrade/utils"
+import { formatMinorMoney } from "@ewatrade/utils"
 import {
   type BottomSheetModal,
   BottomSheetSectionList,
@@ -39,6 +39,18 @@ type CreateSaleSheetProps = {
   onComplete?: () => void
 }
 
+function getActiveCurrencyCode() {
+  const state = useBusinessStore.getState()
+  return (
+    state.businesses.find((business) => business.id === state.activeBusinessId)
+      ?.currency ?? "NGN"
+  )
+}
+
+function formatMoney(valueMinor: number, _legacyCurrencyCode?: string) {
+  return formatMinorMoney(valueMinor, getActiveCurrencyCode())
+}
+
 type CreateSaleContentProps = CreateSaleSheetProps & {
   presentation?: "screen" | "sheet"
 }
@@ -50,7 +62,7 @@ type SellableItem = {
   remoteVariantId?: string
   stock: number
   unitName: string
-  unitPrice: number
+  unitPriceMinor: number
   variantId?: string
 }
 
@@ -114,7 +126,7 @@ function getPrimarySellableItem(product: RetailOpsProduct): SellableItem {
     remoteVariantId: product.remoteVariantId,
     stock: getProductStock(product),
     unitName: product.unitName,
-    unitPrice: product.price,
+    unitPriceMinor: product.priceMinor,
   }
 }
 
@@ -129,7 +141,7 @@ function getSellableItems(product: RetailOpsProduct): SellableItem[] {
       remoteVariantId: variant.remoteId,
       stock: variant.currentStock ?? variant.startingStock ?? 0,
       unitName: variant.name,
-      unitPrice: variant.price,
+      unitPriceMinor: variant.priceMinor,
       variantId: variant.id,
     }))
   }
@@ -170,7 +182,7 @@ function SellableOption({
         onPress={onPress}
         selected
         title={item.unitName}
-        value={formatMoney(item.unitPrice, "NGN")}
+        value={formatMoney(item.unitPriceMinor, "NGN")}
       />
     )
   }
@@ -182,7 +194,7 @@ function SellableOption({
       meta={item.productName}
       onPress={onPress}
       title={item.unitName}
-      value={formatMoney(item.unitPrice, "NGN")}
+      value={formatMoney(item.unitPriceMinor, "NGN")}
     >
       {selected ? (
         <View className="self-start rounded-full bg-primary/10 px-3 py-1">
@@ -389,7 +401,7 @@ export function CreateSaleContent({
   )
   const selectedItem = sellableItems.find((item) => item.id === selectedItemId)
   const quantityValue = parseWholeQuantity(quantity)
-  const total = selectedItem ? selectedItem.unitPrice * quantityValue : 0
+  const total = selectedItem ? selectedItem.unitPriceMinor * quantityValue : 0
   const hasEnoughStock = selectedItem
     ? quantityValue <= selectedItem.stock
     : true
@@ -568,7 +580,7 @@ export function CreateSaleContent({
       productName: selectedItem.productName,
       quantity: quantityValue,
       unitName: selectedItem.unitName,
-      unitPrice: selectedItem.unitPrice,
+      unitPriceMinor: selectedItem.unitPriceMinor,
       variantId: selectedItem.variantId,
     }
 

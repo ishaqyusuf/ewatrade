@@ -6,7 +6,7 @@ import { formatMinorAmount, getPaymentLabel } from "@/lib/sales-operations"
 import { useTRPC } from "@/trpc/client"
 import { cn } from "@/utils"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
-import { Badge, Button } from "@ewatrade/ui"
+import { Badge, Button, CurrencyInput } from "@ewatrade/ui"
 import {
   Add01Icon,
   Calendar03Icon,
@@ -1197,13 +1197,14 @@ export function DryCleaningServicesPage({ store }: { store: StoreSummary }) {
             </Field>
           </div>
           <Field label={`Standard price (${store.currencyCode})`}>
-            <TextInput
-              inputMode="decimal"
+            <CurrencyInput
+              className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
+              currencyCode={store.currencyCode}
               value={serviceForm.price}
-              onChange={(event) =>
+              onValueChange={(value) =>
                 setServiceForm((current) => ({
                   ...current,
-                  price: event.target.value,
+                  price: value,
                 }))
               }
               placeholder="Enter standard price"
@@ -1212,26 +1213,28 @@ export function DryCleaningServicesPage({ store }: { store: StoreSummary }) {
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="SM price">
-              <TextInput
-                inputMode="decimal"
+              <CurrencyInput
+                className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
+                currencyCode={store.currencyCode}
                 value={serviceForm.smPrice}
-                onChange={(event) =>
+                onValueChange={(value) =>
                   setServiceForm((current) => ({
                     ...current,
-                    smPrice: event.target.value,
+                    smPrice: value,
                   }))
                 }
                 placeholder="Enter small price"
               />
             </Field>
             <Field label="LG price">
-              <TextInput
-                inputMode="decimal"
+              <CurrencyInput
+                className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
+                currencyCode={store.currencyCode}
                 value={serviceForm.lgPrice}
-                onChange={(event) =>
+                onValueChange={(value) =>
                   setServiceForm((current) => ({
                     ...current,
-                    lgPrice: event.target.value,
+                    lgPrice: value,
                   }))
                 }
                 placeholder="Enter large price"

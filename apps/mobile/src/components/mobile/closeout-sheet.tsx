@@ -1,6 +1,7 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
+import { MoneyField } from "@/components/mobile/money-field"
 import {
   SessionInventoryLine,
   SessionSectionHeader,
@@ -26,7 +27,11 @@ import {
   useRetailOpsStore,
 } from "@/store/retailOpsStore"
 import { useTRPC } from "@/trpc/client"
-import { formatMoney } from "@ewatrade/utils"
+import {
+  formatMinorMoney,
+  majorToMinor,
+  minorToMajorInput,
+} from "@ewatrade/utils"
 import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useMutation } from "@tanstack/react-query"
 import { forwardRef, useEffect, useMemo, useState } from "react"
@@ -52,11 +57,6 @@ type InventoryDraftLine = {
   variantId?: string
 }
 
-function parseAmount(value: string) {
-  const amount = Number(value.replace(/[^\d.]/g, ""))
-  return Number.isFinite(amount) ? amount : 0
-}
-
 function formatCloseoutTimestamp(value: Date | string) {
   const date = value instanceof Date ? value : new Date(value)
 
@@ -65,10 +65,10 @@ function formatCloseoutTimestamp(value: Date | string) {
     : date.toISOString()
 }
 
-function formatVariance(value: number) {
+function formatVariance(value: number, currencyCode: string) {
   if (value === 0) return "Balanced"
 
-  return `${value > 0 ? "+" : ""}${formatMoney(value, "NGN")}`
+  return `${value > 0 ? "+" : ""}${formatMinorMoney(value, currencyCode)}`
 }
 
 function getSalesAfterLastCloseout(
@@ -94,12 +94,12 @@ function getPaymentTotals(sales: RetailOpsSale[]) {
   return sales.reduce(
     (totals, sale) => {
       if (sale.paymentMethod === "cash") {
-        totals.cash += sale.total
+        totals.cash += sale.totalMinor
       } else {
-        totals.transfer += sale.total
+        totals.transfer += sale.totalMinor
       }
 
-      totals.gross += sale.total
+      totals.gross += sale.totalMinor
 
       return totals
     },
@@ -142,6 +142,10 @@ export function CloseoutContent({
 }: CloseoutContentProps) {
   const trpc = useTRPC()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
+  const businesses = useBusinessStore((state) => state.businesses)
+  const currencyCode =
+    businesses.find((business) => business.id === activeBusinessId)?.currency ??
+    "NGN"
   const allCloseouts = useRetailOpsStore((state) => state.closeouts)
   const createCloseout = useRetailOpsStore((state) => state.createCloseout)
   const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
@@ -201,10 +205,10 @@ export function CloseoutContent({
   const paymentTotals = useMemo(() => getPaymentTotals(openSales), [openSales])
   const inventoryLines = useMemo(() => getInventoryLines(products), [products])
   const [declaredCash, setDeclaredCash] = useState(
-    formatQuantity(paymentTotals.cash),
+    minorToMajorInput(paymentTotals.cash),
   )
   const [declaredTransfer, setDeclaredTransfer] = useState(
-    formatQuantity(paymentTotals.transfer),
+    minorToMajorInput(paymentTotals.transfer),
   )
   const [inventoryDraft, setInventoryDraft] = useState<Record<string, string>>(
     {},
@@ -230,9 +234,10 @@ export function CloseoutContent({
   const pendingSyncCount = syncEvents.filter(
     (event) => event.status === "pending",
   ).length
-  const cashVariance = parseAmount(declaredCash) - paymentTotals.cash
-  const transferVariance =
-    parseAmount(declaredTransfer) - paymentTotals.transfer
+  const cashVarianceMinor =
+    (majorToMinor(declaredCash) ?? 0) - paymentTotals.cash
+  const transferVarianceMinor =
+    (majorToMinor(declaredTransfer) ?? 0) - paymentTotals.transfer
   const hasCloseoutWork = openSales.length > 0 || closeouts.length === 0
   const canCloseProductionSession =
     !isOfflineMode &&
@@ -273,8 +278,8 @@ export function CloseoutContent({
   )
 
   useEffect(() => {
-    setDeclaredCash(formatQuantity(paymentTotals.cash))
-    setDeclaredTransfer(formatQuantity(paymentTotals.transfer))
+    setDeclaredCash(minorToMajorInput(paymentTotals.cash))
+    setDeclaredTransfer(minorToMajorInput(paymentTotals.transfer))
   }, [paymentTotals.cash, paymentTotals.transfer])
 
   useEffect(() => {
@@ -300,8 +305,8 @@ export function CloseoutContent({
   const submit = () => {
     if (!canSubmit) return
 
-    const declaredCashAmount = parseAmount(declaredCash)
-    const declaredTransferAmount = parseAmount(declaredTransfer)
+    const declaredCashAmount = majorToMinor(declaredCash) ?? 0
+    const declaredTransferAmount = majorToMinor(declaredTransfer) ?? 0
     const closeoutLines = inventoryLines.map((line) => ({
       declaredQuantity: parseWholeQuantity(inventoryDraft[line.id] ?? "0"),
       expectedQuantity: line.expectedQuantity,
@@ -318,8 +323,8 @@ export function CloseoutContent({
         attendantName,
         businessId: activeBusinessId ?? undefined,
         createdAt,
-        declaredCash: declaredCashAmount,
-        declaredTransfer: declaredTransferAmount,
+        declaredCashMinor: declaredCashAmount,
+        declaredTransferMinor: declaredTransferAmount,
         inventoryLines: closeoutLines,
         note,
         syncStatus,
@@ -386,17 +391,17 @@ export function CloseoutContent({
           <SessionStatTile label="Sales" value={String(openSales.length)} />
           <SessionStatTile
             label="Gross"
-            value={formatMoney(paymentTotals.gross, "NGN")}
+            value={formatMinorMoney(paymentTotals.gross, currencyCode)}
           />
         </View>
         <View className="flex-row gap-3">
           <SessionStatTile
             label="Cash"
-            value={formatMoney(paymentTotals.cash, "NGN")}
+            value={formatMinorMoney(paymentTotals.cash, currencyCode)}
           />
           <SessionStatTile
             label="Transfer"
-            value={formatMoney(paymentTotals.transfer, "NGN")}
+            value={formatMinorMoney(paymentTotals.transfer, currencyCode)}
           />
         </View>
         {pendingSyncCount > 0 ? (
@@ -420,21 +425,17 @@ export function CloseoutContent({
       </View>
 
       <View className="gap-4">
-        <FormField
-          inputMode="decimal"
-          keyboardType="numeric"
+        <MoneyField
+          currencyCode={currencyCode}
           label="Declared cash"
-          leadingIcon="CircleDollarSign"
-          onChangeText={setDeclaredCash}
+          onChangeValue={setDeclaredCash}
           placeholder="Enter counted cash"
           value={declaredCash}
         />
-        <FormField
-          inputMode="decimal"
-          keyboardType="numeric"
+        <MoneyField
+          currencyCode={currencyCode}
           label="Declared transfer"
-          leadingIcon="Wallet"
-          onChangeText={setDeclaredTransfer}
+          onChangeValue={setDeclaredTransfer}
           placeholder="Enter counted transfer"
           value={declaredTransfer}
         />
@@ -442,24 +443,24 @@ export function CloseoutContent({
           <SessionVarianceRow
             label="Cash variance"
             tone={
-              cashVariance === 0
+              cashVarianceMinor === 0
                 ? "success"
-                : cashVariance > 0
+                : cashVarianceMinor > 0
                   ? "primary"
                   : "destructive"
             }
-            value={formatVariance(cashVariance)}
+            value={formatVariance(cashVarianceMinor, currencyCode)}
           />
           <SessionVarianceRow
             label="Transfer variance"
             tone={
-              transferVariance === 0
+              transferVarianceMinor === 0
                 ? "success"
-                : transferVariance > 0
+                : transferVarianceMinor > 0
                   ? "primary"
                   : "destructive"
             }
-            value={formatVariance(transferVariance)}
+            value={formatVariance(transferVarianceMinor, currencyCode)}
           />
         </View>
       </View>

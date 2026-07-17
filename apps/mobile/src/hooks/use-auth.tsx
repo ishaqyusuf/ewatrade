@@ -22,6 +22,7 @@ const createLocalSession = (input: LocalAuthInput = {}): MobileSession => {
   const name = input.name?.trim() || "Store Owner"
   const businessName = input.businessName?.trim() || "My Business"
   const business = useBusinessStore.getState().ensureBusiness({
+    currency: input.currencyCode,
     name: businessName,
   })
 
@@ -33,6 +34,7 @@ const createLocalSession = (input: LocalAuthInput = {}): MobileSession => {
       name,
       email,
       businessName: business.name,
+      currencyCode: business.currency,
       role: input.role ?? "OWNER",
       status: input.status ?? "ACTIVE",
     },

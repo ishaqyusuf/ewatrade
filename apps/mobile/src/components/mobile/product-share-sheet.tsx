@@ -294,6 +294,14 @@ function formatMinorMoney(value: number, currencyCode: string) {
   return formatMoney(value / 100, currencyCode || "NGN")
 }
 
+function getActiveCurrencyCode() {
+  const state = useBusinessStore.getState()
+  return (
+    state.businesses.find((business) => business.id === state.activeBusinessId)
+      ?.currency ?? "NGN"
+  )
+}
+
 function getReservationStatusLabel(status: string | null | undefined) {
   if (status === "reserved") return "Stock reserved"
   if (status === "consumed") return "Stock consumed"
@@ -422,7 +430,7 @@ function ProductOption({
     <InventoryProductCard
       icon="Share"
       onPress={onPress}
-      priceLabel={formatMoney(product.price, "NGN")}
+      priceLabel={formatMinorMoney(product.priceMinor, getActiveCurrencyCode())}
       selected={selected}
       stockLabel={
         product.variants.length > 0
@@ -492,7 +500,10 @@ function ShareLinkAnalyticsPanel({
         <ShareLinkMetricCard
           icon="TrendingUp"
           label="Revenue"
-          value={formatMinorMoney(analytics.summary.revenueMinor, "NGN")}
+          value={formatMinorMoney(
+            analytics.summary.revenueMinor,
+            getActiveCurrencyCode(),
+          )}
         />
       </View>
 
@@ -526,7 +537,10 @@ function ShareLinkAnalyticsPanel({
               key={linkSummary.shareLink.id}
               meta={`${linkSummary.viewCount} views - ${
                 linkSummary.uniqueVisitorCount
-              } visitors - ${formatMinorMoney(linkSummary.revenueMinor, "NGN")}`}
+              } visitors - ${formatMinorMoney(
+                linkSummary.revenueMinor,
+                getActiveCurrencyCode(),
+              )}`}
               title={linkSummary.shareLink.product.name}
               trailing={
                 <Text className="text-xs font-bold text-primary">

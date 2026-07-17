@@ -216,7 +216,7 @@ function findProductSetupPayload(
     imageUrl: product.imageUrl,
     name: product.name,
     openingStockQuantity: toNonNegativeWholeQuantity(product.startingStock),
-    priceMinor: product.price,
+    priceMinor: product.priceMinor,
     primaryUnitName: product.unitName,
     variants: product.variants.map((variant) => ({
       conversionMultiplier: variant.conversionMultiplier,
@@ -227,7 +227,7 @@ function findProductSetupPayload(
       openingStockQuantity: toNonNegativeWholeQuantity(
         variant.startingStock ?? 0,
       ),
-      priceMinor: variant.price,
+      priceMinor: variant.priceMinor,
       variantLabel: variant.variantLabel,
     })),
   }
@@ -260,8 +260,8 @@ function findCloseoutPayload(
   return {
     cashierSessionId: session.remoteId,
     closedAt: toDate(closeout.createdAt),
-    closingFloatMinor: closeout.declaredCash,
-    declaredTransferMinor: closeout.declaredTransfer,
+    closingFloatMinor: closeout.declaredCashMinor,
+    declaredTransferMinor: closeout.declaredTransferMinor,
     externalId: event.id,
     inventoryLines,
     notes: closeout.note,

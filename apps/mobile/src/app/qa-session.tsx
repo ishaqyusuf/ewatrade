@@ -119,7 +119,7 @@ function seedLocalQaRetailOps(input: {
     retailOpsStore.addFirstProduct({
       businessId,
       name: product.name,
-      price: product.price,
+      priceMinor: product.price,
       remoteId: product.remoteId,
       remoteVariantId: product.remoteVariantId,
       startingStock: product.startingStock,
@@ -128,7 +128,7 @@ function seedLocalQaRetailOps(input: {
       variants: product.variants.map((variant) => ({
         currentStock: variant.currentStock,
         name: variant.name,
-        price: variant.price,
+        priceMinor: variant.price,
         remoteId: variant.remoteId,
         startingStock: variant.startingStock,
       })),

@@ -4,6 +4,7 @@ import {
   KeyboardInlineComposer,
   type KeyboardInlineComposerPill,
 } from "@/components/mobile/keyboard-inline-composer"
+import { MoneyField } from "@/components/mobile/money-field"
 import {
   SetupCheckboxRow,
   SetupChoicePill,
@@ -33,6 +34,7 @@ import {
   useSubscriptionStore,
 } from "@/store/subscriptionStore"
 import { useTRPC } from "@/trpc/client"
+import { majorToMinor } from "@ewatrade/utils"
 import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useMutation } from "@tanstack/react-query"
 import { Image } from "expo-image"
@@ -506,6 +508,10 @@ export function FirstProductSetupContent({
   const trpc = useTRPC()
   const auth = useAuthContext()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
+  const businesses = useBusinessStore((state) => state.businesses)
+  const currencyCode =
+    businesses.find((business) => business.id === activeBusinessId)?.currency ??
+    "NGN"
   const addFirstProduct = useRetailOpsStore((state) => state.addFirstProduct)
   const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
   const allProducts = useRetailOpsStore((state) => state.products)
@@ -755,7 +761,7 @@ export function FirstProductSetupContent({
           imageLinks: productInput.imageLinks,
           imageUrl: productInput.imageUrl,
           name: productInput.name,
-          price: productInput.priceMinor,
+          priceMinor: productInput.priceMinor,
           remoteId: productionProduct.product.id,
           remoteVariantId: defaultUnit?.id,
           startingStock: productInput.openingStockQuantity,
@@ -773,7 +779,7 @@ export function FirstProductSetupContent({
               imageLinks: variant.imageLinks,
               imageUrl: variant.imageUrl,
               name: variant.name,
-              price: variant.priceMinor,
+              priceMinor: variant.priceMinor,
               remoteId: unit?.id,
               startingStock: variant.openingStockQuantity,
               variantLabel: variant.variantLabel,
@@ -1039,8 +1045,8 @@ export function FirstProductSetupContent({
   const buildCreateProductInput = (): CreateProductInput => {
     const normalizedImageLinks = cleanImageLinks(imageLinks)
     const primaryPriceMinor = shouldUsePrimaryUnitFields
-      ? parseAmount(price)
-      : parseAmount(activeVariantRows[0]?.price ?? price)
+      ? (majorToMinor(price) ?? 0)
+      : (majorToMinor(activeVariantRows[0]?.price ?? price) ?? 0)
     const primaryUnitName = shouldUsePrimaryUnitFields
       ? unitName.trim()
       : getHiddenVariantParentUnitName(
@@ -1076,7 +1082,7 @@ export function FirstProductSetupContent({
               imageUrl: variant.imageUrl.trim() || undefined,
               name: variant.name.trim(),
               openingStockQuantity: parseWholeQuantity(variant.stock),
-              priceMinor: parseAmount(variant.price),
+              priceMinor: majorToMinor(variant.price) ?? 0,
               variantLabel: variant.variantLabel.trim() || undefined,
             })),
     }
@@ -1503,7 +1509,7 @@ export function FirstProductSetupContent({
       imageLinks: input.imageLinks,
       imageUrl: input.imageUrl,
       name: input.name,
-      price: input.priceMinor,
+      priceMinor: input.priceMinor,
       startingStock: input.openingStockQuantity,
       unitName: input.primaryUnitName,
       variants: input.variants.map((variant) => ({
@@ -1512,7 +1518,7 @@ export function FirstProductSetupContent({
         imageLinks: variant.imageLinks,
         imageUrl: variant.imageUrl,
         name: variant.name,
-        price: variant.priceMinor,
+        priceMinor: variant.priceMinor,
         startingStock: variant.openingStockQuantity,
         variantLabel: variant.variantLabel,
       })),
@@ -1741,12 +1747,10 @@ export function FirstProductSetupContent({
 
             <View className="flex-row gap-3">
               <View className="min-w-0 flex-1">
-                <FormField
-                  inputMode="decimal"
-                  keyboardType="numeric"
+                <MoneyField
+                  currencyCode={currencyCode}
                   label="Price"
-                  leadingIcon="CircleDollarSign"
-                  onChangeText={(value) =>
+                  onChangeValue={(value) =>
                     updateVariantRow(variant.id, "price", value)
                   }
                   placeholder="Enter price"
@@ -2046,12 +2050,10 @@ export function FirstProductSetupContent({
 
             <View className="flex-row gap-3">
               <View className="min-w-0 flex-1">
-                <FormField
-                  inputMode="decimal"
-                  keyboardType="numeric"
+                <MoneyField
+                  currencyCode={currencyCode}
                   label="Price per unit"
-                  leadingIcon="CircleDollarSign"
-                  onChangeText={setPrice}
+                  onChangeValue={setPrice}
                   placeholder="Enter price"
                   value={price}
                 />

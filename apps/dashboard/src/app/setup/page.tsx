@@ -1,27 +1,22 @@
 "use client"
 
 import { Button } from "@ewatrade/ui"
+import {
+  OPERATING_CURRENCIES,
+  suggestCurrencyForCountry,
+} from "@ewatrade/utils"
 import { Add01Icon, Store04Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
-const CURRENCIES = [
-  { code: "NGN", label: "Nigerian Naira (NGN)" },
-  { code: "USD", label: "US Dollar (USD)" },
-  { code: "GHS", label: "Ghanaian Cedi (GHS)" },
-  { code: "KES", label: "Kenyan Shilling (KES)" },
-  { code: "ZAR", label: "South African Rand (ZAR)" },
-  { code: "EGP", label: "Egyptian Pound (EGP)" },
-]
-
 const COUNTRIES = [
-  { code: "NG", currencyCode: "NGN", label: "Nigeria" },
-  { code: "GH", currencyCode: "GHS", label: "Ghana" },
-  { code: "KE", currencyCode: "KES", label: "Kenya" },
-  { code: "ZA", currencyCode: "ZAR", label: "South Africa" },
-  { code: "EG", currencyCode: "EGP", label: "Egypt" },
-  { code: "OTHER", currencyCode: "USD", label: "Other" },
+  { code: "NG", label: "Nigeria" },
+  { code: "GH", label: "Ghana" },
+  { code: "KE", label: "Kenya" },
+  { code: "ZA", label: "South Africa" },
+  { code: "EG", label: "Egypt" },
+  { code: "OTHER", label: "Other" },
 ]
 
 const BUSINESS_TEMPLATES = [
@@ -59,10 +54,7 @@ export default function SetupPage() {
 
   function handleCountryChange(value: string) {
     setCountryCode(value)
-    const nextCurrency = COUNTRIES.find(
-      (country) => country.code === value,
-    )?.currencyCode
-    if (nextCurrency) setCurrency(nextCurrency)
+    setCurrency(suggestCurrencyForCountry(value))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -291,9 +283,9 @@ export default function SetupPage() {
                 onChange={(e) => setCurrency(e.target.value)}
                 className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
               >
-                {CURRENCIES.map((c) => (
+                {OPERATING_CURRENCIES.map((c) => (
                   <option key={c.code} value={c.code}>
-                    {c.label}
+                    {c.symbol} — {c.label} ({c.code})
                   </option>
                 ))}
               </select>

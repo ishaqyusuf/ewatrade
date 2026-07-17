@@ -6,6 +6,7 @@ import {
   RetailOpsSubscriptionError,
   createTenantStore,
 } from "@ewatrade/db/queries"
+import { OPERATING_CURRENCY_CODES } from "@ewatrade/utils"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { z } from "zod/v4"
@@ -33,7 +34,13 @@ const storeOnboardingSchema = z.object({
 
 const createStoreSchema = z.object({
   name: z.string().min(1).max(120),
-  currencyCode: z.string().length(3).default("NGN"),
+  currencyCode: z
+    .preprocess(
+      (value) =>
+        typeof value === "string" ? value.trim().toUpperCase() : value,
+      z.enum(OPERATING_CURRENCY_CODES),
+    )
+    .optional(),
   onboarding: storeOnboardingSchema.optional(),
   supportEmail: z.email().optional(),
   supportPhone: z.string().optional(),
@@ -74,7 +81,7 @@ export async function POST(request: NextRequest) {
       createdByUserId: session.user.id,
       tenantId: ctx.tenant.id,
       name,
-      currencyCode,
+      currencyCode: currencyCode ?? ctx.tenant.currencyCode ?? "NGN",
       onboarding: onboarding
         ? { ...onboarding, source: "dashboard_first_store_setup" }
         : undefined,

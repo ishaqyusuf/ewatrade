@@ -1,6 +1,7 @@
 import { useAuthContext } from "@/hooks/use-auth"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { useTRPC } from "@/trpc/client"
+import type { OperatingCurrencyCode } from "@ewatrade/utils"
 import type * as GoogleSignIn from "@react-native-google-signin/google-signin"
 import { useMutation } from "@tanstack/react-query"
 import * as Google from "expo-auth-session/providers/google"
@@ -24,6 +25,7 @@ type MobileGoogleAuthMode = "login" | "sign_up"
 
 type UseMobileGoogleAuthInput = {
   businessName?: string
+  currencyCode?: OperatingCurrencyCode
   mode: MobileGoogleAuthMode
   name?: string
   onError: (message: string) => void
@@ -89,6 +91,7 @@ function configureNativeGoogleSignIn(
 
 export function useMobileGoogleAuth({
   businessName,
+  currencyCode,
   mode,
   name,
   onError,
@@ -121,6 +124,7 @@ export function useMobileGoogleAuth({
           profile: {
             businessId: session.profile.businessId ?? undefined,
             businessName: session.profile.businessName ?? undefined,
+            currencyCode: session.profile.currencyCode,
             email: session.profile.email,
             id: session.profile.id,
             name: session.profile.name,
@@ -139,12 +143,13 @@ export function useMobileGoogleAuth({
 
       verifyGoogleMutation.mutate({
         businessName,
+        currencyCode,
         idToken,
         mode,
         name,
       })
     },
-    [businessName, mode, name, verifyGoogleMutation],
+    [businessName, currencyCode, mode, name, verifyGoogleMutation],
   )
 
   useEffect(() => {

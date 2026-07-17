@@ -3,7 +3,8 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { cn } from "@/lib/utils"
-import { formatMoney } from "@ewatrade/utils"
+import { useBusinessStore } from "@/store/businessStore"
+import { formatMinorMoney } from "@ewatrade/utils"
 import type { ReactNode } from "react"
 
 export type DashboardTone =
@@ -68,8 +69,15 @@ export function DashboardMetricCard({
   tone,
   value,
 }: DashboardMetricCardProps) {
+  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
+  const businesses = useBusinessStore((state) => state.businesses)
+  const currencyCode =
+    businesses.find((business) => business.id === activeBusinessId)?.currency ??
+    "NGN"
   const displayValue =
-    label === "Today sales" ? formatMoney(value, "NGN") : String(value)
+    label === "Today sales"
+      ? formatMinorMoney(value, currencyCode)
+      : String(value)
   const toneClassNames = metricToneClassNames[tone]
 
   return (

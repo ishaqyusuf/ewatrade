@@ -34,6 +34,7 @@ type AccountRow = {
 }
 
 type StoreRow = {
+  currencyCode?: string
   id: string
   name: string
   slug?: string
@@ -42,6 +43,7 @@ type StoreRow = {
 }
 
 type TenantRow = {
+  currencyCode?: string
   createdAt: Date
   id: string
   isActive: boolean
@@ -56,6 +58,7 @@ type MembershipRow = {
   role: string
   status: string
   tenant: {
+    currencyCode?: string
     id: string
     name: string
     slug: string
@@ -186,9 +189,16 @@ function createMockMobileAuthDb(input?: {
       create: async ({
         data,
       }: {
-        data: { name: string; slug: string; status: string; tenantId: string }
+        data: {
+          currencyCode?: string
+          name: string
+          slug: string
+          status: string
+          tenantId: string
+        }
       }) => {
         const store = {
+          currencyCode: data.currencyCode,
           id: `store_${stores.length + 1}`,
           name: data.name,
           slug: data.slug,
@@ -202,6 +212,7 @@ function createMockMobileAuthDb(input?: {
         tenant?.stores.push(store)
 
         return {
+          currencyCode: store.currencyCode,
           id: store.id,
           name: store.name,
           slug: store.slug,
@@ -226,10 +237,11 @@ function createMockMobileAuthDb(input?: {
       create: async ({
         data,
       }: {
-        data: { name: string; slug: string }
+        data: { currencyCode?: string; name: string; slug: string }
       }) => {
         const now = new Date()
         const tenant = {
+          currencyCode: data.currencyCode,
           createdAt: now,
           id: `tenant_${tenants.length + 1}`,
           isActive: true,
@@ -242,6 +254,7 @@ function createMockMobileAuthDb(input?: {
         tenants.push(tenant)
 
         return {
+          currencyCode: tenant.currencyCode,
           id: tenant.id,
           name: tenant.name,
           slug: tenant.slug,
@@ -592,6 +605,7 @@ describe("mobile auth queries", () => {
     const db = createMockMobileAuthDb()
     const otp = await createMobileOwnerOtp(db.client, {
       businessName: " Main Market Store ",
+      currencyCode: "GHS",
       email: "new-owner@example.com",
       mode: "sign_up",
       name: " New Owner ",
@@ -606,6 +620,7 @@ describe("mobile auth queries", () => {
     expect(db.tenants).toEqual([
       expect.objectContaining({
         id: "tenant_1",
+        currencyCode: "GHS",
         name: "Main Market Store",
         slug: "main-market-store",
       }),
@@ -620,6 +635,7 @@ describe("mobile auth queries", () => {
     expect(db.stores).toEqual([
       expect.objectContaining({
         id: "store_1",
+        currencyCode: "GHS",
         name: "Main Market Store",
         slug: "main-market-store",
         status: "ACTIVE",
@@ -629,6 +645,7 @@ describe("mobile auth queries", () => {
     expect(session.profile).toMatchObject({
       businessId: "tenant_1",
       businessName: "Main Market Store",
+      currencyCode: "GHS",
       email: "new-owner@example.com",
       id: "user_1",
       name: "New Owner",
@@ -637,6 +654,7 @@ describe("mobile auth queries", () => {
     })
     expect(session.tenant).toMatchObject({
       id: "tenant_1",
+      currencyCode: "GHS",
       name: "Main Market Store",
       storeId: "store_1",
       storeName: "Main Market Store",
@@ -737,6 +755,7 @@ describe("mobile auth queries", () => {
 
     const session = await verifyMobileGoogleIdentity(db.client, {
       businessName: " Main Market Store ",
+      currencyCode: "USD",
       email: "new-google-owner@example.com",
       idToken: "new-google-id-token",
       mode: "sign_up",
@@ -757,6 +776,7 @@ describe("mobile auth queries", () => {
     expect(db.tenants).toEqual([
       expect.objectContaining({
         id: "tenant_1",
+        currencyCode: "USD",
         name: "Main Market Store",
         slug: "main-market-store",
       }),
@@ -764,6 +784,7 @@ describe("mobile auth queries", () => {
     expect(db.stores).toEqual([
       expect.objectContaining({
         id: "store_1",
+        currencyCode: "USD",
         name: "Main Market Store",
         slug: "main-market-store",
         status: "ACTIVE",

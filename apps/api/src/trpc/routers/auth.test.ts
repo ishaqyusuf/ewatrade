@@ -19,6 +19,7 @@ describe("mobile auth router schemas", () => {
   test("normalizes lightweight owner email OTP signup payloads", () => {
     const input = requestMobileOwnerOtpSchema.parse({
       businessName: " Rice Store ",
+      currencyCode: "GHS",
       email: " OWNER@BUSINESS.TEST ",
       mode: "sign_up",
       name: " Store Owner ",
@@ -26,6 +27,7 @@ describe("mobile auth router schemas", () => {
 
     expect(input).toEqual({
       businessName: "Rice Store",
+      currencyCode: "GHS",
       email: "owner@business.test",
       mode: "sign_up",
       name: "Store Owner",
@@ -35,6 +37,7 @@ describe("mobile auth router schemas", () => {
   test("normalizes owner OTP verification payloads", () => {
     const input = verifyMobileOwnerOtpSchema.parse({
       businessName: " Rice Store ",
+      currencyCode: "KES",
       code: " 123456 ",
       email: " OWNER@BUSINESS.TEST ",
       mode: "login",
@@ -43,6 +46,7 @@ describe("mobile auth router schemas", () => {
 
     expect(input).toEqual({
       businessName: "Rice Store",
+      currencyCode: "KES",
       code: "123456",
       email: "owner@business.test",
       mode: "login",
@@ -67,6 +71,12 @@ describe("mobile auth router schemas", () => {
   })
 
   test("rejects bulky or unsafe owner auth payloads", () => {
+    expectRejected(requestMobileOwnerOtpSchema, {
+      businessName: "Rice Store",
+      currencyCode: "XOF",
+      email: "owner@business.test",
+      mode: "sign_up",
+    })
     expectRejected(requestMobileOwnerOtpSchema, {
       businessName: "Rice Store",
       email: "owner@business.test",

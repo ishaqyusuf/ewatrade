@@ -1,3 +1,4 @@
+import { OPERATING_CURRENCY_CODES } from "@ewatrade/utils"
 import { z } from "zod"
 
 // ─── Step 1: Account Type ─────────────────────────────────────────────────────
@@ -83,6 +84,9 @@ export const businessSchema = z.object({
   industry: z.string().min(1, "Select your industry"),
   businessSize: z.string().min(1, "Select your business size"),
   countryCode: z.string().min(1, "Select your country"),
+  currencyCode: z.enum(OPERATING_CURRENCY_CODES, {
+    message: "Select your operating currency",
+  }),
   phone: z
     .string()
     .trim()
@@ -136,6 +140,7 @@ export const signupPayloadSchema = z.object({
   industry: z.string().min(1),
   businessSize: z.string().min(1),
   countryCode: z.string().min(1),
+  currencyCode: z.enum(OPERATING_CURRENCY_CODES),
   phone: z.string().min(7).max(20),
   firstName: z.string().min(1).max(80),
   lastName: z.string().min(1).max(80),

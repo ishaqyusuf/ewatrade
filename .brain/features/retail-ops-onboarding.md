@@ -4,7 +4,14 @@
 Give new owners a lightweight path from signup to first usable Retail Ops workspace without making setup feel like a long questionnaire.
 
 ## Current Phase
-Marketing signup creates the tenant/business and stores owner, country, currency, industry, and business-size context. Dashboard first-store setup now captures the production Retail Ops setup profile before the owner starts operating:
+Marketing signup creates the tenant/business and first store, and stores owner,
+country, operating currency, industry, and business-size context. Operating
+currency is required in marketing and mobile owner signup, suggested from the
+selected country, and manually overridable. The supported launch set is NGN,
+USD, GHS, KES, ZAR, and EGP.
+
+Dashboard first-store setup now captures the production Retail Ops setup profile
+before the owner starts operating:
 
 Early-access signup can now start from a secure marketing access link. The early-access route creates an expiring one-time `OnboardingSession`; `/signup?access_token=...` verifies it, prefills the owner/business fields that came from the lead, and `POST /api/auth/signup` consumes that session exactly once while linking it to the created tenant and owner.
 
@@ -29,6 +36,12 @@ Dry Cleaning / Laundry stores also receive an empty metadata-backed dry-cleaning
 - Do not hard-code feed, grain, or any other case-study product as the product identity.
 - Existing stores without template metadata resolve to Product Sales.
 - Store onboarding values by tenant/store scope so multiple businesses and stores remain isolated.
+- Treat `Store.currencyCode` as the commerce source of truth. Tenant currency is
+  the default for a newly created store; missing legacy values fall back to NGN.
+- Render the selected currency symbol on every money field and display. Unknown
+  legacy codes render as the code instead of an incorrect symbol.
+- Currency changes after transactions, exchange conversion, and historical
+  repricing are outside first-run onboarding.
 - Keep the shared DB helper as the write path for dashboard and tRPC store creation.
 - Treat store metadata plus completed `OnboardingSession` persistence as the current bridge, not the final analytics or setup-state system.
 

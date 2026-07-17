@@ -5,6 +5,7 @@
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./currency": "./src/currency.ts",
     "./colors": "./src/colors.ts",
     "./constants": "./src/constants.ts",
     "./dayjs": "./src/dayjs.ts",

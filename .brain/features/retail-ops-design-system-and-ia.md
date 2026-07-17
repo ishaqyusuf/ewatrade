@@ -453,6 +453,10 @@ The first mobile redesign implementation slice established a reusable foundation
 Mobile form controls should reuse the auth/onboarding input and button feel across operational screens instead of maintaining separate dashboard, sheet, and auth styles.
 
 - `FormField` is the shared field wrapper for auth, dashboard, and bottom-sheet forms. It keeps the auth-style rounded card shell, active/error border treatment, semantic helper/error text, optional leading and trailing icons, multiline support, and accessibility labels.
+- `MoneyField` composes `FormField` for monetary input. It uses a non-editable
+  text prefix from the active store currency, live comma grouping, decimal
+  keyboard entry, and normalized decimal-string output; money fields must not
+  use a generic dollar icon.
 - `variant="auth"`, `variant="filled"`, and `variant="line"` remain accepted for compatibility, but they should render through the same base field shell so first-product setup, staff invite, customer, stock, and checkout forms do not drift from login/sign-up.
 - `QuantityStepper` is the special numeric input exception for POS and inventory quantities, but its center input should still use the same rounded card shell and active border behavior as `FormField`.
 - `ActionButton` is the shared full-width CTA for mobile forms. It keeps auth-style sizing, haptic Button behavior, disabled treatment, optional leading/trailing icons, and a first-class loading state through `isLoading` and `loadingLabel`.

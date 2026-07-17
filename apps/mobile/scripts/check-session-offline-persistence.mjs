@@ -83,9 +83,11 @@ requireMarkers(
   authHookSource,
   [
     "getSession()",
-    "applyAuthenticatedSession(nextSession: MobileSession)",
+    "applyAuthenticatedSession(",
+    "applySession(nextSession",
+    'redirectHref = "/dashboard"',
     "setSession(nextSession)",
-    'router.replace("/dashboard")',
+    "router.replace(redirectHref as never)",
     "deleteSession()",
     'router.replace("/login")',
   ],

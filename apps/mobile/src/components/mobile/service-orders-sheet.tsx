@@ -15,10 +15,11 @@ import { useAuthContext } from "@/hooks/use-auth"
 import { isSalesRepRole } from "@/lib/mobile-roles"
 import { parseWholeQuantity } from "@/lib/quantity"
 import { cn } from "@/lib/utils"
+import { useBusinessStore } from "@/store/businessStore"
 import { useRetailOpsStore } from "@/store/retailOpsStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
-import { formatMoney } from "@ewatrade/utils"
+import { formatMinorMoney } from "@ewatrade/utils"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import * as ImagePicker from "expo-image-picker"
 import { useMemo, useState } from "react"
@@ -56,6 +57,14 @@ const paymentOptions: Array<{
   { label: "On delivery", status: "pay_on_delivery" },
   { label: "Partial", status: "partial" },
 ]
+
+function formatMoney(valueMinor: number, _legacyCurrencyCode?: string) {
+  const state = useBusinessStore.getState()
+  const currencyCode =
+    state.businesses.find((business) => business.id === state.activeBusinessId)
+      ?.currency ?? "NGN"
+  return formatMinorMoney(valueMinor, currencyCode)
+}
 
 function parseCurrencyMinor(value: string) {
   const amount = Number(value.replace(/[^\d.]/g, ""))

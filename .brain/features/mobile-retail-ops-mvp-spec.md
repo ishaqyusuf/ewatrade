@@ -145,7 +145,9 @@ Subscription support is included as a plan and entitlement foundation with three
 - Tailwind/NativeWind classes should be preferred over inline styles for spacing, layout, color, typography, borders, and state variants.
 - All auth and onboarding forms must be keyboard-safe. Inputs must remain visible above the keyboard on common phone sizes.
 - Signup supports two methods: Google/Gmail and email OTP.
-- Email signup collects only name, email address, and business name in the first form.
+- Email signup collects name, email address, business name, and required
+  operating currency in the first form. Google and OTP sign-up carry the
+  selected currency into tenant and first-store creation.
 - OTP verification creates or resumes the owner account, creates the initial business/tenant context, and opens the app session.
 - OTP entry should feel like a compact reference-led PIN verification surface: a minimal off-white/light or matte dark canvas, circular back action, centered headline/copy, separated display cells, in-screen rounded numeric keypad with phone-letter hints, clipboard paste/delete support, resend state, and auto-submit when the six-digit code is complete.
 - OTP emails should use the shared email/notification/job packages rather than screen-local fetch logic. For exact `@test.com` submitted emails, outbound OTP delivery routes to `TEST_EMAILS` or the legacy `TEST_EMAIL` fallback while preserving the submitted account email for verification.
@@ -171,6 +173,14 @@ Subscription support is included as a plan and entitlement foundation with three
 - If a product has variants, the product parent row appears as a label/header and is not directly selectable in create-sale.
 - If a product has no variants, the default primary unit row is selectable in create-sale.
 - Product/unit price changes must preserve historical sale snapshots. Do not compute historical sales from the latest product price.
+- Mobile persisted product prices, sale unit prices/totals, and closeout payment
+  amounts use explicit integer `*Minor` fields. Persist version 1 migrates the
+  legacy local major-unit fields once by multiplying by 100; it does not rewrite
+  server-side prices.
+- Money entry uses the shared `MoneyField`, which renders the active-store
+  currency as non-editable text, groups digits while typing, preserves empty and
+  trailing-decimal states, and emits a normalized major-unit decimal string.
+  Domain validation remains at the feature boundary.
 - When online and a sale timestamp can differ from now, create-sale total previews should use `retailOps.productUnitPriceAt` before recording the sale.
 - Inventory balance changes should be ledger-backed where possible: starting stock, stock intake, sale, adjustment, assignment, return, and sync correction.
 - Inventory stock-operation UI should use reusable flat inventory primitives for product rows, unit choices, restock/adjust toggles, and movement history instead of local card-heavy widgets.

@@ -23,6 +23,7 @@ export const businessFill: BusinessValues = {
   industry: "retail",
   businessSize: "2_10",
   countryCode: "NG",
+  currencyCode: "NGN",
   phone: "+234 801 234 5678",
 }
 

@@ -1733,6 +1733,7 @@ export async function resolveDryCleaningServiceRequestLink(
       (item) => item.status === "active",
     ),
     store: {
+      currencyCode: store.currencyCode,
       id: store.id,
       name: store.name,
       slug: store.slug,

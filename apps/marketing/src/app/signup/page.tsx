@@ -156,6 +156,7 @@ export default function SignupPage() {
         industry: formState.business?.industry ?? "",
         businessSize: formState.business?.businessSize ?? "",
         countryCode: formState.business?.countryCode ?? "",
+        currencyCode: formState.business?.currencyCode ?? "NGN",
         phone: formState.business?.phone ?? "",
         firstName: data.firstName,
         lastName: data.lastName,

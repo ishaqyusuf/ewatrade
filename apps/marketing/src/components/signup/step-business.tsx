@@ -12,6 +12,10 @@ import {
   businessSchema,
 } from "@/lib/signup-schemas"
 import { Button } from "@ewatrade/ui"
+import {
+  OPERATING_CURRENCIES,
+  suggestCurrencyForCountry,
+} from "@ewatrade/utils"
 
 const baseInputClasses =
   "w-full rounded-2xl border border-border/70 bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10 appearance-none"
@@ -33,6 +37,7 @@ export function StepBusiness({
       industry: "",
       businessSize: "",
       countryCode: "",
+      currencyCode: "NGN",
       phone: "",
     },
   })
@@ -118,7 +123,15 @@ export function StepBusiness({
           <label className="block space-y-1.5 text-sm font-medium text-foreground">
             Country
             <select
-              {...form.register("countryCode")}
+              {...form.register("countryCode", {
+                onChange: (event) => {
+                  form.setValue(
+                    "currencyCode",
+                    suggestCurrencyForCountry(event.target.value),
+                    { shouldValidate: true },
+                  )
+                },
+              })}
               className={`${baseInputClasses} mt-1.5`}
             >
               <option value="">Select country…</option>
@@ -150,6 +163,29 @@ export function StepBusiness({
             )}
           </label>
         </div>
+
+        <label className="block space-y-1.5 text-sm font-medium text-foreground">
+          Operating currency
+          <select
+            {...form.register("currencyCode")}
+            className={`${baseInputClasses} mt-1.5`}
+          >
+            {OPERATING_CURRENCIES.map((currency) => (
+              <option key={currency.code} value={currency.code}>
+                {currency.symbol} — {currency.label} ({currency.code})
+              </option>
+            ))}
+          </select>
+          <p className="text-xs font-normal text-muted-foreground">
+            This prefix will appear on prices, totals, reports, and customer
+            pages.
+          </p>
+          {form.formState.errors.currencyCode && (
+            <p className="text-xs text-destructive">
+              {form.formState.errors.currencyCode.message}
+            </p>
+          )}
+        </label>
 
         <div className="flex items-center justify-between pt-2">
           <Button

@@ -4,12 +4,14 @@ import {
   AuthDivider,
   AuthFooterAction,
   AuthMethodButton,
+  CurrencySelector,
   FormField,
   MobileScreen,
   StatusBanner,
 } from "@/components/mobile"
 import { useMobileGoogleAuth } from "@/hooks/use-mobile-google-auth"
 import { useTRPC } from "@/trpc/client"
+import type { OperatingCurrencyCode } from "@ewatrade/utils"
 import { useMutation } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
 import { useState } from "react"
@@ -21,14 +23,16 @@ export default function SignUpRoute() {
   const [name, setName] = useState("")
   const [businessName, setBusinessName] = useState("")
   const [email, setEmail] = useState("")
+  const [currencyCode, setCurrencyCode] = useState<OperatingCurrencyCode>("NGN")
   const [error, setError] = useState<string | null>(null)
   const normalizedEmail = email.trim().toLowerCase()
   const normalizedBusinessName = businessName.trim()
-  const canContinueWithGoogle = !!normalizedBusinessName
+  const canContinueWithGoogle = !!normalizedBusinessName && !!currencyCode
   const canContinueWithEmail =
     !!name.trim() && !!normalizedBusinessName && !!normalizedEmail
   const googleAuth = useMobileGoogleAuth({
     businessName: normalizedBusinessName,
+    currencyCode,
     mode: "sign_up",
     name: name.trim() || undefined,
     onError: setError,
@@ -47,6 +51,7 @@ export default function SignUpRoute() {
           pathname: "/verify-email",
           params: {
             businessName: normalizedBusinessName,
+            currencyCode,
             email: normalizedEmail,
             mode: "sign-up",
             name: name.trim(),
@@ -61,6 +66,7 @@ export default function SignUpRoute() {
 
     requestOtpMutation.mutate({
       businessName: normalizedBusinessName,
+      currencyCode,
       email: normalizedEmail,
       mode: "sign_up",
       name: name.trim(),
@@ -96,6 +102,7 @@ export default function SignUpRoute() {
           value={businessName}
           variant="auth"
         />
+        <CurrencySelector onChange={setCurrencyCode} value={currencyCode} />
         <FormField
           label="Your name"
           leadingIcon="User"

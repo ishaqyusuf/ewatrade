@@ -1,6 +1,15 @@
-export {}
-export { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./components/accordion"
-export { Alert, AlertAction, AlertDescription, AlertTitle } from "./components/alert"
+export {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "./components/accordion"
+export {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from "./components/alert"
 export { AspectRatio } from "./components/aspect-ratio"
 export {
   Avatar,
@@ -8,7 +17,7 @@ export {
   AvatarFallback,
   AvatarGroup,
   AvatarGroupCount,
-  AvatarImage
+  AvatarImage,
 } from "./components/avatar"
 export { Badge, badgeVariants } from "./components/badge"
 export {
@@ -18,7 +27,8 @@ export {
   BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
-  BreadcrumbSeparator
+  BreadcrumbSeparator,
 } from "./components/breadcrumb"
 export { Button, buttonVariants } from "./components/button"
+export { CurrencyInput } from "./components/currency-input"
 export { cn } from "./lib/utils"

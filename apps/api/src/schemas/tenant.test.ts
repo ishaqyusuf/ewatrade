@@ -72,7 +72,6 @@ describe("tenant schemas", () => {
         supportPhone: "   ",
       }),
     ).toEqual({
-      currencyCode: "NGN",
       name: "Warehouse",
       onboarding: {
         businessType: undefined,

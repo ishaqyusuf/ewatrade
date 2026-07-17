@@ -42,7 +42,7 @@ import {
   useSubscriptionStore,
 } from "@/store/subscriptionStore"
 import { useTRPC } from "@/trpc/client"
-import { formatMoney } from "@ewatrade/utils"
+import { formatMinorMoney } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
 import { Redirect, useRouter } from "expo-router"
 import { type ReactNode, useCallback, useEffect, useMemo, useRef } from "react"
@@ -73,6 +73,23 @@ const DASHBOARD_SHARE_LINK_PREVIEW_LIMIT = 3
 const DASHBOARD_STOCK_MOVEMENT_PREVIEW_LIMIT = 3
 const DASHBOARD_CUSTOMER_PREVIEW_LIMIT = 3
 const DASHBOARD_RECENT_SALE_PREVIEW_LIMIT = 5
+
+function getActiveCurrencyCode() {
+  const state = useBusinessStore.getState()
+  return (
+    state.businesses.find((business) => business.id === state.activeBusinessId)
+      ?.currency ?? "NGN"
+  )
+}
+
+function formatMoney(valueMinor: number, currencyCode?: string) {
+  return formatMinorMoney(
+    valueMinor,
+    currencyCode === "NGN" || !currencyCode
+      ? getActiveCurrencyCode()
+      : currencyCode,
+  )
+}
 
 function colorWithAlpha(color: string, opacity: number) {
   const normalizedOpacity = Math.min(1, Math.max(0, opacity))
@@ -286,12 +303,12 @@ function getSalePaymentTotals(sales: RetailOpsSale[]) {
   return sales.reduce(
     (totals, sale) => {
       if (sale.paymentMethod === "cash") {
-        totals.cash += sale.total
+        totals.cash += sale.totalMinor
       } else {
-        totals.transfer += sale.total
+        totals.transfer += sale.totalMinor
       }
 
-      totals.gross += sale.total
+      totals.gross += sale.totalMinor
 
       return totals
     },
@@ -337,7 +354,7 @@ function toRecentSaleItem(sale: RetailOpsSale): RecentSaleItem {
     item: `${sale.productName} - ${sale.unitName}`,
     method: formatPaymentMethod(sale.paymentMethod),
     syncStatus: sale.syncStatus,
-    total: sale.total,
+    total: sale.totalMinor,
   }
 }
 
@@ -428,7 +445,7 @@ function RecentSaleCard({ sale }: { sale: RecentSaleItem }) {
       title={sale.item}
       trailing={
         <Text className="font-extrabold text-foreground">
-          {formatMoney(sale.total, "NGN")}
+          {formatMinorMoney(sale.total, getActiveCurrencyCode())}
         </Text>
       }
     >
@@ -992,7 +1009,7 @@ function InventorySetupSummary({
           title={product.name}
           trailing={
             <Text className="font-extrabold text-foreground">
-              {formatMoney(product.price, "NGN")}
+              {formatMinorMoney(product.priceMinor, getActiveCurrencyCode())}
             </Text>
           }
         />
@@ -1008,7 +1025,10 @@ function InventorySetupSummary({
                 title={variant.name}
                 trailing={
                   <Text className="text-sm font-bold text-foreground">
-                    {formatMoney(variant.price, "NGN")}
+                    {formatMinorMoney(
+                      variant.priceMinor,
+                      getActiveCurrencyCode(),
+                    )}
                   </Text>
                 }
               />
@@ -1575,7 +1595,7 @@ function AdminHomeOverview({
             trailing={
               recentSale ? (
                 <Text className="font-extrabold text-foreground">
-                  {formatMoney(recentSale.total, "NGN")}
+                  {formatMinorMoney(recentSale.total, getActiveCurrencyCode())}
                 </Text>
               ) : null
             }
@@ -1771,6 +1791,15 @@ export function RetailOpsDashboardSurface({
   const businesses = useBusinessStore((state) => state.businesses)
   const ensureBusiness = useBusinessStore((state) => state.ensureBusiness)
   const setActiveBusiness = useBusinessStore((state) => state.setActiveBusiness)
+  const updateBusinessCurrency = useBusinessStore(
+    (state) => state.updateBusinessCurrency,
+  )
+  const tenantQuery = useQuery(
+    trpc.tenant.current.queryOptions(undefined, {
+      enabled: isAuthenticated,
+      retry: false,
+    }),
+  )
   const activeBusiness = businesses.find(
     (business) => business.id === activeBusinessId,
   )
@@ -2091,8 +2120,8 @@ export function RetailOpsDashboardSurface({
   const latestCloseout = closeouts[0] ?? null
   const closeoutVarianceCount = latestCloseout
     ? [
-        latestCloseout.cashVariance,
-        latestCloseout.transferVariance,
+        latestCloseout.cashVarianceMinor,
+        latestCloseout.transferVarianceMinor,
         ...latestCloseout.inventoryLines.map((line) => line.variance),
       ].filter((variance) => variance !== 0).length
     : 0
@@ -2512,6 +2541,7 @@ export function RetailOpsDashboardSurface({
 
     if (!activeBusinessId && profile?.businessName) {
       ensureBusiness({
+        currency: profile.currencyCode,
         id: profile.businessId,
         name: profile.businessName,
       })
@@ -2523,7 +2553,22 @@ export function RetailOpsDashboardSurface({
     isAuthenticated,
     profile?.businessId,
     profile?.businessName,
+    profile?.currencyCode,
     setActiveBusiness,
+  ])
+
+  useEffect(() => {
+    const currencyCode =
+      tenantQuery.data?.activeStore?.currencyCode ??
+      tenantQuery.data?.tenant.currencyCode
+    if (!activeBusinessId || !currencyCode) return
+
+    updateBusinessCurrency(activeBusinessId, currencyCode)
+  }, [
+    activeBusinessId,
+    tenantQuery.data?.activeStore?.currencyCode,
+    tenantQuery.data?.tenant.currencyCode,
+    updateBusinessCurrency,
   ])
 
   useEffect(() => {

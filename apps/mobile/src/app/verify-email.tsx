@@ -5,6 +5,7 @@ import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { useTRPC } from "@/trpc/client"
+import { normalizeOperatingCurrencyCode } from "@ewatrade/utils"
 import { useMutation } from "@tanstack/react-query"
 import * as Clipboard from "expo-clipboard"
 import { Link, useLocalSearchParams } from "expo-router"
@@ -30,6 +31,7 @@ export default function VerifyEmailRoute() {
   )
   const params = useLocalSearchParams<{
     businessName?: string
+    currencyCode?: string
     email?: string
     mode?: "login" | "sign-up"
     name?: string
@@ -40,6 +42,9 @@ export default function VerifyEmailRoute() {
   const emailDeliveryLabel = email || "your email address"
   const name = firstParam(params.name) ?? "Store Owner"
   const businessName = firstParam(params.businessName) ?? "My Business"
+  const currencyCode = normalizeOperatingCurrencyCode(
+    firstParam(params.currencyCode),
+  )
   const authEntryHref = mode === "login" ? "/login" : "/sign-up"
   const trpc = useTRPC()
   const [code, setCode] = useState("")
@@ -73,6 +78,7 @@ export default function VerifyEmailRoute() {
           profile: {
             businessId: session.profile.businessId ?? undefined,
             businessName: session.profile.businessName ?? undefined,
+            currencyCode: session.profile.currencyCode,
             email: session.profile.email,
             id: session.profile.id,
             name: session.profile.name,
@@ -93,12 +99,22 @@ export default function VerifyEmailRoute() {
 
     verifyOtpMutation.mutate({
       businessName,
+      currencyCode,
       code,
       email,
       mode: apiMode,
       name,
     })
-  }, [apiMode, businessName, code, email, name, status, verifyOtpMutation])
+  }, [
+    apiMode,
+    businessName,
+    code,
+    currencyCode,
+    email,
+    name,
+    status,
+    verifyOtpMutation,
+  ])
 
   useEffect(() => {
     if (code.length === OTP_LENGTH) {
@@ -154,11 +170,20 @@ export default function VerifyEmailRoute() {
 
     requestOtpMutation.mutate({
       businessName,
+      currencyCode,
       email,
       mode: apiMode,
       name,
     })
-  }, [apiMode, businessName, email, isVerifying, name, requestOtpMutation])
+  }, [
+    apiMode,
+    businessName,
+    currencyCode,
+    email,
+    isVerifying,
+    name,
+    requestOtpMutation,
+  ])
 
   return (
     <MobileScreen contentClassName="px-5 py-5" keyboardBottomOffset={40}>

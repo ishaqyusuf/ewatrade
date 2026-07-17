@@ -13,7 +13,10 @@ Track current and planned API surface areas.
 - `apps/marketing` exposes public early-access link verification:
   - `GET /api/early-access/session?token=...` validates a one-time early access onboarding token and returns safe prefill context for the signup page.
 - `apps/marketing` exposes public owner signup:
-  - `POST /api/auth/signup` creates the owner, tenant, membership, and hostnames. When `accessToken` is present, it validates expiry/email, consumes the matching `OnboardingSession` exactly once, and links it to the new tenant/user.
+  - `POST /api/auth/signup` creates the owner, tenant, first store, membership,
+    and hostnames using one of the six supported operating currencies. When
+    `accessToken` is present, it validates expiry/email, consumes the matching
+    `OnboardingSession` exactly once, and links it to the new tenant/user.
 - `apps/dashboard` exposes retained migration bridge routes for dashboard shell behavior:
   - `POST /api/auth/logout` signs out the Better Auth session for the dashboard surface.
   - `POST /api/tenants/active` stores the active tenant slug after verifying the user belongs to the requested tenant.
@@ -43,8 +46,12 @@ Track current and planned API surface areas.
 - `apps/api` exposes public self-service store detection:
   - `POST /api/self-service/store-detection/resolve` accepts device coordinates and optional accuracy, resolves enabled store geofences from store metadata, and returns ranked candidates plus a `confirmed`, `needs_confirmation`, or `manual_required` status for the POS/self-service launch flow.
 - Current tRPC procedure groups:
-  - `auth.requestMobileOwnerOtp` sends a six-digit owner login/sign-up OTP email for the mobile app.
-  - `auth.verifyMobileOwnerOtp` verifies the mobile OTP and returns a bearer session plus active business context.
+  - `auth.requestMobileOwnerOtp` sends a six-digit owner login/sign-up OTP email
+    and preserves supported sign-up currency in the verification payload.
+  - `auth.verifyMobileOwnerOtp` verifies the mobile OTP and returns a bearer
+    session plus active business/store currency context.
+  - `auth.verifyMobileGoogle` verifies Google identity and applies the same
+    sign-up currency and session contract.
   - `tenant.current` returns the authenticated user's active tenant context.
   - `tenant.stores` returns stores available to the active tenant membership.
   - `tenant.createStore` creates a store/business under the active tenant for owner/admin users when the tenant is within the current business/store entitlement.

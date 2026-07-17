@@ -1,0 +1,22 @@
+## Parent map
+
+[Wayfinder: Product And Service Catalog Items](../map.md)
+
+## Type
+
+grilling
+
+## Status
+
+open
+
+## Blocked by
+
+- [Define product inventory invariants](03-define-product-inventory-invariants.md)
+- [Define the generic service-item and service-job lifecycle](04-define-generic-service-item-and-service-job-lifecycle.md)
+
+## Question
+
+How should commercial orders, order lines, totals, receipts, payment status, inventory fulfillment, and service fulfillment behave when a sale contains product lines, service lines, or both?
+
+Resolve whether one Order model accepts mixed lines, how line kind is snapshotted, how product stock deduction and service-job creation occur atomically and idempotently, how partial cancellation/refund affects each kind, and how order payment state remains separate from service-job progress.

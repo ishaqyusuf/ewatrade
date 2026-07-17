@@ -183,6 +183,7 @@ export async function POST(request: NextRequest) {
     industry,
     businessSize,
     countryCode,
+    currencyCode,
     phone,
     firstName,
     lastName,
@@ -373,7 +374,7 @@ export async function POST(request: NextRequest) {
           type: primaryType,
           enabledModes: modes,
           countryCode,
-          currencyCode: countryCode === "NG" ? "NGN" : "USD",
+          currencyCode,
           metadata: { industry, businessSize },
         },
       })
@@ -452,6 +453,16 @@ export async function POST(request: NextRequest) {
           role: "OWNER",
           status: "ACTIVE",
           acceptedAt: new Date(),
+        },
+      })
+
+      await tx.store.create({
+        data: {
+          currencyCode,
+          name: businessName,
+          slug: "main",
+          status: "ACTIVE",
+          tenantId: tenant.id,
         },
       })
 

@@ -4,7 +4,7 @@ import {
   createDryCleaningPublicServiceRequest,
   resolveDryCleaningServiceRequestLink,
 } from "@ewatrade/db/queries"
-import { formatMoney } from "@ewatrade/utils"
+import { formatMinorMoney } from "@ewatrade/utils"
 import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 
@@ -204,7 +204,10 @@ export default async function ServiceRequestPage({
                     <p className="font-medium">{item.name}</p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       {item.category ?? "Laundry service"} ·{" "}
-                      {formatMoney(item.priceMinor / 100, "NGN")}
+                      {formatMinorMoney(
+                        item.priceMinor,
+                        link.store.currencyCode,
+                      )}
                     </p>
                     <input
                       name={`note:${item.id}`}
@@ -221,7 +224,10 @@ export default async function ServiceRequestPage({
                     {item.variants.map((variant) => (
                       <option key={variant.id} value={variant.id}>
                         {variant.name} ·{" "}
-                        {formatMoney(variant.priceMinor / 100, "NGN")}
+                        {formatMinorMoney(
+                          variant.priceMinor,
+                          link.store.currencyCode,
+                        )}
                       </option>
                     ))}
                   </select>

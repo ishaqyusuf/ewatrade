@@ -1,4 +1,8 @@
 import { createHash, randomBytes, randomInt } from "node:crypto"
+import {
+  type OperatingCurrencyCode,
+  normalizeOperatingCurrencyCode,
+} from "@ewatrade/utils"
 import { Prisma } from "../../generated/prisma/client"
 import { createTenantStore } from "./stores"
 import type { DbClient } from "./types"
@@ -6,6 +10,7 @@ import type { DbClient } from "./types"
 export type MobileAuthMode = "login" | "sign_up"
 
 export type MobileAuthTenantSummary = {
+  currencyCode: string
   id: string
   name: string
   role: string
@@ -20,6 +25,7 @@ export type MobileAuthSessionResult = {
   profile: {
     businessId: string | null
     businessName: string | null
+    currencyCode: string
     email: string
     id: string
     name: string
@@ -38,6 +44,7 @@ export type MobileOwnerOtpResult = {
 
 export type MobileGoogleIdentityInput = {
   businessName?: string | null
+  currencyCode?: OperatingCurrencyCode | null
   email: string
   idToken?: string | null
   image?: string | null
@@ -101,7 +108,10 @@ function toSlug(name: string) {
 
 async function createUniqueTenant(
   db: DbClient,
-  input: { businessName: string },
+  input: {
+    businessName: string
+    currencyCode: OperatingCurrencyCode
+  },
 ) {
   const baseSlug = toSlug(input.businessName) || "business"
 
@@ -117,7 +127,7 @@ async function createUniqueTenant(
     try {
       return await db.tenant.create({
         data: {
-          currencyCode: "NGN",
+          currencyCode: input.currencyCode,
           enabledModes: ["STORE", "MERCHANT"],
           name: input.businessName,
           slug,
@@ -127,6 +137,7 @@ async function createUniqueTenant(
           id: true,
           name: true,
           slug: true,
+          currencyCode: true,
         },
       })
     } catch (error) {
@@ -170,6 +181,7 @@ async function getFirstActiveTenantForUser(
           id: true,
           name: true,
           slug: true,
+          currencyCode: true,
           stores: {
             where: { status: { not: "ARCHIVED" } },
             orderBy: { createdAt: "asc" },
@@ -177,6 +189,7 @@ async function getFirstActiveTenantForUser(
               id: true,
               name: true,
               status: true,
+              currencyCode: true,
             },
           },
         },
@@ -192,6 +205,9 @@ async function getFirstActiveTenantForUser(
     null
 
   return {
+    currencyCode:
+      activeStore?.currencyCode ??
+      normalizeOperatingCurrencyCode(membership.tenant.currencyCode),
     id: membership.tenant.id,
     name: membership.tenant.name,
     role: membership.role,
@@ -206,6 +222,7 @@ async function ensureOwnerTenant(
   db: DbClient,
   input: {
     businessName: string
+    currencyCode: OperatingCurrencyCode
     userId: string
   },
 ): Promise<MobileAuthTenantSummary> {
@@ -217,6 +234,7 @@ async function ensureOwnerTenant(
 
   const tenant = await createUniqueTenant(db, {
     businessName: input.businessName,
+    currencyCode: input.currencyCode,
   })
 
   await db.membership.create({
@@ -231,6 +249,7 @@ async function ensureOwnerTenant(
 
   const store = await createTenantStore(db, {
     createdByUserId: input.userId,
+    currencyCode: tenant.currencyCode,
     name: input.businessName,
     onboarding: {
       source: "mobile_owner_signup",
@@ -239,6 +258,7 @@ async function ensureOwnerTenant(
   })
 
   return {
+    currencyCode: store.currencyCode,
     id: tenant.id,
     name: tenant.name,
     role: "OWNER",
@@ -274,6 +294,7 @@ export async function createMobileOwnerOtp(
   db: DbClient,
   input: {
     businessName?: string | null
+    currencyCode?: OperatingCurrencyCode | null
     email: string
     mode: MobileAuthMode
     name?: string | null
@@ -315,6 +336,10 @@ export async function createMobileOwnerOtp(
       value: JSON.stringify({
         businessName: cleanText(input.businessName),
         codeHash: hashOtp(code),
+        currencyCode:
+          input.mode === "sign_up"
+            ? normalizeOperatingCurrencyCode(input.currencyCode)
+            : null,
         mode: input.mode,
         name: cleanText(input.name),
       }),
@@ -333,6 +358,7 @@ export async function verifyMobileOwnerOtp(
   input: {
     businessName?: string | null
     code: string
+    currencyCode?: OperatingCurrencyCode | null
     email: string
     mode: MobileAuthMode
     name?: string | null
@@ -355,6 +381,7 @@ export async function verifyMobileOwnerOtp(
   let payload: {
     businessName?: string | null
     codeHash?: string
+    currencyCode?: OperatingCurrencyCode | null
     name?: string | null
   }
 
@@ -380,6 +407,9 @@ export async function verifyMobileOwnerOtp(
     cleanText(input.businessName) ??
     cleanText(payload.businessName) ??
     "My Business"
+  const currencyCode = normalizeOperatingCurrencyCode(
+    input.currencyCode ?? payload.currencyCode,
+  )
 
   const existingUser = await db.user.findUnique({
     where: { email },
@@ -419,6 +449,7 @@ export async function verifyMobileOwnerOtp(
     input.mode === "sign_up"
       ? await ensureOwnerTenant(db, {
           businessName,
+          currencyCode,
           userId: user.id,
         })
       : await getFirstActiveTenantForUser(db, { userId: user.id })
@@ -437,6 +468,7 @@ export async function verifyMobileOwnerOtp(
     profile: {
       businessId: tenant.id,
       businessName: tenant.name,
+      currencyCode: tenant.currencyCode,
       email: user.email,
       id: user.id,
       name: user.name || displayName,
@@ -550,6 +582,7 @@ export async function verifyMobileGoogleIdentity(
     input.mode === "sign_up"
       ? await ensureOwnerTenant(db, {
           businessName,
+          currencyCode: normalizeOperatingCurrencyCode(input.currencyCode),
           userId: user.id,
         })
       : await getFirstActiveTenantForUser(db, { userId: user.id })
@@ -568,6 +601,7 @@ export async function verifyMobileGoogleIdentity(
     profile: {
       businessId: tenant.id,
       businessName: tenant.name,
+      currencyCode: tenant.currencyCode,
       email: user.email,
       id: user.id,
       name: user.name || displayName,

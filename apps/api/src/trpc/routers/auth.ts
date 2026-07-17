@@ -9,6 +9,7 @@ import {
   createTestRoutedEmailMessages,
   dispatchEmailMessages,
 } from "@ewatrade/email"
+import { OPERATING_CURRENCY_CODES } from "@ewatrade/utils"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { verifyGoogleIdToken } from "../../auth/mobile-google"
@@ -21,6 +22,7 @@ const mobileAuthModeSchema = z.enum(["login", "sign_up"])
 export const requestMobileOwnerOtpSchema = z
   .object({
     businessName: z.string().trim().min(1).max(120).optional(),
+    currencyCode: z.enum(OPERATING_CURRENCY_CODES).optional(),
     email: emailSchema,
     mode: mobileAuthModeSchema,
     name: z.string().trim().min(1).max(120).optional(),
@@ -37,6 +39,7 @@ export const verifyMobileOwnerOtpSchema = requestMobileOwnerOtpSchema.extend({
 export const verifyMobileGoogleSchema = z
   .object({
     businessName: z.string().trim().min(1).max(120).optional(),
+    currencyCode: z.enum(OPERATING_CURRENCY_CODES).optional(),
     idToken: z.string().trim().min(20),
     mode: mobileAuthModeSchema,
     name: z.string().trim().min(1).max(120).optional(),
@@ -168,6 +171,7 @@ export const authRouter = createTRPCRouter({
       try {
         return await verifyMobileGoogleIdentity(ctx.db, {
           businessName: input.businessName,
+          currencyCode: input.currencyCode,
           email: profile.email,
           idToken: input.idToken,
           image: profile.picture,

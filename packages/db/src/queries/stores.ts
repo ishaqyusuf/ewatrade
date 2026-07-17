@@ -1,3 +1,7 @@
+import {
+  isOperatingCurrencyCode,
+  normalizeOperatingCurrencyCode,
+} from "@ewatrade/utils"
 import { Prisma } from "../../generated/prisma/client"
 import {
   type BusinessTemplateKey,
@@ -35,6 +39,7 @@ export type CreateTenantStoreOnboardingInput = {
 }
 
 export type CreatedTenantStore = {
+  currencyCode: string
   id: string
   slug: string
   name: string
@@ -260,7 +265,14 @@ export async function createTenantStore(
   const supportEmail = cleanText(input.supportEmail)
   const supportPhone = cleanText(input.supportPhone)
   const baseSlug = toSlug(name) || "store"
-  const currencyCode = cleanText(input.currencyCode)?.toUpperCase() ?? "NGN"
+  const requestedCurrencyCode = cleanText(input.currencyCode)?.toUpperCase()
+  if (
+    requestedCurrencyCode &&
+    !isOperatingCurrencyCode(requestedCurrencyCode)
+  ) {
+    throw new Error("Unsupported operating currency.")
+  }
+  const currencyCode = normalizeOperatingCurrencyCode(requestedCurrencyCode)
   const capturedAt = new Date()
   const onboardingMetadata = buildOnboardingMetadata(
     input.onboarding,
@@ -290,7 +302,13 @@ export async function createTenantStore(
           status: "ACTIVE",
           ...(metadata ? { metadata } : {}),
         },
-        select: { id: true, slug: true, name: true, status: true },
+        select: {
+          currencyCode: true,
+          id: true,
+          slug: true,
+          name: true,
+          status: true,
+        },
       })
 
       await createCompletedStoreOnboardingSession({
