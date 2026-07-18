@@ -621,6 +621,17 @@ describe("retail ops product queries", () => {
     expect(
       templates.filter((template) => template.key === "bag_fractions"),
     ).toHaveLength(1)
+    expect(
+      templates.find((template) => template.key === "feed_bag_25kg"),
+    ).toMatchObject({
+      baseUnitName: "Bag",
+      units: [
+        { conversionMultiplier: 1, name: "Bag" },
+        { conversionMultiplier: 0.5, name: "Half bag" },
+        { conversionMultiplier: 0.25, name: "Quarter bag" },
+        { conversionMultiplier: 0.04, name: "Kilogram" },
+      ],
+    })
     expect(getCall(db.calls, "productUnitTemplate.findMany")).toMatchObject({
       where: {
         OR: [

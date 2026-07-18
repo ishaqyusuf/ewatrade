@@ -94,6 +94,7 @@ describe("buildRetailOpsSyncEventsInput", () => {
           remoteVariantId: "remote-unit-bag",
           startingStock: 12.9,
           syncStatus: "pending",
+          unitTemplateKey: "feed_bag_25kg",
           unitName: "Bag",
           variants: [
             {
@@ -206,7 +207,7 @@ describe("buildRetailOpsSyncEventsInput", () => {
           id: "conversion-in-1",
           productId,
           productName: "Rice",
-          quantity: 5.8,
+          quantity: 4.8,
           relatedMovementId: "conversion-out-1",
           syncGroupId: "conversion-1",
           syncStatus: "pending",
@@ -236,6 +237,7 @@ describe("buildRetailOpsSyncEventsInput", () => {
       ],
       imageUrl: "https://cdn.example.com/products/rice.png",
       openingStockQuantity: 12,
+      unitTemplateKey: "feed_bag_25kg",
       variants: [
         {
           enabled: true,
@@ -276,7 +278,7 @@ describe("buildRetailOpsSyncEventsInput", () => {
       sourceProductVariantId: "remote-unit-bag",
       sourceQuantity: 2,
       targetProductVariantId: "remote-unit-half-bag",
-      targetQuantity: 5,
+      targetQuantity: 4,
     })
   })
 

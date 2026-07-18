@@ -1,6 +1,6 @@
+import { resolveDashboardUrl } from "@/lib/dashboard-url"
 import { auth } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
-import { buildInternalTenantHostname } from "@ewatrade/utils"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { z } from "zod/v4"
@@ -15,15 +15,12 @@ const PLATFORM_DOMAIN =
 const MARKETING_URL =
   process.env.NEXT_PUBLIC_MARKETING_URL ?? `https://${PLATFORM_DOMAIN}`
 
-function buildDashboardUrl(tenantSlug: string): string {
-  const hostname = buildInternalTenantHostname({
-    localProjectSlug: tenantSlug,
-    tenantSlug,
-    surface: "dashboard",
+function getDashboardUrl(): string {
+  return resolveDashboardUrl({
+    configuredUrl: process.env.NEXT_PUBLIC_DASHBOARD_URL,
+    isProduction: process.env.NODE_ENV === "production",
     platformDomain: PLATFORM_DOMAIN,
   })
-  const protocol = process.env.NODE_ENV === "production" ? "https" : "http"
-  return `${protocol}://${hostname}`
 }
 
 export async function POST(request: NextRequest) {
@@ -73,7 +70,7 @@ export async function POST(request: NextRequest) {
 
   const tenantSlug = membership?.tenant.slug
   const dashboardUrl = tenantSlug
-    ? buildDashboardUrl(tenantSlug)
+    ? getDashboardUrl()
     : `${MARKETING_URL}/login?error=no_tenant`
 
   return NextResponse.json({ success: true, dashboardUrl })

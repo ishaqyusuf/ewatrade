@@ -10,7 +10,7 @@ Capture high-level relationships between major entity groups.
 - Tenant -> many stores
 - Tenant -> many users through memberships
 - Tenant -> many orders, sites, conversations, and automation events
-- Tenant -> many hostname records across tenant, POS, and dashboard surfaces
+- Tenant -> many storefront and POS hostname records; the dashboard is a shared platform host and has no hostname row for new tenants
 - Store -> many catalog items through compatibility `Product` rows
 - Catalog item (`Product`) -> many variants
 - Catalog item (`Product`) -> zero or one Service item profile

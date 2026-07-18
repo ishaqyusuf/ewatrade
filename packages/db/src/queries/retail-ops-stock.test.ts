@@ -15,15 +15,18 @@ type StockCall = {
 function createProductVariantRow(input?: {
   id?: string
   kind?: "PRODUCT" | "SERVICE"
+  metadata?: unknown
   name?: string
-  ratioDenominator?: number
-  ratioNumerator?: number
+  ratioDenominator?: number | null
+  ratioNumerator?: number | null
 }) {
   return {
-    conversionRatioDenominator: input?.ratioDenominator ?? 1,
-    conversionRatioNumerator: input?.ratioNumerator ?? 1,
+    conversionRatioDenominator:
+      input && "ratioDenominator" in input ? input.ratioDenominator : 1,
+    conversionRatioNumerator:
+      input && "ratioNumerator" in input ? input.ratioNumerator : 1,
     id: input?.id ?? "variant_bag",
-    metadata: {},
+    metadata: input?.metadata ?? {},
     name: input?.name ?? "Bag",
     product: {
       id: "product_rice",
@@ -143,21 +146,28 @@ function createMockStockIntakeDb(input?: {
   }
 }
 
-function createMockUnitConversionDb() {
+function createMockUnitConversionDb(input?: {
+  sourceVariant?: ReturnType<typeof createProductVariantRow>
+  targetVariant?: ReturnType<typeof createProductVariantRow>
+}) {
   const calls: StockCall[] = []
   const convertedAt = new Date("2026-07-12T10:00:00.000Z")
-  const sourceVariant = createProductVariantRow({
-    id: "variant_bag",
-    name: "Bag",
-    ratioDenominator: 1,
-    ratioNumerator: 1,
-  })
-  const targetVariant = createProductVariantRow({
-    id: "variant_half_bag",
-    name: "Half bag",
-    ratioDenominator: 2,
-    ratioNumerator: 1,
-  })
+  const sourceVariant =
+    input?.sourceVariant ??
+    createProductVariantRow({
+      id: "variant_bag",
+      name: "Bag",
+      ratioDenominator: 1,
+      ratioNumerator: 1,
+    })
+  const targetVariant =
+    input?.targetVariant ??
+    createProductVariantRow({
+      id: "variant_half_bag",
+      name: "Half bag",
+      ratioDenominator: 2,
+      ratioNumerator: 1,
+    })
 
   const tx = {
     inventoryItem: {
@@ -562,6 +572,60 @@ describe("retail ops stock queries", () => {
         },
       },
     })
+  })
+
+  test("derives the target quantity from configured unit ratios", async () => {
+    const db = createMockUnitConversionDb()
+
+    const result = await recordRetailOpsUnitConversion(db.client, {
+      actorUserId: "user_owner",
+      convertedAt: db.convertedAt,
+      externalId: "unit_conversion_derived",
+      note: "Split one bag",
+      sourceProductVariantId: "variant_bag",
+      sourceQuantity: 1,
+      storeId: "store_123",
+      targetProductVariantId: "variant_half_bag",
+      tenantId: "tenant_123",
+    })
+
+    expect(result.conversion.targetQuantity).toBe(2)
+    expect(getCall(db.calls, "inventoryItem.upsert").data).toMatchObject({
+      create: {
+        onHandQuantity: 2,
+      },
+      update: {
+        onHandQuantity: {
+          increment: 2,
+        },
+      },
+    })
+  })
+
+  test("rejects conversions when either unit is missing a ratio", async () => {
+    const db = createMockUnitConversionDb({
+      targetVariant: createProductVariantRow({
+        id: "variant_half_bag",
+        name: "Half bag",
+        ratioDenominator: null,
+        ratioNumerator: null,
+      }),
+    })
+
+    await expect(
+      recordRetailOpsUnitConversion(db.client, {
+        actorUserId: "user_owner",
+        externalId: "unit_conversion_missing_ratio",
+        sourceProductVariantId: "variant_bag",
+        sourceQuantity: 1,
+        storeId: "store_123",
+        targetProductVariantId: "variant_half_bag",
+        tenantId: "tenant_123",
+      }),
+    ).rejects.toMatchObject({
+      code: "CONVERSION_RATIO_REQUIRED",
+    })
+    expect(getCalls(db.calls, "inventoryItem.updateMany")).toHaveLength(0)
   })
 
   test("records damage adjustment without consuming reserved stock", async () => {

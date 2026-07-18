@@ -218,6 +218,7 @@ function findProductSetupPayload(
     openingStockQuantity: toNonNegativeWholeQuantity(product.startingStock),
     priceMinor: product.priceMinor,
     primaryUnitName: product.unitName,
+    unitTemplateKey: product.unitTemplateKey,
     variants: product.variants.map((variant) => ({
       conversionMultiplier: variant.conversionMultiplier,
       enabled: variant.enabled,

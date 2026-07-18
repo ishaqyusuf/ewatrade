@@ -5,6 +5,7 @@ import {
   filterInventoryRows,
   formatMovementType,
   formatSignedQuantity,
+  getUnitConversionPreview,
   getStockState,
   mapInventoryRows,
 } from "./inventory-operations"
@@ -18,6 +19,8 @@ const products: InventoryProductForRows[] = [
     status: "ACTIVE",
     variants: [
       {
+        conversionRatioDenominator: 1,
+        conversionRatioNumerator: 1,
         id: "unit_1",
         inventoryItem: {
           onHandQuantity: 20,
@@ -30,6 +33,8 @@ const products: InventoryProductForRows[] = [
         sku: "RICE-BAG",
       },
       {
+        conversionRatioDenominator: 2,
+        conversionRatioNumerator: 1,
         id: "unit_2",
         inventoryItem: {
           onHandQuantity: 4,
@@ -51,6 +56,8 @@ const products: InventoryProductForRows[] = [
     status: "ACTIVE",
     variants: [
       {
+        conversionRatioDenominator: 1,
+        conversionRatioNumerator: 1,
         id: "unit_3",
         inventoryItem: null,
         isDefault: true,
@@ -77,18 +84,24 @@ describe("inventory operation helpers", () => {
     expect(mapInventoryRows(products)).toMatchObject([
       {
         availableQuantity: 18,
+        baseEquivalentQuantity: 20,
+        baseUnitName: "Bag",
         productName: "Premium Rice",
         state: "available",
         unitName: "Bag",
       },
       {
         availableQuantity: 4,
+        baseEquivalentQuantity: 2,
+        baseUnitName: "Bag",
         productName: "Premium Rice",
         state: "low",
         unitName: "Paint bucket",
       },
       {
         availableQuantity: 0,
+        baseEquivalentQuantity: 0,
+        baseUnitName: "Bottle",
         productName: "Groundnut Oil",
         state: "out",
         unitName: "Bottle",
@@ -130,5 +143,27 @@ describe("inventory operation helpers", () => {
     expect(formatMovementType("conversion_out")).toBe("Conversion out")
     expect(formatSignedQuantity(4)).toBe("+4")
     expect(formatSignedQuantity(-3)).toBe("-3")
+  })
+
+  test("derives a same-product whole-unit conversion preview", () => {
+    const rows = mapInventoryRows(products)
+
+    expect(
+      getUnitConversionPreview({
+        sourceQuantity: 50,
+        sourceUnit: rows[0],
+        targetUnit: rows[1],
+      }),
+    ).toMatchObject({
+      sourceBaseQuantity: 50,
+      targetQuantity: 100,
+    })
+    expect(
+      getUnitConversionPreview({
+        sourceQuantity: 1,
+        sourceUnit: rows[0],
+        targetUnit: rows[2],
+      }),
+    ).toBeNull()
   })
 })

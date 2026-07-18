@@ -9,6 +9,7 @@
     "./colors": "./src/colors.ts",
     "./constants": "./src/constants.ts",
     "./dayjs": "./src/dayjs.ts",
+    "./inventory-unit-conversion": "./src/inventory-unit-conversion.ts",
     "./insurance-documents": "./src/insurance-documents.ts"
   },
   "sideEffects": false,

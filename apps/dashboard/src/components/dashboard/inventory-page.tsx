@@ -9,6 +9,7 @@ import {
   filterInventoryRows,
   formatMovementType,
   formatSignedQuantity,
+  getUnitConversionPreview,
 } from "@/lib/inventory-operations"
 import { formatMinorCurrency } from "@/lib/product-catalog"
 import { cn } from "@/utils"
@@ -50,7 +51,6 @@ type OperationForm = {
   reason: "correction" | "damage" | "found_stock" | "loss"
   sourceName: string
   targetProductVariantId: string
-  targetQuantity: string
 }
 
 const emptyForm: OperationForm = {
@@ -61,7 +61,6 @@ const emptyForm: OperationForm = {
   reason: "correction",
   sourceName: "",
   targetProductVariantId: "",
-  targetQuantity: "",
 }
 
 function stateTone(state: InventoryStockState) {
@@ -224,19 +223,27 @@ export function InventoryPage({
       unit.unitId !== form.productVariantId &&
       (!selectedUnit || unit.productId === selectedUnit.productId),
   )
+  const selectedTargetUnit = inventory.find(
+    (unit) => unit.unitId === form.targetProductVariantId,
+  )
+  const conversionPreview = useMemo(
+    () =>
+      getUnitConversionPreview({
+        sourceQuantity: getQuantity(form.quantity) ?? 0,
+        sourceUnit: selectedUnit,
+        targetUnit: selectedTargetUnit,
+      }),
+    [form.quantity, selectedTargetUnit, selectedUnit],
+  )
   const summary = useMemo(() => {
-    const onHand = inventory.reduce(
-      (total, unit) => total + unit.onHandQuantity,
-      0,
-    )
     const low = inventory.filter((unit) => unit.state === "low").length
     const out = inventory.filter((unit) => unit.state === "out").length
 
     return {
       low,
       movements: movements.length,
-      onHand,
       out,
+      products: new Set(inventory.map((unit) => unit.productId)).size,
       units: inventory.length,
     }
   }, [inventory, movements])
@@ -283,15 +290,20 @@ export function InventoryPage({
     }
 
     if (sheetMode === "conversion") {
-      const targetQuantity = getQuantity(form.targetQuantity)
-
-      if (!targetQuantity || !form.targetProductVariantId) {
-        setError("Choose a target unit and quantity.")
+      if (!form.targetProductVariantId) {
+        setError("Choose a target unit.")
         return
       }
 
       if (form.productVariantId === form.targetProductVariantId) {
         setError("Choose different source and target units.")
+        return
+      }
+
+      if (!conversionPreview) {
+        setError(
+          "These units need compatible conversion ratios and a whole-number output.",
+        )
         return
       }
     }
@@ -324,7 +336,6 @@ export function InventoryPage({
                 sourceProductVariantId: form.productVariantId,
                 sourceQuantity: quantity,
                 targetProductVariantId: form.targetProductVariantId,
-                targetQuantity: Number(form.targetQuantity),
               }
       const response = await fetch("/api/inventory", {
         body: JSON.stringify(payload),
@@ -408,8 +419,8 @@ export function InventoryPage({
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {[
-          ["Units", summary.units],
-          ["On hand", summary.onHand],
+          ["Products", summary.products],
+          ["Stock units", summary.units],
           ["Low stock", summary.low],
           ["Out", summary.out],
           ["Movements", summary.movements],
@@ -518,6 +529,14 @@ export function InventoryPage({
                   ) : null}
                 </span>
               ),
+            },
+            {
+              header: "Base equivalent",
+              key: "baseEquivalent",
+              render: (row) =>
+                row.baseEquivalentQuantity === null
+                  ? "Ratio required"
+                  : `${row.baseEquivalentQuantity} ${row.baseUnitName}`,
             },
             {
               header: "Reorder",
@@ -756,16 +775,15 @@ export function InventoryPage({
               </Field>
               <Field label="Target quantity">
                 <TextInput
-                  inputMode="numeric"
-                  value={form.targetQuantity}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      targetQuantity: event.target.value,
-                    }))
-                  }
-                  required
+                  aria-live="polite"
+                  readOnly
+                  value={conversionPreview?.targetQuantity ?? ""}
                 />
+                <span className="text-xs text-muted-foreground">
+                  {conversionPreview
+                    ? `Calculated from the configured unit ratios. ${form.quantity || "0"} ${selectedUnit?.unitName ?? "source units"} becomes ${conversionPreview.targetQuantity} ${selectedTargetUnit?.unitName ?? "target units"}.`
+                    : "Choose compatible units and a source quantity that produces a whole-number output."}
+                </span>
               </Field>
             </>
           ) : null}

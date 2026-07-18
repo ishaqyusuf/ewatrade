@@ -16,8 +16,10 @@ import {
   useRetailOpsStore,
 } from "@/store/retailOpsStore"
 import { useTRPC } from "@/trpc/client"
+import { calculateWholeUnitConversion } from "@ewatrade/utils/inventory-unit-conversion"
 import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useMutation } from "@tanstack/react-query"
+import * as Crypto from "expo-crypto"
 import { forwardRef, useEffect, useMemo, useState } from "react"
 import { View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
@@ -31,12 +33,6 @@ type UnitConversionContentProps = UnitConversionSheetProps & {
 }
 
 const CONVERSION_VARIANT_PREVIEW_LIMIT = 8
-
-function formatQuantity(value: number) {
-  return Number.isInteger(value)
-    ? String(value)
-    : String(Number(value.toFixed(2)))
-}
 
 function getProductStock(product: RetailOpsProduct) {
   return product.currentStock ?? product.startingStock ?? 0
@@ -131,7 +127,6 @@ export function UnitConversionContent({
     [products],
   )
   const [note, setNote] = useState("")
-  const [outputQuantity, setOutputQuantity] = useState("2")
   const [productQuery, setProductQuery] = useState("")
   const [variantQuery, setVariantQuery] = useState("")
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
@@ -190,7 +185,12 @@ export function UnitConversionContent({
     (variant) => variant.id === selectedVariantId,
   )
   const sourceQuantityValue = parseWholeQuantity(sourceQuantity)
-  const outputQuantityValue = parseWholeQuantity(outputQuantity)
+  const conversionPreview = calculateWholeUnitConversion({
+    sourceMultiplier: 1,
+    sourceQuantity: sourceQuantityValue,
+    targetMultiplier: selectedVariant?.conversionMultiplier,
+  })
+  const outputQuantityValue = conversionPreview?.targetQuantity ?? 0
   const availableSourceStock = selectedProduct
     ? getProductStock(selectedProduct)
     : 0
@@ -203,7 +203,7 @@ export function UnitConversionContent({
     !!selectedProduct &&
     !!selectedVariant &&
     sourceQuantityValue > 0 &&
-    outputQuantityValue > 0 &&
+    !!conversionPreview &&
     hasEnoughSourceStock &&
     !unitConversionMutation.isPending
   const sourceDetail = isOfflineMode
@@ -227,47 +227,21 @@ export function UnitConversionContent({
 
       setSelectedProductId(nextProduct?.id ?? null)
       setSelectedVariantId(nextVariant?.id ?? null)
-      setOutputQuantity(
-        formatQuantity(
-          parseWholeQuantity(sourceQuantity) *
-            (nextVariant?.conversionMultiplier ?? 1),
-        ),
-      )
     }
-  }, [convertibleProducts, selectedProductId, sourceQuantity])
+  }, [convertibleProducts, selectedProductId])
 
   const selectProduct = (product: RetailOpsProduct) => {
     setSelectedProductId(product.id)
     setSelectedVariantId(product.variants[0]?.id ?? null)
     setVariantQuery("")
-    setOutputQuantity(
-      formatQuantity(
-        parseWholeQuantity(sourceQuantity) *
-          (product.variants[0]?.conversionMultiplier ?? 1),
-      ),
-    )
   }
 
   const selectVariant = (variant: RetailOpsVariant) => {
     setSelectedVariantId(variant.id)
-    setOutputQuantity(
-      formatQuantity(
-        parseWholeQuantity(sourceQuantity) *
-          (variant.conversionMultiplier ?? 1),
-      ),
-    )
   }
 
   const updateSourceQuantity = (value: string) => {
     setSourceQuantity(value)
-
-    if (selectedVariant?.conversionMultiplier) {
-      setOutputQuantity(
-        formatQuantity(
-          parseWholeQuantity(value) * selectedVariant.conversionMultiplier,
-        ),
-      )
-    }
   }
 
   const submit = () => {
@@ -278,6 +252,7 @@ export function UnitConversionContent({
       stockSnapshot?: {
         convertedAt?: string
         sourceStockAfter?: number
+        targetQuantity?: number
         targetStockAfter?: number
       },
     ) => {
@@ -285,7 +260,7 @@ export function UnitConversionContent({
         businessId: activeBusinessId ?? undefined,
         convertedAt: stockSnapshot?.convertedAt,
         note,
-        outputQuantity: outputQuantityValue,
+        outputQuantity: stockSnapshot?.targetQuantity ?? outputQuantityValue,
         productId: selectedProduct.id,
         sourceQuantity: sourceQuantityValue,
         sourceStockAfter: stockSnapshot?.sourceStockAfter,
@@ -294,9 +269,6 @@ export function UnitConversionContent({
         targetVariantId: selectedVariant.id,
       })
       setNote("")
-      setOutputQuantity(
-        formatQuantity(selectedVariant.conversionMultiplier ?? 1),
-      )
       setSourceQuantity("1")
       onComplete?.()
     }
@@ -310,11 +282,11 @@ export function UnitConversionContent({
     ) {
       unitConversionMutation.mutate(
         {
+          externalId: `mobile:unit_conversion:${Crypto.randomUUID()}`,
           note: note.trim() || undefined,
           sourceProductVariantId: selectedProduct.remoteVariantId,
           sourceQuantity: sourceQuantityValue,
           targetProductVariantId: selectedVariant.remoteId,
-          targetQuantity: outputQuantityValue,
         },
         {
           onSuccess: (conversion) => {
@@ -326,6 +298,7 @@ export function UnitConversionContent({
             completeLocalConversion("synced", {
               convertedAt,
               sourceStockAfter: conversion.source.onHandQuantity,
+              targetQuantity: conversion.conversion.targetQuantity,
               targetStockAfter: conversion.target.onHandQuantity,
             })
           },
@@ -457,11 +430,17 @@ export function UnitConversionContent({
         />
       ) : null}
 
-      <QuantityStepper
-        helper={selectedVariant?.name}
+      <FormField
+        editable={false}
+        helper={
+          conversionPreview
+            ? `Calculated from the configured unit ratio for ${selectedVariant?.name ?? "the target unit"}.`
+            : "Choose a target with a valid ratio and a source quantity that produces whole units."
+        }
         label="Variant units produced"
-        onChangeText={setOutputQuantity}
-        value={outputQuantity}
+        value={
+          conversionPreview ? String(conversionPreview.targetQuantity) : ""
+        }
       />
 
       <FormField

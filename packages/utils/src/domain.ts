@@ -194,6 +194,26 @@ export function buildInternalTenantHostname(params: {
   return `${tenantSlug}${SURFACE_SUFFIX_BY_KIND[params.surface]}.${platformDomain}`
 }
 
+export function buildPlatformSurfaceHostname(params: {
+  surface: Exclude<TenantSurface, "storefront">
+  platformDomain: string
+  localProjectSlug?: string
+}) {
+  const platformDomain = normalizeHostname(params.platformDomain)
+
+  if (isLocalHostname(platformDomain)) {
+    return getLocalSurfaceHostname({
+      surface: params.surface,
+      platformDomain,
+      localProjectSlug: (params.localProjectSlug ?? "ewatrade")
+        .trim()
+        .toLowerCase(),
+    })
+  }
+
+  return `${SURFACE_PREFIX_BY_KIND[params.surface]}.${platformDomain}`
+}
+
 export function buildCustomTenantHostname(params: {
   customDomain: string
   surface: TenantSurface

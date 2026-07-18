@@ -22,6 +22,8 @@ export async function getDashboardInventory(input: {
       variants: {
         orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
         select: {
+          conversionRatioDenominator: true,
+          conversionRatioNumerator: true,
           id: true,
           inventoryItem: {
             select: {
@@ -31,6 +33,7 @@ export async function getDashboardInventory(input: {
             },
           },
           isDefault: true,
+          metadata: true,
           name: true,
           priceMinor: true,
           sku: true,

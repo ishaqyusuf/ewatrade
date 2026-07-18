@@ -20,8 +20,8 @@ Track important request/response shapes and contract rules.
 - Marketing owner signup contracts:
   - `POST /api/auth/signup` accepts account modes, workspace subdomain/custom domain, business details, required operating `currencyCode`, owner name/email/phone, and password from the marketing signup stepper.
   - `currencyCode` is restricted to NGN, USD, GHS, KES, ZAR, or EGP.
-  - The route creates the Better Auth user, tenant, first store, tenant hostnames, and owner membership, persisting the same currency on tenant and store, then dispatches the welcome email through `@ewatrade/email`.
-  - Successful responses include `tenantSlug`, `dashboardUrl`, and `emailDeliveryStatus` (`sent` or `failed`). Development responses may also include `devEmailHtml` for local preview.
+  - The route creates the Better Auth user, tenant, first store, storefront/POS tenant hostnames, and owner membership, persisting the same currency on tenant and store, then dispatches the welcome email through `@ewatrade/email`. It does not create an internal or custom tenant dashboard hostname.
+  - Successful responses include `tenantSlug`, the shared platform `dashboardUrl`, and `emailDeliveryStatus` (`sent` or `failed`). Development responses may also include `devEmailHtml` for local preview.
 - Mobile auth contracts:
   - `auth.requestMobileOwnerOtp` accepts mode `login` or `sign_up`, normalized email, optional owner name/business name, and optional supported `currencyCode`; the UI requires currency for sign-up and login ignores it.
   - In `login` mode, `auth.requestMobileOwnerOtp` must first confirm that the normalized email belongs to an existing account with an active owner/admin/manager membership or invited/active staff business context. Missing accounts or accounts without an available business fail before any OTP verification row is written or email is dispatched.
@@ -246,7 +246,10 @@ Track important request/response shapes and contract rules.
   - The first-phase result returns adjustment metadata, unit/product identity, and before/after on-hand quantity for the variant
   - Stock adjustment history still reads the metadata-backed normalized rows in this bridge. Durable stock report reads and live DB validation remain follow-up work.
 - Retail Ops unit conversion contract:
-  - `retailOps.recordUnitConversion` accepts optional `storeId`, optional `externalId`, optional `note`, optional `convertedAt`, required `sourceProductVariantId`, required `targetProductVariantId`, positive integer `sourceQuantity`, and positive integer `targetQuantity`
+  - `retailOps.recordUnitConversion` accepts optional `storeId`, required `externalId`, optional `note`, optional `convertedAt`, required `sourceProductVariantId`, required `targetProductVariantId`, and positive integer `sourceQuantity`. `targetQuantity` is optional compatibility input for older clients.
+  - The repository derives the target quantity from the source and target base-unit ratios. A compatibility `targetQuantity` must equal that derived value.
+  - Missing ratios, non-whole target output, different products, the same source/target unit, and insufficient unreserved source stock fail before inventory mutation.
+  - The response returns the authoritative source quantity, derived target quantity, and resulting source/target balances. Callers reconcile local state from this response.
   - Unit conversion requires a POS-capable role: owner, admin, manager, cashier, or operator
   - When `externalId` is supplied, repeated submissions with the same tenant/store/type external id return the original conversion response without another source decrement or target increment
   - Source and target variants must be different active variants in the selected tenant/store

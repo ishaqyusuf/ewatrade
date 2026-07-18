@@ -136,7 +136,11 @@ Group sales by product and unit/variant. Include quantity sold, gross sales, cur
 
 ### Stock Balance
 
-Report current stock by product, primary unit, and variant. Production should derive audit views from inventory movement ledgers, not only denormalized balances.
+Report current stock by product, primary unit, and variant. Each row may include
+its base-unit equivalent when a conversion ratio exists. Never add raw counts
+from unlike units (for example bags plus kilograms) into one on-hand total.
+Production should derive audit views from inventory movement ledgers, not only
+denormalized balances.
 
 ### Payment Reconciliation
 

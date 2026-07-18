@@ -58,7 +58,7 @@ export type RecordRetailOpsUnitConversionInput = {
   sourceQuantity: number
   storeId: string
   targetProductVariantId: string
-  targetQuantity: number
+  targetQuantity?: number
   tenantId: string
 }
 
@@ -182,6 +182,8 @@ export type RetailOpsStockMovementHistoryRow = {
 
 type RetailOpsStockErrorCode =
   | "CONVERSION_RATIO_MISMATCH"
+  | "CONVERSION_RATIO_REQUIRED"
+  | "CONVERSION_TARGET_NOT_WHOLE"
   | "DIFFERENT_PRODUCT"
   | "INSUFFICIENT_STOCK"
   | "INVALID_STOCK_ADJUSTMENT"
@@ -265,12 +267,6 @@ function getVariantConversionMultiplier(variant: {
   conversionRatioNumerator: number | null
   metadata: unknown
 }) {
-  const metadataMultiplier = getPositiveNumberField(
-    getRetailOpsMetadata(variant.metadata).conversionMultiplier,
-  )
-
-  if (metadataMultiplier !== null) return metadataMultiplier
-
   const ratioNumerator = getPositiveNumberField(
     variant.conversionRatioNumerator,
   )
@@ -282,28 +278,39 @@ function getVariantConversionMultiplier(variant: {
     return ratioNumerator / ratioDenominator
   }
 
-  return null
+  return getPositiveNumberField(
+    getRetailOpsMetadata(variant.metadata).conversionMultiplier,
+  )
 }
 
-function assertUnitConversionRatioMatches(input: {
+function calculateUnitConversionTargetQuantity(input: {
   sourceMultiplier: number | null
   sourceQuantity: number
   targetMultiplier: number | null
-  targetQuantity: number
 }) {
   if (input.sourceMultiplier === null || input.targetMultiplier === null) {
-    return
+    throw new RetailOpsStockError(
+      "CONVERSION_RATIO_REQUIRED",
+      "Source and target units must both have a configured conversion ratio.",
+    )
   }
 
   const sourceBaseQuantity = input.sourceQuantity * input.sourceMultiplier
-  const targetBaseQuantity = input.targetQuantity * input.targetMultiplier
+  const targetQuantity = sourceBaseQuantity / input.targetMultiplier
+  const roundedTargetQuantity = Math.round(targetQuantity)
 
-  if (Math.abs(sourceBaseQuantity - targetBaseQuantity) <= 1e-9) return
+  if (
+    !Number.isSafeInteger(roundedTargetQuantity) ||
+    roundedTargetQuantity <= 0 ||
+    Math.abs(targetQuantity - roundedTargetQuantity) > 1e-9
+  ) {
+    throw new RetailOpsStockError(
+      "CONVERSION_TARGET_NOT_WHOLE",
+      "This source quantity cannot produce a whole number of the selected target unit.",
+    )
+  }
 
-  throw new RetailOpsStockError(
-    "CONVERSION_RATIO_MISMATCH",
-    "Source and target quantities must match the configured unit conversion ratio.",
-  )
+  return roundedTargetQuantity
 }
 
 function assertStockAdjustmentReasonMatchesDirection(input: {
@@ -2520,12 +2527,21 @@ export async function recordRetailOpsUnitConversion(
       )
     }
 
-    assertUnitConversionRatioMatches({
+    const targetQuantity = calculateUnitConversionTargetQuantity({
       sourceMultiplier: getVariantConversionMultiplier(sourceVariant),
       sourceQuantity: input.sourceQuantity,
       targetMultiplier: getVariantConversionMultiplier(targetVariant),
-      targetQuantity: input.targetQuantity,
     })
+
+    if (
+      input.targetQuantity !== undefined &&
+      input.targetQuantity !== targetQuantity
+    ) {
+      throw new RetailOpsStockError(
+        "CONVERSION_RATIO_MISMATCH",
+        `The configured unit ratio requires a target quantity of ${targetQuantity}.`,
+      )
+    }
 
     const sourceInventory = await tx.inventoryItem.findUnique({
       where: {
@@ -2595,14 +2611,14 @@ export async function recordRetailOpsUnitConversion(
         productVariantId: targetVariant.id,
       },
       create: {
-        onHandQuantity: input.targetQuantity,
+        onHandQuantity: targetQuantity,
         productVariantId: targetVariant.id,
         storeId: input.storeId,
         tenantId: input.tenantId,
         updatedByUserId: input.actorUserId,
       },
       update: {
-        onHandQuantity: { increment: input.targetQuantity },
+        onHandQuantity: { increment: targetQuantity },
         updatedByUserId: input.actorUserId,
       },
       select: {
@@ -2617,7 +2633,7 @@ export async function recordRetailOpsUnitConversion(
         externalId,
         note: input.note ?? null,
         sourceQuantity: input.sourceQuantity,
-        targetQuantity: input.targetQuantity,
+        targetQuantity,
       },
       product: {
         id: sourceVariant.product.id,

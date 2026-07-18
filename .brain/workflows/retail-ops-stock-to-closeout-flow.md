@@ -62,6 +62,10 @@ Examples:
 Rules:
 
 - Product is the parent entity.
+- Each sellable unit has its own inventory balance.
+- Convertible units require a positive ratio to the product base unit.
+- Standard feed presets provide Bag, Half bag, Quarter bag, and Kilogram ratios
+  for 25 kg and 50 kg sealed bags.
 - A product with variants can show the parent row as a label/header.
 - Variant rows are selectable sale units.
 - Products without variants can sell through the primary unit.
@@ -76,12 +80,20 @@ Example:
 
 - 1 bag can become 2 half bags.
 - 1 bag can become 4 quarter bags.
+- 1 feed bag can become 25 or 50 kilograms according to its selected preset.
+- 50 bags can become 100 half bags.
 
 Expected system behavior:
 
 - Conversion records a stock movement out of the source unit.
 - Conversion records a paired stock movement into the target unit.
 - Conversion validates available stock.
+- The client enters only a whole source quantity; the server derives the whole
+  target quantity from configured ratios.
+- Missing ratios, fractional target outputs, cross-product conversions, and
+  same-unit conversions are rejected before either balance changes.
+- Online and offline conversion retries carry an external id and return the
+  original result instead of applying the movement twice.
 - Conversion is visible in movement history and reports.
 - Production conversion should be transactional and ledger-backed.
 

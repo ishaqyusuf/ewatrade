@@ -14,6 +14,8 @@ import { useEffect, useState } from "react"
 
 const PLATFORM_DOMAIN =
   process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com"
+const DASHBOARD_URL =
+  process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "https://dashboard.ewatrade.com"
 
 type StepSuccessProps = {
   tenantSlug: string
@@ -71,14 +73,13 @@ export function StepSuccess({
     storefrontUrl ?? `https://${tenantSlug}.${PLATFORM_DOMAIN}`
   const resolvedPosUrl =
     posUrl ?? `https://${tenantSlug}-pos.${PLATFORM_DOMAIN}`
-  const resolvedDashboardUrl =
-    dashboardUrl ?? `https://${tenantSlug}-dashboard.${PLATFORM_DOMAIN}`
+  const resolvedDashboardUrl = dashboardUrl ?? DASHBOARD_URL
 
   const surfaces = [
     {
       icon: Store04Icon,
       label: "Storefront",
-      description: "Your public merchant store",
+      description: "Your reserved public store address",
       href: resolvedStorefrontUrl,
       domain: getDisplayHost(resolvedStorefrontUrl),
       color: "text-primary",

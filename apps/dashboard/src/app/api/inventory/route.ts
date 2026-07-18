@@ -48,7 +48,7 @@ const unitConversionSchema = z.object({
   sourceQuantity: z.coerce.number().int().positive().max(1_000_000),
   storeId: z.string().trim().min(1).optional(),
   targetProductVariantId: z.string().trim().min(1),
-  targetQuantity: z.coerce.number().int().positive().max(1_000_000),
+  targetQuantity: z.coerce.number().int().positive().max(1_000_000).optional(),
 })
 
 const inventoryOperationSchema = z.discriminatedUnion("operation", [

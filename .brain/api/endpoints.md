@@ -19,7 +19,7 @@ Track current and planned API surface areas.
     `OnboardingSession` exactly once, and links it to the new tenant/user.
 - `apps/dashboard` exposes retained migration bridge routes for dashboard shell behavior:
   - `POST /api/auth/logout` signs out the Better Auth session for the dashboard surface.
-  - `POST /api/tenants/active` stores the active tenant slug after verifying the user belongs to the requested tenant.
+  - `POST /api/tenants/active` stores the active tenant slug after verifying the user belongs to the requested tenant. It keeps the user on the shared dashboard host.
   - `POST /api/stores/active` stores the active store id after verifying the store belongs to the active tenant context.
   - `POST /api/stores` creates the first or next tenant store from the dashboard onboarding/setup flow.
 - `apps/dashboard` exposes temporary inventory bridge routes for the dashboard proof slice:

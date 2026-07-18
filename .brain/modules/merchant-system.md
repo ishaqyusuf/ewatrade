@@ -30,7 +30,7 @@ The mobile app is the first MVP surface for these workflows. The dashboard app b
 
 The dashboard now supports first-phase active store switching for tenants with multiple stores. The sidebar exposes a store selector, `/api/stores/active` persists the selected store id in an http-only cookie, and `getActiveTenant` prefers that store when resolving dashboard context.
 
-The dashboard also supports first-phase tenant switching for users with active memberships in multiple tenant businesses. `getActiveTenant` returns the user's active tenant list, `/api/tenants/active` validates and persists a selected tenant for local/dev contexts, hosted switches can redirect to the selected tenant's dashboard domain, and the sidebar exposes a tenant selector when more than one tenant is available.
+The dashboard also supports first-phase tenant switching for users with active memberships in multiple tenant businesses. `getActiveTenant` returns the user's active tenant list, `/api/tenants/active` validates and persists a selected tenant, and the sidebar exposes a tenant selector when more than one tenant is available. All businesses stay on the shared dashboard host; switching updates session/cookie context and refreshes the current route instead of redirecting to a tenant dashboard domain.
 
 The dashboard first-store setup now captures a compact Retail Ops onboarding profile before the business starts adding inventory. The setup form records business type, country/currency, main product category, sales method, and team size, then `POST /api/stores` and tRPC `tenant.createStore` persist those fields through the shared store helper in `Store.metadata.retailOps.onboarding` and a completed tenant/user `OnboardingSession`.
 

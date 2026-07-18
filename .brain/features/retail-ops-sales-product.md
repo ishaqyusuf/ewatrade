@@ -31,6 +31,11 @@ Rabbit feed, poultry feed, grain, bag, half bag, and quarter bag examples are st
 - stock custody and reconciliation
 - cash and transfer closeout
 
+The standard feed presets model a sealed 25 kg or 50 kg Bag as the base unit,
+with Half bag, Quarter bag, and Kilogram as separate stock buckets. Rebagging is
+an explicit conversion between those buckets; selling a smaller unit never
+silently consumes a sealed bag.
+
 They are not the entire product boundary. The same model should support foodstuff wholesalers, building materials, cosmetics, pharmacy-adjacent retail where allowed, spare parts, mini-marts, and other inventory-led small businesses.
 
 ## Primary Personas

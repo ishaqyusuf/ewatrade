@@ -50,10 +50,10 @@ describe("retail ops quantity schemas", () => {
     expect(
       retailOpsRecordUnitConversionSchema.safeParse({
         ...storeScope,
+        externalId: "conversion-1",
         sourceProductVariantId: "unit-1",
         sourceQuantity: "2",
         targetProductVariantId: "unit-2",
-        targetQuantity: "4",
       }).success,
     ).toBe(true)
 
@@ -89,17 +89,24 @@ describe("retail ops quantity schemas", () => {
     })
     expectQuantityRejected(retailOpsRecordUnitConversionSchema, {
       ...storeScope,
+      externalId: "conversion-decimal-source",
       sourceProductVariantId: "unit-1",
       sourceQuantity: 1.2,
       targetProductVariantId: "unit-2",
-      targetQuantity: 2,
+    })
+    expectQuantityRejected(retailOpsRecordUnitConversionSchema, {
+      ...storeScope,
+      externalId: "conversion-decimal-target",
+      sourceProductVariantId: "unit-1",
+      sourceQuantity: 1,
+      targetProductVariantId: "unit-2",
+      targetQuantity: 2.8,
     })
     expectQuantityRejected(retailOpsRecordUnitConversionSchema, {
       ...storeScope,
       sourceProductVariantId: "unit-1",
       sourceQuantity: 1,
       targetProductVariantId: "unit-2",
-      targetQuantity: 2.8,
     })
   })
 

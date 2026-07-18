@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 
 import {
+  buildPlatformSurfaceHostname,
   extractTenantSlugFromPlatformHostname,
   inferTenantSurfaceFromHostname,
   resolveTenantDomain,
@@ -44,5 +45,20 @@ describe("tenant domain resolution", () => {
         "ewatrade.com",
       ),
     ).toBe("demo")
+  })
+
+  test("builds one global dashboard hostname for every business", () => {
+    expect(
+      buildPlatformSurfaceHostname({
+        platformDomain: "ewatrade.com",
+        surface: "dashboard",
+      }),
+    ).toBe("dashboard.ewatrade.com")
+    expect(
+      buildPlatformSurfaceHostname({
+        platformDomain: "localhost",
+        surface: "dashboard",
+      }),
+    ).toBe("ewatrade-dashboard.localhost")
   })
 })

@@ -287,7 +287,6 @@ describe("retail ops dashboard report queries", () => {
         lowStockCount: 2,
         productCount: 2,
         stockUnitCount: 3,
-        totalOnHandQuantity: 11,
       },
       payments: {
         cashMinor: 37_000,

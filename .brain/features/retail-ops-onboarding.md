@@ -15,7 +15,12 @@ before the owner starts operating:
 
 Early-access signup can now start from a secure marketing access link. The early-access route creates an expiring one-time `OnboardingSession`; `/signup?access_token=...` verifies it, prefills the owner/business fields that came from the lead, and `POST /api/auth/signup` consumes that session exactly once while linking it to the created tenant and owner.
 
-Local signup uses tenant-specific local surface hostnames such as `<tenant>-storefront.localhost`, `<tenant>-pos.localhost`, and `<tenant>-dashboard.localhost` for DB hostname records. Production keeps the public `<tenant>.ewatrade.com`, `<tenant>-pos.ewatrade.com`, and `<tenant>-dashboard.ewatrade.com` shape.
+The chosen business slug reserves the future public storefront address:
+`<tenant>.ewatrade.com` in production. Signup may also retain a tenant-specific
+POS hostname, but it never creates a tenant-specific dashboard hostname. Every
+business uses the shared dashboard at `dashboard.ewatrade.com` in production or
+`ewatrade-dashboard.localhost` in local development; active business context is
+resolved from the authenticated membership and active-tenant cookie.
 
 - store name
 - business template: Product Sales, Dry Cleaning / Laundry, or Other business
@@ -33,6 +38,7 @@ Dry Cleaning / Laundry stores also receive an empty metadata-backed dry-cleaning
 
 ## Product Rules
 - Keep first-run setup compact and operational.
+- Treat the chosen subdomain as storefront identity, never as a dashboard host.
 - Do not hard-code feed, grain, or any other case-study product as the product identity.
 - Existing stores without template metadata resolve to Product Sales.
 - Store onboarding values by tenant/store scope so multiple businesses and stores remain isolated.

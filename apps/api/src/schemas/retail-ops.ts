@@ -545,12 +545,17 @@ export const retailOpsRecordStockAdjustmentSchema =
 export const retailOpsRecordUnitConversionSchema =
   retailOpsStoreScopeSchema.extend({
     convertedAt: z.coerce.date().optional(),
-    externalId: z.string().trim().min(1).max(120).optional(),
+    externalId: z.string().trim().min(1).max(120),
     note: z.string().trim().max(500).optional(),
     sourceProductVariantId: z.string().trim().min(1),
     sourceQuantity: z.coerce.number().int().positive().max(1_000_000),
     targetProductVariantId: z.string().trim().min(1),
-    targetQuantity: z.coerce.number().int().positive().max(1_000_000),
+    targetQuantity: z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(1_000_000)
+      .optional(),
   })
 
 export const retailOpsOpenSessionSchema = retailOpsStoreScopeSchema.extend({

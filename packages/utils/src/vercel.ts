@@ -64,14 +64,13 @@ export async function addVercelDomain(
 }
 
 /**
- * Provision all three tenant surfaces (storefront, pos, dashboard) on Vercel.
- * Uses the three project IDs from environment variables.
+ * Provision tenant-owned public/store-operation surfaces on Vercel.
+ * The dashboard is a shared platform surface and is never tenant-provisioned.
  * Non-blocking — logs results but does not throw.
  */
 export async function provisionTenantVercelDomains(params: {
   storefrontDomain: string
   posDomain: string
-  dashboardDomain: string
 }): Promise<void> {
   const token = readEnv("VERCEL_API_TOKEN")?.trim()
 
@@ -84,7 +83,6 @@ export async function provisionTenantVercelDomains(params: {
 
   const storefrontProjectId = readEnv("VERCEL_STOREFRONT_PROJECT_ID") ?? ""
   const posProjectId = readEnv("VERCEL_POS_PROJECT_ID") ?? ""
-  const dashboardProjectId = readEnv("VERCEL_DASHBOARD_PROJECT_ID") ?? ""
   const configuredDomains = [
     {
       surface: "storefront",
@@ -92,11 +90,6 @@ export async function provisionTenantVercelDomains(params: {
       projectId: storefrontProjectId,
     },
     { surface: "pos", domain: params.posDomain, projectId: posProjectId },
-    {
-      surface: "dashboard",
-      domain: params.dashboardDomain,
-      projectId: dashboardProjectId,
-    },
   ].filter(({ projectId }) => projectId.trim().length > 0)
 
   const results = await Promise.allSettled(

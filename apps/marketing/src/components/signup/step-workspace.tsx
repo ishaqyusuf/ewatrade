@@ -19,6 +19,16 @@ import { useCallback, useEffect, useState } from "react"
 
 const PLATFORM_DOMAIN =
   process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com"
+const DASHBOARD_URL =
+  process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "https://dashboard.ewatrade.com"
+
+function getDisplayHost(url: string) {
+  try {
+    return new URL(url).host
+  } catch {
+    return url.replace(/^https?:\/\//, "")
+  }
+}
 
 const baseInputClasses =
   "w-full rounded-2xl border border-border/70 bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10 disabled:opacity-50"
@@ -52,7 +62,7 @@ function SubdomainPreview({ slug }: { slug: string }) {
     {
       icon: DashboardCircleIcon,
       label: "Dashboard",
-      domain: `${slug || "yourname"}-dashboard.${PLATFORM_DOMAIN}`,
+      domain: getDisplayHost(DASHBOARD_URL),
       color: "text-emerald-700",
       bg: "bg-emerald-500/8",
     },
@@ -197,8 +207,7 @@ export function StepWorkspace({
           Claim your workspace
         </h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Your subdomain becomes the root of your storefront, POS, and
-          dashboard.
+          Reserve the address for your future public storefront.
         </p>
       </div>
 

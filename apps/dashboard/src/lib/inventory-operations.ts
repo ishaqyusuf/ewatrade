@@ -1,4 +1,8 @@
 import { canOperatePos, normalizeRole } from "@ewatrade/auth/roles"
+import {
+  type WholeUnitConversion,
+  calculateWholeUnitConversion,
+} from "@ewatrade/utils/inventory-unit-conversion"
 
 export const LOW_STOCK_FALLBACK_THRESHOLD = 5
 
@@ -6,6 +10,9 @@ export type InventoryStockState = "available" | "low" | "out"
 
 export type InventoryUnitRow = {
   availableQuantity: number
+  baseEquivalentQuantity: number | null
+  baseUnitName: string
+  conversionMultiplier: number | null
   currencyCode: string
   isDefault: boolean
   onHandQuantity: number
@@ -29,6 +36,8 @@ export type InventoryProductForRows = {
   slug: string
   status: string
   variants: Array<{
+    conversionRatioDenominator?: number | null
+    conversionRatioNumerator?: number | null
     id: string
     inventoryItem: {
       onHandQuantity: number
@@ -36,6 +45,7 @@ export type InventoryProductForRows = {
       reservedQuantity: number
     } | null
     isDefault: boolean
+    metadata?: unknown
     name: string
     priceMinor: number
     sku: string | null
@@ -45,6 +55,38 @@ export type InventoryProductForRows = {
 export type InventoryFilters = {
   search?: string
   state?: InventoryStockState | ""
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {}
+}
+
+function getConversionMultiplier(
+  variant: InventoryProductForRows["variants"][number],
+) {
+  const numerator = variant.conversionRatioNumerator
+  const denominator = variant.conversionRatioDenominator
+
+  if (
+    typeof numerator === "number" &&
+    numerator > 0 &&
+    typeof denominator === "number" &&
+    denominator > 0
+  ) {
+    return numerator / denominator
+  }
+
+  const metadataMultiplier = asRecord(
+    asRecord(variant.metadata).retailOps,
+  ).conversionMultiplier
+
+  return typeof metadataMultiplier === "number" &&
+    Number.isFinite(metadataMultiplier) &&
+    metadataMultiplier > 0
+    ? metadataMultiplier
+    : null
 }
 
 export type StockMovementRow = {
@@ -111,8 +153,12 @@ export function getStockState(input: {
 }
 
 export function mapInventoryRows(products: InventoryProductForRows[]) {
-  return products.flatMap((product) =>
-    product.variants.map((variant) => {
+  return products.flatMap((product) => {
+    const baseUnit =
+      product.variants.find((variant) => variant.isDefault) ??
+      product.variants[0]
+
+    return product.variants.map((variant) => {
       const onHandQuantity = variant.inventoryItem?.onHandQuantity ?? 0
       const reservedQuantity = variant.inventoryItem?.reservedQuantity ?? 0
       const reorderPoint = variant.inventoryItem?.reorderPoint ?? null
@@ -120,9 +166,16 @@ export function mapInventoryRows(products: InventoryProductForRows[]) {
         onHandQuantity,
         reservedQuantity,
       })
+      const conversionMultiplier = getConversionMultiplier(variant)
 
       return {
         availableQuantity,
+        baseEquivalentQuantity:
+          conversionMultiplier === null
+            ? null
+            : onHandQuantity * conversionMultiplier,
+        baseUnitName: baseUnit?.name ?? "Base unit",
+        conversionMultiplier,
         currencyCode: product.currencyCode,
         isDefault: variant.isDefault,
         onHandQuantity,
@@ -142,8 +195,29 @@ export function mapInventoryRows(products: InventoryProductForRows[]) {
         unitId: variant.id,
         unitName: variant.name,
       } satisfies InventoryUnitRow
-    }),
-  )
+    })
+  })
+}
+
+export function getUnitConversionPreview(input: {
+  sourceQuantity: number
+  sourceUnit: InventoryUnitRow | null | undefined
+  targetUnit: InventoryUnitRow | null | undefined
+}): WholeUnitConversion | null {
+  if (
+    !input.sourceUnit ||
+    !input.targetUnit ||
+    input.sourceUnit.unitId === input.targetUnit.unitId ||
+    input.sourceUnit.productId !== input.targetUnit.productId
+  ) {
+    return null
+  }
+
+  return calculateWholeUnitConversion({
+    sourceMultiplier: input.sourceUnit.conversionMultiplier,
+    sourceQuantity: input.sourceQuantity,
+    targetMultiplier: input.targetUnit.conversionMultiplier,
+  })
 }
 
 export function filterInventoryRows(

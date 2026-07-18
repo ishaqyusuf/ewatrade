@@ -27,6 +27,8 @@ function getStockErrorCode(
   if (error.code === "INSUFFICIENT_STOCK") return "CONFLICT"
   if (
     error.code === "CONVERSION_RATIO_MISMATCH" ||
+    error.code === "CONVERSION_RATIO_REQUIRED" ||
+    error.code === "CONVERSION_TARGET_NOT_WHOLE" ||
     error.code === "DIFFERENT_PRODUCT" ||
     error.code === "ITEM_NOT_STOCKABLE" ||
     error.code === "INVALID_STOCK_ADJUSTMENT" ||

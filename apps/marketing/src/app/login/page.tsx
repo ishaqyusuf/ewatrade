@@ -41,7 +41,7 @@ function LoginPageContent() {
 
       const { dashboardUrl } = body as { dashboardUrl: string }
 
-      // Redirect to the tenant's dashboard (or the next param if same-origin)
+      // Redirect to the shared dashboard (or the next param if same-origin).
       if (nextUrl?.startsWith("/")) {
         router.push(nextUrl)
       } else {

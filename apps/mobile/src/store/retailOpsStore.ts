@@ -1,5 +1,6 @@
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
+import { calculateWholeUnitConversion } from "@ewatrade/utils/inventory-unit-conversion"
 import { zustandStorage } from "./mmkv"
 
 export type RetailOpsVariant = {
@@ -35,6 +36,7 @@ export type RetailOpsProduct = {
   }
   startingStock: number
   syncStatus: "pending" | "synced"
+  unitTemplateKey?: string
   unitName: string
   variants: RetailOpsVariant[]
 }
@@ -256,6 +258,7 @@ type FirstProductInput = {
   }
   startingStock: number
   syncStatus?: "pending" | "synced"
+  unitTemplateKey?: string
   unitName: string
   variants: Array<{
     currentStock?: number
@@ -749,6 +752,7 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                 service: input.service,
                 startingStock,
                 syncStatus,
+                unitTemplateKey: input.unitTemplateKey,
                 unitName: input.unitName,
                 variants: input.variants.map((variant) => {
                   const variantStartingStock = toNonNegativeWholeQuantity(
@@ -1922,10 +1926,17 @@ export const useRetailOpsStore = create<RetailOpsState>()(
             input.outputQuantity,
           )
           const sourceStock = getProductStock(product)
+          const conversionPreview = calculateWholeUnitConversion({
+            sourceMultiplier: 1,
+            sourceQuantity,
+            targetMultiplier: targetVariant.conversionMultiplier,
+          })
 
           if (
             sourceQuantity <= 0 ||
             outputQuantity <= 0 ||
+            !conversionPreview ||
+            outputQuantity !== conversionPreview.targetQuantity ||
             sourceQuantity > sourceStock
           ) {
             return state

@@ -11,7 +11,6 @@ export type RetailOpsSummary = {
     lowStockCount: number
     productCount: number
     stockUnitCount: number
-    totalOnHandQuantity: number
   }
   payments: RetailOpsMoneyTotals & {
     receiptCount: number
@@ -321,10 +320,6 @@ export async function getRetailOpsDashboardSummary(
         .length,
       productCount: new Set(inventory.map((unit) => unit.productId)).size,
       stockUnitCount: inventory.length,
-      totalOnHandQuantity: inventory.reduce(
-        (total, unit) => total + unit.onHandQuantity,
-        0,
-      ),
     },
     payments: {
       ...paymentTotals,

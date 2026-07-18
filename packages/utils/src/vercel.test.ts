@@ -5,7 +5,6 @@ const originalFetch = globalThis.fetch
 const originalWarn = console.warn
 const originalEnv = {
   VERCEL_API_TOKEN: process.env.VERCEL_API_TOKEN,
-  VERCEL_DASHBOARD_PROJECT_ID: process.env.VERCEL_DASHBOARD_PROJECT_ID,
   VERCEL_POS_PROJECT_ID: process.env.VERCEL_POS_PROJECT_ID,
   VERCEL_STOREFRONT_PROJECT_ID: process.env.VERCEL_STOREFRONT_PROJECT_ID,
 }
@@ -50,7 +49,6 @@ describe("Vercel tenant domain provisioning", () => {
     await provisionTenantVercelDomains({
       storefrontDomain: "demo.ewatrade.com",
       posDomain: "demo-pos.ewatrade.com",
-      dashboardDomain: "demo-dashboard.ewatrade.com",
     })
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -84,7 +82,6 @@ describe("Vercel tenant domain provisioning", () => {
     await provisionTenantVercelDomains({
       storefrontDomain: "demo.ewatrade.com",
       posDomain: "demo-pos.ewatrade.com",
-      dashboardDomain: "demo-dashboard.ewatrade.com",
     })
 
     expect(fetchMock).not.toHaveBeenCalled()

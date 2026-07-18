@@ -1,3 +1,4 @@
+import { resolveDashboardUrl } from "@/lib/dashboard-url"
 import { signupPayloadSchema } from "@/lib/signup-schemas"
 import { auth } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
@@ -334,14 +335,13 @@ export async function POST(request: NextRequest) {
     surface: "pos",
     platformDomain: PLATFORM_DOMAIN,
   })
-  const dashboardHostname = buildInternalTenantHostname({
-    localProjectSlug: subdomain,
-    tenantSlug: subdomain,
-    surface: "dashboard",
+  const dashboardUrl = resolveDashboardUrl({
+    configuredUrl: process.env.NEXT_PUBLIC_DASHBOARD_URL,
+    isProduction: process.env.NODE_ENV === "production",
     platformDomain: PLATFORM_DOMAIN,
   })
+  const dashboardHostname = new URL(dashboardUrl).host
   const urlProtocol = process.env.NODE_ENV === "production" ? "https" : "http"
-  const dashboardUrl = `${urlProtocol}://${dashboardHostname}`
   const posUrl = `${urlProtocol}://${posHostname}`
   const storefrontUrl = `${urlProtocol}://${storefrontHostname}`
 
@@ -379,7 +379,8 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      // Create all three internal hostname records
+      // The business slug belongs to public/store operations. The dashboard is
+      // one shared platform surface and resolves tenant context from session.
       await tx.tenantHostname.createMany({
         data: [
           {
@@ -393,13 +394,6 @@ export async function POST(request: NextRequest) {
             tenantId: tenant.id,
             surface: "POS",
             hostname: posHostname,
-            isPrimary: true,
-            isCustom: false,
-          },
-          {
-            tenantId: tenant.id,
-            surface: "DASHBOARD",
-            hostname: dashboardHostname,
             isPrimary: true,
             isCustom: false,
           },
@@ -427,16 +421,6 @@ export async function POST(request: NextRequest) {
               hostname: buildCustomTenantHostname({
                 customDomain: cleanCustom,
                 surface: "pos",
-              }),
-              isPrimary: false,
-              isCustom: true,
-            },
-            {
-              tenantId: tenant.id,
-              surface: "DASHBOARD",
-              hostname: buildCustomTenantHostname({
-                customDomain: cleanCustom,
-                surface: "dashboard",
               }),
               isPrimary: false,
               isCustom: true,
@@ -507,7 +491,6 @@ export async function POST(request: NextRequest) {
     void provisionTenantVercelDomains({
       storefrontDomain: storefrontHostname,
       posDomain: posHostname,
-      dashboardDomain: dashboardHostname,
     })
   }
 
