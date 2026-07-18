@@ -1146,7 +1146,7 @@ function DashboardActionPickerSheet({
     <Modal
       accessibilityLabel="Create action"
       ref={modal.ref}
-      snapPoints={["42%"]}
+      snapPoints={[items.length > 4 ? "60%" : "42%"]}
       title="Create"
     >
       <View className="gap-2 px-4 pb-5">
@@ -2496,57 +2496,72 @@ export function RetailOpsDashboardSurface({
   const shellCentralAction: MobileAppShellNavItem = hasProductCatalogItem
     ? {
         accessibilityLabel:
-          hasServiceCatalogItem && !isAttendantDashboard
-            ? "Create order"
-            : "Create sale",
+          isAttendantDashboard ? "Create sale" : "Open create actions",
         icon: "Plus",
-        label:
-          hasServiceCatalogItem && !isAttendantDashboard ? "Create" : "Sale",
+        label: isAttendantDashboard ? "Sale" : "Add",
         onPress: () =>
-          hasServiceCatalogItem && !isAttendantDashboard
-            ? actionModal.present()
-            : handleQuickAction("New sale"),
+          isAttendantDashboard
+            ? handleQuickAction("New sale")
+            : actionModal.present(),
       }
     : hasServiceCatalogItem
       ? {
-          accessibilityLabel: "Create service order",
+          accessibilityLabel: isAttendantDashboard
+            ? "Create service order"
+            : "Open create actions",
           icon: "Plus",
-          label: "Service",
-          onPress: () => openCreateSale("service"),
+          label: isAttendantDashboard ? "Service" : "Add",
+          onPress: () =>
+            isAttendantDashboard
+              ? openCreateSale("service")
+              : actionModal.present(),
         }
       : {
-          accessibilityLabel: "Add catalog item",
+          accessibilityLabel: isAttendantDashboard
+            ? "Sale unavailable until an item is added"
+            : "Open create actions",
+          disabled: isAttendantDashboard,
           icon: "Plus",
-          label: "Item",
-          onPress: openFirstProductSetup,
+          label: isAttendantDashboard ? "Sale" : "Add",
+          onPress: actionModal.present,
         }
   const actionPickerItems: MoreNavigationItem[] = [
-    ...(hasProductCatalogItem
+    ...(hasProductCatalogItem || hasServiceCatalogItem
       ? [
           {
-            description: "Start a sale for the current session.",
-            icon: "ReceiptText" as const,
-            label: "New sale",
+            description: "Create an order from active Product or Service items.",
+            icon: "ClipboardList" as const,
+            label: "Order",
             onPress: () => {
               actionModal.dismiss()
+              if (hasServiceCatalogItem && !hasProductCatalogItem) {
+                openCreateSale("service")
+                return
+              }
+
               handleQuickAction("New sale")
             },
           },
         ]
       : []),
-    ...(hasServiceCatalogItem
-      ? [
-          {
-            description: "Create an order using active Service items.",
-            icon: "ClipboardList" as const,
-            label: "Service order",
-            onPress: () => {
-              actionModal.dismiss()
-              openCreateSale("service")
-            },
-          },
-        ]
-      : []),
+    {
+      description: "Add a Product or Service item to the catalog.",
+      icon: "PlusCircle",
+      label: "Item",
+      onPress: () => {
+        actionModal.dismiss()
+        openFirstProductSetup()
+      },
+    },
+    {
+      description: "Find saved customers and recent purchase activity.",
+      icon: "Users",
+      label: "Customer",
+      onPress: () => {
+        actionModal.dismiss()
+        openCustomerBook()
+      },
+    },
     ...(hasProductCatalogItem
       ? [
           {
