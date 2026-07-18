@@ -1,167 +1,185 @@
 model Store {
-  id                 String              @id @default(cuid())
-  tenantId           String
-  slug               String
-  name               String
-  description        String?
-  status             StoreStatus         @default(DRAFT)
-  currencyCode       String              @default("NGN")
-  supportPhone       String?
-  supportEmail       String?
-  isMarketplaceLive  Boolean             @default(false)
-  metadata           Json?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  products           Product[]
-  carts              Cart[]
-  orders             Order[]
-  inventoryItems     InventoryItem[]
-  productUnitPriceHistory ProductUnitPriceHistory[]
-  retailOpsStaffProfiles RetailOpsStaffProfile[]
-  pages              Page[]
-  sites              Site[]
-  themes             Theme[]
-  templates          Template[]
-  cashierSessions    CashierSession[]
-  receipts           Receipt[]
-  stockDeliveries    StockDelivery[]
-  inventoryMovements InventoryMovement[]
-  offlineDevices     OfflineDevice[]
-  retailOpsSyncRuns  RetailOpsSyncRun[]
-  retailOpsSyncEvents RetailOpsSyncEvent[]
-  productShareLinks  ProductShareLink[]
-  productShareLinkEvents ProductShareLinkEvent[]
-  productShareLinkViews ProductShareLinkView[]
-  productShareLinkOrderRequests ProductShareLinkOrderRequest[]
-  productShareLinkReservations ProductShareLinkReservation[]
-  productShareLinkNotifications ProductShareLinkNotification[]
+  id                             String                           @id @default(cuid())
+  tenantId                       String
+  slug                           String
+  name                           String
+  description                    String?
+  status                         StoreStatus                      @default(DRAFT)
+  currencyCode                   String                           @default("NGN")
+  supportPhone                   String?
+  supportEmail                   String?
+  isMarketplaceLive              Boolean                          @default(false)
+  metadata                       Json?
+  createdAt                      DateTime                         @default(now())
+  updatedAt                      DateTime                         @updatedAt
+  tenant                         Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  products                       Product[]
+  carts                          Cart[]
+  orders                         Order[]
+  orderPaymentEvents             OrderPaymentEvent[]
+  inventoryItems                 InventoryItem[]
+  productUnitPriceHistory        ProductUnitPriceHistory[]
+  retailOpsStaffProfiles         RetailOpsStaffProfile[]
+  pages                          Page[]
+  sites                          Site[]
+  themes                         Theme[]
+  templates                      Template[]
+  cashierSessions                CashierSession[]
+  receipts                       Receipt[]
+  stockDeliveries                StockDelivery[]
+  inventoryMovements             InventoryMovement[]
+  offlineDevices                 OfflineDevice[]
+  retailOpsSyncRuns              RetailOpsSyncRun[]
+  retailOpsSyncEvents            RetailOpsSyncEvent[]
+  productShareLinks              ProductShareLink[]
+  productShareLinkEvents         ProductShareLinkEvent[]
+  productShareLinkViews          ProductShareLinkView[]
+  productShareLinkOrderRequests  ProductShareLinkOrderRequest[]
+  productShareLinkReservations   ProductShareLinkReservation[]
+  productShareLinkNotifications  ProductShareLinkNotification[]
   productShareLinkAnalyticsDaily ProductShareLinkAnalyticsDaily[]
-  retailOpsCustomers RetailOpsCustomer[]
-  retailOpsCustomerIdentities RetailOpsCustomerIdentity[]
-  retailOpsCustomerEvents RetailOpsCustomerEvent[]
-  retailOpsCloseouts RetailOpsCloseout[]
-  retailOpsStockDeclarations RetailOpsStockDeclaration[]
-  retailOpsPaymentDeclarations RetailOpsPaymentDeclaration[]
-  retailOpsCloseoutReviews RetailOpsCloseoutReview[]
-  staffStockWallets StaffStockWallet[]
+  retailOpsCustomers             RetailOpsCustomer[]
+  retailOpsCustomerIdentities    RetailOpsCustomerIdentity[]
+  retailOpsCustomerEvents        RetailOpsCustomerEvent[]
+  retailOpsCloseouts             RetailOpsCloseout[]
+  retailOpsStockDeclarations     RetailOpsStockDeclaration[]
+  retailOpsPaymentDeclarations   RetailOpsPaymentDeclaration[]
+  retailOpsCloseoutReviews       RetailOpsCloseoutReview[]
+  staffStockWallets              StaffStockWallet[]
+  serviceJobs                    ServiceJob[]
+  serviceRequestLinks            ServiceRequestLink[]
+  serviceRequests                ServiceRequest[]
+  serviceNotificationIntents     ServiceNotificationIntent[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, status])
 }
 
 model Product {
-  id                  String              @id @default(cuid())
-  tenantId            String
-  storeId             String
-  unitTemplateId      String?
-  slug                String
-  name                String
-  description         String?
-  status              ProductStatus       @default(DRAFT)
-  sku                 String?
-  listPriceMinor      Int
-  salePriceMinor      Int?
-  currencyCode        String              @default("NGN")
-  isPublished         Boolean             @default(false)
-  isMarketplaceListed Boolean             @default(false)
-  metadata            Json?
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-  store               Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  unitTemplate        ProductUnitTemplate? @relation("ProductUnitTemplateProducts", fields: [unitTemplateId], references: [id], onDelete: SetNull)
-  orderItems          OrderItem[]
-  variants            ProductVariant[]
-  unitPriceHistory    ProductUnitPriceHistory[]
-  stockDeliveryLines  StockDeliveryLine[]
-  inventoryMovements  InventoryMovement[]
-  shareLinks          ProductShareLink[]
-  shareLinkViews      ProductShareLinkView[]
-  shareLinkOrderRequests ProductShareLinkOrderRequest[]
-  shareLinkReservations ProductShareLinkReservation[]
-  shareLinkAnalyticsDaily ProductShareLinkAnalyticsDaily[]
+  id                         String                           @id @default(cuid())
+  tenantId                   String
+  storeId                    String
+  unitTemplateId             String?
+  slug                       String
+  name                       String
+  description                String?
+  category                   String?
+  kind                       CatalogItemKind                  @default(PRODUCT)
+  legacyServiceItemId        String?
+  status                     ProductStatus                    @default(DRAFT)
+  sku                        String?
+  listPriceMinor             Int
+  salePriceMinor             Int?
+  currencyCode               String                           @default("NGN")
+  isPublished                Boolean                          @default(false)
+  isMarketplaceListed        Boolean                          @default(false)
+  metadata                   Json?
+  createdAt                  DateTime                         @default(now())
+  updatedAt                  DateTime                         @updatedAt
+  store                      Store                            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  unitTemplate               ProductUnitTemplate?             @relation("ProductUnitTemplateProducts", fields: [unitTemplateId], references: [id], onDelete: SetNull)
+  orderItems                 OrderItem[]
+  variants                   ProductVariant[]
+  unitPriceHistory           ProductUnitPriceHistory[]
+  stockDeliveryLines         StockDeliveryLine[]
+  inventoryMovements         InventoryMovement[]
+  shareLinks                 ProductShareLink[]
+  shareLinkViews             ProductShareLinkView[]
+  shareLinkOrderRequests     ProductShareLinkOrderRequest[]
+  shareLinkReservations      ProductShareLinkReservation[]
+  shareLinkAnalyticsDaily    ProductShareLinkAnalyticsDaily[]
   retailOpsStockDeclarations RetailOpsStockDeclaration[]
-  staffStockWallets StaffStockWallet[]
+  staffStockWallets          StaffStockWallet[]
+  serviceProfile             ServiceItemProfile?
+  serviceJobLines            ServiceJobLine[]
+  serviceRequestLines        ServiceRequestLine[]
 
   @@unique([storeId, slug])
+  @@unique([storeId, legacyServiceItemId])
   @@unique([storeId, sku])
   @@index([tenantId, status])
+  @@index([unitTemplateId])
+  @@index([storeId, kind, status])
   @@index([storeId, isPublished])
 }
 
 model ProductVariant {
-  id                        String              @id @default(cuid())
-  productId                 String
-  unitTemplateId            String?
-  unitTemplateUnitId        String?
-  sku                       String
-  name                      String
-  optionSummary             String?
-  priceMinor                Int
-  compareAtMinor            Int?
-  conversionRatioNumerator  Int?
+  id                         String                        @id @default(cuid())
+  productId                  String
+  unitTemplateId             String?
+  unitTemplateUnitId         String?
+  sku                        String
+  name                       String
+  optionSummary              String?
+  legacyServiceVariantId     String?
+  priceMinor                 Int
+  compareAtMinor             Int?
+  conversionRatioNumerator   Int?
   conversionRatioDenominator Int?
-  isDefault                 Boolean             @default(false)
-  isActive                  Boolean             @default(true)
-  metadata                  Json?
-  createdAt                 DateTime            @default(now())
-  updatedAt                 DateTime            @updatedAt
-  product                   Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
-  unitTemplate              ProductUnitTemplate? @relation("ProductUnitTemplateVariants", fields: [unitTemplateId], references: [id], onDelete: SetNull)
-  unitTemplateUnit          ProductUnitTemplateUnit? @relation(fields: [unitTemplateUnitId], references: [id], onDelete: SetNull)
-  inventoryItem             InventoryItem?
-  cartItems                 CartItem[]
-  orderItems                OrderItem[]
-  unitPriceHistory          ProductUnitPriceHistory[]
-  stockDeliveryLines        StockDeliveryLine[]
-  inventoryMovements        InventoryMovement[] @relation("InventoryMovementVariant")
-  relatedInventoryMovements InventoryMovement[] @relation("RelatedInventoryMovementVariant")
+  isDefault                  Boolean                       @default(false)
+  isActive                   Boolean                       @default(true)
+  metadata                   Json?
+  createdAt                  DateTime                      @default(now())
+  updatedAt                  DateTime                      @updatedAt
+  product                    Product                       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  unitTemplate               ProductUnitTemplate?          @relation("ProductUnitTemplateVariants", fields: [unitTemplateId], references: [id], onDelete: SetNull)
+  unitTemplateUnit           ProductUnitTemplateUnit?      @relation(fields: [unitTemplateUnitId], references: [id], onDelete: SetNull)
+  inventoryItem              InventoryItem?
+  cartItems                  CartItem[]
+  orderItems                 OrderItem[]
+  unitPriceHistory           ProductUnitPriceHistory[]
+  stockDeliveryLines         StockDeliveryLine[]
+  inventoryMovements         InventoryMovement[]           @relation("InventoryMovementVariant")
+  relatedInventoryMovements  InventoryMovement[]           @relation("RelatedInventoryMovementVariant")
   retailOpsStockDeclarations RetailOpsStockDeclaration[]
-  staffStockWallets StaffStockWallet[]
-  shareLinkReservations ProductShareLinkReservation[]
+  staffStockWallets          StaffStockWallet[]
+  shareLinkReservations      ProductShareLinkReservation[]
+  serviceJobLines            ServiceJobLine[]
+  serviceRequestLines        ServiceRequestLine[]
 
   @@unique([productId, sku])
+  @@unique([productId, legacyServiceVariantId])
   @@index([productId, isActive])
   @@index([unitTemplateId])
   @@index([unitTemplateUnitId])
 }
 
 model ProductUnitTemplate {
-  id            String                    @id @default(cuid())
-  tenantId      String?
-  key           String                    @unique
-  name          String
-  description   String?
-  baseUnitName  String
-  isSystem      Boolean                   @default(false)
-  isActive      Boolean                   @default(true)
-  sortOrder     Int                       @default(0)
-  metadata      Json?
-  createdAt     DateTime                  @default(now())
-  updatedAt     DateTime                  @updatedAt
-  tenant        Tenant?                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  units         ProductUnitTemplateUnit[]
-  products      Product[]                 @relation("ProductUnitTemplateProducts")
-  variants      ProductVariant[]          @relation("ProductUnitTemplateVariants")
+  id           String                    @id @default(cuid())
+  tenantId     String?
+  key          String                    @unique
+  name         String
+  description  String?
+  baseUnitName String
+  isSystem     Boolean                   @default(false)
+  isActive     Boolean                   @default(true)
+  sortOrder    Int                       @default(0)
+  metadata     Json?
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  tenant       Tenant?                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  units        ProductUnitTemplateUnit[]
+  products     Product[]                 @relation("ProductUnitTemplateProducts")
+  variants     ProductVariant[]          @relation("ProductUnitTemplateVariants")
 
   @@index([tenantId, isActive, sortOrder])
   @@index([isSystem, sortOrder])
 }
 
 model ProductUnitTemplateUnit {
-  id             String              @id @default(cuid())
-  templateId     String
-  key            String
-  name           String
-  ratioNumerator Int                 @default(1)
-  ratioDenominator Int               @default(1)
-  isBase         Boolean             @default(false)
-  sortOrder      Int                 @default(0)
-  metadata       Json?
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  template       ProductUnitTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  variants       ProductVariant[]
+  id               String              @id @default(cuid())
+  templateId       String
+  key              String
+  name             String
+  ratioNumerator   Int                 @default(1)
+  ratioDenominator Int                 @default(1)
+  isBase           Boolean             @default(false)
+  sortOrder        Int                 @default(0)
+  metadata         Json?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  template         ProductUnitTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  variants         ProductVariant[]
 
   @@unique([templateId, key])
   @@index([templateId, sortOrder])
@@ -291,48 +309,48 @@ model StockDeliveryLine {
 }
 
 model InventoryMovement {
-  id                      String                     @id @default(cuid())
-  tenantId                String
-  storeId                 String
-  productId               String
-  productVariantId        String
-  relatedProductVariantId String?
-  inventoryItemId         String?
-  stockDeliveryId         String?
-  stockDeliveryLineId     String?
-  orderId                 String?
-  orderItemId             String?
-  cashierSessionId        String?
-  staffStockWalletId      String?
-  actorUserId             String?
-  staffUserId             String?
-  type                    InventoryMovementType
-  direction               InventoryMovementDirection
-  source                  InventoryMovementSource     @default(MANUAL)
-  quantity                Int
-  previousOnHandQuantity  Int?
-  onHandQuantity          Int?
+  id                          String                     @id @default(cuid())
+  tenantId                    String
+  storeId                     String
+  productId                   String
+  productVariantId            String
+  relatedProductVariantId     String?
+  inventoryItemId             String?
+  stockDeliveryId             String?
+  stockDeliveryLineId         String?
+  orderId                     String?
+  orderItemId                 String?
+  cashierSessionId            String?
+  staffStockWalletId          String?
+  actorUserId                 String?
+  staffUserId                 String?
+  type                        InventoryMovementType
+  direction                   InventoryMovementDirection
+  source                      InventoryMovementSource    @default(MANUAL)
+  quantity                    Int
+  previousOnHandQuantity      Int?
+  onHandQuantity              Int?
   previousStaffWalletQuantity Int?
-  staffWalletQuantity     Int?
-  sourceReferenceId       String?
-  externalId              String?
-  movementGroupId         String?
-  note                    String?
-  happenedAt              DateTime                    @default(now())
-  metadata                Json?
-  createdAt               DateTime                    @default(now())
-  updatedAt               DateTime                    @updatedAt
-  store                   Store                       @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  product                 Product                     @relation(fields: [productId], references: [id], onDelete: Restrict)
-  productVariant          ProductVariant              @relation("InventoryMovementVariant", fields: [productVariantId], references: [id], onDelete: Restrict)
-  relatedProductVariant   ProductVariant?             @relation("RelatedInventoryMovementVariant", fields: [relatedProductVariantId], references: [id], onDelete: SetNull)
-  inventoryItem           InventoryItem?              @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
-  stockDelivery           StockDelivery?              @relation(fields: [stockDeliveryId], references: [id], onDelete: SetNull)
-  stockDeliveryLine       StockDeliveryLine?          @relation(fields: [stockDeliveryLineId], references: [id], onDelete: SetNull)
-  order                   Order?                      @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  orderItem               OrderItem?                  @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
-  cashierSession          CashierSession?             @relation(fields: [cashierSessionId], references: [id], onDelete: SetNull)
-  staffStockWallet        StaffStockWallet?           @relation(fields: [staffStockWalletId], references: [id], onDelete: SetNull)
+  staffWalletQuantity         Int?
+  sourceReferenceId           String?
+  externalId                  String?
+  movementGroupId             String?
+  note                        String?
+  happenedAt                  DateTime                   @default(now())
+  metadata                    Json?
+  createdAt                   DateTime                   @default(now())
+  updatedAt                   DateTime                   @updatedAt
+  store                       Store                      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product                     Product                    @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productVariant              ProductVariant             @relation("InventoryMovementVariant", fields: [productVariantId], references: [id], onDelete: Restrict)
+  relatedProductVariant       ProductVariant?            @relation("RelatedInventoryMovementVariant", fields: [relatedProductVariantId], references: [id], onDelete: SetNull)
+  inventoryItem               InventoryItem?             @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+  stockDelivery               StockDelivery?             @relation(fields: [stockDeliveryId], references: [id], onDelete: SetNull)
+  stockDeliveryLine           StockDeliveryLine?         @relation(fields: [stockDeliveryLineId], references: [id], onDelete: SetNull)
+  order                       Order?                     @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  orderItem                   OrderItem?                 @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+  cashierSession              CashierSession?            @relation(fields: [cashierSessionId], references: [id], onDelete: SetNull)
+  staffStockWallet            StaffStockWallet?          @relation(fields: [staffStockWalletId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, storeId, type, externalId])
   @@index([tenantId, storeId, happenedAt])
@@ -378,36 +396,39 @@ model CartItem {
 }
 
 model Order {
-  id                 String              @id @default(cuid())
-  tenantId           String
-  storeId            String
-  orderNumber        String
-  retailOpsCustomerId String?
-  status             OrderStatus         @default(PENDING)
-  paymentStatus      PaymentStatus       @default(PENDING)
-  customerEmail      String?
-  customerPhone      String?
-  customerName       String?
-  subtotalMinor      Int                 @default(0)
-  deliveryFeeMinor   Int                 @default(0)
-  discountMinor      Int                 @default(0)
-  taxMinor           Int                 @default(0)
-  totalMinor         Int                 @default(0)
-  currencyCode       String              @default("NGN")
-  notes              String?
-  metadata           Json?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store              Store               @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  items              OrderItem[]
-  deliveryRequest    DeliveryRequest?
-  receipts           Receipt[]
-  inventoryMovements InventoryMovement[]
+  id                           String                        @id @default(cuid())
+  tenantId                     String
+  storeId                      String
+  orderNumber                  String
+  retailOpsCustomerId          String?
+  status                       OrderStatus                   @default(PENDING)
+  paymentStatus                PaymentStatus                 @default(PENDING)
+  customerEmail                String?
+  customerPhone                String?
+  customerName                 String?
+  subtotalMinor                Int                           @default(0)
+  deliveryFeeMinor             Int                           @default(0)
+  discountMinor                Int                           @default(0)
+  taxMinor                     Int                           @default(0)
+  totalMinor                   Int                           @default(0)
+  currencyCode                 String                        @default("NGN")
+  notes                        String?
+  metadata                     Json?
+  createdAt                    DateTime                      @default(now())
+  updatedAt                    DateTime                      @updatedAt
+  tenant                       Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                        Store                         @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  items                        OrderItem[]
+  deliveryRequest              DeliveryRequest?
+  receipts                     Receipt[]
+  inventoryMovements           InventoryMovement[]
   productShareLinkOrderRequest ProductShareLinkOrderRequest?
-  retailOpsCustomer   RetailOpsCustomer? @relation("RetailOpsCustomerOrders", fields: [retailOpsCustomerId], references: [id], onDelete: SetNull)
-  retailOpsCustomerEvents RetailOpsCustomerEvent[]
+  retailOpsCustomer            RetailOpsCustomer?            @relation("RetailOpsCustomerOrders", fields: [retailOpsCustomerId], references: [id], onDelete: SetNull)
+  retailOpsCustomerEvents      RetailOpsCustomerEvent[]
   productShareLinkReservations ProductShareLinkReservation[]
+  serviceJob                   ServiceJob?
+  serviceRequest               ServiceRequest?
+  paymentEvents                OrderPaymentEvent[]
 
   @@unique([storeId, orderNumber])
   @@index([tenantId, status])
@@ -416,25 +437,55 @@ model Order {
 }
 
 model OrderItem {
-  id                 String              @id @default(cuid())
-  orderId            String
-  productId          String
-  productVariantId   String?
-  nameSnapshot       String
-  skuSnapshot        String?
-  quantity           Int                 @default(1)
-  unitPriceMinor     Int
-  totalPriceMinor    Int
-  metadata           Json?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  order              Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product            Product             @relation(fields: [productId], references: [id], onDelete: Restrict)
-  productVariant     ProductVariant?     @relation(fields: [productVariantId], references: [id], onDelete: SetNull)
-  inventoryMovements InventoryMovement[]
+  id                           String                        @id @default(cuid())
+  orderId                      String
+  productId                    String
+  productVariantId             String?
+  kindSnapshot                 CatalogItemKind               @default(PRODUCT)
+  nameSnapshot                 String
+  skuSnapshot                  String?
+  quantity                     Int                           @default(1)
+  unitPriceMinor               Int
+  totalPriceMinor              Int
+  cancelledAt                  DateTime?
+  cancelledByUserId            String?
+  cancellationReason           String?
+  metadata                     Json?
+  createdAt                    DateTime                      @default(now())
+  updatedAt                    DateTime                      @updatedAt
+  order                        Order                         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product                      Product                       @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productVariant               ProductVariant?               @relation(fields: [productVariantId], references: [id], onDelete: SetNull)
+  inventoryMovements           InventoryMovement[]
   productShareLinkReservations ProductShareLinkReservation[]
+  serviceJobLine               ServiceJobLine?
 
   @@index([orderId])
   @@index([productId])
   @@index([productVariantId])
+  @@index([orderId, cancelledAt])
+}
+
+model OrderPaymentEvent {
+  id            String                @id @default(cuid())
+  tenantId      String
+  storeId       String
+  orderId       String
+  type          OrderPaymentEventType
+  amountMinor   Int
+  paymentMethod String?
+  externalId    String?
+  note          String?
+  actorUserId   String?
+  happenedAt    DateTime              @default(now())
+  metadata      Json?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  tenant        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store         Store                 @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  order         Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, storeId, type, externalId])
+  @@index([orderId, happenedAt])
+  @@index([tenantId, storeId, happenedAt])
 }

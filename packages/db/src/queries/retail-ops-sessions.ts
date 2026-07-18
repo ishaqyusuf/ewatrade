@@ -1,5 +1,6 @@
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
+  CatalogItemKind as DurableCatalogItemKind,
   InventoryMovementDirection as DurableInventoryMovementDirection,
   InventoryMovementSource as DurableInventoryMovementSource,
   InventoryMovementType as DurableInventoryMovementType,
@@ -221,6 +222,7 @@ export type ListRetailOpsSessionsInput = {
 
 type RetailOpsSessionErrorCode =
   | "DUPLICATE_INVENTORY_LINE"
+  | "ITEM_NOT_STOCKABLE"
   | "OPEN_SESSION_EXISTS"
   | "PRODUCT_VARIANT_NOT_FOUND"
   | "SESSION_NOT_CLOSED"
@@ -2004,6 +2006,7 @@ export async function openRetailOpsSession(
                 product: {
                   select: {
                     id: true,
+                    kind: true,
                     name: true,
                   },
                 },
@@ -2030,6 +2033,16 @@ export async function openRetailOpsSession(
     const inventoryByVariantId = new Map(
       inventoryItems.map((item) => [item.productVariantId, item]),
     )
+    if (
+      productVariants.some(
+        (variant) => variant.product.kind !== DurableCatalogItemKind.PRODUCT,
+      )
+    ) {
+      throw new RetailOpsSessionError(
+        "ITEM_NOT_STOCKABLE",
+        "Service items do not participate in opening inventory.",
+      )
+    }
 
     const session = await tx.cashierSession.create({
       data: {
@@ -2205,6 +2218,7 @@ export async function closeRetailOpsSession(
                 product: {
                   select: {
                     id: true,
+                    kind: true,
                     name: true,
                   },
                 },
@@ -2228,6 +2242,16 @@ export async function closeRetailOpsSession(
       throw new RetailOpsSessionError(
         "PRODUCT_VARIANT_NOT_FOUND",
         "One or more closeout inventory units were not found for this store.",
+      )
+    }
+    if (
+      productVariants.some(
+        (variant) => variant.product.kind !== DurableCatalogItemKind.PRODUCT,
+      )
+    ) {
+      throw new RetailOpsSessionError(
+        "ITEM_NOT_STOCKABLE",
+        "Service items do not participate in closeout inventory.",
       )
     }
 

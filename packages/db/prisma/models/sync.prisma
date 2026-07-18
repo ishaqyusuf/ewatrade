@@ -1,25 +1,25 @@
 model OfflineDevice {
-  id                String                    @id @default(cuid())
-  tenantId          String
-  storeId           String?
-  deviceId          String
-  deviceName        String?
-  platform          OfflineDevicePlatform     @default(UNKNOWN)
-  appVersion        String?
-  status            OfflineDeviceStatus       @default(ACTIVE)
+  id                 String                    @id @default(cuid())
+  tenantId           String
+  storeId            String?
+  deviceId           String
+  deviceName         String?
+  platform           OfflineDevicePlatform     @default(UNKNOWN)
+  appVersion         String?
+  status             OfflineDeviceStatus       @default(ACTIVE)
   registeredByUserId String?
-  registeredAt      DateTime                  @default(now())
-  lastSeenAt        DateTime                  @default(now())
-  revokedAt         DateTime?
-  revokedByUserId   String?
-  metadata          Json?
-  createdAt         DateTime                  @default(now())
-  updatedAt         DateTime                  @updatedAt
-  tenant            Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store             Store?                    @relation(fields: [storeId], references: [id], onDelete: SetNull)
-  revocations       OfflineDeviceRevocation[]
-  syncRuns          RetailOpsSyncRun[]
-  syncEvents        RetailOpsSyncEvent[]
+  registeredAt       DateTime                  @default(now())
+  lastSeenAt         DateTime                  @default(now())
+  revokedAt          DateTime?
+  revokedByUserId    String?
+  metadata           Json?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  tenant             Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store              Store?                    @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  revocations        OfflineDeviceRevocation[]
+  syncRuns           RetailOpsSyncRun[]
+  syncEvents         RetailOpsSyncEvent[]
 
   @@unique([tenantId, deviceId])
   @@index([tenantId, status])
@@ -27,23 +27,23 @@ model OfflineDevice {
 }
 
 model OfflineDeviceRevocation {
-  id              String                @id @default(cuid())
-  tenantId        String
-  offlineDeviceId String?
-  deviceId        String
-  deviceName      String?
-  platform        OfflineDevicePlatform @default(UNKNOWN)
-  appVersion      String?
-  revokedByUserId String
-  revokedAt       DateTime              @default(now())
+  id               String                @id @default(cuid())
+  tenantId         String
+  offlineDeviceId  String?
+  deviceId         String
+  deviceName       String?
+  platform         OfflineDevicePlatform @default(UNKNOWN)
+  appVersion       String?
+  revokedByUserId  String
+  revokedAt        DateTime              @default(now())
   restoredByUserId String?
-  restoredAt      DateTime?
-  reason          String?
-  metadata        Json?
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  tenant          Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  offlineDevice   OfflineDevice?        @relation(fields: [offlineDeviceId], references: [id], onDelete: SetNull)
+  restoredAt       DateTime?
+  reason           String?
+  metadata         Json?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  offlineDevice    OfflineDevice?        @relation(fields: [offlineDeviceId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, deviceId])
   @@index([tenantId, revokedAt])

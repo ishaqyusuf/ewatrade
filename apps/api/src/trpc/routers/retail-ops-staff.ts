@@ -49,8 +49,9 @@ function getStaffErrorCode(
 
 function getStockWalletErrorCode(
   error: RetailOpsStockWalletError,
-): "CONFLICT" | "NOT_FOUND" {
+): "BAD_REQUEST" | "CONFLICT" | "NOT_FOUND" {
   if (error.code === "INSUFFICIENT_STOCK") return "CONFLICT"
+  if (error.code === "ITEM_NOT_STOCKABLE") return "BAD_REQUEST"
 
   return "NOT_FOUND"
 }

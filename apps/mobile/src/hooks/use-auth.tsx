@@ -7,7 +7,7 @@ import {
 } from "@/lib/session-store"
 import { useBusinessStore } from "@/store/businessStore"
 import { useRouter } from "expo-router"
-import { createContext, useContext, useState } from "react"
+import { createContext, useContext, useEffect, useState } from "react"
 
 type AuthContextProps = ReturnType<typeof useCreateAuthContext>
 export const AuthContext = createContext<AuthContextProps | undefined>(
@@ -45,7 +45,15 @@ export const useCreateAuthContext = () => {
   const [session, setSessionState] = useState<MobileSession | null>(
     getSession(),
   )
+  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null)
   const router = useRouter()
+
+  useEffect(() => {
+    if (!session || !pendingRedirect) return
+
+    router.replace(pendingRedirect as never)
+    setPendingRedirect(null)
+  }, [pendingRedirect, router, session])
 
   const applySession = (
     nextSession: MobileSession,
@@ -53,7 +61,7 @@ export const useCreateAuthContext = () => {
   ) => {
     setSession(nextSession)
     setSessionState(nextSession)
-    router.replace(redirectHref as never)
+    setPendingRedirect(redirectHref)
   }
 
   return {

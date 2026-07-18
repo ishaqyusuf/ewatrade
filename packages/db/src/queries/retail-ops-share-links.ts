@@ -1652,6 +1652,7 @@ async function getShareableProduct(
   const product = await db.product.findFirst({
     where: {
       id: input.productId,
+      kind: "PRODUCT",
       status: { not: "ARCHIVED" },
       storeId: input.storeId,
       tenantId: input.tenantId,
@@ -2582,6 +2583,7 @@ async function getDurableRetailOpsSharedProduct(
       where: {
         token: input.token,
         product: {
+          kind: "PRODUCT",
           slug: input.productSlug,
           status: { not: "ARCHIVED" },
           store: {
@@ -2806,6 +2808,7 @@ export async function listRetailOpsProductShareLinks(
   const durableShareLinks = await listDurableProductShareLinks(db, input)
   const products = await db.product.findMany({
     where: {
+      kind: "PRODUCT",
       status: { not: "ARCHIVED" },
       storeId: input.storeId,
       tenantId: input.tenantId,
@@ -3646,6 +3649,7 @@ export async function getRetailOpsSharedProduct(
 
   const product = await db.product.findFirst({
     where: {
+      kind: "PRODUCT",
       slug: input.productSlug,
       status: { not: "ARCHIVED" },
       store: {

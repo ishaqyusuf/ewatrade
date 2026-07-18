@@ -3,8 +3,18 @@
 ## Purpose
 Add a v1 business-template layer so new stores can start as Product Sales, Dry Cleaning / Laundry, or Other business without weakening the existing Retail Ops product-sales flow.
 
-## Current Phase
-Implemented as a metadata-backed v1 in the main Retail Ops stack:
+## Architecture Status
+
+Historical legacy behavior; superseded and migrated on 2026-07-18 by:
+
+- `.brain/features/product-service-catalog-items.md`
+- `.brain/decisions/ADR-0008-item-level-product-service-catalog.md`
+- `.scratch/wayfinder-catalog-items-product-service/spec.md`
+
+Migration is complete. This file records the retired metadata-backed implementation only. Runtime code now uses item-level `PRODUCT | SERVICE`, generic Service Jobs, and generic service request/tracking contracts. New work must not restore or extend the business-template or dry-cleaning-specific runtime model.
+
+## Historical Phase
+Previously implemented as a metadata-backed v1 in the main Retail Ops stack:
 
 - `Product Sales` remains the default effective template for stores without explicit template metadata.
 - `Dry Cleaning / Laundry` enables service items, service orders, service request links, request conversion, customer tracking tokens, notification intents, and operational reports.

@@ -9,13 +9,12 @@ import { join } from "node:path"
 import { prisma } from "@ewatrade/db/client"
 import {
   completeRetailOpsStaffOnboarding,
-  convertDryCleaningServiceRequestToOrder,
-  createDryCleaningPublicServiceRequest,
-  createDryCleaningServiceItem,
-  createDryCleaningServiceOrder,
-  createDryCleaningServiceRequestLink,
+  convertRetailOpsServiceRequestToSale,
+  createPublicRetailOpsServiceRequest,
+  createRetailOpsCatalogItem,
+  createRetailOpsCatalogSale,
+  createRetailOpsServiceRequestLink,
   inviteRetailOpsStaff,
-  updateDryCleaningStoreSettings,
 } from "@ewatrade/db/queries"
 import { notificationDispatchHandler } from "../src/handlers/notification-dispatch"
 
@@ -61,7 +60,7 @@ const WAITLIST_COUNT = 2
 function assertConfirmed() {
   if (process.env[CONFIRMATION_ENV] !== "1") {
     throw new Error(
-      `${CONFIRMATION_ENV}=1 must be set because this check creates test.com leads, sends/renders notification emails, signs up a tenant, creates a dry-cleaning store, and invites staff.`,
+      `${CONFIRMATION_ENV}=1 must be set because this check creates test.com leads, sends/renders notification emails, signs up a tenant, creates a service-business store, and invites staff.`,
     )
   }
 }
@@ -533,13 +532,12 @@ async function main() {
     `${dashboardBaseUrl}/api/stores`,
     {
       currencyCode: "NGN",
-      name: `Goal Laundry Front ${runId}`,
+      name: `Goal Service Front ${runId}`,
       onboarding: {
-        businessTemplateKey: "dry_cleaning_laundry",
         countryCode: "NG",
-        operatingModel: "In-store and pickup",
+        operatingModel: "In-store and scheduled service",
+        orderChannels: ["In person", "Public request link"],
         salesMethod: "Counter service",
-        serviceCategory: "Dry cleaning and laundry",
         teamSize: "2-10 people",
       },
       supportEmail: signupLead.email,
@@ -555,9 +553,7 @@ async function main() {
   const storeId = storeResult.payload?.store?.id
   if (!storeResult.payload?.success || !storeId || !consumedSession.tenantId) {
     throw new Error(
-      `Dry-cleaning store creation failed: ${JSON.stringify(
-        storeResult.payload,
-      )}`,
+      `Service-business store creation failed: ${JSON.stringify(storeResult.payload)}`,
     )
   }
 
@@ -566,61 +562,68 @@ async function main() {
     throw new Error("Consumed early-access session is missing owner user id.")
   }
 
-  await updateDryCleaningStoreSettings(prisma, {
-    expressSurchargePercent: 25,
-    storeId,
-    tenantId: consumedSession.tenantId,
-  })
-
   const serviceDefinitions = [
-    ["Shirt and trouser", 500_00, 400_00],
-    ["Agbada", 700_00, 560_00],
-    ["Jalabia", 400_00, 320_00],
-    ["Iro and Buba", 600_00, 480_00],
+    ["Standard consultation", 50_000, 40_000],
+    ["Priority consultation", 70_000, 56_000],
+    ["Home visit", 40_000, 32_000],
+    ["Follow-up appointment", 60_000, 48_000],
   ] as const
   const services = []
 
-  for (const [name, lgPrice, smPrice] of serviceDefinitions) {
+  for (const [name, fullPrice, shortPrice] of serviceDefinitions) {
     services.push(
-      await createDryCleaningServiceItem(prisma, {
-        category: "Laundry",
-        estimatedTurnaroundHours: 48,
+      await createRetailOpsCatalogItem(prisma, {
+        actorUserId: ownerUserId,
+        category: "Appointments",
+        kind: "service",
         name,
-        priceMinor: lgPrice,
+        priceMinor: fullPrice,
+        service: {
+          estimatedTurnaroundHours: 48,
+          fulfillmentMode: "tracked",
+        },
         storeId,
         tenantId: consumedSession.tenantId,
         variants: [
-          { name: "SM", priceMinor: smPrice },
-          { name: "LG", priceMinor: lgPrice },
+          {
+            name: "Short session",
+            openingStockQuantity: 0,
+            priceMinor: shortPrice,
+          },
+          {
+            name: "Full session",
+            openingStockQuantity: 0,
+            priceMinor: fullPrice,
+          },
         ],
       }),
     )
   }
 
-  const [shirt, agbada, jalabia, iro] = services
-  if (!shirt || !agbada || !jalabia || !iro) {
-    throw new Error("Expected all dry-cleaning service definitions to exist.")
+  const [consultation, priority, homeVisit, followUp] = services
+  if (!consultation || !priority || !homeVisit || !followUp) {
+    throw new Error("Expected all service catalog definitions to exist.")
   }
 
   const orderInputs = [
     {
       customer: "Amina Yusuf",
       dueInDays: 0,
-      line: shirt,
+      line: consultation,
       paid: "paid" as const,
       quantity: 2,
     },
     {
       customer: "Bola Ahmed",
       dueInDays: 1,
-      line: agbada,
+      line: priority,
       paid: "pay_on_collection" as const,
       quantity: 1,
     },
     {
       customer: "Chika Okafor",
       dueInDays: 2,
-      line: jalabia,
+      line: homeVisit,
       paid: "partial" as const,
       quantity: 3,
     },
@@ -628,14 +631,14 @@ async function main() {
       customer: "Dayo Musa",
       dueInDays: 3,
       express: true,
-      line: iro,
+      line: followUp,
       paid: "pay_on_delivery" as const,
       quantity: 1,
     },
     {
       customer: "Esther Bello",
       dueInDays: 4,
-      line: agbada,
+      line: priority,
       paid: "unpaid" as const,
       quantity: 2,
     },
@@ -643,7 +646,7 @@ async function main() {
       customer: "Femi Lawal",
       dueInDays: 5,
       express: true,
-      line: shirt,
+      line: consultation,
       paid: "paid" as const,
       quantity: 4,
     },
@@ -651,76 +654,70 @@ async function main() {
   const orders = []
 
   for (const [index, orderInput] of orderInputs.entries()) {
+    const variant = orderInput.line.variants[0]
+    if (!variant) {
+      throw new Error(
+        `Service item ${orderInput.line.item.name} has no sellable variant.`,
+      )
+    }
     const unitPriceMinor = orderInput.express
-      ? Math.round(orderInput.line.priceMinor * 1.25)
-      : orderInput.line.priceMinor
+      ? Math.round(variant.priceMinor * 1.25)
+      : variant.priceMinor
 
     orders.push(
-      await createDryCleaningServiceOrder(prisma, {
+      await createRetailOpsCatalogSale(prisma, {
         actorUserId: ownerUserId,
-        customer: {
-          email: `${emailPrefix}-customer-${index + 1}@test.com`,
-          name: orderInput.customer,
-          phone: `+234 803 000 00${index + 1}`,
-        },
-        dueAt: addDays(orderInput.dueInDays),
-        evidence: [
-          {
-            label: "Intake photo",
-            url: `https://ewatrade.com/evidence/${runId}-${index + 1}.jpg`,
-          },
-        ],
+        customerEmail: `${emailPrefix}-customer-${index + 1}@test.com`,
+        customerName: orderInput.customer,
+        customerPhone: `+234 803 000 00${index + 1}`,
+        externalId: `goal-e2e-service-sale-${runId}-${index + 1}`,
         lines: [
           {
-            note: orderInput.express ? "Express order" : "Standard order",
+            catalogItemVariantId: variant.id,
             quantity: orderInput.quantity,
-            serviceItemId: orderInput.line.id,
-            unitPriceMinor,
-            variantId: orderInput.line.variants[1]?.id,
           },
         ],
         notes: orderInput.express
-          ? "Customer requested express service."
-          : "Standard intake.",
-        paymentStatus: orderInput.paid,
+          ? `Priority service; agreed unit price ${unitPriceMinor}.`
+          : "Standard service intake.",
+        paymentMethod: orderInput.paid === "paid" ? "cash" : "credit",
+        serviceDueAt: addDays(orderInput.dueInDays),
         storeId,
         tenantId: consumedSession.tenantId,
       }),
     )
   }
 
-  const requestLink = await createDryCleaningServiceRequestLink(prisma, {
-    createdByUserId: ownerUserId,
-    label: "Goal E2E public laundry request",
+  const requestLink = await createRetailOpsServiceRequestLink(prisma, {
+    actorUserId: ownerUserId,
+    label: "Goal E2E public service request",
     storeId,
     tenantId: consumedSession.tenantId,
   })
-  const publicRequest = await createDryCleaningPublicServiceRequest(prisma, {
-    customer: {
-      email: `${emailPrefix}-public-customer@test.com`,
-      name: "Public Request Customer",
-      phone: "+234 804 000 0000",
-    },
+  const consultationVariant = consultation.variants[0]
+  if (!consultationVariant) {
+    throw new Error("Consultation service has no sellable variant.")
+  }
+  const publicRequest = await createPublicRetailOpsServiceRequest(prisma, {
+    customerEmail: `${emailPrefix}-public-customer@test.com`,
+    customerName: "Public Request Customer",
+    customerPhone: "+234 804 000 0000",
     lines: [
       {
+        catalogItemVariantId: consultationVariant.id,
         quantity: 2,
-        serviceItemId: shirt.id,
-        variantId: shirt.variants[0]?.id,
       },
     ],
     notes: "Public request from E2E link.",
     token: requestLink.token,
   })
-  const convertedRequest = await convertDryCleaningServiceRequestToOrder(
-    prisma,
-    {
-      actorUserId: ownerUserId,
-      paymentStatus: "pay_on_collection",
-      requestId: publicRequest.id,
-      storeId,
-      tenantId: consumedSession.tenantId,
-    },
-  )
+  const convertedRequest = await convertRetailOpsServiceRequestToSale(prisma, {
+    actorUserId: ownerUserId,
+    paymentMethod: "credit",
+    requestId: publicRequest.id,
+    storeId,
+    tenantId: consumedSession.tenantId,
+  })
   const publicRequestUrl = `${publicBaseUrl}/service-request/${requestLink.token}`
   const publicRequestResponse = await fetchWithRetry(publicRequestUrl)
   const publicRequestHtml = await publicRequestResponse.text()
@@ -728,15 +725,15 @@ async function main() {
   if (
     !publicRequestResponse.ok ||
     !publicRequestHtml.includes("og:title") ||
-    !publicRequestHtml.includes("Shirt and trouser")
+    !publicRequestHtml.includes("Standard consultation")
   ) {
     throw new Error(
-      `Public dry-cleaning request page failed metadata/content validation at ${publicRequestUrl}.`,
+      `Public service request page failed metadata/content validation at ${publicRequestUrl}.`,
     )
   }
 
   checks.push(
-    pass("dry-cleaning store, services, orders, and public request", {
+    pass("service-business store, catalog, orders, and public request", {
       convertedOrderId: convertedRequest.order.id,
       orderCount: orders.length + 1,
       publicRequestStatus: publicRequestResponse.status,
@@ -771,7 +768,7 @@ async function main() {
       {
         payload: {
           appUrl: dashboardBaseUrl,
-          businessName: `Goal E2E Laundry ${runId}`,
+          businessName: `Goal E2E Services ${runId}`,
           inviteUrl: `${dashboardBaseUrl}/staff-onboarding?inviteToken=${invitedStaff.invite.acceptanceToken}`,
           invitedByName: "Goal Owner",
           inviteeEmail: invitedStaff.staff.email,
@@ -843,13 +840,13 @@ async function main() {
   if (
     !dashboardResponse.ok ||
     !dashboardHtml.includes("Service orders") ||
-    !dashboardHtml.includes(`Goal Laundry Front ${runId}`)
+    !dashboardHtml.includes(`Goal Service Front ${runId}`)
   ) {
-    throw new Error("Dashboard dry-cleaning services page failed validation.")
+    throw new Error("Dashboard service jobs page failed validation.")
   }
 
   checks.push(
-    pass("dashboard dry-cleaning services page", {
+    pass("dashboard service jobs page", {
       dashboardStatus: dashboardResponse.status,
       hasServiceOrders: dashboardHtml.includes("Service orders"),
     }),

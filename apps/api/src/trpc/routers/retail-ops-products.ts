@@ -8,17 +8,23 @@ import {
   RetailOpsProductError,
   RetailOpsSubscriptionError,
   assertRetailOpsReportRangeAllowed,
+  createRetailOpsCatalogItem,
   createRetailOpsProduct,
   getRetailOpsProductUnitPriceAt,
+  listRetailOpsCatalogItems,
   listRetailOpsProductUnitPriceHistory,
   listRetailOpsProductUnitTemplates,
+  updateRetailOpsCatalogItem,
   updateRetailOpsProductUnitPrice,
 } from "@ewatrade/db/queries"
 import { TRPCError } from "@trpc/server"
 import {
+  retailOpsCatalogItemsSchema,
+  retailOpsCreateCatalogItemSchema,
   retailOpsCreateProductSchema,
   retailOpsProductUnitEffectivePriceSchema,
   retailOpsProductUnitPriceHistorySchema,
+  retailOpsUpdateCatalogItemSchema,
   retailOpsUpdateProductUnitPriceSchema,
 } from "../../schemas/retail-ops"
 import { type TRPCContext, createTRPCRouter, protectedProcedure } from "../init"
@@ -28,6 +34,8 @@ function getProductErrorCode(
 ): "BAD_REQUEST" | "NOT_FOUND" {
   if (error.code === "DUPLICATE_UNIT") return "BAD_REQUEST"
   if (error.code === "FUTURE_PRICE_NOT_SUPPORTED") return "BAD_REQUEST"
+  if (error.code === "ITEM_KIND_MISMATCH") return "BAD_REQUEST"
+  if (error.code === "ITEM_NOT_STOCKABLE") return "BAD_REQUEST"
 
   return "NOT_FOUND"
 }
@@ -136,6 +144,106 @@ function resolveStore(
 }
 
 export const retailOpsProductsRouter = createTRPCRouter({
+  catalogItems: protectedProcedure
+    .input(retailOpsCatalogItemsSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanOperateRetailOpsPos(ctx.tenantContext.membership.role)
+      const store = resolveStore(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input,
+      )
+
+      return listRetailOpsCatalogItems(ctx.db, {
+        kind: input.kind,
+        storeId: store.id,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+    }),
+
+  createCatalogItem: protectedProcedure
+    .input(retailOpsCreateCatalogItemSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanManageRetailOpsProducts(ctx.tenantContext.membership.role)
+      const store = resolveStore(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input,
+      )
+
+      try {
+        return await createRetailOpsCatalogItem(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          category: input.category,
+          description: input.description,
+          externalId: input.externalId,
+          imageLinks: input.imageLinks,
+          imageUrl: input.imageUrl,
+          kind: input.kind,
+          name: input.name,
+          openingStockQuantity: input.openingStockQuantity,
+          priceMinor: input.priceMinor,
+          primaryUnitName: input.primaryUnitName,
+          service: input.service,
+          storeId: store.id,
+          tenantId: ctx.tenantContext.tenant.id,
+          unitTemplateKey: input.unitTemplateKey,
+          variants: input.variants,
+        })
+      } catch (error) {
+        if (error instanceof RetailOpsProductError) {
+          throw new TRPCError({
+            code: getProductErrorCode(error),
+            message: error.message,
+          })
+        }
+        if (error instanceof RetailOpsSubscriptionError) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: error.message,
+          })
+        }
+        throw error
+      }
+    }),
+
+  updateCatalogItem: protectedProcedure
+    .input(retailOpsUpdateCatalogItemSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanManageRetailOpsProducts(ctx.tenantContext.membership.role)
+      const store = resolveStore(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input,
+      )
+
+      try {
+        return await updateRetailOpsCatalogItem(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          category: input.category,
+          description: input.description,
+          imageLinks: input.imageLinks,
+          imageUrl: input.imageUrl,
+          itemId: input.itemId,
+          kind: input.kind,
+          name: input.name,
+          priceMinor: input.priceMinor,
+          service: input.service,
+          status: input.status,
+          storeId: store.id,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof RetailOpsProductError) {
+          throw new TRPCError({
+            code: getProductErrorCode(error),
+            message: error.message,
+          })
+        }
+        throw error
+      }
+    }),
+
   productUnitPriceAt: protectedProcedure
     .input(retailOpsProductUnitEffectivePriceSchema)
     .query(async ({ ctx, input }) => {

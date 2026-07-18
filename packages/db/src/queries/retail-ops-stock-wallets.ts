@@ -5,6 +5,7 @@ import {
   type PrismaClient,
 } from "../../generated/prisma/client"
 import {
+  CatalogItemKind as DurableCatalogItemKind,
   InventoryMovementDirection as DurableInventoryMovementDirection,
   InventoryMovementSource as DurableInventoryMovementSource,
   InventoryMovementType as DurableInventoryMovementType,
@@ -160,6 +161,7 @@ export type RetailOpsStaffStockWalletMovementEntry = {
 
 type RetailOpsStockWalletErrorCode =
   | "INSUFFICIENT_STOCK"
+  | "ITEM_NOT_STOCKABLE"
   | "PRODUCT_VARIANT_NOT_FOUND"
   | "STAFF_NOT_FOUND"
   | "STORE_NOT_FOUND"
@@ -631,7 +633,8 @@ async function writeDurableStaffStockWalletMovement(
       ? "staff_assignment"
       : "staff_return"
   const movementGroupId = `${groupPrefix}:${
-    input.externalId ?? `${input.staffUserId}:${input.productVariantId}:${input.happenedAt.toISOString()}`
+    input.externalId ??
+    `${input.staffUserId}:${input.productVariantId}:${input.happenedAt.toISOString()}`
   }`
   const metadata = {
     retailOps: {
@@ -1052,24 +1055,24 @@ export async function listRetailOpsStaffStockWallets(
   const limit = Math.min(Math.max(input.limit ?? 50, 1), 100)
   const [store, durableRows] = await Promise.all([
     db.store.findFirst({
-    where: {
-      id: input.storeId,
-      tenantId: input.tenantId,
-      status: { not: "ARCHIVED" },
-    },
-    select: {
-      metadata: true,
-    },
+      where: {
+        id: input.storeId,
+        tenantId: input.tenantId,
+        status: { not: "ARCHIVED" },
+      },
+      select: {
+        metadata: true,
+      },
     }),
     listDurableRetailOpsStaffStockWallets(db, input, limit),
   ])
 
   if (!store) return []
 
-  const fallbackRows = getStockWalletBalances(store.metadata)
-    .filter((balance) =>
+  const fallbackRows = getStockWalletBalances(store.metadata).filter(
+    (balance) =>
       input.staffUserId ? balance.staff.id === input.staffUserId : true,
-    )
+  )
 
   return mergeStaffStockWalletBalances({
     durableRows,
@@ -1147,6 +1150,7 @@ export async function assignRetailOpsStaffStock(
           product: {
             select: {
               id: true,
+              kind: true,
               name: true,
             },
           },
@@ -1171,6 +1175,13 @@ export async function assignRetailOpsStaffStock(
       throw new RetailOpsStockWalletError(
         "PRODUCT_VARIANT_NOT_FOUND",
         "Product unit not found for this store.",
+      )
+    }
+
+    if (productVariant.product.kind !== DurableCatalogItemKind.PRODUCT) {
+      throw new RetailOpsStockWalletError(
+        "ITEM_NOT_STOCKABLE",
+        "Service items cannot be assigned as stock.",
       )
     }
 
@@ -1380,6 +1391,11 @@ export async function returnRetailOpsStaffStock(
         },
         select: {
           id: true,
+          product: {
+            select: {
+              kind: true,
+            },
+          },
         },
       }),
     ])
@@ -1401,6 +1417,13 @@ export async function returnRetailOpsStaffStock(
       throw new RetailOpsStockWalletError(
         "PRODUCT_VARIANT_NOT_FOUND",
         "Product unit not found for this store.",
+      )
+    }
+
+    if (productVariant.product.kind !== DurableCatalogItemKind.PRODUCT) {
+      throw new RetailOpsStockWalletError(
+        "ITEM_NOT_STOCKABLE",
+        "Service items cannot be returned as stock.",
       )
     }
 

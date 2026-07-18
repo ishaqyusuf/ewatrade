@@ -2,10 +2,13 @@ import { randomUUID } from "node:crypto"
 
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
+  CatalogItemKind as DurableCatalogItemKind,
   InventoryMovementDirection as DurableInventoryMovementDirection,
   InventoryMovementSource as DurableInventoryMovementSource,
   InventoryMovementType as DurableInventoryMovementType,
+  ProductStatus as DurableProductStatus,
   ProductUnitPriceChangeSource as DurableProductUnitPriceChangeSource,
+  ServiceFulfillmentMode as DurableServiceFulfillmentMode,
 } from "../../generated/prisma/enums"
 import { assertRetailOpsEntitlementAvailable } from "./retail-ops-subscriptions"
 
@@ -34,6 +37,113 @@ export type CreateRetailOpsProductInput = {
   tenantId: string
   unitTemplateKey?: string
   variants: CreateRetailOpsProductUnitInput[]
+}
+
+export type RetailOpsCatalogItemKind = "product" | "service"
+export type RetailOpsCatalogItemStatus = "active" | "archived" | "draft"
+
+export type CreateRetailOpsCatalogItemInput = {
+  actorUserId: string
+  category?: string
+  description?: string
+  externalId?: string
+  imageLinks?: string[]
+  imageUrl?: string
+  kind: RetailOpsCatalogItemKind
+  name: string
+  openingStockQuantity?: number
+  priceMinor: number
+  primaryUnitName?: string
+  service?: {
+    estimatedTurnaroundHours?: number
+    fulfillmentMode?: "immediate" | "tracked"
+    instructions?: string
+  }
+  storeId: string
+  tenantId: string
+  unitTemplateKey?: string
+  variants: Array<{
+    conversionMultiplier?: number
+    enabled?: boolean
+    imageLinks?: string[]
+    imageUrl?: string
+    name: string
+    openingStockQuantity?: number
+    priceMinor: number
+    variantLabel?: string
+  }>
+}
+
+export type CreatedRetailOpsCatalogItem = {
+  item: {
+    category: string | null
+    currencyCode: string
+    description: string | null
+    id: string
+    kind: RetailOpsCatalogItemKind
+    name: string
+    slug: string
+  }
+  service: {
+    estimatedTurnaroundHours: number | null
+    fulfillmentMode: "immediate" | "tracked"
+    instructions: string | null
+  } | null
+  variants: CreatedRetailOpsProduct["units"]
+}
+
+export type RetailOpsCatalogItem = {
+  category: string | null
+  currencyCode: string
+  description: string | null
+  id: string
+  imageLinks: string[]
+  imageUrl: string | null
+  kind: RetailOpsCatalogItemKind
+  name: string
+  service: {
+    estimatedTurnaroundHours: number | null
+    fulfillmentMode: "immediate" | "tracked"
+    instructions: string | null
+  } | null
+  slug: string
+  status: RetailOpsCatalogItemStatus
+  variants: Array<{
+    availableQuantity: number | null
+    id: string
+    imageLinks: string[]
+    imageUrl: string | null
+    isDefault: boolean
+    name: string
+    priceMinor: number
+    sku: string
+  }>
+}
+
+export type ListRetailOpsCatalogItemsInput = {
+  kind?: RetailOpsCatalogItemKind
+  storeId: string
+  tenantId: string
+}
+
+export type UpdateRetailOpsCatalogItemInput = {
+  actorUserId: string
+  category?: string | null
+  description?: string | null
+  imageLinks?: string[]
+  imageUrl?: string | null
+  itemId: string
+  kind: RetailOpsCatalogItemKind
+  name?: string
+  priceMinor?: number
+  service?: {
+    estimatedTurnaroundHours?: number | null
+    fulfillmentMode?: "immediate" | "tracked"
+    instructions?: string | null
+  }
+  status?: Exclude<RetailOpsCatalogItemStatus, "draft">
+  storeId: string
+  tenantId: string
 }
 
 type NormalizedRetailOpsProductUnitInput = {
@@ -185,6 +295,9 @@ export type UpdatedRetailOpsProductUnitPrice = {
 type RetailOpsProductErrorCode =
   | "DUPLICATE_UNIT"
   | "FUTURE_PRICE_NOT_SUPPORTED"
+  | "ITEM_KIND_MISMATCH"
+  | "ITEM_NOT_FOUND"
+  | "ITEM_NOT_STOCKABLE"
   | "PRODUCT_UNIT_NOT_FOUND"
   | "STORE_NOT_FOUND"
 type DurableProductUnitPriceHistory = {
@@ -356,6 +469,32 @@ function normalizeTemplateKey(value: string | null | undefined) {
   const cleaned = value?.trim()
 
   return cleaned || null
+}
+
+function toDurableCatalogItemKind(kind: RetailOpsCatalogItemKind) {
+  return kind === "service"
+    ? DurableCatalogItemKind.SERVICE
+    : DurableCatalogItemKind.PRODUCT
+}
+
+function fromDurableCatalogItemKind(kind: string): RetailOpsCatalogItemKind {
+  return kind === DurableCatalogItemKind.SERVICE ? "service" : "product"
+}
+
+function toDurableServiceFulfillmentMode(
+  mode: "immediate" | "tracked" | undefined,
+) {
+  return mode === "immediate"
+    ? DurableServiceFulfillmentMode.IMMEDIATE
+    : DurableServiceFulfillmentMode.TRACKED
+}
+
+function fromDurableServiceFulfillmentMode(
+  mode: string,
+): "immediate" | "tracked" {
+  return mode === DurableServiceFulfillmentMode.IMMEDIATE
+    ? "immediate"
+    : "tracked"
 }
 
 function toTemplateUnitLookupKey(value: string) {
@@ -1102,18 +1241,22 @@ export async function listRetailOpsProductUnitTemplates(
   }
 }
 
-export async function createRetailOpsProduct(
+async function createRetailOpsCatalogItemInternal(
   db: PrismaClient,
-  input: CreateRetailOpsProductInput,
-): Promise<CreatedRetailOpsProduct> {
+  input: CreateRetailOpsCatalogItemInput,
+) {
   const externalId = input.externalId?.trim() || null
-  const unitTemplateKey = normalizeTemplateKey(input.unitTemplateKey)
+  const durableKind = toDurableCatalogItemKind(input.kind)
+  const isService = input.kind === "service"
+  const unitTemplateKey = isService
+    ? null
+    : normalizeTemplateKey(input.unitTemplateKey)
   const primaryUnit: NormalizedRetailOpsProductUnitInput = {
     conversionMultiplier: 1,
     enabled: true,
     imageLinks: [],
-    name: input.primaryUnitName,
-    openingStockQuantity: input.openingStockQuantity,
+    name: input.primaryUnitName?.trim() || (isService ? "Standard" : "Unit"),
+    openingStockQuantity: isService ? 0 : (input.openingStockQuantity ?? 0),
     priceMinor: input.priceMinor,
   }
   const units: NormalizedRetailOpsProductUnitInput[] = [
@@ -1124,7 +1267,7 @@ export async function createRetailOpsProduct(
       imageLinks: variant.imageLinks ?? [],
       imageUrl: variant.imageUrl,
       name: variant.name,
-      openingStockQuantity: variant.openingStockQuantity,
+      openingStockQuantity: isService ? 0 : (variant.openingStockQuantity ?? 0),
       priceMinor: variant.priceMinor,
       variantLabel: variant.variantLabel,
     })),
@@ -1154,6 +1297,7 @@ export async function createRetailOpsProduct(
     if (externalId) {
       const existingProduct = await tx.product.findFirst({
         where: {
+          kind: durableKind,
           metadata: {
             path: ["retailOps", "externalId"],
             equals: externalId,
@@ -1164,8 +1308,18 @@ export async function createRetailOpsProduct(
         },
         select: {
           currencyCode: true,
+          category: true,
+          description: true,
           id: true,
+          kind: true,
           name: true,
+          serviceProfile: {
+            select: {
+              estimatedTurnaroundHours: true,
+              fulfillmentMode: true,
+              instructions: true,
+            },
+          },
           slug: true,
           variants: {
             orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
@@ -1191,8 +1345,27 @@ export async function createRetailOpsProduct(
       if (existingProduct) {
         return {
           created: false,
+          item: {
+            category: existingProduct.category,
+            currencyCode: existingProduct.currencyCode,
+            description: existingProduct.description,
+            id: existingProduct.id,
+            kind: fromDurableCatalogItemKind(existingProduct.kind),
+            name: existingProduct.name,
+            slug: existingProduct.slug,
+          },
           openingStockMovements: [],
           product: toCreatedRetailOpsProduct(existingProduct),
+          service: existingProduct.serviceProfile
+            ? {
+                estimatedTurnaroundHours:
+                  existingProduct.serviceProfile.estimatedTurnaroundHours,
+                fulfillmentMode: fromDurableServiceFulfillmentMode(
+                  existingProduct.serviceProfile.fulfillmentMode,
+                ),
+                instructions: existingProduct.serviceProfile.instructions,
+              }
+            : null,
         }
       }
     }
@@ -1221,8 +1394,10 @@ export async function createRetailOpsProduct(
         : null
     const product = await tx.product.create({
       data: {
+        category: input.category?.trim() || null,
         currencyCode: store.currencyCode,
         description: input.description,
+        kind: durableKind,
         listPriceMinor: input.priceMinor,
         metadata: {
           retailOps: {
@@ -1231,8 +1406,11 @@ export async function createRetailOpsProduct(
             imageLinks: input.imageLinks ?? [],
             imageUrl: input.imageUrl?.trim() || null,
             imagesUrl: input.imageLinks ?? [],
-            primaryUnitName: normalizeUnitName(input.primaryUnitName),
-            source: "retail_ops_product_setup",
+            itemKind: input.kind,
+            primaryUnitName: normalizeUnitName(primaryUnit.name),
+            source: isService
+              ? "retail_ops_catalog_item_setup"
+              : "retail_ops_product_setup",
             unitTemplateId: unitTemplate?.id ?? null,
             unitTemplateKey:
               unitTemplate?.key ?? fallbackUnitTemplate?.key ?? unitTemplateKey,
@@ -1253,6 +1431,36 @@ export async function createRetailOpsProduct(
         slug: true,
       },
     })
+
+    const service = isService
+      ? await tx.serviceItemProfile.upsert({
+          where: {
+            productId: product.id,
+          },
+          create: {
+            estimatedTurnaroundHours:
+              input.service?.estimatedTurnaroundHours ?? null,
+            fulfillmentMode: toDurableServiceFulfillmentMode(
+              input.service?.fulfillmentMode,
+            ),
+            instructions: input.service?.instructions?.trim() || null,
+            productId: product.id,
+          },
+          update: {
+            estimatedTurnaroundHours:
+              input.service?.estimatedTurnaroundHours ?? null,
+            fulfillmentMode: toDurableServiceFulfillmentMode(
+              input.service?.fulfillmentMode,
+            ),
+            instructions: input.service?.instructions?.trim() || null,
+          },
+          select: {
+            estimatedTurnaroundHours: true,
+            fulfillmentMode: true,
+            instructions: true,
+          },
+        })
+      : null
 
     const createdAt = new Date()
     const createdUnits: CreatedRetailOpsProduct["units"] = []
@@ -1335,30 +1543,32 @@ export async function createRetailOpsProduct(
         },
       })
 
-      const inventoryItem = await tx.inventoryItem.create({
-        data: {
-          onHandQuantity: unit.openingStockQuantity,
+      if (!isService) {
+        const inventoryItem = await tx.inventoryItem.create({
+          data: {
+            onHandQuantity: unit.openingStockQuantity,
+            productVariantId: variant.id,
+            storeId: input.storeId,
+            tenantId: input.tenantId,
+            updatedByUserId: input.actorUserId,
+          },
+          select: {
+            id: true,
+          },
+        })
+
+        openingStockMovements.push({
+          actorUserId: input.actorUserId,
+          externalId,
+          happenedAt: createdAt,
+          inventoryItemId: inventoryItem.id,
+          productId: product.id,
           productVariantId: variant.id,
+          quantity: unit.openingStockQuantity,
           storeId: input.storeId,
           tenantId: input.tenantId,
-          updatedByUserId: input.actorUserId,
-        },
-        select: {
-          id: true,
-        },
-      })
-
-      openingStockMovements.push({
-        actorUserId: input.actorUserId,
-        externalId,
-        happenedAt: createdAt,
-        inventoryItemId: inventoryItem.id,
-        productId: product.id,
-        productVariantId: variant.id,
-        quantity: unit.openingStockQuantity,
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-      })
+        })
+      }
 
       createdUnits.push({
         conversionMultiplier,
@@ -1373,11 +1583,29 @@ export async function createRetailOpsProduct(
 
     return {
       created: true,
+      item: {
+        category: input.category?.trim() || null,
+        currencyCode: product.currencyCode,
+        description: input.description?.trim() || null,
+        id: product.id,
+        kind: input.kind,
+        name: product.name,
+        slug: product.slug,
+      },
       openingStockMovements,
       product: {
         product,
         units: createdUnits,
       },
+      service: service
+        ? {
+            estimatedTurnaroundHours: service.estimatedTurnaroundHours,
+            fulfillmentMode: fromDurableServiceFulfillmentMode(
+              service.fulfillmentMode,
+            ),
+            instructions: service.instructions,
+          }
+        : null,
     }
   })
 
@@ -1393,6 +1621,365 @@ export async function createRetailOpsProduct(
       }),
     ])
   }
+
+  return result
+}
+
+export async function createRetailOpsCatalogItem(
+  db: PrismaClient,
+  input: CreateRetailOpsCatalogItemInput,
+): Promise<CreatedRetailOpsCatalogItem> {
+  const result = await createRetailOpsCatalogItemInternal(db, input)
+
+  return {
+    item: result.item,
+    service: result.service,
+    variants: result.product.units,
+  }
+}
+
+function mapRetailOpsCatalogItem(input: {
+  category: string | null
+  currencyCode: string
+  description: string | null
+  id: string
+  kind: string
+  metadata: unknown
+  name: string
+  serviceProfile: {
+    estimatedTurnaroundHours: number | null
+    fulfillmentMode: string
+    instructions: string | null
+  } | null
+  slug: string
+  status: string
+  variants: Array<{
+    id: string
+    inventoryItem: {
+      onHandQuantity: number
+      reservedQuantity: number
+    } | null
+    isDefault: boolean
+    metadata: unknown
+    name: string
+    priceMinor: number
+    sku: string
+  }>
+}): RetailOpsCatalogItem {
+  const kind = fromDurableCatalogItemKind(input.kind)
+  const retailOpsMetadata = getRetailOpsMetadata(input.metadata)
+  const imageLinks = Array.isArray(retailOpsMetadata.imageLinks)
+    ? retailOpsMetadata.imageLinks.filter(
+        (value): value is string => typeof value === "string",
+      )
+    : []
+
+  return {
+    category: input.category,
+    currencyCode: input.currencyCode,
+    description: input.description,
+    id: input.id,
+    imageLinks,
+    imageUrl: getStringField(retailOpsMetadata.imageUrl),
+    kind,
+    name: input.name,
+    service: input.serviceProfile
+      ? {
+          estimatedTurnaroundHours:
+            input.serviceProfile.estimatedTurnaroundHours,
+          fulfillmentMode: fromDurableServiceFulfillmentMode(
+            input.serviceProfile.fulfillmentMode,
+          ),
+          instructions: input.serviceProfile.instructions,
+        }
+      : null,
+    slug: input.slug,
+    status:
+      input.status === DurableProductStatus.ARCHIVED
+        ? "archived"
+        : input.status === DurableProductStatus.DRAFT
+          ? "draft"
+          : "active",
+    variants: input.variants.map((variant) => {
+      const variantMetadata = getRetailOpsMetadata(variant.metadata)
+      return {
+        availableQuantity:
+          kind === "product"
+            ? Math.max(
+                0,
+                (variant.inventoryItem?.onHandQuantity ?? 0) -
+                  (variant.inventoryItem?.reservedQuantity ?? 0),
+              )
+            : null,
+        id: variant.id,
+        imageLinks: Array.isArray(variantMetadata.imageLinks)
+          ? variantMetadata.imageLinks.filter(
+              (value): value is string => typeof value === "string",
+            )
+          : [],
+        imageUrl: getStringField(variantMetadata.imageUrl),
+        isDefault: variant.isDefault,
+        name: variant.name,
+        priceMinor: variant.priceMinor,
+        sku: variant.sku,
+      }
+    }),
+  }
+}
+
+const retailOpsCatalogItemSelect = {
+  category: true,
+  currencyCode: true,
+  description: true,
+  id: true,
+  kind: true,
+  metadata: true,
+  name: true,
+  serviceProfile: {
+    select: {
+      estimatedTurnaroundHours: true,
+      fulfillmentMode: true,
+      instructions: true,
+    },
+  },
+  slug: true,
+  status: true,
+  variants: {
+    where: {
+      isActive: true,
+    },
+    orderBy: [{ isDefault: "desc" as const }, { createdAt: "asc" as const }],
+    select: {
+      id: true,
+      inventoryItem: {
+        select: {
+          onHandQuantity: true,
+          reservedQuantity: true,
+        },
+      },
+      isDefault: true,
+      metadata: true,
+      name: true,
+      priceMinor: true,
+      sku: true,
+    },
+  },
+} satisfies Prisma.ProductSelect
+
+export async function listRetailOpsCatalogItems(
+  db: PrismaClient,
+  input: ListRetailOpsCatalogItemsInput,
+): Promise<RetailOpsCatalogItem[]> {
+  const items = await db.product.findMany({
+    where: {
+      ...(input.kind
+        ? {
+            kind: toDurableCatalogItemKind(input.kind),
+          }
+        : {}),
+      status: { not: "ARCHIVED" },
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    },
+    orderBy: [{ name: "asc" }, { createdAt: "asc" }],
+    select: retailOpsCatalogItemSelect,
+  })
+
+  return items.map(mapRetailOpsCatalogItem)
+}
+
+export async function updateRetailOpsCatalogItem(
+  db: PrismaClient,
+  input: UpdateRetailOpsCatalogItemInput,
+): Promise<RetailOpsCatalogItem> {
+  return db.$transaction(async (tx) => {
+    const item = await tx.product.findFirst({
+      where: {
+        id: input.itemId,
+        status: { not: "ARCHIVED" },
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+      select: {
+        id: true,
+        kind: true,
+        metadata: true,
+        status: true,
+        variants: {
+          where: {
+            isActive: true,
+            isDefault: true,
+          },
+          take: 1,
+          select: {
+            id: true,
+          },
+        },
+      },
+    })
+
+    if (!item) {
+      throw new RetailOpsProductError(
+        "ITEM_NOT_FOUND",
+        "Catalog item not found for this store.",
+      )
+    }
+
+    const durableKind = toDurableCatalogItemKind(input.kind)
+    if (item.kind !== durableKind) {
+      if (item.status !== DurableProductStatus.DRAFT) {
+        throw new RetailOpsProductError(
+          "ITEM_KIND_MISMATCH",
+          "An item type can only be corrected while the item is an unused draft.",
+        )
+      }
+      const operationalReferenceCounts = await Promise.all([
+        tx.inventoryItem.count({
+          where: { productVariant: { productId: item.id } },
+        }),
+        tx.inventoryMovement.count({ where: { productId: item.id } }),
+        tx.orderItem.count({ where: { productId: item.id } }),
+        tx.productShareLink.count({ where: { productId: item.id } }),
+        tx.serviceJobLine.count({ where: { productId: item.id } }),
+        tx.serviceRequestLine.count({ where: { productId: item.id } }),
+        tx.staffStockWallet.count({ where: { productId: item.id } }),
+      ])
+      if (operationalReferenceCounts.some((count) => count > 0)) {
+        throw new RetailOpsProductError(
+          "ITEM_KIND_MISMATCH",
+          "An item with operational history must be archived and recreated to change its type.",
+        )
+      }
+    }
+
+    const normalizedName = input.name?.trim()
+    const nextMetadata =
+      input.imageLinks !== undefined || input.imageUrl !== undefined
+        ? withRetailOpsMetadata(item.metadata, {
+            ...(input.imageLinks !== undefined
+              ? { imageLinks: input.imageLinks, imagesUrl: input.imageLinks }
+              : {}),
+            ...(input.imageUrl !== undefined
+              ? { imageUrl: input.imageUrl?.trim() || null }
+              : {}),
+          })
+        : undefined
+    const updated = await tx.product.update({
+      where: {
+        id: item.id,
+      },
+      data: {
+        ...(input.category !== undefined
+          ? { category: input.category?.trim() || null }
+          : {}),
+        ...(input.description !== undefined
+          ? { description: input.description?.trim() || null }
+          : {}),
+        ...(normalizedName ? { name: normalizedName } : {}),
+        ...(item.kind !== durableKind ? { kind: durableKind } : {}),
+        ...(nextMetadata ? { metadata: nextMetadata } : {}),
+        ...(input.priceMinor !== undefined
+          ? { listPriceMinor: input.priceMinor }
+          : {}),
+        ...(input.status
+          ? {
+              status:
+                input.status === "archived"
+                  ? DurableProductStatus.ARCHIVED
+                  : DurableProductStatus.ACTIVE,
+            }
+          : {}),
+      },
+      select: {
+        id: true,
+      },
+    })
+
+    if (input.priceMinor !== undefined && item.variants[0]) {
+      await tx.productVariant.update({
+        where: {
+          id: item.variants[0].id,
+        },
+        data: {
+          priceMinor: input.priceMinor,
+        },
+        select: {
+          id: true,
+        },
+      })
+    }
+
+    if (
+      durableKind === DurableCatalogItemKind.SERVICE &&
+      (input.service || item.kind !== durableKind)
+    ) {
+      await tx.serviceItemProfile.upsert({
+        where: {
+          productId: updated.id,
+        },
+        create: {
+          estimatedTurnaroundHours:
+            input.service?.estimatedTurnaroundHours ?? null,
+          fulfillmentMode: toDurableServiceFulfillmentMode(
+            input.service?.fulfillmentMode,
+          ),
+          instructions: input.service?.instructions?.trim() || null,
+          productId: updated.id,
+        },
+        update: {
+          ...(input.service?.estimatedTurnaroundHours !== undefined
+            ? {
+                estimatedTurnaroundHours:
+                  input.service.estimatedTurnaroundHours,
+              }
+            : {}),
+          ...(input.service?.fulfillmentMode
+            ? {
+                fulfillmentMode: toDurableServiceFulfillmentMode(
+                  input.service.fulfillmentMode,
+                ),
+              }
+            : {}),
+          ...(input.service?.instructions !== undefined
+            ? {
+                instructions: input.service.instructions?.trim() || null,
+              }
+            : {}),
+        },
+        select: {
+          id: true,
+        },
+      })
+    } else if (
+      durableKind === DurableCatalogItemKind.PRODUCT &&
+      item.kind !== durableKind
+    ) {
+      await tx.serviceItemProfile.deleteMany({
+        where: {
+          productId: updated.id,
+        },
+      })
+    }
+
+    const result = await tx.product.findUniqueOrThrow({
+      where: {
+        id: item.id,
+      },
+      select: retailOpsCatalogItemSelect,
+    })
+
+    return mapRetailOpsCatalogItem(result)
+  })
+}
+
+export async function createRetailOpsProduct(
+  db: PrismaClient,
+  input: CreateRetailOpsProductInput,
+): Promise<CreatedRetailOpsProduct> {
+  const result = await createRetailOpsCatalogItemInternal(db, {
+    ...input,
+    kind: "product",
+  })
 
   return result.product
 }

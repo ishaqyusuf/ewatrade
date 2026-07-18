@@ -215,6 +215,7 @@ describe("retail ops dashboard report queries", () => {
       },
     ])
     expect(getCall(db.calls, "product.findMany").where).toMatchObject({
+      kind: "PRODUCT",
       status: { not: "ARCHIVED" },
       storeId: "store_123",
       tenantId: "tenant_123",

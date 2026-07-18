@@ -24,6 +24,7 @@ import {
   useRetailOpsStore,
 } from "@/store/retailOpsStore"
 import { useTRPC } from "@/trpc/client"
+import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { formatMinorMoney } from "@ewatrade/utils"
 import {
   type BottomSheetModal,
@@ -36,6 +37,7 @@ import { SectionList, View } from "react-native"
 
 type CreateSaleSheetProps = {
   attendantName?: string
+  itemKind?: "product" | "service"
   onComplete?: () => void
 }
 
@@ -57,10 +59,12 @@ type CreateSaleContentProps = CreateSaleSheetProps & {
 
 type SellableItem = {
   id: string
+  kind: "product" | "service"
   productId: string
   productName: string
   remoteVariantId?: string
   stock: number
+  turnaroundHours?: number
   unitName: string
   unitPriceMinor: number
   variantId?: string
@@ -104,6 +108,52 @@ type ProductionCustomerBookEntry = {
   phone: string | null
 }
 
+type ProductionCatalogItem = RouterOutputs["retailOps"]["catalogItems"][number]
+
+function mapProductionCatalogItem(
+  item: ProductionCatalogItem,
+  businessId?: string,
+): RetailOpsProduct {
+  const defaultVariant =
+    item.variants.find((variant) => variant.isDefault) ??
+    item.variants[0] ??
+    null
+
+  return {
+    businessId,
+    currentStock: defaultVariant?.availableQuantity ?? 0,
+    description: item.description ?? undefined,
+    id: `remote-${item.id}`,
+    kind: item.kind,
+    name: item.name,
+    priceMinor: defaultVariant?.priceMinor ?? 0,
+    remoteId: item.id,
+    remoteVariantId: defaultVariant?.id,
+    service: item.service
+      ? {
+          estimatedTurnaroundHours:
+            item.service.estimatedTurnaroundHours ?? undefined,
+          fulfillmentMode: item.service.fulfillmentMode,
+          instructions: item.service.instructions ?? undefined,
+        }
+      : undefined,
+    startingStock: defaultVariant?.availableQuantity ?? 0,
+    syncStatus: "synced",
+    unitName: defaultVariant?.name ?? "Standard",
+    variants:
+      item.variants.length > 1
+        ? item.variants.map((variant) => ({
+            currentStock: variant.availableQuantity ?? 0,
+            id: `remote-${variant.id}`,
+            name: variant.name,
+            priceMinor: variant.priceMinor,
+            remoteId: variant.id,
+            startingStock: variant.availableQuantity ?? 0,
+          }))
+        : [],
+  }
+}
+
 type CustomerOption = {
   detail: string
   email?: string
@@ -121,10 +171,15 @@ function getProductStock(product: RetailOpsProduct) {
 function getPrimarySellableItem(product: RetailOpsProduct): SellableItem {
   return {
     id: `${product.id}-primary`,
+    kind: product.kind ?? "product",
     productId: product.id,
     productName: product.name,
     remoteVariantId: product.remoteVariantId,
-    stock: getProductStock(product),
+    stock:
+      product.kind === "service"
+        ? Number.POSITIVE_INFINITY
+        : getProductStock(product),
+    turnaroundHours: product.service?.estimatedTurnaroundHours,
     unitName: product.unitName,
     unitPriceMinor: product.priceMinor,
   }
@@ -136,10 +191,15 @@ function getSellableItems(product: RetailOpsProduct): SellableItem[] {
   if (product.variants.length > 0) {
     return product.variants.map((variant) => ({
       id: `${product.id}-${variant.id}`,
+      kind: product.kind ?? "product",
       productId: product.id,
       productName: product.name,
       remoteVariantId: variant.remoteId,
-      stock: variant.currentStock ?? variant.startingStock ?? 0,
+      stock:
+        product.kind === "service"
+          ? Number.POSITIVE_INFINITY
+          : (variant.currentStock ?? variant.startingStock ?? 0),
+      turnaroundHours: product.service?.estimatedTurnaroundHours,
       unitName: variant.name,
       unitPriceMinor: variant.priceMinor,
       variantId: variant.id,
@@ -173,12 +233,18 @@ function SellableOption({
   selected: boolean
 }) {
   const isOutOfStock = item.stock <= 0
+  const availability =
+    item.kind === "service"
+      ? item.turnaroundHours
+        ? `Service · about ${item.turnaroundHours}h`
+        : "Service"
+      : `${item.stock} available`
 
   if (selected) {
     return (
       <SaleSelectableRow
         accessory="Selected"
-        meta={`${item.productName} - ${item.stock} available`}
+        meta={`${item.productName} - ${availability}`}
         onPress={onPress}
         selected
         title={item.unitName}
@@ -189,7 +255,7 @@ function SellableOption({
 
   return (
     <SaleSelectableRow
-      accessory={`${item.stock} available`}
+      accessory={availability}
       disabled={isOutOfStock}
       meta={item.productName}
       onPress={onPress}
@@ -218,7 +284,11 @@ function ProductSectionHeader({ product }: { product: RetailOpsProduct }) {
           </Text>
         </View>
         <StatusBadge
-          label={`${getProductStock(product)} ${product.unitName}`}
+          label={
+            product.kind === "service"
+              ? "Service"
+              : `${getProductStock(product)} ${product.unitName}`
+          }
           tone="muted"
         />
       </View>
@@ -313,6 +383,7 @@ function CustomerOptionChip({
 
 export function CreateSaleContent({
   attendantName = "Store Owner",
+  itemKind,
   onComplete,
   presentation = "sheet",
 }: CreateSaleContentProps) {
@@ -334,7 +405,7 @@ export function CreateSaleContent({
       ),
     [activeBusinessId, allCustomers],
   )
-  const products = useMemo(
+  const localProducts = useMemo(
     () =>
       allProducts.filter(
         (product) =>
@@ -360,6 +431,9 @@ export function CreateSaleContent({
     useState<RetailOpsPaymentMethod>("cash")
   const [quantity, setQuantity] = useState("1")
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
+  const [cartQuantities, setCartQuantities] = useState<Record<string, number>>(
+    {},
+  )
   const [submitError, setSubmitError] = useState<string | null>(null)
   const createProductionSaleMutation = useMutation(
     trpc.retailOps.createSale.mutationOptions({
@@ -368,6 +442,47 @@ export function CreateSaleContent({
       },
     }),
   )
+  const productionCatalogQuery = useQuery(
+    trpc.retailOps.catalogItems.queryOptions(
+      {},
+      {
+        enabled: !isOfflineMode,
+        retry: false,
+      },
+    ),
+  )
+  const products = useMemo(() => {
+    const availableProducts =
+      isOfflineMode || !productionCatalogQuery.data
+        ? localProducts
+        : (() => {
+            const localRemoteIds = new Set(
+              localProducts.flatMap((product) =>
+                product.remoteId ? [product.remoteId] : [],
+              ),
+            )
+            return [
+              ...localProducts,
+              ...productionCatalogQuery.data
+                .filter((item) => !localRemoteIds.has(item.id))
+                .map((item) =>
+                  mapProductionCatalogItem(item, activeBusinessId ?? undefined),
+                ),
+            ]
+          })()
+
+    return itemKind
+      ? availableProducts.filter(
+          (item) => (item.kind ?? "product") === itemKind,
+        )
+      : availableProducts
+  }, [
+    activeBusinessId,
+    isOfflineMode,
+    itemKind,
+    localProducts,
+    productionCatalogQuery.data,
+  ])
   const normalizedCustomerSearch = customerName.trim()
   const productionCustomersQuery = useQuery(
     trpc.retailOps.customerBook.queryOptions(
@@ -400,25 +515,67 @@ export function CreateSaleContent({
     [products],
   )
   const selectedItem = sellableItems.find((item) => item.id === selectedItemId)
-  const quantityValue = parseWholeQuantity(quantity)
-  const total = selectedItem ? selectedItem.unitPriceMinor * quantityValue : 0
+  const cartLines = sellableItems.flatMap((item) => {
+    const lineQuantity = cartQuantities[item.id]
+    return lineQuantity
+      ? [
+          {
+            item,
+            quantity: lineQuantity,
+          },
+        ]
+      : []
+  })
+  const quantityValue = selectedItem
+    ? (cartQuantities[selectedItem.id] ?? parseWholeQuantity(quantity))
+    : 0
+  const total = cartLines.reduce(
+    (sum, line) => sum + line.item.unitPriceMinor * line.quantity,
+    0,
+  )
   const hasEnoughStock = selectedItem
-    ? quantityValue <= selectedItem.stock
+    ? selectedItem.kind === "service" || quantityValue <= selectedItem.stock
     : true
   const hasOpenSession = !!currentOpenSession
+  const hasProductLine = cartLines.some((line) => line.item.kind === "product")
+  const hasRequiredSession = !hasProductLine || hasOpenSession
+  const productionLines = cartLines.flatMap(
+    ({ item, quantity: lineQuantity }) =>
+      item.remoteVariantId
+        ? [
+            {
+              catalogItemVariantId: item.remoteVariantId,
+              quantity: lineQuantity,
+            },
+          ]
+        : [],
+  )
   const canCreateProductionSale =
     !isOfflineMode &&
-    !!selectedItem?.remoteVariantId &&
-    !!currentOpenSession?.remoteId
+    cartLines.length > 0 &&
+    productionLines.length === cartLines.length &&
+    (!hasProductLine || !!currentOpenSession?.remoteId)
+  const allLinesHaveStock = cartLines.every(
+    (line) => line.item.kind === "service" || line.quantity <= line.item.stock,
+  )
+  const canUseLocalSale =
+    cartLines.length === 1 && cartLines[0]?.item.kind === "product"
   const canSubmit =
-    hasOpenSession &&
-    !!selectedItem &&
-    quantityValue > 0 &&
-    hasEnoughStock &&
+    hasRequiredSession &&
+    cartLines.length > 0 &&
+    (canCreateProductionSale || canUseLocalSale) &&
+    allLinesHaveStock &&
     !createProductionSaleMutation.isPending
+  const isServiceFlow = itemKind === "service"
+  const showSourceWarning =
+    isOfflineMode || (cartLines.length > 0 && !canCreateProductionSale)
   const sourceDetail = isOfflineMode
-    ? "This sale will sync when connection is ready."
-    : "Waiting for the product unit or rep session to sync before direct production sale."
+    ? isServiceFlow
+      ? "Service orders need a live connection."
+      : "Product sales can use the offline queue; Service orders need a live connection."
+    : isServiceFlow
+      ? "Waiting for the selected Service item to finish syncing before this order can be completed."
+      : "Waiting for the selected Product unit or rep session to finish syncing."
   const localCustomerOptions = useMemo(() => {
     const normalizedSearch = normalizedCustomerSearch.toLowerCase()
     const localCustomers = normalizedSearch
@@ -467,7 +624,7 @@ export function CreateSaleContent({
       rows.push({ kind: "stock-warning" })
     }
 
-    if (!hasOpenSession) {
+    if (hasProductLine && !hasOpenSession) {
       rows.push({ kind: "session-warning" })
     }
 
@@ -483,7 +640,13 @@ export function CreateSaleContent({
     )
 
     return rows
-  }, [hasEnoughStock, hasOpenSession, selectedItem, submitError])
+  }, [
+    hasEnoughStock,
+    hasOpenSession,
+    hasProductLine,
+    selectedItem,
+    submitError,
+  ])
   const saleSections = useMemo<SaleListSection[]>(
     () => [
       ...sellableSections,
@@ -552,9 +715,35 @@ export function CreateSaleContent({
   }
 
   const selectItem = (item: SellableItem) => {
+    if (selectedItemId === item.id && cartQuantities[item.id]) {
+      const nextQuantities = { ...cartQuantities }
+      delete nextQuantities[item.id]
+      setCartQuantities(nextQuantities)
+      const nextItemId = Object.keys(nextQuantities)[0] ?? null
+      setSelectedItemId(nextItemId)
+      setQuantity(nextItemId ? String(nextQuantities[nextItemId] ?? 1) : "1")
+      return
+    }
+
+    const nextQuantity = cartQuantities[item.id] ?? 1
+    setCartQuantities((current) => ({
+      ...current,
+      [item.id]: nextQuantity,
+    }))
     setSelectedItemId(item.id)
-    setQuantity("1")
+    setQuantity(String(nextQuantity))
     scrollToQuantityInput()
+  }
+
+  const updateSelectedQuantity = (value: string) => {
+    setQuantity(value)
+    if (!selectedItem) return
+    const parsed = parseWholeQuantity(value)
+    if (parsed <= 0) return
+    setCartQuantities((current) => ({
+      ...current,
+      [selectedItem.id]: parsed,
+    }))
   }
 
   const resetForm = () => {
@@ -563,30 +752,34 @@ export function CreateSaleContent({
     setPaymentMethod("cash")
     setQuantity("1")
     setSelectedItemId(null)
+    setCartQuantities({})
     setSubmitError(null)
   }
 
   const submit = () => {
-    if (!selectedItem || !canSubmit) return
+    if (!canSubmit || cartLines.length === 0) return
 
     const resolvedCustomerName =
       selectedCustomer?.name.trim() || customerName.trim()
-    const localSaleInput = {
-      attendantName,
-      businessId: activeBusinessId ?? undefined,
-      customerName: resolvedCustomerName,
-      paymentMethod,
-      productId: selectedItem.productId,
-      productName: selectedItem.productName,
-      quantity: quantityValue,
-      unitName: selectedItem.unitName,
-      unitPriceMinor: selectedItem.unitPriceMinor,
-      variantId: selectedItem.variantId,
-    }
+    const localSaleInputs = cartLines.map(
+      ({ item, quantity: lineQuantity }) => ({
+        attendantName,
+        businessId: activeBusinessId ?? undefined,
+        customerName: resolvedCustomerName,
+        kind: item.kind,
+        paymentMethod,
+        productId: item.productId,
+        productName: item.productName,
+        quantity: lineQuantity,
+        unitName: item.unitName,
+        unitPriceMinor: item.unitPriceMinor,
+        variantId: item.variantId,
+      }),
+    )
 
     setSubmitError(null)
 
-    if (canCreateProductionSale && selectedItem.remoteVariantId) {
+    if (canCreateProductionSale) {
       createProductionSaleMutation.mutate(
         {
           cashierSessionId: currentOpenSession?.remoteId,
@@ -594,16 +787,17 @@ export function CreateSaleContent({
           customerName: resolvedCustomerName || undefined,
           customerPhone: selectedCustomer?.phone,
           paymentMethod,
-          productVariantId: selectedItem.remoteVariantId,
-          quantity: quantityValue,
+          lines: productionLines,
         },
         {
           onSuccess: (sale) => {
-            createSale({
-              ...localSaleInput,
-              remoteId: sale.order.id,
-              syncStatus: "synced",
-            })
+            for (const localSaleInput of localSaleInputs) {
+              createSale({
+                ...localSaleInput,
+                remoteId: sale.order.id,
+                syncStatus: "synced",
+              })
+            }
             resetForm()
             onComplete?.()
           },
@@ -612,6 +806,8 @@ export function CreateSaleContent({
       return
     }
 
+    const localSaleInput = localSaleInputs[0]
+    if (!localSaleInput) return
     createSale(localSaleInput)
     resetForm()
     onComplete?.()
@@ -628,18 +824,27 @@ export function CreateSaleContent({
     ListHeaderComponent: (
       <View className="gap-5 pt-1 pb-4">
         <View className="gap-2">
-          <Text className="text-xl font-bold text-foreground">Select item</Text>
+          <Text className="text-xl font-bold text-foreground">
+            {isServiceFlow ? "Select service" : "Select item"}
+          </Text>
           <Text className="text-sm leading-5 text-muted-foreground">
-            Choose a product unit or variant, set quantity, then confirm payment
-            and customer.
+            {isServiceFlow
+              ? "Add one or more priced Service items, set quantities, then confirm payment and customer."
+              : "Add one or more Product or Service items, set quantities, then confirm payment and customer."}
           </Text>
         </View>
 
-        {!canCreateProductionSale ? (
+        {showSourceWarning ? (
           <StatusBanner
             icon="Clock"
             message={sourceDetail}
-            title={isOfflineMode ? "Offline sale" : "Sync required"}
+            title={
+              isOfflineMode
+                ? isServiceFlow
+                  ? "Service orders are online-only"
+                  : "Offline sale"
+                : "Sync required"
+            }
             tone="warning"
           />
         ) : null}
@@ -647,8 +852,14 @@ export function CreateSaleContent({
         {products.length === 0 ? (
           <EmptyState
             icon="Warehouse"
-            message="Create at least one item before recording a sale."
-            title="Add inventory first"
+            message={
+              isServiceFlow
+                ? "Create at least one active Service item before recording an order."
+                : "Create at least one item before recording a sale."
+            }
+            title={
+              isServiceFlow ? "Add a Service item first" : "Add item first"
+            }
           />
         ) : null}
       </View>
@@ -660,7 +871,7 @@ export function CreateSaleContent({
             <SellableOption
               item={item.item}
               onPress={() => selectItem(item.item)}
-              selected={selectedItemId === item.item.id}
+              selected={Boolean(cartQuantities[item.item.id])}
             />
           </View>
         )
@@ -671,7 +882,7 @@ export function CreateSaleContent({
           <View className="pt-5 pb-3">
             <QuantityStepper
               helper={selectedItem ? selectedItem.unitName : undefined}
-              onChangeText={setQuantity}
+              onChangeText={updateSelectedQuantity}
               onFocus={scrollToQuantityInput}
               value={quantity}
             />
@@ -711,7 +922,11 @@ export function CreateSaleContent({
             <StatusBanner
               icon="TriangleAlert"
               message={submitError}
-              title="Sale was not completed"
+              title={
+                isServiceFlow
+                  ? "Service order was not completed"
+                  : "Sale was not completed"
+              }
               tone="destructive"
             />
           </View>
@@ -722,7 +937,7 @@ export function CreateSaleContent({
         return (
           <View className="pb-5">
             <SaleTotalSummary
-              helper={selectedItem?.unitName}
+              helper={`${cartLines.length} ${cartLines.length === 1 ? "line" : "lines"}`}
               label="Total"
               value={formatMoney(total, "NGN")}
             />
@@ -814,7 +1029,9 @@ export function CreateSaleContent({
             <ActionButton
               disabled={!canSubmit}
               isLoading={createProductionSaleMutation.isPending}
-              loadingLabel="Recording sale"
+              loadingLabel={
+                isServiceFlow ? "Creating service order" : "Recording sale"
+              }
               onPress={submit}
             >
               Complete transaction

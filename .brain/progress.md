@@ -1,6 +1,24 @@
 # Progress
 
+## 2026-07-18
+
+### Product And Service Catalog Implementation
+- Source Mode: Approved Product And Service Catalog Wayfinder specification plus the item-driven Sales/Services UX requirement and dev OTP suppression request.
+- Completed: Implemented neutral stores with item-level `PRODUCT | SERVICE`, shared pricing and variants, Product-only inventory enforcement, Service profiles, mixed commercial orders, generic relational Service Jobs, assignment/delay/evidence/history, public request/tracking, cancellation/reversal/refund events, net service reporting, an idempotent privacy-safe legacy migration, generic API/dashboard/mobile contracts, and item-driven Sales/Services navigation and direct-route gates. Mobile Service-only checkout uses priced Service items without stock or cashier-session requirements. Development/test owner OTP creates and returns `devCode` without sending email; production email behavior is unchanged.
+- Changed Source Areas: Prisma catalog/service-operation models and migrations; DB catalog/sale/stock/session/staff/service repositories and migration CLI; API schemas and routers; dashboard Catalog, Services, navigation, search, and public pages; mobile Catalog, Service Jobs, home/navigation/order flows and QA guards; focused tests.
+- Brain Files Updated: `.brain/api/contracts.md`, `.brain/api/endpoints.md`, `.brain/api/permissions.md`, `.brain/database/migrations.md`, `.brain/database/relationships.md`, `.brain/database/schema.md`, `.brain/decisions/ADR-0008-item-level-product-service-catalog.md`, `.brain/features/README.md`, `.brain/features/business-type-onboarding-dry-cleaning.md`, `.brain/features/product-service-catalog-items.md`, `.brain/plans/2026-07-17-feature-business-template-capability-gating-and-service-architecture.md`, `.brain/tasks/done.md`, `.brain/tasks/roadmap.md`, `.brain/progress.md`.
+- Checks Run: `bun run typecheck` (14/14); `bun test apps/api/src packages/db/src apps/dashboard/src apps/mobile/src` (190 pass, 0 fail); five mobile QA guards; `bun db:migrate`; `bun db:push`; legacy migration dry-run/apply; changed/new source Biome; `git diff --check`; dashboard browser QA across empty/Product/Service/mixed states plus public tracking/reporting; Android Service-only home, Service Jobs, and completed service-order QA.
+- Known Baseline: Root `bun run lint` still reports pre-existing untouched issues in `packages/email`, `packages/utils`, and `packages/tenant-url`; every changed/new source file passes Biome.
+
 ## 2026-07-17
+
+### Product And Service Catalog Wayfinder Specification
+- Source Mode: Approved Wayfinder-to-spec workflow from the item-level Product/Service discussion.
+- Completed: Created the Product And Service Catalog Items Wayfinder map and nine decision tickets, posted all nine owner-approved proposed-answer comments, and published a ready-for-agent local specification. The approved direction keeps stores neutral, classifies each priced catalog item as Product or Service, restricts stock to Product items, generalizes dry-cleaning operations into Service Jobs, supports mixed orders, and converts the current mobile Product setup into a kind-aware Add Item flow.
+- Changed Source Files: `.scratch/wayfinder-catalog-items-product-service/map.md`, `.scratch/wayfinder-catalog-items-product-service/issues/*.md`, `.scratch/wayfinder-catalog-items-product-service/spec.md`.
+- Brain Files Updated: `.brain/decisions/ADR-0008-item-level-product-service-catalog.md`, `.brain/features/product-service-catalog-items.md`, `.brain/features/business-type-onboarding-dry-cleaning.md`, `.brain/plans/2026-07-17-feature-business-template-capability-gating-and-service-architecture.md`, `.brain/tasks/roadmap.md`, `.brain/progress.md`.
+- Checks Run: Wayfinder marker/ticket structure scan; ready-for-agent spec section scan; legacy dry-cleaning hard-code guard scan; `git diff --check` for the Wayfinder and Brain artifacts.
+- Follow-up: Implemented on 2026-07-18; see the entry above.
 
 ### First-Product Ghost Action Label Visibility
 - Source Mode: Direct user report that `Add image link` and `Add Description` labels were not visible in light mode.

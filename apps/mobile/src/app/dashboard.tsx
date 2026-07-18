@@ -19,6 +19,7 @@ import { Text } from "@/components/ui/text"
 import { quickActions } from "@/data/retail-ops-dashboard-data"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useColorScheme, useColors } from "@/hooks/use-color"
+import { deriveMobileCatalogFeatureAvailability } from "@/lib/catalog-capabilities"
 import { isInvitedStaffProfile, isSalesRepRole } from "@/lib/mobile-roles"
 import { cn } from "@/lib/utils"
 import { useBusinessStore } from "@/store/businessStore"
@@ -129,6 +130,8 @@ function getStockStatus(stock: number): LowStockAlert["status"] {
 
 function getLowStockAlerts(products: RetailOpsProduct[]) {
   return products.flatMap((product) => {
+    if ((product.kind ?? "product") !== "product") return []
+
     const primaryStock = product.currentStock ?? product.startingStock ?? 0
     const rows: LowStockAlert[] = []
 
@@ -364,12 +367,12 @@ function toProductionRecentSaleItem(
   const firstLine = sale.lines[0]
 
   return {
-    attendant: "Synced sale",
+    attendant: "Synced order",
     customer: sale.customer.name ?? "Walk-in customer",
     id: sale.orderNumber || sale.id,
     item: firstLine
       ? `${firstLine.productName} - ${firstLine.unitName}`
-      : "Retail sale",
+      : "Order",
     method: formatProductionPaymentMethod(sale.payment.method),
     syncStatus: "synced",
     total: sale.totalMinor,
@@ -859,7 +862,7 @@ function PlanStatusCard({
   return (
     <DashboardPanel
       actionLabel="Plans"
-      description={`${plan.name} plan controls products, staff, businesses, reports, and offline device limits.`}
+      description={`${plan.name} plan controls catalog items, staff, businesses, reports, and offline device limits.`}
       icon="CreditCard"
       onActionPress={onPress}
       title="Subscription"
@@ -873,7 +876,7 @@ function PlanStatusCard({
 
       <View className="flex-row gap-3">
         <PlanUsageStat
-          label="Products"
+          label="Catalog items"
           limit={plan.limits.products}
           used={usage.products}
         />
@@ -1475,8 +1478,12 @@ function RetailOpsHomeHero({
 }
 
 function AdminHomeOverview({
+  catalogItemCount,
   firstProduct,
+  hasProductItems,
+  hasServiceItems,
   lowStockAlerts,
+  onCatalog,
   onCloseout,
   onCustomers,
   onSales,
@@ -1485,14 +1492,17 @@ function AdminHomeOverview({
   onStocks,
   openRepSessionCount,
   openSalesCount,
-  productCount,
   recentSale,
   stockUnitCount,
   todaySalesCount,
   todayTotal,
 }: {
+  catalogItemCount: number
   firstProduct: RetailOpsProduct | null
+  hasProductItems: boolean
+  hasServiceItems: boolean
   lowStockAlerts: LowStockAlert[]
+  onCatalog: () => void
   onCloseout: () => void
   onCustomers: () => void
   onSales: () => void
@@ -1501,57 +1511,86 @@ function AdminHomeOverview({
   onStocks: () => void
   openRepSessionCount: number
   openSalesCount: number
-  productCount: number
   recentSale: RecentSaleItem | null
   stockUnitCount: number
   todaySalesCount: number
   todayTotal: number
 }) {
   const primaryLowStock = lowStockAlerts[0]
+  const isServiceOnly = hasServiceItems && !hasProductItems
+  const activityNoun = isServiceOnly
+    ? "service order"
+    : hasProductItems && hasServiceItems
+      ? "order"
+      : "sale"
 
   return (
     <>
       <View className="gap-4">
         <View className="flex-row flex-wrap gap-3">
           <DashboardStatTile
-            detail={`${todaySalesCount} sale${todaySalesCount === 1 ? "" : "s"}`}
+            detail={`${todaySalesCount} ${activityNoun}${
+              todaySalesCount === 1 ? "" : "s"
+            }`}
             label="Today"
             tone="primary"
             value={formatMoney(todayTotal, "NGN")}
           />
-          <DashboardStatTile
-            detail={`${productCount} product${productCount === 1 ? "" : "s"}`}
-            label="Stock"
-            tone={lowStockAlerts.length > 0 ? "warning" : "success"}
-            value={stockUnitCount}
-          />
+          {hasProductItems ? (
+            <DashboardStatTile
+              detail={`${catalogItemCount} item${catalogItemCount === 1 ? "" : "s"} in catalog`}
+              label="Stock"
+              tone={lowStockAlerts.length > 0 ? "warning" : "success"}
+              value={stockUnitCount}
+            />
+          ) : (
+            <DashboardStatTile
+              detail={`${catalogItemCount} priced service${
+                catalogItemCount === 1 ? "" : "s"
+              } in catalog`}
+              label="Services"
+              tone="success"
+              value={catalogItemCount}
+            />
+          )}
         </View>
 
         <View className="gap-3">
           <Text className="text-xl font-extrabold text-foreground">
-            Service categories
+            Operations
           </Text>
           <View className="flex-row flex-wrap gap-3">
             <AdminHomeCategory
-              icon="ReceiptText"
-              label="Sales"
-              onPress={onSales}
-            />
-            <AdminHomeCategory
               icon="Warehouse"
-              label="Stocks"
-              onPress={onStocks}
+              label="Catalog"
+              onPress={onCatalog}
             />
+            {hasProductItems ? (
+              <AdminHomeCategory
+                icon="ReceiptText"
+                label="Sales"
+                onPress={onSales}
+              />
+            ) : null}
+            {hasProductItems ? (
+              <AdminHomeCategory
+                icon="Warehouse"
+                label="Stocks"
+                onPress={onStocks}
+              />
+            ) : null}
             <AdminHomeCategory
               icon="UserPlus"
-              label="Sales Reps"
+              label={isServiceOnly ? "Team" : "Sales Reps"}
               onPress={onSalesReps}
             />
-            <AdminHomeCategory
-              icon="ClipboardList"
-              label="Services"
-              onPress={onServices}
-            />
+            {hasServiceItems ? (
+              <AdminHomeCategory
+                icon="ClipboardList"
+                label="Services"
+                onPress={onServices}
+              />
+            ) : null}
             <AdminHomeCategory
               icon="Users"
               label="Customers"
@@ -1562,36 +1601,50 @@ function AdminHomeOverview({
       </View>
 
       <DashboardPanel
-        actionLabel="Closeout"
-        description="A compact view of the operations that need owner attention."
+        actionLabel={hasProductItems ? "Closeout" : "Jobs"}
+        description={
+          isServiceOnly
+            ? "A compact view of service activity that needs owner attention."
+            : "A compact view of the operations that need owner attention."
+        }
         icon="LayoutDashboard"
-        onActionPress={onCloseout}
+        onActionPress={hasProductItems ? onCloseout : onServices}
         title="Current operations"
         tone={primaryLowStock ? "warning" : "neutral"}
       >
         <View className="gap-3">
-          <DashboardRecordRow
-            detail={
-              firstProduct
-                ? `${firstProduct.currentStock ?? firstProduct.startingStock ?? 0} ${firstProduct.unitName} available`
-                : "Add your first item to start tracking sales and stock."
-            }
-            icon="Warehouse"
-            title={firstProduct?.name ?? "Inventory setup"}
-            trailing={
-              primaryLowStock ? (
-                <StatusBadge label={primaryLowStock.status} tone="warning" />
-              ) : null
-            }
-          />
+          {hasProductItems ? (
+            <DashboardRecordRow
+              detail={
+                firstProduct
+                  ? `${firstProduct.currentStock ?? firstProduct.startingStock ?? 0} ${firstProduct.unitName} available`
+                  : "Add a Product item to start tracking sales and stock."
+              }
+              icon="Warehouse"
+              title={firstProduct?.name ?? "Inventory setup"}
+              trailing={
+                primaryLowStock ? (
+                  <StatusBadge label={primaryLowStock.status} tone="warning" />
+                ) : null
+              }
+            />
+          ) : (
+            <DashboardRecordRow
+              detail={`${catalogItemCount} priced service${
+                catalogItemCount === 1 ? "" : "s"
+              } available for orders.`}
+              icon="ClipboardList"
+              title="Service catalog"
+            />
+          )}
           <DashboardRecordRow
             detail={
               recentSale
                 ? `${recentSale.customer} by ${recentSale.attendant}`
-                : "Completed sales will appear here."
+                : `Completed ${activityNoun}s will appear here.`
             }
             icon="ReceiptText"
-            title={recentSale?.item ?? "No recent sale yet"}
+            title={recentSale?.item ?? `No recent ${activityNoun} yet`}
             trailing={
               recentSale ? (
                 <Text className="font-extrabold text-foreground">
@@ -1600,18 +1653,20 @@ function AdminHomeOverview({
               ) : null
             }
           />
-          <View className="flex-row flex-wrap gap-3">
-            <DashboardInlineStatus
-              label={`${openRepSessionCount} open`}
-              title="Rep sessions"
-              tone={openRepSessionCount > 0 ? "primary" : "neutral"}
-            />
-            <DashboardInlineStatus
-              label={`${openSalesCount} open`}
-              title="Closeout queue"
-              tone={openSalesCount > 0 ? "warning" : "success"}
-            />
-          </View>
+          {hasProductItems ? (
+            <View className="flex-row flex-wrap gap-3">
+              <DashboardInlineStatus
+                label={`${openRepSessionCount} open`}
+                title="Rep sessions"
+                tone={openRepSessionCount > 0 ? "primary" : "neutral"}
+              />
+              <DashboardInlineStatus
+                label={`${openSalesCount} open`}
+                title="Closeout queue"
+                tone={openSalesCount > 0 ? "warning" : "success"}
+              />
+            </View>
+          ) : null}
         </View>
       </DashboardPanel>
     </>
@@ -1648,11 +1703,14 @@ function SalesRepHomeOverview({
   attendantName,
   currentSession,
   firstProduct,
+  hasProductItems,
+  hasServiceItems,
   onClockIn,
   onCloseout,
   onCreateSale,
+  onCreateServiceOrder,
   onCustomers,
-  onServiceOrders,
+  onServiceJobs,
   openSalesCount,
   todaySalesCount,
   todayTotal,
@@ -1660,35 +1718,63 @@ function SalesRepHomeOverview({
   attendantName: string
   currentSession: RetailOpsRepSession | null
   firstProduct: RetailOpsProduct | null
+  hasProductItems: boolean
+  hasServiceItems: boolean
   onClockIn: () => void
   onCloseout: () => void
   onCreateSale: () => void
+  onCreateServiceOrder: () => void
   onCustomers: () => void
-  onServiceOrders: () => void
+  onServiceJobs: () => void
   openSalesCount: number
   todaySalesCount: number
   todayTotal: number
 }) {
-  const canSell = !!firstProduct && !!currentSession
-  const description = currentSession
+  const canSellProducts = hasProductItems && !!firstProduct && !!currentSession
+  const activityLabel =
+    hasServiceItems && !hasProductItems
+      ? "Service orders"
+      : hasServiceItems
+        ? "Orders"
+        : "Sales"
+  const primaryAction = canSellProducts
+    ? {
+        icon: "ReceiptText" as const,
+        label: "New sale",
+        onPress: onCreateSale,
+      }
+    : hasServiceItems
+      ? {
+          icon: "ClipboardList" as const,
+          label: "Service order",
+          onPress: onCreateServiceOrder,
+        }
+      : {
+          icon: "Clock" as const,
+          label: "Clock in",
+          onPress: onClockIn,
+        }
+  const description = canSellProducts
     ? "Record sales, check customers, and close out your assigned shift."
-    : firstProduct
-      ? "Clock in before recording sales for this workspace."
-      : "Ask an admin to finish stock setup before starting sales."
+    : hasServiceItems
+      ? "Create service orders and keep customer jobs moving."
+      : hasProductItems
+        ? "Clock in before recording sales for this workspace."
+        : "Ask an admin to add a Product or Service item first."
 
   return (
     <DashboardPanel
-      actionLabel={canSell ? "New sale" : "Clock in"}
+      actionLabel={primaryAction.label}
       description={description}
-      icon={canSell ? "ReceiptText" : "Clock"}
-      onActionPress={canSell ? onCreateSale : onClockIn}
+      icon={primaryAction.icon}
+      onActionPress={primaryAction.onPress}
       title={`Hi, ${attendantName}`}
-      tone={canSell ? "success" : "warning"}
+      tone={canSellProducts || hasServiceItems ? "success" : "warning"}
     >
       <View className="flex-row flex-wrap gap-3">
         <DashboardStatTile
           detail="Recorded today"
-          label="Sales"
+          label={activityLabel}
           tone="success"
           value={todaySalesCount}
         />
@@ -1700,49 +1786,59 @@ function SalesRepHomeOverview({
         />
       </View>
       <View className="flex-row gap-2">
-        <Pressable
-          className={cn(
-            "flex-1 flex-row items-center justify-center gap-2 rounded-xl px-3 py-3",
-            canSell ? "bg-primary active:bg-primary/90" : "bg-muted",
-          )}
-          haptic
-          onPress={canSell ? onCreateSale : onClockIn}
-          transition
-        >
-          <Icon
+        {hasProductItems ? (
+          <Pressable
             className={cn(
-              "size-sm",
-              canSell ? "text-primary-foreground" : "text-muted-foreground",
+              "flex-1 flex-row items-center justify-center gap-2 rounded-xl px-3 py-3",
+              canSellProducts ? "bg-primary active:bg-primary/90" : "bg-muted",
             )}
-            name={canSell ? "Plus" : "Clock"}
-          />
-          <Text
-            className={cn(
-              "text-sm font-bold",
-              canSell ? "text-primary-foreground" : "text-muted-foreground",
-            )}
+            haptic
+            onPress={canSellProducts ? onCreateSale : onClockIn}
+            transition
           >
-            {canSell ? "Sale" : "Clock in"}
-          </Text>
-        </Pressable>
-        <Pressable
-          className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-3 active:bg-primary/20"
-          haptic
-          onPress={onServiceOrders}
-          transition
-        >
-          <Icon className="size-sm text-primary" name="ClipboardList" />
-          <Text className="text-sm font-bold text-primary">Services</Text>
-        </Pressable>
-        <Pressable
-          className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-3 active:bg-primary/20"
-          haptic
-          onPress={onCloseout}
-          transition
-        >
-          <Icon className="size-sm text-primary" name="ClipboardCheck" />
-          <Text className="text-sm font-bold text-primary">Closeout</Text>
-        </Pressable>
+            <Icon
+              className={cn(
+                "size-sm",
+                canSellProducts
+                  ? "text-primary-foreground"
+                  : "text-muted-foreground",
+              )}
+              name={canSellProducts ? "Plus" : "Clock"}
+            />
+            <Text
+              className={cn(
+                "text-sm font-bold",
+                canSellProducts
+                  ? "text-primary-foreground"
+                  : "text-muted-foreground",
+              )}
+            >
+              {canSellProducts ? "Sale" : "Clock in"}
+            </Text>
+          </Pressable>
+        ) : null}
+        {hasServiceItems ? (
+          <Pressable
+            className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-3 active:bg-primary/20"
+            haptic
+            onPress={onServiceJobs}
+            transition
+          >
+            <Icon className="size-sm text-primary" name="ClipboardList" />
+            <Text className="text-sm font-bold text-primary">Services</Text>
+          </Pressable>
+        ) : null}
+        {hasProductItems ? (
+          <Pressable
+            className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 px-3 py-3 active:bg-primary/20"
+            haptic
+            onPress={onCloseout}
+            transition
+          >
+            <Icon className="size-sm text-primary" name="ClipboardCheck" />
+            <Text className="text-sm font-bold text-primary">Closeout</Text>
+          </Pressable>
+        ) : null}
       </View>
       <Pressable
         className="min-h-11 flex-row items-center justify-center gap-2 rounded-xl bg-muted px-3 py-3 active:bg-accent"
@@ -1753,28 +1849,32 @@ function SalesRepHomeOverview({
         <Icon className="size-sm text-foreground" name="Users" />
         <Text className="text-sm font-bold text-foreground">Customers</Text>
       </Pressable>
-      <DashboardRecordRow
-        detail={
-          firstProduct
-            ? `${firstProduct.currentStock ?? firstProduct.startingStock ?? 0} ${firstProduct.unitName} available for sales`
-            : "Assigned stock will appear after an admin completes inventory setup."
-        }
-        icon="Warehouse"
-        title={firstProduct?.name ?? "Assigned stock"}
-        trailing={
-          firstProduct ? (
-            <StatusBadge
-              label={canSell ? "Ready" : "Clock in"}
-              tone={canSell ? "success" : "warning"}
-            />
-          ) : null
-        }
-      />
-      <DashboardInlineStatus
-        label={`${openSalesCount} open`}
-        title="Closeout queue"
-        tone={openSalesCount > 0 ? "warning" : "success"}
-      />
+      {hasProductItems ? (
+        <>
+          <DashboardRecordRow
+            detail={
+              firstProduct
+                ? `${firstProduct.currentStock ?? firstProduct.startingStock ?? 0} ${firstProduct.unitName} available for sales`
+                : "Assigned stock will appear after an admin completes inventory setup."
+            }
+            icon="Warehouse"
+            title={firstProduct?.name ?? "Assigned stock"}
+            trailing={
+              firstProduct ? (
+                <StatusBadge
+                  label={canSellProducts ? "Ready" : "Clock in"}
+                  tone={canSellProducts ? "success" : "warning"}
+                />
+              ) : null
+            }
+          />
+          <DashboardInlineStatus
+            label={`${openSalesCount} open`}
+            title="Closeout queue"
+            tone={openSalesCount > 0 ? "warning" : "success"}
+          />
+        </>
+      ) : null}
     </DashboardPanel>
   )
 }
@@ -1814,13 +1914,6 @@ export function RetailOpsDashboardSurface({
     surface === "sales-rep" || (!surface && profileIsSalesRep)
   const showSecondaryAdminHomeSections = false
   const canManageInventory = !isAttendantDashboard
-  const visibleQuickActions = useMemo(
-    () =>
-      quickActions.filter(
-        (action) => !isAttendantDashboard || action.label === "New sale",
-      ),
-    [isAttendantDashboard],
-  )
   const businessDisplayName =
     activeBusiness?.name ?? profile?.businessName ?? "Retail workspace"
   const subscriptions = useSubscriptionStore((state) => state.subscriptions)
@@ -1851,12 +1944,16 @@ export function RetailOpsDashboardSurface({
     [activeBusinessId, allCustomers],
   )
   const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
-  const products = useMemo(
+  const catalogItems = useMemo(
     () =>
       allProducts.filter((product) =>
         isActiveBusinessRecord(product, activeBusinessId),
       ),
     [activeBusinessId, allProducts],
+  )
+  const products = useMemo(
+    () => catalogItems.filter((item) => (item.kind ?? "product") === "product"),
+    [catalogItems],
   )
   const repSessions = useMemo(
     () =>
@@ -1914,6 +2011,15 @@ export function RetailOpsDashboardSurface({
       retry: false,
     }),
   )
+  const productionCatalogQuery = useQuery(
+    trpc.retailOps.catalogItems.queryOptions(
+      {},
+      {
+        enabled: canReadProductionDashboard,
+        retry: false,
+      },
+    ),
+  )
   const productionRecentSalesQuery = useQuery(
     trpc.retailOps.recentSales.queryOptions(
       {
@@ -1969,16 +2075,44 @@ export function RetailOpsDashboardSurface({
   const productionCustomers = (productionCustomersQuery.data ??
     []) as ProductionCustomerBookEntry[]
   const firstProduct = products[0] ?? null
-  const productionInventoryKnown =
-    canReadProductionDashboard && dashboardSummaryQuery.isSuccess
+  const productionCatalogItems = productionCatalogQuery.data ?? []
+  const localOnlyCatalogItems = catalogItems.filter(
+    (item) =>
+      !item.remoteId ||
+      !productionCatalogItems.some(
+        (productionItem) => productionItem.id === item.remoteId,
+      ),
+  )
+  const catalogItemCount =
+    productionCatalogItems.length + localOnlyCatalogItems.length
+  const catalogFeatures = useMemo(
+    () =>
+      deriveMobileCatalogFeatureAvailability([
+        ...catalogItems,
+        ...productionCatalogItems,
+      ]),
+    [catalogItems, productionCatalogItems],
+  )
+  const hasProductCatalogItem = catalogFeatures.hasProductItems
+  const hasServiceCatalogItem = catalogFeatures.hasServiceItems
+  const visibleQuickActions = useMemo(
+    () =>
+      quickActions.filter(
+        (action) =>
+          (!isAttendantDashboard || action.label === "New sale") &&
+          (action.label !== "New sale" || hasProductCatalogItem),
+      ),
+    [hasProductCatalogItem, isAttendantDashboard],
+  )
+  const productionCatalogKnown =
+    canReadProductionDashboard && productionCatalogQuery.isSuccess
   const shouldPromptFirstProduct =
     isAuthenticated &&
     !!activeBusinessId &&
-    !firstProduct &&
-    ((productionInventoryKnown &&
-      (productionSummary?.inventory.stockUnitCount ?? 0) === 0) ||
+    catalogItemCount === 0 &&
+    ((productionCatalogKnown && productionCatalogItems.length === 0) ||
       !canReadProductionDashboard ||
-      dashboardSummaryQuery.isError)
+      productionCatalogQuery.isError)
   const localSubscription = getBusinessSubscription(
     subscriptions,
     activeBusinessId,
@@ -2011,7 +2145,7 @@ export function RetailOpsDashboardSurface({
       }
     : {
         businesses: businesses.length,
-        products: products.length,
+        products: catalogItems.length,
         staff: staff.length,
       }
   const openRepSessions = repSessions.filter(
@@ -2259,12 +2393,22 @@ export function RetailOpsDashboardSurface({
   const openFirstProductSetup = useCallback(() => {
     router.push("/first-product-setup-modal")
   }, [router])
+  const openCatalog = useCallback(() => {
+    router.push("/catalog-items-modal" as never)
+  }, [router])
   const openStockIntake = useCallback(() => {
     router.push("/stock-intake-modal")
   }, [router])
-  const openCreateSale = useCallback(() => {
-    router.push("/create-sale-modal")
-  }, [router])
+  const openCreateSale = useCallback(
+    (kind?: "service") => {
+      router.push(
+        (kind === "service"
+          ? "/create-sale-modal?kind=service"
+          : "/create-sale-modal") as never,
+      )
+    },
+    [router],
+  )
   const openRepClockIn = useCallback(() => {
     router.push("/rep-clock-in-modal")
   }, [router])
@@ -2289,8 +2433,8 @@ export function RetailOpsDashboardSurface({
   const openProductShare = useCallback(() => {
     router.push("/product-share-modal")
   }, [router])
-  const openServiceOrders = useCallback(() => {
-    router.push("/service-orders-modal")
+  const openServiceJobs = useCallback(() => {
+    router.push("/service-jobs-modal" as never)
   }, [router])
 
   const handleQuickAction = (label: QuickActionProps["label"]) => {
@@ -2301,7 +2445,7 @@ export function RetailOpsDashboardSurface({
     }
 
     if (label === "New sale") {
-      if (!firstProduct) {
+      if (!hasProductCatalogItem) {
         if (!isAttendantDashboard) {
           openFirstProductSetup()
         }
@@ -2349,43 +2493,73 @@ export function RetailOpsDashboardSurface({
       )}
     </Pressable>
   )
-  const shellCentralAction: MobileAppShellNavItem = {
-    accessibilityLabel: "Create sale",
-    icon: "Plus",
-    label: "Sale",
-    onPress: () =>
-      isAttendantDashboard
-        ? handleQuickAction("New sale")
-        : actionModal.present(),
-  }
+  const shellCentralAction: MobileAppShellNavItem = hasProductCatalogItem
+    ? {
+        accessibilityLabel:
+          hasServiceCatalogItem && !isAttendantDashboard
+            ? "Create order"
+            : "Create sale",
+        icon: "Plus",
+        label:
+          hasServiceCatalogItem && !isAttendantDashboard ? "Create" : "Sale",
+        onPress: () =>
+          hasServiceCatalogItem && !isAttendantDashboard
+            ? actionModal.present()
+            : handleQuickAction("New sale"),
+      }
+    : hasServiceCatalogItem
+      ? {
+          accessibilityLabel: "Create service order",
+          icon: "Plus",
+          label: "Service",
+          onPress: () => openCreateSale("service"),
+        }
+      : {
+          accessibilityLabel: "Add catalog item",
+          icon: "Plus",
+          label: "Item",
+          onPress: openFirstProductSetup,
+        }
   const actionPickerItems: MoreNavigationItem[] = [
-    {
-      description: "Start a sale for the current session.",
-      icon: "ReceiptText",
-      label: "New sale",
-      onPress: () => {
-        actionModal.dismiss()
-        handleQuickAction("New sale")
-      },
-    },
-    {
-      description: "Receive dry-cleaning items and update due orders.",
-      icon: "ClipboardList",
-      label: "Service order",
-      onPress: () => {
-        actionModal.dismiss()
-        openServiceOrders()
-      },
-    },
-    {
-      description: "Record restock, adjustment, or inventory movement.",
-      icon: "Warehouse",
-      label: "Stock entry",
-      onPress: () => {
-        actionModal.dismiss()
-        firstProduct ? openStockIntake() : openFirstProductSetup()
-      },
-    },
+    ...(hasProductCatalogItem
+      ? [
+          {
+            description: "Start a sale for the current session.",
+            icon: "ReceiptText" as const,
+            label: "New sale",
+            onPress: () => {
+              actionModal.dismiss()
+              handleQuickAction("New sale")
+            },
+          },
+        ]
+      : []),
+    ...(hasServiceCatalogItem
+      ? [
+          {
+            description: "Create an order using active Service items.",
+            icon: "ClipboardList" as const,
+            label: "Service order",
+            onPress: () => {
+              actionModal.dismiss()
+              openCreateSale("service")
+            },
+          },
+        ]
+      : []),
+    ...(hasProductCatalogItem
+      ? [
+          {
+            description: "Record restock, adjustment, or inventory movement.",
+            icon: "Warehouse" as const,
+            label: "Stock entry",
+            onPress: () => {
+              actionModal.dismiss()
+              firstProduct ? openStockIntake() : openFirstProductSetup()
+            },
+          },
+        ]
+      : []),
     {
       description: "Invite a sales rep into this workspace.",
       icon: "UserPlus",
@@ -2406,15 +2580,19 @@ export function RetailOpsDashboardSurface({
         router.push("/staff-invite-modal")
       },
     },
-    {
-      description: "Set up services and manage dry-cleaning orders.",
-      icon: "ClipboardList",
-      label: "Services",
-      onPress: () => {
-        moreModal.dismiss()
-        openServiceOrders()
-      },
-    },
+    ...(hasServiceCatalogItem
+      ? [
+          {
+            description: "Manage priced services and their active jobs.",
+            icon: "ClipboardList" as const,
+            label: "Services",
+            onPress: () => {
+              moreModal.dismiss()
+              openServiceJobs()
+            },
+          },
+        ]
+      : []),
     {
       description: "Find saved customers and recent purchase activity.",
       icon: "Users",
@@ -2463,7 +2641,12 @@ export function RetailOpsDashboardSurface({
       },
     },
     {
-      description: "Open sales, stock, and closeout reports.",
+      description:
+        hasProductCatalogItem && hasServiceCatalogItem
+          ? "Open sales, service, stock, and closeout reports."
+          : hasServiceCatalogItem
+            ? "Open service order and revenue reports."
+            : "Open sales, stock, and closeout reports.",
       icon: "BarChart3",
       label: "Reports",
       onPress: () => {
@@ -2510,16 +2693,30 @@ export function RetailOpsDashboardSurface({
       label: "Home",
       onPress: () => undefined,
     },
-    {
-      icon: "ReceiptText",
-      label: "Sales",
-      onPress: () => handleQuickAction("New sale"),
-    },
+    ...(hasProductCatalogItem
+      ? [
+          {
+            icon: "ReceiptText" as const,
+            label: "Sales",
+            onPress: () => handleQuickAction("New sale"),
+          },
+        ]
+      : []),
+    ...(hasProductCatalogItem
+      ? [
+          {
+            icon: "Warehouse" as const,
+            label: "Stocks",
+            onPress: () =>
+              firstProduct ? openStockIntake() : openFirstProductSetup(),
+            ownerOnly: true,
+          },
+        ]
+      : []),
     {
       icon: "Warehouse",
-      label: "Stocks",
-      onPress: () =>
-        firstProduct ? openStockIntake() : openFirstProductSetup(),
+      label: "Catalog",
+      onPress: openCatalog,
       ownerOnly: true,
     },
     {
@@ -2530,6 +2727,54 @@ export function RetailOpsDashboardSurface({
       ownerOnly: false,
     },
   ]
+  const isServiceOnlyCatalog = hasServiceCatalogItem && !hasProductCatalogItem
+  const isMixedCatalog = hasServiceCatalogItem && hasProductCatalogItem
+  const ownerPrimaryActionLabel = isServiceOnlyCatalog
+    ? "Review services"
+    : isMixedCatalog
+      ? "Review orders"
+      : hasProductCatalogItem
+        ? "Review sales"
+        : "Add item"
+  const ownerSummaryDetail = isServiceOnlyCatalog
+    ? `${dashboardTodaySalesCount} service order${
+        dashboardTodaySalesCount === 1 ? "" : "s"
+      } today, ${catalogItemCount} priced service${
+        catalogItemCount === 1 ? "" : "s"
+      }.`
+    : isMixedCatalog
+      ? `${dashboardTodaySalesCount} order${
+          dashboardTodaySalesCount === 1 ? "" : "s"
+        } today, ${lowStockCount} stock alert${
+          lowStockCount === 1 ? "" : "s"
+        }, ${openRepSessions.length} active rep${
+          openRepSessions.length === 1 ? "" : "s"
+        }.`
+      : hasProductCatalogItem
+        ? `${dashboardTodaySalesCount} sale${
+            dashboardTodaySalesCount === 1 ? "" : "s"
+          } today, ${lowStockCount} stock alert${
+            lowStockCount === 1 ? "" : "s"
+          }, ${openRepSessions.length} active rep${
+            openRepSessions.length === 1 ? "" : "s"
+          }.`
+        : "Add a Product or Service item to tailor this workspace."
+  const attendantPrimaryActionLabel = isServiceOnlyCatalog
+    ? "Service order"
+    : currentRepSession
+      ? "Record sale"
+      : "Clock in"
+  const attendantSummaryDetail = isServiceOnlyCatalog
+    ? `${dashboardTodaySalesCount} service order${
+        dashboardTodaySalesCount === 1 ? "" : "s"
+      } recorded today.`
+    : currentRepSession
+      ? `${openCloseoutSales.length} sale${
+          openCloseoutSales.length === 1 ? "" : "s"
+        } waiting for closeout.`
+      : hasProductCatalogItem
+        ? "Clock in to begin recording sales for this workspace."
+        : "Ask an admin to add a Product or Service item first."
 
   useEffect(() => {
     if (!isAuthenticated) return
@@ -2616,36 +2861,26 @@ export function RetailOpsDashboardSurface({
           headerAction={<Logout tone="hero" />}
           onBusinessPress={openBusinessSwitch}
           onPrimaryPress={() =>
-            isAttendantDashboard ? handleQuickAction("New sale") : openReports()
+            isAttendantDashboard
+              ? isServiceOnlyCatalog
+                ? openCreateSale("service")
+                : handleQuickAction("New sale")
+              : isServiceOnlyCatalog
+                ? openServiceJobs()
+                : hasProductCatalogItem
+                  ? openReports()
+                  : openFirstProductSetup()
           }
           onSearchPress={openCustomerBook}
           primaryActionLabel={
             isAttendantDashboard
-              ? currentRepSession
-                ? "Record sale"
-                : "Clock in"
-              : "Review sales"
+              ? attendantPrimaryActionLabel
+              : ownerPrimaryActionLabel
           }
           roleLabel={isAttendantDashboard ? "Sales rep home" : "Admin home"}
-          searchPlaceholder={
-            isAttendantDashboard
-              ? "Search customers and recent sales"
-              : "Search sales, stock, reps, customers"
-          }
+          searchPlaceholder="Search customers"
           summaryDetail={
-            isAttendantDashboard
-              ? currentRepSession
-                ? `${openCloseoutSales.length} sale${
-                    openCloseoutSales.length === 1 ? "" : "s"
-                  } waiting for closeout.`
-                : "Clock in to begin recording sales for this workspace."
-              : `${dashboardTodaySalesCount} sale${
-                  dashboardTodaySalesCount === 1 ? "" : "s"
-                } today, ${lowStockCount} stock alert${
-                  lowStockCount === 1 ? "" : "s"
-                }, ${openRepSessions.length} active rep${
-                  openRepSessions.length === 1 ? "" : "s"
-                }.`
+            isAttendantDashboard ? attendantSummaryDetail : ownerSummaryDetail
           }
           summaryLabel={
             isAttendantDashboard ? "Your shift snapshot" : "Today snapshot"
@@ -2668,32 +2903,38 @@ export function RetailOpsDashboardSurface({
           attendantName={attendantName}
           currentSession={currentRepSession}
           firstProduct={firstProduct ?? null}
+          hasProductItems={hasProductCatalogItem}
+          hasServiceItems={hasServiceCatalogItem}
           onClockIn={() => (firstProduct ? openRepClockIn() : undefined)}
           onCloseout={() => (firstProduct ? openCloseout() : undefined)}
           onCreateSale={() => handleQuickAction("New sale")}
+          onCreateServiceOrder={() => openCreateSale("service")}
           onCustomers={openCustomerBook}
-          onServiceOrders={openServiceOrders}
+          onServiceJobs={openServiceJobs}
           openSalesCount={openCloseoutSales.length}
           todaySalesCount={dashboardTodaySalesCount}
           todayTotal={dashboardTodayTotal}
         />
       ) : (
         <AdminHomeOverview
+          catalogItemCount={catalogItemCount}
           firstProduct={firstProduct ?? null}
+          hasProductItems={hasProductCatalogItem}
+          hasServiceItems={hasServiceCatalogItem}
           lowStockAlerts={lowStockAlerts}
           onCloseout={() =>
             firstProduct ? openCloseout() : openFirstProductSetup()
           }
+          onCatalog={openCatalog}
           onCustomers={openCustomerBook}
           onSales={() => handleQuickAction("New sale")}
           onSalesReps={() => router.push("/staff-invite-modal")}
-          onServices={openServiceOrders}
+          onServices={openServiceJobs}
           onStocks={() =>
             firstProduct ? openStockIntake() : openFirstProductSetup()
           }
           openRepSessionCount={openRepSessions.length}
           openSalesCount={openCloseoutSales.length}
-          productCount={products.length}
           recentSale={visibleRecentSales[0] ?? null}
           stockUnitCount={stockUnitCount}
           todaySalesCount={dashboardTodaySalesCount}

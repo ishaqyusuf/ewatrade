@@ -6,29 +6,29 @@ import superjson from "superjson"
 
 const DEFAULT_API_URL = "http://127.0.0.1:3095"
 const DEFAULT_DEEP_LINK_BASE = "exp://192.168.18.7:3096/--/qa-session"
-const DRY_CLEANING_CASE_STUDY_SERVICES = [
+const SERVICE_QA_ITEMS = [
   {
-    lgPriceMinor: 50_000,
-    name: "Shirt and trouser",
-    smPriceMinor: 40_000,
+    premiumPriceMinor: 50_000,
+    name: "Standard consultation",
+    standardPriceMinor: 40_000,
   },
   {
-    lgPriceMinor: 70_000,
-    name: "Agbada",
-    smPriceMinor: 55_000,
+    premiumPriceMinor: 70_000,
+    name: "Document review",
+    standardPriceMinor: 55_000,
   },
   {
-    lgPriceMinor: 40_000,
-    name: "Jalabia",
-    smPriceMinor: 32_000,
+    premiumPriceMinor: 40_000,
+    name: "Installation visit",
+    standardPriceMinor: 32_000,
   },
   {
-    lgPriceMinor: 60_000,
-    name: "Iro and Buba",
-    smPriceMinor: 48_000,
+    premiumPriceMinor: 60_000,
+    name: "Maintenance package",
+    standardPriceMinor: 48_000,
   },
 ]
-const DRY_CLEANING_CASE_STUDY_ORDERS = [
+const SERVICE_QA_JOBS = [
   {
     customer: {
       email: "aisha-bello@test.com",
@@ -40,9 +40,9 @@ const DRY_CLEANING_CASE_STUDY_ORDERS = [
     notes: "Express intake paid upfront.",
     paymentStatus: "paid",
     quantity: 2,
-    serviceName: "Shirt and trouser",
-    statuses: ["in_progress", "ready", "pickup_pending"],
-    variantName: "LG",
+    serviceName: "Standard consultation",
+    statuses: ["in_progress", "ready"],
+    variantName: "Premium",
   },
   {
     customer: {
@@ -55,9 +55,9 @@ const DRY_CLEANING_CASE_STUDY_ORDERS = [
     notes: "Customer will pay on collection.",
     paymentStatus: "pay_on_collection",
     quantity: 1,
-    serviceName: "Agbada",
+    serviceName: "Document review",
     statuses: ["in_progress"],
-    variantName: "LG",
+    variantName: "Premium",
   },
   {
     customer: {
@@ -70,9 +70,9 @@ const DRY_CLEANING_CASE_STUDY_ORDERS = [
     notes: "Standard drop-off.",
     paymentStatus: "unpaid",
     quantity: 3,
-    serviceName: "Jalabia",
+    serviceName: "Installation visit",
     statuses: [],
-    variantName: "SM",
+    variantName: "Standard",
   },
   {
     customer: {
@@ -85,9 +85,9 @@ const DRY_CLEANING_CASE_STUDY_ORDERS = [
     notes: "Express order for delivery follow-up.",
     paymentStatus: "paid",
     quantity: 1,
-    serviceName: "Iro and Buba",
-    statuses: ["in_progress", "ready", "delivery_pending"],
-    variantName: "LG",
+    serviceName: "Maintenance package",
+    statuses: ["in_progress", "ready"],
+    variantName: "Premium",
   },
   {
     customer: {
@@ -100,9 +100,9 @@ const DRY_CLEANING_CASE_STUDY_ORDERS = [
     notes: "Due work sample for dashboard review.",
     paymentStatus: "partial",
     quantity: 2,
-    serviceName: "Agbada",
-    statuses: ["delayed"],
-    variantName: "SM",
+    serviceName: "Document review",
+    statuses: ["in_progress"],
+    variantName: "Standard",
   },
   {
     customer: {
@@ -115,9 +115,9 @@ const DRY_CLEANING_CASE_STUDY_ORDERS = [
     notes: "Pay on delivery sample.",
     paymentStatus: "pay_on_delivery",
     quantity: 1,
-    serviceName: "Shirt and trouser",
+    serviceName: "Standard consultation",
     statuses: ["cancelled"],
-    variantName: "SM",
+    variantName: "Standard",
   },
 ]
 
@@ -191,29 +191,7 @@ async function createMobileSession(client, input) {
   })
 }
 
-async function prepareBusinessTemplate(client, templateKey) {
-  if (!templateKey || templateKey === "none") return null
-
-  const update = await client.retailOps.updateBusinessTemplate.mutate({
-    allowOperationalDataChange: true,
-    nextTemplateKey: templateKey,
-    reason: "Mobile real-session QA setup",
-  })
-  const current = await client.retailOps.storeBusinessTemplate.query({})
-
-  if (current.key !== templateKey) {
-    throw new Error(
-      `Expected business template ${templateKey}, received ${current.key}.`,
-    )
-  }
-
-  return {
-    current,
-    update,
-  }
-}
-
-function getCaseStudyVariant(serviceItem, variantName) {
+function getQaVariant(serviceItem, variantName) {
   return (
     serviceItem.variants.find((variant) => variant.name === variantName) ??
     serviceItem.variants[0] ??
@@ -221,110 +199,96 @@ function getCaseStudyVariant(serviceItem, variantName) {
   )
 }
 
-function getOrderUnitPrice(input) {
-  const basePrice = input.variant?.priceMinor ?? input.serviceItem.priceMinor
-
-  if (!input.express) return basePrice
-
-  return Math.round(basePrice * 1.25)
-}
-
-async function seedDryCleaningCaseStudy(client, runId) {
-  const settings = await client.retailOps.updateDryCleaningSettings.mutate({
-    expressSurchargePercent: 25,
-  })
+async function seedServiceQaData(client, runId) {
   const serviceItems = []
 
-  for (const service of DRY_CLEANING_CASE_STUDY_SERVICES) {
+  for (const service of SERVICE_QA_ITEMS) {
     serviceItems.push(
-      await client.retailOps.createDryCleaningServiceItem.mutate({
-        category: "Dry cleaning",
+      await client.retailOps.createCatalogItem.mutate({
+        category: "Professional services",
+        kind: "service",
         name: service.name,
-        priceMinor: service.lgPriceMinor,
+        priceMinor: service.standardPriceMinor,
+        primaryUnitName: "Standard",
+        service: {
+          fulfillmentMode: "tracked",
+        },
         variants: [
           {
-            name: "SM",
-            priceMinor: service.smPriceMinor,
-          },
-          {
-            name: "LG",
-            priceMinor: service.lgPriceMinor,
+            openingStockQuantity: 0,
+            name: "Premium",
+            priceMinor: service.premiumPriceMinor,
           },
         ],
       }),
     )
   }
 
-  const orders = []
+  const jobs = []
 
-  for (const [index, orderInput] of DRY_CLEANING_CASE_STUDY_ORDERS.entries()) {
+  for (const [index, orderInput] of SERVICE_QA_JOBS.entries()) {
     const serviceItem = serviceItems.find(
-      (item) => item.name === orderInput.serviceName,
+      (item) => item.item.name === orderInput.serviceName,
     )
 
     if (!serviceItem) {
       throw new Error(`Seed service ${orderInput.serviceName} was not created.`)
     }
 
-    const variant = getCaseStudyVariant(serviceItem, orderInput.variantName)
-    const createdOrder =
-      await client.retailOps.createDryCleaningServiceOrder.mutate({
-        customer: orderInput.customer,
-        dueAt: addDays(orderInput.dueOffsetDays),
-        evidence: [
-          {
-            label: orderInput.express
-              ? "Express intake evidence"
-              : "Intake evidence",
-            url: `https://ewatrade.com/qa/evidence/${runId}-${index + 1}.jpg`,
-          },
-        ],
-        lines: [
-          {
-            quantity: orderInput.quantity,
-            serviceItemId: serviceItem.id,
-            unitPriceMinor: getOrderUnitPrice({
-              express: orderInput.express,
-              serviceItem,
-              variant,
-            }),
-            ...(variant ? { variantId: variant.id } : {}),
-          },
-        ],
-        notes: orderInput.notes,
-        paymentStatus: orderInput.paymentStatus,
-      })
-    let latestOrder = createdOrder
+    const variant = getQaVariant(serviceItem, orderInput.variantName)
+    const sale = await client.retailOps.createSale.mutate({
+      customerEmail: orderInput.customer.email,
+      customerName: orderInput.customer.name,
+      customerPhone: orderInput.customer.phone,
+      lines: [
+        {
+          catalogItemVariantId: variant?.id ?? serviceItem.variants[0].id,
+          quantity: orderInput.quantity,
+        },
+      ],
+      notes: orderInput.notes,
+      paymentMethod: "cash",
+      serviceDueAt: addDays(orderInput.dueOffsetDays),
+    })
+    if (!sale.serviceJob) continue
+    let latestJob = sale.serviceJob
+    await client.retailOps.addServiceJobEvidence.mutate({
+      jobId: latestJob.id,
+      label: orderInput.express
+        ? "Priority intake evidence"
+        : "Intake evidence",
+      url: `https://ewatrade.com/qa/evidence/${runId}-${index + 1}.jpg`,
+    })
 
     for (const status of orderInput.statuses) {
-      const statusUpdate =
-        await client.retailOps.updateDryCleaningServiceOrderStatus.mutate({
-          note: `Seeded ${status} status for mobile real-session QA.`,
-          notifyCustomer: false,
-          orderId: latestOrder.id,
-          status,
-        })
-      latestOrder = statusUpdate.order
+      if (
+        !["in_progress", "ready", "completed", "cancelled"].includes(status)
+      ) {
+        continue
+      }
+      latestJob = await client.retailOps.updateServiceJobStatus.mutate({
+        note: `Seeded ${status} status for mobile real-session QA.`,
+        jobId: latestJob.id,
+        status,
+      })
     }
 
-    orders.push(latestOrder)
+    jobs.push({
+      customerName: orderInput.customer.name,
+      id: latestJob.id,
+      status: latestJob.status,
+      totalMinor: sale.order.totalMinor,
+    })
   }
 
   return {
-    orderCount: orders.length,
-    orders: orders.map((order) => ({
-      customerName: order.customer.name,
-      id: order.id,
-      paymentStatus: order.paymentStatus,
-      status: order.status,
-      totalMinor: order.totalMinor,
-    })),
+    jobCount: jobs.length,
+    jobs,
     serviceItems: serviceItems.map((item) => ({
-      id: item.id,
-      name: item.name,
+      id: item.item.id,
+      name: item.item.name,
       variantCount: item.variants.length,
     })),
-    settings,
   }
 }
 
@@ -435,10 +399,7 @@ async function main() {
   const ownerName = process.env.MOBILE_REAL_SESSION_OWNER_NAME || "Mobile Owner"
   const businessName =
     process.env.MOBILE_REAL_SESSION_BUSINESS_NAME ||
-    `Mobile Dry Cleaning QA ${runId}`
-  const businessTemplate =
-    process.env.MOBILE_REAL_SESSION_BUSINESS_TEMPLATE ||
-    "dry_cleaning_laundry"
+    `Mobile Service QA ${runId}`
   const publicClient = createClient({ apiUrl })
   const ownerSession = await createMobileSession(publicClient, {
     businessName,
@@ -450,16 +411,12 @@ async function main() {
     apiUrl,
     token: ownerSession.token,
   })
-  const businessTemplateSetup = await prepareBusinessTemplate(
-    ownerClient,
-    businessTemplate,
-  )
-  const dryCleaningSeed =
-    process.env.MOBILE_REAL_SESSION_SEED_DRY_CLEANING === "1"
-      ? await seedDryCleaningCaseStudy(ownerClient, runId)
+  const serviceSeed =
+    process.env.MOBILE_REAL_SESSION_SEED_SERVICES === "1"
+      ? await seedServiceQaData(ownerClient, runId)
       : null
   let selectedSession = ownerSession
-  let next = process.env.MOBILE_REAL_SESSION_NEXT || "/service-orders-modal"
+  let next = process.env.MOBILE_REAL_SESSION_NEXT || "/service-jobs-modal"
   let staffInvite = null
   let staffCompletion = null
 
@@ -520,21 +477,8 @@ async function main() {
   })
   const evidence = {
     apiUrl,
-    businessTemplateSetup: businessTemplateSetup
-      ? {
-          changed: businessTemplateSetup.update.changed,
-          currentTemplateKey: businessTemplateSetup.update.currentTemplateKey,
-          previousTemplateKey:
-            businessTemplateSetup.update.previousTemplateKey ?? null,
-          resolvedTemplate: {
-            key: businessTemplateSetup.current.key,
-            label: businessTemplateSetup.current.label,
-            storeId: businessTemplateSetup.current.storeId,
-          },
-        }
-      : null,
     createdAt: new Date().toISOString(),
-    dryCleaningSeed,
+    serviceSeed,
     importLink,
     next,
     ownerSession: redactSession(ownerSession),
@@ -575,6 +519,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error)
+  console.error(error instanceof Error ? (error.stack ?? error.message) : error)
   process.exit(1)
 })

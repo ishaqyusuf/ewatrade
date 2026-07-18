@@ -1,52 +1,57 @@
 model Tenant {
-  id             String            @id @default(cuid())
-  slug           String            @unique
-  name           String
-  type           TenantType
-  enabledModes   TenantMode[]
-  isActive       Boolean           @default(true)
-  timezone       String            @default("Africa/Lagos")
-  countryCode    String?
-  currencyCode   String            @default("NGN")
-  metadata       Json?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  users          Membership[]
-  stores         Store[]
-  orders         Order[]
-  sites          Site[]
-  hostnames      TenantHostname[]
-  conversations  Conversation[]
-  automations    AutomationEvent[]
-  dispatchOffers DeliveryBid[]
-  subscription   TenantSubscription?
-  billingCheckoutSessions BillingCheckoutSession[]
-  billingInvoices BillingInvoice[]
-  billingProviderEvents BillingProviderEvent[]
-  productUnitTemplates ProductUnitTemplate[]
-  productUnitPriceHistory ProductUnitPriceHistory[]
-  retailOpsStaffProfiles RetailOpsStaffProfile[]
-  retailOpsStaffInviteTokens RetailOpsStaffInviteToken[]
-  retailOpsStaffLifecycleEvents RetailOpsStaffLifecycleEvent[]
-  offlineDevices OfflineDevice[]
-  offlineDeviceRevocations OfflineDeviceRevocation[]
-  retailOpsSyncRuns RetailOpsSyncRun[]
-  retailOpsSyncEvents RetailOpsSyncEvent[]
-  productShareLinks ProductShareLink[]
-  productShareLinkEvents ProductShareLinkEvent[]
-  productShareLinkViews ProductShareLinkView[]
-  productShareLinkOrderRequests ProductShareLinkOrderRequest[]
-  productShareLinkReservations ProductShareLinkReservation[]
-  productShareLinkNotifications ProductShareLinkNotification[]
+  id                             String                           @id @default(cuid())
+  slug                           String                           @unique
+  name                           String
+  type                           TenantType
+  enabledModes                   TenantMode[]
+  isActive                       Boolean                          @default(true)
+  timezone                       String                           @default("Africa/Lagos")
+  countryCode                    String?
+  currencyCode                   String                           @default("NGN")
+  metadata                       Json?
+  createdAt                      DateTime                         @default(now())
+  updatedAt                      DateTime                         @updatedAt
+  users                          Membership[]
+  stores                         Store[]
+  orders                         Order[]
+  orderPaymentEvents             OrderPaymentEvent[]
+  sites                          Site[]
+  hostnames                      TenantHostname[]
+  conversations                  Conversation[]
+  automations                    AutomationEvent[]
+  dispatchOffers                 DeliveryBid[]
+  subscription                   TenantSubscription?
+  billingCheckoutSessions        BillingCheckoutSession[]
+  billingInvoices                BillingInvoice[]
+  billingProviderEvents          BillingProviderEvent[]
+  productUnitTemplates           ProductUnitTemplate[]
+  productUnitPriceHistory        ProductUnitPriceHistory[]
+  retailOpsStaffProfiles         RetailOpsStaffProfile[]
+  retailOpsStaffInviteTokens     RetailOpsStaffInviteToken[]
+  retailOpsStaffLifecycleEvents  RetailOpsStaffLifecycleEvent[]
+  offlineDevices                 OfflineDevice[]
+  offlineDeviceRevocations       OfflineDeviceRevocation[]
+  retailOpsSyncRuns              RetailOpsSyncRun[]
+  retailOpsSyncEvents            RetailOpsSyncEvent[]
+  productShareLinks              ProductShareLink[]
+  productShareLinkEvents         ProductShareLinkEvent[]
+  productShareLinkViews          ProductShareLinkView[]
+  productShareLinkOrderRequests  ProductShareLinkOrderRequest[]
+  productShareLinkReservations   ProductShareLinkReservation[]
+  productShareLinkNotifications  ProductShareLinkNotification[]
   productShareLinkAnalyticsDaily ProductShareLinkAnalyticsDaily[]
-  retailOpsCustomers RetailOpsCustomer[]
-  retailOpsCustomerIdentities RetailOpsCustomerIdentity[]
-  retailOpsCustomerEvents RetailOpsCustomerEvent[]
-  retailOpsCloseouts RetailOpsCloseout[]
-  retailOpsStockDeclarations RetailOpsStockDeclaration[]
-  retailOpsPaymentDeclarations RetailOpsPaymentDeclaration[]
-  retailOpsCloseoutReviews RetailOpsCloseoutReview[]
-  staffStockWallets StaffStockWallet[]
+  retailOpsCustomers             RetailOpsCustomer[]
+  retailOpsCustomerIdentities    RetailOpsCustomerIdentity[]
+  retailOpsCustomerEvents        RetailOpsCustomerEvent[]
+  retailOpsCloseouts             RetailOpsCloseout[]
+  retailOpsStockDeclarations     RetailOpsStockDeclaration[]
+  retailOpsPaymentDeclarations   RetailOpsPaymentDeclaration[]
+  retailOpsCloseoutReviews       RetailOpsCloseoutReview[]
+  staffStockWallets              StaffStockWallet[]
+  serviceJobs                    ServiceJob[]
+  serviceRequestLinks            ServiceRequestLink[]
+  serviceRequests                ServiceRequest[]
+  serviceNotificationIntents     ServiceNotificationIntent[]
 }
 
 model TenantHostname {
@@ -99,31 +104,31 @@ model LeadCapture {
 }
 
 model User {
-  id               String            @id @default(cuid())
-  name             String            @default("")
-  email            String            @unique
-  emailVerified    Boolean           @default(false)
-  emailVerifiedAt  DateTime?
-  image            String?
-  phone            String?           @unique
-  firstName        String?
-  lastName         String?
-  displayName      String?
-  avatarUrl        String?
-  isPlatformAdmin  Boolean           @default(false)
-  metadata         Json?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  accounts         Account[]
-  sessions         Session[]
-  memberships      Membership[]
+  id                     String                  @id @default(cuid())
+  name                   String                  @default("")
+  email                  String                  @unique
+  emailVerified          Boolean                 @default(false)
+  emailVerifiedAt        DateTime?
+  image                  String?
+  phone                  String?                 @unique
+  firstName              String?
+  lastName               String?
+  displayName            String?
+  avatarUrl              String?
+  isPlatformAdmin        Boolean                 @default(false)
+  metadata               Json?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  accounts               Account[]
+  sessions               Session[]
+  memberships            Membership[]
   retailOpsStaffProfiles RetailOpsStaffProfile[] @relation("RetailOpsStaffProfileUser")
-  cashierSessions  CashierSession[]
-  receipts         Receipt[]
-  barcodeEvents    BarcodeEvent[]
-  staffStockWallets StaffStockWallet[] @relation("StaffStockWalletUser")
-  sentMessages     Message[]
-  automationEvents AutomationEvent[] @relation("AutomationActor")
+  cashierSessions        CashierSession[]
+  receipts               Receipt[]
+  barcodeEvents          BarcodeEvent[]
+  staffStockWallets      StaffStockWallet[]      @relation("StaffStockWalletUser")
+  sentMessages           Message[]
+  automationEvents       AutomationEvent[]       @relation("AutomationActor")
 }
 
 model Account {
@@ -176,20 +181,20 @@ model Verification {
 }
 
 model Membership {
-  id          String           @id @default(cuid())
-  tenantId    String
-  userId      String
-  role        MembershipRole
-  status      MembershipStatus @default(ACTIVE)
-  invitedById String?
-  invitedAt   DateTime?
-  acceptedAt  DateTime?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  retailOpsStaffProfile RetailOpsStaffProfile?
-  retailOpsStaffInviteTokens RetailOpsStaffInviteToken[]
+  id                            String                         @id @default(cuid())
+  tenantId                      String
+  userId                        String
+  role                          MembershipRole
+  status                        MembershipStatus               @default(ACTIVE)
+  invitedById                   String?
+  invitedAt                     DateTime?
+  acceptedAt                    DateTime?
+  createdAt                     DateTime                       @default(now())
+  updatedAt                     DateTime                       @updatedAt
+  tenant                        Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user                          User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  retailOpsStaffProfile         RetailOpsStaffProfile?
+  retailOpsStaffInviteTokens    RetailOpsStaffInviteToken[]
   retailOpsStaffLifecycleEvents RetailOpsStaffLifecycleEvent[]
 
   @@unique([tenantId, userId])

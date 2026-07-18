@@ -1,5 +1,6 @@
 import { DashboardHeader } from "@/components/dashboard/header"
 import { DashboardSidebar } from "@/components/dashboard/sidebar"
+import { getCatalogFeatureAvailability } from "@/lib/catalog-capabilities"
 import {
   canAccessDashboardPath,
   getDashboardNavigation,
@@ -35,16 +36,20 @@ export default async function ShellLayout({
   }
 
   const pathname = headerStore.get("x-pathname") ?? "/"
-
-  const navContext = {
-    storeBusinessTemplateKey: ctx.activeStore?.businessTemplateKey,
+  const store = ctx.activeStore ?? ctx.stores[0]
+  if (!store) {
+    redirect("/setup")
   }
+  const catalogFeatures = await getCatalogFeatureAvailability({
+    storeId: store.id,
+    tenantId: ctx.tenant.id,
+  })
 
-  if (!canAccessDashboardPath(pathname, ctx.membership.role, navContext)) {
+  if (!canAccessDashboardPath(pathname, ctx.membership.role, catalogFeatures)) {
     redirect("/")
   }
 
-  const navItems = getDashboardNavigation(ctx.membership.role, navContext)
+  const navItems = getDashboardNavigation(ctx.membership.role, catalogFeatures)
 
   return (
     <div className="min-h-screen bg-muted/30">

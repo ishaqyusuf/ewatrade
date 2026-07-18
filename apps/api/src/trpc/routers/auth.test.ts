@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import {
   createMobileOwnerOtpEmailMessages,
   requestMobileOwnerOtpSchema,
+  shouldDispatchMobileOwnerOtpEmail,
   verifyMobileGoogleSchema,
   verifyMobileOwnerOtpSchema,
 } from "./auth"
@@ -144,5 +145,16 @@ describe("mobile auth router schemas", () => {
     expect(messages.every((message) => message.text.includes("123456"))).toBe(
       true,
     )
+  })
+
+  test("dispatches OTP email only in production", () => {
+    expect(shouldDispatchMobileOwnerOtpEmail({ NODE_ENV: "production" })).toBe(
+      true,
+    )
+    expect(shouldDispatchMobileOwnerOtpEmail({ NODE_ENV: "development" })).toBe(
+      false,
+    )
+    expect(shouldDispatchMobileOwnerOtpEmail({ NODE_ENV: "test" })).toBe(false)
+    expect(shouldDispatchMobileOwnerOtpEmail({})).toBe(false)
   })
 })

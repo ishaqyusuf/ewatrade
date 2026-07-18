@@ -1,8 +1,8 @@
 import { prisma } from "@ewatrade/db"
 import {
-  BusinessTemplateError,
-  createDryCleaningPublicServiceRequest,
-  resolveDryCleaningServiceRequestLink,
+  RetailOpsServiceOperationsError,
+  createPublicRetailOpsServiceRequest,
+  getPublicRetailOpsServiceRequestLink,
 } from "@ewatrade/db/queries"
 import { formatMinorMoney } from "@ewatrade/utils"
 import type { Metadata } from "next"
@@ -26,9 +26,9 @@ function getFormValue(formData: FormData, name: string) {
 
 async function resolveServiceRequestLink(token: string, recordFailure = true) {
   try {
-    return await resolveDryCleaningServiceRequestLink(prisma, { token })
+    return await getPublicRetailOpsServiceRequestLink(prisma, { token })
   } catch (error) {
-    if (error instanceof BusinessTemplateError && recordFailure) {
+    if (error instanceof RetailOpsServiceOperationsError && recordFailure) {
       notFound()
     }
 
@@ -46,19 +46,20 @@ async function submitServiceRequest(formData: FormData) {
     notFound()
   }
 
-  const lines = link.serviceItems.flatMap((item) => {
+  const lines = link.items.flatMap((item) => {
     const quantity = Number(getFormValue(formData, `quantity:${item.id}`))
     if (!Number.isInteger(quantity) || quantity <= 0) return []
 
-    const variantId = getFormValue(formData, `variant:${item.id}`) || undefined
-    const note = getFormValue(formData, `note:${item.id}`).trim()
+    const defaultVariant =
+      item.variants.find((variant) => variant.isDefault) ?? item.variants[0]
+    const catalogItemVariantId =
+      getFormValue(formData, `variant:${item.id}`) || defaultVariant?.id
+    if (!catalogItemVariantId) return []
 
     return [
       {
-        note: note || undefined,
+        catalogItemVariantId,
         quantity,
-        serviceItemId: item.id,
-        variantId,
       },
     ]
   })
@@ -77,12 +78,10 @@ async function submitServiceRequest(formData: FormData) {
     redirect(`/service-request/${token}?error=CUSTOMER_REQUIRED`)
   }
 
-  const request = await createDryCleaningPublicServiceRequest(prisma, {
-    customer: {
-      email: customerEmail || null,
-      name: customerName,
-      phone: customerPhone || null,
-    },
+  const request = await createPublicRetailOpsServiceRequest(prisma, {
+    customerEmail: customerEmail || undefined,
+    customerName,
+    customerPhone: customerPhone || undefined,
     lines,
     notes: getFormValue(formData, "notes").trim() || undefined,
     token,
@@ -122,7 +121,7 @@ export async function generateMetadata({
     }
   }
 
-  const description = `Request dry cleaning or laundry service from ${link.store.name}.`
+  const description = `Request a service from ${link.store.name}.`
 
   return {
     title: `${link.store.name} service request`,
@@ -163,10 +162,10 @@ export default async function ServiceRequestPage({
       <section className="border-border border-b bg-surface">
         <div className="mx-auto max-w-4xl px-5 py-10 md:px-8 md:py-14">
           <p className="text-sm text-muted-foreground">
-            {link.store.name} / Dry Cleaning & Laundry
+            {link.store.name} / Service request
           </p>
           <h1 className="mt-3 max-w-3xl font-semibold text-4xl leading-tight md:text-5xl">
-            Request laundry service
+            Request a service
           </h1>
           <p className="mt-4 max-w-2xl text-base text-muted-foreground leading-7">
             Select the services you need, then submit your contact details. The
@@ -195,52 +194,59 @@ export default async function ServiceRequestPage({
           <div className="grid gap-4 rounded-lg border border-border bg-background p-5">
             <h2 className="text-lg font-semibold tracking-tight">Services</h2>
             <div className="grid gap-4">
-              {link.serviceItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="grid gap-3 border border-border p-4 md:grid-cols-[1fr_160px_110px]"
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium">{item.name}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {item.category ?? "Laundry service"} ·{" "}
-                      {formatMinorMoney(
-                        item.priceMinor,
-                        link.store.currencyCode,
-                      )}
-                    </p>
+              {link.items.map((item) => {
+                const defaultVariant =
+                  item.variants.find((variant) => variant.isDefault) ??
+                  item.variants[0]
+
+                return (
+                  <div
+                    key={item.id}
+                    className="grid gap-3 border border-border p-4 md:grid-cols-[1fr_160px_110px]"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium">{item.name}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {item.category ?? "Service"} ·{" "}
+                        {defaultVariant
+                          ? formatMinorMoney(
+                              defaultVariant.priceMinor,
+                              link.store.currencyCode,
+                            )
+                          : "Price unavailable"}
+                      </p>
+                      {item.description ? (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          {item.description}
+                        </p>
+                      ) : null}
+                    </div>
+                    <select
+                      name={`variant:${item.id}`}
+                      className="h-10 border border-border bg-background px-3 text-sm outline-none focus:border-primary"
+                      defaultValue={defaultVariant?.id ?? ""}
+                    >
+                      {item.variants.map((variant) => (
+                        <option key={variant.id} value={variant.id}>
+                          {variant.name} ·{" "}
+                          {formatMinorMoney(
+                            variant.priceMinor,
+                            link.store.currencyCode,
+                          )}
+                        </option>
+                      ))}
+                    </select>
                     <input
-                      name={`note:${item.id}`}
-                      className="mt-3 h-10 w-full border border-border bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary"
-                      placeholder="Optional note"
+                      name={`quantity:${item.id}`}
+                      className="h-10 border border-border bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary"
+                      min={0}
+                      inputMode="numeric"
+                      type="number"
+                      placeholder="Qty"
                     />
                   </div>
-                  <select
-                    name={`variant:${item.id}`}
-                    className="h-10 border border-border bg-background px-3 text-sm outline-none focus:border-primary"
-                    defaultValue=""
-                  >
-                    <option value="">Standard</option>
-                    {item.variants.map((variant) => (
-                      <option key={variant.id} value={variant.id}>
-                        {variant.name} ·{" "}
-                        {formatMinorMoney(
-                          variant.priceMinor,
-                          link.store.currencyCode,
-                        )}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    name={`quantity:${item.id}`}
-                    className="h-10 border border-border bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary"
-                    min={0}
-                    inputMode="numeric"
-                    type="number"
-                    placeholder="Qty"
-                  />
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 

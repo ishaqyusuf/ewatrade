@@ -44,6 +44,15 @@ Document migration ownership and safety rules.
 - `bun run db:push --local|--remote-dev|--prod` - run Prisma db push against the selected database profile
 - `bun run db:studio` - open Prisma Studio against the configured database
 
+## Item-Level Catalog And Service Operations
+
+- `20260717195703_item_level_product_service_catalog` adds `CatalogItemKind`, backfills existing `Product` rows to `PRODUCT`, adds Service item profiles, generic Service Jobs/events/evidence, service request/link/line records, notification intents, order-line kind snapshots, and legacy mapping tables.
+- `20260717203905_order_line_cancellation_service_assignment` adds Service Job assignment events/current assignee, order/service-line cancellation fields, the `SALE_REVERSAL` inventory movement type, and order payment event records.
+- `bun --cwd packages/db migrate:legacy-services --dry-run` previews bounded legacy metadata conversion without writing.
+- `bun --cwd packages/db migrate:legacy-services --apply` performs the idempotent conversion while preserving legacy ids and opaque public tokens.
+- The 2026-07-18 validation run applied `bun db:migrate` and `bun db:push` successfully. Both reported the configured database in sync.
+- The final legacy dry-run and apply each scanned nine stores, skipped nine already migrated/no-legacy stores, migrated zero, and emitted no private customer, token, evidence, or note values.
+
 ## Retail Ops Static Readiness Snapshot
 - Static source evidence currently shows committed Prisma source models, generated Prisma model files, and migration SQL files for the Retail Ops stock ledger, subscription/billing, sync/offline-device, share-link, closeout, staff wallet/profile, customer book, and product-unit/price-history foundations.
 - Static Prisma schema validation passed from `packages/db` with `node node_modules/prisma/build/index.js validate --config prisma.config.ts` on 2026-07-11. This validates the file-based schema shape only; it does not apply migrations or prove a live database matches the schema.

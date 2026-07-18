@@ -55,13 +55,14 @@ function createStaffMembership() {
   }
 }
 
-function createProductVariant() {
+function createProductVariant(kind: "PRODUCT" | "SERVICE" = "PRODUCT") {
   return {
     id: "variant_bag",
     name: "Bag",
     sku: "rice-bag",
     product: {
       id: "product_rice",
+      kind,
       name: "Rice",
     },
   }
@@ -115,7 +116,7 @@ function createMockListStaffStockWalletDb() {
   }
 }
 
-function createMockAssignStaffStockDb() {
+function createMockAssignStaffStockDb(kind: "PRODUCT" | "SERVICE" = "PRODUCT") {
   const calls: StockWalletCall[] = []
   const assignedAt = new Date("2026-07-12T10:00:00.000Z")
   const store = {
@@ -174,7 +175,7 @@ function createMockAssignStaffStockDb() {
       findFirst: async ({ where }: { where: unknown }) => {
         calls.push({ kind: "productVariant.findFirst", where })
 
-        return createProductVariant()
+        return createProductVariant(kind)
       },
     },
     staffStockWallet: {
@@ -217,7 +218,7 @@ function createMockAssignStaffStockDb() {
   }
 }
 
-function createMockReturnStaffStockDb() {
+function createMockReturnStaffStockDb(kind: "PRODUCT" | "SERVICE" = "PRODUCT") {
   const calls: StockWalletCall[] = []
   const returnedAt = new Date("2026-07-12T11:00:00.000Z")
   const store = {
@@ -280,6 +281,9 @@ function createMockReturnStaffStockDb() {
 
         return {
           id: "variant_bag",
+          product: {
+            kind,
+          },
         }
       },
     },
@@ -540,6 +544,25 @@ describe("retail ops staff stock wallet queries", () => {
     })
   })
 
+  test("rejects assigning a Service item to a stock wallet", async () => {
+    const db = createMockAssignStaffStockDb("SERVICE")
+
+    await expect(
+      assignRetailOpsStaffStock(db.client, {
+        actorUserId: "user_owner",
+        productVariantId: "variant_bag",
+        quantity: 1,
+        staffUserId: "user_cashier",
+        storeId: "store_123",
+        tenantId: "tenant_123",
+      }),
+    ).rejects.toThrow("Service items cannot be assigned as stock.")
+
+    expect(
+      db.calls.some((call) => call.kind === "inventoryItem.updateMany"),
+    ).toBe(false)
+  })
+
   test("returns staff wallet stock to store inventory and removes empty fallback balances", async () => {
     const db = createMockReturnStaffStockDb()
 
@@ -669,5 +692,24 @@ describe("retail ops staff stock wallet queries", () => {
         },
       },
     })
+  })
+
+  test("rejects returning a Service item through a stock wallet", async () => {
+    const db = createMockReturnStaffStockDb("SERVICE")
+
+    await expect(
+      returnRetailOpsStaffStock(db.client, {
+        actorUserId: "user_owner",
+        productVariantId: "variant_bag",
+        quantity: 1,
+        staffUserId: "user_cashier",
+        storeId: "store_123",
+        tenantId: "tenant_123",
+      }),
+    ).rejects.toThrow("Service items cannot be returned as stock.")
+
+    expect(db.calls.some((call) => call.kind === "inventoryItem.upsert")).toBe(
+      false,
+    )
   })
 })

@@ -16,7 +16,8 @@ Define authorization and visibility rules for APIs.
 - `POST /api/auth/signup` is public but gated by `NEXT_PUBLIC_SIGNUP_ENABLED`.
 - Signup must reject duplicate owner emails and duplicate tenant slugs before creating the auth user and tenant.
 - Signup sends the welcome email after tenant persistence through the shared email package; exact `@test.com` recipients route to `TEST_EMAILS` or the legacy `TEST_EMAIL` fallback for smoke safety.
-- Mobile owner OTP email delivery must use the same exact `@test.com` routing while preserving the submitted email for verification and account identity.
+- Production mobile owner OTP email delivery uses the same exact `@test.com` routing while preserving the submitted email for verification and account identity.
+- Development and test create the normal short-lived OTP and return `devCode`, but must not dispatch OTP email.
 
 ## Tenant Store Mutation Rules
 - `tenant.createStore` is a protected tRPC procedure.
@@ -59,26 +60,25 @@ Define authorization and visibility rules for APIs.
 - Dashboard sales and customer bridge reads must preserve the same role-aware selected-store versus actor/user scoping.
 - First-phase `retailOps.summary` and `retailOps.inventory` remain selected-store reads because they describe store-level stock and dashboard state rather than actor-owned activity.
 
-## Business Template And Dry Cleaning Rules
-- `retailOps.businessTemplates` and `retailOps.storeBusinessTemplate` are protected tRPC procedures.
-- Store template reads must resolve tenant membership and store scope before returning the effective template.
-- Stores without explicit template metadata resolve to Product Sales.
-- `retailOps.updateBusinessTemplate` is a protected mutation for owner/admin tenant-management roles.
-- Template changes are audited in store metadata and are blocked by default when Product Sales products/orders or dry-cleaning service records already exist.
-- `retailOps.unsupportedBusinessDemand` is an internal-only procedure protected by the internal API key boundary.
-- Dry-cleaning service catalog mutations require owner/admin/manager-style sales-management permission.
-- Dry-cleaning service order creation, request review/conversion, and status updates require POS-capable roles: owner, admin, manager, cashier, or operator.
-- Dry-cleaning protected reads and writes must resolve the selected store from the active tenant context and reject stores outside that tenant.
-- Dry-cleaning operations are only available when the selected store resolves to the Dry Cleaning / Laundry template.
-- Public dry-cleaning service-request and tracking procedures must use opaque tokens and must not expose raw database ids or private evidence metadata.
+## Catalog Item And Service Operations Rules
+- Catalog listing/creation/update requires tenant membership, selected-store scope, and existing role permissions; item kind never grants authorization.
+- Catalog mutations require owner/admin/manager-style sales-management permission.
+- Both Product and Service items count toward the catalog-item entitlement.
+- Product-only stock operations resolve the catalog item inside the write transaction and reject Service items with `ITEM_NOT_STOCKABLE`.
+- Service Job creation, request review/conversion, assignment, evidence, delay, notification, and status updates require POS-capable roles: owner, admin, manager, cashier, or operator.
+- Protected Service reads and writes resolve the selected store from the active tenant context and reject records outside that tenant/store.
+- Dashboard/mobile visibility is item-driven: Product presence enables Sales/stock surfaces and Service presence enables Services. UI gates do not replace API authorization or kind enforcement.
+- Public Service request and tracking procedures use opaque tokens and must not expose raw database ids, assignment, private evidence, internal notes, actor ids, or private contact details.
+- Business-template metadata and dry-cleaning-specific names are migration history only and are not runtime permission gates.
 
 ## Retail Ops Sale Mutation Rules
 - `retailOps.createSale` is a protected tRPC procedure.
 - The procedure must resolve tenant membership and store scope before writing.
-- The product variant must belong to the selected tenant/store and must be active.
+- Every selected variant must belong to the selected tenant/store and be active.
 - A supplied cashier session must be open in the selected tenant/store and belong to the acting user.
 - Sale creation requires a POS-capable role: owner, admin, manager, cashier, or operator.
-- Stock deduction must be atomic with order and receipt creation.
+- Product stock deduction and Service Job creation must be atomic with order and receipt creation.
+- Service lines bypass inventory and session requirements; Product lines retain stock/session rules.
 - Insufficient stock should return a conflict response, not a generic server error.
 
 ## Retail Ops Session Rules
@@ -127,16 +127,15 @@ Define authorization and visibility rules for APIs.
 - The MVP web checkout requires first-time customer registration and returning-customer login before order request submission. The storefront server action resolves those customer accounts through Better Auth and forwards the platform customer account id into the pending order request; raw passwords must never be stored in order data or metadata.
 - First-phase share-link APIs reserve selected stock for pending requests, audit customer/account identity into the customer book, enqueue and audit customer/merchant notification dispatch, and support protected follow-up completion or cancellation with payment and pickup/delivery outcome capture. Live email-provider configuration, provider-native payment capture, provider bidding/selection, richer customer account onboarding, and subscription campaign limits remain future hardening.
 
-## Retail Ops Product Mutation Rules
-- `retailOps.createProduct` and `retailOps.updateProductUnitPrice` are protected tRPC procedures.
-- Dashboard bridge routes `GET /api/products`, `POST /api/products`, and `PATCH /api/products/[productId]` are authenticated dashboard-only product catalog endpoints for the first web proof slice.
+## Retail Ops Catalog Mutation Rules
+- `retailOps.catalogItems`, `retailOps.createCatalogItem`, `retailOps.updateCatalogItem`, and Product compatibility price procedures are protected tRPC procedures.
 - The procedure must resolve tenant membership and store scope before writing.
-- Dashboard product bridge routes must resolve the active tenant and selected or active store before reading or writing products.
+- Catalog procedures resolve the active tenant and selected or active store before reading or writing items.
 - Unit names must be unique within the product request.
-- Product, variant, and inventory creation must happen atomically.
+- Catalog item and variant creation is atomic; inventory rows are created only for Product variants.
 - When an `externalId` is supplied, product setup must treat tenant/store external id as a replay key and return the original product/unit ids without creating a duplicate product.
-- Product creation must pass the tenant product entitlement check before writing.
-- Product listing, creation, product edits, and product unit price changes require owner/admin/manager-style sales-management permission; cashier/operator users cannot manage the catalog.
+- Product and Service creation must pass the tenant catalog-item entitlement check before writing.
+- Catalog listing, creation, edits, and unit price changes require owner/admin/manager-style sales-management permission; cashier/operator users cannot manage the catalog.
 
 ## Retail Ops Closeout Review Rules
 - `retailOps.reviewCloseoutSession` is a protected tRPC procedure.

@@ -74,9 +74,9 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "../init"
-import { retailOpsBusinessTemplatesRouter } from "./retail-ops-business-templates"
 import { retailOpsProductsRouter } from "./retail-ops-products"
 import { retailOpsSalesRouter } from "./retail-ops-sales"
+import { retailOpsServiceJobsRouter } from "./retail-ops-service-jobs"
 import { retailOpsSessionsRouter } from "./retail-ops-sessions"
 import { retailOpsShareLinksRouter } from "./retail-ops-share-links"
 import { retailOpsStaffRouter } from "./retail-ops-staff"
@@ -96,6 +96,8 @@ function getProductErrorCode(
 ): "BAD_REQUEST" | "NOT_FOUND" {
   if (error.code === "DUPLICATE_UNIT") return "BAD_REQUEST"
   if (error.code === "FUTURE_PRICE_NOT_SUPPORTED") return "BAD_REQUEST"
+  if (error.code === "ITEM_KIND_MISMATCH") return "BAD_REQUEST"
+  if (error.code === "ITEM_NOT_STOCKABLE") return "BAD_REQUEST"
 
   return "NOT_FOUND"
 }
@@ -107,6 +109,7 @@ function getStockErrorCode(
   if (
     error.code === "CONVERSION_RATIO_MISMATCH" ||
     error.code === "DIFFERENT_PRODUCT" ||
+    error.code === "ITEM_NOT_STOCKABLE" ||
     error.code === "INVALID_STOCK_ADJUSTMENT" ||
     error.code === "SAME_UNIT"
   ) {
@@ -120,6 +123,7 @@ function getSessionErrorCode(
   error: RetailOpsSessionError,
 ): "BAD_REQUEST" | "CONFLICT" | "NOT_FOUND" {
   if (error.code === "DUPLICATE_INVENTORY_LINE") return "BAD_REQUEST"
+  if (error.code === "ITEM_NOT_STOCKABLE") return "BAD_REQUEST"
   if (error.code === "OPEN_SESSION_EXISTS") return "CONFLICT"
   if (error.code === "SESSION_NOT_CLOSED") return "CONFLICT"
 
@@ -1255,9 +1259,9 @@ const retailOpsCoreRouter = createTRPCRouter({
 
 export const retailOpsRouter = mergeRouters(
   retailOpsCoreRouter,
-  retailOpsBusinessTemplatesRouter,
   retailOpsProductsRouter,
   retailOpsSalesRouter,
+  retailOpsServiceJobsRouter,
   retailOpsSessionsRouter,
   retailOpsShareLinksRouter,
   retailOpsStaffRouter,

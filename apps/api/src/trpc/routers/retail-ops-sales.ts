@@ -9,13 +9,15 @@ import {
   RetailOpsStockWalletError,
   RetailOpsSubscriptionError,
   assertRetailOpsReportRangeAllowed,
-  createRetailOpsSale,
+  cancelRetailOpsOrderLine,
+  createRetailOpsCatalogSale,
   listRetailOpsCreditSales,
   listRetailOpsRecentSales,
   recordRetailOpsCreditPayment,
 } from "@ewatrade/db/queries"
 import { TRPCError } from "@trpc/server"
 import {
+  retailOpsCancelOrderLineSchema,
   retailOpsCreateSaleSchema,
   retailOpsCreditSalesSchema,
   retailOpsRecentSalesSchema,
@@ -27,14 +29,17 @@ function getSaleErrorCode(error: RetailOpsSaleError): "CONFLICT" | "NOT_FOUND" {
   if (error.code === "INSUFFICIENT_STOCK") return "CONFLICT"
   if (error.code === "CREDIT_PAYMENT_NOT_ALLOWED") return "CONFLICT"
   if (error.code === "CREDIT_PAYMENT_OVERPAID") return "CONFLICT"
+  if (error.code === "ORDER_LINE_CANCELLATION_NOT_ALLOWED") return "CONFLICT"
+  if (error.code === "REFUND_AMOUNT_INVALID") return "CONFLICT"
 
   return "NOT_FOUND"
 }
 
 function getStockWalletErrorCode(
   error: RetailOpsStockWalletError,
-): "CONFLICT" | "NOT_FOUND" {
+): "BAD_REQUEST" | "CONFLICT" | "NOT_FOUND" {
   if (error.code === "INSUFFICIENT_STOCK") return "CONFLICT"
+  if (error.code === "ITEM_NOT_STOCKABLE") return "BAD_REQUEST"
 
   return "NOT_FOUND"
 }
@@ -65,6 +70,17 @@ function assertCanOperateRetailOpsPos(role: string) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "You do not have permission to operate Retail Ops POS.",
+    })
+  }
+}
+
+function assertCanManageRetailOpsSales(role: string) {
+  const normalizedRole = getRetailOpsRole(role)
+
+  if (!canManageSalesOperations(normalizedRole)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "You do not have permission to cancel sales or record refunds.",
     })
   }
 }
@@ -222,6 +238,38 @@ export const retailOpsSalesRouter = createTRPCRouter({
       }
     }),
 
+  cancelOrderLine: protectedProcedure
+    .input(retailOpsCancelOrderLineSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanManageRetailOpsSales(ctx.tenantContext.membership.role)
+      const store = resolveStore(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input,
+      )
+
+      try {
+        return await cancelRetailOpsOrderLine(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          externalId: input.externalId,
+          note: input.note,
+          orderItemId: input.orderItemId,
+          refundAmountMinor: input.refundAmountMinor,
+          refundMethod: input.refundMethod,
+          storeId: store.id,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof RetailOpsSaleError) {
+          throw new TRPCError({
+            code: getSaleErrorCode(error),
+            message: error.message,
+          })
+        }
+        throw error
+      }
+    }),
+
   createSale: protectedProcedure
     .input(retailOpsCreateSaleSchema)
     .mutation(async ({ ctx, input }) => {
@@ -234,7 +282,18 @@ export const retailOpsSalesRouter = createTRPCRouter({
       )
 
       try {
-        return await createRetailOpsSale(ctx.db, {
+        const lines =
+          input.lines ??
+          (input.productVariantId && input.quantity
+            ? [
+                {
+                  catalogItemVariantId: input.productVariantId,
+                  quantity: input.quantity,
+                },
+              ]
+            : [])
+
+        return await createRetailOpsCatalogSale(ctx.db, {
           actorUserId: ctx.session.user.id,
           cashierSessionId: input.cashierSessionId,
           creditDueAt: input.creditDueAt,
@@ -245,8 +304,8 @@ export const retailOpsSalesRouter = createTRPCRouter({
           externalId: input.externalId,
           notes: input.notes,
           paymentMethod: input.paymentMethod,
-          productVariantId: input.productVariantId,
-          quantity: input.quantity,
+          lines,
+          serviceDueAt: input.serviceDueAt,
           soldAt: input.soldAt,
           storeId: store.id,
           tenantId: ctx.tenantContext.tenant.id,

@@ -6,17 +6,17 @@ import * as SplashScreen from "expo-splash-screen"
 import { useEffect, useMemo } from "react"
 import "react-native-reanimated"
 import "@/styles/global.css"
+import { AppLockProvider } from "@/hooks/use-app-lock"
 import {
   AuthProvider,
   useAuthContext,
   useCreateAuthContext,
 } from "@/hooks/use-auth"
-import { AppLockProvider } from "@/hooks/use-app-lock"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 
 import { AppAutoUpdateModal } from "@/components/app-auto-update-modal"
-import { AppLockGate } from "@/components/mobile/app-lock-gate"
 import { FloatingThemeToggle } from "@/components/mobile"
+import { AppLockGate } from "@/components/mobile/app-lock-gate"
 import { ToastProviderWithViewport } from "@/components/ui/toast"
 import { useColorScheme } from "@/hooks/use-color"
 import { shouldShowFloatingThemeToggle } from "@/lib/app-variant"
@@ -137,6 +137,10 @@ const InitialLayout = () => {
               options={{ headerShown: false, presentation: "modal" }}
             />
             <Stack.Screen
+              name="catalog-items-modal"
+              options={{ headerShown: false, presentation: "modal" }}
+            />
+            <Stack.Screen
               name="first-product-setup-modal"
               options={{ headerShown: false, presentation: "modal" }}
             />
@@ -184,7 +188,7 @@ const InitialLayout = () => {
               options={{ headerShown: false, presentation: "modal" }}
             />
             <Stack.Screen
-              name="service-orders-modal"
+              name="service-jobs-modal"
               options={{ headerShown: false, presentation: "modal" }}
             />
             <Stack.Screen

@@ -12,9 +12,10 @@ describe("dashboard navigation policy", () => {
 
     expect(ownerItems.map((item) => item.href)).toEqual([
       "/",
-      "/products",
+      "/catalog",
       "/inventory",
       "/sales",
+      "/services",
       "/customers",
       "/staff",
       "/links",
@@ -29,9 +30,10 @@ describe("dashboard navigation policy", () => {
   test("shows managers operational administration without owner-only settings", () => {
     expect(getDashboardNavigation("MANAGER").map((item) => item.href)).toEqual([
       "/",
-      "/products",
+      "/catalog",
       "/inventory",
       "/sales",
+      "/services",
       "/customers",
       "/staff",
       "/links",
@@ -39,23 +41,56 @@ describe("dashboard navigation policy", () => {
     ])
   })
 
-  test("adds service orders only for dry-cleaning stores", () => {
+  test("shows service jobs to every sales operator without business gating", () => {
+    expect(getDashboardNavigation("OWNER").map((item) => item.href)).toContain(
+      "/services",
+    )
+    expect(canAccessDashboardPath("/services", "CASHIER")).toBe(true)
+  })
+
+  test("tailors Sales and Service jobs to catalog item kinds", () => {
+    const empty = {
+      hasProductItems: false,
+      hasServiceItems: false,
+    }
+    const productOnly = {
+      hasProductItems: true,
+      hasServiceItems: false,
+    }
+    const serviceOnly = {
+      hasProductItems: false,
+      hasServiceItems: true,
+    }
+    const mixed = {
+      hasProductItems: true,
+      hasServiceItems: true,
+    }
+
     expect(
-      getDashboardNavigation("OWNER", {
-        storeBusinessTemplateKey: "dry_cleaning_laundry",
-      }).map((item) => item.href),
-    ).toContain("/services")
+      getDashboardNavigation("OWNER", empty).map((item) => item.href),
+    ).not.toContain("/sales")
     expect(
-      getDashboardNavigation("OWNER", {
-        storeBusinessTemplateKey: "product_sales",
-      }).map((item) => item.href),
+      getDashboardNavigation("OWNER", empty).map((item) => item.href),
     ).not.toContain("/services")
     expect(
-      canAccessDashboardPath("/services", "CASHIER", {
-        storeBusinessTemplateKey: "dry_cleaning_laundry",
-      }),
-    ).toBe(true)
-    expect(canAccessDashboardPath("/services", "CASHIER")).toBe(false)
+      getDashboardNavigation("OWNER", productOnly).map((item) => item.href),
+    ).toContain("/sales")
+    expect(
+      getDashboardNavigation("OWNER", productOnly).map((item) => item.href),
+    ).not.toContain("/services")
+    expect(
+      getDashboardNavigation("OWNER", serviceOnly).map((item) => item.href),
+    ).not.toContain("/sales")
+    expect(
+      getDashboardNavigation("OWNER", serviceOnly).map((item) => item.href),
+    ).toContain("/services")
+    expect(
+      getDashboardNavigation("OWNER", mixed).map((item) => item.href),
+    ).toEqual(expect.arrayContaining(["/sales", "/services"]))
+    expect(canAccessDashboardPath("/sales", "OWNER", serviceOnly)).toBe(false)
+    expect(canAccessDashboardPath("/services", "OWNER", productOnly)).toBe(
+      false,
+    )
   })
 
   test("shows attendants only permitted work surfaces", () => {
@@ -70,6 +105,7 @@ describe("dashboard navigation policy", () => {
       "/",
       "/inventory",
       "/sales",
+      "/services",
       "/customers",
       "/links",
     ])

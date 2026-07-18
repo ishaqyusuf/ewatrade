@@ -25,7 +25,7 @@ export default async function DashboardHomePage() {
         {[
           { label: "Revenue today", value: "—", sub: "No orders yet" },
           { label: "Orders", value: "0", sub: "This month" },
-          { label: "Products", value: "0", sub: "Active listings" },
+          { label: "Catalog items", value: "0", sub: "Products and services" },
           { label: "Low stock", value: "0", sub: "Items below reorder point" },
         ].map((card) => (
           <div

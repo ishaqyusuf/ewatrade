@@ -68,6 +68,61 @@ enum ProductStatus {
   ARCHIVED
 }
 
+enum CatalogItemKind {
+  PRODUCT
+  SERVICE
+}
+
+enum ServiceFulfillmentMode {
+  IMMEDIATE
+  TRACKED
+}
+
+enum ServiceJobStatus {
+  RECEIVED
+  IN_PROGRESS
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+enum ServiceJobEventType {
+  CREATED
+  ASSIGNED
+  STATUS_CHANGED
+  DELAYED
+  DUE_DATE_CHANGED
+  NOTE_ADDED
+  EVIDENCE_ADDED
+}
+
+enum ServiceRequestStatus {
+  PENDING
+  CONFIRMED
+  CONVERTED
+  REJECTED
+  CANCELLED
+}
+
+enum ServiceNotificationIntentType {
+  READY
+  DELAY
+}
+
+enum ServiceNotificationIntentStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum ServiceNotificationChannel {
+  MANUAL
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
 enum ProductUnitPriceChangeSource {
   PRODUCT_SETUP
   MANUAL
@@ -101,6 +156,7 @@ enum InventoryMovementType {
   CONVERSION_OUT
   CONVERSION_IN
   SALE_DEDUCTION
+  SALE_REVERSAL
   STAFF_ASSIGNMENT
   STAFF_RETURN
   CLOSEOUT_ADJUSTMENT
@@ -305,6 +361,11 @@ enum PaymentStatus {
   PAID
   FAILED
   REFUNDED
+}
+
+enum OrderPaymentEventType {
+  REFUND
+  CORRECTION
 }
 
 enum DeliveryRequestStatus {

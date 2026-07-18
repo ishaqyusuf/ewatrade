@@ -1,5 +1,9 @@
-import { DryCleaningServicesPage } from "@/components/dashboard/dry-cleaning-services-page"
-import { canUseSalesOperations } from "@/lib/sales-operations"
+import { ServiceJobsPage } from "@/components/dashboard/service-jobs-page"
+import { getCatalogFeatureAvailability } from "@/lib/catalog-capabilities"
+import {
+  canManageSalesReports,
+  canUseSalesOperations,
+} from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { redirect } from "next/navigation"
@@ -29,13 +33,17 @@ export default async function ServicesRoutePage() {
   if (!store) {
     redirect("/setup")
   }
-
-  if (store.businessTemplateKey !== "dry_cleaning_laundry") {
+  const catalogFeatures = await getCatalogFeatureAvailability({
+    storeId: store.id,
+    tenantId: ctx.tenant.id,
+  })
+  if (!catalogFeatures.hasServiceItems) {
     redirect("/")
   }
 
   return (
-    <DryCleaningServicesPage
+    <ServiceJobsPage
+      canManage={canManageSalesReports(ctx.membership.role)}
       store={{
         currencyCode: store.currencyCode,
         id: store.id,

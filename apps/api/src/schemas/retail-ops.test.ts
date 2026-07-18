@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test"
 import {
+  retailOpsAssignServiceJobSchema,
+  retailOpsCancelOrderLineSchema,
   retailOpsCloseSessionSchema,
+  retailOpsCreateCatalogItemSchema,
   retailOpsCreateDeliveryRequestSchema,
   retailOpsCreateProductSchema,
   retailOpsCreateProductShareLinkSchema,
@@ -152,7 +155,110 @@ describe("retail ops quantity schemas", () => {
   })
 })
 
+describe("retail ops service assignment and line cancellation schemas", () => {
+  test("normalizes service assignment and explicit refund inputs", () => {
+    expect(
+      retailOpsAssignServiceJobSchema.parse({
+        assignedUserId: " user-operator ",
+        jobId: " job-1 ",
+        note: " Primary operator ",
+        ...storeScope,
+      }),
+    ).toMatchObject({
+      assignedUserId: "user-operator",
+      jobId: "job-1",
+      note: "Primary operator",
+      storeId: "store-1",
+    })
+
+    expect(
+      retailOpsCancelOrderLineSchema.parse({
+        externalId: " cancel-1 ",
+        note: " Customer cancellation ",
+        orderItemId: " order-item-1 ",
+        refundAmountMinor: "5000",
+        refundMethod: "cash",
+        ...storeScope,
+      }),
+    ).toMatchObject({
+      externalId: "cancel-1",
+      note: "Customer cancellation",
+      orderItemId: "order-item-1",
+      refundAmountMinor: 5_000,
+      refundMethod: "cash",
+      storeId: "store-1",
+    })
+  })
+
+  test("accepts unassignment and rejects invalid refund amounts", () => {
+    expect(
+      retailOpsAssignServiceJobSchema.safeParse({
+        assignedUserId: null,
+        jobId: "job-1",
+        ...storeScope,
+      }).success,
+    ).toBe(true)
+    expectQuantityRejected(retailOpsCancelOrderLineSchema, {
+      orderItemId: "order-item-1",
+      refundAmountMinor: 0,
+      ...storeScope,
+    })
+  })
+})
+
 describe("retail ops product setup schemas", () => {
+  test("accepts priced services and rejects service stock", () => {
+    expect(
+      retailOpsCreateCatalogItemSchema.parse({
+        ...storeScope,
+        kind: "service",
+        name: "Shirt cleaning",
+        priceMinor: "50000",
+        service: {
+          estimatedTurnaroundHours: "48",
+          fulfillmentMode: "tracked",
+          instructions: "Inspect buttons.",
+        },
+        variants: [
+          {
+            name: "Express",
+            priceMinor: "75000",
+          },
+        ],
+      }),
+    ).toMatchObject({
+      kind: "service",
+      priceMinor: 50_000,
+      service: {
+        estimatedTurnaroundHours: 48,
+      },
+      variants: [
+        {
+          name: "Express",
+          priceMinor: 75_000,
+        },
+      ],
+    })
+
+    expectQuantityRejected(retailOpsCreateCatalogItemSchema, {
+      ...storeScope,
+      kind: "service",
+      name: "Shirt cleaning",
+      openingStockQuantity: 1,
+      priceMinor: 50_000,
+    })
+  })
+
+  test("requires a primary unit for products", () => {
+    expectQuantityRejected(retailOpsCreateCatalogItemSchema, {
+      ...storeScope,
+      kind: "product",
+      name: "Rice",
+      openingStockQuantity: 5,
+      priceMinor: 18_500,
+    })
+  })
+
   test("accepts optional product description and public image urls", () => {
     const parsed = retailOpsCreateProductSchema.parse({
       ...storeScope,

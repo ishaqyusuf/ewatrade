@@ -32,9 +32,7 @@ describe("tenant schemas", () => {
       currencyCode: " ngn ",
       name: " Main Branch ",
       onboarding: {
-        businessType: " Retail ",
         countryCode: " ng ",
-        productCategory: " Food staples ",
         salesMethod: " In store ",
         teamSize: "   ",
       },
@@ -46,9 +44,7 @@ describe("tenant schemas", () => {
       currencyCode: "NGN",
       name: "Main Branch",
       onboarding: {
-        businessType: "Retail",
         countryCode: "ng",
-        productCategory: "Food staples",
         salesMethod: "In store",
         teamSize: undefined,
       },
@@ -62,9 +58,7 @@ describe("tenant schemas", () => {
       createStoreSchema.parse({
         name: "Warehouse",
         onboarding: {
-          businessType: "   ",
           countryCode: "   ",
-          productCategory: "   ",
           salesMethod: "   ",
           teamSize: "   ",
         },
@@ -74,9 +68,7 @@ describe("tenant schemas", () => {
     ).toEqual({
       name: "Warehouse",
       onboarding: {
-        businessType: undefined,
         countryCode: undefined,
-        productCategory: undefined,
         salesMethod: undefined,
         teamSize: undefined,
       },

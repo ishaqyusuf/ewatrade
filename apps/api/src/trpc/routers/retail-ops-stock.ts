@@ -28,6 +28,7 @@ function getStockErrorCode(
   if (
     error.code === "CONVERSION_RATIO_MISMATCH" ||
     error.code === "DIFFERENT_PRODUCT" ||
+    error.code === "ITEM_NOT_STOCKABLE" ||
     error.code === "INVALID_STOCK_ADJUSTMENT" ||
     error.code === "SAME_UNIT"
   ) {

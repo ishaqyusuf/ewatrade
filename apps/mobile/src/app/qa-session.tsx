@@ -137,7 +137,11 @@ function seedLocalQaRetailOps(input: {
 
   const currentProducts = useRetailOpsStore
     .getState()
-    .products.filter((product) => product.businessId === businessId)
+    .products.filter(
+      (product) =>
+        product.businessId === businessId &&
+        (product.kind ?? "product") === "product",
+    )
   const hasOpenSession = useRetailOpsStore
     .getState()
     .repSessions.some(

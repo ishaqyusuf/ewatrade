@@ -64,7 +64,7 @@
     "qa:reports-flow": "node ./scripts/check-reports-flow.mjs",
     "qa:retail-ops-api-boundary": "node ./scripts/check-retail-ops-api-boundary.mjs",
     "qa:session-offline-persistence": "node ./scripts/check-session-offline-persistence.mjs",
-    "qa:service-orders-flow": "node ./scripts/check-service-orders-flow.mjs",
+    "qa:service-jobs-flow": "node ./scripts/check-service-jobs-flow.mjs",
     "qa:shared-link-browser-checkout": "node ./scripts/run-shared-link-browser-checkout.mjs",
     "qa:shared-link-browser-checkout:prod": "SHARED_LINK_BROWSER_CHECKOUT_ENV_FILE=../../.env.production node ./scripts/run-shared-link-browser-checkout.mjs",
     "qa:shared-link-browser-fixtures": "node ./scripts/check-shared-link-browser-checkout-fixtures.mjs",

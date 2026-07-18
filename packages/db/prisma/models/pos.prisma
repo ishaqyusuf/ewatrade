@@ -1,43 +1,43 @@
 model CashierSession {
-  id                 String              @id @default(cuid())
-  tenantId           String
-  storeId            String
-  userId             String
-  status             PosSessionStatus    @default(OPEN)
-  openedAt           DateTime            @default(now())
-  closedAt           DateTime?
-  openingFloatMinor  Int                 @default(0)
-  closingFloatMinor  Int?
-  notes              String?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  store              Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  receipts           Receipt[]
-  barcodeEvents      BarcodeEvent[]
-  inventoryMovements InventoryMovement[]
-  retailOpsCloseout  RetailOpsCloseout?
-  stockDeclarations  RetailOpsStockDeclaration[]
+  id                  String                        @id @default(cuid())
+  tenantId            String
+  storeId             String
+  userId              String
+  status              PosSessionStatus              @default(OPEN)
+  openedAt            DateTime                      @default(now())
+  closedAt            DateTime?
+  openingFloatMinor   Int                           @default(0)
+  closingFloatMinor   Int?
+  notes               String?
+  createdAt           DateTime                      @default(now())
+  updatedAt           DateTime                      @updatedAt
+  store               Store                         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user                User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  receipts            Receipt[]
+  barcodeEvents       BarcodeEvent[]
+  inventoryMovements  InventoryMovement[]
+  retailOpsCloseout   RetailOpsCloseout?
+  stockDeclarations   RetailOpsStockDeclaration[]
   paymentDeclarations RetailOpsPaymentDeclaration[]
-  closeoutReviews    RetailOpsCloseoutReview[]
+  closeoutReviews     RetailOpsCloseoutReview[]
 
   @@index([tenantId, status])
   @@index([storeId, openedAt])
 }
 
 model RetailOpsCloseout {
-  id                     String                  @id @default(cuid())
+  id                     String                        @id @default(cuid())
   tenantId               String
   storeId                String
-  cashierSessionId       String                  @unique
-  status                 RetailOpsCloseoutStatus @default(PENDING_REVIEW)
-  expectedTotalMinor     Int                     @default(0)
-  declaredTotalMinor     Int                     @default(0)
-  varianceTotalMinor     Int                     @default(0)
-  paymentVarianceCount   Int                     @default(0)
-  stockVarianceLineCount Int                     @default(0)
+  cashierSessionId       String                        @unique
+  status                 RetailOpsCloseoutStatus       @default(PENDING_REVIEW)
+  expectedTotalMinor     Int                           @default(0)
+  declaredTotalMinor     Int                           @default(0)
+  varianceTotalMinor     Int                           @default(0)
+  paymentVarianceCount   Int                           @default(0)
+  stockVarianceLineCount Int                           @default(0)
   submittedByUserId      String?
-  submittedAt            DateTime                @default(now())
+  submittedAt            DateTime                      @default(now())
   reviewedByUserId       String?
   reviewedAt             DateTime?
   reviewNote             String?
@@ -46,11 +46,11 @@ model RetailOpsCloseout {
   syncEventId            String?
   notes                  String?
   metadata               Json?
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  tenant                 Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store                  Store                   @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  cashierSession         CashierSession          @relation(fields: [cashierSessionId], references: [id], onDelete: Cascade)
+  createdAt              DateTime                      @default(now())
+  updatedAt              DateTime                      @updatedAt
+  tenant                 Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                  Store                         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  cashierSession         CashierSession                @relation(fields: [cashierSessionId], references: [id], onDelete: Cascade)
   stockDeclarations      RetailOpsStockDeclaration[]
   paymentDeclarations    RetailOpsPaymentDeclaration[]
   reviews                RetailOpsCloseoutReview[]

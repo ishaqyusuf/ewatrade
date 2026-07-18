@@ -1,3 +1,4 @@
+import { getCatalogFeatureAvailability } from "@/lib/catalog-capabilities"
 import type { DashboardSearchResult } from "@/lib/dashboard-search"
 import { canOperateInventory } from "@/lib/inventory-operations"
 import { canManageProductCatalog } from "@/lib/product-catalog"
@@ -68,9 +69,11 @@ export async function GET(request: NextRequest) {
   const role = ctx.membership.role
   const tenantId = ctx.tenant.id
   const storeScope = { storeId: store.id, tenantId }
+  const catalogFeatures = await getCatalogFeatureAvailability(storeScope)
   const canSearchProducts =
     canManageProductCatalog(role) || canOperateInventory(role)
-  const canSearchSales = canUseSalesOperations(role)
+  const canSearchCustomers = canUseSalesOperations(role)
+  const canSearchSales = canSearchCustomers && catalogFeatures.hasProductItems
   const canSearchLinks = canUseShareLinks(role)
   const canSearchStaff = canManageStaff(role)
   const canManageAllSales = ["OWNER", "ADMIN", "MANAGER"].includes(
@@ -84,6 +87,7 @@ export async function GET(request: NextRequest) {
           orderBy: { updatedAt: "desc" },
           select: {
             id: true,
+            kind: true,
             name: true,
             slug: true,
             status: true,
@@ -100,7 +104,7 @@ export async function GET(request: NextRequest) {
           },
         })
       : [],
-    canSearchSales
+    canSearchCustomers
       ? getRetailOpsCustomerBook(prisma, {
           actorUserId,
           limit: 8,
@@ -152,9 +156,9 @@ export async function GET(request: NextRequest) {
   const results = [
     ...products.map((product) =>
       result({
-        description: `${product.status} product`,
+        description: `${product.status} ${product.kind.toLowerCase()} item`,
         group: "products",
-        href: `/products?search=${encodeURIComponent(product.name)}`,
+        href: `/catalog?search=${encodeURIComponent(product.name)}`,
         id: `product:${product.id}`,
         title: product.name,
       }),

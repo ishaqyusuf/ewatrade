@@ -701,8 +701,10 @@ export function ReportsContent({
   )
   const products = useMemo(
     () =>
-      allProducts.filter((product) =>
-        isActiveBusinessRecord(product, activeBusinessId),
+      allProducts.filter(
+        (product) =>
+          (product.kind ?? "product") === "product" &&
+          isActiveBusinessRecord(product, activeBusinessId),
       ),
     [activeBusinessId, allProducts],
   )

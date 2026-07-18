@@ -4,10 +4,19 @@
 Feature
 
 ## Status
-Proposed
+Superseded
+
+## Superseded By
+- `.scratch/wayfinder-catalog-items-product-service/spec.md`
+- `.brain/decisions/ADR-0008-item-level-product-service-catalog.md`
+- `.brain/features/product-service-catalog-items.md`
+
+The approved replacement keeps stores neutral and places `PRODUCT | SERVICE` on each catalog item. The capability-matrix and business-template runtime approach in this historical plan must not be implemented.
+
+The replacement was implemented on 2026-07-18. Dashboard and mobile experience gates are derived from actual catalog contents rather than stored business capabilities.
 
 ## Created Date
-2026-07-17
+2026-07-18
 
 ## Last Updated
 2026-07-17

@@ -23,10 +23,16 @@ export type RetailOpsProduct = {
   imageLinks?: string[]
   id: string
   imageUrl?: string
+  kind?: "product" | "service"
   name: string
   priceMinor: number
   remoteId?: string
   remoteVariantId?: string
+  service?: {
+    estimatedTurnaroundHours?: number
+    fulfillmentMode: "immediate" | "tracked"
+    instructions?: string
+  }
   startingStock: number
   syncStatus: "pending" | "synced"
   unitName: string
@@ -49,6 +55,7 @@ export type RetailOpsSale = {
   createdAt: string
   customerName: string
   id: string
+  kind?: "product" | "service"
   paymentMethod: RetailOpsPaymentMethod
   productId: string
   productName: string
@@ -237,10 +244,16 @@ type FirstProductInput = {
   description?: string
   imageLinks?: string[]
   imageUrl?: string
+  kind?: "product" | "service"
   name: string
   priceMinor: number
   remoteId?: string
   remoteVariantId?: string
+  service?: {
+    estimatedTurnaroundHours?: number
+    fulfillmentMode: "immediate" | "tracked"
+    instructions?: string
+  }
   startingStock: number
   syncStatus?: "pending" | "synced"
   unitName: string
@@ -262,6 +275,7 @@ type CreateSaleInput = {
   attendantName: string
   businessId?: string
   customerName: string
+  kind?: "product" | "service"
   paymentMethod: RetailOpsPaymentMethod
   productId: string
   productName: string
@@ -617,6 +631,7 @@ export function migrateRetailOpsPersistedState(persistedState: unknown) {
         const product = record(value)
         return {
           ...product,
+          kind: product.kind === "service" ? "service" : "product",
           priceMinor:
             typeof product.priceMinor === "number"
               ? product.priceMinor
@@ -643,6 +658,7 @@ export function migrateRetailOpsPersistedState(persistedState: unknown) {
         const sale = record(value)
         return {
           ...sale,
+          kind: sale.kind === "service" ? "service" : "product",
           totalMinor:
             typeof sale.totalMinor === "number"
               ? sale.totalMinor
@@ -708,8 +724,12 @@ export const useRetailOpsStore = create<RetailOpsState>()(
           const productId = createId("product")
           const stockMovementId = createId("stock")
           const syncStatus = input.syncStatus ?? "pending"
-          const shouldQueueSync = syncStatus === "pending"
-          const startingStock = toNonNegativeWholeQuantity(input.startingStock)
+          const kind = input.kind ?? "product"
+          const shouldQueueSync = syncStatus === "pending" && kind === "product"
+          const startingStock =
+            kind === "product"
+              ? toNonNegativeWholeQuantity(input.startingStock)
+              : 0
 
           return {
             products: [
@@ -721,16 +741,18 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                 imageLinks: input.imageLinks,
                 id: productId,
                 imageUrl: input.imageUrl,
+                kind,
                 name: input.name,
                 priceMinor: input.priceMinor,
                 remoteId: input.remoteId,
                 remoteVariantId: input.remoteVariantId,
+                service: input.service,
                 startingStock,
                 syncStatus,
                 unitName: input.unitName,
                 variants: input.variants.map((variant) => {
                   const variantStartingStock = toNonNegativeWholeQuantity(
-                    variant.startingStock ?? 0,
+                    kind === "product" ? (variant.startingStock ?? 0) : 0,
                   )
                   const variantCurrentStock = toNonNegativeWholeQuantity(
                     variant.currentStock ?? variantStartingStock,
@@ -745,21 +767,24 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                 }),
               },
             ],
-            stockMovements: [
-              {
-                businessId,
-                createdAt: new Date().toISOString(),
-                id: stockMovementId,
-                note: "Opening stock",
-                productId,
-                productName: input.name,
-                quantity: startingStock,
-                syncStatus,
-                type: "opening_stock",
-                unitName: input.unitName,
-              },
-              ...state.stockMovements,
-            ],
+            stockMovements:
+              kind === "product"
+                ? [
+                    {
+                      businessId,
+                      createdAt: new Date().toISOString(),
+                      id: stockMovementId,
+                      note: "Opening stock",
+                      productId,
+                      productName: input.name,
+                      quantity: startingStock,
+                      syncStatus,
+                      type: "opening_stock" as const,
+                      unitName: input.unitName,
+                    },
+                    ...state.stockMovements,
+                  ]
+                : state.stockMovements,
             syncEvents: shouldQueueSync
               ? [
                   createSyncEvent(
@@ -859,10 +884,11 @@ export const useRetailOpsStore = create<RetailOpsState>()(
         set((state) => {
           const now = new Date().toISOString()
           const syncStatus = input.syncStatus ?? "pending"
-          const shouldQueueSync = syncStatus === "pending"
           const product = state.products.find(
             (currentProduct) => currentProduct.id === input.productId,
           )
+          const kind = input.kind ?? product?.kind ?? "product"
+          const shouldQueueSync = syncStatus === "pending" && kind === "product"
           const businessId = resolveBusinessId(
             input.businessId ?? product?.businessId,
           )
@@ -877,7 +903,9 @@ export const useRetailOpsStore = create<RetailOpsState>()(
               session.attendantName === input.attendantName,
           )
 
-          if (!openSession || quantity <= 0) return state
+          if ((kind === "product" && !openSession) || quantity <= 0) {
+            return state
+          }
 
           const existingCustomer = state.customers.find(
             (customer) =>
@@ -915,7 +943,7 @@ export const useRetailOpsStore = create<RetailOpsState>()(
           return {
             customers: nextCustomers,
             products: state.products.map((product) =>
-              product.id === input.productId
+              kind === "product" && product.id === input.productId
                 ? input.variantId
                   ? {
                       ...product,
@@ -953,31 +981,35 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                 createdAt: now,
                 id: saleId,
                 remoteId: input.remoteId,
-                repSessionId: openSession.id,
+                repSessionId: openSession?.id,
                 syncStatus,
                 ...input,
                 businessId,
                 customerName: customerName || "Walk-in customer",
+                kind,
                 quantity,
                 totalMinor: input.unitPriceMinor * quantity,
               },
               ...state.sales,
             ],
-            stockMovements: [
-              {
-                businessId,
-                createdAt: now,
-                id: stockMovementId,
-                productId: input.productId,
-                productName: input.productName,
-                quantity: -quantity,
-                syncStatus,
-                type: "sale",
-                unitName: input.unitName,
-                variantId: input.variantId,
-              },
-              ...state.stockMovements,
-            ],
+            stockMovements:
+              kind === "product"
+                ? [
+                    {
+                      businessId,
+                      createdAt: now,
+                      id: stockMovementId,
+                      productId: input.productId,
+                      productName: input.productName,
+                      quantity: -quantity,
+                      syncStatus,
+                      type: "sale" as const,
+                      unitName: input.unitName,
+                      variantId: input.variantId,
+                    },
+                    ...state.stockMovements,
+                  ]
+                : state.stockMovements,
             syncEvents: shouldQueueSync
               ? [
                   createSyncEvent(
@@ -998,11 +1030,15 @@ export const useRetailOpsStore = create<RetailOpsState>()(
                               )?.remoteId
                             : product?.remoteVariantId,
                         }) ?? []),
-                        {
-                          id: openSession.id,
-                          kind: "rep_session",
-                          remoteId: openSession.remoteId,
-                        },
+                        ...(openSession
+                          ? [
+                              {
+                                id: openSession.id,
+                                kind: "rep_session" as const,
+                                remoteId: openSession.remoteId,
+                              },
+                            ]
+                          : []),
                         ...(customerName
                           ? [
                               {
@@ -1670,7 +1706,13 @@ export const useRetailOpsStore = create<RetailOpsState>()(
               )
             : null
 
-          if (!product || (input.variantId && !targetVariant)) return state
+          if (
+            !product ||
+            product.kind === "service" ||
+            (input.variantId && !targetVariant)
+          ) {
+            return state
+          }
 
           const businessId = resolveBusinessId(
             input.businessId ?? product.businessId,
@@ -1756,7 +1798,13 @@ export const useRetailOpsStore = create<RetailOpsState>()(
               )
             : null
 
-          if (!product || (input.variantId && !targetVariant)) return state
+          if (
+            !product ||
+            product.kind === "service" ||
+            (input.variantId && !targetVariant)
+          ) {
+            return state
+          }
 
           const quantity = toNonNegativeWholeQuantity(input.quantity)
           const normalizedDirection = normalizeStockAdjustmentDirection({
@@ -1860,7 +1908,9 @@ export const useRetailOpsStore = create<RetailOpsState>()(
             (variant) => variant.id === input.targetVariantId,
           )
 
-          if (!product || !targetVariant) return state
+          if (!product || product.kind === "service" || !targetVariant) {
+            return state
+          }
 
           const businessId = resolveBusinessId(
             input.businessId ?? product.businessId,
@@ -2004,7 +2054,7 @@ export const useRetailOpsStore = create<RetailOpsState>()(
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true)
       },
-      version: 1,
+      version: 2,
     },
   ),
 )

@@ -60,7 +60,7 @@ model RetailOpsStaffInviteToken {
 }
 
 model RetailOpsStaffLifecycleEvent {
-  id             String                            @id @default(cuid())
+  id             String                           @id @default(cuid())
   tenantId       String
   membershipId   String?
   staffProfileId String?
@@ -71,13 +71,13 @@ model RetailOpsStaffLifecycleEvent {
   toStatus       MembershipStatus?
   fromRole       MembershipRole?
   toRole         MembershipRole?
-  happenedAt     DateTime                          @default(now())
+  happenedAt     DateTime                         @default(now())
   reason         String?
   metadata       Json?
-  createdAt      DateTime                          @default(now())
-  tenant         Tenant                            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  membership     Membership?                       @relation(fields: [membershipId], references: [id], onDelete: SetNull)
-  staffProfile   RetailOpsStaffProfile?            @relation(fields: [staffProfileId], references: [id], onDelete: SetNull)
+  createdAt      DateTime                         @default(now())
+  tenant         Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  membership     Membership?                      @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+  staffProfile   RetailOpsStaffProfile?           @relation(fields: [staffProfileId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, happenedAt])
   @@index([membershipId, happenedAt])

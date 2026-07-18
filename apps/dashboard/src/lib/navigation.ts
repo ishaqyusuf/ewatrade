@@ -31,8 +31,14 @@ type DashboardNavDefinition = DashboardNavItem & {
   canSee: (role: EwaTradeRole | null, context: DashboardNavContext) => boolean
 }
 
-type DashboardNavContext = {
-  storeBusinessTemplateKey?: string | null
+export type DashboardNavContext = {
+  hasProductItems: boolean
+  hasServiceItems: boolean
+}
+
+const DEFAULT_NAV_CONTEXT: DashboardNavContext = {
+  hasProductItems: true,
+  hasServiceItems: true,
 }
 
 const canUseDashboard = (role: EwaTradeRole | null) => role !== null
@@ -42,13 +48,6 @@ const canManageCatalog = (role: EwaTradeRole | null) =>
 
 const canUseRetailOps = (role: EwaTradeRole | null) =>
   role ? canOperatePos(role) : false
-
-const canUseDryCleaningServices = (
-  role: EwaTradeRole | null,
-  context: DashboardNavContext,
-) =>
-  canUseRetailOps(role) &&
-  context.storeBusinessTemplateKey === "dry_cleaning_laundry"
 
 const DASHBOARD_NAV: DashboardNavDefinition[] = [
   {
@@ -60,10 +59,10 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     canSee: canUseDashboard,
   },
   {
-    description: "Catalog and product setup",
-    href: "/products",
+    description: "Product and service item setup",
+    href: "/catalog",
     icon: "products",
-    label: "Products",
+    label: "Catalog",
     canSee: canManageCatalog,
   },
   {
@@ -78,14 +77,14 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     href: "/sales",
     icon: "sales",
     label: "Sales",
-    canSee: canUseRetailOps,
+    canSee: (role, context) => canUseRetailOps(role) && context.hasProductItems,
   },
   {
-    description: "Service catalog, walk-in orders, due work, and delivery",
+    description: "Tracked service work, requests, and due dates",
     href: "/services",
     icon: "services",
-    label: "Service orders",
-    canSee: canUseDryCleaningServices,
+    label: "Service jobs",
+    canSee: (role, context) => canUseRetailOps(role) && context.hasServiceItems,
   },
   {
     description: "Customer book and follow-up records",
@@ -138,7 +137,7 @@ function matchesPath(pathname: string, href: string, end?: boolean) {
 
 export function getDashboardNavigation(
   role: string | null | undefined,
-  context: DashboardNavContext = {},
+  context: DashboardNavContext = DEFAULT_NAV_CONTEXT,
 ) {
   const normalizedRole = getNormalizedRole(role)
 
@@ -150,7 +149,7 @@ export function getDashboardNavigation(
 export function getDashboardNavItem(
   pathname: string,
   role: string | null | undefined,
-  context: DashboardNavContext = {},
+  context: DashboardNavContext = DEFAULT_NAV_CONTEXT,
 ) {
   return getDashboardNavigation(role, context).find((item) =>
     matchesPath(pathname, item.href, item.end),
@@ -160,7 +159,7 @@ export function getDashboardNavItem(
 export function canAccessDashboardPath(
   pathname: string,
   role: string | null | undefined,
-  context: DashboardNavContext = {},
+  context: DashboardNavContext = DEFAULT_NAV_CONTEXT,
 ) {
   const normalizedRole = getNormalizedRole(role)
   const matchedKnownPath = DASHBOARD_NAV.find((item) =>

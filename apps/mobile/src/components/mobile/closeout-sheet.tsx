@@ -166,8 +166,9 @@ export function CloseoutContent({
     () =>
       allProducts.filter(
         (product) =>
-          !activeBusinessId ||
-          (product.businessId ?? activeBusinessId) === activeBusinessId,
+          (product.kind ?? "product") === "product" &&
+          (!activeBusinessId ||
+            (product.businessId ?? activeBusinessId) === activeBusinessId),
       ),
     [activeBusinessId, allProducts],
   )

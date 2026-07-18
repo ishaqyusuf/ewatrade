@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
+  cancelRetailOpsOrderLine,
+  createRetailOpsCatalogSale,
   createRetailOpsSale,
   listRetailOpsCreditSales,
   listRetailOpsSalesByRep,
@@ -228,6 +230,246 @@ function createMockExistingSaleDb() {
     client: db as unknown as PrismaClient,
   }
 }
+
+function createMockCatalogSaleDb() {
+  const calls: SaleCall[] = []
+  const variants = [
+    {
+      id: "variant_rice",
+      metadata: {},
+      name: "Bag",
+      priceMinor: 1_000,
+      sku: "rice-bag",
+      product: {
+        currencyCode: "NGN",
+        id: "item_rice",
+        kind: "PRODUCT",
+        name: "Rice",
+        serviceProfile: null,
+      },
+    },
+    {
+      id: "variant_shirt",
+      metadata: {},
+      name: "Standard",
+      priceMinor: 500,
+      sku: "shirt-standard",
+      product: {
+        currencyCode: "NGN",
+        id: "item_shirt",
+        kind: "SERVICE",
+        name: "Shirt cleaning",
+        serviceProfile: {
+          estimatedTurnaroundHours: 48,
+          fulfillmentMode: "TRACKED",
+        },
+      },
+    },
+  ]
+  const orderItems = [
+    {
+      id: "order_item_rice",
+      kindSnapshot: "PRODUCT",
+      nameSnapshot: "Rice",
+      productId: "item_rice",
+      productVariantId: "variant_rice",
+      quantity: 2,
+      totalPriceMinor: 2_000,
+      unitPriceMinor: 1_000,
+    },
+    {
+      id: "order_item_shirt",
+      kindSnapshot: "SERVICE",
+      nameSnapshot: "Shirt cleaning",
+      productId: "item_shirt",
+      productVariantId: "variant_shirt",
+      quantity: 3,
+      totalPriceMinor: 1_500,
+      unitPriceMinor: 500,
+    },
+  ]
+  const tx = {
+    cashierSession: {
+      findFirst: async ({ where }: { where: unknown }) => {
+        calls.push({ kind: "cashierSession.findFirst", where })
+        return { id: "session_123" }
+      },
+    },
+    inventoryItem: {
+      findFirst: async ({ where }: { where: unknown }) => {
+        calls.push({ kind: "inventoryItem.findFirst", where })
+        return {
+          id: "inventory_rice",
+          onHandQuantity: 10,
+          reservedQuantity: 0,
+        }
+      },
+      findUniqueOrThrow: async ({ where }: { where: unknown }) => {
+        calls.push({ kind: "inventoryItem.findUniqueOrThrow", where })
+        return { onHandQuantity: 8 }
+      },
+      updateMany: async ({
+        data,
+        where,
+      }: { data: unknown; where: unknown }) => {
+        calls.push({ data, kind: "inventoryItem.updateMany", where })
+        return { count: 1 }
+      },
+    },
+    inventoryMovement: {
+      upsert: async ({ create, update, where }: Record<string, unknown>) => {
+        calls.push({
+          data: { create, update },
+          kind: "inventoryMovement.upsert",
+          where,
+        })
+        return { id: "movement_rice" }
+      },
+    },
+    order: {
+      create: async ({ data }: { data: Record<string, unknown> }) => {
+        calls.push({ data, kind: "order.create" })
+        return {
+          id: "order_mixed",
+          items: orderItems,
+          orderNumber: "SALE-MIXED",
+          paymentStatus: "PAID",
+          status: "COMPLETED",
+          totalMinor: 3_500,
+        }
+      },
+      findFirst: async ({ where }: { where: unknown }) => {
+        calls.push({ kind: "order.findFirst", where })
+        return null
+      },
+    },
+    productUnitPriceHistory: {
+      findFirst: async ({ where }: { where: unknown }) => {
+        calls.push({ kind: "productUnitPriceHistory.findFirst", where })
+        return null
+      },
+    },
+    productVariant: {
+      findMany: async ({ where }: { where: unknown }) => {
+        calls.push({ kind: "productVariant.findMany", where })
+        return variants
+      },
+    },
+    receipt: {
+      create: async ({ data }: { data: Record<string, unknown> }) => {
+        calls.push({ data, kind: "receipt.create" })
+        return {
+          id: "receipt_mixed",
+          receiptNumber: "RCPT-MIXED",
+          totalMinor: 3_500,
+        }
+      },
+    },
+    serviceJob: {
+      create: async ({ data }: { data: Record<string, unknown> }) => {
+        calls.push({ data, kind: "serviceJob.create" })
+        return {
+          id: "service_job_mixed",
+          status: "RECEIVED",
+          trackingToken: "tracking_mixed",
+        }
+      },
+    },
+    store: {
+      findFirst: async ({ where }: { where: unknown }) => {
+        calls.push({ kind: "store.findFirst", where })
+        return { id: "store_123", metadata: {} }
+      },
+      update: async ({ data, where }: Record<string, unknown>) => {
+        calls.push({ data, kind: "store.update", where })
+        return { id: "store_123" }
+      },
+    },
+  }
+  const db = {
+    $transaction: async <T>(
+      callback: (transactionClient: typeof tx) => Promise<T>,
+    ) => callback(tx),
+  }
+
+  return {
+    calls,
+    client: db as unknown as PrismaClient,
+  }
+}
+
+describe("catalog sales", () => {
+  test("finalizes a mixed order with product stock and service work atomically", async () => {
+    const mock = createMockCatalogSaleDb()
+
+    const result = await createRetailOpsCatalogSale(mock.client, {
+      actorUserId: "user_cashier",
+      cashierSessionId: "session_123",
+      externalId: "mixed_sale_123",
+      lines: [
+        { catalogItemVariantId: "variant_rice", quantity: 2 },
+        { catalogItemVariantId: "variant_shirt", quantity: 3 },
+      ],
+      paymentMethod: "cash",
+      serviceDueAt: new Date("2026-07-20T12:00:00.000Z"),
+      storeId: "store_123",
+      tenantId: "tenant_123",
+    })
+
+    expect(result.order.totalMinor).toBe(3_500)
+    expect(result.lines.map((line) => line.kind)).toEqual([
+      "product",
+      "service",
+    ])
+    expect(result.inventoryEffects).toHaveLength(1)
+    expect(result.serviceJob).toMatchObject({
+      id: "service_job_mixed",
+      status: "received",
+    })
+    expect(
+      mock.calls.filter((call) => call.kind === "inventoryItem.updateMany"),
+    ).toHaveLength(1)
+    expect(
+      mock.calls.find((call) => call.kind === "serviceJob.create")?.data,
+    ).toMatchObject({
+      dueAt: new Date("2026-07-20T12:00:00.000Z"),
+      lines: {
+        create: [
+          {
+            orderItemId: "order_item_shirt",
+            productId: "item_shirt",
+            quantity: 3,
+          },
+        ],
+      },
+    })
+  })
+
+  test("derives a tracked service due date from catalog turnaround", async () => {
+    const mock = createMockCatalogSaleDb()
+    const soldAt = new Date("2026-07-17T12:00:00.000Z")
+
+    await createRetailOpsCatalogSale(mock.client, {
+      actorUserId: "user_cashier",
+      cashierSessionId: "session_123",
+      externalId: "mixed_sale_due_123",
+      lines: [
+        { catalogItemVariantId: "variant_rice", quantity: 2 },
+        { catalogItemVariantId: "variant_shirt", quantity: 3 },
+      ],
+      paymentMethod: "cash",
+      soldAt,
+      storeId: "store_123",
+      tenantId: "tenant_123",
+    })
+
+    expect(
+      mock.calls.find((call) => call.kind === "serviceJob.create")?.data,
+    ).toMatchObject({
+      dueAt: new Date("2026-07-19T12:00:00.000Z"),
+    })
+  })
+})
 
 function createValidCreditPayment(overrides: Record<string, unknown> = {}) {
   return {
@@ -1064,6 +1306,258 @@ describe("retail ops sales queries", () => {
           ],
         },
       },
+    })
+  })
+
+  test("cancels a Product line with an auditable stock reversal and refund", async () => {
+    const calls: SaleCall[] = []
+    const line = {
+      cancelledAt: null,
+      cancellationReason: null,
+      id: "order_item_product",
+      kindSnapshot: "PRODUCT",
+      nameSnapshot: "Consultation handbook",
+      productId: "product_handbook",
+      productVariantId: "variant_handbook",
+      quantity: 2,
+      totalPriceMinor: 10_000,
+      order: {
+        id: "order_mixed",
+        items: [{ cancelledAt: null, id: "order_item_product" }],
+        metadata: {},
+        orderNumber: "SALE-MIXED",
+        paymentEvents: [],
+        paymentStatus: "PAID",
+        receipts: [{ totalMinor: 10_000 }],
+        serviceJob: null,
+        status: "COMPLETED",
+        totalMinor: 10_000,
+      },
+    }
+    const tx = {
+      inventoryItem: {
+        findUnique: async () => ({
+          id: "inventory_handbook",
+          onHandQuantity: 8,
+        }),
+        upsert: async (input: Record<string, unknown>) => {
+          calls.push({ data: input, kind: "inventoryItem.upsert" })
+          return {
+            id: "inventory_handbook",
+            onHandQuantity: 10,
+          }
+        },
+      },
+      inventoryMovement: {
+        create: async ({ data }: { data: unknown }) => {
+          calls.push({ data, kind: "inventoryMovement.create" })
+          return { id: "movement_reversal" }
+        },
+      },
+      order: {
+        update: async ({ data }: { data: unknown }) => {
+          calls.push({ data, kind: "order.update" })
+          return {
+            id: "order_mixed",
+            orderNumber: "SALE-MIXED",
+            paymentStatus: "REFUNDED",
+            serviceJob: null,
+            status: "CANCELLED",
+            totalMinor: 10_000,
+          }
+        },
+      },
+      orderItem: {
+        findFirst: async () => line,
+        update: async ({ data }: { data: unknown }) => {
+          calls.push({ data, kind: "orderItem.update" })
+          return { id: "order_item_product" }
+        },
+      },
+      orderPaymentEvent: {
+        create: async ({ data }: { data: unknown }) => {
+          calls.push({ data, kind: "orderPaymentEvent.create" })
+          return {
+            amountMinor: 10_000,
+            externalId: "cancel_product_line",
+            happenedAt: new Date("2026-07-17T10:00:00.000Z"),
+            id: "refund_product",
+            paymentMethod: "cash",
+          }
+        },
+      },
+    }
+    const db = {
+      $transaction: async <T>(
+        callback: (transaction: typeof tx) => Promise<T>,
+      ) => callback(tx),
+    } as unknown as PrismaClient
+
+    const result = await cancelRetailOpsOrderLine(db, {
+      actorUserId: "user_owner",
+      externalId: "cancel_product_line",
+      note: "Customer returned the item.",
+      orderItemId: "order_item_product",
+      refundAmountMinor: 10_000,
+      refundMethod: "cash",
+      storeId: "store_123",
+      tenantId: "tenant_123",
+    })
+
+    expect(result).toMatchObject({
+      alreadyCancelled: false,
+      inventory: {
+        onHandQuantity: 10,
+        previousOnHandQuantity: 8,
+      },
+      line: {
+        kind: "product",
+      },
+      order: {
+        paymentStatus: "REFUNDED",
+        status: "CANCELLED",
+      },
+      refund: {
+        amountMinor: 10_000,
+      },
+    })
+    expect(calls).toContainEqual({
+      data: expect.objectContaining({
+        direction: "INBOUND",
+        orderItemId: "order_item_product",
+        quantity: 2,
+        type: "SALE_REVERSAL",
+      }),
+      kind: "inventoryMovement.create",
+    })
+    expect(calls).toContainEqual({
+      data: expect.objectContaining({
+        amountMinor: 10_000,
+        orderId: "order_mixed",
+        type: "REFUND",
+      }),
+      kind: "orderPaymentEvent.create",
+    })
+  })
+
+  test("cancels the final Service line and closes unfinished work", async () => {
+    const calls: SaleCall[] = []
+    const tx = {
+      order: {
+        update: async ({ data }: { data: unknown }) => {
+          calls.push({ data, kind: "order.update" })
+          return {
+            id: "order_service",
+            orderNumber: "SALE-SERVICE",
+            paymentStatus: "PENDING",
+            serviceJob: {
+              id: "job_service",
+              status: "CANCELLED",
+            },
+            status: "CANCELLED",
+            totalMinor: 8_000,
+          }
+        },
+      },
+      orderItem: {
+        findFirst: async () => ({
+          cancelledAt: null,
+          cancellationReason: null,
+          id: "order_item_service",
+          kindSnapshot: "SERVICE",
+          nameSnapshot: "Document review",
+          productId: "service_review",
+          productVariantId: "variant_review",
+          quantity: 1,
+          totalPriceMinor: 8_000,
+          order: {
+            id: "order_service",
+            items: [{ cancelledAt: null, id: "order_item_service" }],
+            metadata: {},
+            orderNumber: "SALE-SERVICE",
+            paymentEvents: [],
+            paymentStatus: "PENDING",
+            receipts: [],
+            serviceJob: {
+              id: "job_service",
+              lines: [
+                {
+                  cancelledAt: null,
+                  id: "job_line_service",
+                  orderItemId: "order_item_service",
+                },
+              ],
+              status: "IN_PROGRESS",
+            },
+            status: "COMPLETED",
+            totalMinor: 8_000,
+          },
+        }),
+        update: async ({ data }: { data: unknown }) => {
+          calls.push({ data, kind: "orderItem.update" })
+          return { id: "order_item_service" }
+        },
+      },
+      serviceJob: {
+        update: async ({ data }: { data: unknown }) => {
+          calls.push({ data, kind: "serviceJob.update" })
+          return { id: "job_service" }
+        },
+      },
+      serviceJobEvent: {
+        create: async ({ data }: { data: unknown }) => {
+          calls.push({ data, kind: "serviceJobEvent.create" })
+          return { id: "event_cancelled" }
+        },
+      },
+      serviceJobLine: {
+        updateMany: async ({ data }: { data: unknown }) => {
+          calls.push({ data, kind: "serviceJobLine.updateMany" })
+          return { count: 1 }
+        },
+      },
+    }
+    const db = {
+      $transaction: async <T>(
+        callback: (transaction: typeof tx) => Promise<T>,
+      ) => callback(tx),
+    } as unknown as PrismaClient
+
+    const result = await cancelRetailOpsOrderLine(db, {
+      actorUserId: "user_owner",
+      note: "Customer cancelled before completion.",
+      orderItemId: "order_item_service",
+      storeId: "store_123",
+      tenantId: "tenant_123",
+    })
+
+    expect(result).toMatchObject({
+      inventory: null,
+      line: {
+        kind: "service",
+      },
+      order: {
+        status: "CANCELLED",
+      },
+      refund: null,
+      serviceJob: {
+        status: "cancelled",
+      },
+    })
+    expect(calls).toContainEqual({
+      data: expect.objectContaining({
+        cancelledAt: expect.any(Date),
+        status: "CANCELLED",
+      }),
+      kind: "serviceJob.update",
+    })
+    expect(calls).toContainEqual({
+      data: expect.objectContaining({
+        fromStatus: "IN_PROGRESS",
+        toStatus: "CANCELLED",
+        type: "STATUS_CHANGED",
+      }),
+      kind: "serviceJobEvent.create",
     })
   })
 })

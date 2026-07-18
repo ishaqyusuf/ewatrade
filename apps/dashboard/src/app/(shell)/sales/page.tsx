@@ -1,4 +1,5 @@
 import { SalesPage } from "@/components/dashboard/sales-page"
+import { getCatalogFeatureAvailability } from "@/lib/catalog-capabilities"
 import { getDashboardSalesOperations } from "@/lib/sales-data"
 import { canUseSalesOperations } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
@@ -29,6 +30,13 @@ export default async function SalesRoutePage() {
 
   if (!store) {
     redirect("/setup")
+  }
+  const catalogFeatures = await getCatalogFeatureAvailability({
+    storeId: store.id,
+    tenantId: ctx.tenant.id,
+  })
+  if (!catalogFeatures.hasProductItems) {
+    redirect("/")
   }
 
   const data = await getDashboardSalesOperations({

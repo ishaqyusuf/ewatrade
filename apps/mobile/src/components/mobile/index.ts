@@ -16,6 +16,7 @@ export {
   BusinessSwitchContent,
   BusinessSwitchSheet,
 } from "./business-switch-sheet"
+export { CatalogItemsContent } from "./catalog-items-sheet"
 export {
   MobileBottomTabs,
   type MobileBottomTab,
@@ -79,7 +80,7 @@ export {
   SecondaryOperationalRow,
   SecondarySheetHeader,
 } from "./secondary-operations"
-export { ServiceOrdersContent } from "./service-orders-sheet"
+export { ServiceJobsContent } from "./service-jobs-sheet"
 export {
   SessionInventoryLine,
   SessionSectionHeader,

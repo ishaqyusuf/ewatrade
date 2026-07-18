@@ -194,20 +194,51 @@ export const retailOpsReturnStaffStockSchema = retailOpsStoreScopeSchema.extend(
   },
 )
 
-export const retailOpsCreateSaleSchema = retailOpsStoreScopeSchema.extend({
-  cashierSessionId: z.string().trim().min(1).optional(),
-  creditDueAt: z.coerce.date().optional(),
-  creditTermsNote: z.string().trim().max(500).optional(),
-  customerEmail: retailOpsEmailSchema.optional(),
-  customerName: z.string().trim().min(1).max(160).optional(),
-  customerPhone: retailOpsOptionalPhoneSchema,
-  externalId: z.string().trim().min(1).max(120).optional(),
-  notes: z.string().trim().max(500).optional(),
-  paymentMethod: retailOpsPaymentMethodSchema.default("cash"),
-  productVariantId: z.string().trim().min(1),
-  quantity: z.coerce.number().int().positive().max(100_000),
-  soldAt: z.coerce.date().optional(),
-})
+export const retailOpsCreateSaleSchema = retailOpsStoreScopeSchema
+  .extend({
+    cashierSessionId: z.string().trim().min(1).optional(),
+    creditDueAt: z.coerce.date().optional(),
+    creditTermsNote: z.string().trim().max(500).optional(),
+    customerEmail: retailOpsEmailSchema.optional(),
+    customerName: z.string().trim().min(1).max(160).optional(),
+    customerPhone: retailOpsOptionalPhoneSchema,
+    externalId: z.string().trim().min(1).max(120).optional(),
+    notes: z.string().trim().max(500).optional(),
+    paymentMethod: retailOpsPaymentMethodSchema.default("cash"),
+    lines: z
+      .array(
+        z.object({
+          catalogItemVariantId: z.string().trim().min(1),
+          quantity: z.coerce.number().int().positive().max(100_000),
+        }),
+      )
+      .min(1)
+      .max(100)
+      .optional(),
+    productVariantId: z.string().trim().min(1).optional(),
+    quantity: z.coerce.number().int().positive().max(100_000).optional(),
+    serviceDueAt: z.coerce.date().optional(),
+    soldAt: z.coerce.date().optional(),
+  })
+  .superRefine((input, ctx) => {
+    if (
+      !input.lines?.length &&
+      (!input.productVariantId || input.quantity === undefined)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Add at least one catalog item to the sale.",
+        path: ["lines"],
+      })
+    }
+  })
+
+export const retailOpsOfflineCreateSaleSchema = retailOpsCreateSaleSchema.and(
+  z.object({
+    productVariantId: z.string().trim().min(1),
+    quantity: z.coerce.number().int().positive().max(100_000),
+  }),
+)
 
 export const retailOpsRecordCreditPaymentSchema =
   retailOpsStoreScopeSchema.extend({
@@ -219,6 +250,19 @@ export const retailOpsRecordCreditPaymentSchema =
     paidAt: z.coerce.date().optional(),
     paymentMethod: retailOpsCreditPaymentMethodSchema.default("cash"),
   })
+
+export const retailOpsCancelOrderLineSchema = retailOpsStoreScopeSchema.extend({
+  externalId: z.string().trim().min(1).max(120).optional(),
+  note: z.string().trim().max(1_000).optional(),
+  orderItemId: z.string().trim().min(1),
+  refundAmountMinor: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(100_000_000)
+    .optional(),
+  refundMethod: retailOpsCreditPaymentMethodSchema.optional(),
+})
 
 export const retailOpsCreateProductUnitSchema = z.object({
   conversionMultiplier: z.coerce.number().positive().optional(),
@@ -244,6 +288,202 @@ export const retailOpsCreateProductSchema = retailOpsStoreScopeSchema.extend({
   variants: z.array(retailOpsCreateProductUnitSchema).max(24).default([]),
 })
 
+export const retailOpsCatalogItemKindSchema = z.enum(["product", "service"])
+
+export const retailOpsCatalogItemsSchema = retailOpsStoreScopeSchema.extend({
+  kind: retailOpsCatalogItemKindSchema.optional(),
+})
+
+export const retailOpsCreateCatalogItemSchema = retailOpsStoreScopeSchema
+  .extend({
+    category: z.string().trim().max(120).optional(),
+    description: z.string().trim().max(1_000).optional(),
+    externalId: z.string().trim().min(1).max(120).optional(),
+    imageLinks: retailOpsProductImageLinksSchema,
+    imageUrl: retailOpsProductImageUrlSchema,
+    kind: retailOpsCatalogItemKindSchema,
+    name: z.string().trim().min(1).max(160),
+    openingStockQuantity: z.coerce.number().int().min(0).optional(),
+    priceMinor: z.coerce.number().int().min(0).max(100_000_000),
+    primaryUnitName: z.string().trim().min(1).max(80).optional(),
+    service: z
+      .object({
+        estimatedTurnaroundHours: z.coerce
+          .number()
+          .int()
+          .min(1)
+          .max(8_760)
+          .optional(),
+        fulfillmentMode: z.enum(["immediate", "tracked"]).default("tracked"),
+        instructions: z.string().trim().max(2_000).optional(),
+      })
+      .optional(),
+    unitTemplateKey: z.string().trim().min(1).max(120).optional(),
+    variants: z
+      .array(
+        retailOpsCreateProductUnitSchema.extend({
+          openingStockQuantity: z.coerce.number().int().min(0).optional(),
+        }),
+      )
+      .max(24)
+      .default([]),
+  })
+  .superRefine((input, ctx) => {
+    if (input.kind === "product" && !input.primaryUnitName) {
+      ctx.addIssue({
+        code: "custom",
+        message: "A primary unit is required for a Product.",
+        path: ["primaryUnitName"],
+      })
+    }
+    if (
+      input.kind === "service" &&
+      ((input.openingStockQuantity ?? 0) > 0 ||
+        input.variants.some(
+          (variant) => (variant.openingStockQuantity ?? 0) > 0,
+        ))
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Service items do not have stock.",
+        path: ["openingStockQuantity"],
+      })
+    }
+  })
+
+export const retailOpsUpdateCatalogItemSchema =
+  retailOpsStoreScopeSchema.extend({
+    category: z.string().trim().max(120).nullable().optional(),
+    description: z.string().trim().max(1_000).nullable().optional(),
+    imageLinks: retailOpsProductImageLinksSchema,
+    imageUrl: retailOpsProductImageUrlSchema.nullable().optional(),
+    itemId: z.string().trim().min(1),
+    kind: retailOpsCatalogItemKindSchema,
+    name: z.string().trim().min(1).max(160).optional(),
+    priceMinor: z.coerce.number().int().min(0).max(100_000_000).optional(),
+    service: z
+      .object({
+        estimatedTurnaroundHours: z.coerce
+          .number()
+          .int()
+          .min(1)
+          .max(8_760)
+          .nullable()
+          .optional(),
+        fulfillmentMode: z.enum(["immediate", "tracked"]).optional(),
+        instructions: z.string().trim().max(2_000).nullable().optional(),
+      })
+      .optional(),
+    status: z.enum(["active", "archived"]).optional(),
+  })
+
+export const retailOpsServiceJobStatusSchema = z.enum([
+  "received",
+  "in_progress",
+  "ready",
+  "completed",
+  "cancelled",
+])
+
+export const retailOpsServiceJobsSchema = retailOpsStoreScopeSchema.extend({
+  limit: z.coerce.number().int().min(1).max(250).default(100),
+  status: retailOpsServiceJobStatusSchema.optional(),
+})
+
+export const retailOpsUpdateServiceJobStatusSchema =
+  retailOpsStoreScopeSchema.extend({
+    jobId: z.string().trim().min(1),
+    note: z.string().trim().max(1_000).optional(),
+    status: retailOpsServiceJobStatusSchema,
+  })
+
+export const retailOpsAssignServiceJobSchema = retailOpsStoreScopeSchema.extend(
+  {
+    assignedUserId: z.string().trim().min(1).nullable().optional(),
+    jobId: z.string().trim().min(1),
+    note: z.string().trim().max(1_000).optional(),
+  },
+)
+
+export const retailOpsDelayServiceJobSchema = retailOpsStoreScopeSchema.extend({
+  dueAt: z.coerce.date(),
+  jobId: z.string().trim().min(1),
+  note: z.string().trim().min(1).max(1_000),
+})
+
+export const retailOpsAddServiceJobEvidenceSchema =
+  retailOpsStoreScopeSchema.extend({
+    jobId: z.string().trim().min(1),
+    label: z.string().trim().max(160).optional(),
+    mediaType: z.string().trim().max(120).optional(),
+    url: z.string().trim().url().max(2_000),
+  })
+
+export const retailOpsServiceJobIdSchema = retailOpsStoreScopeSchema.extend({
+  jobId: z.string().trim().min(1),
+})
+
+export const retailOpsServiceTrackingSchema = z.object({
+  trackingToken: z.string().trim().min(12).max(256),
+})
+
+export const retailOpsCreateServiceRequestLinkSchema =
+  retailOpsStoreScopeSchema.extend({
+    label: z.string().trim().min(1).max(160),
+  })
+
+export const retailOpsServiceRequestLinkIdSchema =
+  retailOpsStoreScopeSchema.extend({
+    linkId: z.string().trim().min(1),
+  })
+
+export const retailOpsPublicServiceRequestLinkSchema = z.object({
+  token: z.string().trim().min(12).max(256),
+})
+
+export const retailOpsCreatePublicServiceRequestSchema =
+  retailOpsPublicServiceRequestLinkSchema.extend({
+    customerEmail: retailOpsEmailSchema.optional(),
+    customerName: z.string().trim().min(1).max(160),
+    customerPhone: retailOpsOptionalPhoneSchema,
+    lines: z
+      .array(
+        z.object({
+          catalogItemVariantId: z.string().trim().min(1),
+          quantity: z.coerce.number().int().positive().max(100_000),
+        }),
+      )
+      .min(1)
+      .max(100),
+    notes: z.string().trim().max(1_000).optional(),
+  })
+
+export const retailOpsServiceRequestStatusSchema = z.enum([
+  "pending",
+  "confirmed",
+  "converted",
+  "rejected",
+  "cancelled",
+])
+
+export const retailOpsServiceRequestsSchema = retailOpsStoreScopeSchema.extend({
+  limit: z.coerce.number().int().min(1).max(250).default(100),
+  status: retailOpsServiceRequestStatusSchema.optional(),
+})
+
+export const retailOpsUpdateServiceRequestStatusSchema =
+  retailOpsStoreScopeSchema.extend({
+    requestId: z.string().trim().min(1),
+    status: z.enum(["pending", "confirmed", "rejected", "cancelled"]),
+  })
+
+export const retailOpsConvertServiceRequestSchema =
+  retailOpsStoreScopeSchema.extend({
+    paymentMethod: retailOpsPaymentMethodSchema.default("cash"),
+    requestId: z.string().trim().min(1),
+    serviceDueAt: z.coerce.date().optional(),
+  })
+
 export const retailOpsUpdateProductUnitPriceSchema =
   retailOpsStoreScopeSchema.extend({
     effectiveAt: z.coerce.date().optional(),
@@ -264,196 +504,6 @@ export const retailOpsProductUnitPriceHistorySchema =
     limit: z.coerce.number().int().min(1).max(100).default(50),
     productVariantId: z.string().trim().min(1).optional(),
     to: z.coerce.date().optional(),
-  })
-
-export const retailOpsBusinessTemplateKeySchema = z.enum([
-  "product_sales",
-  "dry_cleaning_laundry",
-  "other_generic",
-])
-
-export const retailOpsUpdateBusinessTemplateSchema =
-  retailOpsStoreScopeSchema.extend({
-    allowOperationalDataChange: z.boolean().default(false),
-    nextTemplateKey: retailOpsBusinessTemplateKeySchema,
-    reason: z.string().trim().max(500).optional(),
-  })
-
-export const retailOpsUnsupportedBusinessDemandSchema = z.object({
-  limit: z.coerce.number().int().min(1).max(100).default(25),
-})
-
-export const retailOpsDryCleaningServiceItemVariantSchema = z.object({
-  id: z.string().trim().min(1).max(120).optional(),
-  name: z.string().trim().min(1).max(120),
-  priceMinor: z.coerce.number().int().min(0).max(100_000_000),
-})
-
-export const retailOpsDryCleaningCreateServiceItemSchema =
-  retailOpsStoreScopeSchema.extend({
-    category: z.string().trim().max(120).optional(),
-    description: z.string().trim().max(1_000).optional(),
-    estimatedTurnaroundHours: z.coerce
-      .number()
-      .int()
-      .min(1)
-      .max(8_760)
-      .optional(),
-    name: z.string().trim().min(1).max(160),
-    priceMinor: z.coerce.number().int().min(0).max(100_000_000),
-    variants: z
-      .array(retailOpsDryCleaningServiceItemVariantSchema.omit({ id: true }))
-      .max(24)
-      .default([]),
-  })
-
-export const retailOpsDryCleaningUpdateServiceItemSchema =
-  retailOpsStoreScopeSchema.extend({
-    category: z.string().trim().max(120).optional(),
-    description: z.string().trim().max(1_000).optional(),
-    estimatedTurnaroundHours: z.coerce
-      .number()
-      .int()
-      .min(1)
-      .max(8_760)
-      .optional(),
-    name: z.string().trim().min(1).max(160).optional(),
-    priceMinor: z.coerce.number().int().min(0).max(100_000_000).optional(),
-    serviceItemId: z.string().trim().min(1),
-    status: z.enum(["active", "archived"]).optional(),
-    variants: z
-      .array(retailOpsDryCleaningServiceItemVariantSchema)
-      .max(24)
-      .optional(),
-  })
-
-export const retailOpsDryCleaningListServiceItemsSchema =
-  retailOpsStoreScopeSchema.extend({
-    includeArchived: z.boolean().default(false),
-  })
-
-export const retailOpsDryCleaningUpdateSettingsSchema =
-  retailOpsStoreScopeSchema.extend({
-    expressSurchargePercent: z.coerce.number().int().min(0).max(500),
-  })
-
-export const retailOpsDryCleaningPaymentStatusSchema = z.enum([
-  "paid",
-  "partial",
-  "pay_on_collection",
-  "pay_on_delivery",
-  "unpaid",
-])
-
-export const retailOpsDryCleaningServiceOrderStatusSchema = z.enum([
-  "cancelled",
-  "completed",
-  "delayed",
-  "delivery_pending",
-  "in_progress",
-  "pickup_pending",
-  "ready",
-  "received",
-])
-
-const retailOpsDryCleaningCustomerSchema = z.object({
-  email: retailOpsEmailSchema.optional(),
-  name: z.string().trim().min(1).max(160),
-  phone: retailOpsOptionalPhoneSchema,
-})
-
-const retailOpsDryCleaningServiceLineInputSchema = z.object({
-  note: z.string().trim().max(500).optional(),
-  quantity: z.coerce.number().int().min(1).max(10_000),
-  serviceItemId: z.string().trim().min(1),
-  unitPriceMinor: z.coerce.number().int().min(0).max(100_000_000).optional(),
-  variantId: z.string().trim().min(1).optional(),
-})
-
-export const retailOpsDryCleaningCreateServiceOrderSchema =
-  retailOpsStoreScopeSchema.extend({
-    customer: retailOpsDryCleaningCustomerSchema,
-    dueAt: z.coerce.date().optional(),
-    evidence: z
-      .array(
-        z.object({
-          label: z.string().trim().max(120).optional(),
-          url: z.string().trim().url().max(2_000),
-        }),
-      )
-      .max(20)
-      .default([]),
-    lines: z.array(retailOpsDryCleaningServiceLineInputSchema).min(1).max(100),
-    notes: z.string().trim().max(1_000).optional(),
-    paymentStatus: retailOpsDryCleaningPaymentStatusSchema.default("unpaid"),
-  })
-
-export const retailOpsDryCleaningListServiceOrdersSchema =
-  retailOpsStoreScopeSchema.extend({
-    from: z.coerce.date().optional(),
-    limit: z.coerce.number().int().min(1).max(100).default(50),
-    status: retailOpsDryCleaningServiceOrderStatusSchema.optional(),
-    to: z.coerce.date().optional(),
-  })
-
-export const retailOpsDryCleaningUpdateServiceOrderStatusSchema =
-  retailOpsStoreScopeSchema.extend({
-    evidence: z
-      .array(
-        z.object({
-          label: z.string().trim().max(120).optional(),
-          url: z.string().trim().url().max(2_000),
-        }),
-      )
-      .max(20)
-      .default([]),
-    note: z.string().trim().max(1_000).optional(),
-    notifyCustomer: z.boolean().default(false),
-    orderId: z.string().trim().min(1),
-    status: retailOpsDryCleaningServiceOrderStatusSchema,
-  })
-
-export const retailOpsDryCleaningCreateRequestLinkSchema =
-  retailOpsStoreScopeSchema.extend({
-    label: z.string().trim().max(120).optional(),
-  })
-
-export const retailOpsDryCleaningPublicTokenSchema = z.object({
-  token: z.string().trim().min(20).max(256),
-})
-
-export const retailOpsDryCleaningCreatePublicRequestSchema =
-  retailOpsDryCleaningPublicTokenSchema.extend({
-    customer: retailOpsDryCleaningCustomerSchema,
-    lines: z
-      .array(
-        retailOpsDryCleaningServiceLineInputSchema.omit({
-          unitPriceMinor: true,
-        }),
-      )
-      .min(1)
-      .max(100),
-    notes: z.string().trim().max(1_000).optional(),
-  })
-
-export const retailOpsDryCleaningListServiceRequestsSchema =
-  retailOpsStoreScopeSchema.extend({
-    limit: z.coerce.number().int().min(1).max(100).default(50),
-    status: z
-      .enum(["cancelled", "confirmed", "converted", "pending", "rejected"])
-      .optional(),
-  })
-
-export const retailOpsDryCleaningUpdateServiceRequestStatusSchema =
-  retailOpsStoreScopeSchema.extend({
-    requestId: z.string().trim().min(1),
-    status: z.enum(["cancelled", "confirmed", "pending", "rejected"]),
-  })
-
-export const retailOpsDryCleaningConvertServiceRequestSchema =
-  retailOpsStoreScopeSchema.extend({
-    paymentStatus: retailOpsDryCleaningPaymentStatusSchema.default("unpaid"),
-    requestId: z.string().trim().min(1),
   })
 
 export const retailOpsStockMovementsSchema = retailOpsStoreScopeSchema.extend({
@@ -695,7 +745,7 @@ export const retailOpsSyncEventSchema = z.discriminatedUnion("type", [
     type: z.literal("product_setup"),
   }),
   retailOpsSyncEventBaseSchema.extend({
-    payload: retailOpsCreateSaleSchema,
+    payload: retailOpsOfflineCreateSaleSchema,
     type: z.literal("sale_created"),
   }),
   retailOpsSyncEventBaseSchema.extend({

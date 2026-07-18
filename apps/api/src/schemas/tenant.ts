@@ -26,22 +26,10 @@ export const tenantBootstrapSchema = z.object({
 })
 
 const storeOnboardingSchema = z.object({
-  businessTemplateKey: z
-    .enum(["product_sales", "dry_cleaning_laundry", "other_generic"])
-    .optional(),
-  businessType: optionalText(80),
   countryCode: optionalText(8),
-  offeringCategory: optionalText(120),
   operatingModel: optionalText(120),
   orderChannels: z.array(z.string().trim().min(1).max(80)).max(8).optional(),
-  otherBusinessDescription: optionalText(240),
-  productCategory: optionalText(120),
-  requestedCapabilities: z
-    .array(z.string().trim().min(1).max(120))
-    .max(12)
-    .optional(),
   salesMethod: optionalText(80),
-  serviceCategory: optionalText(120),
   staffInvolvement: optionalText(120),
   teamSize: optionalText(80),
 })

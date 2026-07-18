@@ -12,14 +12,19 @@ Longer-horizon sequencing across major implementation phases.
 
 ## Proposed Intake Tasks
 
-### Business Template Capability Gating And Service Architecture
+### Product And Service Catalog Items
 - Priority: High
-- Description: Track plan in `.brain/plans/2026-07-17-feature-business-template-capability-gating-and-service-architecture.md`.
-- Related Feature: Business type onboarding, capability gating, and service operations
-- Status: Roadmap
-- Plan Status: Proposed
-- Plan File: .brain/plans/2026-07-17-feature-business-template-capability-gating-and-service-architecture.md
+- Description: Implement the approved item-level catalog specification in `.scratch/wayfinder-catalog-items-product-service/spec.md`.
+- Related Feature: Neutral catalog, Product inventory, and generic Service Jobs
+- Status: Done
+- Spec Status: Implemented
+- Spec File: .scratch/wayfinder-catalog-items-product-service/spec.md
+- Feature File: .brain/features/product-service-catalog-items.md
+- Decision File: .brain/decisions/ADR-0008-item-level-product-service-catalog.md
+- Superseded Plan File: .brain/plans/2026-07-17-feature-business-template-capability-gating-and-service-architecture.md
 - Created Date: 2026-07-17
+- Completed Date: 2026-07-18
+- Checks Run: 190 focused tests; full workspace typecheck; five mobile QA guards; Prisma migrate/push; legacy migration dry-run/apply; dashboard browser QA; Android Service-only and service-order QA; changed-file Biome and diff checks.
 
 ### Retail Ops Design System And IA
 - Priority: High

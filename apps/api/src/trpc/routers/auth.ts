@@ -97,6 +97,12 @@ export function createMobileOwnerOtpEmailMessages(input: {
   )
 }
 
+export function shouldDispatchMobileOwnerOtpEmail(
+  env: Pick<EmailRoutingEnv, "NODE_ENV"> = process.env,
+) {
+  return env.NODE_ENV === "production"
+}
+
 export const authRouter = createTRPCRouter({
   requestMobileOwnerOtp: publicProcedure
     .input(requestMobileOwnerOtpSchema)
@@ -115,29 +121,33 @@ export const authRouter = createTRPCRouter({
         }
       })()
 
-      const emailMessages = (() => {
-        try {
-          return createMobileOwnerOtpEmailMessages({
-            code: otp.code,
-            email: otp.email,
-            expiresAt: otp.expiresAt,
-            mode: input.mode,
-          })
-        } catch {
+      if (shouldDispatchMobileOwnerOtpEmail()) {
+        const emailMessages = (() => {
+          try {
+            return createMobileOwnerOtpEmailMessages({
+              code: otp.code,
+              email: otp.email,
+              expiresAt: otp.expiresAt,
+              mode: input.mode,
+            })
+          } catch {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "We could not send the verification email. Try again.",
+            })
+          }
+        })()
+        const results = await dispatchEmailMessages(emailMessages)
+        const failedResult = results.find(
+          (result) => result.status === "failed",
+        )
+
+        if (failedResult) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "We could not send the verification email. Try again.",
           })
         }
-      })()
-      const results = await dispatchEmailMessages(emailMessages)
-      const failedResult = results.find((result) => result.status === "failed")
-
-      if (failedResult) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "We could not send the verification email. Try again.",
-        })
       }
 
       return {

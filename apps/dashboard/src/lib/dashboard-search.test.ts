@@ -8,10 +8,10 @@ import type { DashboardNavItem } from "@/lib/navigation"
 
 const navItems: DashboardNavItem[] = [
   {
-    description: "Catalog and product setup",
-    href: "/products",
+    description: "Product and service item setup",
+    href: "/catalog",
     icon: "products",
-    label: "Products",
+    label: "Catalog",
   },
   {
     description: "Stock, inbounds, and movement controls",
@@ -38,7 +38,7 @@ describe("dashboard command search helpers", () => {
     const commands = getDashboardCommands(navItems)
 
     expect(commands.map((command) => command.id)).toEqual([
-      "create-product",
+      "create-item",
       "invite-staff",
       "record-stock-intake",
     ])

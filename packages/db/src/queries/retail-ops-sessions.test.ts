@@ -13,22 +13,26 @@ type SessionCall = {
   where?: unknown
 }
 
-function createProductVariantRow() {
+function createProductVariantRow(kind: "PRODUCT" | "SERVICE" = "PRODUCT") {
   return {
     id: "variant_bag",
     name: "Bag",
     sku: "rice-bag",
     product: {
       id: "product_rice",
+      kind,
       name: "Rice",
     },
   }
 }
 
-function createMockOpenSessionDb(input?: { existingSession?: boolean }) {
+function createMockOpenSessionDb(input?: {
+  existingSession?: boolean
+  variantKind?: "PRODUCT" | "SERVICE"
+}) {
   const calls: SessionCall[] = []
   const openedAt = new Date("2026-07-12T08:00:00.000Z")
-  const variant = createProductVariantRow()
+  const variant = createProductVariantRow(input?.variantKind)
   const session = {
     id: "session_open_123",
     openedAt,
@@ -99,11 +103,13 @@ function createMockOpenSessionDb(input?: { existingSession?: boolean }) {
   }
 }
 
-function createMockCloseSessionDb() {
+function createMockCloseSessionDb(input?: {
+  variantKind?: "PRODUCT" | "SERVICE"
+}) {
   const calls: SessionCall[] = []
   const openedAt = new Date("2026-07-12T08:00:00.000Z")
   const closedAt = new Date("2026-07-12T17:00:00.000Z")
-  const variant = createProductVariantRow()
+  const variant = createProductVariantRow(input?.variantKind)
 
   const tx = {
     cashierSession: {
@@ -532,6 +538,28 @@ describe("retail ops session queries", () => {
     expect(getCalls(db.calls, "store.update")).toHaveLength(0)
   })
 
+  test("rejects Service items from opening inventory", async () => {
+    const db = createMockOpenSessionDb({ variantKind: "SERVICE" })
+
+    await expect(
+      openRetailOpsSession(db.client, {
+        actorUserId: "user_owner",
+        inventoryLines: [
+          {
+            countedQuantity: 1,
+            productVariantId: "variant_bag",
+          },
+        ],
+        openedAt: db.openedAt,
+        openingFloatMinor: 0,
+        storeId: "store_123",
+        tenantId: "tenant_123",
+      }),
+    ).rejects.toThrow("Service items do not participate in opening inventory.")
+
+    expect(getCalls(db.calls, "cashierSession.create")).toHaveLength(0)
+  })
+
   test("closes a session with payment variance and durable stock declarations", async () => {
     const db = createMockCloseSessionDb()
 
@@ -681,6 +709,29 @@ describe("retail ops session queries", () => {
         },
       },
     })
+  })
+
+  test("rejects Service items from closeout inventory", async () => {
+    const db = createMockCloseSessionDb({ variantKind: "SERVICE" })
+
+    await expect(
+      closeRetailOpsSession(db.client, {
+        actorUserId: "user_owner",
+        cashierSessionId: "session_open_123",
+        closedAt: db.closedAt,
+        closingFloatMinor: 0,
+        inventoryLines: [
+          {
+            countedQuantity: 1,
+            productVariantId: "variant_bag",
+          },
+        ],
+        storeId: "store_123",
+        tenantId: "tenant_123",
+      }),
+    ).rejects.toThrow("Service items do not participate in closeout inventory.")
+
+    expect(getCalls(db.calls, "cashierSession.update")).toHaveLength(0)
   })
 
   test("lists closed sessions with declarations, credit totals, inventory, and review metadata", async () => {

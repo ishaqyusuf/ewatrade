@@ -4,6 +4,7 @@
 Completed work with durable value to the project.
 
 ## Items
+- Implemented the item-level Product and Service catalog. Stores are neutral; both item kinds are priced; only Product has stock. Product-only, Service-only, and mixed orders use one commercial order/payment model, while Service lines create generic relational Service Jobs. Removed runtime business-template/dry-cleaning contracts, added idempotent legacy migration, cancellation/refund/reversal history, opaque public request/tracking, item-driven dashboard/mobile Sales and Services gates, Service-only mobile checkout, and production-only owner OTP email dispatch. Completed Date: 2026-07-18. Checks Run: 190 focused tests; full workspace typecheck; five mobile QA guards; Prisma migrate/push; legacy migration dry-run/apply; dashboard browser QA; Android QA; changed-file Biome; `git diff --check`.
 - Implemented store-scoped operating currency and formatted money input across
   marketing, dashboard, mobile, public service-request pages, and offline Retail
   Ops state. Signup supports NGN, USD, GHS, KES, ZAR, and EGP; web/mobile money

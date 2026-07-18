@@ -99,7 +99,7 @@ const CONTRACTS = [
       "SessionSectionHeader",
       "StatusBanner",
       "StatusBadge",
-      "border-t border-border py-4",
+      'variant="muted" className="flex-row items-center justify-between gap-3 p-3"',
       "text-success",
       "text-warn",
     ],

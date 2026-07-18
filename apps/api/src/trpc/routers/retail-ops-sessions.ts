@@ -28,6 +28,7 @@ function getSessionErrorCode(
   error: RetailOpsSessionError,
 ): "BAD_REQUEST" | "CONFLICT" | "NOT_FOUND" {
   if (error.code === "DUPLICATE_INVENTORY_LINE") return "BAD_REQUEST"
+  if (error.code === "ITEM_NOT_STOCKABLE") return "BAD_REQUEST"
   if (error.code === "OPEN_SESSION_EXISTS") return "CONFLICT"
   if (error.code === "SESSION_NOT_CLOSED") return "CONFLICT"
 

@@ -22,10 +22,6 @@ Track current and planned API surface areas.
   - `POST /api/tenants/active` stores the active tenant slug after verifying the user belongs to the requested tenant.
   - `POST /api/stores/active` stores the active store id after verifying the store belongs to the active tenant context.
   - `POST /api/stores` creates the first or next tenant store from the dashboard onboarding/setup flow.
-- `apps/dashboard` exposes temporary product catalog bridge routes for the dashboard proof slice:
-  - `GET /api/products` lists selected-store products with search, status filtering, unit stock, default-unit pricing, and recent price-history rows.
-  - `POST /api/products` creates a selected-store Product Sales catalog item through the existing Retail Ops product setup helper.
-  - `PATCH /api/products/[productId]` edits selected-store product name, description, status, default-unit name, and default-unit price while appending durable price history for price changes.
 - `apps/dashboard` exposes temporary inventory bridge routes for the dashboard proof slice:
   - `GET /api/inventory` lists selected-store product/unit inventory rows with on-hand, reserved, available, reorder, low/out state, and recent stock movement history. It accepts optional `storeId` and `productVariantId` query parameters.
   - `POST /api/inventory` records selected-store stock intake, stock adjustment, or unit conversion operations through the existing Retail Ops stock helpers. It generates dashboard external ids when callers do not provide replay keys.
@@ -46,8 +42,7 @@ Track current and planned API surface areas.
 - `apps/api` exposes public self-service store detection:
   - `POST /api/self-service/store-detection/resolve` accepts device coordinates and optional accuracy, resolves enabled store geofences from store metadata, and returns ranked candidates plus a `confirmed`, `needs_confirmation`, or `manual_required` status for the POS/self-service launch flow.
 - Current tRPC procedure groups:
-  - `auth.requestMobileOwnerOtp` sends a six-digit owner login/sign-up OTP email
-    and preserves supported sign-up currency in the verification payload.
+  - `auth.requestMobileOwnerOtp` creates a six-digit owner login/sign-up OTP and preserves supported sign-up currency in the verification payload. Production dispatches email; development and test return `devCode` without sending email.
   - `auth.verifyMobileOwnerOtp` verifies the mobile OTP and returns a bearer
     session plus active business/store currency context.
   - `auth.verifyMobileGoogle` verifies Google identity and applies the same
@@ -55,16 +50,12 @@ Track current and planned API surface areas.
   - `tenant.current` returns the authenticated user's active tenant context.
   - `tenant.stores` returns stores available to the active tenant membership.
   - `tenant.createStore` creates a store/business under the active tenant for owner/admin users when the tenant is within the current business/store entitlement.
-  - `retailOps.businessTemplates` returns the system-owned Product Sales, Dry Cleaning / Laundry, and Other business template definitions.
-  - `retailOps.storeBusinessTemplate` returns the effective template for the selected tenant store, defaulting stores without explicit metadata to Product Sales.
-  - `retailOps.updateBusinessTemplate` lets owner/admin tenant managers correct a store template with operational-data guardrails and audit metadata.
-  - `retailOps.unsupportedBusinessDemand` is an internal procedure that ranks Other-business onboarding submissions from completed onboarding sessions.
-  - `retailOps.dryCleaningSettings` and `retailOps.updateDryCleaningSettings` read and update metadata-backed Dry Cleaning / Laundry settings such as express surcharge percentage.
-  - `retailOps.dryCleaningServiceItems`, `retailOps.createDryCleaningServiceItem`, and `retailOps.updateDryCleaningServiceItem` manage metadata-backed Dry Cleaning / Laundry service catalog entries and variants.
-  - `retailOps.dryCleaningServiceOrders`, `retailOps.createDryCleaningServiceOrder`, and `retailOps.updateDryCleaningServiceOrderStatus` manage metadata-backed dry-cleaning service orders, intake/status evidence, notes, express pricing snapshots, and ready/delay notification intents.
-  - `retailOps.createDryCleaningServiceRequestLink`, `retailOps.dryCleaningServiceRequestLinks`, `retailOps.dryCleaningServiceRequests`, `retailOps.updateDryCleaningServiceRequestStatus`, and `retailOps.convertDryCleaningServiceRequest` manage protected dry-cleaning public request intake and link visibility.
-  - `retailOps.dryCleaningOperationalReport` returns dry-cleaning order, payment-state, service-item, request-conversion, and completion metrics for the selected store/range.
-  - `retailOps.dryCleaningServiceRequestLink`, `retailOps.createDryCleaningPublicServiceRequest`, and `retailOps.dryCleaningTracking` are public procedures for opaque dry-cleaning request links and accountless customer tracking.
+  - `retailOps.catalogItems`, `retailOps.createCatalogItem`, and `retailOps.updateCatalogItem` manage the neutral Product/Service catalog. Both kinds are priced; only Product accepts stock/unit-conversion fields.
+  - `retailOps.serviceJobs`, `retailOps.updateServiceJobStatus`, `retailOps.assignServiceJob`, `retailOps.delayServiceJob`, and `retailOps.addServiceJobEvidence` manage generic service work.
+  - `retailOps.serviceRequestLinks`, `retailOps.createServiceRequestLink`, `retailOps.disableServiceRequestLink`, `retailOps.serviceRequests`, `retailOps.updateServiceRequestStatus`, and `retailOps.convertServiceRequest` manage protected generic public-service intake.
+  - `retailOps.serviceOperationsReport` returns Service Job state, due/overdue, delay, request conversion, popularity, and commercial-order net revenue metrics.
+  - `retailOps.publicServiceRequestLink`, `retailOps.createPublicServiceRequest`, and `retailOps.publicServiceTracking` are public opaque-token procedures with privacy-safe responses.
+  - `retailOps.cancelOrderLine` records auditable line cancellation, reverses eligible Product stock, cancels unfinished Service work, and records refund/payment events when supplied.
   - `retailOps.sharedProduct` publicly returns an active shared product link payload for a tenant/store/product slug and share token.
   - `retailOps.createSharedProductOrderRequest` publicly creates a pending order request from an active shared product link, reserves the requested unit quantity through the first-phase inventory balance bridge, and records notification dispatch status without failing checkout when enqueue fails after order creation.
   - `retailOps.summary` returns the first tenant-scoped Retail Ops dashboard summary.
@@ -104,7 +95,7 @@ Track current and planned API surface areas.
   - `retailOps.createProductShareLink` creates an opaque web-first product link for a tenant/store product with optional external-id replay protection.
   - `retailOps.deactivateProductShareLink` deactivates a generated product link with optional external-id replay protection.
   - `retailOps.unitTemplates` lists active durable system/tenant product-unit templates, with fallback presets while migrations or seeds are unavailable.
-  - `retailOps.createProduct` creates a Retail Ops product with primary unit, optional variant units, prices, and opening stock.
+  - `retailOps.createProduct` remains a compatibility Product-only setup procedure; new generic clients use `retailOps.createCatalogItem`.
   - `retailOps.productUnitPriceAt` resolves the effective product-unit price for a selected timestamp using durable price history, metadata fallback, or current variant price.
   - `retailOps.updateProductUnitPrice` changes a product unit price and appends metadata-backed price history.
   - `retailOps.recordStockIntake` increments current stock for an existing product variant/unit.
@@ -117,8 +108,8 @@ Track current and planned API surface areas.
   - `retailOps.returnStaffStock` returns assigned staff stock to central store inventory and records a metadata-backed return event.
 
 ## Current Web Routes
-- `apps/dashboard` exposes `/services` for Dry Cleaning / Laundry stores. The route is owner/admin/manager/cashier/operator accessible through POS-capable navigation only when the selected store resolves to the Dry Cleaning / Laundry template.
-- `apps/marketing` and `apps/storefront` expose `GET /service-request/[token]` for public dry-cleaning request links. The duplicated route is intentional while early production serves customer-facing links from the marketing Vercel project and the storefront app remains the longer-term customer surface.
+- `apps/dashboard` exposes `/catalog` for the shared Product/Service catalog, `/sales` only when the selected store has Product items, and `/services` only when it has Service items. Server routes enforce the same item-driven gates as navigation.
+- `apps/marketing` and `apps/storefront` expose `GET /service-request/[token]` for public generic service requests. `apps/marketing` also exposes `GET /service-tracking/[token]` for opaque customer-safe tracking.
 
 ## Planned Domains
 - Live Google/Gmail OAuth provider QA with a fresh short-lived ID token and approved API/database target

@@ -1,5 +1,6 @@
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
+  CatalogItemKind as DurableCatalogItemKind,
   InventoryMovementDirection as DurableInventoryMovementDirection,
   InventoryMovementSource as DurableInventoryMovementSource,
   InventoryMovementType as DurableInventoryMovementType,
@@ -137,6 +138,7 @@ export type RetailOpsStockMovementHistoryType =
   | "conversion_out"
   | "opening_stock"
   | "sale"
+  | "sale_reversal"
   | "staff_assignment"
   | "staff_return"
   | "stock_adjustment"
@@ -183,6 +185,7 @@ type RetailOpsStockErrorCode =
   | "DIFFERENT_PRODUCT"
   | "INSUFFICIENT_STOCK"
   | "INVALID_STOCK_ADJUSTMENT"
+  | "ITEM_NOT_STOCKABLE"
   | "PRODUCT_VARIANT_NOT_FOUND"
   | "SAME_UNIT"
 
@@ -687,6 +690,7 @@ async function findDurableStockIntakeResult(
         product: {
           select: {
             id: true,
+            kind: true,
             name: true,
           },
         },
@@ -777,6 +781,7 @@ async function findDurableUnitConversionResult(
         product: {
           select: {
             id: true,
+            kind: true,
             name: true,
           },
         },
@@ -796,7 +801,8 @@ async function findDurableUnitConversionResult(
         movement.type === DurableInventoryMovementType.CONVERSION_OUT,
     )
     const targetMovement = movements.find(
-      (movement) => movement.type === DurableInventoryMovementType.CONVERSION_IN,
+      (movement) =>
+        movement.type === DurableInventoryMovementType.CONVERSION_IN,
     )
 
     if (
@@ -1016,9 +1022,7 @@ async function writeDurableStockIntakeMovement(
         receivedAt: input.result.intake.receivedAt,
         receivedByUserId: input.actorUserId,
         referenceNumber: input.externalId,
-        source: getDurableStockDeliverySource(
-          input.result.intake.sourceName,
-        ),
+        source: getDurableStockDeliverySource(input.result.intake.sourceName),
         sourceName: input.result.intake.sourceName,
         status: DurableStockDeliveryStatus.RECEIVED,
         storeId: input.storeId,
@@ -1035,9 +1039,7 @@ async function writeDurableStockIntakeMovement(
         notes: input.result.intake.note,
         receivedAt: input.result.intake.receivedAt,
         receivedByUserId: input.actorUserId,
-        source: getDurableStockDeliverySource(
-          input.result.intake.sourceName,
-        ),
+        source: getDurableStockDeliverySource(input.result.intake.sourceName),
         sourceName: input.result.intake.sourceName,
         status: DurableStockDeliveryStatus.RECEIVED,
       },
@@ -1115,8 +1117,7 @@ async function writeDurableStockIntakeMovement(
         movementGroupId: `stock_intake:${input.externalId}`,
         note: input.result.intake.note,
         onHandQuantity: input.result.inventory.onHandQuantity,
-        previousOnHandQuantity:
-          input.result.inventory.previousOnHandQuantity,
+        previousOnHandQuantity: input.result.inventory.previousOnHandQuantity,
         productId: input.result.unit.productId,
         productVariantId: input.result.unit.id,
         quantity: input.result.intake.quantity,
@@ -1141,8 +1142,7 @@ async function writeDurableStockIntakeMovement(
         movementGroupId: `stock_intake:${input.externalId}`,
         note: input.result.intake.note,
         onHandQuantity: input.result.inventory.onHandQuantity,
-        previousOnHandQuantity:
-          input.result.inventory.previousOnHandQuantity,
+        previousOnHandQuantity: input.result.inventory.previousOnHandQuantity,
         productId: input.result.unit.productId,
         productVariantId: input.result.unit.id,
         quantity: input.result.intake.quantity,
@@ -1364,8 +1364,7 @@ async function writeDurableStockAdjustmentMovement(
         movementGroupId: `stock_adjustment:${input.externalId}`,
         note: input.result.adjustment.note,
         onHandQuantity: input.result.inventory.onHandQuantity,
-        previousOnHandQuantity:
-          input.result.inventory.previousOnHandQuantity,
+        previousOnHandQuantity: input.result.inventory.previousOnHandQuantity,
         productId: input.result.unit.productId,
         productVariantId: input.result.unit.id,
         quantity: input.result.adjustment.quantity,
@@ -1392,8 +1391,7 @@ async function writeDurableStockAdjustmentMovement(
         movementGroupId: `stock_adjustment:${input.externalId}`,
         note: input.result.adjustment.note,
         onHandQuantity: input.result.inventory.onHandQuantity,
-        previousOnHandQuantity:
-          input.result.inventory.previousOnHandQuantity,
+        previousOnHandQuantity: input.result.inventory.previousOnHandQuantity,
         productId: input.result.unit.productId,
         productVariantId: input.result.unit.id,
         quantity: input.result.adjustment.quantity,
@@ -1722,6 +1720,7 @@ const durableStockMovementTypes = [
   DurableInventoryMovementType.LOSS,
   DurableInventoryMovementType.OPENING_STOCK,
   DurableInventoryMovementType.SALE_DEDUCTION,
+  DurableInventoryMovementType.SALE_REVERSAL,
   DurableInventoryMovementType.STAFF_ASSIGNMENT,
   DurableInventoryMovementType.STAFF_RETURN,
   DurableInventoryMovementType.STOCK_ADJUSTMENT,
@@ -1799,6 +1798,10 @@ function getDurableStockMovementHistoryType(
     return "sale"
   }
 
+  if (type === DurableInventoryMovementType.SALE_REVERSAL) {
+    return "sale_reversal"
+  }
+
   if (type === DurableInventoryMovementType.STAFF_ASSIGNMENT) {
     return "staff_assignment"
   }
@@ -1865,15 +1868,19 @@ function getDurableStockMovementSourceName(
   retailOpsMetadata: Record<string, unknown>,
 ) {
   if (movement.type === DurableInventoryMovementType.STOCK_INTAKE) {
-    return (
-      getStringField(retailOpsMetadata.sourceName) ?? "Stock intake"
-    )
+    return getStringField(retailOpsMetadata.sourceName) ?? "Stock intake"
   }
 
   if (movement.type === DurableInventoryMovementType.SALE_DEDUCTION) {
     return movement.order?.orderNumber
       ? `Sale ${movement.order.orderNumber}`
       : "Sale"
+  }
+
+  if (movement.type === DurableInventoryMovementType.SALE_REVERSAL) {
+    return movement.order?.orderNumber
+      ? `Reversal ${movement.order.orderNumber}`
+      : "Sale reversal"
   }
 
   if (movement.type === DurableInventoryMovementType.STAFF_ASSIGNMENT) {
@@ -1963,11 +1970,9 @@ function getDurableStockMovementHistoryRow(
     happenedAt: movement.happenedAt.toISOString(),
     id: `durable:${movement.id}`,
     note: movement.note,
-    onHandQuantity:
-      movement.onHandQuantity ?? movement.staffWalletQuantity,
+    onHandQuantity: movement.onHandQuantity ?? movement.staffWalletQuantity,
     previousOnHandQuantity:
-      movement.previousOnHandQuantity ??
-      movement.previousStaffWalletQuantity,
+      movement.previousOnHandQuantity ?? movement.previousStaffWalletQuantity,
     product: movement.product,
     quantity: movement.quantity,
     relatedUnit: getDurableStockMovementRelatedUnit(
@@ -1975,10 +1980,7 @@ function getDurableStockMovementHistoryRow(
       retailOpsMetadata,
     ),
     signedQuantity,
-    sourceName: getDurableStockMovementSourceName(
-      movement,
-      retailOpsMetadata,
-    ),
+    sourceName: getDurableStockMovementSourceName(movement, retailOpsMetadata),
     type: getDurableStockMovementHistoryType(movement.type),
     unit: {
       id: movement.productVariant.id,
@@ -2077,9 +2079,11 @@ async function listDurableRetailOpsStockMovementRows(
   }
 }
 
-function getStockMovementDedupKey(
-  movement: RetailOpsStockMovementHistoryRow,
-) {
+function getStockMovementDedupKey(movement: RetailOpsStockMovementHistoryRow) {
+  if (movement.type === "opening_stock") {
+    return [movement.type, movement.unit.id].join(":")
+  }
+
   return [
     movement.type,
     movement.externalId,
@@ -2089,9 +2093,7 @@ function getStockMovementDedupKey(
   ].join(":")
 }
 
-function getUniqueStockMovementRows(
-  rows: RetailOpsStockMovementHistoryRow[],
-) {
+function getUniqueStockMovementRows(rows: RetailOpsStockMovementHistoryRow[]) {
   const seenKeys = new Set<string>()
 
   return rows.filter((row) => {
@@ -2174,6 +2176,7 @@ export async function listRetailOpsStockMovements(
           ...(input.productVariantId ? { id: input.productVariantId } : {}),
           isActive: true,
           product: {
+            kind: DurableCatalogItemKind.PRODUCT,
             status: { not: "ARCHIVED" },
             storeId: input.storeId,
             tenantId: input.tenantId,
@@ -2312,6 +2315,7 @@ export async function recordRetailOpsStockIntake(
         product: {
           select: {
             id: true,
+            kind: true,
             name: true,
           },
         },
@@ -2322,6 +2326,13 @@ export async function recordRetailOpsStockIntake(
       throw new RetailOpsStockError(
         "PRODUCT_VARIANT_NOT_FOUND",
         "Product variant not found for this store.",
+      )
+    }
+
+    if (productVariant.product.kind !== DurableCatalogItemKind.PRODUCT) {
+      throw new RetailOpsStockError(
+        "ITEM_NOT_STOCKABLE",
+        "Service items do not have stock.",
       )
     }
 
@@ -2472,6 +2483,7 @@ export async function recordRetailOpsUnitConversion(
         product: {
           select: {
             id: true,
+            kind: true,
             name: true,
           },
         },
@@ -2488,6 +2500,16 @@ export async function recordRetailOpsUnitConversion(
       throw new RetailOpsStockError(
         "PRODUCT_VARIANT_NOT_FOUND",
         "Product variant not found for this store.",
+      )
+    }
+
+    if (
+      sourceVariant.product.kind !== DurableCatalogItemKind.PRODUCT ||
+      targetVariant.product.kind !== DurableCatalogItemKind.PRODUCT
+    ) {
+      throw new RetailOpsStockError(
+        "ITEM_NOT_STOCKABLE",
+        "Service items cannot participate in stock conversions.",
       )
     }
 
@@ -2706,6 +2728,7 @@ export async function recordRetailOpsStockAdjustment(
         product: {
           select: {
             id: true,
+            kind: true,
             name: true,
           },
         },
@@ -2716,6 +2739,13 @@ export async function recordRetailOpsStockAdjustment(
       throw new RetailOpsStockError(
         "PRODUCT_VARIANT_NOT_FOUND",
         "Product variant not found for this store.",
+      )
+    }
+
+    if (productVariant.product.kind !== DurableCatalogItemKind.PRODUCT) {
+      throw new RetailOpsStockError(
+        "ITEM_NOT_STOCKABLE",
+        "Service items do not have stock.",
       )
     }
 

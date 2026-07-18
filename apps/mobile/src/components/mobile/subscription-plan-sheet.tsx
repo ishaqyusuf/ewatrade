@@ -173,7 +173,7 @@ function PlanCard({
           value={`Up to ${plan.limits.businesses}`}
         />
         <PlanLimitRow
-          label="Products"
+          label="Catalog items"
           value={`Up to ${plan.limits.products}`}
         />
         <PlanLimitRow label="Staff" value={`Up to ${plan.limits.staff}`} />
@@ -390,7 +390,7 @@ export function SubscriptionPlanContent({
           used={usageSnapshot.businesses}
         />
         <UsageRow
-          label="Products"
+          label="Catalog items"
           limit={currentPlan.limits.products}
           used={usageSnapshot.products}
         />

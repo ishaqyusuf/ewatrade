@@ -40,12 +40,12 @@ export function getDashboardCommands(navItems: DashboardNavItem[]) {
   const available = new Set(navItems.map((item) => item.href))
   const commands: DashboardCommand[] = []
 
-  if (available.has("/products")) {
+  if (available.has("/catalog")) {
     commands.push({
-      description: "Open the product catalog and create sheet.",
-      href: "/products",
-      id: "create-product",
-      title: "Create product",
+      description: "Open the catalog and add a Product or Service item.",
+      href: "/catalog",
+      id: "create-item",
+      title: "Add item",
     })
   }
 

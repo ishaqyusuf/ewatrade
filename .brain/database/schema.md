@@ -49,13 +49,10 @@ Track the conceptual schema and schema ownership rules for the platform.
   `*Minor` values. Zustand persist version 1 performs a client-only one-time
   conversion from legacy local major-unit fields; it does not change database
   rows.
-- Dashboard first-store setup and protected tRPC `tenant.createStore` accept a compact onboarding payload for the effective business template, country code, product/service/offering category, sales/operating model, team size, support contact, and Other-business demand details.
-- `createTenantStore` persists cleaned first-store setup values under `Store.metadata.retailOps.onboarding` with source, captured timestamp, currency code, and the selected template snapshot.
-- `Store.metadata.retailOps.businessTemplate` stores the effective v1 template key and label. Existing stores without explicit template metadata resolve to Product Sales.
-- Dry Cleaning / Laundry stores receive a `Store.metadata.retailOps.dryCleaning` workspace for metadata-backed settings, service items, service orders, service request links, service requests, and notification intents.
-- Dry-cleaning settings currently store express surcharge percentage in metadata; service orders snapshot express line pricing and evidence metadata so later setting or catalog edits do not rewrite historical orders.
+- Dashboard first-store setup and protected tRPC `tenant.createStore` accept neutral store information. Item kind is selected when the merchant adds a catalog item, not persisted as a store/business type.
+- Historical `Store.metadata.retailOps.businessTemplate` and `Store.metadata.retailOps.dryCleaning` values are migration inputs only and are not runtime authority.
 - Other business submissions store unsupported-demand metadata under `Store.metadata.retailOps.unsupportedBusinessDemand`, while completed `OnboardingSession.formData.onboarding` preserves the raw answers for internal ranking.
-- The shared store helper writes a completed `OnboardingSession` for onboarding submissions with tenant id, actor user id, completed status, expiry, created store snapshot, source, captured timestamp, currency, template, and setup answers. Multi-step setup state, onboarding analytics, normalized onboarding field tables, and dedicated dry-cleaning Prisma tables remain planned.
+- The shared store helper writes a completed `OnboardingSession` for onboarding submissions with tenant id, actor user id, completed status, expiry, created store snapshot, source, captured timestamp, currency, and setup answers.
 - No Prisma schema or migration is required for operating currency because the
   tenant, store, product, order, and billing currency/minor-unit columns already
   exist.
@@ -67,8 +64,24 @@ Track the conceptual schema and schema ownership rules for the platform.
 - The legacy-compatible metadata path `Store.metadata.selfServiceStoreDetection` is also read during rollout.
 - Durable location-resolution event logging, geofence polygons, floor/branch metadata, and admin store-location management remain planned extensions.
 
-## Current Retail Ops Product Mapping
-- First-phase production product setup uses existing `Product`, `ProductVariant`, and `InventoryItem` records.
+## Current Product And Service Catalog Mapping
+- The existing `Product` and `ProductVariant` table names are retained as compatibility storage for canonical Catalog Items and variants.
+- `Product.kind` uses `CatalogItemKind.PRODUCT | SERVICE`; existing catalog rows backfill to `PRODUCT`, and variants inherit their parent kind.
+- Both kinds have prices and may have priced variants. `ServiceItemProfile` stores optional turnaround and service instructions for Service items.
+- Only Product variants may have `InventoryItem`, inventory movements, stock reservations, stock-wallet balances, opening/closing declarations, or unit conversions. Repository transactions reject Service variants with `ITEM_NOT_STOCKABLE`.
+- `OrderItem.kindSnapshot` stores the sold kind alongside item/variant names, quantity, unit price, and total.
+- A finalized order may contain Product-only, Service-only, or mixed lines. Product effects and Service Job creation commit atomically under the existing order external-id replay boundary.
+- `ServiceJob` belongs to tenant/store/order/customer and groups its Service order lines through `ServiceJobLine`.
+- `ServiceJobEvent` records status, delay, note, due-date, cancellation, and assignment history. `ServiceJobEvidence` is private. `ServiceJob.assignedUserId` captures the current assignment.
+- `ServiceRequestLink`, `ServiceRequest`, and `ServiceRequestLine` provide opaque public intake. `ServiceNotificationIntent` records auditable customer communication intents.
+- Cancellation fields on `OrderItem`/`ServiceJobLine`, `InventoryMovement(SALE_REVERSAL)`, and `OrderPaymentEvent` retain cancellation, inventory reversal, refund, and correction history without deleting commercial records.
+- Unique legacy-id fields on Product/variant and generic Service records retain source identifiers for idempotent migration and token preservation.
+- Generic service reports derive operational counts from Service Jobs and net revenue from commercial order/payment events.
+- The legacy metadata migration is implemented in `packages/db/scripts/migrate-legacy-service-operations.ts`; it is bounded, resumable, tenant/store-scoped, idempotent, and privacy-safe.
+- Product offline events remain supported. Service operations are online-only.
+
+## Product Compatibility Details
+- Product setup uses existing `Product`, `ProductVariant`, and `InventoryItem` records.
 - The primary unit is represented as the default `ProductVariant`.
 - Optional sub-units or variants are represented as additional `ProductVariant` records with independent prices.
 - The standard mobile item form remains metadata-backed in this phase: product public image links are stored under `Product.metadata.retailOps.imageLinks`/`imagesUrl`, variant public image links and enabled state are stored under `ProductVariant.metadata.retailOps`, and local camera/gallery URIs are not persisted until durable upload storage is selected.

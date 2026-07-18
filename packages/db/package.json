@@ -3,12 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "files": [
-    "src",
-    "generated",
-    "prisma",
-    "prisma.config.ts"
-  ],
+  "files": ["src", "generated", "prisma", "prisma.config.ts"],
   "exports": {
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
@@ -22,6 +17,7 @@
     "format": "bun run db:format",
     "migrate:dev": "bun run db:migrate",
     "migrate:deploy": "bun run db:migrate:deploy",
+    "migrate:legacy-services": "bun scripts/migrate-legacy-service-operations.ts",
     "db:push": "prisma db push",
     "seed:retail-ops-reference": "bun scripts/seed-retail-ops-reference-data.ts",
     "validate:retail-ops-live": "bun scripts/retail-ops-live-validation.ts",

@@ -86,6 +86,7 @@ const STOCK_MOVEMENT_TYPE_LABELS: Record<
   conversion_out: "Conversion out",
   opening_stock: "Opening stock",
   sale: "Sale",
+  sale_reversal: "Sale reversal",
   staff_assignment: "Staff assignment",
   staff_return: "Staff return",
   stock_adjustment: "Stock adjustment",

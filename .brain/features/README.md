@@ -8,7 +8,8 @@ Detailed feature docs for implemented or planned product areas.
 - Link features to related APIs, schema entities, and workflows when those exist.
 
 ## Planned Features
-- [Business Type Onboarding And Dry Cleaning](./business-type-onboarding-dry-cleaning.md)
+- [Product And Service Catalog Items](./product-service-catalog-items.md)
+- [Business Type Onboarding And Dry Cleaning (historical)](./business-type-onboarding-dry-cleaning.md)
 - [Ewatrade Dispatch Internal App](./ewatrade-dispatch-internal-app.md)
 - [Mobile Retail Ops MVP](./mobile-retail-ops-mvp-spec.md)
 - [Product Image Marketplace And Storefront Publishing](./product-image-marketplace-and-storefront-publishing.md)

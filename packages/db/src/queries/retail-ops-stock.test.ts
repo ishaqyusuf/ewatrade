@@ -14,6 +14,7 @@ type StockCall = {
 
 function createProductVariantRow(input?: {
   id?: string
+  kind?: "PRODUCT" | "SERVICE"
   name?: string
   ratioDenominator?: number
   ratioNumerator?: number
@@ -26,15 +27,18 @@ function createProductVariantRow(input?: {
     name: input?.name ?? "Bag",
     product: {
       id: "product_rice",
+      kind: input?.kind ?? "PRODUCT",
       name: "Rice",
     },
   }
 }
 
-function createMockStockIntakeDb() {
+function createMockStockIntakeDb(input?: {
+  variant?: ReturnType<typeof createProductVariantRow>
+}) {
   const calls: StockCall[] = []
   const receivedAt = new Date("2026-07-12T09:00:00.000Z")
-  const variant = createProductVariantRow()
+  const variant = input?.variant ?? createProductVariantRow()
 
   const tx = {
     inventoryItem: {
@@ -358,6 +362,28 @@ function getCall(calls: StockCall[], kind: string) {
 }
 
 describe("retail ops stock queries", () => {
+  test("rejects stock intake for a service item before inventory mutation", async () => {
+    const db = createMockStockIntakeDb({
+      variant: createProductVariantRow({ kind: "SERVICE" }),
+    })
+
+    await expect(
+      recordRetailOpsStockIntake(db.client, {
+        actorUserId: "user_owner",
+        productVariantId: "variant_service",
+        quantity: 1,
+        storeId: "store_123",
+        tenantId: "tenant_123",
+      }),
+    ).rejects.toMatchObject({
+      code: "ITEM_NOT_STOCKABLE",
+    })
+
+    expect(
+      db.calls.some((call) => call.kind.startsWith("inventoryItem.")),
+    ).toBe(false)
+  })
+
   test("records stock intake with delivery and durable movement ledger", async () => {
     const db = createMockStockIntakeDb()
 

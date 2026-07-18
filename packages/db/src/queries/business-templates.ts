@@ -2095,3 +2095,17 @@ export async function getDryCleaningOperationalReport(
     to: input.to?.toISOString() ?? null,
   }
 }
+
+/**
+ * Migration-only reader for the legacy store-metadata service model.
+ * New runtime features must use the relational catalog/service queries.
+ */
+export function getLegacyServiceOperationsSnapshot(metadata: unknown) {
+  return {
+    notificationIntents: getDryCleaningNotificationIntents(metadata),
+    orders: getDryCleaningServiceOrders(metadata),
+    requestLinks: getDryCleaningRequestLinks(metadata),
+    requests: getDryCleaningServiceRequests(metadata),
+    serviceItems: getDryCleaningServiceItems(metadata),
+  }
+}

@@ -72,6 +72,7 @@ export type StockMovementRow = {
     | "conversion_out"
     | "opening_stock"
     | "sale"
+    | "sale_reversal"
     | "staff_assignment"
     | "staff_return"
     | "stock_adjustment"
@@ -181,6 +182,8 @@ export function formatMovementType(type: StockMovementRow["type"]) {
       return "Opening stock"
     case "sale":
       return "Sale"
+    case "sale_reversal":
+      return "Sale reversal"
     case "staff_assignment":
       return "Staff assignment"
     case "staff_return":

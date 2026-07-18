@@ -122,12 +122,13 @@ type VariantActionTarget =
       type: "value"
     }
 
-type ProductionProduct = {
-  product: {
+type ProductionCatalogItem = {
+  item: {
     id: string
+    kind: "product" | "service"
     name: string
   }
-  units: Array<{
+  variants: Array<{
     id: string
     isDefault: boolean
     name: string
@@ -140,6 +141,7 @@ type CreateProductInput = {
   description?: string
   imageLinks?: string[]
   imageUrl?: string
+  kind: "product" | "service"
   name: string
   openingStockQuantity: number
   priceMinor: number
@@ -154,6 +156,11 @@ type CreateProductInput = {
     priceMinor: number
     variantLabel?: string
   }>
+  service?: {
+    estimatedTurnaroundHours?: number
+    fulfillmentMode: "immediate" | "tracked"
+    instructions?: string
+  }
 }
 
 const FIRST_PRODUCT_STEPS = ["Item"]
@@ -270,13 +277,13 @@ function inferConversionMultiplier(name: string) {
 }
 
 function getMatchingUnit(
-  product: ProductionProduct,
+  product: ProductionCatalogItem,
   input: {
     isDefault?: boolean
     name: string
   },
 ) {
-  return product.units.find((unit) =>
+  return product.variants.find((unit) =>
     typeof input.isDefault === "boolean"
       ? unit.isDefault === input.isDefault
       : unit.name.trim().toLowerCase() === input.name.trim().toLowerCase(),
@@ -532,6 +539,7 @@ export function FirstProductSetupContent({
     typeof setTimeout
   > | null>(null)
   const [name, setName] = useState("")
+  const [itemKind, setItemKind] = useState<"product" | "service">("product")
   const [usesMultiplePricing, setUsesMultiplePricing] = useState(false)
   const [showDescription, setShowDescription] = useState(false)
   const [description, setDescription] = useState("")
@@ -541,6 +549,11 @@ export function FirstProductSetupContent({
   const [localImageUri, setLocalImageUri] = useState("")
   const [imageLinks, setImageLinks] = useState<string[]>([])
   const [startingStock, setStartingStock] = useState("")
+  const [serviceFulfillmentMode, setServiceFulfillmentMode] = useState<
+    "immediate" | "tracked"
+  >("tracked")
+  const [serviceInstructions, setServiceInstructions] = useState("")
+  const [serviceTurnaroundHours, setServiceTurnaroundHours] = useState("")
   const [variants, setVariants] = useState<VariantDraft[]>([])
   const [variantCombinations, setVariantCombinations] = useState<
     VariantCombinationDraft[]
@@ -559,6 +572,7 @@ export function FirstProductSetupContent({
     useState<VariantSetupTab>("variants")
   const [submitError, setSubmitError] = useState<string | null>(null)
   const shouldUseLocalQueue = isOfflineMode || isLocalSessionToken(auth.token)
+  const isService = itemKind === "service"
   const subscription = getBusinessSubscription(subscriptions, activeBusinessId)
   const plan = getPlan(subscription.planId)
   const isAtProductLimit = products.length >= plan.limits.products
@@ -721,6 +735,7 @@ export function FirstProductSetupContent({
     !isInlineVariantComposerVisible
   const resetForm = () => {
     setName("")
+    setItemKind("product")
     setUsesMultiplePricing(false)
     setShowDescription(false)
     setDescription("")
@@ -729,6 +744,9 @@ export function FirstProductSetupContent({
     setLocalImageUri("")
     setImageLinks([])
     setStartingStock("")
+    setServiceFulfillmentMode("tracked")
+    setServiceInstructions("")
+    setServiceTurnaroundHours("")
     setVariants([])
     setVariantCombinations([])
     setVariantSearch("")
@@ -743,12 +761,12 @@ export function FirstProductSetupContent({
     setSubmitError(null)
   }
   const createProductMutation = useMutation(
-    trpc.retailOps.createProduct.mutationOptions({
+    trpc.retailOps.createCatalogItem.mutationOptions({
       onError: (error) => {
         setSubmitError(error.message)
       },
       onSuccess: (createdProduct, input) => {
-        const productionProduct = createdProduct as ProductionProduct
+        const productionProduct = createdProduct as ProductionCatalogItem
         const productInput = input as CreateProductInput
         const defaultUnit = getMatchingUnit(productionProduct, {
           isDefault: true,
@@ -762,8 +780,10 @@ export function FirstProductSetupContent({
           imageUrl: productInput.imageUrl,
           name: productInput.name,
           priceMinor: productInput.priceMinor,
-          remoteId: productionProduct.product.id,
+          kind: productInput.kind,
+          remoteId: productionProduct.item.id,
           remoteVariantId: defaultUnit?.id,
+          service: productInput.service,
           startingStock: productInput.openingStockQuantity,
           syncStatus: "synced",
           unitName: productInput.primaryUnitName,
@@ -774,7 +794,10 @@ export function FirstProductSetupContent({
 
             return {
               conversionMultiplier: variant.conversionMultiplier,
-              currentStock: variant.openingStockQuantity,
+              currentStock:
+                productInput.kind === "product"
+                  ? variant.openingStockQuantity
+                  : 0,
               enabled: variant.enabled,
               imageLinks: variant.imageLinks,
               imageUrl: variant.imageUrl,
@@ -833,21 +856,28 @@ export function FirstProductSetupContent({
         areProductImageLinksValid([variant.imageUrl, ...variant.imageLinks]) &&
         isNumberInput(variant.price) &&
         parseAmount(variant.price) > 0 &&
-        isWholeNumberInput(variant.stock) &&
-        parseWholeQuantity(variant.stock) >= 0,
+        (isService ||
+          (isWholeNumberInput(variant.stock) &&
+            parseWholeQuantity(variant.stock) >= 0)),
     )
   const arePrimaryUnitFieldsValid =
-    !!unitName.trim() &&
+    (isService || !!unitName.trim()) &&
     isNumberInput(price) &&
     parseAmount(price) > 0 &&
-    isWholeNumberInput(startingStock) &&
-    parseWholeQuantity(startingStock) >= 0
+    (isService ||
+      (isWholeNumberInput(startingStock) &&
+        parseWholeQuantity(startingStock) >= 0))
   const canSubmit =
     !isAtProductLimit &&
     !createProductMutation.isPending &&
     !!name.trim() &&
     description.trim().length <= 1000 &&
     areProductImageLinksValid(imageLinks) &&
+    (!isService ||
+      !serviceTurnaroundHours.trim() ||
+      (isWholeNumberInput(serviceTurnaroundHours) &&
+        parseWholeQuantity(serviceTurnaroundHours) > 0)) &&
+    (!isService || !shouldUseLocalQueue) &&
     (shouldUsePrimaryUnitFields
       ? arePrimaryUnitFieldsValid
       : areActiveVariantRowsValid)
@@ -1048,19 +1078,24 @@ export function FirstProductSetupContent({
       ? (majorToMinor(price) ?? 0)
       : (majorToMinor(activeVariantRows[0]?.price ?? price) ?? 0)
     const primaryUnitName = shouldUsePrimaryUnitFields
-      ? unitName.trim()
+      ? isService
+        ? "Standard"
+        : unitName.trim()
       : getHiddenVariantParentUnitName(
           activeVariantRows.map((variant) => variant.name),
         )
 
     return {
       description: description.trim() || undefined,
+      kind: itemKind,
       name: name.trim(),
       imageLinks: normalizedImageLinks,
       imageUrl: normalizedImageLinks[0],
-      openingStockQuantity: shouldUsePrimaryUnitFields
-        ? parseWholeQuantity(startingStock)
-        : 0,
+      openingStockQuantity: isService
+        ? 0
+        : shouldUsePrimaryUnitFields
+          ? parseWholeQuantity(startingStock)
+          : 0,
       priceMinor: primaryPriceMinor,
       primaryUnitName,
       variants: shouldUsePrimaryUnitFields
@@ -1081,10 +1116,23 @@ export function FirstProductSetupContent({
               imageLinks: cleanImageLinks(variant.imageLinks),
               imageUrl: variant.imageUrl.trim() || undefined,
               name: variant.name.trim(),
-              openingStockQuantity: parseWholeQuantity(variant.stock),
+              openingStockQuantity: isService
+                ? 0
+                : parseWholeQuantity(variant.stock),
               priceMinor: majorToMinor(variant.price) ?? 0,
               variantLabel: variant.variantLabel.trim() || undefined,
             })),
+      service: isService
+        ? {
+            estimatedTurnaroundHours:
+              serviceFulfillmentMode === "tracked" &&
+              serviceTurnaroundHours.trim()
+                ? parseWholeQuantity(serviceTurnaroundHours)
+                : undefined,
+            fulfillmentMode: serviceFulfillmentMode,
+            instructions: serviceInstructions.trim() || undefined,
+          }
+        : undefined,
     }
   }
 
@@ -1508,8 +1556,10 @@ export function FirstProductSetupContent({
       description: input.description,
       imageLinks: input.imageLinks,
       imageUrl: input.imageUrl,
+      kind: input.kind,
       name: input.name,
       priceMinor: input.priceMinor,
+      service: input.service,
       startingStock: input.openingStockQuantity,
       unitName: input.primaryUnitName,
       variants: input.variants.map((variant) => ({
@@ -1562,7 +1612,10 @@ export function FirstProductSetupContent({
   const variantActionSubtitle = selectedActionIsEnabled ? "Active" : "Inactive"
   const variantManagementTabs = (
     <View className="flex-row rounded-full bg-muted p-1">
-      {(["variants", "stocks"] as VariantSetupTab[]).map((tab) => {
+      {(isService
+        ? (["variants"] as VariantSetupTab[])
+        : (["variants", "stocks"] as VariantSetupTab[])
+      ).map((tab) => {
         const isSelected = tab === variantSetupTab
 
         return (
@@ -1718,7 +1771,9 @@ export function FirstProductSetupContent({
                 </Text>
               ) : null}
               <Pressable
-                accessibilityLabel="Expand stock row"
+                accessibilityLabel={
+                  isService ? "Expand service option" : "Expand stock row"
+                }
                 className="h-10 w-10 items-center justify-center rounded-full bg-muted"
                 haptic
                 onPress={() => toggleVariantRowExpanded(variant.id)}
@@ -1730,7 +1785,11 @@ export function FirstProductSetupContent({
                 />
               </Pressable>
               <Pressable
-                accessibilityLabel="Open stock row options"
+                accessibilityLabel={
+                  isService
+                    ? "Open service option settings"
+                    : "Open stock row options"
+                }
                 className="h-10 w-10 items-center justify-center rounded-full bg-muted"
                 haptic
                 onPress={() =>
@@ -1757,23 +1816,25 @@ export function FirstProductSetupContent({
                   value={variant.price}
                 />
               </View>
-              <View className="min-w-0 flex-1">
-                <FormField
-                  inputMode="numeric"
-                  keyboardType="numeric"
-                  label="Stock"
-                  leadingIcon="Warehouse"
-                  onChangeText={(value) =>
-                    updateVariantRow(
-                      variant.id,
-                      "stock",
-                      normalizeWholeNumberInput(value),
-                    )
-                  }
-                  placeholder="Enter stock"
-                  value={variant.stock}
-                />
-              </View>
+              {!isService ? (
+                <View className="min-w-0 flex-1">
+                  <FormField
+                    inputMode="numeric"
+                    keyboardType="numeric"
+                    label="Stock"
+                    leadingIcon="Warehouse"
+                    onChangeText={(value) =>
+                      updateVariantRow(
+                        variant.id,
+                        "stock",
+                        normalizeWholeNumberInput(value),
+                      )
+                    }
+                    placeholder="Enter stock"
+                    value={variant.stock}
+                  />
+                </View>
+              ) : null}
             </View>
 
             {variant.expanded ? (
@@ -1850,7 +1911,16 @@ export function FirstProductSetupContent({
   const variantSetupContent = shouldShowVariantTabs ? (
     <View className="gap-4">
       {variantManagementTabs}
-      {variantSetupTab === "variants" ? variantGroupsView : stockRowsView}
+      {isService ? (
+        <>
+          {variantGroupsView}
+          {stockRowsView}
+        </>
+      ) : variantSetupTab === "variants" ? (
+        variantGroupsView
+      ) : (
+        stockRowsView
+      )}
     </View>
   ) : (
     <SetupSection
@@ -1867,7 +1937,9 @@ export function FirstProductSetupContent({
             No variants yet
           </Text>
           <Text className="text-center text-sm leading-5 text-muted-foreground">
-            Add at least one variant, then enter its price and current stock.
+            {isService
+              ? "Add at least one service option, then enter its price."
+              : "Add at least one variant, then enter its price and current stock."}
           </Text>
         </View>
       ) : (
@@ -1888,7 +1960,7 @@ export function FirstProductSetupContent({
           title="Set up item"
         />
 
-        {shouldUseLocalQueue ? (
+        {shouldUseLocalQueue && !isService ? (
           <SetupInlineNotice
             icon="Wind"
             text="This item will sync when connection is ready."
@@ -1896,10 +1968,46 @@ export function FirstProductSetupContent({
           />
         ) : null}
 
+        {shouldUseLocalQueue && isService ? (
+          <SetupInlineNotice
+            icon="Wind"
+            text="Service items need a live connection. Product items can still be added offline."
+            tone="warning"
+          />
+        ) : null}
+
         <SetupSection
-          description="Add a name and choose the right pricing setup."
+          description="Choose what the item represents, then add its name and pricing."
           title="Item"
         >
+          <View className="flex-row gap-2">
+            <SetupChoicePill
+              onPress={() => setItemKind("product")}
+              selected={!isService}
+            >
+              Product
+            </SetupChoicePill>
+            <SetupChoicePill
+              onPress={() => {
+                setItemKind("service")
+                setStartingStock("0")
+                setVariantSetupTab("variants")
+              }}
+              selected={isService}
+            >
+              Service
+            </SetupChoicePill>
+          </View>
+
+          <SetupInlineNotice
+            icon={isService ? "ClipboardList" : "Briefcase"}
+            text={
+              isService
+                ? "Services have a selling price but no stock."
+                : "Products have a selling price and tracked stock."
+            }
+          />
+
           <FormField
             label="Item name"
             leadingIcon="FileText"
@@ -1920,14 +2028,14 @@ export function FirstProductSetupContent({
               error={
                 description.trim().length <= 1000
                   ? undefined
-                  : "Keep the product description under 1000 characters."
+                  : "Keep the item description under 1000 characters."
               }
-              helper="Optional. This appears in the shared product page and link preview."
+              helper="Optional. This appears anywhere the item is shared."
               label="Description"
               leadingIcon="StickyNote"
               multiline
               onChangeText={setDescription}
-              placeholder="Enter product description"
+              placeholder="Enter item description"
               value={description}
             />
           ) : (
@@ -1943,8 +2051,8 @@ export function FirstProductSetupContent({
         </SetupSection>
 
         <SetupSection
-          description="Use the camera, gallery, or public links. Public links are used for shared product previews."
-          title="Product image links"
+          description="Use the camera, gallery, or public links. Public links are used anywhere the item is shared."
+          title="Item images"
         >
           <Pressable
             accessibilityLabel="Pick or take item image"
@@ -2000,10 +2108,10 @@ export function FirstProductSetupContent({
                       }
                       inputMode="url"
                       keyboardType="url"
-                      label="Product image link"
+                      label="Item image link"
                       leadingIcon="Globe"
                       onChangeText={(value) => updateImageLink(index, value)}
-                      placeholder="Enter product image link"
+                      placeholder="Enter item image link"
                       value={link}
                     />
                   </View>
@@ -2034,54 +2142,114 @@ export function FirstProductSetupContent({
 
         {shouldUsePrimaryUnitFields ? (
           <SetupSection
-            description="Use this path when the item has one selling unit."
-            title="Primary unit, price, and stock"
+            description={
+              isService
+                ? "Set the standard price customers pay for this service."
+                : "Use this path when the item has one selling unit."
+            }
+            title={
+              isService ? "Service price" : "Primary unit, price, and stock"
+            }
           >
-            <FormField
-              autoCapitalize="words"
-              label="Primary unit"
-              leadingIcon="Hash"
-              onBlur={hideUnitSuggestionBar}
-              onChangeText={setUnitName}
-              onFocus={showUnitSuggestionBar}
-              placeholder="Enter unit name"
-              value={unitName}
-            />
+            {!isService ? (
+              <FormField
+                autoCapitalize="words"
+                label="Primary unit"
+                leadingIcon="Hash"
+                onBlur={hideUnitSuggestionBar}
+                onChangeText={setUnitName}
+                onFocus={showUnitSuggestionBar}
+                placeholder="Enter unit name"
+                value={unitName}
+              />
+            ) : null}
 
             <View className="flex-row gap-3">
               <View className="min-w-0 flex-1">
                 <MoneyField
                   currencyCode={currencyCode}
-                  label="Price per unit"
+                  label={isService ? "Price" : "Price per unit"}
                   onChangeValue={setPrice}
                   placeholder="Enter price"
                   value={price}
                 />
               </View>
-              <View className="min-w-0 flex-1">
-                <FormField
-                  inputMode="numeric"
-                  keyboardType="numeric"
-                  label="Current stock"
-                  leadingIcon="Warehouse"
-                  onChangeText={(value) =>
-                    setStartingStock(normalizeWholeNumberInput(value))
-                  }
-                  placeholder="Enter stock"
-                  value={startingStock}
-                />
-              </View>
+              {!isService ? (
+                <View className="min-w-0 flex-1">
+                  <FormField
+                    inputMode="numeric"
+                    keyboardType="numeric"
+                    label="Current stock"
+                    leadingIcon="Warehouse"
+                    onChangeText={(value) =>
+                      setStartingStock(normalizeWholeNumberInput(value))
+                    }
+                    placeholder="Enter stock"
+                    value={startingStock}
+                  />
+                </View>
+              ) : null}
             </View>
           </SetupSection>
         ) : null}
 
         {usesMultiplePricing ? variantSetupContent : null}
 
+        {isService ? (
+          <SetupSection
+            description="Optional details help staff and customers understand how the work will be fulfilled."
+            title="Service fulfillment"
+          >
+            <View className="flex-row gap-2">
+              <SetupChoicePill
+                onPress={() => setServiceFulfillmentMode("tracked")}
+                selected={serviceFulfillmentMode === "tracked"}
+              >
+                Tracked job
+              </SetupChoicePill>
+              <SetupChoicePill
+                onPress={() => setServiceFulfillmentMode("immediate")}
+                selected={serviceFulfillmentMode === "immediate"}
+              >
+                Immediate
+              </SetupChoicePill>
+            </View>
+            {serviceFulfillmentMode === "tracked" ? (
+              <FormField
+                error={
+                  !serviceTurnaroundHours.trim() ||
+                  (isWholeNumberInput(serviceTurnaroundHours) &&
+                    parseWholeQuantity(serviceTurnaroundHours) > 0)
+                    ? undefined
+                    : "Enter turnaround as whole hours greater than zero."
+                }
+                inputMode="numeric"
+                keyboardType="numeric"
+                label="Estimated turnaround (hours)"
+                leadingIcon="Clock"
+                onChangeText={(value) =>
+                  setServiceTurnaroundHours(normalizeWholeNumberInput(value))
+                }
+                placeholder="48"
+                value={serviceTurnaroundHours}
+              />
+            ) : null}
+            <FormField
+              label="Service instructions"
+              leadingIcon="StickyNote"
+              multiline
+              onChangeText={setServiceInstructions}
+              placeholder="Add handling or fulfillment instructions"
+              value={serviceInstructions}
+            />
+          </SetupSection>
+        ) : null}
+
         {isAtProductLimit ? (
           <StatusBanner
             icon="TriangleAlert"
-            message={`${plan.name} allows ${plan.limits.products} products. Open Subscription to move to a higher tier.`}
-            title="Product limit reached"
+            message={`${plan.name} allows ${plan.limits.products} catalog items. Products and Services both count. Open Subscription to move to a higher tier.`}
+            title="Catalog limit reached"
             tone="destructive"
           />
         ) : null}

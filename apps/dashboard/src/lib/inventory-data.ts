@@ -42,6 +42,7 @@ export async function getDashboardInventory(input: {
     },
     take: 150,
     where: {
+      kind: "PRODUCT",
       status: { not: "ARCHIVED" },
       storeId: input.storeId,
       tenantId: input.tenantId,

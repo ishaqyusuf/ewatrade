@@ -362,6 +362,74 @@ describe("mobile retail ops local MVP smoke flow", () => {
     })
   })
 
+  test("keeps Service items priced but outside inventory and offline sync", () => {
+    const businessId = "business-services"
+
+    useRetailOpsStore.getState().addFirstProduct({
+      businessId,
+      kind: "service",
+      name: "Standard consultation",
+      priceMinor: 50_000,
+      startingStock: 99,
+      syncStatus: "synced",
+      unitName: "Standard",
+      variants: [],
+    })
+
+    const service = useRetailOpsStore.getState().products[0]
+
+    expect(service).toMatchObject({
+      currentStock: 0,
+      kind: "service",
+      priceMinor: 50_000,
+      startingStock: 0,
+    })
+    expect(useRetailOpsStore.getState().stockMovements).toHaveLength(0)
+
+    useRetailOpsStore.getState().recordStockIntake({
+      businessId,
+      productId: service.id,
+      quantity: 4,
+      syncStatus: "pending",
+    })
+    useRetailOpsStore.getState().recordStockAdjustment({
+      businessId,
+      direction: "increase",
+      productId: service.id,
+      quantity: 3,
+      reason: "correction",
+      syncStatus: "pending",
+    })
+    useRetailOpsStore.getState().createSale({
+      attendantName: "Ishaq",
+      businessId,
+      customerName: "Amina",
+      kind: "service",
+      paymentMethod: "cash",
+      productId: service.id,
+      productName: service.name,
+      quantity: 2,
+      syncStatus: "synced",
+      unitName: service.unitName,
+      unitPriceMinor: service.priceMinor,
+    })
+
+    const state = useRetailOpsStore.getState()
+
+    expect(state.products[0]).toMatchObject({
+      currentStock: 0,
+      startingStock: 0,
+    })
+    expect(state.stockMovements).toHaveLength(0)
+    expect(state.sales[0]).toMatchObject({
+      kind: "service",
+      quantity: 2,
+      totalMinor: 100_000,
+    })
+    expect(state.sales[0]?.repSessionId).toBeUndefined()
+    expect(state.syncEvents).toHaveLength(0)
+  })
+
   test("migrates legacy persisted major-unit money into explicit minor units once", () => {
     const migrated = migrateRetailOpsPersistedState({
       closeouts: [

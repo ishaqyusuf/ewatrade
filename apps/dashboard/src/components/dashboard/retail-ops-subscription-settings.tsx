@@ -38,7 +38,7 @@ type SettingsPanelItem = {
 const ENTITLEMENT_LABELS: Record<Entitlement["key"], string> = {
   businesses: "Businesses",
   offlineDevices: "Offline devices",
-  products: "Products",
+  products: "Catalog items",
   reportsHistoryDays: "Report history",
   staff: "Staff",
 }
@@ -288,7 +288,7 @@ function PlanCard({
           </dd>
         </div>
         <div className="flex justify-between gap-3">
-          <dt>Products</dt>
+          <dt>Catalog items</dt>
           <dd className="font-medium text-foreground">
             {formatLimit("products", plan.limits.products)}
           </dd>

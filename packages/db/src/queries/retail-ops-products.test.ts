@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test"
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
+  createRetailOpsCatalogItem,
   createRetailOpsProduct,
   listRetailOpsProductUnitPriceHistory,
   listRetailOpsProductUnitTemplates,
+  updateRetailOpsCatalogItem,
 } from "./retail-ops-products"
 
 type ProductCall = {
@@ -116,6 +118,20 @@ function createMockProductSetupDb(options?: {
         }
       },
     },
+    serviceItemProfile: {
+      upsert: async ({ create, update, where }: Record<string, unknown>) => {
+        calls.push({
+          data: {
+            create,
+            update,
+          },
+          kind: "serviceItemProfile.upsert",
+          where,
+        })
+
+        return { id: "service_profile_123" }
+      },
+    },
     store: {
       count: async ({ where }: { where: unknown }) => {
         calls.push({ kind: "store.count", where })
@@ -211,6 +227,194 @@ function createMockProductSetupDb(options?: {
     client: db as unknown as PrismaClient,
   }
 }
+
+describe("catalog item creation", () => {
+  test("creates a priced service item without inventory", async () => {
+    const mock = createMockProductSetupDb()
+
+    const result = await createRetailOpsCatalogItem(mock.client, {
+      actorUserId: "user_owner",
+      description: "Wash and press one shirt",
+      kind: "service",
+      name: "Shirt cleaning",
+      priceMinor: 50_000,
+      service: {
+        estimatedTurnaroundHours: 48,
+        fulfillmentMode: "tracked",
+        instructions: "Inspect buttons before washing.",
+      },
+      storeId: "store_123",
+      tenantId: "tenant_123",
+      variants: [
+        {
+          name: "Express",
+          priceMinor: 75_000,
+          variantLabel: "Service level",
+        },
+      ],
+    })
+
+    expect(result.item).toMatchObject({
+      id: "product_123",
+      kind: "service",
+      name: "Rice",
+    })
+    expect(
+      mock.calls.find((call) => call.kind === "product.create")?.data,
+    ).toMatchObject({
+      kind: "SERVICE",
+      listPriceMinor: 50_000,
+    })
+    expect(
+      mock.calls.filter((call) => call.kind === "inventoryItem.create"),
+    ).toHaveLength(0)
+    expect(
+      mock.calls.find((call) => call.kind === "serviceItemProfile.upsert"),
+    ).toBeDefined()
+    expect(
+      mock.calls.filter((call) => call.kind === "productVariant.create"),
+    ).toHaveLength(2)
+  })
+})
+
+describe("catalog item updates", () => {
+  function createMockCatalogUpdateDb(input: {
+    operationalReferenceCount?: number
+    status: "ACTIVE" | "DRAFT"
+  }) {
+    const calls: ProductCall[] = []
+    const count = async () => input.operationalReferenceCount ?? 0
+    const resultRow = {
+      category: null,
+      currencyCode: "NGN",
+      description: null,
+      id: "item_123",
+      kind: "SERVICE",
+      metadata: {},
+      name: "Draft service",
+      serviceProfile: {
+        estimatedTurnaroundHours: null,
+        fulfillmentMode: "TRACKED",
+        instructions: null,
+      },
+      slug: "draft-service",
+      status: input.status,
+      variants: [
+        {
+          id: "variant_123",
+          inventoryItem: null,
+          isDefault: true,
+          name: "Standard",
+          priceMinor: 500,
+          sku: "draft-service-standard",
+        },
+      ],
+    }
+    const tx = {
+      inventoryItem: { count },
+      inventoryMovement: { count },
+      orderItem: { count },
+      productShareLink: { count },
+      serviceJobLine: { count },
+      serviceRequestLine: { count },
+      staffStockWallet: { count },
+      product: {
+        findFirst: async () => ({
+          id: "item_123",
+          kind: "PRODUCT",
+          metadata: {},
+          status: input.status,
+          variants: [{ id: "variant_123" }],
+        }),
+        findUniqueOrThrow: async () => resultRow,
+        update: async ({ data }: { data: unknown }) => {
+          calls.push({ data, kind: "product.update" })
+          return { id: "item_123" }
+        },
+      },
+      productVariant: {
+        update: async () => ({ id: "variant_123" }),
+      },
+      serviceItemProfile: {
+        deleteMany: async () => ({ count: 0 }),
+        upsert: async ({ create }: { create: unknown }) => {
+          calls.push({ data: create, kind: "serviceItemProfile.upsert" })
+          return { id: "profile_123" }
+        },
+      },
+    }
+    const db = {
+      $transaction: async <T>(
+        callback: (transaction: typeof tx) => Promise<T>,
+      ) => callback(tx),
+    }
+
+    return {
+      calls,
+      client: db as unknown as PrismaClient,
+    }
+  }
+
+  test("allows an unused draft item kind to be corrected", async () => {
+    const mock = createMockCatalogUpdateDb({ status: "DRAFT" })
+
+    const updated = await updateRetailOpsCatalogItem(mock.client, {
+      actorUserId: "user_owner",
+      itemId: "item_123",
+      kind: "service",
+      service: {
+        fulfillmentMode: "tracked",
+      },
+      storeId: "store_123",
+      tenantId: "tenant_123",
+    })
+
+    expect(updated.kind).toBe("service")
+    expect(mock.calls).toContainEqual(
+      expect.objectContaining({
+        data: expect.objectContaining({ kind: "SERVICE" }),
+        kind: "product.update",
+      }),
+    )
+  })
+
+  test("rejects an item kind change after activation", async () => {
+    const mock = createMockCatalogUpdateDb({ status: "ACTIVE" })
+
+    await expect(
+      updateRetailOpsCatalogItem(mock.client, {
+        actorUserId: "user_owner",
+        itemId: "item_123",
+        kind: "service",
+        storeId: "store_123",
+        tenantId: "tenant_123",
+      }),
+    ).rejects.toThrow(
+      "An item type can only be corrected while the item is an unused draft.",
+    )
+
+    expect(mock.calls).toHaveLength(0)
+  })
+
+  test("rejects a draft kind change once operational history exists", async () => {
+    const mock = createMockCatalogUpdateDb({
+      operationalReferenceCount: 1,
+      status: "DRAFT",
+    })
+
+    await expect(
+      updateRetailOpsCatalogItem(mock.client, {
+        actorUserId: "user_owner",
+        itemId: "item_123",
+        kind: "service",
+        storeId: "store_123",
+        tenantId: "tenant_123",
+      }),
+    ).rejects.toThrow(
+      "An item with operational history must be archived and recreated to change its type.",
+    )
+  })
+})
 
 function createMockProductReadsDb() {
   const calls: ProductCall[] = []

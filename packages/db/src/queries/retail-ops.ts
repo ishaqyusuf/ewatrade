@@ -93,6 +93,7 @@ export async function getRetailOpsInventorySnapshot(
 ): Promise<RetailOpsInventoryUnit[]> {
   const products = await db.product.findMany({
     where: {
+      kind: "PRODUCT",
       tenantId: input.tenantId,
       storeId: input.storeId,
       status: { not: "ARCHIVED" },
@@ -200,7 +201,7 @@ export async function getRetailOpsSalesByProduct(
 
   const grouped = new Map<string, RetailOpsSalesByProductRow>()
 
-  orderItems.forEach((item) => {
+  for (const item of orderItems) {
     const unitName = item.productVariant?.name ?? "Unit"
     const key = `${item.productId}:${unitName}`
     const current = grouped.get(key) ?? {
@@ -216,7 +217,7 @@ export async function getRetailOpsSalesByProduct(
       grossMinor: current.grossMinor + item.totalPriceMinor,
       quantity: current.quantity + item.quantity,
     })
-  })
+  }
 
   return Array.from(grouped.values()).sort(
     (left, right) => right.grossMinor - left.grossMinor,
@@ -331,8 +332,9 @@ export async function getRetailOpsDashboardSummary(
     },
     period: range,
     sales: {
-      completedOrderCount: orders.filter((order) => order.status === "COMPLETED")
-        .length,
+      completedOrderCount: orders.filter(
+        (order) => order.status === "COMPLETED",
+      ).length,
       orderCount: orders.length,
       pendingOrderCount: orders.filter((order) => order.status === "PENDING")
         .length,
