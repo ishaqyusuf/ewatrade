@@ -19,12 +19,14 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: "Create your workspace — ewatrade",
   description:
-    "Sign up for ewatrade and launch your merchant workspace with a branded storefront, POS, and operations dashboard.",
+    "Create a neutral ewatrade operations workspace for products, services, or both.",
 }
 
 export default function SignupLayout({
   children,
-}: { children: React.ReactNode }) {
+}: {
+  children: React.ReactNode
+}) {
   if (process.env.NEXT_PUBLIC_SIGNUP_ENABLED !== "true") {
     redirect("/")
   }

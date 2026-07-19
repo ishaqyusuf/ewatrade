@@ -1,4 +1,4 @@
-import { type Session, auth } from "@ewatrade/auth"
+import { type Session, auth, parseCookieHeader } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
 import type { TenantContext } from "@ewatrade/db/queries"
 import { getActiveTenantForUser } from "@ewatrade/db/queries"
@@ -105,11 +105,16 @@ export const createTRPCContext = async (
   const session = cookieSession ?? (await getSessionFromBearer(bearerToken))
   const internalKey = c.req.header("x-internal-key")
   const expectedInternalKey = process.env.INTERNAL_API_KEY
+  const requestCookies = parseCookieHeader(c.req.header("cookie"))
+  const tenantSlug =
+    c.req.header("x-tenant-slug") ??
+    requestCookies.get("ewatrade.active_tenant_slug") ??
+    null
 
   return {
     db: prisma,
     session,
-    tenantSlug: c.req.header("x-tenant-slug") ?? null,
+    tenantSlug,
     tenantContext: null,
     tenantId: null,
     requestId,

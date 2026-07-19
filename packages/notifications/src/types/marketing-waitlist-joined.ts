@@ -9,7 +9,7 @@ export const marketingWaitlistJoinedPayloadSchema = z.object({
   id: z.string().trim().min(1),
   message: z.string().trim().min(1).nullable().optional(),
   phone: z.string().trim().min(1).nullable().optional(),
-  roleTitle: z.string().trim().min(1).nullable().optional()
+  roleTitle: z.string().trim().min(1).nullable().optional(),
 })
 
 export type MarketingWaitlistJoinedPayload = z.infer<
@@ -19,8 +19,9 @@ export type MarketingWaitlistJoinedPayload = z.infer<
 export const marketingWaitlistJoined = defineNotificationType({
   defaultChannels: ["email", "in_app"],
   defaultRecipients: ["email"],
-  description: "A visitor joined the ewatrade waitlist from the marketing site.",
+  description:
+    "A visitor joined the ewatrade waitlist from the marketing site.",
   schema: marketingWaitlistJoinedPayloadSchema,
   title: "New waitlist signup",
-  variant: "info"
+  variant: "info",
 })

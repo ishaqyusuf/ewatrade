@@ -1,12 +1,12 @@
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import {
+  type TenantUrlConfig,
+  type TenantUrlContext,
   buildTenantHref,
   getTenantUrlHeaderNames,
   resolveTenantUrlContext,
   toInternalTenantPath,
-  type TenantUrlConfig,
-  type TenantUrlContext,
 } from "."
 
 export type ResolveTenantUrlContextFromHeadersOptions = {

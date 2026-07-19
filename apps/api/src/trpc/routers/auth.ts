@@ -21,11 +21,14 @@ const mobileAuthModeSchema = z.enum(["login", "sign_up"])
 
 export const requestMobileOwnerOtpSchema = z
   .object({
+    addressLine1: z.string().trim().min(3).max(200).optional(),
     businessName: z.string().trim().min(1).max(120).optional(),
+    city: z.string().trim().min(2).max(120).optional(),
     currencyCode: z.enum(OPERATING_CURRENCY_CODES).optional(),
     email: emailSchema,
     mode: mobileAuthModeSchema,
     name: z.string().trim().min(1).max(120).optional(),
+    phone: z.string().trim().min(7).max(40).optional(),
   })
   .strict()
 
@@ -38,11 +41,14 @@ export const verifyMobileOwnerOtpSchema = requestMobileOwnerOtpSchema.extend({
 
 export const verifyMobileGoogleSchema = z
   .object({
+    addressLine1: z.string().trim().min(3).max(200).optional(),
     businessName: z.string().trim().min(1).max(120).optional(),
+    city: z.string().trim().min(2).max(120).optional(),
     currencyCode: z.enum(OPERATING_CURRENCY_CODES).optional(),
     idToken: z.string().trim().min(20),
     mode: mobileAuthModeSchema,
     name: z.string().trim().min(1).max(120).optional(),
+    phone: z.string().trim().min(7).max(40).optional(),
   })
   .strict()
 
@@ -180,13 +186,16 @@ export const authRouter = createTRPCRouter({
 
       try {
         return await verifyMobileGoogleIdentity(ctx.db, {
+          addressLine1: input.addressLine1,
           businessName: input.businessName,
+          city: input.city,
           currencyCode: input.currencyCode,
           email: profile.email,
           idToken: input.idToken,
           image: profile.picture,
           mode: input.mode,
           name: input.name ?? profile.name,
+          phone: input.phone,
           providerAccountId: profile.sub,
         })
       } catch (error) {

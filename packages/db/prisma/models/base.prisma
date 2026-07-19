@@ -1,57 +1,55 @@
 model Tenant {
-  id                             String                           @id @default(cuid())
-  slug                           String                           @unique
-  name                           String
-  type                           TenantType
-  enabledModes                   TenantMode[]
-  isActive                       Boolean                          @default(true)
-  timezone                       String                           @default("Africa/Lagos")
-  countryCode                    String?
-  currencyCode                   String                           @default("NGN")
-  metadata                       Json?
-  createdAt                      DateTime                         @default(now())
-  updatedAt                      DateTime                         @updatedAt
-  users                          Membership[]
-  stores                         Store[]
-  orders                         Order[]
-  orderPaymentEvents             OrderPaymentEvent[]
-  sites                          Site[]
-  hostnames                      TenantHostname[]
-  conversations                  Conversation[]
-  automations                    AutomationEvent[]
-  dispatchOffers                 DeliveryBid[]
-  subscription                   TenantSubscription?
-  billingCheckoutSessions        BillingCheckoutSession[]
-  billingInvoices                BillingInvoice[]
-  billingProviderEvents          BillingProviderEvent[]
-  productUnitTemplates           ProductUnitTemplate[]
-  productUnitPriceHistory        ProductUnitPriceHistory[]
-  retailOpsStaffProfiles         RetailOpsStaffProfile[]
-  retailOpsStaffInviteTokens     RetailOpsStaffInviteToken[]
-  retailOpsStaffLifecycleEvents  RetailOpsStaffLifecycleEvent[]
-  offlineDevices                 OfflineDevice[]
-  offlineDeviceRevocations       OfflineDeviceRevocation[]
-  retailOpsSyncRuns              RetailOpsSyncRun[]
-  retailOpsSyncEvents            RetailOpsSyncEvent[]
-  productShareLinks              ProductShareLink[]
-  productShareLinkEvents         ProductShareLinkEvent[]
-  productShareLinkViews          ProductShareLinkView[]
-  productShareLinkOrderRequests  ProductShareLinkOrderRequest[]
-  productShareLinkReservations   ProductShareLinkReservation[]
-  productShareLinkNotifications  ProductShareLinkNotification[]
-  productShareLinkAnalyticsDaily ProductShareLinkAnalyticsDaily[]
-  retailOpsCustomers             RetailOpsCustomer[]
-  retailOpsCustomerIdentities    RetailOpsCustomerIdentity[]
-  retailOpsCustomerEvents        RetailOpsCustomerEvent[]
-  retailOpsCloseouts             RetailOpsCloseout[]
-  retailOpsStockDeclarations     RetailOpsStockDeclaration[]
-  retailOpsPaymentDeclarations   RetailOpsPaymentDeclaration[]
-  retailOpsCloseoutReviews       RetailOpsCloseoutReview[]
-  staffStockWallets              StaffStockWallet[]
-  serviceJobs                    ServiceJob[]
-  serviceRequestLinks            ServiceRequestLink[]
-  serviceRequests                ServiceRequest[]
-  serviceNotificationIntents     ServiceNotificationIntent[]
+  id                            String                         @id @default(cuid())
+  slug                          String                         @unique
+  name                          String
+  type                          TenantType
+  enabledModes                  TenantMode[]
+  isActive                      Boolean                        @default(true)
+  timezone                      String                         @default("Africa/Lagos")
+  countryCode                   String?
+  currencyCode                  String                         @default("NGN")
+  metadata                      Json?
+  createdAt                     DateTime                       @default(now())
+  updatedAt                     DateTime                       @updatedAt
+  users                         Membership[]
+  stores                        Store[]
+  sites                         Site[]
+  hostnames                     TenantHostname[]
+  conversations                 Conversation[]
+  automations                   AutomationEvent[]
+  subscription                  TenantSubscription?
+  billingCheckoutSessions       BillingCheckoutSession[]
+  billingInvoices               BillingInvoice[]
+  billingProviderEvents         BillingProviderEvent[]
+  retailOpsStaffProfiles        RetailOpsStaffProfile[]
+  retailOpsStaffInviteTokens    RetailOpsStaffInviteToken[]
+  retailOpsStaffLifecycleEvents RetailOpsStaffLifecycleEvent[]
+  offlineDevices                OfflineDevice[]
+  offlineDeviceRevocations      OfflineDeviceRevocation[]
+  serviceIntakes                ServiceIntake[]
+  serviceJobs                   ServiceJob[]
+  serviceWorkEvents             ServiceWorkEvent[]
+  serviceEvidence               ServiceEvidence[]
+  serviceRequestForms           ServiceRequestForm[]
+  serviceRequests               ServiceRequest[]
+  serviceQuotes                 ServiceQuote[]
+  customerTrackingAccess        CustomerTrackingAccess[]
+  serviceNotificationIntents    ServiceNotificationIntent[]
+  catalogItems                  CatalogItem[]
+  catalogUnitDefinitions        UnitDefinition[]
+  catalogOfferings              SellableOffering[]
+  catalogProductUnitOfferings   ProductUnitOffering[]
+  catalogPriceChanges           CatalogPriceChange[]
+  catalogCommandReceipts        CatalogCommandReceipt[]
+  stockBalanceSources           StockBalanceSource[]
+  stockOperations               StockOperation[]
+  stockReservations             StockReservation[]
+  stockCounts                   StockCount[]
+  stockTransfers                StockTransfer[]
+  inventoryCloseouts            InventoryCloseout[]
+  commercialOrders              CommercialOrder[]
+  productReturns                ProductReturn[]
+  offlineCommands               OfflineCommand[]
 }
 
 model TenantHostname {
@@ -123,10 +121,6 @@ model User {
   sessions               Session[]
   memberships            Membership[]
   retailOpsStaffProfiles RetailOpsStaffProfile[] @relation("RetailOpsStaffProfileUser")
-  cashierSessions        CashierSession[]
-  receipts               Receipt[]
-  barcodeEvents          BarcodeEvent[]
-  staffStockWallets      StaffStockWallet[]      @relation("StaffStockWalletUser")
   sentMessages           Message[]
   automationEvents       AutomationEvent[]       @relation("AutomationActor")
 }

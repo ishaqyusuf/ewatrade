@@ -27,7 +27,10 @@ Canonical stack reference for current implementation choices.
 - Runtime querying / repositories: Drizzle
 - Database provider: PostgreSQL as the canonical application database
 - Development database runtime: local Docker PostgreSQL by default, with `remote-dev` and `prod` database profiles available through `DEV_PROFILE`/`APP_ENV` and `LOCAL_DATABASE_URL`/`REMOTE_DEV_DATABASE_URL`/`PROD_DATABASE_URL`.
-- Development command router: `bun run dev` selects the environment profile with `--local`, `--remote`/`--remote-dev`, or `--prod`, then forwards package filters to Turbo.
+- Development command router: `bun run dev` selects the environment profile
+  with `--local`, `--remote`/`--remote-dev`, or `--prod`, then forwards package
+  filters to Turbo. When dev is required and not already running, launch the
+  required profile in a dedicated managed terminal session.
 
 ## Guidance
 - Model entities in Prisma first.
@@ -37,4 +40,4 @@ Canonical stack reference for current implementation choices.
 
 ## Excluded Stack
 - Supabase is not part of the current platform design.
-- Local named-host dev: workspace `dev` scripts are Portless-backed directly without `PORTLESS_PORT`, so local named-host URLs do not include a proxy port. Website/dashboard QA should use `bun run dev --local --filter dashboard marketing` when those apps are in scope, then browse the repository's Portless hostnames for marketing, storefront, dashboard, POS, and API flows instead of raw localhost ports.
+- Local named-host dev: workspace `dev` scripts are Portless-backed directly without `PORTLESS_PORT`, so local named-host URLs do not include a proxy port. Marketing uses `http://ewatrade.localhost` and dashboard uses `http://ewatrade-dashboard.localhost`. An explicit port on a named host is a blocking Portless defect, not an accepted fallback.

@@ -1,13 +1,11 @@
 "use client"
 
 import { SignupStepper } from "@/components/signup/signup-stepper"
-import { StepAccountType } from "@/components/signup/step-account-type"
 import { StepBusiness } from "@/components/signup/step-business"
 import { StepOwner } from "@/components/signup/step-owner"
 import { StepSuccess } from "@/components/signup/step-success"
 import { StepWorkspace } from "@/components/signup/step-workspace"
 import type {
-  AccountTypeValues,
   BusinessValues,
   OwnerValues,
   WorkspaceValues,
@@ -17,7 +15,6 @@ import { useEffect, useState } from "react"
 // ─── Accumulated form state ───────────────────────────────────────────────────
 
 type SignupFormState = {
-  accountType?: Partial<AccountTypeValues>
   workspace?: Partial<WorkspaceValues>
   business?: Partial<BusinessValues>
   owner?: Partial<OwnerValues>
@@ -127,19 +124,14 @@ export default function SignupPage() {
 
   // ── Step handlers ──────────────────────────────────────────────────────────
 
-  function handleAccountType(data: AccountTypeValues) {
-    setFormState((s) => ({ ...s, accountType: data }))
-    setStep(2)
-  }
-
   function handleWorkspace(data: WorkspaceValues) {
     setFormState((s) => ({ ...s, workspace: data }))
-    setStep(3)
+    setStep(2)
   }
 
   function handleBusiness(data: BusinessValues) {
     setFormState((s) => ({ ...s, business: data }))
-    setStep(4)
+    setStep(3)
   }
 
   async function handleOwner(data: OwnerValues) {
@@ -148,16 +140,18 @@ export default function SignupPage() {
 
     try {
       const payload = {
+        addressLine1: formState.business?.addressLine1 ?? "",
         accessToken: accessToken ?? undefined,
-        modes: formState.accountType?.modes ?? [],
         subdomain: formState.workspace?.subdomain ?? "",
         customDomain: formState.workspace?.customDomain ?? "",
         businessName: formState.business?.businessName ?? "",
+        city: formState.business?.city ?? "",
         industry: formState.business?.industry ?? "",
         businessSize: formState.business?.businessSize ?? "",
         countryCode: formState.business?.countryCode ?? "",
         currencyCode: formState.business?.currencyCode ?? "NGN",
         phone: formState.business?.phone ?? "",
+        region: formState.business?.region ?? "",
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
@@ -198,7 +192,7 @@ export default function SignupPage() {
         posUrl: result.posUrl,
         storefrontUrl: result.storefrontUrl,
       })
-      setStep(5)
+      setStep(4)
     } catch {
       setSubmitError(
         "Unable to connect. Please check your connection and try again.",
@@ -214,53 +208,45 @@ export default function SignupPage() {
     <div className="min-h-[calc(100vh-8rem)] px-6 pb-16 sm:px-10">
       <div className="mx-auto max-w-2xl">
         {/* Stepper (hidden on success step) */}
-        {step < 5 && <SignupStepper currentStep={step} />}
+        {step < 4 && <SignupStepper currentStep={step} />}
 
         {/* Card wrapper */}
         <div
-          className="animate-in fade-in slide-in-from-bottom-4 rounded-[2rem] border border-border/70 bg-background/95 p-6 shadow-[0_32px_100px_rgba(39,28,14,0.09)] duration-500 sm:p-8"
+          className="animate-in fade-in slide-in-from-bottom-4 rounded-xl border border-border/70 bg-background p-6 duration-500 sm:p-8"
           key={step}
         >
-          {accessNotice && step < 5 && (
-            <div className="mb-5 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+          {accessNotice && step < 4 && (
+            <div className="mb-5 border-l-2 border-primary bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
               {accessNotice}
             </div>
           )}
 
           {step === 1 && (
-            <StepAccountType
-              defaultValues={formState.accountType}
-              onNext={handleAccountType}
+            <StepWorkspace
+              defaultValues={formState.workspace}
+              onNext={handleWorkspace}
             />
           )}
 
           {step === 2 && (
-            <StepWorkspace
-              defaultValues={formState.workspace}
-              onNext={handleWorkspace}
+            <StepBusiness
+              defaultValues={formState.business}
+              onNext={handleBusiness}
               onBack={() => setStep(1)}
             />
           )}
 
           {step === 3 && (
-            <StepBusiness
-              defaultValues={formState.business}
-              onNext={handleBusiness}
-              onBack={() => setStep(2)}
-            />
-          )}
-
-          {step === 4 && (
             <StepOwner
               defaultValues={formState.owner}
               onNext={handleOwner}
-              onBack={() => setStep(3)}
+              onBack={() => setStep(2)}
               isSubmitting={isSubmitting}
               submitError={submitError}
             />
           )}
 
-          {step === 5 && success && (
+          {step === 4 && success && (
             <StepSuccess
               tenantSlug={success.tenantSlug}
               businessName={success.businessName}

@@ -186,7 +186,7 @@ export const PLAYGROUND_METRICS: PlaygroundMetric[] = [
     value: 4,
   },
   {
-    detail: "Generated product links",
+    detail: "Customer request links",
     label: "Link orders",
     tone: "neutral",
     value: 18,

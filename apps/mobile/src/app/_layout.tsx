@@ -98,28 +98,11 @@ const InitialLayout = () => {
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="sign-up" options={{ headerShown: false }} />
           <Stack.Screen name="verify-email" options={{ headerShown: false }} />
-          <Stack.Screen name="qa-session" options={{ headerShown: false }} />
           <Stack.Screen
             name="qa-session/[payload]"
             options={{ headerShown: false }}
           />
           <Stack.Screen name="design-system" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="design-system/index"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="design-system/references/[referenceId]"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="design-system/references/[referenceId]/index"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="design-system/references/[referenceId]/image"
-            options={{ headerShown: false }}
-          />
           <Stack.Screen
             name="design-system-pattern"
             options={{ headerShown: false }}
@@ -146,10 +129,6 @@ const InitialLayout = () => {
             />
             <Stack.Screen
               name="reports-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-            <Stack.Screen
-              name="product-share-modal"
               options={{ headerShown: false, presentation: "modal" }}
             />
             <Stack.Screen
@@ -193,10 +172,6 @@ const InitialLayout = () => {
             />
             <Stack.Screen
               name="customer-book-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-            <Stack.Screen
-              name="rep-clock-in-modal"
               options={{ headerShown: false, presentation: "modal" }}
             />
             <Stack.Screen

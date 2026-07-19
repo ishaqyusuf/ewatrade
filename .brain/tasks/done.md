@@ -4,6 +4,15 @@
 Completed work with durable value to the project.
 
 ## Items
+- Completed five-model mobile and website behavioral QA for the clean generic
+  Catalog, Inventory and Service Operations cutover. Verified packaged bulk
+  transformations, shared-stock apparel, garment-care Intake/work, mixed
+  electronics Orders and quote-based professional services; fixed
+  tenant-scoped dashboard/mobile caches, active-tenant tRPC propagation,
+  shared-dashboard onboarding, public storefront routing, quote/tracking label
+  duplication, tenant-timezone promise rendering, keyboard-safe mobile forms,
+  status-bar treatment, flat dividers and responsive padding. Completed Date:
+  2026-07-19.
 - Changed registration, login, and business switching to use one shared dashboard host while reserving each chosen business subdomain for its future storefront. New tenants no longer receive internal/custom dashboard hostname rows or tenant dashboard domain provisioning. Completed Date: 2026-07-18.
 - Implemented ratio-backed feed inventory conversions across database, API, dashboard, and mobile. Added 25 kg/50 kg feed presets, server-derived whole target quantities, required online idempotency keys, paired transactional ledger movements, offline preset replay, read-only client previews, and base-equivalent dashboard reporting without raw mixed-unit totals. Completed Date: 2026-07-18. Checks Run: 50 focused tests; DB/API/dashboard/marketing/mobile typechecks; mobile first-product, service-job, and inventory-operation QA guards; `git diff --check`.
 - Implemented the item-level Product and Service catalog. Stores are neutral; both item kinds are priced; only Product has stock. Product-only, Service-only, and mixed orders use one commercial order/payment model, while Service lines create generic relational Service Jobs. Removed runtime business-template/dry-cleaning contracts, added idempotent legacy migration, cancellation/refund/reversal history, opaque public request/tracking, item-driven dashboard/mobile Sales and Services gates, Service-only mobile checkout, and production-only owner OTP email dispatch. Completed Date: 2026-07-18. Checks Run: 190 focused tests; full workspace typecheck; five mobile QA guards; Prisma migrate/push; legacy migration dry-run/apply; dashboard browser QA; Android QA; changed-file Biome; `git diff --check`.

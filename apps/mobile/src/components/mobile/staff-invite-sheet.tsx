@@ -11,10 +11,7 @@ import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { useBusinessStore } from "@/store/businessStore"
-import {
-  type RetailOpsStaffMember,
-  useRetailOpsStore,
-} from "@/store/retailOpsStore"
+import { useOperationalModeStore } from "@/store/operationalModeStore"
 import {
   getBusinessSubscription,
   getPlan,
@@ -60,8 +57,6 @@ type StaffRow = {
   email: string
   id: string
   name: string
-  source: "local" | "production"
-  sourceLabel: string
   statusLabel: string
 }
 
@@ -106,10 +101,6 @@ function getStaffRoleLabel(role: string) {
   return role
 }
 
-function getStaffKey(staff: { email: string }) {
-  return staff.email.trim().toLowerCase()
-}
-
 function mapProductionStaff(staff: ProductionStaffMember): StaffRow {
   const name =
     staff.user.displayName?.trim() ||
@@ -123,21 +114,6 @@ function mapProductionStaff(staff: ProductionStaffMember): StaffRow {
     email: staff.user.email,
     id: staff.id,
     name,
-    source: "production",
-    sourceLabel: "Synced staff",
-    statusLabel: getStaffStatusLabel(staff.status),
-  }
-}
-
-function mapLocalStaff(staff: RetailOpsStaffMember): StaffRow {
-  return {
-    detail: `Attendant - invited ${formatStaffDate(staff.invitedAt)}`,
-    email: staff.email,
-    id: staff.id,
-    name: staff.name,
-    source: "local",
-    sourceLabel:
-      staff.syncStatus === "synced" ? "Local synced" : "Pending sync",
     statusLabel: getStaffStatusLabel(staff.status),
   }
 }
@@ -156,11 +132,7 @@ function StaffRowItem({ staff }: { staff: StaffRow }) {
         />
       }
     >
-      <StatusBadge
-        icon={staff.source === "production" ? "CircleCheck" : "Clock"}
-        label={staff.sourceLabel}
-        tone={staff.source === "production" ? "success" : "warning"}
-      />
+      <StatusBadge icon="CircleCheck" label="Business staff" tone="success" />
     </SecondaryOperationalRow>
   )
 }
@@ -172,17 +144,8 @@ export function StaffInviteContent({
 }: StaffInviteContentProps) {
   const trpc = useTRPC()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
-  const inviteStaff = useRetailOpsStore((state) => state.inviteStaff)
-  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
-  const allStaff = useRetailOpsStore((state) => state.staff)
-  const staff = useMemo(
-    () =>
-      allStaff.filter(
-        (staffMember) =>
-          !activeBusinessId ||
-          (staffMember.businessId ?? activeBusinessId) === activeBusinessId,
-      ),
-    [activeBusinessId, allStaff],
+  const isOfflineMode = useOperationalModeStore(
+    (state) => state.isOfflineMode,
   )
   const subscriptions = useSubscriptionStore((state) => state.subscriptions)
   const [email, setEmail] = useState("")
@@ -217,25 +180,13 @@ export function StaffInviteContent({
       },
     }),
   )
-  const localStaffRows = useMemo(() => staff.map(mapLocalStaff), [staff])
-  const productionStaffRows = useMemo(
+  const staffRows = useMemo(
     () =>
       ((productionStaffQuery.data ?? []) as ProductionStaffMember[]).map(
         mapProductionStaff,
       ),
     [productionStaffQuery.data],
   )
-  const usesLocalStaffFallback = isOfflineMode || productionStaffQuery.isError
-  const staffRows = useMemo(() => {
-    if (usesLocalStaffFallback) return localStaffRows
-
-    const productionStaffKeys = new Set(productionStaffRows.map(getStaffKey))
-    const unsyncedLocalRows = localStaffRows.filter(
-      (staffMember) => !productionStaffKeys.has(getStaffKey(staffMember)),
-    )
-
-    return [...productionStaffRows, ...unsyncedLocalRows]
-  }, [localStaffRows, productionStaffRows, usesLocalStaffFallback])
   const visibleStaffRows = useMemo(
     () => staffRows.slice(0, STAFF_PREVIEW_LIMIT),
     [staffRows],
@@ -243,19 +194,21 @@ export function StaffInviteContent({
   const isAtStaffLimit = staffRows.length >= plan.limits.staff
   const canSubmit =
     !isAtStaffLimit &&
+    !isOfflineMode &&
+    !productionStaffQuery.isError &&
     isValidEmail(email) &&
-    (usesLocalStaffFallback || !inviteStaffMutation.isPending)
+    !inviteStaffMutation.isPending
   const sourceLabel = isOfflineMode
-    ? "Local"
+    ? "Online connection required"
     : productionStaffQuery.isError
-      ? "Local fallback"
+      ? "Staff list unavailable"
       : productionStaffQuery.isFetching
         ? "Refreshing"
         : "Online"
   const sourceDetail = isOfflineMode
-    ? "Staff invites are queued on this device until sync reconnects."
+    ? "Staff membership changes are server-authoritative and cannot be queued offline. Reconnect to send an invitation."
     : productionStaffQuery.isError
-      ? "Production staff list is unavailable, so local staff are shown."
+      ? "The business staff list could not be loaded. Reconnect and try again."
       : productionStaffQuery.isFetching
         ? "Refreshing production staff."
         : "Production staff includes invited, active, and suspended attendant memberships."
@@ -270,23 +223,11 @@ export function StaffInviteContent({
 
     setSubmitError(null)
 
-    if (!usesLocalStaffFallback) {
-      inviteStaffMutation.mutate({
-        email: normalizedEmail,
-        name: trimmedName || undefined,
-        role: "cashier",
-      })
-      return
-    }
-
-    inviteStaff({
-      businessId: activeBusinessId ?? undefined,
+    inviteStaffMutation.mutate({
       email: normalizedEmail,
       name: trimmedName,
+      role: "cashier",
     })
-    setEmail("")
-    setName("")
-    onComplete?.()
   }
 
   const action = (

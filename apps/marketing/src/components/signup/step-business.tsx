@@ -18,7 +18,7 @@ import {
 } from "@ewatrade/utils"
 
 const baseInputClasses =
-  "w-full rounded-2xl border border-border/70 bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10 appearance-none"
+  "w-full scroll-mt-24 rounded-lg border border-border/70 bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10 appearance-none"
 
 type StepBusinessProps = {
   defaultValues?: Partial<BusinessValues>
@@ -33,12 +33,15 @@ export function StepBusiness({
 }: StepBusinessProps) {
   const form = useZodForm<BusinessValues>(businessSchema, {
     defaultValues: defaultValues ?? {
+      addressLine1: "",
       businessName: "",
       industry: "",
       businessSize: "",
+      city: "",
       countryCode: "",
       currencyCode: "NGN",
       phone: "",
+      region: "",
     },
   })
 
@@ -118,6 +121,49 @@ export function StepBusiness({
           </label>
         </div>
 
+        <label className="block space-y-1.5 text-sm font-medium text-foreground">
+          Business address
+          <input
+            {...form.register("addressLine1")}
+            type="text"
+            placeholder="Street address"
+            className={`${baseInputClasses} mt-1.5`}
+          />
+          {form.formState.errors.addressLine1 && (
+            <p className="text-xs text-destructive">
+              {form.formState.errors.addressLine1.message}
+            </p>
+          )}
+        </label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block space-y-1.5 text-sm font-medium text-foreground">
+            City
+            <input
+              {...form.register("city")}
+              type="text"
+              placeholder="City"
+              className={`${baseInputClasses} mt-1.5`}
+            />
+            {form.formState.errors.city && (
+              <p className="text-xs text-destructive">
+                {form.formState.errors.city.message}
+              </p>
+            )}
+          </label>
+          <label className="block space-y-1.5 text-sm font-medium text-foreground">
+            State or region{" "}
+            <span className="font-normal text-muted-foreground">
+              (optional)
+            </span>
+            <input
+              {...form.register("region")}
+              type="text"
+              placeholder="State or region"
+              className={`${baseInputClasses} mt-1.5`}
+            />
+          </label>
+        </div>
+
         {/* Country + Phone grid */}
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block space-y-1.5 text-sm font-medium text-foreground">
@@ -187,23 +233,23 @@ export function StepBusiness({
           )}
         </label>
 
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center justify-between border-t border-border/60 pt-5">
           <Button
             type="button"
             variant="ghost"
             size="lg"
-            className="rounded-full"
+            className="rounded-lg"
             onClick={onBack}
           >
             Back
           </Button>
-          <Button type="submit" size="lg" className="rounded-full px-8">
+          <Button type="submit" size="lg" className="rounded-lg px-8">
             Continue
           </Button>
         </div>
       </form>
 
-      <DevFormFillButton onFill={fill} label="Fill step 3" />
+      <DevFormFillButton onFill={fill} label="Fill step 2" />
     </div>
   )
 }

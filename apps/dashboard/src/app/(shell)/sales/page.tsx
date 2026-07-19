@@ -1,13 +1,19 @@
 import { SalesPage } from "@/components/dashboard/sales-page"
-import { getCatalogFeatureAvailability } from "@/lib/catalog-capabilities"
-import { getDashboardSalesOperations } from "@/lib/sales-data"
+import { OrdersTableSkeleton } from "@/components/tables/orders/skeleton"
 import { canUseSalesOperations } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
+import { HydrateClient, prefetch, trpc } from "@/trpc/server"
+import type { Metadata } from "next"
 import { redirect } from "next/navigation"
+import { Suspense } from "react"
 
 const MARKETING_URL =
   process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com"
+
+export const metadata: Metadata = {
+  title: "Orders | EwaTrade",
+}
 
 export default async function SalesRoutePage() {
   const session = await getServerSession()
@@ -31,20 +37,17 @@ export default async function SalesRoutePage() {
   if (!store) {
     redirect("/setup")
   }
-  const catalogFeatures = await getCatalogFeatureAvailability({
-    storeId: store.id,
-    tenantId: ctx.tenant.id,
-  })
-  if (!catalogFeatures.hasProductItems) {
-    redirect("/")
-  }
 
-  const data = await getDashboardSalesOperations({
-    role: ctx.membership.role,
-    storeId: store.id,
-    tenantId: ctx.tenant.id,
-    userId: session.user.id,
-  })
+  await Promise.allSettled([
+    prefetch(trpc.catalog.listItems.queryOptions({})),
+    prefetch(trpc.orders.list.queryOptions({ limit: 100, storeId: store.id })),
+  ])
 
-  return <SalesPage initialData={data} store={store} />
+  return (
+    <HydrateClient>
+      <Suspense fallback={<OrdersTableSkeleton />}>
+        <SalesPage store={store} />
+      </Suspense>
+    </HydrateClient>
+  )
 }

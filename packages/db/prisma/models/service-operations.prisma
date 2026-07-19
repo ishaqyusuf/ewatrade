@@ -1,212 +1,502 @@
-model ServiceItemProfile {
-  id                       String                 @id @default(cuid())
-  productId                String                 @unique
-  estimatedTurnaroundHours Int?
-  instructions             String?
-  fulfillmentMode          ServiceFulfillmentMode @default(TRACKED)
-  metadata                 Json?
-  createdAt                DateTime               @default(now())
-  updatedAt                DateTime               @updatedAt
-  product                  Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+model ServiceIntake {
+  id                  String              @id @default(cuid())
+  tenantId            String
+  storeId             String
+  clientIntakeId      String
+  payloadHash         String
+  schemaVersion       Int                 @default(1)
+  status              ServiceIntakeStatus @default(DRAFT)
+  commercialOrderId   String?             @unique
+  customerName        String?
+  customerPhone       String?
+  customerEmail       String?
+  requestedAt         DateTime?
+  instructions        String?
+  conditionNote       String?
+  priority            ServicePriority     @default(NORMAL)
+  dueCommitmentAt     DateTime?
+  requestedAssigneeId String?
+  createdByUserId     String
+  confirmedAt         DateTime?
+  cancelledAt         DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  tenant              Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store               Store               @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  commercialOrder     CommercialOrder?    @relation(fields: [commercialOrderId], references: [id], onDelete: Restrict)
+  lines               ServiceIntakeLine[]
+  jobs                ServiceJob[]
 
-  @@index([fulfillmentMode])
+  @@unique([tenantId, clientIntakeId])
+  @@index([tenantId, storeId, status, createdAt])
+}
+
+model ServiceIntakeLine {
+  id                      String           @id @default(cuid())
+  intakeId                String
+  offeringId              String
+  quantity                Decimal          @db.Decimal(38, 6)
+  expectedFixedPriceMinor Int?
+  approvedQuotePriceMinor Int?
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+  intake                  ServiceIntake    @relation(fields: [intakeId], references: [id], onDelete: Cascade)
+  offering                SellableOffering @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+
+  @@index([intakeId])
+  @@index([offeringId])
 }
 
 model ServiceJob {
-  id                  String                      @id @default(cuid())
-  tenantId            String
-  storeId             String
-  orderId             String                      @unique
-  retailOpsCustomerId String?
-  trackingToken       String                      @unique
-  status              ServiceJobStatus            @default(RECEIVED)
-  dueAt               DateTime?
-  completedAt         DateTime?
-  cancelledAt         DateTime?
-  assignedUserId      String?
-  source              String                      @default("sale")
-  legacyId            String?
-  metadata            Json?
-  createdAt           DateTime                    @default(now())
-  updatedAt           DateTime                    @updatedAt
-  tenant              Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store               Store                       @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  order               Order                       @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  retailOpsCustomer   RetailOpsCustomer?          @relation(fields: [retailOpsCustomerId], references: [id], onDelete: SetNull)
-  lines               ServiceJobLine[]
-  events              ServiceJobEvent[]
-  evidence            ServiceJobEvidence[]
-  notificationIntents ServiceNotificationIntent[]
+  id                    String                      @id @default(cuid())
+  tenantId              String
+  storeId               String
+  commercialOrderId     String
+  intakeId              String?
+  clientJobId           String
+  revision              Int                         @default(0)
+  priority              ServicePriority             @default(NORMAL)
+  currentAssigneeUserId String?
+  reworkOfJobId         String?
+  splitFromJobId        String?
+  createdByUserId       String
+  completedAt           DateTime?
+  cancelledAt           DateTime?
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @updatedAt
+  tenant                Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                 Store                       @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  commercialOrder       CommercialOrder             @relation(fields: [commercialOrderId], references: [id], onDelete: Restrict)
+  intake                ServiceIntake?              @relation(fields: [intakeId], references: [id], onDelete: SetNull)
+  reworkOfJob           ServiceJob?                 @relation("ServiceJobRework", fields: [reworkOfJobId], references: [id], onDelete: Restrict)
+  reworkJobs            ServiceJob[]                @relation("ServiceJobRework")
+  splitFromJob          ServiceJob?                 @relation("ServiceJobSplit", fields: [splitFromJobId], references: [id], onDelete: Restrict)
+  splitJobs             ServiceJob[]                @relation("ServiceJobSplit")
+  lines                 ServiceJobLine[]
+  events                ServiceWorkEvent[]
+  assignments           ServiceWorkAssignment[]
+  dueCommitments        ServiceDueCommitment[]
+  notes                 ServiceInternalNote[]
+  evidence              ServiceEvidence[]
+  exceptions            ServiceException[]
+  trackingAccess        CustomerTrackingAccess[]
+  notificationIntents   ServiceNotificationIntent[]
 
-  @@unique([tenantId, storeId, legacyId])
-  @@index([tenantId, storeId, status, dueAt])
-  @@index([retailOpsCustomerId, createdAt])
-  @@index([assignedUserId, status])
+  @@unique([tenantId, clientJobId])
+  @@index([tenantId, storeId, priority, createdAt])
+  @@index([commercialOrderId])
+  @@index([currentAssigneeUserId, createdAt])
+  @@index([reworkOfJobId])
+  @@index([splitFromJobId])
 }
 
 model ServiceJobLine {
-  id                  String          @id @default(cuid())
-  serviceJobId        String
-  orderItemId         String          @unique
-  productId           String
-  productVariantId    String?
-  nameSnapshot        String
-  variantNameSnapshot String?
-  quantity            Int
-  unitPriceMinor      Int
-  totalPriceMinor     Int
-  cancelledAt         DateTime?
-  cancelledByUserId   String?
-  cancellationNote    String?
-  metadata            Json?
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
-  serviceJob          ServiceJob      @relation(fields: [serviceJobId], references: [id], onDelete: Cascade)
-  orderItem           OrderItem       @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
-  product             Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
-  productVariant      ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: SetNull)
+  id                    String                  @id @default(cuid())
+  serviceJobId          String
+  commercialOrderLineId String
+  allocationSnapshot    Json
+  allocatedQuantity     Decimal                 @db.Decimal(38, 6)
+  status                ServiceJobLineStatus    @default(QUEUED)
+  revision              Int                     @default(0)
+  authorizationStatus   WorkAuthorizationStatus
+  authorizationPolicy   WorkAuthorizationPolicy
+  authorizationSource   String?
+  reworkOfLineId        String?
+  authorizedAt          DateTime?
+  cancelledAt           DateTime?
+  completedAt           DateTime?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  serviceJob            ServiceJob              @relation(fields: [serviceJobId], references: [id], onDelete: Cascade)
+  commercialOrderLine   CommercialOrderLine     @relation(fields: [commercialOrderLineId], references: [id], onDelete: Restrict)
+  reworkOfLine          ServiceJobLine?         @relation("ServiceJobLineRework", fields: [reworkOfLineId], references: [id], onDelete: Restrict)
+  reworkLines           ServiceJobLine[]        @relation("ServiceJobLineRework")
+  events                ServiceWorkEvent[]
+  notes                 ServiceInternalNote[]
+  evidence              ServiceEvidence[]
+  exceptions            ServiceException[]
 
+  @@index([serviceJobId, status, createdAt])
+  @@index([commercialOrderLineId, createdAt])
+  @@index([authorizationStatus, status])
+  @@index([reworkOfLineId])
+}
+
+model ServiceWorkEvent {
+  id               String                @id @default(cuid())
+  tenantId         String
+  serviceJobId     String
+  serviceJobLineId String?
+  clientCommandId  String?
+  type             ServiceWorkEventType
+  fromStatus       ServiceJobLineStatus?
+  toStatus         ServiceJobLineStatus?
+  actorUserId      String
+  source           String
+  reason           String?
+  payload          Json?
+  effectiveAt      DateTime              @default(now())
+  createdAt        DateTime              @default(now())
+  tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  serviceJob       ServiceJob            @relation(fields: [serviceJobId], references: [id], onDelete: Cascade)
+  serviceJobLine   ServiceJobLine?       @relation(fields: [serviceJobLineId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, clientCommandId])
+  @@index([serviceJobId, effectiveAt])
+  @@index([serviceJobLineId, effectiveAt])
+  @@index([actorUserId, effectiveAt])
+  @@index([type, effectiveAt])
+}
+
+model ServiceWorkAssignment {
+  id               String     @id @default(cuid())
+  serviceJobId     String
+  assignedUserId   String
+  previousUserId   String?
+  assignedByUserId String
+  reason           String?
+  assignedAt       DateTime   @default(now())
+  endedAt          DateTime?
+  createdAt        DateTime   @default(now())
+  serviceJob       ServiceJob @relation(fields: [serviceJobId], references: [id], onDelete: Cascade)
+
+  @@index([serviceJobId, assignedAt])
+  @@index([assignedUserId, endedAt])
+}
+
+model ServiceDueCommitment {
+  id                 String     @id @default(cuid())
+  serviceJobId       String
+  promisedAt         DateTime
+  previousPromisedAt DateTime?
+  createdByUserId    String
+  reason             String?
+  effectiveAt        DateTime   @default(now())
+  supersededAt       DateTime?
+  createdAt          DateTime   @default(now())
+  serviceJob         ServiceJob @relation(fields: [serviceJobId], references: [id], onDelete: Cascade)
+
+  @@index([serviceJobId, supersededAt])
+  @@index([promisedAt, supersededAt])
+}
+
+model ServiceInternalNote {
+  id               String          @id @default(cuid())
+  serviceJobId     String
+  serviceJobLineId String?
+  clientCommandId  String?
+  body             String
+  actorUserId      String
+  createdAt        DateTime        @default(now())
+  serviceJob       ServiceJob      @relation(fields: [serviceJobId], references: [id], onDelete: Cascade)
+  serviceJobLine   ServiceJobLine? @relation(fields: [serviceJobLineId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceJobId, clientCommandId])
   @@index([serviceJobId, createdAt])
-  @@index([productId, createdAt])
-  @@index([productVariantId])
-  @@index([serviceJobId, cancelledAt])
+  @@index([serviceJobLineId, createdAt])
 }
 
-model ServiceJobEvent {
-  id           String              @id @default(cuid())
-  serviceJobId String
-  actorUserId  String?
-  type         ServiceJobEventType
-  fromStatus   ServiceJobStatus?
-  toStatus     ServiceJobStatus?
-  note         String?
-  revisedDueAt DateTime?
-  happenedAt   DateTime            @default(now())
-  metadata     Json?
-  createdAt    DateTime            @default(now())
-  serviceJob   ServiceJob          @relation(fields: [serviceJobId], references: [id], onDelete: Cascade)
+model ServiceException {
+  id               String                  @id @default(cuid())
+  serviceJobId     String
+  serviceJobLineId String?
+  type             ServiceExceptionType
+  outcome          ServiceExceptionOutcome @default(OPEN)
+  description      String
+  actorUserId      String
+  resolvedByUserId String?
+  occurredAt       DateTime                @default(now())
+  resolvedAt       DateTime?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  serviceJob       ServiceJob              @relation(fields: [serviceJobId], references: [id], onDelete: Cascade)
+  serviceJobLine   ServiceJobLine?         @relation(fields: [serviceJobLineId], references: [id], onDelete: Cascade)
 
-  @@index([serviceJobId, happenedAt])
-  @@index([actorUserId, happenedAt])
-  @@index([type, happenedAt])
+  @@index([serviceJobId, outcome, occurredAt])
+  @@index([serviceJobLineId, occurredAt])
 }
 
-model ServiceJobEvidence {
-  id           String     @id @default(cuid())
-  serviceJobId String
-  actorUserId  String?
-  label        String?
-  url          String
-  mediaType    String?
-  legacyId     String?
-  metadata     Json?
-  addedAt      DateTime   @default(now())
-  createdAt    DateTime   @default(now())
-  serviceJob   ServiceJob @relation(fields: [serviceJobId], references: [id], onDelete: Cascade)
+model ServiceEvidence {
+  id                String                      @id @default(cuid())
+  tenantId          String
+  serviceJobId      String
+  serviceJobLineId  String?
+  clientEvidenceId  String
+  purpose           ServiceEvidencePurpose
+  mediaType         ServiceEvidenceMediaType
+  label             String?
+  assetReference    String?
+  safePublicAssetId String?
+  uploadStatus      ServiceEvidenceUploadStatus @default(LOCAL)
+  visibility        ServiceEvidenceVisibility   @default(PRIVATE)
+  uploaderUserId    String
+  capturedAt        DateTime?
+  uploadedAt        DateTime?
+  publishedAt       DateTime?
+  revokedAt         DateTime?
+  failureReason     String?
+  safetyMetadata    Json?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+  tenant            Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  serviceJob        ServiceJob                  @relation(fields: [serviceJobId], references: [id], onDelete: Cascade)
+  serviceJobLine    ServiceJobLine?             @relation(fields: [serviceJobLineId], references: [id], onDelete: Cascade)
+  auditEvents       ServiceEvidenceAuditEvent[]
 
-  @@unique([serviceJobId, legacyId])
-  @@index([serviceJobId, addedAt])
-  @@index([actorUserId, addedAt])
+  @@unique([tenantId, clientEvidenceId])
+  @@index([serviceJobId, visibility, createdAt])
+  @@index([serviceJobLineId, createdAt])
+  @@index([uploadStatus, createdAt])
 }
 
-model ServiceRequestLink {
-  id              String           @id @default(cuid())
-  tenantId        String
-  storeId         String
-  token           String           @unique
-  label           String
-  createdByUserId String?
-  disabledAt      DateTime?
-  legacyId        String?
-  metadata        Json?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store           Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  requests        ServiceRequest[]
+model ServiceEvidenceAuditEvent {
+  id          String                     @id @default(cuid())
+  evidenceId  String
+  action      ServiceEvidenceAuditAction
+  actorUserId String
+  reason      String?
+  metadata    Json?
+  effectiveAt DateTime                   @default(now())
+  createdAt   DateTime                   @default(now())
+  evidence    ServiceEvidence            @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
 
-  @@unique([tenantId, storeId, legacyId])
-  @@index([tenantId, storeId, disabledAt])
-  @@index([createdByUserId, createdAt])
+  @@index([evidenceId, effectiveAt])
+  @@index([action, effectiveAt])
+}
+
+model ServiceRequestForm {
+  id                String                       @id @default(cuid())
+  tenantId          String
+  storeId           String
+  label             String
+  status            ServiceRequestFormStatus     @default(DRAFT)
+  publicTokenDigest String                       @unique
+  activeFrom        DateTime?
+  expiresAt         DateTime?
+  createdByUserId   String
+  disabledAt        DateTime?
+  createdAt         DateTime                     @default(now())
+  updatedAt         DateTime                     @updatedAt
+  tenant            Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                        @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  offerings         ServiceRequestFormOffering[]
+  requests          ServiceRequest[]
+
+  @@index([tenantId, storeId, status])
+}
+
+model ServiceRequestFormOffering {
+  id            String             @id @default(cuid())
+  requestFormId String
+  offeringId    String
+  createdAt     DateTime           @default(now())
+  requestForm   ServiceRequestForm @relation(fields: [requestFormId], references: [id], onDelete: Cascade)
+  offering      SellableOffering   @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+
+  @@unique([requestFormId, offeringId])
+  @@index([offeringId])
 }
 
 model ServiceRequest {
-  id                  String               @id @default(cuid())
-  tenantId            String
-  storeId             String
-  requestLinkId       String
-  convertedOrderId    String?              @unique
-  retailOpsCustomerId String?
-  trackingToken       String               @unique
-  status              ServiceRequestStatus @default(PENDING)
-  customerName        String
-  customerEmail       String?
-  customerPhone       String?
-  notes               String?
-  totalMinor          Int
-  currencyCode        String               @default("NGN")
-  legacyId            String?
-  convertedAt         DateTime?
-  metadata            Json?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store               Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  requestLink         ServiceRequestLink   @relation(fields: [requestLinkId], references: [id], onDelete: Restrict)
-  convertedOrder      Order?               @relation(fields: [convertedOrderId], references: [id], onDelete: SetNull)
-  retailOpsCustomer   RetailOpsCustomer?   @relation(fields: [retailOpsCustomerId], references: [id], onDelete: SetNull)
-  lines               ServiceRequestLine[]
+  id              String               @id @default(cuid())
+  tenantId        String
+  storeId         String
+  requestFormId   String
+  clientRequestId String
+  payloadHash     String
+  status          ServiceRequestStatus @default(SUBMITTED)
+  customerName    String
+  customerEmail   String?
+  customerPhone   String?
+  requestedAt     DateTime?
+  details         String?
+  staffResponse   String?
+  currentQuoteId  String?              @unique
+  convertedAt     DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store           Store                @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  requestForm     ServiceRequestForm   @relation(fields: [requestFormId], references: [id], onDelete: Restrict)
+  currentQuote    ServiceQuote?        @relation("ServiceRequestCurrentQuote", fields: [currentQuoteId], references: [id], onDelete: SetNull)
+  lines           ServiceRequestLine[]
+  quotes          ServiceQuote[]       @relation("ServiceRequestQuotes")
 
-  @@unique([tenantId, storeId, legacyId])
+  @@unique([tenantId, clientRequestId])
   @@index([tenantId, storeId, status, createdAt])
-  @@index([requestLinkId, createdAt])
-  @@index([retailOpsCustomerId, createdAt])
+  @@index([requestFormId, createdAt])
 }
 
 model ServiceRequestLine {
-  id                  String          @id @default(cuid())
-  requestId           String
-  productId           String
-  productVariantId    String?
-  nameSnapshot        String
-  variantNameSnapshot String?
-  quantity            Int
-  unitPriceMinor      Int
-  totalPriceMinor     Int
-  metadata            Json?
-  createdAt           DateTime        @default(now())
-  request             ServiceRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  product             Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
-  productVariant      ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: SetNull)
+  id                String           @id @default(cuid())
+  requestId         String
+  offeringId        String
+  offeringName      String
+  variantName       String
+  optionSelections  Json
+  requestedQuantity Decimal          @db.Decimal(38, 6)
+  details           String?
+  createdAt         DateTime         @default(now())
+  request           ServiceRequest   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  offering          SellableOffering @relation(fields: [offeringId], references: [id], onDelete: Restrict)
 
-  @@index([requestId, createdAt])
-  @@index([productId])
-  @@index([productVariantId])
+  @@index([requestId])
+  @@index([offeringId])
+}
+
+model ServiceQuote {
+  id                String                @id @default(cuid())
+  tenantId          String
+  storeId           String
+  requestId         String?
+  clientQuoteId     String
+  currentVersionId  String?               @unique
+  createdByUserId   String
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  tenant            Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                 @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  request           ServiceRequest?       @relation("ServiceRequestQuotes", fields: [requestId], references: [id], onDelete: SetNull)
+  currentForRequest ServiceRequest?       @relation("ServiceRequestCurrentQuote")
+  currentVersion    ServiceQuoteVersion?  @relation("ServiceQuoteCurrentVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  versions          ServiceQuoteVersion[] @relation("ServiceQuoteVersions")
+
+  @@unique([tenantId, clientQuoteId])
+  @@index([tenantId, storeId, createdAt])
+  @@index([requestId])
+}
+
+model ServiceQuoteVersion {
+  id                    String             @id @default(cuid())
+  quoteId               String
+  clientVersionId       String
+  payloadHash           String
+  version               Int
+  status                ServiceQuoteStatus @default(DRAFT)
+  currencyCode          String
+  subtotalMinor         Int
+  discountMinor         Int                @default(0)
+  taxMinor              Int                @default(0)
+  totalMinor            Int
+  acceptanceTokenDigest String?            @unique
+  expiresAt             DateTime?
+  issuedAt              DateTime?
+  acceptedAt            DateTime?
+  supersededAt          DateTime?
+  acceptedOrderId       String?            @unique
+  acceptanceClientId    String?
+  createdByUserId       String
+  createdAt             DateTime           @default(now())
+  quote                 ServiceQuote       @relation("ServiceQuoteVersions", fields: [quoteId], references: [id], onDelete: Cascade)
+  currentForQuote       ServiceQuote?      @relation("ServiceQuoteCurrentVersion")
+  acceptedOrder         CommercialOrder?   @relation(fields: [acceptedOrderId], references: [id], onDelete: Restrict)
+  lines                 ServiceQuoteLine[]
+
+  @@unique([quoteId, version])
+  @@unique([quoteId, clientVersionId])
+  @@index([status, expiresAt])
+}
+
+model ServiceQuoteLine {
+  id               String              @id @default(cuid())
+  quoteVersionId   String
+  offeringId       String
+  catalogItemName  String
+  variantName      String
+  optionSelections Json
+  offeringName     String
+  quantity         Decimal             @db.Decimal(38, 6)
+  unitPriceMinor   Int
+  totalMinor       Int
+  createdAt        DateTime            @default(now())
+  quoteVersion     ServiceQuoteVersion @relation(fields: [quoteVersionId], references: [id], onDelete: Cascade)
+  offering         SellableOffering    @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+
+  @@index([quoteVersionId])
+  @@index([offeringId])
+}
+
+model CustomerTrackingAccess {
+  id                  String                   @id @default(cuid())
+  tenantId            String
+  serviceJobId        String
+  tokenDigest         String                   @unique
+  status              CustomerTrackingStatus   @default(ACTIVE)
+  customerScopeKey    String
+  expiresAt           DateTime?
+  rotatedFromId       String?
+  createdByUserId     String
+  revokedByUserId     String?
+  revokedAt           DateTime?
+  lastAccessedAt      DateTime?
+  accessCount         Int                      @default(0)
+  rateWindowStartedAt DateTime                 @default(now())
+  rateWindowCount     Int                      @default(0)
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  tenant              Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  serviceJob          ServiceJob               @relation(fields: [serviceJobId], references: [id], onDelete: Cascade)
+  rotatedFrom         CustomerTrackingAccess?  @relation("TrackingAccessRotation", fields: [rotatedFromId], references: [id], onDelete: Restrict)
+  rotations           CustomerTrackingAccess[] @relation("TrackingAccessRotation")
+
+  @@index([serviceJobId, status])
+  @@index([tenantId, status, expiresAt])
 }
 
 model ServiceNotificationIntent {
-  id            String                          @id @default(cuid())
-  tenantId      String
-  storeId       String
-  serviceJobId  String
-  type          ServiceNotificationIntentType
-  channel       ServiceNotificationChannel      @default(MANUAL)
-  status        ServiceNotificationIntentStatus @default(PENDING)
-  customerPhone String?
-  customerEmail String?
-  manualCopy    String
-  providerId    String?
-  failureReason String?
-  dedupeKey     String?                         @unique
-  legacyId      String?
-  metadata      Json?
-  createdAt     DateTime                        @default(now())
-  updatedAt     DateTime                        @updatedAt
-  tenant        Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store         Store                           @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  serviceJob    ServiceJob                      @relation(fields: [serviceJobId], references: [id], onDelete: Cascade)
+  id               String                          @id @default(cuid())
+  tenantId         String
+  storeId          String
+  serviceJobId     String
+  businessEventKey String
+  audienceKey      String
+  templatePurpose  String
+  status           ServiceNotificationIntentStatus @default(PENDING)
+  renderedSubject  String?
+  renderedMessage  String
+  customerPhone    String?
+  customerEmail    String?
+  createdByUserId  String
+  completedAt      DateTime?
+  createdAt        DateTime                        @default(now())
+  updatedAt        DateTime                        @updatedAt
+  tenant           Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store            Store                           @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  serviceJob       ServiceJob                      @relation(fields: [serviceJobId], references: [id], onDelete: Cascade)
+  manualShares     ServiceManualShare[]
+  deliveryAttempts ServiceDeliveryAttempt[]
 
-  @@unique([tenantId, storeId, legacyId])
+  @@unique([tenantId, businessEventKey, audienceKey, templatePurpose])
   @@index([tenantId, storeId, status, createdAt])
   @@index([serviceJobId, createdAt])
+}
+
+model ServiceManualShare {
+  id                   String                     @id @default(cuid())
+  notificationIntentId String
+  sharedByUserId       String
+  channel              ServiceNotificationChannel @default(MANUAL)
+  sharedAt             DateTime                   @default(now())
+  note                 String?
+  notificationIntent   ServiceNotificationIntent  @relation(fields: [notificationIntentId], references: [id], onDelete: Cascade)
+
+  @@index([notificationIntentId, sharedAt])
+}
+
+model ServiceDeliveryAttempt {
+  id                   String                       @id @default(cuid())
+  notificationIntentId String
+  channel              ServiceNotificationChannel
+  providerKey          String
+  providerAttemptId    String?
+  status               ServiceDeliveryAttemptStatus @default(PENDING)
+  failureCode          String?
+  failureMessage       String?
+  attemptedAt          DateTime                     @default(now())
+  completedAt          DateTime?
+  createdAt            DateTime                     @default(now())
+  notificationIntent   ServiceNotificationIntent    @relation(fields: [notificationIntentId], references: [id], onDelete: Cascade)
+
+  @@index([notificationIntentId, attemptedAt])
+  @@index([providerKey, status, attemptedAt])
 }

@@ -8,6 +8,8 @@ Detailed feature docs for implemented or planned product areas.
 - Link features to related APIs, schema entities, and workflows when those exist.
 
 ## Planned Features
+- [Generic Catalog, Inventory Units, And Stock Operations](./generic-catalog-inventory-units-stock-operations.md)
+- [Generic Service Catalog And Work Operations](./generic-service-operations.md)
 - [Product And Service Catalog Items](./product-service-catalog-items.md)
 - [Business Type Onboarding And Dry Cleaning (historical)](./business-type-onboarding-dry-cleaning.md)
 - [Ewatrade Dispatch Internal App](./ewatrade-dispatch-internal-app.md)

@@ -35,11 +35,17 @@ const storeOnboardingSchema = z.object({
 })
 
 export const createStoreSchema = z.object({
+  addressLine1: optionalText(200),
+  addressLine2: optionalText(200),
+  city: optionalText(120),
+  countryCode: optionalText(8),
   name: z.string().trim().min(1).max(120),
   currencyCode: operatingCurrencySchema.optional(),
   onboarding: storeOnboardingSchema.optional(),
   supportEmail: optionalEmailSchema,
   supportPhone: optionalText(40),
+  postalCode: optionalText(40),
+  region: optionalText(120),
 })
 
 export type TenantBootstrapInput = z.infer<typeof tenantBootstrapSchema>

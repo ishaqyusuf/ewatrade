@@ -1,0 +1,140 @@
+model CommercialOrder {
+  id                   String                @id @default(cuid())
+  tenantId             String
+  storeId              String
+  clientOrderId        String
+  payloadHash          String
+  schemaVersion        Int                   @default(1)
+  orderNumber          String
+  status               OrderStatus           @default(CONFIRMED)
+  paymentStatus        PaymentStatus         @default(PENDING)
+  currencyCode         String
+  subtotalMinor        Int
+  discountMinor        Int                   @default(0)
+  taxMinor             Int                   @default(0)
+  totalMinor           Int
+  customerName         String?
+  customerPhone        String?
+  customerEmail        String?
+  notes                String?
+  createdByUserId      String
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                Store                 @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  lines                CommercialOrderLine[]
+  returns              ProductReturn[]
+  serviceIntake        ServiceIntake?
+  serviceJobs          ServiceJob[]
+  acceptedQuoteVersion ServiceQuoteVersion?
+
+  @@unique([tenantId, clientOrderId])
+  @@unique([storeId, orderNumber])
+  @@index([tenantId, status, createdAt])
+  @@index([storeId, createdAt])
+}
+
+model CommercialOrderLine {
+  id                  String               @id @default(cuid())
+  orderId             String
+  offeringId          String
+  kind                SellableOfferingKind
+  quantity            Decimal              @db.Decimal(38, 6)
+  unitPriceMinor      Int
+  discountMinor       Int                  @default(0)
+  taxMinor            Int                  @default(0)
+  totalMinor          Int
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  order               CommercialOrder      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  offering            SellableOffering     @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  snapshot            OfferingSnapshot?
+  stockReservation    StockReservation?
+  productFulfillments ProductFulfillment[]
+  productReturns      ProductReturn[]
+  serviceJobLines     ServiceJobLine[]
+
+  @@index([orderId])
+  @@index([offeringId])
+}
+
+model OfferingSnapshot {
+  id                     String                      @id @default(cuid())
+  orderLineId            String                      @unique
+  catalogItemId          String
+  catalogItemName        String
+  variantId              String
+  variantName            String
+  optionSelections       Json
+  offeringId             String
+  offeringName           String
+  offeringKind           SellableOfferingKind
+  pricingPolicy          OfferingPricingPolicy
+  currencyCode           String
+  unitPriceMinor         Int
+  quantity               Decimal                     @db.Decimal(38, 6)
+  discountMinor          Int                         @default(0)
+  taxMinor               Int                         @default(0)
+  totalMinor             Int
+  inventoryUnitId        String?
+  inventoryUnitName      String?
+  transactionScale       Int?
+  sku                    String?
+  barcode                String?
+  configurationVersionId String?
+  unitFactor             Decimal?                    @db.Decimal(38, 12)
+  stockBehavior          InventoryUnitStockBehavior?
+  balanceSourceId        String?
+  createdAt              DateTime                    @default(now())
+  orderLine              CommercialOrderLine         @relation(fields: [orderLineId], references: [id], onDelete: Cascade)
+  inventoryUnit          InventoryUnit?              @relation(fields: [inventoryUnitId], references: [id], onDelete: Restrict)
+  configurationVersion   UnitConfigurationVersion?   @relation(fields: [configurationVersionId], references: [id], onDelete: Restrict)
+  balanceSource          StockBalanceSource?         @relation(fields: [balanceSourceId], references: [id], onDelete: Restrict)
+
+  @@index([catalogItemId, createdAt])
+  @@index([offeringId, createdAt])
+  @@index([balanceSourceId])
+}
+
+model ProductFulfillment {
+  id               String              @id @default(cuid())
+  orderLineId      String
+  reservationId    String
+  stockOperationId String
+  quantity         Decimal             @db.Decimal(38, 6)
+  createdAt        DateTime            @default(now())
+  orderLine        CommercialOrderLine @relation(fields: [orderLineId], references: [id], onDelete: Restrict)
+  reservation      StockReservation    @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  stockOperation   StockOperation      @relation(fields: [stockOperationId], references: [id], onDelete: Restrict)
+
+  @@unique([orderLineId, reservationId])
+  @@index([stockOperationId])
+}
+
+model ProductReturn {
+  id                         String                   @id @default(cuid())
+  tenantId                   String
+  storeId                    String
+  orderId                    String
+  orderLineId                String
+  clientReturnId             String
+  payloadHash                String
+  schemaVersion              Int                      @default(1)
+  quantity                   Decimal                  @db.Decimal(38, 6)
+  disposition                ProductReturnDisposition
+  destinationBalanceSourceId String?
+  stockOperationId           String?
+  reason                     String
+  actorUserId                String
+  createdAt                  DateTime                 @default(now())
+  tenant                     Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                      Store                    @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  order                      CommercialOrder          @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  orderLine                  CommercialOrderLine      @relation(fields: [orderLineId], references: [id], onDelete: Restrict)
+  destinationBalanceSource   StockBalanceSource?      @relation(fields: [destinationBalanceSourceId], references: [id], onDelete: Restrict)
+  stockOperation             StockOperation?          @relation(fields: [stockOperationId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, clientReturnId])
+  @@index([orderLineId, createdAt])
+  @@index([destinationBalanceSourceId])
+}

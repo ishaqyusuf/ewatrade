@@ -48,11 +48,13 @@ const EXPECTED = [
   {
     checks: {
       ALLOWED_API_ORIGINS: includesAll([
+        "http://localhost:3091",
         "http://localhost:3092",
         "http://localhost:3094",
         "http://localhost:3095",
       ]),
       BETTER_AUTH_TRUSTED_ORIGINS: includesAll([
+        "http://localhost:3091",
         "http://localhost:3092",
         "http://localhost:3094",
         "http://localhost:3095",
@@ -63,14 +65,16 @@ const EXPECTED = [
       API_URL: equals("http://localhost:3095"),
       MOBILE_APP_URL: equals("http://localhost:3096"),
       PLATFORM_DOMAIN: equals("localhost:3092"),
-      STOREFRONT_URL: equals("http://localhost:3092"),
+      STOREFRONT_URL: equals("http://ewatrade-storefront.localhost"),
       MARKETING_INBOX_EMAILS: nonLocalEmailLike,
       NEXT_PUBLIC_API_URL: equals("http://localhost:3095"),
       NEXT_PUBLIC_APP_URL: equals("http://localhost:3092"),
       NEXT_PUBLIC_DASHBOARD_URL: equals("http://localhost:3094"),
       NEXT_PUBLIC_PLATFORM_DOMAIN: equals("localhost:3092"),
       NEXT_PUBLIC_MARKETING_URL: equals("http://localhost:3092"),
-      NEXT_PUBLIC_STOREFRONT_URL: equals("http://localhost:3092"),
+      NEXT_PUBLIC_STOREFRONT_URL: equals(
+        "http://ewatrade-storefront.localhost",
+      ),
     },
     file: ROOT_LOCAL_ENV,
     label: "root local env",

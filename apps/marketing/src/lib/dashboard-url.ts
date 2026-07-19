@@ -1,5 +1,3 @@
-import { buildPlatformSurfaceHostname } from "@ewatrade/utils"
-
 export function resolveDashboardUrl(params: {
   configuredUrl?: string
   isProduction: boolean
@@ -8,13 +6,14 @@ export function resolveDashboardUrl(params: {
   const configuredUrl = params.configuredUrl?.trim()
 
   if (configuredUrl) {
-    return configuredUrl.replace(/\/+$/, "")
+    const normalized = configuredUrl.replace(/\/+$/, "")
+    if (!params.isProduction) return normalized
+    try {
+      const url = new URL(normalized)
+      if (url.hostname !== `dashboard.${params.platformDomain}`) return normalized
+    } catch {
+      // Fall through to the shared platform URL.
+    }
   }
-
-  const hostname = buildPlatformSurfaceHostname({
-    platformDomain: params.platformDomain,
-    surface: "dashboard",
-  })
-
-  return `${params.isProduction ? "https" : "http"}://${hostname}`
+  return `${params.isProduction ? "https" : "http"}://${params.platformDomain}/dashboard`
 }

@@ -24,10 +24,13 @@ let nativeGoogleConfigured = false
 type MobileGoogleAuthMode = "login" | "sign_up"
 
 type UseMobileGoogleAuthInput = {
+  addressLine1?: string
   businessName?: string
+  city?: string
   currencyCode?: OperatingCurrencyCode
   mode: MobileGoogleAuthMode
   name?: string
+  phone?: string
   onError: (message: string) => void
 }
 
@@ -90,10 +93,13 @@ function configureNativeGoogleSignIn(
 }
 
 export function useMobileGoogleAuth({
+  addressLine1,
   businessName,
+  city,
   currencyCode,
   mode,
   name,
+  phone,
   onError,
 }: UseMobileGoogleAuthInput) {
   const auth = useAuthContext()
@@ -142,14 +148,17 @@ export function useMobileGoogleAuth({
       lastSubmittedIdToken.current = idToken
 
       verifyGoogleMutation.mutate({
+        addressLine1,
         businessName,
+        city,
         currencyCode,
         idToken,
         mode,
         name,
+        phone,
       })
     },
-    [businessName, currencyCode, mode, name, verifyGoogleMutation],
+    [addressLine1, businessName, city, currencyCode, mode, name, phone, verifyGoogleMutation],
   )
 
   useEffect(() => {

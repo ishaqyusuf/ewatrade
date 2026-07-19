@@ -17,22 +17,24 @@ export type UserNotificationContact = {
   userId: string
 }
 
-export type NotificationContact = EmailNotificationContact | UserNotificationContact
+export type NotificationContact =
+  | EmailNotificationContact
+  | UserNotificationContact
 
 export function createEmailNotificationContact(
-  input: Omit<EmailNotificationContact, "kind">
+  input: Omit<EmailNotificationContact, "kind">,
 ): EmailNotificationContact {
   return {
     ...input,
-    kind: "email"
+    kind: "email",
   }
 }
 
 export function createUserNotificationContact(
-  input: Omit<UserNotificationContact, "kind">
+  input: Omit<UserNotificationContact, "kind">,
 ): UserNotificationContact {
   return {
     ...input,
-    kind: "user"
+    kind: "user",
   }
 }

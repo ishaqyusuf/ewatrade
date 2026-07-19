@@ -1,5 +1,20 @@
 # Retail Ops Sales Product
 
+## Status
+
+Superseded on 2026-07-19 by the clean generic Catalog, Offering, Inventory,
+Commercial Order, and Service Operations implementation. This document is
+retained only as historical product discovery and is not an implementation
+contract. Runtime behavior is defined by:
+
+- `.brain/features/generic-catalog-inventory-units-stock-operations.md`
+- `.brain/features/generic-service-operations.md`
+- `.brain/decisions/ADR-0012-generic-service-operations-bounded-contexts.md`
+- `.brain/decisions/ADR-0013-generic-catalog-inventory-units-and-stock-operations.md`
+
+Industry examples below are explanatory history only. No feed, bag, dry-cleaning,
+or other industry vocabulary is encoded as a product rule or runtime namespace.
+
 ## Purpose
 
 Document Retail Ops/Sales as the first focused ewatrade product wedge for small businesses that sell physical inventory through owners, managers, and attendants.
@@ -20,7 +35,7 @@ The product is for merchants who currently rely on notebooks, WhatsApp, memory, 
 - Did any stock or payment variance happen?
 - Which changes are still waiting to sync?
 
-## Starter Template
+## Historical Starter Example
 
 Rabbit feed, poultry feed, grain, bag, half bag, and quarter bag examples are starter templates because they exercise the hard parts of the domain:
 

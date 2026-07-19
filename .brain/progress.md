@@ -1,6 +1,148 @@
 # Progress
 
+## 2026-07-19
+
+### Generic Inventory And Service Operations Source Implementation Complete
+
+- Completed the two approved generic Wayfinder specifications in the existing
+  main worktree without worktrees, compatibility readers or industry-specific
+  runtime branches.
+- Implemented advanced Catalog/Offerings, exact versioned units, complete stock
+  operations, immutable mixed Commercial Orders, offline conflict handling,
+  reports, direct Service Intake, generic Job/Line work, Requests, immutable
+  Quote Versions, safe customer tracking, communications and evidence policy.
+- Rebuilt dashboard, mobile and storefront surfaces around the clean contracts;
+  added dashboard unit-configuration history/Draft/publish management and
+  retained the shared-host dashboard/storefront-subdomain boundary.
+- Migrated Catalog, Inventory, Orders, Service Work and Reports to the Midday
+  workspace architecture: thin server routes, typed prefetch/hydration,
+  URL-backed search/sheet state, domain tables, focused sheets/forms,
+  Suspense/loading/empty/error states and exact query invalidation.
+- Kept the existing mobile floating bottom-tab/central-create shell, renamed
+  the generic operations surface, made onboarding industry-neutral, and split
+  owner signup into progressive business and account steps while retaining
+  address, city, phone and operating currency.
+- Resolved all 24 Wayfinder decision issues and implemented both
+  specifications. Implementation tickets are marked source-complete while
+  behavioral acceptance remains reserved for the separate testing goal.
+- Deleted prototype Product/unit/stock/order/POS/customer/share-link/sync
+  schemas, repositories, APIs, mobile persistence, orphaned storefront routes,
+  conversion utility, industry seeds and stale direct QA scripts. Added neutral
+  Unit Definition seeding.
+- Hardened evidence so client procedures cannot mark media safe or available.
+  Mobile photo/video captures are copied into the app documents directory and
+  recorded as private `LOCAL` evidence rather than falsely queued as uploaded;
+  only trusted future upload infrastructure can provide safety/public asset
+  facts before explicit manager publication.
+- Closed the simple Intake-flow gap by progressively revealing optional
+  photo/video capture alongside promised date and instructions. Online Intake
+  attaches retained local evidence to the created tracked Job; offline Intake
+  queues evidence after the Intake command and resolves the Job through the
+  stable Intake client id. Charge-only Service selections cannot accept Job
+  evidence.
+- Static validation passed for database, API, dashboard, mobile, storefront,
+  marketing, jobs, notifications, email and utilities. Dashboard lint and
+  repository diff checks pass. Repository-wide lint proceeds through the
+  changed foundational packages and then stops on existing untouched
+  `packages/ui` formatting/accessibility diagnostics. No behavioral/browser/
+  device tests were run by owner request.
+- Used the owner-approved destructive local development reset, then let Prisma
+  generate and apply `20260719092903_clean_generic_operations_cutover`.
+  `bun run db:push --local`, neutral Unit Definition seeding and
+  `prisma migrate status` all pass; all 22 migrations are applied. No remote or
+  production database was touched.
+- Remaining gate: the separate behavioral testing goal. Managed
+  cross-device/public media remains a fail-closed deployment integration and is
+  not represented as active storage.
+
 ## 2026-07-18
+
+### Clean Simple Product And Service Setup — Ticket 02 Implemented
+- Source Mode: Continued the owner-approved Generic Inventory implementation in
+  the existing main worktree with Midday-style query/router and
+  URL/full-screen workflow ownership.
+- Implemented: `catalog.createSimpleItem`; strict Product/Service-discriminated
+  contracts; tenant-scoped command receipts; optional Product Opening Stock as
+  an immutable operation/movement against an explicit balance; progressive
+  dashboard setup; full-screen mobile setup; and a clean mobile Catalog list.
+- Generic Behavior: Product and Service share the same item entry flow, but only
+  Product accepts a counted-in unit or Opening Stock. No feed, bag, garment,
+  dry-cleaning, industry key, old local cache, dual write, or metadata fallback
+  exists in the new path.
+- Migration: Prisma generated and locally applied
+  `20260718213251_simple_catalog_idempotency_opening_stock`; local push is in
+  sync. Production and remote pushes were attempted and stopped safely on the
+  same older prototype uniqueness warnings; `--accept-data-loss` was not used.
+- Static Validation: database, API, dashboard, and mobile TypeScript checks
+  passed for the clean paths. No browser, device, or behavioral tests were run,
+  per the active-goal constraint.
+- Next: ticket 03 neutral advanced variants, Offerings, identifiers, and Store
+  availability. Tickets 01 and 02 remain behavioral-validation pending for the
+  separate testing goal.
+
+### Clean Catalog, Offering, And Exact-Quantity Foundation — Ticket 01 Implemented
+- Source Mode: Owner-approved implementation of the Generic Inventory Units
+  Wayfinder in the main worktree, using Midday implementation-mode package,
+  schema, query, and thin-router boundaries.
+- Implemented: exact decimal-string primitives with coefficient/scale
+  arithmetic; clean business-owned Catalog Item Product/Service subtypes;
+  explicit Sellable Variants and normalized option/value schema; exclusive
+  Product Unit/Service Offering subtypes; versioned Product unit configuration;
+  `DECIMAL(38,12)` Inventory Unit factors; Store Offering Availability; Catalog
+  Price Changes; atomic tenant/store-scoped Catalog commands; and dedicated
+  `catalog.createItem`, `catalog.getItem`, and `catalog.listItems` tRPC
+  procedures.
+- No Compatibility: no legacy ids, backfill, dual writes, aliases, metadata
+  fallbacks, or feed/bag presets connect the new foundation to the existing
+  prototype tables.
+- Migration: Prisma generated and locally applied
+  `20260718212155_clean_catalog_offering_foundation`; local `db:push` is in
+  sync. Required production and remote attempts stopped without changes at the
+  Prisma data-loss safeguard for two older prototype uniqueness constraints;
+  `--accept-data-loss` was not used.
+- Static Validation: Prisma format/generate succeeded; `@ewatrade/db` and API
+  typechecks passed; exact-decimal errors are absent from the shared utility
+  typecheck. The utility package still reports two pre-existing Vercel test
+  env-key typing errors in `src/vercel.test.ts`.
+- Testing Constraint: no web or mobile tests were run. Behavioral validation is
+  reserved for the owner-requested separate testing goal.
+- Brain Files Updated: generic Catalog feature and ADR; database schema,
+  relationships, and migrations; API contracts, endpoints, and permissions;
+  in-progress/backlog tracking; progress.
+- Next: Generic Inventory ticket 02, simple Product/Service setup on the clean
+  Catalog contract, while Ticket 01 remains validation-pending.
+
+### Generic Inventory Units And Service Operations Specifications And Tickets
+- Source Mode: Owner-approved Wayfinder-to-spec and to-tickets continuation for the two generic Wayfinders, with standing approval for all recommendations and local publication.
+- Completed: Kept the existing Generic Inventory Units specification as the authoritative ready-for-agent Catalog/Offering/Inventory contract; added approved pipeline comments to all 12 Generic Service Operations Wayfinder tickets; published the ready-for-agent Generic Service Operations specification; and published two local tracer-bullet implementation sets with 12 tickets each and explicit within-spec and cross-spec blockers. No additional Wayfinder was created.
+- Published Specs: `.scratch/wayfinder-generic-inventory-units/spec.md`; `.scratch/wayfinder-generic-service-operations/spec.md`.
+- Published Tickets: `.scratch/generic-inventory-units-implementation/issues/` (12); `.scratch/generic-service-operations-implementation/issues/` (12).
+- Brain Files Updated: `.brain/features/generic-catalog-inventory-units-stock-operations.md`, `.brain/features/generic-service-operations.md`, `.brain/decisions/ADR-0008-item-level-product-service-catalog.md`, `.brain/decisions/ADR-0010-server-owned-stock-unit-conversions.md`, `.brain/decisions/ADR-0013-generic-catalog-inventory-units-and-stock-operations.md`, `.brain/tasks/backlog.md`, `.brain/progress.md`, and `CONTEXT.md` from the approved domain-language step.
+- Checks Run: Spec template/label scans; one approved pipeline marker per Service Wayfinder ticket; 12-ticket count per implementation set; local ticket template/status/blocker scans; six acceptance criteria per ticket; cross-spec dependency review.
+- Follow-up: Implementation begins at Generic Inventory ticket 01. Generic Service ticket 01 remains blocked until Generic Inventory tickets 02, 03, and 09 provide the shared Catalog, Offering, and Commercial Order contracts.
+
+### Shared Dashboard And Storefront Subdomains
+- Source Mode: Direct user correction during rabbit-feed inventory implementation.
+- Completed: Reserved the selected business slug for the future public storefront, changed signup/login to return the shared platform dashboard URL, stopped new signup from creating internal/custom dashboard hostname records or provisioning tenant dashboard domains, changed business switching to refresh shared-host tenant context, and corrected signup/success copy and URL previews.
+- Changed Source Areas: marketing signup/login routes and signup UI; shared domain/Vercel utilities; dashboard active-tenant route; focused URL/domain tests.
+- Brain Files Updated: `.brain/decisions/ADR-0011-shared-dashboard-storefront-subdomains.md`, `.brain/features/retail-ops-onboarding.md`, `.brain/modules/merchant-system.md`, `.brain/modules/website-builder.md`, `.brain/api/contracts.md`, `.brain/api/endpoints.md`, `.brain/database/relationships.md`, `.brain/tasks/done.md`, `.brain/progress.md`.
+- Checks Run: shared domain and Vercel unit tests; marketing and dashboard typechecks; mobile workflow source guards; changed-file Biome; `git diff --check`.
+
+### Ratio-Backed Feed Inventory Conversions
+- Source Mode: Direct implementation request following the rabbit-feed inventory design review.
+- Completed: Added 25 kg and 50 kg feed-unit presets; preserved separate Bag, Half bag, Quarter bag, and Kilogram inventory buckets; moved target-quantity derivation to the server; made missing ratios and fractional outputs fail closed; required online conversion idempotency ids; kept paired conversion ledger writes transactional; corrected mobile conversion direction and offline replay; made dashboard/mobile output previews read-only; and replaced misleading raw mixed-unit totals with per-unit and base-equivalent reporting.
+- Changed Source Areas: shared conversion utility; Retail Ops product-template and stock repositories; API schemas/router; dashboard inventory data/helper/page/route; mobile item setup, conversion, local store, replay builder, and QA guards.
+- Brain Files Updated: `.brain/decisions/ADR-0010-server-owned-stock-unit-conversions.md`, `.brain/features/retail-ops-sales-product.md`, `.brain/workflows/retail-ops-stock-to-closeout-flow.md`, `.brain/api/contracts.md`, `.brain/database/schema.md`, `.brain/features/retail-ops-reporting.md`, `.brain/tasks/done.md`, `.brain/progress.md`.
+- Checks Run: 50 focused Bun tests across conversion, domain, provisioning, repository, API schema, dashboard, and mobile replay behavior; `@ewatrade/db`, API, dashboard, marketing, and mobile TypeScript checks; `qa:inventory-operations-flow`; `qa:first-product-flow`; `qa:service-jobs-flow`; changed-file Biome formatting; `git diff --check`.
+- QA Note: Dashboard and marketing development servers started successfully and the protected inventory route redirected to login. Authenticated inventory UI testing stopped before workspace creation because signup requires accepting product terms. Expo Metro started, but native launch had no available device/simulator and Expo web bundling hit the existing `react-native-web`/`react-native-css` `FlatList` runtime error. `qa:offline-sync-flow` also reports two pre-existing marker mismatches in untouched sync/dashboard UI.
+
+### Context-Aware Add Item Variant Tabs
+- Source Mode: Direct user request to replace stock-oriented multiple-pricing tab copy with item-kind-aware Product and Service terminology.
+- Completed: Replaced the internal `stocks` tab state with a stable `details` state and now render `Variants | Inventory` for Products and `Variants | Pricing` for Services. Variant definitions and sellable-row details are separated for both kinds, Service pricing rows never render stock fields, item-kind and multiple-pricing changes reset to Variants, tab accessibility exposes selected state, and the Pricing/Inventory tab owns the final Add item action.
+- Changed Source Files: `apps/mobile/src/components/mobile/first-product-setup-sheet.tsx`, `apps/mobile/scripts/check-first-product-flow.mjs`, `apps/mobile/scripts/check-service-jobs-flow.mjs`.
+- Brain Files Updated: `.brain/features/product-service-catalog-items.md`, `.brain/progress.md`.
+- Checks Run: `bun --cwd apps/mobile qa:first-product-flow`; `bun --cwd apps/mobile qa:service-jobs-flow`; `bun --cwd apps/mobile qa:nativewind-style`; `bun --cwd apps/mobile qa:mvp-typechecks`; `bun test apps/api/src packages/db/src apps/dashboard/src apps/mobile/src` (190 pass, 0 fail); changed-source Biome; `git diff --check`; Android Expo Go Product/Service interaction QA in light and dark themes covering label mapping, tab selection, mode-switch reset, Product Price/Stock rows, Service Price-only rows, and the Service Pricing Add item path.
+- Known Baseline: `bun --cwd apps/mobile qa:mvp-source` still stops on pre-existing untouched Customer Book guard drift in `secondary-operations.tsx` and `dashboard.tsx`; the focused first-product and Service Jobs guards pass.
 
 ### Product And Service Catalog Implementation
 - Source Mode: Approved Product And Service Catalog Wayfinder specification plus the item-driven Sales/Services UX requirement and dev OTP suppression request.

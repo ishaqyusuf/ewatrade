@@ -177,36 +177,53 @@ export async function POST(request: NextRequest) {
 
   const {
     accessToken,
-    modes,
+    addressLine1,
     subdomain,
     customDomain,
     businessName,
+    city,
     industry,
     businessSize,
     countryCode,
     currencyCode,
     phone,
+    region,
     firstName,
     lastName,
     email,
     password,
   } = result.data
 
-  // ── 2. Check existing email / slug ───────────────────────────────────────
-  const [existingUser, existingTenant] = await Promise.all([
-    prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
-      select: { id: true },
-    }),
-    prisma.tenant.findUnique({
-      where: { slug: subdomain },
-      select: { id: true },
-    }),
-  ])
+  const normalizedEmail = email.toLowerCase()
+  const normalizedPhone = phone.replace(/\s+/g, "")
 
-  if (existingUser) {
+  // ── 2. Check existing account / slug ─────────────────────────────────────
+  const [existingEmailUser, existingPhoneUser, existingTenant] =
+    await Promise.all([
+      prisma.user.findUnique({
+        where: { email: normalizedEmail },
+        select: { id: true },
+      }),
+      prisma.user.findUnique({
+        where: { phone: normalizedPhone },
+        select: { id: true },
+      }),
+      prisma.tenant.findUnique({
+        where: { slug: subdomain },
+        select: { id: true },
+      }),
+    ])
+
+  if (existingEmailUser) {
     return NextResponse.json(
       { message: "An account with this email address already exists." },
+      { status: 409 },
+    )
+  }
+
+  if (existingPhoneUser) {
+    return NextResponse.json(
+      { message: "An account with this phone number already exists." },
       { status: 409 },
     )
   }
@@ -218,8 +235,6 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const normalizedEmail = email.toLowerCase()
-  const normalizedPhone = phone.replace(/\s+/g, "")
   const displayName = `${firstName} ${lastName}`.trim()
   const accessSession = accessToken
     ? await prisma.onboardingSession.findUnique({
@@ -316,13 +331,7 @@ export async function POST(request: NextRequest) {
 
   const userId = signUpResult.user.id
 
-  // ── 4. Determine primary tenant type ────────────────────────────────────
-  const primaryType =
-    modes.includes("DISPATCH") && modes.length === 1
-      ? ("DISPATCH" as const)
-      : ("MERCHANT" as const)
-
-  // ── 5. Build hostnames ───────────────────────────────────────────────────
+  // ── 4. Build hostnames ───────────────────────────────────────────────────
   const storefrontHostname = buildInternalTenantHostname({
     localProjectSlug: subdomain,
     tenantSlug: subdomain,
@@ -345,7 +354,7 @@ export async function POST(request: NextRequest) {
   const posUrl = `${urlProtocol}://${posHostname}`
   const storefrontUrl = `${urlProtocol}://${storefrontHostname}`
 
-  // ── 6. Transactional DB writes ───────────────────────────────────────────
+  // ── 5. Transactional DB writes ───────────────────────────────────────────
   const { tenant } = await prisma
     .$transaction(async (tx) => {
       const user = await tx.user.update({
@@ -371,8 +380,8 @@ export async function POST(request: NextRequest) {
         data: {
           slug: subdomain,
           name: businessName,
-          type: primaryType,
-          enabledModes: modes,
+          type: "MERCHANT",
+          enabledModes: ["MERCHANT"],
           countryCode,
           currencyCode,
           metadata: { industry, businessSize },
@@ -442,10 +451,15 @@ export async function POST(request: NextRequest) {
 
       await tx.store.create({
         data: {
+          addressLine1: addressLine1.trim(),
+          city: city.trim(),
+          countryCode,
           currencyCode,
           name: businessName,
+          region: region?.trim() || null,
           slug: "main",
           status: "ACTIVE",
+          supportPhone: normalizedPhone,
           tenantId: tenant.id,
         },
       })
@@ -486,7 +500,7 @@ export async function POST(request: NextRequest) {
       throw error
     })
 
-  // ── 7. Vercel domain provisioning (fire-and-forget) ──────────────────────
+  // ── 6. Vercel domain provisioning (fire-and-forget) ──────────────────────
   if (process.env.VERCEL_API_TOKEN) {
     void provisionTenantVercelDomains({
       storefrontDomain: storefrontHostname,
@@ -494,7 +508,7 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  // ── 8. Build email HTML ──────────────────────────────────────────────────
+  // ── 7. Build email HTML ──────────────────────────────────────────────────
   const signupEmailRecipients = signupEmailRouting.recipients.join(", ")
   const emailHtml = buildWelcomeEmailHtml({
     firstName,
@@ -543,7 +557,7 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  // ── 9. Return signup result ──────────────────────────────────────────────
+  // ── 8. Return signup result ──────────────────────────────────────────────
   return NextResponse.json({
     success: true,
     tenantSlug: tenant.slug,

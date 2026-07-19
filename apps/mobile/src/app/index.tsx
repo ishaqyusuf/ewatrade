@@ -13,9 +13,9 @@ function StartupSplash() {
     >
       <AuthHeader
         align="center"
-        badge="Retail ops"
+        badge="Business operations"
         icon="Building2"
-        subtitle="Preparing your sales and inventory workspace."
+        subtitle="Preparing your catalog, orders, stock, and work workspace."
         title="Ewatrade"
       />
       <View className="flex-row gap-2">

@@ -18,7 +18,6 @@ describe("dashboard navigation policy", () => {
       "/services",
       "/customers",
       "/staff",
-      "/links",
       "/analytics",
       "/settings",
     ])
@@ -36,16 +35,20 @@ describe("dashboard navigation policy", () => {
       "/services",
       "/customers",
       "/staff",
-      "/links",
       "/analytics",
     ])
   })
 
-  test("shows service jobs to every sales operator without business gating", () => {
+  test("shows service jobs to sales operators when services exist", () => {
     expect(getDashboardNavigation("OWNER").map((item) => item.href)).toContain(
       "/services",
     )
-    expect(canAccessDashboardPath("/services", "CASHIER")).toBe(true)
+    expect(
+      canAccessDashboardPath("/services", "CASHIER", {
+        hasProductItems: true,
+        hasServiceItems: false,
+      }),
+    ).toBe(false)
   })
 
   test("tailors Sales and Service jobs to catalog item kinds", () => {
@@ -80,14 +83,20 @@ describe("dashboard navigation policy", () => {
     ).not.toContain("/services")
     expect(
       getDashboardNavigation("OWNER", serviceOnly).map((item) => item.href),
-    ).not.toContain("/sales")
+    ).not.toContain("/inventory")
+    expect(
+      getDashboardNavigation("OWNER", serviceOnly).map((item) => item.href),
+    ).toContain("/sales")
     expect(
       getDashboardNavigation("OWNER", serviceOnly).map((item) => item.href),
     ).toContain("/services")
     expect(
       getDashboardNavigation("OWNER", mixed).map((item) => item.href),
     ).toEqual(expect.arrayContaining(["/sales", "/services"]))
-    expect(canAccessDashboardPath("/sales", "OWNER", serviceOnly)).toBe(false)
+    expect(canAccessDashboardPath("/sales", "OWNER", serviceOnly)).toBe(true)
+    expect(canAccessDashboardPath("/inventory", "OWNER", serviceOnly)).toBe(
+      false,
+    )
     expect(canAccessDashboardPath("/services", "OWNER", productOnly)).toBe(
       false,
     )
@@ -107,7 +116,6 @@ describe("dashboard navigation policy", () => {
       "/sales",
       "/services",
       "/customers",
-      "/links",
     ])
     expect(operatorItems).toEqual(cashierItems)
   })

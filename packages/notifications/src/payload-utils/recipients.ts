@@ -1,7 +1,7 @@
 import {
+  type NotificationContact,
   createEmailNotificationContact,
   createUserNotificationContact,
-  type NotificationContact
 } from "../contacts"
 import type { NotificationRecipients } from "./types"
 
@@ -32,7 +32,9 @@ export function makeUserRecipients(
 export function makeEmailRecipients(
   ...recipients: Array<Parameters<typeof createEmailNotificationContact>[0]>
 ) {
-  return recipients.map((recipient) => createEmailNotificationContact(recipient))
+  return recipients.map((recipient) =>
+    createEmailNotificationContact(recipient),
+  )
 }
 
 export function normalizeRecipients(recipients?: NotificationRecipients) {

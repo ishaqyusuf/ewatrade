@@ -1,166 +1,75 @@
 import { spawnSync } from "node:child_process"
 import { mkdirSync, writeFileSync } from "node:fs"
-import { dirname } from "node:path"
+import { dirname, resolve } from "node:path"
 import { createTRPCProxyClient, httpLink } from "@trpc/client"
 import superjson from "superjson"
 
 const DEFAULT_API_URL = "http://127.0.0.1:3095"
-const DEFAULT_DEEP_LINK_BASE = "exp://192.168.18.7:3096/--/qa-session"
-const SERVICE_QA_ITEMS = [
+const DEFAULT_DEEP_LINK_BASE = "ewatrade-dev://qa-session"
+const DEFAULT_EVIDENCE_PATH = resolve(
+  new URL("../../..", import.meta.url).pathname,
+  ".scratch/qa/mobile-five-business-real-session.json",
+)
+
+const BUSINESS_MODELS = [
   {
-    premiumPriceMinor: 50_000,
-    name: "Standard consultation",
-    standardPriceMinor: 40_000,
+    id: "bulk-packaged-goods",
+    businessName: "Kora Bulk Goods",
+    next: "/reports-modal",
+    seed: seedBulkPackagedGoods,
   },
   {
-    premiumPriceMinor: 70_000,
-    name: "Document review",
-    standardPriceMinor: 55_000,
+    id: "fashion-apparel",
+    businessName: "Aso Lane Apparel",
+    next: "/catalog-items-modal",
+    seed: seedFashionApparel,
   },
   {
-    premiumPriceMinor: 40_000,
-    name: "Installation visit",
-    standardPriceMinor: 32_000,
+    id: "garment-care-services",
+    businessName: "FreshFold Garment Care",
+    next: "/service-jobs-modal",
+    seed: seedGarmentCareServices,
   },
   {
-    premiumPriceMinor: 60_000,
-    name: "Maintenance package",
-    standardPriceMinor: 48_000,
-  },
-]
-const SERVICE_QA_JOBS = [
-  {
-    customer: {
-      email: "aisha-bello@test.com",
-      name: "Aisha Bello",
-      phone: "+2348010000001",
-    },
-    dueOffsetDays: 0,
-    express: true,
-    notes: "Express intake paid upfront.",
-    paymentStatus: "paid",
-    quantity: 2,
-    serviceName: "Standard consultation",
-    statuses: ["in_progress", "ready"],
-    variantName: "Premium",
+    id: "electronics-mixed",
+    businessName: "CircuitCare Electronics",
+    next: "/dashboard",
+    seed: seedElectronicsMixed,
   },
   {
-    customer: {
-      email: "tunde-adebayo@test.com",
-      name: "Tunde Adebayo",
-      phone: "+2348010000002",
-    },
-    dueOffsetDays: 1,
-    express: false,
-    notes: "Customer will pay on collection.",
-    paymentStatus: "pay_on_collection",
-    quantity: 1,
-    serviceName: "Document review",
-    statuses: ["in_progress"],
-    variantName: "Premium",
-  },
-  {
-    customer: {
-      email: "mariam-sanni@test.com",
-      name: "Mariam Sanni",
-      phone: "+2348010000003",
-    },
-    dueOffsetDays: 2,
-    express: false,
-    notes: "Standard drop-off.",
-    paymentStatus: "unpaid",
-    quantity: 3,
-    serviceName: "Installation visit",
-    statuses: [],
-    variantName: "Standard",
-  },
-  {
-    customer: {
-      email: "chinedu-okoro@test.com",
-      name: "Chinedu Okoro",
-      phone: "+2348010000004",
-    },
-    dueOffsetDays: 3,
-    express: true,
-    notes: "Express order for delivery follow-up.",
-    paymentStatus: "paid",
-    quantity: 1,
-    serviceName: "Maintenance package",
-    statuses: ["in_progress", "ready"],
-    variantName: "Premium",
-  },
-  {
-    customer: {
-      email: "fatima-yusuf@test.com",
-      name: "Fatima Yusuf",
-      phone: "+2348010000005",
-    },
-    dueOffsetDays: -1,
-    express: false,
-    notes: "Due work sample for dashboard review.",
-    paymentStatus: "partial",
-    quantity: 2,
-    serviceName: "Document review",
-    statuses: ["in_progress"],
-    variantName: "Standard",
-  },
-  {
-    customer: {
-      email: "segun-cole@test.com",
-      name: "Segun Cole",
-      phone: "+2348010000006",
-    },
-    dueOffsetDays: 4,
-    express: false,
-    notes: "Pay on delivery sample.",
-    paymentStatus: "pay_on_delivery",
-    quantity: 1,
-    serviceName: "Standard consultation",
-    statuses: ["cancelled"],
-    variantName: "Standard",
+    id: "professional-services",
+    businessName: "Northstar Advisory",
+    next: "/service-jobs-modal",
+    seed: seedProfessionalServices,
   },
 ]
 
 function requireConfirmation() {
   if (process.env.MOBILE_REAL_SESSION_CONFIRM === "1") return
-
   console.error(
-    "Set MOBILE_REAL_SESSION_CONFIRM=1 to create disposable mobile auth/staff records for QA.",
+    "Set MOBILE_REAL_SESSION_CONFIRM=1 to create five disposable local QA businesses.",
   )
   process.exit(1)
 }
 
-function nowId() {
-  return new Date()
-    .toISOString()
-    .replace(/[^0-9]/g, "")
-    .slice(0, 14)
+function runId() {
+  return new Date().toISOString().replace(/[^0-9]/g, "").slice(0, 14)
 }
 
-function normalizeApiUrl(value) {
-  return (value || DEFAULT_API_URL).replace(/\/$/, "")
-}
-
-function addDays(days) {
-  const date = new Date()
-  date.setDate(date.getDate() + days)
-  return date
+function operationId(prefix, id) {
+  return `${prefix}-${id}-${crypto.randomUUID()}`
 }
 
 function createClient({ apiUrl, token }) {
   return createTRPCProxyClient({
     links: [
       httpLink({
-        headers() {
-          return token
-            ? {
-                "x-app-authorization": `Bearer ${token}`,
-                "x-trpc-source": "mobile-real-session-qa",
-              }
-            : {
-                "x-trpc-source": "mobile-real-session-qa",
-              }
-        },
+        headers: () => ({
+          ...(token
+            ? { "x-app-authorization": `Bearer ${token}` }
+            : undefined),
+          "x-trpc-source": "mobile-five-business-real-session-qa",
+        }),
         transformer: superjson,
         url: `${apiUrl}/api/trpc`,
       }),
@@ -168,154 +77,544 @@ function createClient({ apiUrl, token }) {
   })
 }
 
-async function createMobileSession(client, input) {
-  const otp = await client.auth.requestMobileOwnerOtp.mutate({
-    businessName: input.businessName,
-    email: input.email,
-    mode: input.mode,
-    name: input.name,
-  })
-
+async function createBusinessSession(publicClient, model, id, modelIndex) {
+  const input = {
+    addressLine1: "12 QA Operations Way",
+    businessName: `${model.businessName} ${id}`,
+    city: "Lagos",
+    currencyCode: "NGN",
+    email: `mobile-${model.id}-${id}@test.com`,
+    mode: "sign_up",
+    name: `${model.businessName} Owner`,
+    phone: `+234${Date.now()}${modelIndex + 1}`,
+  }
+  const otp = await publicClient.auth.requestMobileOwnerOtp.mutate(input)
   if (!otp.devCode) {
     throw new Error(
-      "The API did not return devCode. Run this only against non-production API targets.",
+      "The local API did not return an OTP devCode. Never run this harness against production.",
     )
   }
-
-  return await client.auth.verifyMobileOwnerOtp.mutate({
-    businessName: input.businessName,
+  return publicClient.auth.verifyMobileOwnerOtp.mutate({
+    ...input,
     code: otp.devCode,
-    email: input.email,
-    mode: input.mode,
-    name: input.name,
   })
 }
 
-function getQaVariant(serviceItem, variantName) {
-  return (
-    serviceItem.variants.find((variant) => variant.name === variantName) ??
-    serviceItem.variants[0] ??
-    null
-  )
+function offering(item, predicate = () => true) {
+  const found = item.variants
+    .flatMap((variant) =>
+      variant.offerings.map((candidate) => ({ candidate, variant })),
+    )
+    .find(({ candidate, variant }) => predicate(candidate, variant))
+  if (!found) throw new Error(`No matching Offering exists for ${item.name}.`)
+  return found.candidate
 }
 
-async function seedServiceQaData(client, runId) {
-  const serviceItems = []
+function unit(item, key) {
+  const found = item.product?.currentUnitConfiguration?.units.find(
+    (candidate) => candidate.key === key,
+  )
+  if (!found) throw new Error(`No ${key} Inventory Unit exists for ${item.name}.`)
+  return found
+}
 
-  for (const service of SERVICE_QA_ITEMS) {
-    serviceItems.push(
-      await client.retailOps.createCatalogItem.mutate({
-        category: "Professional services",
-        kind: "service",
-        name: service.name,
-        priceMinor: service.standardPriceMinor,
-        primaryUnitName: "Standard",
-        service: {
-          fulfillmentMode: "tracked",
+async function createAdvancedProduct(client, input) {
+  return client.catalog.createItem.mutate({
+    clientOperationId: operationId("catalog", input.key),
+    kind: "product",
+    name: input.name,
+    openingStockQuantity: input.openingStockQuantity,
+    optionGroups: input.optionGroups,
+    unitConfiguration: input.unitConfiguration,
+    variants: input.variants,
+  })
+}
+
+async function createAdvancedService(client, input) {
+  return client.catalog.createItem.mutate({
+    category: input.category,
+    clientOperationId: operationId("catalog", input.key),
+    description: input.description,
+    kind: "service",
+    name: input.name,
+    optionGroups: input.optionGroups,
+    variants: input.variants,
+  })
+}
+
+function fixedServiceOffering(key, name, priceMinor, overrides = {}) {
+  return {
+    authorizationPolicy: "on_order_confirmation",
+    fixedPriceMinor: priceMinor,
+    key,
+    name,
+    pricingPolicy: "fixed",
+    quantityScale: 0,
+    workPolicy: "tracked",
+    ...overrides,
+  }
+}
+
+async function seedBulkPackagedGoods(client, id) {
+  const item = await createAdvancedProduct(client, {
+    key: "bulk",
+    name: "Premium Grower Mix",
+    unitConfiguration: {
+      canonicalBalanceScale: 3,
+      units: [
+        {
+          factor: "1",
+          key: "kilogram",
+          name: "Kilogram",
+          stockBehavior: "canonical_shared",
+          symbol: "kg",
+          transactionScale: 3,
         },
+        {
+          factor: "25",
+          key: "full-package",
+          name: "Full package",
+          stockBehavior: "packaged_stock",
+          transactionScale: 0,
+        },
+        {
+          factor: "12.5",
+          key: "half-package",
+          name: "Half package",
+          stockBehavior: "packaged_stock",
+          transactionScale: 0,
+        },
+        {
+          factor: "6.25",
+          key: "quarter-package",
+          name: "Quarter package",
+          stockBehavior: "packaged_stock",
+          transactionScale: 0,
+        },
+      ],
+    },
+    variants: [
+      {
+        isDefault: true,
+        key: "default",
+        name: "Premium Grower Mix",
+        offerings: [
+          {
+            fixedPriceMinor: 38_000,
+            inventoryUnitKey: "full-package",
+            key: "full-package",
+            name: "Full package",
+            pricingPolicy: "fixed",
+          },
+          {
+            fixedPriceMinor: 19_500,
+            inventoryUnitKey: "half-package",
+            key: "half-package",
+            name: "Half package",
+            pricingPolicy: "fixed",
+          },
+          {
+            fixedPriceMinor: 10_000,
+            inventoryUnitKey: "quarter-package",
+            key: "quarter-package",
+            name: "Quarter package",
+            pricingPolicy: "fixed",
+          },
+          {
+            fixedPriceMinor: 1_700,
+            inventoryUnitKey: "kilogram",
+            key: "kilogram",
+            name: "Kilogram",
+            pricingPolicy: "fixed",
+          },
+        ],
+      },
+    ],
+  })
+  const fullOffering = offering(item, (candidate) => candidate.key === "full-package")
+  const halfOffering = offering(item, (candidate) => candidate.key === "half-package")
+  const fullAvailability = await client.inventory.offeringAvailability.query({
+    offeringId: fullOffering.id,
+  })
+  await client.inventory.postBalanceOperation.mutate({
+    balanceSourceId: fullAvailability.balanceSourceId,
+    clientOperationId: operationId("receipt", id),
+    direction: "increase",
+    enteredInventoryUnitId: fullAvailability.enteredInventoryUnitId,
+    enteredQuantity: "1000",
+    expectedBalanceRevision: fullAvailability.revision,
+    expectedConfigurationVersionId: fullAvailability.configurationVersionId,
+    reason: "Opening receipt of 1000 full packages",
+    schemaVersion: 1,
+    source: "five_business_qa",
+    type: "receipt",
+  })
+  const source = await client.inventory.offeringAvailability.query({
+    offeringId: fullOffering.id,
+  })
+  const target = await client.inventory.offeringAvailability.query({
+    offeringId: halfOffering.id,
+  })
+  await client.inventory.transformPackagedStock.mutate({
+    clientOperationId: operationId("transform", id),
+    expectedConfigurationVersionId: source.configurationVersionId,
+    reason: "Repackage 50 full packages into 100 half packages",
+    schemaVersion: 1,
+    source: "five_business_qa",
+    sourceBalanceRevision: source.revision,
+    sourceBalanceSourceId: source.balanceSourceId,
+    sourceQuantity: "50",
+    targetBalanceRevision: target.revision,
+    targetBalanceSourceId: target.balanceSourceId,
+    targetQuantity: "100",
+  })
+  const report = await client.inventory.balanceReport.query({
+    includeCompatibleTotals: true,
+  })
+  const rows = report.rows.filter((row) => row.productId === item.product?.id)
+  return {
+    assertion: {
+      fullPackages: rows.find((row) => row.inventoryUnitName === "Full package")
+        ?.onHandQuantity,
+      halfPackages: rows.find((row) => row.inventoryUnitName === "Half package")
+        ?.onHandQuantity,
+    },
+    catalogItemId: item.id,
+    units: item.product?.currentUnitConfiguration?.units.map((entry) => ({
+      factor: entry.factor,
+      name: entry.name,
+      stockBehavior: entry.stockBehavior,
+    })),
+  }
+}
+
+async function seedFashionApparel(client) {
+  const sizes = [
+    ["sm", "Small", 18_000],
+    ["md", "Medium", 19_000],
+    ["lg", "Large", 20_000],
+  ]
+  const item = await createAdvancedProduct(client, {
+    key: "apparel",
+    name: "Classic Linen Shirt",
+    openingStockQuantity: "24",
+    optionGroups: [
+      {
+        key: "size",
+        name: "Size",
+        values: sizes.map(([key, label]) => ({ key, label })),
+      },
+    ],
+    unitConfiguration: {
+      canonicalBalanceScale: 0,
+      units: [
+        {
+          factor: "1",
+          key: "piece",
+          name: "Piece",
+          stockBehavior: "canonical_shared",
+          symbol: "pc",
+          transactionScale: 0,
+        },
+      ],
+    },
+    variants: sizes.map(([key, label, priceMinor], index) => ({
+      isDefault: index === 0,
+      key,
+      name: `Classic Linen Shirt · ${label}`,
+      offerings: [
+        {
+          barcode: `QA-SHIRT-${String(key).toUpperCase()}`,
+          fixedPriceMinor: Number(priceMinor),
+          inventoryUnitKey: "piece",
+          key: `piece-${key}`,
+          name: `${label} shirt`,
+          pricingPolicy: "fixed",
+          sku: `SHIRT-${String(key).toUpperCase()}`,
+        },
+      ],
+      selections: [{ groupKey: "size", valueKey: String(key) }],
+    })),
+  })
+  const smallOffering = offering(
+    item,
+    (candidate) => candidate.key === "piece-sm",
+  )
+  const availability = await client.inventory.offeringAvailability.query({
+    offeringId: smallOffering.id,
+  })
+  const order = await client.orders.create.mutate({
+    clientOrderId: operationId("order", "apparel"),
+    customerName: "Ada Apparel Customer",
+    lines: [
+      {
+        expectedBalanceRevision: availability.revision,
+        expectedConfigurationVersionId: availability.configurationVersionId,
+        expectedFixedPriceMinor: 18_000,
+        offeringId: smallOffering.id,
+        quantity: "2",
+      },
+    ],
+    schemaVersion: 1,
+  })
+  return {
+    catalogItemId: item.id,
+    orderId: order.id,
+    variantCount: item.variants.length,
+  }
+}
+
+async function seedGarmentCareServices(client, id) {
+  const definitions = [
+    ["agbada", "Agbada", 40_000, 70_000],
+    ["shirt", "Shirt", 20_000, 30_000],
+    ["trouser", "Trouser", 20_000, 20_000],
+    ["suit", "Suit", 70_000, 90_000],
+  ]
+  const items = []
+  for (const [key, name, smallPrice, largePrice] of definitions) {
+    items.push(
+      await createAdvancedService(client, {
+        category: "Garment care",
+        key,
+        name,
+        optionGroups: [
+          {
+            key: "size",
+            name: "Size",
+            values: [
+              { key: "sm", label: "SM" },
+              { key: "lg", label: "L" },
+            ],
+          },
+        ],
         variants: [
           {
-            openingStockQuantity: 0,
-            name: "Premium",
-            priceMinor: service.premiumPriceMinor,
+            isDefault: true,
+            key: "sm",
+            name: `${name} · SM`,
+            offerings: [
+              fixedServiceOffering("sm", `${name} · SM`, Number(smallPrice)),
+            ],
+            selections: [{ groupKey: "size", valueKey: "sm" }],
+          },
+          {
+            isDefault: false,
+            key: "lg",
+            name: `${name} · L`,
+            offerings: [
+              fixedServiceOffering("lg", `${name} · L`, Number(largePrice)),
+            ],
+            selections: [{ groupKey: "size", valueKey: "lg" }],
           },
         ],
       }),
     )
   }
-
-  const jobs = []
-
-  for (const [index, orderInput] of SERVICE_QA_JOBS.entries()) {
-    const serviceItem = serviceItems.find(
-      (item) => item.item.name === orderInput.serviceName,
-    )
-
-    if (!serviceItem) {
-      throw new Error(`Seed service ${orderInput.serviceName} was not created.`)
-    }
-
-    const variant = getQaVariant(serviceItem, orderInput.variantName)
-    const sale = await client.retailOps.createSale.mutate({
-      customerEmail: orderInput.customer.email,
-      customerName: orderInput.customer.name,
-      customerPhone: orderInput.customer.phone,
-      lines: [
-        {
-          catalogItemVariantId: variant?.id ?? serviceItem.variants[0].id,
-          quantity: orderInput.quantity,
-        },
-      ],
-      notes: orderInput.notes,
-      paymentMethod: "cash",
-      serviceDueAt: addDays(orderInput.dueOffsetDays),
-    })
-    if (!sale.serviceJob) continue
-    let latestJob = sale.serviceJob
-    await client.retailOps.addServiceJobEvidence.mutate({
-      jobId: latestJob.id,
-      label: orderInput.express
-        ? "Priority intake evidence"
-        : "Intake evidence",
-      url: `https://ewatrade.com/qa/evidence/${runId}-${index + 1}.jpg`,
-    })
-
-    for (const status of orderInput.statuses) {
-      if (
-        !["in_progress", "ready", "completed", "cancelled"].includes(status)
-      ) {
-        continue
-      }
-      latestJob = await client.retailOps.updateServiceJobStatus.mutate({
-        note: `Seeded ${status} status for mobile real-session QA.`,
-        jobId: latestJob.id,
-        status,
+  const intake = await client.services.createAndConfirmIntake.mutate({
+    clientIntakeId: operationId("intake", id),
+    conditionNote: "Photo and video package captured at intake.",
+    customerName: "Amaka Dry Cleaning Customer",
+    customerPhone: "+2348098765432",
+    dueCommitmentAt: new Date(Date.now() + 2 * 86_400_000),
+    instructions: "Use mild detergent and package each garment separately.",
+    lines: [
+      {
+        expectedFixedPriceMinor: 70_000,
+        offeringId: offering(items[0], (candidate) => candidate.key === "lg").id,
+        quantity: "1",
+      },
+      {
+        expectedFixedPriceMinor: 20_000,
+        offeringId: offering(items[2], (candidate) => candidate.key === "sm").id,
+        quantity: "2",
+      },
+    ],
+    priority: "normal",
+    schemaVersion: 1,
+  })
+  const job = intake.jobs[0]
+  const evidence = job
+    ? await client.services.captureEvidence.mutate({
+        assetReference: `local://five-business/${id}/garment-intake.jpg`,
+        clientEvidenceId: operationId("evidence", id),
+        jobId: job.id,
+        label: "Intake condition",
+        mediaType: "photo",
+        purpose: "intake_condition",
+        uploadStatus: "local",
       })
-    }
-
-    jobs.push({
-      customerName: orderInput.customer.name,
-      id: latestJob.id,
-      status: latestJob.status,
-      totalMinor: sale.order.totalMinor,
-    })
-  }
-
+    : null
   return {
-    jobCount: jobs.length,
-    jobs,
-    serviceItems: serviceItems.map((item) => ({
-      id: item.item.id,
-      name: item.item.name,
-      variantCount: item.variants.length,
-    })),
+    catalogItemIds: items.map((item) => item.id),
+    evidenceId: evidence?.id ?? null,
+    jobIds: intake.jobs.map((entry) => entry.id),
+    orderId: intake.orderId,
   }
 }
 
-function toSessionImportLink(input) {
+async function seedElectronicsMixed(client) {
+  const accessory = await client.catalog.createSimpleItem.mutate({
+    canonicalUnitName: "Piece",
+    clientOperationId: operationId("catalog", "cable"),
+    kind: "product",
+    name: "USB-C Cable",
+    openingStockQuantity: "30",
+    priceMinor: 8_500,
+  })
+  const repair = await createAdvancedService(client, {
+    category: "Device repair",
+    key: "repair",
+    name: "Phone Diagnostic and Repair",
+    variants: [
+      {
+        isDefault: true,
+        key: "standard",
+        name: "Standard repair",
+        offerings: [
+          fixedServiceOffering("standard", "Standard repair", 25_000, {
+            authorizationPolicy: "manual_release",
+            guidance: "Diagnose first. Obtain approval before replacement work.",
+          }),
+        ],
+      },
+    ],
+  })
+  const accessoryOffering = offering(accessory)
+  const repairOffering = offering(repair)
+  const accessoryAvailability =
+    await client.inventory.offeringAvailability.query({
+      offeringId: accessoryOffering.id,
+    })
+  const order = await client.orders.create.mutate({
+    clientOrderId: operationId("order", "electronics"),
+    customerName: "Tunde Device Customer",
+    customerPhone: "+2348080000100",
+    lines: [
+      {
+        expectedBalanceRevision: accessoryAvailability.revision,
+        expectedConfigurationVersionId:
+          accessoryAvailability.configurationVersionId,
+        expectedFixedPriceMinor: accessoryOffering.fixedPriceMinor,
+        offeringId: accessoryOffering.id,
+        quantity: "1",
+      },
+      {
+        expectedFixedPriceMinor: repairOffering.fixedPriceMinor,
+        offeringId: repairOffering.id,
+        quantity: "1",
+      },
+    ],
+    notes: "Mixed accessory sale and tracked repair.",
+    schemaVersion: 1,
+  })
+  return {
+    orderId: order.id,
+    productItemId: accessory.id,
+    serviceItemId: repair.id,
+  }
+}
+
+async function seedProfessionalServices(client, id) {
+  const consultation = await client.catalog.createSimpleItem.mutate({
+    authorizationPolicy: "on_order_confirmation",
+    clientOperationId: operationId("catalog", "consultation"),
+    kind: "service",
+    name: "Strategy Consultation",
+    priceMinor: 75_000,
+    quantityScale: 0,
+    workPolicy: "charge_only",
+  })
+  const project = await createAdvancedService(client, {
+    category: "Advisory",
+    description: "A scoped engagement priced after customer requirements.",
+    key: "advisory-project",
+    name: "Advisory Project",
+    variants: [
+      {
+        isDefault: true,
+        key: "custom",
+        name: "Custom project",
+        offerings: [
+          {
+            authorizationPolicy: "manual_release",
+            guidance: "Start only after the customer accepts the quote.",
+            key: "custom",
+            name: "Custom project",
+            pricingPolicy: "quote_required",
+            quantityScale: 0,
+            workPolicy: "tracked",
+          },
+        ],
+      },
+    ],
+  })
+  const consultationOffering = offering(consultation)
+  const projectOffering = offering(project)
+  const requestForm = await client.serviceAccess.createRequestForm.mutate({
+    label: "Advisory request",
+    offeringIds: [consultationOffering.id, projectOffering.id],
+  })
+  const publicClient = createClient({
+    apiUrl:
+      process.env.MOBILE_REAL_SESSION_API_URL ||
+      process.env.EXPO_PUBLIC_API_URL ||
+      DEFAULT_API_URL,
+  })
+  const request = await publicClient.serviceAccess.submitRequest.mutate({
+    clientRequestId: operationId("request", id),
+    customerEmail: "customer.advisory@test.com",
+    customerName: "Ife Advisory Customer",
+    details: "Review operations and recommend a 90-day implementation plan.",
+    formToken: requestForm.token,
+    lines: [
+      {
+        details: "One scoped advisory engagement.",
+        offeringId: projectOffering.id,
+        quantity: "1",
+      },
+    ],
+  })
+  const quote = await client.serviceAccess.issueQuote.mutate({
+    clientQuoteId: operationId("quote", id),
+    clientVersionId: operationId("quote-version", id),
+    lines: [
+      {
+        offeringId: projectOffering.id,
+        quantity: "1",
+        unitPriceMinor: 450_000,
+      },
+    ],
+    requestId: request.id,
+  })
+  const publicQuote = await publicClient.serviceAccess.quote.query({
+    acceptanceToken: quote.token,
+  })
+  const acceptance = await publicClient.serviceAccess.acceptQuote.mutate({
+    acceptanceToken: quote.token,
+    clientAcceptanceId: operationId("acceptance", id),
+  })
+  return {
+    acceptedQuoteId: quote.quoteId,
+    acceptedOrderId: acceptance.orderId,
+    jobId: acceptance.jobId,
+    publicQuoteTotalMinor: publicQuote.totalMinor,
+    requestFormToken: requestForm.token,
+    requestId: request.id,
+  }
+}
+
+function toImportLink(session, next, deepLinkBase) {
   const payload = {
-    email: input.session.profile.email,
-    name: input.session.profile.name,
-    next: input.next,
-    token: input.session.token,
-    userId: input.session.profile.id,
-  }
-  const optionalEntries = {
-    businessId: input.session.profile.businessId,
-    businessName: input.session.profile.businessName,
     expiresAt:
-      input.session.expiresAt instanceof Date
-        ? input.session.expiresAt.toISOString()
-        : input.session.expiresAt,
-    role: input.session.profile.role,
-    status: input.session.profile.status,
+      session.expiresAt instanceof Date
+        ? session.expiresAt.toISOString()
+        : session.expiresAt,
+    next,
+    profile: session.profile,
+    token: session.token,
   }
-
-  for (const [key, value] of Object.entries(optionalEntries)) {
-    if (value) payload[key] = String(value)
-  }
-
-  return `${input.deepLinkBase}/${encodeURIComponent(JSON.stringify(payload))}`
+  return `${deepLinkBase}/${encodeURIComponent(JSON.stringify(payload))}`
 }
 
 function redactSession(session) {
@@ -330,28 +629,36 @@ function redactSession(session) {
 }
 
 function writeEvidence(path, evidence) {
-  if (!path) return
-
   mkdirSync(dirname(path), { recursive: true })
-  writeFileSync(`${path}.link`, evidence.importLink, "utf8")
   writeFileSync(
     path,
     `${JSON.stringify(
       {
         ...evidence,
-        importLink: "[written beside this file as .link]",
+        businesses: evidence.businesses.map((business) => ({
+          ...business,
+          importLink: "[written to the adjacent links file]",
+        })),
       },
       null,
       2,
     )}\n`,
     "utf8",
   )
+  writeFileSync(
+    `${path}.links`,
+    `${evidence.businesses
+      .map((business) => `${business.modelId}\t${business.importLink}`)
+      .join("\n")}\n`,
+    "utf8",
+  )
 }
 
 function openOnAndroid(importLink) {
   if (process.env.MOBILE_REAL_SESSION_OPEN !== "1") return false
-
-  const adb = process.env.ADB_PATH || "adb"
+  const adb =
+    process.env.ADB_PATH ||
+    "/Users/M1PRO/Library/Android/sdk/platform-tools/adb"
   const result = spawnSync(
     adb,
     [
@@ -363,158 +670,67 @@ function openOnAndroid(importLink) {
       "-d",
       importLink,
     ],
-    { stdio: "pipe" },
+    { encoding: "utf8" },
   )
-
-  if (result.error) {
-    throw result.error
-  }
-
+  if (result.error) throw result.error
   if (result.status !== 0) {
-    throw new Error(
-      result.stderr?.toString() || "Failed to open mobile QA import link.",
-    )
+    throw new Error(result.stderr || "Failed to open the mobile QA import link.")
   }
-
   return true
 }
 
 async function main() {
   requireConfirmation()
-
-  const runId = nowId()
-  const apiUrl = normalizeApiUrl(
+  const id = runId()
+  const apiUrl = (
     process.env.MOBILE_REAL_SESSION_API_URL ||
-      process.env.EXPO_PUBLIC_API_URL ||
-      process.env.API_URL,
-  )
-  const profile = (
-    process.env.MOBILE_REAL_SESSION_PROFILE || "owner"
-  ).toLowerCase()
+    process.env.EXPO_PUBLIC_API_URL ||
+    DEFAULT_API_URL
+  ).replace(/\/$/, "")
   const deepLinkBase =
     process.env.MOBILE_REAL_SESSION_DEEP_LINK_BASE || DEFAULT_DEEP_LINK_BASE
-  const ownerEmail =
-    process.env.MOBILE_REAL_SESSION_OWNER_EMAIL ||
-    `mobile-owner-${runId}@test.com`
-  const ownerName = process.env.MOBILE_REAL_SESSION_OWNER_NAME || "Mobile Owner"
-  const businessName =
-    process.env.MOBILE_REAL_SESSION_BUSINESS_NAME ||
-    `Mobile Service QA ${runId}`
   const publicClient = createClient({ apiUrl })
-  const ownerSession = await createMobileSession(publicClient, {
-    businessName,
-    email: ownerEmail,
-    mode: "sign_up",
-    name: ownerName,
-  })
-  const ownerClient = createClient({
-    apiUrl,
-    token: ownerSession.token,
-  })
-  const serviceSeed =
-    process.env.MOBILE_REAL_SESSION_SEED_SERVICES === "1"
-      ? await seedServiceQaData(ownerClient, runId)
-      : null
-  let selectedSession = ownerSession
-  let next = process.env.MOBILE_REAL_SESSION_NEXT || "/service-jobs-modal"
-  let staffInvite = null
-  let staffCompletion = null
+  const businesses = []
 
-  if (profile === "staff-invited" || profile === "staff-active") {
-    const staffEmail =
-      process.env.MOBILE_REAL_SESSION_STAFF_EMAIL ||
-      `mobile-staff-${runId}@test.com`
-    const staffName =
-      process.env.MOBILE_REAL_SESSION_STAFF_NAME || "Mobile Staff"
-
-    staffInvite = await ownerClient.retailOps.inviteStaff.mutate({
-      email: staffEmail,
-      name: staffName,
-      role: "cashier",
+  for (const [modelIndex, model] of BUSINESS_MODELS.entries()) {
+    const session = await createBusinessSession(
+      publicClient,
+      model,
+      id,
+      modelIndex,
+    )
+    const client = createClient({ apiUrl, token: session.token })
+    const seed = await model.seed(client, id)
+    businesses.push({
+      importLink: toImportLink(session, model.next, deepLinkBase),
+      modelId: model.id,
+      seed,
+      session: redactSession(session),
     })
-
-    const staffSession = await createMobileSession(publicClient, {
-      email: staffEmail,
-      mode: "login",
-      name: staffName,
-    })
-
-    selectedSession = staffSession
-    next = process.env.MOBILE_REAL_SESSION_NEXT || "/staff-onboarding"
-
-    if (profile === "staff-active") {
-      const staffClient = createClient({
-        apiUrl,
-        token: staffSession.token,
-      })
-
-      staffCompletion =
-        await staffClient.retailOps.completeStaffOnboarding.mutate({
-          displayName: staffName,
-          name: staffName,
-        })
-      selectedSession = {
-        ...staffSession,
-        profile: {
-          ...staffSession.profile,
-          businessId: staffCompletion.tenant.id,
-          businessName: staffCompletion.tenant.name,
-          email: staffCompletion.user.email,
-          id: staffCompletion.user.id,
-          name: staffCompletion.user.displayName || staffCompletion.user.name,
-          role: staffCompletion.role,
-          status: staffCompletion.status,
-        },
-      }
-      next = process.env.MOBILE_REAL_SESSION_NEXT || "/sales-rep-home"
-    }
+    console.log(`Seeded ${model.id}.`)
   }
 
-  const importLink = toSessionImportLink({
-    deepLinkBase,
-    next,
-    session: selectedSession,
-  })
   const evidence = {
     apiUrl,
+    businesses,
     createdAt: new Date().toISOString(),
-    serviceSeed,
-    importLink,
-    next,
-    ownerSession: redactSession(ownerSession),
-    profile,
-    selectedSession: redactSession(selectedSession),
-    staffCompletion: staffCompletion
-      ? {
-          role: staffCompletion.role,
-          status: staffCompletion.status,
-          tenant: staffCompletion.tenant,
-          user: staffCompletion.user,
-        }
-      : null,
-    staffInvite: staffInvite
-      ? {
-          role: staffInvite.invite.role,
-          staff: staffInvite.staff,
-          status: staffInvite.invite.status,
-          tenantId: staffInvite.tenantId,
-        }
-      : null,
+    runId: id,
   }
+  const evidencePath =
+    process.env.MOBILE_REAL_SESSION_EVIDENCE_PATH || DEFAULT_EVIDENCE_PATH
+  writeEvidence(evidencePath, evidence)
+  const requestedModel =
+    process.env.MOBILE_REAL_SESSION_MODEL || BUSINESS_MODELS[0].id
+  const selected =
+    businesses.find((business) => business.modelId === requestedModel) ??
+    businesses[0]
+  const opened = openOnAndroid(selected.importLink)
 
-  writeEvidence(process.env.MOBILE_REAL_SESSION_EVIDENCE_PATH, evidence)
-  const opened = openOnAndroid(importLink)
-
+  console.log(`Evidence=${evidencePath}`)
   console.log(
     opened
-      ? "Created real mobile session and opened the guarded QA import route."
-      : "Created real mobile session. Set MOBILE_REAL_SESSION_OPEN=1 to open it on Android.",
-  )
-  console.log(
-    `Profile=${profile}; next=${next}; tokenPrefix=${selectedSession.token.slice(
-      0,
-      8,
-    )}`,
+      ? `Opened ${selected.modelId} in the Android development build.`
+      : "Set MOBILE_REAL_SESSION_OPEN=1 to import one seeded session into Android.",
   )
 }
 

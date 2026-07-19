@@ -1,8 +1,8 @@
-import { readFileSync } from "node:fs"
-import { join, relative, resolve } from "node:path"
+import { readFileSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 
-const REPO_ROOT = resolve(new URL("../../..", import.meta.url).pathname)
-const MOBILE_DIR = join(REPO_ROOT, "apps/mobile")
+const REPO_ROOT = resolve(new URL("../../..", import.meta.url).pathname);
+const MOBILE_DIR = join(REPO_ROOT, "apps/mobile");
 const FILES = {
   dashboard: join(MOBILE_DIR, "src/app/dashboard.tsx"),
   subscriptionsRouter: join(
@@ -19,7 +19,7 @@ const FILES = {
     "src/components/mobile/subscription-plan-sheet.tsx",
   ),
   subscriptionStore: join(MOBILE_DIR, "src/store/subscriptionStore.ts"),
-}
+};
 
 const CONTRACTS = [
   {
@@ -97,17 +97,12 @@ const CONTRACTS = [
   {
     file: FILES.dashboard,
     markers: [
-      "SubscriptionPlanSheet",
-      "subscriptionModal.present",
-      "trpc.retailOps.subscription",
-      "useProductionSubscriptionSnapshot",
-      "subscriptionPlan",
-      "subscriptionUsage",
-      "Plans",
-      "offline device limits",
+      'label="Plans"',
+      'router.push("/subscription-modal" as never)',
+      "!isAttendant",
     ],
     reason:
-      "dashboard must keep the subscription summary and plan-sheet entry point",
+      "the generic dashboard must keep an owner-only route to the subscription surface",
   },
   {
     file: FILES.subscriptionsRouter,
@@ -124,33 +119,33 @@ const CONTRACTS = [
     reason:
       "API must keep billing permission boundaries, subscription snapshot reads, and provider-neutral checkout intent creation",
   },
-]
-const failures = []
+];
+const failures = [];
 
 for (const contract of CONTRACTS) {
-  const source = readFileSync(contract.file, "utf8")
+  const source = readFileSync(contract.file, "utf8");
   const missingMarkers = contract.markers.filter(
     (marker) => !source.includes(marker),
-  )
+  );
 
   if (missingMarkers.length > 0) {
     failures.push({
       file: contract.file,
       message: `missing ${missingMarkers.join(", ")} (${contract.reason})`,
-    })
+    });
   }
 }
 
 if (failures.length > 0) {
   console.error(
     "Subscription flow check failed. Restore the three-tier model, mobile plan surface, dashboard entry point, or billing API boundary.",
-  )
+  );
 
   for (const failure of failures) {
-    console.error(`- ${relative(REPO_ROOT, failure.file)}: ${failure.message}`)
+    console.error(`- ${relative(REPO_ROOT, failure.file)}: ${failure.message}`);
   }
 
-  process.exit(1)
+  process.exit(1);
 }
 
-console.log("Subscription flow check passed.")
+console.log("Subscription flow check passed.");

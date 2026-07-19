@@ -25,7 +25,6 @@ const NAV_ICONS: Record<DashboardNavItem["icon"], any> = {
   customers: UserCircle02Icon,
   home: Home01Icon,
   inventory: Archive01Icon,
-  links: Store04Icon,
   products: Package01Icon,
   sales: ShoppingCart01Icon,
   services: Store04Icon,

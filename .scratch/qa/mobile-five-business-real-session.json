@@ -1,0 +1,157 @@
+{
+  "apiUrl": "http://127.0.0.1:3095",
+  "businesses": [
+    {
+      "importLink": "[written to the adjacent links file]",
+      "modelId": "bulk-packaged-goods",
+      "seed": {
+        "assertion": {
+          "fullPackages": "950",
+          "halfPackages": "100"
+        },
+        "catalogItemId": "cmrrwow6300hjucs0151ycdof",
+        "units": [
+          {
+            "factor": "1",
+            "name": "Kilogram",
+            "stockBehavior": "canonical_shared"
+          },
+          {
+            "factor": "25",
+            "name": "Full package",
+            "stockBehavior": "packaged_stock"
+          },
+          {
+            "factor": "12.5",
+            "name": "Half package",
+            "stockBehavior": "packaged_stock"
+          },
+          {
+            "factor": "6.25",
+            "name": "Quarter package",
+            "stockBehavior": "packaged_stock"
+          }
+        ]
+      },
+      "session": {
+        "expiresAt": "2026-10-17T14:43:49.067Z",
+        "profile": {
+          "businessId": "cmrrwow4z00hducs0lg0ki3aj",
+          "businessName": "Kora Bulk Goods 20260719144348",
+          "currencyCode": "NGN",
+          "email": "mobile-bulk-packaged-goods-20260719144348@test.com",
+          "id": "cmrrwow4r00hcucs04joj3aol",
+          "name": "Kora Bulk Goods Owner",
+          "role": "OWNER",
+          "status": "ACTIVE"
+        },
+        "tokenPrefix": "bca9aabd"
+      }
+    },
+    {
+      "importLink": "[written to the adjacent links file]",
+      "modelId": "fashion-apparel",
+      "seed": {
+        "catalogItemId": "cmrrwowaz00inucs05gbw9lmc",
+        "orderId": "cmrrwowdc00jhucs0gc2vi4hv",
+        "variantCount": 3
+      },
+      "session": {
+        "expiresAt": "2026-10-17T14:43:49.247Z",
+        "profile": {
+          "businessId": "cmrrwowad00ihucs03u6c3pok",
+          "businessName": "Aso Lane Apparel 20260719144348",
+          "currencyCode": "NGN",
+          "email": "mobile-fashion-apparel-20260719144348@test.com",
+          "id": "cmrrwowaa00igucs04y8n4j6n",
+          "name": "Aso Lane Apparel Owner",
+          "role": "OWNER",
+          "status": "ACTIVE"
+        },
+        "tokenPrefix": "f666e284"
+      }
+    },
+    {
+      "importLink": "[written to the adjacent links file]",
+      "modelId": "garment-care-services",
+      "seed": {
+        "catalogItemIds": [
+          "cmrrwoweq00jtucs05rnzhbso",
+          "cmrrwowfi00kbucs0a075pey2",
+          "cmrrwowgh00ktucs0xzuvkqn3",
+          "cmrrwowhb00lbucs08tgmxtg9"
+        ],
+        "evidenceId": "cmrrwowk200m9ucs0f33jxelq",
+        "jobIds": [
+          "cmrrwowiy00m1ucs0v97o2o96"
+        ],
+        "orderId": "cmrrwowik00lwucs0zl9daje9"
+      },
+      "session": {
+        "expiresAt": "2026-10-17T14:43:49.385Z",
+        "profile": {
+          "businessId": "cmrrwowe900jnucs0d4yym0ii",
+          "businessName": "FreshFold Garment Care 20260719144348",
+          "currencyCode": "NGN",
+          "email": "mobile-garment-care-services-20260719144348@test.com",
+          "id": "cmrrwowe700jmucs0qyoa4ust",
+          "name": "FreshFold Garment Care Owner",
+          "role": "OWNER",
+          "status": "ACTIVE"
+        },
+        "tokenPrefix": "70a6bca2"
+      }
+    },
+    {
+      "importLink": "[written to the adjacent links file]",
+      "modelId": "electronics-mixed",
+      "seed": {
+        "orderId": "cmrrwownq00n4ucs0qa6n8dqs",
+        "productItemId": "cmrrwowl600mjucs0uerpkakz",
+        "serviceItemId": "cmrrwowm600mwucs0d7er1mi4"
+      },
+      "session": {
+        "expiresAt": "2026-10-17T14:43:49.615Z",
+        "profile": {
+          "businessId": "cmrrwowkk00mducs07k3pwvxe",
+          "businessName": "CircuitCare Electronics 20260719144348",
+          "currencyCode": "NGN",
+          "email": "mobile-electronics-mixed-20260719144348@test.com",
+          "id": "cmrrwowkg00mcucs0rnqsob9j",
+          "name": "CircuitCare Electronics Owner",
+          "role": "OWNER",
+          "status": "ACTIVE"
+        },
+        "tokenPrefix": "cc7722fc"
+      }
+    },
+    {
+      "importLink": "[written to the adjacent links file]",
+      "modelId": "professional-services",
+      "seed": {
+        "acceptedQuoteId": "cmrrwowr100o5ucs017w64cev",
+        "acceptedOrderId": "cmrrwowry00o8ucs0w8xj3085",
+        "jobId": "cmrrwowsb00obucs0o96o74vz",
+        "publicQuoteTotalMinor": 450000,
+        "requestFormToken": "NzqjOCr_rC5SEYQtuB2shrA7D8_fyLA7UzjaFKm6aP8",
+        "requestId": "cmrrwowqr00o3ucs0p7i9121x"
+      },
+      "session": {
+        "expiresAt": "2026-10-17T14:43:49.764Z",
+        "profile": {
+          "businessId": "cmrrwowos00nfucs0vxfyli15",
+          "businessName": "Northstar Advisory 20260719144348",
+          "currencyCode": "NGN",
+          "email": "mobile-professional-services-20260719144348@test.com",
+          "id": "cmrrwowop00neucs02u3mogsf",
+          "name": "Northstar Advisory Owner",
+          "role": "OWNER",
+          "status": "ACTIVE"
+        },
+        "tokenPrefix": "b5e099c5"
+      }
+    }
+  ],
+  "createdAt": "2026-07-19T14:43:49.893Z",
+  "runId": "20260719144348"
+}

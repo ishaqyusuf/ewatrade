@@ -10,10 +10,11 @@ const DEFAULT_COLORS = [
   "#0891B2",
   "#4F46E5",
 ]
+const DEFAULT_COLOR = "#0F766E"
 
 export function getColorFromName(value?: string | null) {
   const name = String(value ?? "").trim()
-  if (!name) return DEFAULT_COLORS[0]!
+  if (!name) return DEFAULT_COLOR
 
   let hash = 0
   for (let index = 0; index < name.length; index += 1) {
@@ -21,7 +22,7 @@ export function getColorFromName(value?: string | null) {
     hash |= 0
   }
 
-  return DEFAULT_COLORS[Math.abs(hash) % DEFAULT_COLORS.length]!
+  return DEFAULT_COLORS[Math.abs(hash) % DEFAULT_COLORS.length] ?? DEFAULT_COLOR
 }
 
 export function hexToRgba(hex: string, opacity = 1) {

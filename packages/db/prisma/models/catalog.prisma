@@ -1,0 +1,583 @@
+model CatalogItem {
+  id               String                  @id @default(cuid())
+  tenantId         String
+  slug             String
+  kind             CatalogItemKind
+  status           CatalogRecordStatus     @default(DRAFT)
+  name             String
+  description      String?
+  category         String?
+  imageUrl         String?
+  imageLinks       String[]                @default([])
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  archivedAt       DateTime?
+  tenant           Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product          CatalogProduct?
+  service          CatalogService?
+  variants         SellableVariant[]
+  optionGroups     VariantOptionGroup[]
+  offerings        SellableOffering[]
+  creationCommands CatalogCommandReceipt[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, kind, status])
+  @@index([tenantId, updatedAt])
+}
+
+model CatalogProduct {
+  id                                String                     @id @default(cuid())
+  catalogItemId                     String                     @unique
+  currentUnitConfigurationVersionId String?                    @unique
+  createdAt                         DateTime                   @default(now())
+  updatedAt                         DateTime                   @updatedAt
+  catalogItem                       CatalogItem                @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+  unitConfigurations                UnitConfigurationVersion[] @relation("CatalogProductUnitConfigurations")
+  currentUnitConfiguration          UnitConfigurationVersion?  @relation("CatalogProductCurrentUnitConfiguration", fields: [currentUnitConfigurationVersionId], references: [id], onDelete: SetNull)
+  stockBalanceSources               StockBalanceSource[]
+}
+
+model CatalogService {
+  id            String      @id @default(cuid())
+  catalogItemId String      @unique
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+}
+
+model VariantOptionGroup {
+  id            String                     @id @default(cuid())
+  catalogItemId String
+  key           String
+  name          String
+  sortOrder     Int                        @default(0)
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
+  catalogItem   CatalogItem                @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+  values        VariantOptionValue[]
+  selections    SellableVariantSelection[]
+
+  @@unique([catalogItemId, key])
+  @@index([catalogItemId, sortOrder])
+}
+
+model VariantOptionValue {
+  id         String                     @id @default(cuid())
+  groupId    String
+  key        String
+  label      String
+  sortOrder  Int                        @default(0)
+  createdAt  DateTime                   @default(now())
+  updatedAt  DateTime                   @updatedAt
+  group      VariantOptionGroup         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  selections SellableVariantSelection[]
+
+  @@unique([groupId, key])
+  @@index([groupId, sortOrder])
+}
+
+model SellableVariant {
+  id                  String                     @id @default(cuid())
+  catalogItemId       String
+  key                 String
+  name                String
+  status              CatalogRecordStatus        @default(DRAFT)
+  isDefault           Boolean                    @default(false)
+  sortOrder           Int                        @default(0)
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+  archivedAt          DateTime?
+  catalogItem         CatalogItem                @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+  selections          SellableVariantSelection[]
+  offerings           SellableOffering[]
+  stockBalanceSources StockBalanceSource[]
+
+  @@unique([catalogItemId, key])
+  @@index([catalogItemId, status, sortOrder])
+  @@index([catalogItemId, isDefault])
+}
+
+model SellableVariantSelection {
+  id        String             @id @default(cuid())
+  variantId String
+  groupId   String
+  valueId   String
+  createdAt DateTime           @default(now())
+  variant   SellableVariant    @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  group     VariantOptionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  value     VariantOptionValue @relation(fields: [valueId], references: [id], onDelete: Cascade)
+
+  @@unique([variantId, groupId])
+  @@unique([variantId, valueId])
+  @@index([groupId, valueId])
+}
+
+model SellableOffering {
+  id                          String                       @id @default(cuid())
+  tenantId                    String
+  catalogItemId               String
+  variantId                   String
+  key                         String
+  kind                        SellableOfferingKind
+  status                      CatalogRecordStatus          @default(DRAFT)
+  name                        String
+  pricingPolicy               OfferingPricingPolicy
+  fixedPriceMinor             Int?
+  currencyCode                String
+  sortOrder                   Int                          @default(0)
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime                     @updatedAt
+  archivedAt                  DateTime?
+  tenant                      Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  catalogItem                 CatalogItem                  @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+  variant                     SellableVariant              @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  productUnitOffering         ProductUnitOffering?
+  serviceOffering             ServiceOffering?
+  storeAvailability           StoreOfferingAvailability[]
+  priceChanges                CatalogPriceChange[]
+  stockReservations           StockReservation[]
+  commercialOrderLines        CommercialOrderLine[]
+  serviceIntakeLines          ServiceIntakeLine[]
+  serviceRequestFormOfferings ServiceRequestFormOffering[]
+  serviceRequestLines         ServiceRequestLine[]
+  serviceQuoteLines           ServiceQuoteLine[]
+
+  @@unique([catalogItemId, key])
+  @@index([tenantId, status, updatedAt])
+  @@index([variantId, status, sortOrder])
+}
+
+model ProductUnitOffering {
+  id              String           @id @default(cuid())
+  tenantId        String
+  offeringId      String           @unique
+  inventoryUnitId String
+  sku             String?
+  barcode         String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  offering        SellableOffering @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  inventoryUnit   InventoryUnit    @relation(fields: [inventoryUnitId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, sku])
+  @@unique([tenantId, barcode])
+  @@index([inventoryUnitId])
+}
+
+model ServiceOffering {
+  id                  String                  @id @default(cuid())
+  offeringId          String                  @unique
+  workPolicy          ServiceWorkPolicy       @default(CHARGE_ONLY)
+  authorizationPolicy WorkAuthorizationPolicy @default(ON_ORDER_CONFIRMATION)
+  quantityScale       Int                     @default(0)
+  guidance            String?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  offering            SellableOffering        @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+}
+
+model UnitDefinition {
+  id        String          @id @default(cuid())
+  tenantId  String?
+  scopeKey  String          @unique
+  name      String
+  symbol    String?
+  isSystem  Boolean         @default(false)
+  isActive  Boolean         @default(true)
+  sortOrder Int             @default(0)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  tenant    Tenant?         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  units     InventoryUnit[]
+
+  @@index([tenantId, isActive, sortOrder])
+  @@index([isSystem, isActive, sortOrder])
+}
+
+model UnitConfigurationVersion {
+  id                    String                  @id @default(cuid())
+  productId             String
+  version               Int
+  status                UnitConfigurationStatus @default(DRAFT)
+  canonicalBalanceScale Int                     @default(0)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  publishedAt           DateTime?
+  supersededAt          DateTime?
+  product               CatalogProduct          @relation("CatalogProductUnitConfigurations", fields: [productId], references: [id], onDelete: Cascade)
+  currentForProduct     CatalogProduct?         @relation("CatalogProductCurrentUnitConfiguration")
+  units                 InventoryUnit[]
+  stockMovements        StockMovement[]
+  stockReservations     StockReservation[]
+  stockCountLines       StockCountLine[]
+  stockTransfers        StockTransfer[]
+  offeringSnapshots     OfferingSnapshot[]
+
+  @@unique([productId, version])
+  @@index([productId, status])
+}
+
+model InventoryUnit {
+  id                      String                     @id @default(cuid())
+  configurationVersionId  String
+  unitDefinitionId        String?
+  key                     String
+  name                    String
+  symbol                  String?
+  factor                  Decimal                    @db.Decimal(38, 12)
+  transactionScale        Int                        @default(0)
+  stockBehavior           InventoryUnitStockBehavior
+  sortOrder               Int                        @default(0)
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
+  configurationVersion    UnitConfigurationVersion   @relation(fields: [configurationVersionId], references: [id], onDelete: Cascade)
+  unitDefinition          UnitDefinition?            @relation(fields: [unitDefinitionId], references: [id], onDelete: SetNull)
+  productUnitOfferings    ProductUnitOffering[]
+  stockBalanceSources     StockBalanceSource[]
+  stockMovements          StockMovement[]
+  stockReservations       StockReservation[]
+  observedStockCountLines StockCountLine[]
+  stockCountEntries       StockCountEntry[]
+  stockTransfers          StockTransfer[]
+  offeringSnapshots       OfferingSnapshot[]
+
+  @@unique([configurationVersionId, key])
+  @@index([configurationVersionId, stockBehavior, sortOrder])
+  @@index([unitDefinitionId])
+}
+
+model StoreOfferingAvailability {
+  id          String           @id @default(cuid())
+  storeId     String
+  offeringId  String
+  isAvailable Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  store       Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  offering    SellableOffering @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, offeringId])
+  @@index([storeId, isAvailable])
+  @@index([offeringId, isAvailable])
+}
+
+model CatalogPriceChange {
+  id                 String           @id @default(cuid())
+  tenantId           String
+  offeringId         String
+  previousPriceMinor Int?
+  priceMinor         Int
+  currencyCode       String
+  changedByUserId    String?
+  reason             String?
+  effectiveAt        DateTime         @default(now())
+  createdAt          DateTime         @default(now())
+  tenant             Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  offering           SellableOffering @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, effectiveAt])
+  @@index([offeringId, effectiveAt])
+}
+
+model CatalogCommandReceipt {
+  id                String      @id @default(cuid())
+  tenantId          String
+  storeId           String
+  catalogItemId     String
+  clientOperationId String
+  payloadHash       String
+  commandType       String
+  createdAt         DateTime    @default(now())
+  tenant            Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  catalogItem       CatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, clientOperationId])
+  @@index([storeId, createdAt])
+  @@index([catalogItemId])
+}
+
+model StockBalanceSource {
+  id                    String                  @id @default(cuid())
+  tenantId              String
+  storeId               String
+  productId             String
+  variantId             String
+  inventoryUnitId       String
+  kind                  StockBalanceKind
+  custodyType           StockCustodyType        @default(STORE)
+  custodyReferenceId    String                  @default("")
+  parentBalanceSourceId String?
+  onHandQuantity        Decimal                 @default(0) @db.Decimal(38, 18)
+  reservedQuantity      Decimal                 @default(0) @db.Decimal(38, 18)
+  revision              Int                     @default(0)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  tenant                Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                 Store                   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product               CatalogProduct          @relation(fields: [productId], references: [id], onDelete: Restrict)
+  variant               SellableVariant         @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  inventoryUnit         InventoryUnit           @relation(fields: [inventoryUnitId], references: [id], onDelete: Restrict)
+  parentBalanceSource   StockBalanceSource?     @relation("StockBalanceCustody", fields: [parentBalanceSourceId], references: [id], onDelete: Restrict)
+  custodyBalances       StockBalanceSource[]    @relation("StockBalanceCustody")
+  movements             StockMovement[]
+  reservations          StockReservation[]
+  stockCountLines       StockCountLine[]
+  outboundTransfers     StockTransfer[]         @relation("StockTransferSourceBalance")
+  transitTransfers      StockTransfer[]         @relation("StockTransferTransitBalance")
+  closeoutLines         InventoryCloseoutLine[]
+  offeringSnapshots     OfferingSnapshot[]
+  productReturns        ProductReturn[]
+
+  @@unique([storeId, variantId, inventoryUnitId, custodyType, custodyReferenceId])
+  @@index([tenantId, storeId, kind])
+  @@index([productId, variantId])
+  @@index([parentBalanceSourceId])
+}
+
+model StockReservation {
+  id                      String                   @id @default(cuid())
+  tenantId                String
+  storeId                 String
+  offeringId              String
+  balanceSourceId         String
+  configurationVersionId  String
+  enteredInventoryUnitId  String
+  clientReservationId     String
+  commercialOrderLineId   String?                  @unique
+  payloadHash             String
+  schemaVersion           Int                      @default(1)
+  status                  StockReservationStatus   @default(ACTIVE)
+  enteredQuantity         Decimal                  @db.Decimal(38, 6)
+  unitFactorSnapshot      Decimal                  @db.Decimal(38, 12)
+  canonicalQuantity       Decimal                  @db.Decimal(38, 18)
+  balanceRevisionSnapshot Int
+  expiresAt               DateTime?
+  releasedAt              DateTime?
+  committedAt             DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  tenant                  Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                   Store                    @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  offering                SellableOffering         @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  balanceSource           StockBalanceSource       @relation(fields: [balanceSourceId], references: [id], onDelete: Restrict)
+  configurationVersion    UnitConfigurationVersion @relation(fields: [configurationVersionId], references: [id], onDelete: Restrict)
+  enteredInventoryUnit    InventoryUnit            @relation(fields: [enteredInventoryUnitId], references: [id], onDelete: Restrict)
+  commercialOrderLine     CommercialOrderLine?     @relation(fields: [commercialOrderLineId], references: [id], onDelete: Restrict)
+  productFulfillments     ProductFulfillment[]
+
+  @@unique([tenantId, clientReservationId])
+  @@index([balanceSourceId, status, expiresAt])
+  @@index([offeringId, status])
+  @@index([tenantId, storeId, createdAt])
+}
+
+model StockOperation {
+  id                      String               @id @default(cuid())
+  tenantId                String
+  storeId                 String
+  type                    StockOperationType
+  clientOperationId       String
+  payloadHash             String
+  actorUserId             String
+  source                  String
+  reason                  String?
+  linkedOperationId       String?
+  correctionOfOperationId String?
+  effectiveAt             DateTime             @default(now())
+  createdAt               DateTime             @default(now())
+  tenant                  Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                   Store                @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  movements               StockMovement[]
+  linkedOperation         StockOperation?      @relation("StockOperationLinks", fields: [linkedOperationId], references: [id], onDelete: Restrict)
+  linkedOperations        StockOperation[]     @relation("StockOperationLinks")
+  correctionOf            StockOperation?      @relation("StockOperationCorrections", fields: [correctionOfOperationId], references: [id], onDelete: Restrict)
+  corrections             StockOperation[]     @relation("StockOperationCorrections")
+  finalizedCounts         StockCount[]
+  dispatchedTransfers     StockTransfer[]      @relation("StockTransferDispatchedOperation")
+  receivedTransfers       StockTransfer[]      @relation("StockTransferReceivedOperation")
+  cancelledTransfers      StockTransfer[]      @relation("StockTransferCancelledOperation")
+  finalizedCloseouts      InventoryCloseout[]
+  productFulfillments     ProductFulfillment[]
+  productReturns          ProductReturn[]
+
+  @@unique([tenantId, clientOperationId])
+  @@index([tenantId, storeId, effectiveAt])
+  @@index([type, effectiveAt])
+  @@index([linkedOperationId])
+  @@index([correctionOfOperationId])
+}
+
+model StockMovement {
+  id                       String                   @id @default(cuid())
+  operationId              String
+  balanceSourceId          String
+  configurationVersionId   String
+  enteredInventoryUnitId   String
+  enteredQuantity          Decimal                  @db.Decimal(38, 6)
+  transactionScaleSnapshot Int
+  unitFactorSnapshot       Decimal                  @db.Decimal(38, 12)
+  signedCanonicalEffect    Decimal                  @db.Decimal(38, 18)
+  previousOnHandQuantity   Decimal                  @db.Decimal(38, 18)
+  resultingOnHandQuantity  Decimal                  @db.Decimal(38, 18)
+  unitCostMinorSnapshot    Int?
+  totalCostMinorSnapshot   Decimal?                 @db.Decimal(38, 6)
+  currencyCodeSnapshot     String?
+  reversalOfMovementId     String?
+  createdAt                DateTime                 @default(now())
+  operation                StockOperation           @relation(fields: [operationId], references: [id], onDelete: Restrict)
+  balanceSource            StockBalanceSource       @relation(fields: [balanceSourceId], references: [id], onDelete: Restrict)
+  configurationVersion     UnitConfigurationVersion @relation(fields: [configurationVersionId], references: [id], onDelete: Restrict)
+  enteredInventoryUnit     InventoryUnit            @relation(fields: [enteredInventoryUnitId], references: [id], onDelete: Restrict)
+  reversalOfMovement       StockMovement?           @relation("StockMovementReversals", fields: [reversalOfMovementId], references: [id], onDelete: Restrict)
+  reversals                StockMovement[]          @relation("StockMovementReversals")
+
+  @@index([operationId])
+  @@index([balanceSourceId, createdAt])
+  @@index([configurationVersionId])
+  @@index([reversalOfMovementId])
+}
+
+model StockCount {
+  id                   String           @id @default(cuid())
+  tenantId             String
+  storeId              String
+  clientOperationId    String
+  payloadHash          String
+  schemaVersion        Int              @default(1)
+  status               StockCountStatus @default(DRAFT)
+  actorUserId          String
+  reason               String?
+  finalizedOperationId String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  finalizedAt          DateTime?
+  tenant               Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                Store            @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  finalizedOperation   StockOperation?  @relation(fields: [finalizedOperationId], references: [id], onDelete: Restrict)
+  lines                StockCountLine[]
+
+  @@unique([tenantId, clientOperationId])
+  @@index([tenantId, storeId, status, createdAt])
+}
+
+model StockCountLine {
+  id                      String                   @id @default(cuid())
+  stockCountId            String
+  balanceSourceId         String
+  configurationVersionId  String
+  observedInventoryUnitId String
+  expectedRevision        Int
+  expectedQuantity        Decimal                  @db.Decimal(38, 18)
+  observedQuantity        Decimal                  @db.Decimal(38, 18)
+  varianceQuantity        Decimal                  @db.Decimal(38, 18)
+  createdAt               DateTime                 @default(now())
+  stockCount              StockCount               @relation(fields: [stockCountId], references: [id], onDelete: Cascade)
+  balanceSource           StockBalanceSource       @relation(fields: [balanceSourceId], references: [id], onDelete: Restrict)
+  configurationVersion    UnitConfigurationVersion @relation(fields: [configurationVersionId], references: [id], onDelete: Restrict)
+  observedInventoryUnit   InventoryUnit            @relation(fields: [observedInventoryUnitId], references: [id], onDelete: Restrict)
+  entries                 StockCountEntry[]
+
+  @@unique([stockCountId, balanceSourceId])
+  @@index([balanceSourceId, createdAt])
+}
+
+model StockCountEntry {
+  id                     String         @id @default(cuid())
+  stockCountLineId       String
+  enteredInventoryUnitId String
+  enteredQuantity        Decimal        @db.Decimal(38, 6)
+  unitFactorSnapshot     Decimal        @db.Decimal(38, 12)
+  canonicalQuantity      Decimal        @db.Decimal(38, 18)
+  createdAt              DateTime       @default(now())
+  stockCountLine         StockCountLine @relation(fields: [stockCountLineId], references: [id], onDelete: Cascade)
+  enteredInventoryUnit   InventoryUnit  @relation(fields: [enteredInventoryUnitId], references: [id], onDelete: Restrict)
+
+  @@index([stockCountLineId])
+  @@index([enteredInventoryUnitId])
+}
+
+model StockTransfer {
+  id                     String                     @id @default(cuid())
+  tenantId               String
+  sourceStoreId          String
+  targetStoreId          String
+  sourceBalanceSourceId  String
+  transitBalanceSourceId String?
+  clientTransferId       String
+  payloadHash            String
+  schemaVersion          Int                        @default(1)
+  status                 StockTransferStatus        @default(DRAFT)
+  inventoryUnitId        String
+  configurationVersionId String
+  enteredQuantity        Decimal                    @db.Decimal(38, 6)
+  unitFactorSnapshot     Decimal                    @db.Decimal(38, 12)
+  canonicalQuantity      Decimal                    @db.Decimal(38, 18)
+  stockBehaviorSnapshot  InventoryUnitStockBehavior
+  createdByUserId        String
+  dispatchedOperationId  String?
+  receivedOperationId    String?
+  cancelledOperationId   String?
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
+  dispatchedAt           DateTime?
+  receivedAt             DateTime?
+  cancelledAt            DateTime?
+  tenant                 Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sourceStore            Store                      @relation("StockTransferSourceStore", fields: [sourceStoreId], references: [id], onDelete: Restrict)
+  targetStore            Store                      @relation("StockTransferTargetStore", fields: [targetStoreId], references: [id], onDelete: Restrict)
+  sourceBalanceSource    StockBalanceSource         @relation("StockTransferSourceBalance", fields: [sourceBalanceSourceId], references: [id], onDelete: Restrict)
+  transitBalanceSource   StockBalanceSource?        @relation("StockTransferTransitBalance", fields: [transitBalanceSourceId], references: [id], onDelete: Restrict)
+  inventoryUnit          InventoryUnit              @relation(fields: [inventoryUnitId], references: [id], onDelete: Restrict)
+  configurationVersion   UnitConfigurationVersion   @relation(fields: [configurationVersionId], references: [id], onDelete: Restrict)
+  dispatchedOperation    StockOperation?            @relation("StockTransferDispatchedOperation", fields: [dispatchedOperationId], references: [id], onDelete: Restrict)
+  receivedOperation      StockOperation?            @relation("StockTransferReceivedOperation", fields: [receivedOperationId], references: [id], onDelete: Restrict)
+  cancelledOperation     StockOperation?            @relation("StockTransferCancelledOperation", fields: [cancelledOperationId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, clientTransferId])
+  @@index([tenantId, sourceStoreId, status, createdAt])
+  @@index([tenantId, targetStoreId, status, createdAt])
+  @@index([transitBalanceSourceId])
+}
+
+model InventoryCloseout {
+  id                   String                  @id @default(cuid())
+  tenantId             String
+  storeId              String
+  custodyType          StockCustodyType
+  custodyReferenceId   String
+  clientOperationId    String
+  payloadHash          String
+  schemaVersion        Int                     @default(1)
+  status               InventoryCloseoutStatus @default(DRAFT)
+  actorUserId          String
+  reason               String?
+  finalizedOperationId String?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  finalizedAt          DateTime?
+  tenant               Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                Store                   @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  finalizedOperation   StockOperation?         @relation(fields: [finalizedOperationId], references: [id], onDelete: Restrict)
+  lines                InventoryCloseoutLine[]
+
+  @@unique([tenantId, clientOperationId])
+  @@index([tenantId, storeId, custodyType, custodyReferenceId, status])
+}
+
+model InventoryCloseoutLine {
+  id               String             @id @default(cuid())
+  closeoutId       String
+  balanceSourceId  String
+  expectedRevision Int
+  expectedQuantity Decimal            @db.Decimal(38, 18)
+  declaredQuantity Decimal            @db.Decimal(38, 18)
+  varianceQuantity Decimal            @db.Decimal(38, 18)
+  createdAt        DateTime           @default(now())
+  closeout         InventoryCloseout  @relation(fields: [closeoutId], references: [id], onDelete: Cascade)
+  balanceSource    StockBalanceSource @relation(fields: [balanceSourceId], references: [id], onDelete: Restrict)
+
+  @@unique([closeoutId, balanceSourceId])
+  @@index([balanceSourceId, createdAt])
+}

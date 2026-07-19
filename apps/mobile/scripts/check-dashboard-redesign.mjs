@@ -1,48 +1,38 @@
-import { readFileSync } from "node:fs"
-import { join, relative, resolve } from "node:path"
+import { readFileSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 
-const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname)
-const SOURCE_DIR = join(MOBILE_DIR, "src")
+const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname);
+const SOURCE_DIR = join(MOBILE_DIR, "src");
 
 const requiredMarkers = [
   {
     file: "app/dashboard.tsx",
     markers: [
       "MobileAppShell",
-      "EmptyState",
-      "StatusBadge",
-      "MetricCard",
-      "QuickAction",
-      "DashboardPanel",
-      "DashboardRecordRow",
-      "DashboardStatTile",
-      "DashboardInlineStatus",
-      "visibleQuickActions",
-      "showSecondaryAdminHomeSections = false",
-      "showSecondaryAdminHomeSections ? (",
-      "canManageInventory",
-      "No low-stock items",
-      "No attendants yet",
-      "No stock movement yet",
-      "No saved customers yet",
-      "No sales yet",
-      "Pending sync",
-      "Invite pending",
-      "Product links",
-      "PlanStatusCard",
-      "RepSessionStatusCard",
-      'headerAction={<Logout tone="hero" />}',
-      "statusBarColor={colors.primary}",
-      "scrolledStatusBarColor={colors.card}",
-      "useSafeAreaInsets",
-      "colorWithAlpha",
-      "borderBottomLeftRadius: 36",
+      "StatusBanner",
+      "OperationsDashboardSurface",
+      "isSalesRepRole",
+      "getOfflineProvisionalProjection",
+      "hasProduct",
+      'item.kind === "product"',
+      "packagedBalanceCount",
+      'row.kind === "PACKAGED_STOCK"',
+      "!isAttendant && hasProduct",
+      "!isAttendant && packagedBalanceCount >= 2",
+      "Quick actions",
+      "Recent orders",
+      "Product and Service Offerings",
+      "Add your first item",
+      "Create a Product or Service",
     ],
   },
   {
     file: "components/mobile/app-shell.tsx",
     markers: [
       "StatusBar",
+      "contentStatusBarStyle",
+      "heroStatusBarStyle",
+      "hero",
       "statusBarColor",
       "mobile-shell-status-bar-background",
       "hasStartedScroll",
@@ -51,89 +41,63 @@ const requiredMarkers = [
       "hideOnScroll",
     ],
   },
+];
+
+const forbiddenMarkers = [
   {
-    file: "components/mobile/empty-state.tsx",
-    markers: ["EmptyState", "ActionButton", "text-center"],
-  },
-  {
-    file: "components/mobile/status-badge.tsx",
-    markers: ["StatusBadge", "MobileDesignStatusTone", "min-h-8"],
-  },
-  {
-    file: "components/mobile/dashboard-kit.tsx",
+    file: "app/dashboard.tsx",
     markers: [
-      "DashboardMetricCard",
-      "DashboardQuickAction",
-      "DashboardPanel",
-      "DashboardRecordRow",
-      "DashboardStatTile",
-      "DashboardInlineStatus",
-      "DashboardMetricTone",
-      "flex-row flex-wrap items-center gap-2",
-      "bg-success/10",
-      "bg-warn/10",
+      "Retail ops",
+      "Feed",
+      "Bag",
+      "showSecondaryAdminHomeSections",
+      'headerAction={<Logout tone="hero" />}',
     ],
   },
-]
+  {
+    file: "components/mobile/app-shell.tsx",
+    markers: ["hideOnScroll={false}"],
+  },
+];
 
-const forbiddenDashboardMarkers = [
-  "No sales yet\n              </Text>",
-  "No saved customers yet\n            </Text>",
-]
-const forbiddenShellMarkers = ["hideOnScroll={false}"]
-
-const failures = []
+const failures = [];
 
 for (const check of requiredMarkers) {
-  const filePath = join(SOURCE_DIR, check.file)
-  const contents = readFileSync(filePath, "utf8")
+  const filePath = join(SOURCE_DIR, check.file);
+  const contents = readFileSync(filePath, "utf8");
 
   for (const marker of check.markers) {
-    if (contents.includes(marker)) continue
+    if (contents.includes(marker)) continue;
 
     failures.push({
       file: relative(MOBILE_DIR, filePath),
       message: `missing marker: ${marker}`,
-    })
+    });
   }
 }
 
-const dashboardSource = readFileSync(
-  join(SOURCE_DIR, "app/dashboard.tsx"),
-  "utf8",
-)
+for (const check of forbiddenMarkers) {
+  const filePath = join(SOURCE_DIR, check.file);
+  const contents = readFileSync(filePath, "utf8");
 
-for (const marker of forbiddenDashboardMarkers) {
-  if (!dashboardSource.includes(marker)) continue
+  for (const marker of check.markers) {
+    if (!contents.includes(marker)) continue;
 
-  failures.push({
-    file: "src/app/dashboard.tsx",
-    message: `contains old inline empty-state marker: ${marker}`,
-  })
-}
-
-const appShellSource = readFileSync(
-  join(SOURCE_DIR, "components/mobile/app-shell.tsx"),
-  "utf8",
-)
-
-for (const marker of forbiddenShellMarkers) {
-  if (!appShellSource.includes(marker)) continue
-
-  failures.push({
-    file: "src/components/mobile/app-shell.tsx",
-    message: `contains old fixed-tab marker: ${marker}`,
-  })
+    failures.push({
+      file: relative(MOBILE_DIR, filePath),
+      message: `contains obsolete marker: ${marker}`,
+    });
+  }
 }
 
 if (failures.length > 0) {
-  console.error("Mobile dashboard redesign check failed.")
+  console.error("Mobile generic operations dashboard check failed.");
 
   for (const failure of failures) {
-    console.error(`- ${failure.file}: ${failure.message}`)
+    console.error(`- ${failure.file}: ${failure.message}`);
   }
 
-  process.exit(1)
+  process.exit(1);
 }
 
-console.log("Mobile dashboard redesign check passed.")
+console.log("Mobile generic operations dashboard check passed.");

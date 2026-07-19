@@ -1,17 +1,16 @@
-# Retail Ops Onboarding
+# Business Onboarding
 
 ## Purpose
-Give new owners a lightweight path from signup to first usable Retail Ops workspace without making setup feel like a long questionnaire.
+Give new owners a lightweight path from signup to a usable generic operations
+workspace without making setup feel like a long questionnaire or choosing an
+industry workflow.
 
 ## Current Phase
-Marketing signup creates the tenant/business and first store, and stores owner,
-country, operating currency, industry, and business-size context. Operating
-currency is required in marketing and mobile owner signup, suggested from the
-selected country, and manually overridable. The supported launch set is NGN,
-USD, GHS, KES, ZAR, and EGP.
-
-Dashboard first-store setup now captures the production Retail Ops setup profile
-before the owner starts operating:
+Marketing signup creates the tenant/business and first Store and captures
+business identity, physical address, phone, country, operating currency and
+owner identity. Industry and team-size answers are descriptive onboarding
+context only; they never select a Catalog, Inventory or Service runtime model.
+The supported launch currency set is NGN, USD, GHS, KES, ZAR and EGP.
 
 Early-access signup can now start from a secure marketing access link. The early-access route creates an expiring one-time `OnboardingSession`; `/signup?access_token=...` verifies it, prefills the owner/business fields that came from the lead, and `POST /api/auth/signup` consumes that session exactly once while linking it to the created tenant and owner.
 
@@ -22,25 +21,25 @@ business uses the shared dashboard at `dashboard.ewatrade.com` in production or
 `ewatrade-dashboard.localhost` in local development; active business context is
 resolved from the authenticated membership and active-tenant cookie.
 
-- store name
-- business template: Product Sales, Dry Cleaning / Laundry, or Other business
-- country and currency
-- template-specific category or raw business description
-- sales method
-- team size
-- optional support email
+The browser signup is a neutral three-step flow: reserved storefront address,
+business details and owner details. It does not ask for a business runtime
+mode. The backend creates one neutral merchant workspace, and the success
+screen distinguishes the reserved storefront from the shared dashboard.
+Duplicate owner phone numbers fail before account creation with a clear field
+error.
 
 Marketing signup dispatches the welcome email through `@ewatrade/email` after tenant creation. The signup response includes `emailDeliveryStatus` so the success UI can distinguish a sent confirmation from a provider failure instead of claiming delivery unconditionally.
 
-`POST /api/stores` and protected tRPC `tenant.createStore` accept the same onboarding payload. Both paths call `createTenantStore`, which stores cleaned values in `Store.metadata.retailOps.onboarding` with source, captured timestamp, currency code, and the effective business-template snapshot. It also writes `Store.metadata.retailOps.businessTemplate` and a completed `OnboardingSession` for the tenant/user with the created store snapshot and the same setup payload. This keeps first-store setup reusable for dashboard and API clients while preserving a durable setup-completion record.
-
-Dry Cleaning / Laundry stores also receive an empty metadata-backed dry-cleaning workspace under `Store.metadata.retailOps.dryCleaning`. Other business submissions store unsupported-demand metadata that the internal ranking procedure can aggregate from completed onboarding sessions.
+Mobile presents three short, industry-neutral introduction steps. Owner signup
+then reveals two focused stages: business name/address/city/phone/currency,
+followed by owner name and email OTP or Google authentication. The operational
+workspace starts empty and becomes Product-only, Service-only or mixed from the
+Catalog Items the business actually creates.
 
 ## Product Rules
 - Keep first-run setup compact and operational.
 - Treat the chosen subdomain as storefront identity, never as a dashboard host.
 - Do not hard-code feed, grain, or any other case-study product as the product identity.
-- Existing stores without template metadata resolve to Product Sales.
 - Store onboarding values by tenant/store scope so multiple businesses and stores remain isolated.
 - Treat `Store.currencyCode` as the commerce source of truth. Tenant currency is
   the default for a newly created store; missing legacy values fall back to NGN.
@@ -48,12 +47,23 @@ Dry Cleaning / Laundry stores also receive an empty metadata-backed dry-cleaning
   legacy codes render as the code instead of an incorrect symbol.
 - Currency changes after transactions, exchange conversion, and historical
   repricing are outside first-run onboarding.
-- Keep the shared DB helper as the write path for dashboard and tRPC store creation.
-- Treat store metadata plus completed `OnboardingSession` persistence as the current bridge, not the final analytics or setup-state system.
+- Keep Catalog capability derived from actual Product and Service Items, never
+  a signup template.
+- Keep the shared DB helper as the write path for dashboard and API Store
+  creation.
 
 ## Deferred
-- Multi-step setup-completion state beyond the first completed store setup session.
-- Dedicated setup screens after the first business-template selection.
-- Reusable starter templates for units, variants, and stock setup.
+- Setup-completion analytics beyond the first completed signup/session record.
+- Optional neutral starter suggestions for units, variants, and stock setup.
 - Onboarding analytics, drop-off reporting, and admin review tools.
-- Manual browser validation of the full signup -> first store -> first product path.
+
+## Behavioral Validation
+
+- Browser signup was completed against the local marketing app and created a
+  real tenant, Store and owner session.
+- The success CTA opened the shared dashboard rather than a tenant dashboard
+  subdomain.
+- Desktop and 390 px signup layouts were reviewed for flat dividers, padding,
+  scrolling and clear storefront/dashboard copy.
+- The created owner switched among five local QA businesses without tenant
+  cache leakage.

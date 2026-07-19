@@ -2,19 +2,18 @@ import { CheckmarkCircle01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 
 const STEPS = [
-  { label: "Account type" },
-  { label: "Workspace" },
-  { label: "Business" },
+  { label: "Storefront address" },
+  { label: "Business details" },
   { label: "Your account" },
 ]
 
 type SignupStepperProps = {
-  currentStep: number // 1-indexed, steps 1–4 (step 5 is success)
+  currentStep: number // 1-indexed, steps 1–3 (step 4 is success)
 }
 
 export function SignupStepper({ currentStep }: SignupStepperProps) {
   return (
-    <div className="mb-8 flex items-center justify-center gap-0">
+    <div className="mb-8 flex items-start justify-center gap-0">
       {STEPS.map((step, index) => {
         const stepNumber = index + 1
         const isCompleted = stepNumber < currentStep
@@ -26,7 +25,7 @@ export function SignupStepper({ currentStep }: SignupStepperProps) {
             {/* Step indicator */}
             <div className="flex flex-col items-center gap-1.5">
               <div
-                className={`flex size-8 items-center justify-center rounded-full border-2 text-xs font-bold transition-all duration-300 ${
+                className={`flex size-8 items-center justify-center rounded-lg border text-xs font-bold transition-all duration-300 ${
                   isCompleted
                     ? "border-primary bg-primary text-primary-foreground"
                     : isCurrent
@@ -60,7 +59,7 @@ export function SignupStepper({ currentStep }: SignupStepperProps) {
             {/* Connector line (not after last step) */}
             {index < STEPS.length - 1 && (
               <div
-                className={`mx-2 mb-5 h-px w-10 transition-colors duration-300 sm:w-16 ${
+                className={`mx-2 mt-4 h-px w-8 transition-colors duration-300 sm:w-16 ${
                   stepNumber < currentStep ? "bg-primary" : "bg-border"
                 }`}
               />

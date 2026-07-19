@@ -3,22 +3,17 @@ import {
   type EmailMessage,
   type EmailTransport,
   type MarketingEmailInput,
-  type RetailOpsSharedLinkOrderEmailInput,
   type RetailOpsStaffInviteEmailInput,
   createMarketingEarlyAccessAdminEmail,
   createMarketingEarlyAccessConfirmationEmail,
   createMarketingWaitlistAdminEmail,
   createMarketingWaitlistConfirmationEmail,
-  createRetailOpsSharedLinkOrderCustomerEmail,
-  createRetailOpsSharedLinkOrderMerchantEmail,
   createRetailOpsStaffInviteEmail,
   createTestRoutedEmailMessages,
   defaultMarketingEarlyAccessAdminSubject,
   defaultMarketingEarlyAccessConfirmationSubject,
   defaultMarketingWaitlistAdminSubject,
   defaultMarketingWaitlistConfirmationSubject,
-  defaultRetailOpsSharedLinkOrderCustomerSubject,
-  defaultRetailOpsSharedLinkOrderMerchantSubject,
   defaultRetailOpsStaffInviteSubject,
   dispatchEmailMessages,
 } from "@ewatrade/email"
@@ -125,39 +120,6 @@ function planEmailMessagesForDispatch(
                 input: payload,
                 replyTo,
                 subject: defaultMarketingWaitlistAdminSubject(),
-                to: recipient.email,
-              }),
-              recipientEmail: recipient.email,
-            },
-      )
-    }
-    case "retail_ops_shared_link_order_requested": {
-      const payload = dispatch.payload as RetailOpsSharedLinkOrderEmailInput
-
-      return emailRecipients.map((recipient) =>
-        recipient.deliveryRole === "customer"
-          ? {
-              deliveryRole: "customer",
-              message: createRetailOpsSharedLinkOrderCustomerEmail({
-                from,
-                input: payload,
-                replyTo,
-                subject: defaultRetailOpsSharedLinkOrderCustomerSubject({
-                  orderNumber: payload.orderNumber,
-                }),
-                to: recipient.email,
-              }),
-              recipientEmail: recipient.email,
-            }
-          : {
-              deliveryRole: "admin",
-              message: createRetailOpsSharedLinkOrderMerchantEmail({
-                from,
-                input: payload,
-                replyTo,
-                subject: defaultRetailOpsSharedLinkOrderMerchantSubject({
-                  orderNumber: payload.orderNumber,
-                }),
                 to: recipient.email,
               }),
               recipientEmail: recipient.email,

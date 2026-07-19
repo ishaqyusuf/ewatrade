@@ -7,6 +7,10 @@ import { assertRetailOpsEntitlementAvailable } from "./retail-ops-subscriptions"
 import type { DbClient } from "./types"
 
 export type CreateTenantStoreInput = {
+  addressLine1?: string | null
+  addressLine2?: string | null
+  city?: string | null
+  countryCode?: string | null
   createdByUserId?: string | null
   tenantId: string
   name: string
@@ -14,6 +18,8 @@ export type CreateTenantStoreInput = {
   supportEmail?: string | null
   supportPhone?: string | null
   onboarding?: CreateTenantStoreOnboardingInput | null
+  postalCode?: string | null
+  region?: string | null
 }
 
 export type CreateTenantStoreOnboardingInput = {
@@ -221,9 +227,15 @@ export async function createTenantStore(
     try {
       const store = await db.store.create({
         data: {
+          addressLine1: cleanText(input.addressLine1),
+          addressLine2: cleanText(input.addressLine2),
+          city: cleanText(input.city),
+          countryCode: cleanText(input.countryCode)?.toUpperCase(),
           tenantId: input.tenantId,
           slug,
           name,
+          postalCode: cleanText(input.postalCode),
+          region: cleanText(input.region),
           currencyCode,
           supportEmail,
           supportPhone,

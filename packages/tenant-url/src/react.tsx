@@ -1,16 +1,7 @@
 "use client"
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  type ReactNode,
-} from "react"
-import {
-  buildTenantHref,
-  type TenantUrlConfig,
-  type TenantUrlContext,
-} from "."
+import { type ReactNode, createContext, useCallback, useContext } from "react"
+import { type TenantUrlConfig, type TenantUrlContext, buildTenantHref } from "."
 
 export type TenantUrlProviderValue = {
   config: TenantUrlConfig

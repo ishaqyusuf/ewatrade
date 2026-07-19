@@ -1,276 +1,74 @@
 # API Contracts
 
-## Purpose
-Track important request/response shapes and contract rules.
+## General
 
-## How To Use
-- Update when API payloads or validation schemas change.
+- All tenant-owned reads/writes resolve tenant context server-side.
+- On the shared dashboard host, the active-tenant cookie is propagated through
+  both server and browser tRPC clients. An explicit tenant header still has
+  priority where supported.
+- Store ids are validated against the active tenant.
+- Exact quantities/factors are decimal strings; money is integer minor units.
+- Commands use stable client ids and payload hashes for idempotency.
+- Immutable snapshots preserve historical meaning; clients never reconstruct
+  inventory or Order truth from current mutable Catalog data.
 
-## Contract Rules
-- Keep tenant context explicit in authenticated flows.
-- Prefer shared validation/schema packages for API boundaries.
-- Hide repository/ORM details from API responses.
+## Catalog
 
-## Current State
-- Marketing lead capture contracts:
-  - `POST /api/early-access` accepts `fullName`, `email`, and optional `companyName`, `roleTitle`, `phone`, `message`
-  - `POST /api/waitlist` accepts `fullName` and `email`
-  - Both routes return a simple success `message` on success and still keep notification/email side effects server-side
-  - Marketing notification dispatches record bounded delivery receipts on `LeadCapture.metadata.lastNotificationDispatch` and `LeadCapture.metadata.notificationDispatches`, including delivery role, recipient, provider status, provider message id when available, subject, and sent/failed timestamps
-- Marketing owner signup contracts:
-  - `POST /api/auth/signup` accepts account modes, workspace subdomain/custom domain, business details, required operating `currencyCode`, owner name/email/phone, and password from the marketing signup stepper.
-  - `currencyCode` is restricted to NGN, USD, GHS, KES, ZAR, or EGP.
-  - The route creates the Better Auth user, tenant, first store, storefront/POS tenant hostnames, and owner membership, persisting the same currency on tenant and store, then dispatches the welcome email through `@ewatrade/email`. It does not create an internal or custom tenant dashboard hostname.
-  - Successful responses include `tenantSlug`, the shared platform `dashboardUrl`, and `emailDeliveryStatus` (`sent` or `failed`). Development responses may also include `devEmailHtml` for local preview.
-- Mobile auth contracts:
-  - `auth.requestMobileOwnerOtp` accepts mode `login` or `sign_up`, normalized email, optional owner name/business name, and optional supported `currencyCode`; the UI requires currency for sign-up and login ignores it.
-  - In `login` mode, `auth.requestMobileOwnerOtp` must first confirm that the normalized email belongs to an existing account with an active owner/admin/manager membership or invited/active staff business context. Missing accounts or accounts without an available business fail before any OTP verification row is written or email is dispatched.
-  - After preflight, the mutation writes a short-lived six-digit OTP to the shared `Verification` table.
-  - Production dispatches the OTP through the shared email package. Exact `test.com` recipients route to comma-separated `TEST_EMAILS` with `TEST_EMAIL` fallback while preserving the submitted identity email.
-  - Development and test do not dispatch email; they return the generated short-lived code as `devCode`. There is no fixed-code bypass.
-  - `auth.verifyMobileOwnerOtp` accepts the same identity payload plus a six-digit code, verifies the latest unexpired OTP, marks the email verified, creates or resumes the owner user, resolves or creates the first tenant/business/store context for sign-up, and returns a bearer session token plus mobile profile and tenant summary containing active-store currency.
-  - `auth.verifyMobileGoogle` accepts the same optional sign-up currency and returns the same currency-aware session shape.
-  - For login mode, `auth.verifyMobileOwnerOtp` can also resolve an invited cashier/operator/manager membership and return mobile profile role/status so the app can route the staff user into `retailOps.completeStaffOnboarding`
-  - Mobile tRPC accepts bearer sessions from either `Authorization` or `x-app-authorization` so the Expo client can authenticate production reads and mutations after OTP verification
-- Retail Ops read contracts:
-  - `tenant.createStore` accepts store/business `name`, optional supported `currencyCode`, optional `supportEmail`, and optional `supportPhone`; omitted currency inherits tenant currency, then NGN.
-  - `tenant.createStore` accepts optional neutral onboarding context but no store-level Product, Service, or dry-cleaning runtime type. The merchant chooses kind when creating each catalog item.
-  - `tenant.createStore` returns the created store id, slug, name, status, and currency after enforcing owner/admin permission and the tenant's business/store entitlement
-  - `retailOps.catalogItems` returns both kinds with kind-aware variant/price/profile fields. `retailOps.createCatalogItem` and `retailOps.updateCatalogItem` accept `kind: PRODUCT | SERVICE`; both require price, Product accepts stock/unit fields, and Service accepts optional turnaround/instructions but no stock.
-  - Catalog responses retain compatibility ids while exposing generic item terminology. Item kind cannot be changed after operational use.
-  - `retailOps.createSale` accepts one or more priced Product and/or Service lines. Product lines validate/deduct stock; Service lines bypass stock and create one Service Job grouping the order's Service lines.
-  - `retailOps.cancelOrderLine` accepts an order line, cancellation reason, optional restock decision, and optional refund/correction fields; it records immutable cancellation, Product reversal, Service cancellation, and payment-event history as applicable.
-  - Service Job contracts support list, legal status transition, assignment, delay/revised due date, private evidence, ready notification intent, and tenant/store-scoped history.
-  - Service request-link reads return active/inactive opaque tokens and safe link metadata. Public submissions accept customer details, priced Service lines, and notes, then create pending requests for staff review and idempotent conversion.
-  - Public request pages expose share-preview metadata. Public tracking returns business name, safe reference/status/due/payment summaries only and excludes raw ids, private contacts, assignments, evidence, internal notes, and actor data.
-  - Service operational reports summarize job states, due/overdue/delay counts, completion time, popular Service items, request conversion, gross commercial revenue, refunds, and net revenue.
-  - `retailOps.summary` accepts optional `storeId`, `from`, and `to`
-  - `retailOps.inventory` accepts optional `storeId`
-  - `retailOps.salesByProduct` accepts optional `storeId`, `from`, and `to`
-  - `retailOps.salesByRep` accepts optional `storeId`, `from`, and `to`
-  - `retailOps.customerBook` accepts optional `storeId`, optional `search`, and optional `limit`
-  - `retailOps.recentSales` accepts optional `storeId`, optional `from`, optional `to`, and optional `limit`
-  - `retailOps.creditSales` accepts optional `storeId`, optional `from`, optional `to`, and optional `limit`
-  - `retailOps.sessions` accepts optional `storeId`, optional `from`, optional `to`, optional `limit`, and status filter `all`, `open`, or `closed`
-  - `retailOps.paymentReconciliation` accepts optional `storeId`, `from`, and `to`
-  - `GET /api/sales` is the dashboard bridge read contract over recent sales, credit sales, cashier sessions, and payment reconciliation. It accepts optional `storeId` and `sessionStatus` values `all`, `open`, or `closed`.
-  - `GET /api/customers` is the dashboard bridge read contract over the customer book. It accepts optional `storeId` and `search`.
-  - `GET /api/search` is the dashboard bridge read contract for command-surface record search. It accepts optional `q` and `storeId`, returns `{ query, results }`, and returns an empty `results` array when the trimmed query is shorter than two characters.
-  - Dashboard search results use `{ id, group, title, description, href }`; current groups are `products`, `customers`, `staff`, `sales`, and `links`.
-  - Dashboard command-surface pages and commands are client-composed from permitted navigation items; the search API only returns records and does not perform writes.
-  - Date range inputs are coerced to dates at the tRPC boundary. When omitted, reporting defaults to today from local server midnight through request time.
-  - Protected date-range reads that receive a `from` date must pass the tenant's `reportsHistoryDays` entitlement before querying report data.
-  - Store resolution uses the requested store when provided, otherwise the active tenant store, otherwise the first non-archived tenant store.
-  - Owner/admin/manager users read selected-store operational report data, while cashier/operator users are actor-scoped on `salesByProduct`, `salesByRep`, `recentSales`, and `creditSales`, customer-scoped to their own in-person sale orders or creator-attributed shared-link order requests in `customerBook`, and user-scoped on `sessions` and `paymentReconciliation`.
-  - Dashboard sales/customer bridge reads use the same role-aware actor/user scoping as the Retail Ops tRPC procedures.
-  - `retailOps.summary` and `retailOps.inventory` remain selected-store reads in the first phase because they report store-level operating state rather than actor-owned sale/session activity.
-  - Read responses expose operational DTOs: store identity/currency, inventory counts, receipt payment totals, order totals/counts, open cashier session count, product/unit stock rows, and product/unit sales rows.
-  - `retailOps.customerBook` groups recent non-cancelled orders by customer email, then phone, then normalized name. It returns customer display data, order count, total spend, first/last seen timestamps, and last order summary.
-  - `retailOps.salesByRep` groups in-person Retail Ops sales by order metadata actor id, joins known users for display names, and returns sale count, quantity, gross total, cash, transfer, card, credit, session ids, and last sale timestamp.
-  - `retailOps.recentSales` only returns orders whose metadata source is `retail_ops_sale`, so pending shared-link order requests are not mixed into in-person sale lists.
-  - `retailOps.recentSales` returns order status/payment status, customer details, sale lines, unit names, payment method/state, receipt summary, actor id, cashier session id, and optional external id.
-  - `retailOps.creditSales` only returns pending in-person Retail Ops credit sale orders and exposes remaining amount due, paid amount, due date, terms note, aging bucket, overdue days, last payment time, customer details, actor display data, sale lines, repayment events, and payment state.
-  - `retailOps.recordCreditPayment` accepts optional `storeId`, required credit sale `orderId`, positive `amountMinor`, repayment method `cash`, `transfer`, or `card`, optional open `cashierSessionId`, optional `paidAt`, optional `externalId`, and optional notes.
-  - Credit repayment requires a POS-capable role, only applies to in-person Retail Ops credit sale orders in the selected tenant/store, rejects overpayment, creates a receipt for the collected amount, and updates the order payment state to `credit_partially_paid` or `credit_paid`.
-  - When `externalId` is supplied, repeated credit-payment submissions with the same order external id return the already-recorded repayment result without creating another receipt or increasing the paid amount.
-  - `retailOps.sessions` returns bounded cashier sessions in the selected range with rep identity, status, timestamps, opening float, optional closing float, receipt totals by cash/transfer/card/gross, expected cash, and cash variance when a closing float exists.
-  - `retailOps.paymentReconciliation` returns closed cashier sessions in the selected range with rep identity, opening float, closing float, receipt totals by cash/transfer/card/gross, expected cash, and cash variance.
-  - `retailOps.subscription` returns Starter, Growth, and Pro plan definitions, using active durable `SubscriptionPlan` rows when available and backend constants as fallback. It resolves durable `TenantSubscription` rows first, then tenant metadata or default Starter trial state, and returns current tenant usage counts plus entitlement counters for businesses/stores, products, staff, offline devices, and report history.
-  - `retailOps.createSubscriptionCheckoutIntent` accepts target plan id `starter`, `growth`, or `pro`, plus caller surface `dashboard`, `mobile`, or `unknown`, and returns a typed provider-neutral checkout intent with current plan, target plan, tenant, subscription, status, message, provider, and nullable checkout URL.
-  - Non-current checkout intent requests write a durable `BillingCheckoutSession` row when the billing tables are available, while still returning `provider: "none"` and `checkoutUrl: null` until a payable provider is selected.
-  - `POST /api/billing/provider-events` is an internal normalized billing webhook bridge protected by `x-internal-key`/`INTERNAL_API_KEY`. It accepts provider `manual`, `stripe`, `app_store`, `play_store`, or `other`; an idempotent `eventId`; a normalized event type such as checkout, subscription, or invoice status changes; and optional normalized checkout, subscription, and invoice payloads.
-  - Billing provider events are recorded in durable `BillingProviderEvent` rows by provider and event id. Already-processed events are skipped, actionable events can update `BillingCheckoutSession`, upsert `TenantSubscription`, and upsert `BillingInvoice`, and failed events are marked failed with an error message. Undeployed billing tables return an unavailable bridge response without leaking provider-specific fields to UI code.
-  - Provider-specific payable checkout creation, signature verification adapters, payment collection, App Store/Play Store purchase validation, and live invoice/payment reconciliation remain behind this normalized boundary.
-  - `retailOps.offlineDevices` returns current offline device registrations ordered by last-seen time for owner/admin/manager review, using durable device rows when available and metadata fallback while the migration rolls out.
-  - `retailOps.revokedOfflineDevices` returns currently blocked offline device registrations ordered by revoked time for owner/admin/manager review, using durable revocation rows when available and metadata fallback while the migration rolls out.
-  - `retailOps.registerOfflineDevice` accepts optional `storeId`, `deviceId`, optional `deviceName`, platform `android`, `ios`, `web`, or `unknown`, and optional `appVersion`
-  - Offline device registration is idempotent by `deviceId`; a known device refreshes `lastSeenAt`, while a new device checks the `offlineDevices` entitlement before being recorded.
-  - Offline device registration returns the recorded device id, name, platform, app version, actor user id, store id, registered timestamp, and last-seen timestamp.
-  - `retailOps.revokeOfflineDevice` accepts a `deviceId`, marks the device revoked for owner/admin/manager users, and returns the removed active device record.
-  - Revoking an unknown device returns a not-found response and does not mutate device state.
-  - Revocation stores a durable active revocation row when available, marks the device `REVOKED`, and blocks that `deviceId` from registration or `retailOps.syncEvents`; undeployed environments keep the bounded metadata tombstone fallback.
-  - `retailOps.restoreOfflineDevice` accepts a `deviceId`, marks the matching active revocation restored, and returns the removed revoked-device record.
-  - Restoring an unknown revoked device returns a not-found response and does not mutate device state.
-  - `retailOps.syncEvents` accepts optional `deviceId` plus 1 to 50 offline events with `eventId`, `type`, optional `createdAt`, and a type-specific payload
-  - Sync replay rejects a supplied `deviceId` when that device is currently in the tenant revoked-device list.
-  - First-phase sync replay applies `closeout_created`, `customer_upsert`, `product_setup`, `rep_session_opened`, `sale_created`, `share_link_created`, `share_link_deactivated`, `staff_invited`, `stock_adjustment_recorded`, `stock_intake_recorded`, and `unit_conversion_recorded` events by forwarding to the existing close-session, derived customer-book, product setup, session open, sale, share-link, staff invite, stock adjustment, stock intake, and unit conversion mutation helpers
-  - Sync replay uses the client `eventId` as the `externalId` when the payload does not provide one, so supported event retries use the same idempotency path as direct mutations
-  - Sync replay stores a bounded first-phase server sync-run record in `Tenant.metadata.retailOps.syncRuns`
-  - Sync replay returns `totalCount`, `appliedCount`, `failedCount`, `skippedCount`, optional `deviceId`, the recorded `syncRun`, and a per-event status/result/error list
-  - `retailOps.syncHistory` accepts optional `deviceId` plus a bounded `limit`, then returns recent sync runs with actor id, device id, completed timestamp, aggregate status, counts, and per-event status/error summaries
-  - Owner/admin/manager roles can read tenant sync history; cashier/operator roles are limited to their own sync runs.
-  - `retailOps.syncConflicts` accepts optional `deviceId` plus a bounded `limit`, then returns unreviewed failed sync events whose error code is `CONFLICT`, including event id, type, actor id, device id, sync run id, processed timestamp, error summary, and server-derived resolution guidance with `resolutionAction` and `resolutionDetail`.
-  - `retailOps.reviewSyncConflict` accepts an `eventId`, marks the matching unreviewed tenant conflict reviewed, and returns the reviewed event summary with reviewer id and review timestamp.
-  - Sync conflict reads/reviews use durable `RetailOpsSyncEvent.reviewedAt` and `reviewedByUserId` when available; undeployed environments fall back to conflict entries derived from metadata sync runs plus a bounded metadata reviewed-event-id list.
-  - All currently declared first-phase offline event types have a replay branch, including credit-payment replay through `credit_payment_recorded`. Future event types should return `skipped` until their idempotency and conflict contracts are implemented.
-  - The current customer book is a derived order read model, not a dedicated customer identity table. `customer_upsert` replay validates that the referenced synced sale exists, then returns the derived customer identity that `retailOps.customerBook` can read from orders.
-  - The current read and sync surface is intentionally not a ledger contract. Rich closeout declarations, stock movement history, staff attribution beyond actor/session metadata, share-link order attribution, durable customer identities, full resolution workflow actions, and background retry orchestration need dedicated contracts before they are treated as production-complete.
-- Retail Ops session lifecycle contract:
-  - `retailOps.openSession` accepts optional `storeId`, optional `externalId`, optional bounded `inventoryLines`, optional `notes`, optional `openedAt`, and `openingFloatMinor`
-  - Each opening inventory line includes `productVariantId`, non-negative integer `countedQuantity`, and optional note; duplicate units in one opening declaration are rejected
-  - Opening and closing sessions require a POS-capable role: owner, admin, manager, cashier, or operator
-  - Opening a session prevents duplicate open sessions for the same user and store
-  - When `externalId` is supplied, repeated open-session submissions with the same store external id return the original opened session result before duplicate-open validation
-  - Opening inventory declarations are stored in a bounded first-phase record under `Store.metadata.retailOps.openingInventoryDeclarations`; expected quantity uses the acting user's staff wallet for that product unit when present, otherwise the central `InventoryItem.onHandQuantity`
-  - Opening inventory lines return product/unit snapshots, expected quantity, counted quantity, variance quantity, stock source (`staff_wallet` or `store`), and optional note
-  - `retailOps.closeSession` accepts optional `storeId`, required `cashierSessionId`, optional `closedAt`, required `closingFloatMinor`, optional `declaredTransferMinor`, optional `declaredCardMinor`, optional `declaredCreditMinor`, optional bounded `inventoryLines`, optional `externalId`, and optional `notes`
-  - Each closeout inventory line includes `productVariantId`, non-negative integer `countedQuantity`, and optional note; duplicate units in one closeout are rejected
-  - Closing a session only closes an open session owned by the acting user in the selected tenant/store
-  - When `externalId` is supplied, repeated close-session submissions with the same store external id return the original closed session result before open-session validation
-  - The first close result returns receipt/credit totals by cash, transfer, card, credit, gross, and receipt count, plus expected cash from opening float and cash receipts, declared cash/transfer/card/credit amounts, and variances for each payment bucket
-  - Non-cash closeout declarations are stored in a bounded first-phase record under `Store.metadata.retailOps.closeoutDeclarations`
-  - Closing inventory declarations are stored in a bounded first-phase record under `Store.metadata.retailOps.closeoutInventoryDeclarations`; expected quantity uses the acting user's staff wallet for that product unit when present, otherwise the central `InventoryItem.onHandQuantity`
-  - When the closeout migration is available, closing a session mirrors the close result into durable `RetailOpsCloseout`, `RetailOpsPaymentDeclaration`, and closing `RetailOpsStockDeclaration` rows with payment expected/declared/variance amounts, stock expected/counted/variance quantities, actor, timestamps, note, external id, and pending-review status; undeployed environments keep the metadata fallback
-  - Closeout inventory lines return product/unit snapshots, expected quantity, counted quantity, variance quantity, stock source (`staff_wallet` or `store`), and optional note
-  - `retailOps.reviewCloseoutSession` accepts optional `storeId`, required `cashierSessionId`, status `approved` or `rejected`, and optional review note
-  - Closeout review is restricted to sales-management roles, only applies to closed sessions in the selected tenant/store, and stores a bounded first-phase review record under `Store.metadata.retailOps.closeoutReviews`
-  - When the closeout migration is available, closeout review also updates the durable `RetailOpsCloseout` status/review snapshot and appends a durable `RetailOpsCloseoutReview` history row; undeployed environments keep the metadata fallback
-  - `retailOps.sessions` and `retailOps.paymentReconciliation` include opening inventory, declaration, closing inventory variance, payment variance, and latest closeout review state for each returned session when present
-  - This is still a session lifecycle and metadata-backed read bridge. Durable read cutover, opening stock persistence, approved ledger posting, rejection correction workflow, and variance resolution still need dedicated contracts.
-- Retail Ops staff management contract:
-  - `retailOps.staff` accepts optional `storeId`, optional `search`, optional `limit`, role filter `all`, `owner`, `admin`, `manager`, `cashier`, or `operator`, and status filter `all`, `active`, `invited`, or `suspended`
-  - `GET /api/staff` is the dashboard bridge read contract over the same staff list rules, accepting optional `storeId`, `search`, `role`, and `status`
-  - Staff list reads require owner/admin/manager-level permission and return non-removed tenant memberships for Retail Ops roles
-  - Staff list results include membership id, role, status, invited/accepted timestamps, inviter id, update timestamps, and user identity/display fields
-  - `retailOps.inviteStaff` accepts optional `storeId`, optional `externalId`, staff `email`, optional `name`, and role `cashier`, `operator`, or `manager`
-  - `POST /api/staff` is the dashboard bridge write contract for staff `invite` and `status` operations; invite accepts staff `email`, optional `name`, and role `cashier`, `operator`, or `manager`, while status accepts `staffUserId` and target status `active` or `suspended`
-  - The mutation resolves tenant/store membership before writing and requires an owner/admin/manager-level role
-  - Staff emails are normalized to lowercase at the API boundary
-  - The mutation creates a user record when the email is new, then creates or refreshes a tenant `Membership` with `status: INVITED`, `invitedById`, `invitedAt`, and the selected role
-  - Existing non-active memberships can be re-invited; existing active memberships return a conflict
-  - New or restored staff invites check the tenant's current staff entitlement before creating a counted membership
-  - When `externalId` is supplied, repeated staff invite submissions with the same tenant external id return the original invite result without refreshing the membership again or sending another email
-  - The mutation enqueues a staff invitation email through the shared notification dispatch job after membership persistence succeeds, except when returning an already-applied replay result
-  - The first-phase result returns staff identity plus invite id, status, role, inviter, tenant, and store context
-  - `retailOps.completeStaffOnboarding` accepts optional `tenantSlug`, optional `name`, and optional `displayName` from an authenticated user before tenant activation
-  - Staff onboarding completion activates the current user's invited cashier/operator/manager membership, sets `acceptedAt`, updates lightweight user display fields when supplied, and returns tenant, membership, role, status, and user identity
-  - Repeated onboarding completion for an already-active cashier/operator/manager membership returns the active membership and can refresh the lightweight display fields
-  - `retailOps.updateStaffStatus` accepts optional `storeId`, required `staffUserId`, and target status `active` or `suspended`
-  - Staff status updates require owner/admin/manager-level permission, only target cashier/operator/manager memberships, prevent self-updates, suspend active or invited staff, and reactivate suspended staff
-  - Status update responses return the membership id, role, previous status, new status, accepted timestamp, update timestamp, actor id, and staff identity
-  - `retailOps.staffStockWallets` accepts optional `storeId`, optional `staffUserId`, and optional `limit`, then returns metadata-backed staff custody balances for the selected store
-  - `retailOps.assignStaffStock` accepts optional `storeId`, optional `externalId`, optional `assignedAt`, optional `note`, required active staff `staffUserId`, required `productVariantId`, and positive integer `quantity`
-  - Staff stock assignment requires owner/admin/manager-level permission, validates active sales staff and an active product unit in the selected store, decrements unreserved store inventory, increases the staff wallet balance, and records a bounded assignment event under `Store.metadata.retailOps.staffStockAssignments`
-  - When `externalId` is supplied, repeated stock assignment submissions with the same store external id return the original assignment result without decrementing store inventory again
-  - `retailOps.returnStaffStock` accepts optional `storeId`, optional `externalId`, optional `returnedAt`, optional `note`, required staff `staffUserId`, required `productVariantId`, and positive integer `quantity`
-  - Staff stock return requires owner/admin/manager-level permission, validates the staff membership and product unit in the selected store, decrements the metadata-backed staff wallet balance, increments central `InventoryItem.onHandQuantity`, and records a bounded return event under `Store.metadata.retailOps.staffStockReturns`
-  - When `externalId` is supplied, repeated stock return submissions with the same store external id return the original return result without moving stock again
-  - This is a membership, list, first email, staff-limit, one-time invite-token, account-based OTP onboarding, durable staff profile/audit, and metadata-backed stock-wallet bridge, not the final custody lifecycle. Live email provider configuration, richer staff profile details, durable stock wallet tables, ledger-backed assignment/return movements, return approval workflow, and broader reconciliation remain required.
-- Retail Ops product share-link contract:
-  - `retailOps.sharedProduct` accepts public `tenantSlug`, `storeSlug`, `productSlug`, and share `token`
-  - Public shared-product lookup validates that the product exists for the tenant/store slug path and the share token is active, records a durable view row/event and link view counter when the `ProductShareLink` tables are available, falls back to product metadata otherwise, and returns tenant, store, product, variant/unit, price, and available quantity details for the web page
-  - The storefront shared-product page builds canonical and preview-image metadata URLs from the forwarded request host when available, falling back to configured storefront base URL only when request host data is missing or malformed
-  - `retailOps.createSharedProductOrderRequest` accepts the same public slug/token lookup fields plus `productVariantId`, positive integer `quantity`, customer `name`, customer `email`, optional phone, and optional notes
-  - The MVP web checkout must offer first-time customer registration with name, email, and password, plus a returning-customer login path with email and password, before order request submission
-  - The storefront shared-link server action resolves first-time registration and returning login through Better Auth before creating the pending order request; raw passwords are not stored in order data or metadata
-  - Customer identity from shared-link checkout is platform-level so repeat customers can order from any participating business without re-entering basic details; tenant-specific history remains scoped to the business
-  - Shared-product order requests create a pending `Order` and `OrderItem` with product/unit/price snapshots, customer details, platform customer account metadata when available, share-link attribution metadata, and first-phase stock-reservation metadata. When the shared-link tables are available, the request also increments durable link order counters, records a `ProductShareLinkEvent(ORDER_REQUESTED)`, and mirrors the pending checkout into durable `ProductShareLinkOrderRequest` plus `ProductShareLinkReservation` audit rows.
-  - Shared-product order requests reject quantities above currently available stock with a conflict response, then atomically increment `InventoryItem.reservedQuantity` for the selected unit so pending link orders reduce future visible availability
-  - Shared-product order requests enqueue notification dispatch payloads for the customer order confirmation, owner/admin merchant alert, and responsible sales-rep/link-creator alert after the pending order is created
-  - Notification enqueue success is recorded as `queued` on first-phase order metadata and, when the shared-link tables are available, mirrored into per-recipient customer and merchant `ProductShareLinkNotification(PENDING)` audit rows using the dispatch payload; enqueue failure does not change a created order request into a failed checkout response
-  - Background shared-link email dispatch returns per-recipient delivery results. The job records provider message ids, subjects, sent/failed timestamps, failure reasons, attempt count, max attempts, and next retry hints on order metadata and durable notification rows. Attempts where every email delivery fails throw back into the job retry loop; partial failures are audited for follow-up without resending already-successful recipients in this first bridge.
-  - Shared-product order requests do not create receipts or collect payment at checkout; they are pending requests for business follow-up
-  - `retailOps.productShareLinks` accepts optional `storeId` and returns generated links for products in the selected store, reading durable `ProductShareLink` rows first, using `ProductShareLinkAnalyticsDaily` totals for view/order counters when available, and merging product-metadata links as rollout fallback
-  - `GET /api/links` is the dashboard bridge read contract over generated product links, shared-link order requests, delivery requests, and active products for link creation. It accepts optional `storeId` and shared-order status filter `pending`, `completed`, `cancelled`, or `all`.
-  - `POST /api/links` is the dashboard bridge write contract for operations `create_link`, `deactivate_link`, and `order_follow_up`; the bridge forwards to the existing Retail Ops share-link and order follow-up helpers and generates dashboard external ids for link create/deactivate operations.
-  - `retailOps.productShareLinkAnalytics` accepts optional `storeId`, optional `from`, optional `to`, optional `productId`, and optional `shareLinkId`, defaults to a recent 30-day range, and returns overall summary totals, per-link totals, and daily rows for views, unique visitors, order requests, completed/cancelled follow-up, reserved/released/consumed quantities, and completed revenue
-  - Product share-link analytics reads `ProductShareLinkAnalyticsDaily` rows when available, scopes cashier/operator users to links they created, lets owner/admin/manager users view all selected-store links, and falls back to generated-link counters when the daily rollup table is not deployed
-  - `retailOps.sharedLinkOrderRequests` accepts optional `storeId`, optional `from`, optional `to`, optional `limit`, and status filter `pending`, `completed`, `cancelled`, or `all`
-  - Shared-link order request reads use durable `ProductShareLinkOrderRequest` rows first when available, merge legacy order-metadata requests as rollout fallback, and return pending-order customer details, order totals/status, first line product/unit/price snapshot, payment state/status, receipt summary when present, fulfillment status/method/timestamp/note when present, notification dispatch status, reservation status, and share-link attribution for business follow-up
-  - Owner/admin/manager users can read all shared-link order requests for the selected tenant/store; cashier/operator users only receive requests attributed to links they created
-  - `retailOps.updateSharedLinkOrderRequestStatus` accepts optional `storeId`, required `orderId`, status `completed` or `cancelled`, optional follow-up payment fields `paymentMethod` (`cash`, `transfer`, or `card`), `cashierSessionId`, and `paidAt`, and optional fulfillment fields `fulfillmentStatus` (`pending`, `ready_for_pickup`, `picked_up`, or `delivered`), `fulfillmentMethod` (`pickup`, `delivery`, or `other`), `fulfilledAt`, and `fulfillmentNote`
-  - Shared-link order status updates only apply to pending orders whose metadata source is `retail_ops_share_link_order_request`; owner/admin/manager users can update any selected-store request, while cashier/operator users can only update requests from links they created
-  - Completing a shared-link request consumes the first-phase reservation by decrementing both `InventoryItem.reservedQuantity` and `InventoryItem.onHandQuantity`; cancelling a request releases the reservation by decrementing only `reservedQuantity`
-  - Completing or cancelling a shared-link request updates `Order.status`, records follow-up actor, timestamp, status, payment-state metadata, and fulfillment metadata, and mirrors completed/cancelled plus consumed/released reservation state into durable order-request and reservation audit rows when available. When a completed request includes `paymentMethod`, it also creates a `Receipt`, marks the order `paymentStatus = PAID`, records `paymentState = paid_at_follow_up`, and returns the receipt summary. When completion includes fulfillment fields, the order metadata stores the pickup/delivery outcome for follow-up visibility; `picked_up` and `delivered` outcomes default `fulfilledAt` to follow-up time when omitted. Completion without a payment method remains a follow-up-only completion and does not create a receipt. Cancelling never creates a receipt and records a cancelled fulfillment outcome.
-  - `retailOps.deliveryRequests` accepts optional `storeId`, optional `from`, optional `to`, optional `limit`, and status filter `all`, `draft`, `open`, `assigned`, `picked_up`, `delivered`, or `cancelled`
-  - Delivery-request reads use durable `DeliveryRequest` rows first and merge order-metadata fallback requests when the fulfillment tables are not deployed. Responses include pickup/dropoff contact details, request status, requested/assigned/completed timestamps, customer/order/payment summary, share-link attribution, bid count, tracking-event count, and assignment summary when one exists.
-  - `retailOps.createDeliveryRequest` accepts optional `storeId`, required shared-link `orderId`, pickup name/phone/address, dropoff name/phone/address, optional notes, and optional requested timestamp. The mutation only accepts orders whose metadata source is `retail_ops_share_link_order_request`, scopes owner/admin/manager users to all selected-store requests and cashier/operator users to links they created, writes a durable `DeliveryRequest` when available, and stores `Order.metadata.retailOps.deliveryRequest` as rollout fallback.
-  - `retailOps.updateDeliveryRequestStatus` accepts optional `storeId`, required `deliveryRequestId`, status `assigned`, `picked_up`, `delivered`, or `cancelled`, optional happened timestamp, optional note, and optional driver name/phone. The mutation applies the same shared-link creator/admin scope as delivery request creation, updates durable `DeliveryRequest` status/timestamps when available, creates a `TrackingEvent`, upserts or updates the first self-delivery `DeliveryAssignment` summary for assigned/picked-up/delivered states, and mirrors delivery status plus shared-link fulfillment metadata onto `Order.metadata.retailOps`.
-  - `retailOps.createProductShareLink` accepts optional `storeId`, optional `externalId`, required `productId`, and optional `label`
-  - The create mutation resolves tenant/store membership, validates the product belongs to that store, generates an opaque token, writes a durable `ProductShareLink` row and `CREATED` event when available, mirrors link metadata on the product for fallback, and returns a public URL built from the tenant storefront hostname when available, otherwise the configured storefront base URL, plus tenant slug, store slug, product slug, and the share token
-  - When `externalId` is supplied to create, repeated submissions with the same product external id return the existing generated link instead of creating a new token
-  - `retailOps.deactivateProductShareLink` accepts optional `storeId`, optional `externalId`, required `productId`, and required `shareLinkId`
-  - Deactivation marks the durable link inactive and records a `DEACTIVATED` event when available, mirrors inactive/deactivation metadata to the product fallback record, and does not delete history
-  - When `externalId` is supplied to deactivate, repeated submissions with the same link deactivation external id return the already-deactivated link without updating deactivation metadata again
-  - The first-phase response returns link id, token, URL, active state, label, creator, created/deactivated timestamps, last activity timestamp, view count, order count, and product identity
-  - This is a web-first, durable-first core link management, pending-request read/audit, per-recipient notification delivery audit, retry-metadata, paid follow-up receipt creation, fulfillment-outcome capture, first delivery-request create/list/status bridge, and generated-link analytics bridge with metadata fallback, not the final native customer app or full storefront contract. Shared-link order request responses still use `Order`/`OrderItem` snapshots for customer, product, unit, payment, and fulfillment details; analytics UI/export presentation, provider bidding/selection, richer tracking UI, provider-native webhook receipt ingestion, real email provider configuration, and richer payment-provider flows remain required.
-- Retail Ops product unit template contract:
-  - `retailOps.unitTemplates` takes no input and is restricted to owner/admin/manager-level sales-management roles
-  - The query returns active durable system templates and tenant templates, including template id/key/name/base unit, source, and ordered units with id/key/name/base flag, integer ratio numerator/denominator, and computed conversion multiplier
-  - When durable template tables are unavailable or system seeds are missing, the query merges small fallback presets for bag fractions and kilogram fractions so product setup can still suggest common units
-  - This is a read bridge for setup assistance. Template creation/editing, seed management UI, mobile picker UI, and conversion-ledger enforcement remain separate slices.
-- Retail Ops product setup contract:
-  - `retailOps.createProduct` accepts optional `storeId`, optional `description`, optional public `imageUrl`, optional public `imageLinks`, optional `externalId`, optional `unitTemplateKey`, product `name`, `primaryUnitName`, primary `priceMinor`, primary `openingStockQuantity`, and up to 24 variant units
-  - Product, sellable-unit, and inventory-balance creation remain atomic. Optional durable opening-stock ledger mirroring runs only after that transaction commits so an environment whose ledger migration is behind can still create the product through the metadata/inventory fallback without leaving PostgreSQL in an aborted transaction.
-  - Product setup is restricted to owner/admin/manager-level sales-management roles
-  - Each variant unit accepts `name`, `priceMinor`, optional `openingStockQuantity`, optional `conversionMultiplier`, optional `enabled`, optional public `imageUrl`, optional public `imageLinks`, and optional `variantLabel`
-  - When `externalId` is supplied, repeated product setup submissions with the same tenant/store external id return the existing product and unit ids without creating a duplicate product or consuming another product entitlement slot
-  - The mutation resolves tenant/store membership, creates an active `Product`, creates a default `ProductVariant` for the primary unit, creates optional additional `ProductVariant` rows for variants/sub-units, and creates an `InventoryItem` for every created variant
-  - Product creation checks the tenant's current product entitlement before writing the new product
-  - Unit names must be unique within the product request
-  - Image URLs must be HTTP(S) links. Camera/gallery local URIs stay device-local until upload storage is connected and are not accepted by the API contract.
-  - First-phase variant labels and images are metadata-backed. One variant label maps directly to additional `ProductVariant` rows; multiple mobile variant labels are saved as generated combination row names such as `Color Red, Size SM`, with `variantLabel` storing the combined dimensions.
-  - When `unitTemplateKey` matches an active durable system or tenant template, product setup links the created `Product` to the template, links matching `ProductVariant` rows to their template units, and uses matched template-unit ratios as durable conversion ratio values. When `unitTemplateKey` matches a fallback preset while durable rows are unavailable, setup still applies the fallback ratios but does not write relational template ids. Unknown template keys do not block manual setup.
-  - Product setup stores an initial metadata-backed price-history entry for every created unit and mirrors those entries into durable `ProductUnitPriceHistory` rows when the migration is available, so later price changes have a first effective price anchor
-  - First-phase conversion multipliers are still stored in variant metadata as fallback and are also written to durable `ProductVariant.conversionRatioNumerator`/`conversionRatioDenominator` fields when positive. Returned units resolve the multiplier from metadata first, then durable ratio fields for idempotent replay compatibility. These fields are not yet durable conversion ledger rules.
-  - The first-phase result returns product identity/currency plus created unit ids, names, SKUs, prices, default flags, opening stock quantities, and conversion multiplier metadata
-- Retail Ops product price contract:
-  - `retailOps.productUnitPriceAt` accepts optional `storeId`, required `productVariantId`, and optional `effectiveAt`
-  - Product-unit price preview requires a POS-capable role and validates that the product unit belongs to the selected tenant/store
-  - The query resolves the unit price at the requested timestamp from durable `ProductUnitPriceHistory` first, metadata price history second, and current `ProductVariant.priceMinor` last; the response includes requested timestamp, resolved price, current price, source, product identity, and unit identity
-  - `retailOps.updateProductUnitPrice` accepts optional `storeId`, required `productVariantId`, required positive integer `priceMinor`, optional `effectiveAt`, and optional `reason`
-  - The mutation is restricted to sales-management roles and validates that the product unit belongs to the selected tenant/store
-  - Future-dated `effectiveAt` values are rejected in this first phase; price changes are effective immediately or at a past correction timestamp
-  - The mutation updates `ProductVariant.priceMinor`, appends a metadata-backed price-history entry with actor, previous price, new price, effective time, reason, and source, mirrors that entry into durable `ProductUnitPriceHistory` when available, and updates `Product.listPriceMinor` when the changed unit is the default unit
-  - Sales snapshot the resolved unit price at sale creation, so existing historical order items are not rewritten by later price changes
-  - `retailOps.createSale` resolves the unit price at `soldAt` from durable `ProductUnitPriceHistory` first, then metadata price history, then current `ProductVariant.priceMinor`
-  - This is a durable-first price-history and sale-time price lookup bridge with metadata/current-price fallback, but not the final price-preview UI or full effective-price service surface.
-- Retail Ops stock intake contract:
-  - `retailOps.recordStockIntake` accepts optional `storeId`, optional `externalId`, optional `note`, required `productVariantId`, positive integer `quantity`, optional `receivedAt`, and optional `sourceName`
-  - Stock intake requires a POS-capable role: owner, admin, manager, cashier, or operator
-  - When `externalId` is supplied, repeated submissions with the same tenant/store/type external id return the original intake response without incrementing stock again
-  - The mutation resolves tenant/store membership, validates that the product variant belongs to the selected store, and increments `InventoryItem.onHandQuantity`
-  - If no inventory item exists for the variant, the mutation creates one with the received quantity
-  - The first-phase result returns intake metadata, unit/product identity, and before/after on-hand quantity for the variant
-  - This is a balance update bridge, not the final stock ledger. Delivery records, movement rows, conversion pairs, source references, and audit filters still need dedicated contracts.
-- Retail Ops stock adjustment contract:
-  - `retailOps.recordStockAdjustment` accepts optional `storeId`, optional `externalId`, optional `note`, optional `adjustedAt`, required `productVariantId`, required positive integer `quantity`, required `direction` of `increase` or `decrease`, optional `sourceName`, and `reason` of `correction`, `damage`, `found_stock`, or `loss`
-  - Stock adjustment requires a POS-capable role: owner, admin, manager, cashier, or operator
-  - When `externalId` is supplied, repeated submissions with the same tenant/store/type external id return the original adjustment response without applying another balance change
-  - The mutation validates that the product variant belongs to the selected tenant/store and is active
-  - Increasing adjustments increment or create the selected unit inventory balance
-  - Decreasing adjustments require enough unreserved current stock and return a conflict response when the stock is insufficient
-  - Damage and loss reasons must decrease stock; found-stock reasons must increase stock; invalid reason/direction combinations return a bad-request response before inventory is mutated
-  - When the stock-ledger migration is available and `externalId` is supplied, the mutation writes a durable `InventoryMovement` row. Damage and loss use dedicated `DAMAGE`/`LOSS` movement types, while correction and found-stock use `STOCK_ADJUSTMENT`, all with `STOCK_ADJUSTMENT` source, reason metadata, before/after balance snapshots, actor, note, happened-at timestamp, and movement group id.
-  - If metadata replay state is missing but a durable adjustment/damage/loss movement row already exists for the same tenant/store external id, the mutation can return the durable adjustment response before applying another balance mutation
-  - The first-phase result returns adjustment metadata, unit/product identity, and before/after on-hand quantity for the variant
-  - Stock adjustment history still reads the metadata-backed normalized rows in this bridge. Durable stock report reads and live DB validation remain follow-up work.
-- Retail Ops unit conversion contract:
-  - `retailOps.recordUnitConversion` accepts optional `storeId`, required `externalId`, optional `note`, optional `convertedAt`, required `sourceProductVariantId`, required `targetProductVariantId`, and positive integer `sourceQuantity`. `targetQuantity` is optional compatibility input for older clients.
-  - The repository derives the target quantity from the source and target base-unit ratios. A compatibility `targetQuantity` must equal that derived value.
-  - Missing ratios, non-whole target output, different products, the same source/target unit, and insufficient unreserved source stock fail before inventory mutation.
-  - The response returns the authoritative source quantity, derived target quantity, and resulting source/target balances. Callers reconcile local state from this response.
-  - Unit conversion requires a POS-capable role: owner, admin, manager, cashier, or operator
-  - When `externalId` is supplied, repeated submissions with the same tenant/store/type external id return the original conversion response without another source decrement or target increment
-  - Source and target variants must be different active variants in the selected tenant/store
-  - Source and target variants must belong to the same product
-  - When both units have known conversion multipliers or durable conversion ratio fields, the source and target quantities must represent the same base-unit amount; mismatch returns a bad-request response before stock is mutated
-  - The mutation atomically decrements the source `InventoryItem.onHandQuantity` and increments or creates the target `InventoryItem`
-  - When the stock-ledger migration is available and `externalId` is supplied, the mutation writes paired durable `InventoryMovement` rows with `CONVERSION_OUT` and `CONVERSION_IN` types, `UNIT_CONVERSION` source, related unit references, before/after balance snapshots, actor, note, happened-at timestamp, and a shared movement group id; undeployed environments keep the metadata fallback
-  - If metadata replay state is missing but durable conversion rows already exist for the same tenant/store/type external id, the mutation can return the durable conversion response before applying another balance mutation
-  - Insufficient unreserved source stock returns a conflict response
-  - The first-phase result returns conversion metadata, product identity, and before/after balances for both units
-  - Conversion stock history still reads the metadata-backed normalized rows in this bridge. Waste/loss and durable audit filters still need dedicated contracts.
-- Retail Ops sale creation contract:
-  - `retailOps.createSale` accepts optional `storeId`, `cashierSessionId`, `creditDueAt`, `creditTermsNote`, `customerName`, `customerEmail`, `customerPhone`, `externalId`, `notes`, and `soldAt`
-  - `retailOps.createSale` requires `productVariantId`, positive integer `quantity`, and `paymentMethod`
-  - Sale creation requires a POS-capable role: owner, admin, manager, cashier, or operator
-  - Supported first-phase payment methods are `cash`, `transfer`, `card`, and `credit`
-  - When `externalId` is supplied, repeated submissions with the same tenant/store external id return the original sale response without decrementing stock again
-  - The mutation resolves tenant/store membership, validates that the product variant belongs to the selected store, checks available stock, creates a completed `Order`, creates an `OrderItem` with product/unit/price snapshots, and creates a `Receipt` for non-credit payment methods
-  - Sale line totals and receipts use the resolved sale-time unit price for `soldAt`; sale/order metadata records whether the price came from durable price history, metadata price history, or the current variant price
-  - If the acting user has a metadata-backed staff wallet balance for the selected product unit, the sale deducts that assigned wallet stock, records a bounded event under `Store.metadata.retailOps.staffStockWalletSales`, and leaves central `InventoryItem.onHandQuantity` unchanged because the stock was already moved during assignment
-  - If the acting user has no assigned wallet balance for the selected product unit, the sale atomically decrements central `InventoryItem.onHandQuantity`
-  - `Order.metadata.retailOps.stockSource` records whether the sale used `staff_wallet` or `store` stock
-  - Credit sales create the sale/order with `paymentStatus: PENDING`, optional due-date/terms metadata, and metadata payment state `credit_pending`, but do not create a receipt
-  - The first-phase result returns order identity/status/total, sale line snapshot, receipt identity when present, and before/after stock quantity for the sold variant
+- Item kind is immutable after creation.
+- Variant option combinations are separate from Offerings and units.
+- Product Unit Offerings require fixed prices and a Current Inventory Unit.
+- Service Offerings may be fixed or quote-required and never accept stock
+  input.
+- Unit Draft publication validates one factor-1 Canonical Unit, direct exact
+  factors, precision, Offering replacement and any required Stock Transition.
+
+## Inventory
+
+- Every operation identifies an explicit Balance Source and expected revision.
+- Shared/Packaged stock is never substituted automatically.
+- Transformations require balanced compatible Packaged Stock endpoints.
+- Corrections append reversal/replacement facts; posted operations are not
+  edited in place.
+- Reports serialize exact quantities and configuration context.
+
+## Orders
+
+- A line selects one active Store-available Offering and snapshots its price,
+  quantity and semantic context at confirmation.
+- Product reservation/fulfillment and Service work creation are separate
+  transactional effects.
+- Mixed Product/Service Orders are supported.
+
+## Services
+
+- Service Request is unconfirmed intent and creates no Order/work.
+- Quote Versions are immutable; only the current unexpired version may be
+  accepted. Acceptance is idempotent.
+- Direct Intake confirmation and Quote acceptance create the Commercial
+  Order/tracked work graph atomically.
+- Job Line revision guards stale work transitions, authorization, split,
+  assignment and promise changes.
+- Evidence is private by default. Client contracts can report local, queued,
+  uploading or failed state but cannot mark an asset safe/available. Trusted
+  infrastructure must supply safe asset and safety metadata before manager
+  publication can succeed.
+- A mobile capture stored as `LOCAL` references a file retained in that app
+  installation's documents directory. It is not a cloud URL, is never returned
+  publicly, and cannot be published.
+- Public tracking is an allowlisted projection and never returns internal notes,
+  actors, private evidence, raw storage references or private contacts.
+- Public tracking includes the tenant timezone so customer promise dates are
+  formatted consistently and accurately.
+
+## Offline
+
+- Supported command payloads are versioned and dependency-aware.
+- Offline Intake evidence depends on the Intake command and carries its stable
+  client id so replay resolves the newly created tenant-owned Job; a missing or
+  charge-only Job fails as a typed evidence conflict.
+- Replay returns applied, review-required, blocked or discarded outcomes with
+  typed conflict codes and authoritative state.
+- Unsupported old event shapes are discarded; there is no compatibility
+  reader.
+- Public Requests/Quotes, payment, evidence publication and provider delivery
+  are online-only.

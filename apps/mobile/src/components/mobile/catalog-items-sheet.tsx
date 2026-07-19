@@ -9,11 +9,6 @@ import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
-import { useBusinessStore } from "@/store/businessStore"
-import {
-  type RetailOpsProduct,
-  useRetailOpsStore,
-} from "@/store/retailOpsStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { formatMinorMoney } from "@ewatrade/utils"
@@ -22,16 +17,14 @@ import { useMemo, useState } from "react"
 import { FlatList, View } from "react-native"
 
 type CatalogKindFilter = "all" | "product" | "service"
-type ProductionCatalogItem = RouterOutputs["retailOps"]["catalogItems"][number]
+type CatalogItem = RouterOutputs["catalog"]["listItems"][number]
 
 type CatalogRow = {
   detail: string
   id: string
   kind: "product" | "service"
   name: string
-  priceMinor: number
-  source: "local" | "production"
-  stockLabel?: string
+  priceLabel: string
   unitName: string
 }
 
@@ -40,73 +33,48 @@ type CatalogItemsContentProps = {
   onComplete?: () => void
 }
 
-function getCurrencyCode() {
-  const state = useBusinessStore.getState()
-  return (
-    state.businesses.find((business) => business.id === state.activeBusinessId)
-      ?.currency ?? "NGN"
-  )
-}
-
-function mapLocalCatalogItem(item: RetailOpsProduct): CatalogRow {
-  const kind = item.kind ?? "product"
-
-  return {
-    detail:
-      kind === "service"
-        ? item.service?.estimatedTurnaroundHours
-          ? `Tracked · about ${item.service.estimatedTurnaroundHours}h`
-          : item.service?.fulfillmentMode === "immediate"
-            ? "Immediate fulfillment"
-            : "Priced service"
-        : `${item.currentStock ?? item.startingStock ?? 0} ${item.unitName} available`,
-    id: `local-${item.id}`,
-    kind,
-    name: item.name,
-    priceMinor: item.priceMinor,
-    source: "local",
-    stockLabel:
-      kind === "product"
-        ? `${item.currentStock ?? item.startingStock ?? 0} in stock`
-        : undefined,
-    unitName: item.unitName,
-  }
-}
-
-function mapProductionCatalogItem(item: ProductionCatalogItem): CatalogRow {
+function mapCatalogItem(item: CatalogItem): CatalogRow {
   const defaultVariant =
-    item.variants.find((variant) => variant.isDefault) ??
-    item.variants[0] ??
-    null
-  const serviceDetail =
-    item.service?.fulfillmentMode === "tracked"
-      ? item.service.estimatedTurnaroundHours
-        ? `Tracked · about ${item.service.estimatedTurnaroundHours}h`
-        : "Tracked fulfillment"
-      : "Immediate fulfillment"
+    item.variants.find((variant) => variant.isDefault) ?? item.variants[0]
+  const offering = defaultVariant?.offerings[0]
+  const currencyCode = offering?.currencyCode ?? "NGN"
+  const priceLabel =
+    offering?.pricingPolicy === "fixed" && offering.fixedPriceMinor !== null
+      ? formatMinorMoney(offering.fixedPriceMinor, currencyCode)
+      : "Quote"
+
+  if (item.kind === "service") {
+    return {
+      detail: `${priceLabel} · No inventory`,
+      id: item.id,
+      kind: item.kind,
+      name: item.name,
+      priceLabel,
+      unitName: offering?.name ?? "Service",
+    }
+  }
+
+  const canonicalUnit =
+    item.product?.currentUnitConfiguration?.units.find(
+      (unit) => unit.stockBehavior === "canonical_shared",
+    ) ?? item.product?.currentUnitConfiguration?.units[0]
+  const balance = item.product?.stockBalances[0]
+  const unitName = balance?.inventoryUnitName ?? canonicalUnit?.name ?? "unit"
 
   return {
-    detail:
-      item.kind === "service"
-        ? serviceDetail
-        : `${defaultVariant?.availableQuantity ?? 0} ${defaultVariant?.name ?? "units"} available`,
-    id: `production-${item.id}`,
+    detail: `${balance?.onHandQuantity ?? "0"} ${unitName} available · ${priceLabel}`,
+    id: item.id,
     kind: item.kind,
     name: item.name,
-    priceMinor: defaultVariant?.priceMinor ?? 0,
-    source: "production",
-    stockLabel:
-      item.kind === "product"
-        ? `${defaultVariant?.availableQuantity ?? 0} in stock`
-        : undefined,
-    unitName: defaultVariant?.name ?? "Standard",
+    priceLabel,
+    unitName,
   }
 }
 
 function CatalogItemRow({ item }: { item: CatalogRow }) {
   return (
     <SecondaryOperationalRow
-      detail={`${item.detail} · ${formatMinorMoney(item.priceMinor, getCurrencyCode())} per ${item.unitName}`}
+      detail={item.detail}
       icon={item.kind === "service" ? "Wrench" : "Warehouse"}
       title={item.name}
       trailing={
@@ -115,11 +83,7 @@ function CatalogItemRow({ item }: { item: CatalogRow }) {
           tone={item.kind === "service" ? "primary" : "success"}
         />
       }
-    >
-      {item.source === "local" ? (
-        <StatusBadge label="Saved on device" tone="warning" />
-      ) : null}
-    </SecondaryOperationalRow>
+    />
   )
 }
 
@@ -162,48 +126,18 @@ export function CatalogItemsContent({
   onComplete,
 }: CatalogItemsContentProps) {
   const trpc = useTRPC()
-  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
-  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
-  const allLocalItems = useRetailOpsStore((state) => state.products)
   const [kindFilter, setKindFilter] = useState<CatalogKindFilter>("all")
   const [query, setQuery] = useState("")
-  const productionItemsQuery = useQuery(
-    trpc.retailOps.catalogItems.queryOptions(
-      {
-        kind: kindFilter === "all" ? undefined : kindFilter,
-      },
-      {
-        enabled: !isOfflineMode,
-        retry: false,
-      },
+  const itemsQuery = useQuery(
+    trpc.catalog.listItems.queryOptions(
+      { kind: kindFilter === "all" ? undefined : kindFilter },
+      { retry: false },
     ),
   )
-  const localItems = useMemo(
-    () =>
-      allLocalItems.filter(
-        (item) =>
-          (!activeBusinessId ||
-            (item.businessId ?? activeBusinessId) === activeBusinessId) &&
-          (kindFilter === "all" || (item.kind ?? "product") === kindFilter),
-      ),
-    [activeBusinessId, allLocalItems, kindFilter],
+  const rows = useMemo(
+    () => (itemsQuery.data ?? []).map(mapCatalogItem),
+    [itemsQuery.data],
   )
-  const rows = useMemo(() => {
-    const localRows = localItems.map(mapLocalCatalogItem)
-
-    if (isOfflineMode || !productionItemsQuery.data) return localRows
-
-    const localRemoteIds = new Set(
-      localItems.flatMap((item) => (item.remoteId ? [item.remoteId] : [])),
-    )
-
-    return [
-      ...productionItemsQuery.data
-        .filter((item) => !localRemoteIds.has(item.id))
-        .map(mapProductionCatalogItem),
-      ...localRows,
-    ]
-  }, [isOfflineMode, localItems, productionItemsQuery.data])
   const visibleRows = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
 
@@ -216,7 +150,6 @@ export function CatalogItemsContent({
         .includes(normalizedQuery),
     )
   }, [query, rows])
-  const isLocalFallback = isOfflineMode || productionItemsQuery.isError
 
   return (
     <FlatList<CatalogRow>
@@ -229,8 +162,12 @@ export function CatalogItemsContent({
         <EmptyState
           className="mx-4"
           icon="Warehouse"
-          message="Add a priced Product or Service item to make it available at checkout."
-          title="No catalog items found"
+          message={
+            itemsQuery.isPending
+              ? "Loading catalog items."
+              : "Add a Product or Service to start your Catalog."
+          }
+          title={itemsQuery.isPending ? "Loading" : "No catalog items"}
         />
       }
       ListFooterComponent={
@@ -246,17 +183,18 @@ export function CatalogItemsContent({
       ListHeaderComponent={
         <View className="gap-5 px-4 pt-1 pb-4">
           <SecondarySheetHeader
-            description="Products track stock. Services keep a price but never show or change inventory."
+            description="Products track stock. Services stay outside inventory."
             icon="Warehouse"
             title="Catalog items"
           />
 
-          {isLocalFallback ? (
+          {itemsQuery.isError ? (
             <StatusBanner
-              icon="Wind"
-              message="Only items already saved on this device are available until the connection returns. New Services stay online-first."
-              title={isOfflineMode ? "Offline catalog" : "Local fallback"}
-              tone="warning"
+              actionLabel="Try again"
+              icon="AlertCircle"
+              message={itemsQuery.error.message}
+              onActionPress={() => void itemsQuery.refetch()}
+              tone="destructive"
             />
           ) : null}
 

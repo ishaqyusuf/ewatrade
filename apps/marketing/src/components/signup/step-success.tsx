@@ -15,7 +15,7 @@ import { useEffect, useState } from "react"
 const PLATFORM_DOMAIN =
   process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com"
 const DASHBOARD_URL =
-  process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "https://dashboard.ewatrade.com"
+  process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "https://ewatrade.com/dashboard"
 
 type StepSuccessProps = {
   tenantSlug: string
@@ -78,8 +78,8 @@ export function StepSuccess({
   const surfaces = [
     {
       icon: Store04Icon,
-      label: "Storefront",
-      description: "Your reserved public store address",
+      label: "Reserved storefront",
+      description: "Reserved for your future public store",
       href: resolvedStorefrontUrl,
       domain: getDisplayHost(resolvedStorefrontUrl),
       color: "text-primary",
@@ -137,11 +137,11 @@ export function StepSuccess({
         </h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           <span className="font-semibold text-foreground">{businessName}</span>{" "}
-          is set up on ewatrade. Here are your workspace URLs.
+          is set up on ewatrade. Here are your business addresses.
         </p>
       </div>
 
-      {/* Workspace URL cards */}
+      {/* Business address rows */}
       <div className="mb-6 space-y-2">
         {surfaces.map((s) => (
           <a
@@ -149,10 +149,10 @@ export function StepSuccess({
             href={s.href}
             target="_blank"
             rel="noopener noreferrer"
-            className={`group flex items-center gap-4 rounded-2xl border border-border/60 bg-background/80 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:bg-muted/20 hover:shadow-sm ${s.hoverBorder}`}
+            className={`group flex items-center gap-4 border-t border-border/60 bg-background p-4 transition-colors duration-200 hover:bg-muted/20 ${s.hoverBorder}`}
           >
             <div
-              className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${s.bg} ${s.color}`}
+              className={`flex size-9 shrink-0 items-center justify-center rounded-md ${s.bg} ${s.color}`}
             >
               <HugeiconsIcon
                 icon={s.icon}

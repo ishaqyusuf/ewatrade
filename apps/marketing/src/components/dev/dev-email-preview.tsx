@@ -7,7 +7,7 @@ type DevEmailPreviewProps = {
 
 /**
  * Dev-only component. Opens the provided email HTML in a new browser tab.
- * Used to preview outgoing emails when no email transport is configured.
+ * Used to preview outgoing emails in development.
  */
 export function DevEmailPreview({
   html,
@@ -24,25 +24,24 @@ export function DevEmailPreview({
   }
 
   return (
-    <div className="mt-4 overflow-hidden rounded-2xl border border-amber-300/60 bg-amber-50">
+    <div className="mt-4 overflow-hidden rounded-lg border border-amber-300/60 bg-amber-50">
       <div className="flex items-center justify-between border-b border-amber-200/80 px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <span className="size-2 rounded-full bg-amber-500" />
+          <span className="size-2 bg-amber-500" />
           <span className="text-xs font-semibold text-amber-800">
-            DEV — Email not sent
+            DEV — Email preview
           </span>
         </div>
         <span className="truncate text-xs text-amber-700">{subject}</span>
       </div>
       <div className="px-4 py-3">
         <p className="mb-2 text-xs text-amber-700">
-          No email transport is configured in this environment. Preview the
-          email that would have been sent:
+          Preview the development email output:
         </p>
         <button
           type="button"
           onClick={openInTab}
-          className="rounded-xl border border-amber-400/50 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800 shadow-sm transition-colors hover:bg-amber-50 active:scale-95"
+          className="rounded-md border border-amber-400/50 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-50 active:scale-95"
         >
           Open email in new tab →
         </button>

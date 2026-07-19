@@ -1,7 +1,7 @@
 import type {
   NotificationChannel,
+  NotificationContact,
   NotificationDispatch,
-  NotificationContact
 } from "./types"
 
 export type NotificationChannelDispatch = {
@@ -21,7 +21,7 @@ export type NotificationDeliveryPlan = {
 
 function supportsChannel(
   recipient: NotificationContact,
-  channel: NotificationChannel
+  channel: NotificationChannel,
 ) {
   if (channel === "email") {
     return Boolean(recipient.email)
@@ -31,14 +31,14 @@ function supportsChannel(
 }
 
 export function planNotificationDeliveries(
-  notification: NotificationDispatch
+  notification: NotificationDispatch,
 ): NotificationDeliveryPlan {
   const dispatches: NotificationChannelDispatch[] = []
   const skippedChannels: NotificationDeliveryPlan["skippedChannels"] = []
 
   for (const channel of notification.channels) {
     const recipients = notification.recipients.filter((recipient) =>
-      supportsChannel(recipient, channel)
+      supportsChannel(recipient, channel),
     )
 
     if (recipients.length === 0) {
@@ -47,7 +47,7 @@ export function planNotificationDeliveries(
         reason:
           channel === "email"
             ? "No recipients had an email address for email delivery."
-            : "No user recipients were available for in-app delivery."
+            : "No user recipients were available for in-app delivery.",
       })
       continue
     }
@@ -59,12 +59,12 @@ export function planNotificationDeliveries(
       payload: notification.payload,
       recipients,
       title: notification.title,
-      variant: notification.variant ?? "info"
+      variant: notification.variant ?? "info",
     })
   }
 
   return {
     dispatches,
-    skippedChannels
+    skippedChannels,
   }
 }

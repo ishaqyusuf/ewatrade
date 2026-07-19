@@ -92,12 +92,6 @@ function statusTone(status: SubscriptionSnapshot["subscription"]["status"]) {
   return "bg-primary/10 text-primary"
 }
 
-function formatList(values: string[]) {
-  if (values.length === 0) return "Not configured"
-
-  return values.join(", ")
-}
-
 function SettingsPanel({
   icon,
   items,
@@ -144,10 +138,7 @@ function SettingsOverview({ context }: { context: SettingsContext }) {
           items={[
             { label: "Name", value: tenant?.name ?? "Loading..." },
             { label: "Slug", value: tenant?.slug ?? "Loading..." },
-            {
-              label: "Modes",
-              value: tenant ? formatList(tenant.enabledModes) : "Loading...",
-            },
+            { label: "Catalog model", value: "Products, services, or both" },
             { label: "Timezone", value: tenant?.timezone ?? "Loading..." },
           ]}
         />

@@ -1,63 +1,9 @@
-import {
-  type DashboardCustomerRow,
-  type DashboardSaleRow,
-  type DashboardSessionRow,
-  getSalesActorScope,
-} from "@/lib/sales-operations"
+import type { DashboardCustomerRow } from "@/lib/sales-operations"
 import { prisma } from "@ewatrade/db"
-import {
-  getRetailOpsCustomerBook,
-  listRetailOpsCreditSales,
-  listRetailOpsPaymentReconciliation,
-  listRetailOpsRecentSales,
-  listRetailOpsSessions,
-} from "@ewatrade/db/queries"
+import { listCommercialOrders } from "@ewatrade/db/queries"
 
 function toJson<T>(value: unknown): T {
   return JSON.parse(JSON.stringify(value)) as T
-}
-
-export async function getDashboardSalesOperations(input: {
-  role: string
-  sessionStatus?: "all" | "closed" | "open"
-  storeId: string
-  tenantId: string
-  userId: string
-}) {
-  const actorUserId = getSalesActorScope(input.role, input.userId)
-  const [sales, creditSales, sessions, reconciliation] = await Promise.all([
-    listRetailOpsRecentSales(prisma, {
-      actorUserId,
-      limit: 50,
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-    }),
-    listRetailOpsCreditSales(prisma, {
-      actorUserId,
-      limit: 50,
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-    }),
-    listRetailOpsSessions(prisma, {
-      limit: 50,
-      status: input.sessionStatus ?? "all",
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-      userId: actorUserId,
-    }),
-    listRetailOpsPaymentReconciliation(prisma, {
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-      userId: actorUserId,
-    }),
-  ])
-
-  return {
-    creditSales: toJson<unknown[]>(creditSales),
-    reconciliation: toJson<DashboardSessionRow[]>(reconciliation),
-    sales: toJson<DashboardSaleRow[]>(sales),
-    sessions: toJson<DashboardSessionRow[]>(sessions),
-  }
 }
 
 export async function getDashboardCustomerBook(input: {
@@ -67,13 +13,69 @@ export async function getDashboardCustomerBook(input: {
   tenantId: string
   userId: string
 }) {
-  const customers = await getRetailOpsCustomerBook(prisma, {
-    actorUserId: getSalesActorScope(input.role, input.userId),
-    limit: 75,
-    search: input.search,
+  const orders = await listCommercialOrders(prisma, {
+    limit: 100,
     storeId: input.storeId,
     tenantId: input.tenantId,
   })
-
-  return toJson<DashboardCustomerRow[]>(customers)
+  const grouped = new Map<string, DashboardCustomerRow>()
+  for (const order of orders) {
+    const identity =
+      order.customerPhone || order.customerEmail || order.customerName
+    const key = identity?.trim().toLowerCase() || `walk-in:${order.id}`
+    if (
+      input.search &&
+      ![order.customerName, order.customerPhone, order.customerEmail]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(input.search.toLowerCase())
+    )
+      continue
+    const previous = grouped.get(key)
+    const createdAt = order.createdAt.toISOString()
+    const row: DashboardCustomerRow = previous ?? {
+      email: order.customerEmail,
+      firstSeenAt: createdAt,
+      id: key,
+      identityType: order.customerPhone
+        ? "phone"
+        : order.customerEmail
+          ? "email"
+          : order.customerName
+            ? "name"
+            : "walk-in",
+      lastOrder: {
+        createdAt,
+        orderNumber: order.orderNumber,
+        paymentStatus: order.paymentStatus,
+        status: order.status,
+        totalMinor: order.totalMinor,
+      },
+      lastSeenAt: createdAt,
+      name:
+        order.customerName ||
+        order.customerPhone ||
+        order.customerEmail ||
+        "Walk-in customer",
+      orderCount: 0,
+      phone: order.customerPhone,
+      totalMinor: 0,
+    }
+    row.orderCount += 1
+    row.totalMinor += order.totalMinor
+    if (createdAt > row.lastSeenAt) {
+      row.lastSeenAt = createdAt
+      row.lastOrder = {
+        createdAt,
+        orderNumber: order.orderNumber,
+        paymentStatus: order.paymentStatus,
+        status: order.status,
+        totalMinor: order.totalMinor,
+      }
+    }
+    if (createdAt < row.firstSeenAt) row.firstSeenAt = createdAt
+    grouped.set(key, row)
+  }
+  return toJson<DashboardCustomerRow[]>(Array.from(grouped.values()))
 }

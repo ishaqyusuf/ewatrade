@@ -1,86 +1,111 @@
-import { readFileSync } from "node:fs"
-import { join, relative, resolve } from "node:path"
+import { readFileSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 
-const REPO_ROOT = resolve(new URL("../../..", import.meta.url).pathname)
-const MOBILE_DIR = join(REPO_ROOT, "apps/mobile")
-const FILES = {
-  createItem: join(
-    MOBILE_DIR,
-    "src/components/mobile/first-product-setup-sheet.tsx",
-  ),
-  createSale: join(MOBILE_DIR, "src/components/mobile/create-sale-sheet.tsx"),
-  dashboard: join(MOBILE_DIR, "src/app/dashboard.tsx"),
-  jobs: join(MOBILE_DIR, "src/components/mobile/service-jobs-sheet.tsx"),
-  layout: join(MOBILE_DIR, "src/app/_layout.tsx"),
-  route: join(MOBILE_DIR, "src/app/service-jobs-modal.tsx"),
-}
-
-const CONTRACTS = [
+const REPO_ROOT = resolve(new URL("../../..", import.meta.url).pathname);
+const MOBILE_DIR = join(REPO_ROOT, "apps/mobile");
+const contracts = [
   {
-    file: FILES.layout,
+    file: "src/app/_layout.tsx",
     markers: ['name="service-jobs-modal"'],
-    reason: "the authenticated layout must register the Service Jobs route",
+    reason: "authenticated users must be able to reach Service Work",
   },
   {
-    file: FILES.route,
+    file: "src/app/service-jobs-modal.tsx",
     markers: ["WorkflowModalScreen", "ServiceJobsContent"],
-    reason: "Service Jobs must use the shared full-screen workflow shell",
+    reason: "Service Work must use the shared full-screen workflow shell",
   },
   {
-    file: FILES.dashboard,
+    file: "src/app/dashboard.tsx",
     markers: ['router.push("/service-jobs-modal" as never)'],
-    reason: "mobile homes must keep Service Jobs reachable",
+    reason: "Service Work must remain reachable from the generic dashboard",
   },
   {
-    file: FILES.createItem,
+    file: "src/components/mobile/simple-catalog-item-screen.tsx",
     markers: [
-      'setItemKind("product")',
-      'setItemKind("service")',
-      "createCatalogItem.mutationOptions",
-      "Services have a selling price but no stock.",
-    ],
-    reason: "item creation must choose Product or Service per item",
-  },
-  {
-    file: FILES.createSale,
-    markers: [
-      "catalogItems.queryOptions",
-      "catalogItemVariantId",
-      'selectedItem.kind === "service"',
-    ],
-    reason: "sales must consume the generic catalog and skip stock for Service",
-  },
-  {
-    file: FILES.jobs,
-    markers: [
-      "serviceJobs.queryOptions",
-      "updateServiceJobStatus.mutationOptions",
-      "addServiceJobEvidence.mutationOptions",
-      "Service jobs need a live connection",
+      'setKind("product")',
+      'setKind("service")',
+      "trpc.catalog.createSimpleItem",
+      "trpc.catalog.createItem",
+      "Products can track stock. Services do not affect inventory.",
+      "Track work after order",
+      "authorizationPolicy",
+      "workPolicy",
+      "quote_required",
     ],
     reason:
-      "Service Jobs must use generic relational APIs and state offline scope",
+      "Catalog setup must classify each item and configure charge-only/tracked Service policies without inventory coupling",
   },
-]
+  {
+    file: "src/components/mobile/service-jobs-sheet.tsx",
+    markers: [
+      'trpc.catalog.listItems.queryOptions({ kind: "service" }',
+      "trpc.services.createAndConfirmIntake",
+      "trpc.services.queue",
+      "trpc.services.transitionLine",
+      "trpc.services.addNote",
+      "trpc.services.assignJob",
+      "trpc.services.captureEvidence",
+      "Customer and delivery details are optional.",
+      "Add date, instructions, photo or video",
+      "Private evidence requires at least one tracked Service item.",
+      "Service order created.",
+      "offeringDisplayName",
+      "normalizedVariantName.startsWith(`${normalizedItemName} ·`)",
+      "Start work",
+      "Mark ready",
+      "Update status",
+      "bottomOffset={120}",
+    ],
+    reason:
+      "the simple Service flow must support optional details/evidence and tracked or charge-only outcomes",
+  },
+  {
+    file: "src/components/mobile/service-jobs-sheet.tsx",
+    markers: [
+      'kind: "service_intake"',
+      'kind: "service_evidence_capture"',
+      'kind: "service_transition"',
+      'kind: "service_note"',
+      'kind: "service_self_assignment"',
+      "dependencyClientIds: [clientIntakeId]",
+      "provisional until replay",
+      "expectedRevision",
+    ],
+    reason:
+      "offline Service commands must preserve dependency order, revisions, and provisional messaging",
+  },
+];
 
-const failures = []
-for (const contract of CONTRACTS) {
-  const source = readFileSync(contract.file, "utf8")
-  const missing = contract.markers.filter((marker) => !source.includes(marker))
-  if (missing.length) {
+const failures = [];
+for (const contract of contracts) {
+  const filePath = join(MOBILE_DIR, contract.file);
+  const source = readFileSync(filePath, "utf8");
+  const missing = contract.markers.filter((marker) => !source.includes(marker));
+  if (missing.length > 0) {
     failures.push({
-      file: contract.file,
+      file: filePath,
       message: `missing ${missing.join(", ")} (${contract.reason})`,
-    })
+    });
+  }
+  const legacy = [
+    "retailOps.createCatalogItem",
+    "retailOps.createSale",
+    "updateServiceJobStatus",
+  ].filter((marker) => source.includes(marker));
+  if (legacy.length > 0) {
+    failures.push({
+      file: filePath,
+      message: `contains legacy Service markers ${legacy.join(", ")}`,
+    });
   }
 }
 
-if (failures.length) {
-  console.error("Service jobs flow check failed.")
+if (failures.length > 0) {
+  console.error("Generic Service Work flow check failed.");
   for (const failure of failures) {
-    console.error(`- ${relative(REPO_ROOT, failure.file)}: ${failure.message}`)
+    console.error(`- ${relative(REPO_ROOT, failure.file)}: ${failure.message}`);
   }
-  process.exit(1)
+  process.exit(1);
 }
 
-console.log("Service jobs flow check passed.")
+console.log("Generic Service Work flow check passed.");

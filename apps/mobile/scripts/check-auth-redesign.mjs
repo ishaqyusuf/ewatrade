@@ -1,8 +1,8 @@
-import { readFileSync } from "node:fs"
-import { join, relative, resolve } from "node:path"
+import { readFileSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 
-const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname)
-const SOURCE_DIR = join(MOBILE_DIR, "src")
+const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname);
+const SOURCE_DIR = join(MOBILE_DIR, "src");
 
 const requiredMarkers = [
   {
@@ -39,7 +39,7 @@ const requiredMarkers = [
       "StartupSplash",
       "AuthHeader",
       'align="center"',
-      "Preparing your sales and inventory workspace.",
+      "Preparing your catalog, orders, stock, and work workspace.",
     ],
   },
   {
@@ -68,7 +68,8 @@ const requiredMarkers = [
       'placeholder="Enter your business name"',
       'placeholder="Enter your full name"',
       'placeholder="Enter your email address"',
-      "Start with only the details needed",
+      "First, tell us where your business operates.",
+      "Now choose how you want to sign in.",
     ],
   },
   {
@@ -95,7 +96,7 @@ const requiredMarkers = [
       "haptic",
     ],
   },
-]
+];
 
 const forbiddenMarkers = [
   {
@@ -106,46 +107,46 @@ const forbiddenMarkers = [
     file: "app/login.tsx",
     markers: ["owner@business.com", "john@example.com"],
   },
-]
+];
 
-const failures = []
+const failures = [];
 
 for (const check of requiredMarkers) {
-  const filePath = join(SOURCE_DIR, check.file)
-  const contents = readFileSync(filePath, "utf8")
+  const filePath = join(SOURCE_DIR, check.file);
+  const contents = readFileSync(filePath, "utf8");
 
   for (const marker of check.markers) {
-    if (contents.includes(marker)) continue
+    if (contents.includes(marker)) continue;
 
     failures.push({
       file: relative(MOBILE_DIR, filePath),
       message: `missing marker: ${marker}`,
-    })
+    });
   }
 }
 
 for (const check of forbiddenMarkers) {
-  const filePath = join(SOURCE_DIR, check.file)
-  const contents = readFileSync(filePath, "utf8")
+  const filePath = join(SOURCE_DIR, check.file);
+  const contents = readFileSync(filePath, "utf8");
 
   for (const marker of check.markers) {
-    if (!contents.includes(marker)) continue
+    if (!contents.includes(marker)) continue;
 
     failures.push({
       file: relative(MOBILE_DIR, filePath),
       message: `contains sample-data placeholder: ${marker}`,
-    })
+    });
   }
 }
 
 if (failures.length > 0) {
-  console.error("Mobile auth redesign check failed.")
+  console.error("Mobile auth redesign check failed.");
 
   for (const failure of failures) {
-    console.error(`- ${failure.file}: ${failure.message}`)
+    console.error(`- ${failure.file}: ${failure.message}`);
   }
 
-  process.exit(1)
+  process.exit(1);
 }
 
-console.log("Mobile auth redesign check passed.")
+console.log("Mobile auth redesign check passed.");

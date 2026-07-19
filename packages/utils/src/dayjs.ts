@@ -29,8 +29,10 @@ export function timeAgo(value?: string | number | Date | null) {
     ["second", 1],
   ]
 
-  const [unit, unitSeconds] =
-    units.find(([, size]) => absolute >= size) ?? units[units.length - 1]!
+  const [unit, unitSeconds] = units.find(([, size]) => absolute >= size) ?? [
+    "second",
+    1,
+  ]
 
   return new Intl.RelativeTimeFormat("en-US", { numeric: "auto" }).format(
     Math.round(seconds / unitSeconds),

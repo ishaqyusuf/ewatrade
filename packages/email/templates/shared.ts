@@ -63,15 +63,17 @@ export function renderMarketingEmailTemplate(input: {
       .filter((section) => Boolean(section.value))
       .map((section) => `${section.label}: ${section.value ?? ""}`),
     input.ctaHref && input.ctaLabel ? "" : null,
-    input.ctaHref && input.ctaLabel ? `${input.ctaLabel}: ${input.ctaHref}` : null,
+    input.ctaHref && input.ctaLabel
+      ? `${input.ctaLabel}: ${input.ctaHref}`
+      : null,
     input.outro ? "" : null,
-    input.outro ?? null
+    input.outro ?? null,
   ]
     .filter(Boolean)
     .join("\n")
 
   return {
     html,
-    text
+    text,
   }
 }

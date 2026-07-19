@@ -1,14 +1,11 @@
 "use client"
 
 import { DashboardCommandSearch } from "@/components/dashboard/command-search"
-import {
-  type DashboardNavItem,
-  getDashboardNavItem,
-  getDashboardRoleLabel,
-} from "@/lib/navigation"
+import { type DashboardNavItem, getDashboardRoleLabel } from "@/lib/navigation"
 import type { SessionUser } from "@/lib/session"
 import type { TenantContext } from "@/lib/tenant"
 import { getUserInitials } from "@/lib/user-display"
+import { clearDashboardDataCache } from "@/trpc/client"
 import { cn } from "@/utils"
 import { Avatar, AvatarFallback, Button } from "@ewatrade/ui"
 import { Logout01Icon, Store04Icon } from "@hugeicons/core-free-icons"
@@ -28,7 +25,11 @@ export function DashboardHeader({ ctx, navItems, user }: Props) {
   const [isSwitchingTenant, setIsSwitchingTenant] = useState(false)
   const [isSwitchingStore, setIsSwitchingStore] = useState(false)
   const activeItem =
-    getDashboardNavItem(pathname, ctx.membership.role) ?? navItems[0]
+    navItems.find((item) =>
+      item.end
+        ? pathname === item.href
+        : pathname === item.href || pathname.startsWith(`${item.href}/`),
+    ) ?? navItems[0]
   const initials = getUserInitials(user)
   const roleLabel = getDashboardRoleLabel(ctx.membership.role)
 
@@ -52,7 +53,8 @@ export function DashboardHeader({ ctx, navItems, user }: Props) {
       })
 
       if (response.ok) {
-        router.refresh()
+        clearDashboardDataCache()
+        window.location.assign(pathname)
       }
     } finally {
       setIsSwitchingStore(false)
@@ -75,12 +77,14 @@ export function DashboardHeader({ ctx, navItems, user }: Props) {
         : null
 
       if (result?.dashboardUrl) {
+        clearDashboardDataCache()
         window.location.assign(result.dashboardUrl)
         return
       }
 
       if (response.ok) {
-        router.refresh()
+        clearDashboardDataCache()
+        window.location.assign(pathname)
       }
     } finally {
       setIsSwitchingTenant(false)

@@ -5,18 +5,19 @@ import type {
   NotificationChannel,
   NotificationDispatch,
   NotificationInput,
-  NotificationVariant
+  NotificationVariant,
 } from "./core-types"
 import {
   marketingEarlyAccessRequested,
   marketingWaitlistJoined,
-  retailOpsSharedLinkOrderRequested,
-  retailOpsStaffInvited
+  retailOpsStaffInvited,
 } from "./types"
 
 type BuiltNotificationInput = Omit<NotificationInput, "action">
 
-export type NotificationTypeDefinition<TSchema extends z.ZodTypeAny = z.ZodTypeAny> = {
+export type NotificationTypeDefinition<
+  TSchema extends z.ZodTypeAny = z.ZodTypeAny,
+> = {
   defaultChannels?: NotificationChannel[]
   defaultRecipients?: NotificationContactKind[]
   description?: string
@@ -25,23 +26,26 @@ export type NotificationTypeDefinition<TSchema extends z.ZodTypeAny = z.ZodTypeA
   variant?: NotificationVariant
 }
 
-export type NotificationTypeRegistry = Record<string, NotificationTypeDefinition>
+export type NotificationTypeRegistry = Record<
+  string,
+  NotificationTypeDefinition
+>
 
 export function defineNotificationType<TSchema extends z.ZodTypeAny>(
-  definition: NotificationTypeDefinition<TSchema>
+  definition: NotificationTypeDefinition<TSchema>,
 ) {
   return definition
 }
 
-export function defineNotificationTypes<TRegistry extends NotificationTypeRegistry>(
-  registry: TRegistry
-) {
+export function defineNotificationTypes<
+  TRegistry extends NotificationTypeRegistry,
+>(registry: TRegistry) {
   return registry
 }
 
 export function createNotificationFromType<
   TRegistry extends NotificationTypeRegistry,
-  TType extends keyof TRegistry & string
+  TType extends keyof TRegistry & string,
 >(
   registry: TRegistry,
   notificationType: TType,
@@ -53,7 +57,7 @@ export function createNotificationFromType<
     description?: string
     title?: string
     variant?: NotificationVariant
-  }
+  },
 ): BuiltNotificationInput {
   const definition = registry[notificationType]
 
@@ -69,13 +73,13 @@ export function createNotificationFromType<
     description: input?.description ?? definition.description,
     notificationType,
     title: input?.title ?? definition.title ?? "Notification",
-    variant: input?.variant ?? definition.variant ?? "info"
+    variant: input?.variant ?? definition.variant ?? "info",
   }
 }
 
 export function createNotificationDispatchFromType<
   TRegistry extends NotificationTypeRegistry,
-  TType extends keyof TRegistry & string
+  TType extends keyof TRegistry & string,
 >(
   registry: TRegistry,
   notificationType: TType,
@@ -95,7 +99,7 @@ export function createNotificationDispatchFromType<
     recipients?: NotificationDispatch["recipients"]
     title?: string
     variant?: NotificationVariant
-  }
+  },
 ): NotificationDispatch {
   const definition = registry[notificationType]
 
@@ -113,13 +117,12 @@ export function createNotificationDispatchFromType<
     payload,
     recipients: input?.recipients ?? [],
     title: input?.title ?? definition.title ?? "Notification",
-    variant: input?.variant ?? definition.variant ?? "info"
+    variant: input?.variant ?? definition.variant ?? "info",
   }
 }
 
 export const ewatradeNotificationTypes = defineNotificationTypes({
   marketing_early_access_requested: marketingEarlyAccessRequested,
   marketing_waitlist_joined: marketingWaitlistJoined,
-  retail_ops_shared_link_order_requested: retailOpsSharedLinkOrderRequested,
-  retail_ops_staff_invited: retailOpsStaffInvited
+  retail_ops_staff_invited: retailOpsStaffInvited,
 })

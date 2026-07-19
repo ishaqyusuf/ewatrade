@@ -21,34 +21,34 @@ type OnboardingStep = {
 
 const ONBOARDING_STEPS = [
   {
-    body: "Create the workspace your attendants, inventory, and daily sales will work from.",
+    body: "Create one workspace for your team, catalog, orders, and daily work.",
     icon: "Building2",
     tasks: [
-      { icon: "Building2", label: "Name your store" },
-      { icon: "Warehouse", label: "Add opening stock" },
-      { icon: "Users", label: "Bring in attendants" },
+      { icon: "Building2", label: "Add business details" },
+      { icon: "MapPin", label: "Confirm address and phone" },
+      { icon: "Users", label: "Invite your team" },
     ],
     title: "Set up your business",
   },
   {
-    body: "Match how you really sell, from bags and half bags to custom units and prices.",
+    body: "Add Products, Services, prices, options, and units only when you need them.",
     icon: "Warehouse",
     tasks: [
-      { icon: "ReceiptText", label: "Create the first product" },
-      { icon: "Calculator", label: "Set unit prices" },
-      { icon: "CircleCheck", label: "Track available quantity" },
+      { icon: "ReceiptText", label: "Create your first item" },
+      { icon: "Calculator", label: "Set pricing" },
+      { icon: "CircleCheck", label: "Choose stock or work tracking" },
     ],
-    title: "Track stock your way",
+    title: "Build your catalog",
   },
   {
-    body: "Record sales, invite staff, and keep work queued safely when the connection drops.",
+    body: "Confirm orders, track service work, and keep supported actions queued when the connection drops.",
     icon: "Users",
     tasks: [
-      { icon: "UserPlus", label: "Invite sales reps" },
-      { icon: "Receipt", label: "Capture payments" },
+      { icon: "Receipt", label: "Create mixed orders" },
+      { icon: "Wrench", label: "Track service progress" },
       { icon: "Zap", label: "Sync when online" },
     ],
-    title: "Sell with your team",
+    title: "Run daily work",
   },
 ] as const satisfies OnboardingStep[]
 
@@ -92,7 +92,7 @@ export default function OnboardingRoute() {
           >
             <Icon className="size-sm text-primary" name="ShieldCheck" />
             <Text className="text-xs font-bold uppercase text-primary">
-              Retail ops setup
+              Business setup
             </Text>
           </View>
 

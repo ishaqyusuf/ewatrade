@@ -32,8 +32,6 @@ function groupLabel(group: string) {
       return "Staff"
     case "sales":
       return "Sales"
-    case "links":
-      return "Generated links"
     default:
       return "Results"
   }

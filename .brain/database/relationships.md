@@ -1,41 +1,59 @@
 # Database Relationships
 
-## Purpose
-Capture high-level relationships between major entity groups.
+## Catalog To Inventory
 
-## How To Use
-- Update when entity relationships, cardinality, or tenant boundaries change.
+`Tenant -> CatalogItem -> CatalogProduct|CatalogService`
 
-## Core Relationships
-- Tenant -> many stores
-- Tenant -> many users through memberships
-- Tenant -> many orders, sites, conversations, and automation events
-- Tenant -> many storefront and POS hostname records; the dashboard is a shared platform host and has no hostname row for new tenants
-- Store -> many catalog items through compatibility `Product` rows
-- Catalog item (`Product`) -> many variants
-- Catalog item (`Product`) -> zero or one Service item profile
-- Product-kind variant -> zero or one inventory item
-- Order -> many kind-snapshotted order items
-- Order -> zero or one Service Job grouping its Service lines
-- Service Job -> many Service Job lines, events, evidence records, and assignments
-- Service request link -> many Service requests
-- Service request -> many priced Service request lines
-- Service request -> zero or one converted Order and Service Job
-- Catalog item and Service records -> at most one canonical migrated record per scoped legacy source id
-- Cart -> many cart items
-- Order -> many order items
-- Order -> zero or one delivery request
-- Delivery request -> many bids
-- Delivery request -> zero or one assignment
-- Dispatch provider -> many bids and assignments
-- Site -> many pages
-- Page -> many sections
+`CatalogItem -> SellableVariant -> SellableOffering -> ProductUnitOffering|ServiceOffering`
 
-## Tenant Rules
-- Merchant data and dispatch data must be scoped through tenant-aware joins and filters.
-- Shared/public read models should be derived from explicitly public entities only.
-- Catalog, order, and Service Job repositories resolve tenant and store scope before kind checks or writes.
-- Public service request/tracking reads resolve opaque tokens and omit raw ids, private evidence, internal notes, actor ids, and private contacts.
+`CatalogProduct -> UnitConfigurationVersion -> InventoryUnit`
 
-## TODO
-- Replace conceptual relationships with schema-backed references once Prisma models are defined.
+`Store + SellableOffering -> StoreOfferingAvailability`
+
+`Store + CatalogProduct + SellableVariant + InventoryUnit + Custody -> StockBalanceSource`
+
+Every Product Unit Offering points to one Inventory Unit from the Product's
+Current configuration. A Service Offering has no inventory relation.
+
+## Inventory Ledger
+
+`StockOperation -> StockMovement -> StockBalanceSource`
+
+Reservations, counts, transfers, transformations, custody moves, closeouts,
+fulfillment, returns and corrections all resolve to explicit Balance Sources
+and immutable movements. Configuration/version/unit snapshots prevent later
+catalog edits from changing historical meaning.
+
+## Commerce And Work
+
+`CommercialOrder -> CommercialOrderLine -> OfferingSnapshot`
+
+Product lines may link to reservations, fulfillments and returns. Tracked
+Service lines may allocate into one or more `ServiceJobLine` records. Job Lines
+belong to `ServiceJob`; charge-only Service lines allocate no work.
+
+## Requests, Quotes And Tracking
+
+`ServiceRequestForm -> allowed SellableOffering`
+
+`ServiceRequest -> ServiceRequestLine`
+
+`ServiceQuote -> ServiceQuoteVersion -> ServiceQuoteLine`
+
+Accepting the current Quote version creates the Commercial Order/work graph
+once. `CustomerTrackingAccess` points to a Job and exposes an allowlisted public
+projection; it does not expose internal notes, staff identities, private media
+or raw storage identifiers.
+
+## Evidence And Communication
+
+Evidence belongs to a Job and optionally a Job Line. Audit events preserve
+capture, upload, publication and revocation decisions. Notification Intent,
+Manual Share and Delivery Attempt are separate records so provider delivery
+never mutates work or payment state.
+
+## Tenancy
+
+Every owned aggregate is tenant-scoped. Store-scoped records carry Store ids;
+public access uses opaque tokens and repository-projected allowlists. Business
+hostnames are storefront-only; the authenticated dashboard is a shared host.

@@ -1,7 +1,7 @@
-import { readFileSync } from "node:fs"
-import { join, relative, resolve } from "node:path"
+import { readFileSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 
-const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname)
+const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname);
 
 const checks = [
   {
@@ -35,7 +35,7 @@ const checks = [
       "AppLockProvider",
       "AppState.addEventListener",
       "LocalAuthentication.authenticateAsync",
-      "promptMessage: \"Unlock EwaTrade\"",
+      'promptMessage: "Unlock EwaTrade"',
       "unlockWithBiometrics",
       "resetAfterSignOut",
     ],
@@ -54,7 +54,7 @@ const checks = [
     markers: [
       "PinCodeCells",
       "FingerPrintScan",
-      "accessibilityLabel=\"Use fingerprint\"",
+      'accessibilityLabel="Use fingerprint"',
       "Delete last digit",
     ],
   },
@@ -74,32 +74,32 @@ const checks = [
   },
   {
     file: "src/app/dashboard.tsx",
-    markers: ["label: \"App lock\"", "router.push(\"/app-lock-modal\" as never)"],
+    markers: ['label="App lock"', 'router.push("/app-lock-modal" as never)'],
   },
-]
+];
 
-const failures = []
+const failures = [];
 
 for (const check of checks) {
-  const filePath = join(MOBILE_DIR, check.file)
-  const source = readFileSync(filePath, "utf8")
+  const filePath = join(MOBILE_DIR, check.file);
+  const source = readFileSync(filePath, "utf8");
 
   for (const marker of check.markers) {
-    if (source.includes(marker)) continue
+    if (source.includes(marker)) continue;
 
     failures.push({
       file: relative(MOBILE_DIR, filePath),
       marker,
-    })
+    });
   }
 }
 
 if (failures.length > 0) {
-  console.error("Mobile app lock flow check failed.")
+  console.error("Mobile app lock flow check failed.");
   for (const failure of failures) {
-    console.error(`- ${failure.file} is missing marker: ${failure.marker}`)
+    console.error(`- ${failure.file} is missing marker: ${failure.marker}`);
   }
-  process.exit(1)
+  process.exit(1);
 }
 
-console.log("Mobile app lock flow check passed.")
+console.log("Mobile app lock flow check passed.");

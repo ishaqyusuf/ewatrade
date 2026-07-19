@@ -787,7 +787,7 @@ function ReferenceOperationalSystem({
           destination="Counter sale"
           icon="Receipt"
           meta="NGN 48,000"
-          origin="Rabbit feed"
+          origin="Local supplier"
           status="Synced"
           title="Sale 1024"
           tone="success"
@@ -969,7 +969,7 @@ function ReferenceCommerceDetail({
         </Text>
       </View>
       <View className="flex-row flex-wrap gap-2">
-        {["Full bag", "Half bag", "Quarter"].map((label, index) => (
+        {["Single", "Pack", "Carton"].map((label, index) => (
           <View
             className={cn(
               "rounded-full px-4 py-2",
@@ -1178,7 +1178,7 @@ function ModalAndSheetExamples() {
               label="Product name"
               leadingIcon="Warehouse"
               placeholder="Enter product name"
-              value="Premium rabbit feed"
+              value="Organic granola"
             />
             <QuantityStepper
               helper="Whole-number inventory input"
@@ -1423,7 +1423,7 @@ function StatusAndLists() {
             stockLabel="Low stock"
             stockTone="warning"
             subtitle="Primary unit: bag - 6 variants"
-            title="Premium rabbit feed"
+            title="Organic granola"
           />
           <SaleSelectableRow
             meta="Available: 42 bags"
@@ -1441,9 +1441,9 @@ function StatusAndLists() {
             <StatusBadge label="Pending" tone="warning" />
           </SecondaryOperationalRow>
           <ShareLinkRecordRow
-            detail="https://ewa.trade/p/rabbit-feed"
+            detail="https://ewa.trade/p/organic-granola"
             meta="1,284 views - 18 orders"
-            title="Rabbit feed campaign"
+            title="Granola campaign"
           >
             <View className="flex-row gap-2">
               <StatusBadge label="Active" tone="success" />
@@ -1620,8 +1620,8 @@ function RetailOpsPatterns() {
             <SetupChoicePill onPress={() => {}} selected>
               Full bag
             </SetupChoicePill>
-            <SetupChoicePill onPress={() => {}}>Half bag</SetupChoicePill>
-            <SetupChoicePill onPress={() => {}}>Quarter bag</SetupChoicePill>
+            <SetupChoicePill onPress={() => {}}>Pack</SetupChoicePill>
+            <SetupChoicePill onPress={() => {}}>Carton</SetupChoicePill>
           </View>
           <SetupInlineNotice
             icon="Info"
@@ -1638,7 +1638,7 @@ function RetailOpsPatterns() {
             selected
           />
           <InventoryUnitOption
-            label="Half bag"
+            label="Pack"
             onPress={() => {}}
             selected
             stockLabel="21 available"

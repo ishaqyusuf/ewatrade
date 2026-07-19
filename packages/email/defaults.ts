@@ -14,18 +14,6 @@ export function defaultMarketingWaitlistConfirmationSubject() {
   return "You are on the ewatrade waitlist"
 }
 
-export function defaultRetailOpsSharedLinkOrderCustomerSubject(input: {
-  orderNumber: string
-}) {
-  return `We received your order request ${input.orderNumber}`
-}
-
-export function defaultRetailOpsSharedLinkOrderMerchantSubject(input: {
-  orderNumber: string
-}) {
-  return `New product-link order request ${input.orderNumber}`
-}
-
 export function defaultRetailOpsStaffInviteSubject(input: {
   businessName: string
 }) {

@@ -1,5 +1,4 @@
 import type {
-  AccountTypeValues,
   BusinessValues,
   OwnerValues,
   WorkspaceValues,
@@ -9,28 +8,29 @@ import type {
 // Each export provides realistic mock data for its corresponding signup step.
 // Only imported in development — tree-shaken in production builds.
 
-export const accountTypeFill: AccountTypeValues = {
-  modes: ["STORE", "MERCHANT"],
-}
+const devRunSuffix = Date.now().toString().slice(-7)
 
 export const workspaceFill: WorkspaceValues = {
-  subdomain: "nilemkt",
+  subdomain: `nilemkt-${devRunSuffix.slice(-5)}`,
   customDomain: "",
 }
 
 export const businessFill: BusinessValues = {
-  businessName: "Nile Market Co.",
+  addressLine1: "12 Market Road",
+  businessName: `Nile Market QA ${devRunSuffix}`,
   industry: "retail",
   businessSize: "2_10",
+  city: "Lagos",
   countryCode: "NG",
   currencyCode: "NGN",
-  phone: "+234 801 234 5678",
+  phone: `+23480${devRunSuffix}`,
+  region: "Lagos",
 }
 
 export const ownerFill: OwnerValues = {
   firstName: "Ada",
   lastName: "Nwosu",
-  email: `ada.nwosu+dev${Date.now().toString().slice(-4)}@nilemkt.dev`,
+  email: `ada.nwosu+dev${devRunSuffix}@nilemkt.dev`,
   password: "password123",
   confirmPassword: "password123",
 }

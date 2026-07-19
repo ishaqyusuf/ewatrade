@@ -1,8 +1,5 @@
 import type { LeadCaptureType } from "@ewatrade/db"
-import type {
-  RetailOpsSharedLinkOrderRequestedPayload,
-  RetailOpsStaffInvitedPayload,
-} from "@ewatrade/notifications"
+import type { RetailOpsStaffInvitedPayload } from "@ewatrade/notifications"
 
 import {
   type NotificationDispatchPayload,
@@ -12,11 +9,6 @@ import { triggerJob } from "./trigger"
 
 export const jobIds = {
   notificationDispatch: "notifications.dispatch",
-} as const
-
-const retailOpsSharedLinkNotificationRetryOptions = {
-  baseDelayMs: 2_000,
-  maxAttempts: 4,
 } as const
 
 export type MarketingLeadNotificationInput = {
@@ -69,23 +61,6 @@ export async function enqueueMarketingLeadNotification(
     jobIds.notificationDispatch,
     notificationDispatchHandler,
     payload,
-  )
-}
-
-export async function enqueueRetailOpsSharedLinkOrderNotification(
-  input: RetailOpsSharedLinkOrderRequestedPayload,
-) {
-  const payload: NotificationDispatchPayload = {
-    delivery: retailOpsSharedLinkNotificationRetryOptions,
-    payload: input,
-    type: "retail_ops_shared_link_order_requested",
-  }
-
-  await triggerJob(
-    jobIds.notificationDispatch,
-    notificationDispatchHandler,
-    payload,
-    retailOpsSharedLinkNotificationRetryOptions,
   )
 }
 

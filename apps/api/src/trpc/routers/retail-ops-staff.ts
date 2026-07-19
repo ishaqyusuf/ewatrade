@@ -5,28 +5,21 @@ import {
 } from "@ewatrade/auth/roles"
 import {
   RetailOpsStaffError,
-  RetailOpsStockWalletError,
   RetailOpsSubscriptionError,
-  assignRetailOpsStaffStock,
   completeRetailOpsStaffOnboarding,
   inviteRetailOpsStaff,
   listRetailOpsStaff,
-  listRetailOpsStaffStockWallets,
   resolveRetailOpsStaffInviteToken,
-  returnRetailOpsStaffStock,
   updateRetailOpsStaffStatus,
 } from "@ewatrade/db/queries"
 import type { InvitedRetailOpsStaff } from "@ewatrade/db/queries"
 import { enqueueRetailOpsStaffInviteNotification } from "@ewatrade/jobs"
 import { TRPCError } from "@trpc/server"
 import {
-  retailOpsAssignStaffStockSchema,
   retailOpsCompleteStaffOnboardingSchema,
   retailOpsInviteStaffSchema,
   retailOpsResolveStaffInviteTokenSchema,
-  retailOpsReturnStaffStockSchema,
   retailOpsStaffListSchema,
-  retailOpsStaffStockWalletsSchema,
   retailOpsUpdateStaffStatusSchema,
 } from "../../schemas/retail-ops"
 import {
@@ -43,15 +36,6 @@ function getStaffErrorCode(
   if (error.code === "STAFF_SELF_UPDATE_FORBIDDEN") return "FORBIDDEN"
   if (error.code === "STAFF_STATUS_NOT_ALLOWED") return "BAD_REQUEST"
   if (error.code === "STAFF_STATUS_UNCHANGED") return "CONFLICT"
-
-  return "NOT_FOUND"
-}
-
-function getStockWalletErrorCode(
-  error: RetailOpsStockWalletError,
-): "BAD_REQUEST" | "CONFLICT" | "NOT_FOUND" {
-  if (error.code === "INSUFFICIENT_STOCK") return "CONFLICT"
-  if (error.code === "ITEM_NOT_STOCKABLE") return "BAD_REQUEST"
 
   return "NOT_FOUND"
 }
@@ -268,95 +252,6 @@ export const retailOpsStaffRouter = createTRPCRouter({
         if (error instanceof RetailOpsStaffError) {
           throw new TRPCError({
             code: getStaffErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  staffStockWallets: protectedProcedure
-    .input(retailOpsStaffStockWalletsSchema)
-    .query(async ({ ctx, input }) => {
-      assertCanManageRetailOpsStaff(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      return listRetailOpsStaffStockWallets(ctx.db, {
-        limit: input.limit,
-        staffUserId: input.staffUserId,
-        storeId: store.id,
-        tenantId: ctx.tenantContext.tenant.id,
-      })
-    }),
-
-  assignStaffStock: protectedProcedure
-    .input(retailOpsAssignStaffStockSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertCanManageRetailOpsStaff(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await assignRetailOpsStaffStock(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          assignedAt: input.assignedAt,
-          externalId: input.externalId,
-          note: input.note,
-          productVariantId: input.productVariantId,
-          quantity: input.quantity,
-          staffUserId: input.staffUserId,
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsStockWalletError) {
-          throw new TRPCError({
-            code: getStockWalletErrorCode(error),
-            message: error.message,
-          })
-        }
-
-        throw error
-      }
-    }),
-
-  returnStaffStock: protectedProcedure
-    .input(retailOpsReturnStaffStockSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertCanManageRetailOpsStaff(ctx.tenantContext.membership.role)
-
-      const store = resolveStore(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input,
-      )
-
-      try {
-        return await returnRetailOpsStaffStock(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          externalId: input.externalId,
-          note: input.note,
-          productVariantId: input.productVariantId,
-          quantity: input.quantity,
-          returnedAt: input.returnedAt,
-          staffUserId: input.staffUserId,
-          storeId: store.id,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-      } catch (error) {
-        if (error instanceof RetailOpsStockWalletError) {
-          throw new TRPCError({
-            code: getStockWalletErrorCode(error),
             message: error.message,
           })
         }

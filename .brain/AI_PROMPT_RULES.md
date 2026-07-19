@@ -18,7 +18,11 @@ Keep AI-generated work aligned with repository architecture and documentation st
 - Use GND as the reference for the standard notification package system.
 - Use Plot Keys as the reference for local URL handling, portless/proxy support, and generated links.
 - Add `app/[...slug]/page.tsx` as a catch-all route that redirects to `/` unless the repository has an explicit reason to diverge.
-- Prisma schema changes must use the repository Prisma workflow. Do not manually create migration files.
+- Reuse a running development stack when available. Otherwise start the required
+  root `bun run dev` profile in a dedicated managed terminal session and keep
+  that session available for logs and shutdown.
+- Use port-free Portless URLs for website work: `http://ewatrade.localhost` and `http://ewatrade-dashboard.localhost`. Any explicit port on a named host is a Portless bug that must be fixed before proceeding.
+- Prisma schema/database changes must use the repository Prisma workflow, followed by `bun run db:push --local`, `bun run db:push --prod`, and an attempted `bun run db:push --remote`. Do not manually create migration files or force destructive changes without approval.
 
 ## Global Personal Coding Rules
 <!-- BEGIN Global Personal Coding Rules -->

@@ -2,7 +2,14 @@
 
 ## Status
 
-Accepted
+Partially superseded by
+[ADR-0012](./ADR-0012-generic-service-operations-bounded-contexts.md) and
+[ADR-0013](./ADR-0013-generic-catalog-inventory-units-and-stock-operations.md).
+The neutral Product/Service Catalog Item distinction and Service exclusion
+from inventory remain accepted. The compatibility Product/ProductVariant
+storage, overloaded variant/unit bridge, prototype Service profile,
+one-Job-per-Order behavior, compatibility migration, and Service Operations
+contract do not define the replacement architecture.
 
 Implemented on 2026-07-18.
 

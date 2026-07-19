@@ -9,7 +9,7 @@ import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { useBusinessStore } from "@/store/businessStore"
-import { useRetailOpsStore } from "@/store/retailOpsStore"
+import { useOperationalModeStore } from "@/store/operationalModeStore"
 import {
   RETAIL_OPS_PLANS,
   type RetailOpsPlan,
@@ -201,7 +201,7 @@ export function SubscriptionPlanContent({
 }: SubscriptionPlanContentProps) {
   const trpc = useTRPC()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
-  const isOfflineMode = useRetailOpsStore((state) => state.isOfflineMode)
+  const isOfflineMode = useOperationalModeStore((state) => state.isOfflineMode)
   const subscriptions = useSubscriptionStore((state) => state.subscriptions)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const localSubscription = getBusinessSubscription(

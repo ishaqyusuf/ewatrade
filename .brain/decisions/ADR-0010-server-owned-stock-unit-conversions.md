@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted
+Superseded by
+[ADR-0013](./ADR-0013-generic-catalog-inventory-units-and-stock-operations.md).
+This record describes the implemented prototype only. Per-unit ProductVariant
+balances, feed presets, whole-only conversion output, ratio fallbacks, and
+paired conversion movements are rejected by the clean replacement.
 
 Implemented on 2026-07-18.
 

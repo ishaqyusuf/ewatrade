@@ -1,5 +1,5 @@
-import { RetailOpsDashboardSurface } from "./dashboard"
+import { OperationsDashboardSurface } from "./dashboard"
 
 export default function AdminHomeRoute() {
-  return <RetailOpsDashboardSurface surface="admin" />
+  return <OperationsDashboardSurface />
 }

@@ -1,10 +1,10 @@
 import {
+  type EwatradeNotificationType,
+  type NotificationRecipients,
+  type NotificationTriggerInput,
   buildNotificationEvent,
   createNotificationChannelTriggers,
   normalizeRecipients,
-  type EwatradeNotificationType,
-  type NotificationRecipients,
-  type NotificationTriggerInput
 } from "../payload-utils"
 
 type NotificationServiceContext = {
@@ -20,7 +20,7 @@ type WithoutAuthor<TType extends EwatradeNotificationType> = Omit<
 
 type SendFn = <TType extends EwatradeNotificationType>(
   type: TType,
-  input: NotificationTriggerInput<TType>
+  input: NotificationTriggerInput<TType>,
 ) => unknown | Promise<unknown>
 
 export class NotificationService {
@@ -29,17 +29,17 @@ export class NotificationService {
 
   constructor(
     private readonly sendFn: SendFn,
-    private readonly ctx: NotificationServiceContext = {}
+    private readonly ctx: NotificationServiceContext = {},
   ) {
     this.channel = createNotificationChannelTriggers({
       getStoredRecipients: () => this.recipients,
-      send: (type, input) => this.emit(type, input as never)
+      send: (type, input) => this.emit(type, input as never),
     })
   }
 
   private async emit<TType extends EwatradeNotificationType>(
     type: TType,
-    input: WithoutAuthor<TType>
+    input: WithoutAuthor<TType>,
   ) {
     const event = buildNotificationEvent(type, input, this.ctx.userId)
 
@@ -47,13 +47,13 @@ export class NotificationService {
       author: event.author,
       channels: event.channels,
       payload: event.payload,
-      recipients: event.recipients
+      recipients: event.recipients,
     } as NotificationTriggerInput<TType>)
   }
 
   async send<TType extends EwatradeNotificationType>(
     type: TType,
-    input: WithoutAuthor<TType>
+    input: WithoutAuthor<TType>,
   ) {
     return this.emit(type, input)
   }

@@ -60,7 +60,10 @@ export function getInsuranceRequirement(
     }
   }
 
-  if (status.includes("pending") || (!status && !insuranceDocument.approvedAt)) {
+  if (
+    status.includes("pending") ||
+    (!status && !insuranceDocument.approvedAt)
+  ) {
     return {
       blocking: true,
       expiresAt,

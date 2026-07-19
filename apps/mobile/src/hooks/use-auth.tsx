@@ -4,27 +4,28 @@ import {
   deleteSession,
   getSession,
   setSession,
-} from "@/lib/session-store"
-import { useBusinessStore } from "@/store/businessStore"
-import { useRouter } from "expo-router"
-import { createContext, useContext, useEffect, useState } from "react"
+} from "@/lib/session-store";
+import { useBusinessStore } from "@/store/businessStore";
+import { clearMobileDataCache } from "@/trpc/client";
+import { useRouter } from "expo-router";
+import { createContext, useContext, useEffect, useState } from "react";
 
-type AuthContextProps = ReturnType<typeof useCreateAuthContext>
+type AuthContextProps = ReturnType<typeof useCreateAuthContext>;
 export const AuthContext = createContext<AuthContextProps | undefined>(
   undefined,
-)
-export const AuthProvider = AuthContext.Provider
+);
+export const AuthProvider = AuthContext.Provider;
 
-type LocalAuthInput = Partial<MobileProfile>
+type LocalAuthInput = Partial<MobileProfile>;
 
 const createLocalSession = (input: LocalAuthInput = {}): MobileSession => {
-  const email = input.email?.trim() ?? ""
-  const name = input.name?.trim() || "Store Owner"
-  const businessName = input.businessName?.trim() || "My Business"
+  const email = input.email?.trim() ?? "";
+  const name = input.name?.trim() || "Store Owner";
+  const businessName = input.businessName?.trim() || "My Business";
   const business = useBusinessStore.getState().ensureBusiness({
     currency: input.currencyCode,
     name: businessName,
-  })
+  });
 
   return {
     token: `local-${Date.now()}`,
@@ -38,31 +39,37 @@ const createLocalSession = (input: LocalAuthInput = {}): MobileSession => {
       role: input.role ?? "OWNER",
       status: input.status ?? "ACTIVE",
     },
-  }
-}
+  };
+};
 
 export const useCreateAuthContext = () => {
   const [session, setSessionState] = useState<MobileSession | null>(
     getSession(),
-  )
-  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null)
-  const router = useRouter()
+  );
+  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    if (!session || !pendingRedirect) return
+    if (!session || !pendingRedirect) return;
 
-    router.replace(pendingRedirect as never)
-    setPendingRedirect(null)
-  }, [pendingRedirect, router, session])
+    router.replace(pendingRedirect as never);
+    setPendingRedirect(null);
+  }, [pendingRedirect, router, session]);
 
   const applySession = (
     nextSession: MobileSession,
     redirectHref = "/dashboard",
   ) => {
-    setSession(nextSession)
-    setSessionState(nextSession)
-    setPendingRedirect(redirectHref)
-  }
+    if (
+      session?.token !== nextSession.token ||
+      session.profile.businessId !== nextSession.profile.businessId
+    ) {
+      clearMobileDataCache();
+    }
+    setSession(nextSession);
+    setSessionState(nextSession);
+    setPendingRedirect(redirectHref);
+  };
 
   return {
     session,
@@ -73,31 +80,33 @@ export const useCreateAuthContext = () => {
       nextSession: MobileSession,
       redirectHref?: string,
     ) {
-      applySession(nextSession, redirectHref)
+      applySession(nextSession, redirectHref);
     },
     signInLocal(input?: LocalAuthInput) {
-      applySession(createLocalSession(input))
+      applySession(createLocalSession(input));
     },
     signUpLocal(input?: LocalAuthInput) {
-      applySession(createLocalSession(input))
+      applySession(createLocalSession(input));
     },
     signOutLocal() {
-      void deleteSession()
-      setSessionState(null)
-      router.replace("/login")
+      clearMobileDataCache();
+      void deleteSession();
+      setSessionState(null);
+      router.replace("/login");
     },
     onLogout() {
-      void deleteSession()
-      setSessionState(null)
-      router.replace("/login")
+      clearMobileDataCache();
+      void deleteSession();
+      setSessionState(null);
+      router.replace("/login");
     },
-  }
-}
+  };
+};
 
 export const useAuthContext = () => {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuthContext must be used within a AuthProvider")
+    throw new Error("useAuthContext must be used within a AuthProvider");
   }
-  return context
-}
+  return context;
+};

@@ -1317,7 +1317,7 @@ export async function getRetailOpsSubscriptionSnapshot(
         status: { not: "ARCHIVED" },
       },
     }),
-    db.product.count({
+    db.catalogItem.count({
       where: {
         tenantId: input.tenantId,
         status: { not: "ARCHIVED" },

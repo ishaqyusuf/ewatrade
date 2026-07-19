@@ -2,7 +2,7 @@ import type { DashboardNavItem } from "@/lib/navigation"
 
 export type DashboardSearchResult = {
   description: string
-  group: "customers" | "links" | "products" | "sales" | "staff"
+  group: "customers" | "products" | "sales" | "staff"
   href: string
   id: string
   title: string
@@ -64,15 +64,6 @@ export function getDashboardCommands(navItems: DashboardNavItem[]) {
       href: "/inventory",
       id: "record-stock-intake",
       title: "Record stock intake",
-    })
-  }
-
-  if (available.has("/links")) {
-    commands.push({
-      description: "Open generated links and create a product link.",
-      href: "/links",
-      id: "create-generated-link",
-      title: "Create generated link",
     })
   }
 

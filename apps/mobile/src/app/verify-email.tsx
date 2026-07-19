@@ -30,17 +30,23 @@ export default function VerifyEmailRoute() {
     (state) => state.completeOnboarding,
   )
   const params = useLocalSearchParams<{
+    addressLine1?: string
     businessName?: string
+    city?: string
     currencyCode?: string
     email?: string
     mode?: "login" | "sign-up"
     name?: string
+    phone?: string
   }>()
   const email = firstParam(params.email)?.trim() ?? ""
   const mode = firstParam(params.mode) === "login" ? "login" : "sign-up"
   const apiMode = mode === "login" ? "login" : "sign_up"
   const emailDeliveryLabel = email || "your email address"
   const name = firstParam(params.name) ?? "Store Owner"
+  const addressLine1 = firstParam(params.addressLine1)
+  const city = firstParam(params.city)
+  const phone = firstParam(params.phone)
   const businessName = firstParam(params.businessName) ?? "My Business"
   const currencyCode = normalizeOperatingCurrencyCode(
     firstParam(params.currencyCode),
@@ -98,20 +104,26 @@ export default function VerifyEmailRoute() {
     setStatus("verifying")
 
     verifyOtpMutation.mutate({
+      addressLine1,
       businessName,
+      city,
       currencyCode,
       code,
       email,
       mode: apiMode,
       name,
+      phone,
     })
   }, [
     apiMode,
+    addressLine1,
     businessName,
+    city,
     code,
     currencyCode,
     email,
     name,
+    phone,
     status,
     verifyOtpMutation,
   ])
@@ -169,19 +181,25 @@ export default function VerifyEmailRoute() {
     if (requestOtpMutation.isPending || isVerifying) return
 
     requestOtpMutation.mutate({
+      addressLine1,
       businessName,
+      city,
       currencyCode,
       email,
       mode: apiMode,
       name,
+      phone,
     })
   }, [
     apiMode,
+    addressLine1,
     businessName,
+    city,
     currencyCode,
     email,
     isVerifying,
     name,
+    phone,
     requestOtpMutation,
   ])
 

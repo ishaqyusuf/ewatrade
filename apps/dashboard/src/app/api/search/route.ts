@@ -1,18 +1,13 @@
-import { getCatalogFeatureAvailability } from "@/lib/catalog-capabilities"
 import type { DashboardSearchResult } from "@/lib/dashboard-search"
 import { canOperateInventory } from "@/lib/inventory-operations"
 import { canManageProductCatalog } from "@/lib/product-catalog"
+import { getDashboardCustomerBook } from "@/lib/sales-data"
 import { canUseSalesOperations } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
-import { canUseShareLinks } from "@/lib/share-links-operations"
 import { canManageStaff } from "@/lib/staff-management"
 import { getActiveTenant } from "@/lib/tenant"
 import { prisma } from "@ewatrade/db"
-import {
-  getRetailOpsCustomerBook,
-  listRetailOpsProductShareLinks,
-  listRetailOpsRecentSales,
-} from "@ewatrade/db/queries"
+import { listCommercialOrders } from "@ewatrade/db/queries"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
@@ -69,21 +64,14 @@ export async function GET(request: NextRequest) {
   const role = ctx.membership.role
   const tenantId = ctx.tenant.id
   const storeScope = { storeId: store.id, tenantId }
-  const catalogFeatures = await getCatalogFeatureAvailability(storeScope)
   const canSearchProducts =
     canManageProductCatalog(role) || canOperateInventory(role)
   const canSearchCustomers = canUseSalesOperations(role)
-  const canSearchSales = canSearchCustomers && catalogFeatures.hasProductItems
-  const canSearchLinks = canUseShareLinks(role)
+  const canSearchSales = canSearchCustomers
   const canSearchStaff = canManageStaff(role)
-  const canManageAllSales = ["OWNER", "ADMIN", "MANAGER"].includes(
-    role.trim().toUpperCase(),
-  )
-  const actorUserId = canManageAllSales ? undefined : session.user.id
-
-  const [products, customers, staff, sales, links] = await Promise.all([
+  const [products, customers, staff, sales] = await Promise.all([
     canSearchProducts
-      ? prisma.product.findMany({
+      ? prisma.catalogItem.findMany({
           orderBy: { updatedAt: "desc" },
           select: {
             id: true,
@@ -100,16 +88,17 @@ export async function GET(request: NextRequest) {
               { description: { contains: query, mode: "insensitive" } },
             ],
             status: { not: "ARCHIVED" },
-            ...storeScope,
+            tenantId,
           },
         })
       : [],
     canSearchCustomers
-      ? getRetailOpsCustomerBook(prisma, {
-          actorUserId,
-          limit: 8,
+      ? getDashboardCustomerBook({
+          role,
           search: query,
-          ...storeScope,
+          storeId: store.id,
+          tenantId,
+          userId: session.user.id,
         })
       : [],
     canSearchStaff
@@ -143,13 +132,11 @@ export async function GET(request: NextRequest) {
         })
       : [],
     canSearchSales
-      ? listRetailOpsRecentSales(prisma, {
-          actorUserId,
+      ? listCommercialOrders(prisma, {
           limit: 8,
           ...storeScope,
         })
       : [],
-    canSearchLinks ? listRetailOpsProductShareLinks(prisma, storeScope) : [],
   ])
 
   const normalizedQuery = query.toLowerCase()
@@ -186,9 +173,9 @@ export async function GET(request: NextRequest) {
       .filter((sale) =>
         [
           sale.orderNumber,
-          sale.customer.name ?? "",
-          sale.customer.email ?? "",
-          sale.customer.phone ?? "",
+          sale.customerName ?? "",
+          sale.customerEmail ?? "",
+          sale.customerPhone ?? "",
           sale.status,
           sale.paymentStatus,
         ]
@@ -198,28 +185,11 @@ export async function GET(request: NextRequest) {
       )
       .map((sale) =>
         result({
-          description: `${sale.paymentStatus} sale`,
+          description: `${sale.paymentStatus.toLowerCase()} order`,
           group: "sales",
           href: `/sales?search=${encodeURIComponent(sale.orderNumber)}`,
           id: `sale:${sale.id}`,
           title: sale.orderNumber,
-        }),
-      ),
-    ...links
-      .filter((link) =>
-        [link.label ?? "", link.product.name, link.token, link.url]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedQuery),
-      )
-      .slice(0, 8)
-      .map((link) =>
-        result({
-          description: link.active ? "Active generated link" : "Inactive link",
-          group: "links",
-          href: `/links?search=${encodeURIComponent(link.product.name)}`,
-          id: `link:${link.id}`,
-          title: link.label ?? link.product.name,
         }),
       ),
   ].slice(0, 30)

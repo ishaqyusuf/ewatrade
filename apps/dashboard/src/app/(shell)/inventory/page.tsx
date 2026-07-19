@@ -1,12 +1,19 @@
 import { InventoryPage } from "@/components/dashboard/inventory-page"
-import { getDashboardInventory } from "@/lib/inventory-data"
+import { InventoryTableSkeleton } from "@/components/tables/inventory/skeleton"
 import { canOperateInventory } from "@/lib/inventory-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
+import { HydrateClient, prefetch, trpc } from "@/trpc/server"
+import type { Metadata } from "next"
 import { redirect } from "next/navigation"
+import { Suspense } from "react"
 
 const MARKETING_URL =
   process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com"
+
+export const metadata: Metadata = {
+  title: "Inventory | EwaTrade",
+}
 
 export default async function InventoryRoutePage() {
   const session = await getServerSession()
@@ -31,16 +38,32 @@ export default async function InventoryRoutePage() {
     redirect("/setup")
   }
 
-  const { inventory, movements } = await getDashboardInventory({
-    storeId: store.id,
-    tenantId: ctx.tenant.id,
-  })
+  await Promise.allSettled([
+    prefetch(
+      trpc.inventory.balanceReport.queryOptions({
+        includeCompatibleTotals: true,
+        storeId: store.id,
+      }),
+    ),
+    prefetch(
+      trpc.inventory.operationHistory.queryOptions({
+        limit: 50,
+        storeId: store.id,
+      }),
+    ),
+    prefetch(
+      trpc.inventory.transfers.queryOptions({
+        limit: 100,
+        storeId: store.id,
+      }),
+    ),
+  ])
 
   return (
-    <InventoryPage
-      initialInventory={inventory}
-      initialMovements={movements}
-      store={store}
-    />
+    <HydrateClient>
+      <Suspense fallback={<InventoryTableSkeleton />}>
+        <InventoryPage store={store} />
+      </Suspense>
+    </HydrateClient>
   )
 }

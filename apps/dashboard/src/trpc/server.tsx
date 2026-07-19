@@ -2,14 +2,16 @@ import "server-only"
 
 import type { AppRouter } from "@ewatrade/api/trpc/routers/_app"
 import { resolveTenantDomain } from "@ewatrade/utils"
-import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
+import {
+  type FetchQueryOptions,
+  HydrationBoundary,
+  type QueryKey,
+  dehydrate,
+} from "@tanstack/react-query"
 import { createTRPCClient, loggerLink } from "@trpc/client"
 import { httpBatchLink } from "@trpc/client/links/httpBatchLink"
-import {
-  type TRPCQueryOptions,
-  createTRPCOptionsProxy,
-} from "@trpc/tanstack-react-query"
-import { headers } from "next/headers"
+import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query"
+import { cookies, headers } from "next/headers"
 import { cache } from "react"
 import superjson from "superjson"
 import { makeQueryClient } from "./query-client"
@@ -53,7 +55,13 @@ async function getTenantSlugFromRequest() {
       "ewatrade.com",
   })
 
-  return result.kind === "tenant" ? result.tenantSlug : null
+  if (result.kind === "tenant" && result.tenantSlug) {
+    return result.tenantSlug
+  }
+
+  return (
+    (await cookies()).get("ewatrade.active_tenant_slug")?.value?.trim() || null
+  )
 }
 
 export const trpc = createTRPCOptionsProxy<AppRouter>({
@@ -62,7 +70,7 @@ export const trpc = createTRPCOptionsProxy<AppRouter>({
     links: [
       httpBatchLink({
         url: "/api/trpc",
-        transformer: superjson as any,
+        transformer: superjson,
         async fetch(input, init) {
           const origin = await getRequestOrigin()
           const url =
@@ -109,30 +117,13 @@ export function HydrateClient({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function prefetch<T extends ReturnType<TRPCQueryOptions<any>>>(
-  queryOptions: T,
-) {
+export function prefetch<
+  TQueryFnData,
+  TError,
+  TData = TQueryFnData,
+  TQueryKey extends QueryKey = QueryKey,
+>(queryOptions: FetchQueryOptions<TQueryFnData, TError, TData, TQueryKey>) {
   const queryClient = getQueryClient()
-
-  if (queryOptions.queryKey[1]?.type === "infinite") {
-    return queryClient.prefetchInfiniteQuery(queryOptions as any)
-  }
 
   return queryClient.prefetchQuery(queryOptions)
-}
-
-export async function batchPrefetch<
-  T extends ReturnType<TRPCQueryOptions<any>>,
->(queryOptionsArray: T[]) {
-  const queryClient = getQueryClient()
-
-  await Promise.allSettled(
-    queryOptionsArray.map((queryOptions) => {
-      if (queryOptions.queryKey[1]?.type === "infinite") {
-        return queryClient.prefetchInfiniteQuery(queryOptions as any)
-      }
-
-      return queryClient.prefetchQuery(queryOptions)
-    }),
-  )
 }

@@ -1,21 +1,7 @@
 import { OPERATING_CURRENCY_CODES } from "@ewatrade/utils"
 import { z } from "zod"
 
-// ─── Step 1: Account Type ─────────────────────────────────────────────────────
-
-export const TENANT_MODES = ["STORE", "DISPATCH", "MERCHANT"] as const
-export type TenantMode = (typeof TENANT_MODES)[number]
-
-export const accountTypeSchema = z.object({
-  modes: z
-    .array(z.enum(TENANT_MODES))
-    .min(1, "Select at least one account type")
-    .max(3, "Maximum 3 modes allowed"),
-})
-
-export type AccountTypeValues = z.infer<typeof accountTypeSchema>
-
-// ─── Step 2: Workspace ────────────────────────────────────────────────────────
+// ─── Step 1: Workspace ────────────────────────────────────────────────────────
 
 export const workspaceSchema = z.object({
   subdomain: z
@@ -41,7 +27,7 @@ export const workspaceSchema = z.object({
 
 export type WorkspaceValues = z.infer<typeof workspaceSchema>
 
-// ─── Step 3: Business Details ─────────────────────────────────────────────────
+// ─── Step 2: Business Details ─────────────────────────────────────────────────
 
 export const INDUSTRIES = [
   { value: "retail", label: "Retail" },
@@ -51,6 +37,10 @@ export const INDUSTRIES = [
   { value: "logistics", label: "Logistics & Delivery" },
   { value: "health_beauty", label: "Health & Beauty" },
   { value: "home_living", label: "Home & Living" },
+  { value: "cleaning_care", label: "Cleaning & Garment Care" },
+  { value: "repairs_maintenance", label: "Repairs & Maintenance" },
+  { value: "professional_services", label: "Professional Services" },
+  { value: "general_mixed", label: "General / Mixed Business" },
   { value: "other", label: "Other" },
 ] as const
 
@@ -76,6 +66,11 @@ export const COUNTRIES = [
 ] as const
 
 export const businessSchema = z.object({
+  addressLine1: z
+    .string()
+    .trim()
+    .min(3, "Enter your business address")
+    .max(200),
   businessName: z
     .string()
     .trim()
@@ -83,6 +78,7 @@ export const businessSchema = z.object({
     .max(120, "Business name is too long"),
   industry: z.string().min(1, "Select your industry"),
   businessSize: z.string().min(1, "Select your business size"),
+  city: z.string().trim().min(2, "Enter your city").max(120),
   countryCode: z.string().min(1, "Select your country"),
   currencyCode: z.enum(OPERATING_CURRENCY_CODES, {
     message: "Select your operating currency",
@@ -93,11 +89,12 @@ export const businessSchema = z.object({
     .min(7, "Enter a valid phone number")
     .max(20, "Phone number is too long")
     .regex(/^\+?[0-9\s\-().]{7,20}$/, "Enter a valid phone number"),
+  region: z.string().trim().max(120).optional().or(z.literal("")),
 })
 
 export type BusinessValues = z.infer<typeof businessSchema>
 
-// ─── Step 4: Owner Account ────────────────────────────────────────────────────
+// ─── Step 3: Owner Account ────────────────────────────────────────────────────
 
 export const ownerSchema = z
   .object({
@@ -132,16 +129,18 @@ export type OwnerValues = z.infer<typeof ownerSchema>
 // ─── Full Signup Payload ──────────────────────────────────────────────────────
 
 export const signupPayloadSchema = z.object({
+  addressLine1: z.string().min(3).max(200),
   accessToken: z.string().trim().min(1).optional(),
-  modes: z.array(z.enum(TENANT_MODES)).min(1),
   subdomain: z.string().min(3).max(32),
   customDomain: z.string().optional().or(z.literal("")),
   businessName: z.string().min(2).max(120),
+  city: z.string().min(2).max(120),
   industry: z.string().min(1),
   businessSize: z.string().min(1),
   countryCode: z.string().min(1),
   currencyCode: z.enum(OPERATING_CURRENCY_CODES),
   phone: z.string().min(7).max(20),
+  region: z.string().max(120).optional().or(z.literal("")),
   firstName: z.string().min(1).max(80),
   lastName: z.string().min(1).max(80),
   email: z.string().email().max(200),

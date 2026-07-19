@@ -22,6 +22,10 @@ function getQueryClient() {
   return browserQueryClient
 }
 
+export function clearDashboardDataCache() {
+  browserQueryClient?.clear()
+}
+
 function getTenantSlugFromBrowserHost() {
   if (typeof window === "undefined") {
     return null
@@ -43,7 +47,7 @@ export function TRPCReactProvider({
       links: [
         httpBatchLink({
           url: "/api/trpc",
-          transformer: superjson as any,
+          transformer: superjson,
           async headers() {
             const tenantSlug = getTenantSlugFromBrowserHost()
 

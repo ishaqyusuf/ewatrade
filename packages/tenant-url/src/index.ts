@@ -72,9 +72,6 @@ const defaultReservedPaths = [
 
 const defaultTenantSlugPattern = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i
 
-export const DASHBOARD_SUBDOMAIN_PREFIX = "dashboard."
-export const DASHBOARD_SUBDOMAIN_SUFFIX = ".dashboard"
-
 function getEnvProjectSlug() {
   if (typeof process === "undefined") return ""
   return (
@@ -168,10 +165,7 @@ function splitPath(pathname: string) {
 }
 
 function joinPath(...parts: (string | null | undefined)[]) {
-  const path = parts
-    .filter(Boolean)
-    .join("/")
-    .replace(/\/+/g, "/")
+  const path = parts.filter(Boolean).join("/").replace(/\/+/g, "/")
   return path.startsWith("/") ? path : `/${path}`
 }
 
@@ -215,42 +209,6 @@ export function extractTenantSubdomain(host: string, appRootDomain: string) {
   }
 
   return ""
-}
-
-export function stripDashboardPrefix(subdomain: string) {
-  let normalizedSubdomain = subdomain
-
-  if (normalizedSubdomain.startsWith(DASHBOARD_SUBDOMAIN_PREFIX)) {
-    normalizedSubdomain = normalizedSubdomain.slice(
-      DASHBOARD_SUBDOMAIN_PREFIX.length,
-    )
-  }
-
-  if (normalizedSubdomain.endsWith(DASHBOARD_SUBDOMAIN_SUFFIX)) {
-    normalizedSubdomain = normalizedSubdomain.slice(
-      0,
-      -DASHBOARD_SUBDOMAIN_SUFFIX.length,
-    )
-  }
-
-  return normalizedSubdomain
-}
-
-export function getCustomDomainLookupHost(host: string) {
-  const normalizedHost = stripPort(normalizeHost(host))
-
-  if (normalizedHost.startsWith(DASHBOARD_SUBDOMAIN_PREFIX)) {
-    return normalizedHost.slice(DASHBOARD_SUBDOMAIN_PREFIX.length)
-  }
-
-  return normalizedHost
-}
-
-export function getCanonicalTenantSlugFromHost(
-  host: string,
-  appRootDomain: string,
-) {
-  return stripDashboardPrefix(extractTenantSubdomain(host, appRootDomain))
 }
 
 function isIpHost(host: string) {
@@ -422,7 +380,7 @@ export function resolveTenantUrlContext(
     }
   }
 
-  const canonicalSlug = getCanonicalTenantSlugFromHost(host, appRootDomain)
+  const canonicalSlug = extractTenantSubdomain(host, appRootDomain)
 
   if (canonicalSlug && isValidTenantSlug(canonicalSlug, config)) {
     return {
@@ -445,7 +403,7 @@ export function resolveTenantUrlContext(
   }
 
   const customDomainLookupHost =
-    host && !appRootHost ? getCustomDomainLookupHost(host) : null
+    host && !appRootHost ? stripPort(normalizeHost(host)) : null
 
   return {
     host,
@@ -574,7 +532,9 @@ export function createTenantLinkAdapter<LinkComponent>(
     const nextProps = {
       ...props,
       href:
-        typeof href === "string" ? buildTenantHref(context, href, options) : href,
+        typeof href === "string"
+          ? buildTenantHref(context, href, options)
+          : href,
     }
 
     return (Link as (props: Record<string, unknown>) => unknown)(nextProps)

@@ -1,5 +1,5 @@
 import {
-  FirstProductSetupContent,
+  SimpleCatalogItemScreen,
   WorkflowModalScreen,
 } from "@/components/mobile"
 import { useRouter } from "expo-router"
@@ -9,9 +9,8 @@ export default function FirstProductSetupModalRoute() {
 
   return (
     <WorkflowModalScreen closeLabel="Close item setup" title="Set up item">
-      <FirstProductSetupContent
-        onComplete={() => router.replace("/dashboard")}
-        presentation="screen"
+      <SimpleCatalogItemScreen
+        onComplete={() => router.replace("/catalog-items-modal")}
       />
     </WorkflowModalScreen>
   )

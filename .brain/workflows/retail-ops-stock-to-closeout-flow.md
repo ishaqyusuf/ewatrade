@@ -1,5 +1,14 @@
 # Retail Ops Stock To Closeout Flow
 
+## Status
+
+Superseded on 2026-07-19. This document preserves the earlier workflow analysis
+only and must not be used as a runtime or API contract. The active generic flow
+is defined by `.brain/features/generic-catalog-inventory-units-stock-operations.md`
+and ADR-0013. Conversions are now configuration-driven transformations between
+versioned Unit Definitions; industry-specific presets are not part of the
+runtime.
+
 ## Purpose
 
 Document the end-to-end operating workflow for Retail Ops: receive stock, define units, convert stock, assign or make stock available to reps, clock in, sell, close out, reconcile, and sync.

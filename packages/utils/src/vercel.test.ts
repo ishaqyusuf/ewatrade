@@ -43,7 +43,6 @@ describe("Vercel tenant domain provisioning", () => {
       VERCEL_API_TOKEN: "vcp_test_token",
       VERCEL_STOREFRONT_PROJECT_ID: "prj_storefront",
       VERCEL_POS_PROJECT_ID: "",
-      VERCEL_DASHBOARD_PROJECT_ID: "",
     })
 
     await provisionTenantVercelDomains({
@@ -76,7 +75,6 @@ describe("Vercel tenant domain provisioning", () => {
     setVercelEnv({
       VERCEL_STOREFRONT_PROJECT_ID: "prj_storefront",
       VERCEL_POS_PROJECT_ID: "",
-      VERCEL_DASHBOARD_PROJECT_ID: "",
     })
 
     await provisionTenantVercelDomains({

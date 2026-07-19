@@ -2,7 +2,7 @@ import type { NotificationStore } from "./store"
 import type {
   NotificationInput,
   NotificationRecord,
-  NotificationState
+  NotificationState,
 } from "./types"
 
 const DEFAULT_DURATION_MS = 5_000
@@ -14,7 +14,9 @@ function createNotificationId() {
   return `notification-${notificationCount}`
 }
 
-function createNotificationRecord(input: NotificationInput): NotificationRecord {
+function createNotificationRecord(
+  input: NotificationInput,
+): NotificationRecord {
   return {
     action: input.action,
     channels: input.channels ?? ["in_app"],
@@ -26,12 +28,12 @@ function createNotificationRecord(input: NotificationInput): NotificationRecord 
     recipients: input.recipients ?? [],
     status: "active",
     title: input.title,
-    variant: input.variant ?? "info"
+    variant: input.variant ?? "info",
   }
 }
 
 export function createMemoryNotificationStore(
-  initialState: NotificationState = { notifications: [] }
+  initialState: NotificationState = { notifications: [] },
 ): NotificationStore {
   let state = initialState
   const listeners = new Set<() => void>()
@@ -53,10 +55,10 @@ export function createMemoryNotificationStore(
           notification.id === notificationId
             ? {
                 ...notification,
-                status: "dismissed"
+                status: "dismissed",
               }
-            : notification
-        )
+            : notification,
+        ),
       }
       emit()
     },
@@ -67,7 +69,7 @@ export function createMemoryNotificationStore(
       const notification = createNotificationRecord(input)
 
       state = {
-        notifications: [notification, ...state.notifications]
+        notifications: [notification, ...state.notifications],
       }
 
       emit()
@@ -77,8 +79,8 @@ export function createMemoryNotificationStore(
     remove(notificationId) {
       state = {
         notifications: state.notifications.filter(
-          (notification) => notification.id !== notificationId
-        )
+          (notification) => notification.id !== notificationId,
+        ),
       }
       emit()
     },
@@ -88,6 +90,6 @@ export function createMemoryNotificationStore(
       return () => {
         listeners.delete(listener)
       }
-    }
+    },
   }
 }

@@ -6,6 +6,7 @@ import { useZodForm } from "@/hooks/use-zod-form"
 import { workspaceFill } from "@/lib/dev-fill-definitions"
 import { type WorkspaceValues, workspaceSchema } from "@/lib/signup-schemas"
 import { Button } from "@ewatrade/ui"
+import { buildInternalTenantHostname } from "@ewatrade/utils"
 import {
   Alert01Icon,
   CashierIcon,
@@ -20,7 +21,7 @@ import { useCallback, useEffect, useState } from "react"
 const PLATFORM_DOMAIN =
   process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com"
 const DASHBOARD_URL =
-  process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "https://dashboard.ewatrade.com"
+  process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "https://ewatrade.com/dashboard"
 
 function getDisplayHost(url: string) {
   try {
@@ -31,31 +32,41 @@ function getDisplayHost(url: string) {
 }
 
 const baseInputClasses =
-  "w-full rounded-2xl border border-border/70 bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10 disabled:opacity-50"
+  "w-full scroll-mt-24 rounded-lg border border-border/70 bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10 disabled:opacity-50"
 
 type SlugAvailability = "idle" | "checking" | "available" | "taken" | "invalid"
 
 type StepWorkspaceProps = {
   defaultValues?: Partial<WorkspaceValues>
   onNext: (data: WorkspaceValues) => void
-  onBack: () => void
 }
 
 function SubdomainPreview({ slug }: { slug: string }) {
   const isValid = slug.length >= 3
+  const previewSlug = slug || "yourname"
 
   const surfaces = [
     {
       icon: Store04Icon,
-      label: "Storefront",
-      domain: `${slug || "yourname"}.${PLATFORM_DOMAIN}`,
+      label: "Reserved storefront",
+      domain: buildInternalTenantHostname({
+        localProjectSlug: previewSlug,
+        tenantSlug: previewSlug,
+        surface: "storefront",
+        platformDomain: PLATFORM_DOMAIN,
+      }),
       color: "text-primary",
       bg: "bg-primary/8",
     },
     {
       icon: CashierIcon,
       label: "POS",
-      domain: `${slug || "yourname"}-pos.${PLATFORM_DOMAIN}`,
+      domain: buildInternalTenantHostname({
+        localProjectSlug: previewSlug,
+        tenantSlug: previewSlug,
+        surface: "pos",
+        platformDomain: PLATFORM_DOMAIN,
+      }),
       color: "text-amber-700",
       bg: "bg-amber-500/8",
     },
@@ -70,7 +81,7 @@ function SubdomainPreview({ slug }: { slug: string }) {
 
   return (
     <div
-      className={`overflow-hidden rounded-2xl border transition-all duration-300 ${
+      className={`overflow-hidden rounded-lg border transition-all duration-300 ${
         isValid
           ? "border-primary/20 bg-primary/3"
           : "border-border/50 bg-muted/30"
@@ -78,14 +89,14 @@ function SubdomainPreview({ slug }: { slug: string }) {
     >
       <div className="border-b border-border/40 px-4 py-2.5">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          Your workspace URLs
+          Your business addresses
         </p>
       </div>
       <div className="divide-y divide-border/30">
         {surfaces.map((s) => (
           <div key={s.label} className="flex items-center gap-3 px-4 py-3">
             <div
-              className={`flex size-7 shrink-0 items-center justify-center rounded-xl ${s.bg} ${s.color}`}
+              className={`flex size-7 shrink-0 items-center justify-center rounded-md ${s.bg} ${s.color}`}
             >
               <HugeiconsIcon
                 icon={s.icon}
@@ -110,11 +121,7 @@ function SubdomainPreview({ slug }: { slug: string }) {
   )
 }
 
-export function StepWorkspace({
-  defaultValues,
-  onNext,
-  onBack,
-}: StepWorkspaceProps) {
+export function StepWorkspace({ defaultValues, onNext }: StepWorkspaceProps) {
   const form = useZodForm<WorkspaceValues>(workspaceSchema, {
     defaultValues: defaultValues ?? { subdomain: "", customDomain: "" },
     mode: "onChange",
@@ -204,25 +211,26 @@ export function StepWorkspace({
           className="text-2xl font-semibold text-foreground sm:text-3xl"
           style={{ fontFamily: "var(--font-display)" }}
         >
-          Claim your workspace
+          Reserve your storefront address
         </h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Reserve the address for your future public storefront.
+          This address is for your future public storefront. Your private
+          dashboard uses one shared ewatrade address.
         </p>
       </div>
 
       <form onSubmit={form.handleSubmit(onNext)} className="space-y-5">
         {/* Subdomain input */}
         <label className="block space-y-2 text-sm font-medium text-foreground">
-          <span>Choose your subdomain</span>
-          <div className="flex overflow-hidden rounded-2xl border border-border/70 bg-background focus-within:border-primary/50 focus-within:ring-4 focus-within:ring-primary/10">
+          <span>Storefront address</span>
+          <div className="flex overflow-hidden rounded-lg border border-border/70 bg-background focus-within:border-primary/50 focus-within:ring-4 focus-within:ring-primary/10">
             <input
               {...form.register("subdomain")}
               type="text"
               placeholder="yourname"
               autoComplete="off"
               spellCheck={false}
-              className="min-w-0 flex-1 bg-transparent px-4 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/50"
+              className="min-w-0 flex-1 scroll-mt-24 bg-transparent px-4 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/50"
             />
             <div className="flex shrink-0 items-center border-l border-border/50 bg-muted/40 px-3 py-3">
               <span className="text-xs text-muted-foreground">
@@ -253,7 +261,7 @@ export function StepWorkspace({
         <label className="block space-y-2 text-sm font-medium text-foreground">
           <div className="flex items-center gap-2">
             <span>Custom domain</span>
-            <span className="rounded-full border border-border/50 bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+            <span className="border-l border-border/50 pl-2 text-[10px] font-medium text-muted-foreground">
               optional
             </span>
           </div>
@@ -275,20 +283,11 @@ export function StepWorkspace({
           )}
         </label>
 
-        <div className="flex items-center justify-between pt-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="lg"
-            className="rounded-full"
-            onClick={onBack}
-          >
-            Back
-          </Button>
+        <div className="flex items-center justify-end border-t border-border/60 pt-5">
           <Button
             type="submit"
             size="lg"
-            className="rounded-full px-8"
+            className="rounded-lg px-8"
             disabled={slugStatus === "checking" || slugStatus === "taken"}
           >
             Continue
@@ -296,7 +295,7 @@ export function StepWorkspace({
         </div>
       </form>
 
-      <DevFormFillButton onFill={fill} label="Fill step 2" />
+      <DevFormFillButton onFill={fill} label="Fill step 1" />
     </div>
   )
 }

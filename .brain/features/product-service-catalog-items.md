@@ -8,7 +8,17 @@ Provide one neutral merchant catalog in which every sellable item is explicitly 
 
 Implemented on 2026-07-18.
 
-## Source Of Truth
+The earlier Product/Service prototype has been cleanly replaced by the approved
+generic Catalog, Offering, Commercial Order, Inventory, and Service Operations
+architecture. Catalog classification, mixed Commercial Orders, and categorical
+Service exclusion from inventory remain valid. See
+`.brain/features/generic-service-operations.md` and
+`.brain/decisions/ADR-0012-generic-service-operations-bounded-contexts.md`. The
+current inventory contract is documented in
+`.brain/features/generic-catalog-inventory-units-stock-operations.md` and
+ADR-0013.
+
+## Historical Planning Inputs
 
 - Ready-for-agent specification: `.scratch/wayfinder-catalog-items-product-service/spec.md`
 - Wayfinder map: `.scratch/wayfinder-catalog-items-product-service/map.md`
@@ -34,6 +44,7 @@ Implemented on 2026-07-18.
 - Add Item starts with a Product/Service selector.
 - Product reuses the existing price, unit, variant, image, opening-stock, and conversion controls.
 - Service uses the shared name, price, variant, and image controls, hides all stock controls, and may collect turnaround and instructions.
+- Once multiple variant values exist, Add Item uses `Variants | Inventory` for Products and `Variants | Pricing` for Services. The second tab owns sellable-row prices and media for both kinds, plus stock for Products only, and exposes the final Add item action.
 - Existing Products migrate automatically and display a Product badge.
 - Existing dry-cleaning service items migrate automatically and display a Service badge.
 - The sale picker shows availability for Product items and no stock availability for Service items.
@@ -41,7 +52,10 @@ Implemented on 2026-07-18.
 - Inventory and stock-derived metrics use Product items only.
 - Mixed stores can use Inventory and Service Jobs from the same workspace.
 
-## Implemented Model
+## Superseded Prototype Model
+
+This section describes the removed prototype and is retained only for historical
+context. It is not the current runtime or target architecture.
 
 - The existing `Product` and `ProductVariant` tables remain the compatibility storage for the canonical Catalog Item and its sellable variants.
 - `CatalogItemKind` classifies every item as `PRODUCT` or `SERVICE`; existing records backfill to `PRODUCT`.

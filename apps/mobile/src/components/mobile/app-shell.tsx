@@ -1,49 +1,49 @@
-import { Icon, type IconKeys } from "@/components/ui/icon"
-import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
-import { useColorScheme, useColors } from "@/hooks/use-color"
-import { StatusBar } from "expo-status-bar"
-import { type ReactNode, useCallback, useRef, useState } from "react"
+import { Icon, type IconKeys } from "@/components/ui/icon";
+import { Pressable } from "@/components/ui/pressable";
+import { Text } from "@/components/ui/text";
+import { useColorScheme, useColors } from "@/hooks/use-color";
+import { StatusBar } from "expo-status-bar";
+import { type ReactNode, useCallback, useRef, useState } from "react";
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   View as RNView,
   View,
-} from "react-native"
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { type MobileBottomTab, MobileBottomTabs } from "./bottom-tabs"
+} from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { type MobileBottomTab, MobileBottomTabs } from "./bottom-tabs";
 
-export type MobileAppShellRole = "attendant" | "owner"
+export type MobileAppShellRole = "attendant" | "owner";
 
 export type MobileAppShellNavItem = {
-  accessibilityLabel?: string
-  disabled?: boolean
-  icon: IconKeys
-  isActive?: boolean
-  label: string
-  onPress: () => void
-  ownerOnly?: boolean
-}
+  accessibilityLabel?: string;
+  disabled?: boolean;
+  icon: IconKeys;
+  isActive?: boolean;
+  label: string;
+  onPress: () => void;
+  ownerOnly?: boolean;
+};
 
 type MobileAppShellProps = {
-  businessName: string
-  centralAction: MobileAppShellNavItem
-  children: ReactNode
-  headerAction?: ReactNode
-  hero?: ReactNode
-  keyboardBottomOffset?: number
-  navItems: MobileAppShellNavItem[]
-  onBusinessPress?: () => void
-  role: MobileAppShellRole
-  scrolledStatusBarColor?: string
-  scrolledStatusBarStyle?: "dark" | "light"
-  showHeader?: boolean
-  statusBarColor?: string
-  statusBarSwitchOffset?: number
-  syncBanner?: ReactNode
-  title: string
-}
+  businessName: string;
+  centralAction: MobileAppShellNavItem;
+  children: ReactNode;
+  headerAction?: ReactNode;
+  hero?: ReactNode;
+  keyboardBottomOffset?: number;
+  navItems: MobileAppShellNavItem[];
+  onBusinessPress?: () => void;
+  role: MobileAppShellRole;
+  scrolledStatusBarColor?: string;
+  scrolledStatusBarStyle?: "dark" | "light";
+  showHeader?: boolean;
+  statusBarColor?: string;
+  statusBarSwitchOffset?: number;
+  syncBanner?: ReactNode;
+  title: string;
+};
 
 export function MobileAppShell({
   businessName,
@@ -63,17 +63,17 @@ export function MobileAppShell({
   syncBanner,
   title,
 }: MobileAppShellProps) {
-  const insets = useSafeAreaInsets()
-  const colors = useColors()
-  const { colorScheme } = useColorScheme()
-  const [hasStartedScroll, setHasStartedScroll] = useState(false)
-  const [isBottomTabHidden, setIsBottomTabHidden] = useState(false)
-  const lastScrollYRef = useRef(0)
+  const insets = useSafeAreaInsets();
+  const colors = useColors();
+  const { colorScheme } = useColorScheme();
+  const [hasStartedScroll, setHasStartedScroll] = useState(false);
+  const [isBottomTabHidden, setIsBottomTabHidden] = useState(false);
+  const lastScrollYRef = useRef(0);
   const visibleNavItems = navItems.filter(
     (item) => role === "owner" || !item.ownerOnly,
-  )
-  const leftItems = visibleNavItems.slice(0, 2)
-  const rightItems = visibleNavItems.slice(2, 4)
+  );
+  const leftItems = visibleNavItems.slice(0, 2);
+  const rightItems = visibleNavItems.slice(2, 4);
   const bottomTabs: MobileBottomTab[] = [
     ...leftItems.map(toBottomTab),
     {
@@ -116,43 +116,45 @@ export function MobileAppShell({
       ),
     },
     ...rightItems.map(toBottomTab),
-  ]
+  ];
   const contentStatusBarStyle =
-    scrolledStatusBarStyle ?? (colorScheme === "dark" ? "light" : "dark")
-  const heroStatusBarStyle = colorScheme === "dark" ? "dark" : "light"
+    scrolledStatusBarStyle ?? (colorScheme === "dark" ? "light" : "dark");
+  const heroStatusBarStyle = colorScheme === "dark" ? "dark" : "light";
   const shellStatusBarColor =
-    statusBarColor ?? (hero ? colors.primary : colors.background)
+    statusBarColor ?? (hero ? colors.primary : colors.background);
   const statusBarBackgroundColor = hasStartedScroll
     ? (scrolledStatusBarColor ?? colors.card)
-    : shellStatusBarColor
+    : shellStatusBarColor;
   const statusBarStyle = hasStartedScroll
     ? contentStatusBarStyle
-    : heroStatusBarStyle
+    : hero
+      ? heroStatusBarStyle
+      : contentStatusBarStyle;
 
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const scrollY = Math.max(0, event.nativeEvent.contentOffset.y)
-      const nextHasStartedScroll = scrollY > statusBarSwitchOffset
-      const scrollDelta = scrollY - lastScrollYRef.current
+      const scrollY = Math.max(0, event.nativeEvent.contentOffset.y);
+      const nextHasStartedScroll = scrollY > statusBarSwitchOffset;
+      const scrollDelta = scrollY - lastScrollYRef.current;
 
       setHasStartedScroll((currentValue) =>
         currentValue === nextHasStartedScroll
           ? currentValue
           : nextHasStartedScroll,
-      )
+      );
 
       if (scrollY <= statusBarSwitchOffset) {
-        setIsBottomTabHidden(false)
+        setIsBottomTabHidden(false);
       } else if (scrollDelta > 4) {
-        setIsBottomTabHidden(true)
+        setIsBottomTabHidden(true);
       } else if (scrollDelta < -4) {
-        setIsBottomTabHidden(false)
+        setIsBottomTabHidden(false);
       }
 
-      lastScrollYRef.current = scrollY
+      lastScrollYRef.current = scrollY;
     },
     [statusBarSwitchOffset],
-  )
+  );
 
   return (
     <RNView
@@ -255,7 +257,7 @@ export function MobileAppShell({
         />
       </View>
     </RNView>
-  )
+  );
 }
 
 function toBottomTab(item: MobileAppShellNavItem): MobileBottomTab {
@@ -264,5 +266,5 @@ function toBottomTab(item: MobileAppShellNavItem): MobileBottomTab {
     icon: item.icon,
     label: item.label,
     onPress: item.onPress,
-  }
+  };
 }

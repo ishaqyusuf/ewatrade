@@ -70,7 +70,7 @@ export function Design01HomeContent() {
           <Design01HomeRecord
             icon="Warehouse"
             label="Low stock"
-            meta="Premium rabbit feed"
+            meta="Organic granola"
             value="6 bags"
           />
         </View>

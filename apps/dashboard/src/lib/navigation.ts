@@ -12,7 +12,6 @@ export type DashboardNavIcon =
   | "customers"
   | "home"
   | "inventory"
-  | "links"
   | "products"
   | "sales"
   | "services"
@@ -70,14 +69,16 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     href: "/inventory",
     icon: "inventory",
     label: "Inventory",
-    canSee: canUseRetailOps,
+    canSee: (role, context) => canUseRetailOps(role) && context.hasProductItems,
   },
   {
     description: "Sales sessions and order operations",
     href: "/sales",
     icon: "sales",
     label: "Sales",
-    canSee: (role, context) => canUseRetailOps(role) && context.hasProductItems,
+    canSee: (role, context) =>
+      canUseRetailOps(role) &&
+      (context.hasProductItems || context.hasServiceItems),
   },
   {
     description: "Tracked service work, requests, and due dates",
@@ -99,13 +100,6 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     icon: "staff",
     label: "Staff",
     canSee: canManageCatalog,
-  },
-  {
-    description: "Generated product links and follow-up",
-    href: "/links",
-    icon: "links",
-    label: "Generated links",
-    canSee: canUseRetailOps,
   },
   {
     description: "Analytics, reports, exports, and sync review",

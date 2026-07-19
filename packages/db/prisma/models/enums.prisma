@@ -62,58 +62,261 @@ enum StoreStatus {
   ARCHIVED
 }
 
-enum ProductStatus {
-  DRAFT
-  ACTIVE
-  ARCHIVED
-}
-
 enum CatalogItemKind {
   PRODUCT
   SERVICE
 }
 
-enum ServiceFulfillmentMode {
-  IMMEDIATE
+enum CatalogRecordStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum SellableOfferingKind {
+  PRODUCT_UNIT
+  SERVICE
+}
+
+enum OfferingPricingPolicy {
+  FIXED
+  QUOTE_REQUIRED
+}
+
+enum UnitConfigurationStatus {
+  DRAFT
+  CURRENT
+  SUPERSEDED
+}
+
+enum InventoryUnitStockBehavior {
+  CANONICAL_SHARED
+  ALTERNATE_TRANSACTION
+  PACKAGED_STOCK
+}
+
+enum StockBalanceKind {
+  SHARED_POOL
+  PACKAGED_STOCK
+}
+
+enum StockCustodyType {
+  STORE
+  STAFF
+  SESSION
+  TRANSIT
+}
+
+enum StockReservationStatus {
+  ACTIVE
+  RELEASED
+  COMMITTED
+  EXPIRED
+}
+
+enum StockCountStatus {
+  DRAFT
+  FINALIZED
+  CANCELLED
+}
+
+enum StockTransferStatus {
+  DRAFT
+  DISPATCHED
+  IN_TRANSIT
+  RECEIVED
+  CANCELLED
+  EXCEPTION
+}
+
+enum InventoryCloseoutStatus {
+  DRAFT
+  FINALIZED
+  CANCELLED
+}
+
+enum ProductReturnDisposition {
+  RESTOCK
+  QUARANTINE
+  DAMAGED
+  NO_RESTOCK
+}
+
+enum StockOperationType {
+  OPENING_STOCK
+  RECEIPT
+  RESERVATION_COMMIT
+  SALE_FULFILLMENT
+  RETURN
+  COUNT_RECONCILIATION
+  ADJUSTMENT
+  TRANSFER
+  TRANSFORMATION
+  STOCK_TRANSITION
+  CUSTODY_ASSIGNMENT
+  CUSTODY_RETURN
+  CORRECTION
+  CORRECTION_REVERSAL
+  CORRECTION_REPLACEMENT
+}
+
+enum ServiceWorkPolicy {
+  CHARGE_ONLY
   TRACKED
 }
 
-enum ServiceJobStatus {
-  RECEIVED
+enum WorkAuthorizationPolicy {
+  ON_ORDER_CONFIRMATION
+  AFTER_REQUIRED_PAYMENT
+  MANUAL_RELEASE
+}
+
+enum WorkAuthorizationStatus {
+  PENDING_PAYMENT
+  PENDING_RELEASE
+  AUTHORIZED
+  REVOKED
+}
+
+enum ServiceIntakeStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+}
+
+enum ServicePriority {
+  NORMAL
+  URGENT
+}
+
+enum ServiceJobLineStatus {
+  QUEUED
   IN_PROGRESS
-  READY
+  BLOCKED
+  READY_FOR_HANDOFF
   COMPLETED
   CANCELLED
 }
 
-enum ServiceJobEventType {
+enum ServiceWorkEventType {
   CREATED
-  ASSIGNED
+  AUTHORIZED
+  AUTHORIZATION_REVOKED
   STATUS_CHANGED
-  DELAYED
-  DUE_DATE_CHANGED
+  SPLIT
+  ASSIGNED
+  REASSIGNED
+  DUE_COMMITMENT_CREATED
+  DUE_COMMITMENT_REVISED
   NOTE_ADDED
-  EVIDENCE_ADDED
-}
-
-enum ServiceRequestStatus {
-  PENDING
-  CONFIRMED
-  CONVERTED
-  REJECTED
+  EVIDENCE_CAPTURED
+  EVIDENCE_PUBLISHED
+  EVIDENCE_REVOKED
+  PICKUP
+  DELIVERY
+  REMOTE_HANDOFF
+  DELAY
+  FAILED_ATTEMPT
+  QUALITY_EXCEPTION
+  CUSTOMER_REJECTION
+  REWORK
   CANCELLED
 }
 
-enum ServiceNotificationIntentType {
-  READY
+enum ServiceExceptionType {
   DELAY
+  QUALITY
+  FAILED_ATTEMPT
+  CUSTOMER_REJECTION
+  OTHER
+}
+
+enum ServiceExceptionOutcome {
+  OPEN
+  RESOLVED
+  REWORK_REQUIRED
+  CANCELLED
+}
+
+enum ServiceEvidencePurpose {
+  INTAKE_CONDITION
+  PROGRESS
+  COMPLETION
+  EXCEPTION
+  APPROVAL
+  HANDOFF
+  OTHER
+}
+
+enum ServiceEvidenceMediaType {
+  PHOTO
+  VIDEO
+  FILE
+}
+
+enum ServiceEvidenceVisibility {
+  PRIVATE
+  PUBLISHED
+  REVOKED
+}
+
+enum ServiceEvidenceUploadStatus {
+  LOCAL
+  QUEUED
+  UPLOADING
+  AVAILABLE
+  FAILED
+  REVOKED
+}
+
+enum ServiceEvidenceAuditAction {
+  CAPTURED
+  UPLOAD_QUEUED
+  UPLOAD_STARTED
+  UPLOAD_SUCCEEDED
+  UPLOAD_FAILED
+  ACCESSED
+  PUBLISHED
+  PUBLICATION_REVOKED
+}
+
+enum ServiceRequestFormStatus {
+  DRAFT
+  ACTIVE
+  DISABLED
+  EXPIRED
+}
+
+enum ServiceRequestStatus {
+  SUBMITTED
+  NEEDS_INFORMATION
+  QUOTED
+  DECLINED
+  WITHDRAWN
+  CONVERTED
+}
+
+enum ServiceQuoteStatus {
+  DRAFT
+  ISSUED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  SUPERSEDED
+  REVOKED
+}
+
+enum CustomerTrackingStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
 }
 
 enum ServiceNotificationIntentStatus {
   PENDING
-  SENT
-  FAILED
-  SKIPPED
+  READY
+  COMPLETED
+  CANCELLED
 }
 
 enum ServiceNotificationChannel {
@@ -123,59 +326,12 @@ enum ServiceNotificationChannel {
   WHATSAPP
 }
 
-enum ProductUnitPriceChangeSource {
-  PRODUCT_SETUP
-  MANUAL
-  SYNC_REPLAY
-  IMPORT
-}
-
-enum StockDeliveryStatus {
-  DRAFT
-  RECEIVED
+enum ServiceDeliveryAttemptStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
   CANCELLED
-}
-
-enum StockDeliverySource {
-  PRODUCTION
-  SUPPLIER
-  MANUAL
-  TRANSFER
-  OTHER
-}
-
-enum InventoryMovementDirection {
-  INBOUND
-  OUTBOUND
-}
-
-enum InventoryMovementType {
-  OPENING_STOCK
-  STOCK_INTAKE
-  STOCK_ADJUSTMENT
-  CONVERSION_OUT
-  CONVERSION_IN
-  SALE_DEDUCTION
-  SALE_REVERSAL
-  STAFF_ASSIGNMENT
-  STAFF_RETURN
-  CLOSEOUT_ADJUSTMENT
-  DAMAGE
-  LOSS
-  SYNC_CORRECTION
-}
-
-enum InventoryMovementSource {
-  PRODUCT_SETUP
-  STOCK_DELIVERY
-  STOCK_ADJUSTMENT
-  UNIT_CONVERSION
-  SALE
-  STAFF_STOCK_ASSIGNMENT
-  STAFF_STOCK_RETURN
-  CLOSEOUT
-  SYNC_REPLAY
-  MANUAL
 }
 
 enum BillingProvider {
@@ -230,117 +386,47 @@ enum OfflineDeviceStatus {
   REVOKED
 }
 
-enum RetailOpsSyncRunStatus {
-  PENDING
-  PROCESSING
-  SUCCEEDED
-  PARTIAL
-  FAILED
-  SKIPPED
+enum OfflineCommandType {
+  PRODUCT_SETUP
+  STOCK_RECEIPT
+  STOCK_COUNT
+  COMMERCIAL_ORDER
+  CUSTODY_MOVE
+  INVENTORY_CLOSEOUT
+  SERVICE_INTAKE
+  SERVICE_TRANSITION
+  SERVICE_NOTE
+  SERVICE_SELF_ASSIGNMENT
+  SERVICE_EVIDENCE_CAPTURE
 }
 
-enum RetailOpsSyncEventStatus {
+enum OfflineCommandStatus {
   PENDING
   APPLIED
-  FAILED
-  SKIPPED
-  CONFLICT
-  WAITING
+  REVIEW_REQUIRED
+  BLOCKED
+  DISCARDED
 }
 
-enum ProductShareLinkStatus {
-  ACTIVE
-  INACTIVE
+enum OfflineConflictCode {
+  STALE_CONFIGURATION
+  OFFERING_OR_PRICE_CHANGED
+  BALANCE_REVISION_CHANGED
+  RESERVATION_CHANGED
+  PERMISSION_CHANGED
+  UNSUPPORTED_CLIENT
+  IDEMPOTENCY_MISMATCH
+  DEPENDENCY_BLOCKED
+  INVALID_COMMAND
+  SERVICE_TRANSITION_CHANGED
+  SERVICE_ASSIGNMENT_CHANGED
+  SERVICE_PROMISE_CHANGED
+  SERVICE_EVIDENCE_CHANGED
 }
 
-enum ProductShareLinkEventType {
-  CREATED
-  VIEWED
-  ORDER_REQUESTED
-  DEACTIVATED
-}
-
-enum ProductShareLinkOrderRequestStatus {
-  PENDING
-  COMPLETED
-  CANCELLED
-}
-
-enum ProductShareLinkReservationStatus {
-  RESERVED
-  RELEASED
-  CONSUMED
-  EXPIRED
-  FAILED
-}
-
-enum ProductShareLinkNotificationStatus {
-  PENDING
-  SENT
-  FAILED
-  SKIPPED
-}
-
-enum ProductShareLinkNotificationChannel {
-  EMAIL
-  SMS
-  WHATSAPP
-  IN_APP
-}
-
-enum ProductShareLinkNotificationRecipientType {
-  CUSTOMER
-  OWNER
-  ADMIN
-  SALES_REP
-  LINK_CREATOR
-  OTHER
-}
-
-enum RetailOpsCustomerIdentityType {
-  EMAIL
-  PHONE
-  NAME
-  PLATFORM_ACCOUNT
-}
-
-enum RetailOpsCustomerEventType {
-  CREATED
-  UPDATED
-  SALE_RECORDED
-  ORDER_REQUESTED
-  MERGED
-}
-
-enum RetailOpsCloseoutStatus {
-  PENDING_REVIEW
-  APPROVED
-  REJECTED
-  NEEDS_CORRECTION
-}
-
-enum RetailOpsCloseoutReviewResult {
-  APPROVED
-  REJECTED
-  NEEDS_CORRECTION
-}
-
-enum RetailOpsPaymentDeclarationMethod {
-  CASH
-  TRANSFER
-  CARD
-  CREDIT
-  OTHER
-}
-
-enum RetailOpsStockDeclarationType {
-  OPENING
-  CLOSING
-}
-
-enum RetailOpsStockDeclarationSource {
-  CENTRAL_STOCK
-  STAFF_WALLET
+enum OfflineReviewDecision {
+  RETRY
+  DISCARD
 }
 
 enum OrderStatus {
@@ -363,35 +449,6 @@ enum PaymentStatus {
   REFUNDED
 }
 
-enum OrderPaymentEventType {
-  REFUND
-  CORRECTION
-}
-
-enum DeliveryRequestStatus {
-  DRAFT
-  OPEN
-  ASSIGNED
-  PICKED_UP
-  DELIVERED
-  CANCELLED
-}
-
-enum DeliveryBidStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
-  WITHDRAWN
-}
-
-enum AssignmentStatus {
-  PROPOSED
-  ACCEPTED
-  IN_TRANSIT
-  COMPLETED
-  CANCELLED
-}
-
 enum SiteStatus {
   DRAFT
   PUBLISHED
@@ -402,12 +459,6 @@ enum PageStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
-}
-
-enum PosSessionStatus {
-  OPEN
-  CLOSED
-  SUSPENDED
 }
 
 enum ConversationChannel {

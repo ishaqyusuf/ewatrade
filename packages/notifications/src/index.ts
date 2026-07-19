@@ -12,7 +12,6 @@ import type {
   MarketingWaitlistJoinedPayload,
   NotificationDispatch,
   NotificationInput,
-  RetailOpsSharedLinkOrderRequestedPayload,
   RetailOpsStaffInvitedPayload,
 } from "./types"
 
@@ -144,64 +143,6 @@ export function createMarketingWaitlistDispatch(
         email: payload.email,
         fullName: payload.fullName,
       }),
-    },
-  )
-}
-
-function uniqueEmailRecipients(
-  recipients: Array<{
-    deliveryRole: "admin" | "customer"
-    displayName?: string | null
-    email: string
-  }>,
-) {
-  const seen = new Set<string>()
-
-  return recipients.flatMap<NotificationContact>((recipient) => {
-    const key = `${recipient.deliveryRole}:${recipient.email.toLowerCase()}`
-
-    if (seen.has(key)) {
-      return []
-    }
-
-    seen.add(key)
-
-    return [
-      createEmailNotificationContact({
-        deliveryRole: recipient.deliveryRole,
-        displayName: recipient.displayName ?? undefined,
-        email: recipient.email,
-      }),
-    ]
-  })
-}
-
-export function getRetailOpsSharedLinkOrderRecipients(
-  payload: RetailOpsSharedLinkOrderRequestedPayload,
-) {
-  return uniqueEmailRecipients([
-    {
-      deliveryRole: "customer",
-      displayName: payload.customerName,
-      email: payload.customerEmail,
-    },
-    ...payload.merchantRecipients.map((recipient) => ({
-      deliveryRole: "admin" as const,
-      displayName: recipient.displayName ?? undefined,
-      email: recipient.email,
-    })),
-  ])
-}
-
-export function createRetailOpsSharedLinkOrderDispatch(
-  payload: RetailOpsSharedLinkOrderRequestedPayload,
-) {
-  return createNotificationDispatchFromType(
-    ewatradeNotificationTypes,
-    "retail_ops_shared_link_order_requested",
-    payload,
-    {
-      recipients: getRetailOpsSharedLinkOrderRecipients(payload),
     },
   )
 }

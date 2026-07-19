@@ -1,28 +1,28 @@
-import { Icon, type IconKeys } from "@/components/ui/icon"
-import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
-import { View } from "@/components/ui/view"
-import { cn } from "@/lib/utils"
-import type { ReactNode } from "react"
+import { Icon, type IconKeys } from "@/components/ui/icon";
+import { Pressable } from "@/components/ui/pressable";
+import { Text } from "@/components/ui/text";
+import { View } from "@/components/ui/view";
+import { cn } from "@/lib/utils";
+import type { ReactNode } from "react";
 
 type SecondarySheetHeaderProps = {
-  description: string
-  icon: IconKeys
-  title: string
-}
+  description: string;
+  icon: IconKeys;
+  title: string;
+};
 
 type SecondaryOperationalRowProps = {
-  children?: ReactNode
-  className?: string
-  detail: string
-  disabled?: boolean
-  icon?: IconKeys
-  metadata?: string
-  onPress?: () => void
-  selected?: boolean
-  title: string
-  trailing?: ReactNode
-}
+  children?: ReactNode;
+  className?: string;
+  detail: string;
+  disabled?: boolean;
+  icon?: IconKeys;
+  metadata?: string;
+  onPress?: () => void;
+  selected?: boolean;
+  title: string;
+  trailing?: ReactNode;
+};
 
 export function SecondarySheetHeader({
   description,
@@ -41,7 +41,7 @@ export function SecondarySheetHeader({
         </Text>
       </View>
     </View>
-  )
+  );
 }
 
 export function SecondaryOperationalRow({
@@ -57,11 +57,11 @@ export function SecondaryOperationalRow({
   trailing,
 }: SecondaryOperationalRowProps) {
   const containerClassName = cn(
-    "gap-3 rounded-2xl bg-muted/40 p-4",
-    selected && "bg-primary/10",
+    "gap-3 border-t border-border py-4",
+    selected && "bg-primary/5",
     disabled && "opacity-60",
     className,
-  )
+  );
   const content = (
     <>
       <View className="flex-row items-start justify-between gap-3">
@@ -91,10 +91,10 @@ export function SecondaryOperationalRow({
         </View>
       ) : null}
     </>
-  )
+  );
 
   if (!onPress) {
-    return <View className={containerClassName}>{content}</View>
+    return <View className={containerClassName}>{content}</View>;
   }
 
   return (
@@ -107,5 +107,5 @@ export function SecondaryOperationalRow({
     >
       {content}
     </Pressable>
-  )
+  );
 }

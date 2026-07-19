@@ -10,11 +10,11 @@ export function resolveNotificationAuthor(input: {
 
   if (input.authUserId) {
     return {
-      id: input.authUserId
+      id: input.authUserId,
     }
   }
 
   return {
-    id: "system"
+    id: "system",
   }
 }

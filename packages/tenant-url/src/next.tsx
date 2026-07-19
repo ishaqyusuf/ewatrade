@@ -2,7 +2,7 @@
 
 import NextLink from "next/link"
 import { useRouter } from "next/navigation"
-import { forwardRef, type ComponentPropsWithoutRef } from "react"
+import { type ComponentPropsWithoutRef, forwardRef } from "react"
 import { useTenantHref } from "./react"
 
 const isDev = process.env.NODE_ENV !== "production"

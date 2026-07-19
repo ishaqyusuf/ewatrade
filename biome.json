@@ -15,6 +15,13 @@
     }
   },
   "files": {
-    "ignore": ["node_modules", ".next", ".turbo", "dist", "build"]
+    "ignore": [
+      "node_modules",
+      ".next",
+      ".turbo",
+      "dist",
+      "build",
+      "**/next-env.d.ts"
+    ]
   }
 }

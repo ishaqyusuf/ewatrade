@@ -6,11 +6,6 @@ import { renderMarketingEarlyAccessConfirmationTemplate } from "../templates/mar
 import { renderMarketingWaitlistAdminTemplate } from "../templates/marketing-waitlist-admin"
 import { renderMarketingWaitlistConfirmationTemplate } from "../templates/marketing-waitlist-confirmation"
 import {
-  type RetailOpsSharedLinkOrderEmailInput,
-  renderRetailOpsSharedLinkOrderCustomerTemplate,
-  renderRetailOpsSharedLinkOrderMerchantTemplate,
-} from "../templates/retail-ops-shared-link-order"
-import {
   type RetailOpsStaffInviteEmailInput,
   renderRetailOpsStaffInviteTemplate,
 } from "../templates/retail-ops-staff-invite"
@@ -81,7 +76,6 @@ export * from "../templates/marketing-early-access-admin"
 export * from "../templates/marketing-early-access-confirmation"
 export * from "../templates/marketing-waitlist-admin"
 export * from "../templates/marketing-waitlist-confirmation"
-export * from "../templates/retail-ops-shared-link-order"
 export * from "../templates/retail-ops-staff-invite"
 
 export function createEmailMessage(message: EmailMessage) {
@@ -280,44 +274,6 @@ export function createMarketingWaitlistConfirmationEmail(params: {
   to: string
 }) {
   const content = renderMarketingWaitlistConfirmationTemplate(params.input)
-
-  return createEmailMessage({
-    from: params.from,
-    html: content.html,
-    replyTo: params.replyTo,
-    subject: params.subject,
-    text: content.text,
-    to: params.to,
-  })
-}
-
-export function createRetailOpsSharedLinkOrderCustomerEmail(params: {
-  from: string
-  input: RetailOpsSharedLinkOrderEmailInput
-  replyTo?: string
-  subject: string
-  to: string
-}) {
-  const content = renderRetailOpsSharedLinkOrderCustomerTemplate(params.input)
-
-  return createEmailMessage({
-    from: params.from,
-    html: content.html,
-    replyTo: params.replyTo,
-    subject: params.subject,
-    text: content.text,
-    to: params.to,
-  })
-}
-
-export function createRetailOpsSharedLinkOrderMerchantEmail(params: {
-  from: string
-  input: RetailOpsSharedLinkOrderEmailInput
-  replyTo?: string
-  subject: string
-  to: string
-}) {
-  const content = renderRetailOpsSharedLinkOrderMerchantTemplate(params.input)
 
   return createEmailMessage({
     from: params.from,

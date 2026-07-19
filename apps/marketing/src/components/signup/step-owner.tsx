@@ -11,7 +11,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { useState } from "react"
 
 const baseInputClasses =
-  "w-full rounded-2xl border border-border/70 bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
+  "w-full scroll-mt-24 rounded-lg border border-border/70 bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
 
 function PasswordStrength({ password }: { password: string }) {
   const len = password.length
@@ -229,7 +229,7 @@ export function StepOwner({
         </label>
 
         {submitError && (
-          <div className="rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3">
+          <div className="border-l-2 border-destructive bg-destructive/5 px-4 py-3">
             <p className="text-sm text-destructive">{submitError}</p>
           </div>
         )}
@@ -239,12 +239,12 @@ export function StepOwner({
           Policy.
         </p>
 
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center justify-between border-t border-border/60 pt-5">
           <Button
             type="button"
             variant="ghost"
             size="lg"
-            className="rounded-full"
+            className="rounded-lg"
             onClick={onBack}
             disabled={isSubmitting}
           >
@@ -253,7 +253,7 @@ export function StepOwner({
           <Button
             type="submit"
             size="lg"
-            className="rounded-full px-8"
+            className="rounded-lg px-8"
             disabled={isSubmitting}
           >
             {isSubmitting ? "Creating workspace…" : "Create workspace"}
@@ -261,7 +261,7 @@ export function StepOwner({
         </div>
       </form>
 
-      <DevFormFillButton onFill={fill} label="Fill step 4" />
+      <DevFormFillButton onFill={fill} label="Fill step 3" />
     </div>
   )
 }
