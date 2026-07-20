@@ -1,0 +1,505 @@
+{
+  "schemaVersion": 1,
+  "helpers": [
+    {
+      "key": "counted-item",
+      "kind": "product",
+      "classification": "pattern",
+      "title": "Counted item",
+      "description": "Sell and track a product as whole pieces.",
+      "tags": ["count", "piece", "single", "stock"],
+      "recommended": true,
+      "setup": {
+        "units": [
+          {
+            "factor": "1",
+            "name": "Piece",
+            "stockBehavior": "canonical_shared",
+            "symbol": "pc",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": []
+      }
+    },
+    {
+      "key": "shared-pack-carton",
+      "kind": "product",
+      "classification": "pattern",
+      "title": "Piece, pack, and carton",
+      "description": "Price packs and cartons from one shared piece balance.",
+      "tags": ["piece", "pack", "carton", "shared stock", "dozen"],
+      "recommended": true,
+      "setup": {
+        "units": [
+          {
+            "factor": "1",
+            "name": "Piece",
+            "stockBehavior": "canonical_shared",
+            "symbol": "pc",
+            "transactionScale": 0
+          },
+          {
+            "factor": "12",
+            "name": "Pack",
+            "stockBehavior": "alternate_transaction",
+            "transactionScale": 0
+          },
+          {
+            "factor": "144",
+            "name": "Carton",
+            "stockBehavior": "alternate_transaction",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": []
+      }
+    },
+    {
+      "key": "measured-weight",
+      "kind": "product",
+      "classification": "pattern",
+      "title": "Measured by weight",
+      "description": "Track kilograms and sell kilograms or grams from shared stock.",
+      "tags": ["weight", "kilogram", "kg", "gram", "measured"],
+      "recommended": true,
+      "setup": {
+        "units": [
+          {
+            "factor": "1",
+            "name": "Kilogram",
+            "stockBehavior": "canonical_shared",
+            "symbol": "kg",
+            "transactionScale": 2
+          },
+          {
+            "factor": "0.001",
+            "name": "Gram",
+            "stockBehavior": "alternate_transaction",
+            "symbol": "g",
+            "transactionScale": 2
+          }
+        ],
+        "optionGroups": []
+      }
+    },
+    {
+      "key": "measured-volume",
+      "kind": "product",
+      "classification": "pattern",
+      "title": "Measured by volume",
+      "description": "Track litres and sell litres or millilitres from shared stock.",
+      "tags": ["volume", "litre", "liter", "millilitre", "ml", "measured"],
+      "setup": {
+        "units": [
+          {
+            "factor": "1",
+            "name": "Litre",
+            "stockBehavior": "canonical_shared",
+            "symbol": "L",
+            "transactionScale": 2
+          },
+          {
+            "factor": "0.001",
+            "name": "Millilitre",
+            "stockBehavior": "alternate_transaction",
+            "symbol": "mL",
+            "transactionScale": 2
+          }
+        ],
+        "optionGroups": []
+      }
+    },
+    {
+      "key": "measured-length",
+      "kind": "product",
+      "classification": "pattern",
+      "title": "Measured by length",
+      "description": "Track metres and sell metres or centimetres from shared stock.",
+      "tags": ["length", "metre", "meter", "centimetre", "cm", "measured"],
+      "setup": {
+        "units": [
+          {
+            "factor": "1",
+            "name": "Metre",
+            "stockBehavior": "canonical_shared",
+            "symbol": "m",
+            "transactionScale": 2
+          },
+          {
+            "factor": "0.01",
+            "name": "Centimetre",
+            "stockBehavior": "alternate_transaction",
+            "symbol": "cm",
+            "transactionScale": 2
+          }
+        ],
+        "optionGroups": []
+      }
+    },
+    {
+      "key": "prepared-portions",
+      "kind": "product",
+      "classification": "pattern",
+      "title": "Whole, half, and quarter",
+      "description": "Keep prepared half and quarter portions as separate stock.",
+      "tags": ["whole", "half", "quarter", "portion", "prepared stock"],
+      "setup": {
+        "units": [
+          {
+            "factor": "1",
+            "name": "Whole unit",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          },
+          {
+            "factor": "0.5",
+            "name": "Half unit",
+            "stockBehavior": "packaged_stock",
+            "transactionScale": 0
+          },
+          {
+            "factor": "0.25",
+            "name": "Quarter unit",
+            "stockBehavior": "packaged_stock",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": []
+      }
+    },
+    {
+      "key": "feed-bag-25kg",
+      "kind": "product",
+      "classification": "example",
+      "title": "25 kg chicken feed",
+      "description": "Starter, Grower, and Layer feed sold by prepared bag portions or kilograms.",
+      "tags": [
+        "feed",
+        "poultry",
+        "chicken",
+        "starter",
+        "grower",
+        "layer",
+        "25kg"
+      ],
+      "recommended": true,
+      "suggestedName": "Chicken Feed",
+      "setup": {
+        "units": [
+          {
+            "factor": "1",
+            "name": "Bag",
+            "stockBehavior": "canonical_shared",
+            "symbol": "bag",
+            "transactionScale": 0
+          },
+          {
+            "factor": "0.5",
+            "name": "Half bag",
+            "stockBehavior": "packaged_stock",
+            "transactionScale": 0
+          },
+          {
+            "factor": "0.25",
+            "name": "Quarter bag",
+            "stockBehavior": "packaged_stock",
+            "transactionScale": 0
+          },
+          {
+            "factor": "0.04",
+            "name": "Kilogram",
+            "stockBehavior": "packaged_stock",
+            "symbol": "kg",
+            "transactionScale": 2
+          }
+        ],
+        "optionGroups": [
+          {
+            "name": "Feed type",
+            "values": ["Starter", "Grower", "Layer"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "feed-bag-50kg",
+      "kind": "product",
+      "classification": "example",
+      "title": "50 kg chicken feed",
+      "description": "Starter, Grower, and Layer feed sold by prepared bag portions or kilograms.",
+      "tags": [
+        "feed",
+        "poultry",
+        "chicken",
+        "starter",
+        "grower",
+        "layer",
+        "50kg"
+      ],
+      "recommended": true,
+      "suggestedName": "Chicken Feed",
+      "setup": {
+        "units": [
+          {
+            "factor": "1",
+            "name": "Bag",
+            "stockBehavior": "canonical_shared",
+            "symbol": "bag",
+            "transactionScale": 0
+          },
+          {
+            "factor": "0.5",
+            "name": "Half bag",
+            "stockBehavior": "packaged_stock",
+            "transactionScale": 0
+          },
+          {
+            "factor": "0.25",
+            "name": "Quarter bag",
+            "stockBehavior": "packaged_stock",
+            "transactionScale": 0
+          },
+          {
+            "factor": "0.02",
+            "name": "Kilogram",
+            "stockBehavior": "packaged_stock",
+            "symbol": "kg",
+            "transactionScale": 2
+          }
+        ],
+        "optionGroups": [
+          {
+            "name": "Feed type",
+            "values": ["Starter", "Grower", "Layer"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "apparel-size-colour",
+      "kind": "product",
+      "classification": "example",
+      "title": "Apparel by size and colour",
+      "description": "A counted clothing item with independently priced size and colour combinations.",
+      "tags": ["apparel", "clothing", "fashion", "size", "colour", "color"],
+      "suggestedName": "Clothing Item",
+      "setup": {
+        "units": [
+          {
+            "factor": "1",
+            "name": "Piece",
+            "stockBehavior": "canonical_shared",
+            "symbol": "pc",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": [
+          {
+            "name": "Size",
+            "values": ["S", "M", "L", "XL"]
+          },
+          {
+            "name": "Colour",
+            "values": ["Black", "White", "Blue"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "drinks-bottle-crate",
+      "kind": "product",
+      "classification": "example",
+      "title": "Drinks by bottle and crate",
+      "description": "Track bottles and keep unopened crates as separate prepared stock.",
+      "tags": ["drink", "beverage", "bottle", "crate", "soft drink"],
+      "suggestedName": "Soft Drink",
+      "setup": {
+        "units": [
+          {
+            "factor": "1",
+            "name": "Bottle",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          },
+          {
+            "factor": "24",
+            "name": "Crate",
+            "stockBehavior": "packaged_stock",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": []
+      }
+    },
+    {
+      "key": "fabric-roll-metre",
+      "kind": "product",
+      "classification": "example",
+      "title": "Fabric by roll and metre",
+      "description": "Sell measured fabric while unopened 50 metre rolls keep a separate balance.",
+      "tags": ["fabric", "textile", "roll", "metre", "meter", "cloth"],
+      "suggestedName": "Fabric",
+      "setup": {
+        "units": [
+          {
+            "factor": "1",
+            "name": "Metre",
+            "stockBehavior": "canonical_shared",
+            "symbol": "m",
+            "transactionScale": 2
+          },
+          {
+            "factor": "0.01",
+            "name": "Centimetre",
+            "stockBehavior": "alternate_transaction",
+            "symbol": "cm",
+            "transactionScale": 2
+          },
+          {
+            "factor": "50",
+            "name": "Roll",
+            "stockBehavior": "packaged_stock",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": []
+      }
+    },
+    {
+      "key": "simple-fixed-service",
+      "kind": "service",
+      "classification": "pattern",
+      "title": "Simple fixed-price service",
+      "description": "Charge for a service without creating tracked work.",
+      "tags": ["simple", "fixed", "charge", "service"],
+      "recommended": true,
+      "setup": {
+        "authorizationPolicy": "on_order_confirmation",
+        "optionGroups": [],
+        "pricingPolicy": "fixed",
+        "quantityScale": 0,
+        "workPolicy": "charge_only"
+      }
+    },
+    {
+      "key": "tracked-fixed-service",
+      "kind": "service",
+      "classification": "pattern",
+      "title": "Tracked fixed-price service",
+      "description": "Create work in the service queue after the order is confirmed.",
+      "tags": ["tracked", "fixed", "job", "work", "service"],
+      "recommended": true,
+      "setup": {
+        "authorizationPolicy": "on_order_confirmation",
+        "optionGroups": [],
+        "pricingPolicy": "fixed",
+        "quantityScale": 0,
+        "workPolicy": "tracked"
+      }
+    },
+    {
+      "key": "tracked-quote-service",
+      "kind": "service",
+      "classification": "pattern",
+      "title": "Quote-required service",
+      "description": "Review the request and agree a price before tracked work begins.",
+      "tags": ["quote", "estimate", "tracked", "job", "service"],
+      "setup": {
+        "authorizationPolicy": "manual_release",
+        "optionGroups": [],
+        "pricingPolicy": "quote_required",
+        "quantityScale": 0,
+        "workPolicy": "tracked"
+      }
+    },
+    {
+      "key": "dry-cleaning-laundry",
+      "kind": "service",
+      "classification": "example",
+      "title": "Dry cleaning and laundry",
+      "description": "Tracked garment care with independent garment, treatment, and size prices.",
+      "tags": ["dry cleaning", "laundry", "garment", "washing", "ironing"],
+      "recommended": true,
+      "suggestedName": "Dry Cleaning",
+      "setup": {
+        "authorizationPolicy": "on_order_confirmation",
+        "optionGroups": [
+          {
+            "name": "Garment",
+            "values": [
+              "Shirt",
+              "Trousers",
+              "Suit",
+              "Caftan",
+              "Agbada",
+              "Jalabia",
+              "Iro & Buba"
+            ]
+          },
+          {
+            "name": "Treatment",
+            "values": ["Washing", "Ironing"]
+          },
+          {
+            "name": "Size",
+            "values": ["SM", "L"]
+          }
+        ],
+        "pricingPolicy": "fixed",
+        "quantityScale": 0,
+        "workPolicy": "tracked"
+      }
+    },
+    {
+      "key": "device-repair",
+      "kind": "service",
+      "classification": "example",
+      "title": "Device repair",
+      "description": "Quote and track diagnosis or repair work by device type.",
+      "tags": ["device", "phone", "laptop", "tablet", "repair", "technician"],
+      "suggestedName": "Device Repair",
+      "setup": {
+        "authorizationPolicy": "manual_release",
+        "optionGroups": [
+          {
+            "name": "Device",
+            "values": ["Phone", "Laptop", "Tablet"]
+          },
+          {
+            "name": "Work type",
+            "values": ["Diagnosis", "Repair"]
+          }
+        ],
+        "pricingPolicy": "quote_required",
+        "quantityScale": 0,
+        "workPolicy": "tracked"
+      }
+    },
+    {
+      "key": "professional-consultation",
+      "kind": "service",
+      "classification": "example",
+      "title": "Professional consultation",
+      "description": "Quote professional engagements delivered remotely or on-site.",
+      "tags": ["professional", "consultation", "advisory", "project", "quote"],
+      "suggestedName": "Professional Consultation",
+      "setup": {
+        "authorizationPolicy": "manual_release",
+        "optionGroups": [
+          {
+            "name": "Engagement",
+            "values": ["Consultation", "Advisory", "Project"]
+          },
+          {
+            "name": "Delivery",
+            "values": ["Remote", "On-site"]
+          }
+        ],
+        "pricingPolicy": "quote_required",
+        "quantityScale": 0,
+        "workPolicy": "tracked"
+      }
+    }
+  ]
+}

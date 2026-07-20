@@ -107,6 +107,11 @@ behavioral testing are complete.
 - Dashboard: Service setup, direct Intake, work queue/Job workspace, assignments,
   promises, notes, exceptions, split/rework, Requests, versioned Quotes,
   customer-safe updates, evidence governance, tracking links and reports.
+- Dashboard and mobile Service setup include optional JSON-backed quick setups
+  for fixed, tracked, quote-required, dry-cleaning/laundry, repair, and
+  consultation structures. Dry-cleaning options generate independent Garment ×
+  Treatment × Size Offering prices; Express remains configured once in Store
+  Service Settings.
 - Dashboard Service Work follows the Midday workspace structure: server
   prefetch/hydration, URL-addressable Intake/Request/Quote/Job sheets,
   domain-owned queue states, focused forms/workspaces, exact invalidation,

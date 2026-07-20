@@ -8,6 +8,7 @@
     "./currency": "./src/currency.ts",
     "./colors": "./src/colors.ts",
     "./constants": "./src/constants.ts",
+    "./catalog-setup-helpers": "./src/catalog-setup-helpers.ts",
     "./dayjs": "./src/dayjs.ts",
     "./exact-decimal": "./src/exact-decimal.ts",
     "./insurance-documents": "./src/insurance-documents.ts"

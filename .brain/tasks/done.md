@@ -4,6 +4,16 @@
 Completed work with durable value to the project.
 
 ## Items
+- Added shared Catalog quick-setup helpers for dashboard and mobile Product and
+  Service creation. A full-width top-of-form action opens a full-screen
+  searchable Setup/Example list with titles, descriptions, and tags; selecting
+  a helper prefills editable units, stock behavior, options, work policies, and
+  hidden precision without prices, stock, IDs, or automatic saving. The
+  library includes explicit prepared-stock feed examples and independently
+  priceable dry-cleaning combinations. Completed Date: 2026-07-20. Checks Run:
+  8 focused helper tests with 207 assertions, utility/dashboard/mobile
+  TypeScript, four mobile UI guards, targeted Biome, `git diff --check`, and
+  Android Product-form/full-screen-picker verification.
 - Completed the generic Service commerce loop for garment care and other
   tracked services. Concrete garment/service/size Offerings retain independent
   prices; Intake supports express surcharge, optional assignment, pickup

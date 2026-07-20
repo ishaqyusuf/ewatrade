@@ -35,11 +35,19 @@ behavioral testing are complete.
 - Dashboard and mobile use the same short Product/Service setup, with optional
   advanced option groups, Offerings, selling units, identifiers, prices and
   opening stock.
+- Both forms offer the same optional JSON-backed quick-setup library through a
+  full-screen searchable picker. Recipes prefill editable units, exact factors,
+  stock behavior and generic options without prices, opening stock, IDs, or
+  automatic submission. Quantity precision stays hidden; blank/manual Product
+  units and divisible recipe units allow two decimal places.
 - Dashboard Catalog, Inventory, Orders and Reports follow the Midday workspace
   structure: thin authenticated routes, typed server prefetch/hydration,
   Suspense and route recovery states, URL-backed search/sheet state,
   domain-owned tables, and focused mutation forms with exact invalidation.
 - No industry or container name is a runtime type or branch.
+- Feed helpers are examples only. Bag is the received canonical balance and
+  Half bag, Quarter bag, and Kilogram are separate Packaged Stock balances, so
+  stock becomes sellable in those forms only through explicit transformations.
 - Dashboard managers can inspect configuration history, create/edit a Draft and
   publish it. Semantic changes with live balances require an explicit Stock
   Transition operation.

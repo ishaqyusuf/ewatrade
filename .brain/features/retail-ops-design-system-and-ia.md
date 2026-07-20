@@ -489,6 +489,11 @@ Splash, login, sign-up, and OTP verification use shared auth primitives so the e
 
 The first-product setup sheet is the empty-business bridge after auth/business entry.
 
+- Catalog Product/Service forms begin with a full-width `Choose a quick setup`
+  action. The action opens a full-screen flat list grouped into Setups and
+  Examples; every row carries title, description, and tags, while a
+  keyboard-safe search field stays at the bottom. Selection prefills an
+  editable form and never submits it.
 - The setup remains a single guided form: item details, media, and either primary-unit price/stock or variant price/stock rows.
 - Guided setup sheets should use reusable setup-flow primitives for the progress rail, section framing, selectable pills, inline notices, and compact summary rows instead of rebuilding one-off card stacks.
 - First-product setup uses flat line-style fields, manual unit entry with a focused keyboard suggestion bar, divider-based variant rows, and inline stock fields so the flow stays lightweight while remaining operationally clear.

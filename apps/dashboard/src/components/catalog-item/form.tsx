@@ -4,17 +4,26 @@ import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import { useTRPC } from "@/trpc/client"
 import { cn } from "@/utils"
 import { Button, CurrencyInput } from "@ewatrade/ui"
-import { buildCatalogVariantCombinations } from "@ewatrade/utils"
 import {
-  EXACT_QUANTITY_MAX_SCALE,
+  type CatalogSetupHelper,
+  buildCatalogSetupHelperApplication,
+  buildCatalogVariantCombinations,
+  findCatalogSetupHelper,
+  getCatalogSetupReplacementAction,
+  isCatalogFixedPriceMissing,
+} from "@ewatrade/utils"
+import {
+  EXACT_CANONICAL_MAX_SCALE,
   parseExactDecimal,
 } from "@ewatrade/utils/exact-decimal"
 import { Package01Icon, ToolsIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
 import type { FormEvent, InputHTMLAttributes, ReactNode } from "react"
 import { useMemo, useRef, useState } from "react"
 
+import { CatalogSetupHelperPicker } from "./catalog-setup-helper-picker"
 import { type SimpleCatalogItemKind, useCatalogItemForm } from "./form-context"
 
 type CatalogItemFormProps = {
@@ -74,9 +83,11 @@ type AdvancedVariantDraft = {
   barcode: string
   enabled: boolean
   price: string
+  quantity: string
   quoteRequired: boolean
   sku: string
   storeIds: string[]
+  unitPrices: Record<string, string>
 }
 
 type AdvancedUnitDraft = {
@@ -87,6 +98,8 @@ type AdvancedUnitDraft = {
   stockBehavior: "alternate_transaction" | "packaged_stock"
   transactionScale: number
 }
+
+const DEFAULT_UNIT_TRANSACTION_SCALE = 2
 
 function newOptionGroup(): AdvancedOptionGroup {
   return { id: globalThis.crypto.randomUUID(), name: "", values: "" }
@@ -99,7 +112,7 @@ function newUnit(): AdvancedUnitDraft {
     name: "",
     price: "",
     stockBehavior: "alternate_transaction",
-    transactionScale: 0,
+    transactionScale: DEFAULT_UNIT_TRANSACTION_SCALE,
   }
 }
 
@@ -112,6 +125,7 @@ export function CatalogItemForm({
   onCreated,
   storeId,
 }: CatalogItemFormProps) {
+  const router = useRouter()
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const { setCatalogItemMode } = useCatalogItemParams()
@@ -125,9 +139,17 @@ export function CatalogItemForm({
   } = useCatalogItemForm()
   const clientOperationId = useRef(createClientOperationId())
   const [error, setError] = useState<string | null>(null)
+  const [helperPickerOpen, setHelperPickerOpen] = useState(false)
+  const [selectedHelperKey, setSelectedHelperKey] = useState<string | null>(
+    null,
+  )
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showUnits, setShowUnits] = useState(false)
+  const [canonicalTransactionScale, setCanonicalTransactionScale] = useState(
+    DEFAULT_UNIT_TRANSACTION_SCALE,
+  )
   const [trackServiceWork, setTrackServiceWork] = useState(false)
+  const [defaultQuoteRequired, setDefaultQuoteRequired] = useState(false)
   const [serviceAuthorization, setServiceAuthorization] = useState<
     "after_required_payment" | "manual_release" | "on_order_confirmation"
   >("on_order_confirmation")
@@ -144,6 +166,9 @@ export function CatalogItemForm({
   )
   const storesQuery = useQuery(trpc.tenant.stores.queryOptions())
   const stores = storesQuery.data ?? []
+  const selectedHelper = selectedHelperKey
+    ? findCatalogSetupHelper(selectedHelperKey)
+    : undefined
   const normalizedOptionGroups = useMemo(
     () =>
       optionGroups.map((group, groupIndex) => ({
@@ -164,12 +189,18 @@ export function CatalogItemForm({
     () => buildCatalogVariantCombinations(normalizedOptionGroups),
     [normalizedOptionGroups],
   )
-  const onCreatedMutation = (item: { name: string }) => {
-    queryClient.invalidateQueries({
-      queryKey: trpc.catalog.listItems.queryKey(),
-    })
+  const onCreatedMutation = async (item: { name: string }) => {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: trpc.catalog.listItems.queryKey(),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: trpc.tenant.featureAvailability.queryKey(),
+      }),
+    ])
     onCreated(item.name)
     setCatalogItemMode(null)
+    router.refresh()
   }
   const createMutation = useMutation(
     trpc.catalog.createSimpleItem.mutationOptions({
@@ -190,9 +221,11 @@ export function CatalogItemForm({
         barcode: "",
         enabled: true,
         price: "",
-        quoteRequired: false,
+        quantity: "",
+        quoteRequired: defaultQuoteRequired,
         sku: "",
         storeIds: [storeId],
+        unitPrices: {},
       }
     )
   }
@@ -212,6 +245,126 @@ export function CatalogItemForm({
     setForm((current) => ({ ...current, kind }))
   }
 
+  function hasStructuralDraft() {
+    return (
+      selectedHelperKey !== null ||
+      showAdvanced ||
+      showUnits ||
+      showOpeningStock ||
+      trackServiceWork ||
+      additionalUnits.length > 0 ||
+      Object.keys(variantDrafts).length > 0 ||
+      form.openingStockQuantity.trim().length > 0 ||
+      (form.kind === "product" && form.unitName.trim().length > 0) ||
+      serviceGuidance.trim().length > 0 ||
+      optionGroups.some((group) => group.name.trim() || group.values.trim())
+    )
+  }
+
+  function commitHelper(helper: CatalogSetupHelper | null) {
+    if (helper && helper.kind !== form.kind) return
+
+    setError(null)
+    setSelectedHelperKey(helper?.key ?? null)
+    setVariantDrafts({})
+    setServiceGuidance("")
+    setDefaultQuoteRequired(false)
+    setShowOpeningStock(false)
+
+    if (!helper) {
+      setShowAdvanced(false)
+      setShowUnits(false)
+      setAdditionalUnits([])
+      setOptionGroups([newOptionGroup()])
+      setCanonicalTransactionScale(DEFAULT_UNIT_TRANSACTION_SCALE)
+      setTrackServiceWork(false)
+      setServiceAuthorization("on_order_confirmation")
+      setServiceQuantityScale(0)
+      setForm((current) => ({
+        ...current,
+        openingStockQuantity: "",
+        unitName: current.kind === "product" ? "" : current.unitName,
+      }))
+      setHelperPickerOpen(false)
+      return
+    }
+
+    const application = buildCatalogSetupHelperApplication(helper)
+    const groups = application.optionGroups.map((group) => ({
+      id: globalThis.crypto.randomUUID(),
+      name: group.name,
+      values: group.values.join(", "),
+    }))
+    setOptionGroups(groups.length > 0 ? groups : [newOptionGroup()])
+    setShowAdvanced(groups.length > 0)
+
+    if (application.kind === "product") {
+      setForm((current) => ({
+        ...current,
+        name: current.name.trim()
+          ? current.name
+          : (application.suggestedName ?? current.name),
+        openingStockQuantity: "",
+        unitName: application.canonicalUnit.name,
+      }))
+      setCanonicalTransactionScale(application.canonicalUnit.transactionScale)
+      setAdditionalUnits(
+        application.additionalUnits.map((unit) => ({
+          factor: unit.factor,
+          id: globalThis.crypto.randomUUID(),
+          name: unit.name,
+          price: "",
+          stockBehavior:
+            unit.stockBehavior === "packaged_stock"
+              ? "packaged_stock"
+              : "alternate_transaction",
+          transactionScale: unit.transactionScale,
+        })),
+      )
+      setShowUnits(application.additionalUnits.length > 0)
+      setTrackServiceWork(false)
+    } else {
+      setForm((current) => ({
+        ...current,
+        name: current.name.trim()
+          ? current.name
+          : (application.suggestedName ?? current.name),
+      }))
+      setAdditionalUnits([])
+      setShowUnits(false)
+      setCanonicalTransactionScale(DEFAULT_UNIT_TRANSACTION_SCALE)
+      setTrackServiceWork(application.workPolicy === "tracked")
+      setServiceAuthorization(application.authorizationPolicy)
+      setServiceQuantityScale(application.quantityScale)
+      setDefaultQuoteRequired(application.pricingPolicy === "quote_required")
+    }
+
+    setHelperPickerOpen(false)
+  }
+
+  function applyHelper(helper: CatalogSetupHelper | null) {
+    const replacementAction = getCatalogSetupReplacementAction({
+      currentKey: selectedHelperKey,
+      hasStructuralDraft: hasStructuralDraft(),
+      nextKey: helper?.key ?? null,
+    })
+    if (replacementAction === "close") {
+      setHelperPickerOpen(false)
+      return
+    }
+
+    if (
+      replacementAction === "confirm" &&
+      !globalThis.confirm(
+        "Replace the current units, options, prices, and stock setup?",
+      )
+    ) {
+      return
+    }
+
+    commitHelper(helper)
+  }
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
@@ -221,13 +374,19 @@ export function CatalogItemForm({
       return
     }
 
-    const priceMinor = parsePrice(form.price)
-    if (priceMinor === null) {
+    const quoteOnlyService = form.kind === "service" && defaultQuoteRequired
+    const parsedPriceMinor = parsePrice(form.price)
+    if (!quoteOnlyService && parsedPriceMinor === null) {
       setError("Enter a valid price.")
       return
     }
+    const priceMinor = parsedPriceMinor ?? 0
 
-    if (showAdvanced || (form.kind === "product" && showUnits)) {
+    if (
+      showAdvanced ||
+      (form.kind === "product" && (showUnits || selectedHelperKey !== null)) ||
+      quoteOnlyService
+    ) {
       const activeCombinations = showAdvanced
         ? combinations
         : [{ key: "default", name: form.name.trim(), selections: [] }]
@@ -252,12 +411,13 @@ export function CatalogItemForm({
       let openingStockQuantity: string | undefined
       if (
         form.kind === "product" &&
+        !showAdvanced &&
         showOpeningStock &&
         form.openingStockQuantity.trim()
       ) {
         try {
           openingStockQuantity = parseExactDecimal(form.openingStockQuantity, {
-            maxScale: EXACT_QUANTITY_MAX_SCALE,
+            maxScale: canonicalTransactionScale,
           })
         } catch (quantityError) {
           setError(
@@ -278,6 +438,55 @@ export function CatalogItemForm({
         return
       }
 
+      const missingProductPrice =
+        form.kind === "product" && showAdvanced
+          ? activeCombinations.find((combination) => {
+              const draft = variantDraft(combination.key)
+              return draft.enabled && !draft.price.trim()
+            })
+          : undefined
+      if (missingProductPrice) {
+        setError(`Enter a price for ${missingProductPrice.name}.`)
+        return
+      }
+
+      const invalidProductQuantity =
+        form.kind === "product" && showAdvanced
+          ? activeCombinations.find((combination) => {
+              const draft = variantDraft(combination.key)
+              if (!draft.enabled || !draft.quantity.trim()) return draft.enabled
+              try {
+                parseExactDecimal(draft.quantity, {
+                  maxScale: canonicalTransactionScale,
+                })
+                return false
+              } catch {
+                return true
+              }
+            })
+          : undefined
+      if (invalidProductQuantity) {
+        setError(`Enter current stock for ${invalidProductQuantity.name}.`)
+        return
+      }
+
+      const missingFixedServicePrice =
+        form.kind === "service" && parsedPriceMinor === null
+          ? activeCombinations.find((combination) => {
+              const draft = variantDraft(combination.key)
+              return isCatalogFixedPriceMissing({
+                enabled: draft.enabled,
+                hasBasePrice: false,
+                hasOverridePrice: Boolean(draft.price.trim()),
+                quoteRequired: draft.quoteRequired,
+              })
+            })
+          : undefined
+      if (missingFixedServicePrice) {
+        setError(`Enter a price for ${missingFixedServicePrice.name}.`)
+        return
+      }
+
       const invalidUnit = additionalUnits.find(
         (unit) =>
           !unit.name.trim() ||
@@ -288,6 +497,28 @@ export function CatalogItemForm({
       if (invalidUnit) {
         setError(
           "Every additional unit needs a name, positive exact factor, and valid optional price.",
+        )
+        return
+      }
+
+      const invalidVariantUnitPrice =
+        form.kind === "product"
+          ? activeCombinations
+              .filter((combination) => variantDraft(combination.key).enabled)
+              .flatMap((combination) =>
+                additionalUnits.map((unit) => ({
+                  combination,
+                  unit,
+                  value:
+                    variantDraft(combination.key).unitPrices[unit.id]?.trim() ??
+                    "",
+                })),
+              )
+              .find(({ value }) => value && parsePrice(value) === null)
+          : undefined
+      if (invalidVariantUnitPrice) {
+        setError(
+          `Enter a valid ${invalidVariantUnitPrice.unit.name} price for ${invalidVariantUnitPrice.combination.name}.`,
         )
         return
       }
@@ -338,14 +569,14 @@ export function CatalogItemForm({
             optionGroups: showAdvanced ? normalizedOptionGroups : undefined,
             storeId,
             unitConfiguration: {
-              canonicalBalanceScale: 0,
+              canonicalBalanceScale: EXACT_CANONICAL_MAX_SCALE,
               units: [
                 {
                   factor: "1",
                   key: "canonical",
                   name: form.unitName.trim(),
                   stockBehavior: "canonical_shared",
-                  transactionScale: 0,
+                  transactionScale: canonicalTransactionScale,
                 },
                 ...additionalUnits.map((unit, unitIndex) => ({
                   factor: unit.factor.trim(),
@@ -362,6 +593,12 @@ export function CatalogItemForm({
                 variantIndex,
               ) => ({
                 ...variant,
+                openingStockQuantity:
+                  showAdvanced && draft.quantity.trim()
+                    ? parseExactDecimal(draft.quantity, {
+                        maxScale: canonicalTransactionScale,
+                      })
+                    : undefined,
                 offerings: [
                   {
                     ...commonOffering,
@@ -374,9 +611,12 @@ export function CatalogItemForm({
                   ...additionalUnits.map((unit, unitIndex) => ({
                     ...commonOffering,
                     barcode: undefined,
-                    fixedPriceMinor: unit.price.trim()
-                      ? (parsePrice(unit.price) ?? variantPriceMinor)
-                      : variantPriceMinor,
+                    fixedPriceMinor: draft.unitPrices[unit.id]?.trim()
+                      ? (parsePrice(draft.unitPrices[unit.id] ?? "") ??
+                        variantPriceMinor)
+                      : unit.price.trim()
+                        ? (parsePrice(unit.price) ?? variantPriceMinor)
+                        : variantPriceMinor,
                     inventoryUnitKey: unitKey(unitIndex),
                     key: `offering-${variantIndex + 1}-${unitIndex + 2}`,
                     name: `${variant.name} · ${unit.name.trim()}`,
@@ -393,7 +633,7 @@ export function CatalogItemForm({
             description: form.description.trim() || undefined,
             kind: "service",
             name: form.name.trim(),
-            optionGroups: normalizedOptionGroups,
+            optionGroups: showAdvanced ? normalizedOptionGroups : undefined,
             storeId,
             variants: variantRows.map(
               ({ commonOffering, draft, variantPriceMinor, ...variant }) => ({
@@ -461,7 +701,7 @@ export function CatalogItemForm({
     if (showOpeningStock && form.openingStockQuantity.trim()) {
       try {
         openingStockQuantity = parseExactDecimal(form.openingStockQuantity, {
-          maxScale: EXACT_QUANTITY_MAX_SCALE,
+          maxScale: canonicalTransactionScale,
         })
       } catch (quantityError) {
         setError(
@@ -520,15 +760,36 @@ export function CatalogItemForm({
 
   return (
     <form className="flex min-h-full flex-col" onSubmit={submit}>
+      <CatalogSetupHelperPicker
+        kind={form.kind}
+        onClose={() => setHelperPickerOpen(false)}
+        onSelect={applyHelper}
+        open={helperPickerOpen}
+        selectedKey={selectedHelperKey}
+      />
       <button
         type="button"
         className="mb-5 w-fit text-sm text-muted-foreground hover:text-foreground"
-        onClick={() => setForm((current) => ({ ...current, kind: null }))}
+        onClick={() => {
+          commitHelper(null)
+          setForm((current) => ({ ...current, kind: null }))
+        }}
       >
         {form.kind === "product" ? "Product" : "Service"} · Change
       </button>
 
       <div className="grid gap-4">
+        <Button
+          type="button"
+          className="w-full justify-center"
+          onClick={() => setHelperPickerOpen(true)}
+          variant="outline"
+        >
+          {selectedHelper
+            ? `Quick setup: ${selectedHelper.title}`
+            : "Choose a quick setup"}
+        </Button>
+
         <Field htmlFor="catalog-item-name" label="Name">
           <TextInput
             id="catalog-item-name"
@@ -543,7 +804,10 @@ export function CatalogItemForm({
           />
         </Field>
 
-        <Field htmlFor="catalog-item-price" label="Price">
+        <Field
+          htmlFor="catalog-item-price"
+          label={defaultQuoteRequired ? "Starting price (optional)" : "Price"}
+        >
           <CurrencyInput
             id="catalog-item-price"
             className="h-11 rounded-lg border border-border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -552,7 +816,7 @@ export function CatalogItemForm({
             onValueChange={(value) =>
               setForm((current) => ({ ...current, price: value }))
             }
-            required
+            required={!defaultQuoteRequired}
           />
         </Field>
 
@@ -574,7 +838,7 @@ export function CatalogItemForm({
           </Field>
         ) : null}
 
-        {showOpeningStock && form.kind === "product" ? (
+        {showOpeningStock && form.kind === "product" && !showAdvanced ? (
           <Field htmlFor="catalog-opening-stock" label="Opening stock">
             <TextInput
               id="catalog-opening-stock"
@@ -608,7 +872,7 @@ export function CatalogItemForm({
         ) : null}
 
         <div className="flex flex-wrap gap-2">
-          {form.kind === "product" && !showOpeningStock ? (
+          {form.kind === "product" && !showAdvanced && !showOpeningStock ? (
             <Button
               type="button"
               variant="outline"
@@ -633,7 +897,25 @@ export function CatalogItemForm({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setShowAdvanced(true)}
+              onClick={() => {
+                if (
+                  form.kind === "product" &&
+                  form.openingStockQuantity.trim() &&
+                  !globalThis.confirm(
+                    "Adding options replaces the single opening stock with stock for each variant. Continue?",
+                  )
+                ) {
+                  return
+                }
+                setShowAdvanced(true)
+                if (form.kind === "product") {
+                  setShowOpeningStock(false)
+                  setForm((current) => ({
+                    ...current,
+                    openingStockQuantity: "",
+                  }))
+                }
+              }}
             >
               Add options
             </Button>
@@ -697,21 +979,6 @@ export function CatalogItemForm({
                   After required payment
                 </option>
                 <option value="manual_release">After manager release</option>
-              </select>
-            </Field>
-            <Field htmlFor="service-quantity-scale" label="Quantity precision">
-              <select
-                id="service-quantity-scale"
-                className="h-11 rounded-lg border border-border bg-background px-3 text-sm"
-                value={serviceQuantityScale}
-                onChange={(event) =>
-                  setServiceQuantityScale(Number(event.target.value))
-                }
-              >
-                <option value={0}>Whole quantities</option>
-                <option value={1}>1 decimal place</option>
-                <option value={2}>2 decimal places</option>
-                <option value={3}>3 decimal places</option>
               </select>
             </Field>
             <Field
@@ -849,13 +1116,21 @@ export function CatalogItemForm({
                           </label>
                           <Field
                             htmlFor={`catalog-variant-price-${combination.key}`}
-                            label="Price override"
+                            label={
+                              form.kind === "product"
+                                ? "Price"
+                                : "Price override"
+                            }
                           >
                             <CurrencyInput
                               id={`catalog-variant-price-${combination.key}`}
                               className="h-11 rounded-lg border border-border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                               currencyCode={currencyCode}
-                              placeholder={form.price || "Use item price"}
+                              placeholder={
+                                form.kind === "product"
+                                  ? "Enter price"
+                                  : form.price || "Use item price"
+                              }
                               value={draft.price}
                               onValueChange={(value) =>
                                 updateVariantDraft(combination.key, {
@@ -878,36 +1153,97 @@ export function CatalogItemForm({
                               Quote required
                             </label>
                           ) : (
-                            <div className="grid gap-3 sm:grid-cols-2">
+                            <>
                               <Field
-                                htmlFor={`catalog-sku-${combination.key}`}
-                                label="SKU"
+                                htmlFor={`catalog-variant-stock-${combination.key}`}
+                                label="Current stock"
                               >
                                 <TextInput
-                                  id={`catalog-sku-${combination.key}`}
-                                  value={draft.sku}
+                                  id={`catalog-variant-stock-${combination.key}`}
+                                  inputMode="decimal"
+                                  placeholder="Enter current stock"
+                                  required={draft.enabled}
+                                  value={draft.quantity}
                                   onChange={(event) =>
                                     updateVariantDraft(combination.key, {
-                                      sku: event.target.value,
+                                      quantity: event.target.value,
                                     })
                                   }
                                 />
                               </Field>
-                              <Field
-                                htmlFor={`catalog-barcode-${combination.key}`}
-                                label="Barcode"
-                              >
-                                <TextInput
-                                  id={`catalog-barcode-${combination.key}`}
-                                  value={draft.barcode}
-                                  onChange={(event) =>
-                                    updateVariantDraft(combination.key, {
-                                      barcode: event.target.value,
-                                    })
-                                  }
-                                />
-                              </Field>
-                            </div>
+                              {additionalUnits.length > 0 ? (
+                                <div className="grid gap-3 border-t border-border pt-3">
+                                  <div>
+                                    <p className="text-sm font-medium">
+                                      Selling prices by unit
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      Override this variant&apos;s price for
+                                      each selling unit, or leave it blank to
+                                      use the unit default.
+                                    </p>
+                                  </div>
+                                  {additionalUnits.map((unit) => (
+                                    <Field
+                                      htmlFor={`catalog-variant-unit-price-${combination.key}-${unit.id}`}
+                                      key={unit.id}
+                                      label={`${unit.name} price`}
+                                    >
+                                      <CurrencyInput
+                                        id={`catalog-variant-unit-price-${combination.key}-${unit.id}`}
+                                        className="h-11 rounded-lg border border-border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                        currencyCode={currencyCode}
+                                        placeholder={
+                                          unit.price ||
+                                          draft.price ||
+                                          form.price ||
+                                          "Use item price"
+                                        }
+                                        value={draft.unitPrices[unit.id] ?? ""}
+                                        onValueChange={(value) =>
+                                          updateVariantDraft(combination.key, {
+                                            unitPrices: {
+                                              ...draft.unitPrices,
+                                              [unit.id]: value,
+                                            },
+                                          })
+                                        }
+                                      />
+                                    </Field>
+                                  ))}
+                                </div>
+                              ) : null}
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                <Field
+                                  htmlFor={`catalog-sku-${combination.key}`}
+                                  label="SKU"
+                                >
+                                  <TextInput
+                                    id={`catalog-sku-${combination.key}`}
+                                    value={draft.sku}
+                                    onChange={(event) =>
+                                      updateVariantDraft(combination.key, {
+                                        sku: event.target.value,
+                                      })
+                                    }
+                                  />
+                                </Field>
+                                <Field
+                                  htmlFor={`catalog-barcode-${combination.key}`}
+                                  label="Barcode"
+                                >
+                                  <TextInput
+                                    id={`catalog-barcode-${combination.key}`}
+                                    value={draft.barcode}
+                                    onChange={(event) =>
+                                      updateVariantDraft(combination.key, {
+                                        barcode: event.target.value,
+                                      })
+                                    }
+                                  />
+                                </Field>
+                              </div>
+                            </>
                           )}
 
                           {stores.length > 1 ? (
@@ -1070,34 +1406,7 @@ export function CatalogItemForm({
                         </select>
                       </Field>
                     </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <label className="flex items-center gap-2 text-sm">
-                        Decimal places
-                        <select
-                          className="h-9 rounded-lg border border-border bg-background px-2"
-                          value={unit.transactionScale}
-                          onChange={(event) =>
-                            setAdditionalUnits((current) =>
-                              current.map((candidate) =>
-                                candidate.id === unit.id
-                                  ? {
-                                      ...candidate,
-                                      transactionScale: Number(
-                                        event.target.value,
-                                      ),
-                                    }
-                                  : candidate,
-                              ),
-                            )
-                          }
-                        >
-                          {[0, 1, 2, 3, 4, 5, 6].map((scale) => (
-                            <option key={scale} value={scale}>
-                              {scale}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                    <div className="flex items-center justify-end gap-3">
                       <Button
                         type="button"
                         size="sm"

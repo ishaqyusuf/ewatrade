@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { CatalogSetupHelperPicker } from "@/components/mobile/catalog-setup-helper-picker"
 import { FormField } from "@/components/mobile/form-field"
 import {
   KeyboardInlineComposer,
@@ -13,7 +14,15 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useTRPC } from "@/trpc/client"
-import { buildCatalogVariantCombinations, majorToMinor } from "@ewatrade/utils"
+import {
+  type CatalogSetupHelper,
+  buildCatalogSetupHelperApplication,
+  buildCatalogVariantCombinations,
+  findCatalogSetupHelper,
+  getCatalogSetupReplacementAction,
+  isCatalogFixedPriceMissing,
+  majorToMinor,
+} from "@ewatrade/utils"
 import {
   EXACT_CANONICAL_MAX_SCALE,
   EXACT_FACTOR_MAX_SCALE,
@@ -22,7 +31,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Keyboard, type TextInput, View } from "react-native"
+import { Alert, Keyboard, type TextInput, View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
 type CatalogItemKind = "product" | "service"
@@ -209,12 +218,15 @@ function ToggleRow({
   )
 }
 
-function getExactOpeningStock(value: string) {
+function getExactOpeningStock(
+  value: string,
+  maxScale = DEFAULT_UNIT_TRANSACTION_SCALE,
+) {
   const normalized = value.trim()
   if (!normalized) return undefined
 
   return parseExactDecimal(normalized, {
-    maxScale: DEFAULT_UNIT_TRANSACTION_SCALE,
+    maxScale,
   })
 }
 
@@ -229,6 +241,10 @@ export function SimpleCatalogItemScreen({
   const clientOperationIdRef = useRef(Crypto.randomUUID())
   const variantComposerInputRef = useRef<TextInput>(null)
   const [kind, setKind] = useState<CatalogItemKind | null>(initialKind ?? null)
+  const [helperPickerOpen, setHelperPickerOpen] = useState(false)
+  const [selectedHelperKey, setSelectedHelperKey] = useState<string | null>(
+    null,
+  )
   const [name, setName] = useState("")
   const [price, setPrice] = useState("")
   const [unitName, setUnitName] = useState("")
@@ -237,10 +253,15 @@ export function SimpleCatalogItemScreen({
   const [showOpeningStock, setShowOpeningStock] = useState(false)
   const [showDescription, setShowDescription] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [canonicalTransactionScale, setCanonicalTransactionScale] = useState(
+    DEFAULT_UNIT_TRANSACTION_SCALE,
+  )
   const [trackServiceWork, setTrackServiceWork] = useState(false)
+  const [defaultQuoteRequired, setDefaultQuoteRequired] = useState(false)
   const [serviceAuthorization, setServiceAuthorization] = useState<
     "after_required_payment" | "manual_release" | "on_order_confirmation"
   >("on_order_confirmation")
+  const [serviceQuantityScale, setServiceQuantityScale] = useState(0)
   const [serviceGuidance, setServiceGuidance] = useState("")
   const [optionGroups, setOptionGroups] = useState<MobileOptionGroup[]>([
     newOptionGroup(),
@@ -260,6 +281,9 @@ export function SimpleCatalogItemScreen({
   const currencyCode = profile?.currencyCode ?? "NGN"
   const storesQuery = useQuery(trpc.tenant.stores.queryOptions())
   const stores = storesQuery.data ?? []
+  const selectedHelper = selectedHelperKey
+    ? findCatalogSetupHelper(selectedHelperKey)
+    : undefined
   const normalizedOptionGroups = useMemo(
     () =>
       optionGroups.map((group, groupIndex) => ({
@@ -373,7 +397,7 @@ export function SimpleCatalogItemScreen({
       isMoreVisible: false,
       price: "",
       quantity: "",
-      quoteRequired: false,
+      quoteRequired: defaultQuoteRequired,
       sku: "",
       storeIds: defaultStoreId ? [defaultStoreId] : [],
       unitPrices: {},
@@ -398,6 +422,122 @@ export function SimpleCatalogItemScreen({
     updateVariantDraft(variantKey, {
       unitPrices: { ...draft.unitPrices, [unitId]: value },
     })
+  }
+
+  const hasStructuralDraft = () =>
+    selectedHelperKey !== null ||
+    showAdvanced ||
+    showOpeningStock ||
+    trackServiceWork ||
+    additionalUnits.length > 0 ||
+    Object.keys(variantDrafts).length > 0 ||
+    openingStock.trim().length > 0 ||
+    (kind === "product" && unitName.trim().length > 0) ||
+    serviceGuidance.trim().length > 0 ||
+    optionGroups.some(
+      (group) =>
+        group.name.trim() || group.values.some((value) => value.label.trim()),
+    )
+
+  const commitHelper = (helper: CatalogSetupHelper | null) => {
+    if (helper && helper.kind !== kind) return
+
+    setSubmitError(null)
+    setSelectedHelperKey(helper?.key ?? null)
+    setVariantDrafts({})
+    setActiveGroupId(null)
+    setVariantComposerMode(null)
+    setComposerText("")
+    setServiceGuidance("")
+    setDefaultQuoteRequired(false)
+    setOpeningStock("")
+    setShowOpeningStock(false)
+
+    if (!helper) {
+      setShowAdvanced(false)
+      setOptionGroups([newOptionGroup()])
+      setAdditionalUnits([])
+      setCanonicalTransactionScale(DEFAULT_UNIT_TRANSACTION_SCALE)
+      setTrackServiceWork(false)
+      setServiceAuthorization("on_order_confirmation")
+      setServiceQuantityScale(0)
+      if (kind === "product") setUnitName("")
+      setHelperPickerOpen(false)
+      return
+    }
+
+    const application = buildCatalogSetupHelperApplication(helper)
+    const groups = application.optionGroups.map((group) => ({
+      id: Crypto.randomUUID(),
+      name: group.name,
+      values: group.values.map((label) => ({
+        id: Crypto.randomUUID(),
+        label,
+      })),
+    }))
+    setOptionGroups(groups.length > 0 ? groups : [newOptionGroup()])
+    setShowAdvanced(groups.length > 0)
+    if (!name.trim() && application.suggestedName)
+      setName(application.suggestedName)
+
+    if (application.kind === "product") {
+      setUnitName(application.canonicalUnit.name)
+      setCanonicalTransactionScale(application.canonicalUnit.transactionScale)
+      setAdditionalUnits(
+        application.additionalUnits.map((unit) => ({
+          factor: unit.factor,
+          id: Crypto.randomUUID(),
+          name: unit.name,
+          price: "",
+          stockBehavior:
+            unit.stockBehavior === "packaged_stock"
+              ? "packaged_stock"
+              : "alternate_transaction",
+          transactionScale: unit.transactionScale,
+        })),
+      )
+      setTrackServiceWork(false)
+    } else {
+      setUnitName("")
+      setAdditionalUnits([])
+      setCanonicalTransactionScale(DEFAULT_UNIT_TRANSACTION_SCALE)
+      setTrackServiceWork(application.workPolicy === "tracked")
+      setServiceAuthorization(application.authorizationPolicy)
+      setServiceQuantityScale(application.quantityScale)
+      setDefaultQuoteRequired(application.pricingPolicy === "quote_required")
+    }
+
+    setHelperPickerOpen(false)
+  }
+
+  const applyHelper = (helper: CatalogSetupHelper | null) => {
+    const replacementAction = getCatalogSetupReplacementAction({
+      currentKey: selectedHelperKey,
+      hasStructuralDraft: hasStructuralDraft(),
+      nextKey: helper?.key ?? null,
+    })
+    if (replacementAction === "close") {
+      setHelperPickerOpen(false)
+      return
+    }
+
+    if (replacementAction === "apply") {
+      commitHelper(helper)
+      return
+    }
+
+    Alert.alert(
+      "Replace current setup?",
+      "This replaces the current units, options, prices, and stock setup. Your item name, description, and base price stay unchanged.",
+      [
+        { style: "cancel", text: "Keep editing" },
+        {
+          style: "destructive",
+          text: "Replace setup",
+          onPress: () => commitHelper(helper),
+        },
+      ],
+    )
   }
 
   const submitAdvanced = (
@@ -452,6 +592,23 @@ export function SimpleCatalogItemScreen({
       return
     }
 
+    const missingFixedServicePrice =
+      itemKind === "service" && majorToMinor(price) === null
+        ? activeCombinations.find((combination) => {
+            const draft = variantDraft(combination.key)
+            return isCatalogFixedPriceMissing({
+              enabled: draft.enabled,
+              hasBasePrice: false,
+              hasOverridePrice: Boolean(draft.price.trim()),
+              quoteRequired: draft.quoteRequired,
+            })
+          })
+        : undefined
+    if (missingFixedServicePrice) {
+      setSubmitError(`Enter a price for ${missingFixedServicePrice.name}.`)
+      return
+    }
+
     const invalidVariantUnitPrice =
       itemKind === "product"
         ? activeCombinations
@@ -481,7 +638,12 @@ export function SimpleCatalogItemScreen({
             if (!draft.enabled || !draft.quantity.trim()) return draft.enabled
 
             try {
-              return getExactOpeningStock(draft.quantity) === undefined
+              return (
+                getExactOpeningStock(
+                  draft.quantity,
+                  canonicalTransactionScale,
+                ) === undefined
+              )
             } catch {
               return true
             }
@@ -555,7 +717,7 @@ export function SimpleCatalogItemScreen({
         openingStockQuantity: showOpeningStock
           ? showAdvanced
             ? undefined
-            : getExactOpeningStock(openingStock)
+            : getExactOpeningStock(openingStock, canonicalTransactionScale)
           : undefined,
         optionGroups: showAdvanced ? normalizedOptionGroups : undefined,
         unitConfiguration: {
@@ -566,7 +728,7 @@ export function SimpleCatalogItemScreen({
               key: "canonical",
               name: canonicalUnitName,
               stockBehavior: "canonical_shared",
-              transactionScale: DEFAULT_UNIT_TRANSACTION_SCALE,
+              transactionScale: canonicalTransactionScale,
             },
             ...additionalUnits.map((unit, unitIndex) => ({
               factor: unit.factor.trim(),
@@ -585,7 +747,10 @@ export function SimpleCatalogItemScreen({
             ...variant,
             openingStockQuantity:
               showAdvanced && draft.quantity.trim()
-                ? getExactOpeningStock(draft.quantity)
+                ? getExactOpeningStock(
+                    draft.quantity,
+                    canonicalTransactionScale,
+                  )
                 : undefined,
             offerings: [
               {
@@ -622,7 +787,7 @@ export function SimpleCatalogItemScreen({
       description: description.trim() || undefined,
       kind: "service",
       name: trimmedName,
-      optionGroups: normalizedOptionGroups,
+      optionGroups: showAdvanced ? normalizedOptionGroups : undefined,
       variants: rows.map(
         ({ commonOffering, draft, priceMinor: rowPrice, ...variant }) => ({
           ...variant,
@@ -633,6 +798,7 @@ export function SimpleCatalogItemScreen({
                   authorizationPolicy: serviceAuthorization,
                   guidance: serviceGuidance.trim() || undefined,
                   pricingPolicy: "quote_required" as const,
+                  quantityScale: serviceQuantityScale,
                   workPolicy: trackServiceWork
                     ? ("tracked" as const)
                     : ("charge_only" as const),
@@ -643,6 +809,7 @@ export function SimpleCatalogItemScreen({
                   fixedPriceMinor: rowPrice,
                   guidance: serviceGuidance.trim() || undefined,
                   pricingPolicy: "fixed" as const,
+                  quantityScale: serviceQuantityScale,
                   workPolicy: trackServiceWork
                     ? ("tracked" as const)
                     : ("charge_only" as const),
@@ -657,19 +824,26 @@ export function SimpleCatalogItemScreen({
     if (!kind) return
 
     const trimmedName = name.trim()
-    const priceMinor = majorToMinor(price)
+    const quoteOnlyService = kind === "service" && defaultQuoteRequired
+    const parsedPriceMinor = majorToMinor(price)
 
     if (!trimmedName) {
       setSubmitError("Enter an item name.")
       return
     }
-    if (priceMinor === null) {
+    if (!quoteOnlyService && parsedPriceMinor === null) {
       setSubmitError("Enter a valid price.")
       return
     }
+    const priceMinor = parsedPriceMinor ?? 0
 
     try {
-      if (showAdvanced || (kind === "product" && additionalUnits.length > 0)) {
+      if (
+        showAdvanced ||
+        (kind === "product" &&
+          (additionalUnits.length > 0 || selectedHelperKey !== null)) ||
+        quoteOnlyService
+      ) {
         submitAdvanced(kind, trimmedName, priceMinor)
         return
       }
@@ -688,7 +862,7 @@ export function SimpleCatalogItemScreen({
           kind,
           name: trimmedName,
           openingStockQuantity: showOpeningStock
-            ? getExactOpeningStock(openingStock)
+            ? getExactOpeningStock(openingStock, canonicalTransactionScale)
             : undefined,
           priceMinor,
         })
@@ -703,6 +877,7 @@ export function SimpleCatalogItemScreen({
         kind,
         name: trimmedName,
         priceMinor,
+        quantityScale: serviceQuantityScale,
         workPolicy: trackServiceWork ? "tracked" : "charge_only",
       })
     } catch (error) {
@@ -816,10 +991,31 @@ export function SimpleCatalogItemScreen({
     }
   }, [])
 
-  const openVariantComposer = () => {
+  const beginVariantComposer = () => {
+    setShowOpeningStock(false)
+    setOpeningStock("")
     setVariantComposerMode("variant-type")
     setComposerText("")
     focusVariantComposerInput()
+  }
+
+  const openVariantComposer = () => {
+    if (!showAdvanced && openingStock.trim()) {
+      Alert.alert(
+        "Add stock for each variant?",
+        "Adding variants replaces the single opening stock with current stock for each variant.",
+        [
+          { style: "cancel", text: "Keep single stock" },
+          {
+            text: "Continue",
+            onPress: beginVariantComposer,
+          },
+        ],
+      )
+      return
+    }
+
+    beginVariantComposer()
   }
 
   const selectVariantLabel = (rawLabel: string) => {
@@ -974,6 +1170,13 @@ export function SimpleCatalogItemScreen({
 
   return (
     <View className="flex-1">
+      <CatalogSetupHelperPicker
+        kind={kind}
+        onClose={() => setHelperPickerOpen(false)}
+        onSelect={applyHelper}
+        selectedKey={selectedHelperKey}
+        visible={helperPickerOpen}
+      />
       <KeyboardAwareScrollView
         bottomOffset={160}
         className="flex-1"
@@ -992,6 +1195,7 @@ export function SimpleCatalogItemScreen({
             className="min-h-11 flex-row items-center gap-2 self-start rounded-full bg-primary/10 px-4 active:bg-primary/20"
             haptic
             onPress={() => {
+              commitHelper(null)
               setKind(null)
               setSubmitError(null)
               setActiveGroupId(null)
@@ -1006,6 +1210,16 @@ export function SimpleCatalogItemScreen({
               {kind === "product" ? "Product" : "Service"}
             </Text>
           </Pressable>
+
+          <ActionButton
+            icon="LayoutGrid"
+            onPress={() => setHelperPickerOpen(true)}
+            variant="outline"
+          >
+            {selectedHelper
+              ? `Quick setup: ${selectedHelper.title}`
+              : "Choose a quick setup"}
+          </ActionButton>
 
           {submitError ? (
             <StatusBanner
@@ -1028,7 +1242,7 @@ export function SimpleCatalogItemScreen({
           />
           <MoneyField
             currencyCode={currencyCode}
-            label="Price"
+            label={defaultQuoteRequired ? "Starting price (optional)" : "Price"}
             onChangeValue={setPrice}
             placeholder="0.00"
             value={price}
@@ -1044,7 +1258,7 @@ export function SimpleCatalogItemScreen({
             />
           ) : null}
 
-          {kind === "product" && showOpeningStock ? (
+          {kind === "product" && !showAdvanced && showOpeningStock ? (
             <FormField
               keyboardType="decimal-pad"
               label="Opening stock"
@@ -1066,7 +1280,7 @@ export function SimpleCatalogItemScreen({
           ) : null}
 
           <View className="flex-row flex-wrap gap-2">
-            {kind === "product" && !showOpeningStock ? (
+            {kind === "product" && !showAdvanced && !showOpeningStock ? (
               <OptionalFieldButton
                 label="Add opening stock"
                 onPress={() => setShowOpeningStock(true)}

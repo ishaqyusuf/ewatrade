@@ -42,6 +42,10 @@ ADR-0013.
 
 - The current Set up Item flow becomes a shared Add Item flow.
 - Add Item starts with a Product/Service selector.
+- Dashboard and mobile Add Item place a full-width `Choose a quick setup`
+  action at the top. Its full-screen picker searches optional JSON-backed
+  Product/Service recipes by title, description, and tags; applying one only
+  prefills the editable draft and never saves automatically.
 - Product reuses the existing price, unit, variant, image, opening-stock, and conversion controls.
 - Product always shows a compact `Unit` section explaining that customers may
   buy in units such as Bag, Carton, Piece, or Kilogram. `Add unit` opens a
@@ -66,6 +70,10 @@ ADR-0013.
   unit-level default and then the variant's counted-unit price, while every
   persisted variant-unit Offering still receives its own fixed price.
 - Service uses the shared name, price, variant, and image controls, hides all stock controls, and may collect turnaround and instructions.
+- Helper-selected Product variants retain independently editable prices for
+  every selling unit, while helper-selected Service combinations retain
+  independently editable Offering prices. Express remains a Store setting, not
+  a Catalog option or variant.
 - Once multiple variant values exist, Add Item uses `Variants | Inventory` for Products and `Variants | Pricing` for Services. The second tab owns sellable-row prices and media for both kinds, plus stock for Products only, and exposes the final Add item action.
 - Existing Products migrate automatically and display a Product badge.
 - Existing dry-cleaning service items migrate automatically and display a Service badge.
@@ -90,11 +98,21 @@ context. It is not the current runtime or target architecture.
 
 ## Experience Gating
 
-- Catalog is always available and displays Product/Service badges.
-- Sales navigation, dashboard results, and direct routes are available only when the store has a Product item.
-- Services navigation and direct routes are available only when the store has a Service item.
-- A mixed store sees both operational areas; an empty store sees neither until the first item is added.
-- Mobile owner/admin and sales-rep homes use the same item-driven rules. Product-only actions include stock, sessions, and inventory; Service-only actions use Service Jobs and online service-order language.
+- Catalog navigation appears after the active Store has any Product or Service
+  history. Authorized Product and Service creation paths remain available from
+  setup and global Add actions before Catalog is revealed.
+- Product filters and Inventory appear after Product history. Service filters
+  appear after Service history. A type filter is not advertised when the Store
+  has zero history for that kind.
+- Sales navigation appears after the first Commercial Order. Direct
+  first-order creation is permitted once an active fixed-price Offering exists.
+- Service Jobs navigation appears only after the first tracked Service Job; a
+  Service Catalog item by itself does not reveal operational work.
+- A mixed Store reveals each operational area independently. Archived items
+  retain historical revelation.
+- Mobile owner/admin and attendant homes combine the same authoritative
+  contract with pending offline projections. Product-only actions include
+  stock and inventory; tracked Service operations reveal Work.
 - Service checkout uses the normal priced-item order flow without stock or cashier-session requirements.
 
 ## Enforcement And Compatibility
