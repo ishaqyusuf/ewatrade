@@ -2,6 +2,7 @@
 
 import {
   availableActions,
+  formatMoney,
   label,
 } from "@/components/service-work/service-utils"
 import { useTRPC } from "@/trpc/client"
@@ -45,6 +46,15 @@ export function ServiceJobWorkspace({
     {},
   )
   const [customerMessage, setCustomerMessage] = useState("")
+  const [messageChannel, setMessageChannel] = useState<"sms" | "whatsapp">(
+    "whatsapp",
+  )
+  const [messageSchedule, setMessageSchedule] = useState("")
+  const [paymentAmount, setPaymentAmount] = useState("")
+  const [paymentMethod, setPaymentMethod] = useState<
+    "bank_transfer" | "card" | "cash" | "other" | "pos"
+  >("cash")
+  const [paymentReference, setPaymentReference] = useState("")
   const [publicUrl, setPublicUrl] = useState<string | null>(null)
 
   const refresh = async () => {
@@ -142,24 +152,30 @@ export function ServiceJobWorkspace({
       },
     }),
   )
-  const manualShareMutation = useMutation(
-    trpc.serviceCommunications.recordManualShare.mutationOptions({
+  const messageMutation = useMutation(
+    trpc.serviceCommunications.createIntent.mutationOptions({
       onError: fail,
       onSuccess: async () => {
         setCustomerMessage("")
+        setMessageSchedule("")
         await refresh()
       },
     }),
   )
-  const messageMutation = useMutation(
-    trpc.serviceCommunications.createIntent.mutationOptions({
+  const paymentMutation = useMutation(
+    trpc.orders.recordPayment.mutationOptions({
       onError: fail,
-      onSuccess: (intent) =>
-        manualShareMutation.mutate({
-          channel: "manual",
-          intentId: intent.id,
-          note: "Shared from Job Workspace",
-        }),
+      onSuccess: async () => {
+        setPaymentAmount("")
+        setPaymentReference("")
+        await refresh()
+      },
+    }),
+  )
+  const handoffMutation = useMutation(
+    trpc.services.handoff.mutationOptions({
+      onError: fail,
+      onSuccess: refresh,
     }),
   )
 
@@ -207,6 +223,98 @@ export function ServiceJobWorkspace({
           </a>
         </div>
       ) : null}
+      <section className="grid gap-3 border-b border-border pb-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-medium">Order and payment</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {formatMoney(job.amountPaidMinor, job.currencyCode)} paid ·{" "}
+              {formatMoney(job.balanceDueMinor, job.currencyCode)} due
+            </p>
+          </div>
+          <Badge className="rounded-full capitalize">
+            {label(job.paymentStatus)}
+          </Badge>
+        </div>
+        {job.balanceDueMinor > 0 ? (
+          <div className="grid gap-2 sm:grid-cols-[1fr_150px]">
+            <input
+              className={fieldClass}
+              inputMode="decimal"
+              placeholder="Amount received"
+              value={paymentAmount}
+              onChange={(event) => setPaymentAmount(event.target.value)}
+            />
+            <select
+              className={fieldClass}
+              value={paymentMethod}
+              onChange={(event) =>
+                setPaymentMethod(event.target.value as typeof paymentMethod)
+              }
+            >
+              <option value="cash">Cash</option>
+              <option value="bank_transfer">Bank transfer</option>
+              <option value="pos">POS</option>
+              <option value="card">Card</option>
+              <option value="other">Other</option>
+            </select>
+            <input
+              className={fieldClass}
+              placeholder="Reference (optional)"
+              value={paymentReference}
+              onChange={(event) => setPaymentReference(event.target.value)}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!paymentAmount || paymentMutation.isPending}
+              onClick={() =>
+                paymentMutation.mutate({
+                  amountMinor: Math.round(Number(paymentAmount) * 100),
+                  clientPaymentId: crypto.randomUUID(),
+                  method: paymentMethod,
+                  orderId: job.commercialOrderId,
+                  reference: paymentReference.trim() || undefined,
+                })
+              }
+            >
+              Record payment
+            </Button>
+          </div>
+        ) : null}
+        {job.summary === "ready_for_handoff" && !job.handedOffAt ? (
+          <Button
+            disabled={
+              handoffMutation.isPending ||
+              (job.balanceDueMinor > 0 && !paymentAmount)
+            }
+            onClick={() =>
+              handoffMutation.mutate({
+                clientCommandId: crypto.randomUUID(),
+                expectedRevision: job.revision,
+                jobId: job.id,
+                note: "Collected by customer",
+                payment:
+                  job.balanceDueMinor > 0
+                    ? {
+                        amountMinor: Math.round(Number(paymentAmount) * 100),
+                        method: paymentMethod,
+                        reference: paymentReference.trim() || undefined,
+                      }
+                    : undefined,
+              })
+            }
+          >
+            {job.balanceDueMinor > 0
+              ? "Collect balance and hand over"
+              : "Mark collected"}
+          </Button>
+        ) : job.handedOffAt ? (
+          <p className="text-sm text-muted-foreground">
+            Collected {new Date(job.handedOffAt).toLocaleString("en-NG")}.
+          </p>
+        ) : null}
+      </section>
       <section className="grid gap-3">
         <h3 className="font-medium">Work lines</h3>
         {job.lines.map((line) => (
@@ -232,7 +340,9 @@ export function ServiceJobWorkspace({
                 <Button
                   key={action}
                   size="sm"
-                  variant={action === "completed" ? "default" : "outline"}
+                  variant={
+                    action === "ready_for_handoff" ? "default" : "outline"
+                  }
                   disabled={
                     transitionMutation.isPending ||
                     line.authorizationStatus !== "AUTHORIZED"
@@ -595,24 +705,42 @@ export function ServiceJobWorkspace({
               onChange={(event) => setCustomerMessage(event.target.value)}
             />
           </label>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <select
+              className={fieldClass}
+              value={messageChannel}
+              onChange={(event) =>
+                setMessageChannel(event.target.value as typeof messageChannel)
+              }
+            >
+              <option value="whatsapp">WhatsApp</option>
+              <option value="sms">SMS</option>
+            </select>
+            <input
+              type="datetime-local"
+              className={fieldClass}
+              value={messageSchedule}
+              onChange={(event) => setMessageSchedule(event.target.value)}
+            />
+          </div>
           <Button
             variant="outline"
-            disabled={
-              !customerMessage.trim() ||
-              messageMutation.isPending ||
-              manualShareMutation.isPending
-            }
+            disabled={!customerMessage.trim() || messageMutation.isPending}
             onClick={() =>
               messageMutation.mutate({
                 audienceKey: job.orderNumber,
                 businessEventKey: `${job.id}:${crypto.randomUUID()}`,
+                channel: messageChannel,
                 jobId: job.id,
                 renderedMessage: customerMessage.trim(),
+                scheduledFor: messageSchedule
+                  ? new Date(messageSchedule)
+                  : undefined,
                 templatePurpose: "manual_update",
               })
             }
           >
-            Record customer-safe update
+            {messageSchedule ? "Schedule customer update" : "Send update"}
           </Button>
         </section>
       ) : null}

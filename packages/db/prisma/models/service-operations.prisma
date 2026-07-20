@@ -1,31 +1,59 @@
+model ServiceStoreSettings {
+  id                         String                      @id @default(cuid())
+  tenantId                   String
+  storeId                    String                      @unique
+  expressEnabled             Boolean                     @default(false)
+  expressLabel               String                      @default("Express")
+  expressSurchargeType       ServiceSurchargeType        @default(PERCENTAGE)
+  expressSurchargeValue      Int                         @default(0)
+  expressTurnaroundMinutes   Int?
+  reminderLeadMinutes        Int                         @default(1440)
+  autoNotifyReady            Boolean                     @default(false)
+  autoNotifyReminder         Boolean                     @default(false)
+  defaultNotificationChannel ServiceNotificationChannel?
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @updatedAt
+  tenant                     Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                      Store                       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, updatedAt])
+}
+
 model ServiceIntake {
-  id                  String              @id @default(cuid())
-  tenantId            String
-  storeId             String
-  clientIntakeId      String
-  payloadHash         String
-  schemaVersion       Int                 @default(1)
-  status              ServiceIntakeStatus @default(DRAFT)
-  commercialOrderId   String?             @unique
-  customerName        String?
-  customerPhone       String?
-  customerEmail       String?
-  requestedAt         DateTime?
-  instructions        String?
-  conditionNote       String?
-  priority            ServicePriority     @default(NORMAL)
-  dueCommitmentAt     DateTime?
-  requestedAssigneeId String?
-  createdByUserId     String
-  confirmedAt         DateTime?
-  cancelledAt         DateTime?
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-  tenant              Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store               Store               @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  commercialOrder     CommercialOrder?    @relation(fields: [commercialOrderId], references: [id], onDelete: Restrict)
-  lines               ServiceIntakeLine[]
-  jobs                ServiceJob[]
+  id                      String                      @id @default(cuid())
+  tenantId                String
+  storeId                 String
+  clientIntakeId          String
+  payloadHash             String
+  schemaVersion           Int                         @default(1)
+  status                  ServiceIntakeStatus         @default(DRAFT)
+  commercialOrderId       String?                     @unique
+  customerName            String?
+  customerPhone           String?
+  customerEmail           String?
+  requestedAt             DateTime?
+  instructions            String?
+  conditionNote           String?
+  priority                ServicePriority             @default(NORMAL)
+  serviceLevel            ServiceLevel                @default(STANDARD)
+  serviceChargeMinor      Int                         @default(0)
+  serviceLevelSnapshot    Json?
+  dueCommitmentAt         DateTime?
+  requestedAssigneeId     String?
+  initialPaymentMinor     Int                         @default(0)
+  initialPaymentMethod    CommercialPaymentMethod?
+  initialPaymentReference String?
+  notificationChannel     ServiceNotificationChannel?
+  createdByUserId         String
+  confirmedAt             DateTime?
+  cancelledAt             DateTime?
+  createdAt               DateTime                    @default(now())
+  updatedAt               DateTime                    @updatedAt
+  tenant                  Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                   Store                       @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  commercialOrder         CommercialOrder?            @relation(fields: [commercialOrderId], references: [id], onDelete: Restrict)
+  lines                   ServiceIntakeLine[]
+  jobs                    ServiceJob[]
 
   @@unique([tenantId, clientIntakeId])
   @@index([tenantId, storeId, status, createdAt])
@@ -61,6 +89,9 @@ model ServiceJob {
   splitFromJobId        String?
   createdByUserId       String
   completedAt           DateTime?
+  handedOffAt           DateTime?
+  handedOffByUserId     String?
+  handoffNote           String?
   cancelledAt           DateTime?
   createdAt             DateTime                    @default(now())
   updatedAt             DateTime                    @updatedAt
@@ -444,31 +475,35 @@ model CustomerTrackingAccess {
 }
 
 model ServiceNotificationIntent {
-  id               String                          @id @default(cuid())
-  tenantId         String
-  storeId          String
-  serviceJobId     String
-  businessEventKey String
-  audienceKey      String
-  templatePurpose  String
-  status           ServiceNotificationIntentStatus @default(PENDING)
-  renderedSubject  String?
-  renderedMessage  String
-  customerPhone    String?
-  customerEmail    String?
-  createdByUserId  String
-  completedAt      DateTime?
-  createdAt        DateTime                        @default(now())
-  updatedAt        DateTime                        @updatedAt
-  tenant           Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store            Store                           @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  serviceJob       ServiceJob                      @relation(fields: [serviceJobId], references: [id], onDelete: Cascade)
-  manualShares     ServiceManualShare[]
-  deliveryAttempts ServiceDeliveryAttempt[]
+  id                  String                          @id @default(cuid())
+  tenantId            String
+  storeId             String
+  serviceJobId        String
+  businessEventKey    String
+  audienceKey         String
+  templatePurpose     String
+  channel             ServiceNotificationChannel      @default(MANUAL)
+  status              ServiceNotificationIntentStatus @default(PENDING)
+  renderedSubject     String?
+  renderedMessage     String
+  customerPhone       String?
+  customerEmail       String?
+  scheduledFor        DateTime?
+  dispatchRequestedAt DateTime?
+  createdByUserId     String
+  completedAt         DateTime?
+  createdAt           DateTime                        @default(now())
+  updatedAt           DateTime                        @updatedAt
+  tenant              Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store               Store                           @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  serviceJob          ServiceJob                      @relation(fields: [serviceJobId], references: [id], onDelete: Cascade)
+  manualShares        ServiceManualShare[]
+  deliveryAttempts    ServiceDeliveryAttempt[]
 
   @@unique([tenantId, businessEventKey, audienceKey, templatePurpose])
   @@index([tenantId, storeId, status, createdAt])
   @@index([serviceJobId, createdAt])
+  @@index([status, scheduledFor])
 }
 
 model ServiceManualShare {

@@ -5,6 +5,7 @@ import {
   fulfillCommercialOrderProductLine,
   getCommercialOrder,
   listCommercialOrders,
+  recordCommercialOrderPayment,
   returnCommercialOrderProductLine,
 } from "@ewatrade/db/queries"
 import { TRPCError } from "@trpc/server"
@@ -14,6 +15,7 @@ import {
   commercialOrderFulfillLineSchema,
   commercialOrderGetSchema,
   commercialOrderListSchema,
+  commercialOrderPaymentSchema,
   commercialOrderReturnLineSchema,
 } from "../../schemas/orders"
 import { createTRPCRouter, protectedProcedure } from "../init"
@@ -140,6 +142,22 @@ export const ordersRouter = createTRPCRouter({
         storeId,
         tenantId: ctx.tenantContext.tenant.id,
       })
+    }),
+
+  recordPayment: protectedProcedure
+    .input(commercialOrderPaymentSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanOperateOrders(ctx.tenantContext.membership.role)
+      try {
+        return await recordCommercialOrderPayment(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof CatalogError) throw orderError(error)
+        throw error
+      }
     }),
 
   returnProductLine: protectedProcedure

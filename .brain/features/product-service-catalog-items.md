@@ -43,6 +43,28 @@ ADR-0013.
 - The current Set up Item flow becomes a shared Add Item flow.
 - Add Item starts with a Product/Service selector.
 - Product reuses the existing price, unit, variant, image, opening-stock, and conversion controls.
+- Product always shows a compact `Unit` section explaining that customers may
+  buy in units such as Bag, Carton, Piece, or Kilogram. `Add unit` opens a
+  keyboard-aware detached bottom sheet for the unit name, exact factor, selling
+  price default and stock behavior. New units allow quantities with up to two
+  decimal places without exposing precision controls in the setup flow. Saved
+  units render as flat divider rows with explicit edit and delete actions;
+  editing reuses the same sheet.
+- The current generic Product form preserves the approved inline `Add variant`
+  interaction: a keyboard-sticky composer first collects a suggested or custom
+  variant name, then collects contextual values through selected removable
+  pills, suggestions, comma-separated entry, and keyboard Done. This UI writes
+  to generic option groups and generated combinations; it does not introduce a
+  Product-, feed-, bag-, or industry-specific domain branch.
+- Generated Product variant rows use the compact stock-row treatment: the
+  variant name plus side-by-side `Price` and exact `Qty` remain visible and are
+  required for active variants. `More` reveals optional description, SKU,
+  barcode, active status, and store availability. Per-variant Qty is persisted
+  as opening stock for that specific variant rather than being collapsed into
+  the default variant. When additional selling units exist, every generated
+  variant row exposes a price override for each unit. A blank override uses the
+  unit-level default and then the variant's counted-unit price, while every
+  persisted variant-unit Offering still receives its own fixed price.
 - Service uses the shared name, price, variant, and image controls, hides all stock controls, and may collect turnaround and instructions.
 - Once multiple variant values exist, Add Item uses `Variants | Inventory` for Products and `Variants | Pricing` for Services. The second tab owns sellable-row prices and media for both kinds, plus stock for Products only, and exposes the final Add item action.
 - Existing Products migrate automatically and display a Product badge.

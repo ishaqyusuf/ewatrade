@@ -2,9 +2,20 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
-export type ServiceSheetMode = "intake" | "job" | "quote" | "request"
+export type ServiceSheetMode =
+  | "intake"
+  | "job"
+  | "quote"
+  | "request"
+  | "settings"
 
-const MODES = new Set<ServiceSheetMode>(["intake", "job", "quote", "request"])
+const MODES = new Set<ServiceSheetMode>([
+  "intake",
+  "job",
+  "quote",
+  "request",
+  "settings",
+])
 
 export function useServiceWorkParams() {
   const pathname = usePathname()

@@ -22,17 +22,20 @@
 ## Commercial Orders
 
 - Order creation/list/read require commercial/POS capability.
+- Recording a payment or refund requires authenticated commercial/POS
+  capability and a tenant-owned Order.
 - Product fulfillment and returns require inventory/commercial authorization
   and tenant-owned Order/Balance context.
 
 ## Services
 
 - Operators may create/confirm Intake, read the queue/Job, self-assign, progress
-  work, add internal notes/exceptions and capture private evidence.
+  work, collect payment, complete an explicit paid customer handoff, add
+  internal notes/exceptions and capture private evidence.
 - Assigning another user, manual authorization, rescheduling, splitting,
   rework, Request/Quote disposition, tracking access, customer communication,
-  evidence publication/revocation and Service reporting require manager
-  capability.
+  batch work changes, Service settings, evidence publication/revocation and
+  Service reporting require manager capability.
 - Operator-facing evidence upload status cannot declare `AVAILABLE` or provide
   safety/public identifiers.
 - Request Form reads/submission, current Quote reads/acceptance and Tracking

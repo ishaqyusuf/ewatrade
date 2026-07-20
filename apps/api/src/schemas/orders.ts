@@ -98,3 +98,15 @@ export const commercialOrderReturnLineSchema = z
     schemaVersion: z.literal(1),
   })
   .strict()
+
+export const commercialOrderPaymentSchema = z
+  .object({
+    amountMinor: z.number().int().positive().max(100_000_000),
+    clientPaymentId: z.string().trim().min(8).max(160),
+    method: z.enum(["bank_transfer", "card", "cash", "other", "pos"]),
+    note: z.string().trim().max(500).optional(),
+    orderId: z.string().trim().min(1),
+    reference: z.string().trim().max(160).optional(),
+    type: z.enum(["payment", "refund"]).optional(),
+  })
+  .strict()

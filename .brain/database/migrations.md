@@ -19,6 +19,8 @@ Generated and applied locally:
 - `20260719053055_inventory_operations_commercial_orders`
 - `20260719053406_immutable_offering_snapshots`
 - `20260719092903_clean_generic_operations_cutover`
+- `20260719180212_add_sellable_variant_description`
+- `20260720075654_generic_service_commerce_completion`
 
 The last migration is the destructive early-stage cutover to the complete
 Inventory, Commercial Order, offline and Generic Service model. It deletes the
@@ -31,5 +33,25 @@ prototype Service Job/Line rows and one prototype Request. Prisma then
 generated and applied `20260719092903_clean_generic_operations_cutover`;
 the migration file was not hand-authored. `bun run db:push --local` reported
 the schema in sync, `bun run db:seed:catalog-units` loaded neutral Unit
-Definitions, and `prisma migrate status` reported all 22 migrations applied.
+Definitions, and `prisma migrate status` reported all 22 migrations applied at
+that cutover.
 No remote or production database was touched.
+
+On 2026-07-19 Prisma generated and applied
+`20260719180212_add_sellable_variant_description` locally. It adds the nullable
+`SellableVariant.description` field used by optional Product/Service variant
+details. `bun db:push` then confirmed the local schema was already in sync.
+The local migration history now contains 23 applied migrations.
+
+On 2026-07-20 Prisma generated and applied
+`20260720075654_generic_service_commerce_completion`. It adds Store Service
+settings, express Intake snapshots/charges, append-only Commercial Order
+payments, partial-payment state, explicit customer handoff fields, and
+scheduled notification dispatch fields. Before commit, the generated migration
+was hardened to default legacy Notification Intent channels to `MANUAL` and
+backfill already-paid Orders to their full paid total. Local migration history
+was reconciled to that corrected, uncommitted artifact; `bun db:migrate`
+reported no drift. Local, remote-development and production pushes all reported
+the schema in sync, and read-only compatibility checks found no legacy
+zero-projection paid Orders or existing Notification Intents in either remote
+environment. The local migration history now contains 24 applied migrations.

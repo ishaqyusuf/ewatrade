@@ -1,6 +1,128 @@
 # Progress
 
+## 2026-07-20
+
+### Generic Service Commerce Completion
+
+- Added Store-level express configuration with fixed or percentage surcharge,
+  turnaround, default SMS/WhatsApp channel, automatic ready updates and
+  scheduled pickup reminders.
+- Extended Service Intake with standard/express selection, optional staff
+  assignment, promised pickup, deposit/payment method/reference and customer
+  notification preference. Applied express charges are snapshotted into the
+  Commercial Order.
+- Added append-only Order payments/refunds, partial-payment and balance
+  projections, payment-gated work authorization, and explicit paid customer
+  handoff. Staff can no longer bypass collection by marking a line completed.
+- Added manager batch start/ready/delay controls, batch customer updates,
+  promise-aware reminder replacement and provider-neutral SMS/WhatsApp webhook
+  dispatch with atomic worker claims, reclaimable dispatch leases, idempotent
+  batch identities and auditable retry attempts.
+- Added dashboard settings, intake, payment, collection, communication and
+  batch surfaces. Added mobile express intake, deposit/payment, collection and
+  customer-update controls. Manager-only controls are hidden from operators,
+  and mobile payment entry is cleared between orders.
+- Android visual QA found and fixed an ambiguous unchecked Service selector;
+  unselected rows now show an empty square. Payment methods and WhatsApp/SMS
+  controls were verified on the keyboard-safe Intake surface.
+- Prisma generated/applied
+  `20260720075654_generic_service_commerce_completion`; local,
+  remote-development and production schemas report in sync. The canonical
+  migration safely defaults legacy notification channels and backfills legacy
+  paid projections; remote compatibility checks found no rows requiring repair.
+- Checks passed: 16 focused tests, all 14 workspace TypeScript tasks, mobile
+  TypeScript, six Service Work/keyboard/NativeWind/theme/dashboard guards,
+  `git diff --check`, Android rendered Intake/Work QA, targeted formatter
+  checks, and two fixed-point code reviews with no remaining findings. Real
+  provider delivery still requires the deployment environment to configure the
+  relevant webhook URL and optional token.
+
 ## 2026-07-19
+
+### Product Variant-By-Unit Pricing
+
+- Added a keyboard-safe selling-price field for every additional unit inside
+  every generated mobile Product variant row.
+- Kept the unit editor price as an optional default while allowing combinations
+  such as Red / Carton and Blue / Carton to resolve to different fixed-price
+  Offerings.
+- Defaulted new simple and mobile-configured Product units to two-decimal
+  transaction quantities, used the safe canonical balance precision, and
+  removed the quantity-decimal selector from the mobile unit sheet.
+- Extended the mobile keyboard guard to protect the price matrix and hidden
+  precision behavior.
+- Checks passed: API/DB/mobile TypeScript, Catalog schema tests, keyboard
+  coverage, NativeWind/theme guards, targeted Biome, `git diff --check`, and
+  Android variant-unit price/keyboard QA.
+
+### Compact Variant Price And Quantity Rows
+
+- Reworked generated Product variants into flat stock-style rows with only
+  required `Price` and exact `Qty` fields visible.
+- Added a `More` disclosure for optional description, SKU, barcode,
+  active/inactive state, and store availability.
+- Extended generic Catalog creation with optional variant descriptions and
+  exact per-variant opening quantities so every Qty creates the correct
+  variant-specific Canonical Shared opening balance.
+- Prisma generated/applied
+  `20260719180212_add_sellable_variant_description`; `bun db:push` confirmed the
+  local schema in sync.
+- Checks passed: Catalog schema tests, API/DB/mobile TypeScript, keyboard
+  coverage, dashboard/app-shell guards, NativeWind style guard, theme-color
+  guard, targeted Biome, and `git diff --check`.
+
+### Product Selling-Unit Bottom Sheet
+
+- Made the Product `Unit` section visible by default with concise examples and
+  an `Add unit` action before the unit list.
+- Moved unit name, exact factor, selling price, stock source, and quantity-scale
+  fields into one detached keyboard-aware bottom sheet used for both add and
+  edit.
+- Added duplicate-name and field validation, clearer example placeholders, and
+  flat saved-unit rows with 44pt edit and delete actions.
+- Checks passed: mobile TypeScript, keyboard coverage, NativeWind style guard,
+  theme-color guard, targeted Biome, and `git diff --check`.
+
+### Owner Add Sheet Order Action Restored
+
+- Kept `Order` permanently visible in the owner/admin floating Add sheet.
+- The row opens the existing order workflow when at least one active,
+  fixed-price Product or Service offering is available at a store. Otherwise it
+  is disabled and explains: `Create your first product/service to use order
+  feature`.
+- Checks passed: dashboard source guard, mobile TypeScript, NativeWind style
+  guard, theme-color guard, and `git diff --check`.
+
+### Generic Product Variant Composer Restored
+
+- Replaced the Product form's generic `Add options` entry point with the
+  previously approved `Add variant` keyboard-sticky interaction while retaining
+  the clean Catalog option-group and generated-combination contracts.
+- Restored filtered variant-name suggestions, custom variant names, contextual
+  value suggestions, selected removable value pills, duplicate-safe comma
+  entry, keyboard Done submission, keyboard-dismiss cleanup, and direct
+  re-entry for additional values and variant groups.
+- Kept Service terminology as Options and skipped emulator/UI testing at the
+  project owner's request.
+- Checks passed: mobile TypeScript, keyboard coverage, NativeWind style guard,
+  theme-color guard, and `git diff --check`.
+
+### Mobile Floating Create Sheet Restored
+
+- Restored the owner/admin center-plus chooser with the existing detached
+  floating-sheet primitive, flat divider rows, concise labels, consistent plus
+  icons, compact action-count-based height, and safe bottom spacing.
+- Split Product and Service into direct generic catalog setup actions with the
+  selected item kind carried into the existing keyboard-safe full-screen form.
+  Customer, Order, contextual Stock Entry, and Staff reuse their established
+  routes; the sales-rep plus remains a direct order action.
+- Verified the final sheet and direct Product/Service destinations on the
+  Android Pixel 3a emulator, including keyboard-open form layout and
+  theme-aware status-bar treatment. The emulator was intentionally left open.
+- Checks passed: `bun --cwd apps/mobile qa:dashboard-redesign`,
+  `qa:keyboard-coverage`, `qa:nativewind-style`, `qa:theme-colors`,
+  `bun --cwd apps/mobile tsc --noEmit --pretty false`, and
+  `git diff --check`.
 
 ### Generic Inventory And Service Operations Source Implementation Complete
 

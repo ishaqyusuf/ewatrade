@@ -50,9 +50,39 @@ const contracts = [
       "MoneyField",
       'keyboardType="decimal-pad"',
       "KeyboardInlineComposer",
+      "BottomSheetKeyboardAwareScrollView",
+      'snapPoints={["88%"]}',
+      "Unit</Text>",
+      "Add the units customers can buy this product in",
+      "No additional selling units yet.",
+      "openUnitEditor(unit)",
+      "removeUnit(unit.id)",
+      "Example: Bag, Carton, or Piece",
+      "Example: 50",
+      "Save unit",
+      "isMoreVisible",
+      'label="Qty"',
+      "unitPrices: Record<string, string>",
+      "Selling prices by unit",
+      "updateVariantUnitPrice",
+      "DEFAULT_UNIT_TRANSACTION_SCALE",
+      "draft.unitPrices[unit.id]",
+      "fixedPriceMinor: draft.unitPrices[unit.id]?.trim()",
+      "Enter a quantity for",
+      "Optional notes for this variant",
+      "Optional stock keeping code",
+      "Optional barcode number",
+      'type VariantComposerMode = "variant-type" | "variant-value"',
+      "KNOWN_VARIANT_TYPES",
+      "VARIANT_VALUE_SUGGESTIONS_BY_LABEL",
+      "selected: true",
+      'hideSubmitButton={variantComposerMode === "variant-value"}',
+      "Variant name or choose a suggestion",
+      "values, separated by commas",
+      'label={kind === "product" ? "Add variant" : "Add options"}',
     ],
     reason:
-      "generic Product/Service, exact quantity, unit, option, and price fields must remain keyboard-safe",
+      "generic Product/Service, exact quantity, unit, variant/option, and price fields must remain keyboard-safe",
   },
   {
     file: "components/mobile/create-sale-sheet.tsx",
@@ -104,6 +134,15 @@ const contracts = [
   },
 ]
 
+const forbiddenContracts = [
+  {
+    file: "components/mobile/simple-catalog-item-screen.tsx",
+    markers: ["Quantity decimal places", "[0, 1, 2, 3, 4, 5, 6].map((scale)"],
+    reason:
+      "new unit setup should use the hidden two-decimal default instead of exposing precision controls",
+  },
+]
+
 const failures = []
 for (const contract of contracts) {
   const filePath = join(SOURCE_DIR, contract.file)
@@ -113,6 +152,18 @@ for (const contract of contracts) {
     failures.push({
       file: filePath,
       message: `missing ${missing.join(", ")} (${contract.reason})`,
+    })
+  }
+}
+
+for (const contract of forbiddenContracts) {
+  const filePath = join(SOURCE_DIR, contract.file)
+  const source = readFileSync(filePath, "utf8")
+  const present = contract.markers.filter((marker) => source.includes(marker))
+  if (present.length > 0) {
+    failures.push({
+      file: filePath,
+      message: `contains ${present.join(", ")} (${contract.reason})`,
     })
   }
 }

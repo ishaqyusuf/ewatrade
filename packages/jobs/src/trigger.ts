@@ -1,3 +1,4 @@
+import { tasks } from "@trigger.dev/sdk/v3"
 import type { JobHandler, RetryOptions } from "./queue"
 import { runInBackground } from "./queue"
 
@@ -9,12 +10,11 @@ export async function triggerJob<TPayload>(
   jobId: string,
   handler: JobHandler<TPayload>,
   payload: TPayload,
-  options: RetryOptions = {}
+  options: RetryOptions = {},
 ) {
   if (isTriggerConfigured()) {
-    console.info("[jobs] trigger integration not yet wired, using in-memory fallback", {
-      jobId
-    })
+    await tasks.trigger(jobId, payload)
+    return
   }
 
   await runInBackground(handler, payload, options)

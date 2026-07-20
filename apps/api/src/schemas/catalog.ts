@@ -124,6 +124,7 @@ const catalogProductOfferingSchema = catalogFixedOfferingSchema
 function catalogVariantSchema<T extends z.ZodType>(offeringSchema: T) {
   return z
     .object({
+      description: z.string().trim().max(2_000).optional(),
       enabled: z.boolean().optional(),
       isDefault: z.boolean(),
       key: catalogKeySchema,
@@ -206,7 +207,13 @@ export const catalogCreateProductSchema = z
       })
       .strict(),
     variants: z
-      .array(catalogVariantSchema(catalogProductOfferingSchema))
+      .array(
+        catalogVariantSchema(catalogProductOfferingSchema)
+          .extend({
+            openingStockQuantity: exactQuantitySchema.optional(),
+          })
+          .strict(),
+      )
       .min(1)
       .max(96),
   })

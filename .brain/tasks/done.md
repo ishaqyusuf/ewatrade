@@ -4,6 +4,63 @@
 Completed work with durable value to the project.
 
 ## Items
+- Completed the generic Service commerce loop for garment care and other
+  tracked services. Concrete garment/service/size Offerings retain independent
+  prices; Intake supports express surcharge, optional assignment, pickup
+  promise, deposit and customer channel; Commerce records payment/refund facts
+  and balance; managers can batch start/ready/delay and notify; operators can
+  collect a final balance and perform an explicit handoff; SMS/WhatsApp intents
+  support immediate or scheduled provider-neutral webhook delivery. Completed
+  Date: 2026-07-20. Checks Run: 16 focused tests, full workspace and mobile
+  TypeScript, six mobile source/style guards, Prisma migrate plus local/remote/
+  production push, remote migration compatibility checks, `git diff --check`,
+  Android rendered Work/Intake/payment/customer-channel QA, and two fixed-point
+  code reviews with no remaining findings.
+- Completed the mobile Product variant-by-unit price matrix. Every generated
+  variant now exposes an independent override for each additional selling unit,
+  with unit defaults and counted-unit prices retained as fallbacks. New units
+  default to two-decimal quantities, the quantity-precision picker is hidden,
+  and simple Product creation uses the same precision default. Completed Date:
+  2026-07-19. Checks Run: API/DB/mobile TypeScript, Catalog schema tests,
+  keyboard coverage, NativeWind/theme guards, targeted Biome,
+  `git diff --check`, and Android variant-unit price/keyboard QA.
+- Simplified Product variant lists to compact stock-style rows with required
+  Price/Qty and a More disclosure for optional description, SKU, barcode,
+  status, and stores. Extended Catalog creation and inventory opening movements
+  so exact Qty is persisted per variant, and added nullable Sellable Variant
+  descriptions through generated migration
+  `20260719180212_add_sellable_variant_description`. Completed Date:
+  2026-07-19. Checks Run: Catalog schema tests, API/DB/mobile TypeScript,
+  keyboard, dashboard/app-shell, NativeWind, theme and targeted Biome guards,
+  Prisma migrate/push, and `git diff --check`.
+- Converted Product selling-unit setup to an always-visible Unit section and a
+  detached keyboard-aware add/edit bottom sheet. Saved units use flat divider
+  rows with accessible edit/delete actions; modal fields provide concrete Bag,
+  Carton, Piece, and conversion-factor examples. Completed Date: 2026-07-19.
+  Checks Run: mobile TypeScript, keyboard coverage, NativeWind and theme guards,
+  targeted Biome, and `git diff --check`.
+- Restored `Order` as a permanent owner/admin Add-sheet row. It is actionable
+  when an active fixed-price Product or Service offering is store-available;
+  otherwise it remains visible, disabled, and directs the owner to create the
+  first Product/Service. Completed Date: 2026-07-19. Checks Run: dashboard
+  source guard, mobile TypeScript, NativeWind and theme guards, and
+  `git diff --check`.
+- Restored the approved Product `Add variant` keyboard composer on top of the
+  clean generic Catalog model. Variant names use filtered suggestions or custom
+  input; values use contextual suggestions, selected removable pills,
+  duplicate-safe comma entry, and keyboard Done. Service retains generic
+  Options terminology. Completed Date: 2026-07-19. Checks Run: mobile
+  TypeScript, keyboard coverage, NativeWind and theme guards, and
+  `git diff --check`; emulator/UI testing skipped by explicit owner request.
+- Restored the mobile owner/admin center-plus action as a compact detached
+  floating sheet. The headerless, divider-based chooser uses one plus icon per
+  row and concise Product, Service, Customer, Order, contextual Stock Entry,
+  and Staff labels; Product and Service open the generic item flow with the
+  correct kind preselected, while attendants retain direct order access.
+  Completed Date: 2026-07-19. Checks Run: mobile dashboard, keyboard,
+  NativeWind, and theme guards; mobile TypeScript; `git diff --check`; Android
+  emulator sheet, Product form, Service form, keyboard, safe-area, and status
+  bar verification.
 - Completed five-model mobile and website behavioral QA for the clean generic
   Catalog, Inventory and Service Operations cutover. Verified packaged bulk
   transformations, shared-stock apparel, garment-care Intake/work, mixed

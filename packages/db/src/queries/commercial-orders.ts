@@ -31,6 +31,7 @@ import {
   commitCatalogStockReservationInTransaction,
   reserveCatalogOfferingStockInTransaction,
 } from "./catalog-inventory"
+import { effectiveCommercialAmountPaid } from "./commercial-payments"
 
 export type CreateCommercialOrderInput = {
   actorUserId: string
@@ -51,6 +52,7 @@ export type CreateCommercialOrderInput = {
   }>
   notes?: string
   schemaVersion: number
+  serviceChargeMinor?: number
   storeId: string
   taxMinor?: number
   tenantId: string
@@ -66,6 +68,7 @@ const orderGraph = {
     },
     orderBy: { createdAt: "asc" },
   },
+  payments: { orderBy: { recordedAt: "asc" } },
 } satisfies Prisma.CommercialOrderInclude
 
 type OrderGraph = Prisma.CommercialOrderGetPayload<{
@@ -121,7 +124,15 @@ function exactLineTotal(unitPriceMinor: number, quantity: string) {
 }
 
 function serializeOrder(order: OrderGraph) {
+  const amountPaidMinor = effectiveCommercialAmountPaid({
+    amountPaidMinor: order.amountPaidMinor,
+    paymentCount: order.payments.length,
+    paymentStatus: order.paymentStatus,
+    totalMinor: order.totalMinor,
+  })
   return {
+    amountPaidMinor,
+    balanceDueMinor: Math.max(0, order.totalMinor - amountPaidMinor),
     clientOrderId: order.clientOrderId,
     createdAt: order.createdAt,
     currencyCode: order.currencyCode,
@@ -190,6 +201,16 @@ function serializeOrder(order: OrderGraph) {
     notes: order.notes,
     orderNumber: order.orderNumber,
     paymentStatus: order.paymentStatus,
+    payments: order.payments.map((payment) => ({
+      amountMinor: payment.amountMinor,
+      id: payment.id,
+      method: payment.method,
+      note: payment.note,
+      recordedAt: payment.recordedAt,
+      reference: payment.reference,
+      type: payment.type,
+    })),
+    serviceChargeMinor: order.serviceChargeMinor,
     status: order.status,
     storeId: order.storeId,
     subtotalMinor: order.subtotalMinor,
@@ -212,341 +233,342 @@ export async function createCommercialOrderInTransaction(
   const hash = payloadHash(input)
 
   const previous = await tx.commercialOrder.findUnique({
-      include: orderGraph,
-      where: {
-        tenantId_clientOrderId: {
-          clientOrderId: input.clientOrderId,
-          tenantId: input.tenantId,
-        },
+    include: orderGraph,
+    where: {
+      tenantId_clientOrderId: {
+        clientOrderId: input.clientOrderId,
+        tenantId: input.tenantId,
       },
-    })
-    if (previous) {
-      if (previous.payloadHash !== hash) {
-        throw new CatalogError(
-          "IDEMPOTENCY_MISMATCH",
-          "This Commercial Order identity was already used with different input.",
-        )
-      }
-      return serializeOrder(previous)
-    }
-
-    const store = await tx.store.findFirst({
-      where: { id: input.storeId, tenantId: input.tenantId },
-      select: { currencyCode: true, id: true },
-    })
-    if (!store) {
+    },
+  })
+  if (previous) {
+    if (previous.payloadHash !== hash) {
       throw new CatalogError(
-        "STORE_NOT_FOUND",
-        "Store not found for this business.",
+        "IDEMPOTENCY_MISMATCH",
+        "This Commercial Order identity was already used with different input.",
       )
     }
+    return serializeOrder(previous)
+  }
 
-    const resolvedLines: Array<{
-      input: CreateCommercialOrderInput["lines"][number]
-      offering: Awaited<ReturnType<typeof tx.sellableOffering.findFirst>> & {
-        catalogItem: { id: string; name: string }
-        productUnitOffering: null | {
-          inventoryUnit: {
-            configurationVersionId: string
-            factor: Prisma.Decimal
-            id: string
-            name: string
-            stockBehavior: InventoryUnitStockBehavior
-            transactionScale: number
-          }
-          barcode: string | null
-          sku: string | null
-        }
-        serviceOffering: null | { quantityScale: number }
-        storeAvailability: Array<{ isAvailable: boolean }>
-        variant: {
+  const store = await tx.store.findFirst({
+    where: { id: input.storeId, tenantId: input.tenantId },
+    select: { currencyCode: true, id: true },
+  })
+  if (!store) {
+    throw new CatalogError(
+      "STORE_NOT_FOUND",
+      "Store not found for this business.",
+    )
+  }
+
+  const resolvedLines: Array<{
+    input: CreateCommercialOrderInput["lines"][number]
+    offering: Awaited<ReturnType<typeof tx.sellableOffering.findFirst>> & {
+      catalogItem: { id: string; name: string }
+      productUnitOffering: null | {
+        inventoryUnit: {
+          configurationVersionId: string
+          factor: Prisma.Decimal
           id: string
           name: string
-          selections: Array<{
-            group: { key: string; name: string }
-            value: { key: string; label: string }
-          }>
+          stockBehavior: InventoryUnitStockBehavior
+          transactionScale: number
         }
+        barcode: string | null
+        sku: string | null
       }
-      quantity: string
-      totalMinor: number
-      unitPriceMinor: number
-    }> = []
+      serviceOffering: null | { quantityScale: number }
+      storeAvailability: Array<{ isAvailable: boolean }>
+      variant: {
+        id: string
+        name: string
+        selections: Array<{
+          group: { key: string; name: string }
+          value: { key: string; label: string }
+        }>
+      }
+    }
+    quantity: string
+    totalMinor: number
+    unitPriceMinor: number
+  }> = []
 
-    for (const lineInput of input.lines) {
-      const offering = await tx.sellableOffering.findFirst({
-        include: {
-          catalogItem: { select: { id: true, name: true } },
-          productUnitOffering: { include: { inventoryUnit: true } },
-          serviceOffering: true,
-          storeAvailability: { where: { storeId: store.id } },
-          variant: {
-            include: {
-              selections: { include: { group: true, value: true } },
-            },
+  for (const lineInput of input.lines) {
+    const offering = await tx.sellableOffering.findFirst({
+      include: {
+        catalogItem: { select: { id: true, name: true } },
+        productUnitOffering: { include: { inventoryUnit: true } },
+        serviceOffering: true,
+        storeAvailability: { where: { storeId: store.id } },
+        variant: {
+          include: {
+            selections: { include: { group: true, value: true } },
           },
         },
-        where: {
-          id: lineInput.offeringId,
-          status: CatalogRecordStatus.ACTIVE,
-          tenantId: input.tenantId,
-        },
-      })
-      if (!offering || !offering.storeAvailability[0]?.isAvailable) {
-        throw new CatalogError(
-          "OFFERING_UNAVAILABLE",
-          "An Order line selected an unavailable Offering.",
-        )
-      }
-
-      let unitPriceMinor: number
-      if (lineInput.trustedUnitPriceMinor !== undefined) {
-        assertMoney(lineInput.trustedUnitPriceMinor, "Trusted snapshot price")
-        unitPriceMinor = lineInput.trustedUnitPriceMinor
-      } else if (offering.pricingPolicy === OfferingPricingPolicy.FIXED) {
-        if (offering.fixedPriceMinor === null) {
-          throw new CatalogError(
-            "INVALID_ORDER",
-            "Fixed-price Offering has no current price.",
-          )
-        }
-        if (
-          lineInput.expectedFixedPriceMinor !== undefined &&
-          lineInput.expectedFixedPriceMinor !== offering.fixedPriceMinor
-        ) {
-          throw new CatalogError(
-            "OFFERING_UNAVAILABLE",
-            "The Offering price changed before Order confirmation.",
-          )
-        }
-        unitPriceMinor = offering.fixedPriceMinor
-      } else {
-        if (
-          offering.kind !== SellableOfferingKind.SERVICE ||
-          lineInput.approvedQuotePriceMinor === undefined
-        ) {
-          throw new CatalogError(
-            "INVALID_ORDER",
-            "Quote-required Service Offering needs an approved price.",
-          )
-        }
-        assertMoney(lineInput.approvedQuotePriceMinor, "Approved quote")
-        unitPriceMinor = lineInput.approvedQuotePriceMinor
-      }
-
-      const quantity = parseExactDecimal(lineInput.quantity, {
-        allowZero: false,
-        maxScale:
-          offering.kind === SellableOfferingKind.SERVICE
-            ? (offering.serviceOffering?.quantityScale ?? 0)
-            : 6,
-      })
-      resolvedLines.push({
-        input: lineInput,
-        offering,
-        quantity,
-        totalMinor: exactLineTotal(unitPriceMinor, quantity),
-        unitPriceMinor,
-      })
-    }
-
-    const subtotalMinor = resolvedLines.reduce(
-      (total, line) => total + line.totalMinor,
-      0,
-    )
-    const discountMinor = input.discountMinor ?? 0
-    const taxMinor = input.taxMinor ?? 0
-    assertMoney(subtotalMinor, "Subtotal")
-    assertMoney(discountMinor, "Discount")
-    assertMoney(taxMinor, "Tax")
-    const totalMinor = subtotalMinor - discountMinor + taxMinor
-    if (totalMinor < 0) {
+      },
+      where: {
+        id: lineInput.offeringId,
+        status: CatalogRecordStatus.ACTIVE,
+        tenantId: input.tenantId,
+      },
+    })
+    if (!offering || !offering.storeAvailability[0]?.isAvailable) {
       throw new CatalogError(
-        "INVALID_ORDER",
-        "Order discount cannot exceed subtotal plus tax.",
+        "OFFERING_UNAVAILABLE",
+        "An Order line selected an unavailable Offering.",
       )
     }
 
-    const order = await tx.commercialOrder.create({
+    let unitPriceMinor: number
+    if (lineInput.trustedUnitPriceMinor !== undefined) {
+      assertMoney(lineInput.trustedUnitPriceMinor, "Trusted snapshot price")
+      unitPriceMinor = lineInput.trustedUnitPriceMinor
+    } else if (offering.pricingPolicy === OfferingPricingPolicy.FIXED) {
+      if (offering.fixedPriceMinor === null) {
+        throw new CatalogError(
+          "INVALID_ORDER",
+          "Fixed-price Offering has no current price.",
+        )
+      }
+      if (
+        lineInput.expectedFixedPriceMinor !== undefined &&
+        lineInput.expectedFixedPriceMinor !== offering.fixedPriceMinor
+      ) {
+        throw new CatalogError(
+          "OFFERING_UNAVAILABLE",
+          "The Offering price changed before Order confirmation.",
+        )
+      }
+      unitPriceMinor = offering.fixedPriceMinor
+    } else {
+      if (
+        offering.kind !== SellableOfferingKind.SERVICE ||
+        lineInput.approvedQuotePriceMinor === undefined
+      ) {
+        throw new CatalogError(
+          "INVALID_ORDER",
+          "Quote-required Service Offering needs an approved price.",
+        )
+      }
+      assertMoney(lineInput.approvedQuotePriceMinor, "Approved quote")
+      unitPriceMinor = lineInput.approvedQuotePriceMinor
+    }
+
+    const quantity = parseExactDecimal(lineInput.quantity, {
+      allowZero: false,
+      maxScale:
+        offering.kind === SellableOfferingKind.SERVICE
+          ? (offering.serviceOffering?.quantityScale ?? 0)
+          : 6,
+    })
+    resolvedLines.push({
+      input: lineInput,
+      offering,
+      quantity,
+      totalMinor: exactLineTotal(unitPriceMinor, quantity),
+      unitPriceMinor,
+    })
+  }
+
+  const subtotalMinor = resolvedLines.reduce(
+    (total, line) => total + line.totalMinor,
+    0,
+  )
+  const discountMinor = input.discountMinor ?? 0
+  const serviceChargeMinor = input.serviceChargeMinor ?? 0
+  const taxMinor = input.taxMinor ?? 0
+  assertMoney(subtotalMinor, "Subtotal")
+  assertMoney(discountMinor, "Discount")
+  assertMoney(serviceChargeMinor, "Service charge")
+  assertMoney(taxMinor, "Tax")
+  const totalMinor =
+    subtotalMinor + serviceChargeMinor - discountMinor + taxMinor
+  if (totalMinor < 0) {
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "Order discount cannot exceed subtotal plus tax.",
+    )
+  }
+
+  const order = await tx.commercialOrder.create({
+    data: {
+      clientOrderId: input.clientOrderId,
+      createdByUserId: input.actorUserId,
+      currencyCode: store.currencyCode,
+      customerEmail: input.customerEmail?.trim() || null,
+      customerName: input.customerName?.trim() || null,
+      customerPhone: input.customerPhone?.trim() || null,
+      discountMinor,
+      notes: input.notes?.trim() || null,
+      orderNumber: `EO-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`,
+      payloadHash: hash,
+      schemaVersion: input.schemaVersion,
+      serviceChargeMinor,
+      status: OrderStatus.CONFIRMED,
+      storeId: store.id,
+      subtotalMinor,
+      taxMinor,
+      tenantId: input.tenantId,
+      totalMinor,
+    },
+  })
+
+  for (const [index, resolved] of resolvedLines.entries()) {
+    const line = await tx.commercialOrderLine.create({
       data: {
-        clientOrderId: input.clientOrderId,
-        createdByUserId: input.actorUserId,
-        currencyCode: store.currencyCode,
-        customerEmail: input.customerEmail?.trim() || null,
-        customerName: input.customerName?.trim() || null,
-        customerPhone: input.customerPhone?.trim() || null,
-        discountMinor,
-        notes: input.notes?.trim() || null,
-        orderNumber: `EO-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`,
-        payloadHash: hash,
-        schemaVersion: input.schemaVersion,
-        status: OrderStatus.CONFIRMED,
-        storeId: store.id,
-        subtotalMinor,
-        taxMinor,
-        tenantId: input.tenantId,
-        totalMinor,
+        kind: resolved.offering.kind,
+        offeringId: resolved.offering.id,
+        orderId: order.id,
+        quantity: resolved.quantity,
+        totalMinor: resolved.totalMinor,
+        unitPriceMinor: resolved.unitPriceMinor,
       },
     })
 
-    for (const [index, resolved] of resolvedLines.entries()) {
-      const line = await tx.commercialOrderLine.create({
-        data: {
-          kind: resolved.offering.kind,
-          offeringId: resolved.offering.id,
-          orderId: order.id,
-          quantity: resolved.quantity,
-          totalMinor: resolved.totalMinor,
-          unitPriceMinor: resolved.unitPriceMinor,
-        },
-      })
-
-      let reservation:
-        | Awaited<ReturnType<typeof reserveCatalogOfferingStockInTransaction>>
-        | undefined
-      if (resolved.offering.kind === SellableOfferingKind.PRODUCT_UNIT) {
-        if (
-          !resolved.input.expectedConfigurationVersionId ||
-          !resolved.offering.productUnitOffering
-        ) {
-          throw new CatalogError(
-            "STALE_CONFIGURATION",
-            "Product Order lines require the expected Current unit configuration.",
-          )
-        }
-        reservation = await reserveCatalogOfferingStockInTransaction(tx, {
-          clientReservationId: `${input.clientOrderId}:line:${index + 1}`,
-          commercialOrderLineId: line.id,
-          enteredQuantity: resolved.quantity,
-          expectedBalanceRevision: resolved.input.expectedBalanceRevision,
-          expectedConfigurationVersionId:
-            resolved.input.expectedConfigurationVersionId,
-          offeringId: resolved.offering.id,
-          schemaVersion: input.schemaVersion,
-          storeId: store.id,
-          tenantId: input.tenantId,
-        })
+    let reservation:
+      | Awaited<ReturnType<typeof reserveCatalogOfferingStockInTransaction>>
+      | undefined
+    if (resolved.offering.kind === SellableOfferingKind.PRODUCT_UNIT) {
+      if (
+        !resolved.input.expectedConfigurationVersionId ||
+        !resolved.offering.productUnitOffering
+      ) {
+        throw new CatalogError(
+          "STALE_CONFIGURATION",
+          "Product Order lines require the expected Current unit configuration.",
+        )
       }
-
-      const productUnit = resolved.offering.productUnitOffering?.inventoryUnit
-      await tx.offeringSnapshot.create({
-        data: {
-          balanceSourceId: reservation?.balanceSourceId,
-          catalogItemId: resolved.offering.catalogItem.id,
-          catalogItemName: resolved.offering.catalogItem.name,
-          configurationVersionId: reservation?.configurationVersionId,
-          currencyCode: resolved.offering.currencyCode,
-          inventoryUnitId: productUnit?.id,
-          inventoryUnitName: productUnit?.name,
-          transactionScale: productUnit?.transactionScale,
-          sku: resolved.offering.productUnitOffering?.sku,
-          barcode: resolved.offering.productUnitOffering?.barcode,
-          offeringId: resolved.offering.id,
-          offeringKind: resolved.offering.kind,
-          offeringName: resolved.offering.name,
-          optionSelections: resolved.offering.variant.selections.map(
-            (selection) => ({
-              groupKey: selection.group.key,
-              groupName: selection.group.name,
-              valueKey: selection.value.key,
-              valueLabel: selection.value.label,
-            }),
-          ),
-          orderLineId: line.id,
-          pricingPolicy: resolved.offering.pricingPolicy,
-          quantity: resolved.quantity,
-          stockBehavior: productUnit?.stockBehavior,
-          totalMinor: resolved.totalMinor,
-          unitFactor: productUnit?.factor,
-          unitPriceMinor: resolved.unitPriceMinor,
-          variantId: resolved.offering.variant.id,
-          variantName: resolved.offering.variant.name,
-        },
+      reservation = await reserveCatalogOfferingStockInTransaction(tx, {
+        clientReservationId: `${input.clientOrderId}:line:${index + 1}`,
+        commercialOrderLineId: line.id,
+        enteredQuantity: resolved.quantity,
+        expectedBalanceRevision: resolved.input.expectedBalanceRevision,
+        expectedConfigurationVersionId:
+          resolved.input.expectedConfigurationVersionId,
+        offeringId: resolved.offering.id,
+        schemaVersion: input.schemaVersion,
+        storeId: store.id,
+        tenantId: input.tenantId,
       })
     }
 
-    if (input.createTrackedServiceWork !== false) {
-      const trackedLines = await tx.commercialOrderLine.findMany({
-        include: {
-          offering: { include: { serviceOffering: true } },
-          snapshot: true,
-        },
-        where: {
-          orderId: order.id,
-          offering: {
-            serviceOffering: { workPolicy: ServiceWorkPolicy.TRACKED },
-          },
-        },
-      })
-      if (trackedLines.length > 0) {
-        const job = await tx.serviceJob.create({
-          data: {
-            clientJobId: `${input.clientOrderId}:job:1`,
-            commercialOrderId: order.id,
-            createdByUserId: input.actorUserId,
-            priority: ServicePriority.NORMAL,
-            storeId: input.storeId,
-            tenantId: input.tenantId,
-          },
-        })
-        for (const orderLine of trackedLines) {
-          const policy =
-            orderLine.offering.serviceOffering!.authorizationPolicy
-          const authorizationStatus =
-            policy === WorkAuthorizationPolicy.ON_ORDER_CONFIRMATION
-              ? WorkAuthorizationStatus.AUTHORIZED
-              : policy === WorkAuthorizationPolicy.AFTER_REQUIRED_PAYMENT
-                ? WorkAuthorizationStatus.PENDING_PAYMENT
-                : WorkAuthorizationStatus.PENDING_RELEASE
-          const workLine = await tx.serviceJobLine.create({
-            data: {
-              allocatedQuantity: orderLine.quantity,
-              allocationSnapshot: JSON.parse(
-                JSON.stringify(orderLine.snapshot),
-              ) as Prisma.InputJsonValue,
-              authorizationPolicy: policy,
-              authorizationSource:
-                authorizationStatus === WorkAuthorizationStatus.AUTHORIZED
-                  ? "order_confirmation"
-                  : null,
-              authorizationStatus,
-              authorizedAt:
-                authorizationStatus === WorkAuthorizationStatus.AUTHORIZED
-                  ? new Date()
-                  : null,
-              commercialOrderLineId: orderLine.id,
-              serviceJobId: job.id,
-              status: ServiceJobLineStatus.QUEUED,
-            },
-          })
-          await tx.serviceWorkEvent.create({
-            data: {
-              actorUserId: input.actorUserId,
-              serviceJobId: job.id,
-              serviceJobLineId: workLine.id,
-              source: "commercial_order",
-              tenantId: input.tenantId,
-              type: ServiceWorkEventType.CREATED,
-            },
-          })
-        }
-      }
-    }
-
-    const created = await tx.commercialOrder.findUniqueOrThrow({
-      include: orderGraph,
-      where: { id: order.id },
+    const productUnit = resolved.offering.productUnitOffering?.inventoryUnit
+    await tx.offeringSnapshot.create({
+      data: {
+        balanceSourceId: reservation?.balanceSourceId,
+        catalogItemId: resolved.offering.catalogItem.id,
+        catalogItemName: resolved.offering.catalogItem.name,
+        configurationVersionId: reservation?.configurationVersionId,
+        currencyCode: resolved.offering.currencyCode,
+        inventoryUnitId: productUnit?.id,
+        inventoryUnitName: productUnit?.name,
+        transactionScale: productUnit?.transactionScale,
+        sku: resolved.offering.productUnitOffering?.sku,
+        barcode: resolved.offering.productUnitOffering?.barcode,
+        offeringId: resolved.offering.id,
+        offeringKind: resolved.offering.kind,
+        offeringName: resolved.offering.name,
+        optionSelections: resolved.offering.variant.selections.map(
+          (selection) => ({
+            groupKey: selection.group.key,
+            groupName: selection.group.name,
+            valueKey: selection.value.key,
+            valueLabel: selection.value.label,
+          }),
+        ),
+        orderLineId: line.id,
+        pricingPolicy: resolved.offering.pricingPolicy,
+        quantity: resolved.quantity,
+        stockBehavior: productUnit?.stockBehavior,
+        totalMinor: resolved.totalMinor,
+        unitFactor: productUnit?.factor,
+        unitPriceMinor: resolved.unitPriceMinor,
+        variantId: resolved.offering.variant.id,
+        variantName: resolved.offering.variant.name,
+      },
     })
-    return serializeOrder(created)
+  }
+
+  if (input.createTrackedServiceWork !== false) {
+    const trackedLines = await tx.commercialOrderLine.findMany({
+      include: {
+        offering: { include: { serviceOffering: true } },
+        snapshot: true,
+      },
+      where: {
+        orderId: order.id,
+        offering: {
+          serviceOffering: { workPolicy: ServiceWorkPolicy.TRACKED },
+        },
+      },
+    })
+    if (trackedLines.length > 0) {
+      const job = await tx.serviceJob.create({
+        data: {
+          clientJobId: `${input.clientOrderId}:job:1`,
+          commercialOrderId: order.id,
+          createdByUserId: input.actorUserId,
+          priority: ServicePriority.NORMAL,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        },
+      })
+      for (const orderLine of trackedLines) {
+        const policy = orderLine.offering.serviceOffering!.authorizationPolicy
+        const authorizationStatus =
+          policy === WorkAuthorizationPolicy.ON_ORDER_CONFIRMATION
+            ? WorkAuthorizationStatus.AUTHORIZED
+            : policy === WorkAuthorizationPolicy.AFTER_REQUIRED_PAYMENT
+              ? WorkAuthorizationStatus.PENDING_PAYMENT
+              : WorkAuthorizationStatus.PENDING_RELEASE
+        const workLine = await tx.serviceJobLine.create({
+          data: {
+            allocatedQuantity: orderLine.quantity,
+            allocationSnapshot: JSON.parse(
+              JSON.stringify(orderLine.snapshot),
+            ) as Prisma.InputJsonValue,
+            authorizationPolicy: policy,
+            authorizationSource:
+              authorizationStatus === WorkAuthorizationStatus.AUTHORIZED
+                ? "order_confirmation"
+                : null,
+            authorizationStatus,
+            authorizedAt:
+              authorizationStatus === WorkAuthorizationStatus.AUTHORIZED
+                ? new Date()
+                : null,
+            commercialOrderLineId: orderLine.id,
+            serviceJobId: job.id,
+            status: ServiceJobLineStatus.QUEUED,
+          },
+        })
+        await tx.serviceWorkEvent.create({
+          data: {
+            actorUserId: input.actorUserId,
+            serviceJobId: job.id,
+            serviceJobLineId: workLine.id,
+            source: "commercial_order",
+            tenantId: input.tenantId,
+            type: ServiceWorkEventType.CREATED,
+          },
+        })
+      }
+    }
+  }
+
+  const created = await tx.commercialOrder.findUniqueOrThrow({
+    include: orderGraph,
+    where: { id: order.id },
+  })
+  return serializeOrder(created)
 }
 
 export async function createCommercialOrder(
   db: PrismaClient,
   input: CreateCommercialOrderInput,
 ) {
-  return db.$transaction((tx) =>
-    createCommercialOrderInTransaction(tx, input),
-  )
+  return db.$transaction((tx) => createCommercialOrderInTransaction(tx, input))
 }
 
 export async function getCommercialOrder(
@@ -749,7 +771,10 @@ export async function returnCommercialOrderProductLine(
       const isCompatiblePackagedDestination =
         balance?.kind === StockBalanceKind.PACKAGED_STOCK &&
         balance.inventoryUnitId === line.snapshot.inventoryUnitId
-      if (!balance || (!isOriginalBalance && !isCompatiblePackagedDestination)) {
+      if (
+        !balance ||
+        (!isOriginalBalance && !isCompatiblePackagedDestination)
+      ) {
         throw new CatalogError(
           "INVALID_ORDER",
           "Return destination must preserve the original Inventory Unit meaning.",

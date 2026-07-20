@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 
 import {
+  EXACT_CANONICAL_MAX_SCALE,
   EXACT_FACTOR_MAX_SCALE,
   EXACT_QUANTITY_MAX_SCALE,
   parseExactDecimal,
@@ -13,10 +14,10 @@ import {
   InventoryUnitStockBehavior,
   OfferingPricingPolicy,
   SellableOfferingKind,
+  ServiceWorkPolicy,
   StockBalanceKind,
   StockOperationType,
   UnitConfigurationStatus,
-  ServiceWorkPolicy,
   WorkAuthorizationPolicy,
 } from "../../generated/prisma/enums"
 
@@ -27,6 +28,8 @@ export type InventoryUnitStockBehaviorValue =
   | "alternate_transaction"
   | "canonical_shared"
   | "packaged_stock"
+
+const DEFAULT_CATALOG_TRANSACTION_SCALE = 2
 
 type CatalogOfferingInput = {
   enabled?: boolean
@@ -41,6 +44,7 @@ type CatalogOfferingInput = {
 }
 
 type CatalogVariantInput<TOffering> = {
+  description?: string
   enabled?: boolean
   isDefault: boolean
   key: string
@@ -92,7 +96,9 @@ export type CreateCatalogProductInput = {
         inventoryUnitKey: string
         sku?: string
       }
-    >
+    > & {
+      openingStockQuantity?: string
+    }
   >
 }
 
@@ -737,8 +743,7 @@ function serializeCatalogItem(item: CatalogItemGraph) {
           : null,
         serviceWorkPolicy: offering.serviceOffering
           ? {
-              authorizationPolicy:
-                offering.serviceOffering.authorizationPolicy,
+              authorizationPolicy: offering.serviceOffering.authorizationPolicy,
               guidance: offering.serviceOffering.guidance,
               quantityScale: offering.serviceOffering.quantityScale,
               workPolicy: offering.serviceOffering.workPolicy,
@@ -865,6 +870,12 @@ export async function createCatalogItem(
     let canonicalInventoryUnitId: string | null = null
     let canonicalTransactionScale: number | null = null
     let defaultVariantId: string | null = null
+    let hasVariantOpeningStockInput = false
+    const variantOpeningStocks: Array<{
+      quantity: string
+      variantId: string
+      variantKey: string
+    }> = []
 
     if (input.kind === "product") {
       const product = await tx.catalogProduct.create({
@@ -949,6 +960,7 @@ export async function createCatalogItem(
       const variant = await tx.sellableVariant.create({
         data: {
           catalogItemId: item.id,
+          description: variantInput.description?.trim() || null,
           isDefault: variantInput.isDefault,
           key: variantInput.key.trim().toLowerCase(),
           name: variantInput.name.trim(),
@@ -961,6 +973,20 @@ export async function createCatalogItem(
       })
       if (variant.isDefault) {
         defaultVariantId = variant.id
+      }
+      if (
+        input.kind === "product" &&
+        "openingStockQuantity" in variantInput &&
+        variantInput.openingStockQuantity !== undefined
+      ) {
+        hasVariantOpeningStockInput = true
+        variantOpeningStocks.push({
+          quantity: parseExactDecimal(variantInput.openingStockQuantity, {
+            maxScale: EXACT_QUANTITY_MAX_SCALE,
+          }),
+          variantId: variant.id,
+          variantKey: variantInput.key.trim().toLowerCase(),
+        })
       }
 
       for (const selectionInput of variantInput.selections ?? []) {
@@ -1078,37 +1104,47 @@ export async function createCatalogItem(
       }
     }
 
-    if (input.kind === "product" && input.openingStockQuantity !== undefined) {
-      const openingStockQuantity = parseExactDecimal(
-        input.openingStockQuantity,
-        { maxScale: EXACT_QUANTITY_MAX_SCALE },
-      )
+    if (
+      input.kind === "product" &&
+      productId &&
+      configurationVersionId &&
+      canonicalInventoryUnitId &&
+      canonicalTransactionScale !== null
+    ) {
+      const openingStocks = hasVariantOpeningStockInput
+        ? variantOpeningStocks
+        : input.openingStockQuantity !== undefined && defaultVariantId
+          ? [
+              {
+                quantity: parseExactDecimal(input.openingStockQuantity, {
+                  maxScale: EXACT_QUANTITY_MAX_SCALE,
+                }),
+                variantId: defaultVariantId,
+                variantKey: "default",
+              },
+            ]
+          : []
 
-      if (
-        openingStockQuantity !== "0" &&
-        productId &&
-        configurationVersionId &&
-        canonicalInventoryUnitId &&
-        canonicalTransactionScale !== null &&
-        defaultVariantId
-      ) {
+      for (const openingStock of openingStocks) {
+        if (openingStock.quantity === "0") continue
+
         const balanceSource = await tx.stockBalanceSource.create({
           data: {
             inventoryUnitId: canonicalInventoryUnitId,
             kind: StockBalanceKind.SHARED_POOL,
-            onHandQuantity: openingStockQuantity,
+            onHandQuantity: openingStock.quantity,
             productId,
             storeId: store.id,
             tenantId: input.tenantId,
-            variantId: defaultVariantId,
+            variantId: openingStock.variantId,
           },
         })
         const operation = await tx.stockOperation.create({
           data: {
             actorUserId: input.actorUserId,
-            clientOperationId: `${input.clientOperationId}:opening-stock`,
+            clientOperationId: `${input.clientOperationId}:opening-stock:${openingStock.variantKey}`,
             payloadHash,
-            reason: "Initial stock",
+            reason: `Initial stock for ${openingStock.variantKey}`,
             source: "catalog_setup",
             storeId: store.id,
             tenantId: input.tenantId,
@@ -1121,11 +1157,11 @@ export async function createCatalogItem(
             balanceSourceId: balanceSource.id,
             configurationVersionId,
             enteredInventoryUnitId: canonicalInventoryUnitId,
-            enteredQuantity: openingStockQuantity,
+            enteredQuantity: openingStock.quantity,
             operationId: operation.id,
             previousOnHandQuantity: "0",
-            resultingOnHandQuantity: openingStockQuantity,
-            signedCanonicalEffect: openingStockQuantity,
+            resultingOnHandQuantity: openingStock.quantity,
+            signedCanonicalEffect: openingStock.quantity,
             transactionScaleSnapshot: canonicalTransactionScale,
             unitFactorSnapshot: "1",
           },
@@ -1180,14 +1216,14 @@ export async function createSimpleCatalogItem(
           name: input.name,
           offerings: [
             {
-            fixedPriceMinor: input.priceMinor,
-            authorizationPolicy: input.authorizationPolicy,
-            guidance: input.guidance,
-            key: "default",
-            name: input.name,
-            pricingPolicy: "fixed",
-            quantityScale: input.quantityScale,
-            workPolicy: input.workPolicy,
+              fixedPriceMinor: input.priceMinor,
+              authorizationPolicy: input.authorizationPolicy,
+              guidance: input.guidance,
+              key: "default",
+              name: input.name,
+              pricingPolicy: "fixed",
+              quantityScale: input.quantityScale,
+              workPolicy: input.workPolicy,
             },
           ],
         },
@@ -1208,14 +1244,14 @@ export async function createSimpleCatalogItem(
     storeId: input.storeId,
     tenantId: input.tenantId,
     unitConfiguration: {
-      canonicalBalanceScale: 0,
+      canonicalBalanceScale: EXACT_CANONICAL_MAX_SCALE,
       units: [
         {
           factor: "1",
           key: unitKey,
           name: unitName,
           stockBehavior: "canonical_shared",
-          transactionScale: 0,
+          transactionScale: DEFAULT_CATALOG_TRANSACTION_SCALE,
         },
       ],
     },

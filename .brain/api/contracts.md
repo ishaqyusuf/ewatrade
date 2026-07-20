@@ -16,7 +16,17 @@
 
 - Item kind is immutable after creation.
 - Variant option combinations are separate from Offerings and units.
+- Catalog creation accepts an optional description on every Sellable Variant.
+  Product variants may also provide their own exact
+  `openingStockQuantity`; each non-zero value creates opening stock against that
+  specific variant's Canonical Shared balance. The existing item-level opening
+  quantity remains the simple/default-variant path when no per-variant
+  quantities are supplied.
 - Product Unit Offerings require fixed prices and a Current Inventory Unit.
+- Simple Product creation and the mobile Product setup default new Inventory
+  Units to a two-decimal transaction scale. Catalog clients may omit a
+  variant-unit price override; the resolved unit default or variant price is
+  still materialized as that Offering's independent fixed-price snapshot.
 - Service Offerings may be fixed or quote-required and never accept stock
   input.
 - Unit Draft publication validates one factor-1 Canonical Unit, direct exact
@@ -38,6 +48,9 @@
 - Product reservation/fulfillment and Service work creation are separate
   transactional effects.
 - Mixed Product/Service Orders are supported.
+- Payments and refunds append idempotent `CommercialOrderPayment` facts. The
+  Order stores the derived paid amount and exposes paid, balance and payment
+  status; a command cannot overpay or refund more than was collected.
 
 ## Services
 
@@ -59,6 +72,16 @@
   actors, private evidence, raw storage references or private contacts.
 - Public tracking includes the tenant timezone so customer promise dates are
   formatted consistently and accurately.
+- Intake may select standard/express service, an optional assignee, promised
+  pickup, notification channel and initial payment. Express charges are
+  snapshotted into the Order total.
+- Line completion is not a staff progress transition. `services.handoff` is the
+  only normal collection path and atomically requires ready work plus a zero
+  balance, optionally applying the final payment.
+- Batch work and batch messaging accept 1–100 Jobs. Batch messaging requires a
+  stable client batch id so transport retries are idempotent. Scheduled intents
+  remain independent of work state; rescheduling replaces pending due
+  reminders, while full-Job readiness or handoff cancels obsolete reminders.
 
 ## Offline
 

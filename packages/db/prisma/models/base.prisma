@@ -35,6 +35,7 @@ model Tenant {
   serviceQuotes                 ServiceQuote[]
   customerTrackingAccess        CustomerTrackingAccess[]
   serviceNotificationIntents    ServiceNotificationIntent[]
+  serviceStoreSettings          ServiceStoreSettings[]
   catalogItems                  CatalogItem[]
   catalogUnitDefinitions        UnitDefinition[]
   catalogOfferings              SellableOffering[]
@@ -48,6 +49,7 @@ model Tenant {
   stockTransfers                StockTransfer[]
   inventoryCloseouts            InventoryCloseout[]
   commercialOrders              CommercialOrder[]
+  commercialOrderPayments       CommercialOrderPayment[]
   productReturns                ProductReturn[]
   offlineCommands               OfflineCommand[]
 }

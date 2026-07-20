@@ -1,28 +1,31 @@
 model CommercialOrder {
-  id                   String                @id @default(cuid())
+  id                   String                   @id @default(cuid())
   tenantId             String
   storeId              String
   clientOrderId        String
   payloadHash          String
-  schemaVersion        Int                   @default(1)
+  schemaVersion        Int                      @default(1)
   orderNumber          String
-  status               OrderStatus           @default(CONFIRMED)
-  paymentStatus        PaymentStatus         @default(PENDING)
+  status               OrderStatus              @default(CONFIRMED)
+  paymentStatus        PaymentStatus            @default(PENDING)
   currencyCode         String
   subtotalMinor        Int
-  discountMinor        Int                   @default(0)
-  taxMinor             Int                   @default(0)
+  serviceChargeMinor   Int                      @default(0)
+  discountMinor        Int                      @default(0)
+  taxMinor             Int                      @default(0)
   totalMinor           Int
+  amountPaidMinor      Int                      @default(0)
   customerName         String?
   customerPhone        String?
   customerEmail        String?
   notes                String?
   createdByUserId      String
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store                Store                 @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  tenant               Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                Store                    @relation(fields: [storeId], references: [id], onDelete: Restrict)
   lines                CommercialOrderLine[]
+  payments             CommercialOrderPayment[]
   returns              ProductReturn[]
   serviceIntake        ServiceIntake?
   serviceJobs          ServiceJob[]
@@ -32,6 +35,29 @@ model CommercialOrder {
   @@unique([storeId, orderNumber])
   @@index([tenantId, status, createdAt])
   @@index([storeId, createdAt])
+}
+
+model CommercialOrderPayment {
+  id               String                  @id @default(cuid())
+  tenantId         String
+  storeId          String
+  orderId          String
+  clientPaymentId  String
+  type             CommercialPaymentType   @default(PAYMENT)
+  method           CommercialPaymentMethod
+  amountMinor      Int
+  reference        String?
+  note             String?
+  recordedByUserId String
+  recordedAt       DateTime                @default(now())
+  createdAt        DateTime                @default(now())
+  tenant           Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store            Store                   @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  order            CommercialOrder         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, clientPaymentId])
+  @@index([orderId, recordedAt])
+  @@index([tenantId, storeId, recordedAt])
 }
 
 model CommercialOrderLine {

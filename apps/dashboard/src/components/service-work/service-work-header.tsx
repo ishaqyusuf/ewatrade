@@ -28,12 +28,20 @@ export function ServiceWorkHeader({
         </div>
         <div className="flex flex-wrap gap-2">
           {canManage ? (
-            <Button
-              variant="outline"
-              onClick={() => setParams({ serviceSheet: "request" })}
-            >
-              Request link
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setParams({ serviceSheet: "settings" })}
+              >
+                Settings
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setParams({ serviceSheet: "request" })}
+              >
+                Request link
+              </Button>
+            </>
           ) : null}
           <Button onClick={() => setParams({ serviceSheet: "intake" })}>
             <HugeiconsIcon icon={Add01Icon} className="mr-2 size-4" />

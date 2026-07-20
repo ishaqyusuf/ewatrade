@@ -189,6 +189,16 @@ enum ServicePriority {
   URGENT
 }
 
+enum ServiceLevel {
+  STANDARD
+  EXPRESS
+}
+
+enum ServiceSurchargeType {
+  PERCENTAGE
+  FIXED
+}
+
 enum ServiceJobLineStatus {
   QUEUED
   IN_PROGRESS
@@ -443,10 +453,24 @@ enum OrderStatus {
 
 enum PaymentStatus {
   PENDING
+  PARTIALLY_PAID
   AUTHORIZED
   PAID
   FAILED
   REFUNDED
+}
+
+enum CommercialPaymentType {
+  PAYMENT
+  REFUND
+}
+
+enum CommercialPaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CARD
+  POS
+  OTHER
 }
 
 enum SiteStatus {

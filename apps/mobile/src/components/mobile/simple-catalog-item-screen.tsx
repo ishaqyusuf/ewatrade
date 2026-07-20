@@ -1,60 +1,109 @@
-import { ActionButton } from "@/components/mobile/action-button";
-import { FormField } from "@/components/mobile/form-field";
+import { ActionButton } from "@/components/mobile/action-button"
+import { FormField } from "@/components/mobile/form-field"
 import {
   KeyboardInlineComposer,
   type KeyboardInlineComposerPill,
-} from "@/components/mobile/keyboard-inline-composer";
-import { MoneyField } from "@/components/mobile/money-field";
-import { StatusBanner } from "@/components/mobile/status-banner";
-import { Icon, type IconKeys } from "@/components/ui/icon";
-import { Pressable } from "@/components/ui/pressable";
-import { Text } from "@/components/ui/text";
-import { useAuthContext } from "@/hooks/use-auth";
-import { useTRPC } from "@/trpc/client";
-import { buildCatalogVariantCombinations, majorToMinor } from "@ewatrade/utils";
+} from "@/components/mobile/keyboard-inline-composer"
+import { MoneyField } from "@/components/mobile/money-field"
+import { StatusBanner } from "@/components/mobile/status-banner"
+import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
+import { Icon, type IconKeys } from "@/components/ui/icon"
+import { Modal, useModal } from "@/components/ui/modal"
+import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
+import { useAuthContext } from "@/hooks/use-auth"
+import { useTRPC } from "@/trpc/client"
+import { buildCatalogVariantCombinations, majorToMinor } from "@ewatrade/utils"
 import {
+  EXACT_CANONICAL_MAX_SCALE,
   EXACT_FACTOR_MAX_SCALE,
-  EXACT_QUANTITY_MAX_SCALE,
   parseExactDecimal,
-} from "@ewatrade/utils/exact-decimal";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import * as Crypto from "expo-crypto";
-import { useMemo, useRef, useState } from "react";
-import { View } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+} from "@ewatrade/utils/exact-decimal"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import * as Crypto from "expo-crypto"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { Keyboard, type TextInput, View } from "react-native"
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
-type CatalogItemKind = "product" | "service";
+type CatalogItemKind = "product" | "service"
 
 type SimpleCatalogItemScreenProps = {
-  onComplete?: () => void;
-};
+  initialKind?: CatalogItemKind
+  onComplete?: () => void
+}
 
 type MobileOptionGroup = {
-  id: string;
-  name: string;
-  values: Array<{ id: string; label: string }>;
-};
+  id: string
+  name: string
+  values: Array<{ id: string; label: string }>
+}
 
 type MobileVariantDraft = {
-  barcode: string;
-  enabled: boolean;
-  price: string;
-  quoteRequired: boolean;
-  sku: string;
-  storeIds: string[];
-};
+  barcode: string
+  description: string
+  enabled: boolean
+  isMoreVisible: boolean
+  price: string
+  quantity: string
+  quoteRequired: boolean
+  sku: string
+  storeIds: string[]
+  unitPrices: Record<string, string>
+}
 
 type MobileUnitDraft = {
-  factor: string;
-  id: string;
-  name: string;
-  price: string;
-  stockBehavior: "alternate_transaction" | "packaged_stock";
-  transactionScale: number;
-};
+  factor: string
+  id: string
+  name: string
+  price: string
+  stockBehavior: "alternate_transaction" | "packaged_stock"
+  transactionScale: number
+}
+
+type VariantComposerMode = "variant-type" | "variant-value"
+
+const VARIANT_COMPOSER_DEFAULT_SUGGESTION_COUNT = 5
+const DEFAULT_UNIT_TRANSACTION_SCALE = 2
+
+const KNOWN_VARIANT_TYPES = [
+  "Size",
+  "Color",
+  "Unit",
+  "Material",
+  "Length",
+  "Weight",
+  "Package",
+  "Quality",
+  "Service level",
+  "Turnaround",
+]
+
+const VARIANT_VALUE_SUGGESTIONS_BY_LABEL: Record<string, string[]> = {
+  Color: ["Black", "White", "Blue", "Red", "Green", "Yellow", "Brown", "Grey"],
+  Length: ["Short", "Regular", "Long", "Extra long"],
+  Material: ["Cotton", "Leather", "Denim", "Polyester", "Wool", "Silk"],
+  Package: ["Single", "Pack", "Carton", "Bundle", "Dozen", "Half pack"],
+  Quality: ["Standard", "Premium", "Grade A", "Grade B", "Economy"],
+  "Service level": ["Standard", "Express", "Same day", "Next day"],
+  Size: ["XS", "S", "M", "L", "XL", "XXL"],
+  Turnaround: ["Same day", "24 hours", "48 hours", "3 days", "1 week"],
+  Unit: ["Piece", "Pair", "Pack", "Box", "Carton", "Kg", "Gram", "Meter"],
+  Weight: ["Light", "Medium", "Heavy", "1 kg", "5 kg", "10 kg"],
+}
+
+function getVariantValueSuggestions(label: string) {
+  const normalizedLabel = label.trim().toLowerCase()
+  const suggestionLabel = Object.keys(VARIANT_VALUE_SUGGESTIONS_BY_LABEL).find(
+    (knownLabel) => knownLabel.toLowerCase() === normalizedLabel,
+  )
+
+  return suggestionLabel
+    ? VARIANT_VALUE_SUGGESTIONS_BY_LABEL[suggestionLabel]
+    : []
+}
 
 function newOptionGroup(): MobileOptionGroup {
-  return { id: Crypto.randomUUID(), name: "", values: [] };
+  return { id: Crypto.randomUUID(), name: "", values: [] }
 }
 
 function newUnit(): MobileUnitDraft {
@@ -64,12 +113,12 @@ function newUnit(): MobileUnitDraft {
     name: "",
     price: "",
     stockBehavior: "alternate_transaction",
-    transactionScale: 0,
-  };
+    transactionScale: DEFAULT_UNIT_TRANSACTION_SCALE,
+  }
 }
 
 function unitKey(index: number) {
-  return `unit-${index + 2}`;
+  return `unit-${index + 2}`
 }
 
 function KindChoice({
@@ -78,10 +127,10 @@ function KindChoice({
   label,
   onPress,
 }: {
-  description: string;
-  icon: IconKeys;
-  label: string;
-  onPress: () => void;
+  description: string
+  icon: IconKeys
+  label: string
+  onPress: () => void
 }) {
   return (
     <Pressable
@@ -103,15 +152,15 @@ function KindChoice({
         </Text>
       </View>
     </Pressable>
-  );
+  )
 }
 
 function OptionalFieldButton({
   label,
   onPress,
 }: {
-  label: string;
-  onPress: () => void;
+  label: string
+  onPress: () => void
 }) {
   return (
     <Pressable
@@ -125,7 +174,7 @@ function OptionalFieldButton({
       <Icon className="size-xs text-foreground" name="Plus" />
       <Text className="text-sm font-bold text-foreground">{label}</Text>
     </Pressable>
-  );
+  )
 }
 
 function ToggleRow({
@@ -133,9 +182,9 @@ function ToggleRow({
   label,
   onPress,
 }: {
-  enabled: boolean;
-  label: string;
-  onPress: () => void;
+  enabled: boolean
+  label: string
+  onPress: () => void
 }) {
   return (
     <Pressable
@@ -157,53 +206,60 @@ function ToggleRow({
         <View className="h-5 w-5 rounded-full bg-background" />
       </View>
     </Pressable>
-  );
+  )
 }
 
 function getExactOpeningStock(value: string) {
-  const normalized = value.trim();
-  if (!normalized) return undefined;
+  const normalized = value.trim()
+  if (!normalized) return undefined
 
   return parseExactDecimal(normalized, {
-    maxScale: EXACT_QUANTITY_MAX_SCALE,
-  });
+    maxScale: DEFAULT_UNIT_TRANSACTION_SCALE,
+  })
 }
 
 export function SimpleCatalogItemScreen({
+  initialKind,
   onComplete,
 }: SimpleCatalogItemScreenProps) {
-  const trpc = useTRPC();
-  const queryClient = useQueryClient();
-  const { profile } = useAuthContext();
-  const clientOperationIdRef = useRef(Crypto.randomUUID());
-  const [kind, setKind] = useState<CatalogItemKind | null>(null);
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [unitName, setUnitName] = useState("");
-  const [openingStock, setOpeningStock] = useState("");
-  const [description, setDescription] = useState("");
-  const [showOpeningStock, setShowOpeningStock] = useState(false);
-  const [showDescription, setShowDescription] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [showUnits, setShowUnits] = useState(false);
-  const [trackServiceWork, setTrackServiceWork] = useState(false);
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  const { profile } = useAuthContext()
+  const unitModal = useModal()
+  const clientOperationIdRef = useRef(Crypto.randomUUID())
+  const variantComposerInputRef = useRef<TextInput>(null)
+  const [kind, setKind] = useState<CatalogItemKind | null>(initialKind ?? null)
+  const [name, setName] = useState("")
+  const [price, setPrice] = useState("")
+  const [unitName, setUnitName] = useState("")
+  const [openingStock, setOpeningStock] = useState("")
+  const [description, setDescription] = useState("")
+  const [showOpeningStock, setShowOpeningStock] = useState(false)
+  const [showDescription, setShowDescription] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [trackServiceWork, setTrackServiceWork] = useState(false)
   const [serviceAuthorization, setServiceAuthorization] = useState<
     "after_required_payment" | "manual_release" | "on_order_confirmation"
-  >("on_order_confirmation");
-  const [serviceGuidance, setServiceGuidance] = useState("");
+  >("on_order_confirmation")
+  const [serviceGuidance, setServiceGuidance] = useState("")
   const [optionGroups, setOptionGroups] = useState<MobileOptionGroup[]>([
     newOptionGroup(),
-  ]);
-  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
-  const [composerText, setComposerText] = useState("");
+  ])
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null)
+  const [variantComposerMode, setVariantComposerMode] =
+    useState<VariantComposerMode | null>(null)
+  const [composerText, setComposerText] = useState("")
   const [variantDrafts, setVariantDrafts] = useState<
     Record<string, MobileVariantDraft>
-  >({});
-  const [additionalUnits, setAdditionalUnits] = useState<MobileUnitDraft[]>([]);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const currencyCode = profile?.currencyCode ?? "NGN";
-  const storesQuery = useQuery(trpc.tenant.stores.queryOptions());
-  const stores = storesQuery.data ?? [];
+  >({})
+  const [additionalUnits, setAdditionalUnits] = useState<MobileUnitDraft[]>([])
+  const [unitEditorDraft, setUnitEditorDraft] =
+    useState<MobileUnitDraft | null>(null)
+  const [unitEditorError, setUnitEditorError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const currencyCode = profile?.currencyCode ?? "NGN"
+  const storesQuery = useQuery(trpc.tenant.stores.queryOptions())
+  const stores = storesQuery.data ?? []
   const normalizedOptionGroups = useMemo(
     () =>
       optionGroups.map((group, groupIndex) => ({
@@ -215,47 +271,113 @@ export function SimpleCatalogItemScreen({
         })),
       })),
     [optionGroups],
-  );
+  )
   const combinations = useMemo(
     () => buildCatalogVariantCombinations(normalizedOptionGroups),
     [normalizedOptionGroups],
-  );
-  const activeGroup = optionGroups.find((group) => group.id === activeGroupId);
-  const composerPills: KeyboardInlineComposerPill[] =
-    activeGroup?.values.map((value) => ({
-      id: value.id,
-      label: value.label,
-      removable: true,
-    })) ?? [];
+  )
+  const activeGroup = optionGroups.find((group) => group.id === activeGroupId)
+  const inlineVariantTypeSuggestions = useMemo(() => {
+    const defaultSuggestions = KNOWN_VARIANT_TYPES.slice(
+      0,
+      VARIANT_COMPOSER_DEFAULT_SUGGESTION_COUNT,
+    )
+    const normalizedSearch = composerText.trim().toLowerCase()
+
+    if (!normalizedSearch) return defaultSuggestions
+
+    const matches = KNOWN_VARIANT_TYPES.filter((variantType) =>
+      variantType.toLowerCase().includes(normalizedSearch),
+    ).slice(0, VARIANT_COMPOSER_DEFAULT_SUGGESTION_COUNT)
+
+    return matches.length > 0 ? matches : defaultSuggestions
+  }, [composerText])
+  const availableVariantValueSuggestions = useMemo(() => {
+    if (!activeGroup) return []
+
+    const selectedValues = new Set(
+      activeGroup.values.map((value) => value.label.trim().toLowerCase()),
+    )
+    const suggestions = getVariantValueSuggestions(activeGroup.name).filter(
+      (value) => !selectedValues.has(value.trim().toLowerCase()),
+    )
+    const defaultSuggestions = suggestions.slice(
+      0,
+      VARIANT_COMPOSER_DEFAULT_SUGGESTION_COUNT,
+    )
+    const normalizedSearch = composerText.trim().toLowerCase()
+
+    if (!normalizedSearch) return defaultSuggestions
+
+    const matches = suggestions
+      .filter((value) => value.toLowerCase().includes(normalizedSearch))
+      .slice(0, VARIANT_COMPOSER_DEFAULT_SUGGESTION_COUNT)
+
+    return matches.length > 0 ? matches : defaultSuggestions
+  }, [activeGroup, composerText])
+  const composerPills = useMemo<KeyboardInlineComposerPill[]>(() => {
+    if (variantComposerMode === "variant-type") {
+      return inlineVariantTypeSuggestions.map((variantType) => ({
+        id: `type-${variantType}`,
+        label: variantType,
+      }))
+    }
+
+    if (variantComposerMode === "variant-value" && activeGroup) {
+      return [
+        ...activeGroup.values.map((value) => ({
+          id: value.id,
+          label: value.label,
+          removable: true,
+          selected: true,
+        })),
+        ...availableVariantValueSuggestions.map((value) => ({
+          id: `value-${activeGroup.id}-${value}`,
+          label: value,
+        })),
+      ]
+    }
+
+    return []
+  }, [
+    activeGroup,
+    availableVariantValueSuggestions,
+    inlineVariantTypeSuggestions,
+    variantComposerMode,
+  ])
   const onCreated = async () => {
-    setSubmitError(null);
-    await queryClient.invalidateQueries(trpc.catalog.listItems.queryFilter());
-    onComplete?.();
-  };
+    setSubmitError(null)
+    await queryClient.invalidateQueries(trpc.catalog.listItems.queryFilter())
+    onComplete?.()
+  }
   const createItemMutation = useMutation(
     trpc.catalog.createSimpleItem.mutationOptions({
       onError: (error) => setSubmitError(error.message),
       onSuccess: onCreated,
     }),
-  );
+  )
   const createAdvancedMutation = useMutation(
     trpc.catalog.createItem.mutationOptions({
       onError: (error) => setSubmitError(error.message),
       onSuccess: onCreated,
     }),
-  );
+  )
 
-  const defaultStoreId = stores[0]?.id;
+  const defaultStoreId = stores[0]?.id
 
   const variantDraft = (key: string): MobileVariantDraft =>
     variantDrafts[key] ?? {
       barcode: "",
+      description: "",
       enabled: true,
+      isMoreVisible: false,
       price: "",
+      quantity: "",
       quoteRequired: false,
       sku: "",
       storeIds: defaultStoreId ? [defaultStoreId] : [],
-    };
+      unitPrices: {},
+    }
 
   const updateVariantDraft = (
     key: string,
@@ -264,8 +386,19 @@ export function SimpleCatalogItemScreen({
     setVariantDrafts((current) => ({
       ...current,
       [key]: { ...variantDraft(key), ...update },
-    }));
-  };
+    }))
+  }
+
+  const updateVariantUnitPrice = (
+    variantKey: string,
+    unitId: string,
+    value: string,
+  ) => {
+    const draft = variantDraft(variantKey)
+    updateVariantDraft(variantKey, {
+      unitPrices: { ...draft.unitPrices, [unitId]: value },
+    })
+  }
 
   const submitAdvanced = (
     itemKind: CatalogItemKind,
@@ -274,7 +407,7 @@ export function SimpleCatalogItemScreen({
   ) => {
     const activeCombinations = showAdvanced
       ? combinations
-      : [{ key: "default", name: trimmedName, selections: [] }];
+      : [{ key: "default", name: trimmedName, selections: [] }]
     if (
       showAdvanced &&
       (normalizedOptionGroups.some(
@@ -282,37 +415,93 @@ export function SimpleCatalogItemScreen({
       ) ||
         activeCombinations.length === 0)
     ) {
-      setSubmitError("Add a name and at least one value for every option.");
-      return;
+      setSubmitError("Add a name and at least one value for every option.")
+      return
     }
 
     const firstEnabledIndex = activeCombinations.findIndex(
       (combination) => variantDraft(combination.key).enabled,
-    );
+    )
     if (firstEnabledIndex < 0) {
-      setSubmitError("Keep at least one variant enabled.");
-      return;
+      setSubmitError("Keep at least one variant enabled.")
+      return
+    }
+
+    const missingProductPrice =
+      itemKind === "product" && showAdvanced
+        ? activeCombinations.find(
+            (combination) =>
+              variantDraft(combination.key).enabled &&
+              !variantDraft(combination.key).price.trim(),
+          )
+        : undefined
+    if (missingProductPrice) {
+      setSubmitError(`Enter a price for ${missingProductPrice.name}.`)
+      return
     }
 
     const invalidPrice = activeCombinations.find((combination) => {
-      const override = variantDraft(combination.key).price.trim();
-      return override ? majorToMinor(override) === null : false;
-    });
+      const draft = variantDraft(combination.key)
+      if (!draft.enabled) return false
+
+      const override = draft.price.trim()
+      return override ? majorToMinor(override) === null : false
+    })
     if (invalidPrice) {
-      setSubmitError(`Enter a valid price for ${invalidPrice.name}.`);
-      return;
+      setSubmitError(`Enter a valid price for ${invalidPrice.name}.`)
+      return
+    }
+
+    const invalidVariantUnitPrice =
+      itemKind === "product"
+        ? activeCombinations
+            .filter((combination) => variantDraft(combination.key).enabled)
+            .flatMap((combination) =>
+              additionalUnits.map((unit) => ({
+                combination,
+                unit,
+                value:
+                  variantDraft(combination.key).unitPrices[unit.id]?.trim() ??
+                  "",
+              })),
+            )
+            .find(({ value }) => value && majorToMinor(value) === null)
+        : undefined
+    if (invalidVariantUnitPrice) {
+      setSubmitError(
+        `Enter a valid ${invalidVariantUnitPrice.unit.name} price for ${invalidVariantUnitPrice.combination.name}.`,
+      )
+      return
+    }
+
+    const invalidProductQuantity =
+      itemKind === "product" && showAdvanced
+        ? activeCombinations.find((combination) => {
+            const draft = variantDraft(combination.key)
+            if (!draft.enabled || !draft.quantity.trim()) return draft.enabled
+
+            try {
+              return getExactOpeningStock(draft.quantity) === undefined
+            } catch {
+              return true
+            }
+          })
+        : undefined
+    if (invalidProductQuantity) {
+      setSubmitError(`Enter a quantity for ${invalidProductQuantity.name}.`)
+      return
     }
 
     try {
       for (const unit of additionalUnits) {
         if (!unit.name.trim())
-          throw new Error("Enter a name for every selling unit.");
+          throw new Error("Enter a name for every selling unit.")
         parseExactDecimal(unit.factor, {
           allowZero: false,
           maxScale: EXACT_FACTOR_MAX_SCALE,
-        });
+        })
         if (unit.price.trim() && majorToMinor(unit.price) === null) {
-          throw new Error(`Enter a valid price for ${unit.name}.`);
+          throw new Error(`Enter a valid price for ${unit.name}.`)
         }
       }
     } catch (unitError) {
@@ -320,16 +509,16 @@ export function SimpleCatalogItemScreen({
         unitError instanceof Error
           ? unitError.message
           : "Review the selling units.",
-      );
-      return;
+      )
+      return
     }
 
     const rows = activeCombinations.map((combination, index) => {
-      const draft = variantDraft(combination.key);
+      const draft = variantDraft(combination.key)
       const storeAvailability = stores.map((store) => ({
         isAvailable: draft.storeIds.includes(store.id),
         storeId: store.id,
-      }));
+      }))
       return {
         commonOffering: {
           enabled: draft.enabled,
@@ -339,6 +528,7 @@ export function SimpleCatalogItemScreen({
             storeAvailability.length > 0 ? storeAvailability : undefined,
         },
         draft,
+        description: draft.description.trim() || undefined,
         enabled: draft.enabled,
         isDefault: index === firstEnabledIndex,
         key: combination.key,
@@ -347,14 +537,14 @@ export function SimpleCatalogItemScreen({
           ? (majorToMinor(draft.price) ?? priceMinor)
           : priceMinor,
         selections: combination.selections,
-      };
-    });
+      }
+    })
 
     if (itemKind === "product") {
-      const canonicalUnitName = unitName.trim();
+      const canonicalUnitName = unitName.trim()
       if (!canonicalUnitName) {
-        setSubmitError("Enter the unit you count this Product in.");
-        return;
+        setSubmitError("Enter the unit you count this Product in.")
+        return
       }
 
       createAdvancedMutation.mutate({
@@ -363,18 +553,20 @@ export function SimpleCatalogItemScreen({
         kind: "product",
         name: trimmedName,
         openingStockQuantity: showOpeningStock
-          ? getExactOpeningStock(openingStock)
+          ? showAdvanced
+            ? undefined
+            : getExactOpeningStock(openingStock)
           : undefined,
         optionGroups: showAdvanced ? normalizedOptionGroups : undefined,
         unitConfiguration: {
-          canonicalBalanceScale: 0,
+          canonicalBalanceScale: EXACT_CANONICAL_MAX_SCALE,
           units: [
             {
               factor: "1",
               key: "canonical",
               name: canonicalUnitName,
               stockBehavior: "canonical_shared",
-              transactionScale: 0,
+              transactionScale: DEFAULT_UNIT_TRANSACTION_SCALE,
             },
             ...additionalUnits.map((unit, unitIndex) => ({
               factor: unit.factor.trim(),
@@ -391,6 +583,10 @@ export function SimpleCatalogItemScreen({
             variantIndex,
           ) => ({
             ...variant,
+            openingStockQuantity:
+              showAdvanced && draft.quantity.trim()
+                ? getExactOpeningStock(draft.quantity)
+                : undefined,
             offerings: [
               {
                 ...commonOffering,
@@ -403,9 +599,11 @@ export function SimpleCatalogItemScreen({
               ...additionalUnits.map((unit, unitIndex) => ({
                 ...commonOffering,
                 barcode: undefined,
-                fixedPriceMinor: unit.price.trim()
-                  ? (majorToMinor(unit.price) ?? rowPrice)
-                  : rowPrice,
+                fixedPriceMinor: draft.unitPrices[unit.id]?.trim()
+                  ? (majorToMinor(draft.unitPrices[unit.id] ?? "") ?? rowPrice)
+                  : unit.price.trim()
+                    ? (majorToMinor(unit.price) ?? rowPrice)
+                    : rowPrice,
                 inventoryUnitKey: unitKey(unitIndex),
                 key: `offering-${variantIndex + 1}-${unitIndex + 2}`,
                 name: `${variant.name} · ${unit.name.trim()}`,
@@ -415,8 +613,8 @@ export function SimpleCatalogItemScreen({
             ],
           }),
         ),
-      });
-      return;
+      })
+      return
     }
 
     createAdvancedMutation.mutate({
@@ -452,35 +650,35 @@ export function SimpleCatalogItemScreen({
           ],
         }),
       ),
-    });
-  };
+    })
+  }
 
   const submit = () => {
-    if (!kind) return;
+    if (!kind) return
 
-    const trimmedName = name.trim();
-    const priceMinor = majorToMinor(price);
+    const trimmedName = name.trim()
+    const priceMinor = majorToMinor(price)
 
     if (!trimmedName) {
-      setSubmitError("Enter an item name.");
-      return;
+      setSubmitError("Enter an item name.")
+      return
     }
     if (priceMinor === null) {
-      setSubmitError("Enter a valid price.");
-      return;
+      setSubmitError("Enter a valid price.")
+      return
     }
 
     try {
-      if (showAdvanced || (kind === "product" && showUnits)) {
-        submitAdvanced(kind, trimmedName, priceMinor);
-        return;
+      if (showAdvanced || (kind === "product" && additionalUnits.length > 0)) {
+        submitAdvanced(kind, trimmedName, priceMinor)
+        return
       }
 
       if (kind === "product") {
-        const canonicalUnitName = unitName.trim();
+        const canonicalUnitName = unitName.trim()
         if (!canonicalUnitName) {
-          setSubmitError("Enter the unit you count this Product in.");
-          return;
+          setSubmitError("Enter the unit you count this Product in.")
+          return
         }
 
         createItemMutation.mutate({
@@ -493,8 +691,8 @@ export function SimpleCatalogItemScreen({
             ? getExactOpeningStock(openingStock)
             : undefined,
           priceMinor,
-        });
-        return;
+        })
+        return
       }
 
       createItemMutation.mutate({
@@ -506,17 +704,171 @@ export function SimpleCatalogItemScreen({
         name: trimmedName,
         priceMinor,
         workPolicy: trackServiceWork ? "tracked" : "charge_only",
-      });
+      })
     } catch (error) {
       setSubmitError(
         error instanceof Error ? error.message : "Review the item details.",
-      );
+      )
     }
-  };
+  }
 
-  const addComposerValue = () => {
-    const label = composerText.trim();
-    if (!label || !activeGroupId) return;
+  const openUnitEditor = (unit?: MobileUnitDraft) => {
+    Keyboard.dismiss()
+    setUnitEditorDraft(unit ? { ...unit } : newUnit())
+    setUnitEditorError(null)
+    setTimeout(() => {
+      unitModal.present()
+    }, 80)
+  }
+
+  const updateUnitEditorDraft = (update: Partial<MobileUnitDraft>) => {
+    setUnitEditorDraft((current) =>
+      current ? { ...current, ...update } : current,
+    )
+    setUnitEditorError(null)
+  }
+
+  const saveUnitEditorDraft = () => {
+    if (!unitEditorDraft) return
+
+    const trimmedName = unitEditorDraft.name.trim()
+    if (!trimmedName) {
+      setUnitEditorError("Enter a unit name, such as Bag, Carton, or Piece.")
+      return
+    }
+
+    if (
+      additionalUnits.some(
+        (unit) =>
+          unit.id !== unitEditorDraft.id &&
+          unit.name.trim().toLowerCase() === trimmedName.toLowerCase(),
+      )
+    ) {
+      setUnitEditorError(`${trimmedName} is already in the unit list.`)
+      return
+    }
+
+    try {
+      parseExactDecimal(unitEditorDraft.factor, {
+        allowZero: false,
+        maxScale: EXACT_FACTOR_MAX_SCALE,
+      })
+    } catch {
+      setUnitEditorError(
+        `Enter how many ${unitName.trim() || "counted units"} make one ${trimmedName}.`,
+      )
+      return
+    }
+
+    if (
+      unitEditorDraft.price.trim() &&
+      majorToMinor(unitEditorDraft.price) === null
+    ) {
+      setUnitEditorError(`Enter a valid selling price for ${trimmedName}.`)
+      return
+    }
+
+    const nextUnit = { ...unitEditorDraft, name: trimmedName }
+    setAdditionalUnits((current) =>
+      current.some((unit) => unit.id === nextUnit.id)
+        ? current.map((unit) => (unit.id === nextUnit.id ? nextUnit : unit))
+        : [...current, nextUnit],
+    )
+    Keyboard.dismiss()
+    unitModal.dismiss()
+  }
+
+  const removeUnit = (unitId: string) => {
+    setAdditionalUnits((current) =>
+      current.filter((unit) => unit.id !== unitId),
+    )
+    setVariantDrafts((current) =>
+      Object.fromEntries(
+        Object.entries(current).map(([key, draft]) => {
+          const { [unitId]: _removedPrice, ...unitPrices } = draft.unitPrices
+          return [key, { ...draft, unitPrices }]
+        }),
+      ),
+    )
+  }
+
+  const focusVariantComposerInput = () => {
+    setTimeout(() => {
+      variantComposerInputRef.current?.focus()
+    }, 80)
+  }
+
+  const hideVariantComposer = () => {
+    if (!variantComposerMode) return
+
+    setVariantComposerMode(null)
+    setComposerText("")
+  }
+
+  useEffect(() => {
+    const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
+      setVariantComposerMode(null)
+      setComposerText("")
+    })
+
+    return () => {
+      hideSubscription.remove()
+    }
+  }, [])
+
+  const openVariantComposer = () => {
+    setVariantComposerMode("variant-type")
+    setComposerText("")
+    focusVariantComposerInput()
+  }
+
+  const selectVariantLabel = (rawLabel: string) => {
+    const label = rawLabel.trim() || "Variant"
+    const normalizedLabel = label.toLowerCase()
+    const existingGroup = optionGroups.find(
+      (group) => group.name.trim().toLowerCase() === normalizedLabel,
+    )
+    const reusableGroup = optionGroups.find(
+      (group) => !group.name.trim() && group.values.length === 0,
+    )
+    const groupId =
+      existingGroup?.id ?? reusableGroup?.id ?? Crypto.randomUUID()
+
+    setOptionGroups((current) => {
+      if (
+        current.some(
+          (group) => group.name.trim().toLowerCase() === normalizedLabel,
+        )
+      ) {
+        return current
+      }
+
+      if (reusableGroup) {
+        return current.map((group) =>
+          group.id === reusableGroup.id ? { ...group, name: label } : group,
+        )
+      }
+
+      return [...current, { id: groupId, name: label, values: [] }]
+    })
+    setShowAdvanced(true)
+    setActiveGroupId(groupId)
+    setVariantComposerMode("variant-value")
+    setComposerText("")
+    focusVariantComposerInput()
+  }
+
+  const openVariantValueComposer = (groupId: string) => {
+    setActiveGroupId(groupId)
+    setVariantComposerMode("variant-value")
+    setComposerText("")
+    focusVariantComposerInput()
+  }
+
+  const addComposerValueByName = (rawLabel: string) => {
+    const label = rawLabel.trim()
+    if (!label || !activeGroupId) return
+
     setOptionGroups((current) =>
       current.map((group) =>
         group.id === activeGroupId &&
@@ -529,12 +881,52 @@ export function SimpleCatalogItemScreen({
             }
           : group,
       ),
-    );
-    setComposerText("");
-  };
+    )
+  }
+
+  const submitVariantComposer = () => {
+    const value = composerText.trim()
+    if (!value) return
+
+    if (variantComposerMode === "variant-type") {
+      selectVariantLabel(value)
+      return
+    }
+
+    for (const part of value.split(",")) {
+      addComposerValueByName(part)
+    }
+    setComposerText("")
+  }
+
+  const changeVariantComposerText = (value: string) => {
+    if (variantComposerMode !== "variant-value" || !value.includes(",")) {
+      setComposerText(value)
+      return
+    }
+
+    const parts = value.split(",")
+    const unfinishedValue = parts.pop() ?? ""
+
+    for (const part of parts) {
+      addComposerValueByName(part)
+    }
+    setComposerText(unfinishedValue)
+  }
+
+  const pressVariantComposerPill = (pill: KeyboardInlineComposerPill) => {
+    if (variantComposerMode === "variant-type") {
+      selectVariantLabel(pill.label)
+      return
+    }
+
+    addComposerValueByName(pill.label)
+    setComposerText("")
+    focusVariantComposerInput()
+  }
 
   const removeComposerValue = (pill: KeyboardInlineComposerPill) => {
-    if (!activeGroupId) return;
+    if (!activeGroupId) return
     setOptionGroups((current) =>
       current.map((group) =>
         group.id === activeGroupId
@@ -544,8 +936,9 @@ export function SimpleCatalogItemScreen({
             }
           : group,
       ),
-    );
-  };
+    )
+    focusVariantComposerInput()
+  }
 
   if (!kind) {
     return (
@@ -573,21 +966,24 @@ export function SimpleCatalogItemScreen({
           />
         </View>
       </View>
-    );
+    )
   }
 
   const isSaving =
-    createItemMutation.isPending || createAdvancedMutation.isPending;
+    createItemMutation.isPending || createAdvancedMutation.isPending
 
   return (
     <View className="flex-1">
       <KeyboardAwareScrollView
         bottomOffset={160}
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: activeGroupId ? 240 : 144 }}
+        contentContainerStyle={{
+          paddingBottom: variantComposerMode ? 240 : 144,
+        }}
         disableScrollOnKeyboardHide
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
+        onTouchStart={hideVariantComposer}
       >
         <View className="gap-5 px-4 pt-2">
           <Pressable
@@ -596,9 +992,9 @@ export function SimpleCatalogItemScreen({
             className="min-h-11 flex-row items-center gap-2 self-start rounded-full bg-primary/10 px-4 active:bg-primary/20"
             haptic
             onPress={() => {
-              setKind(null);
-              setSubmitError(null);
-              setActiveGroupId(null);
+              setKind(null)
+              setSubmitError(null)
+              setActiveGroupId(null)
             }}
             transition
           >
@@ -684,14 +1080,12 @@ export function SimpleCatalogItemScreen({
             ) : null}
             {!showAdvanced ? (
               <OptionalFieldButton
-                label="Add options"
-                onPress={() => setShowAdvanced(true)}
-              />
-            ) : null}
-            {kind === "product" && !showUnits ? (
-              <OptionalFieldButton
-                label="Add selling units"
-                onPress={() => setShowUnits(true)}
+                label={kind === "product" ? "Add variant" : "Add options"}
+                onPress={
+                  kind === "product"
+                    ? openVariantComposer
+                    : () => setShowAdvanced(true)
+                }
               />
             ) : null}
             {kind === "service" && !trackServiceWork ? (
@@ -762,19 +1156,23 @@ export function SimpleCatalogItemScreen({
               <View className="flex-row items-center justify-between gap-3">
                 <View className="min-w-0 flex-1 gap-1">
                   <Text className="font-extrabold text-foreground">
-                    Options
+                    {kind === "product" ? "Variants" : "Options"}
                   </Text>
                   <Text className="text-xs text-muted-foreground">
-                    Add choices such as Colour and Size.
+                    {kind === "product"
+                      ? "Add variant names and values such as Size and Large."
+                      : "Add choices such as Colour and Size."}
                   </Text>
                 </View>
                 <Pressable
                   accessibilityLabel="Remove options"
                   className="min-h-11 justify-center px-2"
                   onPress={() => {
-                    setShowAdvanced(false);
-                    setActiveGroupId(null);
-                    setVariantDrafts({});
+                    setShowAdvanced(false)
+                    setActiveGroupId(null)
+                    setVariantComposerMode(null)
+                    setComposerText("")
+                    setVariantDrafts({})
                   }}
                 >
                   <Text className="text-sm font-bold text-primary">Remove</Text>
@@ -788,7 +1186,7 @@ export function SimpleCatalogItemScreen({
                 >
                   <FormField
                     autoCapitalize="words"
-                    label="Option name"
+                    label={kind === "product" ? "Variant name" : "Option name"}
                     onChangeText={(value) =>
                       setOptionGroups((current) =>
                         current.map((candidate) =>
@@ -805,10 +1203,7 @@ export function SimpleCatalogItemScreen({
                     accessibilityLabel={`Add values to ${group.name || `option ${index + 1}`}`}
                     className="min-h-11 flex-row items-center justify-center gap-2 rounded-xl bg-muted px-4"
                     haptic
-                    onPress={() => {
-                      setActiveGroupId(group.id);
-                      setComposerText("");
-                    }}
+                    onPress={() => openVariantValueComposer(group.id)}
                   >
                     <Icon className="size-xs text-foreground" name="Plus" />
                     <Text className="text-sm font-bold text-foreground">
@@ -843,298 +1238,316 @@ export function SimpleCatalogItemScreen({
               ))}
 
               <ActionButton
-                onPress={() =>
-                  setOptionGroups((current) => [...current, newOptionGroup()])
+                onPress={
+                  kind === "product"
+                    ? openVariantComposer
+                    : () =>
+                        setOptionGroups((current) => [
+                          ...current,
+                          newOptionGroup(),
+                        ])
                 }
                 variant="outline"
               >
-                Add another option
+                {kind === "product"
+                  ? "Add another variant"
+                  : "Add another option"}
               </ActionButton>
 
               {combinations.map((combination) => {
-                const draft = variantDraft(combination.key);
+                const draft = variantDraft(combination.key)
                 return (
                   <View
-                    className="gap-4 rounded-2xl border border-border bg-background p-4"
+                    className={
+                      draft.enabled
+                        ? "gap-3 border-t border-border pt-4"
+                        : "gap-3 border-t border-border pt-4 opacity-60"
+                    }
                     key={combination.key}
                   >
-                    <ToggleRow
-                      enabled={draft.enabled}
-                      label={combination.name}
-                      onPress={() =>
-                        updateVariantDraft(combination.key, {
-                          enabled: !draft.enabled,
-                        })
-                      }
-                    />
-                    <MoneyField
-                      currencyCode={currencyCode}
-                      label="Price override"
-                      onChangeValue={(value) =>
-                        updateVariantDraft(combination.key, { price: value })
-                      }
-                      placeholder={price || "Use item price"}
-                      value={draft.price}
-                    />
-                    {kind === "service" ? (
-                      <ToggleRow
-                        enabled={draft.quoteRequired}
-                        label="Quote required"
+                    <View className="flex-row items-center gap-3">
+                      <View className="min-w-0 flex-1 gap-1">
+                        <Text className="font-bold text-foreground">
+                          {combination.name}
+                        </Text>
+                        {!draft.enabled ? (
+                          <Text className="text-xs text-muted-foreground">
+                            Inactive
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Pressable
+                        accessibilityLabel={`${draft.isMoreVisible ? "Hide" : "Show"} more fields for ${combination.name}`}
+                        className="min-h-11 flex-row items-center gap-2 rounded-full bg-muted px-4"
+                        haptic
                         onPress={() =>
                           updateVariantDraft(combination.key, {
-                            quoteRequired: !draft.quoteRequired,
+                            isMoreVisible: !draft.isMoreVisible,
                           })
                         }
-                      />
-                    ) : (
-                      <>
-                        <FormField
-                          autoCapitalize="characters"
-                          label="SKU"
-                          onChangeText={(value) =>
-                            updateVariantDraft(combination.key, { sku: value })
+                      >
+                        <Text className="text-xs font-bold text-foreground">
+                          More
+                        </Text>
+                        <Icon
+                          className="size-xs text-muted-foreground"
+                          name={
+                            draft.isMoreVisible ? "ChevronDown" : "ChevronRight"
                           }
-                          value={draft.sku}
                         />
-                        <FormField
-                          label="Barcode"
-                          onChangeText={(value) =>
+                      </Pressable>
+                    </View>
+
+                    <View className="flex-row gap-3">
+                      <View className="min-w-0 flex-1">
+                        <MoneyField
+                          currencyCode={currencyCode}
+                          label={
+                            kind === "product"
+                              ? `${unitName.trim() || "Counted unit"} price`
+                              : "Price"
+                          }
+                          onChangeValue={(value) =>
                             updateVariantDraft(combination.key, {
-                              barcode: value,
+                              price: value,
                             })
                           }
-                          value={draft.barcode}
+                          placeholder="Enter price"
+                          value={draft.price}
                         />
-                      </>
-                    )}
-
-                    {stores.length > 1 ? (
-                      <View className="gap-2">
-                        <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
-                          Available at
-                        </Text>
-                        <View className="flex-row flex-wrap gap-2">
-                          {stores.map((store) => {
-                            const available = draft.storeIds.includes(store.id);
-                            return (
-                              <Pressable
-                                accessibilityRole="checkbox"
-                                accessibilityState={{ checked: available }}
-                                className={
-                                  available
-                                    ? "min-h-10 justify-center rounded-full bg-primary px-4"
-                                    : "min-h-10 justify-center rounded-full bg-muted px-4"
-                                }
-                                key={store.id}
-                                onPress={() =>
-                                  updateVariantDraft(combination.key, {
-                                    storeIds: available
-                                      ? draft.storeIds.filter(
-                                          (storeId) => storeId !== store.id,
-                                        )
-                                      : [...draft.storeIds, store.id],
-                                  })
-                                }
-                              >
-                                <Text
-                                  className={
-                                    available
-                                      ? "text-xs font-bold text-primary-foreground"
-                                      : "text-xs font-bold text-foreground"
-                                  }
-                                >
-                                  {store.name}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
+                      </View>
+                      {kind === "product" ? (
+                        <View className="min-w-0 flex-1">
+                          <FormField
+                            keyboardType="decimal-pad"
+                            label="Qty"
+                            onChangeText={(value) =>
+                              updateVariantDraft(combination.key, {
+                                quantity: value,
+                              })
+                            }
+                            placeholder="Enter quantity"
+                            value={draft.quantity}
+                          />
                         </View>
+                      ) : null}
+                    </View>
+
+                    {kind === "product" && additionalUnits.length > 0 ? (
+                      <View className="gap-3 border-t border-border pt-4">
+                        <View className="gap-1">
+                          <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
+                            Selling prices by unit
+                          </Text>
+                          <Text className="text-xs leading-5 text-muted-foreground">
+                            Set a different price for this variant in each unit,
+                            or leave it blank to use the unit default.
+                          </Text>
+                        </View>
+                        {additionalUnits.map((unit) => (
+                          <MoneyField
+                            currencyCode={currencyCode}
+                            helper={
+                              unit.price.trim()
+                                ? `Defaults to ${currencyCode} ${unit.price} for ${unit.name}.`
+                                : `Defaults to the ${unitName.trim() || "counted unit"} price.`
+                            }
+                            key={unit.id}
+                            label={`${unit.name} price`}
+                            onChangeValue={(value) =>
+                              updateVariantUnitPrice(
+                                combination.key,
+                                unit.id,
+                                value,
+                              )
+                            }
+                            placeholder={
+                              unit.price.trim() || draft.price.trim() || price
+                            }
+                            value={draft.unitPrices[unit.id] ?? ""}
+                          />
+                        ))}
+                      </View>
+                    ) : null}
+
+                    {draft.isMoreVisible ? (
+                      <View className="gap-4 border-t border-border pt-4">
+                        <ToggleRow
+                          enabled={draft.enabled}
+                          label="Available for sale"
+                          onPress={() =>
+                            updateVariantDraft(combination.key, {
+                              enabled: !draft.enabled,
+                            })
+                          }
+                        />
+                        <FormField
+                          label="Description"
+                          multiline
+                          onChangeText={(value) =>
+                            updateVariantDraft(combination.key, {
+                              description: value,
+                            })
+                          }
+                          placeholder="Optional notes for this variant"
+                          value={draft.description}
+                        />
+                        {kind === "service" ? (
+                          <ToggleRow
+                            enabled={draft.quoteRequired}
+                            label="Quote required"
+                            onPress={() =>
+                              updateVariantDraft(combination.key, {
+                                quoteRequired: !draft.quoteRequired,
+                              })
+                            }
+                          />
+                        ) : (
+                          <>
+                            <FormField
+                              autoCapitalize="characters"
+                              label="SKU"
+                              onChangeText={(value) =>
+                                updateVariantDraft(combination.key, {
+                                  sku: value,
+                                })
+                              }
+                              placeholder="Optional stock keeping code"
+                              value={draft.sku}
+                            />
+                            <FormField
+                              label="Barcode"
+                              onChangeText={(value) =>
+                                updateVariantDraft(combination.key, {
+                                  barcode: value,
+                                })
+                              }
+                              placeholder="Optional barcode number"
+                              value={draft.barcode}
+                            />
+                          </>
+                        )}
+
+                        {stores.length > 1 ? (
+                          <View className="gap-2">
+                            <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
+                              Available at
+                            </Text>
+                            <View className="flex-row flex-wrap gap-2">
+                              {stores.map((store) => {
+                                const available = draft.storeIds.includes(
+                                  store.id,
+                                )
+                                return (
+                                  <Pressable
+                                    accessibilityRole="checkbox"
+                                    accessibilityState={{ checked: available }}
+                                    className={
+                                      available
+                                        ? "min-h-10 justify-center rounded-full bg-primary px-4"
+                                        : "min-h-10 justify-center rounded-full bg-muted px-4"
+                                    }
+                                    key={store.id}
+                                    onPress={() =>
+                                      updateVariantDraft(combination.key, {
+                                        storeIds: available
+                                          ? draft.storeIds.filter(
+                                              (storeId) => storeId !== store.id,
+                                            )
+                                          : [...draft.storeIds, store.id],
+                                      })
+                                    }
+                                  >
+                                    <Text
+                                      className={
+                                        available
+                                          ? "text-xs font-bold text-primary-foreground"
+                                          : "text-xs font-bold text-foreground"
+                                      }
+                                    >
+                                      {store.name}
+                                    </Text>
+                                  </Pressable>
+                                )
+                              })}
+                            </View>
+                          </View>
+                        ) : null}
                       </View>
                     ) : null}
                   </View>
-                );
+                )
               })}
             </View>
           ) : null}
 
-          {kind === "product" && showUnits ? (
+          {kind === "product" ? (
             <View className="gap-4 rounded-3xl border border-border bg-muted/30 p-4">
-              <View className="flex-row items-start justify-between gap-3">
-                <View className="min-w-0 flex-1 gap-1">
-                  <Text className="font-extrabold text-foreground">
-                    Selling units
-                  </Text>
-                  <Text className="text-xs leading-5 text-muted-foreground">
-                    A factor means 1 configured unit equals that many counted
-                    units.
-                  </Text>
-                </View>
-                <Pressable
-                  accessibilityLabel="Remove selling units"
-                  className="min-h-11 justify-center px-2"
-                  onPress={() => {
-                    setShowUnits(false);
-                    setAdditionalUnits([]);
-                  }}
-                >
-                  <Text className="text-sm font-bold text-primary">Remove</Text>
-                </Pressable>
+              <View className="gap-1">
+                <Text className="font-extrabold text-foreground">Unit</Text>
+                <Text className="text-xs leading-5 text-muted-foreground">
+                  Add the units customers can buy this product in, such as Bag,
+                  Carton, Piece, or Kilogram.
+                </Text>
               </View>
-              {additionalUnits.map((unit) => (
-                <View
-                  className="gap-4 rounded-2xl border border-border bg-background p-4"
-                  key={unit.id}
-                >
-                  <FormField
-                    autoCapitalize="words"
-                    label="Unit name"
-                    onChangeText={(value) =>
-                      setAdditionalUnits((current) =>
-                        current.map((candidate) =>
-                          candidate.id === unit.id
-                            ? { ...candidate, name: value }
-                            : candidate,
-                        ),
-                      )
-                    }
-                    placeholder="Enter unit name"
-                    value={unit.name}
-                  />
-                  <FormField
-                    keyboardType="decimal-pad"
-                    label="1 unit equals counted units"
-                    onChangeText={(value) =>
-                      setAdditionalUnits((current) =>
-                        current.map((candidate) =>
-                          candidate.id === unit.id
-                            ? { ...candidate, factor: value }
-                            : candidate,
-                        ),
-                      )
-                    }
-                    placeholder="Enter conversion factor"
-                    value={unit.factor}
-                  />
-                  <MoneyField
-                    currencyCode={currencyCode}
-                    label="Selling price"
-                    onChangeValue={(value) =>
-                      setAdditionalUnits((current) =>
-                        current.map((candidate) =>
-                          candidate.id === unit.id
-                            ? { ...candidate, price: value }
-                            : candidate,
-                        ),
-                      )
-                    }
-                    placeholder={price || "Use item price"}
-                    value={unit.price}
-                  />
-                  <View className="gap-2">
-                    <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
-                      Stock source
-                    </Text>
-                    <View className="flex-row gap-2">
-                      {(
-                        [
-                          ["alternate_transaction", "Shared stock"],
-                          ["packaged_stock", "Prepared stock"],
-                        ] as const
-                      ).map(([value, label]) => (
-                        <Pressable
-                          accessibilityRole="radio"
-                          accessibilityState={{
-                            selected: unit.stockBehavior === value,
-                          }}
-                          className={
-                            unit.stockBehavior === value
-                              ? "min-h-10 flex-1 items-center justify-center rounded-full bg-primary px-3"
-                              : "min-h-10 flex-1 items-center justify-center rounded-full bg-muted px-3"
-                          }
-                          key={value}
-                          onPress={() =>
-                            setAdditionalUnits((current) =>
-                              current.map((candidate) =>
-                                candidate.id === unit.id
-                                  ? { ...candidate, stockBehavior: value }
-                                  : candidate,
-                              ),
-                            )
-                          }
-                        >
-                          <Text
-                            className={
-                              unit.stockBehavior === value
-                                ? "text-xs font-bold text-primary-foreground"
-                                : "text-xs font-bold text-foreground"
-                            }
-                          >
-                            {label}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  </View>
-                  <View className="gap-2">
-                    <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
-                      Decimal places
-                    </Text>
-                    <View className="flex-row flex-wrap gap-2">
-                      {[0, 1, 2, 3, 4, 5, 6].map((scale) => (
-                        <Pressable
-                          accessibilityRole="radio"
-                          accessibilityState={{
-                            selected: unit.transactionScale === scale,
-                          }}
-                          className={
-                            unit.transactionScale === scale
-                              ? "h-10 w-10 items-center justify-center rounded-full bg-primary"
-                              : "h-10 w-10 items-center justify-center rounded-full bg-muted"
-                          }
-                          key={scale}
-                          onPress={() =>
-                            setAdditionalUnits((current) =>
-                              current.map((candidate) =>
-                                candidate.id === unit.id
-                                  ? { ...candidate, transactionScale: scale }
-                                  : candidate,
-                              ),
-                            )
-                          }
-                        >
-                          <Text
-                            className={
-                              unit.transactionScale === scale
-                                ? "text-xs font-bold text-primary-foreground"
-                                : "text-xs font-bold text-foreground"
-                            }
-                          >
-                            {scale}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  </View>
-                  <ActionButton
-                    onPress={() =>
-                      setAdditionalUnits((current) =>
-                        current.filter((candidate) => candidate.id !== unit.id),
-                      )
-                    }
-                    variant="outline"
-                  >
-                    Remove unit
-                  </ActionButton>
-                </View>
-              ))}
+
               <ActionButton
-                onPress={() =>
-                  setAdditionalUnits((current) => [...current, newUnit()])
-                }
+                icon="Plus"
+                onPress={() => openUnitEditor()}
                 variant="outline"
               >
-                Add selling unit
+                Add unit
               </ActionButton>
+
+              {additionalUnits.length > 0 ? (
+                <View className="border-t border-border">
+                  {additionalUnits.map((unit) => (
+                    <View
+                      className="flex-row items-center gap-3 border-b border-border py-4"
+                      key={unit.id}
+                    >
+                      <View className="min-w-0 flex-1 gap-1">
+                        <Text className="font-bold text-foreground">
+                          {unit.name}
+                        </Text>
+                        <Text className="text-xs leading-5 text-muted-foreground">
+                          1 {unit.name} = {unit.factor}{" "}
+                          {unitName.trim() || "counted units"} ·{" "}
+                          {unit.price.trim()
+                            ? `Default price ${currencyCode} ${unit.price}`
+                            : "Uses product price"}
+                        </Text>
+                      </View>
+                      <Pressable
+                        accessibilityLabel={`Edit ${unit.name} unit`}
+                        className="h-11 w-11 items-center justify-center rounded-full bg-muted"
+                        haptic
+                        onPress={() => openUnitEditor(unit)}
+                      >
+                        <Icon
+                          className="size-sm text-foreground"
+                          name="Pencil"
+                        />
+                      </Pressable>
+                      <Pressable
+                        accessibilityLabel={`Delete ${unit.name} unit`}
+                        className="h-11 w-11 items-center justify-center rounded-full bg-destructive/10"
+                        haptic
+                        onPress={() => removeUnit(unit.id)}
+                      >
+                        <Icon
+                          className="size-sm text-destructive"
+                          name="Trash"
+                        />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text className="text-center text-xs leading-5 text-muted-foreground">
+                  No additional selling units yet.
+                </Text>
+              )}
             </View>
           ) : null}
 
@@ -1148,18 +1561,144 @@ export function SimpleCatalogItemScreen({
         </View>
       </KeyboardAwareScrollView>
 
+      <Modal
+        onDismiss={() => {
+          setUnitEditorDraft(null)
+          setUnitEditorError(null)
+        }}
+        ref={unitModal.ref}
+        snapPoints={["88%"]}
+        title={
+          unitEditorDraft &&
+          additionalUnits.some((unit) => unit.id === unitEditorDraft.id)
+            ? "Edit unit"
+            : "Add unit"
+        }
+      >
+        {unitEditorDraft ? (
+          <BottomSheetKeyboardAwareScrollView
+            bottomOffset={120}
+            contentContainerStyle={{ paddingBottom: 120 }}
+            extraKeyboardSpace={180}
+            keyboardDismissMode="interactive"
+            keyboardShouldPersistTaps="handled"
+          >
+            <View className="gap-5 px-5 pb-6">
+              <Text className="text-sm leading-5 text-muted-foreground">
+                Describe one way customers buy this product and how it relates
+                to the unit you count in stock.
+              </Text>
+
+              {unitEditorError ? (
+                <StatusBanner
+                  icon="AlertCircle"
+                  message={unitEditorError}
+                  tone="destructive"
+                />
+              ) : null}
+
+              <FormField
+                autoCapitalize="words"
+                label="Unit name"
+                onChangeText={(value) => updateUnitEditorDraft({ name: value })}
+                placeholder="Example: Bag, Carton, or Piece"
+                value={unitEditorDraft.name}
+              />
+              <FormField
+                helper={`For example, enter 50 when one Bag contains 50 ${unitName.trim() || "counted units"}.`}
+                keyboardType="decimal-pad"
+                label={`How many ${unitName.trim() || "counted units"} are in 1 ${unitEditorDraft.name.trim() || "unit"}?`}
+                onChangeText={(value) =>
+                  updateUnitEditorDraft({ factor: value })
+                }
+                placeholder="Example: 50"
+                value={unitEditorDraft.factor}
+              />
+              <MoneyField
+                currencyCode={currencyCode}
+                helper="Variants can override this default after the unit is saved."
+                label="Default selling price"
+                onChangeValue={(value) =>
+                  updateUnitEditorDraft({ price: value })
+                }
+                placeholder="Example: 25000"
+                value={unitEditorDraft.price}
+              />
+
+              <View className="gap-2">
+                <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
+                  Stock source
+                </Text>
+                <Text className="text-xs leading-5 text-muted-foreground">
+                  Shared stock deducts the counted stock. Prepared stock keeps a
+                  separate balance for units already packed.
+                </Text>
+                <View className="flex-row gap-2">
+                  {(
+                    [
+                      ["alternate_transaction", "Shared stock"],
+                      ["packaged_stock", "Prepared stock"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <Pressable
+                      accessibilityRole="radio"
+                      accessibilityState={{
+                        selected: unitEditorDraft.stockBehavior === value,
+                      }}
+                      className={
+                        unitEditorDraft.stockBehavior === value
+                          ? "min-h-11 flex-1 items-center justify-center rounded-full bg-primary px-3"
+                          : "min-h-11 flex-1 items-center justify-center rounded-full bg-muted px-3"
+                      }
+                      key={value}
+                      onPress={() =>
+                        updateUnitEditorDraft({ stockBehavior: value })
+                      }
+                    >
+                      <Text
+                        className={
+                          unitEditorDraft.stockBehavior === value
+                            ? "text-xs font-bold text-primary-foreground"
+                            : "text-xs font-bold text-foreground"
+                        }
+                      >
+                        {label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
+              <ActionButton onPress={saveUnitEditorDraft}>
+                Save unit
+              </ActionButton>
+            </View>
+          </BottomSheetKeyboardAwareScrollView>
+        ) : null}
+      </Modal>
+
       <KeyboardInlineComposer
-        dismissKeyboardOnSubmit={false}
-        onChangeText={setComposerText}
-        onPillPress={() => undefined}
+        dismissKeyboardOnSubmit={variantComposerMode === "variant-value"}
+        hideSubmitButton={variantComposerMode === "variant-value"}
+        onChangeText={changeVariantComposerText}
+        onPillPress={pressVariantComposerPill}
         onRemovePill={removeComposerValue}
-        onSubmit={addComposerValue}
+        onSubmit={submitVariantComposer}
         pills={composerPills}
-        placeholder={`Add ${activeGroup?.name || "option"} value`}
-        submitAccessibilityLabel="Add option value"
+        placeholder={
+          variantComposerMode === "variant-value"
+            ? `${activeGroup?.name || "Variant"} values, separated by commas`
+            : "Variant name or choose a suggestion"
+        }
+        ref={variantComposerInputRef}
+        submitAccessibilityLabel={
+          variantComposerMode === "variant-value"
+            ? "Add variant value"
+            : "Add variant"
+        }
         value={composerText}
-        visible={!!activeGroupId}
+        visible={!!variantComposerMode}
       />
     </View>
-  );
+  )
 }

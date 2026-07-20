@@ -32,6 +32,7 @@ model Store {
   serviceRequests             ServiceRequest[]
   serviceQuotes               ServiceQuote[]
   serviceNotificationIntents  ServiceNotificationIntent[]
+  serviceSettings             ServiceStoreSettings?
   catalogOfferingAvailability StoreOfferingAvailability[]
   catalogCommandReceipts      CatalogCommandReceipt[]
   stockBalanceSources         StockBalanceSource[]
@@ -42,6 +43,7 @@ model Store {
   inboundStockTransfers       StockTransfer[]             @relation("StockTransferTargetStore")
   inventoryCloseouts          InventoryCloseout[]
   commercialOrders            CommercialOrder[]
+  commercialOrderPayments     CommercialOrderPayment[]
   productReturns              ProductReturn[]
 
   @@unique([tenantId, slug])

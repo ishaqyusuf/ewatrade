@@ -6,7 +6,13 @@ import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 
 type StoreSummary = { currencyCode: string; id: string; name: string }
 
-export function ServiceIntakeSheet({ store }: { store: StoreSummary }) {
+export function ServiceIntakeSheet({
+  canManage,
+  store,
+}: {
+  canManage: boolean
+  store: StoreSummary
+}) {
   const { setParams, sheet } = useServiceWorkParams()
   const open = sheet === "intake"
 
@@ -17,7 +23,13 @@ export function ServiceIntakeSheet({ store }: { store: StoreSummary }) {
       title="New service"
       description="Choose the work first. Customer and timing details are optional."
     >
-      {open ? <ServiceIntakeForm key="service-intake" store={store} /> : null}
+      {open ? (
+        <ServiceIntakeForm
+          canManage={canManage}
+          key="service-intake"
+          store={store}
+        />
+      ) : null}
     </DashboardSheet>
   )
 }

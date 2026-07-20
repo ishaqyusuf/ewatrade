@@ -4,6 +4,7 @@ import { ServiceIntakeSheet } from "@/components/sheets/service-intake-sheet"
 import { ServiceJobSheet } from "@/components/sheets/service-job-sheet"
 import { ServiceQuoteSheet } from "@/components/sheets/service-quote-sheet"
 import { ServiceRequestSheet } from "@/components/sheets/service-request-sheet"
+import { ServiceSettingsSheet } from "@/components/sheets/service-settings-sheet"
 import { ServiceWorkDataTable } from "@/components/tables/service-work/data-table"
 
 type StoreSummary = {
@@ -24,13 +25,21 @@ export function ServiceJobsPage({
   return (
     <div className="flex flex-1 flex-col gap-6 p-6 lg:p-8">
       <ServiceWorkHeader canManage={canManage} storeName={store.name} />
-      <ServiceWorkDataTable storeId={store.id} timeZone={timeZone} />
+      <ServiceWorkDataTable
+        canManage={canManage}
+        storeId={store.id}
+        timeZone={timeZone}
+      />
       {canManage ? <CustomerRequests storeId={store.id} /> : null}
-      <ServiceIntakeSheet store={store} />
+      <ServiceIntakeSheet canManage={canManage} store={store} />
       {canManage ? (
         <>
           <ServiceRequestSheet store={store} />
           <ServiceQuoteSheet store={store} />
+          <ServiceSettingsSheet
+            currencyCode={store.currencyCode}
+            storeId={store.id}
+          />
         </>
       ) : null}
       <ServiceJobSheet canManage={canManage} />

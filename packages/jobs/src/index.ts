@@ -1,14 +1,20 @@
 import type { LeadCaptureType } from "@ewatrade/db"
 import type { RetailOpsStaffInvitedPayload } from "@ewatrade/notifications"
+import { customerMessagingProviderStatus } from "@ewatrade/notifications/services/customer-messaging-service"
 
 import {
   type NotificationDispatchPayload,
   notificationDispatchHandler,
 } from "./handlers/notification-dispatch"
+import {
+  type ServiceNotificationDispatchPayload,
+  serviceNotificationDispatchHandler,
+} from "./handlers/service-notification-dispatch"
 import { triggerJob } from "./trigger"
 
 export const jobIds = {
   notificationDispatch: "notifications.dispatch",
+  serviceNotificationDispatch: "services.notification.dispatch",
 } as const
 
 export type MarketingLeadNotificationInput = {
@@ -79,7 +85,18 @@ export async function enqueueRetailOpsStaffInviteNotification(
   )
 }
 
+export async function enqueueServiceNotificationIntent(intentId: string) {
+  const payload: ServiceNotificationDispatchPayload = { intentId }
+  await triggerJob(
+    jobIds.serviceNotificationDispatch,
+    serviceNotificationDispatchHandler,
+    payload,
+  )
+}
+
 export { runInBackground, runWithRetry } from "./queue"
 export { isTriggerConfigured, triggerJob } from "./trigger"
 export { notificationDispatchHandler }
-export type { NotificationDispatchPayload }
+export { serviceNotificationDispatchHandler }
+export { customerMessagingProviderStatus }
+export type { NotificationDispatchPayload, ServiceNotificationDispatchPayload }

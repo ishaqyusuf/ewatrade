@@ -37,6 +37,14 @@ const intakeLineSchema = z
   })
   .strict()
 
+const commercialPaymentMethodSchema = z.enum([
+  "bank_transfer",
+  "card",
+  "cash",
+  "other",
+  "pos",
+])
+
 export const serviceIntakeCreateSchema = z
   .object({
     clientIntakeId: z.string().trim().min(8).max(160),
@@ -46,11 +54,21 @@ export const serviceIntakeCreateSchema = z
     customerPhone: z.string().trim().max(40).optional(),
     dueCommitmentAt: z.coerce.date().optional(),
     instructions: z.string().trim().max(4_000).optional(),
+    initialPaymentMethod: commercialPaymentMethodSchema.optional(),
+    initialPaymentMinor: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(100_000_000)
+      .optional(),
+    initialPaymentReference: z.string().trim().max(160).optional(),
     lines: z.array(intakeLineSchema).min(1).max(100),
+    notificationChannel: z.enum(["sms", "whatsapp"]).optional(),
     priority: z.enum(["normal", "urgent"]).optional(),
     requestedAssigneeId: z.string().trim().min(1).optional(),
     requestedAt: z.coerce.date().optional(),
     schemaVersion: z.literal(1),
+    serviceLevel: z.enum(["express", "standard"]).optional(),
     storeId: z.string().trim().min(1).optional(),
   })
   .strict()
@@ -117,6 +135,66 @@ export const serviceJobRescheduleSchema = z
     jobId: z.string().trim().min(1),
     promisedAt: z.coerce.date(),
     reason: z.string().trim().min(1).max(500),
+  })
+  .strict()
+
+export const serviceJobHandoffSchema = z
+  .object({
+    clientCommandId: z.string().trim().min(8).max(160),
+    expectedRevision: z.number().int().nonnegative(),
+    jobId: z.string().trim().min(1),
+    note: z.string().trim().max(500).optional(),
+    payment: z
+      .object({
+        amountMinor: z.number().int().positive().max(100_000_000),
+        method: commercialPaymentMethodSchema,
+        reference: z.string().trim().max(160).optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict()
+
+export const serviceBatchUpdateSchema = z
+  .object({
+    action: z.enum(["delay", "mark_in_progress", "mark_ready"]),
+    jobs: z
+      .array(
+        z
+          .object({
+            expectedRevision: z.number().int().nonnegative(),
+            jobId: z.string().trim().min(1),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(100),
+    reason: z.string().trim().min(1).max(500),
+    shiftMinutes: z.number().int().positive().max(525_600).optional(),
+  })
+  .strict()
+
+export const serviceSettingsGetSchema = z
+  .object({ storeId: z.string().trim().min(1).optional() })
+  .strict()
+
+export const serviceSettingsUpdateSchema = z
+  .object({
+    autoNotifyReady: z.boolean(),
+    autoNotifyReminder: z.boolean(),
+    defaultNotificationChannel: z.enum(["sms", "whatsapp"]).optional(),
+    expressEnabled: z.boolean(),
+    expressLabel: z.string().trim().min(1).max(80),
+    expressSurchargeType: z.enum(["fixed", "percentage"]),
+    expressSurchargeValue: z.number().int().nonnegative().max(100_000_000),
+    expressTurnaroundMinutes: z
+      .number()
+      .int()
+      .positive()
+      .max(525_600)
+      .optional(),
+    reminderLeadMinutes: z.number().int().nonnegative().max(525_600),
+    storeId: z.string().trim().min(1).optional(),
   })
   .strict()
 
@@ -195,7 +273,9 @@ export const serviceEvidenceRevokeSchema = z
   })
   .strict()
 
-export const serviceJobGetSchema = z.object({ jobId: z.string().trim().min(1) }).strict()
+export const serviceJobGetSchema = z
+  .object({ jobId: z.string().trim().min(1) })
+  .strict()
 
 export const serviceWorkQueueSchema = z
   .object({
@@ -328,11 +408,33 @@ export const serviceNotificationIntentSchema = z
   .object({
     audienceKey: z.string().trim().min(1).max(160),
     businessEventKey: z.string().trim().min(1).max(160),
+    channel: z.enum(["sms", "whatsapp"]),
     customerEmail: z.string().trim().email().max(320).optional(),
     customerPhone: z.string().trim().max(40).optional(),
     jobId: z.string().trim().min(1),
     renderedMessage: z.string().trim().min(1).max(4_000),
     renderedSubject: z.string().trim().max(200).optional(),
+    scheduledFor: z.coerce.date().optional(),
+    templatePurpose: z.string().trim().min(1).max(120),
+  })
+  .strict()
+
+export const serviceBatchNotificationIntentSchema = z
+  .object({
+    channel: z.enum(["sms", "whatsapp"]),
+    clientBatchId: z.string().trim().min(1).max(120),
+    jobs: z
+      .array(
+        z
+          .object({
+            jobId: z.string().trim().min(1),
+            message: z.string().trim().min(1).max(4_000),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(100),
+    scheduledFor: z.coerce.date().optional(),
     templatePurpose: z.string().trim().min(1).max(120),
   })
   .strict()

@@ -1,4 +1,4 @@
-import { createHash, randomBytes, randomUUID } from "node:crypto"
+import { createHash, randomBytes } from "node:crypto"
 
 import {
   multiplyExactDecimals,
@@ -1030,7 +1030,10 @@ export async function getPublicServiceTracking(
     const job = access.serviceJob
     return {
       customerName: job.commercialOrder.customerName,
-      dueAt: job.dueCommitments[0]?.promisedAt ?? null,
+      dueAt:
+        [...job.dueCommitments]
+          .reverse()
+          .find((commitment) => !commitment.supersededAt)?.promisedAt ?? null,
       evidence: job.evidence,
       lines: job.lines.map((line) => ({
         item: line.commercialOrderLine.snapshot?.catalogItemName ?? "Service",
@@ -1068,30 +1071,50 @@ export async function createServiceNotificationIntent(
     actorUserId: string
     audienceKey: string
     businessEventKey: string
+    channel: "sms" | "whatsapp"
     customerEmail?: string
     customerPhone?: string
     jobId: string
     renderedMessage: string
     renderedSubject?: string
+    scheduledFor?: Date
     templatePurpose: string
     tenantId: string
   },
 ) {
   const job = await db.serviceJob.findFirst({
+    include: { commercialOrder: true },
     where: { id: input.jobId, tenantId: input.tenantId },
   })
   if (!job) throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Job not found.")
+  const customerPhone =
+    input.customerPhone?.trim() || job.commercialOrder.customerPhone
+  if (!customerPhone) {
+    throw new CatalogError(
+      "INVALID_SERVICE_TRANSITION",
+      "SMS and WhatsApp updates require a customer phone number.",
+    )
+  }
+  const scheduledFor = input.scheduledFor
   return db.serviceNotificationIntent.upsert({
     create: {
       audienceKey: input.audienceKey,
       businessEventKey: input.businessEventKey,
+      channel:
+        input.channel === "whatsapp"
+          ? ServiceNotificationChannel.WHATSAPP
+          : ServiceNotificationChannel.SMS,
       createdByUserId: input.actorUserId,
       customerEmail: input.customerEmail,
-      customerPhone: input.customerPhone,
+      customerPhone,
       renderedMessage: input.renderedMessage.trim(),
       renderedSubject: input.renderedSubject?.trim() || null,
+      scheduledFor,
       serviceJobId: job.id,
-      status: ServiceNotificationIntentStatus.READY,
+      status:
+        scheduledFor && scheduledFor.getTime() > Date.now()
+          ? ServiceNotificationIntentStatus.PENDING
+          : ServiceNotificationIntentStatus.READY,
       storeId: job.storeId,
       templatePurpose: input.templatePurpose,
       tenantId: input.tenantId,
@@ -1106,6 +1129,248 @@ export async function createServiceNotificationIntent(
       },
     },
   })
+}
+
+export async function createBatchServiceNotificationIntents(
+  db: PrismaClient,
+  input: {
+    actorUserId: string
+    channel: "sms" | "whatsapp"
+    clientBatchId: string
+    jobs: Array<{ jobId: string; message: string }>
+    scheduledFor?: Date
+    templatePurpose: string
+    tenantId: string
+  },
+) {
+  if (input.jobs.length === 0 || input.jobs.length > 100) {
+    throw new CatalogError(
+      "INVALID_SERVICE_TRANSITION",
+      "Select between 1 and 100 Service Jobs to notify.",
+    )
+  }
+  const uniqueJobIds = [...new Set(input.jobs.map((job) => job.jobId))]
+  if (uniqueJobIds.length !== input.jobs.length) {
+    throw new CatalogError(
+      "INVALID_SERVICE_TRANSITION",
+      "Each Service Job can appear only once in a notification batch.",
+    )
+  }
+  const jobs = await db.serviceJob.findMany({
+    include: { commercialOrder: true },
+    where: { id: { in: uniqueJobIds }, tenantId: input.tenantId },
+  })
+  if (jobs.length !== uniqueJobIds.length) {
+    throw new CatalogError(
+      "SERVICE_JOB_NOT_FOUND",
+      "One or more selected Service Jobs could not be found.",
+    )
+  }
+  const jobsById = new Map(jobs.map((job) => [job.id, job]))
+  for (const entry of input.jobs) {
+    if (!jobsById.get(entry.jobId)?.commercialOrder.customerPhone) {
+      throw new CatalogError(
+        "INVALID_SERVICE_TRANSITION",
+        "Every selected Service Job needs a customer phone number.",
+      )
+    }
+  }
+
+  const batchKey = input.clientBatchId
+  const channel =
+    input.channel === "whatsapp"
+      ? ServiceNotificationChannel.WHATSAPP
+      : ServiceNotificationChannel.SMS
+  const status =
+    input.scheduledFor && input.scheduledFor.getTime() > Date.now()
+      ? ServiceNotificationIntentStatus.PENDING
+      : ServiceNotificationIntentStatus.READY
+
+  return db.$transaction(async (tx) => {
+    const businessEventKey = `service-batch:${input.templatePurpose}:${batchKey}`
+    await tx.$queryRaw`
+      SELECT pg_advisory_xact_lock(
+        hashtext(${`${input.tenantId}:${input.templatePurpose}:${batchKey}`})
+      )
+    `
+    const existing = await tx.serviceNotificationIntent.findMany({
+      select: { serviceJobId: true },
+      where: {
+        businessEventKey,
+        templatePurpose: input.templatePurpose,
+        tenantId: input.tenantId,
+      },
+    })
+    if (
+      existing.length > 0 &&
+      (existing.length !== uniqueJobIds.length ||
+        existing.some((intent) => !uniqueJobIds.includes(intent.serviceJobId)))
+    ) {
+      throw new CatalogError(
+        "IDEMPOTENCY_MISMATCH",
+        "This notification batch identity was already used with a different Job selection.",
+      )
+    }
+    return Promise.all(
+      input.jobs.map((entry) => {
+        const job = jobsById.get(entry.jobId)
+        const customerPhone = job?.commercialOrder.customerPhone
+        if (!job || !customerPhone) {
+          throw new CatalogError(
+            "INVALID_SERVICE_TRANSITION",
+            "Every selected Service Job needs a customer phone number.",
+          )
+        }
+        const renderedMessage = entry.message.trim()
+        return tx.serviceNotificationIntent
+          .upsert({
+            create: {
+              audienceKey: entry.jobId,
+              businessEventKey,
+              channel,
+              createdByUserId: input.actorUserId,
+              customerPhone,
+              renderedMessage,
+              scheduledFor: input.scheduledFor,
+              serviceJobId: job.id,
+              status,
+              storeId: job.storeId,
+              templatePurpose: input.templatePurpose,
+              tenantId: input.tenantId,
+            },
+            update: {},
+            where: {
+              tenantId_businessEventKey_audienceKey_templatePurpose: {
+                audienceKey: entry.jobId,
+                businessEventKey,
+                templatePurpose: input.templatePurpose,
+                tenantId: input.tenantId,
+              },
+            },
+          })
+          .then((intent) => {
+            if (
+              intent.channel !== channel ||
+              intent.renderedMessage !== renderedMessage ||
+              intent.serviceJobId !== job.id ||
+              intent.scheduledFor?.getTime() !== input.scheduledFor?.getTime()
+            ) {
+              throw new CatalogError(
+                "IDEMPOTENCY_MISMATCH",
+                "This notification batch identity was already used with different details.",
+              )
+            }
+            return intent
+          })
+      }),
+    )
+  })
+}
+
+const notificationDispatchLeaseMs = 15 * 60_000
+
+export async function listDueServiceNotificationIntentIds(
+  db: PrismaClient,
+  input: { limit?: number; now?: Date },
+) {
+  const now = input.now ?? new Date()
+  const staleBefore = new Date(now.getTime() - notificationDispatchLeaseMs)
+  const intents = await db.serviceNotificationIntent.findMany({
+    orderBy: { scheduledFor: "asc" },
+    select: { id: true },
+    take: Math.min(Math.max(input.limit ?? 100, 1), 500),
+    where: {
+      AND: [
+        {
+          OR: [{ scheduledFor: null }, { scheduledFor: { lte: now } }],
+        },
+        {
+          OR: [
+            { dispatchRequestedAt: null },
+            { dispatchRequestedAt: { lte: staleBefore } },
+          ],
+        },
+      ],
+      channel: {
+        in: [
+          ServiceNotificationChannel.SMS,
+          ServiceNotificationChannel.WHATSAPP,
+        ],
+      },
+      status: {
+        in: [
+          ServiceNotificationIntentStatus.PENDING,
+          ServiceNotificationIntentStatus.READY,
+        ],
+      },
+    },
+  })
+  return intents.map((intent) => intent.id)
+}
+
+export async function getServiceNotificationIntentForDelivery(
+  db: PrismaClient,
+  input: { intentId: string },
+) {
+  const intent = await db.serviceNotificationIntent.findUnique({
+    where: { id: input.intentId },
+  })
+  if (!intent) {
+    throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Intent not found.")
+  }
+  if (
+    intent.status === ServiceNotificationIntentStatus.COMPLETED ||
+    intent.status === ServiceNotificationIntentStatus.CANCELLED
+  ) {
+    return null
+  }
+  if (
+    intent.channel !== ServiceNotificationChannel.SMS &&
+    intent.channel !== ServiceNotificationChannel.WHATSAPP
+  ) {
+    return null
+  }
+  if (
+    intent.status === ServiceNotificationIntentStatus.PENDING &&
+    (!intent.scheduledFor || intent.scheduledFor.getTime() > Date.now())
+  ) {
+    throw new CatalogError(
+      "INVALID_SERVICE_TRANSITION",
+      "Notification is not due yet.",
+    )
+  }
+  const now = new Date()
+  const staleBefore = new Date(now.getTime() - notificationDispatchLeaseMs)
+  const claimed = await db.serviceNotificationIntent.updateMany({
+    data: {
+      dispatchRequestedAt: now,
+      status: ServiceNotificationIntentStatus.READY,
+    },
+    where: {
+      OR: [
+        { dispatchRequestedAt: null },
+        { dispatchRequestedAt: { lte: staleBefore } },
+      ],
+      id: intent.id,
+      status: {
+        in: [
+          ServiceNotificationIntentStatus.PENDING,
+          ServiceNotificationIntentStatus.READY,
+        ],
+      },
+    },
+  })
+  if (claimed.count !== 1) return null
+  return {
+    channel:
+      intent.channel === ServiceNotificationChannel.WHATSAPP
+        ? ("whatsapp" as const)
+        : ("sms" as const),
+    customerPhone: intent.customerPhone,
+    id: intent.id,
+    message: intent.renderedMessage,
+    tenantId: intent.tenantId,
+  }
 }
 
 export async function recordServiceManualShare(
@@ -1159,28 +1424,66 @@ export async function recordServiceDeliveryAttempt(
   })
   if (!intent)
     throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Intent not found.")
-  return db.serviceDeliveryAttempt.create({
-    data: {
-      channel:
-        input.channel === "email"
-          ? ServiceNotificationChannel.EMAIL
-          : input.channel === "sms"
-            ? ServiceNotificationChannel.SMS
-            : ServiceNotificationChannel.WHATSAPP,
-      completedAt: input.status === "pending" ? null : new Date(),
-      failureCode: input.failureCode,
-      failureMessage: input.failureMessage,
-      notificationIntentId: intent.id,
-      providerAttemptId: input.providerAttemptId,
-      providerKey: input.providerKey,
-      status:
-        input.status === "delivered"
-          ? ServiceDeliveryAttemptStatus.DELIVERED
-          : input.status === "failed"
-            ? ServiceDeliveryAttemptStatus.FAILED
-            : input.status === "sent"
-              ? ServiceDeliveryAttemptStatus.SENT
-              : ServiceDeliveryAttemptStatus.PENDING,
-    },
+  return db.$transaction(async (tx) => {
+    const attempt = await tx.serviceDeliveryAttempt.create({
+      data: {
+        channel:
+          input.channel === "email"
+            ? ServiceNotificationChannel.EMAIL
+            : input.channel === "sms"
+              ? ServiceNotificationChannel.SMS
+              : ServiceNotificationChannel.WHATSAPP,
+        completedAt: input.status === "pending" ? null : new Date(),
+        failureCode: input.failureCode,
+        failureMessage: input.failureMessage,
+        notificationIntentId: intent.id,
+        providerAttemptId: input.providerAttemptId,
+        providerKey: input.providerKey,
+        status:
+          input.status === "delivered"
+            ? ServiceDeliveryAttemptStatus.DELIVERED
+            : input.status === "failed"
+              ? ServiceDeliveryAttemptStatus.FAILED
+              : input.status === "sent"
+                ? ServiceDeliveryAttemptStatus.SENT
+                : ServiceDeliveryAttemptStatus.PENDING,
+      },
+    })
+    if (
+      (input.status === "delivered" || input.status === "sent") &&
+      intent.status !== ServiceNotificationIntentStatus.CANCELLED
+    ) {
+      await tx.serviceNotificationIntent.updateMany({
+        data: {
+          completedAt: new Date(),
+          status: ServiceNotificationIntentStatus.COMPLETED,
+        },
+        where: {
+          id: intent.id,
+          status: { not: ServiceNotificationIntentStatus.CANCELLED },
+        },
+      })
+    } else if (
+      input.status === "failed" &&
+      intent.status !== ServiceNotificationIntentStatus.COMPLETED &&
+      intent.status !== ServiceNotificationIntentStatus.CANCELLED
+    ) {
+      await tx.serviceNotificationIntent.updateMany({
+        data: {
+          dispatchRequestedAt: null,
+          status: ServiceNotificationIntentStatus.READY,
+        },
+        where: {
+          id: intent.id,
+          status: {
+            notIn: [
+              ServiceNotificationIntentStatus.CANCELLED,
+              ServiceNotificationIntentStatus.COMPLETED,
+            ],
+          },
+        },
+      })
+    }
+    return attempt
   })
 }

@@ -19,7 +19,8 @@ persistence boundary. Clients never access the database directly.
 - `CatalogItem` is permanently `PRODUCT` or `SERVICE` and owns exactly one
   `CatalogProduct` or `CatalogService` subtype.
 - Customer choices are `VariantOptionGroup`, `VariantOptionValue`,
-  `SellableVariant` and selections.
+  `SellableVariant` and selections. A Sellable Variant may carry its own
+  optional description.
 - `SellableOffering` owns pricing and is exactly one `ProductUnitOffering` or
   `ServiceOffering` by transactional invariant.
 - `StoreOfferingAvailability` is separate from the business Catalog.
@@ -35,6 +36,8 @@ persistence boundary. Clients never access the database directly.
   factor 1. Alternate Transaction units share its balance. Packaged Stock units
   have independent balances.
 - `StockBalanceSource` identifies Store, Product, variant, unit and custody.
+- Product creation may seed separate Canonical Shared opening balances for each
+  variant through exact per-variant opening quantities.
 - `StockReservation`, `StockOperation`, `StockMovement`, `StockCount`,
   `StockTransfer`, `InventoryCloseout` and their lines/entries form the exact
   inventory ledger.
@@ -42,6 +45,8 @@ persistence boundary. Clients never access the database directly.
 ## Commerce
 
 - `CommercialOrder` and `CommercialOrderLine` hold monetary/order state.
+- `CommercialOrderPayment` is the append-only payment/refund ledger. Orders
+  retain service charge and paid-total projections for efficient balance reads.
 - `OfferingSnapshot` is immutable and retains item, variant, Offering, pricing,
   exact quantity, unit, factor, configuration and balance meaning.
 - `ProductFulfillment` links fulfillment to reservation and Stock Operation.
@@ -50,17 +55,21 @@ persistence boundary. Clients never access the database directly.
 ## Service Operations And Customer Access
 
 - `ServiceIntake`/Line records direct staff intake before confirmation.
+- `ServiceStoreSettings` owns express surcharge/turnaround and automatic
+  customer-notification defaults. Intake snapshots the selected service level,
+  service charge, initial payment and customer channel.
 - `ServiceJob` contains exact `ServiceJobLine` allocations. Line work state is
   authoritative; assignments, due commitments, notes, exceptions, rework and
-  work events retain history.
+  work events retain history. Customer handoff is separately timestamped and
+  attributed.
 - `ServiceEvidence` and audit events retain purpose, media type, local/queued/
   uploading/available/failed/revoked state and private/published/revoked
   visibility. Public availability requires trusted asset/safety fields.
 - `ServiceRequestForm`, `ServiceRequest`/Line, `ServiceQuote`, immutable Quote
   Versions/Lines and `CustomerTrackingAccess` implement public intent,
   quotation, acceptance and safe tracking.
-- Notification Intents, Manual Shares and Delivery Attempts are separate from
-  Service work state.
+- Notification Intents carry a required channel and optional scheduled time;
+  Manual Shares and Delivery Attempts remain separate from Service work state.
 
 ## Offline
 

@@ -9,6 +9,7 @@ import { useTRPC } from "@/trpc/client"
 import { Button } from "@ewatrade/ui"
 import {
   useMutation,
+  useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
@@ -21,7 +22,13 @@ const fieldClass =
   "h-10 w-full scroll-mt-24 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
 const areaClass = `${fieldClass} min-h-24 py-2`
 
-export function ServiceIntakeForm({ store }: { store: StoreSummary }) {
+export function ServiceIntakeForm({
+  canManage,
+  store,
+}: {
+  canManage: boolean
+  store: StoreSummary
+}) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const { setParams } = useServiceWorkParams()
@@ -35,6 +42,18 @@ export function ServiceIntakeForm({ store }: { store: StoreSummary }) {
       ),
     [items, store.id],
   )
+  const settingsQuery = useSuspenseQuery(
+    trpc.services.getSettings.queryOptions(
+      { storeId: store.id },
+      { retry: false },
+    ),
+  )
+  const assigneesQuery = useQuery(
+    trpc.services.assignees.queryOptions(undefined, {
+      enabled: canManage,
+      retry: false,
+    }),
+  )
   const [lines, setLines] = useState<IntakeLine[]>([])
   const [customerName, setCustomerName] = useState("")
   const [customerPhone, setCustomerPhone] = useState("")
@@ -43,6 +62,16 @@ export function ServiceIntakeForm({ store }: { store: StoreSummary }) {
   const [instructions, setInstructions] = useState("")
   const [conditionNote, setConditionNote] = useState("")
   const [urgent, setUrgent] = useState(false)
+  const [express, setExpress] = useState(false)
+  const [amountPaid, setAmountPaid] = useState("")
+  const [paymentMethod, setPaymentMethod] = useState<
+    "bank_transfer" | "card" | "cash" | "other" | "pos"
+  >("cash")
+  const [paymentReference, setPaymentReference] = useState("")
+  const [notificationChannel, setNotificationChannel] = useState<
+    "" | "sms" | "whatsapp"
+  >(settingsQuery.data.defaultNotificationChannel ?? "")
+  const [assigneeId, setAssigneeId] = useState("")
   const [showDetails, setShowDetails] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const intakeMutation = useMutation(
@@ -61,6 +90,24 @@ export function ServiceIntakeForm({ store }: { store: StoreSummary }) {
       },
     }),
   )
+  const subtotalMinor = lines.reduce((total, line) => {
+    const offering = offerings.find((entry) => entry.id === line.offeringId)
+    const quantity = Number(line.quantity)
+    return offering &&
+      offering.fixedPriceMinor !== null &&
+      Number.isFinite(quantity)
+      ? total + offering.fixedPriceMinor * quantity
+      : total
+  }, 0)
+  const serviceChargeMinor =
+    express && settingsQuery.data.expressEnabled
+      ? settingsQuery.data.expressSurchargeType === "fixed"
+        ? settingsQuery.data.expressSurchargeValue
+        : Math.round(
+            (subtotalMinor * settingsQuery.data.expressSurchargeValue) / 10_000,
+          )
+      : 0
+  const totalMinor = subtotalMinor + serviceChargeMinor
 
   function submit() {
     setError(null)
@@ -78,10 +125,19 @@ export function ServiceIntakeForm({ store }: { store: StoreSummary }) {
       customerPhone: customerPhone.trim() || undefined,
       dueCommitmentAt: dueAt ? new Date(dueAt) : undefined,
       instructions: instructions.trim() || undefined,
+      initialPaymentMethod:
+        amountPaid.trim() && Number(amountPaid) > 0 ? paymentMethod : undefined,
+      initialPaymentMinor: amountPaid.trim()
+        ? Math.round(Number(amountPaid) * 100)
+        : 0,
+      initialPaymentReference: paymentReference.trim() || undefined,
       lines,
+      notificationChannel: notificationChannel || undefined,
       priority: urgent ? "urgent" : "normal",
+      requestedAssigneeId: assigneeId || undefined,
       requestedAt: requestedAt ? new Date(requestedAt) : undefined,
       schemaVersion: 1,
+      serviceLevel: express ? "express" : "standard",
       storeId: store.id,
     })
   }
@@ -201,6 +257,44 @@ export function ServiceIntakeForm({ store }: { store: StoreSummary }) {
           />
         </label>
       </div>
+      {settingsQuery.data.expressEnabled ? (
+        <label className="flex items-center justify-between gap-3 border-y border-border py-4 text-sm">
+          <span>
+            <span className="block font-medium">
+              {settingsQuery.data.expressLabel}
+            </span>
+            <span className="text-muted-foreground">
+              {settingsQuery.data.expressSurchargeType === "fixed"
+                ? formatMoney(
+                    settingsQuery.data.expressSurchargeValue,
+                    store.currencyCode,
+                  )
+                : `${settingsQuery.data.expressSurchargeValue / 100}% surcharge`}
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            checked={express}
+            onChange={(event) => setExpress(event.target.checked)}
+          />
+        </label>
+      ) : null}
+      <section className="grid gap-3 border-b border-border pb-5">
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">Subtotal</span>
+          <span>{formatMoney(subtotalMinor, store.currencyCode)}</span>
+        </div>
+        {serviceChargeMinor > 0 ? (
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Express</span>
+            <span>{formatMoney(serviceChargeMinor, store.currencyCode)}</span>
+          </div>
+        ) : null}
+        <div className="flex justify-between font-medium">
+          <span>Total</span>
+          <span>{formatMoney(totalMinor, store.currencyCode)}</span>
+        </div>
+      </section>
       <button
         type="button"
         className="w-fit text-left text-sm font-medium text-primary"
@@ -254,8 +348,84 @@ export function ServiceIntakeForm({ store }: { store: StoreSummary }) {
             />
             Mark urgent
           </label>
+          {canManage ? (
+            <label className="grid gap-1.5 text-sm">
+              <span className="font-medium">Assign to</span>
+              <select
+                className={fieldClass}
+                value={assigneeId}
+                onChange={(event) => setAssigneeId(event.target.value)}
+              >
+                <option value="">Leave unassigned</option>
+                {assigneesQuery.data?.map((person) => (
+                  <option key={person.id} value={person.id}>
+                    {person.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
         </div>
       ) : null}
+      <section className="grid gap-4 border-t border-border pt-5">
+        <div>
+          <h3 className="font-medium">Payment</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Leave the amount empty to collect the full balance on delivery.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1.5 text-sm">
+            <span className="font-medium">
+              Amount paid now ({store.currencyCode})
+            </span>
+            <input
+              className={fieldClass}
+              inputMode="decimal"
+              value={amountPaid}
+              onChange={(event) => setAmountPaid(event.target.value)}
+            />
+          </label>
+          <label className="grid gap-1.5 text-sm">
+            <span className="font-medium">Method</span>
+            <select
+              className={fieldClass}
+              value={paymentMethod}
+              onChange={(event) =>
+                setPaymentMethod(event.target.value as typeof paymentMethod)
+              }
+            >
+              <option value="cash">Cash</option>
+              <option value="bank_transfer">Bank transfer</option>
+              <option value="pos">POS</option>
+              <option value="card">Card</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+        </div>
+        <input
+          className={fieldClass}
+          placeholder="Payment reference (optional)"
+          value={paymentReference}
+          onChange={(event) => setPaymentReference(event.target.value)}
+        />
+      </section>
+      <label className="grid gap-1.5 text-sm">
+        <span className="font-medium">Customer updates</span>
+        <select
+          className={fieldClass}
+          value={notificationChannel}
+          onChange={(event) =>
+            setNotificationChannel(
+              event.target.value as typeof notificationChannel,
+            )
+          }
+        >
+          <option value="">No automatic updates</option>
+          <option value="sms">SMS</option>
+          <option value="whatsapp">WhatsApp</option>
+        </select>
+      </label>
       <Button
         disabled={intakeMutation.isPending || lines.length === 0}
         onClick={submit}

@@ -26,7 +26,8 @@ Typed tRPC routers are the primary application contract.
 ## Commercial Orders
 
 - `orders.create`, `orders.get`, `orders.list`,
-  `orders.fulfillProductLine`, `orders.returnProductLine`.
+  `orders.fulfillProductLine`, `orders.returnProductLine`,
+  `orders.recordPayment`.
 
 ## Offline
 
@@ -38,7 +39,8 @@ Typed tRPC routers are the primary application contract.
 - Intake/work: `services.createIntakeDraft`, `confirmIntake`,
   `createAndConfirmIntake`, `queue`, `getJob`, `assignees`, `assignJob`,
   `authorizeLine`, `transitionLine`, `rescheduleJob`, `splitLine`,
-  `createRework`, `addNote`, `recordException`.
+  `createRework`, `addNote`, `recordException`, `batchUpdate`,
+  `handoff`, `getSettings`, `updateSettings`.
 - Evidence: `services.captureEvidence`, `updateEvidenceUpload`,
   `publishEvidence`, `revokeEvidence`.
 - Customer access: `serviceAccess.createRequestForm`, `requestForms`,
@@ -46,7 +48,8 @@ Typed tRPC routers are the primary application contract.
   `updateRequest`, `issueQuote`, `quote` (public), `acceptQuote` (public),
   `createTracking`, `revokeTracking`, `tracking` (public).
 - Communications/reporting: `serviceCommunications.createIntent`,
-  `recordManualShare`, `recordDeliveryAttempt`,
+  `createBatchIntents`, `providerStatus`, `recordManualShare`,
+  `recordDeliveryAttempt`,
   `serviceReporting.summary`, `serviceReporting.auditExport`.
 
 ## Staff And Billing

@@ -3,6 +3,7 @@ import { createHash, randomUUID } from "node:crypto"
 import {
   addExactDecimals,
   compareExactDecimals,
+  multiplyExactDecimals,
   parseExactDecimal,
   subtractExactDecimals,
 } from "@ewatrade/utils/exact-decimal"
@@ -10,7 +11,10 @@ import {
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import {
   CatalogRecordStatus,
+  CommercialPaymentMethod,
   MembershipStatus,
+  OfferingPricingPolicy,
+  OrderStatus,
   PaymentStatus,
   SellableOfferingKind,
   ServiceEvidenceAuditAction,
@@ -22,7 +26,11 @@ import {
   ServiceExceptionType,
   ServiceIntakeStatus,
   ServiceJobLineStatus,
+  ServiceLevel,
+  ServiceNotificationChannel,
+  ServiceNotificationIntentStatus,
   ServicePriority,
+  ServiceSurchargeType,
   ServiceWorkEventType,
   ServiceWorkPolicy,
   WorkAuthorizationPolicy,
@@ -30,6 +38,12 @@ import {
 } from "../../generated/prisma/enums"
 import { CatalogError } from "./catalog"
 import { createCommercialOrderInTransaction } from "./commercial-orders"
+import {
+  type CommercialPaymentMethodValue,
+  effectiveCommercialAmountPaid,
+  recordCommercialOrderPaymentInTransaction,
+} from "./commercial-payments"
+import { calculateServiceChargeMinor } from "./service-settings"
 
 export type ServiceIntakeLineInput = {
   approvedQuotePriceMinor?: number
@@ -48,10 +62,15 @@ export type CreateServiceIntakeInput = {
   dueCommitmentAt?: Date
   instructions?: string
   lines: ServiceIntakeLineInput[]
+  initialPaymentMethod?: CommercialPaymentMethodValue
+  initialPaymentMinor?: number
+  initialPaymentReference?: string
+  notificationChannel?: "sms" | "whatsapp"
   priority?: "normal" | "urgent"
   requestedAssigneeId?: string
   requestedAt?: Date
   schemaVersion: number
+  serviceLevel?: "express" | "standard"
   storeId: string
   tenantId: string
 }
@@ -89,7 +108,9 @@ function assertSchemaVersion(version: number) {
 
 const jobGraph = {
   assignments: { orderBy: { assignedAt: "asc" } },
-  commercialOrder: true,
+  commercialOrder: {
+    include: { payments: { orderBy: { recordedAt: "asc" } } },
+  },
   dueCommitments: { orderBy: { effectiveAt: "asc" } },
   evidence: { orderBy: { createdAt: "asc" } },
   events: { orderBy: [{ effectiveAt: "asc" }, { createdAt: "asc" }] },
@@ -98,12 +119,22 @@ const jobGraph = {
     include: { commercialOrderLine: { include: { snapshot: true } } },
     orderBy: { createdAt: "asc" },
   },
+  intake: {
+    select: { notificationChannel: true },
+  },
   notes: { orderBy: { createdAt: "asc" } },
+  notificationIntents: {
+    include: {
+      deliveryAttempts: { orderBy: { attemptedAt: "asc" } },
+      manualShares: { orderBy: { sharedAt: "asc" } },
+    },
+    orderBy: { createdAt: "asc" },
+  },
 } satisfies Prisma.ServiceJobInclude
 
 type JobGraph = Prisma.ServiceJobGetPayload<{ include: typeof jobGraph }>
 
-function derivedJobSummary(lines: JobGraph["lines"]) {
+function derivedJobSummary(lines: Array<{ status: ServiceJobLineStatus }>) {
   if (lines.length === 0) return "cancelled" as const
   const statuses = lines.map((line) => line.status)
   if (statuses.every((status) => status === ServiceJobLineStatus.CANCELLED)) {
@@ -157,6 +188,12 @@ function serializeJob(job: JobGraph) {
   const currentDue = [...job.dueCommitments]
     .reverse()
     .find((commitment) => !commitment.supersededAt)
+  const amountPaidMinor = effectiveCommercialAmountPaid({
+    amountPaidMinor: job.commercialOrder.amountPaidMinor,
+    paymentCount: job.commercialOrder.payments.length,
+    paymentStatus: job.commercialOrder.paymentStatus,
+    totalMinor: job.commercialOrder.totalMinor,
+  })
   return {
     assignments: job.assignments.map((assignment) => ({
       assignedAt: assignment.assignedAt,
@@ -167,6 +204,12 @@ function serializeJob(job: JobGraph) {
       reason: assignment.reason,
     })),
     commercialOrderId: job.commercialOrderId,
+    currencyCode: job.commercialOrder.currencyCode,
+    amountPaidMinor,
+    balanceDueMinor: Math.max(
+      0,
+      job.commercialOrder.totalMinor - amountPaidMinor,
+    ),
     createdAt: job.createdAt,
     currentAssigneeUserId: job.currentAssigneeUserId,
     customerMilestone: customerMilestone(summary),
@@ -199,6 +242,8 @@ function serializeJob(job: JobGraph) {
       type: exception.type,
     })),
     id: job.id,
+    handedOffAt: job.handedOffAt,
+    handoffNote: job.handoffNote,
     lines: job.lines.map((line) => ({
       allocatedQuantity: line.allocatedQuantity.toString(),
       authorizationPolicy: line.authorizationPolicy,
@@ -214,14 +259,46 @@ function serializeJob(job: JobGraph) {
         line.commercialOrderLine.snapshot?.optionSelections ?? [],
       revision: line.revision,
       status: line.status,
-      variantName:
-        line.commercialOrderLine.snapshot?.variantName ?? "Service",
+      variantName: line.commercialOrderLine.snapshot?.variantName ?? "Service",
     })),
     orderNumber: job.commercialOrder.orderNumber,
+    orderTotalMinor: job.commercialOrder.totalMinor,
     paymentStatus: job.commercialOrder.paymentStatus,
+    payments: job.commercialOrder.payments.map((payment) => ({
+      amountMinor: payment.amountMinor,
+      id: payment.id,
+      method: payment.method,
+      recordedAt: payment.recordedAt,
+      reference: payment.reference,
+      type: payment.type,
+    })),
     priority:
-      job.priority === ServicePriority.URGENT ? ("urgent" as const) : ("normal" as const),
+      job.priority === ServicePriority.URGENT
+        ? ("urgent" as const)
+        : ("normal" as const),
     revision: job.revision,
+    serviceChargeMinor: job.commercialOrder.serviceChargeMinor,
+    notificationIntents: job.notificationIntents.map((intent) => ({
+      channel: intent.channel,
+      createdAt: intent.createdAt,
+      deliveryAttempts: intent.deliveryAttempts.map((attempt) => ({
+        attemptedAt: attempt.attemptedAt,
+        failureMessage: attempt.failureMessage,
+        id: attempt.id,
+        providerKey: attempt.providerKey,
+        status: attempt.status,
+      })),
+      id: intent.id,
+      manualShares: intent.manualShares.map((share) => ({
+        channel: share.channel,
+        id: share.id,
+        sharedAt: share.sharedAt,
+      })),
+      renderedMessage: intent.renderedMessage,
+      scheduledFor: intent.scheduledFor,
+      status: intent.status,
+      templatePurpose: intent.templatePurpose,
+    })),
     notes: job.notes.map((note) => ({
       body: note.body,
       createdAt: note.createdAt,
@@ -247,6 +324,105 @@ async function loadJob(
   return job
 }
 
+async function cancelOutstandingDueReminders(
+  db: Prisma.TransactionClient | PrismaClient,
+  serviceJobId: string,
+) {
+  await db.serviceNotificationIntent.updateMany({
+    data: { status: ServiceNotificationIntentStatus.CANCELLED },
+    where: {
+      serviceJobId,
+      status: {
+        in: [
+          ServiceNotificationIntentStatus.PENDING,
+          ServiceNotificationIntentStatus.READY,
+        ],
+      },
+      templatePurpose: "due_reminder",
+    },
+  })
+}
+
+async function replaceDueReminder(
+  db: Prisma.TransactionClient,
+  input: {
+    actorUserId: string
+    channel: ServiceNotificationChannel | null
+    customerPhone: string | null
+    orderNumber: string
+    promisedAt: Date
+    serviceJobId: string
+    storeId: string
+    tenantId: string
+  },
+) {
+  await cancelOutstandingDueReminders(db, input.serviceJobId)
+  const [settings, tenant] = await Promise.all([
+    db.serviceStoreSettings.findUnique({
+      where: { storeId: input.storeId },
+    }),
+    db.tenant.findUnique({
+      select: { timezone: true },
+      where: { id: input.tenantId },
+    }),
+  ])
+  const channel = input.channel ?? settings?.defaultNotificationChannel
+  if (
+    !settings?.autoNotifyReminder ||
+    !input.customerPhone ||
+    (channel !== ServiceNotificationChannel.SMS &&
+      channel !== ServiceNotificationChannel.WHATSAPP)
+  ) {
+    return null
+  }
+  const scheduledFor = new Date(
+    input.promisedAt.getTime() - settings.reminderLeadMinutes * 60_000,
+  )
+  const renderedMessage = `Reminder: order ${input.orderNumber} is expected to be ready by ${input.promisedAt.toLocaleString(
+    "en-NG",
+    {
+      timeZone: tenant?.timezone ?? "Africa/Lagos",
+    },
+  )}.`
+  return db.serviceNotificationIntent.upsert({
+    create: {
+      audienceKey: input.orderNumber,
+      businessEventKey: `${input.serviceJobId}:due-reminder:${input.promisedAt.toISOString()}`,
+      channel,
+      createdByUserId: input.actorUserId,
+      customerPhone: input.customerPhone,
+      renderedMessage,
+      scheduledFor,
+      serviceJobId: input.serviceJobId,
+      status:
+        scheduledFor.getTime() <= Date.now()
+          ? ServiceNotificationIntentStatus.READY
+          : ServiceNotificationIntentStatus.PENDING,
+      storeId: input.storeId,
+      templatePurpose: "due_reminder",
+      tenantId: input.tenantId,
+    },
+    update: {
+      channel,
+      customerPhone: input.customerPhone,
+      renderedMessage,
+      scheduledFor,
+      status:
+        scheduledFor.getTime() <= Date.now()
+          ? ServiceNotificationIntentStatus.READY
+          : ServiceNotificationIntentStatus.PENDING,
+    },
+    where: {
+      tenantId_businessEventKey_audienceKey_templatePurpose: {
+        audienceKey: input.orderNumber,
+        businessEventKey: `${input.serviceJobId}:due-reminder:${input.promisedAt.toISOString()}`,
+        templatePurpose: "due_reminder",
+        tenantId: input.tenantId,
+      },
+    },
+  })
+}
+
 async function assertActiveAssignee(
   tx: Prisma.TransactionClient,
   input: { tenantId: string; userId: string },
@@ -264,6 +440,21 @@ async function assertActiveAssignee(
       "Assignee must be an active member of this business.",
     )
   }
+}
+
+function commercialPaymentMethod(value?: CommercialPaymentMethodValue) {
+  if (value === "bank_transfer") return CommercialPaymentMethod.BANK_TRANSFER
+  if (value === "card") return CommercialPaymentMethod.CARD
+  if (value === "pos") return CommercialPaymentMethod.POS
+  if (value === "other") return CommercialPaymentMethod.OTHER
+  if (value === "cash") return CommercialPaymentMethod.CASH
+  return null
+}
+
+function serviceNotificationChannel(value?: "sms" | "whatsapp") {
+  if (value === "whatsapp") return ServiceNotificationChannel.WHATSAPP
+  if (value === "sms") return ServiceNotificationChannel.SMS
+  return null
 }
 
 export async function createServiceIntakeDraft(
@@ -314,7 +505,8 @@ export async function createServiceIntakeDraft(
       },
     })
     if (
-      offerings.length !== new Set(input.lines.map((line) => line.offeringId)).size ||
+      offerings.length !==
+        new Set(input.lines.map((line) => line.offeringId)).size ||
       offerings.some(
         (offering) =>
           !offering.serviceOffering ||
@@ -329,15 +521,119 @@ export async function createServiceIntakeDraft(
     const scaleByOffering = new Map(
       offerings.map((offering) => [
         offering.id,
-        offering.serviceOffering!.quantityScale,
+        offering.serviceOffering?.quantityScale ?? 0,
       ]),
     )
+    const offeringById = new Map(
+      offerings.map((offering) => [offering.id, offering]),
+    )
+    let subtotalMinor = 0
     for (const line of input.lines) {
-      parseExactDecimal(line.quantity, {
+      const quantity = parseExactDecimal(line.quantity, {
         allowZero: false,
         maxScale: scaleByOffering.get(line.offeringId) ?? 0,
       })
+      const offering = offeringById.get(line.offeringId)
+      if (!offering) {
+        throw new CatalogError(
+          "OFFERING_UNAVAILABLE",
+          "Service Intake contains an unavailable Offering.",
+        )
+      }
+      const unitPriceMinor =
+        offering.pricingPolicy === OfferingPricingPolicy.FIXED
+          ? offering.fixedPriceMinor
+          : line.approvedQuotePriceMinor
+      if (unitPriceMinor === null || unitPriceMinor === undefined) {
+        throw new CatalogError(
+          "INVALID_ORDER",
+          "Every Service Intake line needs a fixed or approved quote price.",
+        )
+      }
+      if (
+        line.expectedFixedPriceMinor !== undefined &&
+        line.expectedFixedPriceMinor !== offering.fixedPriceMinor
+      ) {
+        throw new CatalogError(
+          "OFFERING_UNAVAILABLE",
+          "A Service price changed before Intake confirmation.",
+        )
+      }
+      const lineTotal = multiplyExactDecimals(String(unitPriceMinor), quantity)
+      if (!/^\d+$/.test(lineTotal)) {
+        throw new CatalogError(
+          "INVALID_ORDER",
+          "Service line total must be a whole minor currency amount.",
+        )
+      }
+      subtotalMinor += Number(lineTotal)
     }
+    const settings = await tx.serviceStoreSettings.findUnique({
+      where: { storeId: store.id },
+    })
+    const isExpress = input.serviceLevel === "express"
+    if (isExpress && !settings?.expressEnabled) {
+      throw new CatalogError(
+        "INVALID_SERVICE_TRANSITION",
+        "Express service is not enabled for this Store.",
+      )
+    }
+    let serviceChargeMinor = 0
+    let serviceLevelSnapshot: Prisma.InputJsonValue | undefined
+    if (isExpress) {
+      if (!settings) {
+        throw new CatalogError(
+          "INVALID_SERVICE_TRANSITION",
+          "Express service is not configured for this Store.",
+        )
+      }
+      serviceChargeMinor = calculateServiceChargeMinor({
+        subtotalMinor,
+        surchargeType:
+          settings.expressSurchargeType === ServiceSurchargeType.FIXED
+            ? "fixed"
+            : "percentage",
+        surchargeValue: settings.expressSurchargeValue,
+      })
+      serviceLevelSnapshot = json({
+        label: settings.expressLabel,
+        surchargeType:
+          settings.expressSurchargeType === ServiceSurchargeType.FIXED
+            ? "fixed"
+            : "percentage",
+        surchargeValue: settings.expressSurchargeValue,
+        turnaroundMinutes: settings.expressTurnaroundMinutes,
+      })
+    }
+    const totalMinor = subtotalMinor + serviceChargeMinor
+    const initialPaymentMinor = input.initialPaymentMinor ?? 0
+    if (
+      !Number.isSafeInteger(initialPaymentMinor) ||
+      initialPaymentMinor < 0 ||
+      initialPaymentMinor > totalMinor
+    ) {
+      throw new CatalogError(
+        "INVALID_ORDER",
+        "Initial payment cannot exceed the Service Order total.",
+      )
+    }
+    if (initialPaymentMinor > 0 && !input.initialPaymentMethod) {
+      throw new CatalogError(
+        "INVALID_ORDER",
+        "Choose a method for the initial payment.",
+      )
+    }
+    if (input.notificationChannel && !input.customerPhone?.trim()) {
+      throw new CatalogError(
+        "INVALID_SERVICE_TRANSITION",
+        "SMS or WhatsApp updates require a customer phone number.",
+      )
+    }
+    const dueCommitmentAt =
+      input.dueCommitmentAt ??
+      (isExpress && settings?.expressTurnaroundMinutes
+        ? new Date(Date.now() + settings.expressTurnaroundMinutes * 60_000)
+        : undefined)
     if (input.requestedAssigneeId) {
       await assertActiveAssignee(tx, {
         tenantId: input.tenantId,
@@ -352,16 +648,27 @@ export async function createServiceIntakeDraft(
         customerEmail: input.customerEmail?.trim() || null,
         customerName: input.customerName?.trim() || null,
         customerPhone: input.customerPhone?.trim() || null,
-        dueCommitmentAt: input.dueCommitmentAt,
+        dueCommitmentAt,
+        initialPaymentMethod: commercialPaymentMethod(
+          input.initialPaymentMethod,
+        ),
+        initialPaymentMinor,
+        initialPaymentReference: input.initialPaymentReference?.trim() || null,
         instructions: input.instructions?.trim() || null,
         payloadHash,
         priority:
-          input.priority === "urgent"
+          input.priority === "urgent" || isExpress
             ? ServicePriority.URGENT
             : ServicePriority.NORMAL,
+        notificationChannel: serviceNotificationChannel(
+          input.notificationChannel,
+        ),
         requestedAssigneeId: input.requestedAssigneeId,
         requestedAt: input.requestedAt,
         schemaVersion: input.schemaVersion,
+        serviceChargeMinor,
+        serviceLevel: isExpress ? ServiceLevel.EXPRESS : ServiceLevel.STANDARD,
+        serviceLevelSnapshot,
         storeId: input.storeId,
         tenantId: input.tenantId,
       },
@@ -407,14 +714,25 @@ export async function confirmServiceIntake(
       )
     }
     if (intake.status === ServiceIntakeStatus.CONFIRMED) {
+      if (!intake.commercialOrderId) {
+        throw new CatalogError(
+          "INVALID_SERVICE_TRANSITION",
+          "Confirmed Service Intake is missing its Commercial Order.",
+        )
+      }
       const jobs = await tx.serviceJob.findMany({
         include: jobGraph,
         where: { intakeId: intake.id },
       })
+      const notificationIntents = await tx.serviceNotificationIntent.findMany({
+        select: { id: true },
+        where: { serviceJob: { intakeId: intake.id } },
+      })
       return {
         intakeId: intake.id,
         jobs: jobs.map(serializeJob),
-        orderId: intake.commercialOrderId!,
+        notificationIntentIds: notificationIntents.map((intent) => intent.id),
+        orderId: intake.commercialOrderId,
       }
     }
     if (intake.status !== ServiceIntakeStatus.DRAFT) {
@@ -438,9 +756,30 @@ export async function confirmServiceIntake(
       })),
       notes: intake.instructions ?? undefined,
       schemaVersion: 1,
+      serviceChargeMinor: intake.serviceChargeMinor,
       storeId: intake.storeId,
       tenantId: input.tenantId,
     })
+    if (intake.initialPaymentMinor > 0 && intake.initialPaymentMethod) {
+      await recordCommercialOrderPaymentInTransaction(tx, {
+        actorUserId: input.actorUserId,
+        amountMinor: intake.initialPaymentMinor,
+        clientPaymentId: `${intake.clientIntakeId}:initial-payment`,
+        method:
+          intake.initialPaymentMethod === CommercialPaymentMethod.BANK_TRANSFER
+            ? "bank_transfer"
+            : intake.initialPaymentMethod === CommercialPaymentMethod.CARD
+              ? "card"
+              : intake.initialPaymentMethod === CommercialPaymentMethod.POS
+                ? "pos"
+                : intake.initialPaymentMethod === CommercialPaymentMethod.OTHER
+                  ? "other"
+                  : "cash",
+        orderId: order.id,
+        reference: intake.initialPaymentReference ?? undefined,
+        tenantId: input.tenantId,
+      })
+    }
     const trackedOrderLines = await tx.commercialOrderLine.findMany({
       include: {
         offering: { include: { serviceOffering: true } },
@@ -454,6 +793,7 @@ export async function confirmServiceIntake(
       },
     })
     const jobs: JobGraph[] = []
+    const notificationIntentIds: string[] = []
     if (trackedOrderLines.length > 0) {
       const job = await tx.serviceJob.create({
         data: {
@@ -468,12 +808,20 @@ export async function confirmServiceIntake(
         },
       })
       for (const orderLine of trackedOrderLines) {
-        const policy =
-          orderLine.offering.serviceOffering!.authorizationPolicy
+        const serviceOffering = orderLine.offering.serviceOffering
+        if (!serviceOffering) {
+          throw new CatalogError(
+            "INVALID_SERVICE_TRANSITION",
+            "Tracked work is missing its Service Offering policy.",
+          )
+        }
+        const policy = serviceOffering.authorizationPolicy
+        const authorizedByPayment =
+          policy === WorkAuthorizationPolicy.AFTER_REQUIRED_PAYMENT &&
+          intake.initialPaymentMinor >= order.totalMinor
         const status =
           policy === WorkAuthorizationPolicy.ON_ORDER_CONFIRMATION ||
-          (policy === WorkAuthorizationPolicy.AFTER_REQUIRED_PAYMENT &&
-            order.paymentStatus === PaymentStatus.PAID)
+          authorizedByPayment
             ? WorkAuthorizationStatus.AUTHORIZED
             : policy === WorkAuthorizationPolicy.AFTER_REQUIRED_PAYMENT
               ? WorkAuthorizationStatus.PENDING_PAYMENT
@@ -485,13 +833,13 @@ export async function confirmServiceIntake(
             authorizationPolicy: policy,
             authorizationSource:
               status === WorkAuthorizationStatus.AUTHORIZED
-                ? "order_confirmation"
+                ? authorizedByPayment
+                  ? "payment"
+                  : "order_confirmation"
                 : null,
             authorizationStatus: status,
             authorizedAt:
-              status === WorkAuthorizationStatus.AUTHORIZED
-                ? new Date()
-                : null,
+              status === WorkAuthorizationStatus.AUTHORIZED ? new Date() : null,
             commercialOrderLineId: orderLine.id,
             serviceJobId: job.id,
           },
@@ -499,7 +847,9 @@ export async function confirmServiceIntake(
         await tx.serviceWorkEvent.create({
           data: {
             actorUserId: input.actorUserId,
-            payload: json({ allocatedQuantity: line.allocatedQuantity.toString() }),
+            payload: json({
+              allocatedQuantity: line.allocatedQuantity.toString(),
+            }),
             serviceJobId: job.id,
             serviceJobLineId: line.id,
             source: "service_intake",
@@ -511,9 +861,14 @@ export async function confirmServiceIntake(
           await tx.serviceWorkEvent.create({
             data: {
               actorUserId: input.actorUserId,
+              reason: authorizedByPayment
+                ? "Commercial Order payment completed"
+                : undefined,
               serviceJobId: job.id,
               serviceJobLineId: line.id,
-              source: "service_intake",
+              source: authorizedByPayment
+                ? "commercial_payment"
+                : "service_intake",
               tenantId: input.tenantId,
               type: ServiceWorkEventType.AUTHORIZED,
             },
@@ -540,6 +895,19 @@ export async function confirmServiceIntake(
           },
         })
       }
+      if (intake.dueCommitmentAt) {
+        const intent = await replaceDueReminder(tx, {
+          actorUserId: input.actorUserId,
+          channel: intake.notificationChannel,
+          customerPhone: intake.customerPhone,
+          orderNumber: order.orderNumber,
+          promisedAt: intake.dueCommitmentAt,
+          serviceJobId: job.id,
+          storeId: intake.storeId,
+          tenantId: input.tenantId,
+        })
+        if (intent) notificationIntentIds.push(intent.id)
+      }
       jobs.push(await loadJob(tx, { jobId: job.id, tenantId: input.tenantId }))
     }
     await tx.serviceIntake.update({
@@ -553,6 +921,7 @@ export async function confirmServiceIntake(
     return {
       intakeId: intake.id,
       jobs: jobs.map(serializeJob),
+      notificationIntentIds,
       orderId: order.id,
     }
   })
@@ -571,14 +940,16 @@ export async function createAndConfirmServiceIntake(
   })
 }
 
-const allowedTransitions = new Map<ServiceJobLineStatus, ServiceJobLineStatus[]>([
+const allowedTransitions = new Map<
+  ServiceJobLineStatus,
+  ServiceJobLineStatus[]
+>([
   [
     ServiceJobLineStatus.QUEUED,
     [
       ServiceJobLineStatus.IN_PROGRESS,
       ServiceJobLineStatus.BLOCKED,
       ServiceJobLineStatus.READY_FOR_HANDOFF,
-      ServiceJobLineStatus.COMPLETED,
       ServiceJobLineStatus.CANCELLED,
     ],
   ],
@@ -587,7 +958,6 @@ const allowedTransitions = new Map<ServiceJobLineStatus, ServiceJobLineStatus[]>
     [
       ServiceJobLineStatus.BLOCKED,
       ServiceJobLineStatus.READY_FOR_HANDOFF,
-      ServiceJobLineStatus.COMPLETED,
       ServiceJobLineStatus.CANCELLED,
     ],
   ],
@@ -601,11 +971,7 @@ const allowedTransitions = new Map<ServiceJobLineStatus, ServiceJobLineStatus[]>
   ],
   [
     ServiceJobLineStatus.READY_FOR_HANDOFF,
-    [
-      ServiceJobLineStatus.IN_PROGRESS,
-      ServiceJobLineStatus.COMPLETED,
-      ServiceJobLineStatus.CANCELLED,
-    ],
+    [ServiceJobLineStatus.IN_PROGRESS, ServiceJobLineStatus.CANCELLED],
   ],
   [ServiceJobLineStatus.COMPLETED, []],
   [ServiceJobLineStatus.CANCELLED, []],
@@ -666,7 +1032,10 @@ export async function transitionServiceJobLine(
       where: { id: input.lineId, serviceJob: { tenantId: input.tenantId } },
     })
     if (!line) {
-      throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Service Job Line not found.")
+      throw new CatalogError(
+        "SERVICE_JOB_NOT_FOUND",
+        "Service Job Line not found.",
+      )
     }
     if (line.revision !== input.expectedRevision) {
       throw new CatalogError(
@@ -749,12 +1118,19 @@ export async function authorizeServiceJobLine(
 ) {
   return db.$transaction(async (tx) => {
     const line = await tx.serviceJobLine.findFirst({
-      include: { commercialOrderLine: { include: { order: true } }, serviceJob: true },
+      include: {
+        commercialOrderLine: { include: { order: true } },
+        serviceJob: true,
+      },
       where: { id: input.lineId, serviceJob: { tenantId: input.tenantId } },
     })
-    if (!line) throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Job Line not found.")
+    if (!line)
+      throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Job Line not found.")
     if (line.revision !== input.expectedRevision) {
-      throw new CatalogError("REVISION_CONFLICT", "Job Line changed before authorization.")
+      throw new CatalogError(
+        "REVISION_CONFLICT",
+        "Job Line changed before authorization.",
+      )
     }
     if (
       input.source === "payment" &&
@@ -818,13 +1194,17 @@ export async function splitServiceJobLine(
       include: { serviceJob: true },
       where: { id: input.lineId, serviceJob: { tenantId: input.tenantId } },
     })
-    if (!line) throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Job Line not found.")
+    if (!line)
+      throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Job Line not found.")
     if (line.revision !== input.expectedRevision) {
-      throw new CatalogError("REVISION_CONFLICT", "Job Line changed before splitting.")
+      throw new CatalogError(
+        "REVISION_CONFLICT",
+        "Job Line changed before splitting.",
+      )
     }
     if (
-      (line.status === ServiceJobLineStatus.COMPLETED ||
-        line.status === ServiceJobLineStatus.CANCELLED)
+      line.status === ServiceJobLineStatus.COMPLETED ||
+      line.status === ServiceJobLineStatus.CANCELLED
     ) {
       throw new CatalogError(
         "SERVICE_ALLOCATION_CONFLICT",
@@ -835,7 +1215,9 @@ export async function splitServiceJobLine(
       allowZero: false,
       maxScale: 6,
     })
-    if (compareExactDecimals(quantity, line.allocatedQuantity.toString()) >= 0) {
+    if (
+      compareExactDecimals(quantity, line.allocatedQuantity.toString()) >= 0
+    ) {
       throw new CatalogError(
         "SERVICE_ALLOCATION_CONFLICT",
         "Split quantity must be smaller than the current allocation.",
@@ -923,7 +1305,10 @@ export async function assignServiceJob(
     })
     if (!job) throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Job not found.")
     if (job.revision !== input.expectedRevision) {
-      throw new CatalogError("REVISION_CONFLICT", "Job changed before assignment.")
+      throw new CatalogError(
+        "REVISION_CONFLICT",
+        "Job changed before assignment.",
+      )
     }
     await assertActiveAssignee(tx, {
       tenantId: input.tenantId,
@@ -980,15 +1365,20 @@ export async function rescheduleServiceJob(
   },
 ) {
   return db.$transaction(async (tx) => {
-    const job = await tx.serviceJob.findFirst({
-      include: { dueCommitments: { where: { supersededAt: null } } },
-      where: { id: input.jobId, tenantId: input.tenantId },
+    const job = await loadJob(tx, {
+      jobId: input.jobId,
+      tenantId: input.tenantId,
     })
     if (!job) throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Job not found.")
     if (job.revision !== input.expectedRevision) {
-      throw new CatalogError("REVISION_CONFLICT", "Job changed before rescheduling.")
+      throw new CatalogError(
+        "REVISION_CONFLICT",
+        "Job changed before rescheduling.",
+      )
     }
-    const previous = job.dueCommitments[0]
+    const previous = [...job.dueCommitments]
+      .reverse()
+      .find((commitment) => !commitment.supersededAt)
     if (previous) {
       await tx.serviceDueCommitment.update({
         data: { supersededAt: new Date() },
@@ -1023,6 +1413,16 @@ export async function rescheduleServiceJob(
           ? ServiceWorkEventType.DUE_COMMITMENT_REVISED
           : ServiceWorkEventType.DUE_COMMITMENT_CREATED,
       },
+    })
+    await replaceDueReminder(tx, {
+      actorUserId: input.actorUserId,
+      channel: job.intake?.notificationChannel ?? null,
+      customerPhone: job.commercialOrder.customerPhone,
+      orderNumber: job.commercialOrder.orderNumber,
+      promisedAt: input.promisedAt,
+      serviceJobId: job.id,
+      storeId: job.storeId,
+      tenantId: input.tenantId,
     })
     return serializeJob(
       await loadJob(tx, { jobId: job.id, tenantId: input.tenantId }),
@@ -1074,10 +1474,18 @@ export async function recordServiceException(
     jobId: string
     lineId?: string
     tenantId: string
-    type: "customer_rejection" | "delay" | "failed_attempt" | "other" | "quality"
+    type:
+      | "customer_rejection"
+      | "delay"
+      | "failed_attempt"
+      | "other"
+      | "quality"
   },
 ) {
-  const job = await loadJob(db, { jobId: input.jobId, tenantId: input.tenantId })
+  const job = await loadJob(db, {
+    jobId: input.jobId,
+    tenantId: input.tenantId,
+  })
   const type =
     input.type === "delay"
       ? ServiceExceptionType.DELAY
@@ -1116,7 +1524,8 @@ export async function createServiceRework(
       include: { serviceJob: true },
       where: { id: input.lineId, serviceJob: { tenantId: input.tenantId } },
     })
-    if (!source) throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Job Line not found.")
+    if (!source)
+      throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Job Line not found.")
     if (source.status !== ServiceJobLineStatus.COMPLETED) {
       throw new CatalogError(
         "INVALID_SERVICE_TRANSITION",
@@ -1127,7 +1536,9 @@ export async function createServiceRework(
       allowZero: false,
       maxScale: 6,
     })
-    if (compareExactDecimals(quantity, source.allocatedQuantity.toString()) > 0) {
+    if (
+      compareExactDecimals(quantity, source.allocatedQuantity.toString()) > 0
+    ) {
       throw new CatalogError(
         "SERVICE_ALLOCATION_CONFLICT",
         "Rework quantity cannot exceed the completed source allocation.",
@@ -1177,7 +1588,8 @@ export async function createServiceRework(
 }
 
 function evidencePurpose(value: string) {
-  if (value === "intake_condition") return ServiceEvidencePurpose.INTAKE_CONDITION
+  if (value === "intake_condition")
+    return ServiceEvidencePurpose.INTAKE_CONDITION
   if (value === "progress") return ServiceEvidencePurpose.PROGRESS
   if (value === "completion") return ServiceEvidencePurpose.COMPLETION
   if (value === "exception") return ServiceEvidencePurpose.EXCEPTION
@@ -1215,7 +1627,10 @@ export async function captureServiceEvidence(
     uploadStatus?: "failed" | "local" | "queued"
   },
 ) {
-  const job = await loadJob(db, { jobId: input.jobId, tenantId: input.tenantId })
+  const job = await loadJob(db, {
+    jobId: input.jobId,
+    tenantId: input.tenantId,
+  })
   const status =
     input.uploadStatus === "failed"
       ? ServiceEvidenceUploadStatus.FAILED
@@ -1298,7 +1713,9 @@ export async function updateServiceEvidenceUpload(
           : undefined,
         uploadStatus: status,
         uploadedAt:
-          status === ServiceEvidenceUploadStatus.AVAILABLE ? new Date() : undefined,
+          status === ServiceEvidenceUploadStatus.AVAILABLE
+            ? new Date()
+            : undefined,
       },
       where: { id: evidence.id },
     })
@@ -1493,4 +1910,326 @@ export async function listServiceAssignees(
       membership.user.email,
     role: membership.role,
   }))
+}
+
+export async function createAutomaticReadyNotificationIntent(
+  db: PrismaClient,
+  input: { actorUserId: string; jobId: string; tenantId: string },
+) {
+  const job = await db.serviceJob.findFirst({
+    include: {
+      commercialOrder: true,
+      intake: true,
+      lines: true,
+      store: { include: { serviceSettings: true } },
+    },
+    where: { id: input.jobId, tenantId: input.tenantId },
+  })
+  if (!job || derivedJobSummary(job.lines) !== "ready_for_handoff") {
+    return null
+  }
+  await cancelOutstandingDueReminders(db, job.id)
+  if (!job.store.serviceSettings?.autoNotifyReady) return null
+  const channel =
+    job.intake?.notificationChannel ??
+    job.store.serviceSettings.defaultNotificationChannel
+  const customerPhone =
+    job.intake?.customerPhone ?? job.commercialOrder.customerPhone
+  if (
+    !customerPhone ||
+    (channel !== ServiceNotificationChannel.SMS &&
+      channel !== ServiceNotificationChannel.WHATSAPP)
+  ) {
+    return null
+  }
+  return db.serviceNotificationIntent.upsert({
+    create: {
+      audienceKey: job.commercialOrder.orderNumber,
+      businessEventKey: `${job.id}:ready:${job.revision}`,
+      channel,
+      createdByUserId: input.actorUserId,
+      customerPhone,
+      renderedMessage: `Your order ${job.commercialOrder.orderNumber} is ready for collection.`,
+      serviceJobId: job.id,
+      status: ServiceNotificationIntentStatus.READY,
+      storeId: job.storeId,
+      templatePurpose: "ready_for_collection",
+      tenantId: input.tenantId,
+    },
+    update: {},
+    where: {
+      tenantId_businessEventKey_audienceKey_templatePurpose: {
+        audienceKey: job.commercialOrder.orderNumber,
+        businessEventKey: `${job.id}:ready:${job.revision}`,
+        templatePurpose: "ready_for_collection",
+        tenantId: input.tenantId,
+      },
+    },
+  })
+}
+
+export async function recordServiceHandoff(
+  db: PrismaClient,
+  input: {
+    actorUserId: string
+    clientCommandId: string
+    expectedRevision: number
+    jobId: string
+    note?: string
+    payment?: {
+      amountMinor: number
+      method: CommercialPaymentMethodValue
+      reference?: string
+    }
+    tenantId: string
+  },
+) {
+  return db.$transaction(async (tx) => {
+    const job = await loadJob(tx, {
+      jobId: input.jobId,
+      tenantId: input.tenantId,
+    })
+    if (job.handedOffAt) return serializeJob(job)
+    if (job.revision !== input.expectedRevision) {
+      throw new CatalogError(
+        "REVISION_CONFLICT",
+        "Service Job changed before customer collection.",
+      )
+    }
+    const canHandoff = job.lines.every(
+      (line) =>
+        line.status === ServiceJobLineStatus.READY_FOR_HANDOFF ||
+        line.status === ServiceJobLineStatus.COMPLETED ||
+        line.status === ServiceJobLineStatus.CANCELLED,
+    )
+    if (!canHandoff) {
+      throw new CatalogError(
+        "INVALID_SERVICE_TRANSITION",
+        "All active Service lines must be ready before customer collection.",
+      )
+    }
+    if (input.payment) {
+      await recordCommercialOrderPaymentInTransaction(tx, {
+        actorUserId: input.actorUserId,
+        amountMinor: input.payment.amountMinor,
+        clientPaymentId: `${input.clientCommandId}:collection-payment`,
+        method: input.payment.method,
+        orderId: job.commercialOrderId,
+        reference: input.payment.reference,
+        tenantId: input.tenantId,
+      })
+    }
+    const settledOrder = await tx.commercialOrder.findUniqueOrThrow({
+      include: { payments: { select: { id: true } } },
+      where: { id: job.commercialOrderId },
+    })
+    const settledAmountPaidMinor = effectiveCommercialAmountPaid({
+      amountPaidMinor: settledOrder.amountPaidMinor,
+      paymentCount: settledOrder.payments.length,
+      paymentStatus: settledOrder.paymentStatus,
+      totalMinor: settledOrder.totalMinor,
+    })
+    if (settledAmountPaidMinor < settledOrder.totalMinor) {
+      throw new CatalogError(
+        "INVALID_ORDER",
+        "Collect the outstanding balance before handing over this order.",
+      )
+    }
+    const handedOffAt = new Date()
+    for (const line of job.lines) {
+      if (line.status !== ServiceJobLineStatus.READY_FOR_HANDOFF) continue
+      await tx.serviceJobLine.update({
+        data: {
+          completedAt: handedOffAt,
+          revision: { increment: 1 },
+          status: ServiceJobLineStatus.COMPLETED,
+        },
+        where: { id: line.id },
+      })
+      await tx.serviceWorkEvent.create({
+        data: {
+          actorUserId: input.actorUserId,
+          clientCommandId: `${input.clientCommandId}:line:${line.id}`,
+          fromStatus: line.status,
+          reason: input.note?.trim() || "Collected by customer",
+          serviceJobId: job.id,
+          serviceJobLineId: line.id,
+          source: "customer_handoff",
+          tenantId: input.tenantId,
+          toStatus: ServiceJobLineStatus.COMPLETED,
+          type: ServiceWorkEventType.STATUS_CHANGED,
+        },
+      })
+    }
+    await tx.serviceWorkEvent.create({
+      data: {
+        actorUserId: input.actorUserId,
+        clientCommandId: input.clientCommandId,
+        payload: json({ paymentStatus: settledOrder.paymentStatus }),
+        reason: input.note?.trim() || "Collected by customer",
+        serviceJobId: job.id,
+        source: "customer_handoff",
+        tenantId: input.tenantId,
+        type: ServiceWorkEventType.REMOTE_HANDOFF,
+      },
+    })
+    await tx.serviceJob.update({
+      data: {
+        completedAt: handedOffAt,
+        handedOffAt,
+        handedOffByUserId: input.actorUserId,
+        handoffNote: input.note?.trim() || null,
+        revision: { increment: 1 },
+      },
+      where: { id: job.id },
+    })
+    await tx.commercialOrder.update({
+      data: { status: OrderStatus.COMPLETED },
+      where: { id: job.commercialOrderId },
+    })
+    await cancelOutstandingDueReminders(tx, job.id)
+    return serializeJob(
+      await loadJob(tx, { jobId: job.id, tenantId: input.tenantId }),
+    )
+  })
+}
+
+export async function batchUpdateServiceJobs(
+  db: PrismaClient,
+  input: {
+    action: "delay" | "mark_in_progress" | "mark_ready"
+    actorUserId: string
+    jobs: Array<{ expectedRevision: number; jobId: string }>
+    reason: string
+    shiftMinutes?: number
+    tenantId: string
+  },
+) {
+  if (input.jobs.length === 0 || input.jobs.length > 100) {
+    throw new CatalogError(
+      "INVALID_SERVICE_TRANSITION",
+      "Select between 1 and 100 Service Jobs.",
+    )
+  }
+  return db.$transaction(async (tx) => {
+    const results: ReturnType<typeof serializeJob>[] = []
+    for (const requested of input.jobs) {
+      const job = await loadJob(tx, {
+        jobId: requested.jobId,
+        tenantId: input.tenantId,
+      })
+      if (job.revision !== requested.expectedRevision) {
+        throw new CatalogError(
+          "REVISION_CONFLICT",
+          `Service Job ${job.commercialOrder.orderNumber} changed before the batch update.`,
+        )
+      }
+      if (input.action === "delay") {
+        const shiftMinutes = input.shiftMinutes ?? 1_440
+        if (!Number.isSafeInteger(shiftMinutes) || shiftMinutes <= 0) {
+          throw new CatalogError(
+            "INVALID_SERVICE_TRANSITION",
+            "Delay duration must be a positive number of minutes.",
+          )
+        }
+        const currentDue = [...job.dueCommitments]
+          .reverse()
+          .find((commitment) => !commitment.supersededAt)
+        if (!currentDue) {
+          throw new CatalogError(
+            "INVALID_SERVICE_TRANSITION",
+            `Service Job ${job.commercialOrder.orderNumber} has no promised date to delay.`,
+          )
+        }
+        const promisedAt = new Date(
+          currentDue.promisedAt.getTime() + shiftMinutes * 60_000,
+        )
+        await tx.serviceDueCommitment.update({
+          data: { supersededAt: new Date() },
+          where: { id: currentDue.id },
+        })
+        await tx.serviceDueCommitment.create({
+          data: {
+            createdByUserId: input.actorUserId,
+            previousPromisedAt: currentDue.promisedAt,
+            promisedAt,
+            reason: input.reason.trim(),
+            serviceJobId: job.id,
+          },
+        })
+        await tx.serviceException.create({
+          data: {
+            actorUserId: input.actorUserId,
+            description: input.reason.trim(),
+            serviceJobId: job.id,
+            type: ServiceExceptionType.DELAY,
+          },
+        })
+        await tx.serviceWorkEvent.create({
+          data: {
+            actorUserId: input.actorUserId,
+            payload: json({
+              previousPromisedAt: currentDue.promisedAt,
+              promisedAt,
+            }),
+            reason: input.reason.trim(),
+            serviceJobId: job.id,
+            source: "service_batch",
+            tenantId: input.tenantId,
+            type: ServiceWorkEventType.DELAY,
+          },
+        })
+        await replaceDueReminder(tx, {
+          actorUserId: input.actorUserId,
+          channel: job.intake?.notificationChannel ?? null,
+          customerPhone: job.commercialOrder.customerPhone,
+          orderNumber: job.commercialOrder.orderNumber,
+          promisedAt,
+          serviceJobId: job.id,
+          storeId: job.storeId,
+          tenantId: input.tenantId,
+        })
+      } else {
+        const nextStatus =
+          input.action === "mark_ready"
+            ? ServiceJobLineStatus.READY_FOR_HANDOFF
+            : ServiceJobLineStatus.IN_PROGRESS
+        for (const line of job.lines) {
+          if (
+            line.authorizationStatus !== WorkAuthorizationStatus.AUTHORIZED ||
+            !allowedTransitions.get(line.status)?.includes(nextStatus)
+          ) {
+            continue
+          }
+          await tx.serviceJobLine.update({
+            data: { revision: { increment: 1 }, status: nextStatus },
+            where: { id: line.id },
+          })
+          await tx.serviceWorkEvent.create({
+            data: {
+              actorUserId: input.actorUserId,
+              fromStatus: line.status,
+              reason: input.reason.trim(),
+              serviceJobId: job.id,
+              serviceJobLineId: line.id,
+              source: "service_batch",
+              tenantId: input.tenantId,
+              toStatus: nextStatus,
+              type: ServiceWorkEventType.STATUS_CHANGED,
+            },
+          })
+        }
+      }
+      await tx.serviceJob.update({
+        data: { revision: { increment: 1 } },
+        where: { id: job.id },
+      })
+      results.push(
+        serializeJob(
+          await loadJob(tx, { jobId: job.id, tenantId: input.tenantId }),
+        ),
+      )
+    }
+    return results
+  })
 }

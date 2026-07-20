@@ -27,6 +27,28 @@ behavioral testing are complete.
 
 ## Implemented Flows
 
+### Service Commerce Completion
+
+- Every concrete garment/service/size combination remains its own fixed-price
+  Service Offering, so Shirt · Washing · Small and Shirt · Ironing · Large may
+  carry independent prices without embedding dry-cleaning concepts in the
+  domain.
+- Store settings configure optional standard/express service, percentage or
+  fixed express surcharge, express turnaround, default customer channel,
+  ready notifications and due reminders.
+- Intake accepts an optional assignee, promised pickup time, notification
+  channel and initial cash/bank/card/POS payment. Commerce retains an append-only
+  payment history, paid total, balance and partial/paid status.
+- Work can be advanced individually or in manager batches. Batch delay revises
+  promises and reminders; batch start/ready keeps per-line work history.
+- Ready work is not completed directly. Customer handoff is an explicit,
+  revision-guarded command that requires every active line to be ready and the
+  Commercial Order balance to be settled, optionally recording that final
+  payment atomically.
+- SMS and WhatsApp intents may be immediate or scheduled. A recurring job
+  dispatches due intents through configured provider-neutral webhooks and
+  records delivery attempts. Ready and due reminders are automated when enabled.
+
 ### Direct Intake
 
 1. Staff selects concrete Service Offerings and exact quantities.
@@ -133,6 +155,7 @@ behavioral testing are complete.
 - Service inventory or automatic consumable deduction.
 - Appointments, calendars, resource capacity, recurring work or arbitrary
   workflow builders.
-- Provider-native payment, messaging or media storage integrations in this
-  implementation.
+- Provider-hosted checkout, calendars, or media storage. Payments are recorded
+  operationally; SMS and WhatsApp delivery use configured provider-neutral
+  webhooks rather than a provider-specific SDK.
 - Legacy compatibility or preservation of development Service records.

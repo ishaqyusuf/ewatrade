@@ -3,25 +3,32 @@ import {
   addServiceInternalNote,
   assignServiceJob,
   authorizeServiceJobLine,
+  batchUpdateServiceJobs,
   captureServiceEvidence,
   confirmServiceIntake,
   createAndConfirmServiceIntake,
+  createAutomaticReadyNotificationIntent,
   createServiceIntakeDraft,
   createServiceRework,
   getServiceJob,
-  listServiceWorkQueue,
+  getServiceStoreSettings,
   listServiceAssignees,
+  listServiceWorkQueue,
   publishServiceEvidence,
   recordServiceException,
+  recordServiceHandoff,
   rescheduleServiceJob,
   revokeServiceEvidencePublication,
   splitServiceJobLine,
   transitionServiceJobLine,
   updateServiceEvidenceUpload,
+  updateServiceStoreSettings,
 } from "@ewatrade/db/queries"
+import { enqueueServiceNotificationIntent } from "@ewatrade/jobs"
 import { TRPCError } from "@trpc/server"
 
 import {
+  serviceBatchUpdateSchema,
   serviceEvidenceCaptureSchema,
   serviceEvidencePublishSchema,
   serviceEvidenceRevokeSchema,
@@ -31,12 +38,15 @@ import {
   serviceJobAssignSchema,
   serviceJobExceptionSchema,
   serviceJobGetSchema,
+  serviceJobHandoffSchema,
   serviceJobLineAuthorizeSchema,
   serviceJobLineSplitSchema,
   serviceJobLineTransitionSchema,
   serviceJobNoteSchema,
   serviceJobRescheduleSchema,
   serviceJobReworkSchema,
+  serviceSettingsGetSchema,
+  serviceSettingsUpdateSchema,
   serviceWorkQueueSchema,
 } from "../../schemas/services"
 import { createTRPCRouter, protectedProcedure } from "../init"
@@ -125,6 +135,30 @@ export const servicesRouter = createTRPCRouter({
       )
     }),
 
+  batchUpdate: protectedProcedure
+    .input(serviceBatchUpdateSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertServiceManager(ctx.tenantContext.membership.role)
+      const jobs = await run(() =>
+        batchUpdateServiceJobs(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+        }),
+      )
+      if (input.action === "mark_ready") {
+        for (const job of jobs) {
+          const intent = await createAutomaticReadyNotificationIntent(ctx.db, {
+            actorUserId: ctx.session.user.id,
+            jobId: job.id,
+            tenantId: ctx.tenantContext.tenant.id,
+          })
+          if (intent) await enqueueServiceNotificationIntent(intent.id)
+        }
+      }
+      return jobs
+    }),
+
   captureEvidence: protectedProcedure
     .input(serviceEvidenceCaptureSchema)
     .mutation(({ ctx, input }) => {
@@ -140,27 +174,35 @@ export const servicesRouter = createTRPCRouter({
 
   confirmIntake: protectedProcedure
     .input(serviceIntakeConfirmSchema)
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       assertServiceOperator(ctx.tenantContext.membership.role)
-      return run(() =>
+      const result = await run(() =>
         confirmServiceIntake(ctx.db, {
           actorUserId: ctx.session.user.id,
           ...input,
           tenantId: ctx.tenantContext.tenant.id,
         }),
       )
+      for (const job of result.jobs) {
+        for (const intent of job.notificationIntents) {
+          if (intent.status === "READY") {
+            await enqueueServiceNotificationIntent(intent.id)
+          }
+        }
+      }
+      return result
     }),
 
   createAndConfirmIntake: protectedProcedure
     .input(serviceIntakeCreateSchema)
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       assertServiceOperator(ctx.tenantContext.membership.role)
       const storeId = resolveServiceStoreId(
         ctx.tenantContext.stores,
         ctx.tenantContext.activeStore,
         input.storeId,
       )
-      return run(() =>
+      const result = await run(() =>
         createAndConfirmServiceIntake(ctx.db, {
           actorUserId: ctx.session.user.id,
           ...input,
@@ -168,6 +210,14 @@ export const servicesRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         }),
       )
+      for (const job of result.jobs) {
+        for (const intent of job.notificationIntents) {
+          if (intent.status === "READY") {
+            await enqueueServiceNotificationIntent(intent.id)
+          }
+        }
+      }
+      return result
     }),
 
   createIntakeDraft: protectedProcedure
@@ -202,13 +252,45 @@ export const servicesRouter = createTRPCRouter({
       )
     }),
 
-  getJob: protectedProcedure.input(serviceJobGetSchema).query(({ ctx, input }) => {
-    assertServiceOperator(ctx.tenantContext.membership.role)
-    return getServiceJob(ctx.db, {
-      ...input,
-      tenantId: ctx.tenantContext.tenant.id,
-    })
-  }),
+  getJob: protectedProcedure
+    .input(serviceJobGetSchema)
+    .query(({ ctx, input }) => {
+      assertServiceOperator(ctx.tenantContext.membership.role)
+      return getServiceJob(ctx.db, {
+        ...input,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+    }),
+
+  getSettings: protectedProcedure
+    .input(serviceSettingsGetSchema)
+    .query(({ ctx, input }) => {
+      assertServiceOperator(ctx.tenantContext.membership.role)
+      const storeId = resolveServiceStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      return run(() =>
+        getServiceStoreSettings(ctx.db, {
+          storeId,
+          tenantId: ctx.tenantContext.tenant.id,
+        }),
+      )
+    }),
+
+  handoff: protectedProcedure
+    .input(serviceJobHandoffSchema)
+    .mutation(({ ctx, input }) => {
+      assertServiceOperator(ctx.tenantContext.membership.role)
+      return run(() =>
+        recordServiceHandoff(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+        }),
+      )
+    }),
 
   publishEvidence: protectedProcedure
     .input(serviceEvidencePublishSchema)
@@ -223,13 +305,15 @@ export const servicesRouter = createTRPCRouter({
       )
     }),
 
-  queue: protectedProcedure.input(serviceWorkQueueSchema).query(({ ctx, input }) => {
-    assertServiceOperator(ctx.tenantContext.membership.role)
-    return listServiceWorkQueue(ctx.db, {
-      ...input,
-      tenantId: ctx.tenantContext.tenant.id,
-    })
-  }),
+  queue: protectedProcedure
+    .input(serviceWorkQueueSchema)
+    .query(({ ctx, input }) => {
+      assertServiceOperator(ctx.tenantContext.membership.role)
+      return listServiceWorkQueue(ctx.db, {
+        ...input,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+    }),
 
   recordException: protectedProcedure
     .input(serviceJobExceptionSchema)
@@ -285,15 +369,24 @@ export const servicesRouter = createTRPCRouter({
 
   transitionLine: protectedProcedure
     .input(serviceJobLineTransitionSchema)
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       assertServiceOperator(ctx.tenantContext.membership.role)
-      return run(() =>
+      const job = await run(() =>
         transitionServiceJobLine(ctx.db, {
           actorUserId: ctx.session.user.id,
           ...input,
           tenantId: ctx.tenantContext.tenant.id,
         }),
       )
+      if (input.toStatus === "ready_for_handoff") {
+        const intent = await createAutomaticReadyNotificationIntent(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          jobId: job.id,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+        if (intent) await enqueueServiceNotificationIntent(intent.id)
+      }
+      return job
     }),
 
   updateEvidenceUpload: protectedProcedure
@@ -304,6 +397,25 @@ export const servicesRouter = createTRPCRouter({
         updateServiceEvidenceUpload(ctx.db, {
           actorUserId: ctx.session.user.id,
           ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+        }),
+      )
+    }),
+
+  updateSettings: protectedProcedure
+    .input(serviceSettingsUpdateSchema)
+    .mutation(({ ctx, input }) => {
+      assertServiceManager(ctx.tenantContext.membership.role)
+      const storeId = resolveServiceStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      return run(() =>
+        updateServiceStoreSettings(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          ...input,
+          storeId,
           tenantId: ctx.tenantContext.tenant.id,
         }),
       )

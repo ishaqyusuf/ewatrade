@@ -118,6 +118,7 @@ const RefreshCw = hugeIcon("RefreshIcon");
 const Search = hugeIcon("Search");
 const Settings = hugeIcon("Settings");
 const Share = hugeIcon("Share");
+const Square = hugeIcon("SquareIcon");
 const ShieldCheck = hugeIcon("SecurityCheckIcon");
 const SecurityPassword = hugeIcon("SecurityPasswordIcon");
 const SlidersHorizontal = hugeIcon("FilterHorizontalIcon");
@@ -338,6 +339,7 @@ const appIcons = {
   settings: Settings,
   Settings,
   Share,
+  Square,
   ShieldCheck,
   SecurityPassword,
   SlidersHorizontal,

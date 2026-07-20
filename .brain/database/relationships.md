@@ -14,6 +14,9 @@
 
 Every Product Unit Offering points to one Inventory Unit from the Product's
 Current configuration. A Service Offering has no inventory relation.
+When Product creation provides per-variant opening quantities, each non-zero
+quantity creates its own Canonical Shared `StockBalanceSource` and opening
+movement for that Sellable Variant.
 
 ## Inventory Ledger
 
@@ -31,6 +34,14 @@ catalog edits from changing historical meaning.
 Product lines may link to reservations, fulfillments and returns. Tracked
 Service lines may allocate into one or more `ServiceJobLine` records. Job Lines
 belong to `ServiceJob`; charge-only Service lines allocate no work.
+
+`CommercialOrder -> CommercialOrderPayment`
+
+`Store -> ServiceStoreSettings`
+
+Payment/refund facts derive the Order balance. Store Service settings are read
+and snapshotted during Intake; later setting changes do not rewrite existing
+Order charges.
 
 ## Requests, Quotes And Tracking
 
@@ -50,7 +61,8 @@ or raw storage identifiers.
 Evidence belongs to a Job and optionally a Job Line. Audit events preserve
 capture, upload, publication and revocation decisions. Notification Intent,
 Manual Share and Delivery Attempt are separate records so provider delivery
-never mutates work or payment state.
+never mutates work or payment state. Scheduled reminders point to the Job and
+are cancelled/replaced when a promise changes or becomes obsolete.
 
 ## Tenancy
 

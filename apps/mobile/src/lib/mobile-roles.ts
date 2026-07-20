@@ -13,6 +13,15 @@ export function isSalesRepRole(role: string | undefined) {
   return normalizedRole === "CASHIER" || normalizedRole === "OPERATOR"
 }
 
+export function canManageMobileOperations(role: string | undefined) {
+  const normalizedRole = normalizeMobileRole(role)
+  return (
+    normalizedRole === "OWNER" ||
+    normalizedRole === "ADMIN" ||
+    normalizedRole === "MANAGER"
+  )
+}
+
 export function isInvitedStaffProfile(profile: MobileProfile) {
   const role = normalizeMobileRole(profile?.role)
   const status = profile?.status?.trim().toUpperCase()

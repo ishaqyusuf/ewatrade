@@ -39,14 +39,14 @@ export function tone(summary: WorkJob["summary"]) {
 
 export function availableActions(status: WorkJob["lines"][number]["status"]) {
   if (status === "QUEUED") {
-    return ["in_progress", "ready_for_handoff", "completed", "blocked"] as const
+    return ["in_progress", "ready_for_handoff", "blocked"] as const
   }
   if (status === "IN_PROGRESS") {
-    return ["ready_for_handoff", "completed", "blocked"] as const
+    return ["ready_for_handoff", "blocked"] as const
   }
   if (status === "BLOCKED") return ["in_progress", "cancelled"] as const
   if (status === "READY_FOR_HANDOFF") {
-    return ["completed", "in_progress"] as const
+    return ["in_progress"] as const
   }
   return [] as const
 }
