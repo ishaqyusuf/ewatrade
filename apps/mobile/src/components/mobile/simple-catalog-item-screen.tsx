@@ -10,6 +10,7 @@ import {
   type KeyboardInlineComposerPill,
 } from "@/components/mobile/keyboard-inline-composer"
 import { MoneyField } from "@/components/mobile/money-field"
+import { SetupCheckboxRow } from "@/components/mobile/setup-flow"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Icon, type IconKeys } from "@/components/ui/icon"
@@ -249,6 +250,7 @@ export function SimpleCatalogItemScreen({
   )
   const [name, setName] = useState("")
   const [price, setPrice] = useState("")
+  const [multiplePriceOptions, setMultiplePriceOptions] = useState(false)
   const [unitName, setUnitName] = useState("")
   const [openingStock, setOpeningStock] = useState("")
   const [description, setDescription] = useState("")
@@ -446,6 +448,7 @@ export function SimpleCatalogItemScreen({
     setShowOpeningStock(false)
 
     if (!helper) {
+      setMultiplePriceOptions(false)
       setShowAdvanced(false)
       setOptionGroups([newOptionGroup()])
       setAdditionalUnits([])
@@ -775,7 +778,7 @@ export function SimpleCatalogItemScreen({
                   fixedPriceMinor: draft.unitPrices[unit.id]?.trim()
                     ? (majorToMinor(draft.unitPrices[unit.id] ?? "") ??
                       rowPrice)
-                    : unit.price.trim()
+                    : !multiplePriceOptions && unit.price.trim()
                       ? (majorToMinor(unit.price) ?? rowPrice)
                       : rowPrice,
                   inventoryUnitKey: unitKey(unitIndex),
@@ -841,7 +844,9 @@ export function SimpleCatalogItemScreen({
       setSubmitError("Enter an item name.")
       return
     }
-    if (!quoteOnlyService && parsedPriceMinor === null) {
+    const requiresBasePrice =
+      !quoteOnlyService && !(kind === "product" && multiplePriceOptions)
+    if (requiresBasePrice && parsedPriceMinor === null) {
       setSubmitError("Enter a valid price.")
       return
     }
@@ -1330,6 +1335,21 @@ export function SimpleCatalogItemScreen({
             value={name}
           />
           {kind === "product" ? (
+            <SetupCheckboxRow
+              checked={multiplePriceOptions}
+              description="Mark this if this product does not have one price. Every option and unit combination will need its own price."
+              label="Multiple Price Options"
+              onPress={() => {
+                const nextValue = !multiplePriceOptions
+                setMultiplePriceOptions(nextValue)
+                setSubmitError(null)
+                if (nextValue) {
+                  setShowAdvanced(true)
+                }
+              }}
+            />
+          ) : null}
+          {kind === "product" ? (
             <View className="flex-row gap-3">
               <FormField
                 autoCapitalize="words"
@@ -1342,6 +1362,12 @@ export function SimpleCatalogItemScreen({
               <MoneyField
                 containerClassName="min-w-0 flex-1"
                 currencyCode={currencyCode}
+                editable={!multiplePriceOptions}
+                helper={
+                  multiplePriceOptions
+                    ? "Set prices in Product stock & pricing below."
+                    : undefined
+                }
                 label="Price"
                 onChangeValue={setPrice}
                 placeholder="0.00"
@@ -1488,6 +1514,7 @@ export function SimpleCatalogItemScreen({
                   accessibilityLabel="Remove options"
                   className="min-h-11 justify-center px-2"
                   onPress={() => {
+                    setMultiplePriceOptions(false)
                     setShowAdvanced(false)
                     setActiveGroupId(null)
                     setEditingGroupId(null)
@@ -1592,21 +1619,6 @@ export function SimpleCatalogItemScreen({
               <ActionButton onPress={openVariantComposer} variant="outline">
                 Add another option
               </ActionButton>
-
-              <CatalogVariantManager
-                basePrice={price}
-                combinations={combinations}
-                currencyCode={currencyCode}
-                drafts={variantDrafts}
-                kind={kind}
-                makeDefaultDraft={makeDefaultVariantDraft}
-                onChangeDraft={(key, draft) =>
-                  setVariantDrafts((current) => ({ ...current, [key]: draft }))
-                }
-                stores={stores}
-                unitName={unitName}
-                units={additionalUnits}
-              />
             </View>
           ) : null}
 
@@ -1644,9 +1656,11 @@ export function SimpleCatalogItemScreen({
                             ? `${unit.relationCount} ${unit.name} in 1 ${unitName.trim() || "main unit"}`
                             : `1 ${unit.name} contains ${unit.relationCount} ${unitName.trim() || "main units"}`}{" "}
                           ·{" "}
-                          {unit.price.trim()
-                            ? `Default price ${currencyCode} ${unit.price}`
-                            : "Uses product price"}
+                          {multiplePriceOptions
+                            ? "Priced by option"
+                            : unit.price.trim()
+                              ? `Default price ${currencyCode} ${unit.price}`
+                              : "Uses product price"}
                         </Text>
                       </View>
                       <Pressable
@@ -1679,6 +1693,40 @@ export function SimpleCatalogItemScreen({
                   No additional selling units yet.
                 </Text>
               )}
+            </View>
+          ) : null}
+
+          {showAdvanced ? (
+            <View className="gap-4 border-t border-border pt-5">
+              <View className="gap-1">
+                <Text className="font-extrabold text-foreground">
+                  {kind === "product"
+                    ? "Product stock & pricing"
+                    : "Service pricing"}
+                </Text>
+                <Text className="text-xs leading-5 text-muted-foreground">
+                  {kind === "product"
+                    ? "Open any option and unit combination to set its price, stock, and details."
+                    : "Open any option combination to set its price and details."}
+                </Text>
+              </View>
+              <CatalogVariantManager
+                basePrice={price}
+                combinations={combinations}
+                currencyCode={currencyCode}
+                drafts={variantDrafts}
+                kind={kind}
+                makeDefaultDraft={makeDefaultVariantDraft}
+                onChangeDraft={(key, draft) =>
+                  setVariantDrafts((current) => ({ ...current, [key]: draft }))
+                }
+                optionPricingOnly={
+                  kind === "product" && multiplePriceOptions
+                }
+                stores={stores}
+                unitName={unitName}
+                units={additionalUnits}
+              />
             </View>
           ) : null}
 
@@ -1792,7 +1840,12 @@ export function SimpleCatalogItemScreen({
               />
               <MoneyField
                 currencyCode={currencyCode}
-                helper="Options can override this default after the unit is saved."
+                editable={!multiplePriceOptions}
+                helper={
+                  multiplePriceOptions
+                    ? "Set this unit's prices for each option in Product stock & pricing."
+                    : "Options can override this default after the unit is saved."
+                }
                 label="Default selling price"
                 onChangeValue={(value) =>
                   updateUnitEditorDraft({ price: value })

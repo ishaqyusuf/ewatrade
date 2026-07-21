@@ -35,6 +35,7 @@ type CatalogVariantUnit = {
   id: string
   name: string
   price: string
+  stockBehavior?: "alternate_transaction" | "packaged_stock"
 }
 
 type CatalogVariantStore = {
@@ -50,6 +51,7 @@ type CatalogVariantManagerProps = {
   kind: "product" | "service"
   makeDefaultDraft: () => CatalogVariantDraft
   onChangeDraft: (key: string, draft: CatalogVariantDraft) => void
+  optionPricingOnly?: boolean
   stores: CatalogVariantStore[]
   unitName: string
   units: CatalogVariantUnit[]
@@ -57,19 +59,6 @@ type CatalogVariantManagerProps = {
 
 function displayValue(value: string, fallback = "Not set") {
   return value.trim() || fallback
-}
-
-function Detail({ label, value }: { label: string; value: string }) {
-  return (
-    <View className="min-w-0 flex-1 gap-0.5">
-      <Text className="text-[10px] font-bold uppercase tracking-[1px] text-muted-foreground">
-        {label}
-      </Text>
-      <Text className="text-xs font-semibold text-foreground" numberOfLines={1}>
-        {value}
-      </Text>
-    </View>
-  )
 }
 
 function MenuAction({
@@ -105,6 +94,7 @@ export function CatalogVariantManager({
   kind,
   makeDefaultDraft,
   onChangeDraft,
+  optionPricingOnly = false,
   stores,
   unitName,
   units,
@@ -131,12 +121,17 @@ export function CatalogVariantManager({
     setTimeout(actionModal.present, 80)
   }
 
-  const openEditor = (key: string) => {
+  const openEditor = (key: string, expanded = false) => {
     const draft = getDraft(key)
     setEditor({ draft: { ...draft, unitPrices: { ...draft.unitPrices } }, key })
     setDescriptionVisible(Boolean(draft.description.trim()))
-    setEditorExpanded(false)
-    setTimeout(editorModal.present, 140)
+    setEditorExpanded(expanded)
+    setTimeout(() => {
+      editorModal.present()
+      if (expanded) {
+        setTimeout(() => editorModal.ref.current?.snapToIndex(1), 120)
+      }
+    }, 140)
   }
 
   const editFromActions = () => {
@@ -212,37 +207,89 @@ export function CatalogVariantManager({
       <View className="border-t border-border">
         {combinations.map((combination) => {
           const draft = getDraft(combination.key)
-          const priceValue =
-            draft.price.trim() || (kind === "service" ? basePrice.trim() : "")
-          const resolvedPrice = priceValue
-            ? `${currencyCode} ${priceValue}`
-            : "Not set"
-          const resolvedUnit = displayValue(unitName, "Unit not set")
+          const canonicalUnitName = displayValue(unitName, "Unit not set")
+          const listingUnits =
+            kind === "product"
+              ? [
+                  {
+                    id: "canonical",
+                    name: canonicalUnitName,
+                    price: draft.price.trim(),
+                    stock: draft.quantity.trim()
+                      ? `${draft.quantity.trim()} ${canonicalUnitName}`
+                      : "Stock not set",
+                  },
+                  ...units.map((unit) => ({
+                    id: unit.id,
+                    name: unit.name,
+                    price:
+                      draft.unitPrices[unit.id]?.trim() ||
+                      (!optionPricingOnly ? unit.price.trim() : "") ||
+                      draft.price.trim(),
+                    stock:
+                      unit.stockBehavior === "packaged_stock"
+                        ? "Prepared stock"
+                        : `Shared ${canonicalUnitName} stock`,
+                  })),
+                ]
+              : [
+                  {
+                    id: "service",
+                    name: "",
+                    price: draft.price.trim() || basePrice.trim(),
+                    stock: draft.quoteRequired ? "Quote" : "Fixed price",
+                  },
+                ]
 
-          return (
-            <View
-              className={
-                draft.enabled
-                  ? "gap-3 border-b border-border py-4"
-                  : "gap-3 border-b border-border py-4 opacity-60"
-              }
-              key={combination.key}
-            >
-              <View className="flex-row items-start gap-3">
-                <View className="min-w-0 flex-1 gap-1">
+          return listingUnits.map((listingUnit) => {
+            const resolvedPrice = listingUnit.price
+              ? `${currencyCode} ${listingUnit.price}`
+              : "Price not set"
+            const listingTitle = listingUnit.name
+              ? `${combination.name} · ${listingUnit.name}`
+              : combination.name
+
+            return (
+              <View
+                className={
+                  draft.enabled
+                    ? "flex-row items-center gap-2 border-b border-border"
+                    : "flex-row items-center gap-2 border-b border-border opacity-60"
+                }
+                key={`${combination.key}-${listingUnit.id}`}
+              >
+                <Pressable
+                  accessibilityHint="Opens this listing for editing"
+                  accessibilityLabel={`Edit ${listingTitle}`}
+                  className="min-h-20 min-w-0 flex-1 justify-center gap-1 py-4"
+                  haptic
+                  onPress={() =>
+                    openEditor(
+                      combination.key,
+                      kind === "product" && listingUnit.id !== "canonical",
+                    )
+                  }
+                  transition
+                >
                   <View className="flex-row items-center gap-2">
                     <Text
-                      className="min-w-0 flex-1 text-base font-extrabold text-foreground"
+                      className="min-w-0 flex-1 font-bold text-foreground"
                       numberOfLines={2}
                     >
-                      {combination.name}
+                      {listingTitle}
                     </Text>
                     {!draft.enabled ? (
-                      <Text className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.8px] text-muted-foreground">
+                      <Text className="rounded-full bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-[0.8px] text-muted-foreground">
                         Disabled
                       </Text>
                     ) : null}
                   </View>
+                  <Text
+                    className="text-xs leading-5 text-muted-foreground"
+                    numberOfLines={2}
+                  >
+                    {listingUnit.stock} · {resolvedPrice}
+                  </Text>
                   {draft.description.trim() ? (
                     <Text
                       className="text-xs leading-5 text-muted-foreground"
@@ -251,9 +298,9 @@ export function CatalogVariantManager({
                       {draft.description.trim()}
                     </Text>
                   ) : null}
-                </View>
+                </Pressable>
                 <Pressable
-                  accessibilityLabel={`Open ${combination.name} options`}
+                  accessibilityLabel={`Open ${listingTitle} menu`}
                   className="h-11 w-11 items-center justify-center rounded-full bg-muted"
                   haptic
                   onPress={() => openActions(combination.key)}
@@ -262,39 +309,8 @@ export function CatalogVariantManager({
                   <Icon className="size-sm text-foreground" name="more" />
                 </Pressable>
               </View>
-
-              {kind === "product" ? (
-                <View className="flex-row gap-3">
-                  <Detail label="Counted in" value={resolvedUnit} />
-                  <Detail
-                    label="Stock"
-                    value={
-                      draft.quantity.trim()
-                        ? `${draft.quantity.trim()} ${resolvedUnit}`
-                        : "Not set"
-                    }
-                  />
-                </View>
-              ) : (
-                <View className="flex-row gap-3">
-                  <Detail
-                    label="Type"
-                    value={draft.quoteRequired ? "Quote" : "Fixed price"}
-                  />
-                  <Detail label="Price" value={resolvedPrice} />
-                </View>
-              )}
-              <View className="flex-row gap-3">
-                {kind === "product" ? (
-                  <Detail label="Price" value={resolvedPrice} />
-                ) : null}
-                <Detail
-                  label="Description"
-                  value={displayValue(draft.description, "Not added")}
-                />
-              </View>
-            </View>
-          )
+            )
+          })
         })}
       </View>
 
@@ -483,7 +499,7 @@ export function CatalogVariantManager({
                           <MoneyField
                             currencyCode={currencyCode}
                             helper={
-                              unit.price.trim()
+                              !optionPricingOnly && unit.price.trim()
                                 ? `Defaults to ${currencyCode} ${unit.price}.`
                                 : "Uses this option's main price."
                             }
@@ -493,9 +509,9 @@ export function CatalogVariantManager({
                               updateEditorUnitPrice(unit.id, value)
                             }
                             placeholder={
-                              unit.price.trim() ||
+                              (!optionPricingOnly ? unit.price.trim() : "") ||
                               editor.draft.price.trim() ||
-                              basePrice
+                              (!optionPricingOnly ? basePrice : "0.00")
                             }
                             value={editor.draft.unitPrices[unit.id] ?? ""}
                           />

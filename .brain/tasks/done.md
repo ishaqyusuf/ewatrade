@@ -1,5 +1,14 @@
 # Done
 
+- Added Product `Multiple Price Options` setup directly after the name field.
+  Enabling it disables the Product base price and selling-unit default prices,
+  reveals Options, and routes pricing through enabled option combinations. The
+  generated Product listings now sit below Unit setup in a dedicated `Product
+  stock & pricing` section, expand every option across its counted-in and
+  additional selling units, use flat Unit-style summaries, open Edit from the
+  row itself, and retain the menu for Edit and Disable/Enable. Completed Date:
+  2026-07-21. Checks Run: automated and UI testing skipped by owner request;
+  formatting and final diff inspection only.
 - Published Android preview OTA update `2026.07.21` to the EAS `preview`
   branch from commit `144e9dd`, update group
   `dff32bcd-0763-4a7f-b7aa-0cdef70b25b7`. EAS reported no compatible build for

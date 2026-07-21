@@ -47,6 +47,10 @@ ADR-0013.
   Product/Service recipes by title, description, and tags; applying one only
   prefills the editable draft and never saves automatically.
 - Product reuses the existing price, unit, variant, image, opening-stock, and conversion controls.
+- Product creation places a `Multiple Price Options` checkbox directly after
+  the item name. When selected, the base Product price and selling-unit default
+  prices are disabled, Options are revealed, and every enabled option
+  combination must provide its pricing through the option editor.
 - Product always shows a compact `Unit` section explaining that customers may
   buy in units such as Bag, Carton, Piece, or Kilogram. `Add unit` opens a
   keyboard-aware detached bottom sheet for the unit name, exact factor, selling
@@ -59,10 +63,12 @@ ADR-0013.
   then contextual values through selected removable pills, suggestions,
   comma-separated entry, and an explicit check action. `Unit` is not an option
   suggestion because selling units have their own flat section and editor.
-- Option names and selected values use a flat divider list. Generated
-  combinations are also list-only: every row summarizes its combination title,
-  counted-in unit, stock/type, price, and description, with a menu button in
-  place of destructive inline actions.
+- Option names and selected values use a flat divider list. Generated Product
+  listings live in their own `Product stock & pricing` section below Unit setup
+  and expand every option across the counted-in unit plus each additional
+  selling unit. Rows use the same flat list language as Unit setup, summarize
+  stock, price, and description without a labeled grid, open Edit when the row
+  is pressed, and retain a menu button for Edit and Disable/Enable.
 - A combination menu exposes Edit and Disable/Enable. Edit opens a compact,
   keyboard-safe floating sheet for quantity, price, and an optionally revealed
   description. `More` expands that sheet to full screen for image, SKU,

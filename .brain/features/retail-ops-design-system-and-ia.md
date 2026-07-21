@@ -512,6 +512,11 @@ The first-product setup sheet is the empty-business bridge after auth/business e
   optional override for every additional selling unit. Unit defaults remain a
   convenient fallback, but merchants can set distinct prices for combinations
   such as Red / Carton and Blue / Carton before saving.
+- A `Multiple Price Options` checkbox after the Product name disables the base
+  Product price and selling-unit default prices, reveals Options, and requires
+  pricing to come from option/unit combinations. The generated combinations
+  render below Unit setup in a separate `Product stock & pricing` section as
+  flat, directly editable option × unit rows rather than labeled detail grids.
 - After a second variant value is added, replace the introductory variant section with a compact `Variants` / `Stocks` segmented control. The Variants view should use flat grouped rows with a label action, value pills, a trailing per-group add pill, and an active bottom `Add variant` action. The Stocks view should preserve editable price/stock rows, label variant inventory entry as `Current stock` instead of `Qty`, use one options icon instead of destructive row controls, and own the validation-aware final `Add item` action.
 - Variant group, value, and stock actions should use a content-sized bottom action sheet with title and Active/Inactive subtitle. Label/value edits return to the keyboard composer with a check action and close on save; disabled values and stock rows use muted treatment and sort after active content.
 - Empty variant copy must make it clear that users can skip variants and continue with only the primary unit.
