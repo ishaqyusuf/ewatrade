@@ -2,6 +2,25 @@
 
 ## 2026-07-21
 
+### Persisted Mobile Theme Restoration
+
+- Replaced native-event-dependent theme restoration with an app-owned
+  observable runtime. Explicit Light and Dark now notify all consumers and
+  remain authoritative after JavaScript/OTA reloads; System resolves from the
+  live device appearance.
+- Hydrated the persisted override before hiding the splash or mounting the
+  navigation and NativeWind theme providers. More and the development toggle
+  now read the same runtime override instead of maintaining separate storage
+  state.
+- Checks passed: 3 focused theme-runtime tests, theme-color guard, NativeWind
+  theme-variable guard, admin-tab guard, and scoped diff checks. Mobile
+  TypeScript was blocked by three unrelated existing unknown-type errors in
+  `packages/utils/src/business-profiles.ts`.
+- Android QA was attempted on `Pixel_3a_API_34`. The first launch correctly
+  identified a dead Metro connection as `Failed to download remote update`;
+  the repository dev profile was restored, but the emulator detached from ADB
+  before Light/Dark relaunch interaction evidence could be captured.
+
 ### Admin Root Tabs And Reference-Led Menu
 
 - Added an Owner/Admin/Manager Expo Router tab group with Home, Orders, a

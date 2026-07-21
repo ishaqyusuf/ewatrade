@@ -1,8 +1,17 @@
 import { THEME } from "@/lib/theme";
-import { useCallback } from "react";
+import type { ThemeOverride } from "@/lib/theme-preference";
+import {
+  appThemeRuntime,
+  resolveThemeColorScheme,
+  toNativeColorScheme,
+} from "@/lib/theme-runtime";
+import { useCallback, useSyncExternalStore } from "react";
 import { Appearance, useColorScheme as useRNColorScheme } from "react-native";
 
-type AppColorScheme = "light" | "dark" | "system";
+export function applyThemeOverride(override: ThemeOverride) {
+  Appearance.setColorScheme(toNativeColorScheme(override));
+  appThemeRuntime.setOverride(override);
+}
 
 export function useColors() {
   const { colorScheme } = useColorScheme();
@@ -11,15 +20,20 @@ export function useColors() {
 }
 
 export function useColorScheme() {
-  const colorScheme = useRNColorScheme();
+  const deviceColorScheme = useRNColorScheme();
+  const themeOverride = useSyncExternalStore(
+    appThemeRuntime.subscribe,
+    appThemeRuntime.getSnapshot,
+    appThemeRuntime.getSnapshot,
+  );
 
-  const resolvedColorScheme: "light" | "dark" =
-    colorScheme === "dark" ? "dark" : "light";
-  const setColorScheme = useCallback((scheme: AppColorScheme) => {
-    Appearance.setColorScheme(scheme === "system" ? null : scheme);
-  }, []);
+  const resolvedColorScheme = resolveThemeColorScheme(
+    themeOverride,
+    deviceColorScheme,
+  );
+  const setColorScheme = useCallback(applyThemeOverride, []);
   const toggleColorScheme = useCallback(() => {
-    Appearance.setColorScheme(
+    applyThemeOverride(
       resolvedColorScheme === "dark" ? "light" : "dark",
     );
   }, [resolvedColorScheme]);
@@ -27,6 +41,7 @@ export function useColorScheme() {
   return {
     colorScheme: resolvedColorScheme,
     setColorScheme,
+    themeOverride,
     toggleColorScheme,
   };
 }

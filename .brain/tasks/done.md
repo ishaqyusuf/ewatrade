@@ -1,5 +1,16 @@
 # Done
 
+- Fixed persisted mobile App theme restoration after OTA/JS reloads. A small
+  observable runtime now makes explicit Light/Dark preferences authoritative
+  without waiting for React Native to emit an appearance event, while System
+  continues following the device. Theme storage hydrates before the splash
+  closes, and More plus the development toggle share the runtime selection.
+  Completed Date: 2026-07-21. Checks Run: 3 focused runtime tests, theme-color,
+  NativeWind theme-variable, and admin-tab guards, plus scoped diff checks.
+  Mobile TypeScript reached three pre-existing `business-profiles.ts` unknown
+  type errors. Android QA was attempted twice; the first launch exposed a dead
+  Metro transport and the restarted emulator later detached from ADB before
+  the persistence interaction could be completed.
 - Replaced the admin mobile shell with protected Home, Orders, non-route `+`,
   stable dynamic Catalog, and More tabs; added reference-led Menu, persisted
   App theme selection, root Orders/Catalog states, shared Create actions,

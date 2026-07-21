@@ -3,7 +3,6 @@ import { useColorScheme, useColors } from "@/hooks/use-color"
 import { shouldShowFloatingThemeToggle } from "@/lib/app-variant"
 import {
   type ThemeOverride,
-  getThemeOverride,
   setThemeOverride,
 } from "@/lib/theme-preference"
 import { usePathname } from "expo-router"
@@ -28,18 +27,9 @@ export function FloatingThemeToggle() {
   const insets = useSafeAreaInsets()
   const colors = useColors()
   const pathname = usePathname()
-  const { colorScheme, setColorScheme } = useColorScheme()
-  const [themeOverride, setThemeOverrideState] =
-    useState<ThemeOverride>("system")
+  const { colorScheme, setColorScheme, themeOverride } = useColorScheme()
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false)
   const hasOperationalDock = OPERATIONAL_DOCK_PATHS.has(pathname)
-
-  useEffect(() => {
-    ;(async () => {
-      const override = await getThemeOverride()
-      setThemeOverrideState(override)
-    })()
-  }, [])
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener("keyboardDidShow", () => {
@@ -74,9 +64,8 @@ export function FloatingThemeToggle() {
             ? "light"
             : "dark"
 
-    setThemeOverrideState(nextOverride)
-    await setThemeOverride(nextOverride)
     setColorScheme(nextOverride)
+    await setThemeOverride(nextOverride)
   }
 
   return (

@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react"
 import { Alert, ScrollView } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useRouter } from "expo-router"
@@ -19,7 +18,6 @@ import {
 import { getMobileRoleLabel, normalizeMobileRole } from "@/lib/mobile-roles"
 import {
   type ThemeOverride,
-  getThemeOverride,
   setThemeOverride,
 } from "@/lib/theme-preference"
 import { useAdminTabs, useResetAdminDock } from "./admin-tabs-context"
@@ -49,24 +47,27 @@ function MenuRow({
       accessibilityState={{ disabled: item.disabled }}
       className={
         item.disabled
-          ? "min-h-16 flex-row items-center gap-4 opacity-55"
-          : "min-h-16 flex-row items-center gap-4 active:opacity-75"
+          ? "min-h-16 flex-row items-stretch gap-3 opacity-55"
+          : "min-h-16 flex-row items-stretch gap-3 active:bg-accent"
       }
       haptic
       onPress={onPress}
+      transition
     >
-      <View className="h-12 w-7 items-center justify-center">
-        <Icon className="size-md text-muted-foreground" name={item.icon} />
+      <View className="w-9 justify-center">
+        <View className="h-9 w-9 items-center justify-center rounded-full bg-muted">
+          <Icon className="size-sm text-muted-foreground" name={item.icon} />
+        </View>
       </View>
-      <View className="min-w-0 flex-1 border-b border-border py-4">
-        <Text className="text-base font-semibold text-foreground">
-          {item.label}
-        </Text>
-        {detail ? (
-          <Text className="mt-1 text-xs text-muted-foreground">{detail}</Text>
-        ) : null}
-      </View>
-      <View className="h-16 justify-center border-b border-border">
+      <View className="min-w-0 flex-1 flex-row items-center gap-3 border-b border-border py-4">
+        <View className="min-w-0 flex-1 gap-1">
+          <Text className="font-extrabold text-foreground">{item.label}</Text>
+          {detail ? (
+            <Text className="text-sm leading-5 text-muted-foreground">
+              {detail}
+            </Text>
+          ) : null}
+        </View>
         <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
       </View>
     </Pressable>
@@ -125,12 +126,10 @@ export function AdminMoreScreen() {
   const insets = useSafeAreaInsets()
   const router = useRouter()
   const auth = useAuthContext()
-  const { setColorScheme } = useColorScheme()
+  const { setColorScheme, themeOverride } = useColorScheme()
   const { availability, syncAlertCount } = useAdminTabs()
   useResetAdminDock()
   const themeModal = useModal()
-  const [themeOverride, setThemeOverrideState] =
-    useState<ThemeOverride>("system")
   const normalizedRole = normalizeMobileRole(auth.profile?.role)
   const role: AdminManagementRole =
     normalizedRole === "ADMIN" || normalizedRole === "MANAGER"
@@ -138,18 +137,7 @@ export function AdminMoreScreen() {
       : "OWNER"
   const sections = buildAdminMoreSections({ availability, role })
 
-  useEffect(() => {
-    let mounted = true
-    void getThemeOverride().then((value) => {
-      if (mounted) setThemeOverrideState(value)
-    })
-    return () => {
-      mounted = false
-    }
-  }, [])
-
   async function selectTheme(value: ThemeOverride) {
-    setThemeOverrideState(value)
     setColorScheme(value)
     await setThemeOverride(value)
     themeModal.dismiss()

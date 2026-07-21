@@ -3,7 +3,7 @@ import { ThemeProvider } from "@react-navigation/native"
 import { useFonts } from "expo-font"
 import { Stack } from "expo-router"
 import * as SplashScreen from "expo-splash-screen"
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import "react-native-reanimated"
 import "@/styles/global.css"
 import { AppLockProvider } from "@/hooks/use-app-lock"
@@ -18,7 +18,7 @@ import { AppAutoUpdateModal } from "@/components/app-auto-update-modal"
 import { FloatingThemeToggle } from "@/components/mobile"
 import { AppLockGate } from "@/components/mobile/app-lock-gate"
 import { ToastProviderWithViewport } from "@/components/ui/toast"
-import { useColorScheme } from "@/hooks/use-color"
+import { applyThemeOverride, useColorScheme } from "@/hooks/use-color"
 import { shouldShowFloatingThemeToggle } from "@/lib/app-variant"
 import { canAccessAdminTabs } from "@/lib/admin-navigation"
 import { isInvitedStaffProfile, isSalesRepRole } from "@/lib/mobile-roles"
@@ -47,6 +47,7 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync()
 
 export default function RootLayout() {
+  const [themeReady, setThemeReady] = useState(false)
   const [loaded, error] = useFonts({
     SpaceMono: require("../../assets/fonts/SpaceMono-Regular.ttf"),
     ...FontAwesome.font,
@@ -58,12 +59,25 @@ export default function RootLayout() {
   }, [error])
 
   useEffect(() => {
-    if (loaded) {
+    let mounted = true
+    void getThemeOverride()
+      .then(applyThemeOverride)
+      .catch(() => applyThemeOverride("system"))
+      .finally(() => {
+        if (mounted) setThemeReady(true)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (loaded && themeReady) {
       SplashScreen.hideAsync()
     }
-  }, [loaded])
+  }, [loaded, themeReady])
 
-  if (!loaded) {
+  if (!loaded || !themeReady) {
     return null
   }
 
@@ -199,7 +213,7 @@ const InitialLayout = () => {
   )
 }
 function RootLayoutNav() {
-  const { colorScheme, setColorScheme } = useColorScheme()
+  const { colorScheme } = useColorScheme()
   const auth = useCreateAuthContext()
   const navigationTheme =
     colorScheme === "dark" ? NAV_THEME.dark : NAV_THEME.light
@@ -208,17 +222,6 @@ function RootLayoutNav() {
     [colorScheme],
   )
 
-  useEffect(() => {
-    let mounted = true
-    ;(async () => {
-      const override = await getThemeOverride()
-      if (!mounted) return
-      setColorScheme(override)
-    })()
-    return () => {
-      mounted = false
-    }
-  }, [setColorScheme])
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <KeyboardProvider>

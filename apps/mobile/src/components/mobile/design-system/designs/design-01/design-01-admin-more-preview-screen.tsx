@@ -72,19 +72,22 @@ export function Design01AdminMorePreviewScreen() {
               {section.title}
             </Text>
             {section.items.map((item) => (
-              <View className="min-h-16 flex-row items-center gap-4" key={item.label}>
-                <View className="h-12 w-7 items-center justify-center">
-                  <Icon
-                    className="size-md text-muted-foreground"
-                    name={item.icon}
-                  />
+              <View
+                className="min-h-16 flex-row items-stretch gap-3"
+                key={item.label}
+              >
+                <View className="w-9 justify-center">
+                  <View className="h-9 w-9 items-center justify-center rounded-full bg-muted">
+                    <Icon
+                      className="size-sm text-muted-foreground"
+                      name={item.icon}
+                    />
+                  </View>
                 </View>
-                <View className="min-w-0 flex-1 border-b border-border py-4">
-                  <Text className="text-base font-semibold text-foreground">
+                <View className="min-w-0 flex-1 flex-row items-center gap-3 border-b border-border py-4">
+                  <Text className="min-w-0 flex-1 font-extrabold text-foreground">
                     {item.label}
                   </Text>
-                </View>
-                <View className="h-16 justify-center border-b border-border">
                   <Icon
                     className="size-sm text-muted-foreground"
                     name="ChevronRight"
