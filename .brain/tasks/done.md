@@ -1,5 +1,11 @@
 # Done
 
+- Published Android preview OTA update `2026.07.21` to the EAS `preview`
+  branch from commit `144e9dd`, update group
+  `dff32bcd-0763-4a7f-b7aa-0cdef70b25b7`. EAS reported no compatible build for
+  Android fingerprint `c8911e6c9aab878f575195a76e071bfba8a22d0d`, so a matching
+  preview binary is required before devices can install this update. Completed
+  Date: 2026-07-21.
 - Completed the source implementation for mobile Product/Service choices as
   flat Options name/value lists
   and list-only combination summaries with counted-in unit, stock/type, price,
