@@ -143,7 +143,7 @@ export type CreateSimpleCatalogItemInput =
       kind: "product"
       name: string
       openingStockQuantity?: string
-      priceMinor: number
+      priceMinor?: number
       storeId: string
       tenantId: string
     }
@@ -400,6 +400,7 @@ function assertOfferingPricing(
   }
 
   if (offering.pricingPolicy === "fixed") {
+    if (kind === "product" && offering.fixedPriceMinor === undefined) return
     assertMoney(offering.fixedPriceMinor, offering.name)
     return
   }

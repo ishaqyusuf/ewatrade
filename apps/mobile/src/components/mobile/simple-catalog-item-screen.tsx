@@ -1,23 +1,24 @@
-import { ActionButton } from "@/components/mobile/action-button"
+import { ActionButton as BaseActionButton } from "@/components/mobile/action-button"
+import { CatalogFormText as Text } from "@/components/mobile/catalog-form-text"
 import { CatalogSetupHelperPicker } from "@/components/mobile/catalog-setup-helper-picker"
 import {
   type CatalogVariantDraft,
   CatalogVariantManager,
 } from "@/components/mobile/catalog-variant-manager"
-import { FormField } from "@/components/mobile/form-field"
+import { FormField as BaseFormField } from "@/components/mobile/form-field"
 import {
   KeyboardInlineComposer,
   type KeyboardInlineComposerPill,
 } from "@/components/mobile/keyboard-inline-composer"
-import { MoneyField } from "@/components/mobile/money-field"
+import { MoneyField as BaseMoneyField } from "@/components/mobile/money-field"
 import { SetupCheckboxRow } from "@/components/mobile/setup-flow"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
+import { resolveCatalogOptionUnitPriceMinor } from "@/lib/catalog-option-pricing"
 import { useTRPC } from "@/trpc/client"
 import {
   type CatalogSetupHelper,
@@ -38,7 +39,13 @@ import {
 } from "@ewatrade/utils/exact-decimal"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
-import { useEffect, useMemo, useRef, useState } from "react"
+import {
+  type ComponentProps,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { Alert, Keyboard, type TextInput, View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
@@ -69,6 +76,18 @@ type VariantComposerMode = "variant-type" | "variant-value"
 
 const VARIANT_COMPOSER_DEFAULT_SUGGESTION_COUNT = 5
 const DEFAULT_UNIT_TRANSACTION_SCALE = 2
+
+function ActionButton(props: ComponentProps<typeof BaseActionButton>) {
+  return <BaseActionButton textScale={1.5} {...props} />
+}
+
+function FormField(props: ComponentProps<typeof BaseFormField>) {
+  return <BaseFormField textScale={1.5} {...props} />
+}
+
+function MoneyField(props: ComponentProps<typeof BaseMoneyField>) {
+  return <BaseMoneyField textScale={1.5} {...props} />
+}
 
 const KNOWN_VARIANT_TYPES = [
   "Size",
@@ -133,6 +152,17 @@ function catalogCreateErrorMessage(message: string) {
   return message
 }
 
+function requirePriceMinor(
+  priceMinor: number | undefined,
+  offeringName: string,
+) {
+  if (priceMinor === undefined) {
+    throw new Error(`Enter a price for ${offeringName}.`)
+  }
+
+  return priceMinor
+}
+
 function KindChoice({
   description,
   icon,
@@ -186,6 +216,50 @@ function OptionalFieldButton({
       <Icon className="size-xs text-foreground" name="Plus" />
       <Text className="text-sm font-bold text-foreground">{label}</Text>
     </Pressable>
+  )
+}
+
+function SectionHeaderActions({
+  addLabel,
+  canRemove = true,
+  onAdd,
+  onRemove,
+  removeLabel,
+}: {
+  addLabel: string
+  canRemove?: boolean
+  onAdd: () => void
+  onRemove: () => void
+  removeLabel: string
+}) {
+  return (
+    <View className="flex-row items-center">
+      <Pressable
+        accessibilityLabel={removeLabel}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !canRemove }}
+        className={
+          canRemove
+            ? "min-h-11 justify-center px-2"
+            : "min-h-11 justify-center px-2 opacity-40"
+        }
+        disabled={!canRemove}
+        haptic
+        onPress={onRemove}
+      >
+        <Text className="text-sm font-bold text-destructive">Remove</Text>
+      </Pressable>
+      <Text className="text-sm text-muted-foreground">|</Text>
+      <Pressable
+        accessibilityLabel={addLabel}
+        accessibilityRole="button"
+        className="min-h-11 justify-center px-2"
+        haptic
+        onPress={onAdd}
+      >
+        <Text className="text-sm font-bold text-primary">Add</Text>
+      </Pressable>
+    </View>
   )
 }
 
@@ -543,7 +617,7 @@ export function SimpleCatalogItemScreen({
   const submitAdvanced = (
     itemKind: CatalogItemKind,
     trimmedName: string,
-    priceMinor: number,
+    priceMinor: number | undefined,
   ) => {
     const activeCombinations = showAdvanced
       ? combinations
@@ -564,19 +638,6 @@ export function SimpleCatalogItemScreen({
     )
     if (firstEnabledIndex < 0) {
       setSubmitError("Keep at least one option combination enabled.")
-      return
-    }
-
-    const missingProductPrice =
-      itemKind === "product" && showAdvanced
-        ? activeCombinations.find(
-            (combination) =>
-              variantDraft(combination.key).enabled &&
-              !variantDraft(combination.key).price.trim(),
-          )
-        : undefined
-    if (missingProductPrice) {
-      setSubmitError(`Enter a price for ${missingProductPrice.name}.`)
       return
     }
 
@@ -635,7 +696,7 @@ export function SimpleCatalogItemScreen({
       itemKind === "product" && showAdvanced
         ? activeCombinations.find((combination) => {
             const draft = variantDraft(combination.key)
-            if (!draft.enabled || !draft.quantity.trim()) return draft.enabled
+            if (!draft.enabled || !draft.quantity.trim()) return false
 
             try {
               return (
@@ -650,7 +711,9 @@ export function SimpleCatalogItemScreen({
           })
         : undefined
     if (invalidProductQuantity) {
-      setSubmitError(`Enter a quantity for ${invalidProductQuantity.name}.`)
+      setSubmitError(
+        `Enter a valid quantity for ${invalidProductQuantity.name}.`,
+      )
       return
     }
 
@@ -699,8 +762,10 @@ export function SimpleCatalogItemScreen({
         key: combination.key,
         name: combination.name,
         priceMinor: draft.price.trim()
-          ? (majorToMinor(draft.price) ?? priceMinor)
-          : priceMinor,
+          ? (majorToMinor(draft.price) ?? undefined)
+          : multiplePriceOptions
+            ? undefined
+            : priceMinor,
         selections: combination.selections,
       }
     })
@@ -767,26 +832,35 @@ export function SimpleCatalogItemScreen({
                 {
                   ...commonOffering,
                   barcode: draft.barcode.trim() || undefined,
-                  fixedPriceMinor: rowPrice,
+                  ...(rowPrice !== undefined
+                    ? { fixedPriceMinor: rowPrice }
+                    : {}),
                   inventoryUnitKey: "canonical",
                   pricingPolicy: "fixed" as const,
                   sku: draft.sku.trim() || undefined,
                 },
-                ...additionalUnits.map((unit, unitIndex) => ({
-                  ...commonOffering,
-                  barcode: undefined,
-                  fixedPriceMinor: draft.unitPrices[unit.id]?.trim()
-                    ? (majorToMinor(draft.unitPrices[unit.id] ?? "") ??
-                      rowPrice)
-                    : !multiplePriceOptions && unit.price.trim()
-                      ? (majorToMinor(unit.price) ?? rowPrice)
-                      : rowPrice,
-                  inventoryUnitKey: unitKey(unitIndex),
-                  key: `offering-${variantIndex + 1}-${unitIndex + 2}`,
-                  name: `${variant.name} · ${unit.name.trim()}`,
-                  pricingPolicy: "fixed" as const,
-                  sku: undefined,
-                })),
+                ...additionalUnits.map((unit, unitIndex) => {
+                  const fixedPriceMinor = resolveCatalogOptionUnitPriceMinor({
+                    basePriceMinor: rowPrice,
+                    optionPrice: draft.price,
+                    optionPricingOnly: multiplePriceOptions,
+                    unitDefaultPrice: unit.price,
+                    unitOverridePrice: draft.unitPrices[unit.id] ?? "",
+                  })
+
+                  return {
+                    ...commonOffering,
+                    barcode: undefined,
+                    ...(fixedPriceMinor !== undefined
+                      ? { fixedPriceMinor }
+                      : {}),
+                    inventoryUnitKey: unitKey(unitIndex),
+                    key: `offering-${variantIndex + 1}-${unitIndex + 2}`,
+                    name: `${variant.name} · ${unit.name.trim()}`,
+                    pricingPolicy: "fixed" as const,
+                    sku: undefined,
+                  }
+                }),
               ],
             }
           },
@@ -819,7 +893,7 @@ export function SimpleCatalogItemScreen({
               : {
                   ...commonOffering,
                   authorizationPolicy: serviceAuthorization,
-                  fixedPriceMinor: rowPrice,
+                  fixedPriceMinor: requirePriceMinor(rowPrice, variant.name),
                   guidance: serviceGuidance.trim() || undefined,
                   pricingPolicy: "fixed" as const,
                   quantityScale: serviceQuantityScale,
@@ -844,13 +918,15 @@ export function SimpleCatalogItemScreen({
       setSubmitError("Enter an item name.")
       return
     }
-    const requiresBasePrice =
-      !quoteOnlyService && !(kind === "product" && multiplePriceOptions)
-    if (requiresBasePrice && parsedPriceMinor === null) {
+    const invalidEnteredPrice =
+      Boolean(price.trim()) && parsedPriceMinor === null
+    const missingServicePrice =
+      kind === "service" && !quoteOnlyService && parsedPriceMinor === null
+    if (invalidEnteredPrice || missingServicePrice) {
       setSubmitError("Enter a valid price.")
       return
     }
-    const priceMinor = parsedPriceMinor ?? 0
+    const priceMinor = parsedPriceMinor ?? undefined
 
     try {
       if (
@@ -891,7 +967,7 @@ export function SimpleCatalogItemScreen({
         guidance: serviceGuidance.trim() || undefined,
         kind,
         name: trimmedName,
-        priceMinor,
+        priceMinor: requirePriceMinor(priceMinor, trimmedName),
         quantityScale: serviceQuantityScale,
         workPolicy: trackServiceWork ? "tracked" : "charge_only",
       })
@@ -978,6 +1054,18 @@ export function SimpleCatalogItemScreen({
           const { [unitId]: _removedPrice, ...unitPrices } = draft.unitPrices
           return [key, { ...draft, unitPrices }]
         }),
+      ),
+    )
+  }
+
+  const removeAllAdditionalUnits = () => {
+    setAdditionalUnits([])
+    setVariantDrafts((current) =>
+      Object.fromEntries(
+        Object.entries(current).map(([key, draft]) => [
+          key,
+          { ...draft, unitPrices: {} },
+        ]),
       ),
     )
   }
@@ -1347,6 +1435,7 @@ export function SimpleCatalogItemScreen({
                   setShowAdvanced(true)
                 }
               }}
+              textScale={1.5}
             />
           ) : null}
           {kind === "product" ? (
@@ -1500,20 +1589,20 @@ export function SimpleCatalogItemScreen({
           ) : null}
 
           {showAdvanced ? (
-            <View className="gap-5 border-t border-border pt-5">
+            <View className="mt-3 gap-5 border-t border-border pt-7">
               <View className="flex-row items-center justify-between gap-3">
                 <View className="min-w-0 flex-1 gap-1">
-                  <Text className="font-extrabold text-foreground">
+                  <Text className="text-lg font-extrabold text-foreground">
                     Options
                   </Text>
                   <Text className="text-xs text-muted-foreground">
                     Add option names and values such as Size and Large.
                   </Text>
                 </View>
-                <Pressable
-                  accessibilityLabel="Remove options"
-                  className="min-h-11 justify-center px-2"
-                  onPress={() => {
+                <SectionHeaderActions
+                  addLabel="Add option"
+                  onAdd={openVariantComposer}
+                  onRemove={() => {
                     setMultiplePriceOptions(false)
                     setShowAdvanced(false)
                     setActiveGroupId(null)
@@ -1522,9 +1611,8 @@ export function SimpleCatalogItemScreen({
                     setComposerText("")
                     setVariantDrafts({})
                   }}
-                >
-                  <Text className="text-sm font-bold text-primary">Remove</Text>
-                </Pressable>
+                  removeLabel="Remove options"
+                />
               </View>
 
               <View className="border-t border-border">
@@ -1615,30 +1703,29 @@ export function SimpleCatalogItemScreen({
                   </View>
                 ))}
               </View>
-
-              <ActionButton onPress={openVariantComposer} variant="outline">
-                Add another option
-              </ActionButton>
             </View>
           ) : null}
 
           {kind === "product" ? (
-            <View className="gap-4 border-t border-border pt-5">
-              <View className="gap-1">
-                <Text className="font-extrabold text-foreground">Unit</Text>
-                <Text className="text-xs leading-5 text-muted-foreground">
-                  Add the units customers can buy this product in, such as Bag,
-                  Carton, Piece, or Kilogram.
-                </Text>
+            <View className="mt-3 gap-5 border-t border-border pt-7">
+              <View className="flex-row items-center justify-between gap-3">
+                <View className="min-w-0 flex-1 gap-1">
+                  <Text className="text-lg font-extrabold text-foreground">
+                    Unit
+                  </Text>
+                  <Text className="text-xs leading-5 text-muted-foreground">
+                    Add the units customers can buy this product in, such as
+                    Bag, Carton, Piece, or Kilogram.
+                  </Text>
+                </View>
+                <SectionHeaderActions
+                  addLabel="Add unit"
+                  canRemove={additionalUnits.length > 0}
+                  onAdd={() => openUnitEditor()}
+                  onRemove={removeAllAdditionalUnits}
+                  removeLabel="Remove all additional units"
+                />
               </View>
-
-              <ActionButton
-                icon="Plus"
-                onPress={() => openUnitEditor()}
-                variant="outline"
-              >
-                Add unit
-              </ActionButton>
 
               {additionalUnits.length > 0 ? (
                 <View className="border-t border-border">
@@ -1697,9 +1784,9 @@ export function SimpleCatalogItemScreen({
           ) : null}
 
           {showAdvanced ? (
-            <View className="gap-4 border-t border-border pt-5">
+            <View className="mt-3 gap-5 border-t border-border pt-7">
               <View className="gap-1">
-                <Text className="font-extrabold text-foreground">
+                <Text className="text-lg font-extrabold text-foreground">
                   {kind === "product"
                     ? "Product stock & pricing"
                     : "Service pricing"}
@@ -1720,9 +1807,7 @@ export function SimpleCatalogItemScreen({
                 onChangeDraft={(key, draft) =>
                   setVariantDrafts((current) => ({ ...current, [key]: draft }))
                 }
-                optionPricingOnly={
-                  kind === "product" && multiplePriceOptions
-                }
+                optionPricingOnly={kind === "product" && multiplePriceOptions}
                 stores={stores}
                 unitName={unitName}
                 units={additionalUnits}

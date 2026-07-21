@@ -1,5 +1,20 @@
 # Done
 
+- Allowed Products to save with blank base, option-unit, and opening-stock
+  values without coercing missing prices to zero. Incomplete Offerings remain
+  visible in sale selection but are disabled with `Price not set` and/or `Out
+  of stock` across mobile and dashboard; fixed-price order payloads still
+  require a real price, and mobile sale stock snapshots are active-Store
+  scoped. Updated the online and offline contracts together.
+  Completed Date: 2026-07-21. Checks Run: 13 focused
+  catalog/pricing/availability tests, workspace typecheck,
+  mobile TypeScript, NativeWind/theme/create-sale guards, and diff validation.
+- Fixed option-only Product pricing so setting the counted-in price for one
+  option no longer fills its blank additional-unit listings. Display,
+  validation, and Offering payload construction now share one resolver; blank
+  option × unit rows show `Price not set` and remain unset until explicitly
+  priced. Completed Date: 2026-07-21. Checks Run: focused regression test,
+  mobile TypeScript, NativeWind and theme-color guards, and diff validation.
 - Added Product `Multiple Price Options` setup directly after the name field.
   Enabling it disables the Product base price and selling-unit default prices,
   reveals Options, and routes pricing through enabled option combinations. The

@@ -1,15 +1,16 @@
-import { FormField } from "@/components/mobile/form-field"
-import { MoneyField } from "@/components/mobile/money-field"
+import { CatalogFormText as Text } from "@/components/mobile/catalog-form-text"
+import { FormField as BaseFormField } from "@/components/mobile/form-field"
+import { MoneyField as BaseMoneyField } from "@/components/mobile/money-field"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
+import { resolveCatalogOptionUnitPrice } from "@/lib/catalog-option-pricing"
 import {
   BottomSheetFooter,
   type BottomSheetFooterProps,
 } from "@gorhom/bottom-sheet"
-import { useMemo, useState } from "react"
+import { type ComponentProps, useMemo, useState } from "react"
 import { Keyboard, View } from "react-native"
 import { KeyboardStickyView } from "react-native-keyboard-controller"
 
@@ -57,6 +58,14 @@ type CatalogVariantManagerProps = {
   units: CatalogVariantUnit[]
 }
 
+function FormField(props: ComponentProps<typeof BaseFormField>) {
+  return <BaseFormField textScale={1.5} {...props} />
+}
+
+function MoneyField(props: ComponentProps<typeof BaseMoneyField>) {
+  return <BaseMoneyField textScale={1.5} {...props} />
+}
+
 function displayValue(value: string, fallback = "Not set") {
   return value.trim() || fallback
 }
@@ -102,9 +111,11 @@ export function CatalogVariantManager({
   const actionModal = useModal()
   const editorModal = useModal()
   const [actionKey, setActionKey] = useState<string | null>(null)
+  const [actionUnitId, setActionUnitId] = useState<string | null>(null)
   const [editor, setEditor] = useState<{
     draft: CatalogVariantDraft
     key: string
+    unitId?: string
   } | null>(null)
   const [descriptionVisible, setDescriptionVisible] = useState(false)
   const [editorExpanded, setEditorExpanded] = useState(false)
@@ -112,34 +123,40 @@ export function CatalogVariantManager({
     () => combinations.find((combination) => combination.key === actionKey),
     [actionKey, combinations],
   )
+  const actionUnit = units.find((unit) => unit.id === actionUnitId)
+  const editorUnit = units.find((unit) => unit.id === editor?.unitId)
 
   const getDraft = (key: string) => drafts[key] ?? makeDefaultDraft()
 
-  const openActions = (key: string) => {
+  const openActions = (key: string, unitId?: string) => {
     Keyboard.dismiss()
     setActionKey(key)
+    setActionUnitId(unitId ?? null)
     setTimeout(actionModal.present, 80)
   }
 
-  const openEditor = (key: string, expanded = false) => {
+  const openEditor = (key: string, unitId?: string) => {
     const draft = getDraft(key)
-    setEditor({ draft: { ...draft, unitPrices: { ...draft.unitPrices } }, key })
+    setEditor({
+      draft: { ...draft, unitPrices: { ...draft.unitPrices } },
+      key,
+      unitId,
+    })
     setDescriptionVisible(Boolean(draft.description.trim()))
-    setEditorExpanded(expanded)
+    setEditorExpanded(false)
     setTimeout(() => {
       editorModal.present()
-      if (expanded) {
-        setTimeout(() => editorModal.ref.current?.snapToIndex(1), 120)
-      }
     }, 140)
   }
 
   const editFromActions = () => {
     if (!actionKey) return
     const key = actionKey
+    const unitId = actionUnitId ?? undefined
     actionModal.dismiss()
     setActionKey(null)
-    openEditor(key)
+    setActionUnitId(null)
+    openEditor(key, unitId)
   }
 
   const toggleEnabledFromActions = () => {
@@ -147,6 +164,8 @@ export function CatalogVariantManager({
     const draft = getDraft(actionKey)
     onChangeDraft(actionKey, { ...draft, enabled: !draft.enabled })
     actionModal.dismiss()
+    setActionKey(null)
+    setActionUnitId(null)
   }
 
   const updateEditor = (update: Partial<CatalogVariantDraft>) => {
@@ -222,10 +241,12 @@ export function CatalogVariantManager({
                   ...units.map((unit) => ({
                     id: unit.id,
                     name: unit.name,
-                    price:
-                      draft.unitPrices[unit.id]?.trim() ||
-                      (!optionPricingOnly ? unit.price.trim() : "") ||
-                      draft.price.trim(),
+                    price: resolveCatalogOptionUnitPrice({
+                      optionPrice: draft.price,
+                      optionPricingOnly,
+                      unitDefaultPrice: unit.price,
+                      unitOverridePrice: draft.unitPrices[unit.id] ?? "",
+                    }),
                     stock:
                       unit.stockBehavior === "packaged_stock"
                         ? "Prepared stock"
@@ -266,7 +287,9 @@ export function CatalogVariantManager({
                   onPress={() =>
                     openEditor(
                       combination.key,
-                      kind === "product" && listingUnit.id !== "canonical",
+                      kind === "product" && listingUnit.id !== "canonical"
+                        ? listingUnit.id
+                        : undefined,
                     )
                   }
                   transition
@@ -301,9 +324,16 @@ export function CatalogVariantManager({
                 </Pressable>
                 <Pressable
                   accessibilityLabel={`Open ${listingTitle} menu`}
-                  className="h-11 w-11 items-center justify-center rounded-full bg-muted"
+                  className="h-11 w-11 items-center justify-center rounded-full bg-transparent active:bg-muted"
                   haptic
-                  onPress={() => openActions(combination.key)}
+                  onPress={() =>
+                    openActions(
+                      combination.key,
+                      kind === "product" && listingUnit.id !== "canonical"
+                        ? listingUnit.id
+                        : undefined,
+                    )
+                  }
                   transition
                 >
                   <Icon className="size-sm text-foreground" name="more" />
@@ -315,10 +345,19 @@ export function CatalogVariantManager({
       </View>
 
       <Modal
-        onDismiss={() => setActionKey(null)}
+        onDismiss={() => {
+          setActionKey(null)
+          setActionUnitId(null)
+        }}
         ref={actionModal.ref}
         snapPoints={["38%"]}
-        title={actionCombination?.name ?? "Option"}
+        title={
+          actionCombination
+            ? actionUnit
+              ? `${actionCombination.name} · ${actionUnit.name}`
+              : actionCombination.name
+            : "Option"
+        }
       >
         {actionCombination ? (
           <View className="px-5 pb-6">
@@ -328,7 +367,9 @@ export function CatalogVariantManager({
                 getDraft(actionCombination.key).enabled ? "EyeOff" : "Check"
               }
               label={
-                getDraft(actionCombination.key).enabled ? "Disable" : "Enable"
+                getDraft(actionCombination.key).enabled
+                  ? "Disable entire option combination"
+                  : "Enable entire option combination"
               }
               onPress={toggleEnabledFromActions}
             />
@@ -349,8 +390,16 @@ export function CatalogVariantManager({
         ref={editorModal.ref}
         snapPoints={["62%", "96%"]}
         title={
-          combinations.find((combination) => combination.key === editor?.key)
-            ?.name ?? "Edit option"
+          editor
+            ? [
+                combinations.find(
+                  (combination) => combination.key === editor.key,
+                )?.name,
+                editorUnit?.name,
+              ]
+                .filter(Boolean)
+                .join(" · ")
+            : "Edit option"
         }
       >
         {editor ? (
@@ -363,8 +412,15 @@ export function CatalogVariantManager({
               keyboardShouldPersistTaps="handled"
             >
               <View className="gap-5 px-5 pb-4">
+                {editorUnit ? (
+                  <Text className="text-sm leading-6 text-muted-foreground">
+                    Editing the {editorUnit.name} price. Quantity, description,
+                    media, codes, and availability belong to the full option
+                    combination.
+                  </Text>
+                ) : null}
                 <View className="flex-row gap-3">
-                  {kind === "product" ? (
+                  {kind === "product" && !editorUnit ? (
                     <FormField
                       containerClassName="min-w-0 flex-1"
                       keyboardType="decimal-pad"
@@ -377,14 +433,29 @@ export function CatalogVariantManager({
                   <MoneyField
                     containerClassName="min-w-0 flex-1"
                     currencyCode={currencyCode}
-                    label="Price"
-                    onChangeValue={(price) => updateEditor({ price })}
-                    placeholder={basePrice.trim() || "0.00"}
-                    value={editor.draft.price}
+                    label={editorUnit ? `${editorUnit.name} price` : "Price"}
+                    onChangeValue={(price) =>
+                      editorUnit
+                        ? updateEditorUnitPrice(editorUnit.id, price)
+                        : updateEditor({ price })
+                    }
+                    placeholder={
+                      editorUnit
+                        ? (!optionPricingOnly ? editorUnit.price.trim() : "") ||
+                          (!optionPricingOnly
+                            ? editor.draft.price.trim() || basePrice.trim()
+                            : "0.00")
+                        : basePrice.trim() || "0.00"
+                    }
+                    value={
+                      editorUnit
+                        ? (editor.draft.unitPrices[editorUnit.id] ?? "")
+                        : editor.draft.price
+                    }
                   />
                 </View>
 
-                {descriptionVisible ? (
+                {editorUnit ? null : descriptionVisible ? (
                   <FormField
                     label="Description"
                     multiline
@@ -433,6 +504,11 @@ export function CatalogVariantManager({
                   </Pressable>
                 ) : (
                   <View className="gap-5 border-t border-border pt-5">
+                    {editorUnit ? (
+                      <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
+                        Full option combination settings
+                      </Text>
+                    ) : null}
                     <FormField
                       autoCapitalize="none"
                       autoCorrect={false}
@@ -499,9 +575,11 @@ export function CatalogVariantManager({
                           <MoneyField
                             currencyCode={currencyCode}
                             helper={
-                              !optionPricingOnly && unit.price.trim()
-                                ? `Defaults to ${currencyCode} ${unit.price}.`
-                                : "Uses this option's main price."
+                              optionPricingOnly
+                                ? "Set a separate price for this option and unit combination."
+                                : unit.price.trim()
+                                  ? `Defaults to ${currencyCode} ${unit.price}.`
+                                  : "Uses this option's main price."
                             }
                             key={unit.id}
                             label={`${unit.name} price`}

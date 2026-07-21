@@ -19,7 +19,8 @@
   Inventory, Orders, Service Jobs, Customers, and Reports; Staff presence is
   Tenant-wide.
 - Archived Catalog items and removed, suspended, or invited operational Staff
-  remain present. `hasActiveSellableItems` is a separate live prerequisite.
+  remain present. `hasActiveSellableItems` is a separate live prerequisite and
+  only counts active fixed-price Offerings with a non-null price.
 - Mobile requests send the selected business slug through `x-tenant-slug`.
   Switching a production business updates the authenticated mobile session
   profile and clears the query cache before the selected context refetches.
@@ -33,7 +34,8 @@
   `openingStockQuantity`; each non-zero value creates opening stock against that
   specific variant's Canonical Shared balance. The existing item-level opening
   quantity remains the simple/default-variant path when no per-variant
-  quantities are supplied.
+  quantities are supplied. Product opening quantities are optional; omitting
+  them creates no opening balance.
 - Mobile and API releases must keep this strict variant object in lockstep. The
   schema regression fixture submits `description`, `imageUrl`, and
   `openingStockQuantity` together so an older strict server contract cannot be
@@ -41,11 +43,14 @@
   keys instead of serializing them as explicit `undefined`, preventing
   SuperJSON from reconstructing unknown keys against a temporarily older
   strict server.
-- Product Unit Offerings require fixed prices and a Current Inventory Unit.
+- Product Unit Offerings require the fixed pricing policy and a Current
+  Inventory Unit, but their fixed amount may remain unset while setup is
+  incomplete. An unset price is stored as null and cannot be ordered.
 - Simple Product creation and the mobile Product setup default new Inventory
   Units to a two-decimal transaction scale. Catalog clients may omit a
-  variant-unit price override; the resolved unit default or variant price is
-  still materialized as that Offering's independent fixed-price snapshot.
+  variant-unit price override. When a fallback exists it is materialized as
+  that Offering's independent fixed-price snapshot; when no price exists the
+  Offering remains visible but unavailable for sale.
 - Service Offerings may be fixed or quote-required and never accept stock
   input.
 - Unit Draft publication validates one factor-1 Canonical Unit, direct exact
@@ -64,6 +69,9 @@
 
 - A line selects one active Store-available Offering and snapshots its price,
   quantity and semantic context at confirmation.
+- Sale clients show active incomplete Product Offerings but disable selection
+  with `Price not set` and/or `Out of stock`; order submission still requires a
+  real fixed price and available Product stock.
 - Product reservation/fulfillment and Service work creation are separate
   transactional effects.
 - Mixed Product/Service Orders are supported.

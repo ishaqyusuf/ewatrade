@@ -18,6 +18,7 @@ type FormFieldProps = Omit<ComponentProps<typeof Input>, "className"> & {
   leadingIcon?: IconKeys
   leadingText?: string
   onActionPress?: () => void
+  textScale?: 1 | 1.5
   trailingIcon?: IconKeys
   variant?: "auth" | "filled" | "line"
 }
@@ -34,6 +35,7 @@ export function FormField({
   onBlur,
   onFocus,
   onActionPress,
+  textScale = 1,
   trailingIcon,
   variant = "filled",
   ...inputProps
@@ -67,6 +69,7 @@ export function FormField({
   )
   const shouldShowLabel = !isAuthVariant
   const isMultiline = !!inputProps.multiline
+  const isLargeText = textScale === 1.5
 
   return (
     <View
@@ -77,6 +80,7 @@ export function FormField({
           <Text
             className={cn(
               "min-w-0 flex-1 text-xs font-bold uppercase tracking-[1.4px]",
+              isLargeText && "text-lg tracking-[1px]",
               error
                 ? "text-destructive"
                 : isFocused
@@ -94,7 +98,12 @@ export function FormField({
               haptic
               onPress={onActionPress}
             >
-              <Text className="text-xs font-bold text-primary">
+              <Text
+                className={cn(
+                  "text-xs font-bold text-primary",
+                  isLargeText && "text-lg",
+                )}
+              >
                 {actionLabel}
               </Text>
             </Pressable>
@@ -110,7 +119,7 @@ export function FormField({
           borderWidth: isFocused || error ? 1.5 : 1,
           flexDirection: "row",
           gap: 10,
-          minHeight: isMultiline ? 92 : 50,
+          minHeight: isMultiline ? 92 * textScale : 50 * textScale,
           paddingHorizontal: 14,
           paddingVertical: isMultiline ? 10 : 0,
         }}
@@ -131,6 +140,7 @@ export function FormField({
             inputClassName,
           )}
           expand
+          textScale={textScale}
           unstyled
           {...sharedInputProps}
         />
@@ -139,9 +149,23 @@ export function FormField({
         ) : null}
       </View>
       {error ? (
-        <Text className="text-xs font-medium text-destructive">{error}</Text>
+        <Text
+          className={cn(
+            "text-xs font-medium text-destructive",
+            isLargeText && "text-lg leading-[30px]",
+          )}
+        >
+          {error}
+        </Text>
       ) : helper ? (
-        <Text className="text-xs text-muted-foreground">{helper}</Text>
+        <Text
+          className={cn(
+            "text-xs text-muted-foreground",
+            isLargeText && "text-lg leading-[30px]",
+          )}
+        >
+          {helper}
+        </Text>
       ) : null}
     </View>
   )

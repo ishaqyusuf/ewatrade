@@ -8,7 +8,10 @@ import { useOfflineCommandStore } from "@/store/offlineCommandStore"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
-import { formatMinorMoney } from "@ewatrade/utils"
+import {
+  formatMinorMoney,
+  getSaleOfferingDisabledReasons,
+} from "@ewatrade/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { useMemo, useState } from "react"
@@ -17,7 +20,13 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
 type CatalogItem = RouterOutputs["catalog"]["listItems"][number]
 
-function flatten(items: CatalogItem[], kind?: "service") {
+function flatten(
+  items: CatalogItem[],
+  storeId: string | undefined,
+  kind?: "service",
+) {
+  if (!storeId) return []
+
   return items.flatMap((item) =>
     item.variants.flatMap((variant) =>
       item.kind === kind || !kind
@@ -25,16 +34,32 @@ function flatten(items: CatalogItem[], kind?: "service") {
             if (
               offering.status !== "active" ||
               offering.pricingPolicy !== "fixed" ||
-              !offering.stores.some((row) => row.isAvailable)
+              !offering.stores.some(
+                (row) => row.storeId === storeId && row.isAvailable,
+              )
             )
               return []
+            const inventoryUnit =
+              item.product?.currentUnitConfiguration?.units.find(
+                (unit) => unit.id === offering.productUnit?.inventoryUnitId,
+              )
             const balance = item.product?.stockBalances.find(
               (row) =>
+                row.storeId === storeId &&
                 row.variantId === variant.id &&
-                (row.inventoryUnitId ===
-                  offering.productUnit?.inventoryUnitId ||
-                  row.kind === "shared_pool"),
+                (inventoryUnit?.stockBehavior === "packaged_stock"
+                  ? row.kind === "packaged_stock" &&
+                    row.inventoryUnitId ===
+                      offering.productUnit?.inventoryUnitId
+                  : row.kind === "shared_pool"),
             )
+            const disabledReasons = getSaleOfferingDisabledReasons({
+              fixedPriceMinor: offering.fixedPriceMinor,
+              kind:
+                offering.kind === "product_unit" ? "product_unit" : "service",
+              onHandQuantity: balance?.onHandQuantity,
+              reservedQuantity: balance?.reservedQuantity,
+            })
             return [
               {
                 balanceRevision: balance?.revision,
@@ -45,7 +70,8 @@ function flatten(items: CatalogItem[], kind?: "service") {
                   item.variants.length > 1
                     ? `${item.name} · ${variant.name}`
                     : item.name,
-                fixedPriceMinor: offering.fixedPriceMinor ?? 0,
+                disabledReason: disabledReasons.join(" · ") || undefined,
+                fixedPriceMinor: offering.fixedPriceMinor,
                 id: offering.id,
                 kind: offering.kind,
                 offeringName: offering.name,
@@ -82,9 +108,12 @@ export function CreateSaleContent({
       retry: false,
     }),
   )
+  const availability = useQuery(
+    trpc.tenant.featureAvailability.queryOptions(undefined, { retry: false }),
+  )
   const allRows = useMemo(
-    () => flatten(catalog.data ?? [], itemKind),
-    [catalog.data, itemKind],
+    () => flatten(catalog.data ?? [], availability.data?.storeId, itemKind),
+    [availability.data?.storeId, catalog.data, itemKind],
   )
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -113,7 +142,9 @@ export function CreateSaleContent({
   const submit = () => {
     const lines = allRows.flatMap((offering) => {
       const quantity = quantities[offering.id]?.trim()
-      return quantity
+      return quantity &&
+        !offering.disabledReason &&
+        offering.fixedPriceMinor !== null
         ? [
             {
               expectedBalanceRevision:
@@ -188,16 +219,23 @@ export function CreateSaleContent({
       />
       <View className="gap-3">
         {rows.map((offering) => {
-          const selected = quantities[offering.id] !== undefined
+          const disabled = Boolean(offering.disabledReason)
+          const selected = !disabled && quantities[offering.id] !== undefined
           return (
             <View
               className="gap-3 rounded-2xl border border-border bg-card p-4"
               key={offering.id}
             >
               <Pressable
+                accessibilityHint={offering.disabledReason}
                 accessibilityRole="checkbox"
-                accessibilityState={{ checked: selected }}
-                className="min-h-11 flex-row items-center justify-between gap-3"
+                accessibilityState={{ checked: selected, disabled }}
+                className={
+                  disabled
+                    ? "min-h-11 flex-row items-center justify-between gap-3 opacity-60"
+                    : "min-h-11 flex-row items-center justify-between gap-3"
+                }
+                disabled={disabled}
                 haptic
                 onPress={() =>
                   setQuantities((current) => {
@@ -216,11 +254,18 @@ export function CreateSaleContent({
                   </Text>
                   <Text className="text-xs text-muted-foreground">
                     {offering.offeringName} ·{" "}
-                    {formatMinorMoney(
-                      offering.fixedPriceMinor,
-                      offering.currencyCode,
-                    )}
+                    {offering.fixedPriceMinor === null
+                      ? "Price not set"
+                      : formatMinorMoney(
+                          offering.fixedPriceMinor,
+                          offering.currencyCode,
+                        )}
                   </Text>
+                  {offering.disabledReason ? (
+                    <Text className="text-xs font-semibold text-destructive">
+                      {offering.disabledReason}
+                    </Text>
+                  ) : null}
                 </View>
                 <Icon
                   className={
@@ -228,7 +273,9 @@ export function CreateSaleContent({
                       ? "size-sm text-primary"
                       : "size-sm text-muted-foreground"
                   }
-                  name={selected ? "CircleCheck" : "CheckSquare"}
+                  name={
+                    disabled ? "Ban" : selected ? "CircleCheck" : "CheckSquare"
+                  }
                 />
               </Pressable>
               {selected ? (
@@ -248,12 +295,12 @@ export function CreateSaleContent({
           )
         })}
       </View>
-      {catalog.isLoading ? (
+      {catalog.isLoading || availability.isLoading ? (
         <StatusBanner icon="Loader2" message="Loading Offerings." />
       ) : rows.length === 0 ? (
         <StatusBanner
           icon="Info"
-          message="Add an active fixed-price Offering to the Catalog first."
+          message="No Catalog offerings match this search."
           title="No items"
         />
       ) : null}

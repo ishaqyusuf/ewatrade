@@ -49,8 +49,8 @@ ADR-0013.
 - Product reuses the existing price, unit, variant, image, opening-stock, and conversion controls.
 - Product creation places a `Multiple Price Options` checkbox directly after
   the item name. When selected, the base Product price and selling-unit default
-  prices are disabled, Options are revealed, and every enabled option
-  combination must provide its pricing through the option editor.
+  prices are disabled, Options are revealed, and option/unit pricing is owned
+  by the option editor even when an incomplete row is saved without a price.
 - Product always shows a compact `Unit` section explaining that customers may
   buy in units such as Bag, Carton, Piece, or Kilogram. `Add unit` opens a
   keyboard-aware detached bottom sheet for the unit name, exact factor, selling
@@ -75,9 +75,12 @@ ADR-0013.
   barcode, per-unit price, Service quote, and Store availability controls. A
   rounded bottom-right check remains above the keyboard and commits the draft.
   Per-variant quantity persists as opening stock for that specific variant.
-  Blank unit overrides use the unit default and then the combination's
-  counted-unit price; each persisted variant-unit Offering still receives its
-  own fixed price.
+  Both Product price and opening quantity may be left blank so incomplete
+  Catalog setup can be saved without storing artificial zero values.
+  With normal pricing, blank unit overrides use the unit default and then the
+  combination's counted-unit price. With `Multiple Price Options`, every
+  option × unit row remains independent: blank rows display `Price not set`,
+  save as an unset price, and never inherit another row's price.
 - Service uses the shared name, price, variant, and image controls, hides all stock controls, and may collect turnaround and instructions.
 - Helper-selected Product variants retain independently editable prices for
   every selling unit, while helper-selected Service combinations retain
@@ -86,7 +89,12 @@ ADR-0013.
 - Once multiple variant values exist, Add Item uses `Variants | Inventory` for Products and `Variants | Pricing` for Services. The second tab owns sellable-row prices and media for both kinds, plus stock for Products only, and exposes the final Add item action.
 - Existing Products migrate automatically and display a Product badge.
 - Existing dry-cleaning service items migrate automatically and display a Service badge.
-- The sale picker shows availability for Product items and no stock availability for Service items.
+- The sale picker shows availability for Product items and no stock availability
+  for Service items. Active Product Offerings with an unset price or no
+  unreserved stock remain listed but cannot be selected, with `Price not set`
+  and/or `Out of stock` shown as the reason on mobile and dashboard order
+  entry. Availability and balance revisions are resolved only for the active
+  Store.
 - The existing Service Orders surface becomes generic Service Jobs and no longer owns service-item creation.
 - Inventory and stock-derived metrics use Product items only.
 - Mixed stores can use Inventory and Service Jobs from the same workspace.

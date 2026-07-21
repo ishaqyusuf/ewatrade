@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import { catalogCreateProductSchema } from "./catalog"
+import {
+  catalogCreateProductSchema,
+  catalogCreateSimpleProductSchema,
+} from "./catalog"
 
 function productInput() {
   return {
@@ -60,5 +63,28 @@ describe("catalog Product variant input", () => {
     expect(() => catalogCreateProductSchema.parse(input)).toThrow(
       "plain decimal string",
     )
+  })
+
+  test("accepts an advanced Product offering without a price", () => {
+    const input = productInput()
+    const offering = input.variants[0]?.offerings[0]
+    if (!offering) throw new Error("Expected a Product offering fixture.")
+    Reflect.deleteProperty(offering, "fixedPriceMinor")
+
+    const result = catalogCreateProductSchema.parse(input)
+
+    expect(result.variants[0]?.offerings[0]?.fixedPriceMinor).toBeUndefined()
+  })
+
+  test("accepts a simple Product without a price or opening quantity", () => {
+    const result = catalogCreateSimpleProductSchema.parse({
+      canonicalUnitName: "Bag",
+      clientOperationId: "catalog-simple-no-price",
+      kind: "product",
+      name: "Rabbit feed",
+    })
+
+    expect(result.priceMinor).toBeUndefined()
+    expect(result.openingStockQuantity).toBeUndefined()
   })
 })

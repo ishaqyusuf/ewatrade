@@ -231,6 +231,18 @@ describe("workspace feature availability", () => {
       db.calls.find((call) => call.kind === "catalogItem.findMany")?.where,
     ).not.toHaveProperty("status")
     expect(
+      db.calls.find((call) => call.kind === "catalogItem.findFirst"),
+    ).toMatchObject({
+      where: {
+        offerings: {
+          some: {
+            fixedPriceMinor: { not: null },
+            pricingPolicy: "FIXED",
+          },
+        },
+      },
+    })
+    expect(
       db.calls.find((call) => call.kind === "membership.findFirst")?.where,
     ).not.toHaveProperty("status")
   })

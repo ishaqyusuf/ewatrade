@@ -16,6 +16,7 @@ type InputProps = TextInputProps &
     expand?: boolean
     inputTextAlign?: "auto" | "center" | "left" | "right"
     placeholderClassName?: string
+    textScale?: 1 | 1.5
     unstyled?: boolean
   }
 
@@ -29,26 +30,29 @@ function Input({
   inputTextAlign,
   placeholderClassName,
   style,
+  textScale = 1,
   unstyled,
   ...props
 }: InputProps) {
   const colors = useColors()
   const isBottomSheetInput = useBottomSheetInput()
+  const inputFontSize = 16 * textScale
+  const inputLineHeight = 20 * textScale
   const embeddedSizingStyle: TextStyle = expand
     ? { flexBasis: 0, flexGrow: 1, flexShrink: 1 }
     : { width: "100%" }
   const embeddedInputStyle: TextStyle = {
     color: colors.foreground,
-    fontSize: 16,
-    lineHeight: 20,
+    fontSize: inputFontSize,
+    lineHeight: inputLineHeight,
     minWidth: 0,
     opacity: props.editable === false ? 0.5 : 1,
     paddingHorizontal: 0,
     paddingVertical: 0,
     textAlign: inputTextAlign ?? "left",
     ...(props.multiline
-      ? { minHeight: 72, textAlignVertical: "top" as const }
-      : { height: 48 }),
+      ? { minHeight: 72 * textScale, textAlignVertical: "top" as const }
+      : { height: 48 * textScale }),
     ...embeddedSizingStyle,
   }
 
@@ -73,9 +77,9 @@ function Input({
                   borderWidth: 1,
                   color: colors.foreground,
                   flexDirection: "row",
-                  fontSize: 16,
-                  height: 48,
-                  lineHeight: 20,
+                  fontSize: inputFontSize,
+                  height: 48 * textScale,
+                  lineHeight: inputLineHeight,
                   minWidth: 0,
                   opacity: props.editable === false ? 0.5 : 1,
                   paddingHorizontal: 16,
@@ -135,6 +139,8 @@ function Input({
       style={[
         {
           color: colors.foreground,
+          fontSize: inputFontSize,
+          lineHeight: inputLineHeight,
           textAlign: inputTextAlign ?? "left",
           ...(expand
             ? { flexBasis: 0, flexGrow: 1, flexShrink: 1 }

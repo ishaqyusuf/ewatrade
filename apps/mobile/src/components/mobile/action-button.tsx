@@ -10,6 +10,7 @@ type ActionButtonProps = ButtonProps & {
   icon?: IconKeys
   isLoading?: boolean
   loadingLabel?: string
+  textScale?: 1 | 1.5
   trailingIcon?: IconKeys
 }
 
@@ -20,6 +21,7 @@ export function ActionButton({
   icon,
   isLoading,
   loadingLabel,
+  textScale = 1,
   trailingIcon,
   variant,
   ...props
@@ -59,7 +61,9 @@ export function ActionButton({
         disabled: isDisabled,
       }}
       className={cn(
-        "min-h-[50px] w-full rounded-xl px-[18px]",
+        textScale === 1.5
+          ? "min-h-[60px] w-full rounded-xl px-[18px]"
+          : "min-h-[50px] w-full rounded-xl px-[18px]",
         isDefaultVariant &&
           (isDisabled
             ? "bg-muted active:bg-muted"
@@ -86,9 +90,9 @@ export function ActionButton({
         numberOfLines={1}
         style={{
           color: foregroundColor,
-          fontSize: 14,
+          fontSize: 14 * textScale,
           fontWeight: "700",
-          lineHeight: 20,
+          lineHeight: 20 * textScale,
         }}
       >
         {isLoading && loadingLabel ? loadingLabel : children}

@@ -87,6 +87,7 @@ export async function getWorkspaceFeatureAvailability(
         tenantId: input.tenantId,
         offerings: {
           some: {
+            fixedPriceMinor: { not: null },
             pricingPolicy: "FIXED",
             status: "ACTIVE",
             storeAvailability: {

@@ -513,10 +513,18 @@ The first-product setup sheet is the empty-business bridge after auth/business e
   convenient fallback, but merchants can set distinct prices for combinations
   such as Red / Carton and Blue / Carton before saving.
 - A `Multiple Price Options` checkbox after the Product name disables the base
-  Product price and selling-unit default prices, reveals Options, and requires
-  pricing to come from option/unit combinations. The generated combinations
+  Product price and selling-unit default prices, reveals Options, and keeps
+  pricing owned by option/unit combinations. The generated combinations
   render below Unit setup in a separate `Product stock & pricing` section as
   flat, directly editable option × unit rows rather than labeled detail grids.
+  These rows are price-independent in this mode: a counted-unit price must not
+  appear in or save through blank additional-unit rows. Blank Product price and
+  opening-stock fields are valid incomplete setup and must save as unset rather
+  than zero.
+- Add Item applies a scoped 1.5× typography scale to its headings, supporting
+  copy, field labels and inputs, pills, list rows, menus, and actions. The scale
+  is opt-in on shared form/action primitives so unrelated mobile screens retain
+  their established typography.
 - After a second variant value is added, replace the introductory variant section with a compact `Variants` / `Stocks` segmented control. The Variants view should use flat grouped rows with a label action, value pills, a trailing per-group add pill, and an active bottom `Add variant` action. The Stocks view should preserve editable price/stock rows, label variant inventory entry as `Current stock` instead of `Qty`, use one options icon instead of destructive row controls, and own the validation-aware final `Add item` action.
 - Variant group, value, and stock actions should use a content-sized bottom action sheet with title and Active/Inactive subtitle. Label/value edits return to the keyboard composer with a check action and close on save; disabled values and stock rows use muted treatment and sort after active content.
 - Empty variant copy must make it clear that users can skip variants and continue with only the primary unit.
@@ -551,6 +559,9 @@ Clock-in and closeout are daily operational checkpoints, so they should feel lik
 The create-sale workflow is the core mobile POS path and should stay optimized for quick one-handed checkout.
 
 - Product and variant selection remains virtualized with `BottomSheetSectionList`; product parents with variants stay display-only while primary units and variant rows are selectable.
+- Active Product Offerings with no price or no available stock remain visible
+  as disabled rows. The row states the exact `Price not set` and/or `Out of
+  stock` reason and cannot add a quantity or enter an order payload.
 - Item rows, payment choices, customer options, and total preview use reusable sale-flow primitives for selectable rows, segmented choices, and ticket-like total summaries instead of local card-heavy widgets.
 - The visual rhythm should stay flat and fast: divider-based sellable rows, rounded selected indicators, semantic stock/payment/customer status, and a prominent total before payment/customer confirmation.
 - Sale sync-required/offline, rep session, insufficient stock, submit error, and empty-product states use shared `StatusBanner` and `EmptyState` primitives.

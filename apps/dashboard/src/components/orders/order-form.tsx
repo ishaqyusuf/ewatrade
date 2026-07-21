@@ -4,6 +4,7 @@ import { useOrderParams } from "@/hooks/use-order-params"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Button } from "@ewatrade/ui"
+import { getSaleOfferingDisabledReasons } from "@ewatrade/utils"
 import {
   useMutation,
   useQueryClient,
@@ -38,12 +39,25 @@ function availableOfferings(items: CatalogItem[], storeId: string) {
         ) {
           return []
         }
+        const inventoryUnit =
+          item.product?.currentUnitConfiguration?.units.find(
+            (unit) => unit.id === offering.productUnit?.inventoryUnitId,
+          )
         const balance = item.product?.stockBalances.find(
           (row) =>
+            row.storeId === storeId &&
             row.variantId === variant.id &&
-            (offering.productUnit?.inventoryUnitId === row.inventoryUnitId ||
-              row.kind === "shared_pool"),
+            (inventoryUnit?.stockBehavior === "packaged_stock"
+              ? row.kind === "packaged_stock" &&
+                row.inventoryUnitId === offering.productUnit?.inventoryUnitId
+              : row.kind === "shared_pool"),
         )
+        const disabledReasons = getSaleOfferingDisabledReasons({
+          fixedPriceMinor: offering.fixedPriceMinor,
+          kind: offering.kind === "product_unit" ? "product_unit" : "service",
+          onHandQuantity: balance?.onHandQuantity,
+          reservedQuantity: balance?.reservedQuantity,
+        })
         return [
           {
             balanceRevision: balance?.revision,
@@ -52,7 +66,8 @@ function availableOfferings(items: CatalogItem[], storeId: string) {
               item.variants.length > 1
                 ? `${item.name} · ${variant.name} · ${offering.name}`
                 : `${item.name} · ${offering.name}`,
-            fixedPriceMinor: offering.fixedPriceMinor ?? 0,
+            disabledReason: disabledReasons.join(" · ") || undefined,
+            fixedPriceMinor: offering.fixedPriceMinor,
             id: offering.id,
             kind: offering.kind,
           },
@@ -100,7 +115,12 @@ export function OrderForm({ store }: { store: StoreSummary }) {
   function submit() {
     const lines = offerings.flatMap((offering) => {
       const quantity = quantities[offering.id]?.trim()
-      if (!quantity) return []
+      if (
+        !quantity ||
+        offering.disabledReason ||
+        offering.fixedPriceMinor === null
+      )
+        return []
       return [
         {
           expectedBalanceRevision:
@@ -155,7 +175,7 @@ export function OrderForm({ store }: { store: StoreSummary }) {
       <div className="grid gap-2">
         {offerings.map((offering) => (
           <label
-            className="grid grid-cols-[1fr_90px] items-center gap-3 border-b border-border py-3"
+            className={`grid grid-cols-[1fr_90px] items-center gap-3 border-b border-border py-3 ${offering.disabledReason ? "opacity-60" : ""}`}
             key={offering.id}
           >
             <span>
@@ -163,12 +183,20 @@ export function OrderForm({ store }: { store: StoreSummary }) {
                 {offering.displayName}
               </span>
               <span className="text-xs text-muted-foreground">
-                {money(offering.fixedPriceMinor, store.currencyCode)}
+                {offering.fixedPriceMinor === null
+                  ? "Price not set"
+                  : money(offering.fixedPriceMinor, store.currencyCode)}
               </span>
+              {offering.disabledReason ? (
+                <span className="block text-xs font-medium text-destructive">
+                  {offering.disabledReason}
+                </span>
+              ) : null}
             </span>
             <input
               aria-label={`${offering.displayName} quantity`}
               className={inputClass}
+              disabled={Boolean(offering.disabledReason)}
               inputMode="decimal"
               placeholder="Qty"
               value={quantities[offering.id] ?? ""}

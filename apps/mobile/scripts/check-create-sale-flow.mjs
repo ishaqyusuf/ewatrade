@@ -3,10 +3,7 @@ import { join, relative, resolve } from "node:path"
 
 const REPO_ROOT = resolve(new URL("../../..", import.meta.url).pathname)
 const MOBILE_DIR = join(REPO_ROOT, "apps/mobile")
-const FILE = join(
-  MOBILE_DIR,
-  "src/components/mobile/create-sale-sheet.tsx",
-)
+const FILE = join(MOBILE_DIR, "src/components/mobile/create-sale-sheet.tsx")
 const source = readFileSync(FILE, "utf8")
 const contracts = [
   {
@@ -16,7 +13,8 @@ const contracts = [
       "variant.offerings.flatMap",
       'offering.status !== "active"',
       'offering.pricingPolicy !== "fixed"',
-      "offering.stores.some((row) => row.isAvailable)",
+      "row.storeId === storeId && row.isAvailable",
+      "row.storeId === storeId",
       "offering.productUnit?.inventoryUnitId",
       'row.kind === "shared_pool"',
       "balanceRevision",
@@ -28,6 +26,7 @@ const contracts = [
   {
     markers: [
       "trpc.catalog.listItems.queryOptions",
+      "trpc.tenant.featureAvailability.queryOptions",
       "trpc.orders.create.mutationOptions",
       "expectedBalanceRevision",
       "expectedConfigurationVersionId",
@@ -72,9 +71,7 @@ const contracts = [
 const failures = contracts.flatMap((contract) => {
   const missing = contract.markers.filter((marker) => !source.includes(marker))
   return missing.length > 0
-    ? [
-        `missing ${missing.join(", ")} (${contract.reason})`,
-      ]
+    ? [`missing ${missing.join(", ")} (${contract.reason})`]
     : []
 })
 

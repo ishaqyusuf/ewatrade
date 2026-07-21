@@ -81,10 +81,12 @@ const catalogOfferingFields = {
     .optional(),
 }
 
+const catalogPriceMinorSchema = z.coerce.number().int().min(0).max(100_000_000)
+
 const catalogFixedOfferingSchema = z
   .object({
     ...catalogOfferingFields,
-    fixedPriceMinor: z.coerce.number().int().min(0).max(100_000_000),
+    fixedPriceMinor: catalogPriceMinorSchema,
     key: catalogKeySchema,
     name: z.string().trim().min(1).max(120),
     pricingPolicy: z.literal("fixed"),
@@ -112,6 +114,7 @@ const serviceWorkPolicyFields = {
 const catalogProductOfferingSchema = catalogFixedOfferingSchema
   .extend({
     barcode: z.string().trim().min(1).max(120).optional(),
+    fixedPriceMinor: catalogPriceMinorSchema.optional(),
     inventoryUnitKey: catalogKeySchema,
     sku: z.string().trim().min(1).max(120).optional(),
   })
@@ -243,7 +246,6 @@ const simpleCatalogItemFields = {
   clientOperationId: z.string().trim().min(8).max(160),
   description: z.string().trim().max(2_000).optional(),
   name: z.string().trim().min(1).max(160),
-  priceMinor: z.coerce.number().int().min(0).max(100_000_000),
   storeId: z.string().trim().min(1).optional(),
 }
 
@@ -253,6 +255,7 @@ export const catalogCreateSimpleProductSchema = z
     canonicalUnitName: z.string().trim().min(1).max(80),
     kind: z.literal("product"),
     openingStockQuantity: exactQuantitySchema.optional(),
+    priceMinor: catalogPriceMinorSchema.optional(),
   })
   .strict()
 
@@ -261,6 +264,7 @@ export const catalogCreateSimpleServiceSchema = z
     ...simpleCatalogItemFields,
     ...serviceWorkPolicyFields,
     kind: z.literal("service"),
+    priceMinor: catalogPriceMinorSchema,
   })
   .strict()
 

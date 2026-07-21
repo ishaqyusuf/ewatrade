@@ -22,7 +22,9 @@ persistence boundary. Clients never access the database directly.
   `SellableVariant` and selections. A Sellable Variant may carry its own
   optional description and image URL.
 - `SellableOffering` owns pricing and is exactly one `ProductUnitOffering` or
-  `ServiceOffering` by transactional invariant.
+  `ServiceOffering` by transactional invariant. Its nullable fixed price
+  represents an incomplete Product Offering; no zero-value placeholder is
+  written and the Offering cannot be sold until priced.
 - `StoreOfferingAvailability` is separate from the business Catalog.
 - `CatalogPriceChange` and `CatalogCommandReceipt` preserve price history and
   tenant-scoped idempotency.
@@ -37,7 +39,8 @@ persistence boundary. Clients never access the database directly.
   have independent balances.
 - `StockBalanceSource` identifies Store, Product, variant, unit and custody.
 - Product creation may seed separate Canonical Shared opening balances for each
-  variant through exact per-variant opening quantities.
+  variant through exact per-variant opening quantities. Blank quantities create
+  no opening movement or available stock.
 - `StockReservation`, `StockOperation`, `StockMovement`, `StockCount`,
   `StockTransfer`, `InventoryCloseout` and their lines/entries form the exact
   inventory ledger.

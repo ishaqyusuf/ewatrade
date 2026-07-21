@@ -33,7 +33,7 @@ type ProductSetupPayload = {
   kind: "product_setup"
   name: string
   openingStockQuantity?: string
-  priceMinor: number
+  priceMinor?: number
 }
 
 type StockReceiptPayload = {
