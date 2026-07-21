@@ -1,5 +1,14 @@
 # Done
 
+- Added Store-scoped Business Profile personalization across marketing signup,
+  mobile OTP/Google signup, dashboard first-Store setup, tenant context, and
+  Catalog quick-setup recommendations. The shared versioned library launches
+  with 15 searchable categories and captures operating model, order channels,
+  team size, and conditional Other/Mixed detail without introducing runtime
+  industry branches. Completed Date: 2026-07-21. Verification was limited at
+  the user's request; focused tests and package/mobile typechecks completed
+  earlier in the implementation, while final broad checks were intentionally
+  skipped.
 - Fixed persisted mobile App theme restoration after OTA/JS reloads. A small
   observable runtime now makes explicit Light/Dark preferences authoritative
   without waiting for React Native to emit an appearance event, while System
