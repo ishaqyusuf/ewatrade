@@ -8,7 +8,11 @@
   additional selling units, use flat Unit-style summaries, open Edit from the
   row itself, and retain the menu for Edit and Disable/Enable. Completed Date:
   2026-07-21. Checks Run: automated and UI testing skipped by owner request;
-  formatting and final diff inspection only.
+  formatting and final diff inspection only. Published as Android preview OTA
+  `2026.07.21.01`, update group
+  `96c276c5-12a7-449e-a52a-9c00290f1b27`. EAS reported no compatible build for
+  Android fingerprint `68ccac3689caebcdd7b2691602ae9e4fb6e65487`, so a
+  matching preview binary is required before devices can install the update.
 - Published Android preview OTA update `2026.07.21` to the EAS `preview`
   branch from commit `144e9dd`, update group
   `dff32bcd-0763-4a7f-b7aa-0cdef70b25b7`. EAS reported no compatible build for
