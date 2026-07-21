@@ -19,19 +19,29 @@ function expectRejected(
 describe("mobile auth router schemas", () => {
   test("normalizes lightweight owner email OTP signup payloads", () => {
     const input = requestMobileOwnerOtpSchema.parse({
+      businessProfileKey: " animal-feed-agricultural-supplies ",
+      businessProfileVersion: 1,
       businessName: " Rice Store ",
       currencyCode: "GHS",
       email: " OWNER@BUSINESS.TEST ",
       mode: "sign_up",
       name: " Store Owner ",
+      operatingModel: "products",
+      orderChannels: ["walk_in", "phone_whatsapp"],
+      teamSize: "2_5",
     })
 
     expect(input).toEqual({
+      businessProfileKey: "animal-feed-agricultural-supplies",
+      businessProfileVersion: 1,
       businessName: "Rice Store",
       currencyCode: "GHS",
       email: "owner@business.test",
       mode: "sign_up",
       name: "Store Owner",
+      operatingModel: "products",
+      orderChannels: ["walk_in", "phone_whatsapp"],
+      teamSize: "2_5",
     })
   })
 
@@ -84,6 +94,12 @@ describe("mobile auth router schemas", () => {
       mode: "sign_up",
       name: "Store Owner",
       password: "not-for-the-mvp",
+    })
+    expectRejected(requestMobileOwnerOtpSchema, {
+      businessName: "Rice Store",
+      businessProfileKey: "unsupported-industry",
+      email: "owner@business.test",
+      mode: "sign_up",
     })
     expectRejected(requestMobileOwnerOtpSchema, {
       email: "owner@business.test",

@@ -8,6 +8,11 @@ import {
   type CatalogSetupHelperKind,
   listCatalogSetupHelpers,
 } from "@ewatrade/utils/catalog-setup-helpers"
+import {
+  findBusinessProfile,
+  getRecommendedCatalogSetupHelperKeys,
+  rankCatalogSetupHelpersForBusinessProfile,
+} from "@ewatrade/utils/business-profiles"
 import { StatusBar } from "expo-status-bar"
 import { useEffect, useMemo, useState } from "react"
 import { Modal as NativeModal, ScrollView, View } from "react-native"
@@ -15,6 +20,7 @@ import { KeyboardStickyView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 type CatalogSetupHelperPickerProps = {
+  businessProfileKey?: string | null
   kind: CatalogSetupHelperKind
   onClose: () => void
   onSelect: (helper: CatalogSetupHelper | null) => void
@@ -25,10 +31,12 @@ type CatalogSetupHelperPickerProps = {
 function HelperRow({
   helper,
   onPress,
+  personalized,
   selected,
 }: {
   helper: CatalogSetupHelper
   onPress: () => void
+  personalized: boolean
   selected: boolean
 }) {
   return (
@@ -47,6 +55,12 @@ function HelperRow({
           <View className="rounded-full bg-primary px-3 py-1">
             <Text className="text-xs font-bold text-primary-foreground">
               Selected
+            </Text>
+          </View>
+        ) : personalized ? (
+          <View className="rounded-full bg-primary/10 px-3 py-1">
+            <Text className="text-xs font-bold text-primary">
+              For your business
             </Text>
           </View>
         ) : helper.recommended ? (
@@ -72,6 +86,7 @@ function HelperRow({
 }
 
 export function CatalogSetupHelperPicker({
+  businessProfileKey,
   kind,
   onClose,
   onSelect,
@@ -82,14 +97,26 @@ export function CatalogSetupHelperPicker({
   const insets = useSafeAreaInsets()
   const colors = useColors()
   const { colorScheme } = useColorScheme()
+  const businessProfile = findBusinessProfile(businessProfileKey)
+  const recommendedHelperKeys = useMemo(
+    () =>
+      getRecommendedCatalogSetupHelperKeys({
+        kind,
+        profileKey: businessProfileKey,
+      }),
+    [businessProfileKey, kind],
+  )
+  const recommendedHelperKeySet = useMemo(
+    () => new Set(recommendedHelperKeys),
+    [recommendedHelperKeys],
+  )
   const helpers = useMemo(
     () =>
-      listCatalogSetupHelpers({ kind, query }).sort(
-        (left, right) =>
-          Number(Boolean(right.recommended)) -
-          Number(Boolean(left.recommended)),
+      rankCatalogSetupHelpersForBusinessProfile(
+        listCatalogSetupHelpers({ kind, query }),
+        businessProfileKey,
       ),
-    [kind, query],
+    [businessProfileKey, kind, query],
   )
   const patterns = helpers.filter(
     (helper) => helper.classification === "pattern",
@@ -126,7 +153,9 @@ export function CatalogSetupHelperPicker({
               Choose a quick setup
             </Text>
             <Text className="text-sm leading-5 text-muted-foreground">
-              Pick a starting point, then review and edit it before saving.
+              {businessProfile
+                ? `${businessProfile.title} suggestions appear first. Review and edit before saving.`
+                : "Pick a starting point, then review and edit it before saving."}
             </Text>
           </View>
           <Pressable
@@ -179,6 +208,7 @@ export function CatalogSetupHelperPicker({
                   helper={helper}
                   key={helper.key}
                   onPress={() => onSelect(helper)}
+                  personalized={recommendedHelperKeySet.has(helper.key)}
                   selected={selectedKey === helper.key}
                 />
               ))}
@@ -195,6 +225,7 @@ export function CatalogSetupHelperPicker({
                   helper={helper}
                   key={helper.key}
                   onPress={() => onSelect(helper)}
+                  personalized={recommendedHelperKeySet.has(helper.key)}
                   selected={selectedKey === helper.key}
                 />
               ))}

@@ -11,6 +11,7 @@ import {
   buildCatalogVariantCombinations,
   catalogUnitFactorToRelation,
   catalogUnitRelationToFactor,
+  findBusinessProfile,
   findCatalogSetupHelper,
   getCatalogSetupReplacementAction,
   isCatalogFixedPriceMissing,
@@ -172,6 +173,9 @@ export function CatalogItemForm({
   )
   const storesQuery = useQuery(trpc.tenant.stores.queryOptions())
   const stores = storesQuery.data ?? []
+  const businessProfileKey =
+    stores.find((store) => store.id === storeId)?.businessProfileKey ?? null
+  const businessProfile = findBusinessProfile(businessProfileKey)
   const selectedHelper = selectedHelperKey
     ? findCatalogSetupHelper(selectedHelperKey)
     : undefined
@@ -760,6 +764,11 @@ export function CatalogItemForm({
           <span className="mt-1 block text-sm text-muted-foreground">
             Something you count or keep in stock.
           </span>
+          {businessProfile?.recommendedItemKinds.includes("product") ? (
+            <span className="mt-3 block text-xs font-medium text-primary">
+              Recommended for {businessProfile.title}
+            </span>
+          ) : null}
         </button>
         <button
           type="button"
@@ -773,6 +782,11 @@ export function CatalogItemForm({
           <span className="mt-1 block text-sm text-muted-foreground">
             Work you price without stock.
           </span>
+          {businessProfile?.recommendedItemKinds.includes("service") ? (
+            <span className="mt-3 block text-xs font-medium text-primary">
+              Recommended for {businessProfile.title}
+            </span>
+          ) : null}
         </button>
       </div>
     )
@@ -781,6 +795,7 @@ export function CatalogItemForm({
   return (
     <form className="flex min-h-full flex-col" onSubmit={submit}>
       <CatalogSetupHelperPicker
+        businessProfileKey={businessProfileKey}
         kind={form.kind}
         onClose={() => setHelperPickerOpen(false)}
         onSelect={applyHelper}

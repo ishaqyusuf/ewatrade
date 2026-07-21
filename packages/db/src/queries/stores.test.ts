@@ -65,9 +65,9 @@ function createMockStoreDb(input?: {
         return { id: "onboarding_session_123" }
       },
     },
-    product: {
+    catalogItem: {
       count: async ({ where }: { where: unknown }) => {
-        calls.push({ kind: "product.count", where })
+        calls.push({ kind: "catalogItem.count", where })
 
         return 0
       },
@@ -172,7 +172,11 @@ describe("tenant store queries", () => {
       currencyCode: " ngn ",
       name: " Main Branch ",
       onboarding: {
+        businessProfileKey: " animal-feed-agricultural-supplies ",
+        businessProfileVersion: 1,
         countryCode: " NG ",
+        operatingModel: " products ",
+        orderChannels: [" walk_in ", "phone_whatsapp"],
         salesMethod: " In store ",
         teamSize: "   ",
       },
@@ -219,8 +223,12 @@ describe("tenant store queries", () => {
         metadata: {
           retailOps: {
             onboarding: {
+              businessProfileKey: "animal-feed-agricultural-supplies",
+              businessProfileVersion: 1,
               countryCode: "NG",
               currencyCode: "NGN",
+              operatingModel: "products",
+              orderChannels: ["walk_in", "phone_whatsapp"],
               salesMethod: "In store",
               source: "store_setup",
             },
@@ -241,8 +249,12 @@ describe("tenant store queries", () => {
           currencyCode: "NGN",
           flow: "retail_ops_store_setup",
           onboarding: {
+            businessProfileKey: "animal-feed-agricultural-supplies",
+            businessProfileVersion: 1,
             countryCode: "NG",
             currencyCode: "NGN",
+            operatingModel: "products",
+            orderChannels: ["walk_in", "phone_whatsapp"],
             salesMethod: "In store",
             source: "store_setup",
           },

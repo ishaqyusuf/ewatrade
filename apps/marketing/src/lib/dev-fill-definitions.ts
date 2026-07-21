@@ -17,14 +17,18 @@ export const workspaceFill: WorkspaceValues = {
 
 export const businessFill: BusinessValues = {
   addressLine1: "12 Market Road",
+  businessProfileKey: "general-retail-groceries",
+  businessProfileVersion: 1,
   businessName: `Nile Market QA ${devRunSuffix}`,
-  industry: "retail",
-  businessSize: "2_10",
+  businessSize: "2_5",
   city: "Lagos",
   countryCode: "NG",
   currencyCode: "NGN",
   phone: `+23480${devRunSuffix}`,
   region: "Lagos",
+  operatingModel: "products",
+  orderChannels: ["walk_in", "phone_whatsapp"],
+  otherBusinessDescription: "",
 }
 
 export const ownerFill: OwnerValues = {

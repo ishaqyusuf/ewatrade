@@ -1,7 +1,12 @@
 import { useAuthContext } from "@/hooks/use-auth"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { useTRPC } from "@/trpc/client"
-import type { OperatingCurrencyCode } from "@ewatrade/utils"
+import type {
+  BusinessOperatingModel,
+  BusinessOrderChannel,
+  BusinessTeamSize,
+  OperatingCurrencyCode,
+} from "@ewatrade/utils"
 import type * as GoogleSignIn from "@react-native-google-signin/google-signin"
 import { useMutation } from "@tanstack/react-query"
 import * as Google from "expo-auth-session/providers/google"
@@ -25,12 +30,18 @@ type MobileGoogleAuthMode = "login" | "sign_up"
 
 type UseMobileGoogleAuthInput = {
   addressLine1?: string
+  businessProfileKey?: string
+  businessProfileVersion?: 1
   businessName?: string
   city?: string
   currencyCode?: OperatingCurrencyCode
   mode: MobileGoogleAuthMode
   name?: string
+  operatingModel?: BusinessOperatingModel
+  orderChannels?: BusinessOrderChannel[]
+  otherBusinessDescription?: string
   phone?: string
+  teamSize?: BusinessTeamSize
   onError: (message: string) => void
 }
 
@@ -94,12 +105,18 @@ function configureNativeGoogleSignIn(
 
 export function useMobileGoogleAuth({
   addressLine1,
+  businessProfileKey,
+  businessProfileVersion,
   businessName,
   city,
   currencyCode,
   mode,
   name,
+  operatingModel,
+  orderChannels,
+  otherBusinessDescription,
   phone,
+  teamSize,
   onError,
 }: UseMobileGoogleAuthInput) {
   const auth = useAuthContext()
@@ -150,23 +167,35 @@ export function useMobileGoogleAuth({
 
       verifyGoogleMutation.mutate({
         addressLine1,
+        businessProfileKey,
+        businessProfileVersion,
         businessName,
         city,
         currencyCode,
         idToken,
         mode,
         name,
+        operatingModel,
+        orderChannels,
+        otherBusinessDescription,
         phone,
+        teamSize,
       })
     },
     [
       addressLine1,
+      businessProfileKey,
+      businessProfileVersion,
       businessName,
       city,
       currencyCode,
       mode,
       name,
+      operatingModel,
+      orderChannels,
+      otherBusinessDescription,
       phone,
+      teamSize,
       verifyGoogleMutation,
     ],
   )

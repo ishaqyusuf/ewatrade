@@ -1,4 +1,8 @@
-import { OPERATING_CURRENCY_CODES } from "@ewatrade/utils"
+import {
+  BUSINESS_PROFILE_SCHEMA_VERSION,
+  OPERATING_CURRENCY_CODES,
+  isBusinessProfileKey,
+} from "@ewatrade/utils"
 import { z } from "zod"
 
 const optionalText = (max: number) =>
@@ -26,7 +30,15 @@ export const tenantBootstrapSchema = z.object({
 })
 
 const storeOnboardingSchema = z.object({
+  businessProfileKey: optionalText(120).refine(
+    (value) => value === undefined || isBusinessProfileKey(value),
+    "Select a supported business category",
+  ),
+  businessProfileVersion: z
+    .literal(BUSINESS_PROFILE_SCHEMA_VERSION)
+    .optional(),
   countryCode: optionalText(8),
+  otherBusinessDescription: optionalText(240),
   operatingModel: optionalText(120),
   orderChannels: z.array(z.string().trim().min(1).max(80)).max(8).optional(),
   salesMethod: optionalText(80),

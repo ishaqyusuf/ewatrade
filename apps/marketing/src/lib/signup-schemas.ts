@@ -1,4 +1,11 @@
-import { OPERATING_CURRENCY_CODES } from "@ewatrade/utils"
+import {
+  BUSINESS_OPERATING_MODEL_KEYS,
+  BUSINESS_ORDER_CHANNEL_KEYS,
+  BUSINESS_PROFILE_SCHEMA_VERSION,
+  BUSINESS_TEAM_SIZE_KEYS,
+  OPERATING_CURRENCY_CODES,
+  isBusinessProfileKey,
+} from "@ewatrade/utils"
 import { z } from "zod"
 
 // ─── Step 1: Workspace ────────────────────────────────────────────────────────
@@ -29,28 +36,6 @@ export type WorkspaceValues = z.infer<typeof workspaceSchema>
 
 // ─── Step 2: Business Details ─────────────────────────────────────────────────
 
-export const INDUSTRIES = [
-  { value: "retail", label: "Retail" },
-  { value: "food_beverage", label: "Food & Beverage" },
-  { value: "fashion", label: "Fashion & Apparel" },
-  { value: "electronics", label: "Electronics" },
-  { value: "logistics", label: "Logistics & Delivery" },
-  { value: "health_beauty", label: "Health & Beauty" },
-  { value: "home_living", label: "Home & Living" },
-  { value: "cleaning_care", label: "Cleaning & Garment Care" },
-  { value: "repairs_maintenance", label: "Repairs & Maintenance" },
-  { value: "professional_services", label: "Professional Services" },
-  { value: "general_mixed", label: "General / Mixed Business" },
-  { value: "other", label: "Other" },
-] as const
-
-export const BUSINESS_SIZES = [
-  { value: "solo", label: "Solo founder" },
-  { value: "2_10", label: "2 – 10 people" },
-  { value: "11_50", label: "11 – 50 people" },
-  { value: "50_plus", label: "50+ people" },
-] as const
-
 export const COUNTRIES = [
   { value: "NG", label: "Nigeria" },
   { value: "GH", label: "Ghana" },
@@ -65,7 +50,8 @@ export const COUNTRIES = [
   { value: "OTHER", label: "Other" },
 ] as const
 
-export const businessSchema = z.object({
+export const businessSchema = z
+  .object({
   addressLine1: z
     .string()
     .trim()
@@ -76,8 +62,14 @@ export const businessSchema = z.object({
     .trim()
     .min(2, "Business name must be at least 2 characters")
     .max(120, "Business name is too long"),
-  industry: z.string().min(1, "Select your industry"),
-  businessSize: z.string().min(1, "Select your business size"),
+  businessProfileKey: z
+    .string()
+    .trim()
+    .refine(isBusinessProfileKey, "Select your business category"),
+  businessProfileVersion: z.literal(BUSINESS_PROFILE_SCHEMA_VERSION),
+  businessSize: z.enum(BUSINESS_TEAM_SIZE_KEYS, {
+    message: "Select your business size",
+  }),
   city: z.string().trim().min(2, "Enter your city").max(120),
   countryCode: z.string().min(1, "Select your country"),
   currencyCode: z.enum(OPERATING_CURRENCY_CODES, {
@@ -90,7 +82,27 @@ export const businessSchema = z.object({
     .max(20, "Phone number is too long")
     .regex(/^\+?[0-9\s\-().]{7,20}$/, "Enter a valid phone number"),
   region: z.string().trim().max(120).optional().or(z.literal("")),
-})
+  operatingModel: z.enum(BUSINESS_OPERATING_MODEL_KEYS, {
+    message: "Select what you sell",
+  }),
+  orderChannels: z
+    .array(z.enum(BUSINESS_ORDER_CHANNEL_KEYS))
+    .min(1, "Select at least one order channel")
+    .max(5),
+  otherBusinessDescription: z.string().trim().max(240).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      value.businessProfileKey === "other-mixed-business" &&
+      !value.otherBusinessDescription?.trim()
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Tell us what your business does",
+        path: ["otherBusinessDescription"],
+      })
+    }
+  })
 
 export type BusinessValues = z.infer<typeof businessSchema>
 
@@ -128,23 +140,43 @@ export type OwnerValues = z.infer<typeof ownerSchema>
 
 // ─── Full Signup Payload ──────────────────────────────────────────────────────
 
-export const signupPayloadSchema = z.object({
-  addressLine1: z.string().min(3).max(200),
-  accessToken: z.string().trim().min(1).optional(),
-  subdomain: z.string().min(3).max(32),
-  customDomain: z.string().optional().or(z.literal("")),
-  businessName: z.string().min(2).max(120),
-  city: z.string().min(2).max(120),
-  industry: z.string().min(1),
-  businessSize: z.string().min(1),
-  countryCode: z.string().min(1),
-  currencyCode: z.enum(OPERATING_CURRENCY_CODES),
-  phone: z.string().min(7).max(20),
-  region: z.string().max(120).optional().or(z.literal("")),
-  firstName: z.string().min(1).max(80),
-  lastName: z.string().min(1).max(80),
-  email: z.string().email().max(200),
-  password: z.string().min(8).max(128),
-})
+export const signupPayloadSchema = z
+  .object({
+    addressLine1: z.string().min(3).max(200),
+    accessToken: z.string().trim().min(1).optional(),
+    subdomain: z.string().min(3).max(32),
+    customDomain: z.string().optional().or(z.literal("")),
+    businessName: z.string().min(2).max(120),
+    city: z.string().min(2).max(120),
+    businessProfileKey: z
+      .string()
+      .trim()
+      .refine(isBusinessProfileKey, "Select your business category"),
+    businessProfileVersion: z.literal(BUSINESS_PROFILE_SCHEMA_VERSION),
+    businessSize: z.enum(BUSINESS_TEAM_SIZE_KEYS),
+    countryCode: z.string().min(1),
+    currencyCode: z.enum(OPERATING_CURRENCY_CODES),
+    phone: z.string().min(7).max(20),
+    region: z.string().max(120).optional().or(z.literal("")),
+    firstName: z.string().min(1).max(80),
+    lastName: z.string().min(1).max(80),
+    email: z.string().email().max(200),
+    password: z.string().min(8).max(128),
+    operatingModel: z.enum(BUSINESS_OPERATING_MODEL_KEYS),
+    orderChannels: z.array(z.enum(BUSINESS_ORDER_CHANNEL_KEYS)).min(1).max(5),
+    otherBusinessDescription: z.string().trim().max(240).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      value.businessProfileKey === "other-mixed-business" &&
+      !value.otherBusinessDescription?.trim()
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Tell us what your business does",
+        path: ["otherBusinessDescription"],
+      })
+    }
+  })
 
 export type SignupPayload = z.infer<typeof signupPayloadSchema>

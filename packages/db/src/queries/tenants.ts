@@ -4,9 +4,11 @@ import type {
   TenantMode,
   TenantType,
 } from "../../generated/prisma/client"
+import { readBusinessProfileKeyFromStoreMetadata } from "@ewatrade/utils"
 import type { DbClient } from "./types"
 
 export type TenantStore = {
+  businessProfileKey: string | null
   id: string
   slug: string
   name: string
@@ -67,6 +69,7 @@ export async function getActiveTenantForUser(
               name: true,
               status: true,
               currencyCode: true,
+              metadata: true,
             },
             orderBy: { createdAt: "asc" },
           },
@@ -77,7 +80,14 @@ export async function getActiveTenantForUser(
 
   if (!membership) return null
 
-  const stores = membership.tenant.stores
+  const stores = membership.tenant.stores.map((store) => ({
+    businessProfileKey: readBusinessProfileKeyFromStoreMetadata(store.metadata),
+    currencyCode: store.currencyCode,
+    id: store.id,
+    name: store.name,
+    slug: store.slug,
+    status: store.status,
+  }))
   const activeStore =
     stores.find((store) => store.status === "ACTIVE") ?? stores[0] ?? null
 

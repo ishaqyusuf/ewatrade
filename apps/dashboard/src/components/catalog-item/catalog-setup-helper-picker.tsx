@@ -6,11 +6,17 @@ import {
   type CatalogSetupHelperKind,
   listCatalogSetupHelpers,
 } from "@ewatrade/utils/catalog-setup-helpers"
+import {
+  findBusinessProfile,
+  getRecommendedCatalogSetupHelperKeys,
+  rankCatalogSetupHelpersForBusinessProfile,
+} from "@ewatrade/utils/business-profiles"
 import { Cancel01Icon, Search01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 type CatalogSetupHelperPickerProps = {
+  businessProfileKey?: string | null
   kind: CatalogSetupHelperKind
   onClose: () => void
   onSelect: (helper: CatalogSetupHelper | null) => void
@@ -21,10 +27,12 @@ type CatalogSetupHelperPickerProps = {
 function HelperRow({
   helper,
   onSelect,
+  personalized,
   selected,
 }: {
   helper: CatalogSetupHelper
   onSelect: () => void
+  personalized: boolean
   selected: boolean
 }) {
   return (
@@ -38,6 +46,10 @@ function HelperRow({
         {selected ? (
           <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
             Selected
+          </span>
+        ) : personalized ? (
+          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+            For your business
           </span>
         ) : helper.recommended ? (
           <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
@@ -63,6 +75,7 @@ function HelperRow({
 }
 
 export function CatalogSetupHelperPicker({
+  businessProfileKey,
   kind,
   onClose,
   onSelect,
@@ -71,14 +84,26 @@ export function CatalogSetupHelperPicker({
 }: CatalogSetupHelperPickerProps) {
   const [query, setQuery] = useState("")
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const businessProfile = findBusinessProfile(businessProfileKey)
+  const recommendedHelperKeys = useMemo(
+    () =>
+      getRecommendedCatalogSetupHelperKeys({
+        kind,
+        profileKey: businessProfileKey,
+      }),
+    [businessProfileKey, kind],
+  )
+  const recommendedHelperKeySet = useMemo(
+    () => new Set(recommendedHelperKeys),
+    [recommendedHelperKeys],
+  )
   const helpers = useMemo(
     () =>
-      listCatalogSetupHelpers({ kind, query }).sort(
-        (left, right) =>
-          Number(Boolean(right.recommended)) -
-          Number(Boolean(left.recommended)),
+      rankCatalogSetupHelpersForBusinessProfile(
+        listCatalogSetupHelpers({ kind, query }),
+        businessProfileKey,
       ),
-    [kind, query],
+    [businessProfileKey, kind, query],
   )
   const patterns = helpers.filter(
     (helper) => helper.classification === "pattern",
@@ -119,7 +144,9 @@ export function CatalogSetupHelperPicker({
             Choose a quick setup
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Pick a starting point, then review and edit it before saving.
+            {businessProfile
+              ? `${businessProfile.title} suggestions appear first. Review and edit before saving.`
+              : "Pick a starting point, then review and edit it before saving."}
           </p>
         </div>
         <Button
@@ -162,6 +189,7 @@ export function CatalogSetupHelperPicker({
                 helper={helper}
                 key={helper.key}
                 onSelect={() => onSelect(helper)}
+                personalized={recommendedHelperKeySet.has(helper.key)}
                 selected={selectedKey === helper.key}
               />
             ))}
@@ -178,6 +206,7 @@ export function CatalogSetupHelperPicker({
                 helper={helper}
                 key={helper.key}
                 onSelect={() => onSelect(helper)}
+                personalized={recommendedHelperKeySet.has(helper.key)}
                 selected={selectedKey === helper.key}
               />
             ))}

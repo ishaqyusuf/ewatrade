@@ -2,7 +2,13 @@
 
 import { Button } from "@ewatrade/ui"
 import {
+  BUSINESS_OPERATING_MODELS,
+  BUSINESS_ORDER_CHANNELS,
+  BUSINESS_PROFILES,
+  BUSINESS_PROFILE_SCHEMA_VERSION,
+  BUSINESS_TEAM_SIZES,
   OPERATING_CURRENCIES,
+  findBusinessProfile,
   suggestCurrencyForCountry,
 } from "@ewatrade/utils"
 import { Add01Icon, Store04Icon } from "@hugeicons/core-free-icons"
@@ -19,29 +25,36 @@ const COUNTRIES = [
   { code: "OTHER", label: "Other" },
 ]
 
-const SALES_METHODS = [
-  "In-store sales",
-  "Delivery and pickup",
-  "WhatsApp/order links",
-  "Mixed channels",
-]
-
-const TEAM_SIZES = ["Just me", "2-5 people", "6-10 people", "11+ people"]
-
 export default function SetupPage() {
   const router = useRouter()
   const [storeName, setStoreName] = useState("")
+  const [businessProfileKey, setBusinessProfileKey] = useState("")
+  const [otherBusinessDescription, setOtherBusinessDescription] = useState("")
   const [countryCode, setCountryCode] = useState("NG")
   const [currency, setCurrency] = useState("NGN")
-  const [salesMethod, setSalesMethod] = useState("In-store sales")
+  const [operatingModel, setOperatingModel] = useState("products")
+  const [salesMethod, setSalesMethod] = useState("walk_in")
   const [supportEmail, setSupportEmail] = useState("")
-  const [teamSize, setTeamSize] = useState("Just me")
+  const [teamSize, setTeamSize] = useState("solo")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   function handleCountryChange(value: string) {
     setCountryCode(value)
     setCurrency(suggestCurrencyForCountry(value))
+  }
+
+  function handleBusinessProfileChange(value: string) {
+    setBusinessProfileKey(value)
+    const profile = findBusinessProfile(value)
+    if (!profile) return
+    setOperatingModel(
+      profile.recommendedItemKinds.length === 1
+        ? profile.recommendedItemKinds[0] === "service"
+          ? "services"
+          : "products"
+        : "products_and_services",
+    )
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -58,8 +71,13 @@ export default function SetupPage() {
           name: storeName.trim(),
           currencyCode: currency,
           onboarding: {
+            businessProfileKey,
+            businessProfileVersion: BUSINESS_PROFILE_SCHEMA_VERSION,
             countryCode,
-            operatingModel: salesMethod,
+            operatingModel,
+            orderChannels: [salesMethod],
+            otherBusinessDescription:
+              otherBusinessDescription.trim() || undefined,
             salesMethod,
             teamSize,
           },
@@ -124,6 +142,70 @@ export default function SetupPage() {
             />
           </div>
 
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="business-profile" className="text-sm font-medium">
+              Business category <span className="text-destructive">*</span>
+            </label>
+            <select
+              id="business-profile"
+              required
+              value={businessProfileKey}
+              onChange={(event) =>
+                handleBusinessProfileChange(event.target.value)
+              }
+              className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+            >
+              <option value="">Select category…</option>
+              {BUSINESS_PROFILES.map((profile) => (
+                <option key={profile.key} value={profile.key}>
+                  {profile.title}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              We use this only to personalize setup suggestions.
+            </p>
+          </div>
+
+          {businessProfileKey === "other-mixed-business" ? (
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="other-business-description"
+                className="text-sm font-medium"
+              >
+                What does your business do?
+              </label>
+              <input
+                id="other-business-description"
+                required
+                value={otherBusinessDescription}
+                onChange={(event) =>
+                  setOtherBusinessDescription(event.target.value)
+                }
+                placeholder="Describe your products or services"
+                className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+              />
+            </div>
+          ) : null}
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="operating-model" className="text-sm font-medium">
+              What will you manage?
+            </label>
+            <select
+              id="operating-model"
+              value={operatingModel}
+              onChange={(event) => setOperatingModel(event.target.value)}
+              className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+            >
+              {BUSINESS_OPERATING_MODELS.map((model) => (
+                <option key={model.key} value={model.key}>
+                  {model.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <label htmlFor="country" className="text-sm font-medium">
@@ -173,9 +255,9 @@ export default function SetupPage() {
                 onChange={(e) => setSalesMethod(e.target.value)}
                 className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
               >
-                {SALES_METHODS.map((method) => (
-                  <option key={method} value={method}>
-                    {method}
+                {BUSINESS_ORDER_CHANNELS.map((channel) => (
+                  <option key={channel.key} value={channel.key}>
+                    {channel.label}
                   </option>
                 ))}
               </select>
@@ -191,9 +273,9 @@ export default function SetupPage() {
                 onChange={(e) => setTeamSize(e.target.value)}
                 className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
               >
-                {TEAM_SIZES.map((size) => (
-                  <option key={size} value={size}>
-                    {size}
+                {BUSINESS_TEAM_SIZES.map((size) => (
+                  <option key={size.key} value={size.key}>
+                    {size.label}
                   </option>
                 ))}
               </select>
@@ -226,7 +308,7 @@ export default function SetupPage() {
 
           <Button
             type="submit"
-            disabled={loading || !storeName.trim()}
+            disabled={loading || !storeName.trim() || !businessProfileKey}
             className="mt-1 h-10 w-full rounded-xl"
           >
             <HugeiconsIcon icon={Add01Icon} className="size-4" />

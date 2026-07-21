@@ -195,7 +195,8 @@ This web surface must stay small and separate from future full storefront browsi
 
 - Splash
 - Login with bold sign-up action
-- Sign up with Google/Gmail or name, email, business name
+- Sign up with business identity, searchable Business Profile, operating model,
+  order channels and team size, then Google/Gmail or name/email OTP
 - OTP verification
 - Active business resolution
 - First product setup
@@ -479,7 +480,11 @@ Splash, login, sign-up, and OTP verification use shared auth primitives so the e
 
 - `AuthHeader` owns the icon, title, supporting copy, and optional badge treatment for simple auth/onboarding screens; richer one-off verification screens can use their own thin shell when a reference-driven layout requires it.
 - `AuthMethodButton` owns haptic third-party auth choices such as Google sign-up/sign-in.
-- Owner sign-up remains intentionally short: business name, full name, and email address for email OTP, with Google available after business name entry.
+- Owner sign-up remains progressive: business identity/location first, a
+  searchable 15-category personalization step second, and account authentication
+  last. Profile selection includes Products/Services/Both, order channels, team
+  size, and conditional Other/Mixed description. Google and email OTP submit
+  the same bounded profile snapshot.
 - Login keeps the new-user CTA visually stronger than a plain text link.
 - OTP verification follows the approved reference-led PIN pattern: off-white/light or matte dark screen canvas, a small circular back action, centered headline and delivery copy, six separated display cells, an in-screen rounded numeric keypad with phone-letter hints, clipboard paste, delete, resend/loading/error feedback, and a compact local fallback note for dev/test paths.
 - The OTP route should keep logic thin by using shared `OtpInput` and `OtpKeypad` primitives instead of local keypad/cell implementations. The reference variant may suppress the system keyboard while preserving the older numeric TextInput OTP behavior for other flows.

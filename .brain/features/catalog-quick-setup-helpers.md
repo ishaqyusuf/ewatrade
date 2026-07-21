@@ -57,6 +57,10 @@ industry-specific runtime branches, preset prices, or automatic saving.
   keyboard controller, and matches the helper metadata. The scroll content
   reserves space for the search footer so the final rows remain reachable.
   Recommended recipes sort first and carry a visible recommendation badge.
+- When a Store has a validated Business Profile, profile-mapped helpers rank
+  before generic recommendations and carry a `For your business` badge. The
+  selected profile changes ordering and copy only; it never hides helpers or
+  changes their Product/Service semantics.
 - Applying a helper suggests its example name only when the item name is empty,
   preserves merchant-entered identity/base-price fields, and prefills editable
   units, exact factors, stock behavior, options, and Service policies.

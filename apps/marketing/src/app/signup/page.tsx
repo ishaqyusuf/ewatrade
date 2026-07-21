@@ -146,7 +146,8 @@ export default function SignupPage() {
         customDomain: formState.workspace?.customDomain ?? "",
         businessName: formState.business?.businessName ?? "",
         city: formState.business?.city ?? "",
-        industry: formState.business?.industry ?? "",
+        businessProfileKey: formState.business?.businessProfileKey ?? "",
+        businessProfileVersion: 1 as const,
         businessSize: formState.business?.businessSize ?? "",
         countryCode: formState.business?.countryCode ?? "",
         currencyCode: formState.business?.currencyCode ?? "NGN",
@@ -156,6 +157,10 @@ export default function SignupPage() {
         lastName: data.lastName,
         email: data.email,
         password: data.password,
+        operatingModel: formState.business?.operatingModel ?? "products",
+        orderChannels: formState.business?.orderChannels ?? [],
+        otherBusinessDescription:
+          formState.business?.otherBusinessDescription ?? undefined,
       }
 
       const response = await fetch("/api/auth/signup", {

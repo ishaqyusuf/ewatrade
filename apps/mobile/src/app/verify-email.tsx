@@ -5,7 +5,13 @@ import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { useTRPC } from "@/trpc/client"
-import { normalizeOperatingCurrencyCode } from "@ewatrade/utils"
+import {
+  BUSINESS_OPERATING_MODEL_KEYS,
+  BUSINESS_ORDER_CHANNEL_KEYS,
+  BUSINESS_PROFILE_SCHEMA_VERSION,
+  BUSINESS_TEAM_SIZE_KEYS,
+  normalizeOperatingCurrencyCode,
+} from "@ewatrade/utils"
 import { useMutation } from "@tanstack/react-query"
 import * as Clipboard from "expo-clipboard"
 import { Link, useLocalSearchParams } from "expo-router"
@@ -31,13 +37,19 @@ export default function VerifyEmailRoute() {
   )
   const params = useLocalSearchParams<{
     addressLine1?: string
+    businessProfileKey?: string
+    businessProfileVersion?: string
     businessName?: string
     city?: string
     currencyCode?: string
     email?: string
     mode?: "login" | "sign-up"
     name?: string
+    operatingModel?: string
+    orderChannels?: string
+    otherBusinessDescription?: string
     phone?: string
+    teamSize?: string
   }>()
   const email = firstParam(params.email)?.trim() ?? ""
   const mode = firstParam(params.mode) === "login" ? "login" : "sign-up"
@@ -45,8 +57,29 @@ export default function VerifyEmailRoute() {
   const emailDeliveryLabel = email || "your email address"
   const name = firstParam(params.name) ?? "Store Owner"
   const addressLine1 = firstParam(params.addressLine1)
+  const businessProfileKey = firstParam(params.businessProfileKey)
+  const businessProfileVersion =
+    firstParam(params.businessProfileVersion) ===
+    String(BUSINESS_PROFILE_SCHEMA_VERSION)
+      ? BUSINESS_PROFILE_SCHEMA_VERSION
+      : undefined
   const city = firstParam(params.city)
+  const operatingModelValue = firstParam(params.operatingModel)
+  const operatingModel = BUSINESS_OPERATING_MODEL_KEYS.find(
+    (value) => value === operatingModelValue,
+  )
+  const requestedOrderChannels = new Set(
+    (firstParam(params.orderChannels) ?? "").split(",").filter(Boolean),
+  )
+  const orderChannels = BUSINESS_ORDER_CHANNEL_KEYS.filter((value) =>
+    requestedOrderChannels.has(value),
+  )
+  const otherBusinessDescription = firstParam(params.otherBusinessDescription)
   const phone = firstParam(params.phone)
+  const teamSizeValue = firstParam(params.teamSize)
+  const teamSize = BUSINESS_TEAM_SIZE_KEYS.find(
+    (value) => value === teamSizeValue,
+  )
   const businessName = firstParam(params.businessName) ?? "My Business"
   const currencyCode = normalizeOperatingCurrencyCode(
     firstParam(params.currencyCode),
@@ -106,6 +139,8 @@ export default function VerifyEmailRoute() {
 
     verifyOtpMutation.mutate({
       addressLine1,
+      businessProfileKey,
+      businessProfileVersion,
       businessName,
       city,
       currencyCode,
@@ -113,19 +148,29 @@ export default function VerifyEmailRoute() {
       email,
       mode: apiMode,
       name,
+      operatingModel,
+      orderChannels,
+      otherBusinessDescription,
       phone,
+      teamSize,
     })
   }, [
     apiMode,
     addressLine1,
+    businessProfileKey,
+    businessProfileVersion,
     businessName,
     city,
     code,
     currencyCode,
     email,
     name,
+    operatingModel,
+    orderChannels,
+    otherBusinessDescription,
     phone,
     status,
+    teamSize,
     verifyOtpMutation,
   ])
 
@@ -183,25 +228,37 @@ export default function VerifyEmailRoute() {
 
     requestOtpMutation.mutate({
       addressLine1,
+      businessProfileKey,
+      businessProfileVersion,
       businessName,
       city,
       currencyCode,
       email,
       mode: apiMode,
       name,
+      operatingModel,
+      orderChannels,
+      otherBusinessDescription,
       phone,
+      teamSize,
     })
   }, [
     apiMode,
     addressLine1,
+    businessProfileKey,
+    businessProfileVersion,
     businessName,
     city,
     currencyCode,
     email,
     isVerifying,
     name,
+    operatingModel,
+    orderChannels,
+    otherBusinessDescription,
     phone,
     requestOtpMutation,
+    teamSize,
   ])
 
   return (

@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "profiles": [
+    {
+      "key": "general-retail-groceries",
+      "title": "General retail and groceries",
+      "description": "Provision stores, mini-marts, supermarkets, and mixed everyday retail.",
+      "tags": ["retail", "grocery", "provisions", "supermarket", "shop"],
+      "recommendedItemKinds": ["product"],
+      "recommendedHelperKeys": ["counted-item", "shared-pack-carton", "measured-weight", "measured-volume"]
+    },
+    {
+      "key": "animal-feed-agricultural-supplies",
+      "title": "Animal feed and agricultural supplies",
+      "description": "Poultry, fish, and livestock feed plus seeds, fertilizer, and farm supplies.",
+      "tags": ["feed", "poultry", "farm", "agriculture", "bag", "kilogram"],
+      "recommendedItemKinds": ["product"],
+      "recommendedHelperKeys": ["feed-bag-50kg", "feed-bag-25kg", "prepared-portions"]
+    },
+    {
+      "key": "fashion-apparel",
+      "title": "Fashion and apparel",
+      "description": "Clothing, shoes, bags, accessories, and other size or colour-based goods.",
+      "tags": ["fashion", "apparel", "clothing", "shoes", "size", "colour"],
+      "recommendedItemKinds": ["product"],
+      "recommendedHelperKeys": ["apparel-size-colour", "counted-item", "shared-pack-carton"]
+    },
+    {
+      "key": "fabrics-tailoring",
+      "title": "Fabrics and tailoring",
+      "description": "Fabric sellers, tailors, fashion designers, alterations, and made-to-measure work.",
+      "tags": ["fabric", "tailoring", "designer", "metre", "roll", "alteration"],
+      "recommendedItemKinds": ["product", "service"],
+      "recommendedHelperKeys": ["fabric-roll-metre", "tracked-fixed-service", "tracked-quote-service"]
+    },
+    {
+      "key": "drinks-water-distribution",
+      "title": "Drinks and water distribution",
+      "description": "Bottled water, soft drinks, beverages, depots, and crate-based sales.",
+      "tags": ["drinks", "water", "beverage", "bottle", "crate", "depot"],
+      "recommendedItemKinds": ["product"],
+      "recommendedHelperKeys": ["drinks-bottle-crate", "shared-pack-carton", "counted-item"]
+    },
+    {
+      "key": "food-bakery-catering",
+      "title": "Food, bakery, and catering",
+      "description": "Restaurants, bakeries, caterers, meal vendors, and prepared food businesses.",
+      "tags": ["food", "restaurant", "bakery", "catering", "meal", "portion"],
+      "recommendedItemKinds": ["product", "service"],
+      "recommendedHelperKeys": ["counted-item", "measured-volume", "simple-fixed-service", "tracked-quote-service"]
+    },
+    {
+      "key": "beauty-salon-spa",
+      "title": "Beauty, salon, barbershop, and spa",
+      "description": "Beauty products and fixed or tracked personal-care services.",
+      "tags": ["beauty", "cosmetics", "salon", "barber", "spa", "hair"],
+      "recommendedItemKinds": ["product", "service"],
+      "recommendedHelperKeys": ["counted-item", "simple-fixed-service", "tracked-fixed-service"]
+    },
+    {
+      "key": "laundry-dry-cleaning",
+      "title": "Laundry and dry cleaning",
+      "description": "Garment washing, ironing, dry cleaning, express work, and pickup-ready services.",
+      "tags": ["laundry", "dry cleaning", "garment", "washing", "ironing", "express"],
+      "recommendedItemKinds": ["service"],
+      "recommendedHelperKeys": ["dry-cleaning-laundry", "tracked-fixed-service"]
+    },
+    {
+      "key": "electronics-phone-shops",
+      "title": "Electronics and phone shops",
+      "description": "Phones, computers, accessories, appliances, and optional device repair work.",
+      "tags": ["electronics", "phone", "computer", "accessories", "appliance", "device"],
+      "recommendedItemKinds": ["product", "service"],
+      "recommendedHelperKeys": ["counted-item", "apparel-size-colour", "device-repair"]
+    },
+    {
+      "key": "repair-maintenance",
+      "title": "Repair and maintenance",
+      "description": "Device, appliance, equipment, and general inspection or repair services.",
+      "tags": ["repair", "maintenance", "technician", "inspection", "quote", "parts"],
+      "recommendedItemKinds": ["service", "product"],
+      "recommendedHelperKeys": ["device-repair", "tracked-quote-service", "tracked-fixed-service", "counted-item"]
+    },
+    {
+      "key": "pharmacy-health-retail",
+      "title": "Pharmacy and health retail",
+      "description": "Medicine, wellness, personal-care, and other counted or packaged health goods.",
+      "tags": ["pharmacy", "medicine", "health", "wellness", "pack", "expiry"],
+      "recommendedItemKinds": ["product"],
+      "recommendedHelperKeys": ["counted-item", "shared-pack-carton"]
+    },
+    {
+      "key": "hardware-building-materials",
+      "title": "Hardware and building materials",
+      "description": "Cement, paint, pipes, electrical supplies, tools, and measured materials.",
+      "tags": ["hardware", "building", "cement", "paint", "length", "weight"],
+      "recommendedItemKinds": ["product"],
+      "recommendedHelperKeys": ["shared-pack-carton", "measured-length", "measured-weight", "measured-volume"]
+    },
+    {
+      "key": "wholesale-distribution",
+      "title": "Wholesale and distribution",
+      "description": "Bulk sellers, distributors, depots, and businesses selling cartons, packs, and pieces.",
+      "tags": ["wholesale", "distribution", "bulk", "carton", "pack", "depot"],
+      "recommendedItemKinds": ["product"],
+      "recommendedHelperKeys": ["shared-pack-carton", "drinks-bottle-crate", "counted-item"]
+    },
+    {
+      "key": "professional-services",
+      "title": "Professional services",
+      "description": "Consulting, accounting, legal, design, training, and other client work.",
+      "tags": ["consulting", "accounting", "legal", "design", "training", "quote"],
+      "recommendedItemKinds": ["service"],
+      "recommendedHelperKeys": ["professional-consultation", "tracked-quote-service", "simple-fixed-service"]
+    },
+    {
+      "key": "other-mixed-business",
+      "title": "Other or mixed business",
+      "description": "A business that spans several categories or is not listed yet.",
+      "tags": ["other", "mixed", "general", "custom", "multiple"],
+      "recommendedItemKinds": ["product", "service"],
+      "recommendedHelperKeys": ["counted-item", "simple-fixed-service"]
+    }
+  ]
+}

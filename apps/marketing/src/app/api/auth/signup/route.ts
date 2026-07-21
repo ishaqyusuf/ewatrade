@@ -180,9 +180,10 @@ export async function POST(request: NextRequest) {
     addressLine1,
     subdomain,
     customDomain,
+    businessProfileKey,
+    businessProfileVersion,
     businessName,
     city,
-    industry,
     businessSize,
     countryCode,
     currencyCode,
@@ -192,10 +193,27 @@ export async function POST(request: NextRequest) {
     lastName,
     email,
     password,
+    operatingModel,
+    orderChannels,
+    otherBusinessDescription,
   } = result.data
 
   const normalizedEmail = email.toLowerCase()
   const normalizedPhone = phone.replace(/\s+/g, "")
+  const onboardingSnapshot = {
+    businessProfileKey,
+    businessProfileVersion,
+    capturedAt: new Date().toISOString(),
+    countryCode,
+    currencyCode,
+    operatingModel,
+    orderChannels,
+    ...(otherBusinessDescription?.trim()
+      ? { otherBusinessDescription: otherBusinessDescription.trim() }
+      : {}),
+    source: "marketing_signup",
+    teamSize: businessSize,
+  }
 
   // ── 2. Check existing account / slug ─────────────────────────────────────
   const [existingEmailUser, existingPhoneUser, existingTenant] =
@@ -384,7 +402,13 @@ export async function POST(request: NextRequest) {
           enabledModes: ["MERCHANT"],
           countryCode,
           currencyCode,
-          metadata: { industry, businessSize },
+          metadata: {
+            businessProfile: {
+              key: businessProfileKey,
+              schemaVersion: businessProfileVersion,
+            },
+            businessSize,
+          },
         },
       })
 
@@ -455,6 +479,11 @@ export async function POST(request: NextRequest) {
           city: city.trim(),
           countryCode,
           currencyCode,
+          metadata: {
+            retailOps: {
+              onboarding: onboardingSnapshot,
+            },
+          },
           name: businessName,
           region: region?.trim() || null,
           slug: "main",
@@ -471,6 +500,7 @@ export async function POST(request: NextRequest) {
             formData: {
               ...accessSessionFormData,
               completedAt: new Date().toISOString(),
+              onboarding: onboardingSnapshot,
               tenantId: tenant.id,
               tenantSlug: tenant.slug,
               userId: user.id,

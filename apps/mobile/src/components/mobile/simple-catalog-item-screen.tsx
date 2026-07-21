@@ -27,6 +27,7 @@ import {
   buildCatalogVariantCombinations,
   catalogUnitFactorToRelation,
   catalogUnitRelationToFactor,
+  findBusinessProfile,
   findCatalogSetupHelper,
   getCatalogSetupReplacementAction,
   isCatalogFixedPriceMissing,
@@ -168,11 +169,13 @@ function KindChoice({
   icon,
   label,
   onPress,
+  recommendation,
 }: {
   description: string
   icon: IconKeys
   label: string
   onPress: () => void
+  recommendation?: string
 }) {
   return (
     <Pressable
@@ -192,6 +195,11 @@ function KindChoice({
         <Text className="text-sm leading-5 text-muted-foreground">
           {description}
         </Text>
+        {recommendation ? (
+          <Text className="text-xs font-bold leading-5 text-primary">
+            {recommendation}
+          </Text>
+        ) : null}
       </View>
     </Pressable>
   )
@@ -360,6 +368,8 @@ export function SimpleCatalogItemScreen({
   const currencyCode = profile?.currencyCode ?? "NGN"
   const storesQuery = useQuery(trpc.tenant.stores.queryOptions())
   const stores = storesQuery.data ?? []
+  const businessProfileKey = stores[0]?.businessProfileKey ?? null
+  const businessProfile = findBusinessProfile(businessProfileKey)
   const selectedHelper = selectedHelperKey
     ? findCatalogSetupHelper(selectedHelperKey)
     : undefined
@@ -1335,12 +1345,22 @@ export function SimpleCatalogItemScreen({
             icon="Warehouse"
             label="Product"
             onPress={() => setKind("product")}
+            recommendation={
+              businessProfile?.recommendedItemKinds.includes("product")
+                ? `Recommended for ${businessProfile.title}`
+                : undefined
+            }
           />
           <KindChoice
             description="Work you price and deliver."
             icon="Wrench"
             label="Service"
             onPress={() => setKind("service")}
+            recommendation={
+              businessProfile?.recommendedItemKinds.includes("service")
+                ? `Recommended for ${businessProfile.title}`
+                : undefined
+            }
           />
         </View>
       </View>
@@ -1353,6 +1373,7 @@ export function SimpleCatalogItemScreen({
   return (
     <View className="flex-1">
       <CatalogSetupHelperPicker
+        businessProfileKey={businessProfileKey}
         kind={kind}
         onClose={() => setHelperPickerOpen(false)}
         onSelect={applyHelper}

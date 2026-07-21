@@ -6,6 +6,11 @@ Typed tRPC routers are the primary application contract.
 
 - `tenant.businesses` lists the authenticated user's active business
   memberships for mobile workspace switching.
+- `auth.requestMobileOwnerOtp`, `auth.verifyMobileOwnerOtp`, and
+  `auth.verifyMobileGoogle` carry bounded Business Profile personalization
+  answers through owner signup. Login remains profile-neutral.
+- `tenant.stores`, `tenant.current`, and `tenant.createStore` expose or capture
+  the validated Store Business Profile used for setup recommendations.
 - `tenant.featureAvailability` returns the active Store's record-derived
   feature presence plus business-wide Staff presence and the live sellable-item
   prerequisite.

@@ -1,5 +1,7 @@
 import {
+  BUSINESS_PROFILE_SCHEMA_VERSION,
   isOperatingCurrencyCode,
+  isBusinessProfileKey,
   normalizeOperatingCurrencyCode,
 } from "@ewatrade/utils"
 import { Prisma } from "../../generated/prisma/client"
@@ -23,9 +25,12 @@ export type CreateTenantStoreInput = {
 }
 
 export type CreateTenantStoreOnboardingInput = {
+  businessProfileKey?: string | null
+  businessProfileVersion?: number | null
   countryCode?: string | null
   operatingModel?: string | null
   orderChannels?: string[] | null
+  otherBusinessDescription?: string | null
   salesMethod?: string | null
   staffInvolvement?: string | null
   source?: string | null
@@ -83,10 +88,21 @@ function buildOnboardingMetadata(
     currencyCode,
     source: cleanText(onboarding.source) ?? "store_setup",
   }
+  const businessProfileKey = cleanText(onboarding.businessProfileKey)
+  if (businessProfileKey && !isBusinessProfileKey(businessProfileKey)) {
+    throw new Error("Unsupported business category.")
+  }
+  if (
+    onboarding.businessProfileVersion != null &&
+    onboarding.businessProfileVersion !== BUSINESS_PROFILE_SCHEMA_VERSION
+  ) {
+    throw new Error("Unsupported business profile version.")
+  }
 
   const fields = [
     ["countryCode", onboarding.countryCode],
     ["operatingModel", onboarding.operatingModel],
+    ["otherBusinessDescription", onboarding.otherBusinessDescription],
     ["salesMethod", onboarding.salesMethod],
     ["staffInvolvement", onboarding.staffInvolvement],
     ["teamSize", onboarding.teamSize],
@@ -96,6 +112,11 @@ function buildOnboardingMetadata(
     const text = cleanText(value)
     if (!text) continue
     onboardingMetadata[key] = text
+  }
+
+  if (businessProfileKey) {
+    onboardingMetadata.businessProfileKey = businessProfileKey
+    onboardingMetadata.businessProfileVersion = BUSINESS_PROFILE_SCHEMA_VERSION
   }
 
   const orderChannels = cleanTextArray(onboarding.orderChannels)

@@ -8,6 +8,7 @@ Detailed feature docs for implemented or planned product areas.
 - Link features to related APIs, schema entities, and workflows when those exist.
 
 ## Planned Features
+- [Business Profile Personalization](./business-profile-personalization.md)
 - [Progressive Feature Revealing](./progressive-feature-revealing.md)
 - [Catalog Quick-Setup Helpers](./catalog-quick-setup-helpers.md)
 - [Generic Catalog, Inventory Units, And Stock Operations](./generic-catalog-inventory-units-stock-operations.md)

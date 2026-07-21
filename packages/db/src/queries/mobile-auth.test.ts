@@ -36,6 +36,7 @@ type AccountRow = {
 type StoreRow = {
   currencyCode?: string
   id: string
+  metadata?: unknown
   name: string
   slug?: string
   status: string
@@ -166,7 +167,7 @@ function createMockMobileAuthDb(input?: {
     onboardingSession: {
       create: async () => null,
     },
-    product: {
+    catalogItem: {
       count: async () => 0,
     },
     session: {
@@ -191,6 +192,7 @@ function createMockMobileAuthDb(input?: {
       }: {
         data: {
           currencyCode?: string
+          metadata?: unknown
           name: string
           slug: string
           status: string
@@ -200,6 +202,7 @@ function createMockMobileAuthDb(input?: {
         const store = {
           currencyCode: data.currencyCode,
           id: `store_${stores.length + 1}`,
+          metadata: data.metadata,
           name: data.name,
           slug: data.slug,
           status: data.status,
@@ -604,11 +607,16 @@ describe("mobile auth queries", () => {
   test("verifies new owner OTP signup by creating the first business and store", async () => {
     const db = createMockMobileAuthDb()
     const otp = await createMobileOwnerOtp(db.client, {
+      businessProfileKey: "animal-feed-agricultural-supplies",
+      businessProfileVersion: 1,
       businessName: " Main Market Store ",
       currencyCode: "GHS",
       email: "new-owner@example.com",
       mode: "sign_up",
       name: " New Owner ",
+      operatingModel: "products",
+      orderChannels: ["walk_in", "phone_whatsapp"],
+      teamSize: "2_5",
     })
 
     const session = await verifyMobileOwnerOtp(db.client, {
@@ -636,6 +644,18 @@ describe("mobile auth queries", () => {
       expect.objectContaining({
         id: "store_1",
         currencyCode: "GHS",
+        metadata: {
+          retailOps: {
+            onboarding: expect.objectContaining({
+              businessProfileKey: "animal-feed-agricultural-supplies",
+              businessProfileVersion: 1,
+              operatingModel: "products",
+              orderChannels: ["walk_in", "phone_whatsapp"],
+              source: "mobile_owner_signup",
+              teamSize: "2_5",
+            }),
+          },
+        },
         name: "Main Market Store",
         slug: "main-market-store",
         status: "ACTIVE",
@@ -754,13 +774,18 @@ describe("mobile auth queries", () => {
     const db = createMockMobileAuthDb()
 
     const session = await verifyMobileGoogleIdentity(db.client, {
+      businessProfileKey: "laundry-dry-cleaning",
+      businessProfileVersion: 1,
       businessName: " Main Market Store ",
       currencyCode: "USD",
       email: "new-google-owner@example.com",
       idToken: "new-google-id-token",
       mode: "sign_up",
       name: " New Google Owner ",
+      operatingModel: "services",
+      orderChannels: ["walk_in", "phone_whatsapp"],
       providerAccountId: " new-google-owner ",
+      teamSize: "2_5",
     })
 
     expect(db.accounts).toEqual([
@@ -785,6 +810,18 @@ describe("mobile auth queries", () => {
       expect.objectContaining({
         id: "store_1",
         currencyCode: "USD",
+        metadata: {
+          retailOps: {
+            onboarding: expect.objectContaining({
+              businessProfileKey: "laundry-dry-cleaning",
+              businessProfileVersion: 1,
+              operatingModel: "services",
+              orderChannels: ["walk_in", "phone_whatsapp"],
+              source: "mobile_owner_signup",
+              teamSize: "2_5",
+            }),
+          },
+        },
         name: "Main Market Store",
         slug: "main-market-store",
         status: "ACTIVE",

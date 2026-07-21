@@ -32,7 +32,11 @@ describe("tenant schemas", () => {
       currencyCode: " ngn ",
       name: " Main Branch ",
       onboarding: {
+        businessProfileKey: " animal-feed-agricultural-supplies ",
+        businessProfileVersion: 1,
         countryCode: " ng ",
+        operatingModel: " products ",
+        orderChannels: [" walk_in ", "phone_whatsapp"],
         salesMethod: " In store ",
         teamSize: "   ",
       },
@@ -44,7 +48,11 @@ describe("tenant schemas", () => {
       currencyCode: "NGN",
       name: "Main Branch",
       onboarding: {
+        businessProfileKey: "animal-feed-agricultural-supplies",
+        businessProfileVersion: 1,
         countryCode: "ng",
+        operatingModel: "products",
+        orderChannels: ["walk_in", "phone_whatsapp"],
         salesMethod: "In store",
         teamSize: undefined,
       },
@@ -94,6 +102,19 @@ describe("tenant schemas", () => {
       name: "Main Branch",
       onboarding: {
         countryCode: "1".repeat(9),
+      },
+    })
+    expectRejected(createStoreSchema, {
+      name: "Main Branch",
+      onboarding: {
+        businessProfileKey: "dry_cleaning_runtime",
+      },
+    })
+    expectRejected(createStoreSchema, {
+      name: "Main Branch",
+      onboarding: {
+        businessProfileKey: "laundry-dry-cleaning",
+        businessProfileVersion: 2,
       },
     })
   })

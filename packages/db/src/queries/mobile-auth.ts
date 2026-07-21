@@ -1,5 +1,6 @@
 import { createHash, randomBytes, randomInt } from "node:crypto"
 import {
+  type BusinessOperatingModel,
   type OperatingCurrencyCode,
   normalizeOperatingCurrencyCode,
 } from "@ewatrade/utils"
@@ -44,6 +45,8 @@ export type MobileOwnerOtpResult = {
 
 export type MobileGoogleIdentityInput = {
   addressLine1?: string | null
+  businessProfileKey?: string | null
+  businessProfileVersion?: 1 | null
   businessName?: string | null
   city?: string | null
   currencyCode?: OperatingCurrencyCode | null
@@ -52,8 +55,12 @@ export type MobileGoogleIdentityInput = {
   image?: string | null
   mode: MobileAuthMode
   name?: string | null
+  operatingModel?: BusinessOperatingModel | null
+  orderChannels?: string[] | null
+  otherBusinessDescription?: string | null
   phone?: string | null
   providerAccountId: string
+  teamSize?: string | null
 }
 
 const OTP_TTL_MINUTES = 10
@@ -225,11 +232,17 @@ async function ensureOwnerTenant(
   db: DbClient,
   input: {
     addressLine1?: string | null
+    businessProfileKey?: string | null
+    businessProfileVersion?: 1 | null
     businessName: string
     city?: string | null
     currencyCode: OperatingCurrencyCode
+    operatingModel?: BusinessOperatingModel | null
+    orderChannels?: string[] | null
+    otherBusinessDescription?: string | null
     userId: string
     phone?: string | null
+    teamSize?: string | null
   },
 ): Promise<MobileAuthTenantSummary> {
   const existing = await getFirstActiveTenantForUser(db, {
@@ -260,7 +273,13 @@ async function ensureOwnerTenant(
     currencyCode: tenant.currencyCode,
     name: input.businessName,
     onboarding: {
+      businessProfileKey: input.businessProfileKey,
+      businessProfileVersion: input.businessProfileVersion,
+      operatingModel: input.operatingModel,
+      orderChannels: input.orderChannels,
+      otherBusinessDescription: input.otherBusinessDescription,
       source: "mobile_owner_signup",
+      teamSize: input.teamSize,
     },
     tenantId: tenant.id,
     supportPhone: input.phone,
@@ -303,13 +322,19 @@ export async function createMobileOwnerOtp(
   db: DbClient,
   input: {
     addressLine1?: string | null
+    businessProfileKey?: string | null
+    businessProfileVersion?: 1 | null
     businessName?: string | null
     city?: string | null
     currencyCode?: OperatingCurrencyCode | null
     email: string
     mode: MobileAuthMode
     name?: string | null
+    operatingModel?: BusinessOperatingModel | null
+    orderChannels?: string[] | null
+    otherBusinessDescription?: string | null
     phone?: string | null
+    teamSize?: string | null
   },
 ): Promise<MobileOwnerOtpResult> {
   const email = normalizeEmail(input.email)
@@ -347,6 +372,8 @@ export async function createMobileOwnerOtp(
       identifier,
       value: JSON.stringify({
         addressLine1: cleanText(input.addressLine1),
+        businessProfileKey: cleanText(input.businessProfileKey),
+        businessProfileVersion: input.businessProfileVersion === 1 ? 1 : null,
         businessName: cleanText(input.businessName),
         city: cleanText(input.city),
         codeHash: hashOtp(code),
@@ -356,7 +383,11 @@ export async function createMobileOwnerOtp(
             : null,
         mode: input.mode,
         name: cleanText(input.name),
+        operatingModel: cleanText(input.operatingModel),
+        orderChannels: input.orderChannels ?? [],
+        otherBusinessDescription: cleanText(input.otherBusinessDescription),
         phone: cleanText(input.phone),
+        teamSize: cleanText(input.teamSize),
       }),
     },
   })
@@ -372,6 +403,8 @@ export async function verifyMobileOwnerOtp(
   db: DbClient,
   input: {
     addressLine1?: string | null
+    businessProfileKey?: string | null
+    businessProfileVersion?: 1 | null
     businessName?: string | null
     city?: string | null
     code: string
@@ -379,7 +412,11 @@ export async function verifyMobileOwnerOtp(
     email: string
     mode: MobileAuthMode
     name?: string | null
+    operatingModel?: BusinessOperatingModel | null
+    orderChannels?: string[] | null
+    otherBusinessDescription?: string | null
     phone?: string | null
+    teamSize?: string | null
   },
 ): Promise<MobileAuthSessionResult> {
   const email = normalizeEmail(input.email)
@@ -398,12 +435,18 @@ export async function verifyMobileOwnerOtp(
 
   let payload: {
     addressLine1?: string | null
+    businessProfileKey?: string | null
+    businessProfileVersion?: 1 | null
     businessName?: string | null
     city?: string | null
     codeHash?: string
     currencyCode?: OperatingCurrencyCode | null
     name?: string | null
+    operatingModel?: BusinessOperatingModel | null
+    orderChannels?: string[] | null
+    otherBusinessDescription?: string | null
     phone?: string | null
+    teamSize?: string | null
   }
 
   try {
@@ -429,8 +472,21 @@ export async function verifyMobileOwnerOtp(
     cleanText(payload.businessName) ??
     "My Business"
   const addressLine1 = cleanText(input.addressLine1) ?? cleanText(payload.addressLine1)
+  const businessProfileKey =
+    cleanText(input.businessProfileKey) ?? cleanText(payload.businessProfileKey)
+  const businessProfileVersion =
+    input.businessProfileVersion === 1 || payload.businessProfileVersion === 1
+      ? 1
+      : null
   const city = cleanText(input.city) ?? cleanText(payload.city)
+  const operatingModel =
+    input.operatingModel ?? payload.operatingModel ?? null
+  const orderChannels = input.orderChannels ?? payload.orderChannels ?? []
+  const otherBusinessDescription =
+    cleanText(input.otherBusinessDescription) ??
+    cleanText(payload.otherBusinessDescription)
   const phone = cleanText(input.phone) ?? cleanText(payload.phone)
+  const teamSize = cleanText(input.teamSize) ?? cleanText(payload.teamSize)
   const currencyCode = normalizeOperatingCurrencyCode(
     input.currencyCode ?? payload.currencyCode,
   )
@@ -475,11 +531,17 @@ export async function verifyMobileOwnerOtp(
     input.mode === "sign_up"
       ? await ensureOwnerTenant(db, {
           addressLine1,
+          businessProfileKey,
+          businessProfileVersion,
           businessName,
           city,
           currencyCode,
+          operatingModel,
+          orderChannels,
+          otherBusinessDescription,
           userId: user.id,
           phone,
+          teamSize,
         })
       : await getFirstActiveTenantForUser(db, { userId: user.id })
 
@@ -611,11 +673,17 @@ export async function verifyMobileGoogleIdentity(
     input.mode === "sign_up"
       ? await ensureOwnerTenant(db, {
           addressLine1: input.addressLine1,
+          businessProfileKey: input.businessProfileKey,
+          businessProfileVersion: input.businessProfileVersion,
           businessName,
           city: input.city,
           currencyCode: normalizeOperatingCurrencyCode(input.currencyCode),
+          operatingModel: input.operatingModel,
+          orderChannels: input.orderChannels,
+          otherBusinessDescription: input.otherBusinessDescription,
           userId: user.id,
           phone: input.phone,
+          teamSize: input.teamSize,
         })
       : await getFirstActiveTenantForUser(db, { userId: user.id })
 

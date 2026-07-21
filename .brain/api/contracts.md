@@ -25,6 +25,18 @@
   Switching a production business updates the authenticated mobile session
   profile and clears the query cache before the selected context refetches.
 
+## Signup And Business Profiles
+
+- Browser signup, mobile email-OTP signup, mobile Google signup, and Store
+  creation accept a validated Business Profile key/version plus bounded
+  Products/Services/Both, order-channel, team-size, and optional Other/Mixed
+  description fields.
+- Signup profile fields are descriptive onboarding context. They never grant
+  permissions, gate features, or choose Product/Service runtime behavior.
+- `tenant.stores` and `tenant.current` expose the validated
+  `businessProfileKey` on each Store for client-side recommendation ranking;
+  malformed or retired metadata is projected as null.
+
 ## Catalog
 
 - Item kind is immutable after creation.

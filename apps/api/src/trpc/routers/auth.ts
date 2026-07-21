@@ -9,7 +9,14 @@ import {
   createTestRoutedEmailMessages,
   dispatchEmailMessages,
 } from "@ewatrade/email"
-import { OPERATING_CURRENCY_CODES } from "@ewatrade/utils"
+import {
+  BUSINESS_OPERATING_MODEL_KEYS,
+  BUSINESS_ORDER_CHANNEL_KEYS,
+  BUSINESS_PROFILE_SCHEMA_VERSION,
+  BUSINESS_TEAM_SIZE_KEYS,
+  OPERATING_CURRENCY_CODES,
+  isBusinessProfileKey,
+} from "@ewatrade/utils"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { verifyGoogleIdToken } from "../../auth/mobile-google"
@@ -18,17 +25,29 @@ import { createTRPCRouter, publicProcedure } from "../init"
 const emailSchema = z.string().trim().toLowerCase().pipe(z.email())
 
 const mobileAuthModeSchema = z.enum(["login", "sign_up"])
+const businessProfileKeySchema = z
+  .string()
+  .trim()
+  .refine(isBusinessProfileKey, "Select a supported business category")
 
 export const requestMobileOwnerOtpSchema = z
   .object({
     addressLine1: z.string().trim().min(3).max(200).optional(),
+    businessProfileKey: businessProfileKeySchema.optional(),
+    businessProfileVersion: z
+      .literal(BUSINESS_PROFILE_SCHEMA_VERSION)
+      .optional(),
     businessName: z.string().trim().min(1).max(120).optional(),
     city: z.string().trim().min(2).max(120).optional(),
     currencyCode: z.enum(OPERATING_CURRENCY_CODES).optional(),
     email: emailSchema,
     mode: mobileAuthModeSchema,
     name: z.string().trim().min(1).max(120).optional(),
+    operatingModel: z.enum(BUSINESS_OPERATING_MODEL_KEYS).optional(),
+    orderChannels: z.array(z.enum(BUSINESS_ORDER_CHANNEL_KEYS)).max(5).optional(),
+    otherBusinessDescription: z.string().trim().min(2).max(240).optional(),
     phone: z.string().trim().min(7).max(40).optional(),
+    teamSize: z.enum(BUSINESS_TEAM_SIZE_KEYS).optional(),
   })
   .strict()
 
@@ -42,13 +61,21 @@ export const verifyMobileOwnerOtpSchema = requestMobileOwnerOtpSchema.extend({
 export const verifyMobileGoogleSchema = z
   .object({
     addressLine1: z.string().trim().min(3).max(200).optional(),
+    businessProfileKey: businessProfileKeySchema.optional(),
+    businessProfileVersion: z
+      .literal(BUSINESS_PROFILE_SCHEMA_VERSION)
+      .optional(),
     businessName: z.string().trim().min(1).max(120).optional(),
     city: z.string().trim().min(2).max(120).optional(),
     currencyCode: z.enum(OPERATING_CURRENCY_CODES).optional(),
     idToken: z.string().trim().min(20),
     mode: mobileAuthModeSchema,
     name: z.string().trim().min(1).max(120).optional(),
+    operatingModel: z.enum(BUSINESS_OPERATING_MODEL_KEYS).optional(),
+    orderChannels: z.array(z.enum(BUSINESS_ORDER_CHANNEL_KEYS)).max(5).optional(),
+    otherBusinessDescription: z.string().trim().min(2).max(240).optional(),
     phone: z.string().trim().min(7).max(40).optional(),
+    teamSize: z.enum(BUSINESS_TEAM_SIZE_KEYS).optional(),
   })
   .strict()
 
@@ -185,18 +212,24 @@ export const authRouter = createTRPCRouter({
       const profile = await verifyGoogleIdToken({ idToken: input.idToken })
 
       try {
-        return await verifyMobileGoogleIdentity(ctx.db, {
-          addressLine1: input.addressLine1,
-          businessName: input.businessName,
+          return await verifyMobileGoogleIdentity(ctx.db, {
+            addressLine1: input.addressLine1,
+            businessProfileKey: input.businessProfileKey,
+            businessProfileVersion: input.businessProfileVersion,
+            businessName: input.businessName,
           city: input.city,
           currencyCode: input.currencyCode,
           email: profile.email,
           idToken: input.idToken,
           image: profile.picture,
-          mode: input.mode,
-          name: input.name ?? profile.name,
-          phone: input.phone,
-          providerAccountId: profile.sub,
+            mode: input.mode,
+            name: input.name ?? profile.name,
+            operatingModel: input.operatingModel,
+            orderChannels: input.orderChannels,
+            otherBusinessDescription: input.otherBusinessDescription,
+            phone: input.phone,
+            providerAccountId: profile.sub,
+            teamSize: input.teamSize,
         })
       } catch (error) {
         throw new TRPCError({

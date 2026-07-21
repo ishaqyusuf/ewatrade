@@ -6,14 +6,28 @@ import {
   RetailOpsSubscriptionError,
   createTenantStore,
 } from "@ewatrade/db/queries"
-import { OPERATING_CURRENCY_CODES } from "@ewatrade/utils"
+import {
+  BUSINESS_PROFILE_SCHEMA_VERSION,
+  OPERATING_CURRENCY_CODES,
+  isBusinessProfileKey,
+} from "@ewatrade/utils"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { z } from "zod/v4"
 
 const storeOnboardingSchema = z.object({
+  businessProfileKey: z
+    .string()
+    .trim()
+    .max(120)
+    .refine(isBusinessProfileKey, "Select a supported business category")
+    .optional(),
+  businessProfileVersion: z
+    .literal(BUSINESS_PROFILE_SCHEMA_VERSION)
+    .optional(),
   countryCode: z.string().trim().max(8).optional(),
   operatingModel: z.string().trim().max(120).optional(),
+  otherBusinessDescription: z.string().trim().max(240).optional(),
   orderChannels: z.array(z.string().trim().min(1).max(80)).max(8).optional(),
   salesMethod: z.string().trim().max(80).optional(),
   staffInvolvement: z.string().trim().max(120).optional(),

@@ -11,6 +11,10 @@ persistence boundary. Clients never access the database directly.
 - Identity/tenancy: `Tenant`, `TenantHostname`, `User`, `Account`, `Session`,
   `Verification`, `Membership`, onboarding and lead capture.
 - Storefront: `Store`, `Site`, `Page`, `PageSection`, `Theme`, `Template`.
+- `Store.metadata.retailOps.onboarding` holds bounded descriptive setup context,
+  including the versioned Business Profile key, Products/Services/Both answer,
+  order channels, team size, capture source/time, and optional Other/Mixed
+  description. This JSON does not control authorization or runtime domains.
 - Staff/billing/messaging: Retail Ops staff profiles and invite audit, plans,
   subscriptions/provider facts, conversations/messages/automation.
 

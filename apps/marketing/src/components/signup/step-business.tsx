@@ -5,15 +5,18 @@ import { useDevFormFill } from "@/hooks/use-dev-form-fill"
 import { useZodForm } from "@/hooks/use-zod-form"
 import { businessFill } from "@/lib/dev-fill-definitions"
 import {
-  BUSINESS_SIZES,
   type BusinessValues,
   COUNTRIES,
-  INDUSTRIES,
   businessSchema,
 } from "@/lib/signup-schemas"
 import { Button } from "@ewatrade/ui"
 import {
+  BUSINESS_OPERATING_MODELS,
+  BUSINESS_ORDER_CHANNELS,
+  BUSINESS_PROFILES,
+  BUSINESS_TEAM_SIZES,
   OPERATING_CURRENCIES,
+  findBusinessProfile,
   suggestCurrencyForCountry,
 } from "@ewatrade/utils"
 
@@ -34,16 +37,22 @@ export function StepBusiness({
   const form = useZodForm<BusinessValues>(businessSchema, {
     defaultValues: defaultValues ?? {
       addressLine1: "",
+      businessProfileKey: "",
+      businessProfileVersion: 1,
       businessName: "",
-      industry: "",
-      businessSize: "",
+      businessSize: "solo",
       city: "",
       countryCode: "",
       currencyCode: "NGN",
       phone: "",
       region: "",
+      operatingModel: "products",
+      orderChannels: ["walk_in"],
+      otherBusinessDescription: "",
     },
   })
+  const selectedProfileKey = form.watch("businessProfileKey")
+  const selectedProfile = findBusinessProfile(selectedProfileKey)
 
   const { fill } = useDevFormFill(businessFill, form)
 
@@ -78,26 +87,45 @@ export function StepBusiness({
           )}
         </label>
 
-        {/* Industry + Size grid */}
+        {/* Business profile + Size grid */}
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block space-y-1.5 text-sm font-medium text-foreground">
-            Industry
+            Business category
             <select
-              {...form.register("industry")}
+              {...form.register("businessProfileKey", {
+                onChange: (event) => {
+                  const profile = findBusinessProfile(event.target.value)
+                  if (!profile) return
+                  form.setValue(
+                    "operatingModel",
+                    profile.recommendedItemKinds.length === 1
+                      ? profile.recommendedItemKinds[0] === "service"
+                        ? "services"
+                        : "products"
+                      : "products_and_services",
+                    { shouldValidate: true },
+                  )
+                },
+              })}
               className={`${baseInputClasses} mt-1.5`}
             >
-              <option value="">Select industry…</option>
-              {INDUSTRIES.map((i) => (
-                <option key={i.value} value={i.value}>
-                  {i.label}
+              <option value="">Select category…</option>
+              {BUSINESS_PROFILES.map((profile) => (
+                <option key={profile.key} value={profile.key}>
+                  {profile.title}
                 </option>
               ))}
             </select>
-            {form.formState.errors.industry && (
+            {form.formState.errors.businessProfileKey && (
               <p className="text-xs text-destructive">
-                {form.formState.errors.industry.message}
+                {form.formState.errors.businessProfileKey.message}
               </p>
             )}
+            {selectedProfile ? (
+              <span className="block text-xs font-normal leading-5 text-muted-foreground">
+                {selectedProfile.description}
+              </span>
+            ) : null}
           </label>
 
           <label className="block space-y-1.5 text-sm font-medium text-foreground">
@@ -107,9 +135,9 @@ export function StepBusiness({
               className={`${baseInputClasses} mt-1.5`}
             >
               <option value="">Select size…</option>
-              {BUSINESS_SIZES.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
+              {BUSINESS_TEAM_SIZES.map((size) => (
+                <option key={size.key} value={size.key}>
+                  {size.label}
                 </option>
               ))}
             </select>
@@ -120,6 +148,68 @@ export function StepBusiness({
             )}
           </label>
         </div>
+
+        {selectedProfileKey === "other-mixed-business" ? (
+          <label className="block space-y-1.5 text-sm font-medium text-foreground">
+            What does your business do?
+            <input
+              {...form.register("otherBusinessDescription")}
+              className={`${baseInputClasses} mt-1.5`}
+              placeholder="Describe your products or services"
+              type="text"
+            />
+            {form.formState.errors.otherBusinessDescription ? (
+              <p className="text-xs text-destructive">
+                {form.formState.errors.otherBusinessDescription.message}
+              </p>
+            ) : null}
+          </label>
+        ) : null}
+
+        <label className="block space-y-1.5 text-sm font-medium text-foreground">
+          What will you manage?
+          <select
+            {...form.register("operatingModel")}
+            className={`${baseInputClasses} mt-1.5`}
+          >
+            {BUSINESS_OPERATING_MODELS.map((model) => (
+              <option key={model.key} value={model.key}>
+                {model.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs font-normal text-muted-foreground">
+            This personalizes your starting suggestions and never limits what
+            you can add later.
+          </p>
+        </label>
+
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium text-foreground">
+            How do customers order?
+          </legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {BUSINESS_ORDER_CHANNELS.map((channel) => (
+              <label
+                className="flex min-h-11 items-center gap-3 rounded-lg border border-border/70 px-3 text-sm text-foreground"
+                key={channel.key}
+              >
+                <input
+                  {...form.register("orderChannels")}
+                  className="size-4 accent-primary"
+                  type="checkbox"
+                  value={channel.key}
+                />
+                {channel.label}
+              </label>
+            ))}
+          </div>
+          {form.formState.errors.orderChannels ? (
+            <p className="text-xs text-destructive">
+              {form.formState.errors.orderChannels.message}
+            </p>
+          ) : null}
+        </fieldset>
 
         <label className="block space-y-1.5 text-sm font-medium text-foreground">
           Business address
