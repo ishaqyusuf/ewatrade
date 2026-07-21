@@ -23,10 +23,16 @@ import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
-import { useRouter } from "expo-router"
+import { Redirect, useRouter } from "expo-router"
 import { View } from "react-native"
 
-export function OperationsDashboardSurface() {
+export function OperationsDashboardSurface({
+  embeddedInAdminTabs = false,
+  onBottomTabVisibilityChange,
+}: {
+  embeddedInAdminTabs?: boolean
+  onBottomTabVisibilityChange?: (hidden: boolean) => void
+} = {}) {
   const router = useRouter()
   const createModal = useModal()
   const trpc = useTRPC()
@@ -176,7 +182,9 @@ export function OperationsDashboardSurface() {
           : createModal.present,
       }}
       navItems={navItems}
+      onBottomTabVisibilityChange={onBottomTabVisibilityChange}
       role={isAttendant ? "attendant" : "owner"}
+      showBottomTabs={!embeddedInAdminTabs}
       title="Today"
     >
       {isOffline ? (
@@ -335,12 +343,14 @@ export function OperationsDashboardSurface() {
             label="Sync"
             onPress={() => router.push("/sync-status-modal" as never)}
           />
-          <QuickAction
-            icon="Lock"
-            label="App lock"
-            onPress={() => router.push("/app-lock-modal" as never)}
-          />
-          {!isAttendant ? (
+          {!embeddedInAdminTabs ? (
+            <QuickAction
+              icon="Lock"
+              label="App lock"
+              onPress={() => router.push("/app-lock-modal" as never)}
+            />
+          ) : null}
+          {!isAttendant && !embeddedInAdminTabs ? (
             <QuickAction
               icon="CreditCard"
               label="Plans"
@@ -405,14 +415,21 @@ export function OperationsDashboardSurface() {
         </View>
       ) : null}
 
-      {!isAttendant ? (
+      {!isAttendant && !embeddedInAdminTabs ? (
         <CreateActionSheet actions={createActions} modal={createModal} />
       ) : null}
     </MobileAppShell>
   )
 }
 
-export default OperationsDashboardSurface
+export default function DashboardCompatibilityRoute() {
+  const { profile } = useAuthContext()
+  return (
+    <Redirect
+      href={isSalesRepRole(profile?.role) ? "/sales-rep-home" : "/admin-home"}
+    />
+  )
+}
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (

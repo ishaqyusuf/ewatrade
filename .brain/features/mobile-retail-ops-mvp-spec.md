@@ -23,15 +23,30 @@ Installed mobile builds use EAS Update for JavaScript and asset-only releases. T
 After login, a user can turn on a device-local App lock from mobile Settings. The lock stores only local secure-state on the phone, uses a 6-digit PIN, can optionally call the phone's fingerprint/biometric prompt, and appears whenever the authenticated app is reopened or returns from background. This is not a replacement for account login; forgotten PIN recovery signs the user out, clears the local app lock for that user/device, and requires normal login again.
 
 For new owner accounts, the dashboard reads the shared progressive feature
-availability contract. Role-authorized bottom tabs remain stable: owners and
-managers retain Home, Catalog, Add, Work, and Reports, while attendants retain
-Home, New Order, and Work. Progressive revealing instead controls dashboard
-metrics, Recent Orders, contextual quick actions, filters, and setup guidance.
+availability contract. Role-authorized bottom tabs remain stable: owners,
+admins, and managers retain Home, Orders, a non-route Add action, the stable
+catalog route, and More, while attendants retain their existing Home, New
+Order, and Work navigation. The catalog tab label is Products for Product-only
+workspaces, Services for Service-only workspaces, and Catalog for mixed or
+empty workspaces. Progressive revealing instead controls dashboard metrics,
+Recent Orders, contextual actions, filters, setup guidance, and capability
+rows within More.
 A flat setup launchpad first offers Product or Service creation, then the first
 Order once a live sellable Offering exists, plus optional Staff invitation.
 Pending offline work is merged into the authoritative contract until replay
 completes. See
 `.brain/features/progressive-feature-revealing.md`.
+
+The four admin root screens share one floating dock. Home, Orders, and Catalog
+hide it on downward scroll and reveal it on upward scroll; More keeps it fixed
+to match the approved Menu reference. Create and More drill-down workflows are
+full-screen routes outside the tab group, so their completion or back action
+returns to the originating root tab. The More tab is titled Menu and owns
+production access to workspace switching, Inventory,
+Analytics, Team, Customers, conditional Service work, permission-gated Plan &
+billing, App theme, App lock, Sync & offline, App updates, and confirmed Sign
+out. App theme persists System, Light, or Dark through the shared device theme
+preference.
 
 Attendants are invited by the owner through email. Each attendant receives an invitation to download the app, completes a short profile setup, verifies access, and lands on an attendant dashboard. Their main workflow is creating sales from assigned inventory.
 

@@ -34,11 +34,13 @@ type MobileAppShellProps = {
   hero?: ReactNode;
   keyboardBottomOffset?: number;
   navItems: MobileAppShellNavItem[];
+  onBottomTabVisibilityChange?: (hidden: boolean) => void;
   onBusinessPress?: () => void;
   role: MobileAppShellRole;
   scrolledStatusBarColor?: string;
   scrolledStatusBarStyle?: "dark" | "light";
   showHeader?: boolean;
+  showBottomTabs?: boolean;
   statusBarColor?: string;
   statusBarSwitchOffset?: number;
   syncBanner?: ReactNode;
@@ -53,10 +55,12 @@ export function MobileAppShell({
   hero,
   keyboardBottomOffset = 140,
   navItems,
+  onBottomTabVisibilityChange,
   onBusinessPress,
   role,
   scrolledStatusBarColor,
   scrolledStatusBarStyle,
+  showBottomTabs = true,
   showHeader = true,
   statusBarColor,
   statusBarSwitchOffset = 1,
@@ -117,15 +121,18 @@ export function MobileAppShell({
 
       if (scrollY <= statusBarSwitchOffset) {
         setIsBottomTabHidden(false);
+        onBottomTabVisibilityChange?.(false);
       } else if (scrollDelta > 4) {
         setIsBottomTabHidden(true);
+        onBottomTabVisibilityChange?.(true);
       } else if (scrollDelta < -4) {
         setIsBottomTabHidden(false);
+        onBottomTabVisibilityChange?.(false);
       }
 
       lastScrollYRef.current = scrollY;
     },
-    [statusBarSwitchOffset],
+    [onBottomTabVisibilityChange, statusBarSwitchOffset],
   );
 
   return (
@@ -212,21 +219,23 @@ export function MobileAppShell({
         </RNView>
       </KeyboardAwareScrollView>
 
-      <View pointerEvents="box-none" testID="mobile-shell-floating-nav">
-        <MobileBottomTabs
-          activeLabel="Home"
-          floating
-          haptic
-          hideOnScroll
-          isHidden={isBottomTabHidden}
-          labelStack="vertical"
-          safeArea
-          showLabel
-          showLabelOnActive={false}
-          tabs={bottomTabs}
-          variant="operational-detail"
-        />
-      </View>
+      {showBottomTabs ? (
+        <View pointerEvents="box-none" testID="mobile-shell-floating-nav">
+          <MobileBottomTabs
+            activeLabel="Home"
+            floating
+            haptic
+            hideOnScroll
+            isHidden={isBottomTabHidden}
+            labelStack="vertical"
+            safeArea
+            showLabel
+            showLabelOnActive={false}
+            tabs={bottomTabs}
+            variant="operational-detail"
+          />
+        </View>
+      ) : null}
     </RNView>
   );
 }

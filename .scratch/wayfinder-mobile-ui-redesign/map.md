@@ -6,7 +6,7 @@ Create a screen-by-screen mobile UI redesign specification for the EwaTrade Expo
 
 - Planning only. This Wayfinder should produce decisions and a handoff-ready redesign spec, not implement screens.
 - Use the UI Designer specialist framing from `agency-design`: design-system first, accessible, consistent, implementation-aware, and component-library oriented.
-- Reference assets live in `assets/reference-pins/`; the visual study is `reference-study.md`.
+- Archived reference assets live in `.designs/wayfinder-mobile-ui-redesign/assets/reference-pins/`; the tracked visual study is `reference-study.md`.
 - Design direction recommendation: light-first clean commerce/ops UI with dark mode, deep green/teal primary, near-black floating nav/selected states, amber/orange for attention, compact rounded cards, pill filters, timeline rows, bottom-sheet forms, and a central create-sale action.
 - Implementation constraints to preserve in later handoff: Expo + React Native + NativeWind, Tailwind-first styling, avoid unnecessary `className` + `style` mixing, GND-style pressable/haptic buttons, floating bottom sheets, keyboard-safe input screens, and screen/component decomposition instead of bulky single components.
 
@@ -41,4 +41,3 @@ Create a screen-by-screen mobile UI redesign specification for the EwaTrade Expo
 - Implementing the redesign in code inside this Wayfinder.
 - Changing API contracts, database schema, auth, sync semantics, or subscription logic unless a design decision reveals a necessary follow-up spec.
 - Designing full customer ecommerce app experiences beyond the already planned shared product/order link surfaces.
-

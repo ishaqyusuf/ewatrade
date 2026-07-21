@@ -14,7 +14,13 @@ import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
 import { useMemo, useState } from "react"
-import { FlatList, View } from "react-native"
+import {
+  FlatList,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  View,
+} from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 type CatalogKindFilter = "all" | "product" | "service"
 type CatalogItem = RouterOutputs["catalog"]["listItems"][number]
@@ -31,6 +37,8 @@ type CatalogRow = {
 type CatalogItemsContentProps = {
   onAddItem: () => void
   onComplete?: () => void
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
+  presentation?: "modal" | "tab"
 }
 
 function mapCatalogItem(item: CatalogItem): CatalogRow {
@@ -124,7 +132,10 @@ function KindFilter({
 export function CatalogItemsContent({
   onAddItem,
   onComplete,
+  onScroll,
+  presentation = "modal",
 }: CatalogItemsContentProps) {
+  const insets = useSafeAreaInsets()
   const trpc = useTRPC()
   const [kindFilter, setKindFilter] = useState<CatalogKindFilter>("all")
   const [query, setQuery] = useState("")
@@ -157,10 +168,14 @@ export function CatalogItemsContent({
   return (
     <FlatList<CatalogRow>
       className="flex-1"
-      contentContainerStyle={{ paddingBottom: 220 }}
+      contentContainerStyle={{
+        paddingBottom:
+          presentation === "tab" ? Math.max(insets.bottom + 116, 152) : 220,
+      }}
       data={visibleRows}
       keyExtractor={(item) => item.id}
       keyboardShouldPersistTaps="handled"
+      onScroll={onScroll}
       ListEmptyComponent={
         <EmptyState
           className="mx-4"
@@ -184,7 +199,7 @@ export function CatalogItemsContent({
         </View>
       }
       ListHeaderComponent={
-        <View className="gap-5 px-4 pt-1 pb-4">
+        <View className="gap-5 px-4 pb-4">
           <SecondarySheetHeader
             description="Products track stock. Services stay outside inventory."
             icon="Warehouse"
@@ -235,11 +250,15 @@ export function CatalogItemsContent({
           />
         </View>
       }
+      ListHeaderComponentStyle={
+        presentation === "tab" ? { paddingTop: insets.top + 24 } : undefined
+      }
       renderItem={({ item }) => (
         <View className="px-4">
           <CatalogItemRow item={item} />
         </View>
       )}
+      scrollEventThrottle={onScroll ? 16 : undefined}
     />
   )
 }

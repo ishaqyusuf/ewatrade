@@ -53,12 +53,12 @@ Expo Go was present on the emulator as `host.exp.exponent`, and the app was open
 
 Captured evidence:
 
-- `.scratch/wayfinder-mobile-design-system-playground/reviews/screenshots/login-design-system-shortcut.png`
-- `.scratch/wayfinder-mobile-design-system-playground/reviews/screenshots/login-shortcut-routed-design-system.png`
-- `.scratch/wayfinder-mobile-design-system-playground/reviews/screenshots/catalog-assets-light.png`
-- `.scratch/wayfinder-mobile-design-system-playground/reviews/screenshots/catalog-dark.png`
-- `.scratch/wayfinder-mobile-design-system-playground/reviews/screenshots/analytics-pattern-light.png`
-- `.scratch/wayfinder-mobile-design-system-playground/reviews/screenshots/catalog-soft-buttons-light.png`
+- `.designs/wayfinder-mobile-design-system-playground/reviews/screenshots/login-design-system-shortcut.png`
+- `.designs/wayfinder-mobile-design-system-playground/reviews/screenshots/login-shortcut-routed-design-system.png`
+- `.designs/wayfinder-mobile-design-system-playground/reviews/screenshots/catalog-assets-light.png`
+- `.designs/wayfinder-mobile-design-system-playground/reviews/screenshots/catalog-dark.png`
+- `.designs/wayfinder-mobile-design-system-playground/reviews/screenshots/analytics-pattern-light.png`
+- `.designs/wayfinder-mobile-design-system-playground/reviews/screenshots/catalog-soft-buttons-light.png`
 
 ## Follow-Up
 

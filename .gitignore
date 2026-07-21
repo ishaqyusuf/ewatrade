@@ -11,3 +11,4 @@ build
 .vercel
 packages/db/generated
 .gstack/
+/.designs/

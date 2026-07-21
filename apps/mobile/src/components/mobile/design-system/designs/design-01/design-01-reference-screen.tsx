@@ -1,5 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { Icon } from "@/components/ui/icon"
+import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { Image } from "react-native"
@@ -77,9 +78,11 @@ export function Design01ReferenceScreen() {
             Reference Images
           </Text>
           {DESIGN_01_REFERENCE_IMAGES.map((image) => (
-            <View
+            <Pressable
               className="flex-row items-center gap-3 rounded-[22px] bg-muted p-3"
+              href={image.route}
               key={image.id}
+              transition
             >
               <View className="h-16 w-12 overflow-hidden rounded-[16px] bg-card">
                 <Image
@@ -97,7 +100,11 @@ export function Design01ReferenceScreen() {
                   {image.sourceLabel}
                 </Text>
               </View>
-            </View>
+              <Icon
+                className="size-sm text-muted-foreground"
+                name="ChevronRight"
+              />
+            </Pressable>
           ))}
         </View>
 
@@ -110,6 +117,13 @@ export function Design01ReferenceScreen() {
           variant="outline"
         >
           Open source image
+        </ActionButton>
+        <ActionButton
+          href={DESIGN_01_ROUTES.more}
+          icon="more"
+          variant="outline"
+        >
+          Open Admin Menu preview
         </ActionButton>
       </View>
     </ReferenceScreenShell>

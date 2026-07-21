@@ -20,6 +20,7 @@ import { AppLockGate } from "@/components/mobile/app-lock-gate"
 import { ToastProviderWithViewport } from "@/components/ui/toast"
 import { useColorScheme } from "@/hooks/use-color"
 import { shouldShowFloatingThemeToggle } from "@/lib/app-variant"
+import { canAccessAdminTabs } from "@/lib/admin-navigation"
 import { isInvitedStaffProfile, isSalesRepRole } from "@/lib/mobile-roles"
 import { nativewindThemeVars } from "@/lib/nativewind-theme-vars"
 import { NAV_THEME } from "@/lib/theme"
@@ -75,6 +76,10 @@ const InitialLayout = () => {
     colorScheme === "dark" ? NAV_THEME.dark : NAV_THEME.light
   const isInvitedStaff = isInvitedStaffProfile(profile)
   const isSalesRep = isSalesRepRole(profile?.role)
+  const canAccessAdmin = canAccessAdminTabs(profile?.role)
+  const canManageTenant =
+    profile?.role?.trim().toUpperCase() === "OWNER" ||
+    profile?.role?.trim().toUpperCase() === "ADMIN"
 
   return (
     <>
@@ -111,10 +116,8 @@ const InitialLayout = () => {
             name="staff-onboarding"
             options={{ headerShown: false }}
           />
-          <Stack.Protected
-            guard={isAuthenticated && !isInvitedStaff && !isSalesRep}
-          >
-            <Stack.Screen name="admin-home" options={{ headerShown: false }} />
+          <Stack.Protected guard={isAuthenticated && !isInvitedStaff && canAccessAdmin}>
+            <Stack.Screen name="(admin-tabs)" options={{ headerShown: false }} />
             <Stack.Screen
               name="business-switch-modal"
               options={{ headerShown: false, presentation: "modal" }}
@@ -140,11 +143,15 @@ const InitialLayout = () => {
               options={{ headerShown: false, presentation: "modal" }}
             />
             <Stack.Screen
-              name="subscription-modal"
+              name="unit-conversion-modal"
               options={{ headerShown: false, presentation: "modal" }}
             />
+          </Stack.Protected>
+          <Stack.Protected
+            guard={isAuthenticated && !isInvitedStaff && canManageTenant}
+          >
             <Stack.Screen
-              name="unit-conversion-modal"
+              name="subscription-modal"
               options={{ headerShown: false, presentation: "modal" }}
             />
           </Stack.Protected>

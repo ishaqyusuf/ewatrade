@@ -55,10 +55,14 @@ prerequisite for starting an Order.
 ## Mobile Behavior
 
 - Role-authorized bottom tabs remain stable regardless of record history:
-  owners/managers see Home, Catalog, Add, Work, and Reports; attendants see
-  Home, New Order, and Work.
+  owners/admins/managers see Home, Orders, a non-route Add action, the stable
+  catalog route, and More; attendants keep Home, New Order, and Work.
+- Record history changes only the catalog tab's visible label: Product-only is
+  `Products`, Service-only is `Services`, and mixed or empty is `Catalog`.
+  Route identity, accessibility, selection, and test IDs remain `catalog`.
 - Progressive revealing applies to dashboard content, metrics, quick actions,
-  filters, and setup guidance rather than bottom-tab membership.
+  filters, setup guidance, and capability rows inside More rather than
+  bottom-tab membership.
 - The owner Add action remains available as the permanent first-record entry
   point.
 - A new owner sees a progressive setup launchpad for the first item, first

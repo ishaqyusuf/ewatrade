@@ -12,6 +12,7 @@
     "icons:generate": "node ./scripts/generate-launcher-icons.mjs",
     "qa:android-ready": "node ./scripts/check-android-qa-ready.mjs",
     "qa:android-ready-fixtures": "node ./scripts/check-android-qa-ready-fixtures.mjs",
+    "qa:admin-tabs": "node ./scripts/check-admin-tabs.mjs",
     "qa:auth-onboarding": "node ./scripts/check-auth-onboarding-flow.mjs",
     "qa:create-sale-flow": "node ./scripts/check-create-sale-flow.mjs",
     "qa:dashboard-redesign": "node ./scripts/check-dashboard-redesign.mjs",

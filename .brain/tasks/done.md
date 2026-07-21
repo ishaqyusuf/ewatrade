@@ -1,5 +1,19 @@
 # Done
 
+- Replaced the admin mobile shell with protected Home, Orders, non-route `+`,
+  stable dynamic Catalog, and More tabs; added reference-led Menu, persisted
+  App theme selection, root Orders/Catalog states, shared Create actions,
+  production capability rows, and root-only dock ownership. Home, Orders, and
+  Catalog now hide/reveal the dock with scroll direction while Menu keeps it
+  fixed. Registered the supplied Menu reference and archived 143 non-runtime
+  raster artifacts from `.scratch/` under ignored root `.designs/` paths.
+  Completed Date: 2026-07-21. Checks Run: focused admin navigation tests;
+  admin-tab, design-system, app-shell, dashboard, NativeWind, theme, reports,
+  subscription, offline, Service Work, commercial-order, App lock, and theme
+  variable guards; mobile TypeScript before the final scroll-behavior override;
+  scoped diff checks. The existing keyboard guard remains stale against two
+  untouched Catalog files, and final Android capture was interrupted before
+  evidence collection.
 - Allowed Products to save with blank base, option-unit, and opening-stock
   values without coercing missing prices to zero. Incomplete Offerings remain
   visible in sale selection but are disabled with `Price not set` and/or `Out

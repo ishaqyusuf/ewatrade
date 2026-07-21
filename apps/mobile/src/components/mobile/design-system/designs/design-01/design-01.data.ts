@@ -8,6 +8,8 @@ export const DESIGN_01_LEGACY_REFERENCE_ID = "home-shell"
 export const DESIGN_01_ROUTES = {
   home: "/design-system/design-01",
   image: "/design-system/design-01/image",
+  more: "/design-system/design-01/more" as LinkProps["href"],
+  moreImage: "/design-system/design-01/more-image" as LinkProps["href"],
   messages: "/design-system/design-01/messages",
   orders: "/design-system/design-01/orders",
   profile: "/design-system/design-01/profile",
@@ -34,14 +36,34 @@ export const DESIGN_01_PRIMARY_REFERENCE: Design01ReferenceImage = {
     "Rounded floating navigation",
   ],
   id: DESIGN_01_LEGACY_REFERENCE_ID,
-  route: DESIGN_01_ROUTES.reference,
+  route: DESIGN_01_ROUTES.image,
   source: require("@assets/images/design-system/reference-home-shell.jpg"),
   sourceLabel: "Pin 2 / home shell reference",
   subtitle: "First approval target before any other reference is implemented.",
   title: "Home Shell Reference",
 }
 
-export const DESIGN_01_REFERENCE_IMAGES = [DESIGN_01_PRIMARY_REFERENCE]
+export const DESIGN_01_ADMIN_MORE_REFERENCE: Design01ReferenceImage = {
+  adoption: [
+    "Four stable admin roots",
+    "Raised center create action",
+    "Flat divider-based Menu rows",
+    "Workspace switcher card",
+    "Production App theme access",
+  ],
+  id: "admin-more-menu",
+  route: DESIGN_01_ROUTES.moreImage,
+  source: require("@assets/images/design-system/reference-admin-more.png"),
+  sourceLabel: "Admin Menu / More reference",
+  subtitle:
+    "Reference for the admin tab dock, Menu hierarchy, and quick-settings access.",
+  title: "Admin Menu Reference",
+}
+
+export const DESIGN_01_REFERENCE_IMAGES = [
+  DESIGN_01_PRIMARY_REFERENCE,
+  DESIGN_01_ADMIN_MORE_REFERENCE,
+]
 
 export const DESIGN_01_HOME_TAB = {
   href: DESIGN_01_ROUTES.home,

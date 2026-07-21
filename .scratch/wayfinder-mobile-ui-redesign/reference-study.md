@@ -2,13 +2,14 @@
 
 ## Sources
 
-- [Pin 1: Flight booking mobile app](https://www.pinterest.com/pin/286893438761033938/) -> `assets/reference-pins/pin-1-286893438761033938.jpg`
-- [Pin 2: Service app before/after](https://www.pinterest.com/pin/286893438761033937/) -> `assets/reference-pins/pin-2-286893438761033937.jpg`
-- [Pin 3: Furniture commerce app](https://www.pinterest.com/pin/286893438761033936/) -> `assets/reference-pins/pin-3-286893438761033936.jpg`
-- [Pin 4: Delivery tracking app](https://www.pinterest.com/pin/286893438761033935/) -> `assets/reference-pins/pin-4-286893438761033935.jpg`
-- [Pin 5: Shipping list app](https://www.pinterest.com/pin/286893438761033934/) -> `assets/reference-pins/pin-5-286893438761033934.jpg`
+- [Pin 1: Flight booking mobile app](https://www.pinterest.com/pin/286893438761033938/) -> `.designs/wayfinder-mobile-ui-redesign/assets/reference-pins/pin-1-286893438761033938.jpg`
+- [Pin 2: Service app before/after](https://www.pinterest.com/pin/286893438761033937/) -> `.designs/wayfinder-mobile-ui-redesign/assets/reference-pins/pin-2-286893438761033937.jpg`
+- [Pin 3: Furniture commerce app](https://www.pinterest.com/pin/286893438761033936/) -> `.designs/wayfinder-mobile-ui-redesign/assets/reference-pins/pin-3-286893438761033936.jpg`
+- [Pin 4: Delivery tracking app](https://www.pinterest.com/pin/286893438761033935/) -> `.designs/wayfinder-mobile-ui-redesign/assets/reference-pins/pin-4-286893438761033935.jpg`
+- [Pin 5: Shipping list app](https://www.pinterest.com/pin/286893438761033934/) -> `.designs/wayfinder-mobile-ui-redesign/assets/reference-pins/pin-5-286893438761033934.jpg`
 
-Raw source metadata lives at `assets/reference-pins/sources.json`.
+Tracked source metadata remains at `assets/reference-pins/sources.json`; its
+`file` entries point to the root `.designs/` archive.
 
 ## Reference Observations
 
@@ -40,4 +41,3 @@ Raw source metadata lives at `assets/reference-pins/sources.json`.
 - Customer book.
 - Offline/sync state, conflict review, and empty/error/loading states.
 - Subscription, settings, profile, and account/business switching.
-

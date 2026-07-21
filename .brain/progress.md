@@ -1,5 +1,36 @@
 # Progress
 
+## 2026-07-21
+
+### Admin Root Tabs And Reference-Led Menu
+
+- Added an Owner/Admin/Manager Expo Router tab group with Home, Orders, a
+  non-route Create action, stable `catalog`, and More; sales-rep navigation is
+  unchanged. Product-only, Service-only, and mixed/empty workspaces display
+  Products, Services, and Catalog without changing the route or test identity.
+- Added Commercial Orders search/status filtering, loading/error/empty states,
+  visible offline provisional rows, and a root Catalog presentation that reuses
+  the existing Catalog content.
+- Implemented the Menu reference as the production More root with sync status,
+  real attention state, user/workspace identity, business switching, capability
+  and permission-aware workspace rows, App theme, App lock, updates, offline
+  management, and guarded sign out. System/Light/Dark applies immediately and
+  persists through the existing theme preference.
+- Kept the dock on the four roots, with directional hide/reveal on Home,
+  Orders, and Catalog and a fixed dock on Menu. Create and all drill-down
+  workflows remain outside the tab group.
+- Registered `reference-admin-more.png` with source and static preview routes.
+  Moved 143 non-runtime QA/reference images out of `.scratch/` into the ignored
+  root `.designs/` archive and updated tracked artifact pointers; no runtime
+  source resolves assets from the archive.
+- Checks passed: focused admin navigation tests; admin-tab, design-system,
+  app-shell, dashboard, NativeWind, theme, reports, subscription, offline,
+  Service Work, commercial-order, App lock, and theme-variable guards; mobile
+  TypeScript before the final scroll override; scoped diff checks. The existing
+  keyboard guard still reports stale markers in two untouched Catalog files.
+  Android launched and bundled the static Menu preview, but the requested ADB
+  evidence capture was interrupted before screenshots could be collected.
+
 ## 2026-07-20
 
 ### Generic Service Commerce Completion

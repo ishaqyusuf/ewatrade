@@ -119,7 +119,7 @@ The redesign will preserve the existing product and architecture boundaries. It 
 
 - The redesign is a UI and UX specification for the existing EwaTrade mobile Retail Ops app. It does not introduce new domain behavior, schema, API contracts, auth semantics, sync semantics, or billing rules.
 - The local issue tracker artifact for this spec is this `spec.md` file under the mobile UI redesign Wayfinder folder, with `Status: ready-for-agent`.
-- The downloaded reference images in `assets/reference-pins/` are the visual source material. The redesign should adapt their patterns, not copy their travel, furniture, delivery, or service-marketplace content literally.
+- The downloaded reference images in `.designs/wayfinder-mobile-ui-redesign/assets/reference-pins/` are the visual source material. The redesign should adapt their patterns, not copy their travel, furniture, delivery, or service-marketplace content literally.
 - The recommended visual direction is light-first with dark mode. Light mode uses bright surfaces, subtle separators, compact rounded cards, and deep teal/green actions. Dark mode uses a matte near-black canvas, charcoal cards, crisp white text, muted secondary copy, and restrained green/amber accents.
 - The redesign should avoid a one-note palette. Teal/green is primary, near-black is structural, amber/orange is reserved for money, warning, and attention, and neutral surfaces carry most of the UI.
 - The app shell should use a rounded floating bottom navigation pattern with a central create-sale/add action. The exact tab count and owner/attendant differences are decided by the Wayfinder shell ticket.

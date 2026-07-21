@@ -3,11 +3,18 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { Image } from "react-native"
 import { ReferenceScreenShell } from "../../references/reference-screen-shell"
-import { DESIGN_01_PRIMARY_REFERENCE, DESIGN_01_ROUTES } from "./design-01.data"
+import {
+  DESIGN_01_ADMIN_MORE_REFERENCE,
+  DESIGN_01_PRIMARY_REFERENCE,
+  DESIGN_01_ROUTES,
+  type Design01ReferenceImage,
+} from "./design-01.data"
 
-export function Design01SourceImageScreen() {
-  const reference = DESIGN_01_PRIMARY_REFERENCE
-
+export function Design01SourceImageScreen({
+  reference = DESIGN_01_PRIMARY_REFERENCE,
+}: {
+  reference?: Design01ReferenceImage
+}) {
   return (
     <ReferenceScreenShell
       secondaryAccessibilityLabel="Open Design 01 home screen"
@@ -30,7 +37,7 @@ export function Design01SourceImageScreen() {
 
         <View className="overflow-hidden rounded-[32px] bg-card">
           <Image
-            accessibilityLabel="Full home shell design reference"
+            accessibilityLabel={`Full ${reference.title} design reference`}
             className="h-[620px] w-full"
             resizeMode="contain"
             source={reference.source}
@@ -46,5 +53,11 @@ export function Design01SourceImageScreen() {
         </ActionButton>
       </View>
     </ReferenceScreenShell>
+  )
+}
+
+export function Design01AdminMoreSourceImageScreen() {
+  return (
+    <Design01SourceImageScreen reference={DESIGN_01_ADMIN_MORE_REFERENCE} />
   )
 }

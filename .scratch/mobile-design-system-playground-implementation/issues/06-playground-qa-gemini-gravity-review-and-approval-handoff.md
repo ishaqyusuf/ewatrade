@@ -19,5 +19,5 @@
 - Android emulator validation used `Pixel_3a_API_34` as `emulator-5554`. The emulator remained running and reported a 1080x2220 display. A direct `bun --cwd apps/mobile dev --android` attempt found port 3002 already occupied, but the existing 3002 Expo server was then reused through Expo Go deep links for `/design-system` and `/design-system-pattern?pattern=analytics`.
 - Gemini CLI was available but blocked on authentication, so no advisory critique was produced in this session.
 - Gravity discovery found `/Applications/Antigravity.app` but no `gravity` shell command on PATH.
-- Light/dark and compact-phone review evidence is saved under `.scratch/wayfinder-mobile-design-system-playground/reviews/screenshots/`.
+- Light/dark and compact-phone review evidence is archived under `.designs/wayfinder-mobile-design-system-playground/reviews/screenshots/`.
 - The approval gate remains: existing mobile screens should not be refactored until the project owner approves the playground.

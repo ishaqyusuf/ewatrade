@@ -50,3 +50,5 @@ a capability.
 - Mobile role-authorized bottom tabs remain predictable before and after the
   first record; their destination screens own zero-data and first-record
   experiences.
+- The admin catalog destination may adapt its visible Products/Services/Catalog
+  label while retaining one stable route identity, as defined by ADR-0016.

@@ -38,6 +38,14 @@ const requiredFiles = [
     markers: ["Design01SourceImageScreen"],
   },
   {
+    file: "src/app/design-system/design-01/more.tsx",
+    markers: ["Design01AdminMorePreviewScreen"],
+  },
+  {
+    file: "src/app/design-system/design-01/more-image.tsx",
+    markers: ["Design01AdminMoreSourceImageScreen"],
+  },
+  {
     file: "src/app/design-system/design-01/orders.tsx",
     markers: ["Design01WorkspaceScreen", 'title="Orders"'],
   },
@@ -201,7 +209,20 @@ const requiredFiles = [
       "/design-system/design-01/orders",
       "/design-system/design-01/profile",
       "DESIGN_01_REFERENCE_IMAGES",
+      "DESIGN_01_ADMIN_MORE_REFERENCE",
       "@assets/images/design-system/reference-home-shell.jpg",
+      "@assets/images/design-system/reference-admin-more.png",
+    ],
+  },
+  {
+    file: "src/components/mobile/design-system/designs/design-01/design-01-admin-more-preview-screen.tsx",
+    markers: [
+      "Design01AdminMorePreviewScreen",
+      "Menu",
+      "Store & workspace",
+      "Account settings",
+      "App theme",
+      "DESIGN_01_ROUTES.moreImage",
     ],
   },
   {
@@ -264,7 +285,8 @@ const requiredFiles = [
     file: "src/components/mobile/design-system/designs/design-01/design-01-source-image-screen.tsx",
     markers: [
       "Design01SourceImageScreen",
-      "Full home shell design reference",
+      "reference.title",
+      "Design01AdminMoreSourceImageScreen",
       "Back to Design 01 home",
     ],
   },
