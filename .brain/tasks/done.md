@@ -1,5 +1,20 @@
 # Done
 
+- Transposed Product selling-unit setup to default to merchant-facing counts
+  such as `50 Kilograms in 1 Bag`, while retaining an explicit opposite
+  direction for larger units. Dashboard creation, mobile creation, and the
+  dashboard unit-version editor now share exact reciprocal conversion logic,
+  preserve the existing persisted factor contract, transpose populated values
+  when possible, and reject relationships that would require rounding.
+  Completed Date: 2026-07-20. Checks Run: 22 focused utility/helper tests;
+  utility and dashboard TypeScript; mobile keyboard, NativeWind, and theme
+  guards; targeted Biome and `git diff --check`; Android default/opposite
+  relationship visual QA. The full Bun suite passed 163 tests and exposed nine
+  unrelated database mock failures where subscription snapshot tests do not
+  provide `catalogItem.count`; mobile TypeScript was blocked by an unrelated
+  invalid `onActionPress` prop in `catalog-variant-manager.tsx`; dashboard
+  browser QA was blocked by the existing Portless login redirect to raw
+  `localhost:3092`.
 ## Purpose
 Completed work with durable value to the project.
 

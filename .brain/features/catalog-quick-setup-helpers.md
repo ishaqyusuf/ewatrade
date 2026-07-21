@@ -58,6 +58,10 @@ industry-specific runtime branches, preset prices, or automatic saving.
 - Applying a helper suggests its example name only when the item name is empty,
   preserves merchant-entered identity/base-price fields, and prefills editable
   units, exact factors, stock behavior, options, and Service policies.
+- Unit editors present helper factors as merchant-facing relationships. Exact
+  factors below one are transposed to counts such as `50 Kilograms in 1 Bag`,
+  while larger selling units retain relationships such as `1 Pack contains 12
+  Pieces`; submitting converts either direction back to the unchanged factor.
 - Replacing populated structural work requires confirmation and clears
   incompatible combinations, unit-price overrides, and stock drafts.
 - Product forms expose one price for every active variant and an optional

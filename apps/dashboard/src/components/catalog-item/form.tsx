@@ -6,11 +6,15 @@ import { cn } from "@/utils"
 import { Button, CurrencyInput } from "@ewatrade/ui"
 import {
   type CatalogSetupHelper,
+  type CatalogUnitRelationDirection,
   buildCatalogSetupHelperApplication,
   buildCatalogVariantCombinations,
+  catalogUnitFactorToRelation,
+  catalogUnitRelationToFactor,
   findCatalogSetupHelper,
   getCatalogSetupReplacementAction,
   isCatalogFixedPriceMissing,
+  transposeCatalogUnitRelation,
 } from "@ewatrade/utils"
 import {
   EXACT_CANONICAL_MAX_SCALE,
@@ -91,10 +95,11 @@ type AdvancedVariantDraft = {
 }
 
 type AdvancedUnitDraft = {
-  factor: string
   id: string
   name: string
   price: string
+  relationCount: string
+  relationDirection: CatalogUnitRelationDirection
   stockBehavior: "alternate_transaction" | "packaged_stock"
   transactionScale: number
 }
@@ -107,10 +112,11 @@ function newOptionGroup(): AdvancedOptionGroup {
 
 function newUnit(): AdvancedUnitDraft {
   return {
-    factor: "",
     id: globalThis.crypto.randomUUID(),
     name: "",
     price: "",
+    relationCount: "",
+    relationDirection: "units_per_canonical",
     stockBehavior: "alternate_transaction",
     transactionScale: DEFAULT_UNIT_TRANSACTION_SCALE,
   }
@@ -309,17 +315,22 @@ export function CatalogItemForm({
       }))
       setCanonicalTransactionScale(application.canonicalUnit.transactionScale)
       setAdditionalUnits(
-        application.additionalUnits.map((unit) => ({
-          factor: unit.factor,
-          id: globalThis.crypto.randomUUID(),
-          name: unit.name,
-          price: "",
-          stockBehavior:
-            unit.stockBehavior === "packaged_stock"
-              ? "packaged_stock"
-              : "alternate_transaction",
-          transactionScale: unit.transactionScale,
-        })),
+        application.additionalUnits.map((unit) => {
+          const relation = catalogUnitFactorToRelation(unit.factor)
+
+          return {
+            id: globalThis.crypto.randomUUID(),
+            name: unit.name,
+            price: "",
+            relationCount: relation.count,
+            relationDirection: relation.direction,
+            stockBehavior:
+              unit.stockBehavior === "packaged_stock"
+                ? "packaged_stock"
+                : "alternate_transaction",
+            transactionScale: unit.transactionScale,
+          }
+        }),
       )
       setShowUnits(application.additionalUnits.length > 0)
       setTrackServiceWork(false)
@@ -487,16 +498,22 @@ export function CatalogItemForm({
         return
       }
 
-      const invalidUnit = additionalUnits.find(
-        (unit) =>
-          !unit.name.trim() ||
-          !/^\d+(?:\.\d+)?$/.test(unit.factor.trim()) ||
-          Number(unit.factor) <= 0 ||
-          (unit.price.trim() ? parsePrice(unit.price) === null : false),
-      )
-      if (invalidUnit) {
+      try {
+        for (const unit of additionalUnits) {
+          if (!unit.name.trim()) throw new Error("Enter every unit name.")
+          catalogUnitRelationToFactor({
+            count: unit.relationCount,
+            direction: unit.relationDirection,
+          })
+          if (unit.price.trim() && parsePrice(unit.price) === null) {
+            throw new Error(`Enter a valid price for ${unit.name}.`)
+          }
+        }
+      } catch (unitError) {
         setError(
-          "Every additional unit needs a name, positive exact factor, and valid optional price.",
+          unitError instanceof Error
+            ? unitError.message
+            : "Review the selling units.",
         )
         return
       }
@@ -557,7 +574,7 @@ export function CatalogItemForm({
       try {
         if (form.kind === "product") {
           if (!form.unitName.trim()) {
-            setError("Enter the unit this Product is counted in.")
+            setError("Enter the Product's main unit.")
             return
           }
           createAdvancedMutation.mutate({
@@ -579,7 +596,10 @@ export function CatalogItemForm({
                   transactionScale: canonicalTransactionScale,
                 },
                 ...additionalUnits.map((unit, unitIndex) => ({
-                  factor: unit.factor.trim(),
+                  factor: catalogUnitRelationToFactor({
+                    count: unit.relationCount,
+                    direction: unit.relationDirection,
+                  }),
                   key: unitKey(unitIndex),
                   name: unit.name.trim(),
                   stockBehavior: unit.stockBehavior,
@@ -693,7 +713,7 @@ export function CatalogItemForm({
     }
 
     if (!form.unitName.trim()) {
-      setError("Enter the unit this Product is counted in.")
+      setError("Enter the Product's main unit.")
       return
     }
 
@@ -821,7 +841,7 @@ export function CatalogItemForm({
         </Field>
 
         {form.kind === "product" ? (
-          <Field htmlFor="catalog-item-unit" label="Counted in">
+          <Field htmlFor="catalog-item-unit" label="Main unit">
             <TextInput
               id="catalog-item-unit"
               autoComplete="off"
@@ -1293,8 +1313,8 @@ export function CatalogItemForm({
                     <h3 className="font-medium">Selling units</h3>
                     <p className="text-xs text-muted-foreground">
                       Add units sold from shared stock or independently prepared
-                      stock. A factor means 1 configured unit equals that many
-                      counted units.
+                      stock. Choose the relationship that reads naturally for
+                      each unit; its stored factor remains unchanged.
                     </p>
                   </div>
                   <Button
@@ -1335,19 +1355,87 @@ export function CatalogItemForm({
                         />
                       </Field>
                       <Field
-                        htmlFor={`catalog-unit-factor-${unit.id}`}
-                        label="1 unit equals counted units"
+                        htmlFor={`catalog-unit-direction-${unit.id}`}
+                        label="Relationship"
+                      >
+                        <select
+                          id={`catalog-unit-direction-${unit.id}`}
+                          className="h-11 rounded-lg border border-border bg-background px-3 text-sm"
+                          value={unit.relationDirection}
+                          onChange={(event) => {
+                            const nextDirection = event.target
+                              .value as CatalogUnitRelationDirection
+                            if (!unit.relationCount.trim()) {
+                              setAdditionalUnits((current) =>
+                                current.map((candidate) =>
+                                  candidate.id === unit.id
+                                    ? {
+                                        ...candidate,
+                                        relationDirection: nextDirection,
+                                      }
+                                    : candidate,
+                                ),
+                              )
+                              return
+                            }
+                            try {
+                              const relation = transposeCatalogUnitRelation(
+                                {
+                                  count: unit.relationCount,
+                                  direction: unit.relationDirection,
+                                },
+                                nextDirection,
+                              )
+                              setAdditionalUnits((current) =>
+                                current.map((candidate) =>
+                                  candidate.id === unit.id
+                                    ? {
+                                        ...candidate,
+                                        relationCount: relation.count,
+                                        relationDirection: relation.direction,
+                                      }
+                                    : candidate,
+                                ),
+                              )
+                              setError(null)
+                            } catch {
+                              setError(
+                                "This relationship cannot be transposed exactly. Keep the current direction.",
+                              )
+                            }
+                          }}
+                        >
+                          <option value="units_per_canonical">
+                            {unit.name.trim() || "This unit"} inside 1{" "}
+                            {form.unitName.trim() || "main unit"}
+                          </option>
+                          <option value="canonical_per_unit">
+                            1 {unit.name.trim() || "unit"} contains{" "}
+                            {form.unitName.trim() || "main units"}
+                          </option>
+                        </select>
+                      </Field>
+                      <Field
+                        htmlFor={`catalog-unit-count-${unit.id}`}
+                        label={
+                          unit.relationDirection === "units_per_canonical"
+                            ? `How many ${unit.name.trim() || "of this unit"} are in 1 ${form.unitName.trim() || "main unit"}?`
+                            : `How many ${form.unitName.trim() || "main units"} are in 1 ${unit.name.trim() || "of this unit"}?`
+                        }
                       >
                         <TextInput
-                          id={`catalog-unit-factor-${unit.id}`}
+                          id={`catalog-unit-count-${unit.id}`}
                           inputMode="decimal"
-                          placeholder="e.g. 12"
-                          value={unit.factor}
+                          placeholder="e.g. 50"
+                          value={unit.relationCount}
                           onChange={(event) =>
                             setAdditionalUnits((current) =>
                               current.map((candidate) =>
                                 candidate.id === unit.id
-                                  ? { ...candidate, factor: event.target.value }
+                                  ? {
+                                      ...candidate,
+                                      relationCount: event.target.value,
+                                    }
                                   : candidate,
                               ),
                             )

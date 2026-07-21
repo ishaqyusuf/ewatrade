@@ -35,6 +35,12 @@ behavioral testing are complete.
 - Dashboard and mobile use the same short Product/Service setup, with optional
   advanced option groups, Offerings, selling units, identifiers, prices and
   opening stock.
+- Dashboard creation, mobile creation, and dashboard configuration-version
+  editing call the canonical inventory unit the Main unit and present exact
+  relationships in either direction. New units default to “how many of this
+  unit are in one Main unit”; larger units can instead state how many Main units
+  one added unit contains. Clients transpose exact counts before sending the
+  unchanged direct factor contract and never round an inexact reciprocal.
 - Both forms offer the same optional JSON-backed quick-setup library through a
   full-screen searchable picker. Recipes prefill editable units, exact factors,
   stock behavior and generic options without prices, opening stock, IDs, or

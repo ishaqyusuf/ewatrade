@@ -2,13 +2,20 @@
 
 import { useTRPC } from "@/trpc/client"
 import { Button } from "@ewatrade/ui"
+import {
+  type CatalogUnitRelationDirection,
+  catalogUnitFactorToRelation,
+  catalogUnitRelationToFactor,
+  transposeCatalogUnitRelation,
+} from "@ewatrade/utils"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useEffect, useMemo, useState } from "react"
 
 type EditableUnit = {
-  factor: string
   key: string
   name: string
+  relationCount: string
+  relationDirection: CatalogUnitRelationDirection
   stockBehavior: "alternate_transaction" | "canonical_shared" | "packaged_stock"
   symbol: string
   transactionScale: number
@@ -20,9 +27,10 @@ const fieldClass =
 
 function blankUnit(index: number): EditableUnit {
   return {
-    factor: "1",
     key: `unit-${index + 1}`,
     name: "",
+    relationCount: "1",
+    relationDirection: "units_per_canonical",
     stockBehavior: "alternate_transaction",
     symbol: "",
     transactionScale: 0,
@@ -65,15 +73,20 @@ export function UnitConfigurationManager({
     if (!editable) return
     setCanonicalBalanceScale(editable.canonicalBalanceScale)
     setUnits(
-      editable.units.map((unit) => ({
-        factor: unit.factor,
-        key: unit.key,
-        name: unit.name,
-        stockBehavior: unit.stockBehavior,
-        symbol: unit.symbol ?? "",
-        transactionScale: unit.transactionScale,
-        unitDefinitionId: unit.unitDefinitionId ?? undefined,
-      })),
+      editable.units.map((unit) => {
+        const relation = catalogUnitFactorToRelation(unit.factor)
+
+        return {
+          key: unit.key,
+          name: unit.name,
+          relationCount: relation.count,
+          relationDirection: relation.direction,
+          stockBehavior: unit.stockBehavior,
+          symbol: unit.symbol ?? "",
+          transactionScale: unit.transactionScale,
+          unitDefinitionId: unit.unitDefinitionId ?? undefined,
+        }
+      }),
     )
   }, [current, draft])
 
@@ -118,6 +131,73 @@ export function UnitConfigurationManager({
       ),
     )
 
+  const mainUnitName =
+    units.find((unit) => unit.stockBehavior === "canonical_shared")?.name ||
+    "main unit"
+
+  const changeRelationDirection = (
+    index: number,
+    nextDirection: CatalogUnitRelationDirection,
+  ) => {
+    const unit = units[index]
+    if (!unit || unit.stockBehavior === "canonical_shared") return
+    if (!unit.relationCount.trim()) {
+      patchUnit(index, { relationDirection: nextDirection })
+      return
+    }
+
+    try {
+      const relation = transposeCatalogUnitRelation(
+        {
+          count: unit.relationCount,
+          direction: unit.relationDirection,
+        },
+        nextDirection,
+      )
+      patchUnit(index, {
+        relationCount: relation.count,
+        relationDirection: relation.direction,
+      })
+      setError(null)
+    } catch {
+      setError(
+        "This relationship cannot be transposed exactly. Keep the current direction.",
+      )
+    }
+  }
+
+  const saveDraft = () => {
+    if (!draft) return
+
+    try {
+      updateDraft.mutate({
+        canonicalBalanceScale,
+        configurationId: draft.id,
+        units: units.map((unit) => ({
+          factor:
+            unit.stockBehavior === "canonical_shared"
+              ? "1"
+              : catalogUnitRelationToFactor({
+                  count: unit.relationCount,
+                  direction: unit.relationDirection,
+                }),
+          key: unit.key,
+          name: unit.name,
+          stockBehavior: unit.stockBehavior,
+          symbol: unit.symbol || undefined,
+          transactionScale: unit.transactionScale,
+          unitDefinitionId: unit.unitDefinitionId,
+        })),
+      })
+    } catch (relationError) {
+      setError(
+        relationError instanceof Error
+          ? relationError.message
+          : "Review the unit relationships.",
+      )
+    }
+  }
+
   return (
     <section className="grid gap-5 rounded-xl border border-border bg-background p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -125,8 +205,8 @@ export function UnitConfigurationManager({
           <p className="text-sm text-muted-foreground">{productName}</p>
           <h2 className="text-lg font-semibold">Unit configuration versions</h2>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            One Canonical Unit must have factor 1. Shared selling units affect
-            the canonical balance; Packaged Stock keeps an independent balance.
+            One Main unit anchors stock. Shared selling units affect its
+            balance; Packaged Stock keeps an independent balance.
           </p>
         </div>
         <Button variant="ghost" onClick={onClose}>
@@ -167,7 +247,7 @@ export function UnitConfigurationManager({
       ) : (
         <>
           <label className="grid max-w-xs gap-1.5 text-sm">
-            <span className="font-medium">Canonical balance precision</span>
+            <span className="font-medium">Main-unit stock precision</span>
             <input
               className={fieldClass}
               max={18}
@@ -183,7 +263,7 @@ export function UnitConfigurationManager({
           <div className="grid gap-3">
             {units.map((unit, index) => (
               <div
-                className="grid gap-2 rounded-lg border border-border p-3 lg:grid-cols-[1fr_1fr_0.8fr_0.8fr_1.3fr_auto]"
+                className="grid gap-2 rounded-lg border border-border p-3 lg:grid-cols-2 xl:grid-cols-[1fr_1fr_1.4fr_1.2fr_0.8fr_1.3fr_auto]"
                 key={`${unit.key}:${index}`}
               >
                 <input
@@ -208,14 +288,49 @@ export function UnitConfigurationManager({
                     })
                   }
                 />
+                {unit.stockBehavior === "canonical_shared" ? (
+                  <div className="flex h-10 items-center rounded-lg border border-border bg-muted px-3 text-sm text-muted-foreground">
+                    Main unit
+                  </div>
+                ) : (
+                  <select
+                    aria-label={`Unit ${index + 1} relationship direction`}
+                    className={fieldClass}
+                    value={unit.relationDirection}
+                    onChange={(event) =>
+                      changeRelationDirection(
+                        index,
+                        event.target.value as CatalogUnitRelationDirection,
+                      )
+                    }
+                  >
+                    <option value="units_per_canonical">
+                      {unit.name || "This unit"} inside 1 {mainUnitName}
+                    </option>
+                    <option value="canonical_per_unit">
+                      1 {unit.name || "unit"} contains {mainUnitName}
+                    </option>
+                  </select>
+                )}
                 <input
-                  aria-label={`Unit ${index + 1} factor`}
+                  aria-label={
+                    unit.stockBehavior === "canonical_shared"
+                      ? `Unit ${index + 1} main-unit count`
+                      : unit.relationDirection === "units_per_canonical"
+                        ? `How many ${unit.name || "of this unit"} are in 1 ${mainUnitName}?`
+                        : `How many ${mainUnitName} are in 1 ${unit.name || "of this unit"}?`
+                  }
                   className={fieldClass}
+                  disabled={unit.stockBehavior === "canonical_shared"}
                   inputMode="decimal"
-                  placeholder="Factor"
-                  value={unit.factor}
+                  placeholder="Count"
+                  value={
+                    unit.stockBehavior === "canonical_shared"
+                      ? "1"
+                      : unit.relationCount
+                  }
                   onChange={(event) =>
-                    patchUnit(index, { factor: event.target.value })
+                    patchUnit(index, { relationCount: event.target.value })
                   }
                 />
                 <input
@@ -242,7 +357,7 @@ export function UnitConfigurationManager({
                     })
                   }
                 >
-                  <option value="canonical_shared">Canonical balance</option>
+                  <option value="canonical_shared">Main unit</option>
                   <option value="alternate_transaction">
                     Shared selling unit
                   </option>
@@ -262,6 +377,13 @@ export function UnitConfigurationManager({
                 >
                   Remove
                 </Button>
+                <p className="text-xs text-muted-foreground lg:col-span-2 xl:col-span-7">
+                  {unit.stockBehavior === "canonical_shared"
+                    ? `1 ${unit.name || "unit"} is the Main unit.`
+                    : unit.relationDirection === "units_per_canonical"
+                      ? `How many ${unit.name || "of this unit"} are in 1 ${mainUnitName}?`
+                      : `How many ${mainUnitName} are in 1 ${unit.name || "of this unit"}?`}
+                </p>
               </div>
             ))}
           </div>
@@ -278,18 +400,15 @@ export function UnitConfigurationManager({
             <Button
               disabled={
                 updateDraft.isPending ||
-                units.some((unit) => !unit.name || !unit.key || !unit.factor)
+                units.some(
+                  (unit) =>
+                    !unit.name ||
+                    !unit.key ||
+                    (unit.stockBehavior !== "canonical_shared" &&
+                      !unit.relationCount),
+                )
               }
-              onClick={() =>
-                updateDraft.mutate({
-                  canonicalBalanceScale,
-                  configurationId: draft.id,
-                  units: units.map((unit) => ({
-                    ...unit,
-                    symbol: unit.symbol || undefined,
-                  })),
-                })
-              }
+              onClick={saveDraft}
             >
               Save Draft
             </Button>

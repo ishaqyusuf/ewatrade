@@ -16,16 +16,19 @@ import { useAuthContext } from "@/hooks/use-auth"
 import { useTRPC } from "@/trpc/client"
 import {
   type CatalogSetupHelper,
+  type CatalogUnitRelationDirection,
   buildCatalogSetupHelperApplication,
   buildCatalogVariantCombinations,
+  catalogUnitFactorToRelation,
+  catalogUnitRelationToFactor,
   findCatalogSetupHelper,
   getCatalogSetupReplacementAction,
   isCatalogFixedPriceMissing,
   majorToMinor,
+  transposeCatalogUnitRelation,
 } from "@ewatrade/utils"
 import {
   EXACT_CANONICAL_MAX_SCALE,
-  EXACT_FACTOR_MAX_SCALE,
   parseExactDecimal,
 } from "@ewatrade/utils/exact-decimal"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -61,10 +64,11 @@ type MobileVariantDraft = {
 }
 
 type MobileUnitDraft = {
-  factor: string
   id: string
   name: string
   price: string
+  relationCount: string
+  relationDirection: CatalogUnitRelationDirection
   stockBehavior: "alternate_transaction" | "packaged_stock"
   transactionScale: number
 }
@@ -117,10 +121,11 @@ function newOptionGroup(): MobileOptionGroup {
 
 function newUnit(): MobileUnitDraft {
   return {
-    factor: "",
     id: Crypto.randomUUID(),
     name: "",
     price: "",
+    relationCount: "",
+    relationDirection: "units_per_canonical",
     stockBehavior: "alternate_transaction",
     transactionScale: DEFAULT_UNIT_TRANSACTION_SCALE,
   }
@@ -484,17 +489,22 @@ export function SimpleCatalogItemScreen({
       setUnitName(application.canonicalUnit.name)
       setCanonicalTransactionScale(application.canonicalUnit.transactionScale)
       setAdditionalUnits(
-        application.additionalUnits.map((unit) => ({
-          factor: unit.factor,
-          id: Crypto.randomUUID(),
-          name: unit.name,
-          price: "",
-          stockBehavior:
-            unit.stockBehavior === "packaged_stock"
-              ? "packaged_stock"
-              : "alternate_transaction",
-          transactionScale: unit.transactionScale,
-        })),
+        application.additionalUnits.map((unit) => {
+          const relation = catalogUnitFactorToRelation(unit.factor)
+
+          return {
+            id: Crypto.randomUUID(),
+            name: unit.name,
+            price: "",
+            relationCount: relation.count,
+            relationDirection: relation.direction,
+            stockBehavior:
+              unit.stockBehavior === "packaged_stock"
+                ? "packaged_stock"
+                : "alternate_transaction",
+            transactionScale: unit.transactionScale,
+          }
+        }),
       )
       setTrackServiceWork(false)
     } else {
@@ -658,9 +668,9 @@ export function SimpleCatalogItemScreen({
       for (const unit of additionalUnits) {
         if (!unit.name.trim())
           throw new Error("Enter a name for every selling unit.")
-        parseExactDecimal(unit.factor, {
-          allowZero: false,
-          maxScale: EXACT_FACTOR_MAX_SCALE,
+        catalogUnitRelationToFactor({
+          count: unit.relationCount,
+          direction: unit.relationDirection,
         })
         if (unit.price.trim() && majorToMinor(unit.price) === null) {
           throw new Error(`Enter a valid price for ${unit.name}.`)
@@ -705,7 +715,7 @@ export function SimpleCatalogItemScreen({
     if (itemKind === "product") {
       const canonicalUnitName = unitName.trim()
       if (!canonicalUnitName) {
-        setSubmitError("Enter the unit you count this Product in.")
+        setSubmitError("Enter the Product's main unit.")
         return
       }
 
@@ -731,7 +741,10 @@ export function SimpleCatalogItemScreen({
               transactionScale: canonicalTransactionScale,
             },
             ...additionalUnits.map((unit, unitIndex) => ({
-              factor: unit.factor.trim(),
+              factor: catalogUnitRelationToFactor({
+                count: unit.relationCount,
+                direction: unit.relationDirection,
+              }),
               key: unitKey(unitIndex),
               name: unit.name.trim(),
               stockBehavior: unit.stockBehavior,
@@ -851,7 +864,7 @@ export function SimpleCatalogItemScreen({
       if (kind === "product") {
         const canonicalUnitName = unitName.trim()
         if (!canonicalUnitName) {
-          setSubmitError("Enter the unit you count this Product in.")
+          setSubmitError("Enter the Product's main unit.")
           return
         }
 
@@ -924,13 +937,13 @@ export function SimpleCatalogItemScreen({
     }
 
     try {
-      parseExactDecimal(unitEditorDraft.factor, {
-        allowZero: false,
-        maxScale: EXACT_FACTOR_MAX_SCALE,
+      catalogUnitRelationToFactor({
+        count: unitEditorDraft.relationCount,
+        direction: unitEditorDraft.relationDirection,
       })
     } catch {
       setUnitEditorError(
-        `Enter how many ${unitName.trim() || "counted units"} make one ${trimmedName}.`,
+        "Enter a positive count that can be converted exactly without rounding.",
       )
       return
     }
@@ -965,6 +978,34 @@ export function SimpleCatalogItemScreen({
         }),
       ),
     )
+  }
+
+  const changeUnitEditorDirection = (
+    nextDirection: CatalogUnitRelationDirection,
+  ) => {
+    if (!unitEditorDraft) return
+    if (!unitEditorDraft.relationCount.trim()) {
+      updateUnitEditorDraft({ relationDirection: nextDirection })
+      return
+    }
+
+    try {
+      const relation = transposeCatalogUnitRelation(
+        {
+          count: unitEditorDraft.relationCount,
+          direction: unitEditorDraft.relationDirection,
+        },
+        nextDirection,
+      )
+      updateUnitEditorDraft({
+        relationCount: relation.count,
+        relationDirection: relation.direction,
+      })
+    } catch {
+      setUnitEditorError(
+        "This relationship cannot be transposed exactly. Keep the current direction.",
+      )
+    }
   }
 
   const focusVariantComposerInput = () => {
@@ -1251,9 +1292,9 @@ export function SimpleCatalogItemScreen({
           {kind === "product" ? (
             <FormField
               autoCapitalize="words"
-              label="Counted in"
+              label="Main unit"
               onChangeText={setUnitName}
-              placeholder="Enter counted unit"
+              placeholder="Enter main unit"
               value={unitName}
             />
           ) : null}
@@ -1518,7 +1559,7 @@ export function SimpleCatalogItemScreen({
                           currencyCode={currencyCode}
                           label={
                             kind === "product"
-                              ? `${unitName.trim() || "Counted unit"} price`
+                              ? `${unitName.trim() || "Main unit"} price`
                               : "Price"
                           }
                           onChangeValue={(value) =>
@@ -1564,7 +1605,7 @@ export function SimpleCatalogItemScreen({
                             helper={
                               unit.price.trim()
                                 ? `Defaults to ${currencyCode} ${unit.price} for ${unit.name}.`
-                                : `Defaults to the ${unitName.trim() || "counted unit"} price.`
+                                : `Defaults to the ${unitName.trim() || "main unit"} price.`
                             }
                             key={unit.id}
                             label={`${unit.name} price`}
@@ -1725,8 +1766,10 @@ export function SimpleCatalogItemScreen({
                           {unit.name}
                         </Text>
                         <Text className="text-xs leading-5 text-muted-foreground">
-                          1 {unit.name} = {unit.factor}{" "}
-                          {unitName.trim() || "counted units"} ·{" "}
+                          {unit.relationDirection === "units_per_canonical"
+                            ? `${unit.relationCount} ${unit.name} in 1 ${unitName.trim() || "main unit"}`
+                            : `1 ${unit.name} contains ${unit.relationCount} ${unitName.trim() || "main units"}`}{" "}
+                          ·{" "}
                           {unit.price.trim()
                             ? `Default price ${currencyCode} ${unit.price}`
                             : "Uses product price"}
@@ -1818,15 +1861,60 @@ export function SimpleCatalogItemScreen({
                 placeholder="Example: Bag, Carton, or Piece"
                 value={unitEditorDraft.name}
               />
+              <View className="gap-2">
+                <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
+                  Relationship
+                </Text>
+                <View className="flex-row gap-2">
+                  {(
+                    [
+                      ["units_per_canonical", "Inside main unit"],
+                      ["canonical_per_unit", "Contains main units"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <Pressable
+                      accessibilityRole="radio"
+                      accessibilityState={{
+                        selected: unitEditorDraft.relationDirection === value,
+                      }}
+                      className={
+                        unitEditorDraft.relationDirection === value
+                          ? "min-h-11 flex-1 items-center justify-center rounded-full bg-primary px-3"
+                          : "min-h-11 flex-1 items-center justify-center rounded-full bg-muted px-3"
+                      }
+                      key={value}
+                      onPress={() => changeUnitEditorDirection(value)}
+                    >
+                      <Text
+                        className={
+                          unitEditorDraft.relationDirection === value
+                            ? "text-center text-xs font-bold text-primary-foreground"
+                            : "text-center text-xs font-bold text-foreground"
+                        }
+                      >
+                        {label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
               <FormField
-                helper={`For example, enter 50 when one Bag contains 50 ${unitName.trim() || "counted units"}.`}
+                helper={
+                  unitEditorDraft.relationDirection === "units_per_canonical"
+                    ? `For example, enter 50 when 1 ${unitName.trim() || "main unit"} contains 50 ${unitEditorDraft.name.trim() || "of this unit"}.`
+                    : `For example, enter 12 when 1 ${unitEditorDraft.name.trim() || "unit"} contains 12 ${unitName.trim() || "main units"}.`
+                }
                 keyboardType="decimal-pad"
-                label={`How many ${unitName.trim() || "counted units"} are in 1 ${unitEditorDraft.name.trim() || "unit"}?`}
+                label={
+                  unitEditorDraft.relationDirection === "units_per_canonical"
+                    ? `How many ${unitEditorDraft.name.trim() || "of this unit"} are in 1 ${unitName.trim() || "main unit"}?`
+                    : `How many ${unitName.trim() || "main units"} are in 1 ${unitEditorDraft.name.trim() || "of this unit"}?`
+                }
                 onChangeText={(value) =>
-                  updateUnitEditorDraft({ factor: value })
+                  updateUnitEditorDraft({ relationCount: value })
                 }
                 placeholder="Example: 50"
-                value={unitEditorDraft.factor}
+                value={unitEditorDraft.relationCount}
               />
               <MoneyField
                 currencyCode={currencyCode}
@@ -1844,8 +1932,8 @@ export function SimpleCatalogItemScreen({
                   Stock source
                 </Text>
                 <Text className="text-xs leading-5 text-muted-foreground">
-                  Shared stock deducts the counted stock. Prepared stock keeps a
-                  separate balance for units already packed.
+                  Shared stock deducts the main-unit stock. Prepared stock
+                  keeps a separate balance for units already packed.
                 </Text>
                 <View className="flex-row gap-2">
                   {(
