@@ -4,17 +4,20 @@ import { Button } from "@ewatrade/ui"
 import {
   BUSINESS_OPERATING_MODELS,
   BUSINESS_ORDER_CHANNELS,
-  BUSINESS_PROFILES,
   BUSINESS_PROFILE_SCHEMA_VERSION,
   BUSINESS_TEAM_SIZES,
+  type BusinessOperatingModel,
+  type BusinessOrderChannel,
+  type BusinessTeamSize,
   OPERATING_CURRENCIES,
   findBusinessProfile,
+  listBusinessProfiles,
   suggestCurrencyForCountry,
 } from "@ewatrade/utils"
 import { Add01Icon, Store04Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 const COUNTRIES = [
   { code: "NG", label: "Nigeria" },
@@ -29,15 +32,25 @@ export default function SetupPage() {
   const router = useRouter()
   const [storeName, setStoreName] = useState("")
   const [businessProfileKey, setBusinessProfileKey] = useState("")
+  const [profileQuery, setProfileQuery] = useState("")
   const [otherBusinessDescription, setOtherBusinessDescription] = useState("")
   const [countryCode, setCountryCode] = useState("NG")
   const [currency, setCurrency] = useState("NGN")
-  const [operatingModel, setOperatingModel] = useState("products")
-  const [salesMethod, setSalesMethod] = useState("walk_in")
+  const [operatingModel, setOperatingModel] =
+    useState<BusinessOperatingModel>("products")
+  const [salesMethod, setSalesMethod] =
+    useState<BusinessOrderChannel>("walk_in")
   const [supportEmail, setSupportEmail] = useState("")
-  const [teamSize, setTeamSize] = useState("solo")
+  const [teamSize, setTeamSize] = useState<BusinessTeamSize>("solo")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const selectedBusinessProfile = findBusinessProfile(businessProfileKey)
+  const visibleBusinessProfiles = useMemo(() => {
+    if (selectedBusinessProfile && !profileQuery.trim()) {
+      return [selectedBusinessProfile]
+    }
+    return listBusinessProfiles({ query: profileQuery })
+  }, [profileQuery, selectedBusinessProfile])
 
   function handleCountryChange(value: string) {
     setCountryCode(value)
@@ -46,6 +59,7 @@ export default function SetupPage() {
 
   function handleBusinessProfileChange(value: string) {
     setBusinessProfileKey(value)
+    setProfileQuery("")
     const profile = findBusinessProfile(value)
     if (!profile) return
     setOperatingModel(
@@ -146,24 +160,48 @@ export default function SetupPage() {
             <label htmlFor="business-profile" className="text-sm font-medium">
               Business category <span className="text-destructive">*</span>
             </label>
-            <select
+            <input
+              aria-label="Search business categories"
+              className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
               id="business-profile"
-              required
-              value={businessProfileKey}
-              onChange={(event) =>
-                handleBusinessProfileChange(event.target.value)
-              }
-              className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+              onChange={(event) => setProfileQuery(event.target.value)}
+              placeholder="Search laundry, feed, groceries…"
+              type="search"
+              value={profileQuery}
+            />
+            <div
+              aria-label="Business categories"
+              className="max-h-56 overflow-y-auto rounded-xl border border-border/70"
+              role="listbox"
             >
-              <option value="">Select category…</option>
-              {BUSINESS_PROFILES.map((profile) => (
-                <option key={profile.key} value={profile.key}>
-                  {profile.title}
-                </option>
-              ))}
-            </select>
+              {visibleBusinessProfiles.map((profile) => {
+                const selected = profile.key === businessProfileKey
+                return (
+                  <button
+                    aria-selected={selected}
+                    className={`block w-full border-b border-border/60 px-3 py-2.5 text-left text-sm last:border-b-0 ${selected ? "bg-primary/10" : "hover:bg-muted/60"}`}
+                    key={profile.key}
+                    onClick={() => handleBusinessProfileChange(profile.key)}
+                    role="option"
+                    type="button"
+                  >
+                    <span className="block font-medium">{profile.title}</span>
+                    <span className="block text-xs leading-5 text-muted-foreground">
+                      {profile.description}
+                    </span>
+                  </button>
+                )
+              })}
+              {visibleBusinessProfiles.length === 0 ? (
+                <p className="px-3 py-5 text-center text-xs text-muted-foreground">
+                  No category matches “{profileQuery.trim()}”.
+                </p>
+              ) : null}
+            </div>
             <p className="text-xs text-muted-foreground">
-              We use this only to personalize setup suggestions.
+              {selectedBusinessProfile
+                ? `${selectedBusinessProfile.title} suggestions will appear first.`
+                : "We use this only to personalize setup suggestions."}
             </p>
           </div>
 
@@ -195,7 +233,11 @@ export default function SetupPage() {
             <select
               id="operating-model"
               value={operatingModel}
-              onChange={(event) => setOperatingModel(event.target.value)}
+              onChange={(event) =>
+                setOperatingModel(
+                  event.target.value as BusinessOperatingModel,
+                )
+              }
               className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
             >
               {BUSINESS_OPERATING_MODELS.map((model) => (
@@ -252,7 +294,9 @@ export default function SetupPage() {
               <select
                 id="sales-method"
                 value={salesMethod}
-                onChange={(e) => setSalesMethod(e.target.value)}
+                onChange={(e) =>
+                  setSalesMethod(e.target.value as BusinessOrderChannel)
+                }
                 className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
               >
                 {BUSINESS_ORDER_CHANNELS.map((channel) => (
@@ -270,7 +314,9 @@ export default function SetupPage() {
               <select
                 id="team-size"
                 value={teamSize}
-                onChange={(e) => setTeamSize(e.target.value)}
+                onChange={(e) =>
+                  setTeamSize(e.target.value as BusinessTeamSize)
+                }
                 className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
               >
                 {BUSINESS_TEAM_SIZES.map((size) => (

@@ -30,14 +30,16 @@ and may contain Product Items, Service Items, or both.
 ## Signup And Store Setup
 
 - Browser signup replaces the loose industry value with a validated business
-  category, Products/Services/Both operating answer, order channels, team size,
-  and a required description for Other/Mixed.
+  category searchable by title, description, or tags,
+  Products/Services/Both operating answer, order channels, team size, and a
+  required description for Other/Mixed.
 - Mobile owner signup keeps business identity and account authentication short
   while inserting a searchable `Personalize your workspace` step before email
   OTP or Google authentication. A single-purpose profile automatically suggests
   Products or Services; the owner may change that descriptive answer.
-- Dashboard first-Store setup captures the same category, operating answer,
-  primary order channel, team size, and Other/Mixed description.
+- Dashboard first-Store setup provides the same searchable category selector
+  and captures the operating answer, primary order channel, team size, and
+  Other/Mixed description.
 - Email OTP request/resend/verification and Google signup carry the same bounded
   profile answers so both authentication methods create equivalent Store
   onboarding snapshots.
@@ -48,9 +50,6 @@ and may contain Product Items, Service Items, or both.
   schema version, capture source/time, currency, operating model, order
   channels, team size, and optional Other/Mixed description. Completed
   onboarding sessions retain the same snapshot where that flow exists.
-- Marketing signup also keeps the primary profile key/version in Tenant
-  metadata as signup context; Store metadata remains the personalization source
-  because a Tenant may later operate different Stores.
 - Protected tenant context exposes only the validated Store profile key.
 - Product/Service choice cards label the profile-relevant item kinds. The
   full-screen quick-setup picker ranks mapped helpers first and labels them

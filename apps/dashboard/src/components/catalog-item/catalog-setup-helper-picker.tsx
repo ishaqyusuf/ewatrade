@@ -105,10 +105,16 @@ export function CatalogSetupHelperPicker({
       ),
     [businessProfileKey, kind, query],
   )
-  const patterns = helpers.filter(
+  const personalizedHelpers = helpers.filter((helper) =>
+    recommendedHelperKeySet.has(helper.key),
+  )
+  const remainingHelpers = helpers.filter(
+    (helper) => !recommendedHelperKeySet.has(helper.key),
+  )
+  const patterns = remainingHelpers.filter(
     (helper) => helper.classification === "pattern",
   )
-  const examples = helpers.filter(
+  const examples = remainingHelpers.filter(
     (helper) => helper.classification === "example",
   )
 
@@ -179,6 +185,23 @@ export function CatalogSetupHelperPicker({
           </span>
         </button>
 
+        {personalizedHelpers.length > 0 ? (
+          <div>
+            <p className="border-b border-border px-5 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              For your business
+            </p>
+            {personalizedHelpers.map((helper) => (
+              <HelperRow
+                helper={helper}
+                key={helper.key}
+                onSelect={() => onSelect(helper)}
+                personalized
+                selected={selectedKey === helper.key}
+              />
+            ))}
+          </div>
+        ) : null}
+
         {patterns.length > 0 ? (
           <div>
             <p className="border-b border-border px-5 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -213,7 +236,7 @@ export function CatalogSetupHelperPicker({
           </div>
         ) : null}
 
-        {patterns.length === 0 && examples.length === 0 ? (
+        {helpers.length === 0 ? (
           <p className="px-5 py-12 text-center text-sm text-muted-foreground">
             No quick setups match “{query.trim()}”.
           </p>

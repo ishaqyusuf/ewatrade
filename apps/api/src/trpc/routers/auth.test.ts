@@ -16,6 +16,14 @@ function expectRejected(
   expect(result.success).toBe(false)
 }
 
+const validSignupProfile = {
+  businessProfileKey: "general-retail-groceries",
+  businessProfileVersion: 1 as const,
+  operatingModel: "products" as const,
+  orderChannels: ["walk_in"] as const,
+  teamSize: "solo" as const,
+}
+
 describe("mobile auth router schemas", () => {
   test("normalizes lightweight owner email OTP signup payloads", () => {
     const input = requestMobileOwnerOtpSchema.parse({
@@ -67,6 +75,7 @@ describe("mobile auth router schemas", () => {
 
   test("normalizes Google identity verification payloads", () => {
     const input = verifyMobileGoogleSchema.parse({
+      ...validSignupProfile,
       businessName: " Rice Store ",
       idToken: " google-id-token-with-enough-length ",
       mode: "sign_up",
@@ -74,6 +83,7 @@ describe("mobile auth router schemas", () => {
     })
 
     expect(input).toEqual({
+      ...validSignupProfile,
       businessName: "Rice Store",
       idToken: "google-id-token-with-enough-length",
       mode: "sign_up",
@@ -128,10 +138,25 @@ describe("mobile auth router schemas", () => {
       idToken: "google-id-token-with-enough-length",
       mode: "register",
     })
+    expectRejected(requestMobileOwnerOtpSchema, {
+      businessName: "Rice Store",
+      email: "owner@business.test",
+      mode: "sign_up",
+      name: "Store Owner",
+    })
+    expectRejected(requestMobileOwnerOtpSchema, {
+      ...validSignupProfile,
+      businessProfileKey: "other-mixed-business",
+      businessName: "Rice Store",
+      email: "owner@business.test",
+      mode: "sign_up",
+      name: "Store Owner",
+    })
   })
 
   test("routes mobile OTP email to test inboxes without changing the identity email", () => {
     const input = requestMobileOwnerOtpSchema.parse({
+      ...validSignupProfile,
       businessName: " Rice Store ",
       email: " OWNER@TEST.COM ",
       mode: "sign_up",

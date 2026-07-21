@@ -30,33 +30,96 @@ const businessProfileKeySchema = z
   .trim()
   .refine(isBusinessProfileKey, "Select a supported business category")
 
+type MobileSignupProfileInput = {
+  businessProfileKey?: string
+  businessProfileVersion?: 1
+  mode: "login" | "sign_up"
+  operatingModel?: string
+  orderChannels?: string[]
+  otherBusinessDescription?: string
+  teamSize?: string
+}
+
+function requireMobileSignupProfile(
+  value: MobileSignupProfileInput,
+  ctx: z.RefinementCtx,
+) {
+  if (value.mode !== "sign_up") return
+
+  const requiredFields = [
+    [
+      value.businessProfileKey,
+      "businessProfileKey",
+      "Select your business category",
+    ],
+    [
+      value.businessProfileVersion,
+      "businessProfileVersion",
+      "Business profile version is required",
+    ],
+    [value.operatingModel, "operatingModel", "Select what you sell"],
+    [value.teamSize, "teamSize", "Select your team size"],
+  ] as const
+
+  for (const [fieldValue, path, message] of requiredFields) {
+    if (fieldValue !== undefined && fieldValue !== "") continue
+    ctx.addIssue({ code: "custom", message, path: [path] })
+  }
+
+  if (!value.orderChannels?.length) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Select at least one order channel",
+      path: ["orderChannels"],
+    })
+  }
+
+  if (
+    value.businessProfileKey === "other-mixed-business" &&
+    !value.otherBusinessDescription?.trim()
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Tell us what your business does",
+      path: ["otherBusinessDescription"],
+    })
+  }
+}
+
+const mobileOwnerAuthShape = {
+  addressLine1: z.string().trim().min(3).max(200).optional(),
+  businessProfileKey: businessProfileKeySchema.optional(),
+  businessProfileVersion: z
+    .literal(BUSINESS_PROFILE_SCHEMA_VERSION)
+    .optional(),
+  businessName: z.string().trim().min(1).max(120).optional(),
+  city: z.string().trim().min(2).max(120).optional(),
+  currencyCode: z.enum(OPERATING_CURRENCY_CODES).optional(),
+  email: emailSchema,
+  mode: mobileAuthModeSchema,
+  name: z.string().trim().min(1).max(120).optional(),
+  operatingModel: z.enum(BUSINESS_OPERATING_MODEL_KEYS).optional(),
+  orderChannels: z.array(z.enum(BUSINESS_ORDER_CHANNEL_KEYS)).max(5).optional(),
+  otherBusinessDescription: z.string().trim().min(2).max(240).optional(),
+  phone: z.string().trim().min(7).max(40).optional(),
+  teamSize: z.enum(BUSINESS_TEAM_SIZE_KEYS).optional(),
+} as const
+
 export const requestMobileOwnerOtpSchema = z
+  .object(mobileOwnerAuthShape)
+  .strict()
+  .superRefine(requireMobileSignupProfile)
+
+export const verifyMobileOwnerOtpSchema = z
   .object({
-    addressLine1: z.string().trim().min(3).max(200).optional(),
-    businessProfileKey: businessProfileKeySchema.optional(),
-    businessProfileVersion: z
-      .literal(BUSINESS_PROFILE_SCHEMA_VERSION)
-      .optional(),
-    businessName: z.string().trim().min(1).max(120).optional(),
-    city: z.string().trim().min(2).max(120).optional(),
-    currencyCode: z.enum(OPERATING_CURRENCY_CODES).optional(),
-    email: emailSchema,
-    mode: mobileAuthModeSchema,
-    name: z.string().trim().min(1).max(120).optional(),
-    operatingModel: z.enum(BUSINESS_OPERATING_MODEL_KEYS).optional(),
-    orderChannels: z.array(z.enum(BUSINESS_ORDER_CHANNEL_KEYS)).max(5).optional(),
-    otherBusinessDescription: z.string().trim().min(2).max(240).optional(),
-    phone: z.string().trim().min(7).max(40).optional(),
-    teamSize: z.enum(BUSINESS_TEAM_SIZE_KEYS).optional(),
+    ...mobileOwnerAuthShape,
+    code: z
+      .string()
+      .trim()
+      .regex(/^\d{6}$/),
   })
   .strict()
-
-export const verifyMobileOwnerOtpSchema = requestMobileOwnerOtpSchema.extend({
-  code: z
-    .string()
-    .trim()
-    .regex(/^\d{6}$/),
-})
+  .superRefine(requireMobileSignupProfile)
 
 export const verifyMobileGoogleSchema = z
   .object({
@@ -78,6 +141,7 @@ export const verifyMobileGoogleSchema = z
     teamSize: z.enum(BUSINESS_TEAM_SIZE_KEYS).optional(),
   })
   .strict()
+  .superRefine(requireMobileSignupProfile)
 
 function getEmailFromAddress() {
   return process.env.EMAIL_FROM ?? "Ewatrade <noreply@ewatrade.com>"
@@ -212,24 +276,24 @@ export const authRouter = createTRPCRouter({
       const profile = await verifyGoogleIdToken({ idToken: input.idToken })
 
       try {
-          return await verifyMobileGoogleIdentity(ctx.db, {
-            addressLine1: input.addressLine1,
-            businessProfileKey: input.businessProfileKey,
-            businessProfileVersion: input.businessProfileVersion,
-            businessName: input.businessName,
+        return await verifyMobileGoogleIdentity(ctx.db, {
+          addressLine1: input.addressLine1,
+          businessProfileKey: input.businessProfileKey,
+          businessProfileVersion: input.businessProfileVersion,
+          businessName: input.businessName,
           city: input.city,
           currencyCode: input.currencyCode,
           email: profile.email,
           idToken: input.idToken,
           image: profile.picture,
-            mode: input.mode,
-            name: input.name ?? profile.name,
-            operatingModel: input.operatingModel,
-            orderChannels: input.orderChannels,
-            otherBusinessDescription: input.otherBusinessDescription,
-            phone: input.phone,
-            providerAccountId: profile.sub,
-            teamSize: input.teamSize,
+          mode: input.mode,
+          name: input.name ?? profile.name,
+          operatingModel: input.operatingModel,
+          orderChannels: input.orderChannels,
+          otherBusinessDescription: input.otherBusinessDescription,
+          phone: input.phone,
+          providerAccountId: profile.sub,
+          teamSize: input.teamSize,
         })
       } catch (error) {
         throw new TRPCError({

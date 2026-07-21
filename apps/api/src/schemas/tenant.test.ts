@@ -117,5 +117,21 @@ describe("tenant schemas", () => {
         businessProfileVersion: 2,
       },
     })
+    expectRejected(createStoreSchema, {
+      name: "Main Branch",
+      onboarding: {
+        businessProfileKey: "other-mixed-business",
+        businessProfileVersion: 1,
+        operatingModel: "products",
+        orderChannels: ["walk_in"],
+        teamSize: "solo",
+      },
+    })
+    expectRejected(createStoreSchema, {
+      name: "Main Branch",
+      onboarding: {
+        operatingModel: "laundry_mode",
+      },
+    })
   })
 })

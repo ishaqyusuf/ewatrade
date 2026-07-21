@@ -13,15 +13,15 @@ export type BusinessOperatingModel =
 export type BusinessProfile = {
   description: string
   key: string
-  recommendedHelperKeys: string[]
-  recommendedItemKinds: CatalogSetupHelperKind[]
-  tags: string[]
+  readonly recommendedHelperKeys: readonly string[]
+  readonly recommendedItemKinds: readonly CatalogSetupHelperKind[]
+  readonly tags: readonly string[]
   title: string
 }
 
 type BusinessProfileFile = {
-  profiles: BusinessProfile[]
-  schemaVersion: 1
+  readonly profiles: readonly BusinessProfile[]
+  readonly schemaVersion: 1
 }
 
 export const BUSINESS_OPERATING_MODEL_KEYS = [
@@ -78,7 +78,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function assertStringArray(
   value: unknown,
   label: string,
-): asserts value is string[] {
+): asserts value is readonly string[] {
   if (
     !Array.isArray(value) ||
     value.length === 0 ||

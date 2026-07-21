@@ -52,44 +52,44 @@ export const COUNTRIES = [
 
 export const businessSchema = z
   .object({
-  addressLine1: z
-    .string()
-    .trim()
-    .min(3, "Enter your business address")
-    .max(200),
-  businessName: z
-    .string()
-    .trim()
-    .min(2, "Business name must be at least 2 characters")
-    .max(120, "Business name is too long"),
-  businessProfileKey: z
-    .string()
-    .trim()
-    .refine(isBusinessProfileKey, "Select your business category"),
-  businessProfileVersion: z.literal(BUSINESS_PROFILE_SCHEMA_VERSION),
-  businessSize: z.enum(BUSINESS_TEAM_SIZE_KEYS, {
-    message: "Select your business size",
-  }),
-  city: z.string().trim().min(2, "Enter your city").max(120),
-  countryCode: z.string().min(1, "Select your country"),
-  currencyCode: z.enum(OPERATING_CURRENCY_CODES, {
-    message: "Select your operating currency",
-  }),
-  phone: z
-    .string()
-    .trim()
-    .min(7, "Enter a valid phone number")
-    .max(20, "Phone number is too long")
-    .regex(/^\+?[0-9\s\-().]{7,20}$/, "Enter a valid phone number"),
-  region: z.string().trim().max(120).optional().or(z.literal("")),
-  operatingModel: z.enum(BUSINESS_OPERATING_MODEL_KEYS, {
-    message: "Select what you sell",
-  }),
-  orderChannels: z
-    .array(z.enum(BUSINESS_ORDER_CHANNEL_KEYS))
-    .min(1, "Select at least one order channel")
-    .max(5),
-  otherBusinessDescription: z.string().trim().max(240).optional(),
+    addressLine1: z
+      .string()
+      .trim()
+      .min(3, "Enter your business address")
+      .max(200),
+    businessName: z
+      .string()
+      .trim()
+      .min(2, "Business name must be at least 2 characters")
+      .max(120, "Business name is too long"),
+    businessProfileKey: z
+      .string()
+      .trim()
+      .refine(isBusinessProfileKey, "Select your business category"),
+    businessProfileVersion: z.literal(BUSINESS_PROFILE_SCHEMA_VERSION),
+    businessSize: z.enum(BUSINESS_TEAM_SIZE_KEYS, {
+      message: "Select your business size",
+    }),
+    city: z.string().trim().min(2, "Enter your city").max(120),
+    countryCode: z.string().min(1, "Select your country"),
+    currencyCode: z.enum(OPERATING_CURRENCY_CODES, {
+      message: "Select your operating currency",
+    }),
+    phone: z
+      .string()
+      .trim()
+      .min(7, "Enter a valid phone number")
+      .max(20, "Phone number is too long")
+      .regex(/^\+?[0-9\s\-().]{7,20}$/, "Enter a valid phone number"),
+    region: z.string().trim().max(120).optional().or(z.literal("")),
+    operatingModel: z.enum(BUSINESS_OPERATING_MODEL_KEYS, {
+      message: "Select what you sell",
+    }),
+    orderChannels: z
+      .array(z.enum(BUSINESS_ORDER_CHANNEL_KEYS))
+      .min(1, "Select at least one order channel")
+      .max(5),
+    otherBusinessDescription: z.string().trim().max(240).optional(),
   })
   .superRefine((value, ctx) => {
     if (

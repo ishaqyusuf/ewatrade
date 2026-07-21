@@ -7,7 +7,10 @@ import {
   createTenantStore,
 } from "@ewatrade/db/queries"
 import {
+  BUSINESS_OPERATING_MODEL_KEYS,
+  BUSINESS_ORDER_CHANNEL_KEYS,
   BUSINESS_PROFILE_SCHEMA_VERSION,
+  BUSINESS_TEAM_SIZE_KEYS,
   OPERATING_CURRENCY_CODES,
   isBusinessProfileKey,
 } from "@ewatrade/utils"
@@ -15,24 +18,40 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { z } from "zod/v4"
 
-const storeOnboardingSchema = z.object({
-  businessProfileKey: z
-    .string()
-    .trim()
-    .max(120)
-    .refine(isBusinessProfileKey, "Select a supported business category")
-    .optional(),
-  businessProfileVersion: z
-    .literal(BUSINESS_PROFILE_SCHEMA_VERSION)
-    .optional(),
-  countryCode: z.string().trim().max(8).optional(),
-  operatingModel: z.string().trim().max(120).optional(),
-  otherBusinessDescription: z.string().trim().max(240).optional(),
-  orderChannels: z.array(z.string().trim().min(1).max(80)).max(8).optional(),
-  salesMethod: z.string().trim().max(80).optional(),
-  staffInvolvement: z.string().trim().max(120).optional(),
-  teamSize: z.string().trim().max(80).optional(),
-})
+const storeOnboardingSchema = z
+  .object({
+    businessProfileKey: z
+      .string()
+      .trim()
+      .max(120)
+      .refine(isBusinessProfileKey, "Select a supported business category")
+      .optional(),
+    businessProfileVersion: z
+      .literal(BUSINESS_PROFILE_SCHEMA_VERSION)
+      .optional(),
+    countryCode: z.string().trim().max(8).optional(),
+    operatingModel: z.enum(BUSINESS_OPERATING_MODEL_KEYS).optional(),
+    otherBusinessDescription: z.string().trim().max(240).optional(),
+    orderChannels: z
+      .array(z.enum(BUSINESS_ORDER_CHANNEL_KEYS))
+      .max(5)
+      .optional(),
+    salesMethod: z.string().trim().max(80).optional(),
+    staffInvolvement: z.string().trim().max(120).optional(),
+    teamSize: z.enum(BUSINESS_TEAM_SIZE_KEYS).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      value.businessProfileKey === "other-mixed-business" &&
+      !value.otherBusinessDescription?.trim()
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Tell us what your business does",
+        path: ["otherBusinessDescription"],
+      })
+    }
+  })
 
 const createStoreSchema = z.object({
   name: z.string().min(1).max(120),

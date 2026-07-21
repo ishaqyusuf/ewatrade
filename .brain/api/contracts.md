@@ -31,6 +31,9 @@
   creation accept a validated Business Profile key/version plus bounded
   Products/Services/Both, order-channel, team-size, and optional Other/Mixed
   description fields.
+- Mobile `sign_up` requests require the profile key/version, operating model,
+  at least one order channel, team size, and Other/Mixed description when that
+  category is selected. Mobile `login` remains profile-free.
 - Signup profile fields are descriptive onboarding context. They never grant
   permissions, gate features, or choose Product/Service runtime behavior.
 - `tenant.stores` and `tenant.current` expose the validated

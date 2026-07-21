@@ -402,13 +402,7 @@ export async function POST(request: NextRequest) {
           enabledModes: ["MERCHANT"],
           countryCode,
           currencyCode,
-          metadata: {
-            businessProfile: {
-              key: businessProfileKey,
-              schemaVersion: businessProfileVersion,
-            },
-            businessSize,
-          },
+          metadata: { businessSize },
         },
       })
 

@@ -13,12 +13,13 @@ import { Button } from "@ewatrade/ui"
 import {
   BUSINESS_OPERATING_MODELS,
   BUSINESS_ORDER_CHANNELS,
-  BUSINESS_PROFILES,
   BUSINESS_TEAM_SIZES,
   OPERATING_CURRENCIES,
   findBusinessProfile,
+  listBusinessProfiles,
   suggestCurrencyForCountry,
 } from "@ewatrade/utils"
+import { useMemo, useState } from "react"
 
 const baseInputClasses =
   "w-full scroll-mt-24 rounded-lg border border-border/70 bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10 appearance-none"
@@ -51,8 +52,13 @@ export function StepBusiness({
       otherBusinessDescription: "",
     },
   })
+  const [profileQuery, setProfileQuery] = useState("")
   const selectedProfileKey = form.watch("businessProfileKey")
   const selectedProfile = findBusinessProfile(selectedProfileKey)
+  const visibleProfiles = useMemo(() => {
+    if (selectedProfile && !profileQuery.trim()) return [selectedProfile]
+    return listBusinessProfiles({ query: profileQuery })
+  }, [profileQuery, selectedProfile])
 
   const { fill } = useDevFormFill(businessFill, form)
 
@@ -89,33 +95,64 @@ export function StepBusiness({
 
         {/* Business profile + Size grid */}
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block space-y-1.5 text-sm font-medium text-foreground">
+          <div className="space-y-1.5 text-sm font-medium text-foreground">
             Business category
-            <select
-              {...form.register("businessProfileKey", {
-                onChange: (event) => {
-                  const profile = findBusinessProfile(event.target.value)
-                  if (!profile) return
-                  form.setValue(
-                    "operatingModel",
-                    profile.recommendedItemKinds.length === 1
-                      ? profile.recommendedItemKinds[0] === "service"
-                        ? "services"
-                        : "products"
-                      : "products_and_services",
-                    { shouldValidate: true },
-                  )
-                },
-              })}
+            <input
+              aria-label="Search business categories"
               className={`${baseInputClasses} mt-1.5`}
+              onChange={(event) => setProfileQuery(event.target.value)}
+              placeholder="Search laundry, feed, groceries…"
+              type="search"
+              value={profileQuery}
+            />
+            <div
+              aria-label="Business categories"
+              className="max-h-52 overflow-y-auto rounded-lg border border-border/70"
+              role="listbox"
             >
-              <option value="">Select category…</option>
-              {BUSINESS_PROFILES.map((profile) => (
-                <option key={profile.key} value={profile.key}>
-                  {profile.title}
-                </option>
-              ))}
-            </select>
+              {visibleProfiles.map((profile) => {
+                const selected = profile.key === selectedProfileKey
+                return (
+                  <button
+                    aria-selected={selected}
+                    className={`block w-full border-b border-border/60 px-3 py-2.5 text-left last:border-b-0 ${selected ? "bg-primary/10" : "hover:bg-muted/60"}`}
+                    key={profile.key}
+                    onClick={() => {
+                      form.setValue("businessProfileKey", profile.key, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                      setProfileQuery("")
+                      form.setValue(
+                        "operatingModel",
+                        profile.recommendedItemKinds.length === 1
+                          ? profile.recommendedItemKinds[0] === "service"
+                            ? "services"
+                            : "products"
+                          : "products_and_services",
+                        { shouldValidate: true },
+                      )
+                    }}
+                    role="option"
+                    type="button"
+                  >
+                    <span className="block font-medium">{profile.title}</span>
+                    <span className="block text-xs font-normal leading-5 text-muted-foreground">
+                      {profile.description}
+                    </span>
+                  </button>
+                )
+              })}
+              {visibleProfiles.length === 0 ? (
+                <p className="px-3 py-5 text-center text-xs font-normal text-muted-foreground">
+                  No category matches “{profileQuery.trim()}”.
+                </p>
+              ) : null}
+            </div>
+            <input
+              {...form.register("businessProfileKey")}
+              type="hidden"
+            />
             {form.formState.errors.businessProfileKey && (
               <p className="text-xs text-destructive">
                 {form.formState.errors.businessProfileKey.message}
@@ -126,7 +163,7 @@ export function StepBusiness({
                 {selectedProfile.description}
               </span>
             ) : null}
-          </label>
+          </div>
 
           <label className="block space-y-1.5 text-sm font-medium text-foreground">
             Team size

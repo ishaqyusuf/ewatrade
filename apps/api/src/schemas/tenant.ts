@@ -1,5 +1,8 @@
 import {
+  BUSINESS_OPERATING_MODEL_KEYS,
+  BUSINESS_ORDER_CHANNEL_KEYS,
   BUSINESS_PROFILE_SCHEMA_VERSION,
+  BUSINESS_TEAM_SIZE_KEYS,
   OPERATING_CURRENCY_CODES,
   isBusinessProfileKey,
 } from "@ewatrade/utils"
@@ -29,22 +32,46 @@ export const tenantBootstrapSchema = z.object({
   tenantSlug: optionalText(120),
 })
 
-const storeOnboardingSchema = z.object({
-  businessProfileKey: optionalText(120).refine(
-    (value) => value === undefined || isBusinessProfileKey(value),
-    "Select a supported business category",
-  ),
-  businessProfileVersion: z
-    .literal(BUSINESS_PROFILE_SCHEMA_VERSION)
-    .optional(),
-  countryCode: optionalText(8),
-  otherBusinessDescription: optionalText(240),
-  operatingModel: optionalText(120),
-  orderChannels: z.array(z.string().trim().min(1).max(80)).max(8).optional(),
-  salesMethod: optionalText(80),
-  staffInvolvement: optionalText(120),
-  teamSize: optionalText(80),
-})
+const storeOnboardingSchema = z
+  .object({
+    businessProfileKey: optionalText(120).refine(
+      (value) => value === undefined || isBusinessProfileKey(value),
+      "Select a supported business category",
+    ),
+    businessProfileVersion: z
+      .literal(BUSINESS_PROFILE_SCHEMA_VERSION)
+      .optional(),
+    countryCode: optionalText(8),
+    otherBusinessDescription: optionalText(240),
+    operatingModel: z.preprocess(
+      (value) =>
+        typeof value === "string" ? value.trim() || undefined : value,
+      z.enum(BUSINESS_OPERATING_MODEL_KEYS).optional(),
+    ),
+    orderChannels: z
+      .array(z.string().trim().pipe(z.enum(BUSINESS_ORDER_CHANNEL_KEYS)))
+      .max(5)
+      .optional(),
+    salesMethod: optionalText(80),
+    staffInvolvement: optionalText(120),
+    teamSize: z.preprocess(
+      (value) =>
+        typeof value === "string" ? value.trim() || undefined : value,
+      z.enum(BUSINESS_TEAM_SIZE_KEYS).optional(),
+    ),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      value.businessProfileKey === "other-mixed-business" &&
+      !value.otherBusinessDescription?.trim()
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Tell us what your business does",
+        path: ["otherBusinessDescription"],
+      })
+    }
+  })
 
 export const createStoreSchema = z.object({
   addressLine1: optionalText(200),
