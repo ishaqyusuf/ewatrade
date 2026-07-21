@@ -54,21 +54,24 @@ ADR-0013.
   decimal places without exposing precision controls in the setup flow. Saved
   units render as flat divider rows with explicit edit and delete actions;
   editing reuses the same sheet.
-- The current generic Product form preserves the approved inline `Add variant`
-  interaction: a keyboard-sticky composer first collects a suggested or custom
-  variant name, then collects contextual values through selected removable
-  pills, suggestions, comma-separated entry, and keyboard Done. This UI writes
-  to generic option groups and generated combinations; it does not introduce a
-  Product-, feed-, bag-, or industry-specific domain branch.
-- Generated Product variant rows use the compact stock-row treatment: the
-  variant name plus side-by-side `Price` and exact `Qty` remain visible and are
-  required for active variants. `More` reveals optional description, SKU,
-  barcode, active status, and store availability. Per-variant Qty is persisted
-  as opening stock for that specific variant rather than being collapsed into
-  the default variant. When additional selling units exist, every generated
-  variant row exposes a price override for each unit. A blank override uses the
-  unit-level default and then the variant's counted-unit price, while every
-  persisted variant-unit Offering still receives its own fixed price.
+- The generic Product/Service form calls customer choices `Options`. A
+  keyboard-sticky composer first collects a suggested or custom option name,
+  then contextual values through selected removable pills, suggestions,
+  comma-separated entry, and an explicit check action. `Unit` is not an option
+  suggestion because selling units have their own flat section and editor.
+- Option names and selected values use a flat divider list. Generated
+  combinations are also list-only: every row summarizes its combination title,
+  counted-in unit, stock/type, price, and description, with a menu button in
+  place of destructive inline actions.
+- A combination menu exposes Edit and Disable/Enable. Edit opens a compact,
+  keyboard-safe floating sheet for quantity, price, and an optionally revealed
+  description. `More` expands that sheet to full screen for image, SKU,
+  barcode, per-unit price, Service quote, and Store availability controls. A
+  rounded bottom-right check remains above the keyboard and commits the draft.
+  Per-variant quantity persists as opening stock for that specific variant.
+  Blank unit overrides use the unit default and then the combination's
+  counted-unit price; each persisted variant-unit Offering still receives its
+  own fixed price.
 - Service uses the shared name, price, variant, and image controls, hides all stock controls, and may collect turnaround and instructions.
 - Helper-selected Product variants retain independently editable prices for
   every selling unit, while helper-selected Service combinations retain
@@ -98,21 +101,26 @@ context. It is not the current runtime or target architecture.
 
 ## Experience Gating
 
-- Catalog navigation appears after the active Store has any Product or Service
-  history. Authorized Product and Service creation paths remain available from
-  setup and global Add actions before Catalog is revealed.
+- Dashboard Catalog navigation appears after the active Store has any Product
+  or Service history. Authorized Product and Service creation paths remain
+  available from setup and global Add actions before Catalog is revealed.
 - Product filters and Inventory appear after Product history. Service filters
   appear after Service history. A type filter is not advertised when the Store
   has zero history for that kind.
-- Sales navigation appears after the first Commercial Order. Direct
+- Dashboard Sales navigation appears after the first Commercial Order. Direct
   first-order creation is permitted once an active fixed-price Offering exists.
-- Service Jobs navigation appears only after the first tracked Service Job; a
-  Service Catalog item by itself does not reveal operational work.
+- Dashboard Service Jobs navigation appears only after the first tracked
+  Service Job; a Service Catalog item by itself does not reveal operational
+  work.
+- Mobile bottom tabs do not participate in record-derived revealing.
+  Role-authorized Catalog, Work, and Reports tabs remain visible before their
+  first records and open the corresponding empty or first-record experience.
 - A mixed Store reveals each operational area independently. Archived items
   retain historical revelation.
 - Mobile owner/admin and attendant homes combine the same authoritative
   contract with pending offline projections. Product-only actions include
-  stock and inventory; tracked Service operations reveal Work.
+  stock and inventory; tracked Service operations reveal Work dashboard
+  content and metrics.
 - Service checkout uses the normal priced-item order flow without stock or cashier-session requirements.
 
 ## Enforcement And Compatibility

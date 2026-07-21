@@ -36,6 +36,16 @@ Ticket 11 Midday-style desktop wrapper internal build is complete. `apps/desktop
 
 Ticket 12 dashboard QA hardening and Brain handoff is complete. The closing pass verified dashboard helper policies, dashboard typecheck, desktop wrapper smoke, authenticated route availability across the main dashboard pages, logged-out redirects with `next` preservation, selected dashboard API smoke checks, and ticket 02's local multi-business/multi-store switching workflow. Remaining QA gaps are fixture-dependent positive paths for non-empty sales/session/customer datasets and shared-link order/delivery follow-up.
 
+Progressive feature revealing is implemented. The shared
+`tenant.featureAvailability` read model now tailors the sidebar and Overview to
+the active Store's operational history, while Staff presence remains
+Tenant-wide. New businesses see a setup launchpad instead of empty modules and
+zero-value sections. Navigation visibility is separate from route
+authorization, so permitted Catalog and Staff creation links, first-order
+access after a live sellable Offering, and command-search creation actions
+remain available. See
+`.brain/features/progressive-feature-revealing.md` and ADR-0015.
+
 Low-stock planning has been extended beyond passive stock-state badges and filters. The dashboard Wayfinder now includes `.scratch/wayfinder-dashboard-standard-system/13-low-stock-level-alert-workflow.md`, which defines low-stock level alerts as a follow-up inventory workflow with threshold source visibility, open/acknowledged/snoozed/resolved lifecycle states, role-gated actions, dashboard/inventory/search placement, notification settings, and QA expectations.
 
 The current direction is:
@@ -54,7 +64,7 @@ Resolved audit guidance:
 - The current EwaTrade route handlers for logout, stores, and active tenant/store may remain as temporary shims while the shell/auth ticket standardizes the dashboard.
 - The current retail reports component may remain as a temporary shim, but should not be expanded before the analytics ticket decomposes it into Midday-style focused components.
 - Dashboard middleware should redirect unauthenticated users to the marketing login page with `next` preserved, while server components and route handlers continue to validate the real Better Auth session.
-- Role-aware dashboard navigation is centralized in `apps/dashboard/src/lib/navigation.ts`; owner/admin users see full shell navigation, managers see operational administration without owner-only settings, cashier/operator users see permitted work surfaces, and support/member roles are limited to overview.
+- Role-aware dashboard navigation is centralized in `apps/dashboard/src/lib/navigation.ts`; it combines role permission with record-derived feature presence. Owner/admin users see revealed administration, managers see revealed operational administration without owner-only settings, cashier/operator users see revealed permitted work surfaces, and support/member roles are limited to overview.
 - The dashboard logout, active tenant, active store, and store creation route handlers are retained as migration bridges until the typed API surface fully covers those shell workflows.
 - The dashboard product catalog route handlers are retained as proof-slice migration bridges until the typed dashboard API surface fully covers product list, create, and edit workflows.
 - The dashboard inventory bridge route handlers are retained as proof-slice migration bridges until the typed dashboard API surface fully covers inventory list, movement history, stock intake, stock adjustment, and unit conversion workflows.

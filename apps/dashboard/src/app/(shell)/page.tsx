@@ -1,5 +1,8 @@
+import { GettingStarted } from "@/components/dashboard/getting-started"
+import { getGettingStartedActions } from "@/lib/dashboard-overview"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
+import { getDashboardFeatureAvailability } from "@/lib/workspace-feature-availability"
 import { prisma } from "@ewatrade/db"
 
 function startOfToday() {
@@ -28,35 +31,64 @@ export default async function DashboardHomePage() {
 
   const store = ctx?.activeStore
   const tenant = ctx?.tenant
-  const summary =
+  const availability =
     store && tenant
+      ? await getDashboardFeatureAvailability(store.id, tenant.id)
+      : null
+  const summary =
+    store && tenant && availability
       ? await Promise.all([
-          prisma.commercialOrder.aggregate({
-            where: { createdAt: { gte: startOfToday() }, storeId: store.id },
-            _sum: { totalMinor: true },
-          }),
-          prisma.commercialOrder.count({
-            where: { createdAt: { gte: startOfMonth() }, storeId: store.id },
-          }),
-          prisma.catalogItem.count({
-            where: { status: "ACTIVE", tenantId: tenant.id },
-          }),
-          prisma.stockBalanceSource.count({
-            where: { storeId: store.id },
-          }),
-          prisma.commercialOrder.findMany({
-            orderBy: { createdAt: "desc" },
-            select: {
-              createdAt: true,
-              currencyCode: true,
-              customerName: true,
-              orderNumber: true,
-              status: true,
-              totalMinor: true,
-            },
-            take: 5,
-            where: { storeId: store.id },
-          }),
+          availability.hasOrders
+            ? prisma.commercialOrder.aggregate({
+                where: {
+                  createdAt: { gte: startOfToday() },
+                  storeId: store.id,
+                },
+                _sum: { totalMinor: true },
+              })
+            : Promise.resolve({ _sum: { totalMinor: null } }),
+          availability.hasOrders
+            ? prisma.commercialOrder.count({
+                where: {
+                  createdAt: { gte: startOfMonth() },
+                  storeId: store.id,
+                },
+              })
+            : Promise.resolve(0),
+          availability.hasCatalogItems
+            ? prisma.catalogItem.count({
+                where: {
+                  offerings: {
+                    some: {
+                      storeAvailability: {
+                        some: { storeId: store.id },
+                      },
+                    },
+                  },
+                  tenantId: tenant.id,
+                },
+              })
+            : Promise.resolve(0),
+          availability.hasProductItems
+            ? prisma.stockBalanceSource.count({
+                where: { storeId: store.id },
+              })
+            : Promise.resolve(0),
+          availability.hasOrders
+            ? prisma.commercialOrder.findMany({
+                orderBy: { createdAt: "desc" },
+                select: {
+                  createdAt: true,
+                  currencyCode: true,
+                  customerName: true,
+                  orderNumber: true,
+                  status: true,
+                  totalMinor: true,
+                },
+                take: 5,
+                where: { storeId: store.id },
+              })
+            : Promise.resolve([]),
         ])
       : null
   const [
@@ -67,29 +99,45 @@ export default async function DashboardHomePage() {
     recentOrders,
   ] = summary ?? [{ _sum: { totalMinor: null } }, 0, 0, 0, []]
   const metrics = [
-    {
-      label: "Revenue today",
-      value: store
-        ? money(revenueToday._sum.totalMinor ?? 0, store.currencyCode)
-        : "—",
-      sub: "Confirmed order value",
-    },
-    {
-      label: "Orders",
-      value: ordersThisMonth.toLocaleString(),
-      sub: "This month",
-    },
-    {
-      label: "Catalog items",
-      value: catalogItems.toLocaleString(),
-      sub: "Active products and services",
-    },
-    {
-      label: "Stock balances",
-      value: stockBalances.toLocaleString(),
-      sub: "Physical balance sources",
-    },
+    ...(availability?.hasOrders
+      ? [
+          {
+            label: "Revenue today",
+            value: store
+              ? money(revenueToday._sum.totalMinor ?? 0, store.currencyCode)
+              : "—",
+            sub: "Confirmed order value",
+          },
+          {
+            label: "Orders",
+            value: ordersThisMonth.toLocaleString(),
+            sub: "This month",
+          },
+        ]
+      : []),
+    ...(availability?.hasCatalogItems
+      ? [
+          {
+            label: "Catalog items",
+            value: catalogItems.toLocaleString(),
+            sub: "Products and services",
+          },
+        ]
+      : []),
+    ...(availability?.hasProductItems
+      ? [
+          {
+            label: "Stock balances",
+            value: stockBalances.toLocaleString(),
+            sub: "Physical balance sources",
+          },
+        ]
+      : []),
   ]
+  const gettingStartedActions =
+    availability && !availability.hasOrders
+      ? getGettingStartedActions(ctx?.membership.role, availability)
+      : []
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6 lg:p-8">
@@ -102,54 +150,64 @@ export default async function DashboardHomePage() {
         </p>
       </div>
 
-      <dl className="grid gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
-        {metrics.map((metric) => (
-          <div key={metric.label} className="bg-background p-5">
-            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {metric.label}
-            </dt>
-            <dd className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
-              {metric.value}
-            </dd>
-            <p className="mt-0.5 text-xs text-muted-foreground">{metric.sub}</p>
-          </div>
-        ))}
-      </dl>
+      {gettingStartedActions.length > 0 ? (
+        <GettingStarted actions={gettingStartedActions} />
+      ) : null}
 
-      <div className="flex flex-1 flex-col gap-3">
-        <h2 className="text-sm font-semibold">Recent orders</h2>
-        {recentOrders.length > 0 ? (
-          <div className="border-y border-border bg-background">
-            {recentOrders.map((order) => (
-              <div
-                key={order.orderNumber}
-                className="grid gap-2 border-b border-border px-4 py-4 last:border-b-0 sm:grid-cols-[1fr_auto_auto] sm:items-center"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium">{order.orderNumber}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {order.customerName || "Walk-in customer"} ·{" "}
-                    {order.createdAt.toLocaleString("en-NG", {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}
+      {metrics.length > 0 ? (
+        <dl className="grid gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+          {metrics.map((metric) => (
+            <div key={metric.label} className="bg-background p-5">
+              <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {metric.label}
+              </dt>
+              <dd className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
+                {metric.value}
+              </dd>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {metric.sub}
+              </p>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+
+      {availability?.hasOrders ? (
+        <div className="flex flex-1 flex-col gap-3">
+          <h2 className="text-sm font-semibold">Recent orders</h2>
+          {recentOrders.length > 0 ? (
+            <div className="border-y border-border bg-background">
+              {recentOrders.map((order) => (
+                <div
+                  key={order.orderNumber}
+                  className="grid gap-2 border-b border-border px-4 py-4 last:border-b-0 sm:grid-cols-[1fr_auto_auto] sm:items-center"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium">{order.orderNumber}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {order.customerName || "Walk-in customer"} ·{" "}
+                      {order.createdAt.toLocaleString("en-NG", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </p>
+                  </div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {order.status.toLowerCase().replaceAll("_", " ")}
+                  </p>
+                  <p className="font-semibold tabular-nums">
+                    {money(order.totalMinor, order.currencyCode)}
                   </p>
                 </div>
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {order.status.toLowerCase().replaceAll("_", " ")}
-                </p>
-                <p className="font-semibold tabular-nums">
-                  {money(order.totalMinor, order.currencyCode)}
-                </p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-1 items-center justify-center border-y border-border bg-background p-10 text-sm text-muted-foreground">
-            Orders you create or receive will appear here.
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-1 items-center justify-center border-y border-border bg-background p-10 text-sm text-muted-foreground">
+              Orders you create or receive will appear here.
+            </div>
+          )}
+        </div>
+      ) : null}
     </div>
   )
 }

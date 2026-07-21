@@ -99,6 +99,7 @@ export default function StaffOnboardingRoute() {
             ...session.profile,
             businessId: completed.tenant.id,
             businessName: business.name,
+            businessSlug: completed.tenant.slug,
             email: completed.user.email,
             id: completed.user.id,
             name:

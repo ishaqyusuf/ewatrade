@@ -130,6 +130,7 @@ export function useMobileGoogleAuth({
           profile: {
             businessId: session.profile.businessId ?? undefined,
             businessName: session.profile.businessName ?? undefined,
+            businessSlug: session.tenant?.slug ?? undefined,
             currencyCode: session.profile.currencyCode,
             email: session.profile.email,
             id: session.profile.id,
@@ -158,7 +159,16 @@ export function useMobileGoogleAuth({
         phone,
       })
     },
-    [addressLine1, businessName, city, currencyCode, mode, name, phone, verifyGoogleMutation],
+    [
+      addressLine1,
+      businessName,
+      city,
+      currencyCode,
+      mode,
+      name,
+      phone,
+      verifyGoogleMutation,
+    ],
   )
 
   useEffect(() => {

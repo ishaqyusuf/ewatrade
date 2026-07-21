@@ -2,6 +2,14 @@
 
 Typed tRPC routers are the primary application contract.
 
+## Tenant Workspace
+
+- `tenant.businesses` lists the authenticated user's active business
+  memberships for mobile workspace switching.
+- `tenant.featureAvailability` returns the active Store's record-derived
+  feature presence plus business-wide Staff presence and the live sellable-item
+  prerequisite.
+
 ## Catalog
 
 - Read: `catalog.listItems`, `catalog.getItem`,

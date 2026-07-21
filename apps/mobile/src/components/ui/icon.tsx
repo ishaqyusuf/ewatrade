@@ -198,7 +198,7 @@ function IconImpl({
       : color
         ? THEME.light[color]
         : undefined;
-  const resolvedColor = themedColor || color || props.color;
+  const resolvedColor = props.color || themedColor || color;
   const styleFromClass = {
     color: resolvedColor,
     ...(opacity !== undefined ? { opacity } : {}),

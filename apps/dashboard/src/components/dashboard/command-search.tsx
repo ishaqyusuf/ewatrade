@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 type Props = {
+  commandPaths: string[]
   navItems: DashboardNavItem[]
 }
 
@@ -37,7 +38,7 @@ function groupLabel(group: string) {
   }
 }
 
-export function DashboardCommandSearch({ navItems }: Props) {
+export function DashboardCommandSearch({ commandPaths, navItems }: Props) {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
@@ -50,8 +51,12 @@ export function DashboardCommandSearch({ navItems }: Props) {
     [navItems, query],
   )
   const commands = useMemo(
-    () => filterDashboardCommands(getDashboardCommands(navItems), query),
-    [navItems, query],
+    () =>
+      filterDashboardCommands(
+        getDashboardCommands(navItems, commandPaths),
+        query,
+      ),
+    [commandPaths, navItems, query],
   )
   const groupedResults = useMemo(() => {
     const groups = new Map<string, typeof results>()

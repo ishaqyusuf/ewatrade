@@ -8,6 +8,9 @@
   projections only.
 - Payment state and work state use separate permissions and never imply one
   another.
+- Workspace availability affects navigation discovery only. Direct-route and
+  mutation authorization continue to use authenticated role, tenant, Store,
+  subscription, and semantic policy.
 
 ## Catalog And Inventory
 

@@ -1,12 +1,12 @@
 import { DashboardHeader } from "@/components/dashboard/header"
 import { DashboardSidebar } from "@/components/dashboard/sidebar"
-import { getCatalogFeatureAvailability } from "@/lib/catalog-capabilities"
 import {
   canAccessDashboardPath,
   getDashboardNavigation,
 } from "@/lib/navigation"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
+import { getDashboardFeatureAvailability } from "@/lib/workspace-feature-availability"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
@@ -40,22 +40,35 @@ export default async function ShellLayout({
   if (!store) {
     redirect("/setup")
   }
-  const catalogFeatures = await getCatalogFeatureAvailability({
-    storeId: store.id,
-    tenantId: ctx.tenant.id,
-  })
+  const featureAvailability = await getDashboardFeatureAvailability(
+    store.id,
+    ctx.tenant.id,
+  )
 
-  if (!canAccessDashboardPath(pathname, ctx.membership.role, catalogFeatures)) {
+  if (
+    !canAccessDashboardPath(pathname, ctx.membership.role, featureAvailability)
+  ) {
     redirect("/")
   }
 
-  const navItems = getDashboardNavigation(ctx.membership.role, catalogFeatures)
+  const navItems = getDashboardNavigation(
+    ctx.membership.role,
+    featureAvailability,
+  )
+  const commandPaths = ["/catalog", "/staff"].filter((path) =>
+    canAccessDashboardPath(path, ctx.membership.role, featureAvailability),
+  )
 
   return (
     <div className="min-h-screen bg-muted/30">
       <DashboardSidebar user={session.user} ctx={ctx} navItems={navItems} />
       <div className="min-h-screen md:pl-[70px]">
-        <DashboardHeader user={session.user} ctx={ctx} navItems={navItems} />
+        <DashboardHeader
+          commandPaths={commandPaths}
+          user={session.user}
+          ctx={ctx}
+          navItems={navItems}
+        />
         <main className="flex min-h-[calc(100vh-70px)] flex-col">
           {children}
         </main>

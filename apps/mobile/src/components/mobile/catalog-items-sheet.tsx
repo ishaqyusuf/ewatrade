@@ -128,6 +128,9 @@ export function CatalogItemsContent({
   const trpc = useTRPC()
   const [kindFilter, setKindFilter] = useState<CatalogKindFilter>("all")
   const [query, setQuery] = useState("")
+  const availabilityQuery = useQuery(
+    trpc.tenant.featureAvailability.queryOptions(undefined, { retry: false }),
+  )
   const itemsQuery = useQuery(
     trpc.catalog.listItems.queryOptions(
       { kind: kindFilter === "all" ? undefined : kindFilter },
@@ -198,23 +201,29 @@ export function CatalogItemsContent({
             />
           ) : null}
 
-          <View className="flex-row flex-wrap gap-2">
-            <KindFilter
-              active={kindFilter === "all"}
-              label="All"
-              onPress={() => setKindFilter("all")}
-            />
-            <KindFilter
-              active={kindFilter === "product"}
-              label="Products"
-              onPress={() => setKindFilter("product")}
-            />
-            <KindFilter
-              active={kindFilter === "service"}
-              label="Services"
-              onPress={() => setKindFilter("service")}
-            />
-          </View>
+          {availabilityQuery.data?.hasCatalogItems ? (
+            <View className="flex-row flex-wrap gap-2">
+              <KindFilter
+                active={kindFilter === "all"}
+                label="All"
+                onPress={() => setKindFilter("all")}
+              />
+              {availabilityQuery.data.hasProductItems ? (
+                <KindFilter
+                  active={kindFilter === "product"}
+                  label="Products"
+                  onPress={() => setKindFilter("product")}
+                />
+              ) : null}
+              {availabilityQuery.data.hasServiceItems ? (
+                <KindFilter
+                  active={kindFilter === "service"}
+                  label="Services"
+                  onPress={() => setKindFilter("service")}
+                />
+              ) : null}
+            </View>
+          ) : null}
 
           <FormField
             autoCapitalize="words"

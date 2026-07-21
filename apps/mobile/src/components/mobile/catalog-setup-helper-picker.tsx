@@ -10,13 +10,8 @@ import {
 } from "@ewatrade/utils/catalog-setup-helpers"
 import { StatusBar } from "expo-status-bar"
 import { useEffect, useMemo, useState } from "react"
-import {
-  KeyboardAvoidingView,
-  Modal as NativeModal,
-  Platform,
-  ScrollView,
-  View,
-} from "react-native"
+import { Modal as NativeModal, ScrollView, View } from "react-native"
+import { KeyboardStickyView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 type CatalogSetupHelperPickerProps = {
@@ -119,10 +114,7 @@ export function CatalogSetupHelperPicker({
       presentationStyle="fullScreen"
       visible={visible}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={{ backgroundColor: colors.background, flex: 1 }}
-      >
+      <View style={{ backgroundColor: colors.background, flex: 1 }}>
         <StatusBar
           backgroundColor={colors.background}
           style={colorScheme === "dark" ? "light" : "dark"}
@@ -147,7 +139,12 @@ export function CatalogSetupHelperPicker({
           </Pressable>
         </View>
 
-        <ScrollView className="flex-1" keyboardShouldPersistTaps="handled">
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="pb-32"
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+        >
           <Pressable
             accessibilityRole="button"
             accessibilityState={{ selected: selectedKey === null }}
@@ -211,19 +208,38 @@ export function CatalogSetupHelperPicker({
           ) : null}
         </ScrollView>
 
-        <View className="border-t border-border bg-background px-5 py-4">
-          <FormField
-            autoCapitalize="none"
-            autoCorrect={false}
-            label="Search templates"
-            onChangeText={setQuery}
-            placeholder="Search units or business examples"
-            returnKeyType="search"
-            value={query}
+        <KeyboardStickyView
+          offset={{ closed: 0, opened: 0 }}
+          pointerEvents="box-none"
+          style={{
+            bottom: 0,
+            left: 0,
+            position: "absolute",
+            right: 0,
+            zIndex: 20,
+          }}
+        >
+          <View className="border-t border-border bg-background px-5 pb-4 pt-3">
+            <FormField
+              accessibilityLabel="Search templates"
+              autoCapitalize="none"
+              autoCorrect={false}
+              label="Search templates"
+              onChangeText={setQuery}
+              placeholder="Search units or business examples"
+              returnKeyType="search"
+              value={query}
+              variant="auth"
+            />
+          </View>
+          <View
+            style={{
+              backgroundColor: colors.background,
+              height: insets.bottom,
+            }}
           />
-        </View>
-        <View style={{ height: insets.bottom }} />
-      </KeyboardAvoidingView>
+        </KeyboardStickyView>
+      </View>
     </NativeModal>
   )
 }

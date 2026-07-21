@@ -3,12 +3,16 @@ import type { LinkProps } from "expo-router"
 import type { ReactNode } from "react"
 
 export type MobileBottomTab = {
+  accessibilityLabel?: string
   disabled?: boolean
   href?: LinkProps["href"]
   icon: IconKeys
+  isActive?: boolean
+  kind?: "action" | "navigation"
   label: string
   onPress?: () => void
   render?: (state: { active?: boolean }) => ReactNode
+  testID?: string
 }
 
 export type MobileBottomTabsProps = {
@@ -27,5 +31,5 @@ export type MobileBottomTabsProps = {
   showLabel?: boolean
   showLabelOnActive?: boolean
   tabs: MobileBottomTab[]
-  variant?: "default" | "reference"
+  variant?: "default" | "operational-detail" | "reference"
 }

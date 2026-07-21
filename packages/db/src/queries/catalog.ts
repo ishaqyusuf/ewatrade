@@ -46,6 +46,7 @@ type CatalogOfferingInput = {
 type CatalogVariantInput<TOffering> = {
   description?: string
   enabled?: boolean
+  imageUrl?: string
   isDefault: boolean
   key: string
   name: string
@@ -716,7 +717,9 @@ function serializeCatalogItem(item: CatalogItemGraph) {
     slug: item.slug,
     status: catalogStatusValue(item.status),
     variants: item.variants.map((variant) => ({
+      description: variant.description,
       id: variant.id,
+      imageUrl: variant.imageUrl,
       isDefault: variant.isDefault,
       key: variant.key,
       name: variant.name,
@@ -961,6 +964,7 @@ export async function createCatalogItem(
         data: {
           catalogItemId: item.id,
           description: variantInput.description?.trim() || null,
+          imageUrl: variantInput.imageUrl?.trim() || null,
           isDefault: variantInput.isDefault,
           key: variantInput.key.trim().toLowerCase(),
           name: variantInput.name.trim(),

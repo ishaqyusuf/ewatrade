@@ -36,14 +36,20 @@ export function filterSearchablePages(
   )
 }
 
-export function getDashboardCommands(navItems: DashboardNavItem[]) {
-  const available = new Set(navItems.map((item) => item.href))
+export function getDashboardCommands(
+  navItems: DashboardNavItem[],
+  accessiblePaths: string[] = [],
+) {
+  const available = new Set([
+    ...navItems.map((item) => item.href),
+    ...accessiblePaths,
+  ])
   const commands: DashboardCommand[] = []
 
   if (available.has("/catalog")) {
     commands.push({
       description: "Open the catalog and add a Product or Service item.",
-      href: "/catalog",
+      href: "/catalog?catalogItem=create",
       id: "create-item",
       title: "Add item",
     })
@@ -52,7 +58,7 @@ export function getDashboardCommands(navItems: DashboardNavItem[]) {
   if (available.has("/staff")) {
     commands.push({
       description: "Open staff management and invite a team member.",
-      href: "/staff",
+      href: "/staff?staffSheet=invite",
       id: "invite-staff",
       title: "Invite staff",
     })

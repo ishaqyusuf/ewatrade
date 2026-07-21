@@ -49,4 +49,19 @@ describe("dashboard command search helpers", () => {
 
     expect(filterDashboardCommands(commands, "invite")).toEqual([commands[1]])
   })
+
+  test("keeps first-record commands available when modules are hidden", () => {
+    const commands = getDashboardCommands([], ["/catalog", "/staff"])
+
+    expect(commands).toEqual([
+      expect.objectContaining({
+        href: "/catalog?catalogItem=create",
+        id: "create-item",
+      }),
+      expect.objectContaining({
+        href: "/staff?staffSheet=invite",
+        id: "invite-staff",
+      }),
+    ])
+  })
 })

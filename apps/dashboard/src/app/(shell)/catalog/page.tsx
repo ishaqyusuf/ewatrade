@@ -3,6 +3,7 @@ import { CatalogTableSkeleton } from "@/components/tables/catalog/skeleton"
 import { canManageProductCatalog } from "@/lib/product-catalog"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
+import { getDashboardFeatureAvailability } from "@/lib/workspace-feature-availability"
 import { HydrateClient, prefetch, trpc } from "@/trpc/server"
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
@@ -47,6 +48,10 @@ export default async function CatalogRoutePage({
     params.catalogKind === "product" || params.catalogKind === "service"
       ? params.catalogKind
       : undefined
+  const availability = await getDashboardFeatureAvailability(
+    store.id,
+    ctx.tenant.id,
+  )
   await Promise.allSettled([
     prefetch(trpc.catalog.listItems.queryOptions({})),
     prefetch(trpc.catalog.listItems.queryOptions({ kind })),
@@ -56,6 +61,10 @@ export default async function CatalogRoutePage({
     <HydrateClient>
       <Suspense fallback={<CatalogTableSkeleton />}>
         <CatalogItemsPage
+          availableKinds={{
+            product: availability.hasProductItems,
+            service: availability.hasServiceItems,
+          }}
           store={{
             currencyCode: store.currencyCode,
             id: store.id,

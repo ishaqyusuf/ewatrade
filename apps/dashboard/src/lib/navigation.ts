@@ -6,6 +6,7 @@ import {
   getRoleDisplayName,
   normalizeRole,
 } from "@ewatrade/auth/roles"
+import type { WorkspaceFeatureAvailability } from "@ewatrade/db/queries"
 
 export type DashboardNavIcon =
   | "analytics"
@@ -27,17 +28,28 @@ export type DashboardNavItem = {
 }
 
 type DashboardNavDefinition = DashboardNavItem & {
+  canAccess: (
+    role: EwaTradeRole | null,
+    context: DashboardNavContext,
+  ) => boolean
   canSee: (role: EwaTradeRole | null, context: DashboardNavContext) => boolean
 }
 
-export type DashboardNavContext = {
-  hasProductItems: boolean
-  hasServiceItems: boolean
-}
+export type DashboardNavContext = Omit<
+  WorkspaceFeatureAvailability,
+  "hasInventoryActivity" | "storeId"
+>
 
 const DEFAULT_NAV_CONTEXT: DashboardNavContext = {
+  hasActiveSellableItems: true,
+  hasCatalogItems: true,
+  hasCustomers: true,
+  hasOrders: true,
   hasProductItems: true,
+  hasReportableActivity: true,
   hasServiceItems: true,
+  hasServiceJobs: true,
+  hasStaff: true,
 }
 
 const canUseDashboard = (role: EwaTradeRole | null) => role !== null
@@ -55,6 +67,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     href: "/",
     icon: "home",
     label: "Overview",
+    canAccess: canUseDashboard,
     canSee: canUseDashboard,
   },
   {
@@ -62,13 +75,16 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     href: "/catalog",
     icon: "products",
     label: "Catalog",
-    canSee: canManageCatalog,
+    canAccess: canManageCatalog,
+    canSee: (role, context) =>
+      canManageCatalog(role) && context.hasCatalogItems,
   },
   {
     description: "Stock, inbounds, and movement controls",
     href: "/inventory",
     icon: "inventory",
     label: "Inventory",
+    canAccess: canUseRetailOps,
     canSee: (role, context) => canUseRetailOps(role) && context.hasProductItems,
   },
   {
@@ -76,43 +92,48 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     href: "/sales",
     icon: "sales",
     label: "Sales",
-    canSee: (role, context) =>
-      canUseRetailOps(role) &&
-      (context.hasProductItems || context.hasServiceItems),
+    canAccess: canUseRetailOps,
+    canSee: (role, context) => canUseRetailOps(role) && context.hasOrders,
   },
   {
     description: "Tracked service work, requests, and due dates",
     href: "/services",
     icon: "services",
     label: "Service jobs",
-    canSee: (role, context) => canUseRetailOps(role) && context.hasServiceItems,
+    canAccess: canUseRetailOps,
+    canSee: (role, context) => canUseRetailOps(role) && context.hasServiceJobs,
   },
   {
     description: "Customer book and follow-up records",
     href: "/customers",
     icon: "customers",
     label: "Customers",
-    canSee: canUseRetailOps,
+    canAccess: canUseRetailOps,
+    canSee: (role, context) => canUseRetailOps(role) && context.hasCustomers,
   },
   {
     description: "Staff invitations and role administration",
     href: "/staff",
     icon: "staff",
     label: "Staff",
-    canSee: canManageCatalog,
+    canAccess: canManageCatalog,
+    canSee: (role, context) => canManageCatalog(role) && context.hasStaff,
   },
   {
     description: "Analytics, reports, exports, and sync review",
     href: "/analytics",
     icon: "analytics",
     label: "Reports",
-    canSee: canManageCatalog,
+    canAccess: canManageCatalog,
+    canSee: (role, context) =>
+      canManageCatalog(role) && context.hasReportableActivity,
   },
   {
     description: "Business settings, subscription, and billing",
     href: "/settings",
     icon: "settings",
     label: "Settings",
+    canAccess: (role) => (role ? canManageTenant(role) : false),
     canSee: (role) => (role ? canManageTenant(role) : false),
   },
 ]
@@ -137,7 +158,7 @@ export function getDashboardNavigation(
 
   return DASHBOARD_NAV.filter((item) =>
     item.canSee(normalizedRole, context),
-  ).map(({ canSee: _canSee, ...item }) => item)
+  ).map(({ canAccess: _canAccess, canSee: _canSee, ...item }) => item)
 }
 
 export function getDashboardNavItem(
@@ -164,7 +185,7 @@ export function canAccessDashboardPath(
     return true
   }
 
-  return matchedKnownPath.canSee(normalizedRole, context)
+  return matchedKnownPath.canAccess(normalizedRole, context)
 }
 
 export function getDashboardRoleLabel(role: string | null | undefined) {

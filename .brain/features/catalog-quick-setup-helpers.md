@@ -53,7 +53,9 @@ industry-specific runtime branches, preset prices, or automatic saving.
   button on dashboard and mobile.
 - The button opens a full-screen, searchable picker. It shows `Start blank`,
   then flat Setup and Example rows with a title, description, and tags. Search
-  stays at the bottom of the screen and matches the helper metadata.
+  stays at the bottom of the screen, follows the keyboard through the shared
+  keyboard controller, and matches the helper metadata. The scroll content
+  reserves space for the search footer so the final rows remain reachable.
   Recommended recipes sort first and carry a visible recommendation badge.
 - Applying a helper suggests its example name only when the item name is empty,
   preserves merchant-entered identity/base-price fields, and prefills editable
@@ -64,11 +66,13 @@ industry-specific runtime branches, preset prices, or automatic saving.
   Pieces`; submitting converts either direction back to the unchanged factor.
 - Replacing populated structural work requires confirmation and clears
   incompatible combinations, unit-price overrides, and stock drafts.
-- Product forms expose one price for every active variant and an optional
-  override for every additional selling unit. Every persisted variant/unit
-  Offering receives its resolved fixed price. Active Product variants also
-  require their own current-stock quantity, validated with the selected
-  canonical unit's hidden precision on both clients.
+- Product forms summarize every generated option combination in a flat list.
+  Its menu opens a progressive compact-to-full-screen editor for current stock,
+  price, description, image, SKU/barcode, Store availability, and optional
+  additional-unit price overrides. Every persisted variant/unit Offering
+  receives its resolved fixed price. Active Product variants require their own
+  current-stock quantity, validated with the selected canonical unit's hidden
+  precision on both clients.
 - Service combinations are independently priceable. Quote-required helpers
   allow an optional starting price and preserve the existing Quote workflow.
 - Quantity precision is intentionally hidden. Counted/discrete/service helpers

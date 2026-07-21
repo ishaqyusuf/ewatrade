@@ -1,8 +1,10 @@
-import { useColors } from "@/hooks/use-color"
+import { useColorScheme, useColors } from "@/hooks/use-color"
+import { MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS } from "@/lib/design-foundation"
 import { useEffect } from "react"
 import { View as RNView } from "react-native"
 import Animated, {
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated"
@@ -30,18 +32,25 @@ export function MobileBottomTabs({
   variant = "default",
 }: MobileBottomTabsProps) {
   const colors = useColors()
+  const { colorScheme } = useColorScheme()
   const insets = useSafeAreaInsets()
   const isReference = variant === "reference"
+  const isOperationalDetail = variant === "operational-detail"
+  const reduceMotion = useReducedMotion()
   const safeBottom = safeArea ? insets.bottom : 0
   const shouldHide = hideOnScroll && isHidden
   const hiddenProgress = useSharedValue(shouldHide ? 1 : 0)
-  const hiddenTranslateY = floating
-    ? Math.max(safeBottom + 76, 92)
-    : Math.max(safeBottom + 72, 88)
+  const hiddenTranslateY = isOperationalDetail
+    ? Math.max(safeBottom + 96, 112)
+    : floating
+      ? Math.max(safeBottom + 76, 92)
+      : Math.max(safeBottom + 72, 88)
 
   useEffect(() => {
-    hiddenProgress.value = withTiming(shouldHide ? 1 : 0, { duration: 220 })
-  }, [hiddenProgress, shouldHide])
+    hiddenProgress.value = withTiming(shouldHide ? 1 : 0, {
+      duration: reduceMotion ? 0 : 220,
+    })
+  }, [hiddenProgress, reduceMotion, shouldHide])
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: 1 - hiddenProgress.value,
@@ -50,8 +59,9 @@ export function MobileBottomTabs({
   const tabStates = tabs.map((tab, index) => ({
     index,
     isActive:
-      tab.label === activeLabel ||
-      (activeHref !== undefined && tab.href === activeHref),
+      tab.isActive ??
+      (tab.label === activeLabel ||
+        (activeHref !== undefined && tab.href === activeHref)),
     tab,
   }))
 
@@ -61,11 +71,13 @@ export function MobileBottomTabs({
       style={[
         floating
           ? {
-              bottom: Math.max(safeBottom - 12, 6),
-              left: 20,
+              bottom: isOperationalDetail
+                ? Math.max(safeBottom - 4, 12)
+                : Math.max(safeBottom - 12, 6),
+              left: isOperationalDetail ? 24 : 20,
               overflow: "visible",
               position: "absolute",
-              right: 20,
+              right: isOperationalDetail ? 24 : 20,
             }
           : { overflow: "visible", width: "100%" },
         animatedStyle,
@@ -73,41 +85,80 @@ export function MobileBottomTabs({
     >
       <RNView
         style={{
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          borderRadius: floating ? 999 : 0,
-          borderTopWidth: floating || isReference ? 0 : 1,
-          elevation: floating ? (isReference ? 10 : 8) : 0,
+          backgroundColor: isOperationalDetail
+            ? MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS.surface
+            : colors.card,
+          borderColor:
+            isOperationalDetail && colorScheme === "dark"
+              ? MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS.darkBorder
+              : colors.border,
+          borderRadius: isOperationalDetail ? 36 : floating ? 999 : 0,
+          borderTopWidth:
+            isOperationalDetail && colorScheme === "dark"
+              ? 1
+              : floating || isReference
+                ? 0
+                : 1,
+          borderWidth:
+            isOperationalDetail && colorScheme === "dark" ? 1 : undefined,
+          elevation: floating
+            ? isOperationalDetail
+              ? 12
+              : isReference
+                ? 10
+                : 8
+            : 0,
           paddingBottom: floating ? 0 : Math.max(safeBottom, 8),
           overflow: "visible",
-          shadowColor: colors.foreground,
-          shadowOffset: { height: floating ? 7 : 0, width: 0 },
-          shadowOpacity: floating ? (isReference ? 0.14 : 0.08) : 0,
-          shadowRadius: floating ? (isReference ? 16 : 12) : 0,
+          shadowColor: isOperationalDetail
+            ? MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS.shadow
+            : colors.foreground,
+          shadowOffset: {
+            height: floating ? (isOperationalDetail ? 6 : 7) : 0,
+            width: 0,
+          },
+          shadowOpacity: floating
+            ? isOperationalDetail
+              ? 0.28
+              : isReference
+                ? 0.14
+                : 0.08
+            : 0,
+          shadowRadius: floating
+            ? isOperationalDetail
+              ? 16
+              : isReference
+                ? 16
+                : 12
+            : 0,
         }}
       >
         <RNView
           style={{
             alignItems: "center",
             flexDirection: "row",
-            height: 56,
+            height: isOperationalDetail ? 72 : 56,
             overflow: "visible",
-            paddingHorizontal: 12,
-            paddingVertical: 6,
+            paddingHorizontal: isOperationalDetail ? 10 : 12,
+            paddingVertical: isOperationalDetail ? 0 : 6,
           }}
         >
           {tabStates.map(({ index, isActive, tab }) => (
             <RNView
               key={tab.label}
               style={{
-                alignItems: getTabSlotAlignment(index, tabs.length),
+                alignItems: getTabSlotAlignment(
+                  index,
+                  tabs.length,
+                  isOperationalDetail,
+                ),
                 flexBasis: `${100 / tabs.length}%`,
                 flexGrow: 0,
                 flexShrink: 0,
                 justifyContent: "center",
                 minHeight: 44,
                 overflow: "visible",
-                zIndex: tab.render ? 20 : 1,
+                zIndex: tab.kind === "action" || tab.render ? 20 : 1,
               }}
             >
               <MobileBottomTabItem
@@ -129,8 +180,12 @@ export function MobileBottomTabs({
   )
 }
 
-function getTabSlotAlignment(index: number, tabCount: number) {
-  if (tabCount !== 3) return "center"
+function getTabSlotAlignment(
+  index: number,
+  tabCount: number,
+  isOperationalDetail: boolean,
+) {
+  if (isOperationalDetail || tabCount !== 3) return "center"
   if (index === 0) return "flex-start"
   if (index === tabCount - 1) return "flex-end"
   return "center"

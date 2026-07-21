@@ -1,5 +1,6 @@
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Input } from "@/components/ui/input-2"
+import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColors } from "@/hooks/use-color"
 import { cn } from "@/lib/utils"
@@ -8,6 +9,7 @@ import { useState } from "react"
 import { View } from "react-native"
 
 type FormFieldProps = Omit<ComponentProps<typeof Input>, "className"> & {
+  actionLabel?: string
   containerClassName?: string
   error?: string
   helper?: string
@@ -15,11 +17,13 @@ type FormFieldProps = Omit<ComponentProps<typeof Input>, "className"> & {
   label: string
   leadingIcon?: IconKeys
   leadingText?: string
+  onActionPress?: () => void
   trailingIcon?: IconKeys
   variant?: "auth" | "filled" | "line"
 }
 
 export function FormField({
+  actionLabel,
   containerClassName,
   error,
   helper,
@@ -29,6 +33,7 @@ export function FormField({
   leadingText,
   onBlur,
   onFocus,
+  onActionPress,
   trailingIcon,
   variant = "filled",
   ...inputProps
@@ -68,18 +73,33 @@ export function FormField({
       className={cn(isAuthVariant ? "gap-2" : "gap-2.5", containerClassName)}
     >
       {shouldShowLabel ? (
-        <Text
-          className={cn(
-            "text-xs font-bold uppercase tracking-[1.4px]",
-            error
-              ? "text-destructive"
-              : isFocused
-                ? "text-primary"
-                : "text-muted-foreground",
-          )}
-        >
-          {label}
-        </Text>
+        <View className="min-h-5 flex-row items-center justify-between gap-3">
+          <Text
+            className={cn(
+              "min-w-0 flex-1 text-xs font-bold uppercase tracking-[1.4px]",
+              error
+                ? "text-destructive"
+                : isFocused
+                  ? "text-primary"
+                  : "text-muted-foreground",
+            )}
+          >
+            {label}
+          </Text>
+          {actionLabel && onActionPress ? (
+            <Pressable
+              accessibilityLabel={`${actionLabel} ${label}`}
+              accessibilityRole="button"
+              className="min-h-11 justify-center px-1"
+              haptic
+              onPress={onActionPress}
+            >
+              <Text className="text-xs font-bold text-primary">
+                {actionLabel}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
       <View
         style={{

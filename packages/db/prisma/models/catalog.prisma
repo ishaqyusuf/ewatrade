@@ -82,6 +82,7 @@ model SellableVariant {
   key                 String
   name                String
   description         String?
+  imageUrl            String?
   status              CatalogRecordStatus        @default(DRAFT)
   isDefault           Boolean                    @default(false)
   sortOrder           Int                        @default(0)

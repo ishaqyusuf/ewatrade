@@ -84,6 +84,7 @@ export default function VerifyEmailRoute() {
           profile: {
             businessId: session.profile.businessId ?? undefined,
             businessName: session.profile.businessName ?? undefined,
+            businessSlug: session.tenant?.slug ?? undefined,
             currencyCode: session.profile.currencyCode,
             email: session.profile.email,
             id: session.profile.id,

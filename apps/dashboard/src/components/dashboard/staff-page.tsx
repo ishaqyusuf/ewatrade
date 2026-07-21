@@ -2,6 +2,7 @@
 
 import { DashboardSheet } from "@/components/dashboard/dashboard-sheet"
 import { DashboardTable } from "@/components/dashboard/dashboard-table"
+import { useStaffParams } from "@/hooks/use-staff-params"
 import {
   type StaffInviteRole,
   type StaffMemberRow,
@@ -23,6 +24,7 @@ import {
   UserCircle02Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { useRouter } from "next/navigation"
 import type {
   FormEvent,
   InputHTMLAttributes,
@@ -126,11 +128,12 @@ export function StaffPage({
   initialStaff: StaffMemberRow[]
   store: StaffResponse["store"]
 }) {
+  const router = useRouter()
+  const { inviteOpen, setInviteOpen } = useStaffParams()
   const [staff, setStaff] = useState(initialStaff)
   const [search, setSearch] = useState("")
   const [role, setRole] = useState<StaffRoleFilter>("all")
   const [status, setStatus] = useState<StaffStatusFilter>("all")
-  const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteForm, setInviteForm] = useState<InviteForm>(emptyInviteForm)
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -262,6 +265,7 @@ export function StaffPage({
       await refreshStaff()
       setInviteOpen(false)
       setNotice("Staff invite sent.")
+      router.refresh()
     } catch (saveError) {
       setError(
         saveError instanceof Error ? saveError.message : "Staff invite failed.",

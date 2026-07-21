@@ -1,50 +1,59 @@
-import { ActionButton } from "@/components/mobile/action-button";
-import { EmptyState } from "@/components/mobile/empty-state";
-import { StatusBadge } from "@/components/mobile/status-badge";
-import { StatusBanner } from "@/components/mobile/status-banner";
-import { Text } from "@/components/ui/text";
-import { useAuthContext } from "@/hooks/use-auth";
+import { ActionButton } from "@/components/mobile/action-button"
+import { EmptyState } from "@/components/mobile/empty-state"
+import { StatusBadge } from "@/components/mobile/status-badge"
+import { StatusBanner } from "@/components/mobile/status-banner"
+import { Text } from "@/components/ui/text"
+import { useAuthContext } from "@/hooks/use-auth"
 import {
   activeBusinessOfflineCommands,
   pendingOfflineCommands,
   useOfflineCommandStore,
-} from "@/store/offlineCommandStore";
-import { useOperationalModeStore } from "@/store/operationalModeStore";
-import { useTRPC } from "@/trpc/client";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import Constants from "expo-constants";
-import { Platform, ScrollView, View } from "react-native";
+} from "@/store/offlineCommandStore"
+import { useOperationalModeStore } from "@/store/operationalModeStore"
+import { useTRPC } from "@/trpc/client"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import Constants from "expo-constants"
+import { Platform, ScrollView, View } from "react-native"
 
 type SyncStatusContentProps = {
-  onComplete?: () => void;
-  presentation?: "screen" | "sheet";
-};
+  onComplete?: () => void
+  presentation?: "screen" | "sheet"
+}
 
 export function SyncStatusContent({
   onComplete,
   presentation: _presentation,
 }: SyncStatusContentProps) {
-  const trpc = useTRPC();
-  const { profile } = useAuthContext();
-  const state = useOfflineCommandStore();
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  const { profile } = useAuthContext()
+  const state = useOfflineCommandStore()
   const commands = activeBusinessOfflineCommands(
     state.commands,
     profile?.businessId,
-  );
-  const isOfflineMode = useOperationalModeStore((mode) => mode.isOfflineMode);
-  const setOfflineMode = useOperationalModeStore((mode) => mode.setOfflineMode);
+  )
+  const isOfflineMode = useOperationalModeStore((mode) => mode.isOfflineMode)
+  const setOfflineMode = useOperationalModeStore((mode) => mode.setOfflineMode)
   const conflicts = useQuery(
     trpc.offline.conflicts.queryOptions({}, { retry: false }),
-  );
+  )
   const replay = useMutation(
     trpc.offline.replay.mutationOptions({
       onError: () => undefined,
-      onSuccess: (results) => {
-        state.applyReplayResults(results);
-        void conflicts.refetch();
+      onSuccess: async (results) => {
+        state.applyReplayResults(results)
+        await Promise.all([
+          conflicts.refetch(),
+          queryClient.invalidateQueries(
+            trpc.tenant.featureAvailability.queryFilter(),
+          ),
+          queryClient.invalidateQueries(trpc.catalog.listItems.queryFilter()),
+          queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
+          queryClient.invalidateQueries(trpc.services.queue.queryFilter()),
+        ])
       },
     }),
-  );
+  )
   const register = useMutation(
     trpc.offline.registerDevice.mutationOptions({
       onSuccess: () =>
@@ -53,21 +62,21 @@ export function SyncStatusContent({
           deviceId: state.deviceId,
         }),
     }),
-  );
+  )
   const review = useMutation(
     trpc.offline.review.mutationOptions({
       onSuccess: () => void conflicts.refetch(),
     }),
-  );
+  )
   const pending = commands.filter(
     (command) => command.localStatus === "pending",
-  );
+  )
   const applied = commands.filter(
     (command) => command.localStatus === "applied",
-  );
+  )
 
   const replayNow = () => {
-    if (pending.length === 0) return;
+    if (pending.length === 0) return
     register.mutate({
       appVersion: Constants.expoConfig?.version,
       deviceId: state.deviceId,
@@ -78,8 +87,8 @@ export function SyncStatusContent({
         Platform.OS === "web"
           ? Platform.OS
           : "unknown",
-    });
-  };
+    })
+  }
 
   return (
     <ScrollView
@@ -209,8 +218,8 @@ export function SyncStatusContent({
                     review.mutate({
                       commandId: conflict.id,
                       decision: "retry",
-                    });
-                    state.retryCommand(conflict.clientCommandId);
+                    })
+                    state.retryCommand(conflict.clientCommandId)
                   }}
                   variant="outline"
                 >
@@ -222,8 +231,8 @@ export function SyncStatusContent({
                     review.mutate({
                       commandId: conflict.id,
                       decision: "discard",
-                    });
-                    state.discardCommand(conflict.clientCommandId);
+                    })
+                    state.discardCommand(conflict.clientCommandId)
                   }}
                   variant="destructive"
                 >
@@ -241,11 +250,11 @@ export function SyncStatusContent({
         </ActionButton>
       ) : null}
     </ScrollView>
-  );
+  )
 }
 
 function Divider() {
-  return <View className="h-10 w-px bg-border" />;
+  return <View className="h-10 w-px bg-border" />
 }
 
 function Summary({ label, value }: { label: string; value: number }) {
@@ -254,5 +263,5 @@ function Summary({ label, value }: { label: string; value: number }) {
       <Text className="text-xl font-extrabold text-foreground">{value}</Text>
       <Text className="text-xs text-muted-foreground">{label}</Text>
     </View>
-  );
+  )
 }

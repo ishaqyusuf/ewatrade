@@ -5,7 +5,13 @@ import { Search01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { OpenCatalogItemSheet } from "./open-catalog-item-sheet"
 
-export function CatalogHeader({ storeName }: { storeName: string }) {
+export function CatalogHeader({
+  availableKinds,
+  storeName,
+}: {
+  availableKinds: { product: boolean; service: boolean }
+  storeName: string
+}) {
   const { catalogKind, catalogQuery, setParams } = useCatalogItemParams()
 
   return (
@@ -38,24 +44,30 @@ export function CatalogHeader({ storeName }: { storeName: string }) {
             }
           />
         </label>
-        <select
-          aria-label="Item type"
-          className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 sm:w-40"
-          value={catalogKind ?? ""}
-          onChange={(event) =>
-            setParams({
-              catalogKind:
-                event.target.value === "product" ||
-                event.target.value === "service"
-                  ? event.target.value
-                  : null,
-            })
-          }
-        >
-          <option value="">All items</option>
-          <option value="product">Products</option>
-          <option value="service">Services</option>
-        </select>
+        {availableKinds.product || availableKinds.service ? (
+          <select
+            aria-label="Item type"
+            className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 sm:w-40"
+            value={catalogKind ?? ""}
+            onChange={(event) =>
+              setParams({
+                catalogKind:
+                  event.target.value === "product" ||
+                  event.target.value === "service"
+                    ? event.target.value
+                    : null,
+              })
+            }
+          >
+            <option value="">All items</option>
+            {availableKinds.product ? (
+              <option value="product">Products</option>
+            ) : null}
+            {availableKinds.service ? (
+              <option value="service">Services</option>
+            ) : null}
+          </select>
+        ) : null}
       </div>
     </header>
   )

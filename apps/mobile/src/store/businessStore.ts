@@ -9,7 +9,9 @@ export type RetailOpsBusiness = {
   currency?: string
   id: string
   name: string
+  role?: string
   salesMethod?: string
+  slug?: string
   teamSize?: string
   type?: string
 }

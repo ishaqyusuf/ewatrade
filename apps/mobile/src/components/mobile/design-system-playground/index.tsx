@@ -16,6 +16,7 @@ import {
   InventoryUnitOption,
 } from "@/components/mobile/inventory-product-card"
 import { MobileAppShell } from "@/components/mobile/app-shell"
+import { MobileBottomTabs } from "@/components/mobile/bottom-tabs"
 import { MobileScreen } from "@/components/mobile/screen"
 import { OtpInput } from "@/components/mobile/otp-input"
 import { QuantityStepper } from "@/components/mobile/quantity-stepper"
@@ -1471,6 +1472,93 @@ function NavigationAndFooters() {
       title="Navigation/Footers"
     >
       <View className="gap-4">
+        <View className="gap-3 rounded-[28px] bg-card p-4">
+          <View className="gap-1">
+            <Text className="font-extrabold text-foreground">
+              Operational-detail dock
+            </Text>
+            <Text className="text-sm leading-5 text-muted-foreground">
+              Production preview derived from
+              reference-operational-detail.jpg. Design 01 keeps its separate
+              home-shell tab treatment.
+            </Text>
+          </View>
+          <View
+            className="relative h-28 overflow-visible rounded-[24px] bg-background"
+            testID="operational-bottom-tab-preview"
+          >
+            <MobileBottomTabs
+              activeLabel="Home"
+              floating
+              hideOnScroll={false}
+              safeArea={false}
+              tabs={[
+                {
+                  icon: "House",
+                  isActive: true,
+                  kind: "navigation",
+                  label: "Home",
+                },
+                {
+                  icon: "Warehouse",
+                  kind: "navigation",
+                  label: "Catalog",
+                },
+                {
+                  accessibilityLabel: "Open create options",
+                  icon: "Plus",
+                  kind: "action",
+                  label: "Create",
+                },
+                {
+                  icon: "Briefcase",
+                  kind: "navigation",
+                  label: "Work",
+                },
+                {
+                  icon: "BarChart3",
+                  kind: "navigation",
+                  label: "Reports",
+                },
+              ]}
+              variant="operational-detail"
+            />
+          </View>
+          <Text className="text-xs font-bold uppercase tracking-[1px] text-muted-foreground">
+            Attendant / three equal lanes
+          </Text>
+          <View
+            className="relative h-28 overflow-visible rounded-[24px] bg-background"
+            testID="operational-bottom-tab-attendant-preview"
+          >
+            <MobileBottomTabs
+              activeLabel="Home"
+              floating
+              hideOnScroll={false}
+              safeArea={false}
+              tabs={[
+                {
+                  icon: "House",
+                  isActive: true,
+                  kind: "navigation",
+                  label: "Home",
+                },
+                {
+                  accessibilityLabel: "Create order",
+                  icon: "Plus",
+                  kind: "action",
+                  label: "Create",
+                },
+                {
+                  icon: "Briefcase",
+                  kind: "navigation",
+                  label: "Work",
+                },
+              ]}
+              variant="operational-detail"
+            />
+          </View>
+        </View>
         <View variant="card" className="gap-3 p-4">
           <Text className="font-extrabold text-foreground">
             Sticky bottom action

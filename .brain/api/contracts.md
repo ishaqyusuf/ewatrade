@@ -12,16 +12,35 @@
 - Immutable snapshots preserve historical meaning; clients never reconstruct
   inventory or Order truth from current mutable Catalog data.
 
+## Workspace Availability
+
+- `tenant.featureAvailability` is a read-only discoverability contract, not an
+  authorization grant. It reports sticky active-Store history for Catalog,
+  Inventory, Orders, Service Jobs, Customers, and Reports; Staff presence is
+  Tenant-wide.
+- Archived Catalog items and removed, suspended, or invited operational Staff
+  remain present. `hasActiveSellableItems` is a separate live prerequisite.
+- Mobile requests send the selected business slug through `x-tenant-slug`.
+  Switching a production business updates the authenticated mobile session
+  profile and clears the query cache before the selected context refetches.
+
 ## Catalog
 
 - Item kind is immutable after creation.
 - Variant option combinations are separate from Offerings and units.
-- Catalog creation accepts an optional description on every Sellable Variant.
-  Product variants may also provide their own exact
+- Catalog creation accepts an optional description and image URL on every
+  Sellable Variant. Product variants may also provide their own exact
   `openingStockQuantity`; each non-zero value creates opening stock against that
   specific variant's Canonical Shared balance. The existing item-level opening
   quantity remains the simple/default-variant path when no per-variant
   quantities are supplied.
+- Mobile and API releases must keep this strict variant object in lockstep. The
+  schema regression fixture submits `description`, `imageUrl`, and
+  `openingStockQuantity` together so an older strict server contract cannot be
+  mistaken for a valid current release. Mobile omits absent optional variant
+  keys instead of serializing them as explicit `undefined`, preventing
+  SuperJSON from reconstructing unknown keys against a temporarily older
+  strict server.
 - Product Unit Offerings require fixed prices and a Current Inventory Unit.
 - Simple Product creation and the mobile Product setup default new Inventory
   Units to a two-decimal transaction scale. Catalog clients may omit a

@@ -1,49 +1,49 @@
 import type {
   RouterInputs,
   RouterOutputs,
-} from "@ewatrade/api/trpc/routers/_app";
-import * as Crypto from "expo-crypto";
-import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+} from "@ewatrade/api/trpc/routers/_app"
+import * as Crypto from "expo-crypto"
+import { create } from "zustand"
+import { createJSONStorage, persist } from "zustand/middleware"
 
-import { getSession } from "@/lib/session-store";
-import { zustandStorage } from "./mmkv";
+import { getSession } from "@/lib/session-store"
+import { zustandStorage } from "./mmkv"
 
-type ReplayInput = RouterInputs["offline"]["replay"];
-type ReplayCommand = ReplayInput["commands"][number];
-type ReplayResult = RouterOutputs["offline"]["replay"][number];
+type ReplayInput = RouterInputs["offline"]["replay"]
+type ReplayCommand = ReplayInput["commands"][number]
+type ReplayResult = RouterOutputs["offline"]["replay"][number]
 
 export type LocalOfflineCommand = ReplayCommand & {
-  authoritativeState?: unknown;
-  conflictCode?: string | null;
-  conflictMessage?: string | null;
-  businessId: string;
-  localStatus: "applied" | "blocked" | "discarded" | "pending" | "review";
-  result?: unknown;
-};
+  authoritativeState?: unknown
+  conflictCode?: string | null
+  conflictMessage?: string | null
+  businessId: string
+  localStatus: "applied" | "blocked" | "discarded" | "pending" | "review"
+  result?: unknown
+}
 
 type OfflineCommandState = {
-  commands: LocalOfflineCommand[];
-  deviceId: string;
-  hasHydrated: boolean;
-  applyReplayResults: (results: ReplayResult[]) => void;
-  discardCommand: (clientCommandId: string) => void;
+  commands: LocalOfflineCommand[]
+  deviceId: string
+  hasHydrated: boolean
+  applyReplayResults: (results: ReplayResult[]) => void
+  discardCommand: (clientCommandId: string) => void
   queueCommand: (
     command: Omit<ReplayCommand, "clientCommandId" | "createdAtClient"> & {
-      clientCommandId?: string;
-      createdAtClient?: Date;
+      clientCommandId?: string
+      createdAtClient?: Date
     },
-  ) => string;
-  retryCommand: (clientCommandId: string) => void;
-  setHasHydrated: (value: boolean) => void;
-};
+  ) => string
+  retryCommand: (clientCommandId: string) => void
+  setHasHydrated: (value: boolean) => void
+}
 
 function localStatus(status: ReplayResult["status"]) {
-  if (status === "APPLIED") return "applied" as const;
-  if (status === "DISCARDED") return "discarded" as const;
-  if (status === "BLOCKED") return "blocked" as const;
-  if (status === "REVIEW_REQUIRED") return "review" as const;
-  return "pending" as const;
+  if (status === "APPLIED") return "applied" as const
+  if (status === "DISCARDED") return "discarded" as const
+  if (status === "BLOCKED") return "blocked" as const
+  if (status === "REVIEW_REQUIRED") return "review" as const
+  return "pending" as const
 }
 
 export function getOfflineProvisionalProjection(
@@ -51,7 +51,7 @@ export function getOfflineProvisionalProjection(
 ) {
   const provisional = commands.filter(
     (command) => command.localStatus === "pending",
-  );
+  )
   return {
     catalogItems: provisional.flatMap((command) =>
       command.payload.kind === "product_setup"
@@ -67,6 +67,15 @@ export function getOfflineProvisionalProjection(
     commercialOrders: provisional.filter(
       (command) => command.payload.kind === "commercial_order",
     ).length,
+    customers: provisional.filter(
+      (command) =>
+        command.payload.kind === "commercial_order" &&
+        Boolean(
+          command.payload.customerEmail ||
+            command.payload.customerName ||
+            command.payload.customerPhone,
+        ),
+    ).length,
     inventoryOperations: provisional.filter((command) =>
       [
         "custody_move",
@@ -78,15 +87,15 @@ export function getOfflineProvisionalProjection(
     serviceOperations: provisional.filter((command) =>
       command.payload.kind.startsWith("service_"),
     ).length,
-  };
+  }
 }
 
 export function activeBusinessOfflineCommands(
   commands: LocalOfflineCommand[],
   businessId: string | null | undefined,
 ) {
-  if (!businessId) return [];
-  return commands.filter((command) => command.businessId === businessId);
+  if (!businessId) return []
+  return commands.filter((command) => command.businessId === businessId)
 }
 
 export const useOfflineCommandStore = create<OfflineCommandState>()(
@@ -101,7 +110,7 @@ export const useOfflineCommandStore = create<OfflineCommandState>()(
             const result = results.find(
               (candidate) =>
                 candidate.clientCommandId === command.clientCommandId,
-            );
+            )
             return result
               ? {
                   ...command,
@@ -111,7 +120,7 @@ export const useOfflineCommandStore = create<OfflineCommandState>()(
                   localStatus: localStatus(result.status),
                   result: result.result,
                 }
-              : command;
+              : command
           }),
         })),
       discardCommand: (clientCommandId) =>
@@ -123,14 +132,14 @@ export const useOfflineCommandStore = create<OfflineCommandState>()(
           ),
         })),
       queueCommand: (input) => {
-        const businessId = getSession()?.profile.businessId;
+        const businessId = getSession()?.profile.businessId
         if (!businessId) {
           throw new Error(
             "Offline work requires an authenticated business workspace.",
-          );
+          )
         }
         const clientCommandId =
-          input.clientCommandId ?? `command-${Crypto.randomUUID()}`;
+          input.clientCommandId ?? `command-${Crypto.randomUUID()}`
         set((state) => ({
           commands: [
             ...state.commands,
@@ -142,8 +151,8 @@ export const useOfflineCommandStore = create<OfflineCommandState>()(
               localStatus: "pending",
             },
           ],
-        }));
-        return clientCommandId;
+        }))
+        return clientCommandId
       },
       retryCommand: (clientCommandId) =>
         set((state) => ({
@@ -170,7 +179,7 @@ export const useOfflineCommandStore = create<OfflineCommandState>()(
         hasHydrated: false,
       }),
       merge: (persisted, current) => {
-        const saved = persisted as Partial<OfflineCommandState>;
+        const saved = persisted as Partial<OfflineCommandState>
         return {
           ...current,
           ...saved,
@@ -181,12 +190,12 @@ export const useOfflineCommandStore = create<OfflineCommandState>()(
             ),
           })),
           hasHydrated: current.hasHydrated,
-        };
+        }
       },
       name: "ewatrade-mobile-offline-commands",
       onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
-        void zustandStorage.removeItem("ewatrade-mobile-retail-ops");
+        state?.setHasHydrated(true)
+        void zustandStorage.removeItem("ewatrade-mobile-retail-ops")
       },
       partialize: (state) => ({
         commands: state.commands,
@@ -196,7 +205,7 @@ export const useOfflineCommandStore = create<OfflineCommandState>()(
       version: 2,
     },
   ),
-);
+)
 
 export function pendingOfflineCommands(
   state: OfflineCommandState,
@@ -210,5 +219,5 @@ export function pendingOfflineCommands(
       dependencyClientIds: command.dependencyClientIds,
       eventVersion: command.eventVersion,
       payload: command.payload,
-    }));
+    }))
 }

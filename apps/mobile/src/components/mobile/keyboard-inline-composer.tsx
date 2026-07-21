@@ -15,6 +15,7 @@ export type KeyboardInlineComposerPill = {
 }
 
 type KeyboardInlineComposerProps = {
+  canSubmit?: boolean
   dismissKeyboardOnSubmit?: boolean
   hideSubmitButton?: boolean
   onChangeText: (value: string) => void
@@ -34,6 +35,7 @@ export const KeyboardInlineComposer = forwardRef<
   KeyboardInlineComposerProps
 >(function KeyboardInlineComposer(
   {
+    canSubmit: canSubmitOverride,
     dismissKeyboardOnSubmit = false,
     hideSubmitButton = false,
     onChangeText,
@@ -50,7 +52,7 @@ export const KeyboardInlineComposer = forwardRef<
   ref,
 ) {
   const colors = useColors()
-  const canSubmit = value.trim().length > 0
+  const canSubmit = canSubmitOverride ?? value.trim().length > 0
 
   if (!visible) return null
 

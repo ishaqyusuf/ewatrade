@@ -2,10 +2,15 @@ import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import {
   RetailOpsSubscriptionError,
   createTenantStore,
+  getWorkspaceFeatureAvailability,
 } from "@ewatrade/db/queries"
 import { TRPCError } from "@trpc/server"
 import { createStoreSchema } from "../../schemas/tenant"
-import { createTRPCRouter, protectedProcedure } from "../init"
+import {
+  authenticatedProcedure,
+  createTRPCRouter,
+  protectedProcedure,
+} from "../init"
 
 function assertCanManageTenantStores(role: string) {
   const normalizedRole = normalizeRole(role)
@@ -19,8 +24,54 @@ function assertCanManageTenantStores(role: string) {
 }
 
 export const tenantRouter = createTRPCRouter({
+  businesses: authenticatedProcedure.query(async ({ ctx }) => {
+    const memberships = await ctx.db.membership.findMany({
+      orderBy: { createdAt: "asc" },
+      select: {
+        role: true,
+        tenant: {
+          select: {
+            currencyCode: true,
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+      },
+      where: {
+        status: "ACTIVE",
+        userId: ctx.session.user.id,
+      },
+    })
+
+    return memberships.map((membership) => ({
+      currencyCode: membership.tenant.currencyCode,
+      id: membership.tenant.id,
+      name: membership.tenant.name,
+      role: membership.role,
+      slug: membership.tenant.slug,
+    }))
+  }),
+
   current: protectedProcedure.query(async ({ ctx }) => {
     return ctx.tenantContext
+  }),
+
+  featureAvailability: protectedProcedure.query(async ({ ctx }) => {
+    const store =
+      ctx.tenantContext.activeStore ?? ctx.tenantContext.stores[0] ?? null
+
+    if (!store) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Create a store before loading workspace features.",
+      })
+    }
+
+    return getWorkspaceFeatureAvailability(ctx.db, {
+      storeId: store.id,
+      tenantId: ctx.tenantContext.tenant.id,
+    })
   }),
 
   stores: protectedProcedure.query(async ({ ctx }) => {

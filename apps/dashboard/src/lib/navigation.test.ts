@@ -1,12 +1,30 @@
 import { describe, expect, test } from "bun:test"
+import type { DashboardNavContext } from "./navigation"
 import {
   canAccessDashboardPath,
   getDashboardNavigation,
   getDashboardRoleLabel,
 } from "./navigation"
 
+function context(
+  overrides: Partial<DashboardNavContext> = {},
+): DashboardNavContext {
+  return {
+    hasActiveSellableItems: false,
+    hasCatalogItems: false,
+    hasCustomers: false,
+    hasOrders: false,
+    hasProductItems: false,
+    hasReportableActivity: false,
+    hasServiceItems: false,
+    hasServiceJobs: false,
+    hasStaff: false,
+    ...overrides,
+  }
+}
+
 describe("dashboard navigation policy", () => {
-  test("shows owner and admin the full dashboard surface", () => {
+  test("shows owner and admin the full established dashboard surface", () => {
     const ownerItems = getDashboardNavigation("OWNER")
     const adminItems = getDashboardNavigation("ADMIN")
 
@@ -26,7 +44,72 @@ describe("dashboard navigation policy", () => {
     )
   })
 
-  test("shows managers operational administration without owner-only settings", () => {
+  test("keeps a new owner workspace focused while preserving creation access", () => {
+    const empty = context()
+
+    expect(
+      getDashboardNavigation("OWNER", empty).map((item) => item.href),
+    ).toEqual(["/", "/settings"])
+    expect(canAccessDashboardPath("/catalog", "OWNER", empty)).toBe(true)
+    expect(canAccessDashboardPath("/staff", "OWNER", empty)).toBe(true)
+    expect(canAccessDashboardPath("/customers", "OWNER", empty)).toBe(true)
+    expect(canAccessDashboardPath("/analytics", "OWNER", empty)).toBe(true)
+    expect(canAccessDashboardPath("/sales", "OWNER", empty)).toBe(true)
+    expect(canAccessDashboardPath("/inventory", "OWNER", empty)).toBe(true)
+    expect(canAccessDashboardPath("/services", "OWNER", empty)).toBe(true)
+  })
+
+  test("reveals catalog and inventory from item history without revealing work", () => {
+    const productOnly = context({
+      hasActiveSellableItems: true,
+      hasCatalogItems: true,
+      hasProductItems: true,
+    })
+    const serviceOnly = context({
+      hasActiveSellableItems: true,
+      hasCatalogItems: true,
+      hasServiceItems: true,
+    })
+
+    expect(
+      getDashboardNavigation("OWNER", productOnly).map((item) => item.href),
+    ).toEqual(["/", "/catalog", "/inventory", "/settings"])
+    expect(
+      getDashboardNavigation("OWNER", serviceOnly).map((item) => item.href),
+    ).toEqual(["/", "/catalog", "/settings"])
+    expect(canAccessDashboardPath("/sales", "OWNER", productOnly)).toBe(true)
+    expect(canAccessDashboardPath("/services", "OWNER", serviceOnly)).toBe(true)
+  })
+
+  test("reveals operational modules from their own records", () => {
+    const established = context({
+      hasActiveSellableItems: true,
+      hasCatalogItems: true,
+      hasCustomers: true,
+      hasOrders: true,
+      hasProductItems: true,
+      hasReportableActivity: true,
+      hasServiceItems: true,
+      hasServiceJobs: true,
+      hasStaff: true,
+    })
+
+    expect(
+      getDashboardNavigation("OWNER", established).map((item) => item.href),
+    ).toEqual([
+      "/",
+      "/catalog",
+      "/inventory",
+      "/sales",
+      "/services",
+      "/customers",
+      "/staff",
+      "/analytics",
+      "/settings",
+    ])
+  })
+
+  test("shows managers operational administration without owner settings", () => {
     expect(getDashboardNavigation("MANAGER").map((item) => item.href)).toEqual([
       "/",
       "/catalog",
@@ -39,74 +122,17 @@ describe("dashboard navigation policy", () => {
     ])
   })
 
-  test("shows service jobs to sales operators when services exist", () => {
-    expect(getDashboardNavigation("OWNER").map((item) => item.href)).toContain(
-      "/services",
-    )
-    expect(
-      canAccessDashboardPath("/services", "CASHIER", {
-        hasProductItems: true,
-        hasServiceItems: false,
-      }),
-    ).toBe(false)
-  })
-
-  test("tailors Sales and Service jobs to catalog item kinds", () => {
-    const empty = {
-      hasProductItems: false,
-      hasServiceItems: false,
-    }
-    const productOnly = {
+  test("shows attendants only revealed permitted work surfaces", () => {
+    const established = context({
+      hasCustomers: true,
+      hasOrders: true,
       hasProductItems: true,
-      hasServiceItems: false,
-    }
-    const serviceOnly = {
-      hasProductItems: false,
-      hasServiceItems: true,
-    }
-    const mixed = {
-      hasProductItems: true,
-      hasServiceItems: true,
-    }
-
-    expect(
-      getDashboardNavigation("OWNER", empty).map((item) => item.href),
-    ).not.toContain("/sales")
-    expect(
-      getDashboardNavigation("OWNER", empty).map((item) => item.href),
-    ).not.toContain("/services")
-    expect(
-      getDashboardNavigation("OWNER", productOnly).map((item) => item.href),
-    ).toContain("/sales")
-    expect(
-      getDashboardNavigation("OWNER", productOnly).map((item) => item.href),
-    ).not.toContain("/services")
-    expect(
-      getDashboardNavigation("OWNER", serviceOnly).map((item) => item.href),
-    ).not.toContain("/inventory")
-    expect(
-      getDashboardNavigation("OWNER", serviceOnly).map((item) => item.href),
-    ).toContain("/sales")
-    expect(
-      getDashboardNavigation("OWNER", serviceOnly).map((item) => item.href),
-    ).toContain("/services")
-    expect(
-      getDashboardNavigation("OWNER", mixed).map((item) => item.href),
-    ).toEqual(expect.arrayContaining(["/sales", "/services"]))
-    expect(canAccessDashboardPath("/sales", "OWNER", serviceOnly)).toBe(true)
-    expect(canAccessDashboardPath("/inventory", "OWNER", serviceOnly)).toBe(
-      false,
-    )
-    expect(canAccessDashboardPath("/services", "OWNER", productOnly)).toBe(
-      false,
-    )
-  })
-
-  test("shows attendants only permitted work surfaces", () => {
-    const cashierItems = getDashboardNavigation("CASHIER").map(
+      hasServiceJobs: true,
+    })
+    const cashierItems = getDashboardNavigation("CASHIER", established).map(
       (item) => item.href,
     )
-    const operatorItems = getDashboardNavigation("OPERATOR").map(
+    const operatorItems = getDashboardNavigation("OPERATOR", established).map(
       (item) => item.href,
     )
 
@@ -129,7 +155,7 @@ describe("dashboard navigation policy", () => {
     ])
   })
 
-  test("gates known dashboard paths by role", () => {
+  test("gates known paths by permission without treating visibility as authorization", () => {
     expect(canAccessDashboardPath("/settings", "OWNER")).toBe(true)
     expect(canAccessDashboardPath("/settings", "MANAGER")).toBe(false)
     expect(canAccessDashboardPath("/analytics", "CASHIER")).toBe(false)

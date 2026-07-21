@@ -14,12 +14,13 @@ import { usePathname, useRouter } from "next/navigation"
 import { useState } from "react"
 
 type Props = {
+  commandPaths: string[]
   ctx: TenantContext
   navItems: DashboardNavItem[]
   user: SessionUser
 }
 
-export function DashboardHeader({ ctx, navItems, user }: Props) {
+export function DashboardHeader({ commandPaths, ctx, navItems, user }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const [isSwitchingTenant, setIsSwitchingTenant] = useState(false)
@@ -102,7 +103,7 @@ export function DashboardHeader({ ctx, navItems, user }: Props) {
         </h1>
       </div>
 
-      <DashboardCommandSearch navItems={navItems} />
+      <DashboardCommandSearch commandPaths={commandPaths} navItems={navItems} />
 
       <div className="hidden items-center gap-2 xl:flex">
         <HugeiconsIcon

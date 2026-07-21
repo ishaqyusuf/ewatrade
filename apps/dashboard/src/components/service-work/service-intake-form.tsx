@@ -13,6 +13,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 
 type StoreSummary = { currencyCode: string; id: string; name: string }
@@ -29,6 +30,7 @@ export function ServiceIntakeForm({
   canManage: boolean
   store: StoreSummary
 }) {
+  const router = useRouter()
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const { setParams } = useServiceWorkParams()
@@ -85,8 +87,12 @@ export function ServiceIntakeForm({
           queryClient.invalidateQueries({
             queryKey: trpc.orders.list.queryKey(),
           }),
+          queryClient.invalidateQueries({
+            queryKey: trpc.tenant.featureAvailability.queryKey(),
+          }),
         ])
         setParams(null)
+        router.refresh()
       },
     }),
   )

@@ -21,6 +21,7 @@ Generated and applied locally:
 - `20260719092903_clean_generic_operations_cutover`
 - `20260719180212_add_sellable_variant_description`
 - `20260720075654_generic_service_commerce_completion`
+- `20260720214348_add_sellable_variant_image`
 
 The last migration is the destructive early-stage cutover to the complete
 Inventory, Commercial Order, offline and Generic Service model. It deletes the
@@ -55,3 +56,16 @@ reported no drift. Local, remote-development and production pushes all reported
 the schema in sync, and read-only compatibility checks found no legacy
 zero-projection paid Orders or existing Notification Intents in either remote
 environment. The local migration history now contains 24 applied migrations.
+
+On 2026-07-20 Prisma generated and applied
+`20260720214348_add_sellable_variant_image` locally, adding nullable
+`SellableVariant.imageUrl` for the progressive mobile option editor. Local and
+remote-development pushes reported the schema in sync. The production push
+initially failed with a schema-engine error; a follow-up production `prisma
+migrate deploy` exposed the underlying baseline problem: migration
+`20260711120000_retail_ops_stock_ledger_foundation` is recorded as pending but
+expects the already-removed `Product` relation (`P3018`, PostgreSQL `42P01`). A
+guarded `bun run db:push --prod` retry on 2026-07-21 then synchronized the
+production schema successfully without force or data-loss flags. The production
+schema now includes the image field, but migration history still requires a
+dedicated reconciliation before the normal migrate-and-release workflow can run.

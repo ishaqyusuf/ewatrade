@@ -1,5 +1,9 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { CatalogSetupHelperPicker } from "@/components/mobile/catalog-setup-helper-picker"
+import {
+  type CatalogVariantDraft,
+  CatalogVariantManager,
+} from "@/components/mobile/catalog-variant-manager"
 import { FormField } from "@/components/mobile/form-field"
 import {
   KeyboardInlineComposer,
@@ -50,19 +54,6 @@ type MobileOptionGroup = {
   values: Array<{ id: string; label: string }>
 }
 
-type MobileVariantDraft = {
-  barcode: string
-  description: string
-  enabled: boolean
-  isMoreVisible: boolean
-  price: string
-  quantity: string
-  quoteRequired: boolean
-  sku: string
-  storeIds: string[]
-  unitPrices: Record<string, string>
-}
-
 type MobileUnitDraft = {
   id: string
   name: string
@@ -81,7 +72,6 @@ const DEFAULT_UNIT_TRANSACTION_SCALE = 2
 const KNOWN_VARIANT_TYPES = [
   "Size",
   "Color",
-  "Unit",
   "Material",
   "Length",
   "Weight",
@@ -100,7 +90,6 @@ const VARIANT_VALUE_SUGGESTIONS_BY_LABEL: Record<string, string[]> = {
   "Service level": ["Standard", "Express", "Same day", "Next day"],
   Size: ["XS", "S", "M", "L", "XL", "XXL"],
   Turnaround: ["Same day", "24 hours", "48 hours", "3 days", "1 week"],
-  Unit: ["Piece", "Pair", "Pack", "Box", "Carton", "Kg", "Gram", "Meter"],
   Weight: ["Light", "Medium", "Heavy", "1 kg", "5 kg", "10 kg"],
 }
 
@@ -133,6 +122,14 @@ function newUnit(): MobileUnitDraft {
 
 function unitKey(index: number) {
   return `unit-${index + 2}`
+}
+
+function catalogCreateErrorMessage(message: string) {
+  if (message.includes("unrecognized_keys") && message.includes("variants")) {
+    return "Catalog option details are not available on the connected server yet. Please try again after it updates."
+  }
+
+  return message
 }
 
 function KindChoice({
@@ -272,11 +269,12 @@ export function SimpleCatalogItemScreen({
     newOptionGroup(),
   ])
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null)
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null)
   const [variantComposerMode, setVariantComposerMode] =
     useState<VariantComposerMode | null>(null)
   const [composerText, setComposerText] = useState("")
   const [variantDrafts, setVariantDrafts] = useState<
-    Record<string, MobileVariantDraft>
+    Record<string, CatalogVariantDraft>
   >({})
   const [additionalUnits, setAdditionalUnits] = useState<MobileUnitDraft[]>([])
   const [unitEditorDraft, setUnitEditorDraft] =
@@ -376,7 +374,12 @@ export function SimpleCatalogItemScreen({
   ])
   const onCreated = async () => {
     setSubmitError(null)
-    await queryClient.invalidateQueries(trpc.catalog.listItems.queryFilter())
+    await Promise.all([
+      queryClient.invalidateQueries(trpc.catalog.listItems.queryFilter()),
+      queryClient.invalidateQueries(
+        trpc.tenant.featureAvailability.queryFilter(),
+      ),
+    ])
     onComplete?.()
   }
   const createItemMutation = useMutation(
@@ -387,47 +390,31 @@ export function SimpleCatalogItemScreen({
   )
   const createAdvancedMutation = useMutation(
     trpc.catalog.createItem.mutationOptions({
-      onError: (error) => setSubmitError(error.message),
+      onError: (error) =>
+        setSubmitError(catalogCreateErrorMessage(error.message)),
       onSuccess: onCreated,
     }),
   )
 
   const defaultStoreId = stores[0]?.id
 
-  const variantDraft = (key: string): MobileVariantDraft =>
+  const makeDefaultVariantDraft = (): CatalogVariantDraft => ({
+    barcode: "",
+    description: "",
+    enabled: true,
+    imageUrl: "",
+    price: "",
+    quantity: "",
+    quoteRequired: defaultQuoteRequired,
+    sku: "",
+    storeIds: defaultStoreId ? [defaultStoreId] : [],
+    unitPrices: {},
+  })
+
+  const variantDraft = (key: string): CatalogVariantDraft =>
     variantDrafts[key] ?? {
-      barcode: "",
-      description: "",
-      enabled: true,
-      isMoreVisible: false,
-      price: "",
-      quantity: "",
-      quoteRequired: defaultQuoteRequired,
-      sku: "",
-      storeIds: defaultStoreId ? [defaultStoreId] : [],
-      unitPrices: {},
+      ...makeDefaultVariantDraft(),
     }
-
-  const updateVariantDraft = (
-    key: string,
-    update: Partial<MobileVariantDraft>,
-  ) => {
-    setVariantDrafts((current) => ({
-      ...current,
-      [key]: { ...variantDraft(key), ...update },
-    }))
-  }
-
-  const updateVariantUnitPrice = (
-    variantKey: string,
-    unitId: string,
-    value: string,
-  ) => {
-    const draft = variantDraft(variantKey)
-    updateVariantDraft(variantKey, {
-      unitPrices: { ...draft.unitPrices, [unitId]: value },
-    })
-  }
 
   const hasStructuralDraft = () =>
     selectedHelperKey !== null ||
@@ -573,7 +560,7 @@ export function SimpleCatalogItemScreen({
       (combination) => variantDraft(combination.key).enabled,
     )
     if (firstEnabledIndex < 0) {
-      setSubmitError("Keep at least one variant enabled.")
+      setSubmitError("Keep at least one option combination enabled.")
       return
     }
 
@@ -700,8 +687,11 @@ export function SimpleCatalogItemScreen({
             storeAvailability.length > 0 ? storeAvailability : undefined,
         },
         draft,
-        description: draft.description.trim() || undefined,
         enabled: draft.enabled,
+        ...(draft.description.trim()
+          ? { description: draft.description.trim() }
+          : {}),
+        ...(draft.imageUrl.trim() ? { imageUrl: draft.imageUrl.trim() } : {}),
         isDefault: index === firstEnabledIndex,
         key: combination.key,
         name: combination.name,
@@ -756,40 +746,47 @@ export function SimpleCatalogItemScreen({
           (
             { commonOffering, draft, priceMinor: rowPrice, ...variant },
             variantIndex,
-          ) => ({
-            ...variant,
-            openingStockQuantity:
+          ) => {
+            const openingStockQuantity =
               showAdvanced && draft.quantity.trim()
                 ? getExactOpeningStock(
                     draft.quantity,
                     canonicalTransactionScale,
                   )
-                : undefined,
-            offerings: [
-              {
-                ...commonOffering,
-                barcode: draft.barcode.trim() || undefined,
-                fixedPriceMinor: rowPrice,
-                inventoryUnitKey: "canonical",
-                pricingPolicy: "fixed" as const,
-                sku: draft.sku.trim() || undefined,
-              },
-              ...additionalUnits.map((unit, unitIndex) => ({
-                ...commonOffering,
-                barcode: undefined,
-                fixedPriceMinor: draft.unitPrices[unit.id]?.trim()
-                  ? (majorToMinor(draft.unitPrices[unit.id] ?? "") ?? rowPrice)
-                  : unit.price.trim()
-                    ? (majorToMinor(unit.price) ?? rowPrice)
-                    : rowPrice,
-                inventoryUnitKey: unitKey(unitIndex),
-                key: `offering-${variantIndex + 1}-${unitIndex + 2}`,
-                name: `${variant.name} · ${unit.name.trim()}`,
-                pricingPolicy: "fixed" as const,
-                sku: undefined,
-              })),
-            ],
-          }),
+                : undefined
+
+            return {
+              ...variant,
+              ...(openingStockQuantity !== undefined
+                ? { openingStockQuantity }
+                : {}),
+              offerings: [
+                {
+                  ...commonOffering,
+                  barcode: draft.barcode.trim() || undefined,
+                  fixedPriceMinor: rowPrice,
+                  inventoryUnitKey: "canonical",
+                  pricingPolicy: "fixed" as const,
+                  sku: draft.sku.trim() || undefined,
+                },
+                ...additionalUnits.map((unit, unitIndex) => ({
+                  ...commonOffering,
+                  barcode: undefined,
+                  fixedPriceMinor: draft.unitPrices[unit.id]?.trim()
+                    ? (majorToMinor(draft.unitPrices[unit.id] ?? "") ??
+                      rowPrice)
+                    : unit.price.trim()
+                      ? (majorToMinor(unit.price) ?? rowPrice)
+                      : rowPrice,
+                  inventoryUnitKey: unitKey(unitIndex),
+                  key: `offering-${variantIndex + 1}-${unitIndex + 2}`,
+                  name: `${variant.name} · ${unit.name.trim()}`,
+                  pricingPolicy: "fixed" as const,
+                  sku: undefined,
+                })),
+              ],
+            }
+          },
         ),
       })
       return
@@ -1019,12 +1016,14 @@ export function SimpleCatalogItemScreen({
 
     setVariantComposerMode(null)
     setComposerText("")
+    setEditingGroupId(null)
   }
 
   useEffect(() => {
     const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
       setVariantComposerMode(null)
       setComposerText("")
+      setEditingGroupId(null)
     })
 
     return () => {
@@ -1036,6 +1035,7 @@ export function SimpleCatalogItemScreen({
     setShowOpeningStock(false)
     setOpeningStock("")
     setVariantComposerMode("variant-type")
+    setEditingGroupId(null)
     setComposerText("")
     focusVariantComposerInput()
   }
@@ -1043,8 +1043,8 @@ export function SimpleCatalogItemScreen({
   const openVariantComposer = () => {
     if (!showAdvanced && openingStock.trim()) {
       Alert.alert(
-        "Add stock for each variant?",
-        "Adding variants replaces the single opening stock with current stock for each variant.",
+        "Add stock for each option?",
+        "Adding options replaces the single opening stock with current stock for each combination.",
         [
           { style: "cancel", text: "Keep single stock" },
           {
@@ -1060,8 +1060,31 @@ export function SimpleCatalogItemScreen({
   }
 
   const selectVariantLabel = (rawLabel: string) => {
-    const label = rawLabel.trim() || "Variant"
+    const label = rawLabel.trim() || "Option"
     const normalizedLabel = label.toLowerCase()
+    if (editingGroupId) {
+      const duplicateGroup = optionGroups.find(
+        (group) =>
+          group.id !== editingGroupId &&
+          group.name.trim().toLowerCase() === normalizedLabel,
+      )
+      if (duplicateGroup) {
+        setSubmitError(`An option named ${label} already exists.`)
+        return
+      }
+
+      setOptionGroups((current) =>
+        current.map((group) =>
+          group.id === editingGroupId ? { ...group, name: label } : group,
+        ),
+      )
+      setEditingGroupId(null)
+      setVariantComposerMode(null)
+      setComposerText("")
+      Keyboard.dismiss()
+      return
+    }
+
     const existingGroup = optionGroups.find(
       (group) => group.name.trim().toLowerCase() === normalizedLabel,
     )
@@ -1096,10 +1119,32 @@ export function SimpleCatalogItemScreen({
   }
 
   const openVariantValueComposer = (groupId: string) => {
+    setEditingGroupId(null)
     setActiveGroupId(groupId)
     setVariantComposerMode("variant-value")
     setComposerText("")
     focusVariantComposerInput()
+  }
+
+  const openOptionNameEditor = (group: MobileOptionGroup) => {
+    setActiveGroupId(group.id)
+    setEditingGroupId(group.id)
+    setVariantComposerMode("variant-type")
+    setComposerText(group.name)
+    focusVariantComposerInput()
+  }
+
+  const removeOptionValue = (groupId: string, valueId: string) => {
+    setOptionGroups((current) =>
+      current.map((group) =>
+        group.id === groupId
+          ? {
+              ...group,
+              values: group.values.filter((value) => value.id !== valueId),
+            }
+          : group,
+      ),
+    )
   }
 
   const addComposerValueByName = (rawLabel: string) => {
@@ -1123,16 +1168,19 @@ export function SimpleCatalogItemScreen({
 
   const submitVariantComposer = () => {
     const value = composerText.trim()
-    if (!value) return
 
     if (variantComposerMode === "variant-type") {
+      if (!value) return
       selectVariantLabel(value)
       return
     }
 
-    for (const part of value.split(",")) {
-      addComposerValueByName(part)
+    if (value) {
+      for (const part of value.split(",")) {
+        addComposerValueByName(part)
+      }
     }
+    setVariantComposerMode(null)
     setComposerText("")
   }
 
@@ -1281,28 +1329,46 @@ export function SimpleCatalogItemScreen({
             returnKeyType="next"
             value={name}
           />
-          <MoneyField
-            currencyCode={currencyCode}
-            label={defaultQuoteRequired ? "Starting price (optional)" : "Price"}
-            onChangeValue={setPrice}
-            placeholder="0.00"
-            value={price}
-          />
-
           {kind === "product" ? (
-            <FormField
-              autoCapitalize="words"
-              label="Main unit"
-              onChangeText={setUnitName}
-              placeholder="Enter main unit"
-              value={unitName}
+            <View className="flex-row gap-3">
+              <FormField
+                autoCapitalize="words"
+                containerClassName="min-w-0 flex-1"
+                label="Counted in"
+                onChangeText={setUnitName}
+                placeholder="e.g. Bag, Piece"
+                value={unitName}
+              />
+              <MoneyField
+                containerClassName="min-w-0 flex-1"
+                currencyCode={currencyCode}
+                label="Price"
+                onChangeValue={setPrice}
+                placeholder="0.00"
+                value={price}
+              />
+            </View>
+          ) : (
+            <MoneyField
+              currencyCode={currencyCode}
+              label={
+                defaultQuoteRequired ? "Starting price (optional)" : "Price"
+              }
+              onChangeValue={setPrice}
+              placeholder="0.00"
+              value={price}
             />
-          ) : null}
+          )}
 
           {kind === "product" && !showAdvanced && showOpeningStock ? (
             <FormField
+              actionLabel="Remove"
               keyboardType="decimal-pad"
               label="Opening stock"
+              onActionPress={() => {
+                setOpeningStock("")
+                setShowOpeningStock(false)
+              }}
               onChangeText={setOpeningStock}
               placeholder="0"
               value={openingStock}
@@ -1311,8 +1377,13 @@ export function SimpleCatalogItemScreen({
 
           {showDescription ? (
             <FormField
+              actionLabel="Remove"
               label="Description"
               multiline
+              onActionPress={() => {
+                setDescription("")
+                setShowDescription(false)
+              }}
               onChangeText={setDescription}
               placeholder="Optional notes"
               textAlignVertical="top"
@@ -1335,12 +1406,8 @@ export function SimpleCatalogItemScreen({
             ) : null}
             {!showAdvanced ? (
               <OptionalFieldButton
-                label={kind === "product" ? "Add variant" : "Add options"}
-                onPress={
-                  kind === "product"
-                    ? openVariantComposer
-                    : () => setShowAdvanced(true)
-                }
+                label="Add options"
+                onPress={openVariantComposer}
               />
             ) : null}
             {kind === "service" && !trackServiceWork ? (
@@ -1407,16 +1474,14 @@ export function SimpleCatalogItemScreen({
           ) : null}
 
           {showAdvanced ? (
-            <View className="gap-4 rounded-3xl border border-border bg-muted/30 p-4">
+            <View className="gap-5 border-t border-border pt-5">
               <View className="flex-row items-center justify-between gap-3">
                 <View className="min-w-0 flex-1 gap-1">
                   <Text className="font-extrabold text-foreground">
-                    {kind === "product" ? "Variants" : "Options"}
+                    Options
                   </Text>
                   <Text className="text-xs text-muted-foreground">
-                    {kind === "product"
-                      ? "Add variant names and values such as Size and Large."
-                      : "Add choices such as Colour and Size."}
+                    Add option names and values such as Size and Large.
                   </Text>
                 </View>
                 <Pressable
@@ -1425,6 +1490,7 @@ export function SimpleCatalogItemScreen({
                   onPress={() => {
                     setShowAdvanced(false)
                     setActiveGroupId(null)
+                    setEditingGroupId(null)
                     setVariantComposerMode(null)
                     setComposerText("")
                     setVariantDrafts({})
@@ -1434,310 +1500,118 @@ export function SimpleCatalogItemScreen({
                 </Pressable>
               </View>
 
-              {optionGroups.map((group, index) => (
-                <View
-                  className="gap-3 rounded-2xl border border-border bg-background p-3"
-                  key={group.id}
-                >
-                  <FormField
-                    autoCapitalize="words"
-                    label={kind === "product" ? "Variant name" : "Option name"}
-                    onChangeText={(value) =>
-                      setOptionGroups((current) =>
-                        current.map((candidate) =>
-                          candidate.id === group.id
-                            ? { ...candidate, name: value }
-                            : candidate,
-                        ),
-                      )
-                    }
-                    placeholder="Enter option name"
-                    value={group.name}
-                  />
-                  <Pressable
-                    accessibilityLabel={`Add values to ${group.name || `option ${index + 1}`}`}
-                    className="min-h-11 flex-row items-center justify-center gap-2 rounded-xl bg-muted px-4"
-                    haptic
-                    onPress={() => openVariantValueComposer(group.id)}
-                  >
-                    <Icon className="size-xs text-foreground" name="Plus" />
-                    <Text className="text-sm font-bold text-foreground">
-                      {group.values.length > 0
-                        ? `${group.values.length} values · Edit`
-                        : "Add values"}
-                    </Text>
-                  </Pressable>
-                  {group.values.length > 0 ? (
-                    <Text className="text-xs leading-5 text-muted-foreground">
-                      {group.values.map((value) => value.label).join(" · ")}
-                    </Text>
-                  ) : null}
-                  {optionGroups.length > 1 ? (
-                    <Pressable
-                      accessibilityLabel={`Remove option ${index + 1}`}
-                      className="min-h-11 items-center justify-center"
-                      onPress={() =>
-                        setOptionGroups((current) =>
-                          current.filter(
-                            (candidate) => candidate.id !== group.id,
-                          ),
-                        )
-                      }
-                    >
-                      <Text className="text-sm font-bold text-destructive">
-                        Remove option
-                      </Text>
-                    </Pressable>
-                  ) : null}
-                </View>
-              ))}
-
-              <ActionButton
-                onPress={
-                  kind === "product"
-                    ? openVariantComposer
-                    : () =>
-                        setOptionGroups((current) => [
-                          ...current,
-                          newOptionGroup(),
-                        ])
-                }
-                variant="outline"
-              >
-                {kind === "product"
-                  ? "Add another variant"
-                  : "Add another option"}
-              </ActionButton>
-
-              {combinations.map((combination) => {
-                const draft = variantDraft(combination.key)
-                return (
+              <View className="border-t border-border">
+                {optionGroups.map((group, index) => (
                   <View
-                    className={
-                      draft.enabled
-                        ? "gap-3 border-t border-border pt-4"
-                        : "gap-3 border-t border-border pt-4 opacity-60"
-                    }
-                    key={combination.key}
+                    className="gap-3 border-b border-border py-4"
+                    key={group.id}
                   >
                     <View className="flex-row items-center gap-3">
-                      <View className="min-w-0 flex-1 gap-1">
-                        <Text className="font-bold text-foreground">
-                          {combination.name}
+                      <View className="min-w-0 flex-1 gap-0.5">
+                        <Text className="text-base font-extrabold text-foreground">
+                          {group.name || `Option ${index + 1}`}
                         </Text>
-                        {!draft.enabled ? (
-                          <Text className="text-xs text-muted-foreground">
-                            Inactive
-                          </Text>
-                        ) : null}
+                        <Text className="text-xs text-muted-foreground">
+                          {group.values.length}{" "}
+                          {group.values.length === 1 ? "value" : "values"}
+                        </Text>
                       </View>
-                      <Pressable
-                        accessibilityLabel={`${draft.isMoreVisible ? "Hide" : "Show"} more fields for ${combination.name}`}
-                        className="min-h-11 flex-row items-center gap-2 rounded-full bg-muted px-4"
-                        haptic
-                        onPress={() =>
-                          updateVariantDraft(combination.key, {
-                            isMoreVisible: !draft.isMoreVisible,
-                          })
-                        }
-                      >
-                        <Text className="text-xs font-bold text-foreground">
-                          More
-                        </Text>
-                        <Icon
-                          className="size-xs text-muted-foreground"
-                          name={
-                            draft.isMoreVisible ? "ChevronDown" : "ChevronRight"
+                      {optionGroups.length > 1 ? (
+                        <Pressable
+                          accessibilityLabel={`Remove ${group.name || `option ${index + 1}`}`}
+                          className="min-h-10 justify-center px-2"
+                          haptic
+                          onPress={() =>
+                            setOptionGroups((current) =>
+                              current.filter(
+                                (candidate) => candidate.id !== group.id,
+                              ),
+                            )
                           }
+                        >
+                          <Text className="text-xs font-bold text-destructive">
+                            Remove
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                      <Pressable
+                        accessibilityLabel={`Edit ${group.name || `option ${index + 1}`} name`}
+                        className="h-10 w-10 items-center justify-center rounded-full bg-muted"
+                        haptic
+                        onPress={() => openOptionNameEditor(group)}
+                        transition
+                      >
+                        <Icon
+                          className="size-sm text-foreground"
+                          name="Pencil"
                         />
                       </Pressable>
                     </View>
 
-                    <View className="flex-row gap-3">
-                      <View className="min-w-0 flex-1">
-                        <MoneyField
-                          currencyCode={currencyCode}
-                          label={
-                            kind === "product"
-                              ? `${unitName.trim() || "Main unit"} price`
-                              : "Price"
-                          }
-                          onChangeValue={(value) =>
-                            updateVariantDraft(combination.key, {
-                              price: value,
-                            })
-                          }
-                          placeholder="Enter price"
-                          value={draft.price}
-                        />
-                      </View>
-                      {kind === "product" ? (
-                        <View className="min-w-0 flex-1">
-                          <FormField
-                            keyboardType="decimal-pad"
-                            label="Qty"
-                            onChangeText={(value) =>
-                              updateVariantDraft(combination.key, {
-                                quantity: value,
-                              })
-                            }
-                            placeholder="Enter quantity"
-                            value={draft.quantity}
-                          />
-                        </View>
-                      ) : null}
-                    </View>
-
-                    {kind === "product" && additionalUnits.length > 0 ? (
-                      <View className="gap-3 border-t border-border pt-4">
-                        <View className="gap-1">
-                          <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
-                            Selling prices by unit
+                    <View className="flex-row flex-wrap gap-2">
+                      {group.values.map((value) => (
+                        <View
+                          className="min-h-10 flex-row items-center gap-2 rounded-full bg-primary px-3"
+                          key={value.id}
+                        >
+                          <Text className="text-xs font-bold text-primary-foreground">
+                            {value.label}
                           </Text>
-                          <Text className="text-xs leading-5 text-muted-foreground">
-                            Set a different price for this variant in each unit,
-                            or leave it blank to use the unit default.
-                          </Text>
-                        </View>
-                        {additionalUnits.map((unit) => (
-                          <MoneyField
-                            currencyCode={currencyCode}
-                            helper={
-                              unit.price.trim()
-                                ? `Defaults to ${currencyCode} ${unit.price} for ${unit.name}.`
-                                : `Defaults to the ${unitName.trim() || "main unit"} price.`
-                            }
-                            key={unit.id}
-                            label={`${unit.name} price`}
-                            onChangeValue={(value) =>
-                              updateVariantUnitPrice(
-                                combination.key,
-                                unit.id,
-                                value,
-                              )
-                            }
-                            placeholder={
-                              unit.price.trim() || draft.price.trim() || price
-                            }
-                            value={draft.unitPrices[unit.id] ?? ""}
-                          />
-                        ))}
-                      </View>
-                    ) : null}
-
-                    {draft.isMoreVisible ? (
-                      <View className="gap-4 border-t border-border pt-4">
-                        <ToggleRow
-                          enabled={draft.enabled}
-                          label="Available for sale"
-                          onPress={() =>
-                            updateVariantDraft(combination.key, {
-                              enabled: !draft.enabled,
-                            })
-                          }
-                        />
-                        <FormField
-                          label="Description"
-                          multiline
-                          onChangeText={(value) =>
-                            updateVariantDraft(combination.key, {
-                              description: value,
-                            })
-                          }
-                          placeholder="Optional notes for this variant"
-                          value={draft.description}
-                        />
-                        {kind === "service" ? (
-                          <ToggleRow
-                            enabled={draft.quoteRequired}
-                            label="Quote required"
+                          <Pressable
+                            accessibilityLabel={`Remove ${value.label}`}
+                            className="h-7 w-7 items-center justify-center rounded-full"
+                            haptic
                             onPress={() =>
-                              updateVariantDraft(combination.key, {
-                                quoteRequired: !draft.quoteRequired,
-                              })
+                              removeOptionValue(group.id, value.id)
                             }
-                          />
-                        ) : (
-                          <>
-                            <FormField
-                              autoCapitalize="characters"
-                              label="SKU"
-                              onChangeText={(value) =>
-                                updateVariantDraft(combination.key, {
-                                  sku: value,
-                                })
-                              }
-                              placeholder="Optional stock keeping code"
-                              value={draft.sku}
+                          >
+                            <Icon
+                              className="size-xs text-primary-foreground"
+                              name="X"
                             />
-                            <FormField
-                              label="Barcode"
-                              onChangeText={(value) =>
-                                updateVariantDraft(combination.key, {
-                                  barcode: value,
-                                })
-                              }
-                              placeholder="Optional barcode number"
-                              value={draft.barcode}
-                            />
-                          </>
-                        )}
-
-                        {stores.length > 1 ? (
-                          <View className="gap-2">
-                            <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
-                              Available at
-                            </Text>
-                            <View className="flex-row flex-wrap gap-2">
-                              {stores.map((store) => {
-                                const available = draft.storeIds.includes(
-                                  store.id,
-                                )
-                                return (
-                                  <Pressable
-                                    accessibilityRole="checkbox"
-                                    accessibilityState={{ checked: available }}
-                                    className={
-                                      available
-                                        ? "min-h-10 justify-center rounded-full bg-primary px-4"
-                                        : "min-h-10 justify-center rounded-full bg-muted px-4"
-                                    }
-                                    key={store.id}
-                                    onPress={() =>
-                                      updateVariantDraft(combination.key, {
-                                        storeIds: available
-                                          ? draft.storeIds.filter(
-                                              (storeId) => storeId !== store.id,
-                                            )
-                                          : [...draft.storeIds, store.id],
-                                      })
-                                    }
-                                  >
-                                    <Text
-                                      className={
-                                        available
-                                          ? "text-xs font-bold text-primary-foreground"
-                                          : "text-xs font-bold text-foreground"
-                                      }
-                                    >
-                                      {store.name}
-                                    </Text>
-                                  </Pressable>
-                                )
-                              })}
-                            </View>
-                          </View>
-                        ) : null}
-                      </View>
-                    ) : null}
+                          </Pressable>
+                        </View>
+                      ))}
+                      <Pressable
+                        accessibilityLabel={`Add values to ${group.name || `option ${index + 1}`}`}
+                        className="min-h-10 flex-row items-center gap-2 rounded-full bg-muted px-3"
+                        haptic
+                        onPress={() => openVariantValueComposer(group.id)}
+                        transition
+                      >
+                        <Icon className="size-xs text-foreground" name="Plus" />
+                        <Text className="text-xs font-bold text-foreground">
+                          Add value
+                        </Text>
+                      </Pressable>
+                    </View>
                   </View>
-                )
-              })}
+                ))}
+              </View>
+
+              <ActionButton onPress={openVariantComposer} variant="outline">
+                Add another option
+              </ActionButton>
+
+              <CatalogVariantManager
+                basePrice={price}
+                combinations={combinations}
+                currencyCode={currencyCode}
+                drafts={variantDrafts}
+                kind={kind}
+                makeDefaultDraft={makeDefaultVariantDraft}
+                onChangeDraft={(key, draft) =>
+                  setVariantDrafts((current) => ({ ...current, [key]: draft }))
+                }
+                stores={stores}
+                unitName={unitName}
+                units={additionalUnits}
+              />
             </View>
           ) : null}
 
           {kind === "product" ? (
-            <View className="gap-4 rounded-3xl border border-border bg-muted/30 p-4">
+            <View className="gap-4 border-t border-border pt-5">
               <View className="gap-1">
                 <Text className="font-extrabold text-foreground">Unit</Text>
                 <Text className="text-xs leading-5 text-muted-foreground">
@@ -1858,7 +1732,7 @@ export function SimpleCatalogItemScreen({
                 autoCapitalize="words"
                 label="Unit name"
                 onChangeText={(value) => updateUnitEditorDraft({ name: value })}
-                placeholder="Example: Bag, Carton, or Piece"
+                placeholder="e.g. Half bag, Quarter bag"
                 value={unitEditorDraft.name}
               />
               <View className="gap-2">
@@ -1918,7 +1792,7 @@ export function SimpleCatalogItemScreen({
               />
               <MoneyField
                 currencyCode={currencyCode}
-                helper="Variants can override this default after the unit is saved."
+                helper="Options can override this default after the unit is saved."
                 label="Default selling price"
                 onChangeValue={(value) =>
                   updateUnitEditorDraft({ price: value })
@@ -1932,8 +1806,8 @@ export function SimpleCatalogItemScreen({
                   Stock source
                 </Text>
                 <Text className="text-xs leading-5 text-muted-foreground">
-                  Shared stock deducts the main-unit stock. Prepared stock
-                  keeps a separate balance for units already packed.
+                  Shared stock deducts the main-unit stock. Prepared stock keeps
+                  a separate balance for units already packed.
                 </Text>
                 <View className="flex-row gap-2">
                   {(
@@ -1980,8 +1854,13 @@ export function SimpleCatalogItemScreen({
       </Modal>
 
       <KeyboardInlineComposer
+        canSubmit={
+          variantComposerMode === "variant-value"
+            ? composerText.trim().length > 0 ||
+              (activeGroup?.values.length ?? 0) > 0
+            : undefined
+        }
         dismissKeyboardOnSubmit={variantComposerMode === "variant-value"}
-        hideSubmitButton={variantComposerMode === "variant-value"}
         onChangeText={changeVariantComposerText}
         onPillPress={pressVariantComposerPill}
         onRemovePill={removeComposerValue}
@@ -1989,14 +1868,21 @@ export function SimpleCatalogItemScreen({
         pills={composerPills}
         placeholder={
           variantComposerMode === "variant-value"
-            ? `${activeGroup?.name || "Variant"} values, separated by commas`
-            : "Variant name or choose a suggestion"
+            ? `${activeGroup?.name || "Option"} values, separated by commas`
+            : editingGroupId
+              ? "Update option name"
+              : "Option name or choose a suggestion"
         }
         ref={variantComposerInputRef}
         submitAccessibilityLabel={
           variantComposerMode === "variant-value"
-            ? "Add variant value"
-            : "Add variant"
+            ? "Complete option values"
+            : editingGroupId
+              ? "Save option name"
+              : "Add option"
+        }
+        submitIconName={
+          variantComposerMode === "variant-value" ? "Check" : "Plus"
         }
         value={composerText}
         visible={!!variantComposerMode}

@@ -72,48 +72,20 @@ export function MobileAppShell({
   const visibleNavItems = navItems.filter(
     (item) => role === "owner" || !item.ownerOnly,
   );
-  const leftItems = visibleNavItems.slice(0, 2);
-  const rightItems = visibleNavItems.slice(2, 4);
+  const middleIndex = Math.ceil(visibleNavItems.length / 2);
+  const leftItems = visibleNavItems.slice(0, middleIndex);
+  const rightItems = visibleNavItems.slice(middleIndex);
   const bottomTabs: MobileBottomTab[] = [
     ...leftItems.map(toBottomTab),
     {
+      accessibilityLabel:
+        centralAction.accessibilityLabel ??
+        (role === "owner" ? "Open create options" : "Create order"),
       icon: centralAction.icon,
+      kind: "action",
       label: centralAction.label,
       onPress: centralAction.onPress,
-      render: ({ active }) => (
-        <RNView
-          testID="mobile-shell-central-action"
-          style={{
-            alignItems: "center",
-            height: 44,
-            justifyContent: "center",
-            overflow: "visible",
-            position: "relative",
-            width: 44,
-            zIndex: 10,
-          }}
-        >
-          <RNView
-            style={{
-              alignItems: "center",
-              backgroundColor: colors.primary,
-              borderRadius: 999,
-              height: active ? 52 : 48,
-              justifyContent: "center",
-              position: "absolute",
-              top: -20,
-              width: active ? 52 : 48,
-              zIndex: 10,
-            }}
-          >
-            <Icon
-              className="size-base"
-              color={colors.primaryForeground}
-              name={centralAction.icon}
-            />
-          </RNView>
-        </RNView>
-      ),
+      testID: "mobile-shell-central-action",
     },
     ...rightItems.map(toBottomTab),
   ];
@@ -241,19 +213,18 @@ export function MobileAppShell({
       </KeyboardAwareScrollView>
 
       <View pointerEvents="box-none" testID="mobile-shell-floating-nav">
-        {/* Center action geometry follows MOBILE_DESIGN_FOUNDATION.layout.floatingControlRadiusClass. */}
         <MobileBottomTabs
           activeLabel="Home"
           floating
           haptic
           hideOnScroll
           isHidden={isBottomTabHidden}
-          labelStack="horizontal"
+          labelStack="vertical"
           safeArea
-          showLabel={false}
-          showLabelOnActive
+          showLabel
+          showLabelOnActive={false}
           tabs={bottomTabs}
-          variant="reference"
+          variant="operational-detail"
         />
       </View>
     </RNView>
@@ -262,8 +233,11 @@ export function MobileAppShell({
 
 function toBottomTab(item: MobileAppShellNavItem): MobileBottomTab {
   return {
+    accessibilityLabel: item.accessibilityLabel,
     disabled: item.disabled,
     icon: item.icon,
+    isActive: item.isActive,
+    kind: "navigation",
     label: item.label,
     onPress: item.onPress,
   };

@@ -1,6 +1,5 @@
 import { ServiceJobsPage } from "@/components/dashboard/service-jobs-page"
 import { ServiceWorkTableSkeleton } from "@/components/tables/service-work/skeleton"
-import { getCatalogFeatureAvailability } from "@/lib/catalog-capabilities"
 import {
   canManageSalesReports,
   canUseSalesOperations,
@@ -40,13 +39,6 @@ export default async function ServicesRoutePage() {
 
   if (!store) {
     redirect("/setup")
-  }
-  const catalogFeatures = await getCatalogFeatureAvailability({
-    storeId: store.id,
-    tenantId: ctx.tenant.id,
-  })
-  if (!catalogFeatures.hasServiceItems) {
-    redirect("/")
   }
   const canManage = canManageSalesReports(ctx.membership.role)
   await Promise.allSettled([

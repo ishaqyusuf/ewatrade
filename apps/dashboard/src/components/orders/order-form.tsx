@@ -9,6 +9,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 
 type CatalogItem = RouterOutputs["catalog"]["listItems"][number]
@@ -62,6 +63,7 @@ function availableOfferings(items: CatalogItem[], storeId: string) {
 }
 
 export function OrderForm({ store }: { store: StoreSummary }) {
+  const router = useRouter()
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const { setParams } = useOrderParams()
@@ -81,10 +83,16 @@ export function OrderForm({ store }: { store: StoreSummary }) {
     trpc.orders.create.mutationOptions({
       onError: (failure) => setError(failure.message),
       onSuccess: async () => {
-        await queryClient.invalidateQueries({
-          queryKey: trpc.orders.list.queryKey(),
-        })
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: trpc.orders.list.queryKey(),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: trpc.tenant.featureAvailability.queryKey(),
+          }),
+        ])
         setParams(null)
+        router.refresh()
       },
     }),
   )

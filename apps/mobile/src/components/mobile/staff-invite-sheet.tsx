@@ -19,7 +19,7 @@ import {
 } from "@/store/subscriptionStore"
 import { useTRPC } from "@/trpc/client"
 import type { BottomSheetModal } from "@gorhom/bottom-sheet"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { forwardRef, useMemo, useState } from "react"
 import { View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
@@ -143,10 +143,9 @@ export function StaffInviteContent({
   presentation = "sheet",
 }: StaffInviteContentProps) {
   const trpc = useTRPC()
+  const queryClient = useQueryClient()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
-  const isOfflineMode = useOperationalModeStore(
-    (state) => state.isOfflineMode,
-  )
+  const isOfflineMode = useOperationalModeStore((state) => state.isOfflineMode)
   const subscriptions = useSubscriptionStore((state) => state.subscriptions)
   const [email, setEmail] = useState("")
   const [name, setName] = useState("")
@@ -171,11 +170,16 @@ export function StaffInviteContent({
       onError: (error) => {
         setSubmitError(error.message)
       },
-      onSuccess: () => {
+      onSuccess: async () => {
         setEmail("")
         setName("")
         setSubmitError(null)
-        void productionStaffQuery.refetch()
+        await Promise.all([
+          productionStaffQuery.refetch(),
+          queryClient.invalidateQueries(
+            trpc.tenant.featureAvailability.queryFilter(),
+          ),
+        ])
         onComplete?.()
       },
     }),

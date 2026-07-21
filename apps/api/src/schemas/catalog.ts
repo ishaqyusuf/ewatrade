@@ -102,11 +102,7 @@ const catalogQuoteOfferingSchema = z
 
 const serviceWorkPolicyFields = {
   authorizationPolicy: z
-    .enum([
-      "after_required_payment",
-      "manual_release",
-      "on_order_confirmation",
-    ])
+    .enum(["after_required_payment", "manual_release", "on_order_confirmation"])
     .optional(),
   guidance: z.string().trim().max(2_000).optional(),
   quantityScale: z.number().int().min(0).max(6).optional(),
@@ -126,6 +122,7 @@ function catalogVariantSchema<T extends z.ZodType>(offeringSchema: T) {
     .object({
       description: z.string().trim().max(2_000).optional(),
       enabled: z.boolean().optional(),
+      imageUrl: catalogImageUrlSchema.optional(),
       isDefault: z.boolean(),
       key: catalogKeySchema,
       name: z.string().trim().min(1).max(120),

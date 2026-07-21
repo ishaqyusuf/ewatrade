@@ -17,7 +17,7 @@ import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { formatMinorMoney, majorToMinor } from "@ewatrade/utils"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { Directory, File, Paths } from "expo-file-system"
 import * as ImagePicker from "expo-image-picker"
@@ -138,6 +138,7 @@ export function ServiceJobsContent({
   onCreateOrder?: () => void
 } = {}) {
   const trpc = useTRPC()
+  const queryClient = useQueryClient()
   const { profile } = useAuthContext()
   const canManage = canManageMobileOperations(profile?.role)
   const isOfflineMode = useOperationalModeStore((state) => state.isOfflineMode)
@@ -302,7 +303,13 @@ export function ServiceJobsContent({
         setPaymentReference("")
         setShowDetails(false)
         setPendingIntakeEvidence([])
-        void jobsQuery.refetch()
+        await Promise.all([
+          jobsQuery.refetch(),
+          queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
+          queryClient.invalidateQueries(
+            trpc.tenant.featureAvailability.queryFilter(),
+          ),
+        ])
       },
     }),
   )

@@ -21,6 +21,7 @@ function productInput() {
     variants: [
       {
         description: "  Large red shirt  ",
+        imageUrl: "https://example.com/large-red.jpg",
         isDefault: true,
         key: "large-red",
         name: "Large · Red",
@@ -40,10 +41,13 @@ function productInput() {
 }
 
 describe("catalog Product variant input", () => {
-  test("accepts an optional description and exact opening quantity", () => {
+  test("accepts optional variant details and exact opening quantity", () => {
     const result = catalogCreateProductSchema.parse(productInput())
 
     expect(result.variants[0]?.description).toBe("Large red shirt")
+    expect(result.variants[0]?.imageUrl).toBe(
+      "https://example.com/large-red.jpg",
+    )
     expect(String(result.variants[0]?.openingStockQuantity)).toBe("12.5")
   })
 

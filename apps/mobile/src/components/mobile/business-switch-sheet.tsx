@@ -11,14 +11,19 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
+import { useAuthContext } from "@/hooks/use-auth"
+import { isLocalSessionToken } from "@/lib/session-store"
+import { switchMobileBusinessSession } from "@/lib/workspace-feature-availability"
 import { type RetailOpsBusiness, useBusinessStore } from "@/store/businessStore"
 import {
   getBusinessSubscription,
   getPlan,
   useSubscriptionStore,
 } from "@/store/subscriptionStore"
+import { clearMobileDataCache, useTRPC } from "@/trpc/client"
 import type { OperatingCurrencyCode } from "@ewatrade/utils"
 import type { BottomSheetModal } from "@gorhom/bottom-sheet"
+import { useQuery } from "@tanstack/react-query"
 import { forwardRef, useMemo, useState } from "react"
 import { View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
@@ -73,8 +78,10 @@ export function BusinessSwitchContent({
   onComplete,
   presentation = "sheet",
 }: BusinessSwitchContentProps) {
+  const auth = useAuthContext()
+  const trpc = useTRPC()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
-  const businesses = useBusinessStore((state) => state.businesses)
+  const localBusinesses = useBusinessStore((state) => state.businesses)
   const createBusiness = useBusinessStore((state) => state.createBusiness)
   const setActiveBusiness = useBusinessStore((state) => state.setActiveBusiness)
   const subscriptions = useSubscriptionStore((state) => state.subscriptions)
@@ -85,6 +92,27 @@ export function BusinessSwitchContent({
   const [currency, setCurrency] = useState<OperatingCurrencyCode>("NGN")
   const [salesMethod, setSalesMethod] = useState("In-store sales")
   const [type, setType] = useState("Retail")
+  const isLocalSession = isLocalSessionToken(auth.token)
+  const productionBusinessesQuery = useQuery(
+    trpc.tenant.businesses.queryOptions(undefined, {
+      enabled: !!auth.token && !isLocalSession,
+      retry: false,
+    }),
+  )
+  const businesses: RetailOpsBusiness[] = isLocalSession
+    ? localBusinesses
+    : (productionBusinessesQuery.data ?? []).map((business) => ({
+        createdAt: "",
+        currency: business.currencyCode,
+        id: business.id,
+        name: business.name,
+        role: business.role,
+        slug: business.slug,
+        type: "Business",
+      }))
+  const currentBusinessId = isLocalSession
+    ? activeBusinessId
+    : auth.profile?.businessId
   const subscription = getBusinessSubscription(subscriptions, activeBusinessId)
   const plan = getPlan(subscription.planId)
   const filteredBusinesses = useMemo(() => {
@@ -113,10 +141,30 @@ export function BusinessSwitchContent({
   const isAtBusinessLimit = businesses.length >= plan.limits.businesses
   const canCreate = !isAtBusinessLimit && !!businessName.trim()
 
+  const activateBusiness = (business: RetailOpsBusiness) => {
+    if (isLocalSession) {
+      setActiveBusiness(business.id)
+      if (auth.session) {
+        auth.applyAuthenticatedSession(
+          switchMobileBusinessSession(auth.session, business),
+        )
+      } else {
+        clearMobileDataCache()
+      }
+      return
+    }
+
+    if (!auth.session || !business.slug) return
+
+    auth.applyAuthenticatedSession(
+      switchMobileBusinessSession(auth.session, business),
+    )
+  }
+
   const submit = () => {
     if (!canCreate) return
 
-    createBusiness({
+    const business = createBusiness({
       category,
       country,
       currency,
@@ -124,6 +172,13 @@ export function BusinessSwitchContent({
       salesMethod,
       type,
     })
+    if (auth.session) {
+      auth.applyAuthenticatedSession(
+        switchMobileBusinessSession(auth.session, business),
+      )
+    } else {
+      clearMobileDataCache()
+    }
     setBusinessName("")
     setCategory("")
     setCountry("Nigeria")
@@ -138,7 +193,11 @@ export function BusinessSwitchContent({
   const content = (
     <View className={contentClassName}>
       <SecondarySheetHeader
-        description="Switch between businesses or add another business under this account."
+        description={
+          isLocalSession
+            ? "Switch between businesses or add another local workspace."
+            : "Switch between the businesses available to this account."
+        }
         icon="Building2"
         title="Business workspace"
       />
@@ -156,15 +215,28 @@ export function BusinessSwitchContent({
             value={businessQuery}
           />
         ) : null}
-        {businesses.length > 0 ? (
+        {!isLocalSession && productionBusinessesQuery.isPending ? (
+          <EmptyState
+            icon="Loader2"
+            message="Loading the businesses available to this account."
+            title="Loading workspaces"
+          />
+        ) : productionBusinessesQuery.isError ? (
+          <StatusBanner
+            icon="AlertCircle"
+            message="Reconnect and try loading your business workspaces again."
+            title="Businesses unavailable"
+            tone="destructive"
+          />
+        ) : businesses.length > 0 ? (
           visibleBusinesses.length > 0 ? (
             <>
               {visibleBusinesses.map((business) => (
                 <BusinessRow
                   business={business}
                   key={business.id}
-                  onPress={() => setActiveBusiness(business.id)}
-                  selected={activeBusinessId === business.id}
+                  onPress={() => activateBusiness(business)}
+                  selected={currentBusinessId === business.id}
                 />
               ))}
               {filteredBusinesses.length > visibleBusinesses.length ? (
@@ -190,53 +262,55 @@ export function BusinessSwitchContent({
         )}
       </View>
 
-      <View className="gap-4">
-        <Text className="text-base font-bold text-foreground">
-          Add business
-        </Text>
-        <FormField
-          label="Business name"
-          leadingIcon="Building2"
-          onChangeText={setBusinessName}
-          placeholder="Enter business or branch name"
-          value={businessName}
-        />
-        <FormField
-          label="Type"
-          leadingIcon="FileText"
-          onChangeText={setType}
-          placeholder="Enter business type"
-          value={type}
-        />
-        <CurrencySelector onChange={setCurrency} value={currency} />
-        <View className="flex-row gap-3">
+      {isLocalSession ? (
+        <View className="gap-4">
+          <Text className="text-base font-bold text-foreground">
+            Add business
+          </Text>
           <FormField
-            containerClassName="flex-1"
-            label="Country"
-            leadingIcon="MapPin"
-            onChangeText={setCountry}
-            placeholder="Enter country"
-            value={country}
+            label="Business name"
+            leadingIcon="Building2"
+            onChangeText={setBusinessName}
+            placeholder="Enter business or branch name"
+            value={businessName}
           />
           <FormField
-            containerClassName="flex-1"
-            label="Category"
-            leadingIcon="List"
-            onChangeText={setCategory}
-            placeholder="Enter product category"
-            value={category}
+            label="Type"
+            leadingIcon="FileText"
+            onChangeText={setType}
+            placeholder="Enter business type"
+            value={type}
+          />
+          <CurrencySelector onChange={setCurrency} value={currency} />
+          <View className="flex-row gap-3">
+            <FormField
+              containerClassName="flex-1"
+              label="Country"
+              leadingIcon="MapPin"
+              onChangeText={setCountry}
+              placeholder="Enter country"
+              value={country}
+            />
+            <FormField
+              containerClassName="flex-1"
+              label="Category"
+              leadingIcon="List"
+              onChangeText={setCategory}
+              placeholder="Enter product category"
+              value={category}
+            />
+          </View>
+          <FormField
+            label="Sales method"
+            leadingIcon="Wallet"
+            onChangeText={setSalesMethod}
+            placeholder="Enter sales method"
+            value={salesMethod}
           />
         </View>
-        <FormField
-          label="Sales method"
-          leadingIcon="Wallet"
-          onChangeText={setSalesMethod}
-          placeholder="Enter sales method"
-          value={salesMethod}
-        />
-      </View>
+      ) : null}
 
-      {isAtBusinessLimit ? (
+      {isLocalSession && isAtBusinessLimit ? (
         <StatusBanner
           icon="TriangleAlert"
           message={`${plan.name} allows ${plan.limits.businesses} business${plan.limits.businesses === 1 ? "" : "es"}. Upgrade before adding another business.`}
@@ -245,9 +319,11 @@ export function BusinessSwitchContent({
         />
       ) : null}
 
-      <ActionButton disabled={!canCreate} onPress={submit}>
-        Add business
-      </ActionButton>
+      {isLocalSession ? (
+        <ActionButton disabled={!canCreate} onPress={submit}>
+          Add business
+        </ActionButton>
+      ) : null}
       <ActionButton onPress={onComplete} variant="outline">
         Done
       </ActionButton>

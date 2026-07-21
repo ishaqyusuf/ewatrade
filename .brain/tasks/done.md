@@ -1,5 +1,19 @@
 # Done
 
+- Completed the source implementation for mobile Product/Service choices as
+  flat Options name/value lists
+  and list-only combination summaries with counted-in unit, stock/type, price,
+  and description. Combination menus provide Edit and Disable/Enable; Edit
+  progresses from a compact quantity/price/description sheet to a full-screen
+  image, SKU/barcode, unit-price, quote, and Store editor with a keyboard-sticky
+  rounded check action. Flattened the Unit section, improved Counted in and
+  Unit-name examples, placed Counted in before Price in two columns, and added
+  label-side removal for Opening stock and Description. Extended strict Catalog
+  variant contracts and persistence with optional image URLs and retained the
+  description/opening-stock regression payload. Local and production schemas
+  are synchronized; the matching production API rollout remains tracked
+  separately because production migration history must be reconciled first.
+  Completed Date: 2026-07-20.
 - Transposed Product selling-unit setup to default to merchant-facing counts
   such as `50 Kilograms in 1 Bag`, while retaining an explicit opposite
   direction for larger units. Dashboard creation, mobile creation, and the
@@ -15,6 +29,39 @@
   invalid `onActionPress` prop in `catalog-variant-manager.tsx`; dashboard
   browser QA was blocked by the existing Portless login redirect to raw
   `localhost:3092`.
+- Corrected mobile progressive feature revealing so record history no longer
+  removes role-authorized bottom tabs. Owners/managers retain Home, Catalog,
+  Add, Work, and Reports; attendants retain Home, New Order, and Work.
+  Progressive availability still controls dashboard content, filters,
+  metrics, setup guidance, and contextual actions, while the approved
+  hide-on-scroll behavior remains unchanged. Completed Date: 2026-07-20.
+  Checks Run: focused mobile availability tests; app-shell, dashboard, Service
+  Jobs, and Reports QA guards; mobile TypeScript; targeted Biome and diff
+  checks; Android owner-dashboard visual verification. The full Bun suite
+  passed 162 tests and exposed nine unrelated database mock failures where
+  subscription snapshot tests do not provide `catalogItem.count`.
+- Fixed the mobile Catalog quick-setup picker bottom search so it follows the
+  open keyboard using the same keyboard-sticky pattern as the GND customer
+  selector, preserves interactive keyboard dismissal, and leaves enough list
+  space for the final setup rows. Removed the visible search title while
+  retaining its accessibility label. Completed Date: 2026-07-20. Checks Run:
+  mobile keyboard coverage, mobile TypeScript, targeted Biome,
+  `git diff --check`, and Android closed/keyboard-open/filtering visual QA.
+- Implemented progressive feature revealing across the shared database/API read
+  model, dashboard, and mobile app. Active-store record history now reveals
+  Catalog, Inventory, Sales, Service Jobs, Customers, and Reports
+  independently; Staff presence remains business-wide and historical records
+  keep revelation sticky. Added dashboard and mobile setup launchpads,
+  conditional metrics/sections, hidden-navigation versus creation-route
+  policies, URL-owned Staff invitation, command-search first-record actions,
+  mutation/replay invalidation, offline provisional merging, and cache reset on
+  business switching. No database migration was required. Completed Date:
+  2026-07-20. Checks Run: 27 focused database/dashboard/mobile tests; DB, API,
+  dashboard, and native mobile TypeScript checks; mobile app-shell, dashboard,
+  create-sale, Service Jobs, and Reports QA guards. Live browser progression
+  was blocked by the stopped local login service; Android visual QA was blocked
+  after the running emulator disconnected from ADB.
+
 ## Purpose
 Completed work with durable value to the project.
 
@@ -29,6 +76,13 @@ Completed work with durable value to the project.
   8 focused helper tests with 207 assertions, utility/dashboard/mobile
   TypeScript, four mobile UI guards, targeted Biome, `git diff --check`, and
   Android Product-form/full-screen-picker verification.
+- Added an explicit checkmark completion action to mobile variant-value entry.
+  It commits unfinished text, remains available after suggestion selection,
+  closes the composer, and dismisses the keyboard. Variant inventory entry now
+  uses `Current stock` instead of the ambiguous `Qty`. Completed Date:
+  2026-07-20. Checks Run: mobile keyboard coverage, mobile TypeScript,
+  NativeWind/theme guards, targeted Biome, and `git diff --check`; final
+  emulator interaction testing was stopped at the owner's request.
 - Completed the generic Service commerce loop for garment care and other
   tracked services. Concrete garment/service/size Offerings retain independent
   prices; Intake supports express surcharge, optional assignment, pickup

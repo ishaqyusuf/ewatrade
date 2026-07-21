@@ -8,6 +8,7 @@ export type MobileProfile = {
   name: string
   email: string
   businessName?: string
+  businessSlug?: string
   currencyCode?: string
   role?: string
   status?: string

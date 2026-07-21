@@ -18,6 +18,11 @@ const THEME_TOGGLE_IMAGES = {
 
 const TOGGLE_SIZE = 40
 const TOGGLE_ICON_SIZE = 18
+const OPERATIONAL_DOCK_PATHS = new Set([
+  "/admin-home",
+  "/dashboard",
+  "/sales-rep-home",
+])
 
 export function FloatingThemeToggle() {
   const insets = useSafeAreaInsets()
@@ -27,6 +32,7 @@ export function FloatingThemeToggle() {
   const [themeOverride, setThemeOverrideState] =
     useState<ThemeOverride>("system")
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false)
+  const hasOperationalDock = OPERATIONAL_DOCK_PATHS.has(pathname)
 
   useEffect(() => {
     ;(async () => {
@@ -78,7 +84,9 @@ export function FloatingThemeToggle() {
       style={[
         styles.container,
         {
-          bottom: Math.max(insets.bottom, 12) + 16,
+          // This development-only control stays independently available for
+          // theme QA, but stacks above the production dock instead of covering it.
+          bottom: Math.max(insets.bottom, 12) + (hasOperationalDock ? 104 : 16),
         },
       ]}
     >
