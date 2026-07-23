@@ -1,9 +1,17 @@
 import { useColors } from "@/hooks/use-color"
 import { useQueryClient } from "@tanstack/react-query"
 import { useCallback, useState } from "react"
-import { RefreshControl } from "react-native"
+import {
+  RefreshControl,
+  type RefreshControlProps,
+} from "react-native"
 
-export function QueryRefreshControl() {
+type QueryRefreshControlProps = Omit<
+  Partial<RefreshControlProps>,
+  "onRefresh" | "refreshing"
+>
+
+export function QueryRefreshControl(props: QueryRefreshControlProps) {
   const colors = useColors()
   const queryClient = useQueryClient()
   const [refreshing, setRefreshing] = useState(false)
@@ -21,6 +29,7 @@ export function QueryRefreshControl() {
 
   return (
     <RefreshControl
+      {...props}
       colors={[colors.primary]}
       onRefresh={() => void refresh()}
       progressBackgroundColor={colors.card}
