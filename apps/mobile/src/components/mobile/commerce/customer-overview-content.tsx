@@ -1,4 +1,5 @@
 import { EmptyState } from "@/components/mobile/empty-state";
+import { QueryRefreshControl } from "@/components/mobile/query-refresh-control";
 import { StatusBadge } from "@/components/mobile/status-badge";
 import { Pressable } from "@/components/ui/pressable";
 import { Text } from "@/components/ui/text";
@@ -80,6 +81,7 @@ export function CustomerOverviewContent({
     <ScrollView
       className="flex-1"
       contentContainerClassName="gap-6 px-4 pb-12"
+      refreshControl={<QueryRefreshControl />}
       showsVerticalScrollIndicator={false}
       testID="customer-overview-screen"
     >

@@ -249,7 +249,9 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
     <MobileScreen
       contentClassName="gap-6 pb-12"
       keyboardBottomOffset={140}
-      refreshControl={<QueryRefreshControl />}
+      refreshControl={
+        showPaymentForm ? undefined : <QueryRefreshControl />
+      }
       scroll
     >
       <View className="gap-6" testID="commercial-order-overview-screen">
