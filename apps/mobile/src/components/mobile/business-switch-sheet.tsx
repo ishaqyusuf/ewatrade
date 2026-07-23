@@ -346,7 +346,9 @@ export function BusinessSwitchContent({
           disableScrollOnKeyboardHide
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
-          refreshControl={<QueryRefreshControl />}
+          refreshControl={
+            isLocalSession ? undefined : <QueryRefreshControl />
+          }
           onScroll={({ nativeEvent }) => {
             if (
               nativeEvent.layoutMeasurement.height +
