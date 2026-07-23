@@ -14,10 +14,10 @@
   validation, and Android emulator swipe checks on Home, Orders,
   Catalog/Products, and Customers. Emulator QA caught and corrected an Android
   layout collapse by forwarding the native `ScrollView` props injected into
-  the shared refresh control. Published Android preview OTA `2026.07.23.03`,
-  update group
-  `e4f2d8b7-0afd-49b4-8654-117b6be3b454`. EAS found no compatible Android
-  build for fingerprint `7ca18d6cc5e728f293f147bfb9190508c457ce1e`,
+  the shared refresh control. Published corrected Android preview OTA
+  `2026.07.23.04`, update group
+  `fcae3af0-0030-468c-8470-cd62b8384947`. EAS found no compatible Android
+  build for fingerprint `4218af36e17744f428446a5f2dec068b1f71cd9b`,
   so a matching preview binary is required before devices can install it.
 
 ### Mobile List Pagination And Search Density
