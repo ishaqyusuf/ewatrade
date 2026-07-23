@@ -3,6 +3,7 @@ import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
+import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
@@ -718,6 +719,9 @@ export function ServiceJobsContent({
       disableScrollOnKeyboardHide
       keyboardDismissMode="interactive"
       keyboardShouldPersistTaps="handled"
+      refreshControl={
+        !creating && !selectedJob ? <QueryRefreshControl /> : undefined
+      }
       onScroll={({ nativeEvent }) => {
         const nearBottom =
           nativeEvent.layoutMeasurement.height + nativeEvent.contentOffset.y >=

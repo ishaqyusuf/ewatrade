@@ -1,9 +1,10 @@
 import { useColors } from "@/hooks/use-color";
 import { cn } from "@/lib/utils";
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  type RefreshControlProps,
   type StyleProp,
   View,
   type ViewStyle,
@@ -17,6 +18,7 @@ type MobileScreenProps = {
   contentContainerStyle?: StyleProp<ViewStyle>;
   keyboardBottomOffset?: number;
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  refreshControl?: ReactElement<RefreshControlProps>;
   scroll?: boolean;
 };
 
@@ -26,6 +28,7 @@ export function MobileScreen({
   contentContainerStyle,
   keyboardBottomOffset = 88,
   onScroll,
+  refreshControl,
   scroll = true,
 }: MobileScreenProps) {
   const colors = useColors();
@@ -52,6 +55,7 @@ export function MobileScreen({
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           onScroll={onScroll}
+          refreshControl={refreshControl}
           scrollEventThrottle={onScroll ? 16 : undefined}
         >
           <View className={cn("min-h-full px-6 py-6", contentClassName)}>

@@ -1,5 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { EmptyState } from "@/components/mobile/empty-state"
+import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
@@ -104,6 +105,7 @@ export function SyncStatusContent({
         paddingBottom: 48,
         paddingHorizontal: 20,
       }}
+      refreshControl={<QueryRefreshControl />}
     >
       <StatusBanner
         icon={isOfflineMode ? "Wind" : "CircleCheck"}

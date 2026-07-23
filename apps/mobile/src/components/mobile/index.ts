@@ -64,6 +64,7 @@ export { OtpInput } from "./otp-input"
 export { OtpKeypad, OTP_KEYPAD_ROWS } from "./otp-keypad"
 export { AppLockPinPad } from "./app-lock-pin-pad"
 export { QuantityStepper } from "./quantity-stepper"
+export { QueryRefreshControl } from "./query-refresh-control"
 export {
   ReportMetricTile,
   ReportRecordRow,

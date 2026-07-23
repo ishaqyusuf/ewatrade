@@ -16,6 +16,7 @@ import {
 import { EmptyState } from "@/components/mobile/empty-state";
 import { FormField } from "@/components/mobile/form-field";
 import { MoneyField } from "@/components/mobile/money-field";
+import { QueryRefreshControl } from "@/components/mobile/query-refresh-control";
 import { MobileScreen } from "@/components/mobile/screen";
 import { StatusBadge } from "@/components/mobile/status-badge";
 import { StatusBanner } from "@/components/mobile/status-banner";
@@ -210,7 +211,11 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
 
   if (!order) {
     return (
-      <MobileScreen contentClassName="gap-6 pb-12" scroll>
+      <MobileScreen
+        contentClassName="gap-6 pb-12"
+        refreshControl={<QueryRefreshControl />}
+        scroll
+      >
         <CommercePageHeader onBack={goBack} title="Order overview" />
         {orderQuery.isPending && !isOffline ? (
           <EmptyState
@@ -244,6 +249,7 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
     <MobileScreen
       contentClassName="gap-6 pb-12"
       keyboardBottomOffset={140}
+      refreshControl={<QueryRefreshControl />}
       scroll
     >
       <View className="gap-6" testID="commercial-order-overview-screen">

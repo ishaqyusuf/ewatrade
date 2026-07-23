@@ -6,6 +6,7 @@ import {
   DashboardRevenueCard,
   EmptyState,
   MobileAppShell,
+  QueryRefreshControl,
   SecondaryOperationalRow,
   StatusBanner,
 } from "@/components/mobile"
@@ -293,6 +294,7 @@ export function OperationsDashboardSurface({
       }}
       navItems={navItems}
       onBottomTabVisibilityChange={onBottomTabVisibilityChange}
+      refreshControl={<QueryRefreshControl />}
       role={isAttendant ? "attendant" : "owner"}
       showHeader={false}
       showBottomTabs={!embeddedInAdminTabs}

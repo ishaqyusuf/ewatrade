@@ -8,6 +8,7 @@ import {
 } from "@/components/mobile/commerce";
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer";
 import { EmptyState } from "@/components/mobile/empty-state";
+import { QueryRefreshControl } from "@/components/mobile/query-refresh-control";
 import { StatusBanner } from "@/components/mobile/status-banner";
 import { Text } from "@/components/ui/text";
 import { View } from "@/components/ui/view";
@@ -285,6 +286,7 @@ export function CustomerBookContent({
             </Text>
           ) : null
         }
+        refreshControl={<QueryRefreshControl />}
         showsVerticalScrollIndicator={false}
       />
       {showSearch ? (

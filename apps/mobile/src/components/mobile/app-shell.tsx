@@ -3,10 +3,17 @@ import { Pressable } from "@/components/ui/pressable";
 import { Text } from "@/components/ui/text";
 import { useColorScheme, useColors } from "@/hooks/use-color";
 import { StatusBar } from "expo-status-bar";
-import { type ReactNode, useCallback, useRef, useState } from "react";
+import {
+  type ReactElement,
+  type ReactNode,
+  useCallback,
+  useRef,
+  useState,
+} from "react";
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  type RefreshControlProps,
   View as RNView,
   View,
 } from "react-native";
@@ -36,6 +43,7 @@ type MobileAppShellProps = {
   navItems: MobileAppShellNavItem[];
   onBottomTabVisibilityChange?: (hidden: boolean) => void;
   onBusinessPress?: () => void;
+  refreshControl?: ReactElement<RefreshControlProps>;
   role: MobileAppShellRole;
   scrolledStatusBarColor?: string;
   scrolledStatusBarStyle?: "dark" | "light";
@@ -57,6 +65,7 @@ export function MobileAppShell({
   navItems,
   onBottomTabVisibilityChange,
   onBusinessPress,
+  refreshControl,
   role,
   scrolledStatusBarColor,
   scrolledStatusBarStyle,
@@ -170,6 +179,7 @@ export function MobileAppShell({
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         onScroll={handleScroll}
+        refreshControl={refreshControl}
         scrollEventThrottle={16}
       >
         {hero}

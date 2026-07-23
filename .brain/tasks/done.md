@@ -1,5 +1,18 @@
 # Done
 
+### Mobile Query Pull-To-Refresh
+
+- Priority: Medium
+- Description: Added one theme-aware native pull-to-refresh control for active
+  query data across Home, Orders, Catalog/Products, Customers, Reports,
+  Service Jobs, Sync Status, business switching, subscription, and Commercial
+  Order detail while leaving transactional form-first workflows unchanged.
+- Related Feature: Mobile Retail Ops MVP
+- Status: Done
+- Completed Date: 2026-07-23
+- Checks Run: mobile TypeScript and diff validation. Automated and device UI
+  testing skipped at the owner's request.
+
 ### Mobile List Pagination And Search Density
 
 - Priority: High

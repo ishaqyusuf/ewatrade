@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import {
   SecondaryOperationalRow,
   SecondarySheetHeader,
@@ -466,6 +467,7 @@ export function SubscriptionPlanContent({
         disableScrollOnKeyboardHide
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
+        refreshControl={<QueryRefreshControl />}
         testID="subscription-scroll"
       >
         {content}

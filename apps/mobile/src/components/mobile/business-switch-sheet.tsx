@@ -3,6 +3,7 @@ import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { CurrencySelector } from "@/components/mobile/currency-selector"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
+import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import {
   SecondaryOperationalRow,
   SecondarySheetHeader,
@@ -345,6 +346,7 @@ export function BusinessSwitchContent({
           disableScrollOnKeyboardHide
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
+          refreshControl={<QueryRefreshControl />}
           onScroll={({ nativeEvent }) => {
             if (
               nativeEvent.layoutMeasurement.height +

@@ -10,6 +10,7 @@ import {
 } from "@/components/mobile/commerce";
 import { EmptyState } from "@/components/mobile/empty-state";
 import { FormField } from "@/components/mobile/form-field";
+import { QueryRefreshControl } from "@/components/mobile/query-refresh-control";
 import { StatusBanner } from "@/components/mobile/status-banner";
 import { Icon } from "@/components/ui/icon";
 import { Pressable } from "@/components/ui/pressable";
@@ -318,6 +319,7 @@ export function AdminOrdersScreen() {
           }
         }}
         onEndReachedThreshold={0.35}
+        refreshControl={<QueryRefreshControl />}
         ListFooterComponent={
           orders.isFetchingNextPage ? (
             <Text className="py-5 text-center text-xs font-semibold text-muted-foreground">

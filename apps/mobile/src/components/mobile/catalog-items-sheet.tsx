@@ -2,6 +2,7 @@ import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
+import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import {
   SecondaryOperationalRow,
   SecondarySheetHeader,
@@ -288,6 +289,7 @@ export function CatalogItemsContent({
         }
       }}
       onEndReachedThreshold={0.35}
+      refreshControl={<QueryRefreshControl />}
       scrollEventThrottle={onScroll ? 16 : undefined}
       />
       {presentation === "modal" && showSearch ? (

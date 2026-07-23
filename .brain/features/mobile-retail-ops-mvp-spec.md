@@ -48,6 +48,14 @@ billing, App theme, App lock, Sync & offline, App updates, and confirmed Sign
 out. App theme persists System, Light, or Dark through the shared device theme
 preference.
 
+Query-backed mobile data surfaces support native pull-to-refresh through one
+shared refresh control that refetches the currently active query cache. This
+includes Home, Orders, Catalog/Products, Customers, Reports, Service Jobs,
+Sync Status, business switching, subscription, and Commercial Order detail.
+Form-first workflows such as stock intake, unit conversion, checkout, and
+closeout intentionally do not attach the gesture while users are entering
+transactional data.
+
 Attendants are invited by the owner through email. Each attendant receives an invitation to download the app, completes a short profile setup, verifies access, and lands on an attendant dashboard. Their main workflow is creating sales from assigned inventory.
 
 Sales creation is optimized for speed: tap the plus/create-sale action, see all sellable inventory items and variants in a compact list, select a variant or base unit, set quantity with plus/minus and numeric entry, see total immediately, choose cash or transfer, capture or select the customer name, and complete the transaction. The sale records the attendant, customer, item, variant/unit, quantity, price snapshot, payment method, and sync status.
