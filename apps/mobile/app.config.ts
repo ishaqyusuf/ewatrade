@@ -1,6 +1,6 @@
 import type { ExpoConfig } from "expo/config"
 
-export const UPDATE_VERSION = "2026.07.23.04"
+export const UPDATE_VERSION = "2026.07.23.06"
 const PROJECT_ID = "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b"
 const appVariant =
   process.env.APP_VARIANT ??
@@ -109,6 +109,14 @@ const config: ExpoConfig = {
     favicon: "./assets/images/favicon.png",
   },
   plugins: [
+    [
+      "@sentry/react-native/expo",
+      {
+        url: "https://sentry.io/",
+        project: "ewatrade-mobile",
+        organization: "cipron-concepts",
+      },
+    ],
     "expo-router",
     "expo-font",
     "expo-web-browser",

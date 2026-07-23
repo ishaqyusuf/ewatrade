@@ -12,11 +12,13 @@ describe("service commerce completion schemas", () => {
   test("accepts cursor pagination and a service queue search query", () => {
     const result = serviceWorkQueuePageSchema.parse({
       cursor: "job-cursor-1",
+      direction: "forward",
       limit: 20,
       query: "pickup",
     })
 
     expect(result.cursor).toBe("job-cursor-1")
+    expect(result.direction).toBe("forward")
     expect(result.query).toBe("pickup")
   })
   test("accepts express intake with a deposit and customer channel", () => {

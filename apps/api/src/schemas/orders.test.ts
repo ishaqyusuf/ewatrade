@@ -10,12 +10,14 @@ describe("commercial Order list schema", () => {
     const result = commercialOrderListPageSchema.parse({
       createdAfter: "2026-07-01T00:00:00.000Z",
       cursor: "order-cursor-1",
+      direction: "forward",
       limit: 20,
       query: "ada",
       statuses: ["PENDING", "COMPLETED"],
     })
 
     expect(result.cursor).toBe("order-cursor-1")
+    expect(result.direction).toBe("forward")
     expect(result.limit).toBe(20)
     expect(result.statuses).toEqual(["PENDING", "COMPLETED"])
   })

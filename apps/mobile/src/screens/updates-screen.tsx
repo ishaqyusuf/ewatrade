@@ -1,4 +1,5 @@
 import config from "@root/app.config"
+import * as Sentry from "@sentry/react-native"
 import { SafeArea } from "@/components/safe-area"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
@@ -176,6 +177,7 @@ export default function UpdatesScreen() {
     setMessage("Restarting into the downloaded update.")
 
     try {
+      await Sentry.flush()
       await Updates.reloadAsync()
     } catch (error) {
       setAction(null)

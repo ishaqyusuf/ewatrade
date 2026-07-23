@@ -13,10 +13,12 @@
   inventory or Order truth from current mutable Catalog data.
 - Discoverable mobile directories use cursor pages with a bounded `limit`,
   stable sort plus id tie-breaker, optional server-side search, `nextCursor`,
-  and an unfiltered `totalCount`. The mobile client loads the next page near
-  the end and only reveals list search when the total record count is greater
-  than 10. Bounded dashboard previews, operational report sections, and
-  subscription-capped lists are not infinite directories.
+  an unfiltered `totalCount`, and optional `forward`/`backward` direction
+  metadata supplied by the tRPC TanStack infinite-query integration. The
+  mobile client loads the next page near the end and only reveals list search
+  when the total record count is greater than 10. Bounded dashboard previews,
+  operational report sections, and subscription-capped lists are not infinite
+  directories.
 
 ## Workspace Availability
 

@@ -1,5 +1,6 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { ThemeProvider } from "@react-navigation/native";
+import * as Sentry from "@sentry/react-native";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -43,10 +44,22 @@ export const unstable_settings = {
   initialRouteName: "index",
 };
 
+const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
+
+Sentry.init({
+  dsn: sentryDsn,
+  enabled: Boolean(sentryDsn),
+  environment:
+    process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT ??
+    (__DEV__ ? "development" : "production"),
+  sendDefaultPii: false,
+  enableLogs: false,
+});
+
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function RootLayout() {
   const [themeReady, setThemeReady] = useState(false);
   const [loaded, error] = useFonts({
     SpaceMono: require("../../assets/fonts/SpaceMono-Regular.ttf"),
@@ -259,3 +272,5 @@ function RootLayoutNav() {
     </GestureHandlerRootView>
   );
 }
+
+export default Sentry.wrap(RootLayout);

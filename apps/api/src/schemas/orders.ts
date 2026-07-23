@@ -94,6 +94,7 @@ export const commercialOrderListPageSchema = z
   .object({
     createdAfter: z.coerce.date().optional(),
     cursor: z.string().trim().min(1).optional(),
+    direction: z.enum(["forward", "backward"]).optional(),
     limit: z.number().int().min(1).max(50).default(20),
     query: z.string().trim().max(160).optional(),
     queryMode: z.enum(["all", "customer"]).default("all"),

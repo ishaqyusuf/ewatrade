@@ -20,6 +20,10 @@ Canonical stack reference for current implementation choices.
 - Client notifications: shared React notification provider and viewport package for app toasts
 - Email: shared package-driven email defaults, templates, message helpers, and transports. Resend is the production provider when `RESEND_API_KEY` is present; console delivery remains the no-provider fallback. Root `bun run email:test` sends a smoke email to the first configured `TEST_EMAILS` recipient, falling back to `TEST_EMAIL`.
 - Auth: Better Auth
+- Mobile observability: Sentry React Native SDK in `apps/mobile`, using the
+  `cipron-concepts/ewatrade-mobile` project for JavaScript errors, native
+  crashes, release artifacts, source maps, and debug symbols. Session Replay,
+  user feedback, logs, and default PII collection are disabled.
 
 ## Database Stack
 - Schema modeling: Prisma

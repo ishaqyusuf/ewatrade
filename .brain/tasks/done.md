@@ -1,5 +1,16 @@
 # Done
 
+### Mobile Infinite-Query Direction Contract
+
+- Priority: High
+- Description: Fixed strict API validation for Orders, Catalog, and Service Job
+  cursor pages by accepting the optional forward/backward pagination direction
+  metadata added by the tRPC TanStack infinite-query integration.
+- Related Feature: Mobile List Pagination And Search Density
+- Status: Done
+- Completed Date: 2026-07-23
+- Checks Run: focused API schema regression tests and scoped diff validation.
+
 ### Mobile Query Pull-To-Refresh
 
 - Priority: Medium

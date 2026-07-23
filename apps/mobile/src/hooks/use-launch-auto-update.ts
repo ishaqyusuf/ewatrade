@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react-native"
 import Constants from "expo-constants"
 import * as Updates from "expo-updates"
 import { useEffect, useRef, useState } from "react"
@@ -106,6 +107,7 @@ export function useLaunchAutoUpdate() {
         await delay(STEP_DELAY_MS)
         setPhaseIfMounted("restarting")
         await delay(STEP_DELAY_MS)
+        await Sentry.flush()
         await Updates.reloadAsync()
       } catch (error) {
         console.warn("[updates] launch update failed", error)

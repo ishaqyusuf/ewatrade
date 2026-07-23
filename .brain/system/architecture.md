@@ -57,6 +57,18 @@ Describe the intended technical architecture and responsibility boundaries for t
   Keyboard-sticky inline composition is reused for compact repeated-value
   entry; ordinary forms remain keyboard-safe.
 
+## Observability Boundary
+
+- Each independently deployed application owns a separate Sentry project.
+- `apps/mobile` reports to `cipron-concepts/ewatrade-mobile` and identifies
+  development, preview, and production through the Sentry environment field.
+- The public DSN may be provided through `EXPO_PUBLIC_SENTRY_DSN`. The private
+  `SENTRY_AUTH_TOKEN` is build-time only, must remain outside version control,
+  and is used solely for source-map and debug-symbol uploads.
+- Mobile default PII collection, Session Replay, user feedback, and SDK logs
+  remain disabled until an explicit privacy and retention decision enables
+  them.
+
 ## Multi-Tenancy
 - Every tenant-owned entity carries a tenant identifier.
 - Merchant tenants and dispatch tenants are isolated in storage and authorization.
