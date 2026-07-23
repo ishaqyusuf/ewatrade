@@ -171,6 +171,12 @@ export type ListCatalogItemsInput = {
   tenantId: string
 }
 
+export type ListCatalogItemsPageInput = ListCatalogItemsInput & {
+  cursor?: string
+  limit?: number
+  query?: string
+}
+
 export type GetCatalogItemInput = {
   itemId: string
   tenantId: string
@@ -1306,6 +1312,104 @@ export async function listCatalogItems(
   })
 
   return items.map(serializeCatalogItem)
+}
+
+export async function listCatalogItemsPage(
+  db: PrismaClient,
+  input: ListCatalogItemsPageInput,
+) {
+  const limit = Math.min(Math.max(input.limit ?? 20, 1), 50)
+  const normalizedQuery = input.query?.trim()
+  const normalizedKind = normalizedQuery?.toLowerCase().replace(/s$/, "")
+  const baseWhere: Prisma.CatalogItemWhereInput = {
+    kind: input.kind ? catalogKind(input.kind) : undefined,
+    status: input.status ? catalogStatus(input.status) : undefined,
+    tenantId: input.tenantId,
+  }
+  const where: Prisma.CatalogItemWhereInput = normalizedQuery
+    ? {
+        ...baseWhere,
+        OR: [
+          { name: { contains: normalizedQuery, mode: "insensitive" } },
+          { description: { contains: normalizedQuery, mode: "insensitive" } },
+          { category: { contains: normalizedQuery, mode: "insensitive" } },
+          ...(normalizedKind === "product"
+            ? [{ kind: CatalogItemKind.PRODUCT }]
+            : normalizedKind === "service"
+              ? [{ kind: CatalogItemKind.SERVICE }]
+              : []),
+          {
+            product: {
+              is: {
+                currentUnitConfiguration: {
+                  is: {
+                    units: {
+                      some: {
+                        OR: [
+                          {
+                            name: {
+                              contains: normalizedQuery,
+                              mode: "insensitive",
+                            },
+                          },
+                          {
+                            symbol: {
+                              contains: normalizedQuery,
+                              mode: "insensitive",
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          {
+            variants: {
+              some: {
+                OR: [
+                  { name: { contains: normalizedQuery, mode: "insensitive" } },
+                  {
+                    description: {
+                      contains: normalizedQuery,
+                      mode: "insensitive",
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          {
+            offerings: {
+              some: {
+                name: { contains: normalizedQuery, mode: "insensitive" },
+              },
+            },
+          },
+        ],
+      }
+    : baseWhere
+  const [records, totalCount] = await Promise.all([
+    db.catalogItem.findMany({
+      cursor: input.cursor ? { id: input.cursor } : undefined,
+      include: catalogItemGraph,
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      skip: input.cursor ? 1 : 0,
+      take: limit + 1,
+      where,
+    }),
+    db.catalogItem.count({ where: baseWhere }),
+  ])
+  const hasNextPage = records.length > limit
+  const pageRecords = hasNextPage ? records.slice(0, limit) : records
+
+  return {
+    items: pageRecords.map(serializeCatalogItem),
+    nextCursor: hasNextPage ? pageRecords.at(-1)?.id : undefined,
+    totalCount,
+  }
 }
 
 export async function setCatalogOfferingStoreAvailability(

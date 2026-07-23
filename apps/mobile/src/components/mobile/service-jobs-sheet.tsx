@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
@@ -8,6 +9,11 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
+import {
+  LIST_PAGE_SIZE,
+  shouldFetchNextListPage,
+  shouldShowListSearch,
+} from "@/lib/list-pagination"
 import { canManageMobileOperations } from "@/lib/mobile-roles"
 import {
   activeBusinessOfflineCommands,
@@ -17,11 +23,16 @@ import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { formatMinorMoney, majorToMinor } from "@ewatrade/utils"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { Directory, File, Paths } from "expo-file-system"
 import * as ImagePicker from "expo-image-picker"
-import { useEffect, useMemo, useState } from "react"
+import { useDeferredValue, useEffect, useMemo, useState } from "react"
 import { View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
@@ -150,6 +161,7 @@ export function ServiceJobsContent({
   )
   const [creating, setCreating] = useState(false)
   const [search, setSearch] = useState("")
+  const deferredSearch = useDeferredValue(search)
   const [quantities, setQuantities] = useState<Record<string, string>>({})
   const [customerName, setCustomerName] = useState("")
   const [customerPhone, setCustomerPhone] = useState("")
@@ -177,10 +189,17 @@ export function ServiceJobsContent({
   const catalogQuery = useQuery(
     trpc.catalog.listItems.queryOptions({ kind: "service" }, { retry: false }),
   )
-  const jobsQuery = useQuery(
-    trpc.services.queue.queryOptions(
-      { limit: 200 },
-      { enabled: !isOfflineMode, retry: false },
+  const jobsQuery = useInfiniteQuery(
+    trpc.services.queuePage.infiniteQueryOptions(
+      {
+        limit: LIST_PAGE_SIZE,
+        query: isOfflineMode ? undefined : deferredSearch || undefined,
+      },
+      {
+        enabled: !isOfflineMode,
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        retry: false,
+      },
     ),
   )
   const settingsQuery = useQuery(
@@ -196,22 +215,27 @@ export function ServiceJobsContent({
       ),
     [catalogQuery.data],
   )
+  const loadedJobs = useMemo(
+    () => jobsQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [jobsQuery.data?.pages],
+  )
   const jobs = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    const current = jobsQuery.data ?? []
-    if (!query) return current
-    return current.filter((job) =>
+    const normalizedSearch = search.trim().toLowerCase()
+    if (!isOfflineMode || !normalizedSearch) return loadedJobs
+    return loadedJobs.filter((job) =>
       [
         job.orderNumber,
-        job.summary,
         ...job.lines.map((line) => line.catalogItemName),
+        ...job.lines.map((line) => line.offeringName),
+        ...job.lines.map((line) => line.variantName),
       ]
+        .filter(Boolean)
         .join(" ")
         .toLowerCase()
-        .includes(query),
+        .includes(normalizedSearch),
     )
-  }, [jobsQuery.data, search])
-  const selectedJob = jobsQuery.data?.find((job) => job.id === selectedJobId)
+  }, [isOfflineMode, loadedJobs, search])
+  const selectedJob = jobs.find((job) => job.id === selectedJobId)
   const pendingServiceCommands = offlineCommands.filter(
     (command) =>
       command.localStatus === "pending" &&
@@ -306,6 +330,10 @@ export function ServiceJobsContent({
         await Promise.all([
           jobsQuery.refetch(),
           queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
+          queryClient.invalidateQueries(trpc.orders.listPage.queryFilter()),
+          queryClient.invalidateQueries(
+            trpc.orders.customerCount.queryFilter(),
+          ),
           queryClient.invalidateQueries(
             trpc.tenant.featureAvailability.queryFilter(),
           ),
@@ -344,7 +372,14 @@ export function ServiceJobsContent({
         setAmountPaid("")
         setPaymentReference("")
         setNotice("Payment recorded.")
-        void jobsQuery.refetch()
+        void Promise.all([
+          jobsQuery.refetch(),
+          queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
+          queryClient.invalidateQueries(trpc.orders.listPage.queryFilter()),
+          queryClient.invalidateQueries(
+            trpc.orders.customerCount.queryFilter(),
+          ),
+        ])
       },
     }),
   )
@@ -356,7 +391,14 @@ export function ServiceJobsContent({
         setPaymentReference("")
         setSelectedJobId(null)
         setNotice("Order collected and closed.")
-        void jobsQuery.refetch()
+        void Promise.all([
+          jobsQuery.refetch(),
+          queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
+          queryClient.invalidateQueries(trpc.orders.listPage.queryFilter()),
+          queryClient.invalidateQueries(
+            trpc.orders.customerCount.queryFilter(),
+          ),
+        ])
       },
     }),
   )
@@ -653,18 +695,46 @@ export function ServiceJobsContent({
     setNotice("Private intake evidence retained on this device.")
   }
 
+  const showQueueSearch =
+    !creating &&
+    !selectedJob &&
+    shouldShowListSearch(
+      Math.max(
+        jobsQuery.data?.pages[0]?.totalCount ?? 0,
+        loadedJobs.length,
+      ),
+    )
+
   return (
-    <KeyboardAwareScrollView
+    <View className="flex-1">
+      <KeyboardAwareScrollView
       bottomOffset={120}
       className="flex-1"
       contentContainerStyle={{
         gap: 20,
-        paddingBottom: 48,
+        paddingBottom: showQueueSearch ? 112 : 48,
         paddingHorizontal: 20,
       }}
       disableScrollOnKeyboardHide
       keyboardDismissMode="interactive"
       keyboardShouldPersistTaps="handled"
+      onScroll={({ nativeEvent }) => {
+        const nearBottom =
+          nativeEvent.layoutMeasurement.height + nativeEvent.contentOffset.y >=
+          nativeEvent.contentSize.height - 240
+        if (
+          !creating &&
+          !selectedJob &&
+          nearBottom &&
+          shouldFetchNextListPage({
+            hasNextPage: Boolean(jobsQuery.hasNextPage),
+            isFetchingNextPage: jobsQuery.isFetchingNextPage,
+          })
+        ) {
+          void jobsQuery.fetchNextPage()
+        }
+      }}
+      scrollEventThrottle={16}
     >
       {error ? (
         <StatusBanner
@@ -1362,14 +1432,6 @@ export function ServiceJobsContent({
           >
             New service
           </ActionButton>
-          <FormField
-            autoCapitalize="none"
-            label="Search"
-            leadingIcon="Search"
-            onChangeText={setSearch}
-            placeholder="Receipt or service"
-            value={search}
-          />
           {jobsQuery.isLoading ? (
             <StatusBanner
               icon="Loader2"
@@ -1424,8 +1486,23 @@ export function ServiceJobsContent({
               ))}
             </View>
           )}
+          {jobsQuery.isFetchingNextPage ? (
+            <Text className="text-center text-xs font-semibold text-muted-foreground">
+              Loading more service jobs…
+            </Text>
+          ) : null}
         </View>
       )}
-    </KeyboardAwareScrollView>
+      </KeyboardAwareScrollView>
+      {showQueueSearch ? (
+        <BottomSearchFooter
+          accessibilityLabel="Search service jobs"
+          onChangeText={setSearch}
+          placeholder="Receipt or service"
+          totalCount={jobsQuery.data?.pages[0]?.totalCount ?? 0}
+          value={search}
+        />
+      ) : null}
+    </View>
   )
 }

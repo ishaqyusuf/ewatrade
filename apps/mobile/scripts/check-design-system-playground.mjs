@@ -1,8 +1,8 @@
-import { existsSync, readFileSync } from "node:fs"
-import { join, relative, resolve } from "node:path"
+import { existsSync, readFileSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 
-const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname)
-const REPO_DIR = resolve(MOBILE_DIR, "../..")
+const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname);
+const REPO_DIR = resolve(MOBILE_DIR, "../..");
 
 const requiredFiles = [
   {
@@ -47,7 +47,36 @@ const requiredFiles = [
   },
   {
     file: "src/app/design-system/design-01/orders.tsx",
-    markers: ["Design01WorkspaceScreen", 'title="Orders"'],
+    markers: ["Design01OrdersScreen"],
+  },
+  {
+    file: "src/app/design-system/design-01/customers.tsx",
+    markers: ["Design01CustomersScreen"],
+  },
+  {
+    file: "src/app/design-system/design-01/customer/[customerId].tsx",
+    markers: ["Design01CustomerOverviewScreen", "useLocalSearchParams"],
+  },
+  {
+    file: "src/app/design-system/design-01/order/[orderId].tsx",
+    markers: ["Design01OrderOverviewScreen", "useLocalSearchParams"],
+  },
+  {
+    file: "src/app/design-system/design-01/source/[referenceId].tsx",
+    markers: ["Design01SourceImageScreen", "getDesign01Reference", "Redirect"],
+  },
+  {
+    file: "src/components/mobile/design-system/designs/design-01/design-01-source-image-screen.tsx",
+    markers: [
+      "Design01SourceImageScreen",
+      "Image.resolveAssetSource",
+      "isLandscapeBoard",
+      "isBoardPanned",
+      "forceFabsHidden",
+      "ScrollView",
+      "implementationRoute",
+      "Swipe horizontally",
+    ],
   },
   {
     file: "src/app/design-system/design-01/stock.tsx",
@@ -147,7 +176,7 @@ const requiredFiles = [
       "tab.render",
       "min-h-11",
       "operational-bottom-tab-action",
-      'accessibilityRole={accessibilityRole}',
+      "accessibilityRole={accessibilityRole}",
     ],
   },
   {
@@ -207,11 +236,81 @@ const requiredFiles = [
       "/design-system/design-01/reference",
       "/design-system/design-01/image",
       "/design-system/design-01/orders",
+      "/design-system/design-01/customers",
       "/design-system/design-01/profile",
       "DESIGN_01_REFERENCE_IMAGES",
       "DESIGN_01_ADMIN_MORE_REFERENCE",
+      "DESIGN_01_COMMERCE_REFERENCE",
+      "DESIGN_01_CUSTOMERS_REFERENCE",
+      "implementationRoute",
       "@assets/images/design-system/reference-home-shell.jpg",
       "@assets/images/design-system/reference-admin-more.png",
+      "@design/reference-commerce-home-customer-orders.png",
+      "@design/reference-products-create-media.png",
+      "@design/reference-customer-orders-insights.png",
+      "@design/reference-customers-profile-orders.png",
+      "@design/reference-customer-wishlist-reviews-loyalty.png",
+    ],
+  },
+  {
+    file: "src/components/mobile/design-system/designs/design-01/design-01-commerce.data.ts",
+    markers: [
+      "DESIGN_01_CUSTOMERS",
+      "DESIGN_01_ORDERS",
+      "getDesign01Customer",
+      "getDesign01Order",
+      "getDesign01CustomerValue",
+    ],
+  },
+  {
+    file: "src/components/mobile/design-system/designs/design-01/design-01-commerce-primitives.tsx",
+    markers: [
+      "Design01CommerceListShell",
+      "Design01FilterChip",
+      "Design01CustomerRow",
+      "Design01OrderRow",
+      "ReferenceFabs",
+    ],
+  },
+  {
+    file: "src/components/mobile/design-system/designs/design-01/design-01-orders-screen.tsx",
+    forbiddenMarkers: ["ReferenceBottomTabBar", "bottomTabBar"],
+    markers: [
+      "Design01OrdersScreen",
+      "design-01-orders-screen",
+      "Design01CommerceListShell",
+      "DESIGN_01_COMMERCE_REFERENCE",
+    ],
+  },
+  {
+    file: "src/components/mobile/design-system/designs/design-01/design-01-customers-screen.tsx",
+    forbiddenMarkers: ["ReferenceBottomTabBar", "bottomTabBar"],
+    markers: [
+      "Design01CustomersScreen",
+      "design-01-customers-screen",
+      "Design01CommerceListShell",
+      "DESIGN_01_CUSTOMERS_REFERENCE",
+    ],
+  },
+  {
+    file: "src/components/mobile/design-system/designs/design-01/design-01-customer-overview-screen.tsx",
+    forbiddenMarkers: ["ReferenceBottomTabBar", "bottomTabBar"],
+    markers: [
+      "Design01CustomerOverviewScreen",
+      "design-01-customer-overview-screen",
+      "Recent orders",
+      "Customer information",
+    ],
+  },
+  {
+    file: "src/components/mobile/design-system/designs/design-01/design-01-order-overview-screen.tsx",
+    forbiddenMarkers: ["ReferenceBottomTabBar", "bottomTabBar"],
+    markers: [
+      "Design01OrderOverviewScreen",
+      "design-01-order-overview-screen",
+      "recordPayment",
+      "advanceFulfilment",
+      "Payment and fulfilment",
     ],
   },
   {
@@ -287,8 +386,36 @@ const requiredFiles = [
       "Design01SourceImageScreen",
       "reference.title",
       "Design01AdminMoreSourceImageScreen",
-      "Back to Design 01 home",
+      "Back to {implementationLabel}",
     ],
+  },
+  {
+    file: "metro.config.js",
+    markers: ["designRoot", 'resolve(__dirname, "../../.design")'],
+  },
+  {
+    file: "tsconfig.json",
+    markers: ['"@design/*": ["../../.design/*"]'],
+  },
+  {
+    file: "../.design/reference-commerce-home-customer-orders.png",
+    markers: [],
+  },
+  {
+    file: "../.design/reference-products-create-media.png",
+    markers: [],
+  },
+  {
+    file: "../.design/reference-customer-orders-insights.png",
+    markers: [],
+  },
+  {
+    file: "../.design/reference-customers-profile-orders.png",
+    markers: [],
+  },
+  {
+    file: "../.design/reference-customer-wishlist-reviews-loyalty.png",
+    markers: [],
   },
   {
     file: "src/components/mobile/design-system-playground/data.ts",
@@ -340,23 +467,23 @@ const requiredFiles = [
       "Gravity",
     ],
   },
-]
+];
 
-const failures = []
+const failures = [];
 const referenceSlashOpacityPattern =
-  /\b(?:bg|border|text|ring|shadow|from|via|to)-[a-z0-9-]+\/\d+\b/
+  /\b(?:bg|border|text|ring|shadow|from|via|to)-[a-z0-9-]+\/\d+\b/;
 
 for (const check of requiredFiles) {
-  const filePath = check.file.startsWith("../.scratch")
+  const filePath = check.file.startsWith("../.")
     ? join(REPO_DIR, check.file.replace("../", ""))
-    : join(MOBILE_DIR, check.file)
+    : join(MOBILE_DIR, check.file);
 
   if (!existsSync(filePath)) {
-    failures.push(`${relative(REPO_DIR, filePath)} is missing`)
-    continue
+    failures.push(`${relative(REPO_DIR, filePath)} is missing`);
+    continue;
   }
 
-  const contents = readFileSync(filePath, "utf8")
+  const contents = readFileSync(filePath, "utf8");
 
   if (
     (check.file.startsWith("src/components/mobile/design-system/references/") ||
@@ -370,32 +497,32 @@ for (const check of requiredFiles) {
         REPO_DIR,
         filePath,
       )} uses slash opacity classes in reference UI; use semantic tokens or explicit computed colors instead`,
-    )
+    );
   }
 
   for (const marker of check.markers) {
-    if (contents.includes(marker)) continue
+    if (contents.includes(marker)) continue;
     failures.push(
       `${relative(REPO_DIR, filePath)} is missing marker: ${marker}`,
-    )
+    );
   }
 
   for (const marker of check.forbiddenMarkers ?? []) {
-    if (!contents.includes(marker)) continue
+    if (!contents.includes(marker)) continue;
     failures.push(
       `${relative(REPO_DIR, filePath)} must not include marker: ${marker}`,
-    )
+    );
   }
 }
 
 if (failures.length > 0) {
-  console.error("Mobile design-system playground check failed.")
+  console.error("Mobile design-system playground check failed.");
 
   for (const failure of failures) {
-    console.error(`- ${failure}`)
+    console.error(`- ${failure}`);
   }
 
-  process.exit(1)
+  process.exit(1);
 }
 
-console.log("Mobile design-system playground check passed.")
+console.log("Mobile design-system playground check passed.");

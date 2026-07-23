@@ -1,8 +1,8 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs"
-import { extname, join, relative, resolve } from "node:path"
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { extname, join, relative, resolve } from "node:path";
 
-const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname)
-const REPO_DIR = resolve(MOBILE_DIR, "../..")
+const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname);
+const REPO_DIR = resolve(MOBILE_DIR, "../..");
 
 const contracts = [
   {
@@ -30,13 +30,22 @@ const contracts = [
     ],
   },
   {
+    file: "src/components/mobile/bottom-tab-item.tsx",
+    markers: [
+      "allowFontScaling={false}",
+      "adjustsFontSizeToFit",
+      'textAlign: "center"',
+      'width: "100%"',
+    ],
+  },
+  {
     file: "src/components/mobile/admin-tabs/admin-orders-screen.tsx",
     markers: [
       "FlatList",
-      "ProvisionalOrderRow",
+      "CommercePendingOrderRow",
       "useAdminDockScroll",
-      "Pending sync",
-      "Find order",
+      "Orders pending sync",
+      "Search order, customer, or item",
       "No matching orders",
       "orders.refetch",
     ],
@@ -86,48 +95,50 @@ const contracts = [
       "DESIGN_01_ROUTES.moreImage",
     ],
   },
-]
+];
 
-const failures = []
+const failures = [];
 
 for (const contract of contracts) {
-  const path = join(MOBILE_DIR, contract.file)
+  const path = join(MOBILE_DIR, contract.file);
   if (!existsSync(path)) {
-    failures.push(`${contract.file} is missing`)
-    continue
+    failures.push(`${contract.file} is missing`);
+    continue;
   }
-  if (contract.markers.length === 0) continue
-  const source = readFileSync(path, "utf8")
+  if (contract.markers.length === 0) continue;
+  const source = readFileSync(path, "utf8");
   for (const marker of contract.markers) {
     if (!source.includes(marker)) {
-      failures.push(`${contract.file} is missing marker: ${marker}`)
+      failures.push(`${contract.file} is missing marker: ${marker}`);
     }
   }
 }
 
-const gitignore = readFileSync(join(REPO_DIR, ".gitignore"), "utf8")
+const gitignore = readFileSync(join(REPO_DIR, ".gitignore"), "utf8");
 if (!gitignore.split("\n").includes("/.designs/")) {
-  failures.push(".gitignore must ignore the root /.designs/ archive")
+  failures.push(".gitignore must ignore the root /.designs/ archive");
 }
 
-const rasterExtensions = new Set([".jpeg", ".jpg", ".png", ".webp"])
+const rasterExtensions = new Set([".jpeg", ".jpg", ".png", ".webp"]);
 function findRasterFiles(directory) {
-  if (!existsSync(directory)) return []
+  if (!existsSync(directory)) return [];
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(directory, entry.name)
-    if (entry.isDirectory()) return findRasterFiles(path)
-    return rasterExtensions.has(extname(entry.name).toLowerCase()) ? [path] : []
-  })
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) return findRasterFiles(path);
+    return rasterExtensions.has(extname(entry.name).toLowerCase())
+      ? [path]
+      : [];
+  });
 }
 
 for (const path of findRasterFiles(join(REPO_DIR, ".scratch"))) {
-  failures.push(`${relative(REPO_DIR, path)} must be archived under .designs/`)
+  failures.push(`${relative(REPO_DIR, path)} must be archived under .designs/`);
 }
 
 if (failures.length > 0) {
-  console.error("Admin tabs contract check failed.")
-  for (const failure of failures) console.error(`- ${failure}`)
-  process.exit(1)
+  console.error("Admin tabs contract check failed.");
+  for (const failure of failures) console.error(`- ${failure}`);
+  process.exit(1);
 }
 
-console.log("Admin tabs contract check passed.")
+console.log("Admin tabs contract check passed.");

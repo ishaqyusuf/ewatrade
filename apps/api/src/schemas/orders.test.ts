@@ -1,6 +1,25 @@
 import { describe, expect, test } from "bun:test"
 
-import { commercialOrderPaymentSchema } from "./orders"
+import {
+  commercialOrderListPageSchema,
+  commercialOrderPaymentSchema,
+} from "./orders"
+
+describe("commercial Order list schema", () => {
+  test("accepts cursor pagination and server-side list filters", () => {
+    const result = commercialOrderListPageSchema.parse({
+      createdAfter: "2026-07-01T00:00:00.000Z",
+      cursor: "order-cursor-1",
+      limit: 20,
+      query: "ada",
+      statuses: ["PENDING", "COMPLETED"],
+    })
+
+    expect(result.cursor).toBe("order-cursor-1")
+    expect(result.limit).toBe(20)
+    expect(result.statuses).toEqual(["PENDING", "COMPLETED"])
+  })
+})
 
 describe("commercial Order payment schema", () => {
   test("accepts a deposit payment with an external reference", () => {

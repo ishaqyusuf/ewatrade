@@ -1,9 +1,15 @@
 import {
+  DashboardActionRow,
+  DashboardHomeHeader,
+  DashboardOverviewMetric,
+  DashboardRecentOrderRow,
+  DashboardRevenueCard,
+  EmptyState,
   MobileAppShell,
   SecondaryOperationalRow,
   StatusBanner,
 } from "@/components/mobile"
-import { Icon } from "@/components/ui/icon"
+import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -89,6 +95,15 @@ export function OperationsDashboardSurface({
   const packagedBalanceCount =
     balances.data?.rows.filter((row) => row.kind === "PACKAGED_STOCK").length ??
     0
+  const activeWorkCount =
+    (service.data?.length ?? 0) + provisional.serviceOperations
+  const balanceCount =
+    (balances.data?.rows.length ?? 0) + provisional.inventoryOperations
+  const recentOrderCount = orderRows.length + provisional.commercialOrders
+  const pendingCommandCount = commands.filter((command) =>
+    ["blocked", "pending", "review"].includes(command.localStatus),
+  ).length
+  const firstName = profile?.name.trim().split(/\s+/)[0] || "there"
   const navItems = [
     {
       icon: "home" as const,
@@ -169,6 +184,101 @@ export function OperationsDashboardSurface({
       onPress: () => openCreateRoute("/staff-invite-modal"),
     },
   ]
+  const operationalAction: HomeAction =
+    packagedBalanceCount >= 2
+      ? {
+          icon: "RefreshCw",
+          label: "Transform stock units",
+          onPress: () => router.push("/unit-conversion-modal" as never),
+          tone: "warning",
+        }
+      : hasProduct
+        ? {
+            icon: "Warehouse",
+            label: "Receive or adjust stock",
+            onPress: () => router.push("/stock-intake-modal" as never),
+            tone: "success",
+          }
+        : featureAvailability.hasServiceItems ||
+            featureAvailability.hasServiceJobs
+          ? {
+              icon: "Wrench",
+              label: "Manage service work",
+              onPress: () => router.push("/service-jobs-modal" as never),
+              tone: "warning",
+            }
+          : {
+              icon: "RefreshCw",
+              label: "Review sync status",
+              onPress: () => router.push("/sync-status-modal" as never),
+              tone: "neutral",
+            }
+  const homeActions: HomeAction[] = isAttendant
+    ? [
+        {
+          disabled: !hasSellableCatalogItem,
+          icon: "PlusCircle",
+          label: hasSellableCatalogItem
+            ? "Create a new order"
+            : "Add a sellable item to create orders",
+          onPress: () => router.push("/create-sale-modal" as never),
+          tone: "success",
+        },
+        {
+          icon: "ClipboardCheck",
+          label: "Complete daily closeout",
+          onPress: () => router.push("/closeout-modal" as never),
+          tone: "primary",
+        },
+        ...(featureAvailability.hasCustomers
+          ? [
+              {
+                icon: "User" as const,
+                label: "Open customer book",
+                onPress: () => router.push("/customer-book-modal" as never),
+                tone: "neutral" as const,
+              },
+            ]
+          : []),
+        {
+          icon: "RefreshCw",
+          label: "Review sync status",
+          onPress: () => router.push("/sync-status-modal" as never),
+          tone: "warning",
+        },
+      ]
+    : [
+        {
+          icon: "FolderPlus",
+          label: "Add a product",
+          onPress: () =>
+            router.push("/first-product-setup-modal?kind=product" as never),
+          tone: "success",
+        },
+        {
+          icon: "Wrench",
+          label: "Add a service",
+          onPress: () =>
+            router.push("/first-product-setup-modal?kind=service" as never),
+          tone: "warning",
+        },
+        {
+          disabled: !hasSellableCatalogItem,
+          icon: "PlusCircle",
+          label: hasSellableCatalogItem
+            ? "Create a new order"
+            : "Add a sellable item to create orders",
+          onPress: () => router.push("/create-sale-modal" as never),
+          tone: "primary",
+        },
+        {
+          icon: "ReceiptText",
+          label: "View all orders",
+          onPress: () => router.push("/orders" as never),
+          tone: "neutral",
+        },
+        operationalAction,
+      ]
 
   return (
     <MobileAppShell
@@ -184,9 +294,25 @@ export function OperationsDashboardSurface({
       navItems={navItems}
       onBottomTabVisibilityChange={onBottomTabVisibilityChange}
       role={isAttendant ? "attendant" : "owner"}
+      showHeader={false}
       showBottomTabs={!embeddedInAdminTabs}
       title="Today"
     >
+      <DashboardHomeHeader
+        businessName={profile?.businessName ?? "Business"}
+        greetingName={firstName}
+        hasNotification={isOffline || pendingCommandCount > 0}
+        onBusinessPress={
+          isAttendant
+            ? undefined
+            : () => router.push("/business-switch-modal" as never)
+        }
+        onNotificationPress={() => router.push("/sync-status-modal" as never)}
+        onProfilePress={
+          embeddedInAdminTabs ? () => router.push("/more" as never) : undefined
+        }
+      />
+
       {isOffline ? (
         <StatusBanner
           icon="Wind"
@@ -196,224 +322,138 @@ export function OperationsDashboardSurface({
         />
       ) : null}
 
-      {featureAvailability.hasOrders ||
-      hasProduct ||
-      featureAvailability.hasServiceJobs ? (
-        <View className="rounded-3xl border border-border bg-card p-5">
-          {featureAvailability.hasOrders ? (
-            <View
-              className={
-                hasProduct || featureAvailability.hasServiceJobs
-                  ? "flex-row items-center justify-between border-b border-border pb-4"
-                  : "flex-row items-center justify-between"
-              }
-            >
-              <Metric
-                label="Orders"
-                value={String(orderRows.length + provisional.commercialOrders)}
-              />
-              <View className="h-9 w-px bg-border" />
-              <Metric
-                label="Order value"
-                value={formatMinorMoney(orderValue, currency)}
-              />
-            </View>
-          ) : null}
-          {hasProduct || featureAvailability.hasServiceJobs ? (
-            <View
-              className={
-                featureAvailability.hasOrders
-                  ? "flex-row items-center justify-between pt-4"
-                  : "flex-row items-center justify-between"
-              }
-            >
-              {hasProduct ? (
-                <Metric
-                  label="Balances"
-                  value={String(
-                    (balances.data?.rows.length ?? 0) +
-                      provisional.inventoryOperations,
-                  )}
-                />
-              ) : null}
-              {hasProduct && featureAvailability.hasServiceJobs ? (
-                <View className="h-9 w-px bg-border" />
-              ) : null}
-              {featureAvailability.hasServiceJobs ? (
-                <Metric
-                  label="Active work"
-                  value={String(
-                    (service.data?.length ?? 0) + provisional.serviceOperations,
-                  )}
-                />
-              ) : null}
-            </View>
-          ) : null}
-        </View>
-      ) : null}
-
-      {featureVisibility.showGettingStarted ? (
-        <View className="border-y border-border bg-card">
-          <View className="border-b border-border py-4">
-            <Text className="text-lg font-extrabold text-foreground">
-              Set up your business
-            </Text>
-            <Text className="mt-1 text-sm text-muted-foreground">
-              Start with what you need. More tools appear as you begin using
-              them.
-            </Text>
-          </View>
-          {!featureAvailability.hasCatalogItems ? (
-            <SecondaryOperationalRow
-              detail="Create a Product or Service with the shortest valid setup."
-              icon="Plus"
-              onPress={() => router.push("/first-product-setup-modal" as never)}
-              title="Add your first item"
-              trailing={
-                <Icon
-                  className="mt-2 size-sm text-muted-foreground"
-                  name="ChevronRight"
-                />
-              }
-            />
-          ) : (
-            <SecondaryOperationalRow
-              detail={
-                hasSellableCatalogItem
-                  ? "Create an order from an active Product or Service."
-                  : "Add an active fixed-price item before creating an order."
-              }
-              disabled={!hasSellableCatalogItem}
-              icon="Receipt"
-              onPress={() => router.push("/create-sale-modal" as never)}
-              title="Create first order"
-              trailing={
-                <Icon
-                  className="mt-2 size-sm text-muted-foreground"
-                  name="ChevronRight"
-                />
-              }
-            />
-          )}
-          {!featureAvailability.hasStaff ? (
-            <SecondaryOperationalRow
-              detail="Invite a team member into this workspace."
-              icon="Users"
-              onPress={() => router.push("/staff-invite-modal" as never)}
-              title="Invite staff"
-              trailing={
-                <Icon
-                  className="mt-2 size-sm text-muted-foreground"
-                  name="ChevronRight"
-                />
-              }
-            />
-          ) : null}
-        </View>
-      ) : null}
-
       <View className="gap-3">
-        <Text className="text-lg font-extrabold text-foreground">
-          Quick actions
-        </Text>
-        <View className="flex-row flex-wrap gap-3">
-          {!isAttendant && hasProduct ? (
-            <QuickAction
-              icon="Warehouse"
-              label="Stock"
-              onPress={() => router.push("/stock-intake-modal" as never)}
-            />
-          ) : null}
-          {!isAttendant && packagedBalanceCount >= 2 ? (
-            <QuickAction
-              icon="RefreshCw"
-              label="Transform"
-              onPress={() => router.push("/unit-conversion-modal" as never)}
-            />
-          ) : null}
-          {isAttendant && featureAvailability.hasOrders ? (
-            <QuickAction
-              icon="ClipboardCheck"
-              label="Closeout"
-              onPress={() => router.push("/closeout-modal" as never)}
-            />
-          ) : null}
-          <QuickAction
-            icon="RefreshCw"
-            label="Sync"
-            onPress={() => router.push("/sync-status-modal" as never)}
+        <View className="flex-row gap-3">
+          <DashboardOverviewMetric
+            detail={
+              hasProduct
+                ? "Current inventory ledger"
+                : featureAvailability.hasServiceItems ||
+                    featureAvailability.hasServiceJobs
+                  ? "Work currently in queue"
+                  : "Ready for your first item"
+            }
+            icon={hasProduct ? "Warehouse" : "Wrench"}
+            label={
+              hasProduct
+                ? "Stock balances"
+                : featureAvailability.hasServiceItems ||
+                    featureAvailability.hasServiceJobs
+                  ? "Active work"
+                  : "Catalog"
+            }
+            value={String(
+              hasProduct
+                ? balanceCount
+                : featureAvailability.hasServiceItems ||
+                    featureAvailability.hasServiceJobs
+                  ? activeWorkCount
+                  : 0,
+            )}
           />
-          {!embeddedInAdminTabs ? (
-            <QuickAction
-              icon="Lock"
-              label="App lock"
-              onPress={() => router.push("/app-lock-modal" as never)}
-            />
-          ) : null}
-          {!isAttendant && !embeddedInAdminTabs ? (
-            <QuickAction
-              icon="CreditCard"
-              label="Plans"
-              onPress={() => router.push("/subscription-modal" as never)}
-            />
-          ) : null}
+          <DashboardOverviewMetric
+            detail={
+              provisional.commercialOrders > 0
+                ? `${provisional.commercialOrders} waiting to sync`
+                : "Latest orders loaded"
+            }
+            icon="ReceiptText"
+            label="Recent orders"
+            tone="accent"
+            value={String(recentOrderCount)}
+          />
         </View>
+        <DashboardRevenueCard
+          detail={
+            orderRows.length === 0
+              ? "No synced order value yet"
+              : `Across the latest ${orderRows.length} ${orderRows.length === 1 ? "order" : "orders"}`
+          }
+          label="Recent revenue"
+          value={formatMinorMoney(orderValue, currency)}
+        />
       </View>
 
-      {featureVisibility.showOrderHistory ? (
-        <View className="gap-3">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-lg font-extrabold text-foreground">
-              Recent orders
-            </Text>
+      <View className="border-t border-border/70">
+        {homeActions.map((action) => (
+          <DashboardActionRow key={action.label} {...action} />
+        ))}
+      </View>
+
+      <View>
+        <View className="flex-row items-center justify-between">
+          <Text className="text-xl font-extrabold tracking-tight text-foreground">
+            Recent orders
+          </Text>
+          {!isAttendant ? (
             <Pressable
+              accessibilityRole="button"
               className="min-h-11 justify-center px-2"
-              onPress={() => router.push("/create-sale-modal" as never)}
+              haptic
+              onPress={() => router.push("/orders" as never)}
             >
-              <Text className="text-sm font-bold text-primary">New</Text>
+              <Text className="text-sm font-bold text-primary">See all</Text>
             </Pressable>
-          </View>
-          {orders.isLoading ? (
-            <StatusBanner icon="Loader2" message="Loading recent orders." />
-          ) : orderRows.length === 0 && provisional.commercialOrders > 0 ? (
-            <StatusBanner
-              icon="Wind"
-              message="Your queued orders will appear here after sync."
-              title="Orders pending sync"
-              tone="warning"
-            />
-          ) : (
-            orderRows.map((order) => (
-              <View
-                className="gap-2 rounded-2xl border border-border bg-card p-4"
-                key={order.id}
-              >
-                <View className="flex-row items-start justify-between gap-3">
-                  <View className="min-w-0 flex-1">
-                    <Text className="font-bold text-foreground">
-                      {order.orderNumber}
-                    </Text>
-                    <Text
-                      className="mt-1 text-xs text-muted-foreground"
-                      numberOfLines={2}
-                    >
-                      {order.lines
-                        .map(
-                          (line) =>
-                            `${line.quantity} × ${line.snapshot?.catalogItemName ?? "Item"}`,
-                        )
-                        .join(", ")}
-                    </Text>
-                  </View>
-                  <Text className="font-bold text-foreground">
-                    {formatMinorMoney(order.totalMinor, order.currencyCode)}
-                  </Text>
-                </View>
-              </View>
-            ))
-          )}
+          ) : null}
         </View>
-      ) : null}
+        {orders.isLoading ? (
+          <StatusBanner icon="Loader2" message="Loading recent orders." />
+        ) : orderRows.length === 0 && provisional.commercialOrders > 0 ? (
+          <StatusBanner
+            icon="Wind"
+            message="Your queued orders will appear here after sync."
+            title="Orders pending sync"
+            tone="warning"
+          />
+        ) : orderRows.length === 0 ? (
+          <EmptyState
+            actionLabel={isAttendant ? undefined : "Create first order"}
+            actionProps={
+              isAttendant
+                ? undefined
+                : {
+                    disabled: !hasSellableCatalogItem,
+                    onPress: () => router.push("/create-sale-modal" as never),
+                  }
+            }
+            className="mt-2"
+            icon="ReceiptText"
+            message={
+              featureVisibility.showGettingStarted
+                ? "Add an item, then create your first order. It will appear here."
+                : "New orders will appear here as soon as they are created."
+            }
+            title="No orders yet"
+          />
+        ) : (
+          orderRows
+            .slice(0, 4)
+            .map((order) => (
+              <DashboardRecentOrderRow
+                amount={formatMinorMoney(order.totalMinor, order.currencyCode)}
+                customer={
+                  order.customerName ||
+                  order.customerPhone ||
+                  "Walk-in customer"
+                }
+                detail={`${order.orderNumber} · ${order.lines
+                  .map(
+                    (line) =>
+                      `${line.quantity} × ${line.snapshot?.catalogItemName ?? "Item"}`,
+                  )
+                  .join(", ")}`}
+                key={order.id}
+                onPress={
+                  isAttendant
+                    ? undefined
+                    : () => router.push("/orders" as never)
+                }
+                status={formatStatusLabel(order.status)}
+                tone={getOrderStatusTone(order.status)}
+              />
+            ))
+        )}
+      </View>
 
       {!isAttendant && !embeddedInAdminTabs ? (
         <CreateActionSheet actions={createActions} modal={createModal} />
@@ -431,44 +471,29 @@ export default function DashboardCompatibilityRoute() {
   )
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <View className="min-w-0 flex-1 items-center px-2">
-      <Text
-        className="text-lg font-extrabold text-foreground"
-        numberOfLines={1}
-      >
-        {value}
-      </Text>
-      <Text className="mt-1 text-center text-xs text-muted-foreground">
-        {label}
-      </Text>
-    </View>
-  )
-}
-
-function QuickAction({
-  icon,
-  label,
-  onPress,
-}: {
-  icon: "ClipboardCheck" | "CreditCard" | "Lock" | "RefreshCw" | "Warehouse"
+type HomeAction = {
+  disabled?: boolean
+  icon: IconKeys
   label: string
   onPress: () => void
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      className="min-w-[46%] flex-1 flex-row items-center gap-3 rounded-2xl border border-border bg-card p-4"
-      haptic
-      onPress={onPress}
-    >
-      <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-        <Icon className="size-sm text-primary" name={icon} />
-      </View>
-      <Text className="font-bold text-foreground">{label}</Text>
-    </Pressable>
-  )
+  tone?: "neutral" | "primary" | "success" | "warning"
+}
+
+function formatStatusLabel(status: string) {
+  return status
+    .toLowerCase()
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ")
+}
+
+function getOrderStatusTone(status: string) {
+  if (status === "COMPLETED") return "success" as const
+  if (status === "CANCELLED" || status === "REFUNDED") {
+    return "destructive" as const
+  }
+  if (status === "DRAFT" || status === "PENDING") return "warning" as const
+  return "primary" as const
 }
 
 type CreateAction = {

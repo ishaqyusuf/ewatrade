@@ -1,22 +1,22 @@
-import { ActionButton as BaseActionButton } from "@/components/mobile/action-button"
-import { CatalogFormText as Text } from "@/components/mobile/catalog-form-text"
+import { ActionButton } from "@/components/mobile/action-button"
 import { CatalogSetupHelperPicker } from "@/components/mobile/catalog-setup-helper-picker"
 import {
   type CatalogVariantDraft,
   CatalogVariantManager,
 } from "@/components/mobile/catalog-variant-manager"
-import { FormField as BaseFormField } from "@/components/mobile/form-field"
+import { FormField } from "@/components/mobile/form-field"
 import {
   KeyboardInlineComposer,
   type KeyboardInlineComposerPill,
 } from "@/components/mobile/keyboard-inline-composer"
-import { MoneyField as BaseMoneyField } from "@/components/mobile/money-field"
+import { MoneyField } from "@/components/mobile/money-field"
 import { SetupCheckboxRow } from "@/components/mobile/setup-flow"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
 import { resolveCatalogOptionUnitPriceMinor } from "@/lib/catalog-option-pricing"
 import { useTRPC } from "@/trpc/client"
@@ -40,13 +40,7 @@ import {
 } from "@ewatrade/utils/exact-decimal"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
-import {
-  type ComponentProps,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Alert, Keyboard, type TextInput, View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
@@ -77,18 +71,6 @@ type VariantComposerMode = "variant-type" | "variant-value"
 
 const VARIANT_COMPOSER_DEFAULT_SUGGESTION_COUNT = 5
 const DEFAULT_UNIT_TRANSACTION_SCALE = 2
-
-function ActionButton(props: ComponentProps<typeof BaseActionButton>) {
-  return <BaseActionButton textScale={1.5} {...props} />
-}
-
-function FormField(props: ComponentProps<typeof BaseFormField>) {
-  return <BaseFormField textScale={1.5} {...props} />
-}
-
-function MoneyField(props: ComponentProps<typeof BaseMoneyField>) {
-  return <BaseMoneyField textScale={1.5} {...props} />
-}
 
 const KNOWN_VARIANT_TYPES = [
   "Size",
@@ -323,10 +305,14 @@ export function SimpleCatalogItemScreen({
   const queryClient = useQueryClient()
   const { profile } = useAuthContext()
   const unitModal = useModal()
+  const replacementModal = useModal()
   const clientOperationIdRef = useRef(Crypto.randomUUID())
   const variantComposerInputRef = useRef<TextInput>(null)
   const [kind, setKind] = useState<CatalogItemKind | null>(initialKind ?? null)
   const [helperPickerOpen, setHelperPickerOpen] = useState(false)
+  const [pendingHelperReplacement, setPendingHelperReplacement] = useState<{
+    helper: CatalogSetupHelper | null
+  } | null>(null)
   const [selectedHelperKey, setSelectedHelperKey] = useState<string | null>(
     null,
   )
@@ -462,6 +448,7 @@ export function SimpleCatalogItemScreen({
     setSubmitError(null)
     await Promise.all([
       queryClient.invalidateQueries(trpc.catalog.listItems.queryFilter()),
+      queryClient.invalidateQueries(trpc.catalog.listItemsPage.queryFilter()),
       queryClient.invalidateQueries(
         trpc.tenant.featureAvailability.queryFilter(),
       ),
@@ -610,18 +597,9 @@ export function SimpleCatalogItemScreen({
       return
     }
 
-    Alert.alert(
-      "Replace current setup?",
-      "This replaces the current units, options, prices, and stock setup. Your item name, description, and base price stay unchanged.",
-      [
-        { style: "cancel", text: "Keep editing" },
-        {
-          style: "destructive",
-          text: "Replace setup",
-          onPress: () => commitHelper(helper),
-        },
-      ],
-    )
+    setHelperPickerOpen(false)
+    setPendingHelperReplacement({ helper })
+    requestAnimationFrame(() => replacementModal.present())
   }
 
   const submitAdvanced = (
@@ -1392,28 +1370,6 @@ export function SimpleCatalogItemScreen({
         onTouchStart={hideVariantComposer}
       >
         <View className="gap-5 px-4 pt-2">
-          <Pressable
-            accessibilityLabel="Change item type"
-            accessibilityRole="button"
-            className="min-h-11 flex-row items-center gap-2 self-start rounded-full bg-primary/10 px-4 active:bg-primary/20"
-            haptic
-            onPress={() => {
-              commitHelper(null)
-              setKind(null)
-              setSubmitError(null)
-              setActiveGroupId(null)
-            }}
-            transition
-          >
-            <Icon
-              className="size-xs text-primary"
-              name={kind === "product" ? "Warehouse" : "Wrench"}
-            />
-            <Text className="text-sm font-bold text-primary">
-              {kind === "product" ? "Product" : "Service"}
-            </Text>
-          </Pressable>
-
           <ActionButton
             icon="LayoutGrid"
             onPress={() => setHelperPickerOpen(true)}
@@ -1456,7 +1412,6 @@ export function SimpleCatalogItemScreen({
                   setShowAdvanced(true)
                 }
               }}
-              textScale={1.5}
             />
           ) : null}
           {kind === "product" ? (
@@ -2010,6 +1965,32 @@ export function SimpleCatalogItemScreen({
             </View>
           </BottomSheetKeyboardAwareScrollView>
         ) : null}
+      </Modal>
+
+      <Modal
+        onDismiss={() => setPendingHelperReplacement(null)}
+        ref={replacementModal.ref}
+        snapPoints={["34%"]}
+        title="Replace current setup?"
+      >
+        <View className="gap-5 px-5 pb-6">
+          <Text className="text-sm leading-6 text-muted-foreground">
+            This replaces the current units, options, prices, and stock setup.
+            Your item name, description, and base price stay unchanged.
+          </Text>
+          <ActionButton
+            onPress={() => {
+              const helper = pendingHelperReplacement?.helper ?? null
+              replacementModal.dismiss()
+              commitHelper(helper)
+            }}
+          >
+            Replace setup
+          </ActionButton>
+          <ActionButton onPress={replacementModal.dismiss} variant="ghost">
+            Keep editing
+          </ActionButton>
+        </View>
       </Modal>
 
       <KeyboardInlineComposer

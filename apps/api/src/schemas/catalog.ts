@@ -286,6 +286,12 @@ export const catalogListItemsSchema = z
   })
   .strict()
 
+export const catalogListItemsPageSchema = catalogListItemsSchema.extend({
+  cursor: z.string().trim().min(1).optional(),
+  limit: z.number().int().min(1).max(50).default(20),
+  query: z.string().trim().max(160).optional(),
+})
+
 export const catalogArchiveOfferingSchema = z
   .object({ offeringId: z.string().trim().min(1) })
   .strict()

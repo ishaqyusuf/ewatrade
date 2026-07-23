@@ -68,7 +68,8 @@ export function WorkflowModalScreen({
         }}
       />
       <MobileScreen
-        contentClassName="px-0 py-6"
+        contentClassName="px-0 pt-6 pb-0"
+        contentContainerStyle={{ paddingBottom: 0 }}
         keyboardBottomOffset={keyboardBottomOffset}
         scroll={false}
       >

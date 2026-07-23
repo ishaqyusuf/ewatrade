@@ -1,22 +1,22 @@
-import { FormField } from "@/components/mobile/form-field"
+import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColorScheme, useColors } from "@/hooks/use-color"
-import {
-  type CatalogSetupHelper,
-  type CatalogSetupHelperKind,
-  listCatalogSetupHelpers,
-} from "@ewatrade/utils/catalog-setup-helpers"
+import { shouldShowListSearch } from "@/lib/list-pagination"
 import {
   findBusinessProfile,
   getRecommendedCatalogSetupHelperKeys,
   rankCatalogSetupHelpersForBusinessProfile,
 } from "@ewatrade/utils/business-profiles"
+import {
+  type CatalogSetupHelper,
+  type CatalogSetupHelperKind,
+  listCatalogSetupHelpers,
+} from "@ewatrade/utils/catalog-setup-helpers"
 import { StatusBar } from "expo-status-bar"
 import { useEffect, useMemo, useState } from "react"
 import { Modal as NativeModal, ScrollView, View } from "react-native"
-import { KeyboardStickyView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 type CatalogSetupHelperPickerProps = {
@@ -118,6 +118,9 @@ export function CatalogSetupHelperPicker({
       ),
     [businessProfileKey, kind, query],
   )
+  const showSearch = shouldShowListSearch(
+    listCatalogSetupHelpers({ kind }).length,
+  )
   const personalizedHelpers = helpers.filter((helper) =>
     recommendedHelperKeySet.has(helper.key),
   )
@@ -176,7 +179,7 @@ export function CatalogSetupHelperPicker({
 
         <ScrollView
           className="flex-1"
-          contentContainerClassName="pb-32"
+          contentContainerClassName={showSearch ? "pb-32" : "pb-8"}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
         >
@@ -262,37 +265,16 @@ export function CatalogSetupHelperPicker({
           ) : null}
         </ScrollView>
 
-        <KeyboardStickyView
-          offset={{ closed: 0, opened: 0 }}
-          pointerEvents="box-none"
-          style={{
-            bottom: 0,
-            left: 0,
-            position: "absolute",
-            right: 0,
-            zIndex: 20,
-          }}
-        >
-          <View className="border-t border-border bg-background px-5 pb-4 pt-3">
-            <FormField
-              accessibilityLabel="Search templates"
-              autoCapitalize="none"
-              autoCorrect={false}
-              label="Search templates"
-              onChangeText={setQuery}
-              placeholder="Search units or business examples"
-              returnKeyType="search"
-              value={query}
-              variant="auth"
-            />
-          </View>
-          <View
-            style={{
-              backgroundColor: colors.background,
-              height: insets.bottom,
-            }}
+        {showSearch ? (
+          <BottomSearchFooter
+            accessibilityLabel="Search templates"
+            label="Search templates"
+            onChangeText={setQuery}
+            placeholder="Search units or business examples"
+            totalCount={listCatalogSetupHelpers({ kind }).length}
+            value={query}
           />
-        </KeyboardStickyView>
+        ) : null}
       </View>
     </NativeModal>
   )

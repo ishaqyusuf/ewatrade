@@ -1,7 +1,12 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
+import {
+  InventoryProductCard,
+  InventorySegmentOption,
+} from "@/components/mobile/inventory-product-card"
+import { SecondarySheetHeader } from "@/components/mobile/secondary-operations"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useOfflineCommandStore } from "@/store/offlineCommandStore"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
@@ -9,13 +14,15 @@ import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { useState } from "react"
-import { View } from "react-native"
+import { ScrollView, View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 export function StockIntakeContent({
   onComplete,
-  presentation: _presentation,
+  presentation = "screen",
 }: { onComplete?: () => void; presentation?: "screen" | "sheet" }) {
+  const insets = useSafeAreaInsets()
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const offline = useOperationalModeStore((state) => state.isOfflineMode)
@@ -196,171 +203,228 @@ export function StockIntakeContent({
       ...operation,
     })
   }
+  const isSubmitting =
+    mutation.isPending ||
+    createCount.isPending ||
+    finalizeCount.isPending ||
+    custody.isPending
+  const canSubmit =
+    Boolean(selected && quantity.trim() && reason.trim()) &&
+    (mode !== "custody" ||
+      targetCustodyType === "store" ||
+      Boolean(targetCustodyReferenceId))
+  const modeOptions = [
+    { key: "receipt", label: "Receive" },
+    { key: "count", label: "Count" },
+    { key: "adjustment", label: "Adjust" },
+    { key: "custody", label: "Move" },
+  ] as const
+
   return (
-    <KeyboardAwareScrollView
-      className="flex-1"
-      contentContainerClassName="gap-5 px-4 pb-12"
-      keyboardDismissMode="interactive"
-      keyboardShouldPersistTaps="handled"
-    >
-      {offline ? (
-        <StatusBanner
-          icon="Wind"
-          message="Receipts, counts, and custody moves are queued as provisional operations until replay."
-          title="Offline"
-          tone="warning"
-        />
-      ) : null}
-      {error ? (
-        <StatusBanner icon="AlertCircle" message={error} tone="destructive" />
-      ) : null}
-      <View className="flex-row flex-wrap gap-2">
-        {(["receipt", "count", "adjustment", "custody"] as const).map(
-          (item) => (
-            <Pressable
-              className={
-                mode === item
-                  ? "min-h-10 min-w-[46%] flex-1 items-center justify-center rounded-full bg-primary"
-                  : "min-h-10 min-w-[46%] flex-1 items-center justify-center rounded-full bg-muted"
-              }
-              key={item}
-              onPress={() => setMode(item)}
-            >
-              <Text
-                className={
-                  mode === item
-                    ? "font-bold capitalize text-primary-foreground"
-                    : "font-bold capitalize text-foreground"
-                }
-              >
-                {item}
-              </Text>
-            </Pressable>
-          ),
-        )}
-      </View>
-      <View className="gap-3">
-        {balances.data?.rows.map((row) => (
-          <Pressable
-            accessibilityRole="radio"
-            accessibilityState={{ selected: balanceId === row.balanceSourceId }}
-            className={
-              balanceId === row.balanceSourceId
-                ? "rounded-2xl border border-primary bg-primary/5 p-4"
-                : "rounded-2xl border border-border bg-card p-4"
-            }
-            key={row.balanceSourceId}
-            onPress={() => setBalanceId(row.balanceSourceId)}
-          >
-            <Text className="font-bold text-foreground">
-              {row.productName} · {row.variantName}
-            </Text>
-            <Text className="mt-1 text-xs text-muted-foreground">
-              {row.onHandQuantity} {row.inventoryUnitName} ·{" "}
-              {row.kind.toLowerCase().replaceAll("_", " ")}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-      {mode === "adjustment" ? (
-        <View className="flex-row gap-2">
-          {(["increase", "decrease"] as const).map((item) => (
-            <Pressable
-              className={
-                direction === item
-                  ? "min-h-10 flex-1 items-center justify-center rounded-full bg-primary"
-                  : "min-h-10 flex-1 items-center justify-center rounded-full bg-muted"
-              }
-              key={item}
-              onPress={() => setDirection(item)}
-            >
-              <Text
-                className={
-                  direction === item
-                    ? "font-bold capitalize text-primary-foreground"
-                    : "font-bold capitalize text-foreground"
-                }
-              >
-                {item}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
-      {mode === "custody" ? (
-        <View className="gap-3">
-          <View className="flex-row gap-2">
-            {(["staff", "store"] as const).map((item) => (
-              <Pressable
-                className={
-                  targetCustodyType === item
-                    ? "min-h-10 flex-1 items-center justify-center rounded-full bg-primary"
-                    : "min-h-10 flex-1 items-center justify-center rounded-full bg-muted"
-                }
-                key={item}
-                onPress={() => setTargetCustodyType(item)}
-              >
-                <Text
-                  className={
-                    targetCustodyType === item
-                      ? "font-bold capitalize text-primary-foreground"
-                      : "font-bold capitalize text-foreground"
-                  }
-                >
-                  {item === "staff" ? "Team member" : "Central Store"}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-          {targetCustodyType === "staff"
-            ? assignees.data?.map((person) => (
-                <Pressable
-                  accessibilityRole="radio"
-                  accessibilityState={{
-                    selected: targetCustodyReferenceId === person.id,
-                  }}
-                  className={
-                    targetCustodyReferenceId === person.id
-                      ? "rounded-2xl border border-primary bg-primary/5 p-4"
-                      : "rounded-2xl border border-border bg-card p-4"
-                  }
-                  key={person.id}
-                  onPress={() => setTargetCustodyReferenceId(person.id)}
-                >
-                  <Text className="font-bold text-foreground">
-                    {person.name}
-                  </Text>
-                  <Text className="text-xs text-muted-foreground">
-                    {person.email}
-                  </Text>
-                </Pressable>
-              ))
-            : null}
-        </View>
-      ) : null}
-      <FormField
-        keyboardType="decimal-pad"
-        label={mode === "count" ? "Observed quantity" : "Quantity"}
-        onChangeText={setQuantity}
-        value={quantity}
-      />
-      <FormField
-        label="Reason"
-        multiline
-        onChangeText={setReason}
-        value={reason}
-      />
-      <ActionButton
-        isLoading={
-          mutation.isPending ||
-          createCount.isPending ||
-          finalizeCount.isPending ||
-          custody.isPending
-        }
-        onPress={submit}
+    <View className="flex-1">
+      <KeyboardAwareScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 112 }}
+        disableScrollOnKeyboardHide
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
       >
-        {offline ? `Queue ${mode}` : "Review and confirm"}
-      </ActionButton>
-    </KeyboardAwareScrollView>
+        <View className="gap-6 px-4">
+          <SecondarySheetHeader
+            description="Choose an operation, select the exact balance, then record the quantity and reason."
+            icon="Warehouse"
+            title="Inventory movement"
+          />
+
+        {offline ? (
+          <StatusBanner
+            icon="Wind"
+            message="Receipts, counts, and custody moves are queued as provisional operations until replay."
+            title="Offline"
+            tone="warning"
+          />
+        ) : null}
+        {error ? (
+          <StatusBanner
+            icon="AlertCircle"
+            message={error}
+            tone="destructive"
+          />
+        ) : null}
+
+        <View className="gap-3">
+          <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
+            Operation
+          </Text>
+          <ScrollView
+            contentContainerClassName="gap-2"
+            horizontal
+            showsHorizontalScrollIndicator={false}
+          >
+            {modeOptions.map((item) => (
+              <View className="w-24" key={item.key}>
+                <InventorySegmentOption
+                  label={item.label}
+                  onPress={() => {
+                    setError(null)
+                    setMode(item.key)
+                  }}
+                  selected={mode === item.key}
+                />
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+
+        <View className="gap-2">
+          <View className="gap-1">
+            <Text className="text-base font-extrabold text-foreground">
+              Select stock balance
+            </Text>
+            <Text className="text-sm leading-5 text-muted-foreground">
+              Quantities are recorded in the balance unit shown below.
+            </Text>
+          </View>
+          <View className="border-b border-border">
+            {balances.isPending ? (
+              <EmptyState
+                icon="Loader2"
+                message="Loading inventory balances."
+                title="Loading stock"
+              />
+            ) : balances.isError ? (
+              <StatusBanner
+                actionLabel="Try again"
+                icon="AlertCircle"
+                message={balances.error.message}
+                onActionPress={() => void balances.refetch()}
+                tone="destructive"
+              />
+            ) : balances.data?.rows.length ? (
+              balances.data.rows.map((row) => (
+                <InventoryProductCard
+                  icon="Warehouse"
+                  key={row.balanceSourceId}
+                  onPress={() => {
+                    setBalanceId(row.balanceSourceId)
+                    setError(null)
+                  }}
+                  selected={balanceId === row.balanceSourceId}
+                  stockLabel={`${row.onHandQuantity} ${row.inventoryUnitName}`}
+                  stockTone="muted"
+                  subtitle={`${row.variantName} · ${row.kind.toLowerCase().replaceAll("_", " ")}`}
+                  title={row.productName}
+                />
+              ))
+            ) : (
+              <EmptyState
+                icon="Warehouse"
+                message="Add a stock-tracked Product before recording inventory."
+                title="No stock balances"
+              />
+            )}
+          </View>
+        </View>
+
+        {mode === "adjustment" ? (
+          <View className="gap-3">
+            <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
+              Adjustment direction
+            </Text>
+            <View className="flex-row gap-2">
+              <InventorySegmentOption
+                label="Increase"
+                onPress={() => setDirection("increase")}
+                selected={direction === "increase"}
+              />
+              <InventorySegmentOption
+                label="Decrease"
+                onPress={() => setDirection("decrease")}
+                selected={direction === "decrease"}
+              />
+            </View>
+          </View>
+        ) : null}
+
+        {mode === "custody" ? (
+          <View className="gap-4">
+            <View className="gap-3">
+              <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
+                Move to
+              </Text>
+              <View className="flex-row gap-2">
+                <InventorySegmentOption
+                  label="Team member"
+                  onPress={() => setTargetCustodyType("staff")}
+                  selected={targetCustodyType === "staff"}
+                />
+                <InventorySegmentOption
+                  label="Central store"
+                  onPress={() => setTargetCustodyType("store")}
+                  selected={targetCustodyType === "store"}
+                />
+              </View>
+            </View>
+            {targetCustodyType === "staff" ? (
+              <View className="border-b border-border">
+                {assignees.data?.map((person) => (
+                  <InventoryProductCard
+                    icon="User"
+                    key={person.id}
+                    onPress={() => setTargetCustodyReferenceId(person.id)}
+                    selected={targetCustodyReferenceId === person.id}
+                    stockLabel="Team member"
+                    stockTone="muted"
+                    subtitle={person.email}
+                    title={person.name}
+                  />
+                ))}
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+          <View className="gap-4">
+            <FormField
+              keyboardType="decimal-pad"
+              label={mode === "count" ? "Observed quantity" : "Quantity"}
+              onChangeText={setQuantity}
+              placeholder={
+                selected ? `In ${selected.inventoryUnitName}` : "0"
+              }
+              value={quantity}
+            />
+            <FormField
+              label="Reason"
+              multiline
+              onChangeText={setReason}
+              placeholder="Why is this stock movement being recorded?"
+              value={reason}
+            />
+          </View>
+        </View>
+      </KeyboardAwareScrollView>
+
+      <View
+        style={{
+          bottom: 0,
+          left: 0,
+          paddingBottom:
+            presentation === "screen" ? Math.max(insets.bottom, 8) : 8,
+          position: "absolute",
+          right: 0,
+        }}
+      >
+        <View className="border-t border-border bg-background px-4 pt-3">
+          <ActionButton
+            disabled={!canSubmit}
+            isLoading={isSubmitting}
+            onPress={submit}
+          >
+            {offline ? `Queue ${mode}` : "Review and confirm"}
+          </ActionButton>
+        </View>
+      </View>
+    </View>
   )
 }

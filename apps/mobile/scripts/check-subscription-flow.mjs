@@ -4,7 +4,7 @@ import { join, relative, resolve } from "node:path";
 const REPO_ROOT = resolve(new URL("../../..", import.meta.url).pathname);
 const MOBILE_DIR = join(REPO_ROOT, "apps/mobile");
 const FILES = {
-  dashboard: join(MOBILE_DIR, "src/app/dashboard.tsx"),
+  adminNavigation: join(MOBILE_DIR, "src/lib/admin-navigation.ts"),
   subscriptionsRouter: join(
     REPO_ROOT,
     "apps/api/src/trpc/routers/retail-ops-subscriptions.ts",
@@ -71,12 +71,15 @@ const CONTRACTS = [
       "UsageRow",
       "PlanCard",
       "Business plan",
-      "billing provider boundary",
+      "compare options for your business",
+      'accessibilityLabel={`${plan.name} plan, ${plan.priceLabel}`}',
       "Upgrade requests need production billing",
       "Online required",
       "Request upgrade",
       "Linking.canOpenURL",
       "Linking.openURL",
+      'testID="subscription-scroll"',
+      "contentContainerStyle={{ paddingBottom: 40 }}",
     ],
     reason:
       "subscription sheet must keep production snapshot reads, local fallback, reusable secondary operation rows, three-tier plan comparison, provider-neutral checkout handoff, and safe link opening",
@@ -95,14 +98,13 @@ const CONTRACTS = [
       "secondary operational screens must share flat headers and selectable divider rows for plan and settings-style surfaces",
   },
   {
-    file: FILES.dashboard,
+    file: FILES.adminNavigation,
     markers: [
-      'label="Plans"',
-      'router.push("/subscription-modal" as never)',
-      "!isAttendant",
+      'label: "Plan & billing"',
+      'href: "/subscription-modal"',
     ],
     reason:
-      "the generic dashboard must keep an owner-only route to the subscription surface",
+      "the owner More menu must keep a route to the subscription surface",
   },
   {
     file: FILES.subscriptionsRouter,

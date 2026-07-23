@@ -17,7 +17,7 @@ Typed tRPC routers are the primary application contract.
 
 ## Catalog
 
-- Read: `catalog.listItems`, `catalog.getItem`,
+- Read: `catalog.listItems`, `catalog.listItemsPage`, `catalog.getItem`,
   `catalog.listUnitDefinitions`, `catalog.listUnitConfigurations`.
 - Setup/manage: `catalog.createSimpleItem`, `catalog.createItem`,
   `catalog.createUnitDefinition`, `catalog.createUnitConfigurationDraft`,
@@ -38,7 +38,8 @@ Typed tRPC routers are the primary application contract.
 
 ## Commercial Orders
 
-- `orders.create`, `orders.get`, `orders.list`,
+- `orders.create`, `orders.get`, `orders.list`, `orders.listPage`,
+  `orders.customerCount`,
   `orders.fulfillProductLine`, `orders.returnProductLine`,
   `orders.recordPayment`.
 
@@ -50,7 +51,7 @@ Typed tRPC routers are the primary application contract.
 ## Service Operations
 
 - Intake/work: `services.createIntakeDraft`, `confirmIntake`,
-  `createAndConfirmIntake`, `queue`, `getJob`, `assignees`, `assignJob`,
+  `createAndConfirmIntake`, `queue`, `queuePage`, `getJob`, `assignees`, `assignJob`,
   `authorizeLine`, `transitionLine`, `rescheduleJob`, `splitLine`,
   `createRework`, `addNote`, `recordException`, `batchUpdate`,
   `handoff`, `getSettings`, `updateSettings`.

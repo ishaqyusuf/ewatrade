@@ -167,10 +167,24 @@ stock pool and does not own an independent physical balance.
 _Avoid_: Virtual inventory, packaged stock
 
 **Unit Price**:
-The price charged for one quantity of a Sellable Offering. For Product Unit
-Offerings it is commercially independent from the Inventory Unit's
+The price charged for one quantity of a Sellable Offering. It may come from
+the Offering's catalog price or an allocated Stock Price Layer, and for Product
+Unit Offerings it is commercially independent from the Inventory Unit's
 stock-equivalence factor.
 _Avoid_: Converted price, ratio price
+
+**Stock Price Layer**:
+A Store-local quantity of one Balance Source carrying an approved Unit Price
+for each eligible Sellable Offering and consumed in receipt order using exact
+canonical stock quantity. It is a commercial allocation layer, not a claim
+that the stock is physically separated.
+_Avoid_: Global product price, physical lot, inventory batch
+
+**Stock Price Allocation**:
+An exact quantity reserved from one Stock Price Layer for a Product quantity
+in a Commercial Order, retaining that layer's approved Offering Unit Price
+until the reservation is released or committed.
+_Avoid_: Checkout-time repricing, payment-time price lookup
 
 **Price Change**:
 An auditable revision affecting a Sellable Offering's future Unit Price without

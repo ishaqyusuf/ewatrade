@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
 import {
@@ -9,11 +10,16 @@ import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import {
+  LIST_PAGE_SIZE,
+  shouldFetchNextListPage,
+  shouldShowListSearch,
+} from "@/lib/list-pagination"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { formatMinorMoney } from "@ewatrade/utils"
-import { useQuery } from "@tanstack/react-query"
-import { useMemo, useState } from "react"
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import { useDeferredValue, useMemo, useState } from "react"
 import {
   FlatList,
   type NativeScrollEvent,
@@ -139,40 +145,46 @@ export function CatalogItemsContent({
   const trpc = useTRPC()
   const [kindFilter, setKindFilter] = useState<CatalogKindFilter>("all")
   const [query, setQuery] = useState("")
+  const deferredQuery = useDeferredValue(query)
   const availabilityQuery = useQuery(
     trpc.tenant.featureAvailability.queryOptions(undefined, { retry: false }),
   )
-  const itemsQuery = useQuery(
-    trpc.catalog.listItems.queryOptions(
-      { kind: kindFilter === "all" ? undefined : kindFilter },
-      { retry: false },
+  const itemsQuery = useInfiniteQuery(
+    trpc.catalog.listItemsPage.infiniteQueryOptions(
+      {
+        kind: kindFilter === "all" ? undefined : kindFilter,
+        limit: LIST_PAGE_SIZE,
+        query: deferredQuery || undefined,
+      },
+      {
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        retry: false,
+      },
     ),
   )
   const rows = useMemo(
-    () => (itemsQuery.data ?? []).map(mapCatalogItem),
-    [itemsQuery.data],
+    () =>
+      (itemsQuery.data?.pages.flatMap((page) => page.items) ?? []).map(
+        mapCatalogItem,
+      ),
+    [itemsQuery.data?.pages],
   )
-  const visibleRows = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
-
-    if (!normalizedQuery) return rows
-
-    return rows.filter((item) =>
-      [item.name, item.kind, item.unitName]
-        .join(" ")
-        .toLowerCase()
-        .includes(normalizedQuery),
-    )
-  }, [query, rows])
+  const totalCount = itemsQuery.data?.pages[0]?.totalCount ?? 0
+  const showSearch = shouldShowListSearch(totalCount)
 
   return (
-    <FlatList<CatalogRow>
+    <View className="flex-1">
+      <FlatList<CatalogRow>
       className="flex-1"
       contentContainerStyle={{
         paddingBottom:
-          presentation === "tab" ? Math.max(insets.bottom + 116, 152) : 220,
+          presentation === "tab"
+            ? Math.max(insets.bottom + 116, 152)
+            : showSearch
+              ? 112
+              : 24,
       }}
-      data={visibleRows}
+      data={rows}
       keyExtractor={(item) => item.id}
       keyboardShouldPersistTaps="handled"
       onScroll={onScroll}
@@ -190,6 +202,11 @@ export function CatalogItemsContent({
       }
       ListFooterComponent={
         <View className="gap-3 px-4 pt-4 pb-8">
+          {itemsQuery.isFetchingNextPage ? (
+            <Text className="py-2 text-center text-xs font-semibold text-muted-foreground">
+              Loading more items…
+            </Text>
+          ) : null}
           <ActionButton onPress={onAddItem}>Add item</ActionButton>
           {onComplete ? (
             <ActionButton onPress={onComplete} variant="outline">
@@ -240,14 +257,16 @@ export function CatalogItemsContent({
             </View>
           ) : null}
 
-          <FormField
-            autoCapitalize="words"
-            label="Find item"
-            leadingIcon="Search"
-            onChangeText={setQuery}
-            placeholder="Search name, type, or unit"
-            value={query}
-          />
+          {presentation === "tab" && showSearch ? (
+            <FormField
+              autoCapitalize="words"
+              label="Find item"
+              leadingIcon="Search"
+              onChangeText={setQuery}
+              placeholder="Search name, type, or unit"
+              value={query}
+            />
+          ) : null}
         </View>
       }
       ListHeaderComponentStyle={
@@ -258,7 +277,28 @@ export function CatalogItemsContent({
           <CatalogItemRow item={item} />
         </View>
       )}
+      onEndReached={() => {
+        if (
+          shouldFetchNextListPage({
+            hasNextPage: Boolean(itemsQuery.hasNextPage),
+            isFetchingNextPage: itemsQuery.isFetchingNextPage,
+          })
+        ) {
+          void itemsQuery.fetchNextPage()
+        }
+      }}
+      onEndReachedThreshold={0.35}
       scrollEventThrottle={onScroll ? 16 : undefined}
-    />
+      />
+      {presentation === "modal" && showSearch ? (
+        <BottomSearchFooter
+          accessibilityLabel="Search catalog items"
+          onChangeText={setQuery}
+          placeholder="Search name, type, or unit"
+          totalCount={totalCount}
+          value={query}
+        />
+      ) : null}
+    </View>
   )
 }

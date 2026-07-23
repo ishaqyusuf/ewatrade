@@ -2,6 +2,8 @@ import { useColors } from "@/hooks/use-color";
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 import {
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   type StyleProp,
   View,
   type ViewStyle,
@@ -14,6 +16,7 @@ type MobileScreenProps = {
   contentClassName?: string;
   contentContainerStyle?: StyleProp<ViewStyle>;
   keyboardBottomOffset?: number;
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   scroll?: boolean;
 };
 
@@ -22,6 +25,7 @@ export function MobileScreen({
   contentClassName,
   contentContainerStyle,
   keyboardBottomOffset = 88,
+  onScroll,
   scroll = true,
 }: MobileScreenProps) {
   const colors = useColors();
@@ -47,6 +51,8 @@ export function MobileScreen({
           disableScrollOnKeyboardHide
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
+          onScroll={onScroll}
+          scrollEventThrottle={onScroll ? 16 : undefined}
         >
           <View className={cn("min-h-full px-6 py-6", contentClassName)}>
             {children}
@@ -55,7 +61,10 @@ export function MobileScreen({
       ) : (
         <View className={cn("flex-1 px-6 py-6", contentClassName)}>
           <View
-            style={[{ flex: 1, paddingBottom: bottomPadding }, contentContainerStyle]}
+            style={[
+              { flex: 1, paddingBottom: bottomPadding },
+              contentContainerStyle,
+            ]}
           >
             {children}
           </View>

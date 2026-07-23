@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { CurrencySelector } from "@/components/mobile/currency-selector"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
@@ -12,6 +13,7 @@ import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
+import { shouldShowListSearch } from "@/lib/list-pagination"
 import { isLocalSessionToken } from "@/lib/session-store"
 import { switchMobileBusinessSession } from "@/lib/workspace-feature-availability"
 import { type RetailOpsBusiness, useBusinessStore } from "@/store/businessStore"
@@ -24,7 +26,7 @@ import { clearMobileDataCache, useTRPC } from "@/trpc/client"
 import type { OperatingCurrencyCode } from "@ewatrade/utils"
 import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useQuery } from "@tanstack/react-query"
-import { forwardRef, useMemo, useState } from "react"
+import { forwardRef, useEffect, useMemo, useState } from "react"
 import { View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
@@ -36,7 +38,7 @@ type BusinessSwitchContentProps = BusinessSwitchSheetProps & {
   presentation?: "screen" | "sheet"
 }
 
-const BUSINESS_PREVIEW_LIMIT = 8
+const BUSINESS_PAGE_SIZE = 10
 
 function BusinessRow({
   business,
@@ -87,6 +89,8 @@ export function BusinessSwitchContent({
   const subscriptions = useSubscriptionStore((state) => state.subscriptions)
   const [businessName, setBusinessName] = useState("")
   const [businessQuery, setBusinessQuery] = useState("")
+  const [visibleBusinessCount, setVisibleBusinessCount] =
+    useState(BUSINESS_PAGE_SIZE)
   const [category, setCategory] = useState("")
   const [country, setCountry] = useState("Nigeria")
   const [currency, setCurrency] = useState<OperatingCurrencyCode>("NGN")
@@ -135,9 +139,17 @@ export function BusinessSwitchContent({
     )
   }, [businessQuery, businesses])
   const visibleBusinesses = useMemo(
-    () => filteredBusinesses.slice(0, BUSINESS_PREVIEW_LIMIT),
-    [filteredBusinesses],
+    () => filteredBusinesses.slice(0, visibleBusinessCount),
+    [filteredBusinesses, visibleBusinessCount],
   )
+  const showBusinessSearch = shouldShowListSearch(businesses.length)
+  const loadMoreBusinesses = () => {
+    if (visibleBusinessCount >= filteredBusinesses.length) return
+    setVisibleBusinessCount((count) => count + BUSINESS_PAGE_SIZE)
+  }
+  useEffect(() => {
+    setVisibleBusinessCount(BUSINESS_PAGE_SIZE)
+  }, [businessQuery])
   const isAtBusinessLimit = businesses.length >= plan.limits.businesses
   const canCreate = !isAtBusinessLimit && !!businessName.trim()
 
@@ -206,15 +218,6 @@ export function BusinessSwitchContent({
         <Text className="text-base font-bold text-foreground">
           Your businesses
         </Text>
-        {businesses.length > BUSINESS_PREVIEW_LIMIT ? (
-          <FormField
-            label="Find business"
-            leadingIcon="Search"
-            onChangeText={setBusinessQuery}
-            placeholder="Search businesses"
-            value={businessQuery}
-          />
-        ) : null}
         {!isLocalSession && productionBusinessesQuery.isPending ? (
           <EmptyState
             icon="Loader2"
@@ -241,8 +244,7 @@ export function BusinessSwitchContent({
               ))}
               {filteredBusinesses.length > visibleBusinesses.length ? (
                 <Text className="text-xs font-semibold text-muted-foreground">
-                  Showing first {visibleBusinesses.length} of{" "}
-                  {filteredBusinesses.length} matching businesses.
+                  Scroll to load more businesses.
                 </Text>
               ) : null}
             </>
@@ -332,27 +334,78 @@ export function BusinessSwitchContent({
 
   if (presentation === "screen") {
     return (
-      <KeyboardAwareScrollView
-        className="flex-1"
-        bottomOffset={320}
-        contentContainerStyle={{ paddingBottom: 240 }}
-        disableScrollOnKeyboardHide
-        keyboardDismissMode="interactive"
-        keyboardShouldPersistTaps="handled"
-      >
-        {content}
-      </KeyboardAwareScrollView>
+      <View className="flex-1">
+        <KeyboardAwareScrollView
+          className="flex-1"
+          bottomOffset={160}
+          contentContainerStyle={{
+            paddingBottom:
+              showBusinessSearch ? 112 : 40,
+          }}
+          disableScrollOnKeyboardHide
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+          onScroll={({ nativeEvent }) => {
+            if (
+              nativeEvent.layoutMeasurement.height +
+                nativeEvent.contentOffset.y >=
+              nativeEvent.contentSize.height - 160
+            ) {
+              loadMoreBusinesses()
+            }
+          }}
+          scrollEventThrottle={16}
+        >
+          {content}
+        </KeyboardAwareScrollView>
+        {showBusinessSearch ? (
+          <BottomSearchFooter
+            accessibilityLabel="Find business"
+            label="Find business"
+            onChangeText={setBusinessQuery}
+            placeholder="Search businesses"
+            totalCount={businesses.length}
+            value={businessQuery}
+          />
+        ) : null}
+      </View>
     )
   }
 
   return (
-    <BottomSheetKeyboardAwareScrollView
-      bottomOffset={320}
-      contentContainerStyle={{ paddingBottom: 240 }}
-      keyboardShouldPersistTaps="handled"
-    >
-      {content}
-    </BottomSheetKeyboardAwareScrollView>
+    <View className="flex-1">
+      <BottomSheetKeyboardAwareScrollView
+        bottomOffset={160}
+        contentContainerStyle={{
+          paddingBottom:
+            showBusinessSearch ? 112 : 40,
+        }}
+        keyboardShouldPersistTaps="handled"
+        onScroll={({ nativeEvent }) => {
+          if (
+            nativeEvent.layoutMeasurement.height +
+              nativeEvent.contentOffset.y >=
+            nativeEvent.contentSize.height - 160
+          ) {
+            loadMoreBusinesses()
+          }
+        }}
+        scrollEventThrottle={16}
+      >
+        {content}
+      </BottomSheetKeyboardAwareScrollView>
+      {showBusinessSearch ? (
+        <BottomSearchFooter
+          accessibilityLabel="Find business"
+          includeSafeArea={false}
+          label="Find business"
+          onChangeText={setBusinessQuery}
+          placeholder="Search businesses"
+          totalCount={businesses.length}
+          value={businessQuery}
+        />
+      ) : null}
+    </View>
   )
 }
 

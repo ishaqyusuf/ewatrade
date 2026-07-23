@@ -1,10 +1,12 @@
 import { canOperatePos, normalizeRole } from "@ewatrade/auth/roles"
 import {
   CatalogError,
+  countCommercialOrderCustomers,
   createCommercialOrder,
   fulfillCommercialOrderProductLine,
   getCommercialOrder,
   listCommercialOrders,
+  listCommercialOrdersPage,
   recordCommercialOrderPayment,
   returnCommercialOrderProductLine,
 } from "@ewatrade/db/queries"
@@ -15,6 +17,7 @@ import {
   commercialOrderFulfillLineSchema,
   commercialOrderGetSchema,
   commercialOrderListSchema,
+  commercialOrderListPageSchema,
   commercialOrderPaymentSchema,
   commercialOrderReturnLineSchema,
 } from "../../schemas/orders"
@@ -71,6 +74,13 @@ function orderError(error: CatalogError) {
 }
 
 export const ordersRouter = createTRPCRouter({
+  customerCount: protectedProcedure.query(async ({ ctx }) => {
+    assertCanOperateOrders(ctx.tenantContext.membership.role)
+    return countCommercialOrderCustomers(ctx.db, {
+      tenantId: ctx.tenantContext.tenant.id,
+    })
+  }),
+
   create: protectedProcedure
     .input(commercialOrderCreateSchema)
     .mutation(async ({ ctx, input }) => {
@@ -138,6 +148,24 @@ export const ordersRouter = createTRPCRouter({
           )
         : undefined
       return listCommercialOrders(ctx.db, {
+        ...input,
+        storeId,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+    }),
+
+  listPage: protectedProcedure
+    .input(commercialOrderListPageSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanOperateOrders(ctx.tenantContext.membership.role)
+      const storeId = input.storeId
+        ? resolveStoreId(
+            ctx.tenantContext.stores,
+            ctx.tenantContext.activeStore,
+            input.storeId,
+          )
+        : undefined
+      return listCommercialOrdersPage(ctx.db, {
         ...input,
         storeId,
         tenantId: ctx.tenantContext.tenant.id,

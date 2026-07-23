@@ -48,8 +48,14 @@ export function SyncStatusContent({
             trpc.tenant.featureAvailability.queryFilter(),
           ),
           queryClient.invalidateQueries(trpc.catalog.listItems.queryFilter()),
+          queryClient.invalidateQueries(
+            trpc.catalog.listItemsPage.queryFilter(),
+          ),
           queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
+          queryClient.invalidateQueries(trpc.orders.listPage.queryFilter()),
+          queryClient.invalidateQueries(trpc.orders.customerCount.queryFilter()),
           queryClient.invalidateQueries(trpc.services.queue.queryFilter()),
+          queryClient.invalidateQueries(trpc.services.queuePage.queryFilter()),
         ])
       },
     }),

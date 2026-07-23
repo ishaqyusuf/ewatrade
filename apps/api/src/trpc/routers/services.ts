@@ -14,6 +14,7 @@ import {
   getServiceStoreSettings,
   listServiceAssignees,
   listServiceWorkQueue,
+  listServiceWorkQueuePage,
   publishServiceEvidence,
   recordServiceException,
   recordServiceHandoff,
@@ -48,6 +49,7 @@ import {
   serviceSettingsGetSchema,
   serviceSettingsUpdateSchema,
   serviceWorkQueueSchema,
+  serviceWorkQueuePageSchema,
 } from "../../schemas/services"
 import { createTRPCRouter, protectedProcedure } from "../init"
 import {
@@ -310,6 +312,16 @@ export const servicesRouter = createTRPCRouter({
     .query(({ ctx, input }) => {
       assertServiceOperator(ctx.tenantContext.membership.role)
       return listServiceWorkQueue(ctx.db, {
+        ...input,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+    }),
+
+  queuePage: protectedProcedure
+    .input(serviceWorkQueuePageSchema)
+    .query(({ ctx, input }) => {
+      assertServiceOperator(ctx.tenantContext.membership.role)
+      return listServiceWorkQueuePage(ctx.db, {
         ...input,
         tenantId: ctx.tenantContext.tenant.id,
       })

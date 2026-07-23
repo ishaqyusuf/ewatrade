@@ -78,6 +78,30 @@ export const commercialOrderListSchema = z
   })
   .strict()
 
+const commercialOrderStatusSchema = z.enum([
+  "DRAFT",
+  "PENDING",
+  "CONFIRMED",
+  "FULFILLING",
+  "READY_FOR_PICKUP",
+  "OUT_FOR_DELIVERY",
+  "COMPLETED",
+  "CANCELLED",
+  "REFUNDED",
+])
+
+export const commercialOrderListPageSchema = z
+  .object({
+    createdAfter: z.coerce.date().optional(),
+    cursor: z.string().trim().min(1).optional(),
+    limit: z.number().int().min(1).max(50).default(20),
+    query: z.string().trim().max(160).optional(),
+    queryMode: z.enum(["all", "customer"]).default("all"),
+    statuses: z.array(commercialOrderStatusSchema).max(9).optional(),
+    storeId: z.string().trim().min(1).optional(),
+  })
+  .strict()
+
 export const commercialOrderFulfillLineSchema = z
   .object({
     clientOperationId: z.string().trim().min(8).max(160),

@@ -1,212 +1,181 @@
-import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
-import { formatMinorMoney } from "@ewatrade/utils"
-import { useQuery } from "@tanstack/react-query"
-import { useMemo, useState } from "react"
-import { FlatList } from "react-native"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
+import {
+  CommerceFilterChip,
+  CommerceMetricTile,
+  CommerceOrderRow,
+  CommercePageHeader,
+  CommercePendingOrderRow,
+  type CommercialOrder,
+  commercialOrderHref,
+  commerceOrderItemCount,
+} from "@/components/mobile/commerce";
+import { EmptyState } from "@/components/mobile/empty-state";
+import { FormField } from "@/components/mobile/form-field";
+import { StatusBanner } from "@/components/mobile/status-banner";
+import { Icon } from "@/components/ui/icon";
+import { Pressable } from "@/components/ui/pressable";
+import { Text } from "@/components/ui/text";
+import { View } from "@/components/ui/view";
+import { useTRPC } from "@/trpc/client";
+import {
+  LIST_PAGE_SIZE,
+  shouldFetchNextListPage,
+  shouldShowListSearch,
+} from "@/lib/list-pagination";
+import { formatMinorMoney } from "@ewatrade/utils";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
+import { useDeferredValue, useMemo, useState } from "react";
+import { FlatList } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAdminDockScroll, useAdminTabs } from "./admin-tabs-context";
 
-import { useTRPC } from "@/trpc/client"
-import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
-import { View } from "@/components/ui/view"
-import { EmptyState } from "../empty-state"
-import { FormField } from "../form-field"
-import { StatusBadge } from "../status-badge"
-import { StatusBanner } from "../status-banner"
-import { useAdminDockScroll, useAdminTabs } from "./admin-tabs-context"
+type OrderFilter = "all" | "cancelled" | "completed" | "open";
+type DateFilter = "all" | "today" | "7_days" | "30_days";
 
-type CommercialOrder = RouterOutputs["orders"]["list"][number]
-type OrderFilter = "all" | "open" | "completed" | "cancelled"
-
-const OPEN_STATUSES = new Set([
+const OPEN_STATUSES = [
   "DRAFT",
   "PENDING",
   "CONFIRMED",
   "FULFILLING",
   "READY_FOR_PICKUP",
   "OUT_FOR_DELIVERY",
-])
+] as const;
 
-function matchesFilter(order: CommercialOrder, filter: OrderFilter) {
-  if (filter === "all") return true
-  if (filter === "open") return OPEN_STATUSES.has(order.status)
-  if (filter === "completed") return order.status === "COMPLETED"
-  return order.status === "CANCELLED" || order.status === "REFUNDED"
+function createdAfterForDateFilter(filter: DateFilter) {
+  if (filter === "all") return undefined;
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  if (filter === "7_days") start.setDate(start.getDate() - 6);
+  if (filter === "30_days") start.setDate(start.getDate() - 29);
+  return start;
 }
 
-function statusLabel(status: string) {
-  return status
-    .toLowerCase()
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ")
-}
-
-function OrderRow({ order }: { order: CommercialOrder }) {
-  const itemSummary = order.lines
-    .map(
-      (line) =>
-        `${line.quantity} × ${line.snapshot?.catalogItemName ?? "Item"}`,
-    )
-    .join(", ")
-  const tone =
-    order.status === "COMPLETED"
-      ? "success"
-      : order.status === "CANCELLED" || order.status === "REFUNDED"
-        ? "destructive"
-        : "primary"
-
-  return (
-    <View className="border-b border-border py-4">
-      <View className="flex-row items-start justify-between gap-4">
-        <View className="min-w-0 flex-1 gap-1">
-          <Text className="font-extrabold text-foreground">
-            {order.orderNumber}
-          </Text>
-          <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-            {order.customerName || order.customerPhone || "Walk-in customer"}
-          </Text>
-          <Text
-            className="text-xs leading-4 text-muted-foreground"
-            numberOfLines={2}
-          >
-            {itemSummary}
-          </Text>
-        </View>
-        <View className="items-end gap-2">
-          <Text className="font-extrabold text-foreground">
-            {formatMinorMoney(order.totalMinor, order.currencyCode)}
-          </Text>
-          <StatusBadge label={statusLabel(order.status)} tone={tone} />
-        </View>
-      </View>
-    </View>
-  )
-}
-
-function ProvisionalOrderRow({
-  order,
-}: {
-  order: {
-    clientCommandId: string
-    createdAtClient: Date
-    customerName?: string
-    customerPhone?: string
-    lineCount: number
+function statusesForOrderFilter(filter: OrderFilter) {
+  if (filter === "open") return [...OPEN_STATUSES];
+  if (filter === "completed") return ["COMPLETED" as const];
+  if (filter === "cancelled") {
+    return ["CANCELLED" as const, "REFUNDED" as const];
   }
-}) {
-  return (
-    <View className="border-b border-border py-4">
-      <View className="flex-row items-start justify-between gap-4">
-        <View className="min-w-0 flex-1 gap-1">
-          <Text className="font-extrabold text-foreground">Queued order</Text>
-          <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-            {order.customerName || order.customerPhone || "Walk-in customer"}
-          </Text>
-          <Text className="text-xs text-muted-foreground">
-            {order.lineCount} {order.lineCount === 1 ? "item" : "items"} ·{" "}
-            {order.createdAtClient.toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </Text>
-        </View>
-        <StatusBadge label="Pending sync" tone="warning" />
-      </View>
-    </View>
-  )
+  return undefined;
 }
 
-function FilterChip({
-  active,
-  label,
-  onPress,
-}: {
-  active: boolean
-  label: string
-  onPress: () => void
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-      className={
-        active
-          ? "min-h-10 justify-center rounded-full bg-foreground px-4"
-          : "min-h-10 justify-center rounded-full border border-border bg-card px-4"
-      }
-      haptic
-      onPress={onPress}
-    >
-      <Text
-        className={
-          active
-            ? "text-sm font-bold text-background"
-            : "text-sm font-bold text-foreground"
-        }
-      >
-        {label}
-      </Text>
-    </Pressable>
-  )
+function dateFilterLabel(filter: DateFilter) {
+  if (filter === "today") return "Today";
+  if (filter === "7_days") return "7 days";
+  if (filter === "30_days") return "30 days";
+  return "All time";
+}
+
+function formatQuantity(value: number) {
+  return value.toLocaleString(undefined, { maximumFractionDigits: 6 });
+}
+
+function currencyMetric(
+  orders: CommercialOrder[],
+  getValue: (orders: CommercialOrder[]) => number,
+) {
+  if (orders.length === 0) return "—";
+  const currencies = new Set(orders.map((order) => order.currencyCode));
+  if (currencies.size !== 1) return "Mixed currencies";
+  return formatMinorMoney(getValue(orders), orders[0]?.currencyCode ?? "NGN");
 }
 
 export function AdminOrdersScreen() {
-  const insets = useSafeAreaInsets()
-  const trpc = useTRPC()
-  const { isOffline, openCreate, provisionalOrders } = useAdminTabs()
-  const handleDockScroll = useAdminDockScroll()
-  const [filter, setFilter] = useState<OrderFilter>("all")
-  const [query, setQuery] = useState("")
-  const orders = useQuery(
-    trpc.orders.list.queryOptions(
-      { limit: 100 },
-      { enabled: !isOffline, retry: false },
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const trpc = useTRPC();
+  const { isOffline, openCreate, provisionalOrders } = useAdminTabs();
+  const handleDockScroll = useAdminDockScroll();
+  const [dateFilter, setDateFilter] = useState<DateFilter>("30_days");
+  const [filter, setFilter] = useState<OrderFilter>("all");
+  const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
+  const createdAfter = useMemo(
+    () => createdAfterForDateFilter(dateFilter),
+    [dateFilter],
+  );
+  const statuses = useMemo(() => statusesForOrderFilter(filter), [filter]);
+  const orders = useInfiniteQuery(
+    trpc.orders.listPage.infiniteQueryOptions(
+      {
+        createdAfter,
+        limit: LIST_PAGE_SIZE,
+        query: isOffline ? undefined : deferredQuery || undefined,
+        statuses,
+      },
+      {
+        enabled: !isOffline,
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        retry: false,
+      },
     ),
-  )
+  );
+  const loadedOrders = useMemo(
+    () => orders.data?.pages.flatMap((page) => page.items) ?? [],
+    [orders.data?.pages],
+  );
   const visibleOrders = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
-    return (orders.data ?? []).filter((order) => {
-      if (!matchesFilter(order, filter)) return false
-      if (!normalizedQuery) return true
-      return [
-        order.orderNumber,
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!isOffline || !normalizedQuery) return loadedOrders;
+    return loadedOrders.filter((order) =>
+      [
+        order.clientOrderId,
+        order.customerEmail,
         order.customerName,
         order.customerPhone,
-        order.customerEmail,
-        ...order.lines.map((line) => line.snapshot?.catalogItemName),
+        ...order.lines.flatMap((line) => [
+          line.snapshot?.catalogItemName,
+          line.snapshot?.offeringName,
+          line.snapshot?.variantName,
+        ]),
       ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
-        .includes(normalizedQuery)
-    })
-  }, [filter, orders.data, query])
+        .includes(normalizedQuery),
+    );
+  }, [isOffline, loadedOrders, query]);
   const visibleProvisionalOrders = useMemo(() => {
-    if (filter === "completed" || filter === "cancelled") return []
-    const normalizedQuery = query.trim().toLowerCase()
-    if (!normalizedQuery) return provisionalOrders
+    if (filter === "completed" || filter === "cancelled") return [];
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return provisionalOrders;
     return provisionalOrders.filter((order) =>
       `${order.customerName ?? ""} ${order.customerPhone ?? ""} queued pending sync`
         .toLowerCase()
         .includes(normalizedQuery),
-    )
-  }, [filter, provisionalOrders, query])
+    );
+  }, [filter, provisionalOrders, query]);
+  const itemCount = visibleOrders.reduce(
+    (total, order) => total + commerceOrderItemCount(order),
+    0,
+  );
+  const averageValue = currencyMetric(visibleOrders, (metricOrders) =>
+    Math.round(
+      metricOrders.reduce((total, order) => total + order.totalMinor, 0) /
+        metricOrders.length,
+    ),
+  );
+  const totalValue = currencyMetric(visibleOrders, (metricOrders) =>
+    metricOrders.reduce((total, order) => total + order.totalMinor, 0),
+  );
+  const totalCount = orders.data?.pages[0]?.totalCount ?? 0;
+  const showSearch = shouldShowListSearch(
+    Math.max(totalCount, loadedOrders.length) + provisionalOrders.length,
+  );
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-background" testID="admin-orders-screen">
       <FlatList
         contentContainerStyle={{
           flexGrow: 1,
           paddingBottom: Math.max(insets.bottom + 116, 152),
           paddingHorizontal: 24,
-          paddingTop: insets.top + 24,
+          paddingTop: insets.top + 20,
         }}
         data={visibleOrders}
         keyExtractor={(order) => order.id}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
-        onScroll={handleDockScroll}
         ListEmptyComponent={
           visibleProvisionalOrders.length === 0 ? (
             <EmptyState
@@ -217,14 +186,14 @@ export function AdminOrdersScreen() {
               message={
                 orders.isPending && !isOffline
                   ? "Loading Commercial Orders."
-                  : query || filter !== "all"
-                    ? "Try another search or status filter."
+                  : query || filter !== "all" || dateFilter !== "all"
+                    ? "Try another date, search, or status filter."
                     : "New Product and Service Orders will appear here."
               }
               title={
                 orders.isPending && !isOffline
                   ? "Loading orders"
-                  : query || filter !== "all"
+                  : query || filter !== "all" || dateFilter !== "all"
                     ? "No matching orders"
                     : "No orders yet"
               }
@@ -233,19 +202,34 @@ export function AdminOrdersScreen() {
         }
         ListHeaderComponent={
           <View className="gap-5 pb-4">
-            <View className="gap-1">
-              <Text className="text-3xl font-extrabold text-foreground">
-                Orders
-              </Text>
-              <Text className="text-sm text-muted-foreground">
-                Products and Services ordered from this workspace.
-              </Text>
-            </View>
+            <CommercePageHeader
+              action={
+                <Pressable
+                  accessibilityLabel="Open customers"
+                  accessibilityRole="button"
+                  className="size-11 items-center justify-center rounded-full bg-card active:bg-accent"
+                  haptic
+                  onPress={() => router.push("/customer-book-modal")}
+                >
+                  <Icon className="size-base text-foreground" name="Users" />
+                </Pressable>
+              }
+              subtitle="Review payment and fulfilment across every order."
+              title="Orders"
+            />
             {provisionalOrders.length > 0 ? (
               <StatusBanner
                 icon="Wind"
                 message={`${provisionalOrders.length} queued ${provisionalOrders.length === 1 ? "Order is" : "Orders are"} shown below and will reconcile after sync.`}
                 title="Orders pending sync"
+                tone="warning"
+              />
+            ) : null}
+            {isOffline ? (
+              <StatusBanner
+                icon="Wind"
+                message="Showing cached Orders and device work. Payment and fulfilment actions require a connection."
+                title="Offline mode"
                 tone="warning"
               />
             ) : null}
@@ -258,18 +242,54 @@ export function AdminOrdersScreen() {
                 tone="destructive"
               />
             ) : null}
-            <FormField
-              autoCapitalize="none"
-              label="Find order"
-              leadingIcon="Search"
-              onChangeText={setQuery}
-              placeholder="Search order, customer, or item"
-              value={query}
-            />
+            {showSearch ? (
+              <FormField
+                autoCapitalize="none"
+                label="Search"
+                leadingIcon="Search"
+                onChangeText={setQuery}
+                placeholder="Search order, customer, or item"
+                value={query}
+              />
+            ) : null}
+            <View className="flex-row flex-wrap gap-2">
+              {(["today", "7_days", "30_days", "all"] as const).map((value) => (
+                <CommerceFilterChip
+                  active={dateFilter === value}
+                  key={value}
+                  label={dateFilterLabel(value)}
+                  onPress={() => setDateFilter(value)}
+                />
+              ))}
+            </View>
+            <View className="flex-row gap-3">
+              <CommerceMetricTile
+                icon="ReceiptText"
+                label="Loaded orders"
+                value={String(visibleOrders.length)}
+              />
+              <CommerceMetricTile
+                icon="ListChecks"
+                label="Loaded items"
+                value={formatQuantity(itemCount)}
+              />
+            </View>
+            <View className="flex-row gap-3">
+              <CommerceMetricTile
+                icon="Calculator"
+                label="Average value"
+                value={averageValue}
+              />
+              <CommerceMetricTile
+                icon="Wallet"
+                label="Loaded value"
+                value={totalValue}
+              />
+            </View>
             <View className="flex-row flex-wrap gap-2">
               {(["all", "open", "completed", "cancelled"] as const).map(
                 (value) => (
-                  <FilterChip
+                  <CommerceFilterChip
                     active={filter === value}
                     key={value}
                     label={value.charAt(0).toUpperCase() + value.slice(1)}
@@ -279,17 +299,41 @@ export function AdminOrdersScreen() {
               )}
             </View>
             {visibleProvisionalOrders.map((order) => (
-              <ProvisionalOrderRow
+              <CommercePendingOrderRow
                 key={order.clientCommandId}
                 order={order}
               />
             ))}
           </View>
         }
-        renderItem={({ item }) => <OrderRow order={item} />}
+        onScroll={handleDockScroll}
+        onEndReached={() => {
+          if (
+            shouldFetchNextListPage({
+              hasNextPage: Boolean(orders.hasNextPage),
+              isFetchingNextPage: orders.isFetchingNextPage,
+            })
+          ) {
+            void orders.fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.35}
+        ListFooterComponent={
+          orders.isFetchingNextPage ? (
+            <Text className="py-5 text-center text-xs font-semibold text-muted-foreground">
+              Loading more orders…
+            </Text>
+          ) : null
+        }
+        renderItem={({ item }) => (
+          <CommerceOrderRow
+            onPress={() => router.push(commercialOrderHref(item.id))}
+            order={item}
+          />
+        )}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       />
     </View>
-  )
+  );
 }

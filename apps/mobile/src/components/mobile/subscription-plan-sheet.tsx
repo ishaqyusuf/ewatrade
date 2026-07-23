@@ -7,7 +7,9 @@ import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Modal } from "@/components/ui/modal"
+import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { cn } from "@/lib/utils"
 import { useBusinessStore } from "@/store/businessStore"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import {
@@ -130,11 +132,14 @@ function PlanLimitRow({
   value: string
 }) {
   return (
-    <SecondaryOperationalRow
-      detail="Included in this plan"
-      title={label}
-      trailing={<StatusBadge label={value} tone="muted" />}
-    />
+    <View className="flex-row items-center justify-between gap-4 border-t border-border py-3">
+      <Text className="min-w-0 flex-1 text-sm font-semibold text-foreground">
+        {label}
+      </Text>
+      <Text className="text-right text-sm font-bold text-muted-foreground">
+        {value}
+      </Text>
+    </View>
   )
 }
 
@@ -152,22 +157,38 @@ function PlanCard({
   plan: RetailOpsPlan
 }) {
   return (
-    <SecondaryOperationalRow
+    <Pressable
+      accessibilityLabel={`${plan.name} plan, ${plan.priceLabel}`}
+      accessibilityRole="button"
+      accessibilityState={{ disabled, selected: current }}
+      className={cn(
+        "will-change-animation gap-4 border-t border-border py-5 active:bg-accent",
+        current && "bg-primary/5",
+        disabled && !current && "opacity-60",
+      )}
       disabled={disabled}
-      detail={plan.description}
-      icon="ShieldCheck"
-      metadata={plan.supportLabel}
+      haptic
       onPress={onSelect}
-      selected={current}
-      title={plan.name}
-      trailing={
+      transition
+    >
+      <View className="flex-row items-start justify-between gap-3">
+        <View className="min-w-0 flex-1 gap-1">
+          <Text className="text-lg font-extrabold text-foreground">
+            {plan.name}
+          </Text>
+          <Text className="text-sm leading-5 text-muted-foreground">
+            {plan.description}
+          </Text>
+        </View>
         <StatusBadge
           label={current ? "Current" : plan.priceLabel}
           tone={current ? "primary" : "muted"}
         />
-      }
-    >
-      <View className="gap-2">
+      </View>
+      <Text className="text-xs font-semibold text-muted-foreground">
+        {plan.supportLabel}
+      </Text>
+      <View>
         <PlanLimitRow
           label="Businesses"
           value={`Up to ${plan.limits.businesses}`}
@@ -179,7 +200,7 @@ function PlanCard({
         <PlanLimitRow label="Staff" value={`Up to ${plan.limits.staff}`} />
       </View>
       <Text className="text-xs font-extrabold text-primary">{actionLabel}</Text>
-    </SecondaryOperationalRow>
+    </Pressable>
   )
 }
 
@@ -329,7 +350,7 @@ export function SubscriptionPlanContent({
   const content = (
     <View className={contentClassName}>
       <SecondarySheetHeader
-        description="Plan limits are business-scoped and upgrade requests stay behind the billing provider boundary."
+        description="See what your plan includes and compare options for your business."
         icon="CreditCard"
         title="Business plan"
       />
@@ -441,10 +462,11 @@ export function SubscriptionPlanContent({
       <KeyboardAwareScrollView
         className="flex-1"
         bottomOffset={140}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
         disableScrollOnKeyboardHide
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
+        testID="subscription-scroll"
       >
         {content}
       </KeyboardAwareScrollView>

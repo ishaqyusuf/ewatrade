@@ -129,6 +129,9 @@ export function MobileBottomTabItem({
             name={tab.icon}
           />
           <RNText
+            adjustsFontSizeToFit
+            allowFontScaling={false}
+            minimumFontScale={0.9}
             numberOfLines={1}
             style={{
               color: isActive
@@ -137,6 +140,8 @@ export function MobileBottomTabItem({
               fontSize: 10,
               fontWeight: "600",
               lineHeight: 12,
+              textAlign: "center",
+              width: "100%",
             }}
           >
             {tab.label}

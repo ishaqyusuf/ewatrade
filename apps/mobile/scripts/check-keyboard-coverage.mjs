@@ -52,7 +52,7 @@ const contracts = [
       "KeyboardInlineComposer",
       "BottomSheetKeyboardAwareScrollView",
       'snapPoints={["88%"]}',
-      "Unit</Text>",
+      'addLabel="Add unit"',
       "Add the units customers can buy this product in",
       "No additional selling units yet.",
       "openUnitEditor(unit)",
@@ -62,8 +62,8 @@ const contracts = [
       "Save unit",
       "DEFAULT_UNIT_TRANSACTION_SCALE",
       "draft.unitPrices[unit.id]",
-      "fixedPriceMinor: draft.unitPrices[unit.id]?.trim()",
-      "Enter a quantity for",
+      'unitOverridePrice: draft.unitPrices[unit.id] ?? ""',
+      "Enter a valid quantity for",
       'type VariantComposerMode = "variant-type" | "variant-value"',
       "KNOWN_VARIANT_TYPES",
       "VARIANT_VALUE_SUGGESTIONS_BY_LABEL",
@@ -90,7 +90,7 @@ const contracts = [
       'keyboardDismissMode="interactive"',
       'keyboardShouldPersistTaps="handled"',
       'label="Qty"',
-      'label="Price"',
+      'label={editorUnit ? `${editorUnit.name} price` : "Price"}',
       'label="Description"',
       'label="Image link"',
       'label="SKU"',
@@ -101,7 +101,8 @@ const contracts = [
       'accessibilityLabel="Save option configuration"',
       'name="Check"',
       'name="more"',
-      '? "Disable" : "Enable"',
+      '"Disable entire option combination"',
+      '"Enable entire option combination"',
     ],
     reason:
       "the list-only option editor must keep its basic and full-screen fields reachable above the keyboard",
@@ -110,27 +111,62 @@ const contracts = [
     file: "components/mobile/create-sale-sheet.tsx",
     markers: [
       "KeyboardAwareScrollView",
+      "BottomSearchFooter",
       'keyboardDismissMode="interactive"',
       'keyboardShouldPersistTaps="handled"',
       'keyboardType="decimal-pad"',
-      'keyboardType="phone-pad"',
+      "focusedQuantityId",
+      'searchVisible={showProductSearch && focusedQuantityId === null}',
     ],
-    reason: "mixed-order quantity and customer entry must remain keyboard-safe",
+    reason:
+      "mixed-order quantity, payment, and bottom-search entry must remain keyboard-safe",
+  },
+  {
+    file: "components/mobile/create-sale-customer-sheet.tsx",
+    markers: [
+      "BottomSheetKeyboardAwareScrollView",
+      'keyboardShouldPersistTaps="handled"',
+      'keyboardType="phone-pad"',
+      'keyboardType="email-address"',
+    ],
+    reason:
+      "quick customer creation must keep phone and email fields reachable in the bottom sheet",
   },
   {
     file: "components/mobile/catalog-setup-helper-picker.tsx",
     markers: [
-      "KeyboardStickyView",
-      'contentContainerClassName="pb-32"',
+      "NativeModal",
+      'contentContainerClassName={showSearch ? "pb-32" : "pb-8"}',
       'keyboardDismissMode="interactive"',
       'keyboardShouldPersistTaps="handled"',
-      "offset={{ closed: 0, opened: 0 }}",
+      "BottomSearchFooter",
       'accessibilityLabel="Search templates"',
       'label="Search templates"',
-      'variant="auth"',
+      'label="Search templates"',
     ],
     reason:
       "the quick-setup bottom search must stay above the keyboard without covering picker rows",
+  },
+  {
+    file: "components/mobile/bottom-search-footer.tsx",
+    markers: [
+      "KeyboardStickyView",
+      "useSafeAreaInsets",
+      "Math.max(insets.bottom, 8)",
+      'testID="bottom-search-footer"',
+      'variant="search"',
+    ],
+    reason:
+      "all no-tab searches must share one compact keyboard-safe bottom footer",
+  },
+  {
+    file: "components/mobile/workflow-modal-screen.tsx",
+    markers: [
+      'contentClassName="px-0 pt-6 pb-0"',
+      "contentContainerStyle={{ paddingBottom: 0 }}",
+    ],
+    reason:
+      "full-screen workflows must not reserve a second bottom gutter beneath their footer",
   },
   {
     file: "components/mobile/service-jobs-sheet.tsx",
@@ -177,6 +213,14 @@ const forbiddenContracts = [
     markers: ["Quantity decimal places", "[0, 1, 2, 3, 4, 5, 6].map((scale)"],
     reason:
       "new unit setup should use the hidden two-decimal default instead of exposing precision controls",
+  },
+  {
+    file: "components/mobile/simple-catalog-item-screen.tsx",
+    markers: [
+      'accessibilityLabel="Change item type"',
+      'Alert.alert(\n      "Replace current setup?"',
+    ],
+    reason: "Product and Service forms must not repeat their type as a badge",
   },
 ]
 

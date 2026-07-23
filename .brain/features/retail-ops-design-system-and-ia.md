@@ -18,6 +18,43 @@ Implementation is now moving through a reference-led approval flow. The Expo app
 
 The first reference implementation has been promoted into a functional design app path: `Design 01`, available at `/design-system/design-01`. Its reference hub is `/design-system/design-01/reference`, its source image route is `/design-system/design-01/image`, and starter feature routes now live beside it under `/design-system/design-01/orders`, `/design-system/design-01/stock`, `/design-system/design-01/messages`, and `/design-system/design-01/profile`. The approved admin Menu reference is registered in the same design family at `/design-system/design-01/more`, with its full source at `/design-system/design-01/more-image` and tracked image at `apps/mobile/assets/images/design-system/reference-admin-more.png`. Only the Design 01 home screen should reveal the bottom tab dock; starter child routes use the same shell and floating actions without bottom tabs unless the project owner explicitly asks for tabs on a specific child route. The old `/design-system/references/home-shell` and `/design-system/references/home-shell/image` paths are compatibility redirects only. Each implemented reference/design screen must carry two floating actions: a theme toggle and a source-image/design toggle. The source-image toggle must open a full-screen route, not a modal.
 
+The Design 01 commerce family now includes functional static previews for
+Orders, Customers, Customer overview, and Order overview. Orders and Customers
+use searchable, filterable flat lists; customer and order rows navigate by
+route id into reusable detail screens; Order overview supports local-only
+payment and fulfilment state demonstrations. The five owner-provided commerce
+boards are tracked under the repository-root `.design/` folder and registered
+in the Design 01 reference hub through one reusable source-image route. Metro
+watches `.design/` directly through the `@design/*` alias, avoiding a second
+asset copy. Landscape source boards use a horizontally pannable review canvas
+that hides floating review controls while panned and returns to the relevant
+Orders or Customers implementation. These screens remain internal sample-data
+approval surfaces and do not replace production Orders, Customer Book, tRPC,
+or database contracts.
+
+The approved commerce direction is now also implemented on the production
+admin Orders tab, Customer Book, Customer overview, and Order overview. These
+surfaces use reusable commerce primitives backed by `orders.list` and
+`orders.get`, merge pending offline commercial-order commands without
+presenting them as synced records, and keep totals separated by currency.
+Customer profiles are derived only from captured order contact facts until a
+dedicated Customer entity exists; address, category, loyalty, and other
+unsupported fields must not be inferred. The protected `/order/[orderId]`
+route exposes real payment recording and eligible Product-line fulfilment
+mutations, while Service fulfilment remains owned by Service jobs.
+
+Production mobile record directories use one list-density rule: Orders,
+Catalog Products/Services, Customer Book, Create Sale pickers, Service Jobs,
+and business selection load bounded cursor pages as the user nears the end.
+Their bottom search is omitted for 10 or fewer total records and appears only
+when the authoritative or cached total is greater than 10. Search stays at the
+bottom on secondary screens; root screens that already own the floating tab
+dock keep search in content so the two footers never compete. Offline mode
+filters the cached base page locally instead of changing to an uncached query
+key. Small operational previews, report sections, and plan-capped Staff lists
+remain deliberately bounded; Staff no longer applies an artificial six-row
+preview cap.
+
 Reference screens that use a colored top hero should use an immersive reference shell: the hero color must blend into the Android status bar at rest, content should remain padded below unsafe status-bar content, and the status bar should switch to the active theme card surface as soon as the user starts scrolling down, with dark icons in light mode and light icons in dark mode. Android edge-to-edge status bars need an explicit opaque backing view behind the status icons so scrolled content cannot bleed under the time/battery area. Bottom navigation previews should use the shared `MobileBottomTabs` primitive as floating safe-area tab docks, not scroll-content previews, with minimum 44pt tab targets, a clear active tab pill, compact spacing below the dock, optional haptics, optional labels or active-only labels, horizontal/vertical label stacking, `href` navigation, `disabled` handling, component-level `onTabPress`, safe-area and hide-on-scroll controls, and per-tab `render({ active })` support for raised center actions such as an Add plus-FAB that sits above the dock top edge. Five-tab reference docks must keep each tab in an equal fixed-width lane and center the tab content inside that lane so active-only labels expand the active pill without shifting neighboring icon positions; three-tab docks use equal lanes with first/start, middle/center, and last/end alignment. Floating footer content, including tab docks and FAB stacks, must hide together on scroll unless an explicit code comment documents a user-approved exception. FAB stacks should use standard footer stacking: normal bottom placement without a tab dock, and a compact lift just above the tab dock when one is present. Reference-specific tab geometry and end-of-screen approval/status text must still use semantic theme surfaces and foregrounds so light and dark mode both have a proper background and readable contrast. Do not use NativeWind slash-opacity classes such as `border-success/30` or `bg-success/10` in reference UI; use solid semantic tokens or explicit computed colors verified on the Android emulator.
 
 NativeWind mobile primitives in this design-system flow should follow the proven `gnd` and `al-ghurobaa` mobile shape: `Text`, `View`, and `Pressable` forward `className` to the native primitive and do not inject inline color styles that can override Tailwind utilities. Semantic surfaces such as service category tiles should use solid tokens (`bg-muted`, `bg-card`, `text-foreground`) on the actual visual surface. When a tile is pressable, let `Pressable` own touch, haptics, and navigation while an inner `View` owns the background token.
@@ -29,6 +66,7 @@ The active design-system code is organized as a thin-route, feature-folder struc
 In development/preview app variants, the login screen exposes an icon-only shortcut to `/design-system` so the project owner can open the approval surface directly during emulator review. This shortcut must remain hidden outside internal dev/preview modes.
 
 Review and QA notes are recorded under `.scratch/wayfinder-mobile-design-system-playground/reviews/`:
+
 - Android emulator validation: `.scratch/wayfinder-mobile-design-system-playground/reviews/android-emulator-validation.md`
 - Design/reference sources: `.scratch/wayfinder-mobile-design-system-playground/reviews/design-reference-sources.md`
 - Gemini CLI review blocker: `.scratch/wayfinder-mobile-design-system-playground/reviews/gemini-review.md`
@@ -58,10 +96,18 @@ Implementation source: `.scratch/mobile-navigation-home-system-implementation/is
 The mobile Retail Ops dashboard now uses role-specific route surfaces instead of showing every role the same owner dashboard. `/admin-home` and `/sales-rep-home` render the shared Retail Ops dashboard surface in role-specific modes, `/dashboard` is a compatibility redirect to the right role surface, Expo Router protects the role routes, and long workflow routes are guarded from the wrong roles.
 
 Admin/owner home rules:
+
 - Bottom navigation is `Home`, `Orders`, center `+`, stable `catalog`, and `More`. The stable catalog route displays `Products` for Product-only workspaces, `Services` for Service-only workspaces, and `Catalog` for mixed or empty workspaces.
 - Owner, Admin, and Manager routes live in one protected Expo Router tab group. The app shell uses the shared `MobileBottomTabs` primitive in the Design 01/reference tab style with a raised non-route center `+`.
 - The floating dock is present on all four root tabs. It hides on downward scroll and returns on upward scroll for Home, Orders, and Catalog; More keeps it fixed to preserve the approved Menu reference. The dock is absent from Create and secondary full-screen workflow routes, and root content owns the corresponding safe bottom inset.
-- Admin Home uses a Design 01-style primary hero with business selection, workspace search, daily snapshot, reports CTA, service categories, and current-operation summaries. Detailed staff, stock, customer, share-link, report, and subscription lists should stay behind their explicit navigation/actions instead of filling the first screen.
+- Admin Home uses a compact reference-led operations composition: greeting,
+  business identity, sync/profile actions, two soft overview metrics, one
+  primary revenue panel, four flat shortcut rows, and a bounded Recent Orders
+  preview. The visual structure may follow an approved commerce reference, but
+  every label and value must come from real EwaTrade capabilities; unsupported
+  profit or trend percentages must never be fabricated. Detailed staff, stock,
+  customer, share-link, report, and subscription lists stay behind their
+  explicit navigation/actions instead of filling the first screen.
 - The center `+` always opens a compact detached floating Create sheet for owner/admin users instead of bypassing the chooser based on catalog state. The headerless, flat, divider-based sheet uses one consistent plus icon and exposes separate `Product` and `Service` actions that preselect the generic catalog item kind, `Customer`, `Order`, contextual `Stock Entry` when Products exist, and `Staff`. `Order` remains visible but disabled until an active fixed-price Product or Service offering is available at a store, with guidance to create the first Product/Service. Sales reps retain the fastest direct `New order` center action.
 - `More` renders the reference-led `Menu` screen: sync bell and attention dot, user initials, business switcher card, then flat 64pt-style rows for Inventory, Analytics, Team, Customers, conditional Service work, permission-gated Plan & billing, App theme, App lock, Sync & offline, App updates, and Sign out. Menu rows reuse the Create sheet's muted circular icon, strong title, row spacing, and press feedback while keeping dividers inset after the icon column. App theme opens a compact persisted System/Light/Dark radio sheet and applies changes immediately. The saved override must hydrate before the splash screen closes, and an app-owned observable runtime—not a native appearance event—owns explicit Light/Dark resolution across cold starts and OTA/JS reloads; System alone follows device appearance changes. Rows without a production capability are not invented.
 - Settings includes App lock, which opens a full-screen post-login PIN setup/manage flow for device-local protection after normal account login.
@@ -70,11 +116,13 @@ Admin/owner home rules:
 - The compact floating theme FAB is only for development UI testing variants; preview and production builds omit it, and production theme access is through More.
 
 Sales-rep home rules:
+
 - Sales reps get a separate home composition focused on session status, quick sale, assigned stock, customer lookup, recent sales, sync status, and closeout queue.
 - Admin-only tools such as Sales Reps management, business settings, reports, broad stock movement controls, product links, and subscription cards stay out of sales-rep navigation.
 - Sales reps keep the fastest center action for creating a sale.
 
 Form and modal rules:
+
 - Canonical mobile inputs flow through `FormField`, which reuses the stable `Input` from `@/components/ui/input-2`.
 - Service-order setup and intake should reuse the canonical `FormField`, `ActionButton`, `QuantityStepper`, `SecondaryOperationalRow`, `StatusBanner`, and keyboard-safe full-screen modal primitives rather than introducing local input or button treatments.
 - App-lock PIN screens follow the provided dark wallet-style reference: compact top title, optional close control in setup/manage, segmented 6-digit choice treatment, circular PIN cells, sparse numeric keypad, fingerprint action in the bottom-left keypad slot when available, and delete in the bottom-right slot.
@@ -91,6 +139,7 @@ Form and modal rules:
 Owns the business workspace, inventory setup, staff invites, product links, subscription plan, reports, and closeout review.
 
 Admin surfaces must show:
+
 - business switcher
 - sales and payment totals
 - active staff and rep sessions
@@ -111,6 +160,7 @@ Manager surfaces should reuse admin dashboards but hide subscription ownership a
 Records sales and manages only the work needed for the current day.
 
 Rep surfaces must show:
+
 - clock-in and opening inventory confirmation
 - assigned or available inventory
 - create-sale action
@@ -203,6 +253,7 @@ This web surface must stay small and separate from future full storefront browsi
 - Optional first stock confirmation
 
 Primary states:
+
 - empty account
 - OTP sent
 - invalid OTP
@@ -229,6 +280,7 @@ Primary states:
 - Plan/subscription card
 
 Primary states:
+
 - no business
 - no inventory
 - offline
@@ -252,6 +304,7 @@ Primary states:
 - Offline sync queue
 
 Primary states:
+
 - not clocked in
 - opening inventory incomplete
 - insufficient stock
@@ -275,6 +328,7 @@ Primary states:
 - Stock movement ledger
 
 Primary states:
+
 - primary unit only
 - variants available
 - conversion available
@@ -294,6 +348,7 @@ Primary states:
 - Rep inventory responsibility
 
 Primary states:
+
 - invite pending
 - active
 - suspended
@@ -312,6 +367,7 @@ Primary states:
 - Closeout history
 
 Primary states:
+
 - no sales to close
 - open sales
 - pending review
@@ -336,6 +392,7 @@ Primary states:
 - Sync exceptions
 
 Primary filters:
+
 - business/store
 - date range
 - rep
@@ -355,6 +412,7 @@ Primary filters:
 - Store billing handoff
 
 Primary states:
+
 - trial/free
 - active paid plan
 - grace period
@@ -542,6 +600,17 @@ Owner and attendant dashboard surfaces should share the same shell and operation
 - Dashboard status chips should use `StatusBadge` for sync, payment, staff, customer, product-link, stock, and movement states.
 - Dashboard metrics, quick actions, summary panels, stat tiles, and inline statuses should use reusable dashboard-kit primitives with flat divider-based rows and semantic primary/success/warn/destructive tokens rather than local card-heavy widgets.
 - Dashboard preview records, including recent sales, staff, product links, customers, and stock movements, should use `DashboardRecordRow` so dense activity lists share one flat row language instead of local card wrappers.
+- The Home overview uses shared `DashboardHomeHeader`,
+  `DashboardOverviewMetric`, `DashboardRevenueCard`, `DashboardActionRow`, and
+  `DashboardRecentOrderRow` primitives. Product businesses show inventory
+  balance context, Service businesses show active work, and empty businesses
+  retain the same stable layout with truthful zero/empty states.
+- Recent revenue is explicitly scoped to the bounded order response shown by
+  the dashboard. Do not relabel a bounded sum as all-time revenue, profit, or a
+  period-over-period trend without a matching server aggregate.
+- Recent Orders remains visible as a stable section even before the first
+  order, using an actionable shared empty state instead of disappearing with
+  feature availability.
 - Empty dashboard sections should use `EmptyState` rather than hand-built dashed panels.
 - Owner-only subscription, staff, closeout, reports, and inventory management actions remain hidden from attendants.
 - Attendant views prioritize sale creation, current session, recent sales, customers, assigned/available stock, and sync state.
@@ -569,9 +638,23 @@ The create-sale workflow is the core mobile POS path and should stay optimized f
   stock` reason and cannot add a quantity or enter an order payload.
 - Item rows, payment choices, customer options, and total preview use reusable sale-flow primitives for selectable rows, segmented choices, and ticket-like total summaries instead of local card-heavy widgets.
 - The visual rhythm should stay flat and fast: divider-based sellable rows, rounded selected indicators, semantic stock/payment/customer status, and a prominent total before payment/customer confirmation.
+- Bottom searches use the GND-style inset muted field without a hard footer
+  divider. During quantity entry, Create Sale hides the Product/Service search
+  while keeping only the total and Proceed action sticky above the keyboard;
+  Customer selection and Catalog quick setup reuse the same bottom-search
+  treatment.
+- Full-screen workflows without the admin dock use one shared compact,
+  safe-area-aware bottom search. Catalog and Customer Book modals, Service
+  Jobs, business switching, and business-category selection keep search out of
+  scrolling content; root Orders and Catalog tabs retain top search because
+  their persistent bottom dock already occupies the bottom action lane.
 - Sale sync-required/offline, rep session, insufficient stock, submit error, and empty-product states use shared `StatusBanner` and `EmptyState` primitives.
 - Stock, selected-customer, and customer-source labels use `StatusBadge` so operational status treatment is consistent with dashboards and setup sheets.
 - Checkout keeps the shared `QuantityStepper`, nearby total preview, cash/transfer selector, customer book lookup, and typed new-customer fallback together in the same keyboard-safe sheet.
+- Checkout step 3 places the amount due and confirmation action in the sticky
+  bottom lane. Its `All amount paid` action copies the exact sale total into
+  Amount received so the payment state and balance update to paid in full
+  without manual entry; empty and partial amounts remain supported.
 - Production sale creation, local/offline fallback recording, rep session validation, and sync queue behavior must remain unchanged when the visual layer is updated.
 - `qa:create-sale-flow` continues to protect the sale list, quantity, payment, customer, offline/local fallback, and sync-required status coverage.
 
@@ -583,7 +666,10 @@ Inventory management surfaces should reuse one compact flat product-row vocabula
 - `InventorySegmentOption`, `InventoryUnitOption`, and `InventoryMovementRow` are the shared stock-operation primitives for restock/adjust toggles, unit choices, and stock movement history rows.
 - Product rows should identify the parent item, primary unit, variant count, and stock status without making parent rows look like hidden variants.
 - Variant/sub-unit rows should read as sellable or convertible units with their own stock and price/conversion labels.
-- Stock intake uses the same flat segmented controls for restock/adjust and adjustment direction/reason choices so inventory operations feel like one focused tool.
+- Stock intake uses the same flat segmented controls for Receive, Count,
+  Adjust, and Move operations, flat selectable balance rows, conditional
+  direction/custody controls, and one safe-area-aligned fixed confirmation
+  action so inventory operations feel like one focused tool.
 - Stock intake and unit conversion sheets use shared `StatusBanner` and `EmptyState` for offline/sync-required source states, shortage, empty inventory, empty search, and submit error states.
 - Low and empty stock states should use warning/destructive status tones; healthy stock should use success treatment.
 - Production stock intake, stock adjustment, unit conversion, local/offline fallback, and stock movement ledger behavior must stay unchanged while the visual layer evolves.
@@ -600,11 +686,28 @@ Staff, customer, subscription, and business settings surfaces should feel like c
 - Staff list rows use `SecondaryOperationalRow` for name, email, role/invite metadata, production/local source, and active/pending status.
 - Staff onboarding uses `SecondarySheetHeader`, `SecondaryOperationalRow`, shared status badges, and status banners for invite lookup, wrong-account handling, role label, account context, and setup errors while keeping only the required name/display-name fields.
 - `qa:staff-flow` must continue to protect the staff onboarding screen from reverting to local card-heavy invite summaries.
-- Customer book remains virtualized and uses `SecondaryOperationalRow` plus shared badges for order count, synced customer, and pending sync states.
-- Customer book degraded source, empty search, and offline/local fallback states use shared banners and empty states.
-- Subscription plan management shows current plan, usage, tier comparison, and provider-neutral upgrade handoff with `SecondaryOperationalRow` and status badges instead of landing-page copy or local plan cards.
+- Customer Book uses `CommerceCustomerRow`, `CommerceOrderRow`, and shared
+  commerce sections for order-derived customer identity, per-currency value,
+  order count, synced records, and pending offline orders. Search and
+  Synced/Pending filters remain bounded over the latest 100 commercial orders.
+- Customer overview stays inside the full-screen Customer Book workflow and
+  exposes the design tabs for Information, Orders, Wishlist, Reviews, Loyalty,
+  and Insights. Information and Orders display only production-backed contact
+  and order facts; tabs without a connected production contract render clear
+  empty states and must not fabricate addresses, categories, notes, loyalty
+  activity, reviews, wishlists, or analytics.
+- Customer Book degraded source, empty search, and offline/local fallback
+  states use shared banners and empty states.
+- Subscription plan management shows current plan, usage, tier comparison, and
+  provider-neutral upgrade handoff with flat full-width plan sections. Plan
+  descriptions, support labels, limits, values, and actions each own a stable
+  text row so compact phones do not clip or overlap nested operational rows.
+- Owner Home exposes Add Product and Add Service as separate revealing actions;
+  each opens the correct typed form directly.
 - Business switching groups current businesses, search, active status, business creation, and plan-limit warnings in the same calm sheet vocabulary, using selectable secondary rows for business workspaces.
-- `qa:customer-book-flow`, `qa:staff-flow`, and `qa:subscription-flow` protect these shared primitives, production/local fallbacks, bounded rows, and role/billing boundaries.
+- `qa:commerce-ops`, `qa:staff-flow`, and `qa:subscription-flow` protect these
+  shared primitives, production/local fallbacks, bounded rows, and role/billing
+  boundaries.
 
 ## Reports Redesign
 

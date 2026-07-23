@@ -14,6 +14,7 @@ import {
   createSimpleCatalogItem,
   getCatalogItem,
   listCatalogItems,
+  listCatalogItemsPage,
   listCatalogUnitDefinitions,
   listProductUnitConfigurations,
   publishProductUnitConfiguration,
@@ -30,6 +31,7 @@ import {
   catalogCreateSimpleItemSchema,
   catalogGetItemSchema,
   catalogListItemsSchema,
+  catalogListItemsPageSchema,
   catalogProductUnitConfigurationsSchema,
   catalogPublishUnitConfigurationSchema,
   catalogSetOfferingAvailabilitySchema,
@@ -255,6 +257,17 @@ export const catalogRouter = createTRPCRouter({
       assertCanReadCatalog(ctx.tenantContext.membership.role)
 
       return listCatalogItems(ctx.db, {
+        ...input,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+    }),
+
+  listItemsPage: protectedProcedure
+    .input(catalogListItemsPageSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanReadCatalog(ctx.tenantContext.membership.role)
+
+      return listCatalogItemsPage(ctx.db, {
         ...input,
         tenantId: ctx.tenantContext.tenant.id,
       })

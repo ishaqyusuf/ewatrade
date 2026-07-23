@@ -1,18 +1,20 @@
-import { ActionButton } from "@/components/mobile/action-button"
-import { Icon } from "@/components/ui/icon"
-import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
-import { View } from "@/components/ui/view"
-import { Image } from "react-native"
-import { ReferenceScreenShell } from "../../references/reference-screen-shell"
+import { ActionButton } from "@/components/mobile/action-button";
+import { Icon } from "@/components/ui/icon";
+import { Pressable } from "@/components/ui/pressable";
+import { Text } from "@/components/ui/text";
+import { View } from "@/components/ui/view";
+import { Image } from "react-native";
+import { ReferenceScreenShell } from "../../references/reference-screen-shell";
 import {
+  design01CustomerHref,
+  design01OrderHref,
   DESIGN_01_PRIMARY_REFERENCE,
   DESIGN_01_REFERENCE_IMAGES,
   DESIGN_01_ROUTES,
-} from "./design-01.data"
+} from "./design-01.data";
 
 export function Design01ReferenceScreen() {
-  const reference = DESIGN_01_PRIMARY_REFERENCE
+  const reference = DESIGN_01_PRIMARY_REFERENCE;
 
   return (
     <ReferenceScreenShell
@@ -111,6 +113,39 @@ export function Design01ReferenceScreen() {
         <ActionButton href={DESIGN_01_ROUTES.home} icon="LayoutDashboard">
           Open Design 01 home
         </ActionButton>
+        <View className="gap-3">
+          <Text className="text-xl font-extrabold text-foreground">
+            Commerce Screens
+          </Text>
+          <ActionButton
+            href={DESIGN_01_ROUTES.orders}
+            icon="ReceiptText"
+            variant="outline"
+          >
+            Open Orders
+          </ActionButton>
+          <ActionButton
+            href={DESIGN_01_ROUTES.customers}
+            icon="Users"
+            variant="outline"
+          >
+            Open Customers
+          </ActionButton>
+          <ActionButton
+            href={design01CustomerHref("amina-bello")}
+            icon="User"
+            variant="outline"
+          >
+            Open Customer overview
+          </ActionButton>
+          <ActionButton
+            href={design01OrderHref("order-12567")}
+            icon="Receipt"
+            variant="outline"
+          >
+            Open Order overview
+          </ActionButton>
+        </View>
         <ActionButton
           href={DESIGN_01_ROUTES.image}
           icon="Camera"
@@ -127,5 +162,5 @@ export function Design01ReferenceScreen() {
         </ActionButton>
       </View>
     </ReferenceScreenShell>
-  )
+  );
 }

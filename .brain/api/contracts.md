@@ -11,6 +11,12 @@
 - Commands use stable client ids and payload hashes for idempotency.
 - Immutable snapshots preserve historical meaning; clients never reconstruct
   inventory or Order truth from current mutable Catalog data.
+- Discoverable mobile directories use cursor pages with a bounded `limit`,
+  stable sort plus id tie-breaker, optional server-side search, `nextCursor`,
+  and an unfiltered `totalCount`. The mobile client loads the next page near
+  the end and only reveals list search when the total record count is greater
+  than 10. Bounded dashboard previews, operational report sections, and
+  subscription-capped lists are not infinite directories.
 
 ## Workspace Availability
 
@@ -43,6 +49,9 @@
 ## Catalog
 
 - Item kind is immutable after creation.
+- `catalog.listItemsPage` searches item name, description, category, kind,
+  variant/Offering labels, and Product Inventory Unit names or symbols while
+  preserving an unfiltered tenant/store list count for search visibility.
 - Variant option combinations are separate from Offerings and units.
 - Catalog creation accepts an optional description and image URL on every
   Sellable Variant. Product variants may also provide their own exact
@@ -93,6 +102,10 @@
 - Payments and refunds append idempotent `CommercialOrderPayment` facts. The
   Order stores the derived paid amount and exposes paid, balance and payment
   status; a command cannot overpay or refund more than was collected.
+- `orders.listPage` supports stable cursor loading plus order-wide or
+  customer-contact search. `orders.customerCount` returns the distinct
+  normalized contact identities used by Customer Book; selecting a customer
+  continues loading remaining pages before final totals are presented.
 
 ## Services
 
@@ -124,6 +137,9 @@
   stable client batch id so transport retries are idempotent. Scheduled intents
   remain independent of work state; rescheduling replaces pending due
   reminders, while full-Job readiness or handoff cancels obsolete reminders.
+- `services.queuePage` cursor-loads active tracked work in priority/age order
+  and searches receipt/customer/service fields without changing the total
+  active-queue count used for search visibility.
 
 ## Offline
 

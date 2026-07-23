@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import {
   catalogCreateProductSchema,
   catalogCreateSimpleProductSchema,
+  catalogListItemsPageSchema,
 } from "./catalog"
 
 function productInput() {
@@ -44,6 +45,17 @@ function productInput() {
 }
 
 describe("catalog Product variant input", () => {
+  test("accepts cursor pagination and a catalog search query", () => {
+    const result = catalogListItemsPageSchema.parse({
+      cursor: "catalog-cursor-1",
+      kind: "product",
+      limit: 20,
+      query: "rabbit feed",
+    })
+
+    expect(result.cursor).toBe("catalog-cursor-1")
+    expect(result.query).toBe("rabbit feed")
+  })
   test("accepts optional variant details and exact opening quantity", () => {
     const result = catalogCreateProductSchema.parse(productInput())
 

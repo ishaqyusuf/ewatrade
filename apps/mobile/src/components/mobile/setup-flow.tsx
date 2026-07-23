@@ -136,7 +136,6 @@ type SetupCheckboxRowProps = {
   description: string
   label: string
   onPress: () => void
-  textScale?: 1 | 1.5
 }
 
 export function SetupCheckboxRow({
@@ -144,10 +143,7 @@ export function SetupCheckboxRow({
   description,
   label,
   onPress,
-  textScale = 1,
 }: SetupCheckboxRowProps) {
-  const isLargeText = textScale === 1.5
-
   return (
     <Pressable
       accessibilityLabel={label}
@@ -169,20 +165,8 @@ export function SetupCheckboxRow({
         ) : null}
       </View>
       <View className="min-w-0 flex-1 gap-1">
-        <Text
-          className={cn(
-            "font-semibold text-foreground",
-            isLargeText && "text-2xl",
-          )}
-        >
-          {label}
-        </Text>
-        <Text
-          className={cn(
-            "text-sm leading-5 text-muted-foreground",
-            isLargeText && "text-[21px] leading-[30px]",
-          )}
-        >
+        <Text className="font-semibold text-foreground">{label}</Text>
+        <Text className="text-sm leading-5 text-muted-foreground">
           {description}
         </Text>
       </View>

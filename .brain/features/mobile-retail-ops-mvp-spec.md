@@ -220,7 +220,13 @@ Subscription support is included as a plan and entitlement foundation with three
 - The admin dashboard should show sales totals, inventory status, low-stock signals, staff activity, customer book entry points, sync state, tenant-level server sync conflicts, and subscription status.
 - Dashboard summary metrics, quick actions, summary panels, stat tiles, inline statuses, and preview records should stay reusable and flat: divider-based rows, clear icons, semantic primary/success/warn/destructive states, and no decorative card-heavy local widgets.
 - The mobile Dashboard should read `retailOps.summary` and `retailOps.recentSales` when online for headline sales, pending-order, low-stock, active-rep, stock-unit, report-summary, and recent-sale surfaces, while keeping local state as the offline or production-unavailable fallback.
-- The mobile Dashboard should also read `retailOps.subscription`, `retailOps.staff`, and `retailOps.customerBook` when online, merge production previews with local pending rows, preserve the production business id in local state, and use the authenticated membership role to hide owner-only management surfaces from cashier/operator dashboards.
+- The mobile Dashboard should also read production subscription and staff
+  contracts when online, preserve the production business id in local state,
+  and use the authenticated membership role to hide owner-only management
+  surfaces from cashier/operator dashboards. Until a dedicated Customer entity
+  and router exist, customer previews must be derived from commercial orders
+  and pending offline order commands instead of calling a nonexistent customer
+  contract.
 - Dry-cleaning stores should expose a mobile Services workflow from owner/admin and sales-rep homes. The first production-backed mobile service-order route uses `retailOps.dryCleaningServiceItems`, `retailOps.dryCleaningSettings`, `retailOps.dryCleaningServiceOrders`, `retailOps.createDryCleaningServiceItem`, `retailOps.updateDryCleaningSettings`, `retailOps.createDryCleaningServiceOrder`, and `retailOps.updateDryCleaningServiceOrderStatus` so mobile service setup and intake reuse the same contracts as the dashboard.
 - The mobile Services workflow should keep setup and intake lightweight: owner/admin users can create service items with SM/LG variants and manage express surcharge, while owner/admin and sales-rep users can select a service variant, set quantity with the shared quantity stepper, capture customer details, set payment status, due timing, native photo/video intake evidence or a manual evidence link, and notes, then review and advance due service orders.
 - Native mobile intake evidence uses `expo-image-picker` camera capture with configured camera, microphone, and photo permission copy. Captured asset URIs and manual evidence links are sent through the existing dry-cleaning evidence metadata contract; cloud upload and cross-device media hosting remain a later storage slice.
@@ -230,14 +236,35 @@ Subscription support is included as a plan and entitlement foundation with three
 - The mobile clock-in sheet should call `retailOps.openSession` when online and every opening inventory unit has a production id; otherwise it should keep using the local queued session path so product/unit dependencies sync first.
 - The mobile Closeout sheet should call `retailOps.closeSession` when online, the open rep session has a production id, no local changes are pending sync, and every closing inventory unit has a production id; otherwise it should keep using the local queued closeout path so sales, customers, stock, and product/session dependencies sync first.
 - Mobile clock-in and closeout sheets should use shared session reconciliation primitives for source state, opening/closing stock declaration rows, payment variance rows, summary stats, empty states, and submit errors. These surfaces should stay flat, keyboard-safe, semantic-token based, and operational rather than using local card-heavy session widgets.
-- Create-sale should use a virtualized list for real product catalogs and should support direct visible selection of variants.
-- The first mobile create-sale sheet now uses a virtualized bottom-sheet section list: product parent headers are display-only, variant rows are selectable when variants exist, primary unit rows are selectable when no variants exist, and every selectable row shows product, unit/variant, price, and available stock.
-- Create-sale item rows, payment choices, customer choices, and total preview should use reusable sale-flow primitives with flat divider rows, segmented choices, and a prominent ticket-like total treatment.
-- The quantity control should combine minus button, plus button, and numeric input with a visible total on the same screen.
-- Checkout captures payment method. MVP payment methods are cash and transfer.
-- Checkout captures customer name and can search/select from the customer book.
-- The first mobile checkout customer picker searches `retailOps.customerBook` online, merges production customer rows with local customers, keeps free-entry for new customer names, and sends selected customer email/phone to production sale creation when available.
-- A new customer name captured during checkout is persisted to the customer book. The mobile Customer book should read durable production customers when online and fall back to local saved customers offline or order-derived rollout records when needed.
+- Create-sale is a staged full-screen workflow: select Items first, choose or
+  skip a Customer second, and Review payment plus totals before confirmation.
+- The Items stage uses a virtualized flat divider list for the real catalog.
+  Every sellable offering shows its product/service context, unit or variant,
+  price, and truthful availability; tapping it reveals a compact right-aligned
+  numeric quantity field and strong line total. A keyboard-sticky bottom search
+  remains visible, with a floating overall total and full-width Proceed action
+  above it after at least one item is selected. While any quantity field is
+  focused, the search field hides so the total and Proceed action become the
+  only keyboard-sticky footer controls; the search returns when quantity entry
+  ends.
+- The Customer stage uses the same keyboard-sticky bottom-search pattern. Create
+  customer and Skip/guest are the first actions, followed by filtered recent
+  customer suggestions derived from commercial orders. Create customer opens a
+  focused bottom-sheet contact form; the contact is attached to the commercial
+  order because a standalone Customer write contract does not yet exist.
+- The Review stage shows the selected lines, customer or guest state, overall
+  total, payment-method choices, and an amount-received money field. It computes
+  received and balance-due values before confirmation and supports unpaid,
+  partial, and fully paid outcomes. Online confirmation creates the idempotent
+  commercial order, then records any non-zero payment through the idempotent
+  payment contract. Offline orders may still queue, but payment entry remains
+  disabled until the order has synced.
+- Checkout offers Cash, Transfer, and POS payment choices for in-person sales.
+- Customer Book and Customer overview currently derive stable customer
+  identities from customer name, email, and phone captured on the latest 100
+  production commercial orders, then merge pending offline commercial-order
+  commands. Values remain grouped by currency, pending rows are never labelled
+  as synced, and unsupported profile fields are omitted rather than inferred.
 - Shared-link web checkout should also feed the durable customer book for the business, including platform customer account identity when the customer registered or logged in on the web order page.
 - Offline replay of queued `customer_upsert` events should reconcile the returned production customer-book id into the local customer record, so offline fallback views can distinguish device-only customers from customers already seen by production.
 - Sale creation snapshots product name, unit/variant name, quantity, unit price, total, payment method, attendant, customer, tenant, store, and client idempotency key.

@@ -16,6 +16,7 @@ export {
   BusinessSwitchContent,
   BusinessSwitchSheet,
 } from "./business-switch-sheet"
+export { BottomSearchFooter } from "./bottom-search-footer"
 export { CatalogItemsContent } from "./catalog-items-sheet"
 export {
   MobileBottomTabs,
@@ -32,11 +33,16 @@ export {
   DesignSystemPlaygroundScreen,
 } from "./design-system-playground"
 export {
+  DashboardActionRow,
+  DashboardHomeHeader,
   DashboardInlineStatus,
   DashboardMetricCard,
+  DashboardOverviewMetric,
   DashboardPanel,
   DashboardQuickAction,
   DashboardRecordRow,
+  DashboardRecentOrderRow,
+  DashboardRevenueCard,
   DashboardStatTile,
   type DashboardMetricTone,
   type DashboardTone,
@@ -114,7 +120,5 @@ export {
   SyncReliabilityToggle,
 } from "./sync-flow"
 export { TimelineRow } from "./timeline-row"
-export {
-  UnitConversionContent,
-} from "./unit-conversion-sheet"
+export { UnitConversionContent } from "./unit-conversion-sheet"
 export { WorkflowModalScreen } from "./workflow-modal-screen"

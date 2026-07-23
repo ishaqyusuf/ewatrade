@@ -46,7 +46,13 @@ ADR-0013.
   action at the top. Its full-screen picker searches optional JSON-backed
   Product/Service recipes by title, description, and tags; applying one only
   prefills the editable draft and never saves automatically.
+- Product and Service routes open directly into their named form without a
+  repeated type badge above Quick setup. Replacing a populated quick setup is
+  confirmed in the shared detached bottom sheet rather than a native alert.
 - Product reuses the existing price, unit, variant, image, opening-stock, and conversion controls.
+- The shared Product/Service Add Item form uses the standard mobile typography
+  and control scale. Feature-specific text remapping or wholesale size
+  multipliers must not override the established mobile form hierarchy.
 - Product creation places a `Multiple Price Options` checkbox directly after
   the item name. When selected, the base Product price and selling-unit default
   prices are disabled, Options are revealed, and option/unit pricing is owned

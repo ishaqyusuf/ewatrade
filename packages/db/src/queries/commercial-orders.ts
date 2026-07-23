@@ -8,7 +8,7 @@ import {
   subtractExactDecimals,
 } from "@ewatrade/utils/exact-decimal"
 
-import type { Prisma, PrismaClient } from "../../generated/prisma/client"
+import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
   CatalogRecordStatus,
   InventoryUnitStockBehavior,
@@ -593,6 +593,120 @@ export async function listCommercialOrders(
     where: { storeId: input.storeId, tenantId: input.tenantId },
   })
   return orders.map(serializeOrder)
+}
+
+export async function countCommercialOrderCustomers(
+  db: PrismaClient,
+  input: { storeId?: string; tenantId: string },
+) {
+  const storeFilter = input.storeId
+    ? Prisma.sql`AND "storeId" = ${input.storeId}`
+    : Prisma.empty
+  const rows = await db.$queryRaw<Array<{ count: bigint }>>(Prisma.sql`
+    SELECT COUNT(DISTINCT COALESCE(
+      CASE WHEN BTRIM("customerEmail") <> ''
+        THEN 'email:' || LOWER(BTRIM("customerEmail")) END,
+      CASE WHEN REGEXP_REPLACE(COALESCE("customerPhone", ''), '[^0-9+]', '', 'g') <> ''
+        THEN 'phone:' || REGEXP_REPLACE("customerPhone", '[^0-9+]', '', 'g') END,
+      CASE WHEN BTRIM("customerName") <> ''
+        THEN 'name:' || LOWER(BTRIM("customerName")) END
+    ))::bigint AS count
+    FROM "CommercialOrder"
+    WHERE "tenantId" = ${input.tenantId}
+    ${storeFilter}
+  `)
+
+  return Number(rows[0]?.count ?? 0)
+}
+
+export async function listCommercialOrdersPage(
+  db: PrismaClient,
+  input: {
+    createdAfter?: Date
+    cursor?: string
+    limit?: number
+    query?: string
+    queryMode?: "all" | "customer"
+    statuses?: OrderStatus[]
+    storeId?: string
+    tenantId: string
+  },
+) {
+  const limit = Math.min(Math.max(input.limit ?? 20, 1), 50)
+  const normalizedQuery = input.query?.trim()
+  const baseWhere: Prisma.CommercialOrderWhereInput = {
+    createdAt: input.createdAfter ? { gte: input.createdAfter } : undefined,
+    status: input.statuses?.length ? { in: input.statuses } : undefined,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+  }
+  const where: Prisma.CommercialOrderWhereInput = normalizedQuery
+    ? {
+        ...baseWhere,
+        OR: [
+          ...(input.queryMode === "customer"
+            ? []
+            : [
+                {
+                  orderNumber: {
+                    contains: normalizedQuery,
+                    mode: "insensitive" as const,
+                  },
+                },
+              ]),
+          { customerName: { contains: normalizedQuery, mode: "insensitive" } },
+          {
+            customerPhone: {
+              contains: normalizedQuery,
+              mode: "insensitive",
+            },
+          },
+          {
+            customerEmail: {
+              contains: normalizedQuery,
+              mode: "insensitive",
+            },
+          },
+          ...(input.queryMode === "customer"
+            ? []
+            : [
+                {
+                  lines: {
+                    some: {
+                      snapshot: {
+                        is: {
+                          catalogItemName: {
+                            contains: normalizedQuery,
+                            mode: "insensitive" as const,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              ]),
+        ],
+      }
+    : baseWhere
+  const [records, totalCount] = await Promise.all([
+    db.commercialOrder.findMany({
+      cursor: input.cursor ? { id: input.cursor } : undefined,
+      include: orderGraph,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: input.cursor ? 1 : 0,
+      take: limit + 1,
+      where,
+    }),
+    db.commercialOrder.count({ where: baseWhere }),
+  ])
+  const hasNextPage = records.length > limit
+  const pageRecords = hasNextPage ? records.slice(0, limit) : records
+
+  return {
+    items: pageRecords.map(serializeOrder),
+    nextCursor: hasNextPage ? pageRecords.at(-1)?.id : undefined,
+    totalCount,
+  }
 }
 
 export async function fulfillCommercialOrderProductLine(

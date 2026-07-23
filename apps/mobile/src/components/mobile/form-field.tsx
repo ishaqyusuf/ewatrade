@@ -18,9 +18,8 @@ type FormFieldProps = Omit<ComponentProps<typeof Input>, "className"> & {
   leadingIcon?: IconKeys
   leadingText?: string
   onActionPress?: () => void
-  textScale?: 1 | 1.5
   trailingIcon?: IconKeys
-  variant?: "auth" | "filled" | "line"
+  variant?: "auth" | "filled" | "line" | "search"
 }
 
 export function FormField({
@@ -35,12 +34,12 @@ export function FormField({
   onBlur,
   onFocus,
   onActionPress,
-  textScale = 1,
   trailingIcon,
   variant = "filled",
   ...inputProps
 }: FormFieldProps) {
   const isAuthVariant = variant === "auth"
+  const isSearchVariant = variant === "search"
   const colors = useColors()
   const [isFocused, setIsFocused] = useState(false)
   const activeBorderColor = error
@@ -63,24 +62,25 @@ export function FormField({
     "size-sm",
     error
       ? "text-destructive"
-      : isFocused
+      : isFocused && !isSearchVariant
         ? "text-primary"
         : "text-muted-foreground",
   )
-  const shouldShowLabel = !isAuthVariant
+  const shouldShowLabel = !isAuthVariant && !isSearchVariant
   const isMultiline = !!inputProps.multiline
-  const isLargeText = textScale === 1.5
 
   return (
     <View
-      className={cn(isAuthVariant ? "gap-2" : "gap-2.5", containerClassName)}
+      className={cn(
+        isAuthVariant || isSearchVariant ? "gap-2" : "gap-2.5",
+        containerClassName,
+      )}
     >
       {shouldShowLabel ? (
         <View className="min-h-5 flex-row items-center justify-between gap-3">
           <Text
             className={cn(
               "min-w-0 flex-1 text-xs font-bold uppercase tracking-[1.4px]",
-              isLargeText && "text-lg tracking-[1px]",
               error
                 ? "text-destructive"
                 : isFocused
@@ -98,12 +98,7 @@ export function FormField({
               haptic
               onPress={onActionPress}
             >
-              <Text
-                className={cn(
-                  "text-xs font-bold text-primary",
-                  isLargeText && "text-lg",
-                )}
-              >
+              <Text className="text-xs font-bold text-primary">
                 {actionLabel}
               </Text>
             </Pressable>
@@ -113,13 +108,13 @@ export function FormField({
       <View
         style={{
           alignItems: isMultiline ? "flex-start" : "center",
-          backgroundColor: colors.card,
+          backgroundColor: isSearchVariant ? colors.muted : colors.card,
           borderColor: activeBorderColor,
           borderRadius: 12,
-          borderWidth: isFocused || error ? 1.5 : 1,
+          borderWidth: isSearchVariant ? 0 : isFocused || error ? 1.5 : 1,
           flexDirection: "row",
           gap: 10,
-          minHeight: isMultiline ? 92 * textScale : 50 * textScale,
+          minHeight: isMultiline ? 92 : 50,
           paddingHorizontal: 14,
           paddingVertical: isMultiline ? 10 : 0,
         }}
@@ -140,7 +135,6 @@ export function FormField({
             inputClassName,
           )}
           expand
-          textScale={textScale}
           unstyled
           {...sharedInputProps}
         />
@@ -149,23 +143,9 @@ export function FormField({
         ) : null}
       </View>
       {error ? (
-        <Text
-          className={cn(
-            "text-xs font-medium text-destructive",
-            isLargeText && "text-lg leading-[30px]",
-          )}
-        >
-          {error}
-        </Text>
+        <Text className="text-xs font-medium text-destructive">{error}</Text>
       ) : helper ? (
-        <Text
-          className={cn(
-            "text-xs text-muted-foreground",
-            isLargeText && "text-lg leading-[30px]",
-          )}
-        >
-          {helper}
-        </Text>
+        <Text className="text-xs text-muted-foreground">{helper}</Text>
       ) : null}
     </View>
   )

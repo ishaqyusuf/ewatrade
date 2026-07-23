@@ -5,6 +5,17 @@ const REPO_ROOT = resolve(new URL("../../..", import.meta.url).pathname)
 const MOBILE_DIR = join(REPO_ROOT, "apps/mobile")
 const FILE = join(MOBILE_DIR, "src/components/mobile/create-sale-sheet.tsx")
 const source = readFileSync(FILE, "utf8")
+const customerSheetSource = readFileSync(
+  join(MOBILE_DIR, "src/components/mobile/create-sale-customer-sheet.tsx"),
+  "utf8",
+)
+const checkoutModelSource = readFileSync(
+  join(MOBILE_DIR, "src/components/mobile/sale-checkout-model.ts"),
+  "utf8",
+)
+const completeSource = [source, customerSheetSource, checkoutModelSource].join(
+  "\n",
+)
 const contracts = [
   {
     markers: [
@@ -25,15 +36,17 @@ const contracts = [
   },
   {
     markers: [
-      "trpc.catalog.listItems.queryOptions",
+      "trpc.catalog.listItemsPage.infiniteQueryOptions",
       "trpc.tenant.featureAvailability.queryOptions",
       "trpc.orders.create.mutationOptions",
+      "trpc.orders.recordPayment.mutationOptions",
       "expectedBalanceRevision",
       "expectedConfigurationVersionId",
       "expectedFixedPriceMinor",
       "offeringId: offering.id",
       "quantity",
       "clientOrderId",
+      "clientPaymentId",
       "schemaVersion: 1",
     ],
     reason:
@@ -54,22 +67,40 @@ const contracts = [
   },
   {
     markers: [
-      "Search",
-      "Product or service",
+      'type SaleStep = "customer" | "items" | "review"',
+      "Step {current} of 3",
+      "FlatList",
+      "BottomSearchFooter",
+      "Search product or service",
+      "focusedQuantityId",
+      "searchVisible={showProductSearch && focusedQuantityId === null}",
+      "onEndReachedThreshold={0.35}",
+      "catalog.fetchNextPage()",
+      "recentOrders.fetchNextPage()",
+      "Line total",
+      'containerClassName="w-16"',
       'accessibilityRole="checkbox"',
       'keyboardType="decimal-pad"',
-      "Customer name",
-      "customerPhone",
+      "Create customer",
+      "Skip · Continue as guest",
+      "Search customer, phone, or email",
+      "Amount received",
+      "All amount paid",
+      "minorToMajorInput(totalMinor)",
+      "Balance due",
+      "paymentSummary.receivedMinor",
       "Select at least one item",
-      "Confirm order",
+      "Confirm sale",
     ],
     reason:
-      "the shortest mobile order flow must support mixed items, exact quantities, optional customer details, and validation",
+      "the staged mobile order flow must support bottom-search selection, compact quantities, customer choice, review, and partial payment",
   },
 ]
 
 const failures = contracts.flatMap((contract) => {
-  const missing = contract.markers.filter((marker) => !source.includes(marker))
+  const missing = contract.markers.filter(
+    (marker) => !completeSource.includes(marker),
+  )
   return missing.length > 0
     ? [`missing ${missing.join(", ")} (${contract.reason})`]
     : []

@@ -1,8 +1,10 @@
-import { CustomerBookContent, WorkflowModalScreen } from "@/components/mobile"
-import { useRouter } from "expo-router"
+import { CustomerBookContent, WorkflowModalScreen } from "@/components/mobile";
+import { useLocalSearchParams } from "expo-router";
 
 export default function CustomerBookModalRoute() {
-  const router = useRouter()
+  const { customerOrderId } = useLocalSearchParams<{
+    customerOrderId?: string;
+  }>();
 
   return (
     <WorkflowModalScreen
@@ -10,10 +12,7 @@ export default function CustomerBookModalRoute() {
       closeLabel="Close customer book"
       title="Customers"
     >
-      <CustomerBookContent
-        onComplete={() => router.replace("/dashboard")}
-        presentation="screen"
-      />
+      <CustomerBookContent initialOrderId={customerOrderId} />
     </WorkflowModalScreen>
-  )
+  );
 }

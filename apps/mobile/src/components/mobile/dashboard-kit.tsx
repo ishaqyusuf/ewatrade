@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { useBusinessStore } from "@/store/businessStore"
 import { formatMinorMoney } from "@ewatrade/utils"
 import type { ReactNode } from "react"
+import { StatusBadge } from "./status-badge"
 
 export type DashboardTone =
   | "destructive"
@@ -14,6 +15,268 @@ export type DashboardTone =
   | "success"
   | "warning"
 export type DashboardMetricTone = Exclude<DashboardTone, "destructive">
+
+type DashboardHomeHeaderProps = {
+  businessName: string
+  greetingName: string
+  hasNotification?: boolean
+  onBusinessPress?: () => void
+  onNotificationPress: () => void
+  onProfilePress?: () => void
+}
+
+export function DashboardHomeHeader({
+  businessName,
+  greetingName,
+  hasNotification = false,
+  onBusinessPress,
+  onNotificationPress,
+  onProfilePress,
+}: DashboardHomeHeaderProps) {
+  return (
+    <View className="flex-row items-center gap-3">
+      <Pressable
+        accessibilityLabel={`Switch business from ${businessName}`}
+        accessibilityRole="button"
+        className="size-10 items-center justify-center rounded-xl bg-primary active:opacity-85"
+        disabled={!onBusinessPress}
+        haptic={Boolean(onBusinessPress)}
+        onPress={onBusinessPress}
+      >
+        <Text className="text-xs font-extrabold text-primary-foreground">
+          {initials(businessName)}
+        </Text>
+      </Pressable>
+      <View className="min-w-0 flex-1">
+        <Text
+          className="text-xl font-extrabold tracking-tight text-foreground"
+          numberOfLines={1}
+        >
+          Hello, {greetingName} 👋
+        </Text>
+        <Text
+          className="mt-0.5 text-xs text-muted-foreground"
+          numberOfLines={1}
+        >
+          {businessName}
+        </Text>
+      </View>
+      <Pressable
+        accessibilityLabel={
+          hasNotification
+            ? "Open sync status, items need attention"
+            : "Open sync status"
+        }
+        accessibilityRole="button"
+        className="relative size-11 items-center justify-center rounded-full bg-card active:bg-accent"
+        haptic
+        onPress={onNotificationPress}
+      >
+        <Icon className="size-base text-foreground" name="Bell" />
+        {hasNotification ? (
+          <View className="absolute right-1 top-1 size-2.5 rounded-full border-2 border-card bg-destructive" />
+        ) : null}
+      </Pressable>
+      <Pressable
+        accessibilityLabel={`${greetingName} profile`}
+        accessibilityRole="button"
+        className="size-11 items-center justify-center rounded-full bg-foreground active:opacity-85"
+        disabled={!onProfilePress}
+        haptic={Boolean(onProfilePress)}
+        onPress={onProfilePress}
+      >
+        <Text className="text-sm font-extrabold text-background">
+          {initials(greetingName)}
+        </Text>
+      </Pressable>
+    </View>
+  )
+}
+
+type DashboardOverviewMetricProps = {
+  detail: string
+  icon: IconKeys
+  label: string
+  tone?: "accent" | "secondary"
+  value: string
+}
+
+export function DashboardOverviewMetric({
+  detail,
+  icon,
+  label,
+  tone = "secondary",
+  value,
+}: DashboardOverviewMetricProps) {
+  return (
+    <View
+      className={cn(
+        "min-w-0 flex-1 rounded-2xl p-4",
+        tone === "accent" ? "bg-accent" : "bg-secondary",
+      )}
+    >
+      <View className="flex-row items-center gap-2">
+        <Icon className="size-sm text-foreground" name={icon} />
+        <Text className="text-xs font-bold text-foreground" numberOfLines={1}>
+          {label}
+        </Text>
+      </View>
+      <Text
+        className="mt-5 text-2xl font-extrabold tracking-tight text-foreground"
+        numberOfLines={1}
+      >
+        {value}
+      </Text>
+      <View className="mt-2 flex-row items-center gap-1.5">
+        <Icon className="size-xs text-primary" name="TrendingUp" />
+        <Text
+          className="min-w-0 flex-1 text-[11px] text-muted-foreground"
+          numberOfLines={1}
+        >
+          {detail}
+        </Text>
+      </View>
+    </View>
+  )
+}
+
+type DashboardRevenueCardProps = {
+  detail: string
+  label: string
+  value: string
+}
+
+export function DashboardRevenueCard({
+  detail,
+  label,
+  value,
+}: DashboardRevenueCardProps) {
+  return (
+    <View className="overflow-hidden rounded-2xl bg-primary p-5">
+      <View className="flex-row items-center justify-between gap-3">
+        <Text className="text-xs font-bold text-primary-foreground/80">
+          {label}
+        </Text>
+        <View className="size-9 items-center justify-center rounded-full bg-primary-foreground/15">
+          <Icon className="size-sm text-primary-foreground" name="BarChart3" />
+        </View>
+      </View>
+      <Text
+        className="mt-5 text-[32px] font-extrabold tracking-tight text-primary-foreground"
+        numberOfLines={1}
+      >
+        {value}
+      </Text>
+      <View className="mt-2 flex-row items-center gap-2">
+        <View className="size-5 items-center justify-center rounded-full bg-primary-foreground/15">
+          <Icon className="size-xs text-primary-foreground" name="TrendingUp" />
+        </View>
+        <Text className="text-xs text-primary-foreground/80">{detail}</Text>
+      </View>
+    </View>
+  )
+}
+
+type DashboardActionRowProps = {
+  disabled?: boolean
+  icon: IconKeys
+  label: string
+  onPress: () => void
+  tone?: DashboardMetricTone
+}
+
+export function DashboardActionRow({
+  disabled = false,
+  icon,
+  label,
+  onPress,
+  tone = "primary",
+}: DashboardActionRowProps) {
+  const toneClassNames = metricToneClassNames[tone]
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      className="min-h-16 flex-row items-center gap-4 border-b border-border/70 py-3 active:bg-accent"
+      disabled={disabled}
+      haptic={!disabled}
+      onPress={onPress}
+    >
+      <View
+        className={cn(
+          "size-10 items-center justify-center rounded-full",
+          toneClassNames.iconBackground,
+          disabled && "opacity-50",
+        )}
+      >
+        <Icon className={cn("size-sm", toneClassNames.iconText)} name={icon} />
+      </View>
+      <Text
+        className={cn(
+          "min-w-0 flex-1 font-bold text-foreground",
+          disabled && "text-muted-foreground",
+        )}
+      >
+        {label}
+      </Text>
+      <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
+    </Pressable>
+  )
+}
+
+type DashboardRecentOrderRowProps = {
+  amount: string
+  customer: string
+  detail: string
+  onPress?: () => void
+  status: string
+  tone: "destructive" | "primary" | "success" | "warning"
+}
+
+export function DashboardRecentOrderRow({
+  amount,
+  customer,
+  detail,
+  onPress,
+  status,
+  tone,
+}: DashboardRecentOrderRowProps) {
+  return (
+    <Pressable
+      accessibilityRole={onPress ? "button" : undefined}
+      className="flex-row items-start gap-3 border-b border-border/70 py-4 active:bg-accent"
+      disabled={!onPress}
+      haptic={Boolean(onPress)}
+      onPress={onPress}
+    >
+      <View className="size-10 items-center justify-center rounded-full bg-muted">
+        <Icon className="size-sm text-foreground" name="ReceiptText" />
+      </View>
+      <View className="min-w-0 flex-1 gap-1">
+        <Text className="font-extrabold text-foreground" numberOfLines={1}>
+          {customer}
+        </Text>
+        <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+          {detail}
+        </Text>
+        <StatusBadge className="mt-1 self-start" label={status} tone={tone} />
+      </View>
+      <Text className="pt-0.5 font-extrabold text-foreground">{amount}</Text>
+    </Pressable>
+  )
+}
+
+function initials(value: string) {
+  return (
+    value
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("") || "EW"
+  )
+}
 
 const metricToneClassNames: Record<
   DashboardTone,

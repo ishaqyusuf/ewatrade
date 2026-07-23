@@ -1,16 +1,16 @@
-import { CatalogFormText as Text } from "@/components/mobile/catalog-form-text"
-import { FormField as BaseFormField } from "@/components/mobile/form-field"
-import { MoneyField as BaseMoneyField } from "@/components/mobile/money-field"
+import { FormField } from "@/components/mobile/form-field"
+import { MoneyField } from "@/components/mobile/money-field"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
 import { resolveCatalogOptionUnitPrice } from "@/lib/catalog-option-pricing"
 import {
   BottomSheetFooter,
   type BottomSheetFooterProps,
 } from "@gorhom/bottom-sheet"
-import { type ComponentProps, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { Keyboard, View } from "react-native"
 import { KeyboardStickyView } from "react-native-keyboard-controller"
 
@@ -56,14 +56,6 @@ type CatalogVariantManagerProps = {
   stores: CatalogVariantStore[]
   unitName: string
   units: CatalogVariantUnit[]
-}
-
-function FormField(props: ComponentProps<typeof BaseFormField>) {
-  return <BaseFormField textScale={1.5} {...props} />
-}
-
-function MoneyField(props: ComponentProps<typeof BaseMoneyField>) {
-  return <BaseMoneyField textScale={1.5} {...props} />
 }
 
 function displayValue(value: string, fallback = "Not set") {

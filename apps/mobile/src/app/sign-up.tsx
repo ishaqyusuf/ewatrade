@@ -4,12 +4,14 @@ import {
   AuthDivider,
   AuthFooterAction,
   AuthMethodButton,
+  BottomSearchFooter,
   CurrencySelector,
   FormField,
   MobileScreen,
   StatusBanner,
 } from "@/components/mobile"
 import { useMobileGoogleAuth } from "@/hooks/use-mobile-google-auth"
+import { shouldShowListSearch } from "@/lib/list-pagination"
 import { useTRPC } from "@/trpc/client"
 import {
   BUSINESS_OPERATING_MODELS,
@@ -66,6 +68,7 @@ export default function SignUpRoute() {
     },
     [profileQuery, selectedBusinessProfile],
   )
+  const showProfileSearch = shouldShowListSearch(listBusinessProfiles().length)
   const hasBusinessProfile =
     !!selectedBusinessProfile &&
     orderChannels.length > 0 &&
@@ -184,10 +187,12 @@ export default function SignUpRoute() {
   }
 
   return (
-    <MobileScreen
-      contentClassName="justify-center gap-7"
-      keyboardBottomOffset={420}
-    >
+    <View className="flex-1">
+      <MobileScreen
+        contentClassName="justify-center gap-7"
+        contentContainerStyle={{ paddingBottom: step === "profile" ? 112 : 40 }}
+        keyboardBottomOffset={420}
+      >
       <AuthBrandHeader
         subtitle={
           step === "business"
@@ -247,16 +252,6 @@ export default function SignUpRoute() {
         </View>
       ) : step === "profile" ? (
         <View className="gap-5">
-          <FormField
-            autoCapitalize="none"
-            autoCorrect={false}
-            label="Business category"
-            leadingIcon="Search"
-            onChangeText={setProfileQuery}
-            placeholder="Search categories"
-            value={profileQuery}
-            variant="auth"
-          />
           <View className="overflow-hidden rounded-2xl border border-border">
             {visibleBusinessProfiles.map((profile) => {
               const selected = businessProfileKey === profile.key
@@ -510,6 +505,17 @@ export default function SignUpRoute() {
           label="Sign in instead"
         />
       </View>
-    </MobileScreen>
+      </MobileScreen>
+      {step === "profile" && showProfileSearch ? (
+        <BottomSearchFooter
+          accessibilityLabel="Search business categories"
+          label="Business category"
+          onChangeText={setProfileQuery}
+          placeholder="Search categories"
+          totalCount={listBusinessProfiles().length}
+          value={profileQuery}
+        />
+      ) : null}
+    </View>
   )
 }

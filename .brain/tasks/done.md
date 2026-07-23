@@ -1,5 +1,85 @@
 # Done
 
+### Mobile List Pagination And Search Density
+
+- Priority: High
+- Description: Added stable cursor loading and server-side search for Orders,
+  Catalog, Customer Book, Create Sale item/customer pickers, and Service Jobs;
+  added incremental local loading for business selection; removed the Staff
+  six-row cap; and standardized bottom-search visibility to totals greater
+  than 10. Offline list search now filters the cached base page, and Customer
+  overview marks partial history until remaining pages finish loading.
+- Related Feature: Retail Ops mobile design system and IA
+- Status: Done
+- Completed Date: 2026-07-23
+- Checks Run: focused schema/list-helper tests; mobile and database TypeScript;
+  list-pagination, commerce, create-sale, Service Jobs, keyboard, admin-tabs,
+  NativeWind, and theme-color guards; Android app-launch/accessibility review.
+
+### Mobile Bottom Search And Operational UI Corrections
+
+- Priority: High
+- Description: Aligned no-tab searches and fixed actions to one compact safe-area footer; removed repeated Product/Service form badges; moved quick-setup replacement confirmation into a floating sheet; protected dock label fit; split Home Product and Service actions; redesigned Record Stock; restored Customer overview tabs with truthful contract-backed content; and repaired Subscription plan text composition.
+- Related Feature: Retail Ops mobile design system and IA
+- Status: Done
+- Completed Date: 2026-07-22
+- Checks Run: mobile TypeScript; keyboard coverage; dashboard redesign; commerce operations; admin tabs; subscription flow; NativeWind style; Android accessibility/bounds QA for bottom Catalog search, quantity-focus Total/Proceed footer, Add Staff action, Product form, Subscription plan rows and final action, and Record Stock layout.
+
+- Refined the mobile bottom-search pattern to match the GND Expo customer
+  selector: Create Sale item/customer search and Catalog quick setup now use an
+  inset muted search field without a hard footer divider. Focusing any Create
+  Sale quantity hides the Product/Service search while the total and Proceed
+  action remain keyboard-sticky, then restores search when quantity entry ends.
+  Completed Date: 2026-07-22. Checks Run: mobile TypeScript; create-sale-flow,
+  keyboard-coverage, NativeWind-style, theme-color, targeted Biome, and diff
+  guards. UI testing was skipped at the owner's request.
+- Redesigned mobile Create Sale as a staged Items, Customer, and Review workflow.
+  The Items stage now has a virtualized flat catalog, keyboard-sticky bottom
+  search, compact right-aligned quantity entry, per-line totals, and a floating
+  overall total/Proceed footer. Customer selection now starts with Create
+  customer and Skip/guest, filters recent order-derived contacts, and provides a
+  focused bottom-sheet contact form. Review now captures Cash, Transfer, or POS,
+  accepts the amount received, previews paid/balance values, and records an
+  idempotent partial or full payment after order creation. Added exact checkout
+  arithmetic tests and strengthened create-sale/keyboard mobile guards.
+  Completed Date: 2026-07-22. Checks Run: mobile TypeScript; checkout model
+  tests; create-sale-flow, keyboard-coverage, NativeWind-style, theme-color, and
+  Android-ready guards; authenticated Android production-app render.
+- Promoted the approved Design 01 commerce direction into the production mobile
+  app. Admin Orders now uses live commercial orders plus pending offline rows,
+  truthful bounded metrics, search/date/status filters, and reusable
+  theme-compatible commerce primitives. Customer Book now derives safe customer
+  summaries and overview history from captured order contacts without inventing
+  unsupported profile fields. Added a protected live Order overview with real
+  `orders.get`, payment recording, eligible Product-line fulfilment, totals,
+  customer navigation, and activity. Service fulfilment remains in Service
+  jobs. Completed Date: 2026-07-22. Checks Run: mobile TypeScript; focused
+  commerce model tests; commerce, admin-tab, app-shell, keyboard, NativeWind,
+  theme-color, and diff guards; Android production-route review.
+- Added the internal Design 01 commerce approval flow for Orders, Customers,
+  Customer overview, and Order overview. The reusable theme-compatible mobile
+  surfaces use static Nigerian sample data, searchable/filterable virtualized
+  lists, typed detail routes, semantic status treatments, linked customer/order
+  navigation, source-board actions, hide-on-scroll review controls, and
+  local-only payment and fulfilment demonstrations. Landscape source boards
+  open on a review-scale horizontal canvas, hide controls while panned, and
+  return to the relevant preview. Registered the five owner-provided boards and
+  Android light/dark/scroll/action evidence under the repository-root `.design/`
+  folder. Completed Date: 2026-07-22. Checks Run:
+  mobile TypeScript; Design 01 playground, NativeWind style, theme-color, and
+  theme-variable guards; Android Expo export; Pixel 3a route, theme, scroll,
+  and order-action review; `git diff --check`.
+- Redesigned the mobile owner/admin and attendant Home surface from the approved
+  commerce reference. The production screen now uses a greeting/business
+  header, sync attention and profile actions, paired workspace metrics, a
+  primary recent-revenue panel, role-aware flat shortcuts, and bounded recent
+  orders with real status badges and an actionable empty state. Unsupported net
+  profit and trend values were intentionally replaced with truthful live
+  Catalog, inventory, service-work, order, and bounded revenue data. Completed
+  Date: 2026-07-22. Checks Run: mobile TypeScript; dashboard, NativeWind,
+  theme-variable, theme-color, admin-tab, and app-shell guards; `git diff
+--check`; Android Pixel 3a debug-build screenshot review for the empty owner
+  workspace and scroll/dock composition.
 - Added Store-scoped Business Profile personalization across marketing signup,
   mobile OTP/Google signup, dashboard first-Store setup, tenant context, and
   Catalog quick-setup recommendations. The shared versioned library launches
@@ -37,7 +117,7 @@
 - Allowed Products to save with blank base, option-unit, and opening-stock
   values without coercing missing prices to zero. Incomplete Offerings remain
   visible in sale selection but are disabled with `Price not set` and/or `Out
-  of stock` across mobile and dashboard; fixed-price order payloads still
+of stock` across mobile and dashboard; fixed-price order payloads still
   require a real price, and mobile sale stock snapshots are active-Store
   scoped. Updated the online and offline contracts together.
   Completed Date: 2026-07-21. Checks Run: 13 focused
@@ -53,7 +133,7 @@
   Enabling it disables the Product base price and selling-unit default prices,
   reveals Options, and routes pricing through enabled option combinations. The
   generated Product listings now sit below Unit setup in a dedicated `Product
-  stock & pricing` section, expand every option across its counted-in and
+stock & pricing` section, expand every option across its counted-in and
   additional selling units, use flat Unit-style summaries, open Edit from the
   row itself, and retain the menu for Edit and Disable/Enable. Completed Date:
   2026-07-21. Checks Run: automated and UI testing skipped by owner request;
@@ -131,9 +211,11 @@
   after the running emulator disconnected from ADB.
 
 ## Purpose
+
 Completed work with durable value to the project.
 
 ## Items
+
 - Added shared Catalog quick-setup helpers for dashboard and mobile Product and
   Service creation. A full-width top-of-form action opens a full-screen
   searchable Setup/Example list with titles, descriptions, and tags; selecting
@@ -246,6 +328,7 @@ Completed work with durable value to the project.
 - Standardized the frontend foundation on Next.js 16 and Tailwind CSS 4 using a shared styling setup informed by the `gnd` project.
 
 ### Retail Ops Design System And IA
+
 - Priority: High
 - Description: Track plan in `.brain/plans/2026-07-06-ux-ui-retail-ops-design-system-and-ia.md`.
 - Related Feature: Retail Ops design system
@@ -258,6 +341,7 @@ Completed work with durable value to the project.
 - Checks Run: `rg -n "Retail Ops Design System And IA|Surface Ownership|Screen Map|Reusable Components|State Language|Acceptance Review Checklist|Retail Ops Product Direction|Retail Ops Ownership|Surface Split" .brain/features/retail-ops-design-system-and-ia.md .brain/features/README.md .brain/product/vision.md .brain/modules/merchant-system.md .brain/modules/pos-cashier.md .brain/plans/2026-07-06-ux-ui-retail-ops-design-system-and-ia.md .brain/tasks/roadmap.md .brain/tasks/done.md`; `rg -n "[[:blank:]]$" .brain/features/retail-ops-design-system-and-ia.md .brain/features/README.md .brain/product/vision.md .brain/modules/merchant-system.md .brain/modules/pos-cashier.md .brain/plans/2026-07-06-ux-ui-retail-ops-design-system-and-ia.md .brain/tasks/roadmap.md .brain/tasks/done.md .brain/progress.md`; `git diff --check -- .brain/features/README.md .brain/product/vision.md .brain/modules/merchant-system.md .brain/modules/pos-cashier.md .brain/plans/2026-07-06-ux-ui-retail-ops-design-system-and-ia.md .brain/tasks/roadmap.md .brain/tasks/done.md`.
 
 ### Retail Sales Product Documentation
+
 - Priority: Medium
 - Description: Track plan in `.brain/plans/2026-07-06-docs-retail-sales-product-documentation.md`.
 - Related Feature: Product documentation
@@ -270,6 +354,7 @@ Completed work with durable value to the project.
 - Checks Run: `rg -n "Retail Ops Sales Product|Starter Template|Core Entities|Workflow Summary|Retail Ops Stock To Closeout Flow|Reconciliation Invariants|Product Wedge|Retail Ops MVP Entity Map|feed.*starter|starter templates" .brain/features/retail-ops-sales-product.md .brain/workflows/retail-ops-stock-to-closeout-flow.md .brain/features/README.md .brain/product/vision.md .brain/product/roadmap.md .brain/modules/merchant-system.md .brain/modules/pos-cashier.md .brain/database/schema.md .brain/plans/2026-07-06-docs-retail-sales-product-documentation.md .brain/tasks/roadmap.md .brain/tasks/done.md`; `rg -n "[[:blank:]]$" .brain/features/retail-ops-sales-product.md .brain/workflows/retail-ops-stock-to-closeout-flow.md .brain/features/README.md .brain/product/vision.md .brain/product/roadmap.md .brain/modules/merchant-system.md .brain/modules/pos-cashier.md .brain/database/schema.md .brain/plans/2026-07-06-docs-retail-sales-product-documentation.md .brain/tasks/roadmap.md .brain/tasks/done.md .brain/progress.md`; `git diff --check -- .brain/features/README.md .brain/product/vision.md .brain/product/roadmap.md .brain/modules/merchant-system.md .brain/modules/pos-cashier.md .brain/database/schema.md .brain/plans/2026-07-06-docs-retail-sales-product-documentation.md .brain/tasks/roadmap.md .brain/tasks/done.md`.
 
 ### Mobile Expo Starter Baseline Cleanup
+
 - Priority: High
 - Description: Track plan in `.brain/plans/2026-07-07-cleanup-mobile-expo-starter-baseline.md`.
 - Related Feature: Mobile Expo starter
@@ -282,6 +367,7 @@ Completed work with durable value to the project.
 - Checks Run: `rg -n "@gnd|GND|gnd|prodesk|pcruz|www-mobile|static-router|static-trpc|app-auto-update-modal" apps/mobile`; `rg -n "expo-updates|expo-dev-client|@supabase|lottie-react-native|react-native-nitro-modules|update:preview|run:android|run:ios" apps/mobile/package.json apps/mobile/src apps/mobile/scripts apps/mobile/app.config.ts`; `bun install --lockfile-only --offline`; `bun --cwd apps/mobile -e '<Expo config identity check>'`; `git diff --check` scoped to changed mobile and Brain files.
 
 ### Mobile API And tRPC Env Scaffold
+
 - Priority: High
 - Description: Track plan in `.brain/plans/2026-07-07-feature-mobile-api-trpc-env-scaffold.md`.
 - Related Feature: Mobile API scaffold
@@ -294,6 +380,7 @@ Completed work with durable value to the project.
 - Checks Run: `rg -n "www-mobile|@api/trpc|EXPO_PUBLIC_BASE_URL|EXPO_PUBLIC_API_URL|@ewatrade/api|superjson|x-trpc-source" apps/mobile`; `rg -n '"@api/\*"|@api/' apps/mobile/tsconfig.json apps/mobile/src`; `bun install --lockfile-only --offline`; `git diff --check` scoped to changed mobile and Brain files.
 
 ### Mobile Local Session And Routing Shell
+
 - Priority: High
 - Description: Track plan in `.brain/plans/2026-07-07-refactor-mobile-local-session-routing-shell.md`.
 - Related Feature: Mobile app shell

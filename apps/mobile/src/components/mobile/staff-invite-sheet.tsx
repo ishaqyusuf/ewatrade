@@ -23,6 +23,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { forwardRef, useMemo, useState } from "react"
 import { View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 type StaffInviteSheetProps = {
   onComplete?: () => void
@@ -34,7 +35,6 @@ type StaffInviteContentProps = {
   presentation?: "screen" | "sheet"
 }
 
-const STAFF_PREVIEW_LIMIT = 6
 
 type ProductionStaffMember = {
   acceptedAt?: Date | string | null
@@ -142,6 +142,7 @@ export function StaffInviteContent({
   onComplete,
   presentation = "sheet",
 }: StaffInviteContentProps) {
+  const insets = useSafeAreaInsets()
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
@@ -155,7 +156,7 @@ export function StaffInviteContent({
   const productionStaffQuery = useQuery(
     trpc.retailOps.staff.queryOptions(
       {
-        limit: 50,
+        limit: 100,
         role: "cashier",
         status: "all",
       },
@@ -190,10 +191,6 @@ export function StaffInviteContent({
         mapProductionStaff,
       ),
     [productionStaffQuery.data],
-  )
-  const visibleStaffRows = useMemo(
-    () => staffRows.slice(0, STAFF_PREVIEW_LIMIT),
-    [staffRows],
   )
   const isAtStaffLimit = staffRows.length >= plan.limits.staff
   const canSubmit =
@@ -248,8 +245,16 @@ export function StaffInviteContent({
     presentation === "screen" ? "gap-5 px-4 pb-6" : "gap-5 px-5 pb-6"
   const stickyActionClassName =
     presentation === "screen"
-      ? "absolute bottom-0 left-0 right-0 border-t border-border bg-background px-4 pb-5 pt-3"
-      : "absolute bottom-0 left-0 right-0 border-t border-border bg-background px-5 pb-5 pt-3"
+      ? "border-t border-border bg-background px-4 pt-3"
+      : "border-t border-border bg-background px-5 pt-3"
+  const stickyActionStyle = {
+    bottom: 0,
+    left: 0,
+    paddingBottom:
+      presentation === "screen" ? Math.max(insets.bottom, 8) : 8,
+    position: "absolute" as const,
+    right: 0,
+  }
 
   const body = (
     <View className={bodyClassName}>
@@ -318,15 +323,9 @@ export function StaffInviteContent({
         <Text className="text-base font-bold text-foreground">Staff</Text>
         {staffRows.length > 0 ? (
           <>
-            {visibleStaffRows.map((staffMember) => (
+            {staffRows.map((staffMember) => (
               <StaffRowItem key={staffMember.id} staff={staffMember} />
             ))}
-            {staffRows.length > visibleStaffRows.length ? (
-              <Text className="text-xs font-semibold text-muted-foreground">
-                Showing first {visibleStaffRows.length} of {staffRows.length}{" "}
-                attendants.
-              </Text>
-            ) : null}
           </>
         ) : (
           <EmptyState
@@ -354,7 +353,9 @@ export function StaffInviteContent({
         >
           {body}
         </KeyboardAwareScrollView>
-        <View className={stickyActionClassName}>{action}</View>
+        <View style={stickyActionStyle}>
+          <View className={stickyActionClassName}>{action}</View>
+        </View>
       </View>
     )
   }

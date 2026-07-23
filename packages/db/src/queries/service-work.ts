@@ -1889,6 +1889,138 @@ export async function listServiceWorkQueue(
     .filter((job) => !["cancelled", "completed"].includes(job.summary))
 }
 
+export async function listServiceWorkQueuePage(
+  db: PrismaClient,
+  input: {
+    assigneeUserId?: string
+    cursor?: string
+    due?: "all" | "overdue" | "today"
+    limit?: number
+    priority?: "normal" | "urgent"
+    query?: string
+    storeId?: string
+    tenantId: string
+  },
+) {
+  const limit = Math.min(Math.max(input.limit ?? 20, 1), 50)
+  const now = new Date()
+  const endOfToday = new Date(now)
+  endOfToday.setHours(23, 59, 59, 999)
+  const normalizedQuery = input.query?.trim()
+  const baseWhere: Prisma.ServiceJobWhereInput = {
+    currentAssigneeUserId: input.assigneeUserId,
+    dueCommitments:
+      input.due && input.due !== "all"
+        ? {
+            some: {
+              promisedAt:
+                input.due === "overdue"
+                  ? { lt: now }
+                  : { gte: now, lte: endOfToday },
+              supersededAt: null,
+            },
+          }
+        : undefined,
+    lines: {
+      some: {
+        status: {
+          notIn: [
+            ServiceJobLineStatus.COMPLETED,
+            ServiceJobLineStatus.CANCELLED,
+          ],
+        },
+      },
+    },
+    priority:
+      input.priority === "urgent"
+        ? ServicePriority.URGENT
+        : input.priority === "normal"
+          ? ServicePriority.NORMAL
+          : undefined,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+  }
+  const where: Prisma.ServiceJobWhereInput = normalizedQuery
+    ? {
+        ...baseWhere,
+        OR: [
+          { clientJobId: { contains: normalizedQuery, mode: "insensitive" } },
+          {
+            commercialOrder: {
+              is: {
+                OR: [
+                  {
+                    orderNumber: {
+                      contains: normalizedQuery,
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    customerName: {
+                      contains: normalizedQuery,
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    customerPhone: {
+                      contains: normalizedQuery,
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    customerEmail: {
+                      contains: normalizedQuery,
+                      mode: "insensitive",
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          {
+            lines: {
+              some: {
+                commercialOrderLine: {
+                  snapshot: {
+                    is: {
+                      catalogItemName: {
+                        contains: normalizedQuery,
+                        mode: "insensitive",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        ],
+      }
+    : baseWhere
+  const [records, totalCount] = await Promise.all([
+    db.serviceJob.findMany({
+      cursor: input.cursor ? { id: input.cursor } : undefined,
+      include: jobGraph,
+      orderBy: [
+        { priority: "desc" },
+        { createdAt: "asc" },
+        { id: "asc" },
+      ],
+      skip: input.cursor ? 1 : 0,
+      take: limit + 1,
+      where,
+    }),
+    db.serviceJob.count({ where: baseWhere }),
+  ])
+  const hasNextPage = records.length > limit
+  const pageRecords = hasNextPage ? records.slice(0, limit) : records
+
+  return {
+    items: pageRecords.map(serializeJob),
+    nextCursor: hasNextPage ? pageRecords.at(-1)?.id : undefined,
+    totalCount,
+  }
+}
+
 export async function listServiceAssignees(
   db: PrismaClient,
   input: { tenantId: string },
