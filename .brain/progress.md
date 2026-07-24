@@ -1,5 +1,34 @@
 # Progress
 
+## 2026-07-24
+
+### Adaptive New Order Product Picker
+
+- Replaced the loaded-catalog Items stage with an empty selected-lines canvas,
+  centered guidance, and a safe-area-aware bottom-right add-item FAB.
+- Added a detached one-tap picker for at most five sellable choices and a
+  full-screen virtualized picker above five or when pagination remains
+  incomplete. The full-screen surface keeps search and Proceed together at the
+  bottom and selected avatars fixed horizontally at the top.
+- Matched the approved multi-recipient interaction with outlined unselected
+  circles, filled selected checks, row toggling, and removable avatar badges.
+  Full-screen edits remain staged until Proceed; existing quantities survive
+  and new choices start at one.
+- Hardened picker page resolution against failed, repeated, and no-progress
+  cursors. Only active, fixed-price, store-available, currently sellable
+  choices influence the adaptive threshold.
+- Android QA verified the authenticated empty order canvas and FAB placement.
+  It also found and corrected the development-only floating theme toggle
+  overlapping the production FAB.
+- Exact five-choice, six-choice, search, avatar-removal, and checkout
+  interactions remain unverified on-device because the available authenticated
+  local QA business exposed one active sellable choice and the disposable
+  session seeder currently trails required business-profile signup fields.
+  Focused model tests and integration guards cover those seams meanwhile.
+- Checks passed: 9 focused picker, checkout, and pagination tests; mobile
+  TypeScript; Create Sale, pagination, keyboard, NativeWind, and theme guards;
+  two-axis standards/spec review; and diff hygiene.
+
 ## 2026-07-21
 
 ### Persisted Mobile Theme Restoration

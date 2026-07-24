@@ -1,5 +1,21 @@
 # Done
 
+### Adaptive New Order Product Picker
+
+- Priority: Medium
+- Description: Replaced the catalog-first Create Sale Items screen with an
+  empty order canvas, safe-area-aware FAB, adaptive compact/full-screen
+  sellable-item picker, staged avatar selection, bottom search, and editable
+  selected order lines.
+- Related Feature: Adaptive New Order Product Picker
+- Status: Done
+- Plan Status: Done
+- Plan File: .brain/plans/2026-07-23-feature-adaptive-new-order-product-picker.md
+- Completed Date: 2026-07-24
+- Checks Run: focused picker/checkout/pagination tests; mobile TypeScript;
+  Create Sale, pagination, keyboard, NativeWind, and theme guards; diff
+  hygiene; authenticated Android empty-canvas/FAB visual QA.
+
 ### Mobile Infinite-Query Direction Contract
 
 - Priority: High

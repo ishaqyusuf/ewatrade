@@ -116,10 +116,23 @@ const contracts = [
       'keyboardShouldPersistTaps="handled"',
       'keyboardType="decimal-pad"',
       "focusedQuantityId",
-      'searchVisible={showProductSearch && focusedQuantityId === null}',
+      "sale-add-item-fab",
+    ],
+    reason: "mixed-order quantity and payment entry must remain keyboard-safe",
+  },
+  {
+    file: "components/mobile/sale-item-picker.tsx",
+    markers: [
+      "NativeModal",
+      "BottomSearchFooter",
+      'layout="inline"',
+      "alwaysShowSearch",
+      'keyboardDismissMode="interactive"',
+      'keyboardShouldPersistTaps="handled"',
+      'accessibilityLabel="Search product or service"',
     ],
     reason:
-      "mixed-order quantity, payment, and bottom-search entry must remain keyboard-safe",
+      "the large order picker must keep search and Proceed above the keyboard",
   },
   {
     file: "components/mobile/create-sale-customer-sheet.tsx",

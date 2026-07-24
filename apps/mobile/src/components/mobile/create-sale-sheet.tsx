@@ -8,6 +8,7 @@ import {
   CreateSaleCustomerSheet,
   type SaleCustomerDraft,
 } from "@/components/mobile/create-sale-customer-sheet"
+import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
 import {
@@ -18,6 +19,18 @@ import {
   SaleSegmentOption,
   SaleTotalSummary,
 } from "@/components/mobile/sale-flow"
+import {
+  CompactSaleItemPicker,
+  FullScreenSaleItemPicker,
+  SaleItemAvatar,
+  type SaleOfferingChoice,
+} from "@/components/mobile/sale-item-picker"
+import {
+  commitSaleItemPickerDraft,
+  getSaleItemPickerPresentation,
+  getSelectableSaleItemChoices,
+  shouldFetchNextSaleItemPickerPage,
+} from "@/components/mobile/sale-item-picker-model"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { useModal } from "@/components/ui/modal"
@@ -50,6 +63,7 @@ import * as Crypto from "expo-crypto"
 import { useDeferredValue, useMemo, useRef, useState } from "react"
 import { FlatList, View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 type CatalogItem = RouterOutputs["catalog"]["listItems"][number]
 type PaymentMethod = RouterInputs["orders"]["recordPayment"]["method"]
@@ -72,10 +86,10 @@ function flatten(
   items: CatalogItem[],
   storeId: string | undefined,
   kind?: "service",
-) {
+): SaleOfferingChoice[] {
   if (!storeId) return []
 
-  return items.flatMap((item) =>
+  const choices = items.flatMap((item) =>
     item.variants.flatMap((variant) =>
       item.kind === kind || !kind
         ? variant.offerings.flatMap((offering) => {
@@ -121,7 +135,12 @@ function flatten(
                 disabledReason: disabledReasons.join(" · ") || undefined,
                 fixedPriceMinor: offering.fixedPriceMinor,
                 id: offering.id,
-                kind: offering.kind,
+                imageUrl: variant.imageUrl ?? item.imageUrl,
+                itemName: item.name,
+                kind:
+                  offering.kind === "product_unit"
+                    ? ("product_unit" as const)
+                    : ("service" as const),
                 offeringName: offering.name,
               },
             ]
@@ -129,9 +148,11 @@ function flatten(
         : [],
     ),
   )
+
+  return getSelectableSaleItemChoices(choices)
 }
 
-type OfferingRow = ReturnType<typeof flatten>[number]
+type OfferingRow = SaleOfferingChoice
 
 function SaleStageHeader({
   current,
@@ -174,64 +195,35 @@ function SaleStageHeader({
   )
 }
 
-function OfferingSelectionRow({
+function SelectedOrderLine({
   offering,
   onQuantityChange,
   onQuantityBlur,
   onQuantityFocus,
-  onToggle,
+  onRemove,
   quantity,
 }: {
   offering: OfferingRow
   onQuantityChange: (value: string) => void
   onQuantityBlur: () => void
   onQuantityFocus: () => void
-  onToggle: () => void
+  onRemove: () => void
   quantity?: string
 }) {
-  const disabled = Boolean(offering.disabledReason)
-  const selected = !disabled && quantity !== undefined
-  const lineTotalMinor = selected
-    ? saleLineTotalMinor(offering.fixedPriceMinor, quantity)
-    : null
+  const lineTotalMinor = saleLineTotalMinor(offering.fixedPriceMinor, quantity)
 
   return (
     <View className="border-b border-border py-4">
-      <Pressable
-        accessibilityHint={offering.disabledReason}
-        accessibilityRole="checkbox"
-        accessibilityState={{ checked: selected, disabled }}
-        className={
-          disabled
-            ? "min-h-11 flex-row items-center gap-3 opacity-50"
-            : "min-h-11 flex-row items-center gap-3 active:opacity-80"
-        }
-        disabled={disabled}
-        haptic
-        onPress={onToggle}
-        transition
-      >
-        <View
-          className={
-            selected
-              ? "h-10 w-10 items-center justify-center rounded-full bg-primary"
-              : "h-10 w-10 items-center justify-center rounded-full bg-muted"
-          }
-        >
-          <Icon
-            className={
-              selected
-                ? "size-sm text-primary-foreground"
-                : "size-sm text-muted-foreground"
-            }
-            name={disabled ? "Ban" : selected ? "Check" : "Plus"}
-          />
-        </View>
+      <View className="min-h-11 flex-row items-center gap-3">
+        <SaleItemAvatar choice={offering} />
         <View className="min-w-0 flex-1 gap-1">
-          <Text className="font-extrabold text-foreground">
+          <Text className="font-extrabold text-foreground" numberOfLines={1}>
             {offering.displayName}
           </Text>
-          <Text className="text-xs leading-4 text-muted-foreground">
+          <Text
+            className="text-xs leading-4 text-muted-foreground"
+            numberOfLines={1}
+          >
             {offering.offeringName} ·{" "}
             {offering.fixedPriceMinor === null
               ? "Price not set"
@@ -240,47 +232,49 @@ function OfferingSelectionRow({
                   offering.currencyCode,
                 )}
           </Text>
-          {offering.disabledReason ? (
-            <Text className="text-xs font-semibold text-destructive">
-              {offering.disabledReason}
-            </Text>
-          ) : null}
         </View>
-      </Pressable>
+        <Pressable
+          accessibilityLabel={`Remove ${offering.displayName} from order`}
+          className="h-11 w-11 items-center justify-center rounded-full bg-muted active:bg-accent"
+          haptic
+          onPress={onRemove}
+          transition
+        >
+          <Icon className="size-sm text-muted-foreground" name="X" />
+        </Pressable>
+      </View>
 
-      {selected ? (
-        <View className="mt-3 flex-row items-center justify-end gap-3 pl-[52px]">
-          <View className="gap-1">
-            <Text className="text-[10px] font-bold uppercase tracking-[1px] text-muted-foreground">
-              Quantity
-            </Text>
-            <FormField
-              accessibilityLabel={`Quantity for ${offering.displayName}`}
-              containerClassName="w-16"
-              inputClassName="text-center font-extrabold"
-              inputTextAlign="center"
-              keyboardType="decimal-pad"
-              label="Quantity"
-              onBlur={onQuantityBlur}
-              onChangeText={onQuantityChange}
-              onFocus={onQuantityFocus}
-              selectTextOnFocus
-              value={quantity}
-              variant="auth"
-            />
-          </View>
-          <View className="min-w-[116px] items-end gap-1">
-            <Text className="text-[10px] font-bold uppercase tracking-[1px] text-muted-foreground">
-              Line total
-            </Text>
-            <Text className="text-lg font-extrabold text-foreground">
-              {lineTotalMinor === null
-                ? "—"
-                : formatMinorMoney(lineTotalMinor, offering.currencyCode)}
-            </Text>
-          </View>
+      <View className="mt-3 flex-row items-center justify-end gap-3 pl-[56px]">
+        <View className="gap-1">
+          <Text className="text-[10px] font-bold uppercase tracking-[1px] text-muted-foreground">
+            Quantity
+          </Text>
+          <FormField
+            accessibilityLabel={`Quantity for ${offering.displayName}`}
+            containerClassName="w-20"
+            inputClassName="text-center font-extrabold"
+            inputTextAlign="center"
+            keyboardType="decimal-pad"
+            label="Quantity"
+            onBlur={onQuantityBlur}
+            onChangeText={onQuantityChange}
+            onFocus={onQuantityFocus}
+            selectTextOnFocus
+            value={quantity}
+            variant="auth"
+          />
         </View>
-      ) : null}
+        <View className="min-w-[116px] items-end gap-1">
+          <Text className="text-[10px] font-bold uppercase tracking-[1px] text-muted-foreground">
+            Line total
+          </Text>
+          <Text className="text-lg font-extrabold text-foreground">
+            {lineTotalMinor === null
+              ? "—"
+              : formatMinorMoney(lineTotalMinor, offering.currencyCode)}
+          </Text>
+        </View>
+      </View>
     </View>
   )
 }
@@ -371,6 +365,8 @@ export function CreateSaleContent({
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const customerModal = useModal()
+  const compactItemModal = useModal()
+  const insets = useSafeAreaInsets()
   const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
   const queueCommand = useOfflineCommandStore((state) => state.queueCommand)
   const orderClientId = useRef(`order-${Crypto.randomUUID()}`)
@@ -388,6 +384,15 @@ export function CreateSaleContent({
   const [error, setError] = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash")
   const [productSearch, setProductSearch] = useState("")
+  const [isResolvingPicker, setIsResolvingPicker] = useState(false)
+  const [pickerChoiceCount, setPickerChoiceCount] = useState(0)
+  const [compactPickerChoices, setCompactPickerChoices] = useState<
+    OfferingRow[]
+  >([])
+  const [pickerDraft, setPickerDraft] = useState<Record<string, OfferingRow>>(
+    {},
+  )
+  const [pickerVisible, setPickerVisible] = useState(false)
   const deferredCustomerSearch = useDeferredValue(customerSearch)
   const deferredProductSearch = useDeferredValue(productSearch)
   const [quantities, setQuantities] = useState<Record<string, string>>({})
@@ -407,6 +412,7 @@ export function CreateSaleContent({
         kind: itemKind,
         limit: LIST_PAGE_SIZE,
         query: isOffline ? undefined : deferredProductSearch || undefined,
+        status: "active",
       },
       {
         getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -475,6 +481,10 @@ export function CreateSaleContent({
       }),
     [allRows, quantities, selectedOfferings],
   )
+  const selectedChoiceIds = useMemo(
+    () => new Set(Object.keys(selectedOfferings)),
+    [selectedOfferings],
+  )
   const totalMinor = selectedRows.reduce(
     (total, line) => total + (line.totalMinor ?? 0),
     0,
@@ -497,9 +507,6 @@ export function CreateSaleContent({
         .includes(normalizedSearch),
     )
   }, [customerSearch, isOffline, loadedCustomers])
-  const showProductSearch = shouldShowListSearch(
-    Math.max(catalog.data?.pages[0]?.totalCount ?? 0, loadedRows.length),
-  )
   const showCustomerSearch = shouldShowListSearch(
     Math.max(customerCount.data ?? 0, loadedCustomers.length),
   )
@@ -509,26 +516,113 @@ export function CreateSaleContent({
     setQuantities((current) => ({ ...current, [offeringId]: value }))
   }
 
-  function toggleOffering(offering: OfferingRow) {
+  function addOffering(offering: OfferingRow) {
     setError(null)
-    if (quantities[offering.id] !== undefined) {
-      setQuantities((current) => {
-        const next = { ...current }
-        delete next[offering.id]
-        return next
+    setSelectedOfferings((selected) => ({
+      ...selected,
+      [offering.id]: offering,
+    }))
+    setQuantities((current) => ({
+      ...current,
+      [offering.id]: current[offering.id] ?? "1",
+    }))
+  }
+
+  function removeOffering(offeringId: string) {
+    setError(null)
+    setSelectedOfferings((selected) => {
+      const remaining = { ...selected }
+      delete remaining[offeringId]
+      return remaining
+    })
+    setQuantities((current) => {
+      const remaining = { ...current }
+      delete remaining[offeringId]
+      return remaining
+    })
+  }
+
+  async function openItemPicker() {
+    setError(null)
+    setIsResolvingPicker(true)
+
+    try {
+      let pages = catalog.data?.pages ?? []
+      let choices = flatten(
+        pages.flatMap((page) => page.items),
+        availability.data?.storeId,
+        itemKind,
+      )
+      let hasNextPage = Boolean(pages.at(-1)?.nextCursor)
+
+      const attemptedCursors = new Set<string>()
+      while (
+        shouldFetchNextSaleItemPickerPage({
+          attemptedCursors,
+          choiceCount: choices.length,
+          isOffline,
+          nextCursor: pages.at(-1)?.nextCursor,
+        })
+      ) {
+        const cursor = pages.at(-1)?.nextCursor
+        if (!cursor) break
+        attemptedCursors.add(cursor)
+
+        const result = await catalog.fetchNextPage()
+        if (result.isError) throw result.error
+
+        const previousPageCount = pages.length
+        pages = result.data?.pages ?? pages
+        if (pages.length <= previousPageCount) break
+
+        choices = flatten(
+          pages.flatMap((page) => page.items),
+          availability.data?.storeId,
+          itemKind,
+        )
+        hasNextPage = Boolean(pages.at(-1)?.nextCursor)
+      }
+
+      setPickerChoiceCount(Math.max(choices.length, pages[0]?.totalCount ?? 0))
+
+      const presentation = getSaleItemPickerPresentation({
+        choiceCount: choices.length,
+        hasUnloadedChoices: hasNextPage,
       })
-      setSelectedOfferings((selected) => {
-        const remaining = { ...selected }
-        delete remaining[offering.id]
-        return remaining
-      })
-    } else {
-      setSelectedOfferings((selected) => ({
-        ...selected,
-        [offering.id]: offering,
-      }))
-      setQuantities((current) => ({ ...current, [offering.id]: "1" }))
+
+      if (presentation === "screen") {
+        setPickerDraft({ ...selectedOfferings })
+        setPickerVisible(true)
+      } else {
+        setCompactPickerChoices(choices)
+        requestAnimationFrame(() => compactItemModal.present())
+      }
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Could not load products or services.",
+      )
+    } finally {
+      setIsResolvingPicker(false)
     }
+  }
+
+  function closeFullScreenPicker() {
+    setPickerVisible(false)
+    setPickerDraft({})
+    setProductSearch("")
+  }
+
+  function commitFullScreenPicker() {
+    const committed = commitSaleItemPickerDraft({
+      currentQuantities: quantities,
+      draft: pickerDraft,
+    })
+    setSelectedOfferings(committed.selectedChoices)
+    setQuantities(committed.quantities)
+    setError(null)
+    closeFullScreenPicker()
   }
 
   function proceedToCustomer() {
@@ -673,8 +767,8 @@ export function CreateSaleContent({
     <View>
       <SaleStageHeader
         current={1}
-        description="Tap an item to add it, then enter a compact quantity. Search stays within reach at the bottom."
-        title={itemKind === "service" ? "Add services" : "Add products"}
+        description="Build the order one item at a time, then enter the quantity for each selection."
+        title={itemKind === "service" ? "New service order" : "New order"}
       />
       {isOffline ? (
         <View className="pb-4">
@@ -706,38 +800,30 @@ export function CreateSaleContent({
           <FlatList
             contentContainerStyle={{
               flexGrow: 1,
-              paddingBottom:
-                selectedRows.length > 0 &&
-                showProductSearch &&
-                focusedQuantityId === null
-                  ? 188
-                  : selectedRows.length > 0 ||
-                      (showProductSearch && focusedQuantityId === null)
-                    ? 104
-                    : 24,
+              paddingBottom: selectedRows.length > 0 ? 132 : 96,
               paddingHorizontal: 16,
             }}
-            data={allRows}
+            data={Object.values(selectedOfferings)}
             keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
             keyExtractor={(offering) => offering.id}
             ListEmptyComponent={
-              <View className="py-12">
-                <Text className="text-center font-extrabold text-foreground">
-                  {catalog.isLoading || availability.isLoading
-                    ? "Loading offerings"
-                    : "No matching items"}
-                </Text>
-                <Text className="mt-1 text-center text-sm text-muted-foreground">
-                  {catalog.isLoading || availability.isLoading
-                    ? "Getting the latest products and services."
-                    : "Try another product, service, unit, or variant name."}
-                </Text>
+              <View className="flex-1 justify-center pb-24">
+                <EmptyState
+                  className="bg-transparent"
+                  icon="ReceiptText"
+                  message={
+                    itemKind === "service"
+                      ? "Tap the + button to add a service."
+                      : "Tap the + button to add a product or service."
+                  }
+                  title="No items added yet"
+                />
               </View>
             }
             ListHeaderComponent={itemsHeader}
             renderItem={({ item }) => (
-              <OfferingSelectionRow
+              <SelectedOrderLine
                 offering={item}
                 onQuantityBlur={() =>
                   setFocusedQuantityId((current) =>
@@ -746,45 +832,67 @@ export function CreateSaleContent({
                 }
                 onQuantityChange={(value) => updateQuantity(item.id, value)}
                 onQuantityFocus={() => setFocusedQuantityId(item.id)}
-                onToggle={() => toggleOffering(item)}
+                onRemove={() => removeOffering(item.id)}
                 quantity={quantities[item.id]}
               />
             )}
             showsVerticalScrollIndicator={false}
             style={{ flex: 1 }}
-            onEndReached={() => {
-              if (
-                shouldFetchNextListPage({
-                  hasNextPage: Boolean(catalog.hasNextPage),
-                  isFetchingNextPage: catalog.isFetchingNextPage,
-                })
-              ) {
-                void catalog.fetchNextPage()
-              }
-            }}
-            onEndReachedThreshold={0.35}
-            ListFooterComponent={
-              catalog.isFetchingNextPage ? (
-                <Text className="py-5 text-center text-xs font-semibold text-muted-foreground">
-                  Loading more items…
-                </Text>
-              ) : null
-            }
           />
 
-          {/* This checkout footer intentionally remains visible because the sale total and Proceed action are continuous selection feedback. */}
-          <BottomSearchFooter
-            accessibilityLabel="Search product or service"
-            onChangeText={setProductSearch}
-            placeholder="Search product or service"
-            searchVisible={showProductSearch && focusedQuantityId === null}
-            totalCount={Math.max(
-              catalog.data?.pages[0]?.totalCount ?? 0,
-              loadedRows.length,
-            )}
-            value={productSearch}
-          >
-            {selectedRows.length > 0 ? (
+          {focusedQuantityId === null ? (
+            <View
+              pointerEvents="box-none"
+              style={{
+                bottom:
+                  selectedRows.length > 0 ? 104 : Math.max(insets.bottom, 16),
+                position: "absolute",
+                right: 16,
+                zIndex: 30,
+              }}
+            >
+              <Pressable
+                accessibilityLabel={
+                  itemKind === "service"
+                    ? "Add service"
+                    : "Add product or service"
+                }
+                accessibilityRole="button"
+                accessibilityState={{
+                  busy: isResolvingPicker,
+                  disabled:
+                    catalog.isLoading ||
+                    availability.isLoading ||
+                    isResolvingPicker,
+                }}
+                className="h-14 w-14 items-center justify-center rounded-full bg-primary shadow-lg active:bg-primary/90"
+                disabled={
+                  catalog.isLoading ||
+                  availability.isLoading ||
+                  isResolvingPicker
+                }
+                haptic
+                onPress={() => void openItemPicker()}
+                testID="sale-add-item-fab"
+                transition
+              >
+                <Icon
+                  className="size-base text-primary-foreground"
+                  name={isResolvingPicker ? "Loader2" : "Plus"}
+                />
+              </Pressable>
+            </View>
+          ) : null}
+
+          {selectedRows.length > 0 ? (
+            <BottomSearchFooter
+              accessibilityLabel="Order actions"
+              onChangeText={() => undefined}
+              placeholder=""
+              searchVisible={false}
+              totalCount={0}
+              value=""
+            >
               <View className="flex-row items-center gap-3">
                 <View className="min-w-[104px] gap-0.5">
                   <Text className="text-[10px] font-bold uppercase tracking-[1px] text-muted-foreground">
@@ -802,8 +910,8 @@ export function CreateSaleContent({
                   Proceed
                 </ActionButton>
               </View>
-            ) : null}
-          </BottomSearchFooter>
+            </BottomSearchFooter>
+          ) : null}
         </View>
       ) : null}
 
@@ -1150,6 +1258,57 @@ export function CreateSaleContent({
         }}
         onSave={saveCustomerDraft}
         ref={customerModal.ref}
+      />
+      <CompactSaleItemPicker
+        choices={compactPickerChoices}
+        itemKind={itemKind}
+        onToggle={(choice) => {
+          if (selectedChoiceIds.has(choice.id)) {
+            removeOffering(choice.id)
+          } else {
+            addOffering(choice)
+          }
+          compactItemModal.dismiss()
+        }}
+        ref={compactItemModal.ref}
+        selectedChoiceIds={selectedChoiceIds}
+      />
+      <FullScreenSaleItemPicker
+        choices={allRows}
+        draft={pickerDraft}
+        hasNextPage={!isOffline && Boolean(catalog.hasNextPage)}
+        isFetchingNextPage={catalog.isFetchingNextPage}
+        itemKind={itemKind}
+        onAdd={(choice) =>
+          setPickerDraft((current) => ({
+            ...current,
+            [choice.id]: choice,
+          }))
+        }
+        onClose={closeFullScreenPicker}
+        onFetchNextPage={() => {
+          if (
+            !isOffline &&
+            shouldFetchNextListPage({
+              hasNextPage: Boolean(catalog.hasNextPage),
+              isFetchingNextPage: catalog.isFetchingNextPage,
+            })
+          ) {
+            void catalog.fetchNextPage()
+          }
+        }}
+        onProceed={commitFullScreenPicker}
+        onQueryChange={setProductSearch}
+        onRemove={(choiceId) =>
+          setPickerDraft((current) => {
+            const remaining = { ...current }
+            delete remaining[choiceId]
+            return remaining
+          })
+        }
+        query={productSearch}
+        searchChoiceCount={pickerChoiceCount}
+        visible={pickerVisible}
       />
     </View>
   )

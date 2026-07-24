@@ -14,7 +14,12 @@ const contracts = [
   },
   {
     file: "components/mobile/bottom-search-footer.tsx",
-    markers: ["totalCount: number", "shouldShowListSearch(totalCount)"],
+    markers: [
+      "totalCount: number",
+      "alwaysShowSearch?: boolean",
+      "alwaysShowSearch || shouldShowListSearch(totalCount)",
+      'layout?: "inline" | "stacked"',
+    ],
   },
   {
     file: "components/mobile/admin-tabs/admin-orders-screen.tsx",

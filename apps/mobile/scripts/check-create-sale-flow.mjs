@@ -13,9 +13,21 @@ const checkoutModelSource = readFileSync(
   join(MOBILE_DIR, "src/components/mobile/sale-checkout-model.ts"),
   "utf8",
 )
-const completeSource = [source, customerSheetSource, checkoutModelSource].join(
-  "\n",
+const pickerSource = readFileSync(
+  join(MOBILE_DIR, "src/components/mobile/sale-item-picker.tsx"),
+  "utf8",
 )
+const pickerModelSource = readFileSync(
+  join(MOBILE_DIR, "src/components/mobile/sale-item-picker-model.ts"),
+  "utf8",
+)
+const completeSource = [
+  source,
+  customerSheetSource,
+  checkoutModelSource,
+  pickerSource,
+  pickerModelSource,
+].join("\n")
 const contracts = [
   {
     markers: [
@@ -71,14 +83,26 @@ const contracts = [
       "Step {current} of 3",
       "FlatList",
       "BottomSearchFooter",
+      "No items added yet",
+      "sale-add-item-fab",
+      "CompactSaleItemPicker",
+      "FullScreenSaleItemPicker",
+      "SALE_ITEM_PICKER_COMPACT_LIMIT = 5",
+      "getSaleItemPickerPresentation",
+      "commitSaleItemPickerDraft",
       "Search product or service",
+      "alwaysShowSearch",
       "focusedQuantityId",
-      "searchVisible={showProductSearch && focusedQuantityId === null}",
+      'layout="inline"',
+      "selectedChoices.length",
+      "onRemove(choice.id)",
+      "draft[item.id] ? onRemove(item.id) : onAdd(item)",
       "onEndReachedThreshold={0.35}",
       "catalog.fetchNextPage()",
+      "!isOffline &&",
       "recentOrders.fetchNextPage()",
       "Line total",
-      'containerClassName="w-16"',
+      'containerClassName="w-20"',
       'accessibilityRole="checkbox"',
       'keyboardType="decimal-pad"',
       "Create customer",

@@ -7,9 +7,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 type BottomSearchFooterProps = {
   accessibilityLabel: string
+  alwaysShowSearch?: boolean
   children?: ReactNode
   includeSafeArea?: boolean
   label?: string
+  layout?: "inline" | "stacked"
   onChangeText: (value: string) => void
   placeholder: string
   searchVisible?: boolean
@@ -19,9 +21,11 @@ type BottomSearchFooterProps = {
 
 export function BottomSearchFooter({
   accessibilityLabel,
+  alwaysShowSearch = false,
   children,
   includeSafeArea = true,
   label = "Search",
+  layout = "stacked",
   onChangeText,
   placeholder,
   searchVisible = true,
@@ -32,7 +36,7 @@ export function BottomSearchFooter({
   const paddingBottom = includeSafeArea ? Math.max(insets.bottom, 8) : 8
 
   const effectiveSearchVisible =
-    searchVisible && shouldShowListSearch(totalCount)
+    searchVisible && (alwaysShowSearch || shouldShowListSearch(totalCount))
 
   if (!children && !effectiveSearchVisible) return null
 
@@ -51,21 +55,30 @@ export function BottomSearchFooter({
     >
       <View style={{ paddingBottom }}>
         <View className="gap-3 bg-background px-4 pt-2">
-          {children}
-          {effectiveSearchVisible ? (
-            <FormField
-              accessibilityLabel={accessibilityLabel}
-              autoCapitalize="none"
-              autoCorrect={false}
-              label={label}
-              leadingIcon="Search"
-              onChangeText={onChangeText}
-              placeholder={placeholder}
-              returnKeyType="search"
-              value={value}
-              variant="search"
-            />
-          ) : null}
+          <View
+            className={
+              layout === "inline" ? "flex-row items-center gap-3" : "gap-3"
+            }
+          >
+            {effectiveSearchVisible ? (
+              <FormField
+                accessibilityLabel={accessibilityLabel}
+                autoCapitalize="none"
+                autoCorrect={false}
+                containerClassName={
+                  layout === "inline" ? "min-w-0 flex-1" : undefined
+                }
+                label={label}
+                leadingIcon="Search"
+                onChangeText={onChangeText}
+                placeholder={placeholder}
+                returnKeyType="search"
+                value={value}
+                variant="search"
+              />
+            ) : null}
+            {children}
+          </View>
         </View>
       </View>
     </KeyboardStickyView>

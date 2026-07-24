@@ -246,15 +246,24 @@ Subscription support is included as a plan and entitlement foundation with three
 - Mobile clock-in and closeout sheets should use shared session reconciliation primitives for source state, opening/closing stock declaration rows, payment variance rows, summary stats, empty states, and submit errors. These surfaces should stay flat, keyboard-safe, semantic-token based, and operational rather than using local card-heavy session widgets.
 - Create-sale is a staged full-screen workflow: select Items first, choose or
   skip a Customer second, and Review payment plus totals before confirmation.
-- The Items stage uses a virtualized flat divider list for the real catalog.
-  Every sellable offering shows its product/service context, unit or variant,
-  price, and truthful availability; tapping it reveals a compact right-aligned
-  numeric quantity field and strong line total. A keyboard-sticky bottom search
-  remains visible, with a floating overall total and full-width Proceed action
-  above it after at least one item is selected. While any quantity field is
-  focused, the search field hides so the total and Proceed action become the
-  only keyboard-sticky footer controls; the search returns when quantity entry
-  ends.
+- The Items stage opens as an empty order canvas with centered guidance and a
+  bottom-right floating add-item button. Selected sellable Offerings return as
+  flat order lines with product/service context, unit or variant, price,
+  editable quantity initialized to one, remove action, and live line total.
+  The overall total and Proceed action remain keyboard-sticky after at least
+  one line is selected.
+- The add-item button uses an adaptive picker over active, store-available,
+  fixed-price Offerings. A complete set of at most five choices opens in a
+  detached floating bottom sheet where one tap adds the choice and closes the
+  sheet. Six or more choices, or an incompletely cached offline catalog, open a
+  full-screen virtualized picker with server-backed online search, local
+  offline filtering, pagination, and a fixed horizontal selected-avatar strip.
+  Picker rows use a trailing outlined circle when unselected and a filled
+  checkmark when selected; tapping a selected row toggles it off, matching the
+  approved multi-recipient selection reference.
+  Full-screen changes remain staged until Proceed; closing discards them.
+  Existing line quantities survive picker edits, new lines start at one, and
+  avatar images fall back to initials or Product/Service icons.
 - The Customer stage uses the same keyboard-sticky bottom-search pattern. Create
   customer and Skip/guest are the first actions, followed by filtered recent
   customer suggestions derived from commercial orders. Create customer opens a

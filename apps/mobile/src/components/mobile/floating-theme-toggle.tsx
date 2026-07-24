@@ -1,10 +1,7 @@
 import { Pressable } from "@/components/ui/pressable"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { shouldShowFloatingThemeToggle } from "@/lib/app-variant"
-import {
-  type ThemeOverride,
-  setThemeOverride,
-} from "@/lib/theme-preference"
+import { type ThemeOverride, setThemeOverride } from "@/lib/theme-preference"
 import { usePathname } from "expo-router"
 import { useEffect, useState } from "react"
 import { Image, Keyboard, StyleSheet, View } from "react-native"
@@ -22,6 +19,7 @@ const OPERATIONAL_DOCK_PATHS = new Set([
   "/dashboard",
   "/sales-rep-home",
 ])
+const FLOATING_ACTION_PATHS = new Set(["/create-sale-modal"])
 
 export function FloatingThemeToggle() {
   const insets = useSafeAreaInsets()
@@ -30,6 +28,7 @@ export function FloatingThemeToggle() {
   const { colorScheme, setColorScheme, themeOverride } = useColorScheme()
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false)
   const hasOperationalDock = OPERATIONAL_DOCK_PATHS.has(pathname)
+  const hasFloatingAction = FLOATING_ACTION_PATHS.has(pathname)
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener("keyboardDidShow", () => {
@@ -74,8 +73,11 @@ export function FloatingThemeToggle() {
         styles.container,
         {
           // This development-only control stays independently available for
-          // theme QA, but stacks above the production dock instead of covering it.
-          bottom: Math.max(insets.bottom, 12) + (hasOperationalDock ? 104 : 16),
+          // theme QA, but stacks above production bottom actions instead of
+          // covering them.
+          bottom:
+            Math.max(insets.bottom, 12) +
+            (hasOperationalDock ? 104 : hasFloatingAction ? 80 : 16),
         },
       ]}
     >
