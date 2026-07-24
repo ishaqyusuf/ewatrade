@@ -28,6 +28,11 @@
 - Checks passed: 9 focused picker, checkout, and pagination tests; mobile
   TypeScript; Create Sale, pagination, keyboard, NativeWind, and theme guards;
   two-axis standards/spec review; and diff hygiene.
+- Published Android preview OTA `2026.07.24` to the EAS `preview` branch.
+  Update group: `d49e8983-37eb-4499-ab88-a887740a2c0f`. EAS found no compatible
+  preview build for Android fingerprint
+  `25054e5fcff34b6e1485356ad8b6ed342943d33c`, so a matching preview binary is
+  required before devices can install the update.
 
 ## 2026-07-21
 
