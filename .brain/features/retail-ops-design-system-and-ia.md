@@ -636,8 +636,12 @@ The create-sale workflow is the core mobile POS path and should stay optimized f
 - Active Product Offerings with no price or no available stock remain visible
   as disabled rows. The row states the exact `Price not set` and/or `Out of
   stock` reason and cannot add a quantity or enter an order payload.
-- Item rows, payment choices, customer options, and total preview use reusable sale-flow primitives for selectable rows, segmented choices, and ticket-like total summaries instead of local card-heavy widgets.
-- The visual rhythm should stay flat and fast: divider-based sellable rows, rounded selected indicators, semantic stock/payment/customer status, and a prominent total before payment/customer confirmation.
+- Item rows, payment choices, customer options, and total preview use reusable sale-flow primitives for add-action rows, segmented choices, and ticket-like total summaries instead of local card-heavy widgets.
+- The visual rhythm should stay flat and fast: divider-based sellable rows,
+  explicit add affordances instead of checkbox state, semantic
+  stock/payment/customer status, and a prominent total before
+  payment/customer confirmation. Repeated taps on one sellable Offering append
+  independent Order lines so each occurrence can keep its own quantity.
 - Bottom searches use the GND-style inset muted field without a hard footer
   divider. During quantity entry, Create Sale hides the Product/Service search
   while keeping only the total and Proceed action sticky above the keyboard;

@@ -262,12 +262,14 @@ Subscription support is included as a plan and entitlement foundation with three
   which owns server-backed online search and pagination. Six or more loaded
   choices open that same full-screen picker; offline filtering remains local
   and the picker keeps a fixed horizontal selected-avatar strip.
-  Picker rows use a trailing outlined circle when unselected and a filled
-  checkmark when selected; tapping a selected row toggles it off, matching the
-  approved multi-recipient selection reference.
+  Picker rows are add actions, not checkboxes: each tap appends a new,
+  independently addressable Order line, including when that Offering is
+  already present. The selected-avatar strip may therefore contain the same
+  Offering more than once, and each avatar removes only its own staged line.
   Full-screen changes remain staged until Proceed; closing discards them.
-  Existing line quantities survive picker edits, new lines start at one, and
-  avatar images fall back to initials or Product/Service icons.
+  Existing line quantities survive picker edits, every new line starts at one,
+  and duplicate lines may retain different quantities. Avatar images fall back
+  to initials or Product/Service icons.
 - The Customer stage uses the same keyboard-sticky bottom-search pattern. Create
   customer and Skip/guest are the first actions, followed by filtered recent
   customer suggestions derived from commercial orders. Create customer opens a

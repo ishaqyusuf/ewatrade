@@ -1,6 +1,10 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
+import {
+  type SaleItemPickerLine,
+  getSaleItemPickerLineCounts,
+} from "@/components/mobile/sale-item-picker-model"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -93,22 +97,22 @@ export function SaleItemAvatar({
 }
 
 function SaleOfferingPickerRow({
+  addedCount,
   choice,
   onPress,
-  selected,
 }: {
+  addedCount: number
   choice: SaleOfferingChoice
   onPress: () => void
-  selected: boolean
 }) {
   const disabled = Boolean(choice.disabledReason)
 
   return (
     <Pressable
       accessibilityHint={choice.disabledReason}
-      accessibilityLabel={`${selected ? "Remove" : "Add"} ${choice.displayName}, ${choice.offeringName}`}
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked: selected, disabled }}
+      accessibilityLabel={`${addedCount > 0 ? "Add another" : "Add"} ${choice.displayName}, ${choice.offeringName}`}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
       className={cn(
         "min-h-18 flex-row items-center gap-3 border-b border-border py-4 active:bg-accent",
         disabled && "opacity-50",
@@ -133,30 +137,23 @@ function SaleOfferingPickerRow({
           <Text className="text-xs font-semibold text-destructive">
             {choice.disabledReason}
           </Text>
-        ) : selected ? (
+        ) : addedCount > 0 ? (
           <Text className="text-xs font-semibold text-primary">
-            Already added
+            {addedCount} {addedCount === 1 ? "line" : "lines"} already in order
           </Text>
         ) : null}
       </View>
       <View
         className={cn(
           "h-9 w-9 items-center justify-center rounded-full border-2",
-          selected
-            ? "border-primary bg-primary"
-            : "border-muted-foreground bg-transparent",
+          "border-muted-foreground bg-transparent",
           disabled && "border-muted-foreground bg-muted",
         )}
       >
-        {disabled || selected ? (
-          <Icon
-            className={cn(
-              "size-sm",
-              selected ? "text-primary-foreground" : "text-muted-foreground",
-            )}
-            name={disabled ? "Ban" : "Check"}
-          />
-        ) : null}
+        <Icon
+          className="size-sm text-muted-foreground"
+          name={disabled ? "Ban" : "Plus"}
+        />
       </View>
     </Pressable>
   )
@@ -165,18 +162,18 @@ function SaleOfferingPickerRow({
 type CompactSaleItemPickerProps = {
   choices: SaleOfferingChoice[]
   itemKind?: "service"
+  lineCountsByOfferingId: Map<string, number>
+  onAdd: (choice: SaleOfferingChoice) => void
   onClose: () => void
-  onToggle: (choice: SaleOfferingChoice) => void
-  selectedChoiceIds: Set<string>
   visible: boolean
 }
 
 export function CompactSaleItemPicker({
   choices,
   itemKind,
+  lineCountsByOfferingId,
+  onAdd,
   onClose,
-  onToggle,
-  selectedChoiceIds,
   visible,
 }: CompactSaleItemPickerProps) {
   const colors = useColors()
@@ -253,10 +250,10 @@ export function CompactSaleItemPicker({
               ) : (
                 choices.map((choice) => (
                   <SaleOfferingPickerRow
+                    addedCount={lineCountsByOfferingId.get(choice.id) ?? 0}
                     choice={choice}
                     key={choice.id}
-                    onPress={() => onToggle(choice)}
-                    selected={selectedChoiceIds.has(choice.id)}
+                    onPress={() => onAdd(choice)}
                   />
                 ))
               )}
@@ -270,7 +267,7 @@ export function CompactSaleItemPicker({
 
 type FullScreenSaleItemPickerProps = {
   choices: SaleOfferingChoice[]
-  draft: Record<string, SaleOfferingChoice>
+  draft: SaleItemPickerLine<SaleOfferingChoice>[]
   hasNextPage: boolean
   isFetchingNextPage: boolean
   itemKind?: "service"
@@ -279,7 +276,7 @@ type FullScreenSaleItemPickerProps = {
   onFetchNextPage: () => void
   onProceed: () => void
   onQueryChange: (value: string) => void
-  onRemove: (choiceId: string) => void
+  onRemove: (lineId: string) => void
   query: string
   searchChoiceCount: number
   visible: boolean
@@ -304,7 +301,10 @@ export function FullScreenSaleItemPicker({
   const colors = useColors()
   const { colorScheme } = useColorScheme()
   const insets = useSafeAreaInsets()
-  const selectedChoices = useMemo(() => Object.values(draft), [draft])
+  const lineCountsByOfferingId = useMemo(
+    () => getSaleItemPickerLineCounts(draft),
+    [draft],
+  )
 
   return (
     <NativeModal
@@ -328,7 +328,7 @@ export function FullScreenSaleItemPicker({
                 : "Add products or services"}
             </Text>
             <Text className="text-sm text-muted-foreground">
-              Select several items, then proceed to set quantities.
+              Add each item as many times as needed, then set quantities.
             </Text>
           </View>
           <Pressable
@@ -348,10 +348,10 @@ export function FullScreenSaleItemPicker({
               Selected
             </Text>
             <Text className="text-xs font-bold text-primary">
-              {selectedChoices.length}
+              {draft.length}
             </Text>
           </View>
-          {selectedChoices.length === 0 ? (
+          {draft.length === 0 ? (
             <View className="min-h-16 justify-center">
               <Text className="text-sm text-muted-foreground">
                 Tap a product or service below to add it here.
@@ -364,17 +364,17 @@ export function FullScreenSaleItemPicker({
               showsHorizontalScrollIndicator={false}
             >
               <View className="flex-row gap-3 pr-4">
-                {selectedChoices.map((choice) => (
-                  <View className="w-[72px] items-center gap-1" key={choice.id}>
+                {draft.map((line) => (
+                  <View className="w-[72px] items-center gap-1" key={line.id}>
                     <View className="relative">
-                      <SaleItemAvatar choice={choice} size="large" />
+                      <SaleItemAvatar choice={line.offering} size="large" />
                       <Pressable
-                        accessibilityLabel={`Remove ${choice.displayName}`}
+                        accessibilityLabel={`Remove one ${line.offering.displayName} line`}
                         allowOverflow
                         className="absolute -right-2 -top-2 h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-foreground"
                         hitSlop={8}
                         haptic
-                        onPress={() => onRemove(choice.id)}
+                        onPress={() => onRemove(line.id)}
                       >
                         <Icon className="size-xs text-background" name="X" />
                       </Pressable>
@@ -383,7 +383,7 @@ export function FullScreenSaleItemPicker({
                       className="w-full text-center text-[10px] font-bold text-foreground"
                       numberOfLines={1}
                     >
-                      {choice.displayName}
+                      {line.offering.displayName}
                     </Text>
                   </View>
                 ))}
@@ -429,9 +429,9 @@ export function FullScreenSaleItemPicker({
           onEndReachedThreshold={0.35}
           renderItem={({ item }) => (
             <SaleOfferingPickerRow
+              addedCount={lineCountsByOfferingId.get(item.id) ?? 0}
               choice={item}
-              onPress={() => (draft[item.id] ? onRemove(item.id) : onAdd(item))}
-              selected={Boolean(draft[item.id])}
+              onPress={() => onAdd(item)}
             />
           )}
           showsVerticalScrollIndicator={false}
@@ -448,7 +448,7 @@ export function FullScreenSaleItemPicker({
           value={query}
         >
           <ActionButton
-            accessibilityLabel={`Proceed with ${selectedChoices.length} selected items`}
+            accessibilityLabel={`Proceed with ${draft.length} selected lines`}
             className="w-[112px]"
             onPress={onProceed}
             trailingIcon="ArrowRight"

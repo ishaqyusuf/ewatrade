@@ -414,6 +414,8 @@ export async function createCommercialOrderInTransaction(
     },
   })
 
+  const offeringIdsWithValidatedBalanceRevision = new Set<string>()
+
   for (const [index, resolved] of resolvedLines.entries()) {
     const line = await tx.commercialOrderLine.create({
       data: {
@@ -443,7 +445,11 @@ export async function createCommercialOrderInTransaction(
         clientReservationId: `${input.clientOrderId}:line:${index + 1}`,
         commercialOrderLineId: line.id,
         enteredQuantity: resolved.quantity,
-        expectedBalanceRevision: resolved.input.expectedBalanceRevision,
+        expectedBalanceRevision: offeringIdsWithValidatedBalanceRevision.has(
+          resolved.offering.id,
+        )
+          ? undefined
+          : resolved.input.expectedBalanceRevision,
         expectedConfigurationVersionId:
           resolved.input.expectedConfigurationVersionId,
         offeringId: resolved.offering.id,
@@ -451,6 +457,7 @@ export async function createCommercialOrderInTransaction(
         storeId: store.id,
         tenantId: input.tenantId,
       })
+      offeringIdsWithValidatedBalanceRevision.add(resolved.offering.id)
     }
 
     const productUnit = resolved.offering.productUnitOffering?.inventoryUnit

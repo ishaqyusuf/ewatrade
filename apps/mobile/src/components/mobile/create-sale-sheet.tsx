@@ -26,9 +26,13 @@ import {
   type SaleOfferingChoice,
 } from "@/components/mobile/sale-item-picker"
 import {
-  commitSaleItemPickerDraft,
+  type SaleItemPickerLine,
+  addSaleItemPickerLine,
+  getSaleItemPickerLineCounts,
   getSelectableSaleItemChoices,
   openSaleItemPicker,
+  removeSaleItemPickerLine,
+  updateSaleItemPickerLineQuantity,
 } from "@/components/mobile/sale-item-picker-model"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
@@ -387,16 +391,15 @@ export function CreateSaleContent({
     OfferingRow[]
   >([])
   const [compactPickerVisible, setCompactPickerVisible] = useState(false)
-  const [pickerDraft, setPickerDraft] = useState<Record<string, OfferingRow>>(
-    {},
-  )
+  const [pickerDraft, setPickerDraft] = useState<
+    SaleItemPickerLine<OfferingRow>[]
+  >([])
   const [pickerVisible, setPickerVisible] = useState(false)
   const deferredCustomerSearch = useDeferredValue(customerSearch)
   const deferredProductSearch = useDeferredValue(productSearch)
-  const [quantities, setQuantities] = useState<Record<string, string>>({})
-  const [selectedOfferings, setSelectedOfferings] = useState<
-    Record<string, OfferingRow>
-  >({})
+  const [selectedLines, setSelectedLines] = useState<
+    SaleItemPickerLine<OfferingRow>[]
+  >([])
   const [focusedQuantityId, setFocusedQuantityId] = useState<string | null>(
     null,
   )
@@ -466,23 +469,19 @@ export function CreateSaleContent({
   }, [isOffline, loadedRows, productSearch])
   const selectedRows = useMemo(
     () =>
-      Object.entries(quantities).flatMap(([offeringId, quantity]) => {
-        const offering =
-          selectedOfferings[offeringId] ??
-          allRows.find((entry) => entry.id === offeringId)
+      selectedLines.flatMap(({ id, offering, quantity }) => {
         if (!offering || offering.disabledReason) return []
         const totalMinor = saleLineTotalMinor(
           offering.fixedPriceMinor,
           quantity,
         )
-        return [{ offering, quantity, totalMinor }]
+        return [{ id, offering, quantity, totalMinor }]
       }),
-    [allRows, quantities, selectedOfferings],
+    [selectedLines],
   )
-  const selectedChoiceIds = useMemo(
-    () => new Set(Object.keys(selectedOfferings)),
-    [selectedOfferings],
-  )
+  const lineCountsByOfferingId = useMemo(() => {
+    return getSaleItemPickerLineCounts(selectedLines)
+  }, [selectedLines])
   const totalMinor = selectedRows.reduce(
     (total, line) => total + (line.totalMinor ?? 0),
     0,
@@ -510,34 +509,26 @@ export function CreateSaleContent({
   )
   const isSubmitting = orderMutation.isPending || paymentMutation.isPending
 
-  function updateQuantity(offeringId: string, value: string) {
-    setQuantities((current) => ({ ...current, [offeringId]: value }))
+  function updateQuantity(lineId: string, value: string) {
+    setSelectedLines((current) =>
+      updateSaleItemPickerLineQuantity(current, lineId, value),
+    )
   }
 
   function addOffering(offering: OfferingRow) {
     setError(null)
-    setSelectedOfferings((selected) => ({
-      ...selected,
-      [offering.id]: offering,
-    }))
-    setQuantities((current) => ({
-      ...current,
-      [offering.id]: current[offering.id] ?? "1",
-    }))
+    setSelectedLines((lines) =>
+      addSaleItemPickerLine({
+        lineId: Crypto.randomUUID(),
+        lines,
+        offering,
+      }),
+    )
   }
 
-  function removeOffering(offeringId: string) {
+  function removeOffering(lineId: string) {
     setError(null)
-    setSelectedOfferings((selected) => {
-      const remaining = { ...selected }
-      delete remaining[offeringId]
-      return remaining
-    })
-    setQuantities((current) => {
-      const remaining = { ...current }
-      delete remaining[offeringId]
-      return remaining
-    })
+    setSelectedLines((lines) => removeSaleItemPickerLine(lines, lineId))
   }
 
   function openItemPicker() {
@@ -554,7 +545,7 @@ export function CreateSaleContent({
       choices,
       hasUnloadedChoices: Boolean(catalog.hasNextPage),
       onOpenScreen: () => {
-        setPickerDraft({ ...selectedOfferings })
+        setPickerDraft([...selectedLines])
         setPickerVisible(true)
       },
       onOpenSheet: (loadedChoices) => {
@@ -566,17 +557,12 @@ export function CreateSaleContent({
 
   function closeFullScreenPicker() {
     setPickerVisible(false)
-    setPickerDraft({})
+    setPickerDraft([])
     setProductSearch("")
   }
 
   function commitFullScreenPicker() {
-    const committed = commitSaleItemPickerDraft({
-      currentQuantities: quantities,
-      draft: pickerDraft,
-    })
-    setSelectedOfferings(committed.selectedChoices)
-    setQuantities(committed.quantities)
+    setSelectedLines([...pickerDraft])
     setError(null)
     closeFullScreenPicker()
   }
@@ -759,10 +745,10 @@ export function CreateSaleContent({
               paddingBottom: selectedRows.length > 0 ? 132 : 96,
               paddingHorizontal: 16,
             }}
-            data={Object.values(selectedOfferings)}
+            data={selectedLines}
             keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
-            keyExtractor={(offering) => offering.id}
+            keyExtractor={(line) => line.id}
             ListEmptyComponent={
               <View className="flex-1 justify-center pb-24">
                 <EmptyState
@@ -780,7 +766,7 @@ export function CreateSaleContent({
             ListHeaderComponent={itemsHeader}
             renderItem={({ item }) => (
               <SelectedOrderLine
-                offering={item}
+                offering={item.offering}
                 onQuantityBlur={() =>
                   setFocusedQuantityId((current) =>
                     current === item.id ? null : current,
@@ -789,7 +775,7 @@ export function CreateSaleContent({
                 onQuantityChange={(value) => updateQuantity(item.id, value)}
                 onQuantityFocus={() => setFocusedQuantityId(item.id)}
                 onRemove={() => removeOffering(item.id)}
-                quantity={quantities[item.id]}
+                quantity={item.quantity}
               />
             )}
             showsVerticalScrollIndicator={false}
@@ -1023,10 +1009,10 @@ export function CreateSaleContent({
                 </Pressable>
               </View>
               {selectedRows.map(
-                ({ offering, quantity, totalMinor: lineTotal }) => (
+                ({ id, offering, quantity, totalMinor: lineTotal }) => (
                   <View
                     className="flex-row items-start justify-between gap-3 border-b border-border py-3"
-                    key={offering.id}
+                    key={id}
                   >
                     <View className="min-w-0 flex-1 gap-1">
                       <Text className="font-bold text-foreground">
@@ -1210,16 +1196,12 @@ export function CreateSaleContent({
       <CompactSaleItemPicker
         choices={compactPickerChoices}
         itemKind={itemKind}
-        onClose={() => setCompactPickerVisible(false)}
-        onToggle={(choice) => {
-          if (selectedChoiceIds.has(choice.id)) {
-            removeOffering(choice.id)
-          } else {
-            addOffering(choice)
-          }
+        lineCountsByOfferingId={lineCountsByOfferingId}
+        onAdd={(choice) => {
+          addOffering(choice)
           setCompactPickerVisible(false)
         }}
-        selectedChoiceIds={selectedChoiceIds}
+        onClose={() => setCompactPickerVisible(false)}
         visible={compactPickerVisible}
       />
       <FullScreenSaleItemPicker
@@ -1229,10 +1211,13 @@ export function CreateSaleContent({
         isFetchingNextPage={catalog.isFetchingNextPage}
         itemKind={itemKind}
         onAdd={(choice) =>
-          setPickerDraft((current) => ({
-            ...current,
-            [choice.id]: choice,
-          }))
+          setPickerDraft((lines) =>
+            addSaleItemPickerLine({
+              lineId: Crypto.randomUUID(),
+              lines,
+              offering: choice,
+            }),
+          )
         }
         onClose={closeFullScreenPicker}
         onFetchNextPage={() => {
@@ -1248,12 +1233,8 @@ export function CreateSaleContent({
         }}
         onProceed={commitFullScreenPicker}
         onQueryChange={setProductSearch}
-        onRemove={(choiceId) =>
-          setPickerDraft((current) => {
-            const remaining = { ...current }
-            delete remaining[choiceId]
-            return remaining
-          })
+        onRemove={(lineId) =>
+          setPickerDraft((lines) => removeSaleItemPickerLine(lines, lineId))
         }
         query={productSearch}
         searchChoiceCount={pickerChoiceCount}

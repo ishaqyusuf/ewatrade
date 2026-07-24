@@ -95,6 +95,11 @@
 
 - A line selects one active Store-available Offering and snapshots its price,
   quantity and semantic context at confirmation.
+- An Order may contain the same Offering on multiple distinct lines. Product
+  Orders use the first occurrence of a repeated Offering to validate any
+  caller-supplied expected Balance Source revision, then reserve each later
+  occurrence against the balance already updated inside the same transaction;
+  combined stock availability remains enforced for every line.
 - Sale clients show active incomplete Product Offerings but disable selection
   with `Price not set` and/or `Out of stock`; order submission still requires a
   real fixed price and available Product stock.

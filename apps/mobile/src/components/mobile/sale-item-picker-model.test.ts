@@ -2,10 +2,12 @@ import { describe, expect, test } from "bun:test"
 
 import {
   SALE_ITEM_PICKER_COMPACT_LIMIT,
-  commitSaleItemPickerDraft,
+  addSaleItemPickerLine,
   getSaleItemPickerPresentation,
   getSelectableSaleItemChoices,
   openSaleItemPicker,
+  removeSaleItemPickerLine,
+  updateSaleItemPickerLineQuantity,
 } from "./sale-item-picker-model"
 
 describe("sale item picker presentation", () => {
@@ -61,32 +63,32 @@ describe("sale item picker presentation", () => {
   })
 })
 
-describe("sale item picker draft", () => {
-  test("preserves existing quantities, starts new choices at one, and removes omitted lines", () => {
-    const existing = { id: "existing", name: "Existing" }
-    const removed = { id: "removed", name: "Removed" }
-    const added = { id: "added", name: "Added" }
-
-    expect(
-      commitSaleItemPickerDraft({
-        currentQuantities: {
-          [existing.id]: "3",
-          [removed.id]: "2",
-        },
-        draft: {
-          [added.id]: added,
-          [existing.id]: existing,
-        },
-      }),
-    ).toEqual({
-      quantities: {
-        [added.id]: "1",
-        [existing.id]: "3",
-      },
-      selectedChoices: {
-        [added.id]: added,
-        [existing.id]: existing,
-      },
+describe("sale item picker lines", () => {
+  test("adds the same offering as independent quantity lines", () => {
+    const offering = { id: "offering-1", name: "Rice" }
+    const first = addSaleItemPickerLine({
+      lineId: "line-1",
+      lines: [],
+      offering,
     })
+    const second = addSaleItemPickerLine({
+      lineId: "line-2",
+      lines: first,
+      offering,
+    })
+
+    const withDifferentQuantities = updateSaleItemPickerLineQuantity(
+      updateSaleItemPickerLineQuantity(second, "line-1", "2"),
+      "line-2",
+      "5",
+    )
+
+    expect(withDifferentQuantities).toEqual([
+      { id: "line-1", offering, quantity: "2" },
+      { id: "line-2", offering, quantity: "5" },
+    ])
+    expect(removeSaleItemPickerLine(withDifferentQuantities, "line-1")).toEqual(
+      [{ id: "line-2", offering, quantity: "5" }],
+    )
   })
 })

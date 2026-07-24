@@ -8,7 +8,9 @@
   sellable-item picker, staged avatar selection, bottom search, and editable
   selected order lines. Corrected the compact picker so it renders above the
   native full-screen order route, and made a FAB press open immediately without
-  prefetching additional catalog pages.
+  prefetching additional catalog pages. Picker rows now use explicit add
+  actions instead of checkbox toggles, and one Offering can be added repeatedly
+  as independent lines with different quantities.
 - Related Feature: Adaptive New Order Product Picker
 - Status: Done
 - Plan Status: Done
@@ -18,7 +20,8 @@
   Create Sale, pagination, keyboard, NativeWind, and theme guards; diff
   hygiene; authenticated Android empty-canvas/FAB visual QA; Android
   accessibility assertion that the compact picker appears after one FAB tap
-  and closes with the system Back action.
+  and closes with the system Back action; repeated-line model regression test
+  plus mobile and database TypeScript checks.
 
 ### Mobile Infinite-Query Direction Contract
 
