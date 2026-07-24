@@ -3,6 +3,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColors } from "@/hooks/use-color"
 import { MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS } from "@/lib/design-foundation"
+import { cn } from "@/lib/utils"
 import { Text as RNText, View as RNView } from "react-native"
 import type {
   MobileBottomTab,
@@ -38,6 +39,7 @@ export function MobileBottomTabItem({
   const isReference = variant === "reference"
   const isOperationalDetail = variant === "operational-detail"
   const isAction = tab.kind === "action"
+  const isOperationalNavigation = isOperationalDetail && !isAction
   const accessibilityRole = isAction ? "button" : "tab"
   const inactiveForeground = isReference
     ? colors.foreground
@@ -52,7 +54,10 @@ export function MobileBottomTabItem({
         selected: isAction ? undefined : isActive,
       }}
       allowOverflow={Boolean(tab.render) || (isOperationalDetail && isAction)}
-      className="min-h-11 min-w-11 items-center justify-center rounded-full active:opacity-85"
+      className={cn(
+        "min-h-11 min-w-11 items-center justify-center rounded-full active:opacity-85",
+        isOperationalNavigation && "w-full",
+      )}
       disabled={tab.disabled}
       haptic={haptic && !tab.disabled}
       href={tab.disabled ? undefined : tab.href}

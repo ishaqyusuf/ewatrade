@@ -34,8 +34,10 @@ const contracts = [
     markers: [
       "allowFontScaling={false}",
       "adjustsFontSizeToFit",
+      "isOperationalNavigation",
       'textAlign: "center"',
       'width: "100%"',
+      'isOperationalNavigation && "w-full"',
     ],
   },
   {
