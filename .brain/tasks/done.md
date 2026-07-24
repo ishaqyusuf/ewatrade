@@ -1,5 +1,20 @@
 # Done
 
+### Tenant-Sequential Commercial Order Numbers
+
+- Priority: High
+- Description: Replaced timestamp-and-UUID Order references for new Commercial
+  Orders with atomic Tenant-wide `ORD-001` numbering while preserving every
+  existing `EO-*` reference and all direct, Service, Quote, and offline
+  creation paths.
+- Related Feature: Standard Order Identifiers
+- Status: Done
+- Completed Date: 2026-07-24
+- Checks Run: Prisma format/generate/migrate; default and explicit local push;
+  production and remote push attempts; formatter tests; PostgreSQL concurrency
+  and rollback tests; focused API tests; DB/API/dashboard/mobile TypeScript;
+  repository test suite; targeted Biome; code review and diff hygiene.
+
 ### Adaptive New Order Product Picker
 
 - Priority: Medium

@@ -95,6 +95,13 @@
 
 - A line selects one active Store-available Offering and snapshots its price,
   quantity and semantic context at confirmation.
+- New Commercial Orders receive a server-owned, Tenant-wide reference in the
+  form `ORD-001`, using minimum three-digit padding and growing naturally to
+  `ORD-1000`. Existing `EO-*` references remain valid and unchanged. Clients
+  cannot reserve or preview the next number.
+- Concurrent retries with the same `clientOrderId` return the first matching
+  Order when their payload hashes agree. The losing transaction rolls its
+  attempted sequence increment back instead of consuming another number.
 - An Order may contain the same Offering on multiple distinct lines. Product
   Orders use the first occurrence of a repeated Offering to validate any
   caller-supplied expected Balance Source revision, then reserve each later

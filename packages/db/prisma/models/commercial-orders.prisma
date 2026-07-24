@@ -32,7 +32,7 @@ model CommercialOrder {
   acceptedQuoteVersion ServiceQuoteVersion?
 
   @@unique([tenantId, clientOrderId])
-  @@unique([storeId, orderNumber])
+  @@unique([tenantId, orderNumber])
   @@index([tenantId, status, createdAt])
   @@index([storeId, createdAt])
 }

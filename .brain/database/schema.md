@@ -51,6 +51,9 @@ persistence boundary. Clients never access the database directly.
 
 ## Commerce
 
+- `Tenant.lastCommercialOrderSequence` is the atomic business-wide allocator
+  for new human-facing Order numbers. Existing legacy references remain
+  unchanged; new Orders use `ORD-001` with minimum three-digit padding.
 - `CommercialOrder` and `CommercialOrderLine` hold monetary/order state.
 - `CommercialOrderPayment` is the append-only payment/refund ledger. Orders
   retain service charge and paid-total projections for efficient balance reads.

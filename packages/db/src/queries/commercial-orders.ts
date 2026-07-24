@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto"
+import { createHash } from "node:crypto"
 
 import {
   addExactDecimals,
@@ -31,6 +31,7 @@ import {
   commitCatalogStockReservationInTransaction,
   reserveCatalogOfferingStockInTransaction,
 } from "./catalog-inventory"
+import { allocateCommercialOrderNumber } from "./commercial-order-number"
 import { effectiveCommercialAmountPaid } from "./commercial-payments"
 
 export type CreateCommercialOrderInput = {
@@ -219,6 +220,32 @@ function serializeOrder(order: OrderGraph) {
   }
 }
 
+function serializeIdempotentOrder(order: OrderGraph, hash: string) {
+  if (order.payloadHash !== hash) {
+    throw new CatalogError(
+      "IDEMPOTENCY_MISMATCH",
+      "This Commercial Order identity was already used with different input.",
+    )
+  }
+
+  return serializeOrder(order)
+}
+
+function findCommercialOrderByClientIdentity(
+  db: Pick<Prisma.TransactionClient, "commercialOrder">,
+  input: Pick<CreateCommercialOrderInput, "clientOrderId" | "tenantId">,
+) {
+  return db.commercialOrder.findUnique({
+    include: orderGraph,
+    where: {
+      tenantId_clientOrderId: {
+        clientOrderId: input.clientOrderId,
+        tenantId: input.tenantId,
+      },
+    },
+  })
+}
+
 export async function createCommercialOrderInTransaction(
   tx: Prisma.TransactionClient,
   input: CreateCommercialOrderInput,
@@ -232,23 +259,9 @@ export async function createCommercialOrderInTransaction(
   }
   const hash = payloadHash(input)
 
-  const previous = await tx.commercialOrder.findUnique({
-    include: orderGraph,
-    where: {
-      tenantId_clientOrderId: {
-        clientOrderId: input.clientOrderId,
-        tenantId: input.tenantId,
-      },
-    },
-  })
+  const previous = await findCommercialOrderByClientIdentity(tx, input)
   if (previous) {
-    if (previous.payloadHash !== hash) {
-      throw new CatalogError(
-        "IDEMPOTENCY_MISMATCH",
-        "This Commercial Order identity was already used with different input.",
-      )
-    }
-    return serializeOrder(previous)
+    return serializeIdempotentOrder(previous, hash)
   }
 
   const store = await tx.store.findFirst({
@@ -391,6 +404,7 @@ export async function createCommercialOrderInTransaction(
     )
   }
 
+  const orderNumber = await allocateCommercialOrderNumber(tx, input.tenantId)
   const order = await tx.commercialOrder.create({
     data: {
       clientOrderId: input.clientOrderId,
@@ -401,7 +415,7 @@ export async function createCommercialOrderInTransaction(
       customerPhone: input.customerPhone?.trim() || null,
       discountMinor,
       notes: input.notes?.trim() || null,
-      orderNumber: `EO-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`,
+      orderNumber,
       payloadHash: hash,
       schemaVersion: input.schemaVersion,
       serviceChargeMinor,
@@ -575,7 +589,23 @@ export async function createCommercialOrder(
   db: PrismaClient,
   input: CreateCommercialOrderInput,
 ) {
-  return db.$transaction((tx) => createCommercialOrderInTransaction(tx, input))
+  try {
+    return await db.$transaction((tx) =>
+      createCommercialOrderInTransaction(tx, input),
+    )
+  } catch (error) {
+    if (
+      !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+      error.code !== "P2002"
+    ) {
+      throw error
+    }
+
+    const previous = await findCommercialOrderByClientIdentity(db, input)
+    if (!previous) throw error
+
+    return serializeIdempotentOrder(previous, payloadHash(input))
+  }
 }
 
 export async function getCommercialOrder(

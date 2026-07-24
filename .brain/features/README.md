@@ -18,6 +18,7 @@ Detailed feature docs for implemented or planned product areas.
 - [Ewatrade Dispatch Internal App](./ewatrade-dispatch-internal-app.md)
 - [Mobile Sentry Observability](./mobile-sentry-observability.md)
 - [Mobile Retail Ops MVP](./mobile-retail-ops-mvp-spec.md)
+- [Standard Order Identifiers](./standard-order-identifiers.md)
 - [Product Image Marketplace And Storefront Publishing](./product-image-marketplace-and-storefront-publishing.md)
 - [Retail Ops Design System And IA](./retail-ops-design-system-and-ia.md)
 - [Retail Ops Reporting](./retail-ops-reporting.md)

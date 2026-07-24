@@ -69,3 +69,18 @@ guarded `bun run db:push --prod` retry on 2026-07-21 then synchronized the
 production schema successfully without force or data-loss flags. The production
 schema now includes the image field, but migration history still requires a
 dedicated reconciliation before the normal migrate-and-release workflow can run.
+
+## Tenant-Sequential Order Number Migration State
+
+On 2026-07-24 Prisma generated and applied
+`20260724225940_tenant_sequential_order_numbers` locally after a read-only
+preflight found no duplicate Tenant/order-number pairs. It adds
+`Tenant.lastCommercialOrderSequence`, replaces Store-scoped Order-number
+uniqueness with Tenant-scoped uniqueness, and leaves all existing `EO-*`
+references unchanged. Both the default and explicit local `db:push` profiles
+confirmed the local schema is in sync.
+
+The required production and remote-development pushes were attempted. Both
+resolved their configured Neon targets but failed with the existing restricted
+schema-engine error. An elevated production retry was denied by the safety
+gate, so no shared-database schema change is confirmed.

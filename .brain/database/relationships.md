@@ -29,6 +29,8 @@ catalog edits from changing historical meaning.
 
 ## Commerce And Work
 
+`Tenant.lastCommercialOrderSequence -> CommercialOrder.orderNumber`
+
 `CommercialOrder -> CommercialOrderLine -> OfferingSnapshot`
 
 Product lines may link to reservations, fulfillments and returns. Tracked
@@ -42,6 +44,11 @@ belong to `ServiceJob`; charge-only Service lines allocate no work.
 Payment/refund facts derive the Order balance. Store Service settings are read
 and snapshotted during Intake; later setting changes do not rewrite existing
 Order charges.
+
+New Order numbers are allocated once across the Tenant rather than per Store.
+The counter increment and Order creation share one database transaction, so a
+failed creation rolls the increment back and concurrent Stores cannot receive
+the same reference.
 
 ## Requests, Quotes And Tracking
 
