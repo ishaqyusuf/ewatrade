@@ -217,6 +217,7 @@ Subscription support is included as a plan and entitlement foundation with three
 - Inventory balance changes should be ledger-backed where possible: starting stock, stock intake, sale, adjustment, assignment, return, and sync correction.
 - Inventory stock-operation UI should use reusable flat inventory primitives for product rows, unit choices, restock/adjust toggles, and movement history instead of local card-heavy widgets.
 - The mobile Stock intake sheet should call `retailOps.recordStockIntake` or `retailOps.recordStockAdjustment` when online and the selected unit has a production id; otherwise it should keep using the local queued stock movement path so product/unit dependencies sync first.
+- The mobile create sheet keeps `Stock Entry` visible but disabled when the workspace has no Product, and the More-screen inventory link is non-interactive in the same state. Both surfaces explain that adding a Product enables stock management so Service-only businesses are not sent into inventory workflows.
 - The mobile Unit conversion sheet should call `retailOps.recordUnitConversion` when online and both the source primary unit and target variant have production ids; otherwise it should keep using the local queued conversion path so product/unit dependencies sync first.
 - Starting stock from onboarding should create an auditable inventory movement, not only mutate a balance field.
 - Staff/attendant invites use membership and role concepts. Owners/admins can invite attendants; attendants cannot invite staff or manage subscription settings.

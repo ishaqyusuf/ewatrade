@@ -50,6 +50,7 @@ function MenuRow({
           ? "min-h-16 flex-row items-stretch gap-3 opacity-55"
           : "min-h-16 flex-row items-stretch gap-3 active:bg-accent"
       }
+      disabled={item.disabled}
       haptic
       onPress={onPress}
       transition
@@ -68,7 +69,9 @@ function MenuRow({
             </Text>
           ) : null}
         </View>
-        <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
+        {item.disabled ? null : (
+          <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
+        )}
       </View>
     </Pressable>
   )
@@ -144,13 +147,6 @@ export function AdminMoreScreen() {
   }
 
   function handleItem(item: AdminMoreItem) {
-    if (item.disabled) {
-      Alert.alert(
-        "Add a Product first",
-        "Inventory becomes available after this workspace has a Product.",
-      )
-      return
-    }
     if (item.action.kind === "route") {
       router.push(item.action.href)
       return

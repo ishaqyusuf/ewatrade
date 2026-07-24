@@ -47,15 +47,14 @@ export function AdminCreateActionSheet({
       label: "Order",
       route: "/create-sale-modal",
     },
-    ...(availability.hasProductItems
-      ? [
-          {
-            detail: "Receive, count, adjust, or assign stock.",
-            label: "Stock Entry",
-            route: "/stock-intake-modal",
-          },
-        ]
-      : []),
+    {
+      detail: availability.hasProductItems
+        ? "Receive, count, adjust, or assign stock."
+        : "Add a Product to enable stock management.",
+      disabled: !availability.hasProductItems,
+      label: "Stock Entry",
+      route: "/stock-intake-modal",
+    },
     {
       detail: "Invite a team member into this workspace.",
       label: "Staff",
@@ -85,10 +84,12 @@ export function AdminCreateActionSheet({
             onPress={() => openRoute(action.route)}
             title={action.label}
             trailing={
-              <Icon
-                className="mt-2 size-sm text-muted-foreground"
-                name="ChevronRight"
-              />
+              action.disabled ? undefined : (
+                <Icon
+                  className="mt-2 size-sm text-muted-foreground"
+                  name="ChevronRight"
+                />
+              )
             }
           />
         ))}

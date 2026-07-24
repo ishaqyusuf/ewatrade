@@ -170,15 +170,14 @@ export function OperationsDashboardSurface({
       label: "Order",
       onPress: () => openCreateRoute("/create-sale-modal"),
     },
-    ...(hasProduct
-      ? [
-          {
-            detail: "Receive, count, adjust, or assign stock.",
-            label: "Stock Entry",
-            onPress: () => openCreateRoute("/stock-intake-modal"),
-          },
-        ]
-      : []),
+    {
+      detail: hasProduct
+        ? "Receive, count, adjust, or assign stock."
+        : "Add a Product to enable stock management.",
+      disabled: !hasProduct,
+      label: "Stock Entry",
+      onPress: () => openCreateRoute("/stock-intake-modal"),
+    },
     {
       detail: "Invite a team member into this workspace.",
       label: "Staff",
@@ -531,10 +530,12 @@ function CreateActionSheet({
             onPress={action.onPress}
             title={action.label}
             trailing={
-              <Icon
-                className="mt-2 size-sm text-muted-foreground"
-                name="ChevronRight"
-              />
+              action.disabled ? undefined : (
+                <Icon
+                  className="mt-2 size-sm text-muted-foreground"
+                  name="ChevronRight"
+                />
+              )
             }
           />
         ))}
