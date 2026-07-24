@@ -8,23 +8,29 @@ export function getSelectableSaleItemChoices<
   return choices.filter((choice) => !choice.disabledReason)
 }
 
-export function shouldFetchNextSaleItemPickerPage({
-  attemptedCursors,
-  choiceCount,
-  isOffline,
-  nextCursor,
+export function openSaleItemPicker<T>({
+  choices,
+  hasUnloadedChoices,
+  onOpenScreen,
+  onOpenSheet,
 }: {
-  attemptedCursors: ReadonlySet<string>
-  choiceCount: number
-  isOffline: boolean
-  nextCursor?: string
-}) {
-  return Boolean(
-    !isOffline &&
-      choiceCount <= SALE_ITEM_PICKER_COMPACT_LIMIT &&
-      nextCursor &&
-      !attemptedCursors.has(nextCursor),
-  )
+  choices: T[]
+  hasUnloadedChoices: boolean
+  onOpenScreen: () => void
+  onOpenSheet: (choices: T[]) => void
+}): SaleItemPickerPresentation {
+  const presentation = getSaleItemPickerPresentation({
+    choiceCount: choices.length,
+    hasUnloadedChoices,
+  })
+
+  if (presentation === "screen") {
+    onOpenScreen()
+  } else {
+    onOpenSheet(choices)
+  }
+
+  return presentation
 }
 
 export function getSaleItemPickerPresentation({

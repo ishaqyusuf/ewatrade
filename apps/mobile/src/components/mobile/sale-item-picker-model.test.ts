@@ -5,7 +5,7 @@ import {
   commitSaleItemPickerDraft,
   getSaleItemPickerPresentation,
   getSelectableSaleItemChoices,
-  shouldFetchNextSaleItemPickerPage,
+  openSaleItemPicker,
 } from "./sale-item-picker-model"
 
 describe("sale item picker presentation", () => {
@@ -25,30 +25,39 @@ describe("sale item picker presentation", () => {
     ).toBe("screen")
   })
 
-  test("counts only selectable choices and stops page resolution without progress", () => {
+  test("counts only selectable choices", () => {
     expect(
       getSelectableSaleItemChoices([
         { id: "available" },
         { disabledReason: "Out of stock", id: "unavailable" },
       ]),
     ).toEqual([{ id: "available" }])
+  })
+
+  test("opens from loaded choices immediately and leaves unloaded pages to the picker", () => {
+    const choices = [{ id: "loaded" }]
+    const opened: string[] = []
 
     expect(
-      shouldFetchNextSaleItemPickerPage({
-        attemptedCursors: new Set(),
-        choiceCount: 5,
-        isOffline: false,
-        nextCursor: "next",
+      openSaleItemPicker({
+        choices,
+        hasUnloadedChoices: true,
+        onOpenScreen: () => opened.push("screen"),
+        onOpenSheet: () => opened.push("sheet"),
       }),
-    ).toBe(true)
+    ).toBe("screen")
+    expect(opened).toEqual(["screen"])
+
     expect(
-      shouldFetchNextSaleItemPickerPage({
-        attemptedCursors: new Set(["next"]),
-        choiceCount: 5,
-        isOffline: false,
-        nextCursor: "next",
+      openSaleItemPicker({
+        choices,
+        hasUnloadedChoices: false,
+        onOpenScreen: () => opened.push("screen"),
+        onOpenSheet: (loadedChoices) =>
+          opened.push(`sheet:${loadedChoices.length}`),
       }),
-    ).toBe(false)
+    ).toBe("sheet")
+    expect(opened).toEqual(["screen", "sheet:1"])
   })
 })
 

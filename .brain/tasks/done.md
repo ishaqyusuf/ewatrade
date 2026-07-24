@@ -6,7 +6,9 @@
 - Description: Replaced the catalog-first Create Sale Items screen with an
   empty order canvas, safe-area-aware FAB, adaptive compact/full-screen
   sellable-item picker, staged avatar selection, bottom search, and editable
-  selected order lines.
+  selected order lines. Corrected the compact picker so it renders above the
+  native full-screen order route, and made a FAB press open immediately without
+  prefetching additional catalog pages.
 - Related Feature: Adaptive New Order Product Picker
 - Status: Done
 - Plan Status: Done
@@ -14,7 +16,9 @@
 - Completed Date: 2026-07-24
 - Checks Run: focused picker/checkout/pagination tests; mobile TypeScript;
   Create Sale, pagination, keyboard, NativeWind, and theme guards; diff
-  hygiene; authenticated Android empty-canvas/FAB visual QA.
+  hygiene; authenticated Android empty-canvas/FAB visual QA; Android
+  accessibility assertion that the compact picker appears after one FAB tap
+  and closes with the system Back action.
 
 ### Mobile Infinite-Query Direction Contract
 

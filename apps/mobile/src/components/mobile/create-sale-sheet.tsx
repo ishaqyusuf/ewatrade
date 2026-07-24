@@ -27,9 +27,8 @@ import {
 } from "@/components/mobile/sale-item-picker"
 import {
   commitSaleItemPickerDraft,
-  getSaleItemPickerPresentation,
   getSelectableSaleItemChoices,
-  shouldFetchNextSaleItemPickerPage,
+  openSaleItemPicker,
 } from "@/components/mobile/sale-item-picker-model"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
@@ -365,7 +364,6 @@ export function CreateSaleContent({
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const customerModal = useModal()
-  const compactItemModal = useModal()
   const insets = useSafeAreaInsets()
   const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
   const queueCommand = useOfflineCommandStore((state) => state.queueCommand)
@@ -384,11 +382,11 @@ export function CreateSaleContent({
   const [error, setError] = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash")
   const [productSearch, setProductSearch] = useState("")
-  const [isResolvingPicker, setIsResolvingPicker] = useState(false)
   const [pickerChoiceCount, setPickerChoiceCount] = useState(0)
   const [compactPickerChoices, setCompactPickerChoices] = useState<
     OfferingRow[]
   >([])
+  const [compactPickerVisible, setCompactPickerVisible] = useState(false)
   const [pickerDraft, setPickerDraft] = useState<Record<string, OfferingRow>>(
     {},
   )
@@ -542,70 +540,28 @@ export function CreateSaleContent({
     })
   }
 
-  async function openItemPicker() {
+  function openItemPicker() {
     setError(null)
-    setIsResolvingPicker(true)
+    const pages = catalog.data?.pages ?? []
+    const choices = flatten(
+      pages.flatMap((page) => page.items),
+      availability.data?.storeId,
+      itemKind,
+    )
+    setPickerChoiceCount(Math.max(choices.length, pages[0]?.totalCount ?? 0))
 
-    try {
-      let pages = catalog.data?.pages ?? []
-      let choices = flatten(
-        pages.flatMap((page) => page.items),
-        availability.data?.storeId,
-        itemKind,
-      )
-      let hasNextPage = Boolean(pages.at(-1)?.nextCursor)
-
-      const attemptedCursors = new Set<string>()
-      while (
-        shouldFetchNextSaleItemPickerPage({
-          attemptedCursors,
-          choiceCount: choices.length,
-          isOffline,
-          nextCursor: pages.at(-1)?.nextCursor,
-        })
-      ) {
-        const cursor = pages.at(-1)?.nextCursor
-        if (!cursor) break
-        attemptedCursors.add(cursor)
-
-        const result = await catalog.fetchNextPage()
-        if (result.isError) throw result.error
-
-        const previousPageCount = pages.length
-        pages = result.data?.pages ?? pages
-        if (pages.length <= previousPageCount) break
-
-        choices = flatten(
-          pages.flatMap((page) => page.items),
-          availability.data?.storeId,
-          itemKind,
-        )
-        hasNextPage = Boolean(pages.at(-1)?.nextCursor)
-      }
-
-      setPickerChoiceCount(Math.max(choices.length, pages[0]?.totalCount ?? 0))
-
-      const presentation = getSaleItemPickerPresentation({
-        choiceCount: choices.length,
-        hasUnloadedChoices: hasNextPage,
-      })
-
-      if (presentation === "screen") {
+    openSaleItemPicker({
+      choices,
+      hasUnloadedChoices: Boolean(catalog.hasNextPage),
+      onOpenScreen: () => {
         setPickerDraft({ ...selectedOfferings })
         setPickerVisible(true)
-      } else {
-        setCompactPickerChoices(choices)
-        requestAnimationFrame(() => compactItemModal.present())
-      }
-    } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : "Could not load products or services.",
-      )
-    } finally {
-      setIsResolvingPicker(false)
-    }
+      },
+      onOpenSheet: (loadedChoices) => {
+        setCompactPickerChoices(loadedChoices)
+        setCompactPickerVisible(true)
+      },
+    })
   }
 
   function closeFullScreenPicker() {
@@ -859,26 +815,18 @@ export function CreateSaleContent({
                 }
                 accessibilityRole="button"
                 accessibilityState={{
-                  busy: isResolvingPicker,
-                  disabled:
-                    catalog.isLoading ||
-                    availability.isLoading ||
-                    isResolvingPicker,
+                  disabled: catalog.isLoading || availability.isLoading,
                 }}
                 className="h-14 w-14 items-center justify-center rounded-full bg-primary shadow-lg active:bg-primary/90"
-                disabled={
-                  catalog.isLoading ||
-                  availability.isLoading ||
-                  isResolvingPicker
-                }
+                disabled={catalog.isLoading || availability.isLoading}
                 haptic
-                onPress={() => void openItemPicker()}
+                onPress={openItemPicker}
                 testID="sale-add-item-fab"
                 transition
               >
                 <Icon
                   className="size-base text-primary-foreground"
-                  name={isResolvingPicker ? "Loader2" : "Plus"}
+                  name="Plus"
                 />
               </Pressable>
             </View>
@@ -1262,16 +1210,17 @@ export function CreateSaleContent({
       <CompactSaleItemPicker
         choices={compactPickerChoices}
         itemKind={itemKind}
+        onClose={() => setCompactPickerVisible(false)}
         onToggle={(choice) => {
           if (selectedChoiceIds.has(choice.id)) {
             removeOffering(choice.id)
           } else {
             addOffering(choice)
           }
-          compactItemModal.dismiss()
+          setCompactPickerVisible(false)
         }}
-        ref={compactItemModal.ref}
         selectedChoiceIds={selectedChoiceIds}
+        visible={compactPickerVisible}
       />
       <FullScreenSaleItemPicker
         choices={allRows}

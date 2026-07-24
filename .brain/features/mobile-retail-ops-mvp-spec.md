@@ -255,10 +255,13 @@ Subscription support is included as a plan and entitlement foundation with three
   one line is selected.
 - The add-item button uses an adaptive picker over active, store-available,
   fixed-price Offerings. A complete set of at most five choices opens in a
-  detached floating bottom sheet where one tap adds the choice and closes the
-  sheet. Six or more choices, or an incompletely cached offline catalog, open a
-  full-screen virtualized picker with server-backed online search, local
-  offline filtering, pagination, and a fixed horizontal selected-avatar strip.
+  detached native overlay above the full-screen order route where one tap adds
+  the choice and closes the sheet. Opening the picker must never wait for
+  additional catalog pages: any unloaded online page or incompletely cached
+  offline catalog routes immediately to the full-screen virtualized picker,
+  which owns server-backed online search and pagination. Six or more loaded
+  choices open that same full-screen picker; offline filtering remains local
+  and the picker keeps a fixed horizontal selected-avatar strip.
   Picker rows use a trailing outlined circle when unselected and a filled
   checkmark when selected; tapping a selected row toggles it off, matching the
   approved multi-recipient selection reference.

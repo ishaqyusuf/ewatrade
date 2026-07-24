@@ -86,9 +86,13 @@ const contracts = [
       "No items added yet",
       "sale-add-item-fab",
       "CompactSaleItemPicker",
+      "setCompactPickerVisible(true)",
+      "visible={compactPickerVisible}",
+      "hasUnloadedChoices: Boolean(catalog.hasNextPage)",
       "FullScreenSaleItemPicker",
       "SALE_ITEM_PICKER_COMPACT_LIMIT = 5",
       "getSaleItemPickerPresentation",
+      "openSaleItemPicker",
       "commitSaleItemPickerDraft",
       "Search product or service",
       "alwaysShowSearch",
@@ -130,7 +134,36 @@ const failures = contracts.flatMap((contract) => {
     : []
 })
 
+const compactPickerStart = pickerSource.indexOf(
+  "export function CompactSaleItemPicker",
+)
+const fullScreenPickerStart = pickerSource.indexOf(
+  "export function FullScreenSaleItemPicker",
+)
+const compactPickerSource = pickerSource.slice(
+  compactPickerStart,
+  fullScreenPickerStart,
+)
+for (const marker of [
+  "<NativeModal",
+  "onRequestClose={onClose}",
+  "transparent",
+  "visible={visible}",
+]) {
+  if (!compactPickerSource.includes(marker)) {
+    failures.push(
+      `compact item picker is missing native-overlay marker ${marker}`,
+    )
+  }
+}
+if (compactPickerSource.includes("BottomSheetModal")) {
+  failures.push(
+    "compact item picker must not use a root-portaled bottom sheet inside the native order route",
+  )
+}
+
 const legacyMarkers = [
+  "compactItemModal.present",
   "retailOps.createSale",
   "catalogItemVariantId",
   "currentOpenSession",

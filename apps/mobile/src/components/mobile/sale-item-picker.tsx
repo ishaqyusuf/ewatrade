@@ -2,20 +2,21 @@ import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { Icon } from "@/components/ui/icon"
-import { Modal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { cn } from "@/lib/utils"
 import { formatMinorMoney } from "@ewatrade/utils"
-import type { BottomSheetModal } from "@gorhom/bottom-sheet"
+import { hexToRgba } from "@ewatrade/utils/colors"
 import { StatusBar } from "expo-status-bar"
-import { forwardRef, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import {
   FlatList,
   Image,
   Modal as NativeModal,
+  Pressable as RNPressable,
   ScrollView,
+  StyleSheet,
   View,
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -164,46 +165,108 @@ function SaleOfferingPickerRow({
 type CompactSaleItemPickerProps = {
   choices: SaleOfferingChoice[]
   itemKind?: "service"
+  onClose: () => void
   onToggle: (choice: SaleOfferingChoice) => void
   selectedChoiceIds: Set<string>
+  visible: boolean
 }
 
-export const CompactSaleItemPicker = forwardRef<
-  BottomSheetModal,
-  CompactSaleItemPickerProps
->(function CompactSaleItemPicker(
-  { choices, itemKind, onToggle, selectedChoiceIds },
-  ref,
-) {
+export function CompactSaleItemPicker({
+  choices,
+  itemKind,
+  onClose,
+  onToggle,
+  selectedChoiceIds,
+  visible,
+}: CompactSaleItemPickerProps) {
+  const colors = useColors()
+  const insets = useSafeAreaInsets()
+
   return (
-    <Modal
-      enableDynamicSizing
-      maxDynamicContentSize={620}
-      ref={ref}
-      title={itemKind === "service" ? "Add service" : "Add product or service"}
+    <NativeModal
+      animationType="slide"
+      navigationBarTranslucent
+      onRequestClose={onClose}
+      statusBarTranslucent
+      transparent
+      visible={visible}
     >
-      <View className="px-5 pb-6">
-        {choices.length === 0 ? (
-          <EmptyState
-            className="bg-transparent"
-            icon="FolderPlus"
-            message="Add an active offering with a price and store availability before creating this order."
-            title="No sellable items available"
-          />
-        ) : (
-          choices.map((choice) => (
-            <SaleOfferingPickerRow
-              choice={choice}
-              key={choice.id}
-              onPress={() => onToggle(choice)}
-              selected={selectedChoiceIds.has(choice.id)}
-            />
-          ))
-        )}
+      <View
+        accessibilityViewIsModal
+        style={{
+          flex: 1,
+          justifyContent: "flex-end",
+          paddingBottom: Math.max(insets.bottom, 20),
+          paddingHorizontal: 8,
+        }}
+      >
+        <RNPressable
+          accessibilityLabel="Close item picker"
+          accessibilityRole="button"
+          onPress={onClose}
+          style={[
+            StyleSheet.absoluteFillObject,
+            { backgroundColor: hexToRgba(colors.foreground, 0.38) },
+          ]}
+        />
+        <View
+          style={{
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+            borderRadius: 32,
+            borderWidth: StyleSheet.hairlineWidth,
+            maxHeight: 620,
+            overflow: "hidden",
+          }}
+        >
+          <View className="items-center pb-2 pt-3">
+            <View className="h-1.5 w-12 rounded-full bg-muted-foreground/25" />
+          </View>
+          <View className="flex-row items-center gap-3 px-5 pb-2">
+            <Text className="min-w-0 flex-1 text-lg font-extrabold text-foreground">
+              {itemKind === "service"
+                ? "Add service"
+                : "Add product or service"}
+            </Text>
+            <Pressable
+              accessibilityLabel="Close item picker"
+              className="h-11 w-11 items-center justify-center rounded-full bg-muted active:bg-accent"
+              haptic
+              onPress={onClose}
+              transition
+            >
+              <Icon className="size-sm text-foreground" name="X" />
+            </Pressable>
+          </View>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View className="px-5 pb-6">
+              {choices.length === 0 ? (
+                <EmptyState
+                  className="bg-transparent"
+                  icon="FolderPlus"
+                  message="Add an active offering with a price and store availability before creating this order."
+                  title="No sellable items available"
+                />
+              ) : (
+                choices.map((choice) => (
+                  <SaleOfferingPickerRow
+                    choice={choice}
+                    key={choice.id}
+                    onPress={() => onToggle(choice)}
+                    selected={selectedChoiceIds.has(choice.id)}
+                  />
+                ))
+              )}
+            </View>
+          </ScrollView>
+        </View>
       </View>
-    </Modal>
+    </NativeModal>
   )
-})
+}
 
 type FullScreenSaleItemPickerProps = {
   choices: SaleOfferingChoice[]
