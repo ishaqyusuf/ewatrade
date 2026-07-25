@@ -31,6 +31,7 @@ model CommercialOrder {
   serviceIntake        ServiceIntake?
   serviceJobs          ServiceJob[]
   acceptedQuoteVersion ServiceQuoteVersion?
+  fulfillmentCommands  CommercialOrderFulfillmentCommand[]
   reminderDeliveries   CommercialOrderReminderDelivery[]
 
   @@unique([tenantId, clientOrderId])
@@ -38,6 +39,23 @@ model CommercialOrder {
   @@index([tenantId, status, createdAt])
   @@index([tenantId, deliveryDueAt, status])
   @@index([storeId, createdAt])
+}
+
+model CommercialOrderFulfillmentCommand {
+  id                 String          @id @default(cuid())
+  tenantId           String
+  orderId            String
+  clientOperationId  String
+  payloadHash        String
+  fulfilledLineCount Int
+  resultStatus       OrderStatus
+  actorUserId        String
+  createdAt          DateTime        @default(now())
+  tenant             Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order              CommercialOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, clientOperationId])
+  @@index([orderId, createdAt])
 }
 
 model CommercialOrderReminderSettings {

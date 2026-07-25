@@ -119,6 +119,15 @@ function assertSchemaVersion(schemaVersion: number) {
   }
 }
 
+function assertOrderCanBeFulfilled(deliveryDueAt: Date | null) {
+  if (deliveryDueAt && deliveryDueAt.getTime() > Date.now()) {
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "This Order cannot be fulfilled before its scheduled delivery time.",
+    )
+  }
+}
+
 function normalizeDeliveryDueAt(value: Date | string | undefined, now: Date) {
   const parsed =
     value === undefined ? now : value instanceof Date ? value : new Date(value)
@@ -988,15 +997,7 @@ export async function fulfillCommercialOrderProductLine(
         "Reserved Product Order line not found.",
       )
     }
-    if (
-      line.order.deliveryDueAt &&
-      line.order.deliveryDueAt.getTime() > Date.now()
-    ) {
-      throw new CatalogError(
-        "INVALID_ORDER",
-        "This Order cannot be fulfilled before its scheduled delivery time.",
-      )
-    }
+    assertOrderCanBeFulfilled(line.order.deliveryDueAt)
     const operation = await commitCatalogStockReservationInTransaction(tx, {
       actorUserId: input.actorUserId,
       clientOperationId: input.clientOperationId,
@@ -1051,43 +1052,105 @@ export async function fulfillCommercialOrderProducts(
   },
 ) {
   assertSchemaVersion(input.schemaVersion)
-  return db.$transaction(async (tx) => {
-    const order = await tx.commercialOrder.findFirst({
-      select: {
-        deliveryDueAt: true,
-        id: true,
-        lines: {
-          select: { id: true },
-          where: { kind: SellableOfferingKind.PRODUCT_UNIT },
+  const hash = payloadHash({
+    orderId: input.orderId,
+    reason: input.reason?.trim() || null,
+    schemaVersion: input.schemaVersion,
+    tenantId: input.tenantId,
+  })
+
+  const serializePrevious = (previous: {
+    fulfilledLineCount: number
+    payloadHash: string
+    resultStatus: OrderStatus
+  }) => {
+    if (previous.payloadHash !== hash) {
+      throw new CatalogError(
+        "IDEMPOTENCY_MISMATCH",
+        "This fulfillment identity was already used with different input.",
+      )
+    }
+    return {
+      fulfilledLineCount: previous.fulfilledLineCount,
+      status: previous.resultStatus,
+    }
+  }
+
+  try {
+    return await db.$transaction(async (tx) => {
+      const previous = await tx.commercialOrderFulfillmentCommand.findUnique({
+        where: {
+          tenantId_clientOperationId: {
+            clientOperationId: input.clientOperationId,
+            tenantId: input.tenantId,
+          },
+        },
+      })
+      if (previous) return serializePrevious(previous)
+
+      const order = await tx.commercialOrder.findFirst({
+        select: {
+          deliveryDueAt: true,
+          id: true,
+          lines: {
+            select: { id: true },
+            where: { kind: SellableOfferingKind.PRODUCT_UNIT },
+          },
+          status: true,
+        },
+        where: { id: input.orderId, tenantId: input.tenantId },
+      })
+      if (!order) {
+        throw new CatalogError("ORDER_NOT_FOUND", "Commercial Order not found.")
+      }
+      assertOrderCanBeFulfilled(order.deliveryDueAt)
+      if (order.lines.length === 0) {
+        throw new CatalogError(
+          "INVALID_ORDER",
+          "This Order has no Product lines to fulfill.",
+        )
+      }
+
+      const result = await fulfillCommercialOrderProductsInTransaction(tx, {
+        actorUserId: input.actorUserId,
+        clientOperationIdPrefix: input.clientOperationId,
+        orderId: order.id,
+        reason: input.reason,
+        schemaVersion: input.schemaVersion,
+        tenantId: input.tenantId,
+      })
+      const status = result.status ?? order.status
+      await tx.commercialOrderFulfillmentCommand.create({
+        data: {
+          actorUserId: input.actorUserId,
+          clientOperationId: input.clientOperationId,
+          fulfilledLineCount: result.fulfilledLineCount,
+          orderId: order.id,
+          payloadHash: hash,
+          resultStatus: status,
+          tenantId: input.tenantId,
+        },
+      })
+      return { fulfilledLineCount: result.fulfilledLineCount, status }
+    })
+  } catch (error) {
+    if (
+      !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+      error.code !== "P2002"
+    ) {
+      throw error
+    }
+    const previous = await db.commercialOrderFulfillmentCommand.findUnique({
+      where: {
+        tenantId_clientOperationId: {
+          clientOperationId: input.clientOperationId,
+          tenantId: input.tenantId,
         },
       },
-      where: { id: input.orderId, tenantId: input.tenantId },
     })
-    if (!order) {
-      throw new CatalogError("ORDER_NOT_FOUND", "Commercial Order not found.")
-    }
-    if (order.deliveryDueAt && order.deliveryDueAt.getTime() > Date.now()) {
-      throw new CatalogError(
-        "INVALID_ORDER",
-        "This Order cannot be fulfilled before its scheduled delivery time.",
-      )
-    }
-    if (order.lines.length === 0) {
-      throw new CatalogError(
-        "INVALID_ORDER",
-        "This Order has no Product lines to fulfill.",
-      )
-    }
-
-    return fulfillCommercialOrderProductsInTransaction(tx, {
-      actorUserId: input.actorUserId,
-      clientOperationIdPrefix: input.clientOperationId,
-      orderId: order.id,
-      reason: input.reason,
-      schemaVersion: input.schemaVersion,
-      tenantId: input.tenantId,
-    })
-  })
+    if (!previous) throw error
+    return serializePrevious(previous)
+  }
 }
 
 export async function returnCommercialOrderProductLine(

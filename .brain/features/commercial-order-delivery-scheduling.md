@@ -18,7 +18,9 @@ blocked until a local PostgreSQL/Docker engine is available.
   fulfillment remains unavailable until the due timestamp.
 - Order overview retains individual Product-line fulfillment and also exposes
   one `Fulfill all products` action. The bulk command atomically commits every
-  remaining active Product reservation and skips lines already fulfilled.
+  remaining active Product reservation and skips lines already fulfilled. Its
+  tenant-scoped receipt binds the client identity to the payload and preserves
+  the original result for stable retries.
 - Existing Orders retain a null delivery time so rollout does not manufacture
   reminders for historical records.
 

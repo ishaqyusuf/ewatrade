@@ -4,8 +4,13 @@
   may still fulfill individual lines or use one action that atomically commits
   all remaining active Product reservations, preserves the scheduled-delivery
   guard, refreshes Order/Catalog/Inventory projections, and reports the number
-  of lines fulfilled. Completed Date: 2026-07-25. Checks Run: focused Order
-  schema/overview tests plus DB, API, and mobile TypeScript.
+  of lines fulfilled. A durable command receipt makes retries stable and rejects
+  identity reuse with a different Order payload. Completed Date: 2026-07-25.
+  Checks Run: focused Order schema/overview tests; DB, API, and mobile
+  TypeScript; mobile commerce-flow UI guard. Android emulator launch was also
+  attempted, but the installed development client is stale and does not contain
+  the required `RNCDatePicker` native module, so interactive screen validation
+  remains blocked until the client is rebuilt.
 
 - Implemented Commercial Order stock visibility, atomic checkout payment plus
   optional due-now Product fulfillment, future delivery scheduling, early

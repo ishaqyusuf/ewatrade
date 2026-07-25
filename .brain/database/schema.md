@@ -74,6 +74,8 @@ persistence boundary. Clients never access the database directly.
 - `OfferingSnapshot` is immutable and retains item, variant, Offering, pricing,
   exact quantity, unit, factor, configuration and balance meaning.
 - `ProductFulfillment` links fulfillment to reservation and Stock Operation.
+- `CommercialOrderFulfillmentCommand` binds each tenant-scoped bulk
+  fulfillment identity to its payload hash and original result.
 - `ProductReturn` records disposition and optional restock operation.
 
 ## Service Operations And Customer Access

@@ -19,6 +19,11 @@ management team without prematurely changing fulfillment state.
 - `fulfillNow` is command intent, not persisted policy. When selected for a due
   Order, Order creation, initial payment, reservations, stock commitment, and
   Product Fulfillment facts share one transaction.
+- Order overview retains line-level fulfillment and offers one bulk action for
+  all remaining active Product reservations. The bulk action stores a
+  tenant-scoped command receipt containing its payload hash and original
+  result, so a retry is stable and the identity cannot be reused for another
+  Order.
 - Future delivery rejects immediate or manual fulfillment until the exact due
   timestamp. No scheduled job auto-fulfills an Order.
 - Reminder settings belong to each Store. Missing rows mean reminders,
@@ -37,6 +42,9 @@ management team without prematurely changing fulfillment state.
   fulfillment time.
 - Checkout can complete the common walk-in sale atomically without hiding the
   ledger distinction.
+- Operators can fulfill all Product lines in one transaction, while durable
+  command receipts prevent duplicate stock movement and preserve replay
+  responses.
 - Scheduled delivery cannot cause an early stock commitment, and reminders do
   not silently mutate Order state.
 - Retryable delivery records prevent hourly task runs from repeatedly emailing

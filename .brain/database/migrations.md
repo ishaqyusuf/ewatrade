@@ -142,6 +142,10 @@ On 2026-07-25 the Prisma schema added nullable
 `CommercialOrderReminderDelivery`, and reminder timing/status enums. Prisma
 format and generation completed successfully.
 
+The same pending delivery-scheduling schema batch now also includes
+`CommercialOrderFulfillmentCommand`, which persists tenant-scoped bulk
+fulfillment idempotency and the original command result.
+
 The required root `bun run db:migrate` workflow was attempted, but no Docker
 engine was reachable and the host has no Docker application to launch. The
 wait was stopped without generating or applying a migration. The required
@@ -149,3 +153,12 @@ local `bun run db:push --local` attempt reached the same Docker preflight and
 was also stopped. No migration file was hand-authored, and no local,
 remote-development, or production schema write is claimed. Migration
 generation/application and the required push workflow remain release blockers.
+
+After the fulfillment-command receipt was added, the required workflows were
+attempted again. `bun db:migrate` and `bun run db:push --local` remained blocked
+by the unavailable Docker engine. The sandboxed production push failed in the
+schema engine, and its elevated retry was denied because this task did not
+explicitly authorize a shared production mutation. The elevated
+remote-development push reached Neon but stopped at Prisma's data-loss safeguard
+for the already-pending Tenant/order-number uniqueness change; no
+`--accept-data-loss` override was used. No database write is claimed.

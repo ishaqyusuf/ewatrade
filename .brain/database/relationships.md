@@ -41,6 +41,8 @@ belong to `ServiceJob`; charge-only Service lines allocate no work.
 
 `CommercialOrder -> CommercialOrderPayment`
 
+`CommercialOrder -> CommercialOrderFulfillmentCommand`
+
 `Store -> CommercialOrderReminderSettings`
 
 `CommercialOrder -> CommercialOrderReminderDelivery`
@@ -54,6 +56,9 @@ belong to `ServiceJob`; charge-only Service lines allocate no work.
 Payment/refund facts derive the Order balance. Store Service settings are read
 and snapshotted during Intake; later setting changes do not rewrite existing
 Order charges.
+Bulk Product fulfillment commands retain their payload hash, fulfilled-line
+count, resulting Order status, and actor so retries cannot repeat inventory
+effects or reuse one identity for a different Order.
 Order reminder deliveries also point to Tenant and Store. Their unique
 Order/timing/recipient-email identity prevents duplicate daily email delivery.
 

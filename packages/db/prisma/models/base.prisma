@@ -51,6 +51,7 @@ model Tenant {
   inventoryCloseouts                InventoryCloseout[]
   commercialOrders                  CommercialOrder[]
   commercialOrderPayments           CommercialOrderPayment[]
+  commercialOrderFulfillmentCommands CommercialOrderFulfillmentCommand[]
   commercialOrderReminderSettings   CommercialOrderReminderSettings[]
   commercialOrderReminderDeliveries CommercialOrderReminderDelivery[]
   customers                         Customer[]

@@ -269,7 +269,9 @@
 - Future delivery and immediate fulfillment are mutually exclusive.
 - `orders.fulfillProducts` accepts one idempotent command identity and commits
   every remaining active Product reservation in one transaction. Already
-  fulfilled or otherwise non-active lines are not committed again.
+  fulfilled or otherwise non-active lines are not committed again. A durable
+  tenant-scoped command receipt binds the identity to the Order payload and
+  returns the original fulfilled-line count and resulting status on replay.
 - Order projections expose nullable `deliveryDueAt`; null identifies a legacy
   Order created before scheduling rollout.
 - Reminder settings return enabled, day-before, and same-day booleans for the
