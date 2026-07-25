@@ -29,6 +29,10 @@ secondary operational workflows focused.
   it fixed for reference fidelity. Creation and More drill-down workflows
   remain full-screen stack routes outside the tab group and therefore never
   render the dock.
+- Catalog item overviews are record-detail stack routes outside the tab group.
+  Catalog rows and global search navigate to the same standalone route, whose
+  safe-area screen shell owns the header and status-bar spacing; back returns
+  to the originating surface without rendering the root dock.
 - Let the tab layout own the shared Create chooser so every root opens the same
   Product, Service, Customer, Order, contextual Stock Entry, and Staff actions.
 - Make More a real root screen titled Menu. It owns production App theme
@@ -45,5 +49,7 @@ secondary operational workflows focused.
 - Root content must reserve safe bottom space for the always-visible dock.
 - New root-only capabilities require an explicit tab-boundary decision; normal
   workflows remain outside the group.
+- Record detail screens remain focused and cannot accidentally inherit the
+  floating root-tab dock.
 - App theme has one production entry point and continues to use device-local
   persistence without API or database changes.

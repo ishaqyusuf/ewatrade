@@ -241,7 +241,7 @@ export function GlobalSearchScreen() {
       } else {
         router.push({
           params: { catalogItemId: item.catalogItemId },
-          pathname: "/catalog",
+          pathname: "/catalog-item/[catalogItemId]",
         })
       }
       return

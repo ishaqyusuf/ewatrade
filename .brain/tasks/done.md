@@ -1,5 +1,12 @@
 # Done
 
+- Moved Product and Service overview into one protected standalone mobile stack
+  route outside the admin tab group. Catalog rows and global search now open
+  the same detail screen, the bottom tab dock is absent, and the shared
+  safe-area screen shell prevents status-bar overlap. Completed Date:
+  2026-07-25. Checks Run: focused catalog-overview route guard and mobile
+  TypeScript.
+
 - Added Order-wide Product fulfillment from mobile Order overview. Operators
   may still fulfill individual lines or use one action that atomically commits
   all remaining active Product reservations, preserves the scheduled-delivery

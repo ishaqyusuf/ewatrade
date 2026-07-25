@@ -1,6 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
-import { CatalogItemOverview } from "@/components/mobile/catalog-item-overview"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
@@ -47,7 +46,6 @@ type CatalogRow = {
 
 type CatalogItemsContentProps = {
   dockHidden?: boolean
-  initialCatalogItemId?: string
   onAddItem: () => void
   onComplete?: () => void
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
@@ -172,7 +170,6 @@ function KindFilter({
 
 export function CatalogItemsContent({
   dockHidden = false,
-  initialCatalogItemId,
   onAddItem,
   onComplete,
   onScroll,
@@ -183,9 +180,6 @@ export function CatalogItemsContent({
   const trpc = useTRPC()
   const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
   const [kindFilter, setKindFilter] = useState<CatalogKindFilter>("all")
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(
-    initialCatalogItemId ?? null,
-  )
   const [query, setQuery] = useState("")
   const deferredQuery = useDeferredValue(query)
   const availabilityQuery = useQuery(
@@ -204,12 +198,6 @@ export function CatalogItemsContent({
       },
     ),
   )
-  const selectedItem = useQuery(
-    trpc.catalog.getItem.queryOptions(
-      { itemId: selectedItemId ?? "" },
-      { enabled: Boolean(selectedItemId), retry: false },
-    ),
-  )
   const rows = useMemo(
     () =>
       (itemsQuery.data?.pages.flatMap((page) => page.items) ?? []).map((item) =>
@@ -219,21 +207,6 @@ export function CatalogItemsContent({
   )
   const totalCount = itemsQuery.data?.pages[0]?.totalCount ?? 0
   const showSearch = shouldShowListSearch(totalCount)
-
-  if (selectedItem.data) {
-    return (
-      <CatalogItemOverview
-        item={selectedItem.data}
-        onBack={() => setSelectedItemId(null)}
-        onCreateOrder={() =>
-          router.push({
-            params: { catalogItemId: selectedItem.data.id },
-            pathname: "/create-sale-modal",
-          })
-        }
-      />
-    )
-  }
 
   return (
     <View className="flex-1">
@@ -338,7 +311,12 @@ export function CatalogItemsContent({
           <View className="px-4">
             <CatalogItemRow
               item={item}
-              onPress={() => setSelectedItemId(item.id)}
+              onPress={() =>
+                router.push({
+                  params: { catalogItemId: item.id },
+                  pathname: "/catalog-item/[catalogItemId]",
+                })
+              }
             />
           </View>
         )}

@@ -1,6 +1,7 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
+import { MobileScreen } from "@/components/mobile/screen"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
@@ -8,7 +9,6 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { formatMinorMoney } from "@ewatrade/utils"
-import { ScrollView } from "react-native"
 
 type CatalogItem = RouterOutputs["catalog"]["getItem"]
 
@@ -34,11 +34,10 @@ export function CatalogItemOverview({
   )
 
   return (
-    <ScrollView
-      className="flex-1"
-      contentContainerClassName="gap-6 px-4 pb-36"
+    <MobileScreen
+      contentClassName="gap-6 px-4 pb-36"
       refreshControl={<QueryRefreshControl />}
-      showsVerticalScrollIndicator={false}
+      scroll
       testID="catalog-item-overview"
     >
       <View className="min-h-11 flex-row items-center gap-3">
@@ -127,6 +126,6 @@ export function CatalogItemOverview({
           ) : null}
         </View>
       </View>
-    </ScrollView>
+    </MobileScreen>
   )
 }

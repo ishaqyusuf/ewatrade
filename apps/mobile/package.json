@@ -17,6 +17,7 @@
     "qa:business-onboarding": "node ./scripts/check-business-onboarding-flow.mjs",
     "qa:create-sale-flow": "node ./scripts/check-create-sale-flow.mjs",
     "qa:commerce-ops": "node ./scripts/check-commerce-ops-flow.mjs",
+    "qa:catalog-overview-route": "node ./scripts/check-catalog-overview-route.mjs",
     "qa:dashboard-redesign": "node ./scripts/check-dashboard-redesign.mjs",
     "qa:design-system-playground": "node ./scripts/check-design-system-playground.mjs",
     "qa:design-foundation": "node ./scripts/check-design-foundation.mjs",

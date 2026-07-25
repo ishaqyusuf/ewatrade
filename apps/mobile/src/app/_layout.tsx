@@ -160,6 +160,10 @@ const InitialLayout = () => {
               options={{ headerShown: false }}
             />
             <Stack.Screen
+              name="catalog-item/[catalogItemId]"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
               name="business-switch-modal"
               options={{ headerShown: false, presentation: "modal" }}
             />

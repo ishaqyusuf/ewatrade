@@ -1,6 +1,6 @@
-import { useColors } from "@/hooks/use-color";
-import { cn } from "@/lib/utils";
-import type { ReactElement, ReactNode } from "react";
+import { useColors } from "@/hooks/use-color"
+import { cn } from "@/lib/utils"
+import type { ReactElement, ReactNode } from "react"
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -8,19 +8,20 @@ import {
   type StyleProp,
   View,
   type ViewStyle,
-} from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+} from "react-native"
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 type MobileScreenProps = {
-  children: ReactNode;
-  contentClassName?: string;
-  contentContainerStyle?: StyleProp<ViewStyle>;
-  keyboardBottomOffset?: number;
-  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
-  refreshControl?: ReactElement<RefreshControlProps>;
-  scroll?: boolean;
-};
+  children: ReactNode
+  contentClassName?: string
+  contentContainerStyle?: StyleProp<ViewStyle>
+  keyboardBottomOffset?: number
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
+  refreshControl?: ReactElement<RefreshControlProps>
+  scroll?: boolean
+  testID?: string
+}
 
 export function MobileScreen({
   children,
@@ -30,10 +31,11 @@ export function MobileScreen({
   onScroll,
   refreshControl,
   scroll = true,
+  testID,
 }: MobileScreenProps) {
-  const colors = useColors();
-  const insets = useSafeAreaInsets();
-  const bottomPadding = Math.max(insets.bottom + 24, 40);
+  const colors = useColors()
+  const insets = useSafeAreaInsets()
+  const bottomPadding = Math.max(insets.bottom + 24, 40)
 
   return (
     <View
@@ -42,6 +44,7 @@ export function MobileScreen({
         flex: 1,
         paddingTop: insets.top,
       }}
+      testID={testID}
     >
       {scroll ? (
         <KeyboardAwareScrollView
@@ -75,5 +78,5 @@ export function MobileScreen({
         </View>
       )}
     </View>
-  );
+  )
 }
