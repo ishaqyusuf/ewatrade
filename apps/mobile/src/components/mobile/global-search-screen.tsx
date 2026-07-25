@@ -148,7 +148,7 @@ export function GlobalSearchScreen() {
         label: "Create order",
         onPress: () => router.push("/create-sale-modal"),
       },
-      ...(canManage
+      ...(canManage && !isOffline
         ? [
             {
               detail: "Add a stock-tracked catalog item.",
@@ -198,7 +198,7 @@ export function GlobalSearchScreen() {
           ]
         : []),
     ],
-    [canManage, router],
+    [canManage, isOffline, router],
   )
   const filteredActions = useMemo(() => {
     const normalized = query.trim().toLowerCase()
@@ -291,7 +291,7 @@ export function GlobalSearchScreen() {
         {isOffline ? (
           <StatusBanner
             icon="Wind"
-            message="Global search needs a connection. Creation shortcuts remain available."
+            message="Global search and Product or Service creation are unavailable until you reconnect."
             title="Search unavailable offline"
             tone="warning"
           />

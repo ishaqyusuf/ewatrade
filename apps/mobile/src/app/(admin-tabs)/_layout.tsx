@@ -9,9 +9,7 @@ import {
   getAdminCatalogTabLabel,
   getAdminTabDefinitions,
 } from "@/lib/admin-navigation"
-import {
-  mergeMobileWorkspaceFeatureAvailability,
-} from "@/lib/workspace-feature-availability"
+import { mergeMobileWorkspaceFeatureAvailability } from "@/lib/workspace-feature-availability"
 import {
   activeBusinessOfflineCommands,
   getOfflineProvisionalProjection,
@@ -50,7 +48,8 @@ export default function AdminTabsLayout() {
   const provisionalOrders = useMemo(
     () =>
       commands.flatMap((command) =>
-        command.localStatus === "pending" &&
+        (command.localStatus === "pending" ||
+          command.localStatus === "approval") &&
         command.payload.kind === "commercial_order"
           ? [
               {
@@ -76,7 +75,9 @@ export default function AdminTabsLayout() {
       provisionalOrders,
       setDockHidden,
       syncAlertCount: commands.filter((command) =>
-        ["blocked", "pending", "review"].includes(command.localStatus),
+        ["approval", "blocked", "pending", "review"].includes(
+          command.localStatus,
+        ),
       ).length,
     }),
     [
@@ -111,6 +112,7 @@ export default function AdminTabsLayout() {
       </Tabs>
       <AdminCreateActionSheet
         availability={availability}
+        isOffline={isOffline}
         modal={createModal}
       />
     </AdminTabsProvider>

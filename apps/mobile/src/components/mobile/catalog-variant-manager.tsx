@@ -433,10 +433,7 @@ export function CatalogVariantManager({
                     }
                     placeholder={
                       editorUnit
-                        ? (!optionPricingOnly ? editorUnit.price.trim() : "") ||
-                          (!optionPricingOnly
-                            ? editor.draft.price.trim() || basePrice.trim()
-                            : "0.00")
+                        ? editorUnit.price.trim() || "0.00"
                         : basePrice.trim() || "0.00"
                     }
                     value={
@@ -560,7 +557,8 @@ export function CatalogVariantManager({
                             Prices by unit
                           </Text>
                           <Text className="text-xs leading-5 text-muted-foreground">
-                            Leave a unit price blank to use its default.
+                            Each unit keeps its own price. Leave blank only when
+                            that unit has a default price.
                           </Text>
                         </View>
                         {units.map((unit) => (
@@ -571,7 +569,7 @@ export function CatalogVariantManager({
                                 ? "Set a separate price for this option and unit combination."
                                 : unit.price.trim()
                                   ? `Defaults to ${currencyCode} ${unit.price}.`
-                                  : "Uses this option's main price."
+                                  : "Set a separate price for this unit."
                             }
                             key={unit.id}
                             label={`${unit.name} price`}
@@ -580,8 +578,7 @@ export function CatalogVariantManager({
                             }
                             placeholder={
                               (!optionPricingOnly ? unit.price.trim() : "") ||
-                              editor.draft.price.trim() ||
-                              (!optionPricingOnly ? basePrice : "0.00")
+                              "0.00"
                             }
                             value={editor.draft.unitPrices[unit.id] ?? ""}
                           />

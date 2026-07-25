@@ -92,12 +92,15 @@ persistence boundary. Clients never access the database directly.
 
 ## Offline
 
-- `Tenant.metadata.offlineOperationsEnabled` is the owner-controlled policy;
-  an absent value preserves enabled behavior for existing Tenants.
+- `Tenant.metadata.offlineOperationsEnabled` controls offline access and
+  `Tenant.metadata.offlineApprovalRequired` controls staff staging; absent
+  values preserve enabled and approval-off behavior respectively.
 - `OfflineDevice`, `OfflineDeviceRevocation`, `OfflineCommand` and
   `OfflineConflictReview` are the only durable offline records.
 - Commands retain client id, type, schema version, payload hash, dependencies,
   attempted/authoritative state and typed conflict/review outcomes.
+- Server persistence enriches a staged command payload with the authenticated
+  staff actor id so later approval retains original Order/payment attribution.
 - Historical command enum values remain in storage, but current API writes and
   replay accept only `COMMERCIAL_ORDER`.
 

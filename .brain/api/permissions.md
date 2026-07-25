@@ -69,20 +69,22 @@
 
 ## Offline
 
-- Authenticated commercial/POS roles may read the Tenant offline policy; only
-  `OWNER` may change it.
+- Authenticated commercial/POS roles may read the Tenant offline policy;
+  `OWNER` and `ADMIN` may change offline access and staff approval settings.
 - Devices register under an authenticated tenant/Store context.
 - Device registration and command replay are forbidden when the owner has
   disabled offline operations.
-- Conflict history remains readable, but retry/discard review mutations are
-  also forbidden while offline operations are disabled.
+- Offline staged/conflict review is restricted to `OWNER`, `ADMIN`, and
+  `MANAGER`. Existing review work remains resolvable after offline access is
+  disabled.
 - Replay accepts only Commercial Order creation with optional checkout payment
   and customer facts. Product, Service, inventory, closeout, Staff and
   standalone Customer mutations cannot be submitted through offline replay.
 - Replay re-runs the same server authorization and semantic validation as
   online commands.
-- Conflict review requires authenticated operational capability and records the
-  reviewer.
+- Cashier and Operator commands are staged when the approval policy is on.
+  Management-created commands apply directly.
+- Approve/reject and retry/discard actions record the authenticated reviewer.
 # Managed Domains
 
 - Only active Tenant owners and administrators may list, quote, purchase,

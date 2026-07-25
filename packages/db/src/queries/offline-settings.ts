@@ -18,6 +18,7 @@ function serializeOfflineOperationsPolicy(policy: {
 }) {
   const metadata = record(policy.metadata)
   return {
+    approvalRequired: metadata.offlineApprovalRequired === true,
     enabled: metadata.offlineOperationsEnabled !== false,
     updatedAt: policy.updatedAt,
   }
@@ -37,15 +38,24 @@ export async function getOfflineOperationsPolicy(
 
 export async function updateOfflineOperationsPolicy(
   db: DbClient,
-  input: { enabled: boolean; tenantId: string },
+  input: {
+    approvalRequired: boolean
+    enabled: boolean
+    tenantId: string
+  },
 ) {
   await db.$executeRaw(Prisma.sql`
     UPDATE "Tenant"
     SET
       "metadata" = jsonb_set(
-        COALESCE("metadata", '{}'::jsonb),
-        '{offlineOperationsEnabled}',
-        to_jsonb(${input.enabled}::boolean),
+        jsonb_set(
+          COALESCE("metadata", '{}'::jsonb),
+          '{offlineOperationsEnabled}',
+          to_jsonb(${input.enabled}::boolean),
+          true
+        ),
+        '{offlineApprovalRequired}',
+        to_jsonb(${input.approvalRequired}::boolean),
         true
       ),
       "updatedAt" = NOW()

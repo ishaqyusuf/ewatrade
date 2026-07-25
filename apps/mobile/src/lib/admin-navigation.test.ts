@@ -86,9 +86,9 @@ describe("admin mobile navigation", () => {
       "service-work",
       "website-domain",
       "plan-billing",
+      "sync-offline",
       "app-theme",
       "app-lock",
-      "sync-offline",
       "app-updates",
       "sign-out",
     ])

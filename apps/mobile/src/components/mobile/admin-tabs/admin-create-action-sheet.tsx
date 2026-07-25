@@ -8,6 +8,7 @@ import { SecondaryOperationalRow } from "../secondary-operations"
 
 type AdminCreateActionSheetProps = {
   availability: MobileWorkspaceFeatureAvailability
+  isOffline: boolean
   modal: ReturnType<typeof useModal>
 }
 
@@ -20,17 +21,20 @@ type CreateAction = {
 
 export function AdminCreateActionSheet({
   availability,
+  isOffline,
   modal,
 }: AdminCreateActionSheetProps) {
   const router = useRouter()
   const actions: CreateAction[] = [
     {
       detail: "Add a stock-tracked item to your catalog.",
+      disabled: isOffline,
       label: "Product",
       route: "/first-product-setup-modal?kind=product",
     },
     {
       detail: "Add work that you price and deliver.",
+      disabled: isOffline,
       label: "Service",
       route: "/first-product-setup-modal?kind=service",
     },

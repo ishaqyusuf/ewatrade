@@ -24,6 +24,7 @@ import {
   FullScreenSaleItemPicker,
   SaleItemAvatar,
   type SaleOfferingChoice,
+  saleOfferingTitle,
 } from "@/components/mobile/sale-item-picker"
 import {
   type SaleItemPickerLine,
@@ -161,6 +162,7 @@ function flatten(
                     ? ("product_unit" as const)
                     : ("service" as const),
                 offeringName: offering.name,
+                unitName: inventoryUnit?.name,
               },
             ]
           })
@@ -237,7 +239,7 @@ function SelectedOrderLine({
         <SaleItemAvatar choice={offering} />
         <View className="min-w-0 flex-1 gap-1">
           <Text className="font-extrabold text-foreground" numberOfLines={1}>
-            {offering.displayName}
+            {saleOfferingTitle(offering)}
           </Text>
           <Text
             className="text-xs leading-4 text-muted-foreground"
@@ -263,14 +265,21 @@ function SelectedOrderLine({
         </Pressable>
       </View>
 
-      <View className="mt-3 flex-row items-center justify-end gap-3 pl-[56px]">
-        <View className="gap-1">
+      <View className="mt-3 flex-row items-start gap-3 pl-[56px]">
+        <View className="min-w-0 flex-1 gap-1">
           <Text className="text-[10px] font-bold uppercase tracking-[1px] text-muted-foreground">
-            Quantity
+            Unit
+          </Text>
+          <Text className="min-h-12 py-3 text-sm font-extrabold text-foreground">
+            {offering.unitName ?? offering.offeringName}
+          </Text>
+        </View>
+        <View className="w-20 gap-1">
+          <Text className="text-[10px] font-bold uppercase tracking-[1px] text-muted-foreground">
+            Qty
           </Text>
           <FormField
             accessibilityLabel={`Quantity for ${offering.displayName}`}
-            containerClassName="w-20"
             inputClassName="text-center font-extrabold"
             inputTextAlign="center"
             keyboardType="decimal-pad"
@@ -283,17 +292,25 @@ function SelectedOrderLine({
             variant="auth"
           />
         </View>
-        <View className="min-w-[116px] items-end gap-1">
+        <View className="min-w-[104px] items-end gap-1">
           <Text className="text-[10px] font-bold uppercase tracking-[1px] text-muted-foreground">
-            Line total
+            Price
           </Text>
-          <Text className="text-lg font-extrabold text-foreground">
-            {lineTotalMinor === null
+          <Text className="min-h-12 py-3 text-right text-sm font-extrabold text-foreground">
+            {offering.fixedPriceMinor === null
               ? "—"
-              : formatMinorMoney(lineTotalMinor, offering.currencyCode)}
+              : formatMinorMoney(
+                  offering.fixedPriceMinor,
+                  offering.currencyCode,
+                )}
           </Text>
         </View>
       </View>
+      {lineTotalMinor !== null ? (
+        <Text className="mt-2 text-right text-xs font-bold text-muted-foreground">
+          Line total {formatMinorMoney(lineTotalMinor, offering.currencyCode)}
+        </Text>
+      ) : null}
     </View>
   )
 }

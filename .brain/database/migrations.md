@@ -110,6 +110,15 @@ An earlier scalar-column design was abandoned before completion after local
 Docker was unavailable and shared-schema pushes failed with the existing
 restricted schema-engine error.
 
+On 2026-07-25 optional staff approval was added as
+`Tenant.metadata.offlineApprovalRequired` and staged work reused the existing
+`OfflineCommand.REVIEW_REQUIRED` plus `OfflineConflictReview` records. The
+final design made no Prisma model, enum, or relationship change and therefore
+requires no migration. Prisma format/generate completed; an abandoned
+schema-expansion attempt did not produce a migration. Local Docker remained
+unavailable, while production and remote push attempts reached Neon and failed
+with the existing schema-engine error before any confirmed write.
+
 ## Tenant-Sequential Order Number Migration State
 
 On 2026-07-24 Prisma generated and applied

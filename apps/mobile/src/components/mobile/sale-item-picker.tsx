@@ -38,6 +38,7 @@ export type SaleOfferingChoice = {
   itemName: string
   kind: "product_unit" | "service"
   offeringName: string
+  unitName?: string
 }
 
 function initials(value: string) {
@@ -126,7 +127,7 @@ function SaleOfferingPickerRow({
       <SaleItemAvatar choice={choice} />
       <View className="min-w-0 flex-1 gap-1">
         <Text className="font-extrabold text-foreground" numberOfLines={1}>
-          {choice.displayName}
+          {saleOfferingTitle(choice)}
         </Text>
         <Text className="text-xs text-muted-foreground" numberOfLines={1}>
           {choice.offeringName} ·{" "}
@@ -158,6 +159,11 @@ function SaleOfferingPickerRow({
       </View>
     </Pressable>
   )
+}
+
+export function saleOfferingTitle(choice: SaleOfferingChoice) {
+  const unitName = choice.unitName?.trim()
+  return unitName ? `${choice.displayName} - ${unitName}` : choice.displayName
 }
 
 type CompactSaleItemPickerProps = {

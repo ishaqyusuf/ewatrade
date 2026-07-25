@@ -22,7 +22,7 @@ type DashboardHomeHeaderProps = {
   hasNotification?: boolean
   onNotificationPress: () => void
   onProfilePress?: () => void
-  onSearchPress: () => void
+  onSearchPress?: () => void
 }
 
 export function DashboardHomeHeader({
@@ -78,10 +78,18 @@ export function DashboardHomeHeader({
         ) : null}
       </Pressable>
       <Pressable
-        accessibilityLabel="Open global search"
+        accessibilityLabel={
+          onSearchPress ? "Open global search" : "Search unavailable offline"
+        }
         accessibilityRole="button"
-        className="size-11 items-center justify-center rounded-full bg-card active:bg-accent"
-        haptic
+        accessibilityState={{ disabled: !onSearchPress }}
+        className={
+          onSearchPress
+            ? "size-11 items-center justify-center rounded-full bg-card active:bg-accent"
+            : "size-11 items-center justify-center rounded-full bg-card opacity-45"
+        }
+        disabled={!onSearchPress}
+        haptic={Boolean(onSearchPress)}
         onPress={onSearchPress}
       >
         <Icon className="size-base text-foreground" name="Search" />

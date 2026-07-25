@@ -26,13 +26,19 @@ import { isInvitedStaffProfile, isSalesRepRole } from "@/lib/mobile-roles"
 import { nativewindThemeVars } from "@/lib/nativewind-theme-vars"
 import { NAV_THEME } from "@/lib/theme"
 import { getThemeOverride } from "@/lib/theme-preference"
+import {
+  pendingOfflineCommands,
+  useOfflineCommandStore,
+} from "@/store/offlineCommandStore"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { TRPCReactProvider, useTRPC } from "@/trpc/client"
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet"
-import { useQuery } from "@tanstack/react-query"
+import Constants from "expo-constants"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useRef } from "react"
 import { StatusBar } from "expo-status-bar"
 import { VariableContextProvider } from "nativewind"
-import { View } from "react-native"
+import { Platform, View } from "react-native"
 import FlashMessage from "react-native-flash-message"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 import Toast from "react-native-toast-message"
@@ -265,6 +271,9 @@ const InitialLayout = () => {
 function OfflinePolicyReconciler() {
   const { isAuthenticated, profile } = useAuthContext()
   const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  const commandState = useOfflineCommandStore()
+  const isOfflineMode = useOperationalModeStore((state) => state.isOfflineMode)
   const setActiveBusiness = useOperationalModeStore(
     (state) => state.setActiveBusiness,
   )
@@ -279,6 +288,71 @@ function OfflinePolicyReconciler() {
       retry: false,
     }),
   )
+  const replay = useMutation(
+    trpc.offline.replay.mutationOptions({
+      onSuccess: async (results) => {
+        commandState.applyReplayResults(results)
+        await Promise.all([
+          queryClient.invalidateQueries(trpc.offline.conflicts.queryFilter()),
+          queryClient.invalidateQueries(trpc.catalog.listItems.queryFilter()),
+          queryClient.invalidateQueries(
+            trpc.catalog.listItemsPage.queryFilter(),
+          ),
+          queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
+          queryClient.invalidateQueries(trpc.orders.listPage.queryFilter()),
+          queryClient.invalidateQueries(
+            trpc.tenant.featureAvailability.queryFilter(),
+          ),
+        ])
+      },
+    }),
+  )
+  const register = useMutation(
+    trpc.offline.registerDevice.mutationOptions({
+      onSuccess: () => {
+        const commands = pendingOfflineCommands(
+          commandState,
+          profile?.businessId,
+        )
+        if (commands.length === 0) return
+        replay.mutate({
+          commands,
+          deviceId: commandState.deviceId,
+        })
+      },
+    }),
+  )
+  const pending = pendingOfflineCommands(commandState, profile?.businessId)
+  const commandsToSync = pending.filter((command) => {
+    if (settings.data?.enabled) return true
+    const localCommand = commandState.commands.find(
+      (candidate) => candidate.clientCommandId === command.clientCommandId,
+    )
+    return (
+      localCommand?.localStatus === "approval" ||
+      localCommand?.localStatus === "review"
+    )
+  })
+  const hasRemoteReview = commandsToSync.some((command) =>
+    commandState.commands.some(
+      (candidate) =>
+        candidate.clientCommandId === command.clientCommandId &&
+        (candidate.localStatus === "approval" ||
+          candidate.localStatus === "review"),
+    ),
+  )
+  const pendingSignature = commandsToSync
+    .map((command) => {
+      const localCommand = commandState.commands.find(
+        (candidate) => candidate.clientCommandId === command.clientCommandId,
+      )
+      return `${command.clientCommandId}:${localCommand?.localStatus ?? "pending"}`
+    })
+    .join("|")
+  const reconciliationSignature = hasRemoteReview
+    ? `${pendingSignature}:${settings.dataUpdatedAt}`
+    : pendingSignature
+  const lastAttemptSignature = useRef("")
 
   useEffect(() => {
     setActiveBusiness(profile?.businessId ?? null)
@@ -288,6 +362,41 @@ function OfflinePolicyReconciler() {
     if (!profile?.businessId || !settings.data) return
     setOfflineAccess(profile.businessId, settings.data.enabled)
   }, [profile?.businessId, setOfflineAccess, settings.data])
+
+  useEffect(() => {
+    if (isOfflineMode || !reconciliationSignature) {
+      lastAttemptSignature.current = ""
+      return
+    }
+    if (lastAttemptSignature.current === reconciliationSignature) return
+    lastAttemptSignature.current = reconciliationSignature
+    if (!settings.data?.enabled) {
+      replay.mutate({
+        commands: commandsToSync,
+        deviceId: commandState.deviceId,
+      })
+      return
+    }
+    register.mutate({
+      appVersion: Constants.expoConfig?.version,
+      deviceId: commandState.deviceId,
+      deviceName: `${Platform.OS} device`,
+      platform:
+        Platform.OS === "ios" ||
+        Platform.OS === "android" ||
+        Platform.OS === "web"
+          ? Platform.OS
+          : "unknown",
+    })
+  }, [
+    commandState.deviceId,
+    commandsToSync,
+    isOfflineMode,
+    reconciliationSignature,
+    register.mutate,
+    replay.mutate,
+    settings.data?.enabled,
+  ])
 
   return null
 }

@@ -688,6 +688,32 @@ export function SimpleCatalogItemScreen({
       )
       return
     }
+    const missingVariantUnitPrice =
+      itemKind === "product"
+        ? activeCombinations
+            .filter((combination) => variantDraft(combination.key).enabled)
+            .flatMap((combination) =>
+              additionalUnits.map((unit) => ({
+                combination,
+                unit,
+                value: resolveCatalogOptionUnitPriceMinor({
+                  basePriceMinor: undefined,
+                  optionPrice: variantDraft(combination.key).price,
+                  optionPricingOnly: multiplePriceOptions,
+                  unitDefaultPrice: unit.price,
+                  unitOverridePrice:
+                    variantDraft(combination.key).unitPrices[unit.id] ?? "",
+                }),
+              })),
+            )
+            .find(({ value }) => value === undefined)
+        : undefined
+    if (missingVariantUnitPrice) {
+      setSubmitError(
+        `Enter a separate ${missingVariantUnitPrice.unit.name} price for ${missingVariantUnitPrice.combination.name}.`,
+      )
+      return
+    }
 
     const invalidProductQuantity =
       itemKind === "product" && showAdvanced
@@ -1746,7 +1772,7 @@ export function SimpleCatalogItemScreen({
                             ? "Priced by option"
                             : unit.price.trim()
                               ? `Default price ${currencyCode} ${unit.price}`
-                              : "Uses product price"}
+                              : "Price not set"}
                         </Text>
                       </View>
                       <Pressable

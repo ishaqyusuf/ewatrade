@@ -2,6 +2,7 @@ import { useRouter } from "expo-router"
 import { Alert, ScrollView } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
+import { ActionButton } from "@/components/mobile/action-button"
 import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
@@ -17,6 +18,9 @@ import {
 } from "@/lib/admin-navigation"
 import { getMobileRoleLabel, normalizeMobileRole } from "@/lib/mobile-roles"
 import { type ThemeOverride, setThemeOverride } from "@/lib/theme-preference"
+import { useOperationalModeStore } from "@/store/operationalModeStore"
+import { useTRPC } from "@/trpc/client"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useAdminTabs, useResetAdminDock } from "./admin-tabs-context"
 
 function initials(value: string | null | undefined) {
@@ -126,6 +130,9 @@ export function AdminMoreScreen() {
   const insets = useSafeAreaInsets()
   const router = useRouter()
   const auth = useAuthContext()
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
   const { setColorScheme, themeOverride } = useColorScheme()
   const { availability, syncAlertCount } = useAdminTabs()
   useResetAdminDock()
@@ -136,6 +143,29 @@ export function AdminMoreScreen() {
       ? normalizedRole
       : "OWNER"
   const sections = buildAdminMoreSections({ availability, role })
+  const offlineSettings = useQuery(
+    trpc.offline.settings.queryOptions(undefined, { retry: false }),
+  )
+  const offlineRecords = useQuery(
+    trpc.offline.conflicts.queryOptions(
+      {},
+      { enabled: !isOffline, retry: false },
+    ),
+  )
+  const reviewOfflineRecord = useMutation(
+    trpc.offline.review.mutationOptions({
+      onSuccess: async () => {
+        await Promise.all([
+          offlineRecords.refetch(),
+          queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
+          queryClient.invalidateQueries(trpc.orders.listPage.queryFilter()),
+        ])
+      },
+    }),
+  )
+  const stagedRecords = (offlineRecords.data ?? []).filter(
+    (record) => record.reviewKind === "approval",
+  )
 
   async function selectTheme(value: ThemeOverride) {
     setColorScheme(value)
@@ -233,13 +263,75 @@ export function AdminMoreScreen() {
                 detail={
                   item.id === "inventory" && item.disabled
                     ? "Add a Product to enable inventory"
-                    : undefined
+                    : item.id === "sync-offline"
+                      ? `${offlineSettings.data?.approvalRequired ? "Staff approval on" : "Staff approval off"} · ${stagedRecords.length} waiting`
+                      : undefined
                 }
                 item={item}
                 key={item.id}
                 onPress={() => handleItem(item)}
               />
             ))}
+            {section.id === "offline" && stagedRecords.length > 0 ? (
+              <View className="mt-2 border-y border-border">
+                {stagedRecords.slice(0, 3).map((record, index, rows) => (
+                  <View
+                    className={`gap-3 py-4 ${
+                      index < rows.length - 1 ? "border-b border-border" : ""
+                    }`}
+                    key={record.id}
+                  >
+                    <View className="flex-row items-start gap-3">
+                      <View className="size-9 items-center justify-center rounded-full bg-muted">
+                        <Icon
+                          className="size-sm text-primary"
+                          name="ReceiptText"
+                        />
+                      </View>
+                      <View className="min-w-0 flex-1 gap-1">
+                        <Text className="font-extrabold text-foreground">
+                          Staff order awaiting approval
+                        </Text>
+                        <Text className="text-xs text-muted-foreground">
+                          {record.actor?.displayName ||
+                            record.actor?.name ||
+                            record.actor?.email ||
+                            "Staff member"}
+                        </Text>
+                      </View>
+                    </View>
+                    <View className="flex-row gap-2">
+                      <ActionButton
+                        className="flex-1"
+                        disabled={reviewOfflineRecord.isPending}
+                        onPress={() =>
+                          reviewOfflineRecord.mutate({
+                            commandId: record.id,
+                            decision: "approve",
+                          })
+                        }
+                        variant="outline"
+                      >
+                        Approve
+                      </ActionButton>
+                      <ActionButton
+                        className="flex-1"
+                        disabled={reviewOfflineRecord.isPending}
+                        onPress={() =>
+                          reviewOfflineRecord.mutate({
+                            commandId: record.id,
+                            decision: "reject",
+                          })
+                        }
+                        variant="destructive"
+                      >
+                        Reject
+                      </ActionButton>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : null}
           </View>
         ))}
       </ScrollView>

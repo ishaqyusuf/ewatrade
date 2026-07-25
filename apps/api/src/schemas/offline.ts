@@ -21,7 +21,10 @@ const commercialOrderPayloadSchema = commercialOrderCreateSchema
 export const offlineCommandPayloadSchema = commercialOrderPayloadSchema
 
 export const offlineSettingsUpdateSchema = z
-  .object({ enabled: z.boolean() })
+  .object({
+    approvalRequired: z.boolean(),
+    enabled: z.boolean(),
+  })
   .strict()
 
 export const offlineReplaySchema = z
@@ -65,7 +68,7 @@ export const offlineListConflictsSchema = z
 export const offlineReviewConflictSchema = z
   .object({
     commandId: z.string().trim().min(1),
-    decision: z.enum(["discard", "retry"]),
+    decision: z.enum(["approve", "discard", "reject", "retry"]),
     reason: z.string().trim().max(500).optional(),
   })
   .strict()

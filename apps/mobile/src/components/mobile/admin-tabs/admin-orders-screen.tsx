@@ -26,7 +26,7 @@ import { useTRPC } from "@/trpc/client"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
-import { useDeferredValue, useMemo, useState } from "react"
+import { useDeferredValue, useEffect, useMemo, useState } from "react"
 import { FlatList } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useAdminDockScroll, useAdminTabs } from "./admin-tabs-context"
@@ -98,6 +98,9 @@ export function AdminOrdersScreen() {
   const [filter, setFilter] = useState<OrderFilter>("all")
   const [query, setQuery] = useState("")
   const deferredQuery = useDeferredValue(query)
+  useEffect(() => {
+    if (isOffline && query) setQuery("")
+  }, [isOffline, query])
   const createdAfter = useMemo(
     () => createdAfterForDateFilter(dateFilter),
     [dateFilter],
@@ -122,37 +125,17 @@ export function AdminOrdersScreen() {
     () => orders.data?.pages.flatMap((page) => page.items) ?? [],
     [orders.data?.pages],
   )
-  const visibleOrders = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
-    if (!isOffline || !normalizedQuery) return loadedOrders
-    return loadedOrders.filter((order) =>
-      [
-        order.clientOrderId,
-        order.customerEmail,
-        order.customerName,
-        order.customerPhone,
-        ...order.lines.flatMap((line) => [
-          line.snapshot?.catalogItemName,
-          line.snapshot?.offeringName,
-          line.snapshot?.variantName,
-        ]),
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-        .includes(normalizedQuery),
-    )
-  }, [isOffline, loadedOrders, query])
+  const visibleOrders = loadedOrders
   const visibleProvisionalOrders = useMemo(() => {
     if (filter === "completed" || filter === "cancelled") return []
-    const normalizedQuery = query.trim().toLowerCase()
+    const normalizedQuery = isOffline ? "" : query.trim().toLowerCase()
     if (!normalizedQuery) return provisionalOrders
     return provisionalOrders.filter((order) =>
       `${order.customerName ?? ""} ${order.customerPhone ?? ""} queued pending sync`
         .toLowerCase()
         .includes(normalizedQuery),
     )
-  }, [filter, provisionalOrders, query])
+  }, [filter, isOffline, provisionalOrders, query])
   const itemCount = visibleOrders.reduce(
     (total, order) => total + commerceOrderItemCount(order),
     0,
@@ -250,7 +233,7 @@ export function AdminOrdersScreen() {
                 tone="destructive"
               />
             ) : null}
-            {showSearch ? (
+            {showSearch && !isOffline ? (
               <FormField
                 autoCapitalize="none"
                 label="Search"

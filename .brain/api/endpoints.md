@@ -62,6 +62,9 @@ Typed tRPC routers are the primary application contract.
 - Policy: `offline.settings`, `offline.updateSettings`.
 - Sync: `offline.registerDevice`, `offline.replay`, `offline.conflicts`,
   `offline.review`.
+- `offline.conflicts` is the management review queue for both staged staff
+  records and typed conflicts; each row declares its review kind and safe
+  actions.
 
 ## Service Operations
 

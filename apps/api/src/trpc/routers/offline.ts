@@ -37,19 +37,49 @@ function assertCanUseOffline(role: string) {
 }
 
 export function canManageOfflineSettings(role: string) {
-  return normalizeRole(role) === "OWNER"
+  const normalized = normalizeRole(role)
+  return normalized === "OWNER" || normalized === "ADMIN"
 }
 
 function assertCanManageOfflineSettings(role: string) {
   if (!canManageOfflineSettings(role)) {
     throw new TRPCError({
       code: "FORBIDDEN",
-      message: "Only the business owner can change offline access.",
+      message: "Only a business owner or admin can change offline settings.",
     })
   }
 }
 
-async function assertOfflineOperationsEnabled(
+export function canManageOfflineReviews(role: string) {
+  const normalized = normalizeRole(role)
+  return (
+    normalized === "OWNER" || normalized === "ADMIN" || normalized === "MANAGER"
+  )
+}
+
+function assertCanManageOfflineReviews(role: string) {
+  if (!canManageOfflineReviews(role)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Only business management can review offline records.",
+    })
+  }
+}
+
+export function requiresOfflineApproval(
+  role: string,
+  approvalRequired: boolean,
+) {
+  if (!approvalRequired) return false
+  const normalized = normalizeRole(role)
+  return !(
+    normalized === "OWNER" ||
+    normalized === "ADMIN" ||
+    normalized === "MANAGER"
+  )
+}
+
+async function requireOfflineOperationsPolicy(
   db: Parameters<typeof getOfflineOperationsPolicy>[0],
   tenantId: string,
 ) {
@@ -60,6 +90,7 @@ async function assertOfflineOperationsEnabled(
       message: "Offline operations have been disabled by the business owner.",
     })
   }
+  return policy
 }
 
 function resolveStoreId(
@@ -110,6 +141,7 @@ export const offlineRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       assertCanManageOfflineSettings(ctx.tenantContext.membership.role)
       return updateOfflineOperationsPolicy(ctx.db, {
+        approvalRequired: input.approvalRequired,
         enabled: input.enabled,
         tenantId: ctx.tenantContext.tenant.id,
       })
@@ -118,7 +150,7 @@ export const offlineRouter = createTRPCRouter({
   conflicts: protectedProcedure
     .input(offlineListConflictsSchema)
     .query(async ({ ctx, input }) => {
-      assertCanUseOffline(ctx.tenantContext.membership.role)
+      assertCanManageOfflineReviews(ctx.tenantContext.membership.role)
       return listOfflineConflictReviews(ctx.db, {
         storeId: input.storeId,
         tenantId: ctx.tenantContext.tenant.id,
@@ -129,7 +161,7 @@ export const offlineRouter = createTRPCRouter({
     .input(offlineRegisterDeviceSchema)
     .mutation(async ({ ctx, input }) => {
       assertCanUseOffline(ctx.tenantContext.membership.role)
-      await assertOfflineOperationsEnabled(ctx.db, ctx.tenantContext.tenant.id)
+      await requireOfflineOperationsPolicy(ctx.db, ctx.tenantContext.tenant.id)
       const storeId = resolveStoreId(
         ctx.tenantContext.stores,
         ctx.tenantContext.activeStore,
@@ -179,7 +211,15 @@ export const offlineRouter = createTRPCRouter({
     .input(offlineReplaySchema)
     .mutation(async ({ ctx, input }) => {
       assertCanUseOffline(ctx.tenantContext.membership.role)
-      await assertOfflineOperationsEnabled(ctx.db, ctx.tenantContext.tenant.id)
+      const policy = await getOfflineOperationsPolicy(ctx.db, {
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+      if (!policy) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Business not found.",
+        })
+      }
       const storeId = resolveStoreId(
         ctx.tenantContext.stores,
         ctx.tenantContext.activeStore,
@@ -187,10 +227,15 @@ export const offlineRouter = createTRPCRouter({
       )
       try {
         return await replayOfflineCommands(ctx.db, {
+          acceptNewCommands: policy.enabled,
           actorUserId: ctx.session.user.id,
           capabilities: roleCapabilities(ctx.tenantContext.membership.role),
           commands: input.commands,
           deviceId: input.deviceId,
+          requiresApproval: requiresOfflineApproval(
+            ctx.tenantContext.membership.role,
+            policy.approvalRequired,
+          ),
           storeId,
           tenantId: ctx.tenantContext.tenant.id,
         })
@@ -205,8 +250,7 @@ export const offlineRouter = createTRPCRouter({
   review: protectedProcedure
     .input(offlineReviewConflictSchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanUseOffline(ctx.tenantContext.membership.role)
-      await assertOfflineOperationsEnabled(ctx.db, ctx.tenantContext.tenant.id)
+      assertCanManageOfflineReviews(ctx.tenantContext.membership.role)
       try {
         return await reviewOfflineConflict(ctx.db, {
           actorUserId: ctx.session.user.id,

@@ -1,6 +1,8 @@
 import { FormField } from "@/components/mobile/form-field"
 import { shouldShowListSearch } from "@/lib/list-pagination"
+import { useOperationalModeStore } from "@/store/operationalModeStore"
 import type { ReactNode } from "react"
+import { useEffect } from "react"
 import { View } from "react-native"
 import { KeyboardStickyView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -35,10 +37,17 @@ export function BottomSearchFooter({
   value,
 }: BottomSearchFooterProps) {
   const insets = useSafeAreaInsets()
+  const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
   const paddingBottom = includeSafeArea ? Math.max(insets.bottom, 8) : 8
 
   const effectiveSearchVisible =
-    searchVisible && (alwaysShowSearch || shouldShowListSearch(totalCount))
+    !isOffline &&
+    searchVisible &&
+    (alwaysShowSearch || shouldShowListSearch(totalCount))
+
+  useEffect(() => {
+    if (isOffline && value) onChangeText("")
+  }, [isOffline, onChangeText, value])
 
   if (!children && !effectiveSearchVisible) return null
 

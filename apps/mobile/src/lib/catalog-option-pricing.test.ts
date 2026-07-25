@@ -39,6 +39,17 @@ describe("catalog option unit pricing", () => {
     ).toBe("25000")
   })
 
+  test("does not copy one variant unit price into another blank unit", () => {
+    expect(
+      resolveCatalogOptionUnitPrice({
+        optionPrice: "30000",
+        optionPricingOnly: false,
+        unitDefaultPrice: "",
+        unitOverridePrice: "",
+      }),
+    ).toBe("")
+  })
+
   test("keeps a blank option-unit payload unpriced in option-only mode", () => {
     expect(
       resolveCatalogOptionUnitPriceMinor({

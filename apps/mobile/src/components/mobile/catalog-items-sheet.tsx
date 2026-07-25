@@ -19,6 +19,7 @@ import {
   shouldShowListSearch,
 } from "@/lib/list-pagination"
 import { useTRPC } from "@/trpc/client"
+import { useOperationalModeStore } from "@/store/operationalModeStore"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
@@ -166,6 +167,7 @@ export function CatalogItemsContent({
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const trpc = useTRPC()
+  const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
   const [kindFilter, setKindFilter] = useState<CatalogKindFilter>("all")
   const [selectedItemId, setSelectedItemId] = useState<string | null>(
     initialCatalogItemId ?? null,
@@ -180,7 +182,7 @@ export function CatalogItemsContent({
       {
         kind: kindFilter === "all" ? undefined : kindFilter,
         limit: LIST_PAGE_SIZE,
-        query: deferredQuery || undefined,
+        query: isOffline ? undefined : deferredQuery || undefined,
       },
       {
         getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -303,7 +305,7 @@ export function CatalogItemsContent({
               </View>
             ) : null}
 
-            {presentation === "tab" && showSearch ? (
+            {presentation === "tab" && showSearch && !isOffline ? (
               <FormField
                 autoCapitalize="words"
                 label="Find item"
@@ -353,6 +355,7 @@ export function CatalogItemsContent({
         accessibilityLabel="Add catalog item"
         bottomOffset={presentation === "modal" && showSearch ? 88 : 0}
         dockHidden={dockHidden}
+        disabled={isOffline}
         onPress={onAddItem}
         sitsAboveDock={presentation === "tab"}
         testID="catalog-add-fab"

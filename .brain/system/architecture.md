@@ -44,14 +44,19 @@ Describe the intended technical architecture and responsibility boundaries for t
   query modules own persistence; jobs own provider writes and reconciliation.
 
 ## Offline Sync Boundary
-- Tenant owners control offline checkout through
-  `Tenant.metadata.offlineOperationsEnabled`; API device registration and
-  replay enforce the current value.
+- Tenant owners/admins control offline checkout through
+  `Tenant.metadata.offlineOperationsEnabled` and optional staff approval
+  through `Tenant.metadata.offlineApprovalRequired`; API device registration,
+  replay and management review enforce the current values.
 - Mobile queues only `commercial_order` after a user has authenticated once.
   The command may carry immutable customer facts and an optional initial
   payment that replay applies atomically with the Order.
 - Commands use tenant-scoped client ids, payload hashes, schema/event versions,
   dependencies and typed conflict results.
+- Staff replay either applies immediately or uses the existing
+  `REVIEW_REQUIRED` state with a null conflict code until Owner/Admin/Manager
+  approval. Approval executes the original staff-authored command atomically;
+  a semantic failure becomes a typed conflict.
 - Durable `OfflineDevice`, `OfflineCommand`, `OfflineConflictReview` and
   `OfflineDeviceRevocation` records are authoritative. The removed generic
   sync-run/event and metadata fallbacks are not read.

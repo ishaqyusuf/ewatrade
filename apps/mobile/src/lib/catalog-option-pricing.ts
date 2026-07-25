@@ -13,25 +13,18 @@ type ResolveCatalogOptionUnitPriceMinorInput =
   }
 
 export function resolveCatalogOptionUnitPrice({
-  optionPrice,
+  optionPrice: _optionPrice,
   optionPricingOnly,
   unitDefaultPrice,
   unitOverridePrice,
 }: ResolveCatalogOptionUnitPriceInput) {
   if (optionPricingOnly) return unitOverridePrice.trim()
-
-  return (
-    unitOverridePrice.trim() || unitDefaultPrice.trim() || optionPrice.trim()
-  )
+  return unitOverridePrice.trim() || unitDefaultPrice.trim()
 }
 
 export function resolveCatalogOptionUnitPriceMinor({
-  basePriceMinor,
+  basePriceMinor: _basePriceMinor,
   ...input
 }: ResolveCatalogOptionUnitPriceMinorInput) {
-  const resolvedPriceMinor = majorToMinor(resolveCatalogOptionUnitPrice(input))
-
-  return (
-    resolvedPriceMinor ?? (input.optionPricingOnly ? undefined : basePriceMinor)
-  )
+  return majorToMinor(resolveCatalogOptionUnitPrice(input)) ?? undefined
 }

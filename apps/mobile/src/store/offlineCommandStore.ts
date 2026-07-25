@@ -18,7 +18,13 @@ export type LocalOfflineCommand = ReplayCommand & {
   conflictCode?: string | null
   conflictMessage?: string | null
   businessId: string
-  localStatus: "applied" | "blocked" | "discarded" | "pending" | "review"
+  localStatus:
+    | "applied"
+    | "approval"
+    | "blocked"
+    | "discarded"
+    | "pending"
+    | "review"
   result?: unknown
 }
 
@@ -38,11 +44,13 @@ type OfflineCommandState = {
   setHasHydrated: (value: boolean) => void
 }
 
-function localStatus(status: ReplayResult["status"]) {
-  if (status === "APPLIED") return "applied" as const
-  if (status === "DISCARDED") return "discarded" as const
-  if (status === "BLOCKED") return "blocked" as const
-  if (status === "REVIEW_REQUIRED") return "review" as const
+function localStatus(result: ReplayResult) {
+  if (result.status === "APPLIED") return "applied" as const
+  if (result.status === "DISCARDED") return "discarded" as const
+  if (result.status === "BLOCKED") return "blocked" as const
+  if (result.status === "REVIEW_REQUIRED") {
+    return result.conflictCode ? ("review" as const) : ("approval" as const)
+  }
   return "pending" as const
 }
 
@@ -50,7 +58,8 @@ export function getOfflineProvisionalProjection(
   commands: LocalOfflineCommand[],
 ) {
   const provisional = commands.filter(
-    (command) => command.localStatus === "pending",
+    (command) =>
+      command.localStatus === "pending" || command.localStatus === "approval",
   )
   return {
     catalogItems: [],
@@ -94,7 +103,7 @@ export const useOfflineCommandStore = create<OfflineCommandState>()(
                   authoritativeState: result.authoritativeState,
                   conflictCode: result.conflictCode,
                   conflictMessage: result.conflictMessage,
-                  localStatus: localStatus(result.status),
+                  localStatus: localStatus(result),
                   result: result.result,
                 }
               : command
@@ -189,7 +198,12 @@ export function pendingOfflineCommands(
   businessId: string | null | undefined,
 ) {
   return activeBusinessOfflineCommands(state.commands, businessId)
-    .filter((command) => command.localStatus === "pending")
+    .filter(
+      (command) =>
+        command.localStatus === "pending" ||
+        command.localStatus === "approval" ||
+        command.localStatus === "review",
+    )
     .map((command) => ({
       clientCommandId: command.clientCommandId,
       createdAtClient: command.createdAtClient,

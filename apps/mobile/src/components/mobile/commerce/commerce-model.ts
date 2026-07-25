@@ -80,16 +80,23 @@ export function formatCommerceDateTime(value: Date | string) {
 }
 
 export function commerceLineTitle(line: CommercialOrderLine) {
-  return line.snapshot?.catalogItemName ?? "Archived item"
+  const title = line.snapshot?.catalogItemName ?? "Archived item"
+  const unit =
+    line.kind === "product" ? line.snapshot?.inventoryUnitName : undefined
+  return unit ? `${title} - ${unit}` : title
 }
 
 export function commerceLineOption(line: CommercialOrderLine) {
+  if (line.kind === "product") {
+    return (
+      line.snapshot?.variantName ?? line.snapshot?.offeringName ?? "Product"
+    )
+  }
   const labels = [
     line.snapshot?.variantName,
-    line.snapshot?.inventoryUnitName,
     line.snapshot?.offeringName,
   ].filter((value, index, values) => value && values.indexOf(value) === index)
-  return labels.join(" · ") || (line.kind === "service" ? "Service" : "Product")
+  return labels.join(" · ") || "Service"
 }
 
 export function commerceOrderItemCount(order: CommercialOrder) {

@@ -148,7 +148,8 @@ export function CustomerBookContent({
     () =>
       activeBusinessOfflineCommands(allCommands, profile?.businessId).flatMap(
         (command) =>
-          command.localStatus === "pending" &&
+          (command.localStatus === "pending" ||
+            command.localStatus === "approval") &&
           command.payload.kind === "commercial_order" &&
           (command.payload.customerName ||
             command.payload.customerPhone ||

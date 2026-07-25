@@ -44,9 +44,9 @@ export type AdminMoreItem = {
 }
 
 export type AdminMoreSection = {
-  id: "store-workspace" | "account-settings"
+  id: "store-workspace" | "offline" | "account-settings"
   items: AdminMoreItem[]
-  title: "Store & workspace" | "Account settings"
+  title: "Store & workspace" | "Offline" | "Account settings"
 }
 
 export function canAccessAdminTabs(role: string | undefined) {
@@ -192,6 +192,18 @@ export function buildAdminMoreSections({
       title: "Store & workspace",
     },
     {
+      id: "offline",
+      items: [
+        {
+          action: { href: "/sync-status-modal", kind: "route" },
+          icon: "RefreshCw",
+          id: "sync-offline",
+          label: "Sync & offline settings",
+        },
+      ],
+      title: "Offline",
+    },
+    {
       id: "account-settings",
       items: [
         {
@@ -205,12 +217,6 @@ export function buildAdminMoreSections({
           icon: "Lock",
           id: "app-lock",
           label: "App lock",
-        },
-        {
-          action: { href: "/sync-status-modal", kind: "route" },
-          icon: "RefreshCw",
-          id: "sync-offline",
-          label: "Sync & offline",
         },
         {
           action: { href: "/updates", kind: "route" },

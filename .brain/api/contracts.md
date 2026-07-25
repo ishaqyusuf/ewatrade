@@ -125,6 +125,9 @@
   variant-unit price override. When a fallback exists it is materialized as
   that Offering's independent fixed-price snapshot; when no price exists the
   Offering remains visible but unavailable for sale.
+- Product Unit Offering prices are independent. A variant's canonical-unit
+  price is never copied into another unit; each additional unit must resolve
+  from its own unit default or explicit variant-unit price.
 - Service Offerings may be fixed or quote-required and never accept stock
   input.
 - Unit Draft publication validates one factor-1 Canonical Unit, direct exact
@@ -196,6 +199,9 @@
   overview opens Create Order and preselects the item's first currently
   sellable Offering. The operator still reviews quantities, price, payment,
   and confirmation.
+- Mobile suppresses operational search inputs while offline and disables the
+  Home global-search action. Product/Service creation entry points are also
+  disabled; offline Order creation remains available.
 
 ## Services
 
@@ -234,16 +240,21 @@
 ## Offline
 
 - `offline.settings` returns the active Tenant's
-  `offlineOperationsEnabled` policy. `offline.updateSettings` changes that
-  policy for an owner.
-- Device registration, replay, and conflict-review mutations reject work while
-  the owner policy is disabled; conflict history remains readable.
+  `offlineOperationsEnabled` and `offlineApprovalRequired` policies.
+  `offline.updateSettings` changes both for an Owner or Admin.
+- Device registration and replay reject new work while offline operations are
+  disabled. Existing staged/conflict records remain reviewable, and replay may
+  return their current server status so originating devices can converge.
 - The only supported command payload is versioned `commercial_order`. It may
   include customer snapshot facts and an optional initial payment; replay
   creates or reuses a directory Customer and records the payment atomically
   with the Order.
-- Replay returns applied, review-required, blocked or discarded outcomes with
-  typed conflict codes and authoritative state.
+- Replay returns applied, review-required, blocked or discarded outcomes. A
+  review-required result with no conflict code is awaiting management
+  approval; a non-null code carries typed conflict and authoritative state.
+- Owner/Admin/Manager may approve or reject staged records. Approval applies
+  the original authenticated staff actor and Order atomically; failure moves
+  the command into typed conflict review.
 - Unsupported old command types and event shapes are rejected or discarded;
   there is no compatibility reader.
 - Catalog, inventory, closeout, Staff, Service, standalone Customer and later

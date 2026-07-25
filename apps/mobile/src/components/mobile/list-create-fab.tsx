@@ -14,6 +14,7 @@ import { getListCreateFabBottom } from "./list-create-fab-model"
 type ListCreateFabProps = {
   accessibilityLabel: string
   bottomOffset?: number
+  disabled?: boolean
   dockHidden?: boolean
   onPress: () => void
   sitsAboveDock?: boolean
@@ -23,6 +24,7 @@ type ListCreateFabProps = {
 export function ListCreateFab({
   accessibilityLabel,
   bottomOffset = 0,
+  disabled = false,
   dockHidden = false,
   onPress,
   sitsAboveDock = false,
@@ -69,8 +71,14 @@ export function ListCreateFab({
       <Pressable
         accessibilityLabel={accessibilityLabel}
         accessibilityRole="button"
-        className="size-14 items-center justify-center rounded-full bg-primary"
-        haptic
+        accessibilityState={{ disabled }}
+        className={
+          disabled
+            ? "size-14 items-center justify-center rounded-full bg-primary opacity-45"
+            : "size-14 items-center justify-center rounded-full bg-primary"
+        }
+        disabled={disabled}
+        haptic={!disabled}
         onPress={onPress}
         testID={testID}
         transition

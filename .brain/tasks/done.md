@@ -1,5 +1,22 @@
 # Done
 
+### Staff Offline Order Approval And Unit-Aware Checkout
+
+- Priority: High
+- Description: Added an Owner/Admin setting for approving staff offline
+  records, automatic replay when mobile returns online, durable staged Order
+  review with original staff attribution, approve/reject management actions in
+  More and Sync, offline search suppression, offline Product/Service creation
+  guards, direct Home-to-Order overview navigation, explicit Unit/Qty/Price
+  checkout rows, unit-aware item titles, and independent per-unit pricing.
+- Related Features: Offline Order Operations; Mobile commerce
+- Status: Done
+- Completed Date: 2026-07-25
+- Checks Run: Prisma format and client generation; local migration/push blocked
+  because Docker is unavailable; production and remote push attempts reached
+  their configured Neon targets and failed with the existing schema-engine
+  error. Automated and hands-on tests were skipped at the user's request.
+
 ### Tenant-Sequential Commercial Order Numbers
 
 - Priority: High

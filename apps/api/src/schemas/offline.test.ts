@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test"
 
-import { offlineCommandPayloadSchema } from "./offline"
+import {
+  offlineCommandPayloadSchema,
+  offlineReviewConflictSchema,
+  offlineSettingsUpdateSchema,
+} from "./offline"
 
 describe("offline command payload", () => {
   test("accepts an Order with customer facts and an initial payment", () => {
@@ -64,5 +68,25 @@ describe("offline command payload", () => {
     for (const payload of unsupportedPayloads) {
       expect(offlineCommandPayloadSchema.safeParse(payload).success).toBe(false)
     }
+  })
+})
+
+describe("offline admin policy and review schemas", () => {
+  test("accepts both offline access and staff approval settings", () => {
+    expect(
+      offlineSettingsUpdateSchema.parse({
+        approvalRequired: true,
+        enabled: true,
+      }),
+    ).toEqual({ approvalRequired: true, enabled: true })
+  })
+
+  test("accepts approving a staged staff record", () => {
+    expect(
+      offlineReviewConflictSchema.parse({
+        commandId: "command_123",
+        decision: "approve",
+      }),
+    ).toEqual({ commandId: "command_123", decision: "approve" })
   })
 })

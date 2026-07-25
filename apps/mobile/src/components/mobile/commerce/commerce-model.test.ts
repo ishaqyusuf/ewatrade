@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import {
   type CommercialOrder,
   buildCommerceCustomers,
+  commerceLineTitle,
   commerceOrderTone,
   commercePaymentTone,
   findCustomerByOrderId,
@@ -110,5 +111,19 @@ describe("production commerce tones", () => {
     expect(commercePaymentTone("PARTIALLY_PAID")).toBe("warning")
     expect(commerceOrderTone("COMPLETED")).toBe("success")
     expect(commerceOrderTone("CANCELLED")).toBe("destructive")
+  })
+})
+
+describe("production commerce line labels", () => {
+  test("includes the selected Product unit in the order-line title", () => {
+    expect(
+      commerceLineTitle({
+        kind: "product",
+        snapshot: {
+          catalogItemName: "Chicken feed",
+          inventoryUnitName: "Half Bag",
+        },
+      } as CommercialOrder["lines"][number]),
+    ).toBe("Chicken feed - Half Bag")
   })
 })

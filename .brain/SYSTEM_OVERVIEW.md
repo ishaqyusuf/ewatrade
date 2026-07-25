@@ -24,9 +24,11 @@ High-level summary of the platform, its business domains, and the current implem
 - Merchant operations use one generic Catalog/Offering model, exact stock
   ledger, a tenant Customer directory, immutable Commercial Order snapshots,
   and generic Service work.
-- Owners control whether a Tenant accepts offline checkout. When enabled,
-  mobile queues only new Commercial Orders with their optional initial payment
-  and customer snapshot; all other operational writes require a connection.
+- Owners/admins control whether a Tenant accepts offline checkout and whether
+  staff records require management approval. Mobile queues only new Commercial
+  Orders with their optional initial payment and customer snapshot; replay
+  either stages staff work for approval or applies it directly. All other
+  operational writes require a connection.
 - Public Service Request, Quote acceptance, and tracking live on storefront
   routes; authenticated dashboards never live on a business subdomain.
 - Managed domain source supports GO54 `.com.ng`, Openprovider `.com`, Paystack

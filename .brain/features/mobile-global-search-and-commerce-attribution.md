@@ -60,9 +60,15 @@ into order creation.
   exposed through protected tRPC procedures.
 - Quick actions are navigation conveniences. Final mutations retain their
   existing authorization, stock, pricing, payment, and idempotency validation.
-- Offline global search is not authoritative. The screen explains that a
-  connection is required rather than presenting incomplete local results as
-  global.
+- Offline global search is not authoritative. Home disables the search action,
+  operational search inputs are removed and cleared, and the protected Search
+  screen explains that a connection is required rather than presenting
+  incomplete local results as global.
+- Product and Service creation shortcuts are disabled while offline. Order
+  creation remains available through the supported offline checkout boundary.
+- Recent Orders on Home open their Order overview directly. Create Order and
+  Order overview display the selected Product unit in the item title; the
+  selected-line editor presents Unit, Qty, and Price before its line total.
 
 ## Verification
 

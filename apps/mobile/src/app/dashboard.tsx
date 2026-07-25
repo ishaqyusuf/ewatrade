@@ -102,7 +102,7 @@ export function OperationsDashboardSurface({
     (balances.data?.rows.length ?? 0) + provisional.inventoryOperations
   const recentOrderCount = orderRows.length + provisional.commercialOrders
   const pendingCommandCount = commands.filter((command) =>
-    ["blocked", "pending", "review"].includes(command.localStatus),
+    ["approval", "blocked", "pending", "review"].includes(command.localStatus),
   ).length
   const firstName = profile?.name.trim().split(/\s+/)[0] || "there"
   const navItems = [
@@ -145,11 +145,13 @@ export function OperationsDashboardSurface({
   const createActions: CreateAction[] = [
     {
       detail: "Add a stock-tracked item to your catalog.",
+      disabled: isOffline,
       label: "Product",
       onPress: () => openCreateRoute("/first-product-setup-modal?kind=product"),
     },
     {
       detail: "Add work that you price and deliver.",
+      disabled: isOffline,
       label: "Service",
       onPress: () => openCreateRoute("/first-product-setup-modal?kind=service"),
     },
@@ -249,6 +251,7 @@ export function OperationsDashboardSurface({
       ]
     : [
         {
+          disabled: isOffline,
           icon: "FolderPlus",
           label: "Add a product",
           onPress: () =>
@@ -256,6 +259,7 @@ export function OperationsDashboardSurface({
           tone: "success",
         },
         {
+          disabled: isOffline,
           icon: "Wrench",
           label: "Add a service",
           onPress: () =>
@@ -307,13 +311,15 @@ export function OperationsDashboardSurface({
         onProfilePress={
           embeddedInAdminTabs ? () => router.push("/more" as never) : undefined
         }
-        onSearchPress={() => router.push("/global-search" as never)}
+        onSearchPress={
+          isOffline ? undefined : () => router.push("/global-search" as never)
+        }
       />
 
       {isOffline ? (
         <StatusBanner
           icon="Wind"
-          message={`${commands.filter((command) => command.localStatus === "pending").length} commands waiting. Provisional: ${provisional.commercialOrders} orders, ${provisional.inventoryOperations} inventory operations, ${provisional.serviceOperations} service operations.`}
+          message={`${commands.filter((command) => command.localStatus === "pending" || command.localStatus === "approval").length} commands waiting. Provisional: ${provisional.commercialOrders} orders, ${provisional.inventoryOperations} inventory operations, ${provisional.serviceOperations} service operations.`}
           title="Offline work is provisional"
           tone="warning"
         />
@@ -440,10 +446,8 @@ export function OperationsDashboardSurface({
                   )
                   .join(", ")}`}
                 key={order.id}
-                onPress={
-                  isAttendant
-                    ? undefined
-                    : () => router.push("/orders" as never)
+                onPress={() =>
+                  router.push(`/order/${encodeURIComponent(order.id)}` as never)
                 }
                 status={formatStatusLabel(order.status)}
                 tone={getOrderStatusTone(order.status)}

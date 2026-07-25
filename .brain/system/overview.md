@@ -18,9 +18,11 @@ Operational summary of the platform and how its major domains fit together.
   immutable operation ledger.
 - Saved Customers are tenant-scoped and merge with immutable customer facts
   captured on Commercial Orders.
-- Tenant owners control offline checkout. The offline mutation boundary is one
-  new Commercial Order with an optional initial payment and customer snapshot;
-  Catalog, inventory, Staff and Service mutations remain online-only.
+- Tenant owners/admins control offline checkout and optional staff-record
+  approval. The offline mutation boundary is one new Commercial Order with an
+  optional initial payment and customer snapshot; replay stages eligible staff
+  work or applies it directly. Catalog, inventory, Staff and Service mutations
+  remain online-only.
 - Service work uses Intake, Jobs/Job Lines, assignments, due commitments,
   evidence, Requests, versioned Quotes and scoped customer tracking.
 - Managed storefront domains separate quote/payment/registrar state from
