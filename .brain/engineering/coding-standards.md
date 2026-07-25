@@ -43,10 +43,10 @@ Shared engineering rules for future implementation work.
 - The jobs workspace exposes `bun --filter @ewatrade/jobs dev`, which loads the local workspace env and forwards `TRIGGER_PROFILE` through `scripts/with-trigger-profile.mjs`.
 - Jobs deployment follows the same pattern through `bun run jobs:deploy`, which loads the production workspace env and forwards `TRIGGER_PROFILE` to `trigger deploy`.
 - Keep env files organized with labeled groups. Trigger.dev job envs belong under `# ── Trigger.dev Jobs ──` with `TRIGGER_PROJECT_ID`, `TRIGGER_PROFILE`, and the environment-specific `TRIGGER_SECRET_KEY`.
-- Email provider envs belong with the email group. `RESEND_API_KEY` enables the Resend transport while `EMAIL_FROM`, `EMAIL_REPLY_TO`, and `MARKETING_INBOX_EMAILS` define sender/reply/admin routing. `TEST_EMAILS` is the primary comma-separated exact `@test.com` safety recipient list, with `TEST_EMAIL` kept as a single-recipient fallback.
-- Use `bun run email:test` for a provider smoke check; the command must fail closed when `RESEND_API_KEY` or `EMAIL_FROM` is missing, or when neither `TEST_EMAILS` nor `TEST_EMAIL` is configured.
+- Email provider envs belong with the email group. `RESEND_API_KEY` enables the Resend transport while `EMAIL_FROM`, `EMAIL_REPLY_TO`, and `MARKETING_INBOX_EMAILS` define sender/reply/admin routing. `EMAIL_QA_DOMAIN_ROUTES` is the primary JSON map from reserved tester `.test` domains to individual deliverable inboxes. `TEST_EMAILS` retains comma-separated exact `@test.com` compatibility routing, with `TEST_EMAIL` as its single-recipient fallback.
+- Use `bun run email:test` for a provider smoke check; the command must fail closed when `RESEND_API_KEY` or `EMAIL_FROM` is missing, or when neither `EMAIL_QA_DOMAIN_ROUTES`, `TEST_EMAILS`, nor `TEST_EMAIL` is configured.
 - Keep application env names short and product-neutral. Do not add the `EWATRADE_` prefix to repository env keys; prefer names such as `API_URL`, `STOREFRONT_URL`, `PLATFORM_DOMAIN`, `GOOGLE_LIVE_*`, and `SHARED_LINK_*`.
-- Development and preview environments must not bypass mobile OTP; use exact `@test.com` addresses plus configured test recipients for safe OTP delivery.
+- Development and preview environments must not bypass mobile OTP; use an address at a configured `EMAIL_QA_DOMAIN_ROUTES` domain, or the legacy exact `@test.com` address with configured test recipients, for safe OTP delivery.
 
 ## Midday Implementation Standard
 - Web UI and dashboard implementation must strictly follow Midday architecture, UX composition, filesystem naming, state management, validation, and QA patterns. This is non-negotiable for every dashboard, marketing, POS, storefront, and shared web UI change.

@@ -154,11 +154,11 @@ describe("mobile auth router schemas", () => {
     })
   })
 
-  test("routes mobile OTP email to test inboxes without changing the identity email", () => {
+  test("routes mobile OTP email by QA domain without changing the identity email", () => {
     const input = requestMobileOwnerOtpSchema.parse({
       ...validSignupProfile,
       businessName: " Rice Store ",
-      email: " OWNER@TEST.COM ",
+      email: " OWNER@ISHAQ.QA.TEST ",
       mode: "sign_up",
       name: " Store Owner ",
     })
@@ -166,21 +166,20 @@ describe("mobile auth router schemas", () => {
       code: "123456",
       email: input.email,
       env: {
+        EMAIL_QA_DOMAIN_ROUTES: JSON.stringify({
+          "ishaq.qa.test": "ishaq@example.com",
+        }),
         NODE_ENV: "production",
-        TEST_EMAILS: "qa-one@example.com, qa-two@example.com",
       },
       expiresAt: new Date("2026-07-13T12:00:00.000Z"),
       mode: input.mode,
     })
 
-    expect(input.email).toBe("owner@test.com")
-    expect(messages.map((message) => message.to)).toEqual([
-      "qa-one@example.com",
-      "qa-two@example.com",
-    ])
+    expect(input.email).toBe("owner@ishaq.qa.test")
+    expect(messages.map((message) => message.to)).toEqual(["ishaq@example.com"])
     expect(
       messages.every((message) =>
-        message.text.includes("Original recipient: owner@test.com"),
+        message.text.includes("Original recipient: owner@ishaq.qa.test"),
       ),
     ).toBe(true)
     expect(messages.every((message) => message.text.includes("123456"))).toBe(

@@ -40,6 +40,7 @@
         "BETTER_AUTH_TRUSTED_ORIGINS",
         "EMAIL_FROM",
         "EMAIL_REPLY_TO",
+        "EMAIL_QA_DOMAIN_ROUTES",
         "MARKETING_INBOX_EMAILS",
         "RESEND_API_KEY",
         "TEST_EMAILS",

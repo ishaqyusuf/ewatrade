@@ -1,5 +1,12 @@
 # Done
 
+- Added Halaalvest-style per-tester QA email domain routing across shared
+  server email delivery. `EMAIL_QA_DOMAIN_ROUTES` maps each reserved `.test`
+  domain to one real tester inbox, applies to mobile OTP and web/application
+  email flows, blocks unmapped synthetic domains, retains legacy exact
+  `@test.com` routing, and is wired into API, Turbo, Trigger.dev, and env
+  validation. Completed Date: 2026-07-25.
+
 - Moved Product and Service overview into one protected standalone mobile stack
   route outside the admin tab group. Catalog rows and global search now open
   the same detail screen, the bottom tab dock is absent, and the shared

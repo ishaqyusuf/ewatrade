@@ -13,6 +13,7 @@ import {
   type RetailOpsStaffInviteEmailInput,
   renderRetailOpsStaffInviteTemplate,
 } from "../templates/retail-ops-staff-invite"
+import { getEmailDomain, parseQaDomainRoutes } from "./qa-email-routing"
 
 export type EmailMessage = {
   from: string
@@ -60,6 +61,7 @@ export type EmailTransport = {
 
 export type EmailRoutingEnv = {
   EMAIL_CAPTURE_FILE?: string
+  EMAIL_QA_DOMAIN_ROUTES?: string
   NODE_ENV?: string
   TEST_EMAIL?: string
   TEST_EMAILS?: string
@@ -83,6 +85,7 @@ export * from "../templates/marketing-waitlist-admin"
 export * from "../templates/marketing-waitlist-confirmation"
 export * from "../templates/retail-ops-staff-invite"
 export * from "../templates/commercial-order-fulfillment-reminder"
+export * from "./qa-email-routing"
 
 export function createEmailMessage(message: EmailMessage) {
   return message
@@ -130,9 +133,13 @@ function hasExactTestComDomain(email: string) {
 
 export function shouldRouteEmailToTestRecipients(
   recipient: string,
-  _env: EmailRoutingEnv = process.env,
+  env: EmailRoutingEnv = process.env,
 ) {
-  return hasExactTestComDomain(recipient)
+  return (
+    parseQaDomainRoutes(env.EMAIL_QA_DOMAIN_ROUTES).has(
+      getEmailDomain(recipient),
+    ) || hasExactTestComDomain(recipient)
+  )
 }
 
 export function getTestEmailRouting(input: {
@@ -141,9 +148,19 @@ export function getTestEmailRouting(input: {
 }): TestEmailRouting {
   const env = input.env ?? process.env
   const originalRecipient = input.to.trim()
-  const routed = shouldRouteEmailToTestRecipients(originalRecipient, env)
+  const qaDomainRoutes = parseQaDomainRoutes(env.EMAIL_QA_DOMAIN_ROUTES)
+  const originalDomain = getEmailDomain(originalRecipient)
+  const qaRecipient = qaDomainRoutes.get(originalDomain)
+  const routed =
+    Boolean(qaRecipient) || hasExactTestComDomain(originalRecipient)
 
   if (!routed) {
+    if (qaDomainRoutes.size > 0 && originalDomain.endsWith(".test")) {
+      throw new Error(
+        `QA email delivery blocked unmatched recipient domain "${originalDomain}".`,
+      )
+    }
+
     return {
       originalRecipient,
       recipients: [originalRecipient],
@@ -151,11 +168,13 @@ export function getTestEmailRouting(input: {
     }
   }
 
-  const recipients = getConfiguredTestEmailRecipients(env)
+  const recipients = qaRecipient
+    ? [qaRecipient]
+    : getConfiguredTestEmailRecipients(env)
 
   if (recipients.length === 0) {
     throw new Error(
-      "TEST_EMAILS or TEST_EMAIL must be configured for @test.com email delivery.",
+      "EMAIL_QA_DOMAIN_ROUTES, TEST_EMAILS, or TEST_EMAIL must be configured for test email delivery.",
     )
   }
 

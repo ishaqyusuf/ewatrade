@@ -15,6 +15,7 @@ import {
 
 const originalNodeEnv = process.env.NODE_ENV
 const originalEmailCaptureFile = process.env.EMAIL_CAPTURE_FILE
+const originalEmailQaDomainRoutes = process.env.EMAIL_QA_DOMAIN_ROUTES
 const originalResendApiKey = process.env.RESEND_API_KEY
 const originalTestEmail = process.env.TEST_EMAIL
 const originalTestEmails = process.env.TEST_EMAILS
@@ -23,6 +24,7 @@ const originalFetch = globalThis.fetch
 afterEach(() => {
   restoreEnv("NODE_ENV", originalNodeEnv)
   restoreEnv("EMAIL_CAPTURE_FILE", originalEmailCaptureFile)
+  restoreEnv("EMAIL_QA_DOMAIN_ROUTES", originalEmailQaDomainRoutes)
   restoreEnv("RESEND_API_KEY", originalResendApiKey)
   restoreEnv("TEST_EMAIL", originalTestEmail)
   restoreEnv("TEST_EMAILS", originalTestEmails)
@@ -143,6 +145,70 @@ describe("Resend email transport", () => {
 })
 
 describe("test email safety routing", () => {
+  test("routes each reserved QA domain to its mapped tester inbox", () => {
+    process.env.EMAIL_QA_DOMAIN_ROUTES = JSON.stringify({
+      "ishaq.qa.test": "ishaq@example.com",
+      "mubarak.qa.test": "mubarak@example.com",
+    })
+    clearEnv("TEST_EMAIL")
+    clearEnv("TEST_EMAILS")
+
+    const ishaqMessages = createTestRoutedEmailMessages(
+      createBaseMessage("owner+store-1@ishaq.qa.test"),
+    )
+    const mubarakMessages = createTestRoutedEmailMessages(
+      createBaseMessage("customer-42@mubarak.qa.test"),
+    )
+
+    expect(ishaqMessages.map((message) => message.to)).toEqual([
+      "ishaq@example.com",
+    ])
+    expect(mubarakMessages.map((message) => message.to)).toEqual([
+      "mubarak@example.com",
+    ])
+    expect(ishaqMessages[0]?.text).toContain(
+      "Original recipient: owner+store-1@ishaq.qa.test",
+    )
+  })
+
+  test("normalizes QA domains and blocks unmapped reserved domains", () => {
+    process.env.EMAIL_QA_DOMAIN_ROUTES = JSON.stringify({
+      " ISHAQ.QA.TEST. ": " ishaq@example.com ",
+    })
+
+    expect(
+      createTestRoutedEmailMessages(
+        createBaseMessage("OWNER@ISHAQ.QA.TEST"),
+      ).map((message) => message.to),
+    ).toEqual(["ishaq@example.com"])
+
+    expect(() =>
+      createTestRoutedEmailMessages(
+        createBaseMessage("owner@unmapped.qa.test"),
+      ),
+    ).toThrow(
+      'QA email delivery blocked unmatched recipient domain "unmapped.qa.test".',
+    )
+  })
+
+  test("rejects invalid QA routing configuration", () => {
+    process.env.EMAIL_QA_DOMAIN_ROUTES = JSON.stringify({
+      "qa.example.com": "tester@example.com",
+    })
+
+    expect(() =>
+      createTestRoutedEmailMessages(createBaseMessage("owner@example.com")),
+    ).toThrow("must be a valid reserved .test domain")
+
+    process.env.EMAIL_QA_DOMAIN_ROUTES = JSON.stringify({
+      "tester.qa.test": "tester@destination.test",
+    })
+
+    expect(() =>
+      createTestRoutedEmailMessages(createBaseMessage("owner@example.com")),
+    ).toThrow("must be a deliverable tester inbox")
+  })
+
   test("keeps non-test email on the original recipient outside production", () => {
     process.env.NODE_ENV = "development"
     process.env.TEST_EMAILS = "qa-one@example.com, qa-two@example.com"
@@ -228,7 +294,7 @@ describe("test email safety routing", () => {
     ).not.toThrow()
     expect(() =>
       createTestRoutedEmailMessages(createBaseMessage("owner@test.com")),
-    ).toThrow("TEST_EMAILS or TEST_EMAIL")
+    ).toThrow("EMAIL_QA_DOMAIN_ROUTES, TEST_EMAILS, or TEST_EMAIL")
 
     process.env.NODE_ENV = "development"
 
