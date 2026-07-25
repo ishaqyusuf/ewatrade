@@ -284,6 +284,67 @@ async function resolveOrderStatusAfterProductFulfillment(
     : OrderStatus.FULFILLING
 }
 
+async function updateOrderStatusAfterProductFulfillment(
+  tx: Prisma.TransactionClient,
+  orderId: string,
+) {
+  const status = await resolveOrderStatusAfterProductFulfillment(tx, orderId)
+  await tx.commercialOrder.update({
+    data: { status },
+    where: { id: orderId },
+  })
+  return status
+}
+
+async function fulfillCommercialOrderProductLineInTransaction(
+  tx: Prisma.TransactionClient,
+  input: {
+    actorUserId: string
+    clientOperationId: string
+    line: {
+      id: string
+      orderId: string
+      quantity: Prisma.Decimal
+      stockReservation: { id: string } | null
+    }
+    reason?: string
+    schemaVersion: number
+    tenantId: string
+  },
+) {
+  if (!input.line.stockReservation) {
+    throw new CatalogError(
+      "ORDER_NOT_FOUND",
+      "Reserved Product Order line not found.",
+    )
+  }
+  const operation = await commitCatalogStockReservationInTransaction(tx, {
+    actorUserId: input.actorUserId,
+    clientOperationId: input.clientOperationId,
+    operationType: "sale_fulfillment",
+    reason: input.reason,
+    reservationId: input.line.stockReservation.id,
+    schemaVersion: input.schemaVersion,
+    source: "commercial_order",
+    tenantId: input.tenantId,
+  })
+  return tx.productFulfillment.upsert({
+    create: {
+      orderLineId: input.line.id,
+      quantity: input.line.quantity,
+      reservationId: input.line.stockReservation.id,
+      stockOperationId: operation.id,
+    },
+    update: {},
+    where: {
+      orderLineId_reservationId: {
+        orderLineId: input.line.id,
+        reservationId: input.line.stockReservation.id,
+      },
+    },
+  })
+}
+
 async function fulfillCommercialOrderProductsInTransaction(
   tx: Prisma.TransactionClient,
   input: {
@@ -310,46 +371,19 @@ async function fulfillCommercialOrderProductsInTransaction(
   )
 
   for (const line of unfulfilledProductLines) {
-    if (!line.stockReservation) {
-      throw new CatalogError(
-        "ORDER_NOT_FOUND",
-        "Reserved Product Order line not found.",
-      )
-    }
-    const operation = await commitCatalogStockReservationInTransaction(tx, {
+    await fulfillCommercialOrderProductLineInTransaction(tx, {
       actorUserId: input.actorUserId,
       clientOperationId: `${input.clientOperationIdPrefix}:${line.id}`,
-      operationType: "sale_fulfillment",
+      line,
       reason: input.reason,
-      reservationId: line.stockReservation.id,
       schemaVersion: input.schemaVersion,
-      source: "commercial_order",
       tenantId: input.tenantId,
-    })
-    await tx.productFulfillment.upsert({
-      create: {
-        orderLineId: line.id,
-        quantity: line.quantity,
-        reservationId: line.stockReservation.id,
-        stockOperationId: operation.id,
-      },
-      update: {},
-      where: {
-        orderLineId_reservationId: {
-          orderLineId: line.id,
-          reservationId: line.stockReservation.id,
-        },
-      },
     })
   }
 
   let status: OrderStatus | null = null
   if (unfulfilledProductLines.length > 0) {
-    status = await resolveOrderStatusAfterProductFulfillment(tx, input.orderId)
-    await tx.commercialOrder.update({
-      data: { status },
-      where: { id: input.orderId },
-    })
+    status = await updateOrderStatusAfterProductFulfillment(tx, input.orderId)
   }
 
   return {
@@ -998,40 +1032,18 @@ export async function fulfillCommercialOrderProductLine(
       )
     }
     assertOrderCanBeFulfilled(line.order.deliveryDueAt)
-    const operation = await commitCatalogStockReservationInTransaction(tx, {
-      actorUserId: input.actorUserId,
-      clientOperationId: input.clientOperationId,
-      operationType: "sale_fulfillment",
-      reason: input.reason,
-      reservationId: line.stockReservation.id,
-      schemaVersion: input.schemaVersion,
-      source: "commercial_order",
-      tenantId: input.tenantId,
-    })
-    const fulfillment = await tx.productFulfillment.upsert({
-      create: {
-        orderLineId: line.id,
-        quantity: line.quantity,
-        reservationId: line.stockReservation.id,
-        stockOperationId: operation.id,
+    const fulfillment = await fulfillCommercialOrderProductLineInTransaction(
+      tx,
+      {
+        actorUserId: input.actorUserId,
+        clientOperationId: input.clientOperationId,
+        line,
+        reason: input.reason,
+        schemaVersion: input.schemaVersion,
+        tenantId: input.tenantId,
       },
-      update: {},
-      where: {
-        orderLineId_reservationId: {
-          orderLineId: line.id,
-          reservationId: line.stockReservation.id,
-        },
-      },
-    })
-    await tx.commercialOrder.update({
-      data: {
-        status: await resolveOrderStatusAfterProductFulfillment(
-          tx,
-          line.orderId,
-        ),
-      },
-      where: { id: line.orderId },
-    })
+    )
+    await updateOrderStatusAfterProductFulfillment(tx, line.orderId)
     return {
       id: fulfillment.id,
       quantity: fulfillment.quantity.toString(),
