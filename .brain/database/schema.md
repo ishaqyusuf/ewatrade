@@ -62,6 +62,11 @@ persistence boundary. Clients never access the database directly.
   unchanged; new Orders use `ORD-001` with minimum three-digit padding.
 - `CommercialOrder` and `CommercialOrderLine` hold monetary/order state.
   `CommercialOrder.createdByUserId` preserves the account that took the Order.
+- `CommercialOrder.deliveryDueAt` is nullable for historical rollout; new
+  Order commands default it to now.
+- `CommercialOrderReminderSettings` stores Store-scoped enablement plus
+  day-before and same-day policy. `CommercialOrderReminderDelivery` records
+  idempotent recipient-level Pending, Sent, or Failed reminder attempts.
 - `CommercialOrderPayment` is the append-only payment/refund ledger.
   `recordedByUserId` preserves the account that received or recorded each
   payment fact. Orders retain service charge and paid-total projections for

@@ -460,6 +460,17 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum CommercialOrderReminderTiming {
+  DAY_BEFORE
+  SAME_DAY
+}
+
+enum CommercialOrderReminderDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
 enum CommercialPaymentType {
   PAYMENT
   REFUND

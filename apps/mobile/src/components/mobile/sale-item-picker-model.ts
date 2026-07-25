@@ -2,6 +2,17 @@ export const SALE_ITEM_PICKER_COMPACT_LIMIT = 5
 
 export type SaleItemPickerPresentation = "screen" | "sheet"
 
+export function getSaleOfferingStockLabel(input: {
+  availableQuantity?: string
+  kind: "product_unit" | "service"
+  unitName: string
+}) {
+  if (input.kind !== "product_unit" || input.availableQuantity === undefined) {
+    return null
+  }
+  return `${input.availableQuantity} ${input.unitName} available`
+}
+
 export type SaleItemPickerLine<T> = {
   id: string
   offering: T

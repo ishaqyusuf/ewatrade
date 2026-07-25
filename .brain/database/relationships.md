@@ -41,6 +41,10 @@ belong to `ServiceJob`; charge-only Service lines allocate no work.
 
 `CommercialOrder -> CommercialOrderPayment`
 
+`Store -> CommercialOrderReminderSettings`
+
+`CommercialOrder -> CommercialOrderReminderDelivery`
+
 `CommercialOrder.createdByUserId -> User`
 
 `CommercialOrderPayment.recordedByUserId -> User`
@@ -50,6 +54,8 @@ belong to `ServiceJob`; charge-only Service lines allocate no work.
 Payment/refund facts derive the Order balance. Store Service settings are read
 and snapshotted during Intake; later setting changes do not rewrite existing
 Order charges.
+Order reminder deliveries also point to Tenant and Store. Their unique
+Order/timing/recipient-email identity prevents duplicate daily email delivery.
 
 New Order numbers are allocated once across the Tenant rather than per Store.
 The counter increment and Order creation share one database transaction, so a

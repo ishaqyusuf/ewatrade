@@ -19,6 +19,7 @@ Detailed feature docs for implemented or planned product areas.
 - [Mobile Sentry Observability](./mobile-sentry-observability.md)
 - [Mobile Retail Ops MVP](./mobile-retail-ops-mvp-spec.md)
 - [Offline Order Operations](./offline-order-operations.md)
+- [Commercial Order Delivery Scheduling And Reminders](./commercial-order-delivery-scheduling.md)
 - [Mobile Global Search And Commerce Attribution](./mobile-global-search-and-commerce-attribution.md)
 - [Standard Order Identifiers](./standard-order-identifiers.md)
 - [Product Image Marketplace And Storefront Publishing](./product-image-marketplace-and-storefront-publishing.md)

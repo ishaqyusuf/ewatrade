@@ -101,3 +101,11 @@
 - Domain registration and reconciliation jobs operate only on persisted paid
   orders and provider attempts; clients cannot invoke a registrar write
   directly.
+
+## Commercial Order Delivery Reminders
+
+- Only Owner and Admin roles may read or update Store Order-reminder settings.
+- Reminder delivery targets active Owner, Admin, and Manager memberships and
+  does not grant them any additional Order mutation authority.
+- Existing commercial/POS capability remains required for Order creation and
+  Product fulfillment.

@@ -1,5 +1,11 @@
 # In Progress
 
+- Generate and apply the Prisma migration for Commercial Order delivery
+  scheduling and reminders once local PostgreSQL/Docker is available, then run
+  the required local, remote-development, and production push workflow under
+  the existing database safety gates. Source implementation, focused tests,
+  and package/mobile typechecks are complete. Started Date: 2026-07-25.
+
 - Implement managed domain purchasing and storefront connection using GO54 for
   `.com.ng`, Openprovider for global domains, Paystack checkout, and Vercel
   hosting/attachment. The implementation follows

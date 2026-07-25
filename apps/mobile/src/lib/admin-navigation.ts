@@ -21,6 +21,7 @@ export type AdminMoreItemId =
   | "inventory"
   | "analytics"
   | "payments-received"
+  | "order-reminders"
   | "team"
   | "customers"
   | "service-work"
@@ -168,6 +169,15 @@ export function buildAdminMoreSections({
   }
 
   if (role === "OWNER" || role === "ADMIN") {
+    storeItems.push({
+      action: {
+        href: "/order-reminder-settings-modal" as LinkProps["href"],
+        kind: "route",
+      },
+      icon: "Bell",
+      id: "order-reminders",
+      label: "Order reminders",
+    })
     storeItems.push({
       action: {
         href: "/domain-management-modal" as LinkProps["href"],

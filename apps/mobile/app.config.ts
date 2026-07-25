@@ -120,6 +120,7 @@ const config: ExpoConfig = {
     "expo-router",
     "expo-font",
     "expo-web-browser",
+    "@react-native-community/datetimepicker",
     [
       "expo-local-authentication",
       {

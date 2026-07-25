@@ -1,40 +1,83 @@
 model CommercialOrder {
-  id                   String                   @id @default(cuid())
+  id                   String                            @id @default(cuid())
   tenantId             String
   storeId              String
   clientOrderId        String
   payloadHash          String
-  schemaVersion        Int                      @default(1)
+  schemaVersion        Int                               @default(1)
   orderNumber          String
-  status               OrderStatus              @default(CONFIRMED)
-  paymentStatus        PaymentStatus            @default(PENDING)
+  status               OrderStatus                       @default(CONFIRMED)
+  paymentStatus        PaymentStatus                     @default(PENDING)
   currencyCode         String
   subtotalMinor        Int
-  serviceChargeMinor   Int                      @default(0)
-  discountMinor        Int                      @default(0)
-  taxMinor             Int                      @default(0)
+  serviceChargeMinor   Int                               @default(0)
+  discountMinor        Int                               @default(0)
+  taxMinor             Int                               @default(0)
   totalMinor           Int
-  amountPaidMinor      Int                      @default(0)
+  amountPaidMinor      Int                               @default(0)
   customerName         String?
   customerPhone        String?
   customerEmail        String?
   notes                String?
+  deliveryDueAt        DateTime?
   createdByUserId      String
-  createdAt            DateTime                 @default(now())
-  updatedAt            DateTime                 @updatedAt
-  tenant               Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store                Store                    @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  createdAt            DateTime                          @default(now())
+  updatedAt            DateTime                          @updatedAt
+  tenant               Tenant                            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                Store                             @relation(fields: [storeId], references: [id], onDelete: Restrict)
   lines                CommercialOrderLine[]
   payments             CommercialOrderPayment[]
   returns              ProductReturn[]
   serviceIntake        ServiceIntake?
   serviceJobs          ServiceJob[]
   acceptedQuoteVersion ServiceQuoteVersion?
+  reminderDeliveries   CommercialOrderReminderDelivery[]
 
   @@unique([tenantId, clientOrderId])
   @@unique([tenantId, orderNumber])
   @@index([tenantId, status, createdAt])
+  @@index([tenantId, deliveryDueAt, status])
   @@index([storeId, createdAt])
+}
+
+model CommercialOrderReminderSettings {
+  id               String   @id @default(cuid())
+  tenantId         String
+  storeId          String   @unique
+  enabled          Boolean  @default(true)
+  dayBeforeEnabled Boolean  @default(true)
+  sameDayEnabled   Boolean  @default(true)
+  updatedByUserId  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store            Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model CommercialOrderReminderDelivery {
+  id             String                                @id @default(cuid())
+  tenantId       String
+  storeId        String
+  orderId        String
+  timing         CommercialOrderReminderTiming
+  recipientEmail String
+  recipientName  String?
+  status         CommercialOrderReminderDeliveryStatus @default(PENDING)
+  attemptCount   Int                                   @default(0)
+  lastAttemptAt  DateTime?
+  sentAt         DateTime?
+  errorMessage   String?
+  createdAt      DateTime                              @default(now())
+  updatedAt      DateTime                              @updatedAt
+  tenant         Tenant                                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store          Store                                 @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  order          CommercialOrder                       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, timing, recipientEmail])
+  @@index([tenantId, status, createdAt])
+  @@index([storeId, timing, createdAt])
 }
 
 model CommercialOrderPayment {

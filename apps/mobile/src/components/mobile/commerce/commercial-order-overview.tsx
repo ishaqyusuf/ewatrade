@@ -7,7 +7,7 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColors } from "@/hooks/use-color"
 import { formatMinorMoney } from "@ewatrade/utils"
-import type { ReactNode } from "react"
+import { type ReactNode, useEffect, useState } from "react"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import {
   type CommercialOrder,
@@ -18,6 +18,7 @@ import {
   commercePaymentTone,
   commerceStatusLabel,
   formatCommerceDate,
+  formatCommerceDateTime,
   formatCommerceQuantity,
 } from "./commerce-model"
 import {
@@ -50,6 +51,22 @@ export function CommercialOrderOverviewContent({
   order,
 }: CommercialOrderOverviewContentProps) {
   const summary = getCommercialOrderOverviewSummary(order)
+  const [fulfillmentClock, setFulfillmentClock] = useState(Date.now())
+  const deliveryDueTime = order.deliveryDueAt
+    ? new Date(order.deliveryDueAt).getTime()
+    : null
+  const fulfillmentScheduledForFuture =
+    deliveryDueTime !== null && deliveryDueTime > fulfillmentClock
+
+  useEffect(() => {
+    const currentTime = Math.max(fulfillmentClock, Date.now())
+    if (deliveryDueTime === null || deliveryDueTime <= currentTime) return
+    const timer = setTimeout(
+      () => setFulfillmentClock(Date.now()),
+      Math.min(deliveryDueTime - currentTime + 50, 60_000),
+    )
+    return () => clearTimeout(timer)
+  }, [deliveryDueTime, fulfillmentClock])
 
   return (
     <View className="gap-7" testID="commercial-order-overview-screen">
@@ -75,6 +92,16 @@ export function CommercialOrderOverviewContent({
       {notice ? (
         <StatusBanner icon="CircleCheck" message={notice} tone="success" />
       ) : null}
+      {fulfillmentScheduledForFuture ? (
+        <StatusBanner
+          icon="Calendar"
+          message={`Product fulfillment becomes available at ${formatCommerceDateTime(
+            order.deliveryDueAt ?? new Date(),
+          )}.`}
+          title="Delivery is scheduled"
+          tone="warning"
+        />
+      ) : null}
 
       <OrderCustomerRow onPress={onOpenCustomer} order={order} />
 
@@ -84,7 +111,7 @@ export function CommercialOrderOverviewContent({
       >
         {order.lines.map((line) => (
           <OrderLineRow
-            disabled={isOffline}
+            disabled={isOffline || fulfillmentScheduledForFuture}
             isFulfilling={fulfillingOrderLineId === line.id}
             key={line.id}
             line={line}
@@ -128,6 +155,15 @@ export function CommercialOrderOverviewContent({
       </OrderOverviewSection>
 
       <OrderOverviewSection title="Payment and fulfilment">
+        <OrderInfoRow
+          detail={
+            order.deliveryDueAt
+              ? formatCommerceDateTime(order.deliveryDueAt)
+              : "No delivery time recorded"
+          }
+          icon="Calendar"
+          title="Scheduled delivery"
+        />
         <OrderInfoRow
           detail={
             order.createdBy?.role
@@ -512,7 +548,7 @@ function OrderInfoRow({
   title,
 }: {
   detail: string
-  icon: "CreditCard" | "StickyNote" | "User" | "Warehouse"
+  icon: "Calendar" | "CreditCard" | "StickyNote" | "User" | "Warehouse"
   title: string
 }) {
   return (

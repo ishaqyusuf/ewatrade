@@ -19,7 +19,9 @@ type CommercialOrderPayload = {
   customerEmail?: string
   customerName?: string
   customerPhone?: string
+  deliveryDueAt?: Date | string
   discountMinor?: number
+  fulfillNow?: boolean
   initialPayment?: {
     amountMinor: number
     clientPaymentId: string
@@ -678,7 +680,7 @@ export async function reviewOfflineConflict(
       })
       const conflicted = await tx.offlineCommand.update({
         data: {
-          attemptedState: command.payload,
+          attemptedState: json(command.payload),
           authoritativeState: json(state),
           conflictCode: conflictCode(error.catalogError),
           conflictMessage: error.catalogError.message,

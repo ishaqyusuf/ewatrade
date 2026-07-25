@@ -133,3 +133,19 @@ The required production and remote-development pushes were attempted. Both
 resolved their configured Neon targets but failed with the existing restricted
 schema-engine error. An elevated production retry was denied by the safety
 gate, so no shared-database schema change is confirmed.
+
+## Commercial Order Delivery Scheduling Migration State
+
+On 2026-07-25 the Prisma schema added nullable
+`CommercialOrder.deliveryDueAt`, Store-scoped
+`CommercialOrderReminderSettings`, recipient-level
+`CommercialOrderReminderDelivery`, and reminder timing/status enums. Prisma
+format and generation completed successfully.
+
+The required root `bun run db:migrate` workflow was attempted, but no Docker
+engine was reachable and the host has no Docker application to launch. The
+wait was stopped without generating or applying a migration. The required
+local `bun run db:push --local` attempt reached the same Docker preflight and
+was also stopped. No migration file was hand-authored, and no local,
+remote-development, or production schema write is claimed. Migration
+generation/application and the required push workflow remain release blockers.

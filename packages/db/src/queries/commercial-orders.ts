@@ -47,7 +47,9 @@ export type CreateCommercialOrderInput = {
   customerName?: string
   customerPhone?: string
   createTrackedServiceWork?: boolean
+  deliveryDueAt?: Date | string
   discountMinor?: number
+  fulfillNow?: boolean
   initialPayment?: {
     amountMinor: number
     clientPaymentId: string
@@ -90,6 +92,7 @@ type OrderGraph = Prisma.CommercialOrderGetPayload<{
 }>
 
 function stableJson(value: unknown): string {
+  if (value instanceof Date) return JSON.stringify(value.toISOString())
   if (value === undefined || value === null || typeof value !== "object") {
     return JSON.stringify(value) ?? "null"
   }
@@ -113,6 +116,18 @@ function assertSchemaVersion(schemaVersion: number) {
       "CLIENT_SCHEMA_UNSUPPORTED: Commercial Orders require schema version 1.",
     )
   }
+}
+
+function normalizeDeliveryDueAt(value: Date | string | undefined, now: Date) {
+  const parsed =
+    value === undefined ? now : value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "Delivery due date must be a valid date and time.",
+    )
+  }
+  return parsed.getTime() < now.getTime() ? now : parsed
 }
 
 function assertMoney(value: number, label: string) {
@@ -155,6 +170,7 @@ function serializeOrder(order: OrderGraph) {
     customerName: order.customerName,
     customerPhone: order.customerPhone,
     discountMinor: order.discountMinor,
+    deliveryDueAt: order.deliveryDueAt,
     id: order.id,
     lines: order.lines.map((line) => ({
       discountMinor: line.discountMinor,
@@ -235,6 +251,93 @@ function serializeOrder(order: OrderGraph) {
   }
 }
 
+async function resolveOrderStatusAfterProductFulfillment(
+  tx: Prisma.TransactionClient,
+  orderId: string,
+) {
+  const lines = await tx.commercialOrderLine.findMany({
+    select: {
+      kind: true,
+      productFulfillments: { select: { id: true }, take: 1 },
+    },
+    where: { orderId },
+  })
+  const productLines = lines.filter(
+    (line) => line.kind === SellableOfferingKind.PRODUCT_UNIT,
+  )
+  const allProductsFulfilled =
+    productLines.length > 0 &&
+    productLines.every((line) => line.productFulfillments.length > 0)
+  return allProductsFulfilled &&
+    lines.every((line) => line.kind === SellableOfferingKind.PRODUCT_UNIT)
+    ? OrderStatus.COMPLETED
+    : OrderStatus.FULFILLING
+}
+
+async function fulfillCommercialOrderProductsInTransaction(
+  tx: Prisma.TransactionClient,
+  input: {
+    actorUserId: string
+    clientOperationIdPrefix: string
+    orderId: string
+    tenantId: string
+  },
+) {
+  const productLines = await tx.commercialOrderLine.findMany({
+    include: { stockReservation: true },
+    orderBy: { createdAt: "asc" },
+    where: {
+      kind: SellableOfferingKind.PRODUCT_UNIT,
+      orderId: input.orderId,
+    },
+  })
+
+  for (const [index, line] of productLines.entries()) {
+    if (!line.stockReservation) {
+      throw new CatalogError(
+        "ORDER_NOT_FOUND",
+        "Reserved Product Order line not found.",
+      )
+    }
+    const operation = await commitCatalogStockReservationInTransaction(tx, {
+      actorUserId: input.actorUserId,
+      clientOperationId: `${input.clientOperationIdPrefix}:${index + 1}`,
+      operationType: "sale_fulfillment",
+      reservationId: line.stockReservation.id,
+      schemaVersion: 1,
+      source: "commercial_order",
+      tenantId: input.tenantId,
+    })
+    await tx.productFulfillment.upsert({
+      create: {
+        orderLineId: line.id,
+        quantity: line.quantity,
+        reservationId: line.stockReservation.id,
+        stockOperationId: operation.id,
+      },
+      update: {},
+      where: {
+        orderLineId_reservationId: {
+          orderLineId: line.id,
+          reservationId: line.stockReservation.id,
+        },
+      },
+    })
+  }
+
+  if (productLines.length > 0) {
+    await tx.commercialOrder.update({
+      data: {
+        status: await resolveOrderStatusAfterProductFulfillment(
+          tx,
+          input.orderId,
+        ),
+      },
+      where: { id: input.orderId },
+    })
+  }
+}
+
 function serializeIdempotentOrder(order: OrderGraph, hash: string) {
   if (order.payloadHash !== hash) {
     throw new CatalogError(
@@ -295,6 +398,14 @@ export async function createCommercialOrderInTransaction(
     throw new CatalogError(
       "INVALID_ORDER",
       "A Commercial Order requires at least one line.",
+    )
+  }
+  const now = new Date()
+  const deliveryDueAt = normalizeDeliveryDueAt(input.deliveryDueAt, now)
+  if (input.fulfillNow && deliveryDueAt.getTime() > now.getTime()) {
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "A future delivery cannot be fulfilled before its scheduled time.",
     )
   }
   const hash = payloadHash(input)
@@ -428,6 +539,17 @@ export async function createCommercialOrderInTransaction(
     (total, line) => total + line.totalMinor,
     0,
   )
+  if (
+    input.fulfillNow &&
+    !resolvedLines.some(
+      (line) => line.offering.kind === SellableOfferingKind.PRODUCT_UNIT,
+    )
+  ) {
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "Immediate stock fulfillment requires at least one Product line.",
+    )
+  }
   const discountMinor = input.discountMinor ?? 0
   const serviceChargeMinor = input.serviceChargeMinor ?? 0
   const taxMinor = input.taxMinor ?? 0
@@ -454,6 +576,7 @@ export async function createCommercialOrderInTransaction(
       customerName: input.customerName?.trim() || null,
       customerPhone: input.customerPhone?.trim() || null,
       discountMinor,
+      deliveryDueAt,
       notes: input.notes?.trim() || null,
       orderNumber,
       payloadHash: hash,
@@ -636,6 +759,15 @@ export async function createCommercialOrderInTransaction(
     await recordCommercialOrderPaymentInTransaction(tx, {
       actorUserId: input.actorUserId,
       ...input.initialPayment,
+      orderId: order.id,
+      tenantId: input.tenantId,
+    })
+  }
+
+  if (input.fulfillNow) {
+    await fulfillCommercialOrderProductsInTransaction(tx, {
+      actorUserId: input.actorUserId,
+      clientOperationIdPrefix: `${input.clientOrderId}:fulfillment`,
       orderId: order.id,
       tenantId: input.tenantId,
     })
@@ -844,6 +976,15 @@ export async function fulfillCommercialOrderProductLine(
         "Reserved Product Order line not found.",
       )
     }
+    if (
+      line.order.deliveryDueAt &&
+      line.order.deliveryDueAt.getTime() > Date.now()
+    ) {
+      throw new CatalogError(
+        "INVALID_ORDER",
+        "This Order cannot be fulfilled before its scheduled delivery time.",
+      )
+    }
     const operation = await commitCatalogStockReservationInTransaction(tx, {
       actorUserId: input.actorUserId,
       clientOperationId: input.clientOperationId,
@@ -870,7 +1011,12 @@ export async function fulfillCommercialOrderProductLine(
       },
     })
     await tx.commercialOrder.update({
-      data: { status: OrderStatus.FULFILLING },
+      data: {
+        status: await resolveOrderStatusAfterProductFulfillment(
+          tx,
+          line.orderId,
+        ),
+      },
       where: { id: line.orderId },
     })
     return {

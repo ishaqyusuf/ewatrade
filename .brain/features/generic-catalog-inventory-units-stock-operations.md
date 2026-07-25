@@ -63,6 +63,10 @@ behavioral testing are complete.
   adjustment/custody, transformation, closeout, reporting and sync/conflict
   review through full-screen workflows. Only new Order checkout may be queued
   offline; all setup, inventory and closeout mutations require a connection.
+- Mobile Order selection describes exact available Product stock in the
+  Offering unit. Checkout can atomically collect the initial payment and
+  fulfill due Product lines, while future delivery keeps stock reserved until
+  fulfillment becomes available.
 - Business registration and dashboards use the shared application host;
   business subdomains remain storefront-only.
 - Mobile onboarding introduces Catalog, mixed Orders, stock/work tracking and

@@ -259,3 +259,15 @@
   there is no compatibility reader.
 - Catalog, inventory, closeout, Staff, Service, standalone Customer and later
   payment mutations remain online-only.
+
+## Commercial Order Delivery
+
+- `orders.create.deliveryDueAt` is optional at the API boundary and defaults to
+  now in the repository. `fulfillNow` is optional command intent.
+- `orders.create.initialPayment` uses the same amount, method, reference, note,
+  and idempotent client-payment identity as later payment collection.
+- Future delivery and immediate fulfillment are mutually exclusive.
+- Order projections expose nullable `deliveryDueAt`; null identifies a legacy
+  Order created before scheduling rollout.
+- Reminder settings return enabled, day-before, and same-day booleans for the
+  active Store. Missing persistence returns all three defaults as true.

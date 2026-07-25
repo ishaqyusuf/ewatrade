@@ -1,4 +1,8 @@
 import {
+  type CommercialOrderFulfillmentReminderEmailInput,
+  renderCommercialOrderFulfillmentReminderTemplate,
+} from "../templates/commercial-order-fulfillment-reminder"
+import {
   type MarketingLeadEmailInput,
   renderMarketingEarlyAccessAdminTemplate,
 } from "../templates/marketing-early-access-admin"
@@ -13,6 +17,7 @@ import {
 export type EmailMessage = {
   from: string
   html: string
+  idempotencyKey?: string
   replyTo?: string
   subject: string
   text: string
@@ -77,6 +82,7 @@ export * from "../templates/marketing-early-access-confirmation"
 export * from "../templates/marketing-waitlist-admin"
 export * from "../templates/marketing-waitlist-confirmation"
 export * from "../templates/retail-ops-staff-invite"
+export * from "../templates/commercial-order-fulfillment-reminder"
 
 export function createEmailMessage(message: EmailMessage) {
   return message
@@ -304,6 +310,27 @@ export function createRetailOpsStaffInviteEmail(params: {
   })
 }
 
+export function createCommercialOrderFulfillmentReminderEmail(params: {
+  from: string
+  idempotencyKey: string
+  input: CommercialOrderFulfillmentReminderEmailInput
+  replyTo?: string
+  subject: string
+  to: string
+}) {
+  const content = renderCommercialOrderFulfillmentReminderTemplate(params.input)
+
+  return createEmailMessage({
+    from: params.from,
+    html: content.html,
+    idempotencyKey: params.idempotencyKey,
+    replyTo: params.replyTo,
+    subject: params.subject,
+    text: content.text,
+    to: params.to,
+  })
+}
+
 export const consoleEmailTransport: EmailTransport = {
   async send(message) {
     console.info("[email:console]", {
@@ -398,6 +425,9 @@ export const resendEmailTransport: EmailTransport = {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
+        ...(message.idempotencyKey
+          ? { "Idempotency-Key": message.idempotencyKey }
+          : {}),
       },
       method: "POST",
     })

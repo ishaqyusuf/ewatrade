@@ -2,6 +2,7 @@ import type { LeadCaptureType } from "@ewatrade/db"
 import type { RetailOpsStaffInvitedPayload } from "@ewatrade/notifications"
 import { customerMessagingProviderStatus } from "@ewatrade/notifications/services/customer-messaging-service"
 
+import { commercialOrderRemindersHandler } from "./handlers/commercial-order-reminders"
 import {
   type DomainConnectionVerificationPayload,
   domainConnectionVerificationHandler,
@@ -30,6 +31,7 @@ export const jobIds = {
   domainRegistration: "domains.registration",
   domainConnectionVerification: "domains.connection.verify",
   domainReconciliation: "domains.reconcile",
+  commercialOrderReminders: "orders.fulfillment-reminders",
 } as const
 
 export type MarketingLeadNotificationInput = {
@@ -137,6 +139,7 @@ export { notificationDispatchHandler }
 export { serviceNotificationDispatchHandler }
 export { domainConnectionVerificationHandler, domainRegistrationHandler }
 export { domainReconciliationHandler }
+export { commercialOrderRemindersHandler }
 export { customerMessagingProviderStatus }
 export type { NotificationDispatchPayload, ServiceNotificationDispatchPayload }
 export type {

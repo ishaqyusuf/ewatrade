@@ -33,11 +33,11 @@ import {
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { TRPCReactProvider, useTRPC } from "@/trpc/client"
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet"
-import Constants from "expo-constants"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useRef } from "react"
+import Constants from "expo-constants"
 import { StatusBar } from "expo-status-bar"
 import { VariableContextProvider } from "nativewind"
+import { useRef } from "react"
 import { Platform, View } from "react-native"
 import FlashMessage from "react-native-flash-message"
 import { KeyboardProvider } from "react-native-keyboard-controller"
@@ -205,6 +205,10 @@ const InitialLayout = () => {
             />
             <Stack.Screen
               name="domain-management-modal"
+              options={{ headerShown: false, presentation: "modal" }}
+            />
+            <Stack.Screen
+              name="order-reminder-settings-modal"
               options={{ headerShown: false, presentation: "modal" }}
             />
           </Stack.Protected>

@@ -19,3 +19,12 @@ export function defaultRetailOpsStaffInviteSubject(input: {
 }) {
   return `You have been invited to ${input.businessName} on ewatrade`
 }
+
+export function defaultCommercialOrderFulfillmentReminderSubject(input: {
+  orderNumber: string
+  timing: "day_before" | "same_day"
+}) {
+  return input.timing === "same_day"
+    ? `Order ${input.orderNumber} is due today`
+    : `Order ${input.orderNumber} is due tomorrow`
+}

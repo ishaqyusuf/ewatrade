@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test"
 
 import {
+  commercialOrderCreateSchema,
   commercialOrderListPageSchema,
   commercialOrderPaymentSchema,
+  commercialOrderReminderSettingsUpdateSchema,
 } from "./orders"
 
 describe("commercial Order list schema", () => {
@@ -46,5 +48,40 @@ describe("commercial Order payment schema", () => {
         orderId: "order-1",
       }),
     ).toThrow()
+  })
+})
+
+describe("commercial Order scheduling schema", () => {
+  test("accepts delivery scheduling, checkout payment, and immediate fulfillment intent", () => {
+    const result = commercialOrderCreateSchema.parse({
+      clientOrderId: "order-command-001",
+      deliveryDueAt: "2026-07-26T14:30:00.000Z",
+      fulfillNow: false,
+      initialPayment: {
+        amountMinor: 25_000,
+        clientPaymentId: "payment-command-003",
+        method: "cash",
+      },
+      lines: [{ offeringId: "offering-1", quantity: "2" }],
+      schemaVersion: 1,
+    })
+
+    expect(result.deliveryDueAt).toEqual(new Date("2026-07-26T14:30:00.000Z"))
+    expect(result.initialPayment?.amountMinor).toBe(25_000)
+    expect(result.fulfillNow).toBe(false)
+  })
+
+  test("accepts configurable same-day and day-before reminders", () => {
+    expect(
+      commercialOrderReminderSettingsUpdateSchema.parse({
+        dayBeforeEnabled: true,
+        enabled: true,
+        sameDayEnabled: false,
+      }),
+    ).toEqual({
+      dayBeforeEnabled: true,
+      enabled: true,
+      sameDayEnabled: false,
+    })
   })
 })

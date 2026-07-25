@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
 import {
+  getSaleFulfillmentOption,
   saleLineTotalMinor,
   salePaymentSummary,
 } from "@/components/mobile/sale-checkout-model"
@@ -30,6 +31,7 @@ import {
   type SaleItemPickerLine,
   addSaleItemPickerLine,
   getSaleItemPickerLineCounts,
+  getSaleOfferingStockLabel,
   getSelectableSaleItemChoices,
   openSaleItemPicker,
   removeSaleItemPickerLine,
@@ -40,6 +42,7 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
+import { Switch } from "@/components/ui/switch"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
 import {
@@ -59,10 +62,15 @@ import type {
   RouterOutputs,
 } from "@ewatrade/api/trpc/routers/_app"
 import {
+  floorExactDecimalQuotient,
   formatMinorMoney,
   getSaleOfferingDisabledReasons,
   minorToMajorInput,
+  subtractExactDecimals,
 } from "@ewatrade/utils"
+import DateTimePicker, {
+  type DateTimePickerEvent,
+} from "@react-native-community/datetimepicker"
 import {
   useInfiniteQuery,
   useMutation,
@@ -71,7 +79,7 @@ import {
 } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
-import { FlatList, View } from "react-native"
+import { FlatList, Platform, View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
@@ -100,6 +108,13 @@ const PAYMENT_METHODS: Array<[PaymentMethod, string]> = [
   ["bank_transfer", "Transfer"],
   ["pos", "POS"],
 ]
+
+function deliveryDateLabel(value: Date) {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(value)
+}
 
 function flatten(
   items: CatalogItem[],
@@ -141,8 +156,27 @@ function flatten(
               onHandQuantity: balance?.onHandQuantity,
               reservedQuantity: balance?.reservedQuantity,
             })
+            const availableBalanceQuantity = balance
+              ? subtractExactDecimals(
+                  balance.onHandQuantity,
+                  balance.reservedQuantity,
+                )
+              : undefined
+            const availableQuantity =
+              availableBalanceQuantity === undefined
+                ? undefined
+                : inventoryUnit?.stockBehavior === "packaged_stock"
+                  ? availableBalanceQuantity
+                  : inventoryUnit
+                    ? floorExactDecimalQuotient(
+                        availableBalanceQuantity,
+                        inventoryUnit.factor,
+                        inventoryUnit.transactionScale,
+                      )
+                    : undefined
             return [
               {
+                availableQuantity,
                 balanceRevision: balance?.revision,
                 catalogItemId: item.id,
                 configurationVersionId:
@@ -232,6 +266,11 @@ function SelectedOrderLine({
   quantity?: string
 }) {
   const lineTotalMinor = saleLineTotalMinor(offering.fixedPriceMinor, quantity)
+  const stockLabel = getSaleOfferingStockLabel({
+    availableQuantity: offering.availableQuantity,
+    kind: offering.kind,
+    unitName: offering.unitName ?? offering.offeringName,
+  })
 
   return (
     <View className="border-b border-border py-4">
@@ -241,6 +280,11 @@ function SelectedOrderLine({
           <Text className="font-extrabold text-foreground" numberOfLines={1}>
             {saleOfferingTitle(offering)}
           </Text>
+          {stockLabel ? (
+            <Text className="text-xs font-semibold text-primary">
+              {stockLabel}
+            </Text>
+          ) : null}
           <Text
             className="text-xs leading-4 text-muted-foreground"
             numberOfLines={1}
@@ -431,6 +475,11 @@ export function CreateSaleContent({
   const [customerSearch, setCustomerSearch] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash")
+  const [deliveryDueAt, setDeliveryDueAt] = useState(() => new Date())
+  const [deliveryPickerMode, setDeliveryPickerMode] = useState<
+    "date" | "time" | null
+  >(null)
+  const [fulfillNowRequested, setFulfillNowRequested] = useState(false)
   const [productSearch, setProductSearch] = useState("")
   const [pickerChoiceCount, setPickerChoiceCount] = useState(0)
   const [compactPickerChoices, setCompactPickerChoices] = useState<
@@ -523,9 +572,6 @@ export function CreateSaleContent({
   )
   const customerMutation = useMutation(trpc.customers.create.mutationOptions())
   const orderMutation = useMutation(trpc.orders.create.mutationOptions())
-  const paymentMutation = useMutation(
-    trpc.orders.recordPayment.mutationOptions(),
-  )
 
   const loadedRows = useMemo(() => {
     const items = catalog.data?.pages.flatMap((page) => page.items) ?? []
@@ -591,6 +637,14 @@ export function CreateSaleContent({
   )
   const currencyCode = selectedRows[0]?.offering.currencyCode ?? "NGN"
   const paymentSummary = salePaymentSummary(totalMinor, amountReceived)
+  const fulfillmentOption = getSaleFulfillmentOption({
+    deliveryDueAt,
+    hasProductLines: selectedRows.some(
+      (line) => line.offering.kind === "product_unit",
+    ),
+    now: new Date(),
+    requested: fulfillNowRequested,
+  })
   const loadedCustomers = useMemo(
     () =>
       buildCommerceCustomers(
@@ -615,7 +669,33 @@ export function CreateSaleContent({
       loadedCustomers.length,
     ),
   )
-  const isSubmitting = orderMutation.isPending || paymentMutation.isPending
+  const isSubmitting = orderMutation.isPending
+
+  function changeDeliveryDueAt(
+    event: DateTimePickerEvent,
+    selectedValue?: Date,
+  ) {
+    if (Platform.OS !== "ios") setDeliveryPickerMode(null)
+    if (event.type !== "set" || !selectedValue) return
+    setDeliveryDueAt((current) => {
+      const next = new Date(current)
+      if (deliveryPickerMode === "date") {
+        next.setFullYear(
+          selectedValue.getFullYear(),
+          selectedValue.getMonth(),
+          selectedValue.getDate(),
+        )
+      } else {
+        next.setHours(
+          selectedValue.getHours(),
+          selectedValue.getMinutes(),
+          0,
+          0,
+        )
+      }
+      return next.getTime() < Date.now() ? new Date() : next
+    })
+  }
 
   function updateQuantity(lineId: string, value: string) {
     setSelectedLines((current) =>
@@ -764,6 +844,9 @@ export function CreateSaleContent({
       queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
       queryClient.invalidateQueries(trpc.orders.listPage.queryFilter()),
       queryClient.invalidateQueries(trpc.orders.customerCount.queryFilter()),
+      queryClient.invalidateQueries(trpc.catalog.listItems.queryFilter()),
+      queryClient.invalidateQueries(trpc.catalog.listItemsPage.queryFilter()),
+      queryClient.invalidateQueries(trpc.inventory.balanceReport.queryFilter()),
       queryClient.invalidateQueries(trpc.customers.count.queryFilter()),
       queryClient.invalidateQueries(trpc.customers.listPage.queryFilter()),
       queryClient.invalidateQueries(trpc.services.queuePage.queryFilter()),
@@ -815,6 +898,8 @@ export function CreateSaleContent({
         buildOfflineOrderCommand({
           clientCommandId: orderClientId.current,
           customer: selectedCustomer,
+          deliveryDueAt,
+          fulfillNow: fulfillmentOption.fulfillNow,
           lines,
           payment:
             paymentSummary.receivedMinor > 0
@@ -839,17 +924,19 @@ export function CreateSaleContent({
     try {
       const order = await orderMutation.mutateAsync({
         clientOrderId: orderClientId.current,
+        deliveryDueAt,
+        fulfillNow: fulfillmentOption.fulfillNow,
+        initialPayment:
+          paymentSummary.receivedMinor > 0
+            ? {
+                amountMinor: paymentSummary.receivedMinor,
+                clientPaymentId: paymentClientId.current,
+                method: paymentMethod,
+              }
+            : undefined,
         schemaVersion: 1,
         ...payload,
       })
-      if (paymentSummary.receivedMinor > 0) {
-        await paymentMutation.mutateAsync({
-          amountMinor: paymentSummary.receivedMinor,
-          clientPaymentId: paymentClientId.current,
-          method: paymentMethod,
-          orderId: order.id,
-        })
-      }
       await refreshOrderQueries()
       onComplete?.({
         amount: formatMinorMoney(totalMinor, currencyCode),
@@ -1204,6 +1291,20 @@ export function CreateSaleContent({
                             offering.currencyCode,
                           )}
                         </Text>
+                        {getSaleOfferingStockLabel({
+                          availableQuantity: offering.availableQuantity,
+                          kind: offering.kind,
+                          unitName: offering.unitName ?? offering.offeringName,
+                        }) ? (
+                          <Text className="text-xs font-semibold text-primary">
+                            {getSaleOfferingStockLabel({
+                              availableQuantity: offering.availableQuantity,
+                              kind: offering.kind,
+                              unitName:
+                                offering.unitName ?? offering.offeringName,
+                            })}
+                          </Text>
+                        ) : null}
                       </View>
                       <Text className="font-extrabold text-foreground">
                         {formatMinorMoney(
@@ -1318,6 +1419,88 @@ export function CreateSaleContent({
                         paymentSummary.balanceDueMinor,
                         currencyCode,
                       )}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              <View className="gap-4 border-t border-border pt-5">
+                <View className="gap-1">
+                  <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
+                    Delivery and fulfillment
+                  </Text>
+                  <Text className="text-sm text-muted-foreground">
+                    Delivery defaults to now. Schedule a future time when this
+                    order should be ready for fulfillment.
+                  </Text>
+                </View>
+
+                <View className="gap-3 rounded-2xl bg-muted/60 p-4">
+                  <View className="flex-row items-center gap-3">
+                    <View className="h-10 w-10 items-center justify-center rounded-full bg-background">
+                      <Icon className="size-sm text-primary" name="Calendar" />
+                    </View>
+                    <View className="min-w-0 flex-1 gap-1">
+                      <Text className="text-xs font-bold uppercase tracking-[1px] text-muted-foreground">
+                        Delivery due
+                      </Text>
+                      <Text className="font-extrabold text-foreground">
+                        {deliveryDateLabel(deliveryDueAt)}
+                      </Text>
+                    </View>
+                  </View>
+                  <View className="flex-row gap-2">
+                    <ActionButton
+                      className="flex-1"
+                      onPress={() => setDeliveryPickerMode("date")}
+                      variant="outline"
+                    >
+                      Change date
+                    </ActionButton>
+                    <ActionButton
+                      className="flex-1"
+                      onPress={() => setDeliveryPickerMode("time")}
+                      variant="outline"
+                    >
+                      Change time
+                    </ActionButton>
+                  </View>
+                  {deliveryPickerMode ? (
+                    <View className="items-center">
+                      <DateTimePicker
+                        display={Platform.OS === "ios" ? "spinner" : "default"}
+                        minimumDate={new Date()}
+                        mode={deliveryPickerMode}
+                        onChange={changeDeliveryDueAt}
+                        value={deliveryDueAt}
+                      />
+                      {Platform.OS === "ios" ? (
+                        <Pressable
+                          accessibilityLabel="Close delivery picker"
+                          className="min-h-11 justify-center px-4"
+                          onPress={() => setDeliveryPickerMode(null)}
+                        >
+                          <Text className="font-bold text-primary">Done</Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  ) : null}
+                </View>
+
+                <View className="flex-row items-start gap-3 rounded-2xl border border-border p-4">
+                  <Switch
+                    accessibilityLabel="Fulfill Product stock when this order is confirmed"
+                    checked={fulfillmentOption.fulfillNow}
+                    disabled={!fulfillmentOption.canFulfillNow}
+                    onCheckedChange={setFulfillNowRequested}
+                  />
+                  <View className="min-w-0 flex-1 gap-1">
+                    <Text className="font-extrabold text-foreground">
+                      Fulfill Product stock now
+                    </Text>
+                    <Text className="text-xs leading-5 text-muted-foreground">
+                      {fulfillmentOption.reason ??
+                        "Commit reserved Product stock as fulfilled when you confirm this sale."}
                     </Text>
                   </View>
                 </View>

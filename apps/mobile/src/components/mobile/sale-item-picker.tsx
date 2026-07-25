@@ -4,6 +4,7 @@ import { EmptyState } from "@/components/mobile/empty-state"
 import {
   type SaleItemPickerLine,
   getSaleItemPickerLineCounts,
+  getSaleOfferingStockLabel,
 } from "@/components/mobile/sale-item-picker-model"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
@@ -26,6 +27,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 export type SaleOfferingChoice = {
+  availableQuantity?: string
   balanceRevision?: number
   catalogItemId: string
   configurationVersionId?: string
@@ -108,6 +110,11 @@ function SaleOfferingPickerRow({
   onPress: () => void
 }) {
   const disabled = Boolean(choice.disabledReason)
+  const stockLabel = getSaleOfferingStockLabel({
+    availableQuantity: choice.availableQuantity,
+    kind: choice.kind,
+    unitName: choice.unitName ?? choice.offeringName,
+  })
 
   return (
     <Pressable
@@ -135,6 +142,11 @@ function SaleOfferingPickerRow({
             ? "Price not set"
             : formatMinorMoney(choice.fixedPriceMinor, choice.currencyCode)}
         </Text>
+        {stockLabel ? (
+          <Text className="text-xs font-semibold text-primary">
+            {stockLabel}
+          </Text>
+        ) : null}
         {choice.disabledReason ? (
           <Text className="text-xs font-semibold text-destructive">
             {choice.disabledReason}

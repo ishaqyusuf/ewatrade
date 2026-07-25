@@ -30,12 +30,15 @@ A queued `commercial_order` may contain:
 - one or more existing Sellable Offering lines;
 - immutable customer name, phone, and email snapshots;
 - an optional initial cash, transfer, card, POS, or other payment.
+- an optional delivery due timestamp and immediate-fulfillment intent.
 
 Replay creates the Commercial Order idempotently, records the initial payment
 inside the same Order transaction, and creates or reuses a tenant Customer
 directory record when a customer name was captured. Contact-backed Customer
 projection uses conflict-safe insertion so concurrent device replay reuses the
 winning directory row.
+Replay also enforces the normal delivery-time guard: a future Order cannot be
+fulfilled early.
 
 When `offlineApprovalRequired` is on, staff commands are staged durably before
 that transaction runs. Owner, Admin, and Manager offline Orders apply directly;

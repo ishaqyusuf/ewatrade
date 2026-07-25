@@ -1,15 +1,21 @@
-import { canOperatePos, normalizeRole } from "@ewatrade/auth/roles"
+import {
+  canManageTenant,
+  canOperatePos,
+  normalizeRole,
+} from "@ewatrade/auth/roles"
 import {
   CatalogError,
   countCommercialOrderCustomers,
   createCommercialOrder,
   fulfillCommercialOrderProductLine,
   getCommercialOrder,
+  getCommercialOrderReminderSettings,
   listCommercialOrderPaymentsPage,
   listCommercialOrders,
   listCommercialOrdersPage,
   recordCommercialOrderPayment,
   returnCommercialOrderProductLine,
+  updateCommercialOrderReminderSettings,
 } from "@ewatrade/db/queries"
 import { TRPCError } from "@trpc/server"
 
@@ -21,6 +27,8 @@ import {
   commercialOrderListSchema,
   commercialOrderPaymentSchema,
   commercialOrderPaymentsListPageSchema,
+  commercialOrderReminderSettingsGetSchema,
+  commercialOrderReminderSettingsUpdateSchema,
   commercialOrderReturnLineSchema,
 } from "../../schemas/orders"
 import { createTRPCRouter, protectedProcedure } from "../init"
@@ -31,6 +39,16 @@ function assertCanOperateOrders(role: string) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "You do not have permission to operate Commercial Orders.",
+    })
+  }
+}
+
+function assertCanManageOrderReminders(role: string) {
+  const normalized = normalizeRole(role)
+  if (!normalized || !canManageTenant(normalized)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Only Owners and Admins can manage Order reminders.",
     })
   }
 }
@@ -184,6 +202,28 @@ export const ordersRouter = createTRPCRouter({
       })
     }),
 
+  reminderSettings: protectedProcedure
+    .input(commercialOrderReminderSettingsGetSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanManageOrderReminders(ctx.tenantContext.membership.role)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      const settings = await getCommercialOrderReminderSettings(ctx.db, {
+        storeId,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+      if (!settings) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Store not found for this business.",
+        })
+      }
+      return settings
+    }),
+
   recordPayment: protectedProcedure
     .input(commercialOrderPaymentSchema)
     .mutation(async ({ ctx, input }) => {
@@ -214,5 +254,29 @@ export const ordersRouter = createTRPCRouter({
         if (error instanceof CatalogError) throw orderError(error)
         throw error
       }
+    }),
+
+  updateReminderSettings: protectedProcedure
+    .input(commercialOrderReminderSettingsUpdateSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanManageOrderReminders(ctx.tenantContext.membership.role)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      const settings = await updateCommercialOrderReminderSettings(ctx.db, {
+        ...input,
+        actorUserId: ctx.session.user.id,
+        storeId,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+      if (!settings) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Store not found for this business.",
+        })
+      }
+      return settings
     }),
 })

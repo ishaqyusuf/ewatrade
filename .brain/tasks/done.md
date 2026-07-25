@@ -1,5 +1,15 @@
 # Done
 
+- Implemented Commercial Order stock visibility, atomic checkout payment plus
+  optional due-now Product fulfillment, future delivery scheduling, early
+  fulfillment guards, Store-level reminder settings, recipient-idempotent
+  management email delivery, and an hourly Trigger.dev reminder task.
+  The Products overview now reports available rather than raw on-hand stock.
+  Completed Date: 2026-07-25. Checks Run: 22 focused tests; DB, API, email,
+  notifications, jobs, and mobile TypeScript; Prisma format/generate. Database
+  migration generation remains tracked separately in progress because Docker
+  was unavailable.
+
 ### Mobile Catalog Option Entry Correction
 
 - Priority: High

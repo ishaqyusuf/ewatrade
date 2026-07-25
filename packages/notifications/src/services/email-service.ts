@@ -1,15 +1,18 @@
 import {
+  type CommercialOrderFulfillmentReminderEmailInput,
   type EmailDispatchResult,
   type EmailMessage,
   type EmailTransport,
   type MarketingEmailInput,
   type RetailOpsStaffInviteEmailInput,
+  createCommercialOrderFulfillmentReminderEmail,
   createMarketingEarlyAccessAdminEmail,
   createMarketingEarlyAccessConfirmationEmail,
   createMarketingWaitlistAdminEmail,
   createMarketingWaitlistConfirmationEmail,
   createRetailOpsStaffInviteEmail,
   createTestRoutedEmailMessages,
+  defaultCommercialOrderFulfillmentReminderSubject,
   defaultMarketingEarlyAccessAdminSubject,
   defaultMarketingEarlyAccessConfirmationSubject,
   defaultMarketingWaitlistAdminSubject,
@@ -62,6 +65,31 @@ function planEmailMessagesForDispatch(
   const emailRecipients = dispatch.recipients.filter(isEmailRecipient)
 
   switch (dispatch.notificationType) {
+    case "commercial_order_fulfillment_reminder": {
+      const payload =
+        dispatch.payload as CommercialOrderFulfillmentReminderEmailInput
+
+      return emailRecipients.map((recipient) => ({
+        deliveryRole: "admin",
+        message: createCommercialOrderFulfillmentReminderEmail({
+          from,
+          idempotencyKey: [
+            "commercial-order-reminder",
+            payload.orderId,
+            payload.timing,
+            recipient.email.trim().toLowerCase(),
+          ].join(":"),
+          input: payload,
+          replyTo,
+          subject: defaultCommercialOrderFulfillmentReminderSubject({
+            orderNumber: payload.orderNumber,
+            timing: payload.timing,
+          }),
+          to: recipient.email,
+        }),
+        recipientEmail: recipient.email,
+      }))
+    }
     case "marketing_early_access_requested": {
       const payload = {
         ...(dispatch.payload as Omit<MarketingEmailInput, "type">),

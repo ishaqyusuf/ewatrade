@@ -4,6 +4,16 @@ import {
 } from "@ewatrade/utils/exact-decimal"
 import { z } from "zod"
 
+const commercialOrderPaymentInputSchema = z
+  .object({
+    amountMinor: z.number().int().positive().max(100_000_000),
+    clientPaymentId: z.string().trim().min(8).max(160),
+    method: z.enum(["bank_transfer", "card", "cash", "other", "pos"]),
+    note: z.string().trim().max(500).optional(),
+    reference: z.string().trim().max(160).optional(),
+  })
+  .strict()
+
 const exactOrderQuantitySchema = z
   .string()
   .trim()
@@ -35,6 +45,9 @@ export const commercialOrderCreateSchema = z
     customerName: z.string().trim().min(1).max(160).optional(),
     customerPhone: z.string().trim().min(3).max(40).optional(),
     discountMinor: z.number().int().nonnegative().max(100_000_000).optional(),
+    deliveryDueAt: z.coerce.date().optional(),
+    fulfillNow: z.boolean().optional(),
+    initialPayment: commercialOrderPaymentInputSchema.optional(),
     lines: z
       .array(
         z
@@ -126,14 +139,23 @@ export const commercialOrderReturnLineSchema = z
 
 export const commercialOrderPaymentSchema = z
   .object({
-    amountMinor: z.number().int().positive().max(100_000_000),
-    clientPaymentId: z.string().trim().min(8).max(160),
-    method: z.enum(["bank_transfer", "card", "cash", "other", "pos"]),
-    note: z.string().trim().max(500).optional(),
+    ...commercialOrderPaymentInputSchema.shape,
     orderId: z.string().trim().min(1),
-    reference: z.string().trim().max(160).optional(),
     type: z.enum(["payment", "refund"]).optional(),
   })
+  .strict()
+
+export const commercialOrderReminderSettingsUpdateSchema = z
+  .object({
+    dayBeforeEnabled: z.boolean(),
+    enabled: z.boolean(),
+    sameDayEnabled: z.boolean(),
+    storeId: z.string().trim().min(1).optional(),
+  })
+  .strict()
+
+export const commercialOrderReminderSettingsGetSchema = z
+  .object({ storeId: z.string().trim().min(1).optional() })
   .strict()
 
 export const commercialOrderPaymentsListPageSchema = z

@@ -24,6 +24,8 @@ export function buildOfflineOrderCommand(input: {
   } | null
   lines: OfflineOrderLine[]
   payment?: OfflineOrderPayment
+  deliveryDueAt?: Date
+  fulfillNow?: boolean
 }) {
   return {
     clientCommandId: input.clientCommandId,
@@ -33,6 +35,10 @@ export function buildOfflineOrderCommand(input: {
       customerEmail: input.customer?.email,
       customerName: input.customer?.name,
       customerPhone: input.customer?.phone,
+      ...(input.deliveryDueAt ? { deliveryDueAt: input.deliveryDueAt } : {}),
+      ...(input.fulfillNow !== undefined
+        ? { fulfillNow: input.fulfillNow }
+        : {}),
       ...(input.payment ? { initialPayment: input.payment } : {}),
       kind: "commercial_order" as const,
       lines: input.lines,

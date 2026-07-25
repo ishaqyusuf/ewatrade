@@ -18,10 +18,10 @@ import {
   shouldFetchNextListPage,
   shouldShowListSearch,
 } from "@/lib/list-pagination"
-import { useTRPC } from "@/trpc/client"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
+import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
-import { formatMinorMoney } from "@ewatrade/utils"
+import { formatMinorMoney, subtractExactDecimals } from "@ewatrade/utils"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
 import { useDeferredValue, useMemo, useState } from "react"
@@ -54,7 +54,7 @@ type CatalogItemsContentProps = {
   presentation?: "modal" | "tab"
 }
 
-function mapCatalogItem(item: CatalogItem): CatalogRow {
+function mapCatalogItem(item: CatalogItem, storeId?: string): CatalogRow {
   const defaultVariant =
     item.variants.find((variant) => variant.isDefault) ?? item.variants[0]
   const offering = defaultVariant?.offerings[0]
@@ -79,11 +79,25 @@ function mapCatalogItem(item: CatalogItem): CatalogRow {
     item.product?.currentUnitConfiguration?.units.find(
       (unit) => unit.stockBehavior === "canonical_shared",
     ) ?? item.product?.currentUnitConfiguration?.units[0]
-  const balance = item.product?.stockBalances[0]
+  const offeringUnit = item.product?.currentUnitConfiguration?.units.find(
+    (unit) => unit.id === offering?.productUnit?.inventoryUnitId,
+  )
+  const balance = item.product?.stockBalances.find(
+    (candidate) =>
+      candidate.storeId === storeId &&
+      candidate.variantId === defaultVariant?.id &&
+      (offeringUnit?.stockBehavior === "packaged_stock"
+        ? candidate.kind === "packaged_stock" &&
+          candidate.inventoryUnitId === offeringUnit.id
+        : candidate.kind === "shared_pool"),
+  )
   const unitName = balance?.inventoryUnitName ?? canonicalUnit?.name ?? "unit"
+  const availableQuantity = balance
+    ? subtractExactDecimals(balance.onHandQuantity, balance.reservedQuantity)
+    : "0"
 
   return {
-    detail: `${balance?.onHandQuantity ?? "0"} ${unitName} available · ${priceLabel}`,
+    detail: `${availableQuantity} ${unitName} available · ${priceLabel}`,
     id: item.id,
     kind: item.kind,
     name: item.name,
@@ -198,10 +212,10 @@ export function CatalogItemsContent({
   )
   const rows = useMemo(
     () =>
-      (itemsQuery.data?.pages.flatMap((page) => page.items) ?? []).map(
-        mapCatalogItem,
+      (itemsQuery.data?.pages.flatMap((page) => page.items) ?? []).map((item) =>
+        mapCatalogItem(item, availabilityQuery.data?.storeId),
       ),
-    [itemsQuery.data?.pages],
+    [availabilityQuery.data?.storeId, itemsQuery.data?.pages],
   )
   const totalCount = itemsQuery.data?.pages[0]?.totalCount ?? 0
   const showSearch = shouldShowListSearch(totalCount)

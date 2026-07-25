@@ -4,6 +4,7 @@ import {
   SALE_ITEM_PICKER_COMPACT_LIMIT,
   addSaleItemPickerLine,
   getSaleItemPickerPresentation,
+  getSaleOfferingStockLabel,
   getSelectableSaleItemChoices,
   openSaleItemPicker,
   removeSaleItemPickerLine,
@@ -35,6 +36,22 @@ describe("sale item picker presentation", () => {
         { disabledReason: "Out of stock", id: "unavailable" },
       ]),
     ).toEqual([{ id: "available" }])
+  })
+
+  test("describes the exact stock available for Product choices", () => {
+    expect(
+      getSaleOfferingStockLabel({
+        availableQuantity: "12.5",
+        kind: "product_unit",
+        unitName: "Bag",
+      }),
+    ).toBe("12.5 Bag available")
+    expect(
+      getSaleOfferingStockLabel({
+        kind: "service",
+        unitName: "Visit",
+      }),
+    ).toBeNull()
   })
 
   test("opens from loaded choices immediately and leaves unloaded pages to the picker", () => {
