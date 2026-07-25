@@ -63,7 +63,7 @@ export function CatalogItemScreen({
           <Icon className="size-base text-foreground" name="ArrowLeft" />
         </Pressable>
         <Text className="text-3xl font-extrabold tracking-tight text-foreground">
-          Product overview
+          Catalog overview
         </Text>
       </View>
       <View className="flex-1 items-center justify-center py-16">
