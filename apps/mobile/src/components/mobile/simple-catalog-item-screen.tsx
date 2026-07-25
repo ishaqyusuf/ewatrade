@@ -113,10 +113,6 @@ function getVariantValueSuggestions(label: string) {
     : []
 }
 
-function newOptionGroup(): MobileOptionGroup {
-  return { id: Crypto.randomUUID(), name: "", values: [] }
-}
-
 function newUnit(): MobileUnitDraft {
   return {
     id: Crypto.randomUUID(),
@@ -342,9 +338,7 @@ export function SimpleCatalogItemScreen({
   >("on_order_confirmation")
   const [serviceQuantityScale, setServiceQuantityScale] = useState(0)
   const [serviceGuidance, setServiceGuidance] = useState("")
-  const [optionGroups, setOptionGroups] = useState<MobileOptionGroup[]>([
-    newOptionGroup(),
-  ])
+  const [optionGroups, setOptionGroups] = useState<MobileOptionGroup[]>([])
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null)
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null)
   const [variantComposerMode, setVariantComposerMode] =
@@ -530,7 +524,7 @@ export function SimpleCatalogItemScreen({
     if (!helper) {
       setMultiplePriceOptions(false)
       setShowAdvanced(false)
-      setOptionGroups([newOptionGroup()])
+      setOptionGroups([])
       setAdditionalUnits([])
       setCanonicalTransactionScale(DEFAULT_UNIT_TRANSACTION_SCALE)
       setTrackServiceWork(false)
@@ -550,7 +544,7 @@ export function SimpleCatalogItemScreen({
         label,
       })),
     }))
-    setOptionGroups(groups.length > 0 ? groups : [newOptionGroup()])
+    setOptionGroups(groups)
     setShowAdvanced(groups.length > 0)
     if (!name.trim() && application.suggestedName)
       setName(application.suggestedName)
@@ -1182,7 +1176,8 @@ export function SimpleCatalogItemScreen({
   }
 
   const selectVariantLabel = (rawLabel: string) => {
-    const label = rawLabel.trim() || "Option"
+    const label = rawLabel.trim()
+    if (!label) return
     const normalizedLabel = label.toLowerCase()
     if (editingGroupId) {
       const duplicateGroup = optionGroups.find(
@@ -1210,11 +1205,7 @@ export function SimpleCatalogItemScreen({
     const existingGroup = optionGroups.find(
       (group) => group.name.trim().toLowerCase() === normalizedLabel,
     )
-    const reusableGroup = optionGroups.find(
-      (group) => !group.name.trim() && group.values.length === 0,
-    )
-    const groupId =
-      existingGroup?.id ?? reusableGroup?.id ?? Crypto.randomUUID()
+    const groupId = existingGroup?.id ?? Crypto.randomUUID()
 
     setOptionGroups((current) => {
       if (
@@ -1225,19 +1216,13 @@ export function SimpleCatalogItemScreen({
         return current
       }
 
-      if (reusableGroup) {
-        return current.map((group) =>
-          group.id === reusableGroup.id ? { ...group, name: label } : group,
-        )
-      }
-
       return [...current, { id: groupId, name: label, values: [] }]
     })
     setShowAdvanced(true)
     setActiveGroupId(groupId)
-    setVariantComposerMode("variant-value")
+    setVariantComposerMode(null)
     setComposerText("")
-    focusVariantComposerInput()
+    Keyboard.dismiss()
   }
 
   const openVariantValueComposer = (groupId: string) => {
@@ -1641,6 +1626,12 @@ export function SimpleCatalogItemScreen({
               </View>
 
               <View className="border-t border-border">
+                {optionGroups.length === 0 ? (
+                  <Text className="border-b border-border py-5 text-sm text-muted-foreground">
+                    No options yet. Add an option such as Size, Color, or
+                    Service level.
+                  </Text>
+                ) : null}
                 {optionGroups.map((group, index) => (
                   <View
                     className="gap-3 border-b border-border py-4"

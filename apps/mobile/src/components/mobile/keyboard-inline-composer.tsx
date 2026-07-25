@@ -67,7 +67,7 @@ export const KeyboardInlineComposer = forwardRef<
 
   return (
     <KeyboardStickyView
-      offset={{ closed: 88, opened: 70 }}
+      offset={{ closed: 88, opened: 0 }}
       pointerEvents="box-none"
       style={styles.sticky}
     >

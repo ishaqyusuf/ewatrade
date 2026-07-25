@@ -64,11 +64,16 @@ ADR-0013.
   decimal places without exposing precision controls in the setup flow. Saved
   units render as flat divider rows with explicit edit and delete actions;
   editing reuses the same sheet.
-- The generic Product/Service form calls customer choices `Options`. A
-  keyboard-sticky composer first collects a suggested or custom option name,
-  then contextual values through selected removable pills, suggestions,
-  comma-separated entry, and an explicit check action. `Unit` is not an option
-  suggestion because selling units have their own flat section and editor.
+- The generic Product/Service form calls customer choices `Options`. Enabling
+  `Multiple Price Options` starts with an empty option list and never creates a
+  placeholder option. A keyboard-sticky composer collects a suggested or
+  custom option name; saving the name dismisses the keyboard and returns to the
+  flat option list. The merchant explicitly selects `Add value` on that option
+  before entering contextual values through removable pills, suggestions,
+  comma-separated entry, and an explicit check action. The composer remains
+  flush above the open keyboard so both its input and completion action stay
+  visible. `Unit` is not an option suggestion because selling units have their
+  own flat section and editor.
 - Option names and selected values use a flat divider list. Generated Product
   listings live in their own `Product stock & pricing` section below Unit setup
   and expand every option across the counted-in unit plus each additional

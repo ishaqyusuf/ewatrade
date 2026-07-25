@@ -1,5 +1,20 @@
 # Done
 
+### Mobile Catalog Option Entry Correction
+
+- Priority: High
+- Description: Fixed the Add Product/Service option composer so its input and
+  completion action remain visible immediately above the Android keyboard.
+  Multiple Price Options now starts with no generated placeholder; adding a
+  suggested or custom option saves its name, dismisses the keyboard, and
+  returns to the option list. Values are entered only after the merchant
+  explicitly selects Add value on the saved option.
+- Related Feature: Product and Service Catalog Items
+- Status: Done
+- Completed Date: 2026-07-25
+- Checks Run: Automated and device UI tests were skipped at the user's request.
+  Scoped code and Brain documentation diffs were reviewed.
+
 ### Staff Offline Order Approval And Unit-Aware Checkout
 
 - Priority: High
