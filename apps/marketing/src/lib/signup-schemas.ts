@@ -20,16 +20,6 @@ export const workspaceSchema = z.object({
       /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/,
       "Subdomain can only contain lowercase letters, numbers, and hyphens (cannot start or end with a hyphen)",
     ),
-  customDomain: z
-    .string()
-    .trim()
-    .max(253, "Domain too long")
-    .regex(
-      /^$|^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i,
-      "Enter a valid domain (e.g. mystore.com)",
-    )
-    .optional()
-    .or(z.literal("")),
 })
 
 export type WorkspaceValues = z.infer<typeof workspaceSchema>
@@ -145,7 +135,6 @@ export const signupPayloadSchema = z
     addressLine1: z.string().min(3).max(200),
     accessToken: z.string().trim().min(1).optional(),
     subdomain: z.string().min(3).max(32),
-    customDomain: z.string().optional().or(z.literal("")),
     businessName: z.string().min(2).max(120),
     city: z.string().min(2).max(120),
     businessProfileKey: z

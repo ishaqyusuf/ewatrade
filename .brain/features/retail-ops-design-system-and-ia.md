@@ -37,11 +37,27 @@ admin Orders tab, Customer Book, Customer overview, and Order overview. These
 surfaces use reusable commerce primitives backed by `orders.list` and
 `orders.get`, merge pending offline commercial-order commands without
 presenting them as synced records, and keep totals separated by currency.
-Customer profiles are derived only from captured order contact facts until a
-dedicated Customer entity exists; address, category, loyalty, and other
-unsupported fields must not be inferred. The protected `/order/[orderId]`
-route exposes real payment recording and eligible Product-line fulfilment
-mutations, while Service fulfilment remains owned by Service jobs.
+Customer Book now merges tenant-scoped saved Customer records with captured
+Order contact facts, so a customer can be saved before their first Order while
+existing order-only identities remain visible. Address, category, loyalty, and
+other unsupported fields must not be inferred. The protected
+`/order/[orderId]` route exposes real payment recording and eligible
+Product-line fulfilment mutations, while Service fulfilment remains owned by
+Service jobs.
+
+The production Order overview is implemented directly on that protected route,
+outside the internal Design 01 preview. It uses the owner-provided customer and
+order boards as visual hierarchy references while rendering only real
+Commercial Order data: a total/item/payment/fulfilment summary, captured
+customer facts, flat Offering snapshot lines, financial totals, payment and
+fulfilment state, notes, and activity. Unsupported address, wishlist, review,
+loyalty, and insight facts are never fabricated. Orders with a balance expose
+one safe-area payment action above the scrolling surface; Android requires the
+action layer to carry explicit native elevation/z-index and the scroll content
+to reserve matching bottom clearance. Payment entry opens in the shared
+keyboard-aware floating sheet, and eligible Product fulfilment remains a
+line-level action. Paid Orders remove the payment action after the production
+mutation refreshes.
 
 Production mobile record directories use one list-density rule: Orders,
 Catalog Products/Services, Customer Book, Create Sale pickers, Service Jobs,
@@ -100,6 +116,13 @@ Admin/owner home rules:
 - Bottom navigation is `Home`, `Orders`, center `+`, stable `catalog`, and `More`. The stable catalog route displays `Products` for Product-only workspaces, `Services` for Service-only workspaces, and `Catalog` for mixed or empty workspaces.
 - Owner, Admin, and Manager routes live in one protected Expo Router tab group. The app shell uses the shared `MobileBottomTabs` primitive in the Design 01/reference tab style with a raised non-route center `+`.
 - The floating dock is present on all four root tabs. It hides on downward scroll and returns on upward scroll for Home, Orders, and Catalog; More keeps it fixed to preserve the approved Menu reference. The dock is absent from Create and secondary full-screen workflow routes, and root content owns the corresponding safe bottom inset.
+- Orders and Catalog expose a page-specific add FAB above the visible dock.
+  When scroll hides the dock, the FAB animates down to its normal safe-area
+  position. Catalog no longer duplicates this action as an inline footer
+  button.
+- Customer Book and Staff are list-first secondary screens with centered empty
+  states and a safe-area add FAB. Their customer-create and staff-invite forms
+  open as keyboard-aware floating sheets.
 - Admin Home uses a compact reference-led operations composition: greeting,
   business identity, sync/profile actions, two soft overview metrics, one
   primary revenue panel, four flat shortcut rows, and a bounded Recent Orders
@@ -659,8 +682,24 @@ The create-sale workflow is the core mobile POS path and should stay optimized f
   bottom lane. Its `All amount paid` action copies the exact sale total into
   Amount received so the payment state and balance update to paid in full
   without manual entry; empty and partial amounts remain supported.
+- Checkout review spacing is owned by an inset NativeWind `View` inside the
+  keyboard-aware scroll surface. Do not place layout-critical spacing on
+  unsupported third-party `contentContainerClassName` props, because the
+  content will render edge-to-edge and make the payment controls overflow on
+  compact Android screens.
+- Successful online orders and queued offline orders reset the workflow stack
+  to Home plus one shared full-screen success route. The success screen shows
+  the truthful order, total, customer, item-count, payment, or queued-sync
+  facts and provides a `Go to home` action. Back gestures pop to Home rather
+  than returning to Checkout.
+- Successful Product and Service creation uses the same full-screen success
+  route with the created item name, kind, and catalog status. It also resets
+  the workflow stack first, so back gestures and the explicit action both lead
+  to Home rather than the item form or Catalog modal.
 - Production sale creation, local/offline fallback recording, rep session validation, and sync queue behavior must remain unchanged when the visual layer is updated.
-- `qa:create-sale-flow` continues to protect the sale list, quantity, payment, customer, offline/local fallback, and sync-required status coverage.
+- `qa:create-sale-flow` and `qa:operation-success` protect the sale list,
+  quantity, payment, customer, offline/local fallback, sync-required state,
+  success information, and Home-only back stack.
 
 ## Product And Inventory Management Redesign
 
@@ -708,7 +747,11 @@ Staff, customer, subscription, and business settings surfaces should feel like c
   text row so compact phones do not clip or overlap nested operational rows.
 - Owner Home exposes Add Product and Add Service as separate revealing actions;
   each opens the correct typed form directly.
-- Business switching groups current businesses, search, active status, business creation, and plan-limit warnings in the same calm sheet vocabulary, using selectable secondary rows for business workspaces.
+- Business switching keeps current businesses, search, and active status in
+  the same calm list vocabulary, using selectable secondary rows for
+  workspaces. A safe-area plus FAB opens the separate keyboard-safe guided
+  business onboarding route so creation inputs do not make the switcher
+  card-heavy.
 - `qa:commerce-ops`, `qa:staff-flow`, and `qa:subscription-flow` protect these
   shared primitives, production/local fallbacks, bounded rows, and role/billing
   boundaries.

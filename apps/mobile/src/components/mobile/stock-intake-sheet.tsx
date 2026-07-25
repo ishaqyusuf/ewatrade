@@ -8,7 +8,6 @@ import {
 import { SecondarySheetHeader } from "@/components/mobile/secondary-operations"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
-import { useOfflineCommandStore } from "@/store/offlineCommandStore"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -26,7 +25,6 @@ export function StockIntakeContent({
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const offline = useOperationalModeStore((state) => state.isOfflineMode)
-  const queueCommand = useOfflineCommandStore((state) => state.queueCommand)
   const [balanceId, setBalanceId] = useState("")
   const [quantity, setQuantity] = useState("")
   const [reason, setReason] = useState("")
@@ -93,6 +91,12 @@ export function StockIntakeContent({
     }),
   )
   const submit = () => {
+    if (offline) {
+      setError(
+        "Inventory changes require a connection. Offline work is limited to new Orders, checkout payment, and customer details.",
+      )
+      return
+    }
     if (!selected || !quantity.trim() || !reason.trim()) {
       setError("Choose a balance, enter an exact quantity, and add a reason.")
       return
@@ -123,15 +127,6 @@ export function StockIntakeContent({
           targetCustodyType === "store" ? "" : targetCustodyReferenceId,
         targetCustodyType,
       }
-      if (offline) {
-        queueCommand({
-          dependencyClientIds: [],
-          eventVersion: 1,
-          payload: { kind: "custody_move", ...payload },
-        })
-        onComplete?.()
-        return
-      }
       custody.mutate({
         clientOperationId: `custody-${Crypto.randomUUID()}`,
         schemaVersion: 1,
@@ -141,19 +136,6 @@ export function StockIntakeContent({
       return
     }
     if (mode === "count") {
-      if (offline) {
-        queueCommand({
-          dependencyClientIds: [],
-          eventVersion: 1,
-          payload: {
-            kind: "stock_count",
-            lines: countLines,
-            reason: reason.trim(),
-          },
-        })
-        onComplete?.()
-        return
-      }
       createCount.mutate({
         actorNote: reason.trim(),
         clientOperationId: `count-${Crypto.randomUUID()}`,
@@ -171,30 +153,6 @@ export function StockIntakeContent({
       expectedConfigurationVersionId: selected.configurationVersionId,
       reason: reason.trim(),
       type: mode,
-    }
-    if (offline) {
-      if (mode !== "receipt") {
-        setError(
-          "Adjustments require a connection. Receipts can be queued offline.",
-        )
-        return
-      }
-      queueCommand({
-        dependencyClientIds: [],
-        eventVersion: 1,
-        payload: {
-          kind: "stock_receipt",
-          balanceSourceId: operation.balanceSourceId,
-          enteredInventoryUnitId: operation.enteredInventoryUnitId,
-          enteredQuantity: operation.enteredQuantity,
-          expectedBalanceRevision: operation.expectedBalanceRevision,
-          expectedConfigurationVersionId:
-            operation.expectedConfigurationVersionId,
-          reason: operation.reason,
-        },
-      })
-      onComplete?.()
-      return
     }
     mutation.mutate({
       clientOperationId: `stock-${Crypto.randomUUID()}`,
@@ -236,162 +194,160 @@ export function StockIntakeContent({
             title="Inventory movement"
           />
 
-        {offline ? (
-          <StatusBanner
-            icon="Wind"
-            message="Receipts, counts, and custody moves are queued as provisional operations until replay."
-            title="Offline"
-            tone="warning"
-          />
-        ) : null}
-        {error ? (
-          <StatusBanner
-            icon="AlertCircle"
-            message={error}
-            tone="destructive"
-          />
-        ) : null}
+          {offline ? (
+            <StatusBanner
+              icon="Lock"
+              message="Products, stock receipts, counts, adjustments, and custody moves are online-only."
+              title="Online connection required"
+              tone="warning"
+            />
+          ) : null}
+          {error ? (
+            <StatusBanner
+              icon="AlertCircle"
+              message={error}
+              tone="destructive"
+            />
+          ) : null}
 
-        <View className="gap-3">
-          <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
-            Operation
-          </Text>
-          <ScrollView
-            contentContainerClassName="gap-2"
-            horizontal
-            showsHorizontalScrollIndicator={false}
-          >
-            {modeOptions.map((item) => (
-              <View className="w-24" key={item.key}>
-                <InventorySegmentOption
-                  label={item.label}
-                  onPress={() => {
-                    setError(null)
-                    setMode(item.key)
-                  }}
-                  selected={mode === item.key}
-                />
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-
-        <View className="gap-2">
-          <View className="gap-1">
-            <Text className="text-base font-extrabold text-foreground">
-              Select stock balance
-            </Text>
-            <Text className="text-sm leading-5 text-muted-foreground">
-              Quantities are recorded in the balance unit shown below.
-            </Text>
-          </View>
-          <View className="border-b border-border">
-            {balances.isPending ? (
-              <EmptyState
-                icon="Loader2"
-                message="Loading inventory balances."
-                title="Loading stock"
-              />
-            ) : balances.isError ? (
-              <StatusBanner
-                actionLabel="Try again"
-                icon="AlertCircle"
-                message={balances.error.message}
-                onActionPress={() => void balances.refetch()}
-                tone="destructive"
-              />
-            ) : balances.data?.rows.length ? (
-              balances.data.rows.map((row) => (
-                <InventoryProductCard
-                  icon="Warehouse"
-                  key={row.balanceSourceId}
-                  onPress={() => {
-                    setBalanceId(row.balanceSourceId)
-                    setError(null)
-                  }}
-                  selected={balanceId === row.balanceSourceId}
-                  stockLabel={`${row.onHandQuantity} ${row.inventoryUnitName}`}
-                  stockTone="muted"
-                  subtitle={`${row.variantName} · ${row.kind.toLowerCase().replaceAll("_", " ")}`}
-                  title={row.productName}
-                />
-              ))
-            ) : (
-              <EmptyState
-                icon="Warehouse"
-                message="Add a stock-tracked Product before recording inventory."
-                title="No stock balances"
-              />
-            )}
-          </View>
-        </View>
-
-        {mode === "adjustment" ? (
           <View className="gap-3">
             <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
-              Adjustment direction
+              Operation
             </Text>
-            <View className="flex-row gap-2">
-              <InventorySegmentOption
-                label="Increase"
-                onPress={() => setDirection("increase")}
-                selected={direction === "increase"}
-              />
-              <InventorySegmentOption
-                label="Decrease"
-                onPress={() => setDirection("decrease")}
-                selected={direction === "decrease"}
-              />
+            <ScrollView
+              contentContainerClassName="gap-2"
+              horizontal
+              showsHorizontalScrollIndicator={false}
+            >
+              {modeOptions.map((item) => (
+                <View className="w-24" key={item.key}>
+                  <InventorySegmentOption
+                    label={item.label}
+                    onPress={() => {
+                      setError(null)
+                      setMode(item.key)
+                    }}
+                    selected={mode === item.key}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+
+          <View className="gap-2">
+            <View className="gap-1">
+              <Text className="text-base font-extrabold text-foreground">
+                Select stock balance
+              </Text>
+              <Text className="text-sm leading-5 text-muted-foreground">
+                Quantities are recorded in the balance unit shown below.
+              </Text>
+            </View>
+            <View className="border-b border-border">
+              {balances.isPending ? (
+                <EmptyState
+                  icon="Loader2"
+                  message="Loading inventory balances."
+                  title="Loading stock"
+                />
+              ) : balances.isError ? (
+                <StatusBanner
+                  actionLabel="Try again"
+                  icon="AlertCircle"
+                  message={balances.error.message}
+                  onActionPress={() => void balances.refetch()}
+                  tone="destructive"
+                />
+              ) : balances.data?.rows.length ? (
+                balances.data.rows.map((row) => (
+                  <InventoryProductCard
+                    icon="Warehouse"
+                    key={row.balanceSourceId}
+                    onPress={() => {
+                      setBalanceId(row.balanceSourceId)
+                      setError(null)
+                    }}
+                    selected={balanceId === row.balanceSourceId}
+                    stockLabel={`${row.onHandQuantity} ${row.inventoryUnitName}`}
+                    stockTone="muted"
+                    subtitle={`${row.variantName} · ${row.kind.toLowerCase().replaceAll("_", " ")}`}
+                    title={row.productName}
+                  />
+                ))
+              ) : (
+                <EmptyState
+                  icon="Warehouse"
+                  message="Add a stock-tracked Product before recording inventory."
+                  title="No stock balances"
+                />
+              )}
             </View>
           </View>
-        ) : null}
 
-        {mode === "custody" ? (
-          <View className="gap-4">
+          {mode === "adjustment" ? (
             <View className="gap-3">
               <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
-                Move to
+                Adjustment direction
               </Text>
               <View className="flex-row gap-2">
                 <InventorySegmentOption
-                  label="Team member"
-                  onPress={() => setTargetCustodyType("staff")}
-                  selected={targetCustodyType === "staff"}
+                  label="Increase"
+                  onPress={() => setDirection("increase")}
+                  selected={direction === "increase"}
                 />
                 <InventorySegmentOption
-                  label="Central store"
-                  onPress={() => setTargetCustodyType("store")}
-                  selected={targetCustodyType === "store"}
+                  label="Decrease"
+                  onPress={() => setDirection("decrease")}
+                  selected={direction === "decrease"}
                 />
               </View>
             </View>
-            {targetCustodyType === "staff" ? (
-              <View className="border-b border-border">
-                {assignees.data?.map((person) => (
-                  <InventoryProductCard
-                    icon="User"
-                    key={person.id}
-                    onPress={() => setTargetCustodyReferenceId(person.id)}
-                    selected={targetCustodyReferenceId === person.id}
-                    stockLabel="Team member"
-                    stockTone="muted"
-                    subtitle={person.email}
-                    title={person.name}
+          ) : null}
+
+          {mode === "custody" ? (
+            <View className="gap-4">
+              <View className="gap-3">
+                <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
+                  Move to
+                </Text>
+                <View className="flex-row gap-2">
+                  <InventorySegmentOption
+                    label="Team member"
+                    onPress={() => setTargetCustodyType("staff")}
+                    selected={targetCustodyType === "staff"}
                   />
-                ))}
+                  <InventorySegmentOption
+                    label="Central store"
+                    onPress={() => setTargetCustodyType("store")}
+                    selected={targetCustodyType === "store"}
+                  />
+                </View>
               </View>
-            ) : null}
-          </View>
-        ) : null}
+              {targetCustodyType === "staff" ? (
+                <View className="border-b border-border">
+                  {assignees.data?.map((person) => (
+                    <InventoryProductCard
+                      icon="User"
+                      key={person.id}
+                      onPress={() => setTargetCustodyReferenceId(person.id)}
+                      selected={targetCustodyReferenceId === person.id}
+                      stockLabel="Team member"
+                      stockTone="muted"
+                      subtitle={person.email}
+                      title={person.name}
+                    />
+                  ))}
+                </View>
+              ) : null}
+            </View>
+          ) : null}
 
           <View className="gap-4">
             <FormField
               keyboardType="decimal-pad"
               label={mode === "count" ? "Observed quantity" : "Quantity"}
               onChangeText={setQuantity}
-              placeholder={
-                selected ? `In ${selected.inventoryUnitName}` : "0"
-              }
+              placeholder={selected ? `In ${selected.inventoryUnitName}` : "0"}
               value={quantity}
             />
             <FormField
@@ -417,11 +373,11 @@ export function StockIntakeContent({
       >
         <View className="border-t border-border bg-background px-4 pt-3">
           <ActionButton
-            disabled={!canSubmit}
+            disabled={offline || !canSubmit}
             isLoading={isSubmitting}
             onPress={submit}
           >
-            {offline ? `Queue ${mode}` : "Review and confirm"}
+            {offline ? "Reconnect to manage stock" : "Review and confirm"}
           </ActionButton>
         </View>
       </View>

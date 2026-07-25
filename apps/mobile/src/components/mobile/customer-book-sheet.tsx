@@ -1,3 +1,4 @@
+import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import {
   CommerceCustomerRow,
   CommerceFilterChip,
@@ -5,61 +6,82 @@ import {
   buildCommerceCustomers,
   commercialOrderHref,
   findCustomerByOrderId,
-} from "@/components/mobile/commerce";
-import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer";
-import { EmptyState } from "@/components/mobile/empty-state";
-import { QueryRefreshControl } from "@/components/mobile/query-refresh-control";
-import { StatusBanner } from "@/components/mobile/status-banner";
-import { Text } from "@/components/ui/text";
-import { View } from "@/components/ui/view";
-import { useAuthContext } from "@/hooks/use-auth";
+} from "@/components/mobile/commerce"
+import {
+  CreateSaleCustomerSheet,
+  type SaleCustomerDraft,
+} from "@/components/mobile/create-sale-customer-sheet"
+import { EmptyState } from "@/components/mobile/empty-state"
+import { ListCreateFab } from "@/components/mobile/list-create-fab"
+import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
+import { StatusBanner } from "@/components/mobile/status-banner"
+import { useModal } from "@/components/ui/modal"
+import { Text } from "@/components/ui/text"
+import { View } from "@/components/ui/view"
+import { useAuthContext } from "@/hooks/use-auth"
 import {
   LIST_PAGE_SIZE,
   shouldFetchNextListPage,
   shouldShowListSearch,
-} from "@/lib/list-pagination";
-import { useOperationalModeStore } from "@/store/operationalModeStore";
+} from "@/lib/list-pagination"
 import {
   activeBusinessOfflineCommands,
   useOfflineCommandStore,
-} from "@/store/offlineCommandStore";
-import { useTRPC } from "@/trpc/client";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+} from "@/store/offlineCommandStore"
+import { useOperationalModeStore } from "@/store/operationalModeStore"
+import { useTRPC } from "@/trpc/client"
 import {
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { FlatList } from "react-native";
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
+import { useRouter } from "expo-router"
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
+import { FlatList } from "react-native"
 
-type CustomerFilter = "all" | "pending" | "synced";
+type CustomerFilter = "all" | "pending" | "synced"
 
 export function activeCustomerFilterLabel(filter: CustomerFilter) {
-  if (filter === "pending") return "Pending sync";
-  if (filter === "synced") return "Synced";
-  return "All";
+  if (filter === "pending") return "Pending sync"
+  if (filter === "synced") return "Synced"
+  return "All"
 }
 
 export function CustomerBookContent({
+  createOnOpen = false,
+  initialCustomerId,
+  initialCustomerName,
   initialOrderId,
 }: {
-  initialOrderId?: string;
+  createOnOpen?: boolean
+  initialCustomerId?: string
+  initialCustomerName?: string
+  initialOrderId?: string
 }) {
-  const router = useRouter();
-  const trpc = useTRPC();
-  const { profile } = useAuthContext();
-  const isOffline = useOperationalModeStore((state) => state.isOfflineMode);
-  const allCommands = useOfflineCommandStore((state) => state.commands);
-  const [filter, setFilter] = useState<CustomerFilter>("all");
-  const [search, setSearch] = useState("");
-  const deferredSearch = useDeferredValue(search);
+  const router = useRouter()
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  const createCustomerModal = useModal()
+  const { profile } = useAuthContext()
+  const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
+  const allCommands = useOfflineCommandStore((state) => state.commands)
+  const [filter, setFilter] = useState<CustomerFilter>("all")
+  const [customerDraft, setCustomerDraft] = useState<SaleCustomerDraft>({
+    email: "",
+    name: "",
+    phone: "",
+  })
+  const [customerDraftError, setCustomerDraftError] = useState<string | null>(
+    null,
+  )
+  const [search, setSearch] = useState(initialCustomerName ?? "")
+  const deferredSearch = useDeferredValue(search)
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(
     null,
-  );
-  const initialSelectionApplied = useRef(false);
+  )
+  const createOnOpenApplied = useRef(false)
+  const initialSelectionApplied = useRef(false)
   const orders = useInfiniteQuery(
     trpc.orders.listPage.infiniteQueryOptions(
       {
@@ -73,19 +95,55 @@ export function CustomerBookContent({
         retry: false,
       },
     ),
-  );
+  )
+  const directory = useInfiniteQuery(
+    trpc.customers.listPage.infiniteQueryOptions(
+      {
+        limit: LIST_PAGE_SIZE,
+        query: isOffline ? undefined : deferredSearch || undefined,
+      },
+      {
+        enabled: !isOffline,
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        retry: false,
+      },
+    ),
+  )
   const customerCount = useQuery(
     trpc.orders.customerCount.queryOptions(undefined, {
       enabled: !isOffline,
       retry: false,
     }),
-  );
+  )
+  const directoryCount = useQuery(
+    trpc.customers.count.queryOptions(undefined, {
+      enabled: !isOffline,
+      retry: false,
+    }),
+  )
+  const createCustomer = useMutation(
+    trpc.customers.create.mutationOptions({
+      onError: (error) => setCustomerDraftError(error.message),
+      onSuccess: async () => {
+        setCustomerDraft({ email: "", name: "", phone: "" })
+        setCustomerDraftError(null)
+        createCustomerModal.dismiss()
+        await Promise.all([
+          queryClient.invalidateQueries(trpc.customers.count.queryFilter()),
+          queryClient.invalidateQueries(trpc.customers.listPage.queryFilter()),
+          queryClient.invalidateQueries(
+            trpc.tenant.featureAvailability.queryFilter(),
+          ),
+        ])
+      },
+    }),
+  )
   const initialOrder = useQuery(
     trpc.orders.get.queryOptions(
       { orderId: initialOrderId ?? "" },
       { enabled: !isOffline && Boolean(initialOrderId), retry: false },
     ),
-  );
+  )
   const pendingOrders = useMemo(
     () =>
       activeBusinessOfflineCommands(allCommands, profile?.businessId).flatMap(
@@ -110,38 +168,89 @@ export function CustomerBookContent({
             : [],
       ),
     [allCommands, profile?.businessId],
-  );
+  )
   const loadedOrders = useMemo(() => {
-    const pageOrders = orders.data?.pages.flatMap((page) => page.items) ?? [];
-    if (!initialOrder.data) return pageOrders;
+    const pageOrders = orders.data?.pages.flatMap((page) => page.items) ?? []
+    if (!initialOrder.data) return pageOrders
     return [
       initialOrder.data,
       ...pageOrders.filter((order) => order.id !== initialOrder.data.id),
-    ];
-  }, [initialOrder.data, orders.data?.pages]);
+    ]
+  }, [initialOrder.data, orders.data?.pages])
+  const directoryCustomers = useMemo(
+    () => directory.data?.pages.flatMap((page) => page.items) ?? [],
+    [directory.data?.pages],
+  )
   const customers = useMemo(
-    () => buildCommerceCustomers(loadedOrders, pendingOrders),
-    [loadedOrders, pendingOrders],
-  );
+    () =>
+      buildCommerceCustomers(loadedOrders, pendingOrders, directoryCustomers),
+    [directoryCustomers, loadedOrders, pendingOrders],
+  )
   const pendingCustomerCount = useMemo(
     () => buildCommerceCustomers([], pendingOrders).length,
     [pendingOrders],
-  );
+  )
   const showSearch = shouldShowListSearch(
-    Math.max(customerCount.data ?? 0, customers.length) + pendingCustomerCount,
-  );
+    Math.max(
+      (customerCount.data ?? 0) + (directoryCount.data ?? 0),
+      customers.length,
+    ) + pendingCustomerCount,
+  )
 
   useEffect(() => {
-    if (initialSelectionApplied.current || !initialOrderId) return;
-    const customer = findCustomerByOrderId(customers, initialOrderId);
-    if (!customer) return;
-    initialSelectionApplied.current = true;
-    setSelectedCustomerId(customer.id);
-  }, [customers, initialOrderId]);
+    if (
+      initialSelectionApplied.current ||
+      (!initialOrderId && !initialCustomerId)
+    ) {
+      return
+    }
+    const customer =
+      customers.find((candidate) => candidate.id === initialCustomerId) ??
+      findCustomerByOrderId(customers, initialOrderId)
+    if (!customer) return
+    initialSelectionApplied.current = true
+    setSelectedCustomerId(customer.id)
+  }, [customers, initialCustomerId, initialOrderId])
+
+  useEffect(() => {
+    if (!createOnOpen || createOnOpenApplied.current) return
+    createOnOpenApplied.current = true
+    setCustomerDraftError(null)
+    const timer = setTimeout(createCustomerModal.present, 120)
+    return () => clearTimeout(timer)
+  }, [createCustomerModal.present, createOnOpen])
 
   const selectedCustomer =
-    customers.find((customer) => customer.id === selectedCustomerId) ?? null;
-  const historyComplete = isOffline || !orders.hasNextPage;
+    customers.find((customer) => customer.id === selectedCustomerId) ?? null
+  const historyComplete = isOffline || !orders.hasNextPage
+
+  function saveCustomer() {
+    const name = customerDraft.name.trim()
+    const email = customerDraft.email.trim()
+    const phone = customerDraft.phone.trim()
+
+    if (isOffline) {
+      setCustomerDraftError(
+        "Reconnect to save a customer to the shared directory.",
+      )
+      return
+    }
+    if (!name) {
+      setCustomerDraftError("Enter the customer name.")
+      return
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setCustomerDraftError("Enter a valid email address.")
+      return
+    }
+
+    setCustomerDraftError(null)
+    createCustomer.mutate({
+      email: email || undefined,
+      name,
+      phone: phone || undefined,
+    })
+  }
 
   useEffect(() => {
     if (
@@ -152,24 +261,24 @@ export function CustomerBookContent({
         isFetchingNextPage: orders.isFetchingNextPage,
       })
     ) {
-      return;
+      return
     }
-    void orders.fetchNextPage();
+    void orders.fetchNextPage()
   }, [
     isOffline,
     orders.fetchNextPage,
     orders.hasNextPage,
     orders.isFetchingNextPage,
     selectedCustomerId,
-  ]);
+  ])
 
   const visibleCustomers = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
+    const normalizedSearch = search.trim().toLowerCase()
     return customers.filter((customer) => {
       if (filter === "pending" && customer.pendingOrders.length === 0) {
-        return false;
+        return false
       }
-      if (filter === "synced" && customer.orders.length === 0) return false;
+      if (filter === "synced" && customer.orders.length === 0) return false
       if (
         isOffline &&
         normalizedSearch &&
@@ -177,11 +286,11 @@ export function CustomerBookContent({
           .toLowerCase()
           .includes(normalizedSearch)
       ) {
-        return false;
+        return false
       }
-      return true;
-    });
-  }, [customers, filter, isOffline, search]);
+      return true
+    })
+  }, [customers, filter, isOffline, search])
 
   if (selectedCustomer) {
     return (
@@ -189,9 +298,20 @@ export function CustomerBookContent({
         customer={selectedCustomer}
         historyComplete={historyComplete}
         onBack={() => setSelectedCustomerId(null)}
+        onCreateOrder={() =>
+          router.push({
+            params: {
+              customerEmail: selectedCustomer.email ?? undefined,
+              customerId: selectedCustomer.id,
+              customerName: selectedCustomer.name,
+              customerPhone: selectedCustomer.phone ?? undefined,
+            },
+            pathname: "/create-sale-modal",
+          })
+        }
         onOpenOrder={(orderId) => router.push(commercialOrderHref(orderId))}
       />
-    );
+    )
   }
 
   return (
@@ -208,17 +328,17 @@ export function CustomerBookContent({
         keyExtractor={(item) => item.id}
         ListEmptyComponent={
           <EmptyState
-            className="mt-6"
+            className="m-4 flex-1 justify-center"
             icon="Users"
             message={
-              orders.isPending && !isOffline
-                ? "Loading customers from Commercial Orders."
+              (orders.isPending || directory.isPending) && !isOffline
+                ? "Loading customers."
                 : search || filter !== "all"
                   ? "Try another search or customer state."
-                  : "Customers appear from confirmed Orders when contact details are provided."
+                  : "Add a customer now, then select them when you create an order."
             }
             title={
-              orders.isPending && !isOffline
+              (orders.isPending || directory.isPending) && !isOffline
                 ? "Loading customers"
                 : search || filter !== "all"
                   ? "No matching customers"
@@ -229,7 +349,7 @@ export function CustomerBookContent({
         ListHeaderComponent={
           <View className="gap-4 pb-3">
             <Text className="text-sm leading-5 text-muted-foreground">
-              Customer identity and order activity from Commercial Orders.
+              Saved customers and customer activity from Commercial Orders.
             </Text>
             {isOffline ? (
               <StatusBanner
@@ -245,6 +365,15 @@ export function CustomerBookContent({
                 icon="AlertCircle"
                 message={orders.error.message}
                 onActionPress={() => void orders.refetch()}
+                tone="destructive"
+              />
+            ) : null}
+            {directory.isError ? (
+              <StatusBanner
+                actionLabel="Try again"
+                icon="AlertCircle"
+                message={directory.error.message}
+                onActionPress={() => void directory.refetch()}
                 tone="destructive"
               />
             ) : null}
@@ -275,12 +404,21 @@ export function CustomerBookContent({
               isFetchingNextPage: orders.isFetchingNextPage,
             })
           ) {
-            void orders.fetchNextPage();
+            void orders.fetchNextPage()
+          }
+          if (
+            filter !== "pending" &&
+            shouldFetchNextListPage({
+              hasNextPage: Boolean(directory.hasNextPage),
+              isFetchingNextPage: directory.isFetchingNextPage,
+            })
+          ) {
+            void directory.fetchNextPage()
           }
         }}
         onEndReachedThreshold={0.35}
         ListFooterComponent={
-          orders.isFetchingNextPage ? (
+          orders.isFetchingNextPage || directory.isFetchingNextPage ? (
             <Text className="py-5 text-center text-xs font-semibold text-muted-foreground">
               Loading more customers…
             </Text>
@@ -295,12 +433,32 @@ export function CustomerBookContent({
           onChangeText={setSearch}
           placeholder="Search name, phone, or email"
           totalCount={
-            Math.max(customerCount.data ?? 0, customers.length) +
-            pendingCustomerCount
+            Math.max(
+              (customerCount.data ?? 0) + (directoryCount.data ?? 0),
+              customers.length,
+            ) + pendingCustomerCount
           }
           value={search}
         />
       ) : null}
+      <ListCreateFab
+        accessibilityLabel="Add customer"
+        bottomOffset={showSearch ? 88 : 0}
+        onPress={() => {
+          setCustomerDraftError(null)
+          createCustomerModal.present()
+        }}
+        testID="customer-add-fab"
+      />
+      <CreateSaleCustomerSheet
+        disabled={isOffline}
+        draft={customerDraft}
+        error={customerDraftError}
+        isLoading={createCustomer.isPending}
+        onChange={setCustomerDraft}
+        onSave={saveCustomer}
+        ref={createCustomerModal.ref}
+      />
     </View>
-  );
+  )
 }

@@ -2,10 +2,11 @@ import {
   SimpleCatalogItemScreen,
   WorkflowModalScreen,
 } from "@/components/mobile"
-import { useLocalSearchParams, useRouter } from "expo-router"
+import { showOperationSuccess } from "@/lib/operation-success-navigation"
+import { useLocalSearchParams, useNavigation } from "expo-router"
 
 export default function FirstProductSetupModalRoute() {
-  const router = useRouter()
+  const navigation = useNavigation()
   const params = useLocalSearchParams<{ kind?: string }>()
   const initialKind =
     params.kind === "product" || params.kind === "service"
@@ -25,7 +26,13 @@ export default function FirstProductSetupModalRoute() {
     >
       <SimpleCatalogItemScreen
         initialKind={initialKind}
-        onComplete={() => router.replace("/catalog-items-modal")}
+        onComplete={(completion) =>
+          showOperationSuccess(navigation, {
+            kind: completion.kind,
+            name: completion.name,
+            status: "created",
+          })
+        }
       />
     </WorkflowModalScreen>
   )

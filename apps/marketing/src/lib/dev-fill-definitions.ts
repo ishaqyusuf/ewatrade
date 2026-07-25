@@ -12,7 +12,6 @@ const devRunSuffix = Date.now().toString().slice(-7)
 
 export const workspaceFill: WorkspaceValues = {
   subdomain: `nilemkt-${devRunSuffix.slice(-5)}`,
-  customDomain: "",
 }
 
 export const businessFill: BusinessValues = {

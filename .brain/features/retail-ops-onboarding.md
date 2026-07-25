@@ -39,6 +39,14 @@ team size, followed by owner name and email OTP or Google authentication. The
 operational workspace starts empty and becomes Product-only, Service-only or
 mixed from the Catalog Items the business actually creates.
 
+Authenticated mobile owners, admins, and managers can open Businesses and use
+the safe-area plus FAB to start another three-step business setup. The flow
+captures business details, the same descriptive profile answers, and a review
+before atomically creating a separate merchant Tenant, active owner
+Membership, first Store, and completed onboarding record. Completion selects
+the new business, clears tenant-scoped mobile cache, and opens its dashboard;
+the Businesses screen remains the switcher for every active membership.
+
 ## Product Rules
 - Keep first-run setup compact and operational.
 - Treat the chosen subdomain as storefront identity, never as a dashboard host.
@@ -57,6 +65,9 @@ mixed from the Catalog Items the business actually creates.
   a signup template.
 - Keep the shared DB helper as the write path for dashboard and API Store
   creation.
+- Keep new owned businesses as separate Tenants. Do not copy Catalog,
+  Inventory, Orders, Customers, Staff, subscription state, or settings from the
+  previously active business.
 
 ## Deferred
 - Setup-completion analytics beyond the first completed signup/session record.
@@ -72,3 +83,10 @@ mixed from the Catalog Items the business actually creates.
   scrolling and clear storefront/dashboard copy.
 - The created owner switched among five local QA businesses without tenant
   cache leakage.
+- The mobile Businesses screen and first new-business setup step were visually
+  reviewed on Android in dark mode, including unobstructed FAB/action stacking.
+  The remaining steps are covered by the source guard and type checks.
+  Repository tests cover the transactional tenant/membership/Store graph and
+  the switch-ready completion result. Live production submission was not
+  exercised because the local API/database profile could not start without
+  Docker.

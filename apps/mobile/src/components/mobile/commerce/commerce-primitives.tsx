@@ -210,7 +210,9 @@ export function CommerceCustomerRow({
   onPress: () => void;
 }) {
   const orderCount = customerOrderCount(customer);
-  const isPendingOnly = customer.orders.length === 0;
+  const isPendingOnly =
+    customer.orders.length === 0 && customer.pendingOrders.length > 0;
+  const hasNoOrders = orderCount === 0;
 
   return (
     <Pressable
@@ -233,17 +235,25 @@ export function CommerceCustomerRow({
             </Text>
             <StatusBadge
               className="min-h-7 px-2.5 py-0"
-              label={isPendingOnly ? "Pending sync" : "Synced"}
-              tone={isPendingOnly ? "warning" : "success"}
+              label={
+                hasNoOrders ? "Saved" : isPendingOnly ? "Pending sync" : "Synced"
+              }
+              tone={hasNoOrders ? "primary" : isPendingOnly ? "warning" : "success"}
             />
           </View>
           <Text className="text-sm text-muted-foreground" numberOfLines={1}>
             {customer.phone ?? customer.email ?? "No contact details"}
           </Text>
           <Text className="text-xs text-muted-foreground">
-            {historyComplete ? "" : "Loaded · "}
-            {customerValueLabel(customer)} order value · {orderCount}{" "}
-            {orderCount === 1 ? "order" : "orders"}
+            {hasNoOrders ? (
+              "No orders yet"
+            ) : (
+              <>
+                {historyComplete ? "" : "Loaded · "}
+                {customerValueLabel(customer)} order value · {orderCount}{" "}
+                {orderCount === 1 ? "order" : "orders"}
+              </>
+            )}
           </Text>
         </View>
       </View>

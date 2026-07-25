@@ -31,9 +31,6 @@ function getDisplayHost(url: string) {
   }
 }
 
-const baseInputClasses =
-  "w-full scroll-mt-24 rounded-lg border border-border/70 bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10 disabled:opacity-50"
-
 type SlugAvailability = "idle" | "checking" | "available" | "taken" | "invalid"
 
 type StepWorkspaceProps = {
@@ -123,7 +120,7 @@ function SubdomainPreview({ slug }: { slug: string }) {
 
 export function StepWorkspace({ defaultValues, onNext }: StepWorkspaceProps) {
   const form = useZodForm<WorkspaceValues>(workspaceSchema, {
-    defaultValues: defaultValues ?? { subdomain: "", customDomain: "" },
+    defaultValues: defaultValues ?? { subdomain: "" },
     mode: "onChange",
   })
 
@@ -257,31 +254,11 @@ export function StepWorkspace({ defaultValues, onNext }: StepWorkspaceProps) {
         {/* Live preview */}
         <SubdomainPreview slug={subdomain} />
 
-        {/* Custom domain */}
-        <label className="block space-y-2 text-sm font-medium text-foreground">
-          <div className="flex items-center gap-2">
-            <span>Custom domain</span>
-            <span className="border-l border-border/50 pl-2 text-[10px] font-medium text-muted-foreground">
-              optional
-            </span>
-          </div>
-          <input
-            {...form.register("customDomain")}
-            type="text"
-            placeholder="mystore.com"
-            className={baseInputClasses}
-          />
-          {form.formState.errors.customDomain ? (
-            <p className="text-xs text-destructive">
-              {form.formState.errors.customDomain.message}
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Connecting a custom domain is also available from your dashboard
-              after signup.
-            </p>
-          )}
-        </label>
+        <p className="rounded-lg border border-border/60 bg-muted/30 px-4 py-3 text-xs leading-5 text-muted-foreground">
+          Your free storefront address is ready immediately. After signup, use
+          Website & domains in the dashboard or app to buy a .com.ng or .com, or
+          securely connect one you already own.
+        </p>
 
         <div className="flex items-center justify-end border-t border-border/60 pt-5">
           <Button

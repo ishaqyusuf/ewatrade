@@ -2,7 +2,6 @@ import { mkdtemp, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
-// @ts-expect-error Bun test runtime types are outside the jobs package tsconfig.
 import { afterEach, describe, expect, mock, test } from "bun:test"
 
 const originalEmailCaptureFile = process.env.EMAIL_CAPTURE_FILE

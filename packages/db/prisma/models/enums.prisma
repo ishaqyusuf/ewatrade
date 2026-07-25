@@ -473,6 +473,92 @@ enum CommercialPaymentMethod {
   OTHER
 }
 
+enum DomainProvider {
+  GO54
+  OPENPROVIDER
+  EXTERNAL
+}
+
+enum DomainQuoteOperation {
+  REGISTER
+  RENEW
+}
+
+enum DomainQuoteStatus {
+  ACTIVE
+  CONSUMED
+  EXPIRED
+}
+
+enum DomainOrderType {
+  REGISTER
+  RENEW
+}
+
+enum DomainPaymentStatus {
+  CREATED
+  PENDING
+  PAID
+  FAILED
+  REFUND_PENDING
+  REFUNDED
+}
+
+enum DomainRegistrationStatus {
+  PENDING
+  REGISTERING
+  REGISTERED
+  UNCERTAIN
+  FAILED
+}
+
+enum ManagedDomainStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  REDEMPTION
+  SUSPENDED
+  TRANSFERRED_OUT
+  FAILED
+}
+
+enum DomainConnectionType {
+  MANAGED
+  EXTERNAL
+}
+
+enum DomainConnectionStatus {
+  OWNERSHIP_PENDING
+  DNS_CONFIGURING
+  VERIFYING
+  ACTIVE
+  FAILED
+  DISCONNECTED
+}
+
+enum DomainRenewalMode {
+  MANUAL
+  AUTO
+}
+
+enum DomainOperationKind {
+  REGISTER
+  RENEW
+  REFUND
+  CONNECT
+  VERIFY
+  TRANSFER
+  RECONCILE
+}
+
+enum DomainOperationStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  UNCERTAIN
+  FAILED
+}
+
 enum SiteStatus {
   DRAFT
   PUBLISHED

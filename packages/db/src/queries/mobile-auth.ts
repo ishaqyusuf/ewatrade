@@ -4,22 +4,15 @@ import {
   type OperatingCurrencyCode,
   normalizeOperatingCurrencyCode,
 } from "@ewatrade/utils"
-import { Prisma } from "../../generated/prisma/client"
-import { createTenantStore } from "./stores"
+import {
+  type OwnerBusinessSummary,
+  createOwnerSignupBusiness,
+} from "./owner-businesses"
 import type { DbClient } from "./types"
 
 export type MobileAuthMode = "login" | "sign_up"
 
-export type MobileAuthTenantSummary = {
-  currencyCode: string
-  id: string
-  name: string
-  role: string
-  slug: string
-  status: string
-  storeId: string | null
-  storeName: string | null
-}
+export type MobileAuthTenantSummary = OwnerBusinessSummary
 
 export type MobileAuthSessionResult = {
   expiresAt: Date
@@ -105,64 +98,6 @@ function addDays(date: Date, days: number) {
   const next = new Date(date)
   next.setDate(next.getDate() + days)
   return next
-}
-
-function toSlug(name: string) {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 48)
-}
-
-async function createUniqueTenant(
-  db: DbClient,
-  input: {
-    businessName: string
-    currencyCode: OperatingCurrencyCode
-  },
-) {
-  const baseSlug = toSlug(input.businessName) || "business"
-
-  for (let attempt = 0; attempt < 50; attempt++) {
-    const slug = attempt === 0 ? baseSlug : `${baseSlug}-${attempt}`
-    const existing = await db.tenant.findUnique({
-      where: { slug },
-      select: { id: true },
-    })
-
-    if (existing) continue
-
-    try {
-      return await db.tenant.create({
-        data: {
-          currencyCode: input.currencyCode,
-          enabledModes: ["STORE", "MERCHANT"],
-          name: input.businessName,
-          slug,
-          type: "MERCHANT",
-        },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          currencyCode: true,
-        },
-      })
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
-        continue
-      }
-
-      throw error
-    }
-  }
-
-  throw new Error("Unable to generate a unique business slug.")
 }
 
 async function getFirstActiveTenantForUser(
@@ -251,50 +186,7 @@ async function ensureOwnerTenant(
 
   if (existing) return existing
 
-  const tenant = await createUniqueTenant(db, {
-    businessName: input.businessName,
-    currencyCode: input.currencyCode,
-  })
-
-  await db.membership.create({
-    data: {
-      acceptedAt: new Date(),
-      role: "OWNER",
-      status: "ACTIVE",
-      tenantId: tenant.id,
-      userId: input.userId,
-    },
-  })
-
-  const store = await createTenantStore(db, {
-    addressLine1: input.addressLine1,
-    city: input.city,
-    createdByUserId: input.userId,
-    currencyCode: tenant.currencyCode,
-    name: input.businessName,
-    onboarding: {
-      businessProfileKey: input.businessProfileKey,
-      businessProfileVersion: input.businessProfileVersion,
-      operatingModel: input.operatingModel,
-      orderChannels: input.orderChannels,
-      otherBusinessDescription: input.otherBusinessDescription,
-      source: "mobile_owner_signup",
-      teamSize: input.teamSize,
-    },
-    tenantId: tenant.id,
-    supportPhone: input.phone,
-  })
-
-  return {
-    currencyCode: store.currencyCode,
-    id: tenant.id,
-    name: tenant.name,
-    role: "OWNER",
-    slug: tenant.slug,
-    status: "ACTIVE",
-    storeId: store.id,
-    storeName: store.name,
-  }
+  return createOwnerSignupBusiness(db, input)
 }
 
 async function createMobileSession(
@@ -471,7 +363,8 @@ export async function verifyMobileOwnerOtp(
     cleanText(input.businessName) ??
     cleanText(payload.businessName) ??
     "My Business"
-  const addressLine1 = cleanText(input.addressLine1) ?? cleanText(payload.addressLine1)
+  const addressLine1 =
+    cleanText(input.addressLine1) ?? cleanText(payload.addressLine1)
   const businessProfileKey =
     cleanText(input.businessProfileKey) ?? cleanText(payload.businessProfileKey)
   const businessProfileVersion =
@@ -479,8 +372,7 @@ export async function verifyMobileOwnerOtp(
       ? 1
       : null
   const city = cleanText(input.city) ?? cleanText(payload.city)
-  const operatingModel =
-    input.operatingModel ?? payload.operatingModel ?? null
+  const operatingModel = input.operatingModel ?? payload.operatingModel ?? null
   const orderChannels = input.orderChannels ?? payload.orderChannels ?? []
   const otherBusinessDescription =
     cleanText(input.otherBusinessDescription) ??

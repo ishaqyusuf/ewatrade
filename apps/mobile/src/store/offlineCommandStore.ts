@@ -53,40 +53,17 @@ export function getOfflineProvisionalProjection(
     (command) => command.localStatus === "pending",
   )
   return {
-    catalogItems: provisional.flatMap((command) =>
-      command.payload.kind === "product_setup"
-        ? [
-            {
-              clientCommandId: command.clientCommandId,
-              label: command.payload.name,
-              provisional: true as const,
-            },
-          ]
-        : [],
-    ),
-    commercialOrders: provisional.filter(
-      (command) => command.payload.kind === "commercial_order",
+    catalogItems: [],
+    commercialOrders: provisional.length,
+    customers: provisional.filter((command) =>
+      Boolean(
+        command.payload.customerEmail ||
+          command.payload.customerName ||
+          command.payload.customerPhone,
+      ),
     ).length,
-    customers: provisional.filter(
-      (command) =>
-        command.payload.kind === "commercial_order" &&
-        Boolean(
-          command.payload.customerEmail ||
-            command.payload.customerName ||
-            command.payload.customerPhone,
-        ),
-    ).length,
-    inventoryOperations: provisional.filter((command) =>
-      [
-        "custody_move",
-        "inventory_closeout",
-        "stock_count",
-        "stock_receipt",
-      ].includes(command.payload.kind),
-    ).length,
-    serviceOperations: provisional.filter((command) =>
-      command.payload.kind.startsWith("service_"),
-    ).length,
+    inventoryOperations: 0,
+    serviceOperations: 0,
   }
 }
 
@@ -202,7 +179,7 @@ export const useOfflineCommandStore = create<OfflineCommandState>()(
         deviceId: state.deviceId,
       }),
       storage: createJSONStorage(() => zustandStorage),
-      version: 2,
+      version: 3,
     },
   ),
 )

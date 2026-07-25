@@ -17,6 +17,10 @@ persistence boundary. Clients never access the database directly.
   description. This JSON does not control authorization or runtime domains.
 - Staff/billing/messaging: Retail Ops staff profiles and invite audit, plans,
   subscriptions/provider facts, conversations/messages/automation.
+- Managed domains: encrypted `DomainRegistrantProfile`, expiring
+  `DomainQuote`, Paystack-backed `DomainOrder`, registrar-owned
+  `ManagedDomain`, independently verified `DomainConnection`, append-only
+  `DomainEvent`, and idempotent `DomainOperationAttempt`.
 
 ## Catalog And Offerings
 
@@ -51,12 +55,17 @@ persistence boundary. Clients never access the database directly.
 
 ## Commerce
 
+- `Customer` is a tenant-scoped saved contact with a required name, optional
+  phone/email, and unique normalized phone/email identities per Tenant.
 - `Tenant.lastCommercialOrderSequence` is the atomic business-wide allocator
   for new human-facing Order numbers. Existing legacy references remain
   unchanged; new Orders use `ORD-001` with minimum three-digit padding.
 - `CommercialOrder` and `CommercialOrderLine` hold monetary/order state.
-- `CommercialOrderPayment` is the append-only payment/refund ledger. Orders
-  retain service charge and paid-total projections for efficient balance reads.
+  `CommercialOrder.createdByUserId` preserves the account that took the Order.
+- `CommercialOrderPayment` is the append-only payment/refund ledger.
+  `recordedByUserId` preserves the account that received or recorded each
+  payment fact. Orders retain service charge and paid-total projections for
+  efficient balance reads.
 - `OfferingSnapshot` is immutable and retains item, variant, Offering, pricing,
   exact quantity, unit, factor, configuration and balance meaning.
 - `ProductFulfillment` links fulfillment to reservation and Stock Operation.
@@ -83,16 +92,36 @@ persistence boundary. Clients never access the database directly.
 
 ## Offline
 
+- `Tenant.metadata.offlineOperationsEnabled` is the owner-controlled policy;
+  an absent value preserves enabled behavior for existing Tenants.
 - `OfflineDevice`, `OfflineDeviceRevocation`, `OfflineCommand` and
   `OfflineConflictReview` are the only durable offline records.
 - Commands retain client id, type, schema version, payload hash, dependencies,
   attempted/authoritative state and typed conflict/review outcomes.
+- Historical command enum values remain in storage, but current API writes and
+  replay accept only `COMMERCIAL_ORDER`.
+
+## Managed Domains
+
+- `DomainRegistrantProfile` is one encrypted legal-owner payload per Tenant.
+  Only display name, masked email, country and consent facts are plaintext.
+- `DomainQuote` snapshots registrar wholesale cost/currency, retail NGN price,
+  optional exchange rate and renewal indication until expiry or consumption.
+- `DomainOrder` separates Paystack state from registrar state and retains the
+  exact quote, accepted terms, payment reference and tenant idempotency key.
+- `ManagedDomain` is registrar lifecycle state. `DomainConnection` is
+  ownership/DNS/Vercel state; registration success does not imply connection
+  success.
+- `DomainEvent` is append-only audit. `DomainOperationAttempt` protects
+  provider writes and retains uncertain outcomes for reconciliation.
+- `TenantHostname` remains the storefront routing projection and is written
+  only after a Domain Connection becomes active.
 
 ## Removed Prototype Schema
 
 The current Prisma schema no longer declares old Product/ProductVariant,
 InventoryItem, unit-template/price-history, stock delivery/movement, staff
-wallet, cart/order/POS session, Product share-link, customer bridge, delivery
+wallet, cart/order/POS session, Product share-link, legacy customer bridge, delivery
 bridge, legacy Service or generic sync-run/event models. There are no runtime
 fallbacks or dual writes.
 

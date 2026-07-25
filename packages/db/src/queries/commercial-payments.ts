@@ -8,6 +8,7 @@ import {
   WorkAuthorizationStatus,
 } from "../../generated/prisma/enums"
 import { CatalogError } from "./catalog"
+import { loadTenantActors } from "./tenant-actors"
 
 export type CommercialPaymentMethodValue =
   | "bank_transfer"
@@ -283,4 +284,120 @@ export async function recordCommercialOrderPayment(
   return db.$transaction((tx) =>
     recordCommercialOrderPaymentInTransaction(tx, input),
   )
+}
+
+export async function listCommercialOrderPaymentsPage(
+  db: PrismaClient,
+  input: {
+    cursor?: string
+    limit?: number
+    query?: string
+    tenantId: string
+  },
+) {
+  const limit = Math.min(Math.max(input.limit ?? 20, 1), 50)
+  const query = input.query?.trim()
+  const matchingActors = query
+    ? await db.user.findMany({
+        select: { id: true },
+        where: {
+          memberships: { some: { tenantId: input.tenantId } },
+          OR: [
+            { displayName: { contains: query, mode: "insensitive" } },
+            { email: { contains: query, mode: "insensitive" } },
+            { name: { contains: query, mode: "insensitive" } },
+          ],
+        },
+      })
+    : []
+  const baseWhere: Prisma.CommercialOrderPaymentWhereInput = {
+    tenantId: input.tenantId,
+    type: CommercialPaymentType.PAYMENT,
+  }
+  const where: Prisma.CommercialOrderPaymentWhereInput = query
+    ? {
+        ...baseWhere,
+        OR: [
+          { reference: { contains: query, mode: "insensitive" } },
+          {
+            recordedByUserId: {
+              in: matchingActors.map((actor) => actor.id),
+            },
+          },
+          {
+            order: {
+              is: {
+                OR: [
+                  {
+                    customerEmail: {
+                      contains: query,
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    customerName: {
+                      contains: query,
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    customerPhone: {
+                      contains: query,
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    orderNumber: {
+                      contains: query,
+                      mode: "insensitive",
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      }
+    : baseWhere
+  const [records, totalCount] = await Promise.all([
+    db.commercialOrderPayment.findMany({
+      cursor: input.cursor ? { id: input.cursor } : undefined,
+      orderBy: [{ recordedAt: "desc" }, { id: "desc" }],
+      select: {
+        amountMinor: true,
+        id: true,
+        method: true,
+        order: {
+          select: {
+            currencyCode: true,
+            customerName: true,
+            id: true,
+            orderNumber: true,
+          },
+        },
+        recordedAt: true,
+        recordedByUserId: true,
+        reference: true,
+      },
+      skip: input.cursor ? 1 : 0,
+      take: limit + 1,
+      where,
+    }),
+    db.commercialOrderPayment.count({ where: baseWhere }),
+  ])
+  const hasNextPage = records.length > limit
+  const pageRecords = hasNextPage ? records.slice(0, limit) : records
+  const actors = await loadTenantActors(db, {
+    tenantId: input.tenantId,
+    userIds: pageRecords.map((payment) => payment.recordedByUserId),
+  })
+
+  return {
+    items: pageRecords.map((payment) => ({
+      ...payment,
+      recordedBy: actors.get(payment.recordedByUserId) ?? null,
+    })),
+    nextCursor: hasNextPage ? pageRecords.at(-1)?.id : undefined,
+    totalCount,
+  }
 }

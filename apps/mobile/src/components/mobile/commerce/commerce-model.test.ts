@@ -1,11 +1,11 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test"
 import {
   type CommercialOrder,
   buildCommerceCustomers,
   commerceOrderTone,
   commercePaymentTone,
   findCustomerByOrderId,
-} from "./commerce-model";
+} from "./commerce-model"
 
 function order(
   input: Partial<CommercialOrder> & Pick<CommercialOrder, "id">,
@@ -32,7 +32,7 @@ function order(
     taxMinor: 0,
     totalMinor: 1_000,
     ...input,
-  };
+  }
 }
 
 describe("production commerce customer projection", () => {
@@ -56,37 +56,59 @@ describe("production commerce customer projection", () => {
           lineCount: 2,
         },
       ],
-    );
+    )
 
-    expect(customers).toHaveLength(1);
-    expect(customers[0]?.orders).toHaveLength(2);
-    expect(customers[0]?.pendingOrders).toHaveLength(1);
+    expect(customers).toHaveLength(1)
+    expect(customers[0]?.orders).toHaveLength(2)
+    expect(customers[0]?.pendingOrders).toHaveLength(1)
     expect(customers[0]?.currencyTotals).toEqual([
       { currencyCode: "NGN", totalMinor: 3_000 },
-    ]);
+    ])
     expect(findCustomerByOrderId(customers, "order-2")?.name).toBe(
       "Amina Bello",
-    );
-  });
+    )
+  })
 
   test("keeps unlike currencies separate instead of adding them", () => {
     const [customer] = buildCommerceCustomers([
       order({ id: "order-ngn" }),
       order({ currencyCode: "USD", id: "order-usd", totalMinor: 500 }),
-    ]);
+    ])
 
     expect(customer?.currencyTotals).toEqual([
       { currencyCode: "NGN", totalMinor: 1_000 },
       { currencyCode: "USD", totalMinor: 500 },
-    ]);
-  });
-});
+    ])
+  })
+
+  test("keeps saved customers visible before their first order", () => {
+    const [customer] = buildCommerceCustomers(
+      [],
+      [],
+      [
+        {
+          createdAt: new Date("2026-07-23T10:00:00.000Z"),
+          email: "new@example.com",
+          id: "customer-1",
+          name: "New Customer",
+          phone: null,
+          updatedAt: new Date("2026-07-23T10:00:00.000Z"),
+        },
+      ],
+    )
+
+    expect(customer?.id).toBe("customer-1")
+    expect(customer?.name).toBe("New Customer")
+    expect(customer?.orders).toEqual([])
+    expect(customer?.currencyTotals).toEqual([])
+  })
+})
 
 describe("production commerce tones", () => {
   test("maps payment and order states to semantic tones", () => {
-    expect(commercePaymentTone("PAID")).toBe("success");
-    expect(commercePaymentTone("PARTIALLY_PAID")).toBe("warning");
-    expect(commerceOrderTone("COMPLETED")).toBe("success");
-    expect(commerceOrderTone("CANCELLED")).toBe("destructive");
-  });
-});
+    expect(commercePaymentTone("PAID")).toBe("success")
+    expect(commercePaymentTone("PARTIALLY_PAID")).toBe("warning")
+    expect(commerceOrderTone("COMPLETED")).toBe("success")
+    expect(commerceOrderTone("CANCELLED")).toBe("destructive")
+  })
+})

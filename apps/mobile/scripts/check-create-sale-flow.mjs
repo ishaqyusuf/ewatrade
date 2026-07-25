@@ -118,6 +118,7 @@ const contracts = [
       "All amount paid",
       "minorToMajorInput(totalMinor)",
       "Balance due",
+      '<View className="gap-5 px-4 pb-36">',
       "paymentSummary.receivedMinor",
       "Select at least one item",
       "Confirm sale",
@@ -177,6 +178,12 @@ const presentLegacyMarkers = legacyMarkers.filter((marker) =>
 if (presentLegacyMarkers.length > 0) {
   failures.push(
     `contains legacy order markers ${presentLegacyMarkers.join(", ")}`,
+  )
+}
+
+if (source.includes("contentContainerClassName=")) {
+  failures.push(
+    "checkout spacing must use a NativeWind-interoped inner View instead of an unsupported KeyboardAwareScrollView contentContainerClassName",
   )
 }
 

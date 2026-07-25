@@ -4,6 +4,7 @@ import {
   verifyMobileGoogleIdentity,
   verifyMobileOwnerOtp,
 } from "./mobile-auth"
+import { createOwnerBusiness } from "./owner-businesses"
 import type { DbClient } from "./types"
 
 type VerificationRow = {
@@ -396,6 +397,77 @@ function createMockMobileAuthDb(input?: {
 }
 
 describe("mobile auth queries", () => {
+  test("creates another isolated owner business for an existing account", async () => {
+    const existingTenant: TenantRow = {
+      createdAt: new Date("2026-07-01T00:00:00.000Z"),
+      currencyCode: "NGN",
+      id: "tenant_existing",
+      isActive: true,
+      name: "Existing Business",
+      slug: "existing-business",
+      stores: [],
+      updatedAt: new Date("2026-07-01T00:00:00.000Z"),
+    }
+    const db = createMockMobileAuthDb({
+      memberships: [
+        {
+          role: "OWNER",
+          status: "ACTIVE",
+          tenant: existingTenant,
+          userId: "user_owner",
+        },
+      ],
+      tenants: [existingTenant],
+      users: [
+        {
+          email: "owner@example.com",
+          id: "user_owner",
+          name: "Owner Name",
+        },
+      ],
+    })
+
+    const business = await createOwnerBusiness(db.client, {
+      addressLine1: "12 Market Road",
+      businessName: "Second Business",
+      businessProfileKey: "general-retail-groceries",
+      businessProfileVersion: 1,
+      city: "Lagos",
+      currencyCode: "NGN",
+      operatingModel: "products",
+      orderChannels: ["walk_in"],
+      phone: "08012345678",
+      teamSize: "2_5",
+      userId: "user_owner",
+    })
+
+    expect(db.tenants).toHaveLength(2)
+    expect(db.memberships).toHaveLength(2)
+    expect(db.stores).toEqual([
+      expect.objectContaining({
+        metadata: {
+          retailOps: {
+            onboarding: expect.objectContaining({
+              businessProfileKey: "general-retail-groceries",
+              source: "mobile_owner_business_create",
+            }),
+          },
+        },
+        name: "Second Business",
+        tenantId: "tenant_2",
+      }),
+    ])
+    expect(business).toMatchObject({
+      currencyCode: "NGN",
+      id: "tenant_2",
+      name: "Second Business",
+      role: "OWNER",
+      slug: "second-business",
+      status: "ACTIVE",
+      storeId: "store_1",
+    })
+  })
+
   test("creates a normalized OTP verification without storing the raw code", async () => {
     const db = createMockMobileAuthDb()
 

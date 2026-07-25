@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 type BottomSearchFooterProps = {
   accessibilityLabel: string
   alwaysShowSearch?: boolean
+  autoFocus?: boolean
   children?: ReactNode
   includeSafeArea?: boolean
   label?: string
@@ -22,6 +23,7 @@ type BottomSearchFooterProps = {
 export function BottomSearchFooter({
   accessibilityLabel,
   alwaysShowSearch = false,
+  autoFocus = false,
   children,
   includeSafeArea = true,
   label = "Search",
@@ -65,6 +67,7 @@ export function BottomSearchFooter({
                 accessibilityLabel={accessibilityLabel}
                 autoCapitalize="none"
                 autoCorrect={false}
+                autoFocus={autoFocus}
                 containerClassName={
                   layout === "inline" ? "min-w-0 flex-1" : undefined
                 }

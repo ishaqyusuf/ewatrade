@@ -20,31 +20,31 @@ type DashboardHomeHeaderProps = {
   businessName: string
   greetingName: string
   hasNotification?: boolean
-  onBusinessPress?: () => void
   onNotificationPress: () => void
   onProfilePress?: () => void
+  onSearchPress: () => void
 }
 
 export function DashboardHomeHeader({
   businessName,
   greetingName,
   hasNotification = false,
-  onBusinessPress,
   onNotificationPress,
   onProfilePress,
+  onSearchPress,
 }: DashboardHomeHeaderProps) {
   return (
     <View className="flex-row items-center gap-3">
       <Pressable
-        accessibilityLabel={`Switch business from ${businessName}`}
+        accessibilityLabel={`${greetingName} profile`}
         accessibilityRole="button"
-        className="size-10 items-center justify-center rounded-xl bg-primary active:opacity-85"
-        disabled={!onBusinessPress}
-        haptic={Boolean(onBusinessPress)}
-        onPress={onBusinessPress}
+        className="size-11 items-center justify-center rounded-full bg-foreground active:opacity-85"
+        disabled={!onProfilePress}
+        haptic={Boolean(onProfilePress)}
+        onPress={onProfilePress}
       >
-        <Text className="text-xs font-extrabold text-primary-foreground">
-          {initials(businessName)}
+        <Text className="text-sm font-extrabold text-background">
+          {initials(greetingName)}
         </Text>
       </Pressable>
       <View className="min-w-0 flex-1">
@@ -78,16 +78,13 @@ export function DashboardHomeHeader({
         ) : null}
       </Pressable>
       <Pressable
-        accessibilityLabel={`${greetingName} profile`}
+        accessibilityLabel="Open global search"
         accessibilityRole="button"
-        className="size-11 items-center justify-center rounded-full bg-foreground active:opacity-85"
-        disabled={!onProfilePress}
-        haptic={Boolean(onProfilePress)}
-        onPress={onProfilePress}
+        className="size-11 items-center justify-center rounded-full bg-card active:bg-accent"
+        haptic
+        onPress={onSearchPress}
       >
-        <Text className="text-sm font-extrabold text-background">
-          {initials(greetingName)}
-        </Text>
+        <Icon className="size-base text-foreground" name="Search" />
       </Pressable>
     </View>
   )

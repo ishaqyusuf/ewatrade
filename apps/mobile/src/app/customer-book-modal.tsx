@@ -1,10 +1,14 @@
-import { CustomerBookContent, WorkflowModalScreen } from "@/components/mobile";
-import { useLocalSearchParams } from "expo-router";
+import { CustomerBookContent, WorkflowModalScreen } from "@/components/mobile"
+import { useLocalSearchParams } from "expo-router"
 
 export default function CustomerBookModalRoute() {
-  const { customerOrderId } = useLocalSearchParams<{
-    customerOrderId?: string;
-  }>();
+  const { create, customerId, customerName, customerOrderId } =
+    useLocalSearchParams<{
+      create?: string
+      customerId?: string
+      customerName?: string
+      customerOrderId?: string
+    }>()
 
   return (
     <WorkflowModalScreen
@@ -12,7 +16,12 @@ export default function CustomerBookModalRoute() {
       closeLabel="Close customer book"
       title="Customers"
     >
-      <CustomerBookContent initialOrderId={customerOrderId} />
+      <CustomerBookContent
+        createOnOpen={create === "true"}
+        initialCustomerId={customerId}
+        initialCustomerName={customerName}
+        initialOrderId={customerOrderId}
+      />
     </WorkflowModalScreen>
-  );
+  )
 }

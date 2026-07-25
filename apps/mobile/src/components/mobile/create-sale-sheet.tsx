@@ -32,6 +32,7 @@ import {
   getSelectableSaleItemChoices,
   openSaleItemPicker,
   removeSaleItemPickerLine,
+  selectInitialCatalogItemLine,
   updateSaleItemPickerLineQuantity,
 } from "@/components/mobile/sale-item-picker-model"
 import { StatusBanner } from "@/components/mobile/status-banner"
@@ -39,13 +40,18 @@ import { Icon } from "@/components/ui/icon"
 import { useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { useAuthContext } from "@/hooks/use-auth"
 import {
   LIST_PAGE_SIZE,
   shouldFetchNextListPage,
   shouldShowListSearch,
 } from "@/lib/list-pagination"
+import { buildOfflineOrderCommand } from "@/lib/offline-order"
 import { useOfflineCommandStore } from "@/store/offlineCommandStore"
-import { useOperationalModeStore } from "@/store/operationalModeStore"
+import {
+  isOfflineAccessAllowed,
+  useOperationalModeStore,
+} from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type {
   RouterInputs,
@@ -63,7 +69,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
-import { useDeferredValue, useMemo, useRef, useState } from "react"
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
 import { FlatList, View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -77,6 +83,15 @@ type SelectedCustomer = {
   id: string
   name: string
   phone?: string
+}
+
+export type CreateSaleCompletion = {
+  amount: string
+  customer: string
+  itemCount: number
+  paymentState: "paid" | "partially_paid" | "pending"
+  reference?: string
+  status: "created" | "queued"
 }
 
 const PAYMENT_METHODS: Array<[PaymentMethod, string]> = [
@@ -128,6 +143,7 @@ function flatten(
             return [
               {
                 balanceRevision: balance?.revision,
+                catalogItemId: item.id,
                 configurationVersionId:
                   item.product?.currentUnitConfiguration?.id,
                 currencyCode: offering.currencyCode,
@@ -356,23 +372,36 @@ function customerFromSuggestion(customer: CommerceCustomer): SelectedCustomer {
 
 export function CreateSaleContent({
   attendantName: _attendantName,
+  initialCatalogItemId,
+  initialCustomer,
   itemKind,
   onComplete,
   presentation: _presentation,
 }: {
   attendantName?: string
+  initialCatalogItemId?: string
+  initialCustomer?: {
+    email?: string
+    id: string
+    name: string
+    phone?: string
+  }
   itemKind?: "service"
-  onComplete?: () => void
+  onComplete?: (completion: CreateSaleCompletion) => void
   presentation?: "screen" | "sheet"
 }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const customerModal = useModal()
   const insets = useSafeAreaInsets()
-  const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
+  const offlineMode = useOperationalModeStore((state) => state.isOfflineMode)
+  const offlineAccessByBusinessId = useOperationalModeStore(
+    (state) => state.offlineAccessByBusinessId,
+  )
   const queueCommand = useOfflineCommandStore((state) => state.queueCommand)
   const orderClientId = useRef(`order-${Crypto.randomUUID()}`)
   const paymentClientId = useRef(`payment-${Crypto.randomUUID()}`)
+  const initialCatalogSelectionApplied = useRef(false)
   const [amountReceived, setAmountReceived] = useState("")
   const [customerDraft, setCustomerDraft] = useState<SaleCustomerDraft>({
     email: "",
@@ -404,8 +433,11 @@ export function CreateSaleContent({
     null,
   )
   const [selectedCustomer, setSelectedCustomer] =
-    useState<SelectedCustomer | null>(null)
+    useState<SelectedCustomer | null>(initialCustomer ?? null)
   const [step, setStep] = useState<SaleStep>("items")
+  const businessId = useAuthContext().profile?.businessId
+  const isOffline =
+    offlineMode && isOfflineAccessAllowed(offlineAccessByBusinessId, businessId)
 
   const catalog = useInfiniteQuery(
     trpc.catalog.listItemsPage.infiniteQueryOptions(
@@ -424,6 +456,15 @@ export function CreateSaleContent({
   const availability = useQuery(
     trpc.tenant.featureAvailability.queryOptions(undefined, { retry: false }),
   )
+  const initialCatalogItem = useQuery(
+    trpc.catalog.getItem.queryOptions(
+      { itemId: initialCatalogItemId ?? "" },
+      {
+        enabled: !isOffline && Boolean(initialCatalogItemId),
+        retry: false,
+      },
+    ),
+  )
   const recentOrders = useInfiniteQuery(
     trpc.orders.listPage.infiniteQueryOptions(
       {
@@ -438,26 +479,53 @@ export function CreateSaleContent({
       },
     ),
   )
+  const customerDirectory = useInfiniteQuery(
+    trpc.customers.listPage.infiniteQueryOptions(
+      {
+        limit: LIST_PAGE_SIZE,
+        query: isOffline ? undefined : deferredCustomerSearch || undefined,
+      },
+      {
+        enabled: !isOffline,
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        retry: false,
+      },
+    ),
+  )
   const customerCount = useQuery(
     trpc.orders.customerCount.queryOptions(undefined, {
       enabled: !isOffline,
       retry: false,
     }),
   )
+  const directoryCustomerCount = useQuery(
+    trpc.customers.count.queryOptions(undefined, {
+      enabled: !isOffline,
+      retry: false,
+    }),
+  )
+  const customerMutation = useMutation(trpc.customers.create.mutationOptions())
   const orderMutation = useMutation(trpc.orders.create.mutationOptions())
   const paymentMutation = useMutation(
     trpc.orders.recordPayment.mutationOptions(),
   )
 
-  const loadedRows = useMemo(
-    () =>
-      flatten(
-        catalog.data?.pages.flatMap((page) => page.items) ?? [],
-        availability.data?.storeId,
-        itemKind,
-      ),
-    [availability.data?.storeId, catalog.data?.pages, itemKind],
-  )
+  const loadedRows = useMemo(() => {
+    const items = catalog.data?.pages.flatMap((page) => page.items) ?? []
+    const initialItem = initialCatalogItem.data
+    return flatten(
+      initialItem
+        ? [initialItem, ...items.filter((item) => item.id !== initialItem.id)]
+        : items,
+      availability.data?.storeId,
+      itemKind,
+    )
+  }, [
+    availability.data?.storeId,
+    catalog.data?.pages,
+    initialCatalogItem.data,
+    itemKind,
+  ])
   const allRows = useMemo(() => {
     const normalizedSearch = productSearch.trim().toLowerCase()
     if (!isOffline || !normalizedSearch) return loadedRows
@@ -467,6 +535,24 @@ export function CreateSaleContent({
         .includes(normalizedSearch),
     )
   }, [isOffline, loadedRows, productSearch])
+  useEffect(() => {
+    if (
+      initialCatalogSelectionApplied.current ||
+      !initialCatalogItemId ||
+      allRows.length === 0
+    ) {
+      return
+    }
+    initialCatalogSelectionApplied.current = true
+    setSelectedLines((lines) =>
+      selectInitialCatalogItemLine({
+        catalogItemId: initialCatalogItemId,
+        choices: allRows,
+        lineId: Crypto.randomUUID(),
+        lines,
+      }),
+    )
+  }, [allRows, initialCatalogItemId])
   const selectedRows = useMemo(
     () =>
       selectedLines.flatMap(({ id, offering, quantity }) => {
@@ -492,8 +578,10 @@ export function CreateSaleContent({
     () =>
       buildCommerceCustomers(
         recentOrders.data?.pages.flatMap((page) => page.items) ?? [],
+        [],
+        customerDirectory.data?.pages.flatMap((page) => page.items) ?? [],
       ),
-    [recentOrders.data?.pages],
+    [customerDirectory.data?.pages, recentOrders.data?.pages],
   )
   const customers = useMemo(() => {
     const normalizedSearch = customerSearch.trim().toLowerCase()
@@ -505,7 +593,10 @@ export function CreateSaleContent({
     )
   }, [customerSearch, isOffline, loadedCustomers])
   const showCustomerSearch = shouldShowListSearch(
-    Math.max(customerCount.data ?? 0, loadedCustomers.length),
+    Math.max(
+      (customerCount.data ?? 0) + (directoryCustomerCount.data ?? 0),
+      loadedCustomers.length,
+    ),
   )
   const isSubmitting = orderMutation.isPending || paymentMutation.isPending
 
@@ -602,7 +693,7 @@ export function CreateSaleContent({
     customerModal.present()
   }
 
-  function saveCustomerDraft() {
+  async function saveCustomerDraft() {
     const name = customerDraft.name.trim()
     const email = customerDraft.email.trim()
     const phone = customerDraft.phone.trim()
@@ -614,13 +705,41 @@ export function CreateSaleContent({
       setCustomerDraftError("Enter a valid email address.")
       return
     }
-    selectCustomer({
-      email: email || undefined,
-      id: `draft:${name.toLowerCase()}:${phone || email}`,
-      name,
-      phone: phone || undefined,
-    })
-    customerModal.dismiss()
+    if (isOffline) {
+      selectCustomer({
+        email: email || undefined,
+        id: `offline:${name.toLowerCase()}:${phone || email}`,
+        name,
+        phone: phone || undefined,
+      })
+      setCustomerDraft({ email: "", name: "", phone: "" })
+      customerModal.dismiss()
+      return
+    }
+    setCustomerDraftError(null)
+    try {
+      const customer = await customerMutation.mutateAsync({
+        email: email || undefined,
+        name,
+        phone: phone || undefined,
+      })
+      await Promise.all([
+        queryClient.invalidateQueries(trpc.customers.count.queryFilter()),
+        queryClient.invalidateQueries(trpc.customers.listPage.queryFilter()),
+      ])
+      selectCustomer({
+        email: customer.email ?? undefined,
+        id: customer.id,
+        name: customer.name,
+        phone: customer.phone ?? undefined,
+      })
+      setCustomerDraft({ email: "", name: "", phone: "" })
+      customerModal.dismiss()
+    } catch (failure) {
+      setCustomerDraftError(
+        failure instanceof Error ? failure.message : "Could not save customer.",
+      )
+    }
   }
 
   async function refreshOrderQueries() {
@@ -628,6 +747,8 @@ export function CreateSaleContent({
       queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
       queryClient.invalidateQueries(trpc.orders.listPage.queryFilter()),
       queryClient.invalidateQueries(trpc.orders.customerCount.queryFilter()),
+      queryClient.invalidateQueries(trpc.customers.count.queryFilter()),
+      queryClient.invalidateQueries(trpc.customers.listPage.queryFilter()),
       queryClient.invalidateQueries(trpc.services.queuePage.queryFilter()),
       queryClient.invalidateQueries(
         trpc.tenant.featureAvailability.queryFilter(),
@@ -673,12 +794,28 @@ export function CreateSaleContent({
     }
     setError(null)
     if (isOffline) {
-      queueCommand({
-        dependencyClientIds: [],
-        eventVersion: 1,
-        payload: { kind: "commercial_order", ...payload },
+      queueCommand(
+        buildOfflineOrderCommand({
+          clientCommandId: orderClientId.current,
+          customer: selectedCustomer,
+          lines,
+          payment:
+            paymentSummary.receivedMinor > 0
+              ? {
+                  amountMinor: paymentSummary.receivedMinor,
+                  clientPaymentId: paymentClientId.current,
+                  method: paymentMethod,
+                }
+              : undefined,
+        }),
+      )
+      onComplete?.({
+        amount: formatMinorMoney(totalMinor, currencyCode),
+        customer: selectedCustomer?.name ?? "Guest customer",
+        itemCount: selectedRows.length,
+        paymentState: paymentSummary.paymentState,
+        status: "queued",
       })
-      onComplete?.()
       return
     }
 
@@ -697,7 +834,14 @@ export function CreateSaleContent({
         })
       }
       await refreshOrderQueries()
-      onComplete?.()
+      onComplete?.({
+        amount: formatMinorMoney(totalMinor, currencyCode),
+        customer: selectedCustomer?.name ?? "Guest customer",
+        itemCount: selectedRows.length,
+        paymentState: paymentSummary.paymentState,
+        reference: order.orderNumber,
+        status: "created",
+      })
     } catch (failure) {
       setError(
         failure instanceof Error ? failure.message : "Could not confirm order.",
@@ -862,7 +1006,8 @@ export function CreateSaleContent({
             keyboardShouldPersistTaps="handled"
             keyExtractor={(customer) => customer.id}
             ListEmptyComponent={
-              recentOrders.isPending && !isOffline ? (
+              (recentOrders.isPending || customerDirectory.isPending) &&
+              !isOffline ? (
                 <Text className="py-10 text-center text-sm text-muted-foreground">
                   Loading recent customers.
                 </Text>
@@ -892,6 +1037,14 @@ export function CreateSaleContent({
                       tone="warning"
                     />
                   </View>
+                ) : null}
+                {customerDirectory.isError ? (
+                  <StatusBanner
+                    icon="AlertCircle"
+                    message={customerDirectory.error.message}
+                    title="Saved customers unavailable"
+                    tone="warning"
+                  />
                 ) : null}
                 <CustomerActionRow
                   description="Add name and optional contact details"
@@ -927,10 +1080,19 @@ export function CreateSaleContent({
               ) {
                 void recentOrders.fetchNextPage()
               }
+              if (
+                shouldFetchNextListPage({
+                  hasNextPage: Boolean(customerDirectory.hasNextPage),
+                  isFetchingNextPage: customerDirectory.isFetchingNextPage,
+                })
+              ) {
+                void customerDirectory.fetchNextPage()
+              }
             }}
             onEndReachedThreshold={0.35}
             ListFooterComponent={
-              recentOrders.isFetchingNextPage ? (
+              recentOrders.isFetchingNextPage ||
+              customerDirectory.isFetchingNextPage ? (
                 <Text className="py-5 text-center text-xs font-semibold text-muted-foreground">
                   Loading more customers…
                 </Text>
@@ -943,7 +1105,7 @@ export function CreateSaleContent({
               onChangeText={setCustomerSearch}
               placeholder="Search customer, phone, or email"
               totalCount={Math.max(
-                customerCount.data ?? 0,
+                (customerCount.data ?? 0) + (directoryCustomerCount.data ?? 0),
                 loadedCustomers.length,
               )}
               value={customerSearch}
@@ -956,192 +1118,191 @@ export function CreateSaleContent({
         <View className="flex-1">
           <KeyboardAwareScrollView
             className="flex-1"
-            contentContainerClassName="gap-5 px-4 pb-36"
             keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
           >
-            <SaleStageHeader
-              current={3}
-              description="Check the details, record payment, then confirm the sale."
-              onBack={() => {
-                setError(null)
-                setStep("customer")
-              }}
-              title="Checkout"
-            />
-            {error ? (
-              <StatusBanner
-                icon="AlertCircle"
-                message={error}
-                title="Could not confirm order"
-                tone="destructive"
+            <View className="gap-5 px-4 pb-36">
+              <SaleStageHeader
+                current={3}
+                description="Check the details, record payment, then confirm the sale."
+                onBack={() => {
+                  setError(null)
+                  setStep("customer")
+                }}
+                title="Checkout"
               />
-            ) : null}
-            {isOffline ? (
-              <StatusBanner
-                icon="Wind"
-                message="The order can be queued now, but payment is online-only and must be recorded after sync."
-                title="Payment not available offline"
-                tone="warning"
+              {error ? (
+                <StatusBanner
+                  icon="AlertCircle"
+                  message={error}
+                  title="Could not confirm order"
+                  tone="destructive"
+                />
+              ) : null}
+              {isOffline ? (
+                <StatusBanner
+                  icon="Wind"
+                  message="The Order, amount received, payment method, and customer details will sync together when you reconnect."
+                  title="Offline checkout"
+                  tone="warning"
+                />
+              ) : null}
+
+              <SaleTotalSummary
+                helper={`${selectedRows.length} item${selectedRows.length === 1 ? "" : "s"}`}
+                label="Total to collect"
+                value={formatMinorMoney(totalMinor, currencyCode)}
               />
-            ) : null}
 
-            <SaleTotalSummary
-              helper={`${selectedRows.length} item${selectedRows.length === 1 ? "" : "s"}`}
-              label="Total to collect"
-              value={formatMinorMoney(totalMinor, currencyCode)}
-            />
-
-            <View>
-              <View className="min-h-11 flex-row items-center justify-between gap-3">
-                <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
-                  Sale details
-                </Text>
-                <Pressable
-                  accessibilityLabel="Edit sale items"
-                  className="min-h-11 justify-center px-1"
-                  haptic
-                  onPress={() => setStep("items")}
-                >
-                  <Text className="text-xs font-bold text-primary">
-                    Edit items
+              <View>
+                <View className="min-h-11 flex-row items-center justify-between gap-3">
+                  <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
+                    Sale details
                   </Text>
-                </Pressable>
-              </View>
-              {selectedRows.map(
-                ({ id, offering, quantity, totalMinor: lineTotal }) => (
-                  <View
-                    className="flex-row items-start justify-between gap-3 border-b border-border py-3"
-                    key={id}
+                  <Pressable
+                    accessibilityLabel="Edit sale items"
+                    className="min-h-11 justify-center px-1"
+                    haptic
+                    onPress={() => setStep("items")}
                   >
-                    <View className="min-w-0 flex-1 gap-1">
-                      <Text className="font-bold text-foreground">
-                        {offering.displayName}
-                      </Text>
-                      <Text className="text-xs text-muted-foreground">
-                        {offering.offeringName} · {quantity} ×{" "}
+                    <Text className="text-xs font-bold text-primary">
+                      Edit items
+                    </Text>
+                  </Pressable>
+                </View>
+                {selectedRows.map(
+                  ({ id, offering, quantity, totalMinor: lineTotal }) => (
+                    <View
+                      className="flex-row items-start justify-between gap-3 border-b border-border py-3"
+                      key={id}
+                    >
+                      <View className="min-w-0 flex-1 gap-1">
+                        <Text className="font-bold text-foreground">
+                          {offering.displayName}
+                        </Text>
+                        <Text className="text-xs text-muted-foreground">
+                          {offering.offeringName} · {quantity} ×{" "}
+                          {formatMinorMoney(
+                            offering.fixedPriceMinor ?? 0,
+                            offering.currencyCode,
+                          )}
+                        </Text>
+                      </View>
+                      <Text className="font-extrabold text-foreground">
                         {formatMinorMoney(
-                          offering.fixedPriceMinor ?? 0,
+                          lineTotal ?? 0,
                           offering.currencyCode,
                         )}
                       </Text>
                     </View>
+                  ),
+                )}
+                <View className="flex-row items-center gap-3 py-4">
+                  <View className="h-10 w-10 items-center justify-center rounded-full bg-muted">
+                    <Icon
+                      className="size-sm text-muted-foreground"
+                      name={selectedCustomer ? "User" : "UserX"}
+                    />
+                  </View>
+                  <View className="min-w-0 flex-1 gap-1">
                     <Text className="font-extrabold text-foreground">
-                      {formatMinorMoney(lineTotal ?? 0, offering.currencyCode)}
+                      {selectedCustomer?.name ?? "Guest customer"}
+                    </Text>
+                    <Text className="text-xs text-muted-foreground">
+                      {selectedCustomer
+                        ? [selectedCustomer.phone, selectedCustomer.email]
+                            .filter(Boolean)
+                            .join(" · ") || "No contact details"
+                        : "No customer attached to this sale"}
                     </Text>
                   </View>
-                ),
-              )}
-              <View className="flex-row items-center gap-3 py-4">
-                <View className="h-10 w-10 items-center justify-center rounded-full bg-muted">
-                  <Icon
-                    className="size-sm text-muted-foreground"
-                    name={selectedCustomer ? "User" : "UserX"}
-                  />
+                  <Pressable
+                    accessibilityLabel="Change customer"
+                    className="min-h-11 justify-center px-1"
+                    haptic
+                    onPress={() => setStep("customer")}
+                  >
+                    <Text className="text-xs font-bold text-primary">
+                      Change
+                    </Text>
+                  </Pressable>
                 </View>
-                <View className="min-w-0 flex-1 gap-1">
-                  <Text className="font-extrabold text-foreground">
-                    {selectedCustomer?.name ?? "Guest customer"}
+              </View>
+
+              <View className="gap-4 border-t border-border pt-5">
+                <View className="gap-1">
+                  <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
+                    Payment
                   </Text>
-                  <Text className="text-xs text-muted-foreground">
-                    {selectedCustomer
-                      ? [selectedCustomer.phone, selectedCustomer.email]
-                          .filter(Boolean)
-                          .join(" · ") || "No contact details"
-                      : "No customer attached to this sale"}
-                  </Text>
-                </View>
-                <Pressable
-                  accessibilityLabel="Change customer"
-                  className="min-h-11 justify-center px-1"
-                  haptic
-                  onPress={() => setStep("customer")}
-                >
-                  <Text className="text-xs font-bold text-primary">Change</Text>
-                </Pressable>
-              </View>
-            </View>
-
-            <View className="gap-4 border-t border-border pt-5">
-              <View className="gap-1">
-                <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
-                  Payment
-                </Text>
-                <Text className="text-sm text-muted-foreground">
-                  Choose the method and enter what the customer paid.
-                </Text>
-              </View>
-              <View className="flex-row gap-2">
-                {PAYMENT_METHODS.map(([value, label]) => (
-                  <SaleSegmentOption
-                    icon={
-                      value === "cash"
-                        ? "Wallet"
-                        : value === "bank_transfer"
-                          ? "Building"
-                          : "CreditCard"
-                    }
-                    key={value}
-                    label={label}
-                    onPress={() => setPaymentMethod(value)}
-                    selected={paymentMethod === value}
-                  />
-                ))}
-              </View>
-
-              <MoneyField
-                actionLabel={isOffline ? undefined : "All amount paid"}
-                currencyCode={currencyCode}
-                editable={!isOffline}
-                error={paymentSummary.error ?? undefined}
-                helper={
-                  isOffline
-                    ? "Reconnect to record payment."
-                    : "Leave empty for an unpaid sale, or enter a part payment."
-                }
-                label="Amount received"
-                onActionPress={
-                  isOffline
-                    ? undefined
-                    : () => setAmountReceived(minorToMajorInput(totalMinor))
-                }
-                onChangeValue={setAmountReceived}
-                placeholder="0.00"
-                value={amountReceived}
-              />
-
-              <View className="gap-3 rounded-2xl bg-muted/60 p-4">
-                <View className="flex-row items-center justify-between gap-3">
                   <Text className="text-sm text-muted-foreground">
-                    Amount received
-                  </Text>
-                  <Text className="font-bold text-foreground">
-                    {formatMinorMoney(
-                      paymentSummary.receivedMinor,
-                      currencyCode,
-                    )}
+                    Choose the method and enter what the customer paid.
                   </Text>
                 </View>
-                <View className="h-px bg-border" />
-                <View className="flex-row items-end justify-between gap-3">
-                  <View className="gap-1">
-                    <Text className="text-xs font-bold uppercase tracking-[1px] text-muted-foreground">
-                      Balance due
+                <View className="flex-row gap-2">
+                  {PAYMENT_METHODS.map(([value, label]) => (
+                    <SaleSegmentOption
+                      icon={
+                        value === "cash"
+                          ? "Wallet"
+                          : value === "bank_transfer"
+                            ? "Building"
+                            : "CreditCard"
+                      }
+                      key={value}
+                      label={label}
+                      onPress={() => setPaymentMethod(value)}
+                      selected={paymentMethod === value}
+                    />
+                  ))}
+                </View>
+
+                <MoneyField
+                  actionLabel="All amount paid"
+                  currencyCode={currencyCode}
+                  error={paymentSummary.error ?? undefined}
+                  helper="Leave empty for an unpaid sale, or enter a part payment."
+                  label="Amount received"
+                  onActionPress={() =>
+                    setAmountReceived(minorToMajorInput(totalMinor))
+                  }
+                  onChangeValue={setAmountReceived}
+                  placeholder="0.00"
+                  value={amountReceived}
+                />
+
+                <View className="gap-3 rounded-2xl bg-muted/60 p-4">
+                  <View className="flex-row items-center justify-between gap-3">
+                    <Text className="text-sm text-muted-foreground">
+                      Amount received
                     </Text>
-                    <Text className="text-xs font-semibold text-primary">
-                      {paymentSummary.paymentState === "paid"
-                        ? "Paid in full"
-                        : paymentSummary.paymentState === "partially_paid"
-                          ? "Part payment"
-                          : "Payment pending"}
+                    <Text className="font-bold text-foreground">
+                      {formatMinorMoney(
+                        paymentSummary.receivedMinor,
+                        currencyCode,
+                      )}
                     </Text>
                   </View>
-                  <Text className="text-2xl font-extrabold text-foreground">
-                    {formatMinorMoney(
-                      paymentSummary.balanceDueMinor,
-                      currencyCode,
-                    )}
-                  </Text>
+                  <View className="h-px bg-border" />
+                  <View className="flex-row items-end justify-between gap-3">
+                    <View className="gap-1">
+                      <Text className="text-xs font-bold uppercase tracking-[1px] text-muted-foreground">
+                        Balance due
+                      </Text>
+                      <Text className="text-xs font-semibold text-primary">
+                        {paymentSummary.paymentState === "paid"
+                          ? "Paid in full"
+                          : paymentSummary.paymentState === "partially_paid"
+                            ? "Part payment"
+                            : "Payment pending"}
+                      </Text>
+                    </View>
+                    <Text className="text-2xl font-extrabold text-foreground">
+                      {formatMinorMoney(
+                        paymentSummary.balanceDueMinor,
+                        currencyCode,
+                      )}
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -1186,11 +1347,12 @@ export function CreateSaleContent({
       <CreateSaleCustomerSheet
         draft={customerDraft}
         error={customerDraftError}
+        isLoading={customerMutation.isPending}
         onChange={(draft) => {
           setCustomerDraft(draft)
           setCustomerDraftError(null)
         }}
-        onSave={saveCustomerDraft}
+        onSave={() => void saveCustomerDraft()}
         ref={customerModal.ref}
       />
       <CompactSaleItemPicker

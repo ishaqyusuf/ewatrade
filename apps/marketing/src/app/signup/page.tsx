@@ -143,7 +143,6 @@ export default function SignupPage() {
         addressLine1: formState.business?.addressLine1 ?? "",
         accessToken: accessToken ?? undefined,
         subdomain: formState.workspace?.subdomain ?? "",
-        customDomain: formState.workspace?.customDomain ?? "",
         businessName: formState.business?.businessName ?? "",
         city: formState.business?.city ?? "",
         businessProfileKey: formState.business?.businessProfileKey ?? "",

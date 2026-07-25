@@ -61,7 +61,8 @@ behavioral testing are complete.
   transformation, custody and Store transfer workflows.
 - Mobile provides Product/Service setup, mixed Offering orders, receipt/count/
   adjustment/custody, transformation, closeout, reporting and sync/conflict
-  review through full-screen workflows.
+  review through full-screen workflows. Only new Order checkout may be queued
+  offline; all setup, inventory and closeout mutations require a connection.
 - Business registration and dashboards use the shared application host;
   business subdomains remain storefront-only.
 - Mobile onboarding introduces Catalog, mixed Orders, stock/work tracking and
@@ -71,9 +72,11 @@ behavioral testing are complete.
 
 ## Offline And Reporting
 
-- The mobile persisted command queue has a clean schema boundary and discards
-  incompatible state; no compatibility reader remains.
-- Supported commands are provisional until replay. Replay is idempotent,
+- The owner-controlled mobile command queue has a clean schema boundary and
+  discards incompatible state; no compatibility reader remains.
+- Only new Commercial Orders with optional checkout payment/customer facts are
+  supported offline. Catalog and inventory commands are online-only.
+- Supported Order commands are provisional until replay. Replay is idempotent,
   dependency-aware and conflict-visible.
 - Reports expose exact entered/canonical quantities, balance/configuration
   context, Commercial Order facts and reconciliation state without silently

@@ -16,10 +16,22 @@ const TOGGLE_SIZE = 40
 const TOGGLE_ICON_SIZE = 18
 const OPERATIONAL_DOCK_PATHS = new Set([
   "/admin-home",
+  "/catalog",
   "/dashboard",
+  "/more",
+  "/orders",
   "/sales-rep-home",
 ])
-const FLOATING_ACTION_PATHS = new Set(["/create-sale-modal"])
+const FLOATING_ACTION_PATHS = new Set([
+  "/business-switch-modal",
+  "/catalog",
+  "/catalog-items-modal",
+  "/create-sale-modal",
+  "/customer-book-modal",
+  "/new-business-onboarding-modal",
+  "/orders",
+  "/staff-invite-modal",
+])
 
 export function FloatingThemeToggle() {
   const insets = useSafeAreaInsets()
@@ -28,7 +40,8 @@ export function FloatingThemeToggle() {
   const { colorScheme, setColorScheme, themeOverride } = useColorScheme()
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false)
   const hasOperationalDock = OPERATIONAL_DOCK_PATHS.has(pathname)
-  const hasFloatingAction = FLOATING_ACTION_PATHS.has(pathname)
+  const hasFloatingAction =
+    FLOATING_ACTION_PATHS.has(pathname) || pathname.startsWith("/order/")
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener("keyboardDidShow", () => {
@@ -77,7 +90,13 @@ export function FloatingThemeToggle() {
           // covering them.
           bottom:
             Math.max(insets.bottom, 12) +
-            (hasOperationalDock ? 104 : hasFloatingAction ? 80 : 16),
+            (hasOperationalDock
+              ? hasFloatingAction
+                ? 184
+                : 104
+              : hasFloatingAction
+                ? 160
+                : 16),
         },
       ]}
     >

@@ -1,16 +1,17 @@
-import { EmptyState } from "@/components/mobile/empty-state";
-import { QueryRefreshControl } from "@/components/mobile/query-refresh-control";
-import { StatusBadge } from "@/components/mobile/status-badge";
-import { Pressable } from "@/components/ui/pressable";
-import { Text } from "@/components/ui/text";
-import { View } from "@/components/ui/view";
-import { useState } from "react";
-import { ScrollView } from "react-native";
+import { ActionButton } from "@/components/mobile/action-button"
+import { EmptyState } from "@/components/mobile/empty-state"
+import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
+import { StatusBadge } from "@/components/mobile/status-badge"
+import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
+import { View } from "@/components/ui/view"
+import { useState } from "react"
+import { ScrollView } from "react-native"
 import {
   type CommerceCustomer,
   customerOrderCount,
   customerValueLabel,
-} from "./commerce-model";
+} from "./commerce-model"
 import {
   CommerceInfoRow,
   CommerceMetricTile,
@@ -18,7 +19,7 @@ import {
   CommercePageHeader,
   CommercePendingOrderRow,
   CommerceSection,
-} from "./commerce-primitives";
+} from "./commerce-primitives"
 
 const CUSTOMER_OVERVIEW_TABS = [
   { key: "information", label: "Information" },
@@ -27,9 +28,9 @@ const CUSTOMER_OVERVIEW_TABS = [
   { key: "reviews", label: "Reviews" },
   { key: "loyalty", label: "Loyalty" },
   { key: "insights", label: "Insights" },
-] as const;
+] as const
 
-type CustomerOverviewTab = (typeof CUSTOMER_OVERVIEW_TABS)[number]["key"];
+type CustomerOverviewTab = (typeof CUSTOMER_OVERVIEW_TABS)[number]["key"]
 
 const EMPTY_TAB_CONTENT: Record<
   Exclude<CustomerOverviewTab, "information" | "orders">,
@@ -55,27 +56,30 @@ const EMPTY_TAB_CONTENT: Record<
       "Saved items will appear when wishlist data is connected to customer profiles.",
     title: "No wishlist items",
   },
-};
+}
 
 export function CustomerOverviewContent({
   customer,
   historyComplete = true,
   onBack,
+  onCreateOrder,
   onOpenOrder,
 }: {
-  customer: CommerceCustomer;
-  historyComplete?: boolean;
-  onBack: () => void;
-  onOpenOrder: (orderId: string) => void;
+  customer: CommerceCustomer
+  historyComplete?: boolean
+  onBack: () => void
+  onCreateOrder: () => void
+  onOpenOrder: (orderId: string) => void
 }) {
-  const orderCount = customerOrderCount(customer);
-  const isPendingOnly = customer.orders.length === 0;
-  const [activeTab, setActiveTab] =
-    useState<CustomerOverviewTab>("information");
+  const orderCount = customerOrderCount(customer)
+  const isPendingOnly =
+    customer.orders.length === 0 && customer.pendingOrders.length > 0
+  const hasNoOrders = orderCount === 0
+  const [activeTab, setActiveTab] = useState<CustomerOverviewTab>("information")
   const emptyTab =
     activeTab === "information" || activeTab === "orders"
       ? null
-      : EMPTY_TAB_CONTENT[activeTab];
+      : EMPTY_TAB_CONTENT[activeTab]
 
   return (
     <ScrollView
@@ -99,8 +103,16 @@ export function CustomerOverviewContent({
               {customer.name}
             </Text>
             <StatusBadge
-              label={isPendingOnly ? "Pending sync" : "Synced"}
-              tone={isPendingOnly ? "warning" : "success"}
+              label={
+                hasNoOrders
+                  ? "Saved"
+                  : isPendingOnly
+                    ? "Pending sync"
+                    : "Synced"
+              }
+              tone={
+                hasNoOrders ? "primary" : isPendingOnly ? "warning" : "success"
+              }
             />
           </View>
           <Text className="text-sm text-muted-foreground">
@@ -122,6 +134,10 @@ export function CustomerOverviewContent({
         />
       </View>
 
+      <ActionButton icon="PlusCircle" onPress={onCreateOrder}>
+        Create order for customer
+      </ActionButton>
+
       {!historyComplete ? (
         <Text className="text-xs font-semibold text-muted-foreground">
           Loading the remaining order history before totals are final…
@@ -135,7 +151,7 @@ export function CustomerOverviewContent({
         testID="customer-overview-tabs"
       >
         {CUSTOMER_OVERVIEW_TABS.map((tab) => {
-          const selected = activeTab === tab.key;
+          const selected = activeTab === tab.key
           return (
             <Pressable
               accessibilityRole="tab"
@@ -159,7 +175,7 @@ export function CustomerOverviewContent({
                 {tab.label}
               </Text>
             </Pressable>
-          );
+          )
         })}
       </ScrollView>
 
@@ -226,5 +242,5 @@ export function CustomerOverviewContent({
         </View>
       ) : null}
     </ScrollView>
-  );
+  )
 }

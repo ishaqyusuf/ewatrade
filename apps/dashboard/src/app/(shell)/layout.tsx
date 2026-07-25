@@ -1,5 +1,6 @@
 import { DashboardHeader } from "@/components/dashboard/header"
 import { DashboardSidebar } from "@/components/dashboard/sidebar"
+import { GlobalSheetsProvider } from "@/components/sheets/global-sheets-provider"
 import {
   canAccessDashboardPath,
   getDashboardNavigation,
@@ -69,9 +70,11 @@ export default async function ShellLayout({
           ctx={ctx}
           navItems={navItems}
         />
-        <main className="flex min-h-[calc(100vh-70px)] flex-col">
-          {children}
-        </main>
+        <GlobalSheetsProvider store={{ id: store.id, name: store.name }}>
+          <main className="flex min-h-[calc(100vh-70px)] flex-col">
+            {children}
+          </main>
+        </GlobalSheetsProvider>
       </div>
     </div>
   )

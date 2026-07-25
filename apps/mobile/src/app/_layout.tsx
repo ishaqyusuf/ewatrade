@@ -1,50 +1,52 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { ThemeProvider } from "@react-navigation/native";
-import * as Sentry from "@sentry/react-native";
-import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useMemo, useState } from "react";
-import "react-native-reanimated";
-import "@/styles/global.css";
-import { AppLockProvider } from "@/hooks/use-app-lock";
+import FontAwesome from "@expo/vector-icons/FontAwesome"
+import { ThemeProvider } from "@react-navigation/native"
+import * as Sentry from "@sentry/react-native"
+import { useFonts } from "expo-font"
+import { Stack } from "expo-router"
+import * as SplashScreen from "expo-splash-screen"
+import { useEffect, useMemo, useState } from "react"
+import "react-native-reanimated"
+import "@/styles/global.css"
+import { AppLockProvider } from "@/hooks/use-app-lock"
 import {
   AuthProvider,
   useAuthContext,
   useCreateAuthContext,
-} from "@/hooks/use-auth";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
+} from "@/hooks/use-auth"
+import { GestureHandlerRootView } from "react-native-gesture-handler"
 
-import { AppAutoUpdateModal } from "@/components/app-auto-update-modal";
-import { FloatingThemeToggle } from "@/components/mobile";
-import { AppLockGate } from "@/components/mobile/app-lock-gate";
-import { ToastProviderWithViewport } from "@/components/ui/toast";
-import { applyThemeOverride, useColorScheme } from "@/hooks/use-color";
-import { shouldShowFloatingThemeToggle } from "@/lib/app-variant";
-import { canAccessAdminTabs } from "@/lib/admin-navigation";
-import { isInvitedStaffProfile, isSalesRepRole } from "@/lib/mobile-roles";
-import { nativewindThemeVars } from "@/lib/nativewind-theme-vars";
-import { NAV_THEME } from "@/lib/theme";
-import { getThemeOverride } from "@/lib/theme-preference";
-import { TRPCReactProvider } from "@/trpc/client";
-import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
-import { StatusBar } from "expo-status-bar";
-import { VariableContextProvider } from "nativewind";
-import { View } from "react-native";
-import FlashMessage from "react-native-flash-message";
-import { KeyboardProvider } from "react-native-keyboard-controller";
-import Toast from "react-native-toast-message";
+import { AppAutoUpdateModal } from "@/components/app-auto-update-modal"
+import { FloatingThemeToggle } from "@/components/mobile"
+import { AppLockGate } from "@/components/mobile/app-lock-gate"
+import { ToastProviderWithViewport } from "@/components/ui/toast"
+import { applyThemeOverride, useColorScheme } from "@/hooks/use-color"
+import { canAccessAdminTabs } from "@/lib/admin-navigation"
+import { shouldShowFloatingThemeToggle } from "@/lib/app-variant"
+import { isInvitedStaffProfile, isSalesRepRole } from "@/lib/mobile-roles"
+import { nativewindThemeVars } from "@/lib/nativewind-theme-vars"
+import { NAV_THEME } from "@/lib/theme"
+import { getThemeOverride } from "@/lib/theme-preference"
+import { useOperationalModeStore } from "@/store/operationalModeStore"
+import { TRPCReactProvider, useTRPC } from "@/trpc/client"
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet"
+import { useQuery } from "@tanstack/react-query"
+import { StatusBar } from "expo-status-bar"
+import { VariableContextProvider } from "nativewind"
+import { View } from "react-native"
+import FlashMessage from "react-native-flash-message"
+import { KeyboardProvider } from "react-native-keyboard-controller"
+import Toast from "react-native-toast-message"
 
 export {
   // Catch any errors thrown by the Layout component.
   ErrorBoundary,
-} from "expo-router";
+} from "expo-router"
 
 export const unstable_settings = {
   initialRouteName: "index",
-};
+}
 
-const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
+const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN
 
 Sentry.init({
   dsn: sentryDsn,
@@ -54,63 +56,64 @@ Sentry.init({
     (__DEV__ ? "development" : "production"),
   sendDefaultPii: false,
   enableLogs: false,
-});
+})
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync()
 
 function RootLayout() {
-  const [themeReady, setThemeReady] = useState(false);
+  const [themeReady, setThemeReady] = useState(false)
   const [loaded, error] = useFonts({
     SpaceMono: require("../../assets/fonts/SpaceMono-Regular.ttf"),
     ...FontAwesome.font,
-  });
+  })
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
-    if (error) throw error;
-  }, [error]);
+    if (error) throw error
+  }, [error])
 
   useEffect(() => {
-    let mounted = true;
+    let mounted = true
     void getThemeOverride()
       .then(applyThemeOverride)
       .catch(() => applyThemeOverride("system"))
       .finally(() => {
-        if (mounted) setThemeReady(true);
-      });
+        if (mounted) setThemeReady(true)
+      })
     return () => {
-      mounted = false;
-    };
-  }, []);
+      mounted = false
+    }
+  }, [])
 
   useEffect(() => {
     if (loaded && themeReady) {
-      SplashScreen.hideAsync();
+      SplashScreen.hideAsync()
     }
-  }, [loaded, themeReady]);
+  }, [loaded, themeReady])
 
   if (!loaded || !themeReady) {
-    return null;
+    return null
   }
 
-  return <RootLayoutNav />;
+  return <RootLayoutNav />
 }
 const InitialLayout = () => {
-  const { colorScheme } = useColorScheme();
-  const { isAuthenticated, profile } = useAuthContext();
+  const { colorScheme } = useColorScheme()
+  const { isAuthenticated, profile } = useAuthContext()
   const navigationTheme =
-    colorScheme === "dark" ? NAV_THEME.dark : NAV_THEME.light;
-  const isInvitedStaff = isInvitedStaffProfile(profile);
-  const isSalesRep = isSalesRepRole(profile?.role);
-  const canAccessAdmin = canAccessAdminTabs(profile?.role);
+    colorScheme === "dark" ? NAV_THEME.dark : NAV_THEME.light
+  const isInvitedStaff = isInvitedStaffProfile(profile)
+  const isSalesRep = isSalesRepRole(profile?.role)
+  const canAccessAdmin = canAccessAdminTabs(profile?.role)
   const canManageTenant =
     profile?.role?.trim().toUpperCase() === "OWNER" ||
-    profile?.role?.trim().toUpperCase() === "ADMIN";
+    profile?.role?.trim().toUpperCase() === "ADMIN"
 
   return (
     <>
       <TRPCReactProvider>
+        <OfflinePolicyReconciler />
         <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
 
         <Stack
@@ -155,6 +158,10 @@ const InitialLayout = () => {
               options={{ headerShown: false, presentation: "modal" }}
             />
             <Stack.Screen
+              name="new-business-onboarding-modal"
+              options={{ headerShown: false, presentation: "modal" }}
+            />
+            <Stack.Screen
               name="catalog-items-modal"
               options={{ headerShown: false, presentation: "modal" }}
             />
@@ -164,6 +171,10 @@ const InitialLayout = () => {
             />
             <Stack.Screen
               name="reports-modal"
+              options={{ headerShown: false, presentation: "modal" }}
+            />
+            <Stack.Screen
+              name="payments-received-modal"
               options={{ headerShown: false, presentation: "modal" }}
             />
             <Stack.Screen
@@ -186,6 +197,10 @@ const InitialLayout = () => {
               name="subscription-modal"
               options={{ headerShown: false, presentation: "modal" }}
             />
+            <Stack.Screen
+              name="domain-management-modal"
+              options={{ headerShown: false, presentation: "modal" }}
+            />
           </Stack.Protected>
           <Stack.Protected
             guard={isAuthenticated && !isInvitedStaff && isSalesRep}
@@ -204,6 +219,18 @@ const InitialLayout = () => {
             <Stack.Screen
               name="create-sale-modal"
               options={{ headerShown: false, presentation: "modal" }}
+            />
+            <Stack.Screen
+              name="global-search"
+              options={{ headerShown: false, presentation: "modal" }}
+            />
+            <Stack.Screen
+              name="operation-success"
+              options={{
+                fullScreenGestureEnabled: true,
+                gestureEnabled: true,
+                headerShown: false,
+              }}
             />
             <Stack.Screen
               name="service-jobs-modal"
@@ -232,17 +259,47 @@ const InitialLayout = () => {
         <Toast />
       </TRPCReactProvider>
     </>
-  );
-};
+  )
+}
+
+function OfflinePolicyReconciler() {
+  const { isAuthenticated, profile } = useAuthContext()
+  const trpc = useTRPC()
+  const setActiveBusiness = useOperationalModeStore(
+    (state) => state.setActiveBusiness,
+  )
+  const setOfflineAccess = useOperationalModeStore(
+    (state) => state.setOfflineAccess,
+  )
+  const settings = useQuery(
+    trpc.offline.settings.queryOptions(undefined, {
+      enabled: isAuthenticated && Boolean(profile?.businessId),
+      refetchInterval: 30_000,
+      refetchIntervalInBackground: false,
+      retry: false,
+    }),
+  )
+
+  useEffect(() => {
+    setActiveBusiness(profile?.businessId ?? null)
+  }, [profile?.businessId, setActiveBusiness])
+
+  useEffect(() => {
+    if (!profile?.businessId || !settings.data) return
+    setOfflineAccess(profile.businessId, settings.data.enabled)
+  }, [profile?.businessId, setOfflineAccess, settings.data])
+
+  return null
+}
 function RootLayoutNav() {
-  const { colorScheme } = useColorScheme();
-  const auth = useCreateAuthContext();
+  const { colorScheme } = useColorScheme()
+  const auth = useCreateAuthContext()
   const navigationTheme =
-    colorScheme === "dark" ? NAV_THEME.dark : NAV_THEME.light;
+    colorScheme === "dark" ? NAV_THEME.dark : NAV_THEME.light
   const themeVariables = useMemo(
     () => nativewindThemeVars(colorScheme),
     [colorScheme],
-  );
+  )
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -270,7 +327,7 @@ function RootLayoutNav() {
         </VariableContextProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>
-  );
+  )
 }
 
-export default Sentry.wrap(RootLayout);
+export default Sentry.wrap(RootLayout)

@@ -33,20 +33,31 @@ Describe the intended technical architecture and responsibility boundaries for t
   explicit Balance Sources, reservations and atomic Stock Operations.
 - Commerce owns Commercial Orders and immutable Offering Snapshots. Product
   fulfillment and Service work are downstream effects, not Order-line types.
+  A tenant Customer directory supports pre-Order contact creation while Orders
+  retain immutable customer snapshots instead of mutable profile relations.
 - Service Operations owns Intake, Job/Line allocation, work state, assignments,
   promises, notes, exceptions, evidence and rework. Customer Access owns public
   Requests, Quote acceptance and safe tracking projections.
+- Managed Domains owns immutable quotes, encrypted registrant profiles,
+  payment/registration orders, registrar lifecycle and independent
+  ownership/DNS/SSL connections. `@ewatrade/domains` owns external adapters;
+  query modules own persistence; jobs own provider writes and reconciliation.
 
 ## Offline Sync Boundary
-- Mobile queues only the explicit supported operational command union after a
-  user has authenticated once.
+- Tenant owners control offline checkout through
+  `Tenant.metadata.offlineOperationsEnabled`; API device registration and
+  replay enforce the current value.
+- Mobile queues only `commercial_order` after a user has authenticated once.
+  The command may carry immutable customer facts and an optional initial
+  payment that replay applies atomically with the Order.
 - Commands use tenant-scoped client ids, payload hashes, schema/event versions,
   dependencies and typed conflict results.
 - Durable `OfflineDevice`, `OfflineCommand`, `OfflineConflictReview` and
   `OfflineDeviceRevocation` records are authoritative. The removed generic
   sync-run/event and metadata fallbacks are not read.
-- Public requests, Quotes, evidence publication, payment and provider delivery
-  remain online-only.
+- Catalog, inventory, closeout, Staff, Service, standalone Customer and later
+  payment mutations remain online-only, as do public Requests, Quotes,
+  evidence publication and provider delivery.
 
 ## Mobile Interaction Boundary
 

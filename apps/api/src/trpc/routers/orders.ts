@@ -5,6 +5,7 @@ import {
   createCommercialOrder,
   fulfillCommercialOrderProductLine,
   getCommercialOrder,
+  listCommercialOrderPaymentsPage,
   listCommercialOrders,
   listCommercialOrdersPage,
   recordCommercialOrderPayment,
@@ -16,9 +17,10 @@ import {
   commercialOrderCreateSchema,
   commercialOrderFulfillLineSchema,
   commercialOrderGetSchema,
-  commercialOrderListSchema,
   commercialOrderListPageSchema,
+  commercialOrderListSchema,
   commercialOrderPaymentSchema,
+  commercialOrderPaymentsListPageSchema,
   commercialOrderReturnLineSchema,
 } from "../../schemas/orders"
 import { createTRPCRouter, protectedProcedure } from "../init"
@@ -168,6 +170,16 @@ export const ordersRouter = createTRPCRouter({
       return listCommercialOrdersPage(ctx.db, {
         ...input,
         storeId,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+    }),
+
+  payments: protectedProcedure
+    .input(commercialOrderPaymentsListPageSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanOperateOrders(ctx.tenantContext.membership.role)
+      return listCommercialOrderPaymentsPage(ctx.db, {
+        ...input,
         tenantId: ctx.tenantContext.tenant.id,
       })
     }),

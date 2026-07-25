@@ -37,6 +37,29 @@ export function removeSaleItemPickerLine<T>(
   return lines.filter((line) => line.id !== lineId)
 }
 
+export function selectInitialCatalogItemLine<
+  T extends { catalogItemId: string; disabledReason?: string; id: string },
+>({
+  catalogItemId,
+  choices,
+  lineId,
+  lines,
+}: {
+  catalogItemId: string
+  choices: T[]
+  lineId: string
+  lines: SaleItemPickerLine<T>[]
+}) {
+  const offering = choices.find(
+    (choice) =>
+      choice.catalogItemId === catalogItemId && !choice.disabledReason,
+  )
+  if (!offering || lines.some((line) => line.offering.id === offering.id)) {
+    return lines
+  }
+  return addSaleItemPickerLine({ lineId, lines, offering })
+}
+
 export function updateSaleItemPickerLineQuantity<T>(
   lines: SaleItemPickerLine<T>[],
   lineId: string,

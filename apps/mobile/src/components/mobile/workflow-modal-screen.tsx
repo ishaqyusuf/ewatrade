@@ -14,7 +14,11 @@ import { MobileScreen } from "./screen"
 type WorkflowModalScreenProps = {
   allowSalesRep?: boolean
   children: ReactNode
-  closeHref?: "/admin-home" | "/dashboard" | "/sales-rep-home"
+  closeHref?:
+    | "/admin-home"
+    | "/business-switch-modal"
+    | "/dashboard"
+    | "/sales-rep-home"
   closeLabel: string
   keyboardBottomOffset?: number
   title: string

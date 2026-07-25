@@ -19,6 +19,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
 import { resolveCatalogOptionUnitPriceMinor } from "@/lib/catalog-option-pricing"
+import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import {
   type CatalogSetupHelper,
@@ -46,9 +47,14 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
 type CatalogItemKind = "product" | "service"
 
+export type CatalogItemCompletion = {
+  kind: CatalogItemKind
+  name: string
+}
+
 type SimpleCatalogItemScreenProps = {
   initialKind?: CatalogItemKind
-  onComplete?: () => void
+  onComplete?: (completion: CatalogItemCompletion) => void
 }
 
 type MobileOptionGroup = {
@@ -304,6 +310,7 @@ export function SimpleCatalogItemScreen({
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const { profile } = useAuthContext()
+  const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
   const unitModal = useModal()
   const replacementModal = useModal()
   const clientOperationIdRef = useRef(Crypto.randomUUID())
@@ -453,7 +460,9 @@ export function SimpleCatalogItemScreen({
         trpc.tenant.featureAvailability.queryFilter(),
       ),
     ])
-    onComplete?.()
+    if (kind) {
+      onComplete?.({ kind, name: name.trim() })
+    }
   }
   const createItemMutation = useMutation(
     trpc.catalog.createSimpleItem.mutationOptions({
@@ -897,6 +906,12 @@ export function SimpleCatalogItemScreen({
 
   const submit = () => {
     if (!kind) return
+    if (isOffline) {
+      setSubmitError(
+        "Products and Services cannot be created offline. Reconnect before saving this item.",
+      )
+      return
+    }
 
     const trimmedName = name.trim()
     const quoteOnlyService = kind === "service" && defaultQuoteRequired
@@ -1387,6 +1402,14 @@ export function SimpleCatalogItemScreen({
               tone="destructive"
             />
           ) : null}
+          {isOffline && !submitError ? (
+            <StatusBanner
+              icon="Lock"
+              message="Product and Service setup is online-only."
+              title="Online connection required"
+              tone="warning"
+            />
+          ) : null}
 
           <FormField
             autoCapitalize="words"
@@ -1792,11 +1815,12 @@ export function SimpleCatalogItemScreen({
           ) : null}
 
           <ActionButton
+            disabled={isOffline}
             isLoading={isSaving}
             loadingLabel="Saving"
             onPress={submit}
           >
-            Save item
+            {isOffline ? "Reconnect to save item" : "Save item"}
           </ActionButton>
         </View>
       </KeyboardAwareScrollView>

@@ -27,6 +27,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 export type SaleOfferingChoice = {
   balanceRevision?: number
+  catalogItemId: string
   configurationVersionId?: string
   currencyCode: string
   disabledReason?: string

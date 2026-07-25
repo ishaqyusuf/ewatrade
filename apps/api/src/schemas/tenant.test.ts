@@ -1,11 +1,30 @@
 import { describe, expect, test } from "bun:test"
-import { createStoreSchema, tenantBootstrapSchema } from "./tenant"
+import {
+  createBusinessSchema,
+  createStoreSchema,
+  tenantBootstrapSchema,
+} from "./tenant"
 
 function expectRejected(
   schema: { safeParse: (value: unknown) => { success: boolean } },
   value: unknown,
 ) {
   expect(schema.safeParse(value).success).toBe(false)
+}
+
+const validBusiness = {
+  addressLine1: " 12 Market Road ",
+  businessName: " Second Business ",
+  city: " Lagos ",
+  currencyCode: "ngn",
+  onboarding: {
+    businessProfileKey: "general-retail-groceries",
+    businessProfileVersion: 1 as const,
+    operatingModel: "products" as const,
+    orderChannels: ["walk_in"] as ["walk_in"],
+    teamSize: "2_5" as const,
+  },
+  supportPhone: " 08012345678 ",
 }
 
 describe("tenant schemas", () => {
@@ -82,6 +101,35 @@ describe("tenant schemas", () => {
       },
       supportEmail: undefined,
       supportPhone: undefined,
+    })
+  })
+
+  test("normalizes a complete new-business onboarding payload", () => {
+    expect(createBusinessSchema.parse(validBusiness)).toEqual({
+      addressLine1: "12 Market Road",
+      businessName: "Second Business",
+      city: "Lagos",
+      currencyCode: "NGN",
+      onboarding: validBusiness.onboarding,
+      supportPhone: "08012345678",
+    })
+  })
+
+  test("requires new-business identity, contact, and profile answers", () => {
+    expectRejected(createBusinessSchema, {
+      ...validBusiness,
+      businessName: "",
+    })
+    expectRejected(createBusinessSchema, {
+      ...validBusiness,
+      supportPhone: "123",
+    })
+    expectRejected(createBusinessSchema, {
+      ...validBusiness,
+      onboarding: {
+        ...validBusiness.onboarding,
+        businessProfileKey: "unsupported-business",
+      },
     })
   })
 

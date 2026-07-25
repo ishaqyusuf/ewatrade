@@ -20,7 +20,7 @@ const validSignupProfile = {
   businessProfileKey: "general-retail-groceries",
   businessProfileVersion: 1 as const,
   operatingModel: "products" as const,
-  orderChannels: ["walk_in"] as const,
+  orderChannels: ["walk_in"] as ["walk_in"],
   teamSize: "solo" as const,
 }
 

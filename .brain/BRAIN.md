@@ -18,14 +18,20 @@ Central index for ewatrade product, architecture, engineering, database, API, de
   storefront, POS and API applications, an Expo mobile application, and shared
   database/domain packages.
 - `ewatrade` is a multi-tenant commerce and operations platform.
-- Catalog, exact inventory, Commercial Orders, generic Service Operations,
-  customer request/quote/tracking, offline replay, staff, billing, storefront,
-  and messaging foundations are implemented.
+- Catalog, exact inventory, tenant Customer directory, Commercial Orders,
+  generic Service Operations, customer request/quote/tracking, offline replay,
+  staff, billing, storefront, and messaging foundations are implemented.
+- Mobile includes a tenant-wide global search across Orders, Customers,
+  Catalog, Service Jobs, and permitted Staff, plus contextual order creation
+  and auditable order/payment actor attribution.
 - Product and Service are Catalog Item kinds. Variants, Offerings, Inventory
   Units, balances, commercial snapshots, and Service work are separate domain
   concepts.
 - Authenticated registration and dashboards use the shared application host.
   Business subdomains are reserved for public storefront use.
+- Managed `.com.ng`/`.com` source implementation routes registrar, Paystack
+  and Vercel work through a server-only domain package and jobs. Database
+  deployment and live provider acceptance remain blocked.
 
 ## Key References
 - [System Overview](./SYSTEM_OVERVIEW.md)
@@ -37,4 +43,7 @@ Central index for ewatrade product, architecture, engineering, database, API, de
 - [Repo Structure](./engineering/repo-structure.md)
 - [Database Schema](./database/schema.md)
 - [API Endpoints](./api/endpoints.md)
+- [Managed Domains](./features/managed-domains.md)
+- [Mobile Global Search And Commerce Attribution](./features/mobile-global-search-and-commerce-attribution.md)
+- [Offline Order Operations](./features/offline-order-operations.md)
 - [Tasks Backlog](./tasks/backlog.md)

@@ -75,6 +75,9 @@ function createMockDb(input?: {
           : (input?.order ?? null)
       },
     },
+    customer: {
+      findFirst: findFirst("customer.findFirst", input?.customer),
+    },
     membership: {
       findFirst: findFirst("membership.findFirst", input?.staff),
     },
@@ -204,6 +207,10 @@ describe("workspace feature availability", () => {
     expect(db.calls).toContainEqual({
       kind: "commercialOrder.findFirst.order",
       where: { storeId: "store_a", tenantId: "tenant_a" },
+    })
+    expect(db.calls).toContainEqual({
+      kind: "customer.findFirst",
+      where: { tenantId: "tenant_a" },
     })
     expect(db.calls).toContainEqual({
       kind: "membership.findFirst",

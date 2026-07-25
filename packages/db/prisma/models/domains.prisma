@@ -1,0 +1,208 @@
+model DomainRegistrantProfile {
+  id               String          @id @default(cuid())
+  tenantId         String          @unique
+  encryptedPayload String
+  displayName      String
+  maskedEmail      String
+  countryCode      String
+  consentVersion   String
+  consentedAt      DateTime
+  providerHandles  Json?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  tenant           Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orders           DomainOrder[]
+  managedDomains   ManagedDomain[]
+
+  @@index([tenantId, updatedAt])
+}
+
+model DomainQuote {
+  id                   String               @id @default(cuid())
+  tenantId             String
+  storeId              String
+  provider             DomainProvider
+  normalizedDomain     String
+  tld                  String
+  operation            DomainQuoteOperation @default(REGISTER)
+  providerCostMinor    Int
+  providerCurrencyCode String
+  retailPriceMinor     Int
+  renewalPriceMinor    Int?
+  retailCurrencyCode   String               @default("NGN")
+  exchangeRate         String?
+  isPremium            Boolean              @default(false)
+  status               DomainQuoteStatus    @default(ACTIVE)
+  expiresAt            DateTime
+  consumedAt           DateTime?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  tenant               Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  order                DomainOrder?
+
+  @@index([tenantId, storeId, status, expiresAt])
+  @@index([normalizedDomain, provider, expiresAt])
+}
+
+model DomainOrder {
+  id                    String                   @id @default(cuid())
+  tenantId              String
+  storeId               String
+  quoteId               String                   @unique
+  registrantProfileId   String
+  managedDomainId       String?                  @unique
+  type                  DomainOrderType          @default(REGISTER)
+  provider              DomainProvider
+  normalizedDomain      String
+  idempotencyKey        String
+  paymentReference      String                   @unique
+  checkoutUrl           String?
+  paymentStatus         DomainPaymentStatus      @default(CREATED)
+  registrationStatus    DomainRegistrationStatus @default(PENDING)
+  amountMinor           Int
+  currencyCode          String                   @default("NGN")
+  providerCostMinor     Int
+  providerCurrencyCode  String
+  exchangeRate          String?
+  termsVersion          String
+  termsAcceptedAt       DateTime
+  paidAt                DateTime?
+  registrationStartedAt DateTime?
+  registeredAt          DateTime?
+  failedAt              DateTime?
+  failureCode           String?
+  failureMessage        String?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  tenant                Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                 Store                    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  quote                 DomainQuote              @relation(fields: [quoteId], references: [id], onDelete: Restrict)
+  registrantProfile     DomainRegistrantProfile  @relation(fields: [registrantProfileId], references: [id], onDelete: Restrict)
+  managedDomain         ManagedDomain?           @relation("DomainOrderManagedDomain", fields: [managedDomainId], references: [id], onDelete: SetNull)
+  events                DomainEvent[]
+  operationAttempts     DomainOperationAttempt[]
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, storeId, createdAt])
+  @@index([paymentStatus, registrationStatus, updatedAt])
+}
+
+model ManagedDomain {
+  id                     String                   @id @default(cuid())
+  tenantId               String
+  storeId                String
+  siteId                 String?
+  registrantProfileId    String
+  provider               DomainProvider
+  providerDomainId       String?
+  providerCustomerHandle String?
+  hostname               String                   @unique
+  tld                    String
+  status                 ManagedDomainStatus      @default(PENDING)
+  renewalMode            DomainRenewalMode        @default(MANUAL)
+  registeredAt           DateTime?
+  expiresAt              DateTime?
+  lastSyncedAt           DateTime?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  tenant                 Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                  Store                    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  site                   Site?                    @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  registrantProfile      DomainRegistrantProfile  @relation(fields: [registrantProfileId], references: [id], onDelete: Restrict)
+  order                  DomainOrder?             @relation("DomainOrderManagedDomain")
+  connections            DomainConnection[]
+  events                 DomainEvent[]
+  operationAttempts      DomainOperationAttempt[]
+
+  @@index([tenantId, storeId, status])
+  @@index([provider, providerDomainId])
+  @@index([status, expiresAt])
+}
+
+model DomainConnection {
+  id                      String                   @id @default(cuid())
+  tenantId                String
+  storeId                 String
+  siteId                  String?
+  managedDomainId         String?
+  hostname                String                   @unique
+  type                    DomainConnectionType
+  status                  DomainConnectionStatus   @default(OWNERSHIP_PENDING)
+  ownershipTokenHash      String?
+  verificationRecordType  String?
+  verificationRecordName  String?
+  verificationRecordValue String?
+  vercelProjectId         String?
+  isPrimary               Boolean                  @default(false)
+  verifiedAt              DateTime?
+  activeAt                DateTime?
+  disconnectedAt          DateTime?
+  lastCheckedAt           DateTime?
+  failureCode             String?
+  failureMessage          String?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  tenant                  Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                   Store                    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  site                    Site?                    @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  managedDomain           ManagedDomain?           @relation(fields: [managedDomainId], references: [id], onDelete: SetNull)
+  events                  DomainEvent[]
+  operationAttempts       DomainOperationAttempt[]
+
+  @@index([tenantId, storeId, status])
+  @@index([managedDomainId, status])
+}
+
+model DomainEvent {
+  id              String                @id @default(cuid())
+  tenantId        String
+  orderId         String?
+  managedDomainId String?
+  connectionId    String?
+  kind            DomainOperationKind
+  status          DomainOperationStatus
+  provider        DomainProvider?
+  providerEventId String?
+  payload         Json?
+  occurredAt      DateTime              @default(now())
+  createdAt       DateTime              @default(now())
+  tenant          Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order           DomainOrder?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  managedDomain   ManagedDomain?        @relation(fields: [managedDomainId], references: [id], onDelete: SetNull)
+  connection      DomainConnection?     @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, providerEventId])
+  @@index([tenantId, occurredAt])
+  @@index([orderId, occurredAt])
+  @@index([managedDomainId, occurredAt])
+}
+
+model DomainOperationAttempt {
+  id                 String                @id @default(cuid())
+  tenantId           String
+  orderId            String?
+  managedDomainId    String?
+  connectionId       String?
+  kind               DomainOperationKind
+  provider           DomainProvider
+  idempotencyKey     String
+  requestFingerprint String
+  status             DomainOperationStatus @default(PENDING)
+  providerReference  String?
+  responseMetadata   Json?
+  startedAt          DateTime?
+  completedAt        DateTime?
+  errorCode          String?
+  errorMessage       String?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  tenant             Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order              DomainOrder?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  managedDomain      ManagedDomain?        @relation(fields: [managedDomainId], references: [id], onDelete: SetNull)
+  connection         DomainConnection?     @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([orderId, kind, status])
+  @@index([managedDomainId, kind, status])
+}

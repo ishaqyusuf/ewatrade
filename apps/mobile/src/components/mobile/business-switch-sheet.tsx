@@ -1,8 +1,7 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
-import { CurrencySelector } from "@/components/mobile/currency-selector"
 import { EmptyState } from "@/components/mobile/empty-state"
-import { FormField } from "@/components/mobile/form-field"
+import { ListCreateFab } from "@/components/mobile/list-create-fab"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import {
   SecondaryOperationalRow,
@@ -18,16 +17,11 @@ import { shouldShowListSearch } from "@/lib/list-pagination"
 import { isLocalSessionToken } from "@/lib/session-store"
 import { switchMobileBusinessSession } from "@/lib/workspace-feature-availability"
 import { type RetailOpsBusiness, useBusinessStore } from "@/store/businessStore"
-import {
-  getBusinessSubscription,
-  getPlan,
-  useSubscriptionStore,
-} from "@/store/subscriptionStore"
 import { clearMobileDataCache, useTRPC } from "@/trpc/client"
-import type { OperatingCurrencyCode } from "@ewatrade/utils"
 import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useQuery } from "@tanstack/react-query"
-import { forwardRef, useEffect, useMemo, useState } from "react"
+import { useRouter } from "expo-router"
+import { forwardRef, useMemo, useState } from "react"
 import { View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
@@ -82,21 +76,14 @@ export function BusinessSwitchContent({
   presentation = "sheet",
 }: BusinessSwitchContentProps) {
   const auth = useAuthContext()
+  const router = useRouter()
   const trpc = useTRPC()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
   const localBusinesses = useBusinessStore((state) => state.businesses)
-  const createBusiness = useBusinessStore((state) => state.createBusiness)
   const setActiveBusiness = useBusinessStore((state) => state.setActiveBusiness)
-  const subscriptions = useSubscriptionStore((state) => state.subscriptions)
-  const [businessName, setBusinessName] = useState("")
   const [businessQuery, setBusinessQuery] = useState("")
   const [visibleBusinessCount, setVisibleBusinessCount] =
     useState(BUSINESS_PAGE_SIZE)
-  const [category, setCategory] = useState("")
-  const [country, setCountry] = useState("Nigeria")
-  const [currency, setCurrency] = useState<OperatingCurrencyCode>("NGN")
-  const [salesMethod, setSalesMethod] = useState("In-store sales")
-  const [type, setType] = useState("Retail")
   const isLocalSession = isLocalSessionToken(auth.token)
   const productionBusinessesQuery = useQuery(
     trpc.tenant.businesses.queryOptions(undefined, {
@@ -118,8 +105,6 @@ export function BusinessSwitchContent({
   const currentBusinessId = isLocalSession
     ? activeBusinessId
     : auth.profile?.businessId
-  const subscription = getBusinessSubscription(subscriptions, activeBusinessId)
-  const plan = getPlan(subscription.planId)
   const filteredBusinesses = useMemo(() => {
     const normalizedQuery = businessQuery.trim().toLowerCase()
 
@@ -148,11 +133,10 @@ export function BusinessSwitchContent({
     if (visibleBusinessCount >= filteredBusinesses.length) return
     setVisibleBusinessCount((count) => count + BUSINESS_PAGE_SIZE)
   }
-  useEffect(() => {
+  const updateBusinessQuery = (value: string) => {
+    setBusinessQuery(value)
     setVisibleBusinessCount(BUSINESS_PAGE_SIZE)
-  }, [businessQuery])
-  const isAtBusinessLimit = businesses.length >= plan.limits.businesses
-  const canCreate = !isAtBusinessLimit && !!businessName.trim()
+  }
 
   const activateBusiness = (business: RetailOpsBusiness) => {
     if (isLocalSession) {
@@ -174,32 +158,6 @@ export function BusinessSwitchContent({
     )
   }
 
-  const submit = () => {
-    if (!canCreate) return
-
-    const business = createBusiness({
-      category,
-      country,
-      currency,
-      name: businessName,
-      salesMethod,
-      type,
-    })
-    if (auth.session) {
-      auth.applyAuthenticatedSession(
-        switchMobileBusinessSession(auth.session, business),
-      )
-    } else {
-      clearMobileDataCache()
-    }
-    setBusinessName("")
-    setCategory("")
-    setCountry("Nigeria")
-    setCurrency("NGN")
-    setSalesMethod("In-store sales")
-    setType("Retail")
-  }
-
   const contentClassName =
     presentation === "screen" ? "gap-5 px-4 pb-6" : "gap-5 px-5 pb-6"
 
@@ -209,7 +167,7 @@ export function BusinessSwitchContent({
         description={
           isLocalSession
             ? "Switch between businesses or add another local workspace."
-            : "Switch between the businesses available to this account."
+            : "Switch between businesses or set up a new workspace."
         }
         icon="Building2"
         title="Business workspace"
@@ -265,68 +223,6 @@ export function BusinessSwitchContent({
         )}
       </View>
 
-      {isLocalSession ? (
-        <View className="gap-4">
-          <Text className="text-base font-bold text-foreground">
-            Add business
-          </Text>
-          <FormField
-            label="Business name"
-            leadingIcon="Building2"
-            onChangeText={setBusinessName}
-            placeholder="Enter business or branch name"
-            value={businessName}
-          />
-          <FormField
-            label="Type"
-            leadingIcon="FileText"
-            onChangeText={setType}
-            placeholder="Enter business type"
-            value={type}
-          />
-          <CurrencySelector onChange={setCurrency} value={currency} />
-          <View className="flex-row gap-3">
-            <FormField
-              containerClassName="flex-1"
-              label="Country"
-              leadingIcon="MapPin"
-              onChangeText={setCountry}
-              placeholder="Enter country"
-              value={country}
-            />
-            <FormField
-              containerClassName="flex-1"
-              label="Category"
-              leadingIcon="List"
-              onChangeText={setCategory}
-              placeholder="Enter product category"
-              value={category}
-            />
-          </View>
-          <FormField
-            label="Sales method"
-            leadingIcon="Wallet"
-            onChangeText={setSalesMethod}
-            placeholder="Enter sales method"
-            value={salesMethod}
-          />
-        </View>
-      ) : null}
-
-      {isLocalSession && isAtBusinessLimit ? (
-        <StatusBanner
-          icon="TriangleAlert"
-          message={`${plan.name} allows ${plan.limits.businesses} business${plan.limits.businesses === 1 ? "" : "es"}. Upgrade before adding another business.`}
-          title="Business limit reached"
-          tone="destructive"
-        />
-      ) : null}
-
-      {isLocalSession ? (
-        <ActionButton disabled={!canCreate} onPress={submit}>
-          Add business
-        </ActionButton>
-      ) : null}
       <ActionButton onPress={onComplete} variant="outline">
         Done
       </ActionButton>
@@ -340,15 +236,12 @@ export function BusinessSwitchContent({
           className="flex-1"
           bottomOffset={160}
           contentContainerStyle={{
-            paddingBottom:
-              showBusinessSearch ? 112 : 40,
+            paddingBottom: showBusinessSearch ? 176 : 112,
           }}
           disableScrollOnKeyboardHide
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
-          refreshControl={
-            isLocalSession ? undefined : <QueryRefreshControl />
-          }
+          refreshControl={isLocalSession ? undefined : <QueryRefreshControl />}
           onScroll={({ nativeEvent }) => {
             if (
               nativeEvent.layoutMeasurement.height +
@@ -366,12 +259,18 @@ export function BusinessSwitchContent({
           <BottomSearchFooter
             accessibilityLabel="Find business"
             label="Find business"
-            onChangeText={setBusinessQuery}
+            onChangeText={updateBusinessQuery}
             placeholder="Search businesses"
             totalCount={businesses.length}
             value={businessQuery}
           />
         ) : null}
+        <ListCreateFab
+          accessibilityLabel="Add a new business"
+          bottomOffset={showBusinessSearch ? 80 : 0}
+          onPress={() => router.push("/new-business-onboarding-modal" as never)}
+          testID="business-add-fab"
+        />
       </View>
     )
   }
@@ -381,8 +280,7 @@ export function BusinessSwitchContent({
       <BottomSheetKeyboardAwareScrollView
         bottomOffset={160}
         contentContainerStyle={{
-          paddingBottom:
-            showBusinessSearch ? 112 : 40,
+          paddingBottom: showBusinessSearch ? 176 : 112,
         }}
         keyboardShouldPersistTaps="handled"
         onScroll={({ nativeEvent }) => {
@@ -403,12 +301,18 @@ export function BusinessSwitchContent({
           accessibilityLabel="Find business"
           includeSafeArea={false}
           label="Find business"
-          onChangeText={setBusinessQuery}
+          onChangeText={updateBusinessQuery}
           placeholder="Search businesses"
           totalCount={businesses.length}
           value={businessQuery}
         />
       ) : null}
+      <ListCreateFab
+        accessibilityLabel="Add a new business"
+        bottomOffset={showBusinessSearch ? 80 : 0}
+        onPress={() => router.push("/new-business-onboarding-modal" as never)}
+        testID="business-add-fab"
+      />
     </View>
   )
 }

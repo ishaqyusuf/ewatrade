@@ -32,11 +32,18 @@
 - Mobile requests send the selected business slug through `x-tenant-slug`.
   Switching a production business updates the authenticated mobile session
   profile and clears the query cache before the selected context refetches.
+- `tenant.createBusiness` accepts the same bounded business identity,
+  location, currency, Business Profile, operating-model, order-channel, and
+  team-size facts used by mobile owner onboarding. Tenant, owner Membership,
+  first Store, and completed onboarding-session creation are one transaction.
+  Its response is a switch-ready Tenant summary; mobile persists that selected
+  slug, clears tenant-scoped cache, and opens the new workspace.
 
 ## Signup And Business Profiles
 
 - Browser signup, mobile email-OTP signup, mobile Google signup, and Store
-  creation accept a validated Business Profile key/version plus bounded
+  creation and authenticated new-business creation accept a validated
+  Business Profile key/version plus bounded
   Products/Services/Both, order-channel, team-size, and optional Other/Mixed
   description fields.
 - Mobile `sign_up` requests require the profile key/version, operating model,
@@ -47,6 +54,47 @@
 - `tenant.stores` and `tenant.current` expose the validated
   `businessProfileKey` on each Store for client-side recommendation ranking;
   malformed or retired metadata is projected as null.
+- Signup reserves only the free EwaTrade storefront hostname. Custom domains
+  must enter the managed purchase or verified connection contract after
+  signup; raw custom hostname writes are not accepted.
+
+## Managed Domains
+
+- Supported purchase names normalize to one label plus `.com.ng` or `.com`.
+  Subdomains, premium results and other TLDs are outside the launch contract.
+- Unsupported TLDs are rejected at the Zod request boundary after URL/case
+  normalization rather than reaching a provider adapter.
+- `.com.ng` deterministically routes to GO54; `.com` routes to Openprovider.
+- Availability creates a 15-minute immutable quote with wholesale, currency,
+  exchange-rate, retail and renewal snapshots.
+- Registrant save encrypts the full legal-owner payload. Clients receive only
+  id, display name, masked email, country, consent and timestamps.
+- Checkout requires an unexpired quote, saved registrant, stable
+  tenant-scoped idempotency key, accepted terms, configured provider,
+  Paystack and Vercel prerequisites.
+- Registrant consent and checkout terms accept only the current
+  `2026-07-24` contract version.
+- Paystack hosted checkout is online-only. Callback navigation never marks an
+  order paid; the signed raw-body webhook verifies reference, amount and
+  currency.
+- Paid registration is asynchronous. `PENDING`, `REGISTERING`, `REGISTERED`,
+  `UNCERTAIN` and `FAILED` are durable states.
+- An uncertain provider write is reconciled against the same registrar before
+  retry, refund or failover. A definite failure requests a Paystack refund.
+- Registrar states are normalized to active, pending, expired, suspended,
+  cancelled, failed, not-found or unknown. Unknown never means active.
+- Refund progress/failure webhooks append idempotent audit events; only a
+  processed/successful refund moves the order to `REFUNDED`.
+- Domain registration and Vercel connection are separate. Only an `ACTIVE`
+  connection can become the primary custom Storefront Hostname.
+- External connection requires the exact TXT challenge before Vercel
+  attachment. Existing DNS/nameservers are never replaced by the verification
+  request.
+- When Vercel requires an additional ownership record, that record remains on
+  the connection contract until verification succeeds.
+- Domain lists are bounded to 100 because launch supports one primary custom
+  storefront domain per Store; infinite pagination and bulk actions are not
+  part of this contract.
 
 ## Catalog
 
@@ -116,10 +164,38 @@
 - Payments and refunds append idempotent `CommercialOrderPayment` facts. The
   Order stores the derived paid amount and exposes paid, balance and payment
   status; a command cannot overpay or refund more than was collected.
+- Order projections expose the tenant actor referenced by
+  `createdByUserId` as `createdBy`. Payment projections similarly expose
+  `recordedByUserId` as `recordedBy`. Missing or no-longer-active membership
+  details do not erase the immutable user id.
+- `orders.payments` cursor-loads received-payment facts across the active
+  Tenant, supports order/customer/reference/receiver search, and returns each
+  payment with its Order summary and receiver projection. Refund facts are
+  excluded from this received-payments directory.
 - `orders.listPage` supports stable cursor loading plus order-wide or
   customer-contact search. `orders.customerCount` returns the distinct
   normalized contact identities used by Customer Book; selecting a customer
   continues loading remaining pages before final totals are presented.
+- `customers.create` saves a tenant-scoped customer with a required name and
+  optional phone/email. Normalized phone and email values reject duplicate
+  contact identities within the Tenant.
+- `customers.listPage` cursor-loads and searches the saved directory.
+  Customer Book and Create Sale merge directory rows with immutable customer
+  snapshots from Commercial Orders, so order-only customers remain visible.
+
+## Global Search And Contextual Creation
+
+- `search.global` accepts a normalized query of 2–160 characters and a
+  per-entity limit of 1–10. The response is a discriminated result union for
+  `order`, `customer`, `catalog_item`, `service_job`, and `staff`.
+- Search is always tenant-scoped. Catalog results may represent Product or
+  Service items; customer results merge saved Customer records with immutable
+  Order customer snapshots.
+- Selecting a Customer search/overview action opens Create Order with that
+  Customer already selected. Selecting Create Order from a Catalog Item
+  overview opens Create Order and preselects the item's first currently
+  sellable Offering. The operator still reviews quantities, price, payment,
+  and confirmation.
 
 ## Services
 
@@ -157,13 +233,18 @@
 
 ## Offline
 
-- Supported command payloads are versioned and dependency-aware.
-- Offline Intake evidence depends on the Intake command and carries its stable
-  client id so replay resolves the newly created tenant-owned Job; a missing or
-  charge-only Job fails as a typed evidence conflict.
+- `offline.settings` returns the active Tenant's
+  `offlineOperationsEnabled` policy. `offline.updateSettings` changes that
+  policy for an owner.
+- Device registration, replay, and conflict-review mutations reject work while
+  the owner policy is disabled; conflict history remains readable.
+- The only supported command payload is versioned `commercial_order`. It may
+  include customer snapshot facts and an optional initial payment; replay
+  creates or reuses a directory Customer and records the payment atomically
+  with the Order.
 - Replay returns applied, review-required, blocked or discarded outcomes with
   typed conflict codes and authoritative state.
-- Unsupported old event shapes are discarded; there is no compatibility
-  reader.
-- Public Requests/Quotes, payment, evidence publication and provider delivery
-  are online-only.
+- Unsupported old command types and event shapes are rejected or discarded;
+  there is no compatibility reader.
+- Catalog, inventory, closeout, Staff, Service, standalone Customer and later
+  payment mutations remain online-only.

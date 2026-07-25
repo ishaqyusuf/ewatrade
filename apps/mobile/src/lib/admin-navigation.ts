@@ -20,9 +20,11 @@ export type AdminTabDefinition = {
 export type AdminMoreItemId =
   | "inventory"
   | "analytics"
+  | "payments-received"
   | "team"
   | "customers"
   | "service-work"
+  | "website-domain"
   | "plan-billing"
   | "app-theme"
   | "app-lock"
@@ -134,6 +136,15 @@ export function buildAdminMoreSections({
       label: "Analytics",
     },
     {
+      action: {
+        href: "/payments-received-modal" as LinkProps["href"],
+        kind: "route",
+      },
+      icon: "CreditCard",
+      id: "payments-received",
+      label: "Payments received",
+    },
+    {
       action: { href: "/staff-invite-modal", kind: "route" },
       icon: "Users",
       id: "team",
@@ -157,6 +168,15 @@ export function buildAdminMoreSections({
   }
 
   if (role === "OWNER" || role === "ADMIN") {
+    storeItems.push({
+      action: {
+        href: "/domain-management-modal" as LinkProps["href"],
+        kind: "route",
+      },
+      icon: "Globe",
+      id: "website-domain",
+      label: "Website & domain",
+    })
     storeItems.push({
       action: { href: "/subscription-modal", kind: "route" },
       icon: "CreditCard",

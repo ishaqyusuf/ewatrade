@@ -29,6 +29,8 @@ catalog edits from changing historical meaning.
 
 ## Commerce And Work
 
+`Tenant -> Customer`
+
 `Tenant.lastCommercialOrderSequence -> CommercialOrder.orderNumber`
 
 `CommercialOrder -> CommercialOrderLine -> OfferingSnapshot`
@@ -38,6 +40,10 @@ Service lines may allocate into one or more `ServiceJobLine` records. Job Lines
 belong to `ServiceJob`; charge-only Service lines allocate no work.
 
 `CommercialOrder -> CommercialOrderPayment`
+
+`CommercialOrder.createdByUserId -> User`
+
+`CommercialOrderPayment.recordedByUserId -> User`
 
 `Store -> ServiceStoreSettings`
 
@@ -49,6 +55,16 @@ New Order numbers are allocated once across the Tenant rather than per Store.
 The counter increment and Order creation share one database transaction, so a
 failed creation rolls the increment back and concurrent Stores cannot receive
 the same reference.
+
+Actor ids are immutable audit references. Tenant-scoped read projections
+resolve names, emails, and membership roles when available without replacing
+or weakening those stored ids.
+
+Customer directory records are merged with Order customer snapshots at the
+application projection boundary. Orders do not point to mutable Customer rows;
+their captured customer facts remain immutable historical context. Named Order
+creation, including offline replay, creates or reuses the matching directory
+record inside the Order transaction without adding a mutable Order relation.
 
 ## Requests, Quotes And Tracking
 
@@ -76,3 +92,24 @@ are cancelled/replaced when a promise changes or becomes obsolete.
 Every owned aggregate is tenant-scoped. Store-scoped records carry Store ids;
 public access uses opaque tokens and repository-projected allowlists. Business
 hostnames are storefront-only; the authenticated dashboard is a shared host.
+
+`User -> Membership -> Tenant` is many-to-many. Creating another owned
+business writes a new merchant Tenant, active OWNER Membership, and first Store
+in one transaction; it never reuses the active Tenant's Store or operational
+records.
+
+## Managed Domains
+
+`Tenant -> DomainRegistrantProfile`
+
+`Tenant + Store -> DomainQuote -> DomainOrder`
+
+`DomainOrder -> ManagedDomain -> DomainConnection`
+
+`DomainOrder|ManagedDomain|DomainConnection -> DomainEvent|DomainOperationAttempt`
+
+The Order owns payment and registration intent. The Managed Domain owns
+registrar lifecycle. The Connection owns TXT verification and Vercel/DNS/SSL
+state. Only an active Connection projects to the Tenant's primary Storefront
+Hostname, so a registrar or hosting failure cannot silently replace the free
+storefront address.

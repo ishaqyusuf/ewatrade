@@ -1,5 +1,25 @@
 # In Progress
 
+- Implement managed domain purchasing and storefront connection using GO54 for
+  `.com.ng`, Openprovider for global domains, Paystack checkout, and Vercel
+  hosting/attachment. The implementation follows
+  `.brain/plans/2026-07-24-managed-domain-midday-migration-contract.md` across
+  database, provider adapters, API/jobs, dashboard, mobile, verified
+  bring-your-own-domain, signup cleanup, QA, and Brain documentation.
+  Source implementation is complete across Prisma schema, provider package,
+  API/jobs, dashboard, mobile and signup cleanup. Remaining blockers are
+  shared-database deployment, authenticated dashboard/Android runtime QA,
+  credentials, commercial/legal acceptance and two owner-approved live
+  canaries. Checks
+  completed: Prisma format/generate, generated/applied local migration
+  `20260724174525_managed_domains`, local push/deploy verification; 41 focused
+  domain/provider/query/job/API
+  tests and 251 repository-wide passing tests (four unrelated existing Retail
+  Ops fixture failures); DB/domains/jobs/API/dashboard/marketing/mobile
+  TypeScript; targeted Biome; mobile domain,
+  NativeWind and keyboard guards; desktop/mobile signup browser QA. Started
+  Date: 2026-07-24.
+
 - Complete the mobile Sentry production handoff. The React Native SDK, Expo
   config plugin, Metro source-map integration, DSN/environment configuration,
   privacy-safe defaults, and OTA-reload flushing are implemented. The public

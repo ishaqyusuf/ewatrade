@@ -1,6 +1,6 @@
+import { useRouter } from "expo-router"
 import { Alert, ScrollView } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { useRouter } from "expo-router"
 
 import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
@@ -16,10 +16,7 @@ import {
   canAccessAdminTabs,
 } from "@/lib/admin-navigation"
 import { getMobileRoleLabel, normalizeMobileRole } from "@/lib/mobile-roles"
-import {
-  type ThemeOverride,
-  setThemeOverride,
-} from "@/lib/theme-preference"
+import { type ThemeOverride, setThemeOverride } from "@/lib/theme-preference"
 import { useAdminTabs, useResetAdminDock } from "./admin-tabs-context"
 
 function initials(value: string | null | undefined) {
@@ -183,32 +180,22 @@ export function AdminMoreScreen() {
           <Text className="text-[34px] font-extrabold tracking-tight text-foreground">
             Menu
           </Text>
-          <View className="flex-row items-center gap-3">
-            <Pressable
-              accessibilityLabel={
-                syncAlertCount > 0
-                  ? `Open sync status, ${syncAlertCount} items need attention`
-                  : "Open sync status"
-              }
-              accessibilityRole="button"
-              className="relative size-12 items-center justify-center rounded-full border border-border bg-card"
-              haptic
-              onPress={() => router.push("/sync-status-modal")}
-            >
-              <Icon className="size-md text-foreground" name="Bell" />
-              {syncAlertCount > 0 ? (
-                <View className="absolute right-1.5 top-1.5 size-3 rounded-full border-2 border-card bg-destructive" />
-              ) : null}
-            </Pressable>
-            <View
-              accessibilityLabel={`${auth.profile?.name ?? "User"} profile`}
-              className="size-12 items-center justify-center rounded-full bg-primary"
-            >
-              <Text className="font-extrabold text-primary-foreground">
-                {initials(auth.profile?.name)}
-              </Text>
-            </View>
-          </View>
+          <Pressable
+            accessibilityLabel={
+              syncAlertCount > 0
+                ? `Open sync status, ${syncAlertCount} items need attention`
+                : "Open sync status"
+            }
+            accessibilityRole="button"
+            className="relative size-12 items-center justify-center rounded-full border border-border bg-card"
+            haptic
+            onPress={() => router.push("/sync-status-modal")}
+          >
+            <Icon className="size-md text-foreground" name="Bell" />
+            {syncAlertCount > 0 ? (
+              <View className="absolute right-1.5 top-1.5 size-3 rounded-full border-2 border-card bg-destructive" />
+            ) : null}
+          </Pressable>
         </View>
 
         <Pressable
@@ -225,8 +212,12 @@ export function AdminMoreScreen() {
           </View>
           <View className="min-w-0 flex-1">
             <Text className="text-lg font-bold text-foreground">My Store</Text>
-            <Text className="mt-0.5 text-sm text-muted-foreground" numberOfLines={1}>
-              {auth.profile?.businessName ?? "Business"} · {getMobileRoleLabel(auth.profile?.role)}
+            <Text
+              className="mt-0.5 text-sm text-muted-foreground"
+              numberOfLines={1}
+            >
+              {auth.profile?.businessName ?? "Business"} ·{" "}
+              {getMobileRoleLabel(auth.profile?.role)}
             </Text>
           </View>
           <Icon className="size-sm text-muted-foreground" name="ChevronRight" />

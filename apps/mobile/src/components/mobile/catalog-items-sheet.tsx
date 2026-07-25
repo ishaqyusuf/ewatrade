@@ -1,7 +1,9 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
+import { CatalogItemOverview } from "@/components/mobile/catalog-item-overview"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
+import { ListCreateFab } from "@/components/mobile/list-create-fab"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import {
   SecondaryOperationalRow,
@@ -20,6 +22,7 @@ import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import { useRouter } from "expo-router"
 import { useDeferredValue, useMemo, useState } from "react"
 import {
   FlatList,
@@ -42,6 +45,8 @@ type CatalogRow = {
 }
 
 type CatalogItemsContentProps = {
+  dockHidden?: boolean
+  initialCatalogItemId?: string
   onAddItem: () => void
   onComplete?: () => void
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
@@ -86,19 +91,33 @@ function mapCatalogItem(item: CatalogItem): CatalogRow {
   }
 }
 
-function CatalogItemRow({ item }: { item: CatalogRow }) {
+function CatalogItemRow({
+  item,
+  onPress,
+}: {
+  item: CatalogRow
+  onPress: () => void
+}) {
   return (
-    <SecondaryOperationalRow
-      detail={item.detail}
-      icon={item.kind === "service" ? "Wrench" : "Warehouse"}
-      title={item.name}
-      trailing={
-        <StatusBadge
-          label={item.kind === "service" ? "Service" : "Product"}
-          tone={item.kind === "service" ? "primary" : "success"}
-        />
-      }
-    />
+    <Pressable
+      accessibilityLabel={`Open ${item.name}`}
+      accessibilityRole="button"
+      haptic
+      onPress={onPress}
+      transition
+    >
+      <SecondaryOperationalRow
+        detail={item.detail}
+        icon={item.kind === "service" ? "Wrench" : "Warehouse"}
+        title={item.name}
+        trailing={
+          <StatusBadge
+            label={item.kind === "service" ? "Service" : "Product"}
+            tone={item.kind === "service" ? "primary" : "success"}
+          />
+        }
+      />
+    </Pressable>
   )
 }
 
@@ -137,14 +156,20 @@ function KindFilter({
 }
 
 export function CatalogItemsContent({
+  dockHidden = false,
+  initialCatalogItemId,
   onAddItem,
   onComplete,
   onScroll,
   presentation = "modal",
 }: CatalogItemsContentProps) {
+  const router = useRouter()
   const insets = useSafeAreaInsets()
   const trpc = useTRPC()
   const [kindFilter, setKindFilter] = useState<CatalogKindFilter>("all")
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(
+    initialCatalogItemId ?? null,
+  )
   const [query, setQuery] = useState("")
   const deferredQuery = useDeferredValue(query)
   const availabilityQuery = useQuery(
@@ -163,6 +188,12 @@ export function CatalogItemsContent({
       },
     ),
   )
+  const selectedItem = useQuery(
+    trpc.catalog.getItem.queryOptions(
+      { itemId: selectedItemId ?? "" },
+      { enabled: Boolean(selectedItemId), retry: false },
+    ),
+  )
   const rows = useMemo(
     () =>
       (itemsQuery.data?.pages.flatMap((page) => page.items) ?? []).map(
@@ -173,124 +204,141 @@ export function CatalogItemsContent({
   const totalCount = itemsQuery.data?.pages[0]?.totalCount ?? 0
   const showSearch = shouldShowListSearch(totalCount)
 
+  if (selectedItem.data) {
+    return (
+      <CatalogItemOverview
+        item={selectedItem.data}
+        onBack={() => setSelectedItemId(null)}
+        onCreateOrder={() =>
+          router.push({
+            params: { catalogItemId: selectedItem.data.id },
+            pathname: "/create-sale-modal",
+          })
+        }
+      />
+    )
+  }
+
   return (
     <View className="flex-1">
       <FlatList<CatalogRow>
-      className="flex-1"
-      contentContainerStyle={{
-        paddingBottom:
-          presentation === "tab"
-            ? Math.max(insets.bottom + 116, 152)
-            : showSearch
-              ? 112
-              : 24,
-      }}
-      data={rows}
-      keyExtractor={(item) => item.id}
-      keyboardShouldPersistTaps="handled"
-      onScroll={onScroll}
-      ListEmptyComponent={
-        <EmptyState
-          className="mx-4"
-          icon="Warehouse"
-          message={
-            itemsQuery.isPending
-              ? "Loading catalog items."
-              : "Add a Product or Service to start your Catalog."
-          }
-          title={itemsQuery.isPending ? "Loading" : "No catalog items"}
-        />
-      }
-      ListFooterComponent={
-        <View className="gap-3 px-4 pt-4 pb-8">
-          {itemsQuery.isFetchingNextPage ? (
-            <Text className="py-2 text-center text-xs font-semibold text-muted-foreground">
-              Loading more items…
-            </Text>
-          ) : null}
-          <ActionButton onPress={onAddItem}>Add item</ActionButton>
-          {onComplete ? (
-            <ActionButton onPress={onComplete} variant="outline">
-              Done
-            </ActionButton>
-          ) : null}
-        </View>
-      }
-      ListHeaderComponent={
-        <View className="gap-5 px-4 pb-4">
-          <SecondarySheetHeader
-            description="Products track stock. Services stay outside inventory."
+        className="flex-1"
+        contentContainerStyle={{
+          paddingBottom:
+            presentation === "tab"
+              ? Math.max(insets.bottom + 116, 152)
+              : showSearch
+                ? 112
+                : 24,
+        }}
+        data={rows}
+        keyExtractor={(item) => item.id}
+        keyboardShouldPersistTaps="handled"
+        onScroll={onScroll}
+        ListEmptyComponent={
+          <EmptyState
+            className="m-4 flex-1 justify-center"
             icon="Warehouse"
-            title="Catalog items"
+            message={
+              itemsQuery.isPending
+                ? "Loading catalog items."
+                : "Add a Product or Service to start your Catalog."
+            }
+            title={itemsQuery.isPending ? "Loading" : "No catalog items"}
           />
-
-          {itemsQuery.isError ? (
-            <StatusBanner
-              actionLabel="Try again"
-              icon="AlertCircle"
-              message={itemsQuery.error.message}
-              onActionPress={() => void itemsQuery.refetch()}
-              tone="destructive"
-            />
-          ) : null}
-
-          {availabilityQuery.data?.hasCatalogItems ? (
-            <View className="flex-row flex-wrap gap-2">
-              <KindFilter
-                active={kindFilter === "all"}
-                label="All"
-                onPress={() => setKindFilter("all")}
-              />
-              {availabilityQuery.data.hasProductItems ? (
-                <KindFilter
-                  active={kindFilter === "product"}
-                  label="Products"
-                  onPress={() => setKindFilter("product")}
-                />
-              ) : null}
-              {availabilityQuery.data.hasServiceItems ? (
-                <KindFilter
-                  active={kindFilter === "service"}
-                  label="Services"
-                  onPress={() => setKindFilter("service")}
-                />
-              ) : null}
-            </View>
-          ) : null}
-
-          {presentation === "tab" && showSearch ? (
-            <FormField
-              autoCapitalize="words"
-              label="Find item"
-              leadingIcon="Search"
-              onChangeText={setQuery}
-              placeholder="Search name, type, or unit"
-              value={query}
-            />
-          ) : null}
-        </View>
-      }
-      ListHeaderComponentStyle={
-        presentation === "tab" ? { paddingTop: insets.top + 24 } : undefined
-      }
-      renderItem={({ item }) => (
-        <View className="px-4">
-          <CatalogItemRow item={item} />
-        </View>
-      )}
-      onEndReached={() => {
-        if (
-          shouldFetchNextListPage({
-            hasNextPage: Boolean(itemsQuery.hasNextPage),
-            isFetchingNextPage: itemsQuery.isFetchingNextPage,
-          })
-        ) {
-          void itemsQuery.fetchNextPage()
         }
-      }}
-      onEndReachedThreshold={0.35}
-      refreshControl={<QueryRefreshControl />}
-      scrollEventThrottle={onScroll ? 16 : undefined}
+        ListFooterComponent={
+          <View className="gap-3 px-4 pt-4 pb-8">
+            {itemsQuery.isFetchingNextPage ? (
+              <Text className="py-2 text-center text-xs font-semibold text-muted-foreground">
+                Loading more items…
+              </Text>
+            ) : null}
+            {onComplete ? (
+              <ActionButton onPress={onComplete} variant="outline">
+                Done
+              </ActionButton>
+            ) : null}
+          </View>
+        }
+        ListHeaderComponent={
+          <View className="gap-5 px-4 pb-4">
+            <SecondarySheetHeader
+              description="Products track stock. Services stay outside inventory."
+              icon="Warehouse"
+              title="Catalog items"
+            />
+
+            {itemsQuery.isError ? (
+              <StatusBanner
+                actionLabel="Try again"
+                icon="AlertCircle"
+                message={itemsQuery.error.message}
+                onActionPress={() => void itemsQuery.refetch()}
+                tone="destructive"
+              />
+            ) : null}
+
+            {availabilityQuery.data?.hasCatalogItems ? (
+              <View className="flex-row flex-wrap gap-2">
+                <KindFilter
+                  active={kindFilter === "all"}
+                  label="All"
+                  onPress={() => setKindFilter("all")}
+                />
+                {availabilityQuery.data.hasProductItems ? (
+                  <KindFilter
+                    active={kindFilter === "product"}
+                    label="Products"
+                    onPress={() => setKindFilter("product")}
+                  />
+                ) : null}
+                {availabilityQuery.data.hasServiceItems ? (
+                  <KindFilter
+                    active={kindFilter === "service"}
+                    label="Services"
+                    onPress={() => setKindFilter("service")}
+                  />
+                ) : null}
+              </View>
+            ) : null}
+
+            {presentation === "tab" && showSearch ? (
+              <FormField
+                autoCapitalize="words"
+                label="Find item"
+                leadingIcon="Search"
+                onChangeText={setQuery}
+                placeholder="Search name, type, or unit"
+                value={query}
+              />
+            ) : null}
+          </View>
+        }
+        ListHeaderComponentStyle={
+          presentation === "tab" ? { paddingTop: insets.top + 24 } : undefined
+        }
+        renderItem={({ item }) => (
+          <View className="px-4">
+            <CatalogItemRow
+              item={item}
+              onPress={() => setSelectedItemId(item.id)}
+            />
+          </View>
+        )}
+        onEndReached={() => {
+          if (
+            shouldFetchNextListPage({
+              hasNextPage: Boolean(itemsQuery.hasNextPage),
+              isFetchingNextPage: itemsQuery.isFetchingNextPage,
+            })
+          ) {
+            void itemsQuery.fetchNextPage()
+          }
+        }}
+        onEndReachedThreshold={0.35}
+        refreshControl={<QueryRefreshControl />}
+        scrollEventThrottle={onScroll ? 16 : undefined}
       />
       {presentation === "modal" && showSearch ? (
         <BottomSearchFooter
@@ -301,6 +349,14 @@ export function CatalogItemsContent({
           value={query}
         />
       ) : null}
+      <ListCreateFab
+        accessibilityLabel="Add catalog item"
+        bottomOffset={presentation === "modal" && showSearch ? 88 : 0}
+        dockHidden={dockHidden}
+        onPress={onAddItem}
+        sitsAboveDock={presentation === "tab"}
+        testID="catalog-add-fab"
+      />
     </View>
   )
 }

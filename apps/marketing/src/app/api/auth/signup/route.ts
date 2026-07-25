@@ -9,7 +9,6 @@ import {
   getTestEmailRouting,
 } from "@ewatrade/email"
 import {
-  buildCustomTenantHostname,
   buildInternalTenantHostname,
   provisionTenantVercelDomains,
 } from "@ewatrade/utils"
@@ -179,7 +178,6 @@ export async function POST(request: NextRequest) {
     accessToken,
     addressLine1,
     subdomain,
-    customDomain,
     businessProfileKey,
     businessProfileVersion,
     businessName,
@@ -426,35 +424,6 @@ export async function POST(request: NextRequest) {
           },
         ],
       })
-
-      // If custom domain provided, also create custom hostname records
-      if (customDomain && customDomain.trim().length > 0) {
-        const cleanCustom = customDomain.trim().toLowerCase()
-        await tx.tenantHostname.createMany({
-          data: [
-            {
-              tenantId: tenant.id,
-              surface: "STOREFRONT",
-              hostname: buildCustomTenantHostname({
-                customDomain: cleanCustom,
-                surface: "storefront",
-              }),
-              isPrimary: false,
-              isCustom: true,
-            },
-            {
-              tenantId: tenant.id,
-              surface: "POS",
-              hostname: buildCustomTenantHostname({
-                customDomain: cleanCustom,
-                surface: "pos",
-              }),
-              isPrimary: false,
-              isCustom: true,
-            },
-          ],
-        })
-      }
 
       // Create owner membership
       await tx.membership.create({

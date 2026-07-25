@@ -28,7 +28,13 @@ describe("admin mobile navigation", () => {
     expect(canAccessAdminTabs("ADMIN")).toBe(true)
     expect(canAccessAdminTabs("MANAGER")).toBe(true)
 
-    for (const role of ["CASHIER", "OPERATOR", "SUPPORT", "MEMBER", undefined]) {
+    for (const role of [
+      "CASHIER",
+      "OPERATOR",
+      "SUPPORT",
+      "MEMBER",
+      undefined,
+    ]) {
       expect(canAccessAdminTabs(role)).toBe(false)
     }
   })
@@ -74,9 +80,11 @@ describe("admin mobile navigation", () => {
     expect(ownerItems.map((item) => item.id)).toEqual([
       "inventory",
       "analytics",
+      "payments-received",
       "team",
       "customers",
       "service-work",
+      "website-domain",
       "plan-billing",
       "app-theme",
       "app-lock",
@@ -97,6 +105,9 @@ describe("admin mobile navigation", () => {
       true,
     )
     expect(managerItems.some((item) => item.id === "service-work")).toBe(false)
+    expect(managerItems.some((item) => item.id === "website-domain")).toBe(
+      false,
+    )
     expect(managerItems.some((item) => item.id === "plan-billing")).toBe(false)
   })
 })

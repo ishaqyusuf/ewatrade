@@ -15,6 +15,91 @@
   and rollback tests; focused API tests; DB/API/dashboard/mobile TypeScript;
   repository test suite; targeted Biome; code review and diff hygiene.
 
+### Owner-Controlled Order-Only Offline Operations
+
+- Priority: High
+- Description: Added an owner-only Tenant switch for accepting offline work;
+  enforced it during device registration and replay; narrowed the strict
+  offline contract to new Commercial Orders with optional checkout payment and
+  customer capture; and made Catalog, inventory, closeout, Staff, standalone
+  Customer, and Service mutations online-only.
+- Related Feature: Offline Order Operations
+- Status: Done
+- Completed Date: 2026-07-24
+- Checks Run: Focused DB/API/mobile tests, DB/API/mobile TypeScript, scoped
+  Biome, diff hygiene, and two-axis standards/spec review.
+
+### Mobile Global Search And Commerce Attribution
+
+- Priority: High
+- Description: Added Midday-informed mobile global search across Orders,
+  Customers, Products, Services, Service Jobs, and permitted Staff; moved the
+  account avatar beside the Home greeting and removed its duplicate from More;
+  added contextual Customer/Product order creation; exposed who took each
+  Order and received each payment; and added a searchable Payments received
+  workspace directory.
+- Related Feature: Mobile global search and commerce attribution
+- Status: Done
+- Completed Date: 2026-07-24
+- Checks Run: 14 focused schema/navigation/model tests; API and mobile
+  TypeScript; targeted Biome; NativeWind, keyboard, commerce, and app-shell
+  guards; Android dark-mode Home, Global Search, More, and Payments received
+  visual QA. Live result data was not smoke-tested because the emulator API was
+  unavailable.
+
+### Mobile New Business Onboarding
+
+- Priority: High
+- Description: Added an unobstructed plus FAB to the mobile Businesses screen
+  and a keyboard-safe three-step new-business setup for identity/location,
+  descriptive Business Profile answers, and review. Production creation now
+  atomically writes a separate merchant Tenant, active owner Membership, first
+  Store, and completed onboarding record, then selects the returned business,
+  clears tenant-scoped cache, and opens its dashboard. The local-session path
+  mirrors the same guided behavior.
+- Related Feature: Business onboarding and multi-business switching
+- Status: Done
+- Completed Date: 2026-07-24
+- Checks Run: 24 focused DB/API/mobile tests; DB, API, and mobile TypeScript;
+  targeted Biome; business-onboarding, NativeWind, and keyboard guards; Android
+  dark-mode Businesses/FAB and onboarding visual QA. Live production submission
+  was blocked because Docker Desktop/local API/database were unavailable.
+
+### Production Mobile Order Overview Redesign
+
+- Priority: High
+- Description: Redesigned the protected production Order overview from the
+  owner-provided commerce/customer boards without moving it into the internal
+  design system. The real Order screen now presents a polished summary,
+  customer facts, flat item and total sections, payment/fulfilment state,
+  notes, activity, line-level Product fulfilment, and a safe-area payment
+  action with keyboard-aware entry.
+- Related Feature: Retail Ops mobile commerce
+- Status: Done
+- Completed Date: 2026-07-24
+- Checks Run: Focused overview and commerce-model tests; mobile TypeScript;
+  targeted Biome; commerce-flow, NativeWind, theme, and keyboard guards;
+  Android light/dark QA covering scrolling, footer stacking, payment-sheet
+  keyboard avoidance, Cancel dismissal, live Product fulfilment, live full
+  payment, query refresh, Paid/Fulfilled state, activity, and payment-action
+  removal.
+
+### Mobile List FABs And Customer Directory
+
+- Priority: High
+- Description: Added consistent add FABs to Orders, Catalog, Customer Book, and
+  Staff; made Staff list-first with a centered empty state; added a
+  tenant-scoped customer directory so customers can be saved before their first
+  Order; and retained immutable customer snapshots on Orders.
+- Related Feature: Retail Ops mobile commerce
+- Status: Done
+- Completed Date: 2026-07-24
+- Checks Run: Prisma format/generate/migrate/local push; DB, API, and mobile
+  TypeScript; focused customer/FAB/workspace tests; admin-tab, commerce,
+  create-sale, pagination, NativeWind, keyboard, and theme guards; Android
+  emulator QA for Orders, Catalog, empty Staff, Add Staff, Customer Book, and
+  Add Customer.
+
 ### Adaptive New Order Product Picker
 
 - Priority: Medium

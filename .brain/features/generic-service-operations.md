@@ -88,11 +88,10 @@ behavioral testing are complete.
   capture/upload state, label and audit history.
 - Capture is optional and never blocks Intake or work.
 - Mobile camera/video capture copies the selected asset into the app documents
-  directory and records private `LOCAL` evidence online or through offline
-  replay. It never labels a device-only file as uploaded.
-- Evidence captured during offline Intake is queued after the Intake command
-  with an explicit dependency and resolves the created Job by the stable
-  Intake client id. It cannot attach to charge-only work because no Job exists.
+  directory and records private `LOCAL` evidence while online. It never labels
+  a device-only file as uploaded.
+- Service Intake and evidence are online-only and are never accepted by the
+  offline command schema.
 - Client procedures cannot declare an asset safe or available. Publication
   requires trusted infrastructure to set a safe public asset id and safety
   metadata, after which a manager must explicitly publish it.
@@ -117,8 +116,8 @@ behavioral testing are complete.
   domain-owned queue states, focused forms/workspaces, exact invalidation,
   Suspense loading and route-level recovery.
 - Mobile: generic Service setup, direct Intake, work queue/Job workspace,
-  self-assignment, notes, progress, camera/video evidence and offline command
-  queue/conflict review.
+  self-assignment, notes, progress and camera/video evidence. These mutations
+  require a connection; only new Order checkout belongs to offline replay.
 - Storefront: public Request Form/submission, current Quote review/acceptance and
   safe tracking routes. Business subdomains never expose authenticated pages.
 

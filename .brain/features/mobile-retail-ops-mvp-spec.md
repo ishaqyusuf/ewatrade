@@ -64,7 +64,7 @@ Product sharing is web-first in the MVP. From the admin or sales-rep app, a user
 
 Shared-link orders notify the customer, the admin, and the sales rep by email. The order is recorded as a pending request so the business can discuss pickup, fulfillment, and payment with the customer. The mobile/admin experience includes a generated-links page where users can review each link, see views and order counts, review pending order requests, choose the follow-up payment method and pickup/delivery outcome, complete or cancel the request, and deactivate links that should no longer be valid.
 
-Offline mode is a first-class MVP behavior after the user has logged in once. When offline, the app shows a top banner: "You are currently offline. Changes will sync when you reconnect." Sales and supported inventory actions, including stock intake, unit conversion, and manual stock adjustment for correction, damage, loss, or found stock, are saved to a local durable queue with idempotency keys. Reconnection syncs events to production through tRPC without duplicate sales or double stock deductions. The sync surface also shows recent server sync history and, for manager roles, unreviewed server-recorded sync conflicts that can be acknowledged from the mobile sheet. The admin Reports dashboard also surfaces tenant-level unreviewed server conflicts with sync-device filtering, CSV export, and review acknowledgement.
+Offline mode is an owner-controlled MVP behavior after the user has logged in once. When enabled, the app shows a top banner while disconnected and saves only new Commercial Order checkout—with optional initial payment and customer capture—to a durable local queue with idempotency keys. Product/Service setup, inventory, closeout, Staff, standalone Customer, and Service work remain online-only. Reconnection syncs Orders to production without duplicates. The sync surface also shows recent server sync history and, for manager roles, unreviewed server-recorded sync conflicts that can be acknowledged from the mobile sheet. The admin Reports dashboard also surfaces tenant-level unreviewed server conflicts with sync-device filtering, CSV export, and review acknowledgement.
 
 Subscription support is included as a plan and entitlement foundation with three tiers, plus in-app plan surfaces. Exact pricing, final plan limits, and App Store/Play Store billing mechanics can be finalized later without changing the tenant entitlement model.
 
@@ -192,7 +192,7 @@ Subscription support is included as a plan and entitlement foundation with three
 - The mobile dashboard now auto-opens the first-product setup sheet once per active empty business, using production summary inventory counts when online and local empty-inventory state as the offline or production-unavailable fallback.
 - The first-product wizard is intentionally short: item name, media, then either a primary unit with price/current stock or variant rows with their own price/current stock.
 - The first-product wizard should use a flat guided setup treatment with progress, line-style inputs, manual unit entry, optional variant divider rows, and compact stock summary rows rather than decorative nested cards.
-- The mobile first-product wizard should create the product through `retailOps.createProduct` when online, persist returned product/unit ids into local state as synced, and use the local queued product setup path only while offline.
+- The mobile first-product wizard should create the product through `retailOps.createProduct` while online and show an online-required state while offline; Product setup is never queued.
 - The first-product wizard no longer shows unit-template choices or sends `unitTemplateKey`; owners enter the primary unit manually only when there are no variants, and add optional manual variants/sub-units with their own prices, stock, and conversion multipliers.
 - Once at least one variant exists, primary-unit fields are hidden and no longer required in the mobile UI; product creation still sends an internal non-conflicting parent unit with zero stock to satisfy the current backend product setup contract.
 - When the primary unit field is focused, the mobile wizard shows a horizontal keyboard accessory of quick unit suggestions, filtered by typed text and falling back to the full suggestion list when empty or unmatched.
@@ -216,14 +216,20 @@ Subscription support is included as a plan and entitlement foundation with three
 - When online and a sale timestamp can differ from now, create-sale total previews should use `retailOps.productUnitPriceAt` before recording the sale.
 - Inventory balance changes should be ledger-backed where possible: starting stock, stock intake, sale, adjustment, assignment, return, and sync correction.
 - Inventory stock-operation UI should use reusable flat inventory primitives for product rows, unit choices, restock/adjust toggles, and movement history instead of local card-heavy widgets.
-- The mobile Stock intake sheet should call `retailOps.recordStockIntake` or `retailOps.recordStockAdjustment` when online and the selected unit has a production id; otherwise it should keep using the local queued stock movement path so product/unit dependencies sync first.
+- The mobile Stock intake sheet should call `retailOps.recordStockIntake` or `retailOps.recordStockAdjustment` while online and show an online-required state while offline; stock movements are never queued.
 - The mobile create sheet keeps `Stock Entry` visible but disabled when the workspace has no Product, and the More-screen inventory link is non-interactive in the same state. Both surfaces explain that adding a Product enables stock management so Service-only businesses are not sent into inventory workflows.
-- The mobile Unit conversion sheet should call `retailOps.recordUnitConversion` when online and both the source primary unit and target variant have production ids; otherwise it should keep using the local queued conversion path so product/unit dependencies sync first.
+- The mobile Unit conversion sheet should call `retailOps.recordUnitConversion` while online and show an online-required state while offline; conversions are never queued.
 - Starting stock from onboarding should create an auditable inventory movement, not only mutate a balance field.
 - Staff/attendant invites use membership and role concepts. Owners/admins can invite attendants; attendants cannot invite staff or manage subscription settings.
 - Staff invite emails should be sent through the shared notification/email flow and include app download/get-started instructions.
-- The mobile Staff invite sheet should read production attendant memberships when online, send online invites through `retailOps.inviteStaff`, and fall back to the local queued invite path when the device is offline.
+- The mobile Staff invite sheet should read production attendant memberships when online, send invites through `retailOps.inviteStaff`, and show an online-required state when disconnected; Staff changes are never queued.
 - Staff, customer, business switching, and subscription management sheets should use shared secondary operational headers and divider/selectable rows for compact names, metadata, source state, status badges, plan usage, workspace selection, and order/staff counts instead of local card-heavy list rows.
+- The mobile Businesses screen keeps switching list-first and exposes new
+  business creation through a safe-area plus FAB. Its keyboard-safe three-step
+  flow captures business details, descriptive profile answers, and review,
+  then creates an isolated Tenant/owner Membership/first Store transaction,
+  selects the returned business, clears tenant-scoped cache, and opens its
+  dashboard.
 - Attendant onboarding should collect only minimal profile details required to accept the invitation and create a usable session, using the same shared secondary header, divider row, status badge, and status banner treatment as staff management rather than card-heavy invite summaries.
 - The first mobile attendant acceptance path is account-owned email OTP plus `retailOps.completeStaffOnboarding`: invited cashier/operator/manager memberships can authenticate into an invited session, complete a short name/display-name setup screen, activate their own membership, and then land on the focused attendant dashboard without using owner credentials.
 - The admin dashboard should show sales totals, inventory status, low-stock signals, staff activity, customer book entry points, sync state, tenant-level server sync conflicts, and subscription status.
@@ -240,10 +246,10 @@ Subscription support is included as a plan and entitlement foundation with three
 - The mobile Services workflow should keep setup and intake lightweight: owner/admin users can create service items with SM/LG variants and manage express surcharge, while owner/admin and sales-rep users can select a service variant, set quantity with the shared quantity stepper, capture customer details, set payment status, due timing, native photo/video intake evidence or a manual evidence link, and notes, then review and advance due service orders.
 - Native mobile intake evidence uses `expo-image-picker` camera capture with configured camera, microphone, and photo permission copy. Captured asset URIs and manual evidence links are sent through the existing dry-cleaning evidence metadata contract; cloud upload and cross-device media hosting remain a later storage slice.
 - Mobile emulator QA for this workflow uses a dev/preview-only real-session import route plus `qa:mobile-real-session`. The runner creates local API-backed owner or activated staff sessions through `auth.requestMobileOwnerOtp`, `auth.verifyMobileOwnerOtp`, `retailOps.inviteStaff`, and `retailOps.completeStaffOnboarding`, switches the fresh store to `dry_cleaning_laundry`, can seed the requested Shirt and trouser, Agbada, Jalabia, and Iro and Buba case-study services with SM/LG variants plus mixed paid/after-service/delivery orders, and then opens `/service-orders-modal` on Android. This keeps runtime proof on production tRPC contracts while keeping the QA import route out of production builds.
-- Dry-cleaning service orders are not yet part of the offline replay queue. The mobile Services workflow must show a clear online-required/offline-warning state until service-order events have durable offline envelopes, idempotent replay, and conflict handling.
+- Dry-cleaning Service Orders are outside the offline replay boundary. The mobile Services workflow shows a clear online-required state while disconnected.
 - The attendant dashboard should prioritize create sale, recent sales, assigned/available inventory, customer lookup, and sync status.
-- The mobile clock-in sheet should call `retailOps.openSession` when online and every opening inventory unit has a production id; otherwise it should keep using the local queued session path so product/unit dependencies sync first.
-- The mobile Closeout sheet should call `retailOps.closeSession` when online, the open rep session has a production id, no local changes are pending sync, and every closing inventory unit has a production id; otherwise it should keep using the local queued closeout path so sales, customers, stock, and product/session dependencies sync first.
+- The mobile clock-in sheet should call `retailOps.openSession` only while online and every opening inventory unit has a production id. Rep-session changes are never queued.
+- The mobile Closeout sheet should call `retailOps.closeSession` only while online, the open rep session has a production id, no local changes are pending sync, and every closing inventory unit has a production id. Closeout is never queued.
 - Mobile clock-in and closeout sheets should use shared session reconciliation primitives for source state, opening/closing stock declaration rows, payment variance rows, summary stats, empty states, and submit errors. These surfaces should stay flat, keyboard-safe, semantic-token based, and operational rather than using local card-heavy session widgets.
 - Create-sale is a staged full-screen workflow: select Items first, choose or
   skip a Customer second, and Review payment plus totals before confirmation.
@@ -280,25 +286,31 @@ Subscription support is included as a plan and entitlement foundation with three
   received and balance-due values before confirmation and supports unpaid,
   partial, and fully paid outcomes. Online confirmation creates the idempotent
   commercial order, then records any non-zero payment through the idempotent
-  payment contract. Offline orders may still queue, but payment entry remains
-  disabled until the order has synced.
+  payment contract. Offline checkout queues the same optional initial payment
+  inside the Order command so replay applies both atomically.
 - Checkout offers Cash, Transfer, and POS payment choices for in-person sales.
+- After an online order is created, or an offline order is queued, mobile
+  resets the workflow navigation to Home plus a full-screen success state. The
+  screen shows the relevant order reference, total, item count, customer,
+  payment or queued-sync state, and a Home action; swiping back must reveal
+  Home instead of Checkout. Product and Service creation follows the same
+  success-and-reset pattern with truthful catalog item details.
 - Customer Book and Customer overview currently derive stable customer
   identities from customer name, email, and phone captured on the latest 100
   production commercial orders, then merge pending offline commercial-order
   commands. Values remain grouped by currency, pending rows are never labelled
   as synced, and unsupported profile fields are omitted rather than inferred.
 - Shared-link web checkout should also feed the durable customer book for the business, including platform customer account identity when the customer registered or logged in on the web order page.
-- Offline replay of queued `customer_upsert` events should reconcile the returned production customer-book id into the local customer record, so offline fallback views can distinguish device-only customers from customers already seen by production.
+- Standalone `customer_upsert` events are not accepted offline. Replaying a named Commercial Order creates or reuses the tenant Customer inside the Order transaction.
 - Sale creation snapshots product name, unit/variant name, quantity, unit price, total, payment method, attendant, customer, tenant, store, and client idempotency key.
-- The mobile Create sale sheet should call `retailOps.createSale` when online and the selected product unit plus rep session already have production ids; otherwise it should keep using the local queued sale path so product/session dependencies sync first.
-- Offline replay of queued `sale_created` events should reconcile the returned production order id into the local sale record, so later dashboard, customer, closeout, and duplicate-replay flows can refer to the durable sale.
+- The mobile Create sale sheet creates the production Commercial Order while online. When the owner policy permits offline work, it queues only the equivalent `commercial_order` checkout using existing cached Offerings.
+- Offline replay of queued `commercial_order` events returns the durable Order id so later dashboard, customer, and duplicate-replay flows can refer to the production Order.
 - Mobile quantity inputs that map to production `quantity`, `sourceQuantity`, `targetQuantity`, `countedQuantity`, or `openingStockQuantity` fields should normalize to whole numbers before submit so the app does not send decimal values to integer tRPC contracts.
 - Product share links are part of the MVP as a web-first ordering surface generated from product actions in the mobile/admin experience.
 - Product share-link management UI should use reusable share-link primitives for analytics panels, generated-link metric tiles, link record rows, follow-up option pills, native share/copy actions, careful deactivation, shared-link order follow-up, and delivery status actions instead of local card-heavy link widgets.
 - A generated share link must map to the tenant/business, product, creator, and optional campaign/link record through an opaque slug or token rather than exposing predictable database ids.
 - A generated share link should use the business storefront hostname when available, including the tenant subdomain, while keeping the tenant/store/product path and opaque share token for lookup and analytics.
-- The mobile Product links sheet now supports production link creation, local queued fallback creation, native share-sheet presentation, active/inactive management, production deactivation, local queued deactivation, and link rows that show product, creator, creation time, status, views, orders, and last activity.
+- The mobile Product links sheet supports online production link creation, native share-sheet presentation, active/inactive management, online production deactivation, and link rows that show product, creator, creation time, status, views, orders, and last activity. Link mutations are never queued offline.
 - The public product page must render server-side metadata for link previews, including title, description, image, and canonical URL, so WhatsApp and similar clients can display a useful preview.
 - Shared-product metadata should use the actual request host, including the business subdomain or verified storefront domain, for canonical and preview-image URLs so shared links preview against the same storefront URL customers open.
 - The shared product page supports product viewing, variant or unit selection, quantity entry, total preview, and order-request submission.
@@ -313,13 +325,13 @@ Subscription support is included as a plan and entitlement foundation with three
 - Link view and order analytics should be event-backed so counts can be recomputed or audited later.
 - Durable share-link schema and migration foundations now exist for links, events, views, order-request attribution, stock reservation, notification audit, and daily analytics rollups. Live APIs now use durable `ProductShareLink` rows first for create/list/deactivate/public lookup, record durable view/order events when available, mirror shared-link checkout into durable order-request/reservation/per-recipient notification audit rows, read shared-link order requests from durable rows first, write daily analytics rollups for views/order requests/follow-up outcomes when available, use those rollups for generated-link view/order counters, expose a protected `retailOps.productShareLinkAnalytics` read surface for summary/per-link/daily reporting, record queued/background provider notification delivery outcomes with retry metadata, support paid completion with receipt creation and fulfillment outcome capture for follow-up, expose first protected delivery-request create/list/status APIs for shared-link orders, and keep product/order metadata as rollout fallback. The mobile Product links sheet now sends compact payment and fulfillment follow-up selections when completing a pending request. Pending stock reservations still use the existing inventory balance bridge, and richer mobile/web analytics UI remains a separate follow-up.
 - Full customer app browsing and checkout is a later extension. The MVP should keep the product-link web flow small, direct, and compatible with that future path.
-- Offline mode is available only after a successful login has established session and tenant context.
+- Offline mode is available only after a successful login has established session and tenant context and the owner policy is enabled.
 - Session tokens stay in secure storage. General preferences can stay in lightweight async storage. Offline sales and sync queues should use a durable local persistence layer suitable for ordered transactional events.
 - Mobile App lock is a post-login, per-user, per-device protection layer. Its PIN hash, salt, biometric preference, failed-attempt counters, and unlock timestamps stay in `expo-secure-store`; no lock code, biometric state, or recovery event is synced to production APIs.
 - Offline events use a sync envelope containing client event id, tenant id, store id, actor user id, device id, event type, payload, created at, dependency ids, and retry state.
-- The mobile local sync queue now stores event envelopes with business/tenant id, optional store id, actor name when known, offline device id, event type, entity id, dependency metadata, retry status/count, and created/updated timestamps. Typed tRPC payloads are derived from the persisted local product, customer, sale, session, staff, share-link, and stock records at replay time so remote ids from earlier dependency events are used before later events sync.
-- Sync mutations must be idempotent. Replaying the same client event must not duplicate sales, customers, or inventory movements.
-- Offline rep-session and closeout replay should include opening and closing inventory declarations once the related product/unit ids have synced, rather than replaying only the session lifecycle shell.
+- The mobile local sync queue stores only Commercial Order event envelopes with business/tenant id, optional store id, actor name when known, offline device id, entity id, dependency metadata, retry status/count, and created/updated timestamps. Strict tRPC payloads are derived from the persisted Order checkout.
+- Sync mutations must be idempotent. Replaying the same client event must not duplicate Orders, payments, or customer-directory projection.
+- Rep-session, closeout, Product, inventory, Staff, standalone Customer, and Service events are not accepted by offline replay.
 - The offline banner is always visible when offline and should not block the primary sale flow.
 - Sync status should distinguish offline, pending, syncing, synced, failed, and conflict.
 - The mobile Sync status sheet now separates local device queue failures from server-recorded conflicts, shows current-device sync history, shows current-device and business-wide unreviewed conflict counts, explains business impact plus recommended actions on failed/conflict rows, and lets manager-capable users acknowledge server conflicts without clearing unresolved local device failures.
@@ -334,6 +346,22 @@ Subscription support is included as a plan and entitlement foundation with three
 - React Native performance decisions follow the provided best-practices guide: measure before speculative optimization, use virtualized lists for long lists, avoid expensive broad re-renders, and avoid premature memoization without evidence.
 - The first implementation should remove copied sample commerce data and copied GND language from mobile user-facing screens.
 - Form placeholders should use direct prompt copy, such as `Enter your email address`, not sample people, businesses, emails, products, addresses, or numeric expected values.
+
+## Global Search And Contextual Commerce
+
+- The Home header places the signed-in account avatar beside the greeting; it
+  opens More. Search and notifications occupy the right-side actions, while
+  More no longer repeats the account avatar.
+- Global Search is a full-screen, keyboard-first workflow with a safe-area
+  bottom search field. Results are grouped and visually distinguished across
+  Orders, Customers, Products/Services, Service Jobs, and permitted Staff.
+- Search also exposes quick actions for creating an Order, Product, Service, or
+  Customer and reviewing received payments.
+- Customer overview can create an Order with the Customer selected. Catalog
+  item overview can create an Order with a sellable Offering preselected.
+- Order overview identifies who took the Order. Payment activity identifies who
+  received each payment. More exposes a searchable Payments received directory
+  containing the Order, customer, amount, method, timestamp, and receiver.
 
 ## Testing Decisions
 

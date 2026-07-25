@@ -1,116 +1,28 @@
 import { z } from "zod"
 
-import { catalogCreateSimpleProductSchema } from "./catalog"
 import {
-  inventoryCreateCloseoutSchema,
-  inventoryCreateStockCountSchema,
-  inventoryMoveCustodySchema,
-  inventorySingleBalanceOperationSchema,
-} from "./inventory"
-import { commercialOrderCreateSchema } from "./orders"
-import {
-  serviceEvidenceCaptureSchema,
-  serviceIntakeCreateSchema,
-  serviceJobAssignSchema,
-  serviceJobLineTransitionSchema,
-  serviceJobNoteSchema,
-} from "./services"
+  commercialOrderCreateSchema,
+  commercialOrderPaymentSchema,
+} from "./orders"
 
-const productSetupPayloadSchema = catalogCreateSimpleProductSchema
-  .omit({ clientOperationId: true, kind: true, storeId: true })
-  .extend({ kind: z.literal("product_setup") })
-  .strict()
-
-const stockReceiptPayloadSchema = inventorySingleBalanceOperationSchema
-  .omit({
-    clientOperationId: true,
-    direction: true,
-    linkedOperationId: true,
-    schemaVersion: true,
-    source: true,
-    storeId: true,
-    type: true,
-  })
-  .extend({ kind: z.literal("stock_receipt") })
-  .strict()
-
-const stockCountPayloadSchema = inventoryCreateStockCountSchema
-  .omit({
-    actorNote: true,
-    clientOperationId: true,
-    schemaVersion: true,
-    storeId: true,
-  })
-  .extend({
-    kind: z.literal("stock_count"),
-    reason: z.string().trim().min(1).max(500),
-  })
-  .strict()
+const offlineInitialPaymentSchema = commercialOrderPaymentSchema.omit({
+  orderId: true,
+  type: true,
+})
 
 const commercialOrderPayloadSchema = commercialOrderCreateSchema
   .omit({ clientOrderId: true, schemaVersion: true, storeId: true })
-  .extend({ kind: z.literal("commercial_order") })
-  .strict()
-
-const custodyMovePayloadSchema = inventoryMoveCustodySchema
-  .omit({
-    clientOperationId: true,
-    schemaVersion: true,
-    source: true,
-  })
-  .extend({ kind: z.literal("custody_move") })
-  .strict()
-
-const inventoryCloseoutPayloadSchema = inventoryCreateCloseoutSchema
-  .omit({ clientOperationId: true, schemaVersion: true, storeId: true })
   .extend({
-    kind: z.literal("inventory_closeout"),
-    reason: z.string().trim().min(1).max(500),
+    initialPayment: offlineInitialPaymentSchema.optional(),
+    kind: z.literal("commercial_order"),
   })
   .strict()
 
-const serviceIntakePayloadSchema = serviceIntakeCreateSchema
-  .omit({ clientIntakeId: true, schemaVersion: true, storeId: true })
-  .extend({ kind: z.literal("service_intake") })
-  .strict()
+export const offlineCommandPayloadSchema = commercialOrderPayloadSchema
 
-const serviceTransitionPayloadSchema = serviceJobLineTransitionSchema
-  .omit({ clientCommandId: true, schemaVersion: true, source: true })
-  .extend({ kind: z.literal("service_transition") })
+export const offlineSettingsUpdateSchema = z
+  .object({ enabled: z.boolean() })
   .strict()
-
-const serviceNotePayloadSchema = serviceJobNoteSchema
-  .omit({ clientCommandId: true })
-  .extend({ kind: z.literal("service_note") })
-  .strict()
-
-const serviceSelfAssignmentPayloadSchema = serviceJobAssignSchema
-  .omit({ assigneeUserId: true })
-  .extend({ kind: z.literal("service_self_assignment") })
-  .strict()
-
-const serviceEvidenceCapturePayloadSchema = serviceEvidenceCaptureSchema
-  .omit({ jobId: true })
-  .extend({
-    intakeClientId: z.string().trim().min(8).max(160).optional(),
-    jobId: z.string().trim().min(1).optional(),
-    kind: z.literal("service_evidence_capture"),
-  })
-  .strict()
-
-export const offlineCommandPayloadSchema = z.discriminatedUnion("kind", [
-  productSetupPayloadSchema,
-  stockReceiptPayloadSchema,
-  stockCountPayloadSchema,
-  commercialOrderPayloadSchema,
-  custodyMovePayloadSchema,
-  inventoryCloseoutPayloadSchema,
-  serviceIntakePayloadSchema,
-  serviceTransitionPayloadSchema,
-  serviceNotePayloadSchema,
-  serviceSelfAssignmentPayloadSchema,
-  serviceEvidenceCapturePayloadSchema,
-])
 
 export const offlineReplaySchema = z
   .object({

@@ -6,6 +6,9 @@ Typed tRPC routers are the primary application contract.
 
 - `tenant.businesses` lists the authenticated user's active business
   memberships for mobile workspace switching.
+- `tenant.createBusiness` creates another merchant Tenant, active owner
+  Membership, first Store, and completed Store onboarding record for the
+  authenticated account.
 - `auth.requestMobileOwnerOtp`, `auth.verifyMobileOwnerOtp`, and
   `auth.verifyMobileGoogle` carry bounded Business Profile personalization
   answers through owner signup. Login remains profile-neutral.
@@ -39,13 +42,25 @@ Typed tRPC routers are the primary application contract.
 ## Commercial Orders
 
 - `orders.create`, `orders.get`, `orders.list`, `orders.listPage`,
-  `orders.customerCount`,
+  `orders.customerCount`, `orders.payments`,
   `orders.fulfillProductLine`, `orders.returnProductLine`,
   `orders.recordPayment`.
 
+## Global Search
+
+- `search.global` returns a bounded, ranked tenant-wide aggregate of Orders,
+  Customers, Catalog Items, Service Jobs, and role-permitted Staff.
+- The mobile client waits for two normalized characters and debounces requests;
+  quick-create actions are client navigation, not synthetic search records.
+
+## Customers
+
+- `customers.create`, `customers.count`, `customers.listPage`.
+
 ## Offline
 
-- `offline.registerDevice`, `offline.replay`, `offline.conflicts`,
+- Policy: `offline.settings`, `offline.updateSettings`.
+- Sync: `offline.registerDevice`, `offline.replay`, `offline.conflicts`,
   `offline.review`.
 
 ## Service Operations
@@ -71,6 +86,21 @@ Typed tRPC routers are the primary application contract.
 The retained `retailOps` router contains only staff membership/onboarding and
 subscription administration. Catalog, inventory, orders, offline and Service
 operations do not use that compatibility namespace.
+
+## Managed Domains
+
+- Read: `domains.list`, `domains.registrantProfile`, `domains.order`.
+- Purchase: `domains.checkAvailability`, `domains.saveRegistrantProfile`,
+  `domains.createCheckout`.
+- Bring your own: `domains.connectExternal`, `domains.verifyConnection`.
+- `POST /api/domains/webhooks/paystack` verifies the raw-body Paystack
+  signature and owns successful payment/refund facts. Non-terminal and failed
+  refund events are recorded idempotently for operations visibility.
+- Trigger jobs `domains.registration`, `domains.connection.verify` and the
+  scheduled `domains.reconcile` task own registrar and Vercel side effects.
+- GO54 and Openprovider do not receive client-originated requests. Current
+  provider lifecycle recovery uses scheduled authoritative reads rather than a
+  provider webhook.
 
 ## Public Host Ownership
 

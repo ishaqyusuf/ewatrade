@@ -16,10 +16,6 @@ import {
   shouldShowListSearch,
 } from "@/lib/list-pagination"
 import { canManageMobileOperations } from "@/lib/mobile-roles"
-import {
-  activeBusinessOfflineCommands,
-  useOfflineCommandStore,
-} from "@/store/offlineCommandStore"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
@@ -154,12 +150,6 @@ export function ServiceJobsContent({
   const { profile } = useAuthContext()
   const canManage = canManageMobileOperations(profile?.role)
   const isOfflineMode = useOperationalModeStore((state) => state.isOfflineMode)
-  const queueCommand = useOfflineCommandStore((state) => state.queueCommand)
-  const allOfflineCommands = useOfflineCommandStore((state) => state.commands)
-  const offlineCommands = activeBusinessOfflineCommands(
-    allOfflineCommands,
-    profile?.businessId,
-  )
   const [creating, setCreating] = useState(false)
   const [search, setSearch] = useState("")
   const deferredSearch = useDeferredValue(search)
@@ -237,11 +227,6 @@ export function ServiceJobsContent({
     )
   }, [isOfflineMode, loadedJobs, search])
   const selectedJob = jobs.find((job) => job.id === selectedJobId)
-  const pendingServiceCommands = offlineCommands.filter(
-    (command) =>
-      command.localStatus === "pending" &&
-      command.payload.kind.startsWith("service_"),
-  ).length
   const intakeCreatesTrackedWork = offerings.some(
     (offering) =>
       quantities[offering.id] !== undefined &&
@@ -413,7 +398,15 @@ export function ServiceJobsContent({
       },
     }),
   )
+  const requireOnlineServiceWork = () => {
+    if (!isOfflineMode) return true
+    setError(
+      "Service setup and work activity require a connection. Offline work is limited to new Orders, checkout payment, and customer details.",
+    )
+    return false
+  }
   const submitIntake = () => {
+    if (!requireOnlineServiceWork()) return
     const lines = Object.entries(quantities)
       .filter(([, quantity]) => quantity.trim())
       .map(([offeringId, quantity]) => ({
@@ -453,37 +446,6 @@ export function ServiceJobsContent({
       return
     }
     const clientIntakeId = `intake-${Crypto.randomUUID()}`
-    if (isOfflineMode) {
-      queueCommand({
-        clientCommandId: clientIntakeId,
-        dependencyClientIds: [],
-        eventVersion: 1,
-        payload: { kind: "service_intake", ...payload },
-      })
-      for (const evidence of pendingIntakeEvidence) {
-        queueCommand({
-          clientCommandId: evidence.clientEvidenceId,
-          dependencyClientIds: [clientIntakeId],
-          eventVersion: 1,
-          payload: {
-            ...evidence,
-            intakeClientId: clientIntakeId,
-            kind: "service_evidence_capture",
-          },
-        })
-      }
-      setCreating(false)
-      setQuantities({})
-      setAmountPaid("")
-      setPaymentReference("")
-      setPendingIntakeEvidence([])
-      setNotice(
-        pendingIntakeEvidence.length > 0
-          ? "Service intake and private evidence records queued in dependency order."
-          : "Service intake queued. It is provisional until sync completes.",
-      )
-      return
-    }
     intakeMutation.mutate({
       clientIntakeId,
       initialPaymentMethod: initialPaymentMinor > 0 ? paymentMethod : undefined,
@@ -505,6 +467,7 @@ export function ServiceJobsContent({
       | "in_progress"
       | "ready_for_handoff",
   ) => {
+    if (!requireOnlineServiceWork()) return
     const commandId = `service-${Crypto.randomUUID()}`
     const input = {
       expectedRevision: line.revision,
@@ -514,16 +477,6 @@ export function ServiceJobsContent({
           ? "Updated from mobile Job Workspace"
           : undefined,
       toStatus,
-    }
-    if (isOfflineMode) {
-      queueCommand({
-        clientCommandId: commandId,
-        dependencyClientIds: [],
-        eventVersion: 1,
-        payload: { kind: "service_transition", ...input },
-      })
-      setNotice("Work update queued as provisional.")
-      return
     }
     transitionMutation.mutate({
       clientCommandId: commandId,
@@ -535,18 +488,8 @@ export function ServiceJobsContent({
 
   const addNote = (job: WorkJob) => {
     if (!jobNote.trim()) return
+    if (!requireOnlineServiceWork()) return
     const clientCommandId = `note-${Crypto.randomUUID()}`
-    if (isOfflineMode) {
-      queueCommand({
-        clientCommandId,
-        dependencyClientIds: [],
-        eventVersion: 1,
-        payload: { body: jobNote.trim(), jobId: job.id, kind: "service_note" },
-      })
-      setJobNote("")
-      setNotice("Private note queued as provisional.")
-      return
-    }
     noteMutation.mutate({
       body: jobNote.trim(),
       clientCommandId,
@@ -556,20 +499,7 @@ export function ServiceJobsContent({
 
   const assignToMe = (job: WorkJob) => {
     if (!profile?.id) return
-    if (isOfflineMode) {
-      queueCommand({
-        dependencyClientIds: [],
-        eventVersion: 1,
-        payload: {
-          expectedRevision: job.revision,
-          jobId: job.id,
-          kind: "service_self_assignment",
-          reason: "Self-assigned from mobile",
-        },
-      })
-      setNotice("Self-assignment queued as provisional.")
-      return
-    }
+    if (!requireOnlineServiceWork()) return
     assignMutation.mutate({
       assigneeUserId: profile.id,
       expectedRevision: job.revision,
@@ -579,6 +509,7 @@ export function ServiceJobsContent({
   }
 
   const recordPayment = (job: WorkJob) => {
+    if (!requireOnlineServiceWork()) return
     const amountMinor = majorToMinor(amountPaid)
     if (amountMinor === null || amountMinor <= 0) {
       setError("Enter a valid payment amount.")
@@ -594,6 +525,7 @@ export function ServiceJobsContent({
   }
 
   const handoff = (job: WorkJob) => {
+    if (!requireOnlineServiceWork()) return
     const amountMinor = amountPaid.trim() ? majorToMinor(amountPaid) : 0
     if (job.balanceDueMinor > 0 && (amountMinor === null || amountMinor <= 0)) {
       setError("Collect the outstanding balance before handoff.")
@@ -616,6 +548,7 @@ export function ServiceJobsContent({
   }
 
   const notifyCustomer = (job: WorkJob) => {
+    if (!requireOnlineServiceWork()) return
     if (!notificationChannel || !customerMessage.trim()) {
       setError("Choose SMS or WhatsApp and enter a customer message.")
       return
@@ -672,24 +605,15 @@ export function ServiceJobsContent({
     job: WorkJob,
     mediaType: "photo" | "video",
   ) => {
+    if (!requireOnlineServiceWork()) return
     const evidence = await captureLocalEvidence(mediaType, "progress")
     if (!evidence) return
     const payload = { ...evidence, jobId: job.id }
-    if (isOfflineMode) {
-      queueCommand({
-        dependencyClientIds: [],
-        eventVersion: 1,
-        payload: { kind: "service_evidence_capture", ...payload },
-      })
-      setNotice(
-        "Private evidence saved on this device. Its record will sync later.",
-      )
-      return
-    }
     evidenceMutation.mutate(payload)
   }
 
   const captureIntakeEvidence = async (mediaType: "photo" | "video") => {
+    if (!requireOnlineServiceWork()) return
     const evidence = await captureLocalEvidence(mediaType, "intake_condition")
     if (!evidence) return
     setPendingIntakeEvidence((current) => [...current, evidence])
@@ -700,477 +624,241 @@ export function ServiceJobsContent({
     !creating &&
     !selectedJob &&
     shouldShowListSearch(
-      Math.max(
-        jobsQuery.data?.pages[0]?.totalCount ?? 0,
-        loadedJobs.length,
-      ),
+      Math.max(jobsQuery.data?.pages[0]?.totalCount ?? 0, loadedJobs.length),
     )
 
   return (
     <View className="flex-1">
       <KeyboardAwareScrollView
-      bottomOffset={120}
-      className="flex-1"
-      contentContainerStyle={{
-        gap: 20,
-        paddingBottom: showQueueSearch ? 112 : 48,
-        paddingHorizontal: 20,
-      }}
-      disableScrollOnKeyboardHide
-      keyboardDismissMode="interactive"
-      keyboardShouldPersistTaps="handled"
-      refreshControl={
-        !creating && !selectedJob ? <QueryRefreshControl /> : undefined
-      }
-      onScroll={({ nativeEvent }) => {
-        const nearBottom =
-          nativeEvent.layoutMeasurement.height + nativeEvent.contentOffset.y >=
-          nativeEvent.contentSize.height - 240
-        if (
-          !creating &&
-          !selectedJob &&
-          nearBottom &&
-          shouldFetchNextListPage({
-            hasNextPage: Boolean(jobsQuery.hasNextPage),
-            isFetchingNextPage: jobsQuery.isFetchingNextPage,
-          })
-        ) {
-          void jobsQuery.fetchNextPage()
+        bottomOffset={120}
+        className="flex-1"
+        contentContainerStyle={{
+          gap: 20,
+          paddingBottom: showQueueSearch ? 112 : 48,
+          paddingHorizontal: 20,
+        }}
+        disableScrollOnKeyboardHide
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          !creating && !selectedJob ? <QueryRefreshControl /> : undefined
         }
-      }}
-      scrollEventThrottle={16}
-    >
-      {error ? (
-        <StatusBanner
-          icon="AlertCircle"
-          message={error}
-          title="Could not complete action"
-          tone="destructive"
-        />
-      ) : null}
-      {notice ? (
-        <StatusBanner
-          icon="ClipboardCheck"
-          message={notice}
-          title="Service work"
-          tone="success"
-        />
-      ) : null}
-      {isOfflineMode ? (
-        <StatusBanner
-          icon="Wind"
-          message={`${pendingServiceCommands} service command${pendingServiceCommands === 1 ? "" : "s"} waiting. Queued changes are provisional until replay.`}
-          title="Offline"
-          tone="warning"
-        />
-      ) : null}
+        onScroll={({ nativeEvent }) => {
+          const nearBottom =
+            nativeEvent.layoutMeasurement.height +
+              nativeEvent.contentOffset.y >=
+            nativeEvent.contentSize.height - 240
+          if (
+            !creating &&
+            !selectedJob &&
+            nearBottom &&
+            shouldFetchNextListPage({
+              hasNextPage: Boolean(jobsQuery.hasNextPage),
+              isFetchingNextPage: jobsQuery.isFetchingNextPage,
+            })
+          ) {
+            void jobsQuery.fetchNextPage()
+          }
+        }}
+        scrollEventThrottle={16}
+      >
+        {error ? (
+          <StatusBanner
+            icon="AlertCircle"
+            message={error}
+            title="Could not complete action"
+            tone="destructive"
+          />
+        ) : null}
+        {notice ? (
+          <StatusBanner
+            icon="ClipboardCheck"
+            message={notice}
+            title="Service work"
+            tone="success"
+          />
+        ) : null}
+        {isOfflineMode ? (
+          <StatusBanner
+            icon="Lock"
+            message="Services cannot be created or updated offline. Reconnect to continue Service work."
+            title="Online connection required"
+            tone="warning"
+          />
+        ) : null}
 
-      {creating ? (
-        <View className="gap-5">
-          <View className="gap-1">
-            <Text className="text-xl font-extrabold text-foreground">
-              New service
-            </Text>
-            <Text className="text-sm leading-5 text-muted-foreground">
-              Select the items. Customer and delivery details are optional.
-            </Text>
-          </View>
-          <View className="border-y border-border">
-            {offerings.map((offering, index) => {
-              const selected = quantities[offering.id] !== undefined
-              return (
-                <View
-                  className={`gap-3 py-4 ${
-                    index < offerings.length - 1 ? "border-b border-border" : ""
-                  }`}
-                  key={offering.id}
-                >
-                  <Pressable
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: selected }}
-                    className="min-h-11 flex-row items-center justify-between gap-3"
-                    haptic
-                    onPress={() =>
-                      setQuantities((current) => {
-                        if (selected) {
-                          const next = { ...current }
-                          delete next[offering.id]
-                          return next
-                        }
-                        return { ...current, [offering.id]: "1" }
-                      })
-                    }
-                  >
-                    <View className="min-w-0 flex-1 gap-1">
-                      <Text className="font-bold text-foreground">
-                        {offering.displayName}
-                      </Text>
-                      <Text className="text-xs text-muted-foreground">
-                        {formatMinorMoney(
-                          offering.fixedPriceMinor ?? 0,
-                          offering.currencyCode,
-                        )}{" "}
-                        ·{" "}
-                        {offering.serviceWorkPolicy?.workPolicy === "TRACKED"
-                          ? "Tracked work"
-                          : "Order only"}
-                      </Text>
-                    </View>
-                    <Icon
-                      className={
-                        selected
-                          ? "size-sm text-primary"
-                          : "size-sm text-muted-foreground"
-                      }
-                      name={selected ? "CircleCheck" : "Square"}
-                    />
-                  </Pressable>
-                  {selected ? (
-                    <FormField
-                      keyboardType="decimal-pad"
-                      label="Quantity"
-                      onChangeText={(value) =>
-                        setQuantities((current) => ({
-                          ...current,
-                          [offering.id]: value,
-                        }))
-                      }
-                      value={quantities[offering.id]}
-                    />
-                  ) : null}
-                </View>
-              )
-            })}
-          </View>
-          {offerings.length === 0 ? (
-            <StatusBanner
-              icon="Info"
-              message="Add an available fixed-price Service Offering to the Catalog first."
-              title="No direct-intake services"
-            />
-          ) : null}
-          <View className="gap-3">
-            <FormField
-              label="Customer name"
-              onChangeText={setCustomerName}
-              value={customerName}
-            />
-            <FormField
-              keyboardType="phone-pad"
-              label="Phone"
-              onChangeText={setCustomerPhone}
-              value={customerPhone}
-            />
-          </View>
-          {!isOfflineMode && settingsQuery.data?.expressEnabled ? (
-            <Pressable
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: express }}
-              className="min-h-14 flex-row items-center justify-between gap-3 border-y border-border py-4"
-              haptic
-              onPress={() => setExpress((value) => !value)}
-            >
-              <View className="min-w-0 flex-1 gap-1">
-                <Text className="font-bold text-foreground">
-                  {settingsQuery.data.expressLabel}
-                </Text>
-                <Text className="text-xs text-muted-foreground">
-                  {settingsQuery.data.expressSurchargeType === "fixed"
-                    ? `${formatMinorMoney(
-                        settingsQuery.data.expressSurchargeValue,
-                        offerings[0]?.currencyCode ?? "NGN",
-                      )} surcharge`
-                    : `${settingsQuery.data.expressSurchargeValue / 100}% surcharge`}
-                </Text>
-              </View>
-              <Icon
-                className={
-                  express
-                    ? "size-sm text-primary"
-                    : "size-sm text-muted-foreground"
-                }
-                name={express ? "CircleCheck" : "CheckSquare"}
-              />
-            </Pressable>
-          ) : null}
-          <View className="gap-2 border-b border-border pb-4">
-            <View className="flex-row justify-between">
-              <Text className="text-sm text-muted-foreground">Subtotal</Text>
-              <Text className="text-sm text-foreground">
-                {formatMinorMoney(
-                  subtotalMinor,
-                  offerings[0]?.currencyCode ?? "NGN",
-                )}
+        {creating ? (
+          <View className="gap-5">
+            <View className="gap-1">
+              <Text className="text-xl font-extrabold text-foreground">
+                New service
+              </Text>
+              <Text className="text-sm leading-5 text-muted-foreground">
+                Select the items. Customer and delivery details are optional.
               </Text>
             </View>
-            {serviceChargeMinor > 0 ? (
+            <View className="border-y border-border">
+              {offerings.map((offering, index) => {
+                const selected = quantities[offering.id] !== undefined
+                return (
+                  <View
+                    className={`gap-3 py-4 ${
+                      index < offerings.length - 1
+                        ? "border-b border-border"
+                        : ""
+                    }`}
+                    key={offering.id}
+                  >
+                    <Pressable
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: selected }}
+                      className="min-h-11 flex-row items-center justify-between gap-3"
+                      haptic
+                      onPress={() =>
+                        setQuantities((current) => {
+                          if (selected) {
+                            const next = { ...current }
+                            delete next[offering.id]
+                            return next
+                          }
+                          return { ...current, [offering.id]: "1" }
+                        })
+                      }
+                    >
+                      <View className="min-w-0 flex-1 gap-1">
+                        <Text className="font-bold text-foreground">
+                          {offering.displayName}
+                        </Text>
+                        <Text className="text-xs text-muted-foreground">
+                          {formatMinorMoney(
+                            offering.fixedPriceMinor ?? 0,
+                            offering.currencyCode,
+                          )}{" "}
+                          ·{" "}
+                          {offering.serviceWorkPolicy?.workPolicy === "TRACKED"
+                            ? "Tracked work"
+                            : "Order only"}
+                        </Text>
+                      </View>
+                      <Icon
+                        className={
+                          selected
+                            ? "size-sm text-primary"
+                            : "size-sm text-muted-foreground"
+                        }
+                        name={selected ? "CircleCheck" : "Square"}
+                      />
+                    </Pressable>
+                    {selected ? (
+                      <FormField
+                        keyboardType="decimal-pad"
+                        label="Quantity"
+                        onChangeText={(value) =>
+                          setQuantities((current) => ({
+                            ...current,
+                            [offering.id]: value,
+                          }))
+                        }
+                        value={quantities[offering.id]}
+                      />
+                    ) : null}
+                  </View>
+                )
+              })}
+            </View>
+            {offerings.length === 0 ? (
+              <StatusBanner
+                icon="Info"
+                message="Add an available fixed-price Service Offering to the Catalog first."
+                title="No direct-intake services"
+              />
+            ) : null}
+            <View className="gap-3">
+              <FormField
+                label="Customer name"
+                onChangeText={setCustomerName}
+                value={customerName}
+              />
+              <FormField
+                keyboardType="phone-pad"
+                label="Phone"
+                onChangeText={setCustomerPhone}
+                value={customerPhone}
+              />
+            </View>
+            {!isOfflineMode && settingsQuery.data?.expressEnabled ? (
+              <Pressable
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: express }}
+                className="min-h-14 flex-row items-center justify-between gap-3 border-y border-border py-4"
+                haptic
+                onPress={() => setExpress((value) => !value)}
+              >
+                <View className="min-w-0 flex-1 gap-1">
+                  <Text className="font-bold text-foreground">
+                    {settingsQuery.data.expressLabel}
+                  </Text>
+                  <Text className="text-xs text-muted-foreground">
+                    {settingsQuery.data.expressSurchargeType === "fixed"
+                      ? `${formatMinorMoney(
+                          settingsQuery.data.expressSurchargeValue,
+                          offerings[0]?.currencyCode ?? "NGN",
+                        )} surcharge`
+                      : `${settingsQuery.data.expressSurchargeValue / 100}% surcharge`}
+                  </Text>
+                </View>
+                <Icon
+                  className={
+                    express
+                      ? "size-sm text-primary"
+                      : "size-sm text-muted-foreground"
+                  }
+                  name={express ? "CircleCheck" : "CheckSquare"}
+                />
+              </Pressable>
+            ) : null}
+            <View className="gap-2 border-b border-border pb-4">
               <View className="flex-row justify-between">
-                <Text className="text-sm text-muted-foreground">Express</Text>
+                <Text className="text-sm text-muted-foreground">Subtotal</Text>
                 <Text className="text-sm text-foreground">
                   {formatMinorMoney(
-                    serviceChargeMinor,
+                    subtotalMinor,
                     offerings[0]?.currencyCode ?? "NGN",
                   )}
                 </Text>
               </View>
-            ) : null}
-            <View className="flex-row justify-between">
-              <Text className="font-bold text-foreground">Total</Text>
-              <Text className="font-bold text-foreground">
-                {formatMinorMoney(
-                  totalMinor,
-                  offerings[0]?.currencyCode ?? "NGN",
-                )}
-              </Text>
-            </View>
-          </View>
-          {!isOfflineMode ? (
-            <View className="gap-4">
-              <View className="gap-1">
-                <Text className="font-bold text-foreground">Payment</Text>
-                <Text className="text-xs leading-5 text-muted-foreground">
-                  Leave empty to collect the full balance on delivery.
-                </Text>
-              </View>
-              <MoneyField
-                currencyCode={offerings[0]?.currencyCode ?? "NGN"}
-                label="Amount paid now"
-                onChangeValue={setAmountPaid}
-                value={amountPaid}
-              />
-              <View className="flex-row flex-wrap gap-2">
-                {(
-                  [
-                    ["cash", "Cash"],
-                    ["bank_transfer", "Transfer"],
-                    ["pos", "POS"],
-                    ["card", "Card"],
-                    ["other", "Other"],
-                  ] as const
-                ).map(([value, label]) => (
-                  <Pressable
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: paymentMethod === value }}
-                    className={
-                      paymentMethod === value
-                        ? "min-h-11 items-center justify-center rounded-full bg-primary px-4"
-                        : "min-h-11 items-center justify-center rounded-full bg-muted px-4"
-                    }
-                    haptic
-                    key={value}
-                    onPress={() => setPaymentMethod(value)}
-                  >
-                    <Text
-                      className={
-                        paymentMethod === value
-                          ? "text-sm font-bold text-primary-foreground"
-                          : "text-sm font-bold text-foreground"
-                      }
-                    >
-                      {label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-              <FormField
-                label="Payment reference"
-                onChangeText={setPaymentReference}
-                value={paymentReference}
-              />
-              <View className="gap-2">
-                <Text className="font-bold text-foreground">
-                  Customer updates
-                </Text>
-                <View className="flex-row gap-2">
-                  {(
-                    [
-                      ["", "None"],
-                      ["whatsapp", "WhatsApp"],
-                      ["sms", "SMS"],
-                    ] as const
-                  ).map(([value, label]) => (
-                    <Pressable
-                      accessibilityRole="radio"
-                      accessibilityState={{
-                        selected: notificationChannel === value,
-                      }}
-                      className={
-                        notificationChannel === value
-                          ? "min-h-11 flex-1 items-center justify-center rounded-full bg-primary px-3"
-                          : "min-h-11 flex-1 items-center justify-center rounded-full bg-muted px-3"
-                      }
-                      haptic
-                      key={value || "none"}
-                      onPress={() => setNotificationChannel(value)}
-                    >
-                      <Text
-                        className={
-                          notificationChannel === value
-                            ? "text-xs font-bold text-primary-foreground"
-                            : "text-xs font-bold text-foreground"
-                        }
-                      >
-                        {label}
-                      </Text>
-                    </Pressable>
-                  ))}
+              {serviceChargeMinor > 0 ? (
+                <View className="flex-row justify-between">
+                  <Text className="text-sm text-muted-foreground">Express</Text>
+                  <Text className="text-sm text-foreground">
+                    {formatMinorMoney(
+                      serviceChargeMinor,
+                      offerings[0]?.currencyCode ?? "NGN",
+                    )}
+                  </Text>
                 </View>
+              ) : null}
+              <View className="flex-row justify-between">
+                <Text className="font-bold text-foreground">Total</Text>
+                <Text className="font-bold text-foreground">
+                  {formatMinorMoney(
+                    totalMinor,
+                    offerings[0]?.currencyCode ?? "NGN",
+                  )}
+                </Text>
               </View>
             </View>
-          ) : null}
-          <Pressable
-            className="min-h-11 justify-center"
-            onPress={() => setShowDetails((value) => !value)}
-          >
-            <Text className="font-bold text-primary">
-              {showDetails
-                ? "Hide details"
-                : "Add date, instructions, photo or video"}
-            </Text>
-          </Pressable>
-          {showDetails ? (
-            <View className="gap-5 border-y border-border py-5">
-              <FormField
-                autoCapitalize="none"
-                helper="Example: 2026-07-21 16:00"
-                label="Promised delivery"
-                onChangeText={setDueAt}
-                value={dueAt}
-              />
-              <FormField
-                label="Instructions"
-                multiline
-                onChangeText={setInstructions}
-                value={instructions}
-              />
-              <View className="gap-3">
+            {!isOfflineMode ? (
+              <View className="gap-4">
                 <View className="gap-1">
-                  <Text className="font-bold text-foreground">
-                    Photo or video package
-                  </Text>
+                  <Text className="font-bold text-foreground">Payment</Text>
                   <Text className="text-xs leading-5 text-muted-foreground">
-                    Optional and private. Available when at least one selected
-                    Service creates tracked work.
+                    Leave empty to collect the full balance on delivery.
                   </Text>
                 </View>
-                <View className="flex-row gap-2">
-                  <View className="flex-1">
-                    <ActionButton
-                      disabled={!intakeCreatesTrackedWork}
-                      onPress={() => void captureIntakeEvidence("photo")}
-                      variant="outline"
-                    >
-                      Take photo
-                    </ActionButton>
-                  </View>
-                  <View className="flex-1">
-                    <ActionButton
-                      disabled={!intakeCreatesTrackedWork}
-                      onPress={() => void captureIntakeEvidence("video")}
-                      variant="outline"
-                    >
-                      Record video
-                    </ActionButton>
-                  </View>
-                </View>
-                {pendingIntakeEvidence.map((evidence) => (
-                  <View
-                    className="flex-row items-center justify-between gap-3 border-t border-border pt-3"
-                    key={evidence.clientEvidenceId}
-                  >
-                    <Text className="min-w-0 flex-1 text-sm text-foreground">
-                      {evidence.label}
-                    </Text>
-                    <ActionButton
-                      onPress={() => {
-                        discardRetainedEvidence(evidence)
-                        setPendingIntakeEvidence((current) =>
-                          current.filter(
-                            (entry) =>
-                              entry.clientEvidenceId !==
-                              evidence.clientEvidenceId,
-                          ),
-                        )
-                      }}
-                      variant="ghost"
-                    >
-                      Remove
-                    </ActionButton>
-                  </View>
-                ))}
-              </View>
-            </View>
-          ) : null}
-          <ActionButton
-            isLoading={intakeMutation.isPending}
-            loadingLabel="Creating"
-            onPress={submitIntake}
-          >
-            {isOfflineMode ? "Queue service" : "Create service order"}
-          </ActionButton>
-          <ActionButton
-            onPress={() => {
-              pendingIntakeEvidence.forEach(discardRetainedEvidence)
-              setPendingIntakeEvidence([])
-              setAmountPaid("")
-              setPaymentReference("")
-              setCreating(false)
-            }}
-            variant="ghost"
-          >
-            Cancel
-          </ActionButton>
-        </View>
-      ) : selectedJob ? (
-        <View className="gap-4">
-          <Pressable
-            className="min-h-11 flex-row items-center gap-2"
-            onPress={() => {
-              setAmountPaid("")
-              setPaymentReference("")
-              setSelectedJobId(null)
-            }}
-          >
-            <Icon className="size-sm text-primary" name="ArrowLeft" />
-            <Text className="font-bold text-primary">Work queue</Text>
-          </Pressable>
-          <View className="gap-1">
-            <Text className="text-xl font-extrabold text-foreground">
-              {selectedJob.orderNumber}
-            </Text>
-            <Text className="capitalize text-sm text-muted-foreground">
-              {textLabel(selectedJob.summary)}
-            </Text>
-          </View>
-          <View className="gap-4 border-y border-border py-4">
-            <View className="flex-row items-start justify-between gap-3">
-              <View className="min-w-0 flex-1 gap-1">
-                <Text className="font-bold text-foreground">
-                  Payment and collection
-                </Text>
-                <Text className="text-xs text-muted-foreground">
-                  {formatMinorMoney(
-                    selectedJob.amountPaidMinor,
-                    selectedJob.currencyCode,
-                  )}{" "}
-                  paid ·{" "}
-                  {formatMinorMoney(
-                    selectedJob.balanceDueMinor,
-                    selectedJob.currencyCode,
-                  )}{" "}
-                  due
-                </Text>
-              </View>
-              <StatusBadge
-                label={textLabel(selectedJob.paymentStatus)}
-                tone={selectedJob.balanceDueMinor > 0 ? "warning" : "success"}
-              />
-            </View>
-            {selectedJob.balanceDueMinor > 0 ? (
-              <>
                 <MoneyField
-                  currencyCode={selectedJob.currencyCode}
-                  label="Amount received"
+                  currencyCode={offerings[0]?.currencyCode ?? "NGN"}
+                  label="Amount paid now"
                   onChangeValue={setAmountPaid}
                   value={amountPaid}
                 />
@@ -1199,8 +887,8 @@ export function ServiceJobsContent({
                       <Text
                         className={
                           paymentMethod === value
-                            ? "text-xs font-bold text-primary-foreground"
-                            : "text-xs font-bold text-foreground"
+                            ? "text-sm font-bold text-primary-foreground"
+                            : "text-sm font-bold text-foreground"
                         }
                       >
                         {label}
@@ -1213,290 +901,535 @@ export function ServiceJobsContent({
                   onChangeText={setPaymentReference}
                   value={paymentReference}
                 />
-                <ActionButton
-                  disabled={!amountPaid.trim()}
-                  isLoading={paymentMutation.isPending}
-                  onPress={() => recordPayment(selectedJob)}
-                  variant="outline"
-                >
-                  Record payment
-                </ActionButton>
-              </>
-            ) : null}
-            {selectedJob.summary === "ready_for_handoff" &&
-            !selectedJob.handedOffAt ? (
-              <ActionButton
-                isLoading={handoffMutation.isPending}
-                onPress={() => handoff(selectedJob)}
-              >
-                {selectedJob.balanceDueMinor > 0
-                  ? "Collect balance and hand over"
-                  : "Mark collected"}
-              </ActionButton>
-            ) : selectedJob.handedOffAt ? (
-              <StatusBanner
-                icon="CircleCheck"
-                message="This order has been collected and closed."
-                tone="success"
-              />
-            ) : null}
-          </View>
-          {profile?.id && selectedJob.currentAssigneeUserId !== profile.id ? (
-            <ActionButton
-              isLoading={assignMutation.isPending}
-              onPress={() => assignToMe(selectedJob)}
-              variant="outline"
-            >
-              Assign to me
-            </ActionButton>
-          ) : null}
-          <View className="border-y border-border">
-            {selectedJob.lines.map((line, index) => (
-              <View
-                className={`gap-4 py-4 ${
-                  index < selectedJob.lines.length - 1
-                    ? "border-b border-border"
-                    : ""
-                }`}
-                key={line.id}
-              >
-                <View className="flex-row items-start justify-between gap-3">
-                  <View className="min-w-0 flex-1 gap-1">
-                    <Text className="font-bold text-foreground">
-                      {line.catalogItemName}
-                    </Text>
-                    <Text className="text-xs text-muted-foreground">
-                      {line.offeringName} · {line.allocatedQuantity}
-                    </Text>
-                  </View>
-                  <StatusBadge label={textLabel(line.status)} tone="muted" />
-                </View>
-                {line.authorizationStatus !== "AUTHORIZED" ? (
-                  <StatusBanner
-                    icon="Lock"
-                    message={`Work is waiting for ${textLabel(line.authorizationStatus)}.`}
-                    tone="warning"
-                  />
-                ) : null}
-                {actions(line.status).length > 0 ? (
-                  <View className="gap-2">
-                    <Text className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Update status
-                    </Text>
-                    <View className="flex-row flex-wrap gap-2">
-                      {actions(line.status).map((action, actionIndex) => (
-                        <View className="min-w-[46%] flex-1" key={action}>
-                          <ActionButton
-                            disabled={line.authorizationStatus !== "AUTHORIZED"}
-                            onPress={() => transition(line, action)}
-                            variant={actionIndex === 0 ? "default" : "outline"}
-                          >
-                            {actionLabel(action)}
-                          </ActionButton>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                ) : null}
-              </View>
-            ))}
-          </View>
-          <View className="gap-4 border-t border-border pt-4">
-            {canManage ? (
-              <View className="gap-3">
-                <Text className="font-bold text-foreground">
-                  Customer update
-                </Text>
-                <View className="flex-row gap-2">
-                  {(
-                    [
-                      ["whatsapp", "WhatsApp"],
-                      ["sms", "SMS"],
-                    ] as const
-                  ).map(([value, label]) => (
-                    <Pressable
-                      accessibilityRole="radio"
-                      accessibilityState={{
-                        selected: notificationChannel === value,
-                      }}
-                      className={
-                        notificationChannel === value
-                          ? "min-h-11 flex-1 items-center justify-center rounded-full bg-primary px-3"
-                          : "min-h-11 flex-1 items-center justify-center rounded-full bg-muted px-3"
-                      }
-                      haptic
-                      key={value}
-                      onPress={() => setNotificationChannel(value)}
-                    >
-                      <Text
+                <View className="gap-2">
+                  <Text className="font-bold text-foreground">
+                    Customer updates
+                  </Text>
+                  <View className="flex-row gap-2">
+                    {(
+                      [
+                        ["", "None"],
+                        ["whatsapp", "WhatsApp"],
+                        ["sms", "SMS"],
+                      ] as const
+                    ).map(([value, label]) => (
+                      <Pressable
+                        accessibilityRole="radio"
+                        accessibilityState={{
+                          selected: notificationChannel === value,
+                        }}
                         className={
                           notificationChannel === value
-                            ? "text-sm font-bold text-primary-foreground"
-                            : "text-sm font-bold text-foreground"
+                            ? "min-h-11 flex-1 items-center justify-center rounded-full bg-primary px-3"
+                            : "min-h-11 flex-1 items-center justify-center rounded-full bg-muted px-3"
                         }
+                        haptic
+                        key={value || "none"}
+                        onPress={() => setNotificationChannel(value)}
                       >
-                        {label}
-                      </Text>
-                    </Pressable>
-                  ))}
+                        <Text
+                          className={
+                            notificationChannel === value
+                              ? "text-xs font-bold text-primary-foreground"
+                              : "text-xs font-bold text-foreground"
+                          }
+                        >
+                          {label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
                 </View>
-                <FormField
-                  label="Message"
-                  multiline
-                  onChangeText={setCustomerMessage}
-                  value={customerMessage}
-                />
-                <ActionButton
-                  disabled={!customerMessage.trim() || !notificationChannel}
-                  isLoading={messageMutation.isPending}
-                  onPress={() => notifyCustomer(selectedJob)}
-                  variant="outline"
-                >
-                  Send customer update
-                </ActionButton>
               </View>
             ) : null}
-            <View className="gap-1">
-              <Text className="font-bold text-foreground">
-                Private work record
-              </Text>
-              <Text className="text-xs leading-5 text-muted-foreground">
-                Notes and evidence are internal unless a manager explicitly
-                publishes reviewed evidence.
-              </Text>
-            </View>
-            <FormField
-              label="Internal note"
-              multiline
-              onChangeText={setJobNote}
-              value={jobNote}
-            />
-            <ActionButton
-              disabled={!jobNote.trim()}
-              isLoading={noteMutation.isPending}
-              onPress={() => addNote(selectedJob)}
-              variant="outline"
+            <Pressable
+              className="min-h-11 justify-center"
+              onPress={() => setShowDetails((value) => !value)}
             >
-              Add note
+              <Text className="font-bold text-primary">
+                {showDetails
+                  ? "Hide details"
+                  : "Add date, instructions, photo or video"}
+              </Text>
+            </Pressable>
+            {showDetails ? (
+              <View className="gap-5 border-y border-border py-5">
+                <FormField
+                  autoCapitalize="none"
+                  helper="Example: 2026-07-21 16:00"
+                  label="Promised delivery"
+                  onChangeText={setDueAt}
+                  value={dueAt}
+                />
+                <FormField
+                  label="Instructions"
+                  multiline
+                  onChangeText={setInstructions}
+                  value={instructions}
+                />
+                <View className="gap-3">
+                  <View className="gap-1">
+                    <Text className="font-bold text-foreground">
+                      Photo or video package
+                    </Text>
+                    <Text className="text-xs leading-5 text-muted-foreground">
+                      Optional and private. Available when at least one selected
+                      Service creates tracked work.
+                    </Text>
+                  </View>
+                  <View className="flex-row gap-2">
+                    <View className="flex-1">
+                      <ActionButton
+                        disabled={!intakeCreatesTrackedWork}
+                        onPress={() => void captureIntakeEvidence("photo")}
+                        variant="outline"
+                      >
+                        Take photo
+                      </ActionButton>
+                    </View>
+                    <View className="flex-1">
+                      <ActionButton
+                        disabled={!intakeCreatesTrackedWork}
+                        onPress={() => void captureIntakeEvidence("video")}
+                        variant="outline"
+                      >
+                        Record video
+                      </ActionButton>
+                    </View>
+                  </View>
+                  {pendingIntakeEvidence.map((evidence) => (
+                    <View
+                      className="flex-row items-center justify-between gap-3 border-t border-border pt-3"
+                      key={evidence.clientEvidenceId}
+                    >
+                      <Text className="min-w-0 flex-1 text-sm text-foreground">
+                        {evidence.label}
+                      </Text>
+                      <ActionButton
+                        onPress={() => {
+                          discardRetainedEvidence(evidence)
+                          setPendingIntakeEvidence((current) =>
+                            current.filter(
+                              (entry) =>
+                                entry.clientEvidenceId !==
+                                evidence.clientEvidenceId,
+                            ),
+                          )
+                        }}
+                        variant="ghost"
+                      >
+                        Remove
+                      </ActionButton>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+            <ActionButton
+              disabled={isOfflineMode}
+              isLoading={intakeMutation.isPending}
+              loadingLabel="Creating"
+              onPress={submitIntake}
+            >
+              {isOfflineMode
+                ? "Reconnect to create Service work"
+                : "Create service order"}
             </ActionButton>
-            {selectedJob.notes.slice(-3).map((entry) => (
-              <View className="rounded-xl bg-muted p-3" key={entry.id}>
-                <Text className="text-sm text-foreground">{entry.body}</Text>
-              </View>
-            ))}
-            <View className="flex-row gap-2">
-              <View className="flex-1">
-                <ActionButton
-                  isLoading={evidenceMutation.isPending}
-                  onPress={() => void captureEvidence(selectedJob, "photo")}
-                  variant="outline"
-                >
-                  Take photo
-                </ActionButton>
-              </View>
-              <View className="flex-1">
-                <ActionButton
-                  isLoading={evidenceMutation.isPending}
-                  onPress={() => void captureEvidence(selectedJob, "video")}
-                  variant="outline"
-                >
-                  Record video
-                </ActionButton>
-              </View>
+            <ActionButton
+              onPress={() => {
+                pendingIntakeEvidence.forEach(discardRetainedEvidence)
+                setPendingIntakeEvidence([])
+                setAmountPaid("")
+                setPaymentReference("")
+                setCreating(false)
+              }}
+              variant="ghost"
+            >
+              Cancel
+            </ActionButton>
+          </View>
+        ) : selectedJob ? (
+          <View className="gap-4">
+            <Pressable
+              className="min-h-11 flex-row items-center gap-2"
+              onPress={() => {
+                setAmountPaid("")
+                setPaymentReference("")
+                setSelectedJobId(null)
+              }}
+            >
+              <Icon className="size-sm text-primary" name="ArrowLeft" />
+              <Text className="font-bold text-primary">Work queue</Text>
+            </Pressable>
+            <View className="gap-1">
+              <Text className="text-xl font-extrabold text-foreground">
+                {selectedJob.orderNumber}
+              </Text>
+              <Text className="capitalize text-sm text-muted-foreground">
+                {textLabel(selectedJob.summary)}
+              </Text>
             </View>
-            {selectedJob.evidence.slice(-4).map((entry) => (
-              <View
-                className="flex-row items-center justify-between gap-3 rounded-xl bg-muted p-3"
-                key={entry.id}
-              >
-                <Text className="min-w-0 flex-1 text-sm text-foreground">
-                  {entry.label || textLabel(entry.purpose)}
-                </Text>
+            <View className="gap-4 border-y border-border py-4">
+              <View className="flex-row items-start justify-between gap-3">
+                <View className="min-w-0 flex-1 gap-1">
+                  <Text className="font-bold text-foreground">
+                    Payment and collection
+                  </Text>
+                  <Text className="text-xs text-muted-foreground">
+                    {formatMinorMoney(
+                      selectedJob.amountPaidMinor,
+                      selectedJob.currencyCode,
+                    )}{" "}
+                    paid ·{" "}
+                    {formatMinorMoney(
+                      selectedJob.balanceDueMinor,
+                      selectedJob.currencyCode,
+                    )}{" "}
+                    due
+                  </Text>
+                </View>
                 <StatusBadge
-                  label={textLabel(entry.uploadStatus)}
-                  tone={entry.uploadStatus === "FAILED" ? "warning" : "muted"}
+                  label={textLabel(selectedJob.paymentStatus)}
+                  tone={selectedJob.balanceDueMinor > 0 ? "warning" : "success"}
                 />
               </View>
-            ))}
-          </View>
-        </View>
-      ) : (
-        <View className="gap-5">
-          <Text className="text-sm leading-5 text-muted-foreground">
-            Charge-only services stay in Orders. Tracked offerings appear here
-            after confirmation.
-          </Text>
-          <ActionButton
-            icon="Plus"
-            onPress={() => {
-              setAmountPaid("")
-              setPaymentReference("")
-              setCreating(true)
-            }}
-          >
-            New service
-          </ActionButton>
-          {jobsQuery.isLoading ? (
-            <StatusBanner
-              icon="Loader2"
-              message="Loading current service work."
-              title="Work queue"
-            />
-          ) : jobs.length === 0 ? (
-            <EmptyState
-              icon="ClipboardList"
-              message="Create a tracked service order to start work."
-              title="No active work"
-            />
-          ) : (
+              {selectedJob.balanceDueMinor > 0 ? (
+                <>
+                  <MoneyField
+                    currencyCode={selectedJob.currencyCode}
+                    label="Amount received"
+                    onChangeValue={setAmountPaid}
+                    value={amountPaid}
+                  />
+                  <View className="flex-row flex-wrap gap-2">
+                    {(
+                      [
+                        ["cash", "Cash"],
+                        ["bank_transfer", "Transfer"],
+                        ["pos", "POS"],
+                        ["card", "Card"],
+                        ["other", "Other"],
+                      ] as const
+                    ).map(([value, label]) => (
+                      <Pressable
+                        accessibilityRole="radio"
+                        accessibilityState={{
+                          selected: paymentMethod === value,
+                        }}
+                        className={
+                          paymentMethod === value
+                            ? "min-h-11 items-center justify-center rounded-full bg-primary px-4"
+                            : "min-h-11 items-center justify-center rounded-full bg-muted px-4"
+                        }
+                        haptic
+                        key={value}
+                        onPress={() => setPaymentMethod(value)}
+                      >
+                        <Text
+                          className={
+                            paymentMethod === value
+                              ? "text-xs font-bold text-primary-foreground"
+                              : "text-xs font-bold text-foreground"
+                          }
+                        >
+                          {label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                  <FormField
+                    label="Payment reference"
+                    onChangeText={setPaymentReference}
+                    value={paymentReference}
+                  />
+                  <ActionButton
+                    disabled={!amountPaid.trim()}
+                    isLoading={paymentMutation.isPending}
+                    onPress={() => recordPayment(selectedJob)}
+                    variant="outline"
+                  >
+                    Record payment
+                  </ActionButton>
+                </>
+              ) : null}
+              {selectedJob.summary === "ready_for_handoff" &&
+              !selectedJob.handedOffAt ? (
+                <ActionButton
+                  isLoading={handoffMutation.isPending}
+                  onPress={() => handoff(selectedJob)}
+                >
+                  {selectedJob.balanceDueMinor > 0
+                    ? "Collect balance and hand over"
+                    : "Mark collected"}
+                </ActionButton>
+              ) : selectedJob.handedOffAt ? (
+                <StatusBanner
+                  icon="CircleCheck"
+                  message="This order has been collected and closed."
+                  tone="success"
+                />
+              ) : null}
+            </View>
+            {profile?.id && selectedJob.currentAssigneeUserId !== profile.id ? (
+              <ActionButton
+                isLoading={assignMutation.isPending}
+                onPress={() => assignToMe(selectedJob)}
+                variant="outline"
+              >
+                Assign to me
+              </ActionButton>
+            ) : null}
             <View className="border-y border-border">
-              {jobs.map((job, index) => (
-                <Pressable
-                  className={`gap-3 py-4 ${
-                    index < jobs.length - 1 ? "border-b border-border" : ""
+              {selectedJob.lines.map((line, index) => (
+                <View
+                  className={`gap-4 py-4 ${
+                    index < selectedJob.lines.length - 1
+                      ? "border-b border-border"
+                      : ""
                   }`}
-                  haptic
-                  key={job.id}
-                  onPress={() => {
-                    setAmountPaid("")
-                    setPaymentReference("")
-                    setSelectedJobId(job.id)
-                  }}
+                  key={line.id}
                 >
                   <View className="flex-row items-start justify-between gap-3">
                     <View className="min-w-0 flex-1 gap-1">
                       <Text className="font-bold text-foreground">
-                        {job.orderNumber}
+                        {line.catalogItemName}
                       </Text>
                       <Text className="text-xs text-muted-foreground">
-                        {job.lines
-                          .map((line) => line.catalogItemName)
-                          .join(", ")}
+                        {line.offeringName} · {line.allocatedQuantity}
                       </Text>
                     </View>
-                    <StatusBadge
-                      label={textLabel(job.summary)}
-                      tone={statusTone(job.summary)}
-                    />
+                    <StatusBadge label={textLabel(line.status)} tone="muted" />
                   </View>
-                  <Text className="text-xs text-muted-foreground">
-                    {job.priority === "urgent"
-                      ? "Urgent"
-                      : job.currentAssigneeUserId
-                        ? "Assigned"
-                        : "Unassigned"}
-                  </Text>
-                </Pressable>
+                  {line.authorizationStatus !== "AUTHORIZED" ? (
+                    <StatusBanner
+                      icon="Lock"
+                      message={`Work is waiting for ${textLabel(line.authorizationStatus)}.`}
+                      tone="warning"
+                    />
+                  ) : null}
+                  {actions(line.status).length > 0 ? (
+                    <View className="gap-2">
+                      <Text className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        Update status
+                      </Text>
+                      <View className="flex-row flex-wrap gap-2">
+                        {actions(line.status).map((action, actionIndex) => (
+                          <View className="min-w-[46%] flex-1" key={action}>
+                            <ActionButton
+                              disabled={
+                                line.authorizationStatus !== "AUTHORIZED"
+                              }
+                              onPress={() => transition(line, action)}
+                              variant={
+                                actionIndex === 0 ? "default" : "outline"
+                              }
+                            >
+                              {actionLabel(action)}
+                            </ActionButton>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  ) : null}
+                </View>
               ))}
             </View>
-          )}
-          {jobsQuery.isFetchingNextPage ? (
-            <Text className="text-center text-xs font-semibold text-muted-foreground">
-              Loading more service jobs…
+            <View className="gap-4 border-t border-border pt-4">
+              {canManage ? (
+                <View className="gap-3">
+                  <Text className="font-bold text-foreground">
+                    Customer update
+                  </Text>
+                  <View className="flex-row gap-2">
+                    {(
+                      [
+                        ["whatsapp", "WhatsApp"],
+                        ["sms", "SMS"],
+                      ] as const
+                    ).map(([value, label]) => (
+                      <Pressable
+                        accessibilityRole="radio"
+                        accessibilityState={{
+                          selected: notificationChannel === value,
+                        }}
+                        className={
+                          notificationChannel === value
+                            ? "min-h-11 flex-1 items-center justify-center rounded-full bg-primary px-3"
+                            : "min-h-11 flex-1 items-center justify-center rounded-full bg-muted px-3"
+                        }
+                        haptic
+                        key={value}
+                        onPress={() => setNotificationChannel(value)}
+                      >
+                        <Text
+                          className={
+                            notificationChannel === value
+                              ? "text-sm font-bold text-primary-foreground"
+                              : "text-sm font-bold text-foreground"
+                          }
+                        >
+                          {label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                  <FormField
+                    label="Message"
+                    multiline
+                    onChangeText={setCustomerMessage}
+                    value={customerMessage}
+                  />
+                  <ActionButton
+                    disabled={!customerMessage.trim() || !notificationChannel}
+                    isLoading={messageMutation.isPending}
+                    onPress={() => notifyCustomer(selectedJob)}
+                    variant="outline"
+                  >
+                    Send customer update
+                  </ActionButton>
+                </View>
+              ) : null}
+              <View className="gap-1">
+                <Text className="font-bold text-foreground">
+                  Private work record
+                </Text>
+                <Text className="text-xs leading-5 text-muted-foreground">
+                  Notes and evidence are internal unless a manager explicitly
+                  publishes reviewed evidence.
+                </Text>
+              </View>
+              <FormField
+                label="Internal note"
+                multiline
+                onChangeText={setJobNote}
+                value={jobNote}
+              />
+              <ActionButton
+                disabled={!jobNote.trim()}
+                isLoading={noteMutation.isPending}
+                onPress={() => addNote(selectedJob)}
+                variant="outline"
+              >
+                Add note
+              </ActionButton>
+              {selectedJob.notes.slice(-3).map((entry) => (
+                <View className="rounded-xl bg-muted p-3" key={entry.id}>
+                  <Text className="text-sm text-foreground">{entry.body}</Text>
+                </View>
+              ))}
+              <View className="flex-row gap-2">
+                <View className="flex-1">
+                  <ActionButton
+                    isLoading={evidenceMutation.isPending}
+                    onPress={() => void captureEvidence(selectedJob, "photo")}
+                    variant="outline"
+                  >
+                    Take photo
+                  </ActionButton>
+                </View>
+                <View className="flex-1">
+                  <ActionButton
+                    isLoading={evidenceMutation.isPending}
+                    onPress={() => void captureEvidence(selectedJob, "video")}
+                    variant="outline"
+                  >
+                    Record video
+                  </ActionButton>
+                </View>
+              </View>
+              {selectedJob.evidence.slice(-4).map((entry) => (
+                <View
+                  className="flex-row items-center justify-between gap-3 rounded-xl bg-muted p-3"
+                  key={entry.id}
+                >
+                  <Text className="min-w-0 flex-1 text-sm text-foreground">
+                    {entry.label || textLabel(entry.purpose)}
+                  </Text>
+                  <StatusBadge
+                    label={textLabel(entry.uploadStatus)}
+                    tone={entry.uploadStatus === "FAILED" ? "warning" : "muted"}
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : (
+          <View className="gap-5">
+            <Text className="text-sm leading-5 text-muted-foreground">
+              Charge-only services stay in Orders. Tracked offerings appear here
+              after confirmation.
             </Text>
-          ) : null}
-        </View>
-      )}
+            <ActionButton
+              icon="Plus"
+              onPress={() => {
+                setAmountPaid("")
+                setPaymentReference("")
+                setCreating(true)
+              }}
+            >
+              New service
+            </ActionButton>
+            {jobsQuery.isLoading ? (
+              <StatusBanner
+                icon="Loader2"
+                message="Loading current service work."
+                title="Work queue"
+              />
+            ) : jobs.length === 0 ? (
+              <EmptyState
+                icon="ClipboardList"
+                message="Create a tracked service order to start work."
+                title="No active work"
+              />
+            ) : (
+              <View className="border-y border-border">
+                {jobs.map((job, index) => (
+                  <Pressable
+                    className={`gap-3 py-4 ${
+                      index < jobs.length - 1 ? "border-b border-border" : ""
+                    }`}
+                    haptic
+                    key={job.id}
+                    onPress={() => {
+                      setAmountPaid("")
+                      setPaymentReference("")
+                      setSelectedJobId(job.id)
+                    }}
+                  >
+                    <View className="flex-row items-start justify-between gap-3">
+                      <View className="min-w-0 flex-1 gap-1">
+                        <Text className="font-bold text-foreground">
+                          {job.orderNumber}
+                        </Text>
+                        <Text className="text-xs text-muted-foreground">
+                          {job.lines
+                            .map((line) => line.catalogItemName)
+                            .join(", ")}
+                        </Text>
+                      </View>
+                      <StatusBadge
+                        label={textLabel(job.summary)}
+                        tone={statusTone(job.summary)}
+                      />
+                    </View>
+                    <Text className="text-xs text-muted-foreground">
+                      {job.priority === "urgent"
+                        ? "Urgent"
+                        : job.currentAssigneeUserId
+                          ? "Assigned"
+                          : "Unassigned"}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+            {jobsQuery.isFetchingNextPage ? (
+              <Text className="text-center text-xs font-semibold text-muted-foreground">
+                Loading more service jobs…
+              </Text>
+            ) : null}
+          </View>
+        )}
       </KeyboardAwareScrollView>
       {showQueueSearch ? (
         <BottomSearchFooter

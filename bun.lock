@@ -16,6 +16,7 @@
       "dependencies": {
         "@ewatrade/auth": "workspace:*",
         "@ewatrade/db": "workspace:*",
+        "@ewatrade/domains": "workspace:*",
         "@ewatrade/email": "workspace:*",
         "@ewatrade/jobs": "workspace:*",
         "@ewatrade/utils": "workspace:*",
@@ -100,6 +101,7 @@
         "@biomejs/biome": "^1.9.4",
         "@ewatrade/tsconfig": "workspace:*",
         "@tailwindcss/postcss": "catalog:",
+        "@types/bun": "latest",
         "@types/node": "^24.6.0",
         "@types/react": "^19.1.13",
         "@types/react-dom": "^19.1.9",
@@ -280,6 +282,16 @@
         "typescript": "catalog:",
       },
     },
+    "packages/domains": {
+      "name": "@ewatrade/domains",
+      "version": "1.0.0",
+      "devDependencies": {
+        "@ewatrade/tsconfig": "workspace:*",
+        "@types/bun": "latest",
+        "@types/node": "^24.6.0",
+        "typescript": "catalog:",
+      },
+    },
     "packages/email": {
       "name": "@ewatrade/email",
       "version": "1.0.0",
@@ -294,6 +306,7 @@
       "version": "1.0.0",
       "dependencies": {
         "@ewatrade/db": "workspace:*",
+        "@ewatrade/domains": "workspace:*",
         "@ewatrade/email": "workspace:*",
         "@ewatrade/notifications": "workspace:*",
         "@trigger.dev/build": "4.0.1",
@@ -301,6 +314,7 @@
       },
       "devDependencies": {
         "@ewatrade/tsconfig": "workspace:*",
+        "@types/bun": "latest",
         "@types/node": "^24.6.0",
         "trigger.dev": "4.0.1",
         "typescript": "catalog:",
@@ -787,6 +801,8 @@
     "@ewatrade/db": ["@ewatrade/db@workspace:packages/db"],
 
     "@ewatrade/desktop": ["@ewatrade/desktop@workspace:apps/desktop"],
+
+    "@ewatrade/domains": ["@ewatrade/domains@workspace:packages/domains"],
 
     "@ewatrade/email": ["@ewatrade/email@workspace:packages/email"],
 

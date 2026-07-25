@@ -1,19 +1,21 @@
 model Site {
-  id             String     @id @default(cuid())
-  tenantId       String
-  storeId        String
-  slug           String
-  name           String
-  status         SiteStatus @default(DRAFT)
-  domain         String?
-  isPrimary      Boolean    @default(false)
-  seoTitle       String?
-  seoDescription String?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  tenant         Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store          Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  pages          Page[]
+  id                String             @id @default(cuid())
+  tenantId          String
+  storeId           String
+  slug              String
+  name              String
+  status            SiteStatus         @default(DRAFT)
+  domain            String?
+  isPrimary         Boolean            @default(false)
+  seoTitle          String?
+  seoDescription    String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  pages             Page[]
+  managedDomains    ManagedDomain[]
+  domainConnections DomainConnection[]
 
   @@unique([storeId, slug])
   @@unique([domain])

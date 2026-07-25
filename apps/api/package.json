@@ -15,6 +15,7 @@
   "dependencies": {
     "@ewatrade/auth": "workspace:*",
     "@ewatrade/db": "workspace:*",
+    "@ewatrade/domains": "workspace:*",
     "@ewatrade/email": "workspace:*",
     "@ewatrade/jobs": "workspace:*",
     "@ewatrade/utils": "workspace:*",

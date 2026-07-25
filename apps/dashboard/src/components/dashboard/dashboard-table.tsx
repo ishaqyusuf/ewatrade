@@ -23,6 +23,7 @@ type DashboardTableProps<T> = {
   emptyState: ReactNode
   getRowKey: (row: T) => string
   isLoading?: boolean
+  onRowClick?: (row: T) => void
   onSelectionChange?: (keys: Set<string>) => void
   rows: T[]
   selectedKeys?: Set<string>
@@ -33,6 +34,7 @@ export function DashboardTable<T>({
   emptyState,
   getRowKey,
   isLoading,
+  onRowClick,
   onSelectionChange,
   rows,
   selectedKeys = new Set<string>(),
@@ -88,7 +90,24 @@ export function DashboardTable<T>({
                   </tr>
                 ))
               : rows.map((row) => (
-                  <tr key={getRowKey(row)} className="hover:bg-muted/40">
+                  <tr
+                    key={getRowKey(row)}
+                    className={cn(
+                      "hover:bg-muted/40",
+                      onRowClick && "cursor-pointer",
+                    )}
+                    tabIndex={onRowClick ? 0 : undefined}
+                    onClick={() => onRowClick?.(row)}
+                    onKeyDown={(event) => {
+                      if (
+                        onRowClick &&
+                        (event.key === "Enter" || event.key === " ")
+                      ) {
+                        event.preventDefault()
+                        onRowClick(row)
+                      }
+                    }}
+                  >
                     {onSelectionChange ? (
                       <td className="px-4 py-4 align-middle">
                         <input

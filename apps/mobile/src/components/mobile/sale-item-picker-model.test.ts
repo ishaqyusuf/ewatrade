@@ -7,6 +7,7 @@ import {
   getSelectableSaleItemChoices,
   openSaleItemPicker,
   removeSaleItemPickerLine,
+  selectInitialCatalogItemLine,
   updateSaleItemPickerLineQuantity,
 } from "./sale-item-picker-model"
 
@@ -90,5 +91,41 @@ describe("sale item picker lines", () => {
     expect(removeSaleItemPickerLine(withDifferentQuantities, "line-1")).toEqual(
       [{ id: "line-2", offering, quantity: "5" }],
     )
+  })
+
+  test("preselects the first sellable offering for a contextual catalog item once", () => {
+    const choices = [
+      {
+        catalogItemId: "product-1",
+        disabledReason: "Out of stock",
+        id: "offering-disabled",
+      },
+      {
+        catalogItemId: "product-1",
+        id: "offering-ready",
+      },
+    ]
+    const selected = selectInitialCatalogItemLine({
+      catalogItemId: "product-1",
+      choices,
+      lineId: "line-1",
+      lines: [],
+    })
+
+    expect(selected).toEqual([
+      {
+        id: "line-1",
+        offering: choices[1],
+        quantity: "1",
+      },
+    ])
+    expect(
+      selectInitialCatalogItemLine({
+        catalogItemId: "product-1",
+        choices,
+        lineId: "line-2",
+        lines: selected,
+      }),
+    ).toBe(selected)
   })
 })

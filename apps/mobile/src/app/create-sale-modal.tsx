@@ -1,10 +1,18 @@
 import { CreateSaleContent, WorkflowModalScreen } from "@/components/mobile"
 import { useAuthContext } from "@/hooks/use-auth"
-import { useLocalSearchParams, useRouter } from "expo-router"
+import { showOperationSuccess } from "@/lib/operation-success-navigation"
+import { useLocalSearchParams, useNavigation } from "expo-router"
 
 export default function CreateSaleModalRoute() {
-  const router = useRouter()
-  const params = useLocalSearchParams<{ kind?: string }>()
+  const navigation = useNavigation()
+  const params = useLocalSearchParams<{
+    catalogItemId?: string
+    customerEmail?: string
+    customerId?: string
+    customerName?: string
+    customerPhone?: string
+    kind?: string
+  }>()
   const { profile } = useAuthContext()
   const itemKind = params.kind === "service" ? "service" : undefined
 
@@ -16,8 +24,29 @@ export default function CreateSaleModalRoute() {
     >
       <CreateSaleContent
         attendantName={profile?.name ?? "Store Owner"}
+        initialCatalogItemId={params.catalogItemId}
+        initialCustomer={
+          params.customerName
+            ? {
+                email: params.customerEmail,
+                id: params.customerId ?? `customer:${params.customerName}`,
+                name: params.customerName,
+                phone: params.customerPhone,
+              }
+            : undefined
+        }
         itemKind={itemKind}
-        onComplete={() => router.replace("/dashboard")}
+        onComplete={(completion) =>
+          showOperationSuccess(navigation, {
+            amount: completion.amount,
+            customer: completion.customer,
+            itemCount: String(completion.itemCount),
+            kind: "order",
+            paymentState: completion.paymentState,
+            reference: completion.reference,
+            status: completion.status,
+          })
+        }
         presentation="screen"
       />
     </WorkflowModalScreen>

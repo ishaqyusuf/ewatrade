@@ -1,18 +1,13 @@
-import {
-  canManageSalesOperations,
-  canOperatePos,
-  normalizeRole,
-} from "@ewatrade/auth/roles"
+import { canOperatePos, normalizeRole } from "@ewatrade/auth/roles"
+import { OfflineDevicePlatform, OfflineDeviceStatus } from "@ewatrade/db/enums"
 import {
   CatalogError,
+  getOfflineOperationsPolicy,
   listOfflineConflictReviews,
   replayOfflineCommands,
   reviewOfflineConflict,
+  updateOfflineOperationsPolicy,
 } from "@ewatrade/db/queries"
-import {
-  OfflineDevicePlatform,
-  OfflineDeviceStatus,
-} from "@ewatrade/db/enums"
 import { TRPCError } from "@trpc/server"
 
 import {
@@ -20,20 +15,14 @@ import {
   offlineRegisterDeviceSchema,
   offlineReplaySchema,
   offlineReviewConflictSchema,
+  offlineSettingsUpdateSchema,
 } from "../../schemas/offline"
 import { createTRPCRouter, protectedProcedure } from "../init"
 
 function roleCapabilities(role: string) {
   const normalized = normalizeRole(role)
   return {
-    manageCatalog: Boolean(
-      normalized && canManageSalesOperations(normalized),
-    ),
-    manageInventory: Boolean(
-      normalized && canManageSalesOperations(normalized),
-    ),
     operateOrders: Boolean(normalized && canOperatePos(normalized)),
-    operateServices: Boolean(normalized && canOperatePos(normalized)),
   }
 }
 
@@ -43,6 +32,32 @@ function assertCanUseOffline(role: string) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "You do not have permission to use offline operations.",
+    })
+  }
+}
+
+export function canManageOfflineSettings(role: string) {
+  return normalizeRole(role) === "OWNER"
+}
+
+function assertCanManageOfflineSettings(role: string) {
+  if (!canManageOfflineSettings(role)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Only the business owner can change offline access.",
+    })
+  }
+}
+
+async function assertOfflineOperationsEnabled(
+  db: Parameters<typeof getOfflineOperationsPolicy>[0],
+  tenantId: string,
+) {
+  const policy = await getOfflineOperationsPolicy(db, { tenantId })
+  if (!policy?.enabled) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Offline operations have been disabled by the business owner.",
     })
   }
 }
@@ -76,6 +91,30 @@ function platform(value: "android" | "ios" | "unknown" | "web") {
 }
 
 export const offlineRouter = createTRPCRouter({
+  settings: protectedProcedure.query(async ({ ctx }) => {
+    assertCanUseOffline(ctx.tenantContext.membership.role)
+    const policy = await getOfflineOperationsPolicy(ctx.db, {
+      tenantId: ctx.tenantContext.tenant.id,
+    })
+    if (!policy) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Offline settings were not found for this business.",
+      })
+    }
+    return policy
+  }),
+
+  updateSettings: protectedProcedure
+    .input(offlineSettingsUpdateSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanManageOfflineSettings(ctx.tenantContext.membership.role)
+      return updateOfflineOperationsPolicy(ctx.db, {
+        enabled: input.enabled,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+    }),
+
   conflicts: protectedProcedure
     .input(offlineListConflictsSchema)
     .query(async ({ ctx, input }) => {
@@ -90,6 +129,7 @@ export const offlineRouter = createTRPCRouter({
     .input(offlineRegisterDeviceSchema)
     .mutation(async ({ ctx, input }) => {
       assertCanUseOffline(ctx.tenantContext.membership.role)
+      await assertOfflineOperationsEnabled(ctx.db, ctx.tenantContext.tenant.id)
       const storeId = resolveStoreId(
         ctx.tenantContext.stores,
         ctx.tenantContext.activeStore,
@@ -139,6 +179,7 @@ export const offlineRouter = createTRPCRouter({
     .input(offlineReplaySchema)
     .mutation(async ({ ctx, input }) => {
       assertCanUseOffline(ctx.tenantContext.membership.role)
+      await assertOfflineOperationsEnabled(ctx.db, ctx.tenantContext.tenant.id)
       const storeId = resolveStoreId(
         ctx.tenantContext.stores,
         ctx.tenantContext.activeStore,
@@ -165,6 +206,7 @@ export const offlineRouter = createTRPCRouter({
     .input(offlineReviewConflictSchema)
     .mutation(async ({ ctx, input }) => {
       assertCanUseOffline(ctx.tenantContext.membership.role)
+      await assertOfflineOperationsEnabled(ctx.db, ctx.tenantContext.tenant.id)
       try {
         return await reviewOfflineConflict(ctx.db, {
           actorUserId: ctx.session.user.id,

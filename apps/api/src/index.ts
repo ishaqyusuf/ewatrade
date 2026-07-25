@@ -6,6 +6,7 @@ import { cors } from "hono/cors"
 import { HTTPException } from "hono/http-exception"
 import { secureHeaders } from "hono/secure-headers"
 import { registerBillingProviderEventRoutes } from "./billing/provider-events"
+import { registerDomainPaystackWebhook } from "./domains/paystack-webhook"
 import { registerSelfServiceStoreDetectionRoutes } from "./self-service/store-detection"
 import { createTRPCContext } from "./trpc/init"
 import { appRouter } from "./trpc/routers/_app"
@@ -105,6 +106,7 @@ app.get("/health", async (c) => {
 })
 
 registerBillingProviderEventRoutes(app)
+registerDomainPaystackWebhook(app)
 registerSelfServiceStoreDetectionRoutes(app)
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw))

@@ -12,6 +12,24 @@ Longer-horizon sequencing across major implementation phases.
 
 ## Proposed Intake Tasks
 
+### Managed domain purchasing and storefront connection
+
+- Priority: High
+- Description: Track the proposed managed-domain feature plan in
+  `.brain/plans/2026-07-24-managed-domain-purchasing.md`.
+- Related Feature: Website builder and custom storefront domains
+- Status: In Progress
+- Plan Status: Source Implemented; Deployment Blocked
+- Plan File: .brain/plans/2026-07-24-managed-domain-purchasing.md
+- Migration Contract: .brain/plans/2026-07-24-managed-domain-midday-migration-contract.md
+- Research File: .brain/research/domain-provider-evaluation.md
+- Cross-check File: .brain/research/2026-07-24-domain-provider-primary-source-review.md
+- Created Date: 2026-07-24
+- Started Date: 2026-07-24
+- Blockers: Docker/local migration, approved production and remote-development
+  schema deployment, provider/payment/hosting credentials, commercial/legal
+  acceptance, Android/dashboard runtime QA, and live `.com.ng`/`.com` canaries.
+
 ### Product And Service Catalog Items
 - Priority: High
 - Description: Implement the approved item-level catalog specification in `.scratch/wayfinder-catalog-items-product-service/spec.md`.

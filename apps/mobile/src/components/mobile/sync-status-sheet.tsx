@@ -5,15 +5,20 @@ import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
+import { normalizeMobileRole } from "@/lib/mobile-roles"
 import {
   activeBusinessOfflineCommands,
   pendingOfflineCommands,
   useOfflineCommandStore,
 } from "@/store/offlineCommandStore"
-import { useOperationalModeStore } from "@/store/operationalModeStore"
+import {
+  isOfflineAccessAllowed,
+  useOperationalModeStore,
+} from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import Constants from "expo-constants"
+import { useEffect } from "react"
 import { Platform, ScrollView, View } from "react-native"
 
 type SyncStatusContentProps = {
@@ -34,7 +39,26 @@ export function SyncStatusContent({
     profile?.businessId,
   )
   const isOfflineMode = useOperationalModeStore((mode) => mode.isOfflineMode)
+  const offlineAccessByBusinessId = useOperationalModeStore(
+    (mode) => mode.offlineAccessByBusinessId,
+  )
+  const setOfflineAccess = useOperationalModeStore(
+    (mode) => mode.setOfflineAccess,
+  )
   const setOfflineMode = useOperationalModeStore((mode) => mode.setOfflineMode)
+  const settings = useQuery(
+    trpc.offline.settings.queryOptions(undefined, { retry: false }),
+  )
+  const updateSettings = useMutation(
+    trpc.offline.updateSettings.mutationOptions({
+      onSuccess: (policy) => {
+        if (profile?.businessId) {
+          setOfflineAccess(profile.businessId, policy.enabled)
+        }
+        queryClient.setQueryData(trpc.offline.settings.queryKey(), policy)
+      },
+    }),
+  )
   const conflicts = useQuery(
     trpc.offline.conflicts.queryOptions({}, { retry: false }),
   )
@@ -54,7 +78,9 @@ export function SyncStatusContent({
           ),
           queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
           queryClient.invalidateQueries(trpc.orders.listPage.queryFilter()),
-          queryClient.invalidateQueries(trpc.orders.customerCount.queryFilter()),
+          queryClient.invalidateQueries(
+            trpc.orders.customerCount.queryFilter(),
+          ),
           queryClient.invalidateQueries(trpc.services.queue.queryFilter()),
           queryClient.invalidateQueries(trpc.services.queuePage.queryFilter()),
         ])
@@ -81,6 +107,16 @@ export function SyncStatusContent({
   const applied = commands.filter(
     (command) => command.localStatus === "applied",
   )
+  const offlineAllowed = isOfflineAccessAllowed(
+    offlineAccessByBusinessId,
+    profile?.businessId,
+  )
+  const isOwner = normalizeMobileRole(profile?.role) === "OWNER"
+
+  useEffect(() => {
+    if (!profile?.businessId || !settings.data) return
+    setOfflineAccess(profile.businessId, settings.data.enabled)
+  }, [profile?.businessId, setOfflineAccess, settings.data])
 
   const replayNow = () => {
     if (pending.length === 0) return
@@ -108,15 +144,33 @@ export function SyncStatusContent({
       refreshControl={<QueryRefreshControl />}
     >
       <StatusBanner
-        icon={isOfflineMode ? "Wind" : "CircleCheck"}
+        icon={!offlineAllowed ? "Lock" : isOfflineMode ? "Wind" : "CircleCheck"}
         message={
-          isOfflineMode
-            ? "New supported operations are queued on this device until you reconnect."
-            : "Server data is authoritative. You can switch to offline work when connectivity is unreliable."
+          !offlineAllowed
+            ? "The business owner has disabled offline work. Staff must reconnect before creating Orders or collecting payments."
+            : isOfflineMode
+              ? "New supported operations are queued on this device until you reconnect."
+              : "Offline work is limited to creating Orders, collecting payment, and saving a customer during checkout."
         }
-        title={isOfflineMode ? "Offline work enabled" : "Online work enabled"}
-        tone={isOfflineMode ? "warning" : "success"}
+        title={
+          !offlineAllowed
+            ? "Offline work disabled"
+            : isOfflineMode
+              ? "Offline work enabled"
+              : "Online work enabled"
+        }
+        tone={!offlineAllowed || isOfflineMode ? "warning" : "success"}
       />
+      {settings.isError ? (
+        <StatusBanner
+          actionLabel="Try again"
+          icon="AlertCircle"
+          message="Reconnect to confirm whether this business currently allows offline work."
+          onActionPress={() => void settings.refetch()}
+          title="Offline policy unavailable"
+          tone="warning"
+        />
+      ) : null}
       {replay.error || register.error ? (
         <StatusBanner
           icon="AlertCircle"
@@ -134,11 +188,33 @@ export function SyncStatusContent({
         <Summary label="Applied" value={applied.length} />
       </View>
 
+      {isOwner ? (
+        <ActionButton
+          disabled={isOfflineMode || updateSettings.isPending}
+          isLoading={updateSettings.isPending}
+          loadingLabel="Saving offline policy"
+          onPress={() => updateSettings.mutate({ enabled: !offlineAllowed })}
+          variant="outline"
+        >
+          {offlineAllowed
+            ? "Disable offline work for staff"
+            : "Enable offline work for staff"}
+        </ActionButton>
+      ) : null}
       <ActionButton
-        onPress={() => setOfflineMode(!isOfflineMode)}
+        disabled={!offlineAllowed}
+        onPress={() => {
+          if (offlineAllowed && profile?.businessId) {
+            setOfflineMode(profile.businessId, !isOfflineMode)
+          }
+        }}
         variant="outline"
       >
-        {isOfflineMode ? "Return to online work" : "Switch to offline work"}
+        {!offlineAllowed
+          ? "Offline work is disabled"
+          : isOfflineMode
+            ? "Return to online work"
+            : "Switch to offline work"}
       </ActionButton>
       <ActionButton
         disabled={isOfflineMode || pending.length === 0}

@@ -87,5 +87,16 @@ export const createStoreSchema = z.object({
   region: optionalText(120),
 })
 
+export const createBusinessSchema = z.object({
+  addressLine1: z.string().trim().min(1).max(200),
+  businessName: z.string().trim().min(1).max(120),
+  city: z.string().trim().min(1).max(120),
+  countryCode: optionalText(8),
+  currencyCode: operatingCurrencySchema,
+  onboarding: storeOnboardingSchema,
+  supportPhone: z.string().trim().min(7).max(40),
+})
+
 export type TenantBootstrapInput = z.infer<typeof tenantBootstrapSchema>
+export type CreateBusinessInput = z.infer<typeof createBusinessSchema>
 export type CreateStoreInput = z.infer<typeof createStoreSchema>

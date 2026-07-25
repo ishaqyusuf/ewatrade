@@ -51,8 +51,16 @@ model Tenant {
   inventoryCloseouts            InventoryCloseout[]
   commercialOrders              CommercialOrder[]
   commercialOrderPayments       CommercialOrderPayment[]
+  customers                     Customer[]
   productReturns                ProductReturn[]
   offlineCommands               OfflineCommand[]
+  domainRegistrantProfile       DomainRegistrantProfile?
+  domainQuotes                  DomainQuote[]
+  domainOrders                  DomainOrder[]
+  managedDomains                ManagedDomain[]
+  domainConnections             DomainConnection[]
+  domainEvents                  DomainEvent[]
+  domainOperationAttempts       DomainOperationAttempt[]
 }
 
 model TenantHostname {

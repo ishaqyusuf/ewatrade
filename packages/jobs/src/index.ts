@@ -3,6 +3,18 @@ import type { RetailOpsStaffInvitedPayload } from "@ewatrade/notifications"
 import { customerMessagingProviderStatus } from "@ewatrade/notifications/services/customer-messaging-service"
 
 import {
+  type DomainConnectionVerificationPayload,
+  domainConnectionVerificationHandler,
+} from "./handlers/domain-connection-verification"
+import {
+  type DomainReconciliationPayload,
+  domainReconciliationHandler,
+} from "./handlers/domain-reconciliation"
+import {
+  type DomainRegistrationPayload,
+  domainRegistrationHandler,
+} from "./handlers/domain-registration"
+import {
   type NotificationDispatchPayload,
   notificationDispatchHandler,
 } from "./handlers/notification-dispatch"
@@ -15,6 +27,9 @@ import { triggerJob } from "./trigger"
 export const jobIds = {
   notificationDispatch: "notifications.dispatch",
   serviceNotificationDispatch: "services.notification.dispatch",
+  domainRegistration: "domains.registration",
+  domainConnectionVerification: "domains.connection.verify",
+  domainReconciliation: "domains.reconcile",
 } as const
 
 export type MarketingLeadNotificationInput = {
@@ -94,9 +109,38 @@ export async function enqueueServiceNotificationIntent(intentId: string) {
   )
 }
 
+export async function enqueueDomainRegistration(
+  input: DomainRegistrationPayload,
+) {
+  await triggerJob(
+    jobIds.domainRegistration,
+    domainRegistrationHandler,
+    input,
+    { maxAttempts: 3 },
+  )
+}
+
+export async function enqueueDomainConnectionVerification(
+  input: DomainConnectionVerificationPayload,
+) {
+  await triggerJob(
+    jobIds.domainConnectionVerification,
+    domainConnectionVerificationHandler,
+    input,
+    { maxAttempts: 8 },
+  )
+}
+
 export { runInBackground, runWithRetry } from "./queue"
 export { isTriggerConfigured, triggerJob } from "./trigger"
 export { notificationDispatchHandler }
 export { serviceNotificationDispatchHandler }
+export { domainConnectionVerificationHandler, domainRegistrationHandler }
+export { domainReconciliationHandler }
 export { customerMessagingProviderStatus }
 export type { NotificationDispatchPayload, ServiceNotificationDispatchPayload }
+export type {
+  DomainConnectionVerificationPayload,
+  DomainReconciliationPayload,
+  DomainRegistrationPayload,
+}

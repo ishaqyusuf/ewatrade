@@ -1,11 +1,12 @@
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import {
   RetailOpsSubscriptionError,
+  createOwnerBusiness,
   createTenantStore,
   getWorkspaceFeatureAvailability,
 } from "@ewatrade/db/queries"
 import { TRPCError } from "@trpc/server"
-import { createStoreSchema } from "../../schemas/tenant"
+import { createBusinessSchema, createStoreSchema } from "../../schemas/tenant"
 import {
   authenticatedProcedure,
   createTRPCRouter,
@@ -24,6 +25,34 @@ function assertCanManageTenantStores(role: string) {
 }
 
 export const tenantRouter = createTRPCRouter({
+  createBusiness: authenticatedProcedure
+    .input(createBusinessSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await ctx.db.$transaction((tx) =>
+          createOwnerBusiness(tx, {
+            addressLine1: input.addressLine1,
+            businessName: input.businessName,
+            city: input.city,
+            countryCode: input.countryCode,
+            currencyCode: input.currencyCode,
+            userId: ctx.session.user.id,
+            phone: input.supportPhone,
+            ...input.onboarding,
+          }),
+        )
+      } catch (error) {
+        if (error instanceof RetailOpsSubscriptionError) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: error.message,
+          })
+        }
+
+        throw error
+      }
+    }),
+
   businesses: authenticatedProcedure.query(async ({ ctx }) => {
     const memberships = await ctx.db.membership.findMany({
       orderBy: { createdAt: "asc" },

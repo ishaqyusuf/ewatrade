@@ -37,6 +37,7 @@
     "@ewatrade/tsconfig": "workspace:*",
     "@tailwindcss/postcss": "catalog:",
     "@types/node": "^24.6.0",
+    "@types/bun": "latest",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "tailwindcss": "catalog:",

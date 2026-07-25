@@ -1,34 +1,41 @@
-import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app";
-import { formatMinorMoney } from "@ewatrade/utils";
-import type { LinkProps } from "expo-router";
+import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
+import { formatMinorMoney } from "@ewatrade/utils"
+import type { LinkProps } from "expo-router"
 
-export type CommercialOrder = RouterOutputs["orders"]["list"][number];
-export type CommercialOrderLine = CommercialOrder["lines"][number];
+export type CommercialOrder = RouterOutputs["orders"]["list"][number]
+export type CommercialOrderLine = CommercialOrder["lines"][number]
+export type DirectoryCustomer =
+  RouterOutputs["customers"]["listPage"]["items"][number]
 export type CommerceStatusTone =
-  "destructive" | "muted" | "primary" | "success" | "warning";
+  | "destructive"
+  | "muted"
+  | "primary"
+  | "success"
+  | "warning"
 
 export type PendingCommerceOrder = {
-  clientCommandId: string;
-  createdAtClient: Date;
-  customerEmail?: string;
-  customerName?: string;
-  customerPhone?: string;
-  lineCount: number;
-};
+  clientCommandId: string
+  createdAtClient: Date
+  customerEmail?: string
+  customerName?: string
+  customerPhone?: string
+  lineCount: number
+}
 
 export type CommerceCustomer = {
-  currencyTotals: Array<{ currencyCode: string; totalMinor: number }>;
-  email: string | null;
-  id: string;
-  initials: string;
-  name: string;
-  orders: CommercialOrder[];
-  pendingOrders: PendingCommerceOrder[];
-  phone: string | null;
-};
+  createdAt?: Date | string
+  currencyTotals: Array<{ currencyCode: string; totalMinor: number }>
+  email: string | null
+  id: string
+  initials: string
+  name: string
+  orders: CommercialOrder[]
+  pendingOrders: PendingCommerceOrder[]
+  phone: string | null
+}
 
 export function commercialOrderHref(orderId: string) {
-  return `/order/${encodeURIComponent(orderId)}` as LinkProps["href"];
+  return `/order/${encodeURIComponent(orderId)}` as LinkProps["href"]
 }
 
 export function commerceStatusLabel(status: string) {
@@ -36,22 +43,22 @@ export function commerceStatusLabel(status: string) {
     .toLowerCase()
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+    .join(" ")
 }
 
 export function commerceOrderTone(status: string): CommerceStatusTone {
-  if (status === "COMPLETED") return "success";
-  if (["CANCELLED", "REFUNDED"].includes(status)) return "destructive";
-  if (["DRAFT", "PENDING"].includes(status)) return "muted";
-  return "primary";
+  if (status === "COMPLETED") return "success"
+  if (["CANCELLED", "REFUNDED"].includes(status)) return "destructive"
+  if (["DRAFT", "PENDING"].includes(status)) return "muted"
+  return "primary"
 }
 
 export function commercePaymentTone(status: string): CommerceStatusTone {
-  if (status === "PAID") return "success";
-  if (["FAILED", "REFUNDED"].includes(status)) return "destructive";
-  if (status === "PARTIALLY_PAID") return "warning";
-  if (status === "AUTHORIZED") return "primary";
-  return "warning";
+  if (status === "PAID") return "success"
+  if (["FAILED", "REFUNDED"].includes(status)) return "destructive"
+  if (status === "PARTIALLY_PAID") return "warning"
+  if (status === "AUTHORIZED") return "primary"
+  return "warning"
 }
 
 export function formatCommerceDate(value: Date | string) {
@@ -59,7 +66,7 @@ export function formatCommerceDate(value: Date | string) {
     day: "numeric",
     month: "short",
     year: "numeric",
-  }).format(new Date(value));
+  }).format(new Date(value))
 }
 
 export function formatCommerceDateTime(value: Date | string) {
@@ -69,11 +76,11 @@ export function formatCommerceDateTime(value: Date | string) {
     minute: "2-digit",
     month: "short",
     year: "numeric",
-  }).format(new Date(value));
+  }).format(new Date(value))
 }
 
 export function commerceLineTitle(line: CommercialOrderLine) {
-  return line.snapshot?.catalogItemName ?? "Archived item";
+  return line.snapshot?.catalogItemName ?? "Archived item"
 }
 
 export function commerceLineOption(line: CommercialOrderLine) {
@@ -81,33 +88,31 @@ export function commerceLineOption(line: CommercialOrderLine) {
     line.snapshot?.variantName,
     line.snapshot?.inventoryUnitName,
     line.snapshot?.offeringName,
-  ].filter((value, index, values) => value && values.indexOf(value) === index);
-  return (
-    labels.join(" · ") || (line.kind === "service" ? "Service" : "Product")
-  );
+  ].filter((value, index, values) => value && values.indexOf(value) === index)
+  return labels.join(" · ") || (line.kind === "service" ? "Service" : "Product")
 }
 
 export function commerceOrderItemCount(order: CommercialOrder) {
-  return order.lines.reduce((total, line) => total + Number(line.quantity), 0);
+  return order.lines.reduce((total, line) => total + Number(line.quantity), 0)
 }
 
 export function formatCommerceQuantity(value: number | string) {
-  const quantity = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(quantity)) return String(value);
-  return quantity.toLocaleString(undefined, { maximumFractionDigits: 6 });
+  const quantity = typeof value === "number" ? value : Number(value)
+  if (!Number.isFinite(quantity)) return String(value)
+  return quantity.toLocaleString(undefined, { maximumFractionDigits: 6 })
 }
 
 export function commerceCustomerIdentity(input: {
-  customerEmail?: null | string;
-  customerName?: null | string;
-  customerPhone?: null | string;
+  customerEmail?: null | string
+  customerName?: null | string
+  customerPhone?: null | string
 }) {
-  const email = input.customerEmail?.trim().toLowerCase();
-  if (email) return `email:${email}`;
-  const phone = input.customerPhone?.replace(/[^\d+]/g, "");
-  if (phone) return `phone:${phone}`;
-  const name = input.customerName?.trim().toLowerCase();
-  return name ? `name:${name}` : null;
+  const email = input.customerEmail?.trim().toLowerCase()
+  if (email) return `email:${email}`
+  const phone = input.customerPhone?.replace(/[^\d+]/g, "")
+  if (phone) return `phone:${phone}`
+  const name = input.customerName?.trim().toLowerCase()
+  return name ? `name:${name}` : null
 }
 
 function customerInitials(name: string) {
@@ -118,29 +123,52 @@ function customerInitials(name: string) {
       .slice(0, 2)
       .map((part) => part.charAt(0).toUpperCase())
       .join("") || "CU"
-  );
+  )
 }
 
 export function buildCommerceCustomers(
   orders: CommercialOrder[],
   pendingOrders: PendingCommerceOrder[] = [],
+  directoryCustomers: DirectoryCustomer[] = [],
 ) {
   const grouped = new Map<
     string,
     {
-      email: string | null;
-      name: string;
-      orders: CommercialOrder[];
-      pendingOrders: PendingCommerceOrder[];
-      phone: string | null;
+      createdAt?: Date | string
+      directoryId?: string
+      email: string | null
+      name: string
+      orders: CommercialOrder[]
+      pendingOrders: PendingCommerceOrder[]
+      phone: string | null
     }
-  >();
+  >()
+
+  for (const customer of directoryCustomers) {
+    const key =
+      commerceCustomerIdentity({
+        customerEmail: customer.email,
+        customerName: customer.name,
+        customerPhone: customer.phone,
+      }) ?? `directory:${customer.id}`
+    grouped.set(key, {
+      createdAt: customer.createdAt,
+      directoryId: customer.id,
+      email: customer.email,
+      name: customer.name,
+      orders: [],
+      pendingOrders: [],
+      phone: customer.phone,
+    })
+  }
 
   for (const order of orders) {
-    const key = commerceCustomerIdentity(order);
-    if (!key) continue;
-    const current = grouped.get(key);
+    const key = commerceCustomerIdentity(order)
+    if (!key) continue
+    const current = grouped.get(key)
     grouped.set(key, {
+      createdAt: current?.createdAt,
+      directoryId: current?.directoryId,
       email: current?.email ?? order.customerEmail,
       name:
         current?.name ??
@@ -151,14 +179,16 @@ export function buildCommerceCustomers(
       orders: [...(current?.orders ?? []), order],
       pendingOrders: current?.pendingOrders ?? [],
       phone: current?.phone ?? order.customerPhone,
-    });
+    })
   }
 
   for (const order of pendingOrders) {
-    const key = commerceCustomerIdentity(order);
-    if (!key) continue;
-    const current = grouped.get(key);
+    const key = commerceCustomerIdentity(order)
+    if (!key) continue
+    const current = grouped.get(key)
     grouped.set(key, {
+      createdAt: current?.createdAt,
+      directoryId: current?.directoryId,
       email: current?.email ?? order.customerEmail ?? null,
       name:
         current?.name ??
@@ -169,7 +199,7 @@ export function buildCommerceCustomers(
       orders: current?.orders ?? [],
       pendingOrders: [...(current?.pendingOrders ?? []), order],
       phone: current?.phone ?? order.customerPhone ?? null,
-    });
+    })
   }
 
   return [...grouped.entries()]
@@ -178,65 +208,72 @@ export function buildCommerceCustomers(
         (left, right) =>
           new Date(right.createdAt).getTime() -
           new Date(left.createdAt).getTime(),
-      );
+      )
       const sortedPending = [...customer.pendingOrders].sort(
         (left, right) =>
           right.createdAtClient.getTime() - left.createdAtClient.getTime(),
-      );
-      const currencyTotals = new Map<string, number>();
+      )
+      const currencyTotals = new Map<string, number>()
       for (const order of sortedOrders) {
         currencyTotals.set(
           order.currencyCode,
           (currencyTotals.get(order.currencyCode) ?? 0) + order.totalMinor,
-        );
+        )
       }
       return {
+        createdAt: customer.createdAt,
         currencyTotals: [...currencyTotals.entries()].map(
           ([currencyCode, totalMinor]) => ({ currencyCode, totalMinor }),
         ),
         email: customer.email,
-        id: key,
+        id: customer.directoryId ?? key,
         initials: customerInitials(customer.name),
         name: customer.name,
         orders: sortedOrders,
         pendingOrders: sortedPending,
         phone: customer.phone,
-      };
+      }
     })
     .sort((left, right) => {
       const leftDate =
-        left.orders[0]?.createdAt ?? left.pendingOrders[0]?.createdAtClient;
+        left.orders[0]?.createdAt ??
+        left.pendingOrders[0]?.createdAtClient ??
+        left.createdAt
       const rightDate =
-        right.orders[0]?.createdAt ?? right.pendingOrders[0]?.createdAtClient;
+        right.orders[0]?.createdAt ??
+        right.pendingOrders[0]?.createdAtClient ??
+        right.createdAt
       return (
         new Date(rightDate ?? 0).getTime() - new Date(leftDate ?? 0).getTime()
-      );
-    });
+      )
+    })
 }
 
 export function customerOrderCount(customer: CommerceCustomer) {
-  return customer.orders.length + customer.pendingOrders.length;
+  return customer.orders.length + customer.pendingOrders.length
 }
 
 export function customerValueLabel(customer: CommerceCustomer) {
-  if (customer.currencyTotals.length === 0) return "Pending sync";
-  if (customer.currencyTotals.length > 1) {
-    return `${customer.currencyTotals.length} currencies`;
+  if (customer.currencyTotals.length === 0) {
+    return customer.pendingOrders.length > 0 ? "Pending sync" : "No orders yet"
   }
-  const [total] = customer.currencyTotals;
+  if (customer.currencyTotals.length > 1) {
+    return `${customer.currencyTotals.length} currencies`
+  }
+  const [total] = customer.currencyTotals
   return total
     ? formatMinorMoney(total.totalMinor, total.currencyCode)
-    : formatMinorMoney(0, "NGN");
+    : formatMinorMoney(0, "NGN")
 }
 
 export function findCustomerByOrderId(
   customers: CommerceCustomer[],
   orderId: string | null | undefined,
 ) {
-  if (!orderId) return null;
+  if (!orderId) return null
   return (
     customers.find((customer) =>
       customer.orders.some((order) => order.id === orderId),
     ) ?? null
-  );
+  )
 }

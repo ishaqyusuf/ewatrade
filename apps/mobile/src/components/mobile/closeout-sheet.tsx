@@ -4,7 +4,6 @@ import { FormField } from "@/components/mobile/form-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
-import { useOfflineCommandStore } from "@/store/offlineCommandStore"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -25,7 +24,6 @@ export function CloseoutContent({
   const queryClient = useQueryClient()
   const { profile } = useAuthContext()
   const offline = useOperationalModeStore((state) => state.isOfflineMode)
-  const queue = useOfflineCommandStore((state) => state.queueCommand)
   const [values, setValues] = useState<Record<string, string>>({})
   const [reason, setReason] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -67,6 +65,12 @@ export function CloseoutContent({
     }),
   )
   const submit = () => {
+    if (offline) {
+      setError(
+        "Closeout requires a connection. Offline work is limited to new Orders, checkout payment, and customer details.",
+      )
+      return
+    }
     if (!profile?.id || custody.length === 0) return
     const declarations = custody.map((row) => ({
       balanceSourceId: row.balanceSourceId,
@@ -80,15 +84,6 @@ export function CloseoutContent({
       declarations,
       reason: reason.trim() || "End of shift closeout",
     }
-    if (offline) {
-      queue({
-        dependencyClientIds: [],
-        eventVersion: 1,
-        payload: { kind: "inventory_closeout", ...payload },
-      })
-      onComplete?.()
-      return
-    }
     create.mutate({
       clientOperationId: `closeout-${Crypto.randomUUID()}`,
       schemaVersion: 1,
@@ -99,9 +94,9 @@ export function CloseoutContent({
     <ScrollView className="flex-1" contentContainerClassName="gap-5 px-4 pb-12">
       {offline ? (
         <StatusBanner
-          icon="Wind"
-          message="Declarations will remain provisional until replay and manager confirmation."
-          title="Offline closeout"
+          icon="Lock"
+          message="Closeout is online-only. Reconnect before reviewing or confirming inventory declarations."
+          title="Online connection required"
           tone="warning"
         />
       ) : null}
@@ -149,11 +144,11 @@ export function CloseoutContent({
         value={reason}
       />
       <ActionButton
-        disabled={custody.length === 0}
+        disabled={offline || custody.length === 0}
         isLoading={create.isPending || finalize.isPending}
         onPress={submit}
       >
-        {offline ? "Queue closeout" : "Review and confirm"}
+        {offline ? "Reconnect to close out" : "Review and confirm"}
       </ActionButton>
     </ScrollView>
   )

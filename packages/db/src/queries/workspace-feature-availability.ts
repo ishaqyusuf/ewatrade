@@ -61,7 +61,8 @@ export async function getWorkspaceFeatureAvailability(
     activeSellableItem,
     order,
     serviceJob,
-    customer,
+    identifiedOrderCustomer,
+    directoryCustomer,
     staff,
     inventoryActivity,
   ] = await Promise.all([
@@ -120,6 +121,10 @@ export async function getWorkspaceFeatureAvailability(
         ],
       },
     }),
+    db.customer.findFirst({
+      select: { id: true },
+      where: { tenantId: input.tenantId },
+    }),
     db.membership.findFirst({
       select: { id: true },
       where: {
@@ -136,7 +141,7 @@ export async function getWorkspaceFeatureAvailability(
   return deriveWorkspaceFeatureAvailability({
     activeSellableItem,
     catalogKinds: catalogItems.map((item) => item.kind),
-    customer,
+    customer: directoryCustomer ?? identifiedOrderCustomer,
     inventoryActivity,
     order,
     serviceJob,

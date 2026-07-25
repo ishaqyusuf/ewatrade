@@ -1,5 +1,8 @@
 {
   "extends": "../../packages/tsconfig/base.json",
+  "compilerOptions": {
+    "types": ["bun", "node"]
+  },
   "include": ["scripts/**/*.ts", "src/**/*.ts", "trigger.config.ts"],
   "exclude": ["node_modules"]
 }

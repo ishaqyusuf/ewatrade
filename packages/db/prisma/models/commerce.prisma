@@ -45,7 +45,29 @@ model Store {
   commercialOrders            CommercialOrder[]
   commercialOrderPayments     CommercialOrderPayment[]
   productReturns              ProductReturn[]
+  domainQuotes                DomainQuote[]
+  domainOrders                DomainOrder[]
+  managedDomains              ManagedDomain[]
+  domainConnections           DomainConnection[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, status])
+}
+
+model Customer {
+  id              String   @id @default(cuid())
+  tenantId        String
+  name            String
+  email           String?
+  normalizedEmail String?
+  phone           String?
+  normalizedPhone String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, normalizedEmail])
+  @@unique([tenantId, normalizedPhone])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, name])
 }

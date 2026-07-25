@@ -303,15 +303,11 @@ export function OperationsDashboardSurface({
         businessName={profile?.businessName ?? "Business"}
         greetingName={firstName}
         hasNotification={isOffline || pendingCommandCount > 0}
-        onBusinessPress={
-          isAttendant
-            ? undefined
-            : () => router.push("/business-switch-modal" as never)
-        }
         onNotificationPress={() => router.push("/sync-status-modal" as never)}
         onProfilePress={
           embeddedInAdminTabs ? () => router.push("/more" as never) : undefined
         }
+        onSearchPress={() => router.push("/global-search" as never)}
       />
 
       {isOffline ? (

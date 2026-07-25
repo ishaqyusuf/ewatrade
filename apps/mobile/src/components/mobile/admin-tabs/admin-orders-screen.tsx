@@ -5,33 +5,34 @@ import {
   CommercePageHeader,
   CommercePendingOrderRow,
   type CommercialOrder,
-  commercialOrderHref,
   commerceOrderItemCount,
-} from "@/components/mobile/commerce";
-import { EmptyState } from "@/components/mobile/empty-state";
-import { FormField } from "@/components/mobile/form-field";
-import { QueryRefreshControl } from "@/components/mobile/query-refresh-control";
-import { StatusBanner } from "@/components/mobile/status-banner";
-import { Icon } from "@/components/ui/icon";
-import { Pressable } from "@/components/ui/pressable";
-import { Text } from "@/components/ui/text";
-import { View } from "@/components/ui/view";
-import { useTRPC } from "@/trpc/client";
+  commercialOrderHref,
+} from "@/components/mobile/commerce"
+import { EmptyState } from "@/components/mobile/empty-state"
+import { FormField } from "@/components/mobile/form-field"
+import { ListCreateFab } from "@/components/mobile/list-create-fab"
+import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
+import { StatusBanner } from "@/components/mobile/status-banner"
+import { Icon } from "@/components/ui/icon"
+import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
+import { View } from "@/components/ui/view"
 import {
   LIST_PAGE_SIZE,
   shouldFetchNextListPage,
   shouldShowListSearch,
-} from "@/lib/list-pagination";
-import { formatMinorMoney } from "@ewatrade/utils";
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { useDeferredValue, useMemo, useState } from "react";
-import { FlatList } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAdminDockScroll, useAdminTabs } from "./admin-tabs-context";
+} from "@/lib/list-pagination"
+import { useTRPC } from "@/trpc/client"
+import { formatMinorMoney } from "@ewatrade/utils"
+import { useInfiniteQuery } from "@tanstack/react-query"
+import { useRouter } from "expo-router"
+import { useDeferredValue, useMemo, useState } from "react"
+import { FlatList } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { useAdminDockScroll, useAdminTabs } from "./admin-tabs-context"
 
-type OrderFilter = "all" | "cancelled" | "completed" | "open";
-type DateFilter = "all" | "today" | "7_days" | "30_days";
+type OrderFilter = "all" | "cancelled" | "completed" | "open"
+type DateFilter = "all" | "today" | "7_days" | "30_days"
 
 const OPEN_STATUSES = [
   "DRAFT",
@@ -40,62 +41,68 @@ const OPEN_STATUSES = [
   "FULFILLING",
   "READY_FOR_PICKUP",
   "OUT_FOR_DELIVERY",
-] as const;
+] as const
 
 function createdAfterForDateFilter(filter: DateFilter) {
-  if (filter === "all") return undefined;
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  if (filter === "7_days") start.setDate(start.getDate() - 6);
-  if (filter === "30_days") start.setDate(start.getDate() - 29);
-  return start;
+  if (filter === "all") return undefined
+  const start = new Date()
+  start.setHours(0, 0, 0, 0)
+  if (filter === "7_days") start.setDate(start.getDate() - 6)
+  if (filter === "30_days") start.setDate(start.getDate() - 29)
+  return start
 }
 
 function statusesForOrderFilter(filter: OrderFilter) {
-  if (filter === "open") return [...OPEN_STATUSES];
-  if (filter === "completed") return ["COMPLETED" as const];
+  if (filter === "open") return [...OPEN_STATUSES]
+  if (filter === "completed") return ["COMPLETED" as const]
   if (filter === "cancelled") {
-    return ["CANCELLED" as const, "REFUNDED" as const];
+    return ["CANCELLED" as const, "REFUNDED" as const]
   }
-  return undefined;
+  return undefined
 }
 
 function dateFilterLabel(filter: DateFilter) {
-  if (filter === "today") return "Today";
-  if (filter === "7_days") return "7 days";
-  if (filter === "30_days") return "30 days";
-  return "All time";
+  if (filter === "today") return "Today"
+  if (filter === "7_days") return "7 days"
+  if (filter === "30_days") return "30 days"
+  return "All time"
 }
 
 function formatQuantity(value: number) {
-  return value.toLocaleString(undefined, { maximumFractionDigits: 6 });
+  return value.toLocaleString(undefined, { maximumFractionDigits: 6 })
 }
 
 function currencyMetric(
   orders: CommercialOrder[],
   getValue: (orders: CommercialOrder[]) => number,
 ) {
-  if (orders.length === 0) return "—";
-  const currencies = new Set(orders.map((order) => order.currencyCode));
-  if (currencies.size !== 1) return "Mixed currencies";
-  return formatMinorMoney(getValue(orders), orders[0]?.currencyCode ?? "NGN");
+  if (orders.length === 0) return "—"
+  const currencies = new Set(orders.map((order) => order.currencyCode))
+  if (currencies.size !== 1) return "Mixed currencies"
+  return formatMinorMoney(getValue(orders), orders[0]?.currencyCode ?? "NGN")
 }
 
 export function AdminOrdersScreen() {
-  const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const trpc = useTRPC();
-  const { isOffline, openCreate, provisionalOrders } = useAdminTabs();
-  const handleDockScroll = useAdminDockScroll();
-  const [dateFilter, setDateFilter] = useState<DateFilter>("30_days");
-  const [filter, setFilter] = useState<OrderFilter>("all");
-  const [query, setQuery] = useState("");
-  const deferredQuery = useDeferredValue(query);
+  const insets = useSafeAreaInsets()
+  const router = useRouter()
+  const trpc = useTRPC()
+  const {
+    availability,
+    isDockHidden,
+    isOffline,
+    openCreate,
+    provisionalOrders,
+  } = useAdminTabs()
+  const handleDockScroll = useAdminDockScroll()
+  const [dateFilter, setDateFilter] = useState<DateFilter>("30_days")
+  const [filter, setFilter] = useState<OrderFilter>("all")
+  const [query, setQuery] = useState("")
+  const deferredQuery = useDeferredValue(query)
   const createdAfter = useMemo(
     () => createdAfterForDateFilter(dateFilter),
     [dateFilter],
-  );
-  const statuses = useMemo(() => statusesForOrderFilter(filter), [filter]);
+  )
+  const statuses = useMemo(() => statusesForOrderFilter(filter), [filter])
   const orders = useInfiniteQuery(
     trpc.orders.listPage.infiniteQueryOptions(
       {
@@ -110,14 +117,14 @@ export function AdminOrdersScreen() {
         retry: false,
       },
     ),
-  );
+  )
   const loadedOrders = useMemo(
     () => orders.data?.pages.flatMap((page) => page.items) ?? [],
     [orders.data?.pages],
-  );
+  )
   const visibleOrders = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    if (!isOffline || !normalizedQuery) return loadedOrders;
+    const normalizedQuery = query.trim().toLowerCase()
+    if (!isOffline || !normalizedQuery) return loadedOrders
     return loadedOrders.filter((order) =>
       [
         order.clientOrderId,
@@ -134,35 +141,35 @@ export function AdminOrdersScreen() {
         .join(" ")
         .toLowerCase()
         .includes(normalizedQuery),
-    );
-  }, [isOffline, loadedOrders, query]);
+    )
+  }, [isOffline, loadedOrders, query])
   const visibleProvisionalOrders = useMemo(() => {
-    if (filter === "completed" || filter === "cancelled") return [];
-    const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) return provisionalOrders;
+    if (filter === "completed" || filter === "cancelled") return []
+    const normalizedQuery = query.trim().toLowerCase()
+    if (!normalizedQuery) return provisionalOrders
     return provisionalOrders.filter((order) =>
       `${order.customerName ?? ""} ${order.customerPhone ?? ""} queued pending sync`
         .toLowerCase()
         .includes(normalizedQuery),
-    );
-  }, [filter, provisionalOrders, query]);
+    )
+  }, [filter, provisionalOrders, query])
   const itemCount = visibleOrders.reduce(
     (total, order) => total + commerceOrderItemCount(order),
     0,
-  );
+  )
   const averageValue = currencyMetric(visibleOrders, (metricOrders) =>
     Math.round(
       metricOrders.reduce((total, order) => total + order.totalMinor, 0) /
         metricOrders.length,
     ),
-  );
+  )
   const totalValue = currencyMetric(visibleOrders, (metricOrders) =>
     metricOrders.reduce((total, order) => total + order.totalMinor, 0),
-  );
-  const totalCount = orders.data?.pages[0]?.totalCount ?? 0;
+  )
+  const totalCount = orders.data?.pages[0]?.totalCount ?? 0
   const showSearch = shouldShowListSearch(
     Math.max(totalCount, loadedOrders.length) + provisionalOrders.length,
-  );
+  )
 
   return (
     <View className="flex-1 bg-background" testID="admin-orders-screen">
@@ -315,7 +322,7 @@ export function AdminOrdersScreen() {
               isFetchingNextPage: orders.isFetchingNextPage,
             })
           ) {
-            void orders.fetchNextPage();
+            void orders.fetchNextPage()
           }
         }}
         onEndReachedThreshold={0.35}
@@ -336,6 +343,19 @@ export function AdminOrdersScreen() {
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       />
+      <ListCreateFab
+        accessibilityLabel="Add order"
+        dockHidden={isDockHidden}
+        onPress={() => {
+          if (availability.hasActiveSellableItems) {
+            router.push("/create-sale-modal")
+          } else {
+            openCreate()
+          }
+        }}
+        sitsAboveDock
+        testID="orders-add-fab"
+      />
     </View>
-  );
+  )
 }

@@ -11,7 +11,7 @@ import {
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
   CatalogRecordStatus,
-  InventoryUnitStockBehavior,
+  type InventoryUnitStockBehavior,
   OfferingPricingPolicy,
   OrderStatus,
   PaymentStatus,
@@ -32,7 +32,13 @@ import {
   reserveCatalogOfferingStockInTransaction,
 } from "./catalog-inventory"
 import { allocateCommercialOrderNumber } from "./commercial-order-number"
-import { effectiveCommercialAmountPaid } from "./commercial-payments"
+import {
+  type CommercialPaymentMethodValue,
+  effectiveCommercialAmountPaid,
+  recordCommercialOrderPaymentInTransaction,
+} from "./commercial-payments"
+import { ensureOrderCustomerInTransaction } from "./customers"
+import { loadTenantActors } from "./tenant-actors"
 
 export type CreateCommercialOrderInput = {
   actorUserId: string
@@ -42,6 +48,13 @@ export type CreateCommercialOrderInput = {
   customerPhone?: string
   createTrackedServiceWork?: boolean
   discountMinor?: number
+  initialPayment?: {
+    amountMinor: number
+    clientPaymentId: string
+    method: CommercialPaymentMethodValue
+    note?: string
+    reference?: string
+  }
   lines: Array<{
     approvedQuotePriceMinor?: number
     expectedBalanceRevision?: number
@@ -136,6 +149,7 @@ function serializeOrder(order: OrderGraph) {
     balanceDueMinor: Math.max(0, order.totalMinor - amountPaidMinor),
     clientOrderId: order.clientOrderId,
     createdAt: order.createdAt,
+    createdByUserId: order.createdByUserId,
     currencyCode: order.currencyCode,
     customerEmail: order.customerEmail,
     customerName: order.customerName,
@@ -208,6 +222,7 @@ function serializeOrder(order: OrderGraph) {
       method: payment.method,
       note: payment.note,
       recordedAt: payment.recordedAt,
+      recordedByUserId: payment.recordedByUserId,
       reference: payment.reference,
       type: payment.type,
     })),
@@ -244,6 +259,31 @@ function findCommercialOrderByClientIdentity(
       },
     },
   })
+}
+
+type SerializedOrder = ReturnType<typeof serializeOrder>
+
+async function attachOrderActors(
+  db: PrismaClient,
+  tenantId: string,
+  orders: SerializedOrder[],
+) {
+  const actors = await loadTenantActors(db, {
+    tenantId,
+    userIds: orders.flatMap((order) => [
+      order.createdByUserId,
+      ...order.payments.map((payment) => payment.recordedByUserId),
+    ]),
+  })
+
+  return orders.map((order) => ({
+    ...order,
+    createdBy: actors.get(order.createdByUserId) ?? null,
+    payments: order.payments.map((payment) => ({
+      ...payment,
+      recordedBy: actors.get(payment.recordedByUserId) ?? null,
+    })),
+  }))
 }
 
 export async function createCommercialOrderInTransaction(
@@ -536,7 +576,14 @@ export async function createCommercialOrderInTransaction(
         },
       })
       for (const orderLine of trackedLines) {
-        const policy = orderLine.offering.serviceOffering!.authorizationPolicy
+        const serviceOffering = orderLine.offering.serviceOffering
+        if (!serviceOffering) {
+          throw new CatalogError(
+            "INVALID_ORDER",
+            "Tracked Service line is missing its Service Offering.",
+          )
+        }
+        const policy = serviceOffering.authorizationPolicy
         const authorizationStatus =
           policy === WorkAuthorizationPolicy.ON_ORDER_CONFIRMATION
             ? WorkAuthorizationStatus.AUTHORIZED
@@ -578,6 +625,22 @@ export async function createCommercialOrderInTransaction(
     }
   }
 
+  await ensureOrderCustomerInTransaction(tx, {
+    email: input.customerEmail,
+    name: input.customerName,
+    phone: input.customerPhone,
+    tenantId: input.tenantId,
+  })
+
+  if (input.initialPayment) {
+    await recordCommercialOrderPaymentInTransaction(tx, {
+      actorUserId: input.actorUserId,
+      ...input.initialPayment,
+      orderId: order.id,
+      tenantId: input.tenantId,
+    })
+  }
+
   const created = await tx.commercialOrder.findUniqueOrThrow({
     include: orderGraph,
     where: { id: order.id },
@@ -616,7 +679,11 @@ export async function getCommercialOrder(
     include: orderGraph,
     where: { id: input.orderId, tenantId: input.tenantId },
   })
-  return order ? serializeOrder(order) : null
+  if (!order) return null
+  const [result] = await attachOrderActors(db, input.tenantId, [
+    serializeOrder(order),
+  ])
+  return result ?? null
 }
 
 export async function listCommercialOrders(
@@ -629,7 +696,7 @@ export async function listCommercialOrders(
     take: Math.min(Math.max(input.limit ?? 50, 1), 100),
     where: { storeId: input.storeId, tenantId: input.tenantId },
   })
-  return orders.map(serializeOrder)
+  return attachOrderActors(db, input.tenantId, orders.map(serializeOrder))
 }
 
 export async function countCommercialOrderCustomers(
@@ -740,7 +807,11 @@ export async function listCommercialOrdersPage(
   const pageRecords = hasNextPage ? records.slice(0, limit) : records
 
   return {
-    items: pageRecords.map(serializeOrder),
+    items: await attachOrderActors(
+      db,
+      input.tenantId,
+      pageRecords.map(serializeOrder),
+    ),
     nextCursor: hasNextPage ? pageRecords.at(-1)?.id : undefined,
     totalCount,
   }
