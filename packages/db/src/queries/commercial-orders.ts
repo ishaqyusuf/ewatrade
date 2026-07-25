@@ -23,6 +23,7 @@ import {
   ServiceWorkPolicy,
   StockBalanceKind,
   StockOperationType,
+  StockReservationStatus,
   WorkAuthorizationPolicy,
   WorkAuthorizationStatus,
 } from "../../generated/prisma/enums"
@@ -280,19 +281,26 @@ async function fulfillCommercialOrderProductsInTransaction(
     actorUserId: string
     clientOperationIdPrefix: string
     orderId: string
+    reason?: string
+    schemaVersion: number
     tenantId: string
   },
 ) {
   const productLines = await tx.commercialOrderLine.findMany({
-    include: { stockReservation: true },
+    include: { productFulfillments: true, stockReservation: true },
     orderBy: { createdAt: "asc" },
     where: {
       kind: SellableOfferingKind.PRODUCT_UNIT,
       orderId: input.orderId,
     },
   })
+  const unfulfilledProductLines = productLines.filter(
+    (line) =>
+      line.productFulfillments.length === 0 &&
+      line.stockReservation?.status === StockReservationStatus.ACTIVE,
+  )
 
-  for (const [index, line] of productLines.entries()) {
+  for (const line of unfulfilledProductLines) {
     if (!line.stockReservation) {
       throw new CatalogError(
         "ORDER_NOT_FOUND",
@@ -301,10 +309,11 @@ async function fulfillCommercialOrderProductsInTransaction(
     }
     const operation = await commitCatalogStockReservationInTransaction(tx, {
       actorUserId: input.actorUserId,
-      clientOperationId: `${input.clientOperationIdPrefix}:${index + 1}`,
+      clientOperationId: `${input.clientOperationIdPrefix}:${line.id}`,
       operationType: "sale_fulfillment",
+      reason: input.reason,
       reservationId: line.stockReservation.id,
-      schemaVersion: 1,
+      schemaVersion: input.schemaVersion,
       source: "commercial_order",
       tenantId: input.tenantId,
     })
@@ -325,16 +334,18 @@ async function fulfillCommercialOrderProductsInTransaction(
     })
   }
 
-  if (productLines.length > 0) {
+  let status: OrderStatus | null = null
+  if (unfulfilledProductLines.length > 0) {
+    status = await resolveOrderStatusAfterProductFulfillment(tx, input.orderId)
     await tx.commercialOrder.update({
-      data: {
-        status: await resolveOrderStatusAfterProductFulfillment(
-          tx,
-          input.orderId,
-        ),
-      },
+      data: { status },
       where: { id: input.orderId },
     })
+  }
+
+  return {
+    fulfilledLineCount: unfulfilledProductLines.length,
+    status,
   }
 }
 
@@ -769,6 +780,7 @@ export async function createCommercialOrderInTransaction(
       actorUserId: input.actorUserId,
       clientOperationIdPrefix: `${input.clientOrderId}:fulfillment`,
       orderId: order.id,
+      schemaVersion: input.schemaVersion,
       tenantId: input.tenantId,
     })
   }
@@ -1024,6 +1036,57 @@ export async function fulfillCommercialOrderProductLine(
       quantity: fulfillment.quantity.toString(),
       stockOperationId: fulfillment.stockOperationId,
     }
+  })
+}
+
+export async function fulfillCommercialOrderProducts(
+  db: PrismaClient,
+  input: {
+    actorUserId: string
+    clientOperationId: string
+    orderId: string
+    reason?: string
+    schemaVersion: number
+    tenantId: string
+  },
+) {
+  assertSchemaVersion(input.schemaVersion)
+  return db.$transaction(async (tx) => {
+    const order = await tx.commercialOrder.findFirst({
+      select: {
+        deliveryDueAt: true,
+        id: true,
+        lines: {
+          select: { id: true },
+          where: { kind: SellableOfferingKind.PRODUCT_UNIT },
+        },
+      },
+      where: { id: input.orderId, tenantId: input.tenantId },
+    })
+    if (!order) {
+      throw new CatalogError("ORDER_NOT_FOUND", "Commercial Order not found.")
+    }
+    if (order.deliveryDueAt && order.deliveryDueAt.getTime() > Date.now()) {
+      throw new CatalogError(
+        "INVALID_ORDER",
+        "This Order cannot be fulfilled before its scheduled delivery time.",
+      )
+    }
+    if (order.lines.length === 0) {
+      throw new CatalogError(
+        "INVALID_ORDER",
+        "This Order has no Product lines to fulfill.",
+      )
+    }
+
+    return fulfillCommercialOrderProductsInTransaction(tx, {
+      actorUserId: input.actorUserId,
+      clientOperationIdPrefix: input.clientOperationId,
+      orderId: order.id,
+      reason: input.reason,
+      schemaVersion: input.schemaVersion,
+      tenantId: input.tenantId,
+    })
   })
 }
 

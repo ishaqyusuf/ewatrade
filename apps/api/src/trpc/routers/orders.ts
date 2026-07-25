@@ -8,6 +8,7 @@ import {
   countCommercialOrderCustomers,
   createCommercialOrder,
   fulfillCommercialOrderProductLine,
+  fulfillCommercialOrderProducts,
   getCommercialOrder,
   getCommercialOrderReminderSettings,
   listCommercialOrderPaymentsPage,
@@ -22,6 +23,7 @@ import { TRPCError } from "@trpc/server"
 import {
   commercialOrderCreateSchema,
   commercialOrderFulfillLineSchema,
+  commercialOrderFulfillProductsSchema,
   commercialOrderGetSchema,
   commercialOrderListPageSchema,
   commercialOrderListSchema,
@@ -129,6 +131,22 @@ export const ordersRouter = createTRPCRouter({
       assertCanOperateOrders(ctx.tenantContext.membership.role)
       try {
         return await fulfillCommercialOrderProductLine(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof CatalogError) throw orderError(error)
+        throw error
+      }
+    }),
+
+  fulfillProducts: protectedProcedure
+    .input(commercialOrderFulfillProductsSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanOperateOrders(ctx.tenantContext.membership.role)
+      try {
+        return await fulfillCommercialOrderProducts(ctx.db, {
           ...input,
           actorUserId: ctx.session.user.id,
           tenantId: ctx.tenantContext.tenant.id,

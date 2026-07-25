@@ -1,5 +1,12 @@
 # Done
 
+- Added Order-wide Product fulfillment from mobile Order overview. Operators
+  may still fulfill individual lines or use one action that atomically commits
+  all remaining active Product reservations, preserves the scheduled-delivery
+  guard, refreshes Order/Catalog/Inventory projections, and reports the number
+  of lines fulfilled. Completed Date: 2026-07-25. Checks Run: focused Order
+  schema/overview tests plus DB, API, and mobile TypeScript.
+
 - Implemented Commercial Order stock visibility, atomic checkout payment plus
   optional due-now Product fulfillment, future delivery scheduling, early
   fulfillment guards, Store-level reminder settings, recipient-idempotent

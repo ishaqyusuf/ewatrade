@@ -30,10 +30,12 @@ import {
 type CommercialOrderOverviewContentProps = {
   activity: CommercialOrderActivity[]
   error: string | null
+  isFulfillingAll: boolean
   fulfillingOrderLineId?: string
   isOffline: boolean
   notice: string | null
   onBack: () => void
+  onFulfillAll: () => void
   onFulfillLine: (orderLineId: string) => void
   onOpenCustomer: () => void
   order: CommercialOrder
@@ -43,9 +45,11 @@ export function CommercialOrderOverviewContent({
   activity,
   error,
   fulfillingOrderLineId,
+  isFulfillingAll,
   isOffline,
   notice,
   onBack,
+  onFulfillAll,
   onFulfillLine,
   onOpenCustomer,
   order,
@@ -111,7 +115,9 @@ export function CommercialOrderOverviewContent({
       >
         {order.lines.map((line) => (
           <OrderLineRow
-            disabled={isOffline || fulfillmentScheduledForFuture}
+            disabled={
+              isOffline || fulfillmentScheduledForFuture || isFulfillingAll
+            }
             isFulfilling={fulfillingOrderLineId === line.id}
             key={line.id}
             line={line}
@@ -189,6 +195,27 @@ export function CommercialOrderOverviewContent({
           icon="Warehouse"
           title={commerceStatusLabel(order.status)}
         />
+        {summary.fulfillableProductLineCount > 0 ? (
+          <View className="gap-2 py-4">
+            <ActionButton
+              disabled={
+                isOffline ||
+                fulfillmentScheduledForFuture ||
+                Boolean(fulfillingOrderLineId)
+              }
+              icon="Warehouse"
+              isLoading={isFulfillingAll}
+              loadingLabel="Fulfilling products"
+              onPress={onFulfillAll}
+            >
+              Fulfill all products
+            </ActionButton>
+            <Text className="text-center text-xs text-muted-foreground">
+              Commits all {summary.fulfillableProductLineCount} reserved Product{" "}
+              {summary.fulfillableProductLineCount === 1 ? "line" : "lines"}.
+            </Text>
+          </View>
+        ) : null}
       </OrderOverviewSection>
 
       {order.notes ? (

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 
 import {
   commercialOrderCreateSchema,
+  commercialOrderFulfillProductsSchema,
   commercialOrderListPageSchema,
   commercialOrderPaymentSchema,
   commercialOrderReminderSettingsUpdateSchema,
@@ -82,6 +83,22 @@ describe("commercial Order scheduling schema", () => {
       dayBeforeEnabled: true,
       enabled: true,
       sameDayEnabled: false,
+    })
+  })
+})
+
+describe("commercial Order bulk fulfillment schema", () => {
+  test("accepts one idempotent command for all Product lines", () => {
+    expect(
+      commercialOrderFulfillProductsSchema.parse({
+        clientOperationId: "fulfillment-all-001",
+        orderId: "order-001",
+        schemaVersion: 1,
+      }),
+    ).toEqual({
+      clientOperationId: "fulfillment-all-001",
+      orderId: "order-001",
+      schemaVersion: 1,
     })
   })
 })

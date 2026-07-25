@@ -73,6 +73,9 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
       queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
       queryClient.invalidateQueries(trpc.orders.listPage.queryFilter()),
       queryClient.invalidateQueries(trpc.orders.customerCount.queryFilter()),
+      queryClient.invalidateQueries(trpc.catalog.listItems.queryFilter()),
+      queryClient.invalidateQueries(trpc.catalog.listItemsPage.queryFilter()),
+      queryClient.invalidateQueries(trpc.inventory.balanceReport.queryFilter()),
     ])
   }
 
@@ -101,6 +104,23 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
       onSuccess: async () => {
         setError(null)
         setNotice("Product fulfilment recorded.")
+        await refreshOrderQueries()
+      },
+    }),
+  )
+  const fulfilAllMutation = useMutation(
+    trpc.orders.fulfillProducts.mutationOptions({
+      onError: (failure) => {
+        setNotice(null)
+        setError(failure.message)
+      },
+      onSuccess: async (result) => {
+        setError(null)
+        setNotice(
+          result.fulfilledLineCount === 1
+            ? "1 Product line fulfilled."
+            : `${result.fulfilledLineCount} Product lines fulfilled.`,
+        )
         await refreshOrderQueries()
       },
     }),
@@ -157,10 +177,19 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
   }
 
   function fulfilProductLine(orderLineId: string) {
-    if (isOffline) return
+    if (isOffline || fulfilAllMutation.isPending) return
     fulfilmentMutation.mutate({
       clientOperationId: `fulfilment-${Crypto.randomUUID()}`,
       orderLineId,
+      schemaVersion: 1,
+    })
+  }
+
+  function fulfilAllProducts() {
+    if (!order || isOffline || fulfilmentMutation.isPending) return
+    fulfilAllMutation.mutate({
+      clientOperationId: `fulfilment-all-${Crypto.randomUUID()}`,
+      orderId: order.id,
       schemaVersion: 1,
     })
   }
@@ -219,9 +248,11 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
               ? fulfilmentMutation.variables?.orderLineId
               : undefined
           }
+          isFulfillingAll={fulfilAllMutation.isPending}
           isOffline={isOffline}
           notice={notice}
           onBack={goBack}
+          onFulfillAll={fulfilAllProducts}
           onFulfillLine={fulfilProductLine}
           onOpenCustomer={openCustomer}
           order={order}

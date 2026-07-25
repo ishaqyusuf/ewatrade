@@ -16,6 +16,9 @@ blocked until a local PostgreSQL/Docker engine is available.
   Completed; mixed Product/Service Orders become Fulfilling.
 - A future delivery time rejects immediate fulfillment. Manual Product-line
   fulfillment remains unavailable until the due timestamp.
+- Order overview retains individual Product-line fulfillment and also exposes
+  one `Fulfill all products` action. The bulk command atomically commits every
+  remaining active Product reservation and skips lines already fulfilled.
 - Existing Orders retain a null delivery time so rollout does not manufacture
   reminders for historical records.
 

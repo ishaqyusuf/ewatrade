@@ -125,6 +125,15 @@ export const commercialOrderFulfillLineSchema = z
   })
   .strict()
 
+export const commercialOrderFulfillProductsSchema = z
+  .object({
+    clientOperationId: z.string().trim().min(8).max(160),
+    orderId: z.string().trim().min(1),
+    reason: z.string().trim().min(1).max(500).optional(),
+    schemaVersion: z.literal(1),
+  })
+  .strict()
+
 export const commercialOrderReturnLineSchema = z
   .object({
     clientReturnId: z.string().trim().min(8).max(160),

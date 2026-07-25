@@ -43,7 +43,8 @@ Typed tRPC routers are the primary application contract.
 
 - `orders.create`, `orders.get`, `orders.list`, `orders.listPage`,
   `orders.customerCount`, `orders.payments`,
-  `orders.fulfillProductLine`, `orders.returnProductLine`,
+  `orders.fulfillProductLine`, `orders.fulfillProducts`,
+  `orders.returnProductLine`,
   `orders.recordPayment`, `orders.reminderSettings`,
   `orders.updateReminderSettings`.
 - `orders.create` accepts optional delivery timing, immediate Product
