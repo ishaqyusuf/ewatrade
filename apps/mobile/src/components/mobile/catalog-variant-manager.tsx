@@ -379,6 +379,7 @@ export function CatalogVariantManager({
           setEditorExpanded(false)
         }}
         footerComponent={renderEditorFooter}
+        keyboardBehavior="fillParent"
         ref={editorModal.ref}
         snapPoints={["62%", "96%"]}
         title={

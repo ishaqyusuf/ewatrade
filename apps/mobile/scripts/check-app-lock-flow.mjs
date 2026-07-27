@@ -30,9 +30,19 @@ const checks = [
     ],
   },
   {
+    file: "src/lib/app-lock-hydration.ts",
+    markers: [
+      "Promise.race",
+      "DEFAULT_APP_LOCK_HYDRATION_TIMEOUT_MS",
+      'status: "error"',
+    ],
+  },
+  {
     file: "src/hooks/use-app-lock.tsx",
     markers: [
       "AppLockProvider",
+      "loadAppLockConfig",
+      "hydrationError",
       "AppState.addEventListener",
       "LocalAuthentication.authenticateAsync",
       'promptMessage: "Unlock EwaTrade"',
@@ -45,6 +55,7 @@ const checks = [
     markers: [
       "Enter your PIN code",
       "AppLockPinPad",
+      "App lock storage is unavailable",
       "showBiometric={canUseBiometrics}",
       "Forgot code? Sign out and reset app lock",
     ],
@@ -73,8 +84,8 @@ const checks = [
     markers: ["AppLockProvider", "AppLockGate", "app-lock-modal"],
   },
   {
-    file: "src/app/dashboard.tsx",
-    markers: ['label="App lock"', 'router.push("/app-lock-modal" as never)'],
+    file: "src/lib/admin-navigation.ts",
+    markers: ['label: "App lock"', 'href: "/app-lock-modal"'],
   },
 ];
 

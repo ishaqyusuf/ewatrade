@@ -1,7 +1,12 @@
 import type { ExpoConfig } from "expo/config"
 
-export const UPDATE_VERSION = "2026.07.24.03"
-const PROJECT_ID = "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b"
+export const UPDATE_VERSION = "2026.07.25.06"
+
+const PROJECT = {
+   default: {id: "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b",slug: "ewatrade", owner: "cipron-startups" },
+   fallback: {id: "5d765962-42a1-4a9e-a01c-122149c3cec4",slug:"ewatrade-2",owner:"startups-2" }
+}
+const {id: PROJECT_ID, slug:SLUG, owner:OWNER } = PROJECT.fallback;
 const appVariant =
   process.env.APP_VARIANT ??
   process.env.EXPO_PUBLIC_APP_VARIANT ??
@@ -69,8 +74,8 @@ const variantConfig = isDevelopmentBuild
 
 const config: ExpoConfig = {
   name: variantConfig.name,
-  slug: "ewatrade",
-  owner: "cipron-startups",
+  slug:SLUG,
+  owner: OWNER,
   version: "1.0.0",
   orientation: "portrait",
   icon: variantConfig.icons.app,
@@ -176,7 +181,7 @@ const config: ExpoConfig = {
     eas: {
       projectId: PROJECT_ID,
     },
-    owner: "cipron-startups",
+    owner: OWNER,
     updates: {
       url: `https://u.expo.dev/${PROJECT_ID}`,
       checkAutomatically: "NEVER",

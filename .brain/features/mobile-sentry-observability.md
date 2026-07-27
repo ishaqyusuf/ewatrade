@@ -59,4 +59,26 @@ resolution, Android Expo export, and diff hygiene checks passed. The Android
 export correctly bundled the Sentry-aware Metro pipeline; its warning about
 missing generated native configuration is expected before CNG/EAS prebuild
 creates the ignored native projects. A live native event and symbolication
-check remain pending.
+check remain pending. On 2026-07-26, Android Preview build
+`246bf5c6-46f1-4fbd-b964-31461a0a4c44` passed the Metro bundle after the
+Design 01 reference boards were included in the EAS upload, then failed in the
+Sentry Gradle upload task because Preview had no `SENTRY_AUTH_TOKEN`. With
+explicit owner authorization, the existing local token was then stored as the
+project-scoped, Preview EAS secret `SENTRY_AUTH_TOKEN`. Replacement build
+`0d20383d-ad6d-4425-888b-2d073718cf6c` completed successfully as Android
+versionCode 4, including the Sentry source-map artifact upload for release
+`com.ewatrade.app@1.0.0+4`. On 2026-07-26, with explicit owner authorization,
+the complete mobile production configuration was synchronized to both
+`production` and `preview` on the currently selected
+`@startups-2/ewatrade-2` project. Metadata verification confirmed the public
+Sentry settings are project-scoped public variables and `SENTRY_AUTH_TOKEN` is
+a project-scoped secret in both environments. Preview build
+`39b3766f-6dba-4ef3-8e0f-a46723b4894a` then proved that the token copied from
+the production env file lacks permission for `cipron-concepts/ewatrade-mobile`:
+its source-map upload received Sentry HTTP 403. The previously authorized,
+known-working local token was restored to Preview only. Replacement Preview
+build `74b14a10-2097-40c6-9f98-2708c36b81c6` completed successfully as
+Android versionCode 7 and uploaded its Sentry artifact. Production still needs
+a token with permission for the mobile Sentry project before a production
+build can upload source maps. A deliberate native Preview event and
+symbolication check remain pending.

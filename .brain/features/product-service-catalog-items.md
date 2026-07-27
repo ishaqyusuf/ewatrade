@@ -85,6 +85,9 @@ ADR-0013.
   description. `More` expands that sheet to full screen for image, SKU,
   barcode, per-unit price, Service quote, and Store availability controls. A
   rounded bottom-right check remains above the keyboard and commits the draft.
+  When the keyboard opens, the editor fills the available parent height so
+  short subunit editors keep their focused price input visible without
+  removing the unit-context description.
   Per-variant quantity persists as opening stock for that specific variant.
   Both Product price and opening quantity may be left blank so incomplete
   Catalog setup can be saved without storing artificial zero values.

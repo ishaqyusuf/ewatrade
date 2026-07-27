@@ -112,6 +112,13 @@ On 2026-07-12 the `@cipron-startups/ewatrade` Expo project was configured with p
 - `production`: `EXPO_PUBLIC_APP_VARIANT=production`, web/generic Google client IDs, Android production client ID, and iOS production client ID.
 - `preview`: `EXPO_PUBLIC_APP_VARIANT=preview`, web/generic Google client IDs, Android production client ID, and iOS production client ID.
 
+On 2026-07-26, with explicit owner authorization, the currently selected
+fallback Expo project `@startups-2/ewatrade-2` received the complete 16-value
+mobile production configuration in both its `production` and `preview` EAS
+environments. This includes the generic/web, Android production, and iOS
+production Google client IDs. EAS metadata verification confirmed all entries
+are project-scoped and attached to the requested environments.
+
 ## QA Gate
 
 Google auth is not complete until:
@@ -133,7 +140,11 @@ Google auth is not complete until:
 - The mobile source now uses native Google Sign-In on Android/iOS and sends the returned ID token to `auth.verifyMobileGoogle`. Expo AuthSession remains available only for the Expo web path.
 - Expo Go cannot fully test native Google Sign-In; use a development build or production build for native provider QA, and use email-code auth as the fallback inside Expo Go.
 - Google OAuth env keys are configured in `.env`, `.env.production`, `apps/mobile/.env.local`, and `apps/mobile/.env.production` as of 2026-07-12.
-- Expo project environment variables are configured for development, preview, and production as of 2026-07-12.
+- Expo project environment variables are configured for development, preview,
+  and production on `@cipron-startups/ewatrade` as of 2026-07-12. The
+  production mobile configuration is also configured in both `production` and
+  `preview` on the currently selected `@startups-2/ewatrade-2` project as of
+  2026-07-26.
 - `bun run --cwd apps/mobile qa:google-oauth-ready` passes against the root local env, root production env, mobile local env, and mobile production env.
 - A fresh Google ID token was generated from the web client for `ishaqyusuf024@gmail.com` on 2026-07-12, proving the consent/test-user path can issue an ID token for the configured EwaTrade app. The token is short-lived and should not be stored in docs.
 - For live sign-up QA, also set `GOOGLE_LIVE_NAME` and `GOOGLE_LIVE_BUSINESS_NAME` to disposable values. They are ignored for login mode, but the live readiness gate requires them when `GOOGLE_LIVE_MODE=sign_up` so the new-owner path can create the first business context intentionally.

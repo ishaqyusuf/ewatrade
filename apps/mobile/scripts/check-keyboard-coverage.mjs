@@ -87,6 +87,7 @@ const contracts = [
       "KeyboardStickyView",
       "offset={{ closed: 0, opened: 16 }}",
       'snapPoints={["62%", "96%"]}',
+      'keyboardBehavior="fillParent"',
       'keyboardDismissMode="interactive"',
       'keyboardShouldPersistTaps="handled"',
       'label="Qty"',

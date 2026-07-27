@@ -398,6 +398,10 @@ const requiredFiles = [
     markers: ['"@design/*": ["../../.design/*"]'],
   },
   {
+    file: "../.gitignore",
+    markers: ["/.design/*", "!/.design/reference-*.png"],
+  },
+  {
     file: "../.design/reference-commerce-home-customer-orders.png",
     markers: [],
   },

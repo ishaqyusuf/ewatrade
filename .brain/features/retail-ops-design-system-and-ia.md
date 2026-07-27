@@ -26,11 +26,14 @@ payment and fulfilment state demonstrations. The five owner-provided commerce
 boards are tracked under the repository-root `.design/` folder and registered
 in the Design 01 reference hub through one reusable source-image route. Metro
 watches `.design/` directly through the `@design/*` alias, avoiding a second
-asset copy. Landscape source boards use a horizontally pannable review canvas
-that hides floating review controls while panned and returns to the relevant
-Orders or Customers implementation. These screens remain internal sample-data
-approval surfaces and do not replace production Orders, Customer Book, tRPC,
-or database contracts.
+asset copy. The root ignore policy explicitly includes `.design/reference-*.png`
+in EAS build uploads while continuing to exclude `.design/qa/` captures and
+other design workspace files; the mobile design-system QA guard locks this
+packaging contract. Landscape source boards use a horizontally pannable review
+canvas that hides floating review controls while panned and returns to the
+relevant Orders or Customers implementation. These screens remain internal
+sample-data approval surfaces and do not replace production Orders, Customer
+Book, tRPC, or database contracts.
 
 The approved commerce direction is now also implemented on the production
 admin Orders tab, Customer Book, Customer overview, and Order overview. These

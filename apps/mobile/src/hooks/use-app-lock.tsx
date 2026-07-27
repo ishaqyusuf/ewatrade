@@ -1,4 +1,5 @@
 import { useAuthContext } from "@/hooks/use-auth"
+import { loadAppLockConfig } from "@/lib/app-lock-hydration"
 import {
   type AppLockConfig,
   type AppLockVerificationResult,
@@ -11,6 +12,7 @@ import {
 } from "@/lib/app-lock-store"
 import * as LocalAuthentication from "expo-local-authentication"
 import {
+  type ReactNode,
   createContext,
   useCallback,
   useContext,
@@ -18,7 +20,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from "react"
 import { AppState, type AppStateStatus } from "react-native"
 
@@ -36,6 +37,7 @@ type AppLockContextValue = {
   clearLock: () => Promise<void>
   config: AppLockConfig | null
   isConfigured: boolean
+  hydrationError: boolean
   isHydrated: boolean
   isLocked: boolean
   lockNow: () => void
@@ -114,6 +116,7 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
   const [biometricsStatus, setBiometricsStatus] =
     useState<AppLockBiometricsStatus>(DEFAULT_BIOMETRICS_STATUS)
   const [config, setConfig] = useState<AppLockConfig | null>(null)
+  const [hydrationError, setHydrationError] = useState(false)
   const [isHydrated, setIsHydrated] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
   const appStateRef = useRef<AppStateStatus>(AppState.currentState)
@@ -128,18 +131,25 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
     async (options: { lockIfEnabled?: boolean } = {}) => {
       if (!auth.isAuthenticated || !userId) {
         setConfig(null)
+        setHydrationError(false)
         setIsLocked(false)
         setIsHydrated(true)
         return
       }
 
-      const nextConfig = await getAppLockConfig(userId)
-      setConfig(nextConfig)
+      const result = await loadAppLockConfig(() => getAppLockConfig(userId))
+      setConfig(result.config)
+      setHydrationError(result.status === "error")
       setIsHydrated(true)
 
+      if (result.status === "error") {
+        setIsLocked(true)
+        return
+      }
+
       if (options.lockIfEnabled) {
-        setIsLocked(!!nextConfig?.enabled)
-      } else if (!nextConfig?.enabled) {
+        setIsLocked(!!result.config?.enabled)
+      } else if (!result.config?.enabled) {
         setIsLocked(false)
       }
     },
@@ -148,6 +158,7 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setIsHydrated(false)
+    setHydrationError(false)
     void refreshConfig({ lockIfEnabled: true })
     void refreshBiometricsStatus()
   }, [refreshBiometricsStatus, refreshConfig])
@@ -259,7 +270,12 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
     setConfig(nextConfig)
     setIsLocked(false)
     return { ok: true }
-  }, [config?.biometricsEnabled, config?.enabled, refreshBiometricsStatus, userId])
+  }, [
+    config?.biometricsEnabled,
+    config?.enabled,
+    refreshBiometricsStatus,
+    userId,
+  ])
 
   const clearLock = useCallback(async () => {
     if (!userId) return
@@ -277,6 +293,7 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
       biometricsStatus,
       clearLock,
       config,
+      hydrationError,
       isConfigured: !!config?.enabled,
       isHydrated,
       isLocked,
@@ -292,6 +309,7 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
       biometricsStatus,
       clearLock,
       config,
+      hydrationError,
       isHydrated,
       isLocked,
       lockNow,

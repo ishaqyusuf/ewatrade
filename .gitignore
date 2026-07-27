@@ -11,5 +11,6 @@ build
 .vercel
 packages/db/generated
 .gstack/
-/.design/
+/.design/*
+!/.design/reference-*.png
 packages/jobs/.trigger/

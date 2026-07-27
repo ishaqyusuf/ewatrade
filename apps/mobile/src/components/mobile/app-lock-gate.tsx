@@ -29,18 +29,28 @@ function formatLockedUntil(value?: string | null) {
 export function AppLockGate() {
   const auth = useAuthContext()
   const appLock = useAppLockContext()
-  const shouldBlock = auth.isAuthenticated && (!appLock.isHydrated || appLock.isLocked)
+  const shouldBlock =
+    auth.isAuthenticated && (!appLock.isHydrated || appLock.isLocked)
 
   if (!shouldBlock) return null
 
   return (
     <Modal animationType="fade" presentationStyle="fullScreen" visible>
-      <AppLockUnlockScreen isLoading={!appLock.isHydrated} />
+      <AppLockUnlockScreen
+        hasHydrationError={appLock.hydrationError}
+        isLoading={!appLock.isHydrated}
+      />
     </Modal>
   )
 }
 
-function AppLockUnlockScreen({ isLoading }: { isLoading: boolean }) {
+function AppLockUnlockScreen({
+  hasHydrationError,
+  isLoading,
+}: {
+  hasHydrationError: boolean
+  isLoading: boolean
+}) {
   const auth = useAuthContext()
   const colors = useColors()
   const { colorScheme } = useColorScheme()
@@ -64,6 +74,9 @@ function AppLockUnlockScreen({ isLoading }: { isLoading: boolean }) {
     lockedUntil !== null && new Date(lockedUntil).getTime() > Date.now()
   const helperMessage = useMemo(() => {
     if (isLoading) return "Checking your app lock."
+    if (hasHydrationError) {
+      return "App lock storage is unavailable. Sign out and reset app lock to continue."
+    }
     if (message) return message
     if (isTemporarilyLocked) return formatLockedUntil(lockedUntil)
     if (hasBiometricsEnabled && !biometricsStatus.isAvailable) {
@@ -74,6 +87,7 @@ function AppLockUnlockScreen({ isLoading }: { isLoading: boolean }) {
     biometricsStatus.isAvailable,
     biometricsStatus.reason,
     hasBiometricsEnabled,
+    hasHydrationError,
     isLoading,
     isTemporarilyLocked,
     lockedUntil,
@@ -177,8 +191,12 @@ function AppLockUnlockScreen({ isLoading }: { isLoading: boolean }) {
   }, [lockedUntil])
 
   const handleForgotCode = useCallback(async () => {
-    await resetAfterSignOut()
     auth.signOutLocal()
+    try {
+      await resetAfterSignOut()
+    } catch {
+      // Local sign-out must remain available when secure storage is unavailable.
+    }
   }, [auth, resetAfterSignOut])
 
   return (
@@ -201,7 +219,12 @@ function AppLockUnlockScreen({ isLoading }: { isLoading: boolean }) {
         <View className="items-center gap-6">
           <AppLockPinPad
             codeLength={APP_LOCK_CODE_LENGTH}
-            disabled={isLoading || isSubmittingCode || isTemporarilyLocked}
+            disabled={
+              isLoading ||
+              hasHydrationError ||
+              isSubmittingCode ||
+              isTemporarilyLocked
+            }
             onBiometricPress={runBiometricUnlock}
             onDeletePress={removeLastDigit}
             onDigitPress={appendDigit}
