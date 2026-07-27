@@ -33,19 +33,30 @@ error.
 Marketing signup dispatches the welcome email through `@ewatrade/email` after tenant creation. The signup response includes `emailDeliveryStatus` so the success UI can distinguish a sent confirmation from a provider failure instead of claiming delivery unconditionally.
 
 Mobile presents three short, industry-neutral introduction steps. Owner signup
-then reveals three focused stages: business identity/location/currency, a
-searchable Business Profile plus Products/Services/Both, order channels and
-team size, followed by owner name and email OTP or Google authentication. The
+then reveals four focused stages: a searchable Business Type selection,
+Products/Services/Both plus order channels and team size, business
+identity/location/currency, and finally owner name with email OTP or Google
+authentication. Selecting a Business Type row immediately advances to the
+operational profile, so the selection-only stage has no redundant Continue
+action. The operational profile includes a selected-type summary and a clear
+CTA back to the complete type list; returning preserves the answers already
+entered so an owner can reconsider the type without restarting setup.
+The type picker is a flat divider list rather than a surrounding card; each row
+owns enough internal padding for its selected/pressed background while the
+screen gutter keeps the state treatment away from the viewport edge. The
 operational workspace starts empty and becomes Product-only, Service-only or
 mixed from the Catalog Items the business actually creates.
 
 Authenticated mobile owners, admins, and managers can open Businesses and use
-the safe-area plus FAB to start another three-step business setup. The flow
-captures business details, the same descriptive profile answers, and a review
-before atomically creating a separate merchant Tenant, active owner
-Membership, first Store, and completed onboarding record. Completion selects
-the new business, clears tenant-scoped mobile cache, and opens its dashboard;
-the Businesses screen remains the switcher for every active membership.
+the safe-area plus FAB to start another four-step business setup. The flow uses
+the same one-tap Business Type-first sequence and bottom search, then captures
+descriptive profile answers, business details, and a review before atomically
+creating a separate
+merchant Tenant, active owner Membership, first Store, and completed onboarding
+record. The operational-profile back CTA returns to the complete type list
+without clearing current form state. Completion selects the new business,
+clears tenant-scoped mobile cache, and opens its dashboard; the Businesses
+screen remains the switcher for every active membership.
 
 ## Product Rules
 - Keep first-run setup compact and operational.

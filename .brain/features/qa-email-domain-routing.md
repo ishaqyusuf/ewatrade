@@ -25,6 +25,12 @@ to another tester.
   invitation, notification, and scheduled job email paths share one policy.
 - `EMAIL_DELIVERY_MODE` has canonical `console` and `live` values. QA domain
   routes are orthogonal and provider-delivered in either mode.
+- Mobile OTP treats either `NODE_ENV=production` or `APP_ENV=production` as a
+  production runtime. This keeps production-profile development servers from
+  silently returning a development code and skipping provider delivery.
+- Only a true non-production runtime uses the deterministic development OTP
+  `123456`; preview and production QA-domain delivery continue to use random
+  provider-delivered codes.
 - Ordinary mail is console-only outside production and provider-delivered in
   production; mixed recipient lists are split per recipient.
 - Routed messages preserve the synthetic address as the original recipient in

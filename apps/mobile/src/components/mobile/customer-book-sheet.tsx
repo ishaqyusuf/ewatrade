@@ -321,7 +321,7 @@ export function CustomerBookContent({
         contentContainerStyle={{
           flexGrow: 1,
           paddingBottom: showSearch ? 112 : 24,
-          paddingHorizontal: 16,
+          paddingHorizontal: 8,
         }}
         data={visibleCustomers}
         keyboardDismissMode="interactive"
@@ -348,7 +348,7 @@ export function CustomerBookContent({
           />
         }
         ListHeaderComponent={
-          <View className="gap-4 pb-3">
+          <View className="gap-4 px-2 pb-3">
             <Text className="text-sm leading-5 text-muted-foreground">
               Saved customers and customer activity from Commercial Orders.
             </Text>
@@ -392,6 +392,7 @@ export function CustomerBookContent({
         }
         renderItem={({ item }) => (
           <CommerceCustomerRow
+            className="px-2"
             customer={item}
             historyComplete={!orders.hasNextPage}
             onPress={() => setSelectedCustomerId(item.id)}

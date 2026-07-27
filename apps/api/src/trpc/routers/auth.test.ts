@@ -73,6 +73,24 @@ describe("mobile auth router schemas", () => {
     })
   })
 
+  test("accepts an empty optional business description during signup verification", () => {
+    const input = verifyMobileOwnerOtpSchema.parse({
+      ...validSignupProfile,
+      addressLine1: "Ojagboro",
+      businessName: "Jawdah",
+      city: "Ilorin",
+      code: "123456",
+      currencyCode: "NGN",
+      email: "jawdah@ishaq.qa.test",
+      mode: "sign_up",
+      name: "Ishaq Yusuf",
+      otherBusinessDescription: "",
+      phone: "08186877306",
+    })
+
+    expect(input.otherBusinessDescription).toBe("")
+  })
+
   test("normalizes Google identity verification payloads", () => {
     const input = verifyMobileGoogleSchema.parse({
       ...validSignupProfile,
@@ -191,6 +209,12 @@ describe("mobile auth router schemas", () => {
     expect(shouldDispatchMobileOwnerOtpEmail({ NODE_ENV: "production" })).toBe(
       true,
     )
+    expect(
+      shouldDispatchMobileOwnerOtpEmail({
+        APP_ENV: "production",
+        NODE_ENV: "development",
+      }),
+    ).toBe(true)
     expect(shouldDispatchMobileOwnerOtpEmail({ NODE_ENV: "development" })).toBe(
       false,
     )

@@ -169,6 +169,8 @@ const contracts = [
       "Math.max(insets.bottom, 8)",
       'testID="bottom-search-footer"',
       'variant="search"',
+      'className="bg-background"',
+      'className="gap-3 px-4 pb-2 pt-2"',
     ],
     reason:
       "all no-tab searches must share one compact keyboard-safe bottom footer",

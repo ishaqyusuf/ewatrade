@@ -115,6 +115,7 @@ function CatalogItemRow({
     <Pressable
       accessibilityLabel={`Open ${item.name}`}
       accessibilityRole="button"
+      className="mx-2 px-2 active:bg-accent"
       haptic
       onPress={onPress}
       transition
@@ -308,17 +309,15 @@ export function CatalogItemsContent({
           presentation === "tab" ? { paddingTop: insets.top + 24 } : undefined
         }
         renderItem={({ item }) => (
-          <View className="px-4">
-            <CatalogItemRow
-              item={item}
-              onPress={() =>
-                router.push({
-                  params: { catalogItemId: item.id },
-                  pathname: "/catalog-item/[catalogItemId]",
-                })
-              }
-            />
-          </View>
+          <CatalogItemRow
+            item={item}
+            onPress={() =>
+              router.push({
+                params: { catalogItemId: item.id },
+                pathname: "/catalog-item/[catalogItemId]",
+              })
+            }
+          />
         )}
         onEndReached={() => {
           if (

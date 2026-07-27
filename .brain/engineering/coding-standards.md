@@ -46,7 +46,11 @@ Shared engineering rules for future implementation work.
 - Email provider envs belong with the email group. `RESEND_API_KEY` enables the Resend transport while `EMAIL_FROM`, `EMAIL_REPLY_TO`, and `MARKETING_INBOX_EMAILS` define sender/reply/admin routing. `EMAIL_QA_DOMAIN_ROUTES` is the primary JSON map from reserved tester `.test` domains to individual deliverable inboxes. `TEST_EMAILS` retains comma-separated exact `@test.com` compatibility routing, with `TEST_EMAIL` as its single-recipient fallback.
 - Use `bun run email:test` for a provider smoke check; the command must fail closed when `RESEND_API_KEY` or `EMAIL_FROM` is missing, or when neither `EMAIL_QA_DOMAIN_ROUTES`, `TEST_EMAILS`, nor `TEST_EMAIL` is configured.
 - Keep application env names short and product-neutral. Do not add the `EWATRADE_` prefix to repository env keys; prefer names such as `API_URL`, `STOREFRONT_URL`, `PLATFORM_DOMAIN`, `GOOGLE_LIVE_*`, and `SHARED_LINK_*`.
-- Development and preview environments must not bypass mobile OTP; use an address at a configured `EMAIL_QA_DOMAIN_ROUTES` domain, or the legacy exact `@test.com` address with configured test recipients, for safe OTP delivery.
+- Local development uses the deterministic mobile OTP `123456` through the
+  normal hashed verification contract. Preview and production must not use the
+  fixed code; use an address at a configured `EMAIL_QA_DOMAIN_ROUTES` domain,
+  or the legacy exact `@test.com` address with configured test recipients, for
+  safe OTP delivery.
 
 ## Midday Implementation Standard
 - Web UI and dashboard implementation must strictly follow Midday architecture, UX composition, filesystem naming, state management, validation, and QA patterns. This is non-negotiable for every dashboard, marketing, POS, storefront, and shared web UI change.

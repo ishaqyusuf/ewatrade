@@ -17,6 +17,8 @@ const contracts = [
       "Loaded orders",
       "30 days",
       "useAdminDockScroll",
+      'paddingHorizontal: 8',
+      'className="px-4"',
     ],
   },
   {
@@ -29,6 +31,15 @@ const contracts = [
       "CustomerOverviewContent",
       "CommerceCustomerRow",
       "commercialOrderHref",
+      'paddingHorizontal: 8',
+      'className="px-2"',
+    ],
+  },
+  {
+    file: "components/mobile/commerce/commerce-primitives.tsx",
+    markers: [
+      "className?: string",
+      '"border-b border-border py-4 active:bg-accent"',
     ],
   },
   {

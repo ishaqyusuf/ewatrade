@@ -65,12 +65,19 @@ mutation refreshes.
 Production mobile record directories use one list-density rule: Orders,
 Catalog Products/Services, Customer Book, Create Sale pickers, Service Jobs,
 and business selection load bounded cursor pages as the user nears the end.
+Orders, Customer Book, Catalog Products/Services, and onboarding Business Type
+choices use flat divider rows without a rounded outer list card. The list keeps
+a small viewport gutter for selected/pressed feedback, each interactive row
+owns its horizontal padding, and header content receives the matching inset so
+row text stays aligned while the state background has visible space around it.
 Their bottom search is omitted for 10 or fewer total records and appears only
 when the authoritative or cached total is greater than 10. Search stays at the
 bottom on secondary screens; root screens that already own the floating tab
-dock keep search in content so the two footers never compete. Offline mode
-filters the cached base page locally instead of changing to an uncached query
-key. Small operational previews, report sections, and plan-capped Staff lists
+dock keep search in content so the two footers never compete. The shared footer
+background extends through the device bottom safe area so the inset search
+field reads as one anchored surface rather than a detached control. Offline
+mode filters the cached base page locally instead of changing to an uncached
+query key. Small operational previews, report sections, and plan-capped Staff lists
 remain deliberately bounded; Staff no longer applies an artificial six-row
 preview cap.
 
@@ -672,7 +679,9 @@ The create-sale workflow is the core mobile POS path and should stay optimized f
   divider. During quantity entry, Create Sale hides the Product/Service search
   while keeping only the total and Proceed action sticky above the keyboard;
   Customer selection and Catalog quick setup reuse the same bottom-search
-  treatment.
+  treatment. Create Sale customer action and suggestion rows follow the same
+  flat-list gutter rule, with their pressed background inset from the sheet
+  edge.
 - Full-screen workflows without the admin dock use one shared compact,
   safe-area-aware bottom search. Catalog and Customer Book modals, Service
   Jobs, business switching, and business-category selection keep search out of

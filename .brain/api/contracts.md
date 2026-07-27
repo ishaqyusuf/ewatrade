@@ -48,7 +48,12 @@
   description fields.
 - Mobile `sign_up` requests require the profile key/version, operating model,
   at least one order channel, team size, and Other/Mixed description when that
-  category is selected. Mobile `login` remains profile-free.
+  category is selected. Blank optional Other/Mixed descriptions normalize to
+  absent for every other profile so request and verification payloads share
+  the same contract. Mobile `login` remains profile-free.
+- True development runtimes use the deterministic mobile owner OTP `123456`.
+  If either `APP_ENV` or `NODE_ENV` is `production`, OTP generation remains
+  random, email delivery is required, and no development code is returned.
 - Signup profile fields are descriptive onboarding context. They never grant
   permissions, gate features, or choose Product/Service runtime behavior.
 - `tenant.stores` and `tenant.current` expose the validated

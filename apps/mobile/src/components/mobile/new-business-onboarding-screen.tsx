@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { CurrencySelector } from "@/components/mobile/currency-selector"
 import { FormField } from "@/components/mobile/form-field"
 import {
@@ -12,6 +13,7 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
+import { shouldShowListSearch } from "@/lib/list-pagination"
 import { isLocalSessionToken } from "@/lib/session-store"
 import { switchMobileBusinessSession } from "@/lib/workspace-feature-availability"
 import { useBusinessStore } from "@/store/businessStore"
@@ -23,6 +25,7 @@ import {
   BUSINESS_TEAM_SIZES,
   type BusinessOperatingModel,
   type BusinessOrderChannel,
+  type BusinessProfile,
   type BusinessTeamSize,
   type OperatingCurrencyCode,
   findBusinessProfile,
@@ -33,7 +36,7 @@ import { useMemo, useState } from "react"
 import { View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
-const STEPS = ["Details", "Profile", "Review"]
+const STEPS = ["Type", "Profile", "Details", "Review"]
 
 export function NewBusinessOnboardingScreen() {
   const auth = useAuthContext()
@@ -61,6 +64,7 @@ export function NewBusinessOnboardingScreen() {
     () => listBusinessProfiles({ query: profileQuery }),
     [profileQuery],
   )
+  const showProfileSearch = shouldShowListSearch(listBusinessProfiles().length)
   const hasDetails =
     businessName.trim().length > 0 &&
     addressLine1.trim().length > 0 &&
@@ -105,13 +109,27 @@ export function NewBusinessOnboardingScreen() {
     )
   }
 
+  const selectBusinessType = (profile: BusinessProfile) => {
+    setError(null)
+    setBusinessProfileKey(profile.key)
+    setOperatingModel(
+      profile.recommendedItemKinds.length === 1
+        ? profile.recommendedItemKinds[0] === "service"
+          ? "services"
+          : "products"
+        : "products_and_services",
+    )
+    setProfileQuery("")
+    setStep(2)
+  }
+
   const continueFlow = () => {
-    if (step === 1 && !hasDetails) {
-      setError("Add the business name, address, city, and phone to continue.")
+    if (step === 2 && !hasProfile) {
+      setError("Tell us what the business will manage and how customers order.")
       return
     }
-    if (step === 2 && !hasProfile) {
-      setError("Choose a business category and at least one order channel.")
+    if (step === 3 && !hasDetails) {
+      setError("Add the business name, address, city, and phone to continue.")
       return
     }
 
@@ -177,101 +195,51 @@ export function NewBusinessOnboardingScreen() {
   }
 
   return (
-    <KeyboardAwareScrollView
-      className="flex-1"
-      bottomOffset={180}
-      contentContainerStyle={{
-        gap: 28,
-        paddingBottom: 48,
-        paddingHorizontal: 16,
-      }}
-      disableScrollOnKeyboardHide
-      keyboardDismissMode="interactive"
-      keyboardShouldPersistTaps="handled"
-    >
-      <SetupFlowHeader
-        badgeLabel="New business"
-        badgeIcon="Building2"
-        currentStep={step}
-        description="Set up a separate workspace with its own catalog, customers, staff, and reports."
-        steps={STEPS}
-        title={
-          step === 1
-            ? "Business details"
-            : step === 2
-              ? "Personalize the workspace"
-              : "Review and create"
-        }
-      />
-
-      {error ? (
-        <StatusBanner
-          icon="AlertCircle"
-          message={error}
-          title="Business setup needs attention"
-          tone="destructive"
+    <View className="flex-1">
+      <KeyboardAwareScrollView
+        className="flex-1"
+        bottomOffset={180}
+        contentContainerStyle={{
+          gap: 28,
+          paddingBottom: step === 1 && showProfileSearch ? 120 : 48,
+          paddingHorizontal: 16,
+        }}
+        disableScrollOnKeyboardHide
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+      >
+        <SetupFlowHeader
+          badgeLabel="New business"
+          badgeIcon="Building2"
+          currentStep={step}
+          description="Set up a separate workspace with its own catalog, customers, staff, and reports."
+          steps={STEPS}
+          title={
+            step === 1
+              ? "Choose a business type"
+              : step === 2
+                ? "How this business works"
+                : step === 3
+                  ? "Business details"
+                  : "Review and create"
+          }
         />
-      ) : null}
 
-      {step === 1 ? (
-        <SetupSection
-          description="This information belongs only to the new business."
-          title="Identity and location"
-        >
-          <FormField
-            label="Business name"
-            leadingIcon="Building2"
-            onChangeText={setBusinessName}
-            placeholder="Enter your business name"
-            value={businessName}
-            variant="auth"
+        {error ? (
+          <StatusBanner
+            icon="AlertCircle"
+            message={error}
+            title="Business setup needs attention"
+            tone="destructive"
           />
-          <FormField
-            label="Business address"
-            leadingIcon="MapPin"
-            onChangeText={setAddressLine1}
-            placeholder="Enter the street address"
-            value={addressLine1}
-            variant="auth"
-          />
-          <View className="flex-row gap-3">
-            <FormField
-              containerClassName="flex-1"
-              label="City"
-              onChangeText={setCity}
-              placeholder="Enter the city"
-              value={city}
-              variant="auth"
-            />
-            <FormField
-              containerClassName="flex-1"
-              keyboardType="phone-pad"
-              label="Phone"
-              onChangeText={setPhone}
-              placeholder="Enter phone"
-              value={phone}
-              variant="auth"
-            />
-          </View>
-          <CurrencySelector onChange={setCurrencyCode} value={currencyCode} />
-        </SetupSection>
-      ) : null}
+        ) : null}
 
-      {step === 2 ? (
-        <View className="gap-7">
+        {step === 1 ? (
           <SetupSection
-            description="The category only personalizes recommendations. It does not restrict what this business can sell."
-            title="Business category"
+            description="The type personalizes recommendations. It does not restrict what this business can sell."
+            title="Business type"
           >
-            <FormField
-              autoCapitalize="none"
-              label="Find a category"
-              leadingIcon="Search"
-              onChangeText={setProfileQuery}
-              placeholder="Search business categories"
-              value={profileQuery}
-            />
-            <View className="overflow-hidden rounded-2xl border border-border">
+            <View className="-mx-2">
               {visibleBusinessProfiles.map((profile) => {
                 const selected = businessProfileKey === profile.key
 
@@ -281,22 +249,12 @@ export function NewBusinessOnboardingScreen() {
                     accessibilityState={{ selected }}
                     className={
                       selected
-                        ? "gap-1 border-b border-border bg-primary/10 px-4 py-4"
-                        : "gap-1 border-b border-border px-4 py-4 active:bg-muted"
+                        ? "gap-1 border-b border-border bg-primary/10 px-2 py-4"
+                        : "gap-1 border-b border-border px-2 py-4 active:bg-muted"
                     }
                     haptic
                     key={profile.key}
-                    onPress={() => {
-                      setBusinessProfileKey(profile.key)
-                      setOperatingModel(
-                        profile.recommendedItemKinds.length === 1
-                          ? profile.recommendedItemKinds[0] === "service"
-                            ? "services"
-                            : "products"
-                          : "products_and_services",
-                      )
-                      setProfileQuery("")
-                    }}
+                    onPress={() => selectBusinessType(profile)}
                   >
                     <Text className="font-bold text-foreground">
                       {profile.title}
@@ -311,127 +269,193 @@ export function NewBusinessOnboardingScreen() {
             {visibleBusinessProfiles.length === 0 ? (
               <SetupInlineNotice
                 icon="Search"
-                text="No category matches that search. Try a broader term."
+                text="No business type matches that search. Try a broader term."
               />
             ) : null}
-            {businessProfileKey === "other-mixed-business" ? (
+          </SetupSection>
+        ) : null}
+
+        {step === 2 ? (
+          <View className="gap-7">
+            <SetupSection title="Selected business type">
+              <SetupInlineNotice
+                icon="Briefcase"
+                text={`${selectedBusinessProfile?.title ?? "Your selection"} suggestions will appear first when you add Products or Services.`}
+                tone="primary"
+              />
+              {businessProfileKey === "other-mixed-business" ? (
+                <FormField
+                  label="What does this business do?"
+                  onChangeText={setOtherBusinessDescription}
+                  placeholder="Describe the products or services"
+                  value={otherBusinessDescription}
+                  variant="auth"
+                />
+              ) : null}
+            </SetupSection>
+
+            <SetupSection title="What will you manage?">
+              <View className="flex-row flex-wrap gap-2">
+                {BUSINESS_OPERATING_MODELS.map((model) => (
+                  <SetupChoicePill
+                    key={model.key}
+                    onPress={() => setOperatingModel(model.key)}
+                    selected={operatingModel === model.key}
+                  >
+                    {model.label}
+                  </SetupChoicePill>
+                ))}
+              </View>
+            </SetupSection>
+
+            <SetupSection title="How do customers order?">
+              <View className="flex-row flex-wrap gap-2">
+                {BUSINESS_ORDER_CHANNELS.map((channel) => (
+                  <SetupChoicePill
+                    key={channel.key}
+                    onPress={() => toggleOrderChannel(channel.key)}
+                    selected={orderChannels.includes(channel.key)}
+                  >
+                    {channel.label}
+                  </SetupChoicePill>
+                ))}
+              </View>
+            </SetupSection>
+
+            <SetupSection title="Team size">
+              <View className="flex-row flex-wrap gap-2">
+                {BUSINESS_TEAM_SIZES.map((size) => (
+                  <SetupChoicePill
+                    key={size.key}
+                    onPress={() => setTeamSize(size.key)}
+                    selected={teamSize === size.key}
+                  >
+                    {size.label}
+                  </SetupChoicePill>
+                ))}
+              </View>
+            </SetupSection>
+          </View>
+        ) : null}
+
+        {step === 3 ? (
+          <SetupSection
+            description="This information belongs only to the new business."
+            title="Identity and location"
+          >
+            <FormField
+              label="Business name"
+              leadingIcon="Building2"
+              onChangeText={setBusinessName}
+              placeholder="Enter your business name"
+              value={businessName}
+              variant="auth"
+            />
+            <FormField
+              label="Business address"
+              leadingIcon="MapPin"
+              onChangeText={setAddressLine1}
+              placeholder="Enter the street address"
+              value={addressLine1}
+              variant="auth"
+            />
+            <View className="flex-row gap-3">
               <FormField
-                label="What does this business do?"
-                onChangeText={setOtherBusinessDescription}
-                placeholder="Describe the products or services"
-                value={otherBusinessDescription}
+                containerClassName="flex-1"
+                label="City"
+                onChangeText={setCity}
+                placeholder="Enter the city"
+                value={city}
                 variant="auth"
               />
-            ) : null}
-          </SetupSection>
-
-          <SetupSection title="What will you manage?">
-            <View className="flex-row flex-wrap gap-2">
-              {BUSINESS_OPERATING_MODELS.map((model) => (
-                <SetupChoicePill
-                  key={model.key}
-                  onPress={() => setOperatingModel(model.key)}
-                  selected={operatingModel === model.key}
-                >
-                  {model.label}
-                </SetupChoicePill>
-              ))}
-            </View>
-          </SetupSection>
-
-          <SetupSection title="How do customers order?">
-            <View className="flex-row flex-wrap gap-2">
-              {BUSINESS_ORDER_CHANNELS.map((channel) => (
-                <SetupChoicePill
-                  key={channel.key}
-                  onPress={() => toggleOrderChannel(channel.key)}
-                  selected={orderChannels.includes(channel.key)}
-                >
-                  {channel.label}
-                </SetupChoicePill>
-              ))}
-            </View>
-          </SetupSection>
-
-          <SetupSection title="Team size">
-            <View className="flex-row flex-wrap gap-2">
-              {BUSINESS_TEAM_SIZES.map((size) => (
-                <SetupChoicePill
-                  key={size.key}
-                  onPress={() => setTeamSize(size.key)}
-                  selected={teamSize === size.key}
-                >
-                  {size.label}
-                </SetupChoicePill>
-              ))}
-            </View>
-          </SetupSection>
-        </View>
-      ) : null}
-
-      {step === 3 ? (
-        <View className="gap-6">
-          <SetupSection
-            description="A new isolated workspace will be created and opened automatically."
-            title="Business summary"
-          >
-            <View>
-              <SetupSummaryRow label="Business" value={businessName.trim()} />
-              <SetupSummaryRow
-                label="Location"
-                value={`${addressLine1.trim()}, ${city.trim()}`}
-              />
-              <SetupSummaryRow label="Currency" value={currencyCode} />
-              <SetupSummaryRow
-                label="Category"
-                value={selectedBusinessProfile?.title ?? "Not selected"}
-              />
-              <SetupSummaryRow
-                label="Operations"
-                value={
-                  BUSINESS_OPERATING_MODELS.find(
-                    (model) => model.key === operatingModel,
-                  )?.label ?? operatingModel
-                }
-              />
-              <SetupSummaryRow
-                label="Team"
-                value={
-                  BUSINESS_TEAM_SIZES.find((size) => size.key === teamSize)
-                    ?.label ?? teamSize
-                }
+              <FormField
+                containerClassName="flex-1"
+                keyboardType="phone-pad"
+                label="Phone"
+                onChangeText={setPhone}
+                placeholder="Enter phone"
+                value={phone}
+                variant="auth"
               />
             </View>
+            <CurrencySelector onChange={setCurrencyCode} value={currencyCode} />
           </SetupSection>
-          <SetupInlineNotice
-            icon="ShieldCheck"
-            text="The new business keeps its inventory, sales, customers, staff, and settings separate from your other businesses."
-            tone="primary"
-          />
-        </View>
-      ) : null}
-
-      <View className="gap-3">
-        {step < STEPS.length ? (
-          <ActionButton onPress={continueFlow} trailingIcon="ArrowRight">
-            Continue
-          </ActionButton>
-        ) : (
-          <ActionButton
-            icon="Plus"
-            isLoading={createBusinessMutation.isPending}
-            loadingLabel="Creating business"
-            onPress={submit}
-          >
-            Create and open business
-          </ActionButton>
-        )}
-        {step > 1 ? (
-          <ActionButton onPress={goBack} variant="outline">
-            Back
-          </ActionButton>
         ) : null}
-      </View>
-    </KeyboardAwareScrollView>
+
+        {step === 4 ? (
+          <View className="gap-6">
+            <SetupSection
+              description="A new isolated workspace will be created and opened automatically."
+              title="Business summary"
+            >
+              <View>
+                <SetupSummaryRow label="Business" value={businessName.trim()} />
+                <SetupSummaryRow
+                  label="Location"
+                  value={`${addressLine1.trim()}, ${city.trim()}`}
+                />
+                <SetupSummaryRow label="Currency" value={currencyCode} />
+                <SetupSummaryRow
+                  label="Category"
+                  value={selectedBusinessProfile?.title ?? "Not selected"}
+                />
+                <SetupSummaryRow
+                  label="Operations"
+                  value={
+                    BUSINESS_OPERATING_MODELS.find(
+                      (model) => model.key === operatingModel,
+                    )?.label ?? operatingModel
+                  }
+                />
+                <SetupSummaryRow
+                  label="Team"
+                  value={
+                    BUSINESS_TEAM_SIZES.find((size) => size.key === teamSize)
+                      ?.label ?? teamSize
+                  }
+                />
+              </View>
+            </SetupSection>
+            <SetupInlineNotice
+              icon="ShieldCheck"
+              text="The new business keeps its inventory, sales, customers, staff, and settings separate from your other businesses."
+              tone="primary"
+            />
+          </View>
+        ) : null}
+
+        <View className="gap-3">
+          {step === 1 ? null : step < STEPS.length ? (
+            <ActionButton onPress={continueFlow} trailingIcon="ArrowRight">
+              Continue
+            </ActionButton>
+          ) : (
+            <ActionButton
+              icon="Plus"
+              isLoading={createBusinessMutation.isPending}
+              loadingLabel="Creating business"
+              onPress={submit}
+            >
+              Create and open business
+            </ActionButton>
+          )}
+          {step > 1 ? (
+            <ActionButton onPress={goBack} variant="outline">
+              {step === 2 ? "Choose a different business type" : "Back"}
+            </ActionButton>
+          ) : null}
+        </View>
+      </KeyboardAwareScrollView>
+      {step === 1 && showProfileSearch ? (
+        <BottomSearchFooter
+          accessibilityLabel="Search business types"
+          label="Business type"
+          onChangeText={setProfileQuery}
+          placeholder="Search business types"
+          totalCount={listBusinessProfiles().length}
+          value={profileQuery}
+        />
+      ) : null}
+    </View>
   )
 }

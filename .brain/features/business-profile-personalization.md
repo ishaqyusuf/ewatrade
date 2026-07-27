@@ -33,10 +33,19 @@ and may contain Product Items, Service Items, or both.
   category searchable by title, description, or tags,
   Products/Services/Both operating answer, order channels, team size, and a
   required description for Other/Mixed.
-- Mobile owner signup keeps business identity and account authentication short
-  while inserting a searchable `Personalize your workspace` step before email
-  OTP or Google authentication. A single-purpose profile automatically suggests
-  Products or Services; the owner may change that descriptive answer.
+- Mobile owner signup separates the searchable Business Type list from the
+  operating-profile form. Tapping a type immediately opens the following
+  screen, with no Continue action on the selection-only step. That screen
+  captures Products/Services/Both, order channels, team size, and the
+  Other/Mixed description before business details and email OTP or Google
+  authentication. A selected-type summary and back CTA let the owner return to
+  the complete type list without clearing answers already entered. The type
+  choices render as padded flat divider rows so selection emphasis does not
+  require a card around the list.
+- Authenticated Add business setup follows the same Type, Profile, Details, and
+  Review order, one-tap type selection, and bottom search so first-business and
+  subsequent-business onboarding use the same mental model and preserve form
+  state when navigating backward.
 - Dashboard first-Store setup provides the same searchable category selector
   and captures the operating answer, primary order channel, team size, and
   Other/Mixed description.

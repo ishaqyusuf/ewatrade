@@ -373,7 +373,7 @@ function CustomerActionRow({
   return (
     <Pressable
       accessibilityRole="button"
-      className="min-h-16 flex-row items-center gap-3 border-b border-border py-4 active:opacity-80"
+      className="min-h-16 flex-row items-center gap-3 border-b border-border px-2 py-4 active:bg-accent"
       haptic
       onPress={onPress}
       transition
@@ -400,7 +400,7 @@ function CustomerSuggestionRow({
   return (
     <Pressable
       accessibilityRole="button"
-      className="min-h-16 flex-row items-center gap-3 border-b border-border py-4 active:opacity-80"
+      className="min-h-16 flex-row items-center gap-3 border-b border-border px-2 py-4 active:bg-accent"
       haptic
       onPress={onPress}
       transition
@@ -1103,7 +1103,7 @@ export function CreateSaleContent({
             contentContainerStyle={{
               flexGrow: 1,
               paddingBottom: showCustomerSearch ? 104 : 24,
-              paddingHorizontal: 16,
+              paddingHorizontal: 8,
             }}
             data={customers}
             keyboardDismissMode="interactive"
@@ -1123,7 +1123,7 @@ export function CreateSaleContent({
               ) : null
             }
             ListHeaderComponent={
-              <View>
+              <View className="px-2">
                 <SaleStageHeader
                   current={2}
                   description="Select a recent customer, add a new contact, or continue as a guest."

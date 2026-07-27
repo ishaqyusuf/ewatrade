@@ -160,7 +160,7 @@ export function AdminOrdersScreen() {
         contentContainerStyle={{
           flexGrow: 1,
           paddingBottom: Math.max(insets.bottom + 116, 152),
-          paddingHorizontal: 24,
+          paddingHorizontal: 8,
           paddingTop: insets.top + 20,
         }}
         data={visibleOrders}
@@ -192,7 +192,7 @@ export function AdminOrdersScreen() {
           ) : null
         }
         ListHeaderComponent={
-          <View className="gap-5 pb-4">
+          <View className="gap-5 px-4 pb-4">
             <CommercePageHeader
               action={
                 <Pressable
@@ -319,6 +319,7 @@ export function AdminOrdersScreen() {
         }
         renderItem={({ item }) => (
           <CommerceOrderRow
+            className="px-4"
             onPress={() => router.push(commercialOrderHref(item.id))}
             order={item}
           />

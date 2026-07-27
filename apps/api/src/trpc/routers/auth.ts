@@ -29,6 +29,15 @@ const businessProfileKeySchema = z
   .string()
   .trim()
   .refine(isBusinessProfileKey, "Select a supported business category")
+const optionalBusinessDescriptionSchema = z
+  .string()
+  .trim()
+  .max(240)
+  .optional()
+  .refine(
+    (value) => !value || value.length >= 2,
+    "Describe the business in at least 2 characters",
+  )
 
 type MobileSignupProfileInput = {
   businessProfileKey?: string
@@ -89,9 +98,7 @@ function requireMobileSignupProfile(
 const mobileOwnerAuthShape = {
   addressLine1: z.string().trim().min(3).max(200).optional(),
   businessProfileKey: businessProfileKeySchema.optional(),
-  businessProfileVersion: z
-    .literal(BUSINESS_PROFILE_SCHEMA_VERSION)
-    .optional(),
+  businessProfileVersion: z.literal(BUSINESS_PROFILE_SCHEMA_VERSION).optional(),
   businessName: z.string().trim().min(1).max(120).optional(),
   city: z.string().trim().min(2).max(120).optional(),
   currencyCode: z.enum(OPERATING_CURRENCY_CODES).optional(),
@@ -100,7 +107,7 @@ const mobileOwnerAuthShape = {
   name: z.string().trim().min(1).max(120).optional(),
   operatingModel: z.enum(BUSINESS_OPERATING_MODEL_KEYS).optional(),
   orderChannels: z.array(z.enum(BUSINESS_ORDER_CHANNEL_KEYS)).max(5).optional(),
-  otherBusinessDescription: z.string().trim().min(2).max(240).optional(),
+  otherBusinessDescription: optionalBusinessDescriptionSchema,
   phone: z.string().trim().min(7).max(40).optional(),
   teamSize: z.enum(BUSINESS_TEAM_SIZE_KEYS).optional(),
 } as const
@@ -135,8 +142,11 @@ export const verifyMobileGoogleSchema = z
     mode: mobileAuthModeSchema,
     name: z.string().trim().min(1).max(120).optional(),
     operatingModel: z.enum(BUSINESS_OPERATING_MODEL_KEYS).optional(),
-    orderChannels: z.array(z.enum(BUSINESS_ORDER_CHANNEL_KEYS)).max(5).optional(),
-    otherBusinessDescription: z.string().trim().min(2).max(240).optional(),
+    orderChannels: z
+      .array(z.enum(BUSINESS_ORDER_CHANNEL_KEYS))
+      .max(5)
+      .optional(),
+    otherBusinessDescription: optionalBusinessDescriptionSchema,
     phone: z.string().trim().min(7).max(40).optional(),
     teamSize: z.enum(BUSINESS_TEAM_SIZE_KEYS).optional(),
   })
@@ -195,9 +205,9 @@ export function createMobileOwnerOtpEmailMessages(input: {
 }
 
 export function shouldDispatchMobileOwnerOtpEmail(
-  env: Pick<EmailRoutingEnv, "NODE_ENV"> = process.env,
+  env: Pick<EmailRoutingEnv, "NODE_ENV"> & { APP_ENV?: string } = process.env,
 ) {
-  return env.NODE_ENV === "production"
+  return env.NODE_ENV === "production" || env.APP_ENV === "production"
 }
 
 export const authRouter = createTRPCRouter({
@@ -248,7 +258,7 @@ export const authRouter = createTRPCRouter({
       }
 
       return {
-        devCode: process.env.NODE_ENV === "production" ? null : otp.code,
+        devCode: shouldDispatchMobileOwnerOtpEmail() ? null : otp.code,
         email: otp.email,
         expiresAt: otp.expiresAt,
       }

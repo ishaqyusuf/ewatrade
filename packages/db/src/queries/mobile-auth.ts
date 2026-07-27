@@ -80,7 +80,18 @@ function hashOtp(code: string) {
   return createHash("sha256").update(code).digest("hex")
 }
 
+export function shouldUseFixedMobileOwnerOtp(env: {
+  APP_ENV?: string
+  NODE_ENV?: string
+}) {
+  return env.APP_ENV !== "production" && env.NODE_ENV !== "production"
+}
+
 function createOtpCode() {
+  if (shouldUseFixedMobileOwnerOtp(process.env)) {
+    return "123456"
+  }
+
   return randomInt(0, 1_000_000).toString().padStart(6, "0")
 }
 

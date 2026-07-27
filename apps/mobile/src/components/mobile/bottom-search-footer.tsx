@@ -64,32 +64,34 @@ export function BottomSearchFooter({
       }}
       testID="bottom-search-footer"
     >
-      <View style={{ paddingBottom }}>
-        <View className="gap-3 bg-background px-4 pt-2">
-          <View
-            className={
-              layout === "inline" ? "flex-row items-center gap-3" : "gap-3"
-            }
-          >
-            {effectiveSearchVisible ? (
-              <FormField
-                accessibilityLabel={accessibilityLabel}
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoFocus={autoFocus}
-                containerClassName={
-                  layout === "inline" ? "min-w-0 flex-1" : undefined
-                }
-                label={label}
-                leadingIcon="Search"
-                onChangeText={onChangeText}
-                placeholder={placeholder}
-                returnKeyType="search"
-                value={value}
-                variant="search"
-              />
-            ) : null}
-            {children}
+      <View className="bg-background">
+        <View style={{ paddingBottom }}>
+          <View className="gap-3 px-4 pb-2 pt-2">
+            <View
+              className={
+                layout === "inline" ? "flex-row items-center gap-3" : "gap-3"
+              }
+            >
+              {effectiveSearchVisible ? (
+                <FormField
+                  accessibilityLabel={accessibilityLabel}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoFocus={autoFocus}
+                  containerClassName={
+                    layout === "inline" ? "min-w-0 flex-1" : undefined
+                  }
+                  label={label}
+                  leadingIcon="Search"
+                  onChangeText={onChangeText}
+                  placeholder={placeholder}
+                  returnKeyType="search"
+                  value={value}
+                  variant="search"
+                />
+              ) : null}
+              {children}
+            </View>
           </View>
         </View>
       </View>

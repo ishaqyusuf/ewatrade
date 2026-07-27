@@ -120,9 +120,11 @@ export function CommerceMetricTile({
 }
 
 export function CommerceOrderRow({
+  className,
   onPress,
   order,
 }: {
+  className?: string;
   onPress: () => void;
   order: CommercialOrder;
 }) {
@@ -132,7 +134,10 @@ export function CommerceOrderRow({
     <Pressable
       accessibilityLabel={`Open ${order.orderNumber}`}
       accessibilityRole="button"
-      className="border-b border-border py-4 active:bg-accent"
+      className={cn(
+        "border-b border-border py-4 active:bg-accent",
+        className,
+      )}
       haptic
       onPress={onPress}
     >
@@ -201,10 +206,12 @@ export function CommercePendingOrderRow({
 }
 
 export function CommerceCustomerRow({
+  className,
   customer,
   historyComplete = true,
   onPress,
 }: {
+  className?: string;
   customer: CommerceCustomer;
   historyComplete?: boolean;
   onPress: () => void;
@@ -218,7 +225,10 @@ export function CommerceCustomerRow({
     <Pressable
       accessibilityLabel={`Open ${customer.name}`}
       accessibilityRole="button"
-      className="border-b border-border py-4 active:bg-accent"
+      className={cn(
+        "border-b border-border py-4 active:bg-accent",
+        className,
+      )}
       haptic
       onPress={onPress}
     >

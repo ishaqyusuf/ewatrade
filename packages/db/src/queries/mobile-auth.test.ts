@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import {
   createMobileOwnerOtp,
+  shouldUseFixedMobileOwnerOtp,
   verifyMobileGoogleIdentity,
   verifyMobileOwnerOtp,
 } from "./mobile-auth"
@@ -397,6 +398,28 @@ function createMockMobileAuthDb(input?: {
 }
 
 describe("mobile auth queries", () => {
+  test("uses the fixed OTP only outside production runtimes", () => {
+    expect(shouldUseFixedMobileOwnerOtp({})).toBe(true)
+    expect(
+      shouldUseFixedMobileOwnerOtp({
+        APP_ENV: "development",
+        NODE_ENV: "development",
+      }),
+    ).toBe(true)
+    expect(
+      shouldUseFixedMobileOwnerOtp({
+        APP_ENV: "production",
+        NODE_ENV: "development",
+      }),
+    ).toBe(false)
+    expect(
+      shouldUseFixedMobileOwnerOtp({
+        APP_ENV: "development",
+        NODE_ENV: "production",
+      }),
+    ).toBe(false)
+  })
+
   test("creates another isolated owner business for an existing account", async () => {
     const existingTenant: TenantRow = {
       createdAt: new Date("2026-07-01T00:00:00.000Z"),
@@ -479,7 +502,7 @@ describe("mobile auth queries", () => {
     })
 
     expect(otp.email).toBe("owner@example.com")
-    expect(otp.code).toMatch(/^\d{6}$/)
+    expect(otp.code).toBe("123456")
     expect(db.verifications).toHaveLength(1)
     expect(db.verifications[0]?.identifier).toBe(
       "mobile-owner-auth:sign_up:owner@example.com",

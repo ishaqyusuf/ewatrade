@@ -183,7 +183,15 @@ Subscription support is included as a plan and entitlement foundation with three
 - OTP verification creates or resumes the owner account, creates the initial business/tenant context, and opens the app session.
 - OTP entry should feel like a compact reference-led PIN verification surface: a minimal off-white/light or matte dark canvas, circular back action, centered headline/copy, separated display cells, in-screen rounded numeric keypad with phone-letter hints, clipboard paste/delete support, resend state, and auto-submit when the six-digit code is complete.
 - OTP emails should use the shared email/notification/job packages rather than screen-local fetch logic. For exact `@test.com` submitted emails, outbound OTP delivery routes to `TEST_EMAILS` or the legacy `TEST_EMAIL` fallback while preserving the submitted account email for verification.
-- Development and preview mobile login use the same email-code form as production; there is no fixed-code OTP or local auth bypass.
+- A server using the production environment profile must dispatch OTP email
+  and suppress `devCode` even when its hot-reload process uses development
+  mode. Optional business descriptions must be omitted or normalized when
+  blank so invalid-code feedback reaches OTP verification rather than failing
+  at profile-schema validation.
+- Local development mobile login uses the same email-code form with the
+  deterministic code `123456`; it still creates and verifies the normal hashed
+  OTP record rather than bypassing auth. Preview and production use random
+  provider-delivered codes and never accept the fixed development code.
 - Returning login should support Google/Gmail and email OTP. Password login is not required for this MVP unless existing auth infrastructure forces it.
 - Returning login OTP requests must verify that the submitted email belongs to an existing account with available business context before creating a verification row or sending email. Missing-account and no-business login attempts should stay on the login screen with a clear error, not route into the local fallback OTP flow.
 - The first production mobile auth bridge now exposes email OTP plus Google identity verification. `auth.requestMobileOwnerOtp` and `auth.verifyMobileOwnerOtp` persist OTPs in the shared `Verification` table after login preflight passes, send codes through the shared email package, create bearer sessions for the Expo app, and resolve owner tenant/business context. `auth.verifyMobileGoogle` verifies Google ID tokens against configured client-id audiences, links the Google account, and issues the same mobile session shape. Live Google sign-in still depends on adding the Google Cloud client IDs to the mobile/API environment and running provider QA. Credential setup details live in `.brain/features/mobile-google-oauth-setup.md`.
@@ -225,11 +233,18 @@ Subscription support is included as a plan and entitlement foundation with three
 - The mobile Staff invite sheet should read production attendant memberships when online, send invites through `retailOps.inviteStaff`, and show an online-required state when disconnected; Staff changes are never queued.
 - Staff, customer, business switching, and subscription management sheets should use shared secondary operational headers and divider/selectable rows for compact names, metadata, source state, status badges, plan usage, workspace selection, and order/staff counts instead of local card-heavy list rows.
 - The mobile Businesses screen keeps switching list-first and exposes new
-  business creation through a safe-area plus FAB. Its keyboard-safe three-step
-  flow captures business details, descriptive profile answers, and review,
-  then creates an isolated Tenant/owner Membership/first Store transaction,
-  selects the returned business, clears tenant-scoped cache, and opens its
-  dashboard.
+  business creation through a safe-area plus FAB. Its keyboard-safe four-step
+  flow captures Business Type, descriptive profile answers, business details,
+  and review, then creates an isolated Tenant/owner Membership/first Store
+  transaction, selects the returned business, clears tenant-scoped cache, and
+  opens its dashboard.
+- Mobile Business Type, Orders, Customers, and Catalog Product/Service lists
+  use flat divider rows instead of rounded outer list cards. Keep a small
+  screen/list gutter outside the interaction state and move the matching
+  horizontal inset into each row so selected/pressed backgrounds surround the
+  text while row content remains aligned with headers. Business Type is a
+  selection-only step: tapping a row advances immediately and the following
+  profile screen owns the back-to-types CTA.
 - Attendant onboarding should collect only minimal profile details required to accept the invitation and create a usable session, using the same shared secondary header, divider row, status badge, and status banner treatment as staff management rather than card-heavy invite summaries.
 - The first mobile attendant acceptance path is account-owned email OTP plus `retailOps.completeStaffOnboarding`: invited cashier/operator/manager memberships can authenticate into an invited session, complete a short name/display-name setup screen, activate their own membership, and then land on the focused attendant dashboard without using owner credentials.
 - The admin dashboard should show sales totals, inventory status, low-stock signals, staff activity, customer book entry points, sync state, tenant-level server sync conflicts, and subscription status.
@@ -278,7 +293,9 @@ Subscription support is included as a plan and entitlement foundation with three
   to initials or Product/Service icons.
 - The Customer stage uses the same keyboard-sticky bottom-search pattern. Create
   customer and Skip/guest are the first actions, followed by filtered recent
-  customer suggestions derived from commercial orders. Create customer opens a
+  customer suggestions derived from commercial orders. These action and
+  suggestion rows keep a small outer gutter plus their own horizontal padding
+  so pressed feedback does not touch the sheet edge. Create customer opens a
   focused bottom-sheet contact form; the contact is attached to the commercial
   order because a standalone Customer write contract does not yet exist.
 - The Review stage shows the selected lines, customer or guest state, overall

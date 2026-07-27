@@ -19,7 +19,10 @@ const contracts = [
       "initialCatalogItemId",
       "selectedItemId",
     ],
-    markers: ['pathname: "/catalog-item/[catalogItemId]"'],
+    markers: [
+      'pathname: "/catalog-item/[catalogItemId]"',
+      'className="mx-2 px-2 active:bg-accent"',
+    ],
   },
   {
     file: "src/app/(admin-tabs)/catalog.tsx",

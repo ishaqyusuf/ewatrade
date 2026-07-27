@@ -21,12 +21,17 @@ const pickerModelSource = readFileSync(
   join(MOBILE_DIR, "src/components/mobile/sale-item-picker-model.ts"),
   "utf8",
 )
+const offlineOrderSource = readFileSync(
+  join(MOBILE_DIR, "src/lib/offline-order.ts"),
+  "utf8",
+)
 const completeSource = [
   source,
   customerSheetSource,
   checkoutModelSource,
   pickerSource,
   pickerModelSource,
+  offlineOrderSource,
 ].join("\n")
 const contracts = [
   {
@@ -51,7 +56,7 @@ const contracts = [
       "trpc.catalog.listItemsPage.infiniteQueryOptions",
       "trpc.tenant.featureAvailability.queryOptions",
       "trpc.orders.create.mutationOptions",
-      "trpc.orders.recordPayment.mutationOptions",
+      "initialPayment:",
       "expectedBalanceRevision",
       "expectedConfigurationVersionId",
       "expectedFixedPriceMinor",
@@ -108,11 +113,14 @@ const contracts = [
       "!isOffline &&",
       "recentOrders.fetchNextPage()",
       "Line total",
-      'containerClassName="w-20"',
+      'className="w-20 gap-1"',
       'accessibilityRole="button"',
       'keyboardType="decimal-pad"',
       "Create customer",
       "Skip · Continue as guest",
+      "paddingHorizontal: 8",
+      'className="px-2"',
+      "active:bg-accent",
       "Search customer, phone, or email",
       "Amount received",
       "All amount paid",
