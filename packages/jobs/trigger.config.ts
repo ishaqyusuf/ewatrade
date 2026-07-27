@@ -3,6 +3,7 @@ import { defineConfig } from "@trigger.dev/sdk/v3"
 
 const syncedProductionEnvVars = [
   "DATABASE_URL",
+  "EMAIL_DELIVERY_MODE",
   "EMAIL_FROM",
   "EMAIL_REPLY_TO",
   "EMAIL_QA_DOMAIN_ROUTES",

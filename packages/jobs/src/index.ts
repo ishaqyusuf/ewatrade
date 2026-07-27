@@ -26,6 +26,7 @@ import {
 import { triggerJob } from "./trigger"
 
 export const jobIds = {
+  qaPurge: "platform.qa.purge",
   notificationDispatch: "notifications.dispatch",
   serviceNotificationDispatch: "services.notification.dispatch",
   domainRegistration: "domains.registration",
@@ -140,6 +141,7 @@ export { serviceNotificationDispatchHandler }
 export { domainConnectionVerificationHandler, domainRegistrationHandler }
 export { domainReconciliationHandler }
 export { commercialOrderRemindersHandler }
+export { qaPurgeHandler } from "./handlers/qa-purge"
 export { customerMessagingProviderStatus }
 export type { NotificationDispatchPayload, ServiceNotificationDispatchPayload }
 export type {

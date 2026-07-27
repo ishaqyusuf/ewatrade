@@ -162,3 +162,8 @@ explicitly authorize a shared production mutation. The elevated
 remote-development push reached Neon but stopped at Prisma's data-loss safeguard
 for the already-pending Tenant/order-number uniqueness change; no
 `--accept-data-loss` override was used. No database write is claimed.
+# Hybrid QA cleanup
+
+- Adds tenant QA lifecycle fields and global purge-run receipts. Apply the
+  migration workflow, then local, production, and remote-development schema
+  pushes before enabling cleanup.

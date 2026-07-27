@@ -141,3 +141,9 @@ Prisma and applied after the approved destructive local development reset.
 The local schema is in sync and neutral Unit Definitions are seeded. Production
 rollout remains guarded by the migration-history repair described in
 `.brain/database/migrations.md`.
+# QA tenant lifecycle
+
+- `Tenant` stores classification, source QA domain, marked time, and purge-start
+  time.
+- Global `QaPurgeRun` stores actor, timestamps, status, aggregate deletion
+  counts, and error category without deleted tenant identities or contents.

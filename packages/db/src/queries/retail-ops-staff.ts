@@ -11,6 +11,7 @@ import {
   RetailOpsStaffLifecycleEventType as DurableRetailOpsStaffLifecycleEventType,
 } from "../../generated/prisma/enums"
 import { assertRetailOpsEntitlementAvailable } from "./retail-ops-subscriptions"
+import { assertQaTenantIdentity } from "./qa-maintenance"
 
 export type RetailOpsStaffInviteRole = "cashier" | "operator" | "manager"
 export type RetailOpsStaffListRoleFilter =
@@ -1064,6 +1065,11 @@ export async function inviteRetailOpsStaff(
         "Business not found for this store.",
       )
     }
+
+    await assertQaTenantIdentity(tx, {
+      email,
+      tenantId: input.tenantId,
+    })
 
     const replayedInvite = externalId
       ? findStaffInviteReplay(tenant.metadata, externalId)

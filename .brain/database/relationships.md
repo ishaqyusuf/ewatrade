@@ -124,3 +124,9 @@ registrar lifecycle. The Connection owns TXT verification and Vercel/DNS/SSL
 state. Only an active Connection projects to the Tenant's primary Storefront
 Hostname, so a registrar or hosting failure cannot silently replace the free
 storefront address.
+# QA purge boundary
+
+- The QA marker lives on the tenant aggregate root and covers stores,
+  memberships, operational data, and owned resources.
+- `QaPurgeRun` is intentionally non-tenant so its counts-only receipt survives
+  tenant deletion.

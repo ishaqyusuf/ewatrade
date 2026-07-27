@@ -109,3 +109,8 @@
   does not grant them any additional Order mutation authority.
 - Existing commercial/POS capability remains required for Order creation and
   Product fulfillment.
+# QA maintenance
+
+- Only platform administrators can discover/adopt QA tenants or operate purge
+  runs. Purging tenants reject normal tenant operations and have sessions
+  revoked.

@@ -30,6 +30,7 @@ export type TenantContext = {
     enabledModes: TenantMode[]
     currencyCode: string
     timezone: string
+    qaPurgeStartedAt: Date | null
   }
   stores: TenantStore[]
   activeStore: TenantStore | null
@@ -61,6 +62,7 @@ export async function getActiveTenantForUser(
           enabledModes: true,
           currencyCode: true,
           timezone: true,
+          qaPurgeStartedAt: true,
           stores: {
             where: { status: { not: "ARCHIVED" } },
             select: {
@@ -105,6 +107,7 @@ export async function getActiveTenantForUser(
       enabledModes: membership.tenant.enabledModes,
       currencyCode: membership.tenant.currencyCode,
       timezone: membership.tenant.timezone,
+      qaPurgeStartedAt: membership.tenant.qaPurgeStartedAt,
     },
     stores,
     activeStore,

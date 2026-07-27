@@ -117,3 +117,7 @@ Public Service Request, Quote and Tracking routes are rendered by the
 storefront. Registration/login and all authenticated dashboard routes remain on
 the shared application host. A business subdomain never routes to an
 authenticated dashboard.
+# Platform QA maintenance
+
+- `qaMaintenance.candidates`, `adopt`, `preview`, `start`, and `run` are
+  platform-admin-only tRPC operations.

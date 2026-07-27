@@ -10,11 +10,11 @@ import {
   createTestRoutedEmailMessages,
   dispatchEmailMessages,
   getDefaultEmailTransport,
-  resendEmailTransport,
 } from "./index"
 
 const originalNodeEnv = process.env.NODE_ENV
 const originalEmailCaptureFile = process.env.EMAIL_CAPTURE_FILE
+const originalEmailDeliveryMode = process.env.EMAIL_DELIVERY_MODE
 const originalEmailQaDomainRoutes = process.env.EMAIL_QA_DOMAIN_ROUTES
 const originalResendApiKey = process.env.RESEND_API_KEY
 const originalTestEmail = process.env.TEST_EMAIL
@@ -24,6 +24,7 @@ const originalFetch = globalThis.fetch
 afterEach(() => {
   restoreEnv("NODE_ENV", originalNodeEnv)
   restoreEnv("EMAIL_CAPTURE_FILE", originalEmailCaptureFile)
+  restoreEnv("EMAIL_DELIVERY_MODE", originalEmailDeliveryMode)
   restoreEnv("EMAIL_QA_DOMAIN_ROUTES", originalEmailQaDomainRoutes)
   restoreEnv("RESEND_API_KEY", originalResendApiKey)
   restoreEnv("TEST_EMAIL", originalTestEmail)
@@ -97,14 +98,17 @@ describe("Resend email transport", () => {
     }
   })
 
-  test("uses Resend as the default transport when RESEND_API_KEY is configured", async () => {
+  test("keeps ordinary non-production email on console with provider credentials", async () => {
     process.env.RESEND_API_KEY = "re_test_key"
+    process.env.EMAIL_DELIVERY_MODE = "console"
 
-    expect(getDefaultEmailTransport()).toBe(resendEmailTransport)
+    const receipt = await getDefaultEmailTransport().send(createBaseMessage())
+    expect(receipt?.provider).toBe("console")
   })
 
-  test("sends email messages through Resend", async () => {
+  test("sends ordinary live email through Resend", async () => {
     process.env.RESEND_API_KEY = "re_test_key"
+    process.env.EMAIL_DELIVERY_MODE = "live"
     const requests: unknown[] = []
 
     globalThis.fetch = async (_url, init) => {

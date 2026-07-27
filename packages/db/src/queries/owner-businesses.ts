@@ -4,6 +4,7 @@ import type {
 } from "@ewatrade/utils"
 import { Prisma } from "../../generated/prisma/client"
 import { createTenantStore } from "./stores"
+import { configuredQaDomainForEmail } from "./qa-maintenance"
 import type { DbClient } from "./types"
 
 export type OwnerBusinessSummary = {
@@ -47,6 +48,7 @@ async function createUniqueTenant(
   input: {
     businessName: string
     currencyCode: OperatingCurrencyCode
+    qaSourceDomain?: string | null
   },
 ) {
   const baseSlug = toSlug(input.businessName) || "business"
@@ -64,8 +66,11 @@ async function createUniqueTenant(
       return await db.tenant.create({
         data: {
           currencyCode: input.currencyCode,
+          dataClassification: input.qaSourceDomain ? "QA" : "LIVE",
           enabledModes: ["STORE", "MERCHANT"],
           name: input.businessName,
+          qaMarkedAt: input.qaSourceDomain ? new Date() : null,
+          qaSourceDomain: input.qaSourceDomain ?? null,
           slug,
           type: "MERCHANT",
         },
@@ -96,9 +101,16 @@ async function createOwnerBusinessWithSource(
   input: CreateOwnerBusinessInput,
   source: "mobile_owner_business_create" | "mobile_owner_signup",
 ): Promise<OwnerBusinessSummary> {
+  const owner = await db.user.findUnique({
+    where: { id: input.userId },
+    select: { email: true },
+  })
+  if (!owner) throw new Error("Owner account not found.")
+  const qaSourceDomain = configuredQaDomainForEmail(owner.email)
   const tenant = await createUniqueTenant(db, {
     businessName: input.businessName,
     currencyCode: input.currencyCode,
+    qaSourceDomain,
   })
 
   await db.membership.create({

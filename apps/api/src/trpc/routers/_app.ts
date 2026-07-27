@@ -14,6 +14,7 @@ import { serviceCommunicationsRouter } from "./service-communications"
 import { serviceReportingRouter } from "./service-reporting"
 import { servicesRouter } from "./services"
 import { tenantRouter } from "./tenant"
+import { qaMaintenanceRouter } from "./qa-maintenance"
 
 export const appRouter = createTRPCRouter({
   auth: authRouter,
@@ -23,6 +24,7 @@ export const appRouter = createTRPCRouter({
   domains: domainsRouter,
   orders: ordersRouter,
   offline: offlineRouter,
+  qaMaintenance: qaMaintenanceRouter,
   serviceAccess: serviceAccessRouter,
   serviceCommunications: serviceCommunicationsRouter,
   services: servicesRouter,

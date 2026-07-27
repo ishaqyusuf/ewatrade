@@ -23,6 +23,10 @@ to another tester.
 
 - Routing is owned by `@ewatrade/email`, so mobile OTP, web signup, staff
   invitation, notification, and scheduled job email paths share one policy.
+- `EMAIL_DELIVERY_MODE` has canonical `console` and `live` values. QA domain
+  routes are orthogonal and provider-delivered in either mode.
+- Ordinary mail is console-only outside production and provider-delivered in
+  production; mixed recipient lists are split per recipient.
 - Routed messages preserve the synthetic address as the original recipient in
   their HTML and text bodies.
 - When QA routes are configured, an unmatched `.test` recipient fails closed.
@@ -41,3 +45,15 @@ to another tester.
   setting is an explicit deployment prerequisite.
 - Mobile clients do not receive the map; mobile OTP delivery is performed by
   the API through the shared server-side email package.
+
+## QA Tenant Lifecycle
+
+- New tenants are server-classified from the creating owner's configured QA
+  domain. Existing candidates require explicit platform-admin adoption.
+- QA and ordinary identities cannot cross membership lanes.
+- `/platform/qa-maintenance` previews marked tenants, counts, and provider
+  blockers, then requires a ten-minute preview token and exact typed
+  confirmation before Trigger starts the purge.
+- Active subscriptions and purchased domains block deletion. The job revokes
+  sessions, deletes tenant aggregates transactionally, removes orphaned users,
+  supports partial retry, and retains only a counts-only `QaPurgeRun`.

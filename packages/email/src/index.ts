@@ -23,6 +23,8 @@ export type EmailMessage = {
   subject: string
   text: string
   to: string
+  qaOriginalRecipient?: string
+  qaRouted?: boolean
 }
 
 export type EmailDeliveryReceipt = {
@@ -61,6 +63,7 @@ export type EmailTransport = {
 
 export type EmailRoutingEnv = {
   EMAIL_CAPTURE_FILE?: string
+  EMAIL_DELIVERY_MODE?: string
   EMAIL_QA_DOMAIN_ROUTES?: string
   NODE_ENV?: string
   TEST_EMAIL?: string
@@ -225,6 +228,9 @@ export function createTestRoutedEmailMessages(
         message.html,
         routing.originalRecipient,
       ),
+      qaOriginalRecipient: routing.originalRecipient,
+      qaRouted: true,
+      subject: `[QA: ${routing.originalRecipient}] ${message.subject}`,
       text: appendOriginalRecipientText(
         message.text,
         routing.originalRecipient,
@@ -476,7 +482,22 @@ export function getDefaultEmailTransport() {
     return captureEmailTransport
   }
 
-  return getResendApiKey() ? resendEmailTransport : consoleEmailTransport
+  const mode = process.env.EMAIL_DELIVERY_MODE?.trim().toLowerCase()
+  const live =
+    mode === "live" ||
+    (mode !== "console" && process.env.NODE_ENV === "production")
+  const ordinaryTransport =
+    live && getResendApiKey() ? resendEmailTransport : consoleEmailTransport
+
+  return {
+    async send(message: EmailMessage) {
+      if (message.qaRouted) {
+        return resendEmailTransport.send(message)
+      }
+
+      return ordinaryTransport.send(message)
+    },
+  } satisfies EmailTransport
 }
 
 export async function dispatchEmailMessages(

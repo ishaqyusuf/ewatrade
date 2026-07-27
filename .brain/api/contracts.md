@@ -276,3 +276,8 @@
   Order created before scheduling rollout.
 - Reminder settings return enabled, day-before, and same-day booleans for the
   active Store. Missing persistence returns all three defaults as true.
+# QA purge contract
+
+- Purge start requires a current signed preview and exact `PURGE ALL QA DATA`
+  confirmation. Empty or provider-blocked previews are rejected.
+- Status responses and retained receipts expose aggregate counts only.

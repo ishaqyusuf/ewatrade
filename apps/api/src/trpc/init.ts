@@ -190,6 +190,13 @@ const withTenantPermissionMiddleware = t.middleware(async (opts) => {
     })
   }
 
+  if (tenantContext.tenant.qaPurgeStartedAt) {
+    throw new TRPCError({
+      code: "CONFLICT",
+      message: "This QA tenant is being permanently purged.",
+    })
+  }
+
   return opts.next({
     ctx: {
       ...opts.ctx,
@@ -216,6 +223,19 @@ export const publicProcedure = t.procedure
   .use(withPrimaryDbMiddleware)
 
 export const authenticatedProcedure = publicProcedure.use(requireAuthMiddleware)
+
+export const platformAdminProcedure = authenticatedProcedure.use(
+  async (opts) => {
+    if (!opts.ctx.session?.user.isPlatformAdmin) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Platform administrator access is required.",
+      })
+    }
+
+    return opts.next({ ctx: { ...opts.ctx, session: opts.ctx.session } })
+  },
+)
 
 export const protectedProcedure = authenticatedProcedure.use(
   withTenantPermissionMiddleware,

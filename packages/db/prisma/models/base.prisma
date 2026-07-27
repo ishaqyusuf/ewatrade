@@ -5,6 +5,10 @@ model Tenant {
   type                              TenantType
   enabledModes                      TenantMode[]
   isActive                          Boolean                           @default(true)
+  dataClassification                QaDataClassification              @default(LIVE)
+  qaSourceDomain                    String?
+  qaMarkedAt                        DateTime?
+  qaPurgeStartedAt                  DateTime?
   timezone                          String                            @default("Africa/Lagos")
   countryCode                       String?
   currencyCode                      String                            @default("NGN")
@@ -64,6 +68,22 @@ model Tenant {
   domainConnections                 DomainConnection[]
   domainEvents                      DomainEvent[]
   domainOperationAttempts           DomainOperationAttempt[]
+}
+
+model QaPurgeRun {
+  id                String           @id @default(cuid())
+  requestedByUserId String
+  status            QaPurgeRunStatus @default(QUEUED)
+  activeKey         String?          @unique
+  deletedCounts     Json?
+  errorCategory     String?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
 }
 
 model TenantHostname {
