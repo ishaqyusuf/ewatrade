@@ -2,6 +2,21 @@
 
 ## 2026-07-29
 
+### Database, Source, And Jobs Release
+
+- `bun run db:push --local` started the Docker-backed PostgreSQL service and
+  confirmed the local `ewatrade` schema is in sync. `bun run db:push --prod`
+  confirmed the hosted Neon production schema is also already in sync; no
+  force or data-loss flags were used.
+- Committed the complete 21-file workspace release as `07b38900` (`Harden
+  database profiles and mobile workflows`) and pushed it to `origin/main`.
+- `bun run jobs:deploy` built and deployed Trigger.dev version `20260729.1`
+  with 8 detected tasks. The deploy loaded 8 configured environment variables
+  and synced 2 changed production values before activation.
+- Release checks passed: 25 focused database/API tests, database/API/mobile
+  TypeScript, mobile Catalog/auth guards, targeted Biome, and diff hygiene.
+  Trigger.dev reported a non-blocking CLI update from `4.0.1` to `4.5.8`.
+
 ### Mobile OTP Business Phone Identity Collision
 
 - Stopped email-OTP owner verification from copying the signup business phone
