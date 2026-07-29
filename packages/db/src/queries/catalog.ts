@@ -30,6 +30,10 @@ export type InventoryUnitStockBehaviorValue =
   | "packaged_stock"
 
 const DEFAULT_CATALOG_TRANSACTION_SCALE = 2
+const CATALOG_WRITE_TRANSACTION_OPTIONS = {
+  maxWait: 10_000,
+  timeout: 30_000,
+} as const
 
 type CatalogOfferingInput = {
   enabled?: boolean
@@ -1204,7 +1208,7 @@ export async function createCatalogItem(
     }
 
     return serializeCatalogItem(created)
-  })
+  }, CATALOG_WRITE_TRANSACTION_OPTIONS)
 }
 
 export async function createSimpleCatalogItem(

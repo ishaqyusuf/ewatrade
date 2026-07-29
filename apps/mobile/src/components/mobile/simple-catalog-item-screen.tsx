@@ -448,11 +448,18 @@ export function SimpleCatalogItemScreen({
   const onCreated = async () => {
     setSubmitError(null)
     await Promise.all([
-      queryClient.invalidateQueries(trpc.catalog.listItems.queryFilter()),
-      queryClient.invalidateQueries(trpc.catalog.listItemsPage.queryFilter()),
-      queryClient.invalidateQueries(
-        trpc.tenant.featureAvailability.queryFilter(),
-      ),
+      queryClient.invalidateQueries({
+        ...trpc.catalog.listItems.queryFilter(),
+        refetchType: "all",
+      }),
+      queryClient.invalidateQueries({
+        ...trpc.catalog.listItemsPage.queryFilter(),
+        refetchType: "all",
+      }),
+      queryClient.invalidateQueries({
+        ...trpc.tenant.featureAvailability.queryFilter(),
+        refetchType: "all",
+      }),
     ])
     if (kind) {
       onComplete?.({ kind, name: name.trim() })

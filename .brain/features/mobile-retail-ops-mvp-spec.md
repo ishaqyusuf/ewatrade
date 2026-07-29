@@ -180,6 +180,10 @@ Subscription support is included as a plan and entitlement foundation with three
 - Email signup collects name, email address, business name, and required
   operating currency in the first form. Google and OTP sign-up carry the
   selected currency into tenant and first-store creation.
+- The signup phone belongs to the business contact profile and is stored as
+  the first Store's support phone. It is not a verified user identity and must
+  not be copied into the unique `User.phone` field by either OTP or Google
+  signup.
 - OTP verification creates or resumes the owner account, creates the initial business/tenant context, and opens the app session.
 - OTP entry should feel like a compact reference-led PIN verification surface: a minimal off-white/light or matte dark canvas, circular back action, centered headline/copy, separated display cells, in-screen rounded numeric keypad with phone-letter hints, clipboard paste/delete support, resend state, and auto-submit when the six-digit code is complete.
 - OTP emails should use the shared email/notification/job packages rather than screen-local fetch logic. For exact `@test.com` submitted emails, outbound OTP delivery routes to `TEST_EMAILS` or the legacy `TEST_EMAIL` fallback while preserving the submitted account email for verification.

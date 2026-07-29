@@ -413,14 +413,12 @@ export async function verifyMobileOwnerOtp(
       emailVerified: true,
       emailVerifiedAt: new Date(),
       name: displayName,
-      phone,
     },
     update: {
       displayName,
       emailVerified: true,
       emailVerifiedAt: new Date(),
       name: displayName,
-      phone: phone ?? undefined,
     },
     where: { email },
     select: {

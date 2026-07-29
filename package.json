@@ -47,7 +47,7 @@
     "typecheck": "turbo typecheck",
     "format": "biome format --write .",
     "db:migrate": "bun run db:start && node ./scripts/with-workspace-env.mjs bun run --cwd packages/db db:migrate",
-    "db:start": "node ./scripts/with-workspace-env.mjs sh ./scripts/start-dev-db.sh"
+    "db:start": "bun ../local-infra-kit/bin/dev-services.ts --profile ewatrade --mode local"
   },
   "dependencies": {
     "@biomejs/biome": "^1.9.4",

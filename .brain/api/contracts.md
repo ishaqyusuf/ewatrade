@@ -51,6 +51,10 @@
   category is selected. Blank optional Other/Mixed descriptions normalize to
   absent for every other profile so request and verification payloads share
   the same contract. Mobile `login` remains profile-free.
+- The phone collected in mobile owner signup is Store support contact data,
+  not a verified account identity. Email-OTP and Google signup both persist it
+  on the first Store without assigning it to the unique `User.phone` field, so
+  a legitimate shared business line cannot block email verification.
 - True development runtimes use the deterministic mobile owner OTP `123456`.
   If either `APP_ENV` or `NODE_ENV` is `production`, OTP generation remains
   random, email delivery is required, and no development code is returned.
@@ -104,6 +108,10 @@
 ## Catalog
 
 - Item kind is immutable after creation.
+- Catalog item creation runs as one idempotent interactive transaction with a
+  bounded 10-second acquisition wait and 30-second execution timeout. This
+  accommodates the sequential immutable graph writes on a remote database
+  without weakening atomicity or allowing unbounded transactions.
 - `catalog.listItemsPage` searches item name, description, category, kind,
   variant/Offering labels, and Product Inventory Unit names or symbols while
   preserving an unfiltered tenant/store list count for search visibility.

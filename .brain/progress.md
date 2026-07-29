@@ -1,5 +1,21 @@
 # Progress
 
+## 2026-07-29
+
+### Mobile OTP Business Phone Identity Collision
+
+- Stopped email-OTP owner verification from copying the signup business phone
+  into the unique `User.phone` identity field. The phone continues to persist
+  as the first Store's support phone, matching the Google signup path and
+  allowing legitimate shared business contact numbers.
+- Added regression coverage for completing the reported QA-domain signup when
+  another user row already owns the same phone, and corrected the mobile-auth
+  test double to support Prisma user lookup by either email or id.
+- Checks passed: 20 focused database/API auth tests, database and API
+  TypeScript, mobile auth/onboarding and API-boundary guards, Biome, and diff
+  hygiene. Android runtime QA was unavailable because no ADB device or emulator
+  was attached; no mobile UI source changed.
+
 ## 2026-07-24
 
 ### Adaptive New Order Product Picker

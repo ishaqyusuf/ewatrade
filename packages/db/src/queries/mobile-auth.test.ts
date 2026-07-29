@@ -24,6 +24,7 @@ type UserRow = {
   id: string
   image?: string | null
   name: string
+  phone?: string | null
 }
 
 type AccountRow = {
@@ -42,6 +43,7 @@ type StoreRow = {
   name: string
   slug?: string
   status: string
+  supportPhone?: string | null
   tenantId?: string
 }
 
@@ -198,6 +200,7 @@ function createMockMobileAuthDb(input?: {
           name: string
           slug: string
           status: string
+          supportPhone?: string | null
           tenantId: string
         }
       }) => {
@@ -208,6 +211,7 @@ function createMockMobileAuthDb(input?: {
           name: data.name,
           slug: data.slug,
           status: data.status,
+          supportPhone: data.supportPhone,
           tenantId: data.tenantId,
         }
         stores.push(store)
@@ -280,8 +284,16 @@ function createMockMobileAuthDb(input?: {
       findUnique: async () => null,
     },
     user: {
-      findUnique: async ({ where }: { where: { email: string } }) =>
-        users.find((user) => user.email === where.email) ?? null,
+      findUnique: async ({
+        where,
+      }: {
+        where: { email?: string; id?: string }
+      }) =>
+        users.find(
+          (user) =>
+            (where.email !== undefined && user.email === where.email) ||
+            (where.id !== undefined && user.id === where.id),
+        ) ?? null,
       create: async ({
         data,
       }: {
@@ -774,6 +786,52 @@ describe("mobile auth queries", () => {
       storeId: "store_1",
       storeName: "Main Market Store",
     })
+  })
+
+  test("keeps the signup business phone on the store instead of the user identity", async () => {
+    const businessPhone = "08186877306"
+    const db = createMockMobileAuthDb({
+      users: [
+        {
+          email: "existing-owner@example.com",
+          id: "user_existing",
+          name: "Existing Owner",
+          phone: businessPhone,
+        },
+      ],
+    })
+    const otp = await createMobileOwnerOtp(db.client, {
+      businessName: "Jawdah",
+      email: "jawdah@ishaq.qa.test",
+      mode: "sign_up",
+      name: "Ishaq Yusuf",
+      phone: businessPhone,
+    })
+
+    const session = await verifyMobileOwnerOtp(db.client, {
+      businessName: "Jawdah",
+      code: otp.code,
+      email: "jawdah@ishaq.qa.test",
+      mode: "sign_up",
+      name: "Ishaq Yusuf",
+      phone: businessPhone,
+    })
+
+    expect(db.users).toEqual([
+      expect.objectContaining({
+        id: "user_existing",
+        phone: businessPhone,
+      }),
+      expect.not.objectContaining({
+        phone: businessPhone,
+      }),
+    ])
+    expect(db.stores).toEqual([
+      expect.objectContaining({
+        supportPhone: businessPhone,
+        tenantId: session.tenant?.id,
+      }),
+    ])
   })
 
   test("rejects Google login when no linked or email-matching owner exists", async () => {

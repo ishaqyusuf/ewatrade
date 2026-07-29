@@ -12,8 +12,16 @@ Shared engineering rules for future implementation work.
 - Keep tenant authorization explicit at API and repository boundaries.
 - Prefer shared types/contracts instead of copy-pasted shapes.
 - Update Brain docs in the same change set when architecture or data contracts change.
+- Multi-write catalog creation must keep its idempotent atomic transaction and
+  pass explicit bounded Prisma transaction options (`maxWait: 10_000`,
+  `timeout: 30_000`) because remote database latency can exceed Prisma's
+  five-second interactive default.
 
 ## Local QA And Dev Commands
+
+- `.env.local` `DATABASE_URL` is authoritative for local PostgreSQL. Docker
+  connection settings are derived transiently from that URL and must not be
+  duplicated as script defaults.
 
 - Reuse an already-running development stack when available. If dev is
   required and no suitable stack is running, start the required root

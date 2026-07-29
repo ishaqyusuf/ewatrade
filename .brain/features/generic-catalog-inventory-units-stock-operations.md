@@ -35,6 +35,12 @@ behavioral testing are complete.
 - Dashboard and mobile use the same short Product/Service setup, with optional
   advanced option groups, Offerings, selling units, identifiers, prices and
   opening stock.
+- Product and Service creation use an explicit bounded catalog transaction
+  window so remote-database latency cannot exhaust Prisma's five-second
+  interactive-transaction default before the item graph commits.
+- Successful mobile creation refetches all cached Catalog directory and
+  feature-availability queries before success navigation, including inactive
+  tab queries, so the new item appears without a manual pull-to-refresh.
 - Dashboard creation, mobile creation, and dashboard configuration-version
   editing call the canonical inventory unit the Main unit and present exact
   relationships in either direction. New units default to “how many of this

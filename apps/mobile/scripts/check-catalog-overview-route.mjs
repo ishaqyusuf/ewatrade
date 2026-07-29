@@ -33,6 +33,10 @@ const contracts = [
     file: "src/components/mobile/global-search-screen.tsx",
     markers: ['pathname: "/catalog-item/[catalogItemId]"'],
   },
+  {
+    file: "src/components/mobile/simple-catalog-item-screen.tsx",
+    markers: ["trpc.catalog.listItemsPage.queryFilter()", 'refetchType: "all"'],
+  },
 ]
 
 const failures = []
