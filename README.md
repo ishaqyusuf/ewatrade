@@ -23,7 +23,9 @@ Minimal monorepo scaffold for ewatrade.
 - `bun run dev:portless` - clear fixed ports, apply migrations, then start all Portless app scripts
 - `bun run kill:ports`
 - `bun run db:generate`
-- `bun run db:migrate:dev`
+- `bun run db:migrate` (local default)
+- `bun run db:migrate --remote`
+- `bun run db:migrate --prod`
 - `bun run build`
 
 Development starters run `dev:prepare` first. That kills stale app processes on the fixed dev ports and applies deployed Prisma migrations to the configured `DATABASE_URL` before Turbo launches app processes.
