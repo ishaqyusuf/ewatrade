@@ -1,4 +1,4 @@
-export type DatabaseProfile = "local" | "remote-dev" | "prod"
+export type DatabaseProfile = "local" | "preview" | "prod"
 
 export function databaseProfileForEnv(env: NodeJS.ProcessEnv): DatabaseProfile
 

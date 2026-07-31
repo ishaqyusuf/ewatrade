@@ -28,22 +28,22 @@ function loadEnv() {
   const isProduction =
     process.env.NODE_ENV === "production" ||
     process.env.APP_ENV === "production"
-  const isRemoteDev =
-    process.env.APP_ENV === "remote-dev" ||
-    process.env.DEV_PROFILE === "remote-dev"
+  const isPreview =
+    process.env.APP_ENV === "preview" ||
+    process.env.DEV_PROFILE === "preview"
   const envFiles = [
     path.join(repoRoot, ".env"),
     path.join(repoRoot, ".env.development"),
-    ...(!isRemoteDev && !isProduction
+    ...(!isPreview && !isProduction
       ? [
           path.join(repoRoot, ".env.local"),
           path.join(repoRoot, ".env.development.local"),
         ]
       : []),
-    ...(isRemoteDev
+    ...(isPreview
       ? [
-          path.join(repoRoot, ".env.remote-dev"),
-          path.join(repoRoot, ".env.remote-dev.local"),
+          path.join(repoRoot, ".env.local"),
+          path.join(repoRoot, ".env.preview"),
         ]
       : []),
     ...(isProduction
@@ -54,16 +54,10 @@ function loadEnv() {
       : []),
     path.join(workspaceDir, ".env"),
     path.join(workspaceDir, ".env.development"),
-    ...(!isRemoteDev && !isProduction
+    ...(!isPreview && !isProduction
       ? [
           path.join(workspaceDir, ".env.local"),
           path.join(workspaceDir, ".env.development.local"),
-        ]
-      : []),
-    ...(isRemoteDev
-      ? [
-          path.join(workspaceDir, ".env.remote-dev"),
-          path.join(workspaceDir, ".env.remote-dev.local"),
         ]
       : []),
     ...(isProduction

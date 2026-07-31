@@ -22,4 +22,4 @@ Repository-specific rules for AI contributors.
 - Use Portless website URLs without explicit ports. The canonical local marketing and dashboard URLs are `http://ewatrade.localhost` and `http://ewatrade-dashboard.localhost`.
 - Treat the selected environment file's `DATABASE_URL` as the complete database contract. Do not add mode-specific URL aliases, database-port registries, or script fallbacks; local infrastructure parses `.env.local` and fails closed when it is missing.
 - Treat any Portless URL that gains an explicit port, such as `ewatrade.localhost:1441`, as a bug. Diagnose and fix the Portless setup before proceeding with website work.
-- After any Prisma schema/database update, follow the repository migration workflow, then run `bun run db:push --local` and `bun run db:push --prod`, and also attempt `bun run db:push --remote`.
+- After any Prisma schema/database update, follow the repository migration workflow, then run `bun run db:push --local` and `bun run db:push --prod`; use `--preview` only when explicitly requested.

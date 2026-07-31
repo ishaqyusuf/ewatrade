@@ -11,8 +11,8 @@ export function databaseProfileForEnv(env) {
     return "prod"
   }
 
-  if (env.APP_ENV === "remote-dev" || env.DEV_PROFILE === "remote-dev") {
-    return "remote-dev"
+  if (env.APP_ENV === "preview" || env.DEV_PROFILE === "preview") {
+    return "preview"
   }
 
   return "local"

@@ -20,6 +20,9 @@ describe("shared database command contract", () => {
         `${prefix} ${action} --profile ewatrade`,
       );
     }
+    expect(rootScripts["db:sync"]).toBe(
+      "bun --env-file=/dev/null ../local-infra-kit/bin/db-sync.ts --profile ewatrade",
+    );
     expect(
       Object.keys(rootScripts).filter((name) =>
         /^db:(generate|migrate|pull|push|studio):/.test(name),

@@ -8,7 +8,7 @@
   push workflow without bypassing data-loss safeguards.
 - Applied historical migrations are immutable history and are not deleted merely
   because their models were later removed.
-- Since 2026-07-31, `db:generate`, `db:migrate`, `db:pull`, `db:push`, and `db:studio` use `local-infra-kit/bin/db.ts`. Each defaults to local and accepts only `--local`, `--remote`, or `--prod`; repository-local routers and mode aliases were removed. The shared command pins the selected mode file, validates the target, starts local services for connected actions, displays a sanitized fingerprint, and requires production confirmation.
+- Since 2026-07-31, `db:generate`, `db:migrate`, `db:pull`, `db:push`, and `db:studio` use `local-infra-kit/bin/db.ts`. Each defaults to local and accepts only `--local`, `--preview`, or `--prod`; repository-local routers and mode aliases were removed. `db:sync` defaults to production → local and can explicitly target preview. The shared command pins the selected mode file, validates the target, starts local services for connected actions, displays a sanitized fingerprint, and requires production confirmation.
 
 ## Generic Operations Migration State
 

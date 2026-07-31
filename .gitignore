@@ -8,9 +8,11 @@ build
 .env
 .env.*
 !.env.example
+!.env.*.example
 .vercel
 packages/db/generated
 .gstack/
+.local-db-sync/
 /.design/*
 !/.design/reference-*.png
 packages/jobs/.trigger/

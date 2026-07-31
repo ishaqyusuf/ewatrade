@@ -27,6 +27,7 @@
     "db:push": "bun --env-file=/dev/null ../local-infra-kit/bin/db.ts push --profile ewatrade",
     "db:seed:catalog-units": "node ./scripts/with-workspace-env.mjs bun run --cwd packages/db seed:catalog-units",
     "db:studio": "bun --env-file=/dev/null ../local-infra-kit/bin/db.ts studio --profile ewatrade",
+    "db:sync": "bun --env-file=/dev/null ../local-infra-kit/bin/db-sync.ts --profile ewatrade",
     "kill:ports": "node ./scripts/with-workspace-env.mjs sh ./scripts/kill-port.sh",
     "killports": "bun run kill:ports",
     "dev:prepare": "bun run kill:ports && bun run db:start && bun run db:generate && node ./scripts/with-workspace-env.mjs bun run --cwd packages/db db:migrate:deploy",

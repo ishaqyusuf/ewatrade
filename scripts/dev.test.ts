@@ -14,17 +14,18 @@ describe("dev script profile router", () => {
     ])
   })
 
-  test("supports remote alias", () => {
-    expect(parseArgs(["--remote"])).toEqual({ profile: "remote-dev" })
+  test("rejects legacy remote flags", () => {
+    expect(() => parseArgs(["--remote"])).toThrow("Unknown dev flag")
+    expect(() => parseArgs(["--remote-dev"])).toThrow("Unknown dev flag")
   })
 
-  test("supports remote-dev", () => {
-    expect(parseArgs(["--remote-dev"])).toEqual({ profile: "remote-dev" })
-    expect(commandForProfile("remote-dev")).toEqual([
+  test("supports preview", () => {
+    expect(parseArgs(["--preview"])).toEqual({ profile: "preview" })
+    expect(commandForProfile("preview")).toEqual([
       "node",
       "./scripts/with-workspace-env.mjs",
-      "APP_ENV=remote-dev",
-      "DEV_PROFILE=remote-dev",
+      "APP_ENV=preview",
+      "DEV_PROFILE=preview",
       "bun",
       "scripts/dev-run.ts",
     ])
@@ -44,7 +45,7 @@ describe("dev script profile router", () => {
   })
 
   test("rejects conflicting profile flags", () => {
-    expect(() => parseArgs(["--local", "--remote"])).toThrow(
+    expect(() => parseArgs(["--local", "--preview"])).toThrow(
       "Conflicting dev flags",
     )
   })
@@ -84,14 +85,14 @@ describe("dev script profile router", () => {
 
   test("supports suffix exclusion syntax for monorepo filters", () => {
     const options = parseArgs([
-      "--remote",
+      "--preview",
       "--filter",
       "@ewatrade/api!",
       "@ewatrade/marketing!",
     ])
 
     expect(options).toEqual({
-      profile: "remote-dev",
+      profile: "preview",
       filters: {
         targets: ["!@ewatrade/api", "!@ewatrade/marketing"],
       },
@@ -169,7 +170,7 @@ describe("dev script profile router", () => {
 
   test("rejects unknown flags with profile guidance", () => {
     expect(() => parseArgs(["--staging"])).toThrow(
-      "Use --local, --remote, --remote-dev, --prod",
+      "Use --local, --preview, --prod",
     )
   })
 })

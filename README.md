@@ -24,13 +24,17 @@ Minimal monorepo scaffold for ewatrade.
 - `bun run kill:ports`
 - `bun run db:generate`
 - `bun run db:migrate` (local default)
-- `bun run db:migrate --remote`
+- `bun run db:migrate --preview`
 - `bun run db:migrate --prod`
+- `bun run db:sync` (production → local by default)
+- `bun run db:sync --to-preview`
 - `bun run build`
 
 Development starters run `dev:prepare` first. That kills stale app processes on the fixed dev ports and applies deployed Prisma migrations to the configured `DATABASE_URL` before Turbo launches app processes.
 
-Configure `DATABASE_URL` with your Neon development branch connection string before running database or app commands:
+Use `.env.local`, `.env.preview`, and `.env.prod` for the local, hosted-preview, and production profiles. Each file exposes its database as `DATABASE_URL`; preview commands use `--preview` and load only `.env.preview` as the overlay.
+
+Configure `DATABASE_URL` before running database or app commands:
 
 ```bash
 DATABASE_URL=postgresql://USER:PASSWORD@HOST/neondb?sslmode=require

@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs"
 import { relative, resolve } from "node:path"
 
-type DevProfile = "local" | "remote-dev" | "prod"
+type DevProfile = "local" | "preview" | "prod"
 
 type DevFilterOptions = {
   targets: string[]
@@ -21,8 +21,7 @@ type WorkspacePackage = {
 
 const PROFILE_FLAGS = new Map<string, DevProfile>([
   ["--local", "local"],
-  ["--remote", "remote-dev"],
-  ["--remote-dev", "remote-dev"],
+  ["--preview", "preview"],
   ["--prod", "prod"],
 ])
 const FILTER_FLAGS = new Set(["--filter", "--f", "-f", "-filter"])
@@ -83,7 +82,7 @@ export function parseArgs(argv: string[]): DevCliOptions {
     }
 
     throw new Error(
-      `Unknown dev flag: ${arg}. Use --local, --remote, --remote-dev, --prod, or --filter/--f/-f/-filter.`,
+      `Unknown dev flag: ${arg}. Use --local, --preview, --prod, or --filter/--f/-f/-filter.`,
     )
   }
 
@@ -110,12 +109,12 @@ export function commandForProfile(
         "scripts/dev-run.ts",
         ...turboFilterArgs,
       ]
-    case "remote-dev":
+    case "preview":
       return [
         "node",
         "./scripts/with-workspace-env.mjs",
-        "APP_ENV=remote-dev",
-        "DEV_PROFILE=remote-dev",
+        "APP_ENV=preview",
+        "DEV_PROFILE=preview",
         "bun",
         "scripts/dev-run.ts",
         ...turboFilterArgs,

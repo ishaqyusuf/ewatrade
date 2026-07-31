@@ -28,8 +28,8 @@ Shared engineering rules for future implementation work.
   `bun run dev` profile in a dedicated managed terminal session and retain the
   session for logs and shutdown.
 - The root profile-aware `bun run dev` router is the development entrypoint.
-  Supported profiles are `bun run dev --local`, `bun run dev --remote` or
-  `bun run dev --remote-dev`, and `bun run dev --prod`. The default is local.
+  Supported profiles are `bun run dev --local`, `bun run dev --preview`, and
+  `bun run dev --prod`. The default is local.
 - `bun run dev --filter <targets>` accepts exact package names such as `@ewatrade/dashboard`, bare workspace shorthands such as `dashboard`, and Turbo selectors. Use this instead of app-specific scripts when multiple surfaces need to run together.
 - `-f` is the supported short alias and accepts multiple bare workspace names.
   Use `bun run dev --local -f mobile api jobs dashboard` for focused mobile
@@ -46,9 +46,9 @@ Shared engineering rules for future implementation work.
 - Raw localhost ports may be inspected only while diagnosing Portless itself; they are not valid website QA URLs and do not allow work to proceed past a broken named host.
 - Expo mobile development defaults to `EXPO_PORT=3096`, which is the next local 309x port after storefront `3091`, marketing/web `3092`, POS `3093`, dashboard `3094`, and API `3095`.
 - `bun run kill:ports` discovers numeric env variables ending in `_PORT` and ignores names containing `PORTLESS`, matching the SchoolClerk kill-port convention. Keep every project-owned dev port declared as an individual `*_PORT` env variable instead of adding aggregate kill lists.
-- After every Prisma schema/database update, run the repository-required migration workflow and then run `bun run db:push --local` and `bun run db:push --prod`; also attempt `bun run db:push --remote`, which aliases the remote-development profile.
-- Database generate/migrate/pull/push/studio actions use the shared `local-infra-kit` router. Keep one root command per action and only raw package implementations; every root action defaults to local and accepts only `--local`, `--remote`, or `--prod`. Connected production actions require confirming the printed credential-free target fingerprint. Do not add mode-suffixed aliases or a repository-local router.
-- All three DB push profiles must be attempted for Prisma updates. Preserve the repository's destructive-change safeguards, never force data loss without approval, and report any profile that could not be updated.
+- After every Prisma schema/database update, run the repository-required migration workflow and then run `bun run db:push --local` and `bun run db:push --prod`; use `--preview` only when explicitly requested.
+- Database generate/migrate/pull/push/studio actions use the shared `local-infra-kit` router. Keep one root command per action and only raw package implementations; every root action defaults to local and accepts only `--local`, `--preview`, or `--prod`. `db:sync` defaults to production → local, accepts `--to-preview`, and never accepts `--to-prod`.
+- Preserve the repository's destructive-change safeguards, never force data loss without approval, and report any requested profile that could not be updated.
 - The jobs workspace exposes `bun --filter @ewatrade/jobs dev`, which loads the local workspace env and forwards `TRIGGER_PROFILE` through `scripts/with-trigger-profile.mjs`.
 - Jobs deployment follows the same pattern through `bun run jobs:deploy`, which loads the production workspace env and forwards `TRIGGER_PROFILE` to `trigger deploy`.
 - Keep env files organized with labeled groups. Trigger.dev job envs belong under `# ── Trigger.dev Jobs ──` with `TRIGGER_PROJECT_ID`, `TRIGGER_PROFILE`, and the environment-specific `TRIGGER_SECRET_KEY`.
@@ -71,7 +71,7 @@ Shared engineering rules for future implementation work.
 - Forms must follow Midday validation, error handling, and mutation patterns.
 - Data fetching and mutations must use the standard Midday tRPC patterns, including invalidation, loading states, errors, and caching behavior.
 - Do not accept dashboard/web UI shortcuts that skip Midday details such as URL params, open buttons, global sheet ownership, table headers, column definitions, skeletons, empty states, action menus, bottom bars, mutation invalidation, or browser QA when those patterns exist in the Midday reference.
-- Prisma schema changes must be followed by the repository Prisma migration/deploy workflow and the local, production, and attempted remote DB pushes defined above. Do not manually create migration files.
+- Prisma schema changes must be followed by the repository Prisma migration/deploy workflow and the local and production DB pushes defined above. Do not manually create migration files.
 
 ## Global Personal Coding Rules
 <!-- BEGIN Global Personal Coding Rules -->
