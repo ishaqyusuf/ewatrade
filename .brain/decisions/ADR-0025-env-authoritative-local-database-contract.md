@@ -20,7 +20,8 @@ Compose, while other local projects need independent host ports.
 - Mode-specific URL aliases and generated connection fallbacks are removed.
 - Public database and dev commands use only local, preview, and production terminology.
 - `db:sync` defaults to production → local; `--to-preview` is explicit authorization
-  for a preview write, and production is never an accepted destination.
+  for a preview write and `--from-local` publishes local data to it. Production
+  is never an accepted destination.
 - Missing or mode-incompatible `DATABASE_URL` values fail closed.
 - GND's MySQL and Redis contract is outside this decision.
 

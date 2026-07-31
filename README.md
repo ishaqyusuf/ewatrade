@@ -28,6 +28,7 @@ Minimal monorepo scaffold for ewatrade.
 - `bun run db:migrate --prod`
 - `bun run db:sync` (production → local by default)
 - `bun run db:sync --to-preview`
+- `bun run db:sync --from-local --to-preview`
 - `bun run build`
 
 Development starters run `dev:prepare` first. That kills stale app processes on the fixed dev ports and applies deployed Prisma migrations to the configured `DATABASE_URL` before Turbo launches app processes.
