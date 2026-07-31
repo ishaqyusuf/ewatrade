@@ -198,7 +198,7 @@ if (!existsSync(".vercel/project.json")) {
 
 if (!skipMigrations) {
   console.log("Running database migrations...")
-  run("bun", ["run", "--cwd", "packages/db", "migrate:deploy"], { env })
+  run("bun", ["run", "--cwd", "packages/db", "db:migrate:deploy"], { env })
 }
 
 const deployArgs = [
