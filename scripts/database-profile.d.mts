@@ -4,4 +4,7 @@ export function databaseProfileForEnv(env: NodeJS.ProcessEnv): DatabaseProfile
 
 export function applyDatabaseProfile<TEnv extends NodeJS.ProcessEnv>(
   env: TEnv,
+  productionDatabaseUrl?: string,
 ): TEnv
+
+export function loadProductionDatabaseUrl(repoRoot: string): string | undefined

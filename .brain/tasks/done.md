@@ -1,5 +1,17 @@
 # Done
 
+- Replaced hostname-based development database blocking with production-target
+  identity protection. Local and preview commands may now use local or hosted
+  PostgreSQL, skip Docker for hosted targets, propagate the selected profile to
+  Prisma, and reject any non-production command or sync endpoint whose
+  canonical target identity resolves to production, including Neon pooled and
+  direct routes and Supabase direct/pooler project aliases. Completed
+  Date: 2026-08-03. Checks Run: shared-router and EwaTrade profile tests,
+  config-only hosted-development preflight, targeted formatting and both
+  typechecks, 99/99 shared infrastructure tests, and the EwaTrade full suite
+  with 314 passing, 5 skipped, and 5 unrelated existing fixture/navigation
+  failures; scoped code review.
+
 - Added Halaalvest-style per-tester QA email domain routing across shared
   server email delivery. `EMAIL_QA_DOMAIN_ROUTES` maps each reserved `.test`
   domain to one real tester inbox, applies to mobile OTP and web/application

@@ -19,9 +19,11 @@ Shared engineering rules for future implementation work.
 
 ## Local QA And Dev Commands
 
-- `.env.local` `DATABASE_URL` is authoritative for local PostgreSQL. Docker
-  connection settings are derived transiently from that URL and must not be
-  duplicated as script defaults.
+- `.env.local` `DATABASE_URL` is authoritative for default development. It may
+  select local Docker PostgreSQL or a hosted non-production database. Docker
+  connection settings are derived transiently only for a local Docker target
+  and must not be duplicated as script defaults. Connected non-production
+  database commands must reject the configured production database identity.
 
 - Reuse an already-running development stack when available. If dev is
   required and no suitable stack is running, start the required root

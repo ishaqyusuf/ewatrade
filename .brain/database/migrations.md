@@ -9,6 +9,15 @@
 - Applied historical migrations are immutable history and are not deleted merely
   because their models were later removed.
 - Since 2026-07-31, `db:generate`, `db:migrate`, `db:pull`, `db:push`, and `db:studio` use `local-infra-kit/bin/db.ts`. Each defaults to local and accepts only `--local`, `--preview`, or `--prod`. `db:sync` defaults to production → local and supports explicit local → preview publishing.
+- Since 2026-08-03, local and preview database commands may target local or
+  hosted PostgreSQL. Connected non-production commands compare canonical
+  database identity against production and refuse a match. Generic identity
+  uses normalized protocol/host, effective port and decoded database path;
+  Neon direct/pooler routes share one endpoint identity, while Supabase uses
+  decoded project references regardless of role or pooler port. Docker starts
+  only for a selected local Compose target. Production comparison and Prisma
+  share the same `.env.prod` or
+  `.env.production.local`-over-production precedence.
 
 ## Generic Operations Migration State
 

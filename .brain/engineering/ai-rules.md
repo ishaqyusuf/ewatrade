@@ -20,6 +20,6 @@ Repository-specific rules for AI contributors.
   `bun run dev --local -f mobile api jobs dashboard marketing storefront pos`.
   Do not start the same workspaces separately.
 - Use Portless website URLs without explicit ports. The canonical local marketing and dashboard URLs are `http://ewatrade.localhost` and `http://ewatrade-dashboard.localhost`.
-- Treat the selected environment file's `DATABASE_URL` as the complete database contract. Do not add mode-specific URL aliases, database-port registries, or script fallbacks; local infrastructure parses `.env.local` and fails closed when it is missing.
+- Treat the selected environment file's `DATABASE_URL` as the complete database contract. Do not add mode-specific URL aliases, database-port registries, or script fallbacks. `.env.local` may select local Docker or a hosted non-production database; connected non-production commands must fail closed when the production target cannot be verified or when the selected target resolves to production.
 - Treat any Portless URL that gains an explicit port, such as `ewatrade.localhost:1441`, as a bug. Diagnose and fix the Portless setup before proceeding with website work.
 - After any Prisma schema/database update, follow the repository migration workflow, then run `bun run db:push --local` and `bun run db:push --prod`; use `--preview` only when explicitly requested.

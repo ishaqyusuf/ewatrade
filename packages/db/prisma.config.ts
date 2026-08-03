@@ -1,9 +1,12 @@
 import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
-import { parseEnv } from "node:util"
 import { fileURLToPath } from "node:url"
+import { parseEnv } from "node:util"
 import { defineConfig, env } from "prisma/config"
-import { applyDatabaseProfile } from "../../scripts/database-profile.mjs"
+import {
+  applyDatabaseProfile,
+  loadProductionDatabaseUrl,
+} from "../../scripts/database-profile.mjs"
 
 const __filename = fileURLToPath(import.meta.url)
 const workspaceDir = path.dirname(__filename)
@@ -29,8 +32,7 @@ function loadEnv() {
     process.env.NODE_ENV === "production" ||
     process.env.APP_ENV === "production"
   const isPreview =
-    process.env.APP_ENV === "preview" ||
-    process.env.DEV_PROFILE === "preview"
+    process.env.APP_ENV === "preview" || process.env.DEV_PROFILE === "preview"
   const envFiles = [
     path.join(repoRoot, ".env"),
     path.join(repoRoot, ".env.development"),
@@ -41,10 +43,7 @@ function loadEnv() {
         ]
       : []),
     ...(isPreview
-      ? [
-          path.join(repoRoot, ".env.local"),
-          path.join(repoRoot, ".env.preview"),
-        ]
+      ? [path.join(repoRoot, ".env.local"), path.join(repoRoot, ".env.preview")]
       : []),
     ...(isProduction
       ? [
@@ -72,7 +71,13 @@ function loadEnv() {
     mergeEnvFile(filePath, loadedEnv)
   }
 
-  applyDatabaseProfile(loadedEnv)
+  const productionDatabaseUrl = loadProductionDatabaseUrl(repoRoot)
+
+  if (isProduction && productionDatabaseUrl) {
+    loadedEnv.DATABASE_URL = productionDatabaseUrl
+  }
+
+  applyDatabaseProfile(loadedEnv, productionDatabaseUrl)
 
   for (const [key, value] of Object.entries(loadedEnv)) {
     if (value !== undefined) {

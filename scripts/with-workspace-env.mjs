@@ -3,7 +3,10 @@ import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { parseEnv } from "node:util"
-import { applyDatabaseProfile } from "./database-profile.mjs"
+import {
+  applyDatabaseProfile,
+  loadProductionDatabaseUrl,
+} from "./database-profile.mjs"
 
 const __filename = fileURLToPath(import.meta.url)
 const repoRoot = path.resolve(path.dirname(__filename), "..")
@@ -26,9 +29,7 @@ function buildEnv(envSeed = {}) {
   const env = { ...process.env, ...envSeed }
   const isProduction =
     env.NODE_ENV === "production" || env.APP_ENV === "production"
-  const isPreview =
-    env.APP_ENV === "preview" ||
-    env.DEV_PROFILE === "preview"
+  const isPreview = env.APP_ENV === "preview" || env.DEV_PROFILE === "preview"
   const rootEnvFiles = [
     path.join(repoRoot, ".env"),
     path.join(repoRoot, ".env.development"),
@@ -39,10 +40,7 @@ function buildEnv(envSeed = {}) {
         ]
       : []),
     ...(isPreview
-      ? [
-          path.join(repoRoot, ".env.local"),
-          path.join(repoRoot, ".env.preview"),
-        ]
+      ? [path.join(repoRoot, ".env.local"), path.join(repoRoot, ".env.preview")]
       : []),
     ...(isProduction
       ? [
@@ -88,7 +86,7 @@ function assertProdDatabaseUrl(env) {
 
   if (!env.DATABASE_URL) {
     console.error(
-      "The production profile requires DATABASE_URL in .env.production.local or an explicit command env assignment."
+      "The production profile requires DATABASE_URL in .env.production.local or an explicit command env assignment.",
     )
     process.exit(1)
   }
@@ -98,14 +96,14 @@ function assertProdDatabaseUrl(env) {
     databaseUrl = new URL(env.DATABASE_URL)
   } catch {
     console.error(
-      "The production profile requires DATABASE_URL to be a valid database URL."
+      "The production profile requires DATABASE_URL to be a valid database URL.",
     )
     process.exit(1)
   }
 
   if (["localhost", "127.0.0.1", "::1"].includes(databaseUrl.hostname)) {
     console.error(
-      "The production profile refused to use a localhost DATABASE_URL. Put the production database URL in .env.production.local."
+      "The production profile refused to use a localhost DATABASE_URL. Put the production database URL in .env.production.local.",
     )
     process.exit(1)
   }
@@ -141,10 +139,13 @@ function parseCommand(argv) {
 }
 
 const { envAssignments, command, args } = parseCommand(process.argv.slice(2))
-const env = applyDatabaseProfile({
-  ...buildEnv(envAssignments),
-  ...envAssignments,
-})
+const env = applyDatabaseProfile(
+  {
+    ...buildEnv(envAssignments),
+    ...envAssignments,
+  },
+  loadProductionDatabaseUrl(repoRoot),
+)
 
 assertProdDatabaseUrl(env)
 
