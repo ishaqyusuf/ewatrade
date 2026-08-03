@@ -24,6 +24,7 @@ Minimal monorepo scaffold for ewatrade.
 - `bun run kill:ports`
 - `bun run db:generate`
 - `bun run db:migrate` (local default)
+- `bun run db:migrate --dev`
 - `bun run db:migrate --preview`
 - `bun run db:migrate --prod`
 - `bun run db:sync` (production → local by default)
@@ -33,7 +34,15 @@ Minimal monorepo scaffold for ewatrade.
 
 Development starters run `dev:prepare` first. That kills stale app processes on the fixed dev ports and applies deployed Prisma migrations to the configured `DATABASE_URL` before Turbo launches app processes.
 
-Use `.env.local`, `.env.preview`, and `.env.prod` for the local, hosted-preview, and production profiles. Each file exposes its database as `DATABASE_URL`; preview commands use `--preview` and load only `.env.preview` as the overlay.
+The root environment contract has one base file and four explicit profile files:
+
+- `.env` provides shared defaults.
+- `.env.local` is selected by the default `--local` profile.
+- `.env.dev` is selected by `--dev` for hosted development.
+- `.env.preview` is selected by `--preview`.
+- `.env.production` is selected by `--prod`.
+
+Each command loads `.env` followed by exactly one profile file. Every profile file owns its local-tooling `DATABASE_URL`; database commands do not inherit that value from `.env` or another profile. Platform-injected process values remain available when no local profile file is present.
 
 Configure `DATABASE_URL` before running database or app commands:
 

@@ -47,6 +47,34 @@ describe("database profile", () => {
     expect(env.DEV_PROFILE).toBe("local")
   })
 
+  test("allows a hosted URL in dev mode when it is not production", () => {
+    const env = applyDatabaseProfile(
+      {
+        DEV_PROFILE: "dev",
+        DATABASE_URL: "postgresql://development.example.com/ewatrade",
+      },
+      "postgresql://production.example.com/ewatrade",
+    )
+
+    expect(env.DATABASE_URL).toBe(
+      "postgresql://development.example.com/ewatrade",
+    )
+    expect(env.DEV_PROFILE).toBe("dev")
+  })
+
+  test("keeps an explicit dev profile non-production during production builds", () => {
+    expect(() =>
+      applyDatabaseProfile(
+        {
+          DATABASE_URL: "postgresql://production.example.com/ewatrade",
+          DEV_PROFILE: "dev",
+          NODE_ENV: "production",
+        },
+        "postgresql://production.example.com/ewatrade",
+      ),
+    ).toThrow("dev mode refuses the production database")
+  })
+
   test("allows a local URL in preview mode when it is not production", () => {
     const env = applyDatabaseProfile(
       {
@@ -108,7 +136,7 @@ describe("database profile", () => {
     ).toThrow("refuses the production database")
   })
 
-  test("loads one canonical production URL with local override precedence", () => {
+  test("loads production identity only from the canonical production file", () => {
     const root = mkdtempSync(path.join(tmpdir(), "ewatrade-production-env-"))
     writeFileSync(
       path.join(root, ".env.production"),
@@ -120,7 +148,7 @@ describe("database profile", () => {
     )
 
     expect(loadProductionDatabaseUrl(root)).toContain(
-      "production-override.example.com/app",
+      "production-base.example.com/app",
     )
   })
 

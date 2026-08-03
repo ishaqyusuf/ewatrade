@@ -30,15 +30,15 @@ Canonical stack reference for current implementation choices.
 - Migrations: Prisma
 - Runtime querying / repositories: Drizzle
 - Database provider: PostgreSQL as the canonical application database
-- Development database runtime: `.env.local` may select local Docker PostgreSQL
-  or a hosted non-production PostgreSQL database, with `preview` and `prod`
-  profiles available through `DEV_PROFILE`/`APP_ENV`. `.env.preview` overlays
-  `.env.local` and owns its `DATABASE_URL`; Docker startup occurs only when the
-  selected development URL identifies the local Compose database. Every
-  connected non-production database command verifies that its target differs
-  from the configured production database.
+- Environment runtime: root tooling loads shared defaults from `.env` followed
+  by exactly one profile file: `.env.local`, `.env.dev`, `.env.preview`, or
+  `.env.production`. Every profile file owns its `DATABASE_URL`; aliases and
+  package-path scanning are excluded from the root loader. Docker starts only
+  when a selected URL identifies the local Compose database. Every connected
+  local, dev, or preview command verifies that its target differs from the
+  database identified by `.env.production`.
 - Development command router: `bun run dev` selects the environment profile
-  with `--local`, `--preview`, or `--prod`, then forwards package
+  with `--local`, `--dev`, `--preview`, or `--prod`, then forwards package
   filters to Turbo. When dev is required and not already running, launch the
   required profile in a dedicated managed terminal session.
 

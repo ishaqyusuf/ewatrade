@@ -1,5 +1,18 @@
 # Done
 
+- Simplified the root environment contract to `.env` plus exactly one of
+  `.env.local`, `.env.dev`, `.env.preview`, or `.env.production`. Prisma now
+  delegates to one canonical loader instead of scanning root/package aliases;
+  the workspace wrapper, dev router, database router, Turbo dependencies, and
+  shared `local-infra-kit` use the same mapping. Added `--dev`, removed preview
+  inheritance from local, made `.env.production` the sole production identity,
+  and retained production-target blocking for every connected non-production
+  command. Completed Date: 2026-08-03. Checks Run: focused EwaTrade profile and
+  router tests; 100/100 shared infrastructure tests; shared infrastructure
+  TypeScript; DB and jobs TypeScript; root `db:generate --local` against the
+  configured hosted development target; EwaTrade full suite with 322 passing,
+  5 skipped, and 5 unrelated existing mobile/query fixture failures.
+
 - Replaced hostname-based development database blocking with production-target
   identity protection. Local and preview commands may now use local or hosted
   PostgreSQL, skip Docker for hosted targets, propagate the selected profile to

@@ -1,14 +1,27 @@
-import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
-import { parseEnv } from "node:util"
+import { readEnvironmentFile } from "./environment-profile.mjs"
 
 export function databaseProfileForEnv(env) {
-  if (env.NODE_ENV === "production" || env.APP_ENV === "production") {
+  const selectedProfile = env.DEV_PROFILE ?? env.APP_ENV
+
+  if (selectedProfile === "prod" || selectedProfile === "production") {
     return "prod"
   }
 
-  if (env.APP_ENV === "preview" || env.DEV_PROFILE === "preview") {
+  if (selectedProfile === "preview") {
     return "preview"
+  }
+
+  if (selectedProfile === "dev" || selectedProfile === "development") {
+    return "dev"
+  }
+
+  if (selectedProfile === "local") {
+    return "local"
+  }
+
+  if (env.NODE_ENV === "production") {
+    return "prod"
   }
 
   return "local"
@@ -51,23 +64,9 @@ export function applyDatabaseProfile(env, productionDatabaseUrl) {
 }
 
 export function loadProductionDatabaseUrl(repoRoot) {
-  const productionEnv = {}
-  const primaryFile = existsSync(path.join(repoRoot, ".env.prod"))
-    ? path.join(repoRoot, ".env.prod")
-    : path.join(repoRoot, ".env.production")
-  const envFiles = [
-    primaryFile,
-    ...(primaryFile.endsWith(".env.production")
-      ? [path.join(repoRoot, ".env.production.local")]
-      : []),
-  ]
-
-  for (const envFile of envFiles) {
-    if (existsSync(envFile)) {
-      Object.assign(productionEnv, parseEnv(readFileSync(envFile, "utf8")))
-    }
-  }
-
+  const productionEnv = readEnvironmentFile(
+    path.join(repoRoot, ".env.production"),
+  )
   return productionEnv.DATABASE_URL?.trim()
 }
 

@@ -19,6 +19,18 @@ describe("dev script profile router", () => {
     expect(() => parseArgs(["--remote-dev"])).toThrow("Unknown dev flag")
   })
 
+  test("supports hosted development", () => {
+    expect(parseArgs(["--dev"])).toEqual({ profile: "dev" })
+    expect(commandForProfile("dev")).toEqual([
+      "node",
+      "./scripts/with-workspace-env.mjs",
+      "APP_ENV=dev",
+      "DEV_PROFILE=dev",
+      "bun",
+      "scripts/dev-run.ts",
+    ])
+  })
+
   test("supports preview", () => {
     expect(parseArgs(["--preview"])).toEqual({ profile: "preview" })
     expect(commandForProfile("preview")).toEqual([
@@ -170,7 +182,7 @@ describe("dev script profile router", () => {
 
   test("rejects unknown flags with profile guidance", () => {
     expect(() => parseArgs(["--staging"])).toThrow(
-      "Use --local, --preview, --prod",
+      "Use --local, --dev, --preview, --prod",
     )
   })
 })

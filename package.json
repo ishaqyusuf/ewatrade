@@ -47,7 +47,7 @@
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "format": "biome format --write .",
-    "db:start": "bun ../local-infra-kit/bin/dev-services.ts --profile ewatrade --mode local"
+    "db:start": "bun ../local-infra-kit/bin/dev-services.ts --profile ewatrade"
   },
   "dependencies": {
     "@biomejs/biome": "^1.9.4",
