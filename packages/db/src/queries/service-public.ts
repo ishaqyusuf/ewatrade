@@ -8,6 +8,7 @@ import {
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import {
   CatalogRecordStatus,
+  CommerceQuoteSourceType,
   CustomerTrackingStatus,
   OfferingPricingPolicy,
   PaymentStatus,
@@ -19,7 +20,6 @@ import {
   ServiceNotificationChannel,
   ServiceNotificationIntentStatus,
   ServicePriority,
-  ServiceQuoteStatus,
   ServiceRequestFormStatus,
   ServiceRequestStatus,
   ServiceWorkEventType,
@@ -28,6 +28,13 @@ import {
   WorkAuthorizationStatus,
 } from "../../generated/prisma/enums"
 import { CatalogError } from "./catalog"
+import {
+  CommerceQuoteError,
+  getCommerceQuoteAcceptanceContext,
+  getPublicCommerceQuote,
+  issueCommerceQuote,
+  recordCommerceQuoteAcceptance,
+} from "./commerce-quotes"
 import { createCommercialOrderInTransaction } from "./commercial-orders"
 
 function token() {
@@ -190,9 +197,6 @@ export async function listServiceRequests(
               : undefined
   const requests = await db.serviceRequest.findMany({
     include: {
-      currentQuote: {
-        include: { currentVersion: true },
-      },
       lines: {
         include: {
           offering: true,
@@ -208,15 +212,26 @@ export async function listServiceRequests(
       tenantId: input.tenantId,
     },
   })
+  const quotes = await db.commerceQuote.findMany({
+    include: { currentVersion: true },
+    where: {
+      sourceId: { in: requests.map((request) => request.id) },
+      sourceType: CommerceQuoteSourceType.SERVICE_REQUEST,
+      tenantId: input.tenantId,
+    },
+  })
+  const quoteByRequestId = new Map(
+    quotes.map((quote) => [quote.sourceId, quote.currentVersion]),
+  )
   return requests.map((request) => ({
     createdAt: request.createdAt,
-    currentQuote: request.currentQuote?.currentVersion
+    currentQuote: quoteByRequestId.get(request.id)
       ? {
-          currencyCode: request.currentQuote.currentVersion.currencyCode,
-          expiresAt: request.currentQuote.currentVersion.expiresAt,
-          status: request.currentQuote.currentVersion.status,
-          totalMinor: request.currentQuote.currentVersion.totalMinor,
-          version: request.currentQuote.currentVersion.version,
+          currencyCode: quoteByRequestId.get(request.id)!.currencyCode,
+          expiresAt: quoteByRequestId.get(request.id)!.expiresAt,
+          status: quoteByRequestId.get(request.id)!.status,
+          totalMinor: quoteByRequestId.get(request.id)!.totalMinor,
+          version: quoteByRequestId.get(request.id)!.version,
         }
       : null,
     customerEmail: request.customerEmail,
@@ -472,6 +487,20 @@ export async function updateServiceRequestDisposition(
   })
 }
 
+function mapCommerceQuoteError(error: CommerceQuoteError) {
+  const code =
+    error.code === "PUBLIC_TOKEN_INVALID"
+      ? "PUBLIC_TOKEN_INVALID"
+      : error.code === "IDEMPOTENCY_MISMATCH"
+        ? "IDEMPOTENCY_MISMATCH"
+        : error.code === "OFFERING_UNAVAILABLE"
+          ? "OFFERING_UNAVAILABLE"
+          : error.code === "STORE_NOT_FOUND"
+            ? "STORE_NOT_FOUND"
+            : "QUOTE_CONFLICT"
+  return new CatalogError(code, error.message)
+}
+
 export async function issueServiceQuote(
   db: PrismaClient,
   input: {
@@ -491,195 +520,35 @@ export async function issueServiceQuote(
     tenantId: string
   },
 ) {
-  const rawToken = token()
-  const payloadHash = hash({
-    discountMinor: input.discountMinor ?? 0,
-    expiresAt: input.expiresAt ?? null,
-    lines: input.lines,
-    requestId: input.requestId ?? null,
-    storeId: input.storeId,
-    taxMinor: input.taxMinor ?? 0,
-  })
-  return db.$transaction(async (tx) => {
-    const store = await tx.store.findFirst({
-      where: { id: input.storeId, tenantId: input.tenantId },
-    })
-    if (!store) throw new CatalogError("STORE_NOT_FOUND", "Store not found.")
-    const quote = await tx.serviceQuote.upsert({
-      create: {
-        clientQuoteId: input.clientQuoteId,
-        createdByUserId: input.actorUserId,
-        requestId: input.requestId,
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-      },
-      update: {},
-      where: {
-        tenantId_clientQuoteId: {
-          clientQuoteId: input.clientQuoteId,
-          tenantId: input.tenantId,
-        },
-      },
-    })
-    const current = quote.currentVersionId
-      ? await tx.serviceQuoteVersion.findUnique({
-          where: { id: quote.currentVersionId },
-        })
-      : null
-    const previousVersion = await tx.serviceQuoteVersion.findUnique({
-      where: {
-        quoteId_clientVersionId: {
-          clientVersionId: input.clientVersionId,
-          quoteId: quote.id,
-        },
-      },
-    })
-    if (previousVersion) {
-      if (previousVersion.payloadHash !== payloadHash) {
-        throw new CatalogError(
-          "IDEMPOTENCY_MISMATCH",
-          "This Quote version command was already used with different details.",
-        )
-      }
-      return {
-        quoteId: quote.id,
-        token: null,
-        versionId: previousVersion.id,
-      }
-    }
-    if (current?.status === ServiceQuoteStatus.ACCEPTED) {
-      throw new CatalogError(
-        "QUOTE_CONFLICT",
-        "An accepted Quote cannot be revised.",
-      )
-    }
-    const offerings = await tx.sellableOffering.findMany({
-      include: {
-        catalogItem: true,
-        serviceOffering: true,
-        storeAvailability: { where: { storeId: input.storeId } },
-        variant: {
-          include: {
-            selections: { include: { group: true, value: true } },
-          },
-        },
-      },
-      where: {
-        id: { in: input.lines.map((line) => line.offeringId) },
-        kind: SellableOfferingKind.SERVICE,
-        status: CatalogRecordStatus.ACTIVE,
-        tenantId: input.tenantId,
-      },
-    })
-    if (
-      offerings.length !==
-      new Set(input.lines.map((line) => line.offeringId)).size
-    ) {
-      throw new CatalogError(
-        "OFFERING_UNAVAILABLE",
-        "Quote contains an unavailable Service Offering.",
-      )
-    }
-    const byId = new Map(offerings.map((offering) => [offering.id, offering]))
-    let subtotalMinor = 0
-    const resolved = input.lines.map((line) => {
-      const offering = byId.get(line.offeringId)!
-      if (
-        !offering.serviceOffering ||
-        !offering.storeAvailability[0]?.isAvailable
-      ) {
-        throw new CatalogError(
-          "OFFERING_UNAVAILABLE",
-          "Quote contains a Store-unavailable Service Offering.",
-        )
-      }
-      if (
-        !Number.isSafeInteger(line.unitPriceMinor) ||
-        line.unitPriceMinor < 0
-      ) {
-        throw new CatalogError("QUOTE_CONFLICT", "Quote price is invalid.")
-      }
-      const quantity = parseExactDecimal(line.quantity, {
-        allowZero: false,
-        maxScale: offering.serviceOffering.quantityScale,
-      })
-      const totalMinor = lineTotal(line.unitPriceMinor, quantity)
-      subtotalMinor += totalMinor
-      return { line, offering, quantity, totalMinor }
-    })
-    const discountMinor = input.discountMinor ?? 0
-    const taxMinor = input.taxMinor ?? 0
-    const totalMinor = subtotalMinor - discountMinor + taxMinor
-    if (totalMinor < 0) {
-      throw new CatalogError(
-        "QUOTE_CONFLICT",
-        "Quote total cannot be negative.",
-      )
-    }
-    const last = await tx.serviceQuoteVersion.aggregate({
-      _max: { version: true },
-      where: { quoteId: quote.id },
-    })
-    if (current) {
-      await tx.serviceQuoteVersion.update({
-        data: {
-          status: ServiceQuoteStatus.SUPERSEDED,
-          supersededAt: new Date(),
-        },
-        where: { id: current.id },
-      })
-    }
-    const version = await tx.serviceQuoteVersion.create({
-      data: {
-        acceptanceTokenDigest: digest(rawToken),
-        clientVersionId: input.clientVersionId,
-        createdByUserId: input.actorUserId,
-        currencyCode: store.currencyCode,
-        discountMinor,
-        expiresAt: input.expiresAt,
-        issuedAt: new Date(),
-        payloadHash,
-        quoteId: quote.id,
-        status: ServiceQuoteStatus.ISSUED,
-        subtotalMinor,
-        taxMinor,
-        totalMinor,
-        version: (last._max.version ?? 0) + 1,
-      },
-    })
-    await tx.serviceQuoteLine.createMany({
-      data: resolved.map(({ line, offering, quantity, totalMinor }) => ({
-        catalogItemName: offering.catalogItem.name,
-        offeringId: offering.id,
-        offeringName: offering.name,
-        optionSelections: json(
-          offering.variant.selections.map((selection) => ({
-            group: selection.group.name,
-            value: selection.value.label,
-          })),
-        ),
-        quantity,
-        quoteVersionId: version.id,
-        totalMinor,
-        unitPriceMinor: line.unitPriceMinor,
-        variantName: offering.variant.name,
+  if (!input.requestId) {
+    throw new CatalogError(
+      "QUOTE_CONFLICT",
+      "A Commerce Quote requires a Service Request source.",
+    )
+  }
+  try {
+    return await issueCommerceQuote(db, {
+      actorUserId: input.actorUserId,
+      availabilityOutcome: "full",
+      clientQuoteId: input.clientQuoteId,
+      clientVersionId: input.clientVersionId,
+      discountMinor: input.discountMinor,
+      expiresAt: input.expiresAt,
+      fulfilmentType: "unspecified",
+      lines: input.lines.map((line) => ({
+        ...line,
+        outcome: "included" as const,
       })),
+      sourceId: input.requestId,
+      sourceType: "service_request",
+      storeId: input.storeId,
+      taxMinor: input.taxMinor,
+      tenantId: input.tenantId,
     })
-    await tx.serviceQuote.update({
-      data: { currentVersionId: version.id },
-      where: { id: quote.id },
-    })
-    if (input.requestId) {
-      await tx.serviceRequest.updateMany({
-        data: {
-          currentQuoteId: quote.id,
-          status: ServiceRequestStatus.QUOTED,
-        },
-        where: { id: input.requestId, tenantId: input.tenantId },
-      })
-    }
-    return { quoteId: quote.id, token: rawToken, versionId: version.id }
-  })
+  } catch (error) {
+    if (error instanceof CommerceQuoteError) throw mapCommerceQuoteError(error)
+    throw error
+  }
 }
 
 async function createTrackedJobsForOrder(
@@ -766,74 +635,84 @@ export async function acceptServiceQuote(
     clientAcceptanceId: string
   },
 ) {
-  return db.$transaction(async (tx) => {
-    const version = await tx.serviceQuoteVersion.findFirst({
-      include: { lines: true, quote: { include: { request: true } } },
-      where: { acceptanceTokenDigest: digest(input.acceptanceToken) },
-    })
-    if (!version) {
-      throw new CatalogError("PUBLIC_TOKEN_INVALID", "Quote is unavailable.")
-    }
-    if (version.status === ServiceQuoteStatus.ACCEPTED) {
-      if (version.acceptanceClientId !== input.clientAcceptanceId) {
-        throw new CatalogError(
-          "IDEMPOTENCY_MISMATCH",
-          "Quote was already accepted with another command identity.",
+  try {
+    return await db.$transaction(async (tx) => {
+      const context = await getCommerceQuoteAcceptanceContext(tx, input)
+      if (context.replayOrderId) {
+        return {
+          jobId: await tx.serviceJob
+            .findFirst({ where: { commercialOrderId: context.replayOrderId } })
+            .then((job) => job?.id ?? null),
+          orderId: context.replayOrderId,
+        }
+      }
+      const { version } = context
+      if (
+        version.quote.sourceType !== CommerceQuoteSourceType.SERVICE_REQUEST
+      ) {
+        throw new CommerceQuoteError(
+          "QUOTE_CONFLICT",
+          "This Quote is not a Service Request Quote.",
         )
       }
-      return {
-        jobId: await tx.serviceJob
-          .findFirst({ where: { commercialOrderId: version.acceptedOrderId! } })
-          .then((job) => job?.id ?? null),
-        orderId: version.acceptedOrderId!,
+      const request = await tx.serviceRequest.findFirst({
+        where: {
+          id: version.quote.sourceId,
+          storeId: version.quote.storeId,
+          tenantId: version.quote.tenantId,
+        },
+      })
+      if (!request) {
+        throw new CommerceQuoteError(
+          "QUOTE_SOURCE_NOT_FOUND",
+          "Service Request source not found.",
+        )
       }
-    }
-    if (
-      version.status !== ServiceQuoteStatus.ISSUED ||
-      version.quote.currentVersionId !== version.id ||
-      (version.expiresAt && version.expiresAt <= new Date())
-    ) {
-      throw new CatalogError(
-        "QUOTE_CONFLICT",
-        "Only the current unexpired Quote Version can be accepted.",
+      const payableLines = version.lines.filter(
+        (line) => line.outcome === "INCLUDED" || line.outcome === "ALTERNATIVE",
       )
-    }
-    const request = version.quote.request
-    const order = await createCommercialOrderInTransaction(tx, {
-      actorUserId: input.actorUserId,
-      clientOrderId: `${input.clientAcceptanceId}:order`,
-      customerEmail: request?.customerEmail ?? undefined,
-      customerName: request?.customerName ?? undefined,
-      customerPhone: request?.customerPhone ?? undefined,
-      createTrackedServiceWork: false,
-      discountMinor: version.discountMinor,
-      lines: version.lines.map((line) => ({
-        offeringId: line.offeringId,
-        quantity: line.quantity.toString(),
-        trustedUnitPriceMinor: line.unitPriceMinor,
-      })),
-      schemaVersion: 1,
-      storeId: version.quote.storeId,
-      taxMinor: version.taxMinor,
-      tenantId: version.quote.tenantId,
-    })
-    const jobId = await createTrackedJobsForOrder(tx, {
-      actorUserId: input.actorUserId,
-      commercialOrderId: order.id,
-      sourceKey: input.clientAcceptanceId,
-      storeId: version.quote.storeId,
-      tenantId: version.quote.tenantId,
-    })
-    await tx.serviceQuoteVersion.update({
-      data: {
-        acceptanceClientId: input.clientAcceptanceId,
-        acceptedAt: new Date(),
-        acceptedOrderId: order.id,
-        status: ServiceQuoteStatus.ACCEPTED,
-      },
-      where: { id: version.id },
-    })
-    if (request) {
+      if (
+        payableLines.some(
+          (line) =>
+            !line.offeringId || !line.quantity || line.unitPriceMinor === null,
+        )
+      ) {
+        throw new CommerceQuoteError(
+          "QUOTE_CONFLICT",
+          "Accepted Quote contains an incomplete payable line.",
+        )
+      }
+      const order = await createCommercialOrderInTransaction(tx, {
+        actorUserId: input.actorUserId,
+        clientOrderId: `${input.clientAcceptanceId}:order`,
+        customerEmail: request.customerEmail ?? undefined,
+        customerName: request.customerName,
+        customerPhone: request.customerPhone ?? undefined,
+        createTrackedServiceWork: false,
+        discountMinor: version.discountMinor,
+        lines: payableLines.map((line) => ({
+          offeringId: line.offeringId!,
+          quantity: line.quantity!.toString(),
+          trustedUnitPriceMinor: line.unitPriceMinor!,
+        })),
+        schemaVersion: 1,
+        serviceChargeMinor: version.fulfilmentFeeMinor,
+        storeId: version.quote.storeId,
+        taxMinor: version.taxMinor,
+        tenantId: version.quote.tenantId,
+      })
+      const jobId = await createTrackedJobsForOrder(tx, {
+        actorUserId: input.actorUserId,
+        commercialOrderId: order.id,
+        sourceKey: input.clientAcceptanceId,
+        storeId: version.quote.storeId,
+        tenantId: version.quote.tenantId,
+      })
+      await recordCommerceQuoteAcceptance(tx, {
+        clientAcceptanceId: input.clientAcceptanceId,
+        orderId: order.id,
+        versionId: version.id,
+      })
       await tx.serviceRequest.update({
         data: {
           convertedAt: new Date(),
@@ -841,49 +720,30 @@ export async function acceptServiceQuote(
         },
         where: { id: request.id },
       })
-    }
-    return { jobId, orderId: order.id }
-  })
+      return { jobId, orderId: order.id }
+    })
+  } catch (error) {
+    if (error instanceof CommerceQuoteError) throw mapCommerceQuoteError(error)
+    throw error
+  }
 }
 
 export async function getPublicServiceQuote(
   db: PrismaClient,
   input: { acceptanceToken: string },
 ) {
-  const version = await db.serviceQuoteVersion.findFirst({
-    include: {
-      lines: true,
-      quote: { include: { store: { select: { name: true } } } },
-    },
-    where: { acceptanceTokenDigest: digest(input.acceptanceToken) },
-  })
-  if (
-    !version ||
-    version.quote.currentVersionId !== version.id ||
-    (version.status !== ServiceQuoteStatus.ISSUED &&
-      version.status !== ServiceQuoteStatus.ACCEPTED) ||
-    (version.expiresAt && version.expiresAt <= new Date())
-  ) {
-    throw new CatalogError("PUBLIC_TOKEN_INVALID", "Quote is unavailable.")
-  }
-  return {
-    accepted: version.status === ServiceQuoteStatus.ACCEPTED,
-    currencyCode: version.currencyCode,
-    discountMinor: version.discountMinor,
-    expiresAt: version.expiresAt,
-    lines: version.lines.map((line) => ({
-      catalogItemName: line.catalogItemName,
-      offeringName: line.offeringName,
-      quantity: line.quantity.toString(),
-      totalMinor: line.totalMinor,
-      unitPriceMinor: line.unitPriceMinor,
-      variantName: line.variantName,
-    })),
-    storeName: version.quote.store.name,
-    subtotalMinor: version.subtotalMinor,
-    taxMinor: version.taxMinor,
-    totalMinor: version.totalMinor,
-    version: version.version,
+  try {
+    const quote = await getPublicCommerceQuote(db, input)
+    if (quote.sourceType !== "service_request") {
+      throw new CommerceQuoteError(
+        "PUBLIC_TOKEN_INVALID",
+        "Quote is unavailable.",
+      )
+    }
+    return quote
+  } catch (error) {
+    if (error instanceof CommerceQuoteError) throw mapCommerceQuoteError(error)
+    throw error
   }
 }
 

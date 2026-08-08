@@ -14,6 +14,7 @@ const availability: MobileWorkspaceFeatureAvailability = {
   hasCustomers: false,
   hasInventoryActivity: false,
   hasOrders: false,
+  hasPrescriptionCommerce: false,
   hasProductItems: false,
   hasReportableActivity: false,
   hasServiceItems: false,

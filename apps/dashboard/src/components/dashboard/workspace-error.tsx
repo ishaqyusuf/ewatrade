@@ -7,11 +7,17 @@ export function WorkspaceError({
   error,
   reset,
 }: {
-  error: Error & { digest?: string }
+  error: unknown
   reset: () => void
 }) {
   useEffect(() => {
-    console.error(error)
+    if (process.env.NODE_ENV !== "production") {
+      console.error(
+        error instanceof Error
+          ? { message: error.message, name: error.name }
+          : "Workspace error",
+      )
+    }
   }, [error])
 
   return (

@@ -1,0 +1,481 @@
+model PrescriptionPaymentIntent {
+  id                String                             @id @default(cuid())
+  tenantId          String
+  storeId           String
+  orderId           String
+  clientPaymentId   String
+  provider          String
+  providerReference String                             @unique
+  statusTokenDigest String                             @unique
+  status            HostedPaymentStatus                @default(CREATED)
+  amountMinor       Int
+  currencyCode      String
+  checkoutUrl       String?
+  expiresAt         DateTime?
+  paidAt            DateTime?
+  failedAt          DateTime?
+  createdAt         DateTime                           @default(now())
+  updatedAt         DateTime                           @updatedAt
+  tenant            Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                              @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  order             CommercialOrder                    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  providerEvents    PrescriptionPaymentProviderEvent[]
+  refunds           PrescriptionPaymentRefund[]
+
+  @@unique([tenantId, clientPaymentId])
+  @@index([tenantId, storeId, status, createdAt])
+  @@index([orderId, status])
+}
+
+model PrescriptionPaymentProviderEvent {
+  id              String                      @id @default(cuid())
+  paymentIntentId String?
+  provider        String
+  providerEventId String                      @unique
+  payloadHash     String
+  eventType       String
+  outcome         PaymentProviderEventOutcome @default(RECEIVED)
+  receivedAt      DateTime                    @default(now())
+  processedAt     DateTime?
+  paymentIntent   PrescriptionPaymentIntent?  @relation(fields: [paymentIntentId], references: [id], onDelete: SetNull)
+
+  @@index([paymentIntentId, receivedAt])
+  @@index([provider, outcome, receivedAt])
+}
+
+model PrescriptionPaymentRefund {
+  id                        String                                  @id @default(cuid())
+  tenantId                  String
+  storeId                   String
+  paymentIntentId           String
+  clientRefundId            String
+  amountMinor               Int
+  reason                    String
+  status                    PrescriptionRefundStatus                @default(PENDING)
+  providerDispatchState     PrescriptionRefundProviderDispatchState @default(READY)
+  providerDispatchCount     Int                                     @default(0)
+  providerDispatchClaimedAt DateTime?
+  providerRefundId          String?
+  requestedByUserId         String
+  requestedAt               DateTime                                @default(now())
+  completedAt               DateTime?
+  createdAt                 DateTime                                @default(now())
+  updatedAt                 DateTime                                @updatedAt
+  tenant                    Tenant                                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                     Store                                   @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  paymentIntent             PrescriptionPaymentIntent               @relation(fields: [paymentIntentId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, clientRefundId])
+  @@index([paymentIntentId, status, requestedAt])
+}
+
+model PrescriptionPickupFulfillment {
+  id                    String                    @id @default(cuid())
+  tenantId              String
+  storeId               String
+  orderId               String                    @unique
+  status                PrescriptionPickupStatus  @default(PREPARING)
+  packingChecks         Json?
+  packedByUserId        String?
+  packedAt              DateTime?
+  pickupCodeDigest      String?
+  pickupCodeCiphertext  String?
+  pickupCodeExpiresAt   DateTime?
+  failedCodeAttempts    Int                       @default(0)
+  lockedUntil           DateTime?
+  collectorName         String?
+  collectorRelationship String?
+  handedOffByUserId     String?
+  handedOffAt           DateTime?
+  exceptionCode         String?
+  exceptionReason       String?
+  revision              Int                       @default(0)
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  tenant                Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                 Store                     @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  order                 CommercialOrder           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  events                PrescriptionPickupEvent[]
+
+  @@index([tenantId, storeId, status, updatedAt])
+}
+
+model PrescriptionPickupEvent {
+  id             String                        @id @default(cuid())
+  fulfillmentId  String
+  type           PrescriptionPickupEventType
+  actorUserId    String?
+  reason         String?
+  payload        Json?
+  idempotencyKey String?
+  effectiveAt    DateTime                      @default(now())
+  createdAt      DateTime                      @default(now())
+  fulfillment    PrescriptionPickupFulfillment @relation(fields: [fulfillmentId], references: [id], onDelete: Cascade)
+
+  @@unique([fulfillmentId, idempotencyKey])
+  @@index([fulfillmentId, effectiveAt])
+}
+
+model PrescriptionDeliveryZone {
+  id              String                            @id @default(cuid())
+  tenantId        String
+  storeId         String
+  name            String
+  status          PrescriptionDeliveryZoneStatus    @default(ACTIVE)
+  matchType       PrescriptionDeliveryZoneMatchType
+  matchValues     Json
+  feePolicy       PrescriptionDeliveryFeePolicy
+  fixedFeeMinor   Int?
+  currencyCode    String
+  promiseText     String
+  priority        Int                               @default(0)
+  createdByUserId String
+  updatedByUserId String
+  createdAt       DateTime                          @default(now())
+  updatedAt       DateTime                          @updatedAt
+  tenant          Tenant                            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store           Store                             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  addresses       PrescriptionDeliveryAddress[]
+
+  @@unique([storeId, name])
+  @@index([tenantId, storeId, status, priority])
+}
+
+model PrescriptionDeliveryAddress {
+  id                  String                          @id @default(cuid())
+  tenantId            String
+  storeId             String
+  orderId             String?                         @unique
+  quoteVersionId      String                          @unique
+  zoneId              String?
+  encryptedPayload    String
+  localityFingerprint String
+  eligibilityStatus   DeliveryEligibilityStatus
+  feeMinor            Int?
+  promiseText         String?
+  evaluatedByUserId   String?
+  evaluationReason    String?
+  evaluatedAt         DateTime                        @default(now())
+  packingChecks       Json?
+  packedByUserId      String?
+  packedAt            DateTime?
+  createdAt           DateTime                        @default(now())
+  updatedAt           DateTime                        @updatedAt
+  tenant              Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store               Store                           @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  order               CommercialOrder?                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  quoteVersion        CommerceQuoteVersion            @relation(fields: [quoteVersionId], references: [id], onDelete: Cascade)
+  zone                PrescriptionDeliveryZone?       @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  assignment          PrescriptionDeliveryAssignment?
+
+  @@index([tenantId, storeId, eligibilityStatus, evaluatedAt])
+  @@index([localityFingerprint])
+}
+
+model PrescriptionDeliveryAssignment {
+  id                 String                      @id @default(cuid())
+  tenantId           String
+  storeId            String
+  orderId            String                      @unique
+  addressId          String                      @unique
+  provider           String                      @default("manual")
+  providerDeliveryId String?
+  status             PrescriptionDeliveryStatus  @default(READY_FOR_ASSIGNMENT)
+  courierReference   String?
+  courierDisplayName String?
+  courierPhoneMasked String?
+  assignedByUserId   String?
+  assignedAt         DateTime?
+  collectedAt        DateTime?
+  deliveredAt        DateTime?
+  proofReference     String?
+  failureCode        String?
+  failureReason      String?
+  revision           Int                         @default(0)
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
+  tenant             Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store              Store                       @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  order              CommercialOrder             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  address            PrescriptionDeliveryAddress @relation(fields: [addressId], references: [id], onDelete: Restrict)
+  events             PrescriptionDeliveryEvent[]
+
+  @@index([tenantId, storeId, status, updatedAt])
+}
+
+model PrescriptionDeliveryEvent {
+  id             String                         @id @default(cuid())
+  assignmentId   String
+  type           PrescriptionDeliveryEventType
+  actorUserId    String?
+  idempotencyKey String?
+  reason         String?
+  payload        Json?
+  effectiveAt    DateTime                       @default(now())
+  createdAt      DateTime                       @default(now())
+  assignment     PrescriptionDeliveryAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, idempotencyKey])
+  @@index([assignmentId, effectiveAt])
+}
+
+model WhatsAppConnection {
+  id                         String                             @id @default(cuid())
+  tenantId                   String
+  wabaId                     String
+  phoneNumberId              String                             @unique
+  displayNumber              String
+  businessDisplayName        String?
+  billingOwner               String?
+  testRecipient              String?
+  credentialReference        String
+  pendingCredentialReference String?
+  status                     WhatsAppConnectionStatus           @default(DRAFT)
+  businessVerified           Boolean                            @default(false)
+  numberVerified             Boolean                            @default(false)
+  webhookSubscribed          Boolean                            @default(false)
+  outboundVerified           Boolean                            @default(false)
+  templatesReady             Boolean                            @default(false)
+  templateConfiguration      Json?
+  lastTestedAt               DateTime?
+  lastTestFailureCode        String?
+  createdByUserId            String
+  suspendedAt                DateTime?
+  revokedAt                  DateTime?
+  createdAt                  DateTime                           @default(now())
+  updatedAt                  DateTime                           @updatedAt
+  tenant                     Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bindings                   WhatsAppStoreBinding[]
+  inboundEvents              WhatsAppInboundEvent[]
+  communicationAttempts      PrescriptionCommunicationAttempt[]
+
+  @@unique([tenantId, wabaId, phoneNumberId])
+  @@index([tenantId, status, updatedAt])
+}
+
+model WhatsAppStoreBinding {
+  id            String                @id @default(cuid())
+  tenantId      String
+  storeId       String
+  connectionId  String
+  isPrimary     Boolean               @default(true)
+  status        WhatsAppBindingStatus @default(PENDING)
+  boundByUserId String
+  activatedAt   DateTime?
+  suspendedAt   DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  tenant        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store         Store                 @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  connection    WhatsAppConnection    @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, storeId])
+  @@index([tenantId, connectionId, status])
+}
+
+model WhatsAppInboundEvent {
+  id                 String                     @id @default(cuid())
+  tenantId           String
+  storeId            String
+  connectionId       String
+  providerEventId    String                     @unique
+  externalCustomerId String
+  messageType        String
+  normalizedPayload  Json
+  status             WhatsAppInboundEventStatus @default(RECEIVED)
+  requestId          String?
+  receivedAt         DateTime                   @default(now())
+  processedAt        DateTime?
+  failureCode        String?
+  tenant             Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store              Store                      @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  connection         WhatsAppConnection         @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, storeId, receivedAt])
+  @@index([connectionId, externalCustomerId, receivedAt])
+  @@index([status, receivedAt])
+}
+
+model WhatsAppRoutingAlert {
+  id                    String    @id @default(cuid())
+  tenantId              String?
+  connectionId          String?
+  code                  String
+  providerEventIdDigest String    @unique
+  phoneNumberIdDigest   String
+  createdAt             DateTime  @default(now())
+  resolvedAt            DateTime?
+
+  @@index([tenantId, connectionId, createdAt])
+  @@index([code, createdAt])
+}
+
+model WhatsAppConnectionAuditEvent {
+  id           String   @id @default(cuid())
+  tenantId     String
+  storeId      String?
+  connectionId String
+  type         String
+  actorUserId  String?
+  payload      Json?
+  effectiveAt  DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  @@index([tenantId, storeId, effectiveAt])
+  @@index([connectionId, effectiveAt])
+}
+
+model WhatsAppEmbeddedSignupSession {
+  id                  String    @id @default(cuid())
+  tenantId            String
+  storeId             String
+  userId              String
+  publicTokenDigest   String    @unique
+  credentialReference String
+  discoveredNumbers   Json
+  expiresAt           DateTime
+  consumedAt          DateTime?
+  createdAt           DateTime  @default(now())
+  tenant              Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store               Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, storeId, expiresAt])
+}
+
+model PrescriptionCommunicationIntent {
+  id                 String                             @id @default(cuid())
+  tenantId           String
+  storeId            String
+  requestId          String?
+  orderId            String?
+  type               PrescriptionCommunicationType
+  recipientReference String
+  payload            Json
+  status             CommunicationIntentStatus          @default(PENDING)
+  deduplicationKey   String
+  createdAt          DateTime                           @default(now())
+  updatedAt          DateTime                           @updatedAt
+  tenant             Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store              Store                              @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  attempts           PrescriptionCommunicationAttempt[]
+
+  @@unique([tenantId, deduplicationKey])
+  @@index([tenantId, storeId, status, createdAt])
+}
+
+model PrescriptionCommunicationAttempt {
+  id                String                          @id @default(cuid())
+  intentId          String
+  connectionId      String?
+  provider          String
+  providerMessageId String?
+  status            CommunicationAttemptStatus      @default(PENDING)
+  attemptNumber     Int
+  failureCode       String?
+  attemptedAt       DateTime                        @default(now())
+  deliveredAt       DateTime?
+  readAt            DateTime?
+  intent            PrescriptionCommunicationIntent @relation(fields: [intentId], references: [id], onDelete: Cascade)
+  connection        WhatsAppConnection?             @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  @@unique([intentId, attemptNumber])
+  @@index([providerMessageId])
+}
+
+model PrescriptionQuickAction {
+  id          String                      @id @default(cuid())
+  tenantId    String
+  storeId     String
+  entityType  String
+  entityId    String
+  action      PrescriptionQuickActionType
+  tokenDigest String                      @unique
+  consumedAt  DateTime?
+  expiresAt   DateTime
+  createdAt   DateTime                    @default(now())
+  tenant      Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store       Store                       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, storeId, entityType, entityId])
+}
+
+model PrescriptionRetentionPolicy {
+  id                   String   @id @default(cuid())
+  tenantId             String
+  storeId              String   @unique
+  rawMediaDays         Int      @default(30)
+  transcriptDays       Int      @default(90)
+  messageDays          Int      @default(90)
+  secureTokenDays      Int      @default(30)
+  addressDays          Int      @default(30)
+  commercialRecordDays Int      @default(2555)
+  legalHold            Boolean  @default(false)
+  updatedByUserId      String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  tenant               Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, updatedAt])
+}
+
+model PrescriptionPrivacyRequest {
+  id                 String                           @id @default(cuid())
+  tenantId           String
+  storeId            String
+  type               PrescriptionPrivacyRequestType
+  status             PrescriptionPrivacyRequestStatus @default(PENDING)
+  subjectReference   String
+  identityVerifiedAt DateTime?
+  reason             String
+  requestedChanges   Json?
+  requestedByUserId  String
+  completedByUserId  String?
+  completedAt        DateTime?
+  resultReference    String?
+  createdAt          DateTime                         @default(now())
+  updatedAt          DateTime                         @updatedAt
+  tenant             Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store              Store                            @relation(fields: [storeId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, storeId, status, createdAt])
+}
+
+model PrescriptionIncidentControl {
+  id                String                     @id @default(cuid())
+  tenantId          String
+  storeId           String
+  type              PrescriptionIncidentType
+  status            PrescriptionIncidentStatus @default(ACTIVE)
+  reason            String
+  activatedByUserId String
+  resolvedByUserId  String?
+  activatedAt       DateTime                   @default(now())
+  expiresAt         DateTime?
+  resolvedAt        DateTime?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  tenant            Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, storeId, status, activatedAt])
+}
+
+model PrescriptionUsageEvent {
+  id               String                     @id @default(cuid())
+  tenantId         String
+  storeId          String
+  eventType        PrescriptionUsageEventType
+  sourceType       String
+  sourceId         String
+  deduplicationKey String
+  occurredAt       DateTime
+  dimensions       Json?
+  amounts          Json?
+  createdAt        DateTime                   @default(now())
+  tenant           Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store            Store                      @relation(fields: [storeId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, deduplicationKey])
+  @@index([tenantId, storeId, eventType, occurredAt])
+}

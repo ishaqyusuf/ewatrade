@@ -13,6 +13,8 @@
     "@ewatrade/auth": "workspace:*",
     "@ewatrade/db": "workspace:*",
     "@ewatrade/jobs": "workspace:*",
+    "@ewatrade/payments": "workspace:*",
+    "@ewatrade/prescriptions": "workspace:*",
     "@ewatrade/ui": "workspace:*",
     "@ewatrade/utils": "workspace:*",
     "@hugeicons/core-free-icons": "^4.1.1",

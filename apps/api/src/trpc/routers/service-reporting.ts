@@ -21,11 +21,13 @@ export const serviceReportingRouter = createTRPCRouter({
       })
     }),
 
-  summary: protectedProcedure.input(serviceReportSchema).query(({ ctx, input }) => {
-    assertServiceManager(ctx.tenantContext.membership.role)
-    return getServiceOperationsReport(ctx.db, {
-      ...input,
-      tenantId: ctx.tenantContext.tenant.id,
-    })
-  }),
+  summary: protectedProcedure
+    .input(serviceReportSchema)
+    .query(({ ctx, input }) => {
+      assertServiceManager(ctx.tenantContext.membership.role)
+      return getServiceOperationsReport(ctx.db, {
+        ...input,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+    }),
 })

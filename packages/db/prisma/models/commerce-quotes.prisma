@@ -1,0 +1,86 @@
+model CommerceQuote {
+  id               String                  @id @default(cuid())
+  tenantId         String
+  storeId          String
+  sourceType       CommerceQuoteSourceType
+  sourceId         String
+  clientQuoteId    String
+  currentVersionId String?                 @unique
+  createdByUserId  String
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  tenant           Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store            Store                   @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  currentVersion   CommerceQuoteVersion?   @relation("CommerceQuoteCurrentVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  versions         CommerceQuoteVersion[]  @relation("CommerceQuoteVersions")
+
+  @@unique([tenantId, clientQuoteId])
+  @@unique([tenantId, sourceType, sourceId])
+  @@index([tenantId, storeId, createdAt])
+  @@index([sourceType, sourceId])
+}
+
+model CommerceQuoteVersion {
+  id                          String                           @id @default(cuid())
+  quoteId                     String
+  clientVersionId             String
+  payloadHash                 String
+  version                     Int
+  status                      CommerceQuoteVersionStatus       @default(DRAFT)
+  availabilityOutcome         CommerceQuoteAvailabilityOutcome
+  fulfilmentType              CommerceQuoteFulfilmentType      @default(UNSPECIFIED)
+  currencyCode                String
+  subtotalMinor               Int
+  discountMinor               Int                              @default(0)
+  taxMinor                    Int                              @default(0)
+  fulfilmentFeeMinor          Int                              @default(0)
+  totalMinor                  Int
+  customerNote                String?
+  fulfilmentPromise           String?
+  acceptanceTokenDigest       String?                          @unique
+  expiresAt                   DateTime?
+  issuedAt                    DateTime?
+  acceptedAt                  DateTime?
+  declinedAt                  DateTime?
+  supersededAt                DateTime?
+  revokedAt                   DateTime?
+  acceptedOrderId             String?                          @unique
+  acceptanceClientId          String?
+  createdByUserId             String
+  createdAt                   DateTime                         @default(now())
+  quote                       CommerceQuote                    @relation("CommerceQuoteVersions", fields: [quoteId], references: [id], onDelete: Cascade)
+  currentForQuote             CommerceQuote?                   @relation("CommerceQuoteCurrentVersion")
+  acceptedOrder               CommercialOrder?                 @relation(fields: [acceptedOrderId], references: [id], onDelete: Restrict)
+  lines                       CommerceQuoteLine[]
+  prescriptionDeliveryAddress PrescriptionDeliveryAddress?
+
+  @@unique([quoteId, version])
+  @@unique([quoteId, clientVersionId])
+  @@index([status, expiresAt])
+  @@index([acceptedOrderId])
+}
+
+model CommerceQuoteLine {
+  id                     String                   @id @default(cuid())
+  quoteVersionId         String
+  sourceLineId           String?
+  offeringId             String?
+  outcome                CommerceQuoteLineOutcome @default(INCLUDED)
+  catalogItemName        String
+  variantName            String
+  optionSelections       Json
+  offeringName           String
+  quantity               Decimal?                 @db.Decimal(38, 6)
+  unitPriceMinor         Int?
+  totalMinor             Int                      @default(0)
+  customerNote           String?
+  configurationVersionId String?
+  balanceRevision        Int?
+  createdAt              DateTime                 @default(now())
+  quoteVersion           CommerceQuoteVersion     @relation(fields: [quoteVersionId], references: [id], onDelete: Cascade)
+  offering               SellableOffering?        @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+
+  @@index([quoteVersionId])
+  @@index([offeringId])
+  @@index([sourceLineId])
+}

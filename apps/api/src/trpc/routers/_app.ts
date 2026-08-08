@@ -7,6 +7,8 @@ import { domainsRouter } from "./domains"
 import { inventoryRouter } from "./inventory"
 import { offlineRouter } from "./offline"
 import { ordersRouter } from "./orders"
+import { prescriptionsRouter } from "./prescriptions"
+import { prescriptionAccessRouter } from "./prescription-access"
 import { retailOpsRouter } from "./retail-ops"
 import { searchRouter } from "./search"
 import { serviceAccessRouter } from "./service-access"
@@ -23,6 +25,8 @@ export const appRouter = createTRPCRouter({
   inventory: inventoryRouter,
   domains: domainsRouter,
   orders: ordersRouter,
+  prescriptions: prescriptionsRouter,
+  prescriptionAccess: prescriptionAccessRouter,
   offline: offlineRouter,
   qaMaintenance: qaMaintenanceRouter,
   serviceAccess: serviceAccessRouter,

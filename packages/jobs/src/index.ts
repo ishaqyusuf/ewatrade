@@ -20,9 +20,33 @@ import {
   notificationDispatchHandler,
 } from "./handlers/notification-dispatch"
 import {
+  type PrescriptionCommunicationDispatchPayload,
+  prescriptionCommunicationDispatchHandler,
+} from "./handlers/prescription-communication-dispatch"
+import {
+  type PrescriptionMediaSafetyPayload,
+  prescriptionMediaSafetyHandler,
+} from "./handlers/prescription-media-safety"
+import {
+  type PrescriptionPrivacyRequestPayload,
+  prescriptionPrivacyRequestHandler,
+} from "./handlers/prescription-privacy-request"
+import {
+  type PrescriptionTranscriptionPayload,
+  prescriptionTranscriptionHandler,
+} from "./handlers/prescription-transcription"
+import {
+  type PrescriptionWhatsAppInboundPayload,
+  prescriptionWhatsAppInboundHandler,
+} from "./handlers/prescription-whatsapp-inbound"
+import {
   type ServiceNotificationDispatchPayload,
   serviceNotificationDispatchHandler,
 } from "./handlers/service-notification-dispatch"
+import {
+  type WhatsAppConnectionTestPayload,
+  whatsappConnectionTestHandler,
+} from "./handlers/whatsapp-connection-test"
 import { triggerJob } from "./trigger"
 
 export const jobIds = {
@@ -33,6 +57,12 @@ export const jobIds = {
   domainConnectionVerification: "domains.connection.verify",
   domainReconciliation: "domains.reconcile",
   commercialOrderReminders: "orders.fulfillment-reminders",
+  prescriptionTranscription: "prescriptions.transcription",
+  prescriptionMediaSafety: "prescriptions.media-safety",
+  prescriptionWhatsAppInbound: "prescriptions.whatsapp-inbound",
+  prescriptionCommunicationDispatch: "prescriptions.communication-dispatch",
+  whatsappConnectionTest: "communications.whatsapp-connection-test",
+  prescriptionPrivacyRequest: "prescriptions.privacy-request",
 } as const
 
 export type MarketingLeadNotificationInput = {
@@ -112,6 +142,74 @@ export async function enqueueServiceNotificationIntent(intentId: string) {
   )
 }
 
+export async function enqueuePrescriptionTranscription(
+  transcriptionId: string,
+) {
+  const payload: PrescriptionTranscriptionPayload = { transcriptionId }
+  await triggerJob(
+    jobIds.prescriptionTranscription,
+    prescriptionTranscriptionHandler,
+    payload,
+    { maxAttempts: 4 },
+  )
+}
+
+export async function enqueuePrescriptionMediaSafety(requestId: string) {
+  const payload: PrescriptionMediaSafetyPayload = { requestId }
+  await triggerJob(
+    jobIds.prescriptionMediaSafety,
+    prescriptionMediaSafetyHandler,
+    payload,
+    { maxAttempts: 4 },
+  )
+}
+
+export async function enqueuePrescriptionWhatsAppInbound(
+  inboundEventId: string,
+) {
+  const payload: PrescriptionWhatsAppInboundPayload = { inboundEventId }
+  await triggerJob(
+    jobIds.prescriptionWhatsAppInbound,
+    prescriptionWhatsAppInboundHandler,
+    payload,
+    { maxAttempts: 4 },
+  )
+}
+
+export async function enqueuePrescriptionCommunicationDispatch(
+  intentId: string,
+) {
+  const payload: PrescriptionCommunicationDispatchPayload = { intentId }
+  await triggerJob(
+    jobIds.prescriptionCommunicationDispatch,
+    prescriptionCommunicationDispatchHandler,
+    payload,
+    { maxAttempts: 4 },
+  )
+}
+
+export async function enqueueWhatsAppConnectionTest(
+  input: WhatsAppConnectionTestPayload,
+) {
+  await triggerJob(
+    jobIds.whatsappConnectionTest,
+    whatsappConnectionTestHandler,
+    input,
+    { maxAttempts: 4 },
+  )
+}
+
+export async function enqueuePrescriptionPrivacyRequest(
+  input: PrescriptionPrivacyRequestPayload,
+) {
+  await triggerJob(
+    jobIds.prescriptionPrivacyRequest,
+    prescriptionPrivacyRequestHandler,
+    input,
+    { maxAttempts: 4 },
+  )
+}
+
 export async function enqueueDomainRegistration(
   input: DomainRegistrationPayload,
 ) {
@@ -138,12 +236,24 @@ export { runInBackground, runWithRetry } from "./queue"
 export { isTriggerConfigured, triggerJob } from "./trigger"
 export { notificationDispatchHandler }
 export { serviceNotificationDispatchHandler }
+export { prescriptionTranscriptionHandler }
+export { prescriptionMediaSafetyHandler }
+export { prescriptionWhatsAppInboundHandler }
+export { prescriptionCommunicationDispatchHandler }
+export { whatsappConnectionTestHandler }
+export { prescriptionPrivacyRequestHandler }
 export { domainConnectionVerificationHandler, domainRegistrationHandler }
 export { domainReconciliationHandler }
 export { commercialOrderRemindersHandler }
 export { qaPurgeHandler } from "./handlers/qa-purge"
 export { customerMessagingProviderStatus }
 export type { NotificationDispatchPayload, ServiceNotificationDispatchPayload }
+export type { PrescriptionTranscriptionPayload }
+export type { PrescriptionMediaSafetyPayload }
+export type { PrescriptionWhatsAppInboundPayload }
+export type { PrescriptionCommunicationDispatchPayload }
+export type { WhatsAppConnectionTestPayload }
+export type { PrescriptionPrivacyRequestPayload }
 export type {
   DomainConnectionVerificationPayload,
   DomainReconciliationPayload,

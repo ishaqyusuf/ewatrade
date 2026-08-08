@@ -13,7 +13,7 @@ const loadingRows = [
 
 type Column<T> = {
   className?: string
-  header: string
+  header: ReactNode
   key: string
   render: (row: T) => ReactNode
 }

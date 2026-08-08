@@ -79,6 +79,32 @@ record inside the Order transaction without adding a mutable Order relation.
 
 ## Requests, Quotes And Tracking
 
+## Prescription Commerce Relationships
+
+`Tenant + Store -> PrescriptionStoreSettings -> PrescriptionStoreRole`
+
+`PrescriptionChannel -> PrescriptionRequest -> PrescriptionMedia -> PrescriptionTranscription -> PrescriptionTranscriptionLine -> PrescriptionLineMapping`
+
+`PrescriptionRequest -> PrescriptionPharmacistReview -> CommerceQuote -> CommerceQuoteVersion -> CommerceQuoteLine -> CommercialOrder`
+
+`CommercialOrder -> PrescriptionPaymentIntent|PrescriptionPickupFulfillment|PrescriptionDeliveryAddress -> PrescriptionDeliveryAssignment`
+
+`Tenant -> WhatsAppConnection -> WhatsAppStoreBinding -> Store`
+
+`WhatsAppConnection + Store + external customer + bounded context -> WhatsAppInboundEvent -> PrescriptionRequest`
+
+Connections may bind multiple Stores. Active routing resolves the recipient
+connection first, then exactly one active Store binding. Pending replacement
+bindings coexist with the old active binding until readiness promotion. Quick
+actions and public capabilities point to one operation through digests; they do
+not form a global customer identity.
+
+Privacy and retention records point to Tenant/Store and affected requests.
+Erasure removes provider media first, then redacts mutable sensitive records;
+legal holds and active incident freezes block destructive completion.
+
+## Requests, Quotes And Tracking
+
 `ServiceRequestForm -> allowed SellableOffering`
 
 `ServiceRequest -> ServiceRequestLine`

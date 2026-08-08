@@ -14,6 +14,7 @@ export type DashboardNavIcon =
   | "home"
   | "inventory"
   | "products"
+  | "prescriptions"
   | "sales"
   | "services"
   | "settings"
@@ -45,6 +46,7 @@ const DEFAULT_NAV_CONTEXT: DashboardNavContext = {
   hasCatalogItems: true,
   hasCustomers: true,
   hasOrders: true,
+  hasPrescriptionCommerce: true,
   hasProductItems: true,
   hasReportableActivity: true,
   hasServiceItems: true,
@@ -102,6 +104,15 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     label: "Service jobs",
     canAccess: canUseRetailOps,
     canSee: (role, context) => canUseRetailOps(role) && context.hasServiceJobs,
+  },
+  {
+    description: "Private prescription intake and pharmacy review",
+    href: "/prescriptions",
+    icon: "prescriptions",
+    label: "Prescriptions",
+    canAccess: canUseRetailOps,
+    canSee: (role, context) =>
+      canUseRetailOps(role) && context.hasPrescriptionCommerce,
   },
   {
     description: "Customer book and follow-up records",

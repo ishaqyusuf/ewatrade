@@ -22,6 +22,7 @@ function presence(
     customer: null,
     inventoryActivity: null,
     order: null,
+    prescriptionCommerce: null,
     serviceJob: null,
     staff: null,
     storeId: "store_a",
@@ -35,6 +36,7 @@ function createMockDb(input?: {
   customer?: unknown
   inventoryActivity?: unknown
   order?: unknown
+  prescriptionCommerce?: unknown
   serviceJob?: unknown
   staff?: unknown
 }) {
@@ -81,6 +83,12 @@ function createMockDb(input?: {
     membership: {
       findFirst: findFirst("membership.findFirst", input?.staff),
     },
+    prescriptionStoreSettings: {
+      findFirst: findFirst(
+        "prescriptionStoreSettings.findFirst",
+        input?.prescriptionCommerce,
+      ),
+    },
     serviceJob: {
       findFirst: findFirst("serviceJob.findFirst", input?.serviceJob),
     },
@@ -103,6 +111,7 @@ describe("workspace feature availability", () => {
       hasCustomers: false,
       hasInventoryActivity: false,
       hasOrders: false,
+      hasPrescriptionCommerce: false,
       hasProductItems: false,
       hasReportableActivity: false,
       hasServiceItems: false,
@@ -184,6 +193,13 @@ describe("workspace feature availability", () => {
       hasServiceJobs: true,
       hasStaff: true,
     })
+  })
+
+  test("reveals Prescription Commerce only after Store activation", () => {
+    expect(presence()).toMatchObject({ hasPrescriptionCommerce: false })
+    expect(
+      presence({ prescriptionCommerce: { id: "prescription_settings" } }),
+    ).toMatchObject({ hasPrescriptionCommerce: true })
   })
 
   test("scopes operational reads to the active store and staff to the tenant", async () => {

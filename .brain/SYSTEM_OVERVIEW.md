@@ -13,6 +13,7 @@ High-level summary of the platform, its business domains, and the current implem
 - Dispatch network coordination
 - POS and self-service checkout
 - WhatsApp-assisted commerce flows
+- Pharmacy-owned Prescription Commerce workflows
 
 ## Architecture Snapshot
 - Implemented platform shape: Next.js and Expo clients backed by Hono/tRPC and
@@ -33,6 +34,12 @@ High-level summary of the platform, its business domains, and the current implem
   routes; authenticated dashboards never live on a business subdomain.
 - Managed domain source supports GO54 `.com.ng`, Openprovider `.com`, Paystack
   checkout and Vercel connection behind server-only adapters and jobs.
+- Prescription Commerce defines pharmacy-owned WABAs/numbers, one shared
+  EwaTrade Meta application/webhook, recipient-number-first Tenant routing,
+  Store channel bindings, and direct Meta Cloud API behind provider-neutral
+  Communications. The source implementation includes manual and Embedded
+  Signup, pending-to-active readiness, scoped Redis state, and redacted routing
+  alerts.
 
 ## Existing Domain Docs
 - `.brain/modules/*.md` contains capability-level module notes.
@@ -48,3 +55,8 @@ High-level summary of the platform, its business domains, and the current implem
 - Managed domain database deployment and live registrar/payment/hosting
   acceptance are blocked pending local Docker, approved shared-schema writes,
   credentials and canaries.
+- Prescription Commerce extends shared Quote, Order, payment, messaging,
+  inventory, and delivery primitives with private media, mandatory OCR line
+  verification, pharmacist release, multi-Tenant inbound WhatsApp routing,
+  privacy/retention controls, and commercial reporting. Production schema and
+  live-provider acceptance remain gated.

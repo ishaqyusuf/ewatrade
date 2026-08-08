@@ -1,5 +1,40 @@
 # Done
 
+- Implemented Prescription Commerce tickets 01-19 and the source/runbook
+  portion of ticket 20 using the strict Midday migration contract: Store
+  activation and professional roles; shared
+  Commerce Quotes and Service migration path; private web/staff/WhatsApp
+  intake; safety/OCR/human/pharmacist gates; hosted Paystack payment; pickup and
+  delivery; direct Meta multi-pharmacy manual and Embedded Signup; opaque quick
+  actions; privacy, retention, incidents, reporting, and durable jobs. The
+  active Prescription dashboard navigation is Store-gated. Completed Date:
+  2026-08-09. Checks Run: Prisma format/generate; focused provider/domain/
+  query/job/schema tests including Store-isolation, receipt, refund-ledger,
+  retry, reporting-timestamp, and quote-command regressions; 25 navigation/workspace tests; full monorepo
+  typecheck; targeted Biome; full suite 359 passing with five skipped and five
+  unrelated existing fixture/navigation failures. Production build was blocked
+  by Turbopack sandbox port binding after a network-enabled retry; schema
+  migration and browser/provider canaries remain tracked in progress.
+
+- Synthesised the approved Prescription Commerce direction into one local
+  ready-for-agent PRD with 118 user stories, explicit bounded-context, schema,
+  API, permission, media, OCR, pharmacist-release, Quote, payment, fulfilment,
+  reporting, security, delivery-sequence, testing, and out-of-scope decisions.
+  The primary acceptance seam covers one full Prescription Request lifecycle
+  from submission through fulfilled Commercial Order. Completed Date:
+  2026-08-08. Publication: `.scratch/prescription-commerce/spec.md`; no GitHub
+  or external issue-tracker action was performed by user direction.
+
+- Prepared the EwaTrade Prescription Commerce Commercialization Package: a
+  general internal strategy, pharmacy-facing partnership proposal, mobile-first
+  WhatsApp pitch, formula-driven commercial model, de-identified pilot data
+  template, KPI scorecard, research register, and regulatory/source notes.
+  Reframed the hospital opportunity as the first design-partner wedge rather
+  than the permanent product boundary. Completed Date: 2026-08-07. Checks Run:
+  workbook formula-error scan and model reconciliation; render inspection of
+  all ten workbook sheets; PDF metadata and page-count verification; visual
+  inspection of all 36 PDF pages.
+
 - Simplified the root environment contract to `.env` plus exactly one of
   `.env.local`, `.env.dev`, `.env.preview`, or `.env.production`. Prisma now
   delegates to one canonical loader instead of scanning root/package aliases;

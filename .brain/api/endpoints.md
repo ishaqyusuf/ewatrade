@@ -117,6 +117,29 @@ Public Service Request, Quote and Tracking routes are rendered by the
 storefront. Registration/login and all authenticated dashboard routes remain on
 the shared application host. A business subdomain never routes to an
 authenticated dashboard.
+
+## Prescription Commerce
+
+- Protected tRPC router `prescriptions` owns Store setup, activation,
+  professional assignments, queue/detail reads, media decisions, transcription
+  verification, pharmacist release, quote issue, payment/refund operations,
+  pickup/delivery operations, privacy requests, incidents, reporting, manual
+  WhatsApp setup, Embedded Signup selection, connection readiness/lifecycle,
+  and Store binding management.
+- Public tRPC router `prescriptionAccess` owns capability-scoped web intake,
+  status, re-upload, Quote review/acceptance, fulfilment choice, hosted payment,
+  and pickup-code projections. The browser never supplies Tenant/Store ids as
+  authority.
+- `GET|POST /api/webhooks/whatsapp` verifies Meta subscription/signatures and
+  delegates normalized inbound events to the connection-resolving runtime.
+- `GET /api/communications/whatsapp/embedded-signup/callback` validates signed
+  state, exchanges the Meta code, persists encrypted short-lived discovery,
+  and redirects to explicit dashboard number selection.
+- `POST /api/webhooks/prescription-payments/:provider` verifies the raw provider
+  callback before creating idempotent payment facts.
+- Trigger tasks own media safety, OCR/transcription, WhatsApp inbound
+  continuation, communication dispatch, connection readiness, privacy
+  execution, and retention.
 # Platform QA maintenance
 
 - `qaMaintenance.candidates`, `adopt`, `preview`, `start`, and `run` are

@@ -14,10 +14,13 @@
   },
   "dependencies": {
     "@ewatrade/auth": "workspace:*",
+    "@ewatrade/communications": "workspace:*",
     "@ewatrade/db": "workspace:*",
     "@ewatrade/domains": "workspace:*",
     "@ewatrade/email": "workspace:*",
     "@ewatrade/jobs": "workspace:*",
+    "@ewatrade/payments": "workspace:*",
+    "@ewatrade/prescriptions": "workspace:*",
     "@ewatrade/utils": "workspace:*",
     "@hono/trpc-server": "^0.4.2",
     "@hono/zod-openapi": "^1.4.0",

@@ -1,73 +1,98 @@
 model Tenant {
-  id                                String                            @id @default(cuid())
-  slug                              String                            @unique
-  name                              String
-  type                              TenantType
-  enabledModes                      TenantMode[]
-  isActive                          Boolean                           @default(true)
-  dataClassification                QaDataClassification              @default(LIVE)
-  qaSourceDomain                    String?
-  qaMarkedAt                        DateTime?
-  qaPurgeStartedAt                  DateTime?
-  timezone                          String                            @default("Africa/Lagos")
-  countryCode                       String?
-  currencyCode                      String                            @default("NGN")
-  metadata                          Json?
-  lastCommercialOrderSequence       Int                               @default(0)
-  createdAt                         DateTime                          @default(now())
-  updatedAt                         DateTime                          @updatedAt
-  users                             Membership[]
-  stores                            Store[]
-  sites                             Site[]
-  hostnames                         TenantHostname[]
-  conversations                     Conversation[]
-  automations                       AutomationEvent[]
-  subscription                      TenantSubscription?
-  billingCheckoutSessions           BillingCheckoutSession[]
-  billingInvoices                   BillingInvoice[]
-  billingProviderEvents             BillingProviderEvent[]
-  retailOpsStaffProfiles            RetailOpsStaffProfile[]
-  retailOpsStaffInviteTokens        RetailOpsStaffInviteToken[]
-  retailOpsStaffLifecycleEvents     RetailOpsStaffLifecycleEvent[]
-  offlineDevices                    OfflineDevice[]
-  offlineDeviceRevocations          OfflineDeviceRevocation[]
-  serviceIntakes                    ServiceIntake[]
-  serviceJobs                       ServiceJob[]
-  serviceWorkEvents                 ServiceWorkEvent[]
-  serviceEvidence                   ServiceEvidence[]
-  serviceRequestForms               ServiceRequestForm[]
-  serviceRequests                   ServiceRequest[]
-  serviceQuotes                     ServiceQuote[]
-  customerTrackingAccess            CustomerTrackingAccess[]
-  serviceNotificationIntents        ServiceNotificationIntent[]
-  serviceStoreSettings              ServiceStoreSettings[]
-  catalogItems                      CatalogItem[]
-  catalogUnitDefinitions            UnitDefinition[]
-  catalogOfferings                  SellableOffering[]
-  catalogProductUnitOfferings       ProductUnitOffering[]
-  catalogPriceChanges               CatalogPriceChange[]
-  catalogCommandReceipts            CatalogCommandReceipt[]
-  stockBalanceSources               StockBalanceSource[]
-  stockOperations                   StockOperation[]
-  stockReservations                 StockReservation[]
-  stockCounts                       StockCount[]
-  stockTransfers                    StockTransfer[]
-  inventoryCloseouts                InventoryCloseout[]
-  commercialOrders                  CommercialOrder[]
-  commercialOrderPayments           CommercialOrderPayment[]
+  id                                 String                              @id @default(cuid())
+  slug                               String                              @unique
+  name                               String
+  type                               TenantType
+  enabledModes                       TenantMode[]
+  isActive                           Boolean                             @default(true)
+  dataClassification                 QaDataClassification                @default(LIVE)
+  qaSourceDomain                     String?
+  qaMarkedAt                         DateTime?
+  qaPurgeStartedAt                   DateTime?
+  timezone                           String                              @default("Africa/Lagos")
+  countryCode                        String?
+  currencyCode                       String                              @default("NGN")
+  metadata                           Json?
+  lastCommercialOrderSequence        Int                                 @default(0)
+  createdAt                          DateTime                            @default(now())
+  updatedAt                          DateTime                            @updatedAt
+  users                              Membership[]
+  stores                             Store[]
+  sites                              Site[]
+  hostnames                          TenantHostname[]
+  conversations                      Conversation[]
+  automations                        AutomationEvent[]
+  subscription                       TenantSubscription?
+  billingCheckoutSessions            BillingCheckoutSession[]
+  billingInvoices                    BillingInvoice[]
+  billingProviderEvents              BillingProviderEvent[]
+  retailOpsStaffProfiles             RetailOpsStaffProfile[]
+  retailOpsStaffInviteTokens         RetailOpsStaffInviteToken[]
+  retailOpsStaffLifecycleEvents      RetailOpsStaffLifecycleEvent[]
+  offlineDevices                     OfflineDevice[]
+  offlineDeviceRevocations           OfflineDeviceRevocation[]
+  serviceIntakes                     ServiceIntake[]
+  serviceJobs                        ServiceJob[]
+  serviceWorkEvents                  ServiceWorkEvent[]
+  serviceEvidence                    ServiceEvidence[]
+  serviceRequestForms                ServiceRequestForm[]
+  serviceRequests                    ServiceRequest[]
+  serviceQuotes                      ServiceQuote[]
+  customerTrackingAccess             CustomerTrackingAccess[]
+  serviceNotificationIntents         ServiceNotificationIntent[]
+  serviceStoreSettings               ServiceStoreSettings[]
+  prescriptionStoreSettings          PrescriptionStoreSettings[]
+  prescriptionStoreRoles             PrescriptionStoreRole[]
+  prescriptionStoreAuditEvents       PrescriptionStoreAuditEvent[]
+  prescriptionChannels               PrescriptionChannel[]
+  prescriptionRequests               PrescriptionRequest[]
+  prescriptionMedia                  PrescriptionMedia[]
+  prescriptionMediaAccessEvents      PrescriptionMediaAccessEvent[]
+  prescriptionRequestAuditEvents     PrescriptionRequestAuditEvent[]
+  prescriptionPaymentIntents         PrescriptionPaymentIntent[]
+  prescriptionPaymentRefunds         PrescriptionPaymentRefund[]
+  prescriptionPickupFulfillments     PrescriptionPickupFulfillment[]
+  prescriptionDeliveryZones          PrescriptionDeliveryZone[]
+  prescriptionDeliveryAddresses      PrescriptionDeliveryAddress[]
+  prescriptionDeliveryAssignments    PrescriptionDeliveryAssignment[]
+  whatsappConnections                WhatsAppConnection[]
+  whatsappStoreBindings              WhatsAppStoreBinding[]
+  whatsappInboundEvents              WhatsAppInboundEvent[]
+  whatsappEmbeddedSignupSessions     WhatsAppEmbeddedSignupSession[]
+  prescriptionCommunicationIntents   PrescriptionCommunicationIntent[]
+  prescriptionQuickActions           PrescriptionQuickAction[]
+  prescriptionRetentionPolicies      PrescriptionRetentionPolicy[]
+  prescriptionPrivacyRequests        PrescriptionPrivacyRequest[]
+  prescriptionIncidentControls       PrescriptionIncidentControl[]
+  prescriptionUsageEvents            PrescriptionUsageEvent[]
+  commerceQuotes                     CommerceQuote[]
+  catalogItems                       CatalogItem[]
+  catalogUnitDefinitions             UnitDefinition[]
+  catalogOfferings                   SellableOffering[]
+  catalogProductUnitOfferings        ProductUnitOffering[]
+  catalogPriceChanges                CatalogPriceChange[]
+  catalogCommandReceipts             CatalogCommandReceipt[]
+  stockBalanceSources                StockBalanceSource[]
+  stockOperations                    StockOperation[]
+  stockReservations                  StockReservation[]
+  stockCounts                        StockCount[]
+  stockTransfers                     StockTransfer[]
+  inventoryCloseouts                 InventoryCloseout[]
+  commercialOrders                   CommercialOrder[]
+  commercialOrderPayments            CommercialOrderPayment[]
   commercialOrderFulfillmentCommands CommercialOrderFulfillmentCommand[]
-  commercialOrderReminderSettings   CommercialOrderReminderSettings[]
-  commercialOrderReminderDeliveries CommercialOrderReminderDelivery[]
-  customers                         Customer[]
-  productReturns                    ProductReturn[]
-  offlineCommands                   OfflineCommand[]
-  domainRegistrantProfile           DomainRegistrantProfile?
-  domainQuotes                      DomainQuote[]
-  domainOrders                      DomainOrder[]
-  managedDomains                    ManagedDomain[]
-  domainConnections                 DomainConnection[]
-  domainEvents                      DomainEvent[]
-  domainOperationAttempts           DomainOperationAttempt[]
+  commercialOrderReminderSettings    CommercialOrderReminderSettings[]
+  commercialOrderReminderDeliveries  CommercialOrderReminderDelivery[]
+  customers                          Customer[]
+  productReturns                     ProductReturn[]
+  offlineCommands                    OfflineCommand[]
+  domainRegistrantProfile            DomainRegistrantProfile?
+  domainQuotes                       DomainQuote[]
+  domainOrders                       DomainOrder[]
+  managedDomains                     ManagedDomain[]
+  domainConnections                  DomainConnection[]
+  domainEvents                       DomainEvent[]
+  domainOperationAttempts            DomainOperationAttempt[]
 }
 
 model QaPurgeRun {

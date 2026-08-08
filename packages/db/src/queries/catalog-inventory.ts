@@ -194,7 +194,7 @@ function serializeReservation(
 }
 
 export async function getCatalogOfferingAvailability(
-  db: PrismaClient,
+  db: InventoryDb,
   input: { offeringId: string; storeId: string; tenantId: string },
 ) {
   const resolved = await resolveOfferingInventory(db, input)

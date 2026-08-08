@@ -2,6 +2,7 @@ import { addExactDecimals } from "@ewatrade/utils/exact-decimal"
 
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
+  CommerceQuoteSourceType,
   ServiceJobLineStatus,
 } from "../../generated/prisma/enums"
 
@@ -47,12 +48,16 @@ export async function getServiceOperationsReport(
           tenantId: input.tenantId,
         },
       }),
-      db.serviceQuoteVersion.groupBy({
+      db.commerceQuoteVersion.groupBy({
         _count: true,
         by: ["status"],
         where: {
           createdAt,
-          quote: { storeId: input.storeId, tenantId: input.tenantId },
+          quote: {
+            sourceType: CommerceQuoteSourceType.SERVICE_REQUEST,
+            storeId: input.storeId,
+            tenantId: input.tenantId,
+          },
         },
       }),
       db.serviceNotificationIntent.findMany({

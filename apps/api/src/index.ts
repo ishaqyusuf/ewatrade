@@ -6,7 +6,11 @@ import { cors } from "hono/cors"
 import { HTTPException } from "hono/http-exception"
 import { secureHeaders } from "hono/secure-headers"
 import { registerBillingProviderEventRoutes } from "./billing/provider-events"
+import { registerWhatsAppEmbeddedSignupRoutes } from "./communications/whatsapp-embedded-signup"
+import { registerWhatsAppWebhookRoutes } from "./communications/whatsapp-webhook"
 import { registerDomainPaystackWebhook } from "./domains/paystack-webhook"
+import { registerPrescriptionMediaDeliveryRoutes } from "./prescriptions/media-delivery"
+import { registerPrescriptionPaystackWebhook } from "./prescriptions/paystack-webhook"
 import { registerSelfServiceStoreDetectionRoutes } from "./self-service/store-detection"
 import { createTRPCContext } from "./trpc/init"
 import { appRouter } from "./trpc/routers/_app"
@@ -108,6 +112,10 @@ app.get("/health", async (c) => {
 registerBillingProviderEventRoutes(app)
 registerDomainPaystackWebhook(app)
 registerSelfServiceStoreDetectionRoutes(app)
+registerPrescriptionMediaDeliveryRoutes(app)
+registerPrescriptionPaystackWebhook(app)
+registerWhatsAppWebhookRoutes(app)
+registerWhatsAppEmbeddedSignupRoutes(app)
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw))
 
@@ -117,13 +125,12 @@ app.use(
     router: appRouter,
     createContext: createTRPCContext,
     endpoint: "/api/trpc",
-    onError: ({ error, path, input }) => {
+    onError: ({ error, path }) => {
       console.error("[tRPC]", {
         path,
         code: error.code,
         message: error.message,
         cause: error.cause instanceof Error ? error.cause.message : undefined,
-        input,
         stack: error.stack,
       })
     },

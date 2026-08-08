@@ -28,3 +28,5 @@ Detailed feature docs for implemented or planned product areas.
 - [Retail Ops Sales Product](./retail-ops-sales-product.md)
 - [Retail Ops Scan Price Resolution](./retail-ops-scan-price-resolution.md)
 - [Retail Ops Subscription Packaging](./retail-ops-subscription-packaging.md)
+- [Prescription Commerce](./prescription-commerce.md)
+- [Hospital Prescription Fast Lane (historical)](./hospital-prescription-fast-lane.md)

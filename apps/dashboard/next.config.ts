@@ -22,6 +22,10 @@ const nextConfig: NextConfig = {
         source: "/api/trpc/:path*",
         destination: `${getApiOrigin()}/api/trpc/:path*`,
       },
+      {
+        source: "/api/prescriptions/media/:path*",
+        destination: `${getApiOrigin()}/api/prescriptions/media/:path*`,
+      },
     ]
   },
 }

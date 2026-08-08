@@ -143,6 +143,8 @@ model SellableOffering {
   serviceRequestFormOfferings ServiceRequestFormOffering[]
   serviceRequestLines         ServiceRequestLine[]
   serviceQuoteLines           ServiceQuoteLine[]
+  commerceQuoteLines          CommerceQuoteLine[]
+  prescriptionLineMappings    PrescriptionLineMapping[]
 
   @@unique([catalogItemId, key])
   @@index([tenantId, status, updatedAt])

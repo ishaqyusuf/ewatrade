@@ -375,6 +375,9 @@ model ServiceRequestLine {
   @@index([offeringId])
 }
 
+/// Historical storage retained for a deployment-safe, verified Commerce Quote
+/// backfill. No application runtime reads or writes this aggregate. Remove only
+/// after `backfill:service-quotes` reports zero legacy-only or orphaned rows.
 model ServiceQuote {
   id                String                @id @default(cuid())
   tenantId          String

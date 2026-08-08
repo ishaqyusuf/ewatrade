@@ -90,6 +90,38 @@ Describe the intended technical architecture and responsibility boundaries for t
 - Merchant tenants and dispatch tenants are isolated in storage and authorization.
 - Public marketplace reads must only expose explicitly public data.
 
+## Prescription WhatsApp Channel Boundary
+
+- The pharmacy or pharmacy group owns its WhatsApp Business Account and public
+  number. EwaTrade uses one Meta application and verified webhook surface for
+  connected pharmacies; the recipient provider phone-number id resolves one
+  Tenant-owned WhatsApp Connection before Store, customer, or request lookup.
+- Store Prescription Channels bind to reusable Tenant connections. A central
+  group number may serve several Stores only when bounded channel context or
+  explicit customer choice resolves the Store; ambiguous and cross-Tenant
+  routing fails closed.
+- The initial provider adapter follows Midday's direct Meta Cloud API transport
+  pattern, but Midday's one global sender is not the EwaTrade Tenant model.
+  Embedded Signup, credentials, templates, windows, buttons, media, receipts,
+  and provider fees remain behind Communications so an approved BSP can be
+  adopted without coupling Prescription Operations to it.
+- Conversation state scope includes Connection, customer WhatsApp id, and
+  explicit Store context. A separate short-lived selection pointer contains
+  only Tenant/Store identity for central-number follow-ups; customer phone
+  number alone is never a global identity or sensitive-request merge key.
+- Pharmacy provider credentials use encrypted or managed-secret references and
+  never enter client configuration, logs, analytics, or prescription domain
+  payloads.
+- Dashboard surfaces follow the Midday invoice boundary: thin authenticated
+  server route, feature composition, `nuqs`-typed URL sheet/filter state,
+  globally mounted sheets, shared Zod form fields, paginated
+  lightweight queue, separate authorized detail, tRPC orchestration, query
+  modules for persistence, provider-neutral packages, and identifier-only
+  durable jobs.
+- Sender replacement and credential rotation are staged. The working binding
+  remains active until readiness promotes the pending route; failed readiness
+  cannot silently interrupt an existing pharmacy number.
+
 ## Explicit Non-Goals
 - No Supabase dependency in the current architecture.
 - No direct client access to the database.

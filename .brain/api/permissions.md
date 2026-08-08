@@ -53,6 +53,30 @@
   offline Order may create or reuse a tenant Customer while preserving the
   Order's immutable customer snapshot.
 
+## Prescription Commerce
+
+- Owner/Admin configure and activate each Store, assign prescription roles,
+  connect/rotate/suspend/revoke WhatsApp senders, manage Store bindings,
+  resolve incidents, approve manual delivery fees, and operate privacy requests.
+- A verified pharmacist assignment requires a credential reference and is the
+  only role permitted to release prescription review, substitutions, restricted
+  item decisions, and a customer Quote.
+- Prescription attendants may intake, inspect cleared media, resolve OCR lines,
+  and prepare work but cannot release a Quote or bypass the pharmacist gate.
+- Operational roles may act only inside the active Tenant/Store and current
+  request state. Every professional or fulfilment transition re-checks role,
+  revision, and state server-side.
+- Public customers receive no ambient read permission. Every route/action is
+  limited by a single-purpose opaque capability and an allowlisted projection.
+- WhatsApp webhooks use verified Meta signatures; payment callbacks use verified
+  provider signatures; neither inherits user-session authority.
+- Jobs receive identifiers, reload the authoritative Tenant/Store entity, and
+  fail closed for revoked credentials, inactive bindings, privacy restriction,
+  legal hold, stale revision, or ambiguous routing.
+- Sensitive media access is short-lived and authorized. Credentials, raw
+  capability tokens, prescription text, delivery address, pickup code, and
+  customer contact are excluded from routine logs, analytics, and audit detail.
+
 ## Services
 
 - Operators may create/confirm Intake, read the queue/Job, self-assign, progress

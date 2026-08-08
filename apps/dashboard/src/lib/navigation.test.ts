@@ -14,6 +14,7 @@ function context(
     hasCatalogItems: false,
     hasCustomers: false,
     hasOrders: false,
+    hasPrescriptionCommerce: false,
     hasProductItems: false,
     hasReportableActivity: false,
     hasServiceItems: false,
@@ -34,6 +35,7 @@ describe("dashboard navigation policy", () => {
       "/inventory",
       "/sales",
       "/services",
+      "/prescriptions",
       "/customers",
       "/staff",
       "/analytics",
@@ -57,6 +59,7 @@ describe("dashboard navigation policy", () => {
     expect(canAccessDashboardPath("/sales", "OWNER", empty)).toBe(true)
     expect(canAccessDashboardPath("/inventory", "OWNER", empty)).toBe(true)
     expect(canAccessDashboardPath("/services", "OWNER", empty)).toBe(true)
+    expect(canAccessDashboardPath("/prescriptions", "OWNER", empty)).toBe(true)
   })
 
   test("reveals catalog and inventory from item history without revealing work", () => {
@@ -87,6 +90,7 @@ describe("dashboard navigation policy", () => {
       hasCatalogItems: true,
       hasCustomers: true,
       hasOrders: true,
+      hasPrescriptionCommerce: true,
       hasProductItems: true,
       hasReportableActivity: true,
       hasServiceItems: true,
@@ -102,6 +106,7 @@ describe("dashboard navigation policy", () => {
       "/inventory",
       "/sales",
       "/services",
+      "/prescriptions",
       "/customers",
       "/staff",
       "/analytics",
@@ -116,6 +121,7 @@ describe("dashboard navigation policy", () => {
       "/inventory",
       "/sales",
       "/services",
+      "/prescriptions",
       "/customers",
       "/staff",
       "/analytics",

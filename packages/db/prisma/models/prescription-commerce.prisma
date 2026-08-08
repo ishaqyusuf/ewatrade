@@ -1,0 +1,286 @@
+model PrescriptionStoreSettings {
+  id                  String                          @id @default(cuid())
+  tenantId            String
+  storeId             String                          @unique
+  status              PrescriptionCommerceStoreStatus @default(DISABLED)
+  operatingHours      Json?
+  servicePolicy       String?
+  contactPolicy       String?
+  consentVersion      String?
+  pickupEnabled       Boolean                         @default(true)
+  deliveryEnabled     Boolean                         @default(false)
+  activatedAt         DateTime?
+  activatedByUserId   String?
+  deactivatedAt       DateTime?
+  deactivatedByUserId String?
+  createdAt           DateTime                        @default(now())
+  updatedAt           DateTime                        @updatedAt
+  tenant              Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store               Store                           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  auditEvents         PrescriptionStoreAuditEvent[]
+
+  @@index([tenantId, status, updatedAt])
+}
+
+model PrescriptionStoreRole {
+  id                         String                      @id @default(cuid())
+  tenantId                   String
+  storeId                    String
+  userId                     String
+  role                       PrescriptionStoreRoleType
+  status                     PrescriptionStoreRoleStatus @default(ACTIVE)
+  credentialReference        String?
+  credentialVerifiedAt       DateTime?
+  credentialVerifiedByUserId String?
+  assignedByUserId           String
+  revokedAt                  DateTime?
+  revokedByUserId            String?
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @updatedAt
+  tenant                     Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                      Store                       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, userId, role])
+  @@index([tenantId, storeId, status, role])
+  @@index([userId, status])
+}
+
+model PrescriptionStoreAuditEvent {
+  id            String                          @id @default(cuid())
+  tenantId      String
+  storeId       String
+  settingsId    String
+  type          PrescriptionStoreAuditEventType
+  actorUserId   String
+  subjectUserId String?
+  payload       Json?
+  effectiveAt   DateTime                        @default(now())
+  createdAt     DateTime                        @default(now())
+  tenant        Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store         Store                           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  settings      PrescriptionStoreSettings       @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, storeId, effectiveAt])
+  @@index([settingsId, effectiveAt])
+  @@index([actorUserId, effectiveAt])
+}
+
+model PrescriptionChannel {
+  id                String                    @id @default(cuid())
+  tenantId          String
+  storeId           String                    @unique
+  status            PrescriptionChannelStatus @default(ACTIVE)
+  publicTokenDigest String                    @unique
+  publicToken       String                    @unique
+  webEnabled        Boolean                   @default(true)
+  whatsappEnabled   Boolean                   @default(false)
+  staffEnabled      Boolean                   @default(true)
+  createdByUserId   String
+  disabledAt        DateTime?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  tenant            Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  requests          PrescriptionRequest[]
+
+  @@index([tenantId, status])
+}
+
+model PrescriptionRequest {
+  id                        String                           @id @default(cuid())
+  tenantId                  String
+  storeId                   String
+  channelId                 String?
+  clientRequestId           String
+  payloadHash               String
+  reference                 String
+  statusTokenDigest         String?                          @unique
+  statusTokenExpiresAt      DateTime
+  reuploadTokenDigest       String?                          @unique
+  reuploadTokenExpiresAt    DateTime?
+  status                    PrescriptionRequestStatus        @default(RECEIVED)
+  source                    PrescriptionRequestSource
+  fulfilmentPreference      PrescriptionFulfilmentPreference @default(UNSPECIFIED)
+  customerName              String?
+  customerPhone             String?
+  customerEmail             String?
+  consentVersion            String
+  consentAcceptedAt         DateTime
+  sourceContext             Json?
+  currentMediaRevision      Int                              @default(1)
+  currentTranscriptRevision Int?
+  clearerMediaReason        String?
+  staffAssistedByUserId     String?
+  convertedAt               DateTime?
+  declinedAt                DateTime?
+  withdrawnAt               DateTime?
+  privacyRestrictedAt       DateTime?
+  expiresAt                 DateTime?
+  createdAt                 DateTime                         @default(now())
+  updatedAt                 DateTime                         @updatedAt
+  tenant                    Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                     Store                            @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  channel                   PrescriptionChannel?             @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  media                     PrescriptionMedia[]
+  transcriptions            PrescriptionTranscription[]
+  pharmacistReviews         PrescriptionPharmacistReview[]
+  auditEvents               PrescriptionRequestAuditEvent[]
+
+  @@unique([tenantId, clientRequestId])
+  @@unique([tenantId, reference])
+  @@index([tenantId, storeId, status, createdAt])
+  @@index([tenantId, storeId, source, createdAt])
+  @@index([channelId, createdAt])
+}
+
+model PrescriptionMedia {
+  id               String                         @id @default(cuid())
+  tenantId         String
+  storeId          String
+  requestId        String
+  clientMediaId    String
+  revision         Int
+  pageNumber       Int
+  objectKey        String
+  originalFileName String
+  mediaType        String
+  sizeBytes        Int
+  sha256           String
+  status           PrescriptionMediaStatus        @default(PENDING)
+  safetyMetadata   Json?
+  uploadedAt       DateTime                       @default(now())
+  reviewedAt       DateTime?
+  reviewedByUserId String?
+  deletedAt        DateTime?
+  createdAt        DateTime                       @default(now())
+  updatedAt        DateTime                       @updatedAt
+  tenant           Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store            Store                          @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  request          PrescriptionRequest            @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  accessEvents     PrescriptionMediaAccessEvent[]
+
+  @@unique([tenantId, clientMediaId])
+  @@unique([requestId, revision, pageNumber])
+  @@index([tenantId, storeId, status, createdAt])
+  @@index([requestId, revision, pageNumber])
+}
+
+model PrescriptionMediaAccessEvent {
+  id          String                        @id @default(cuid())
+  tenantId    String
+  storeId     String
+  mediaId     String
+  action      PrescriptionMediaAccessAction
+  actorUserId String?
+  reason      String?
+  metadata    Json?
+  effectiveAt DateTime                      @default(now())
+  createdAt   DateTime                      @default(now())
+  tenant      Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store       Store                         @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  media       PrescriptionMedia             @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@index([mediaId, effectiveAt])
+  @@index([tenantId, storeId, effectiveAt])
+}
+
+model PrescriptionTranscription {
+  id                  String                          @id @default(cuid())
+  requestId           String
+  revision            Int
+  mediaRevision       Int
+  providerKey         String
+  providerOperationId String?
+  status              PrescriptionTranscriptionStatus @default(PENDING)
+  failureCode         String?
+  requestedByUserId   String
+  requestedAt         DateTime                        @default(now())
+  startedAt           DateTime?
+  completedAt         DateTime?
+  supersededAt        DateTime?
+  createdAt           DateTime                        @default(now())
+  updatedAt           DateTime                        @updatedAt
+  request             PrescriptionRequest             @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  lines               PrescriptionTranscriptionLine[]
+
+  @@unique([requestId, revision])
+  @@index([status, requestedAt])
+  @@index([requestId, mediaRevision])
+}
+
+model PrescriptionTranscriptionLine {
+  id               String                             @id @default(cuid())
+  transcriptionId  String
+  lineNumber       Int
+  draftText        String
+  confidence       Decimal?                           @db.Decimal(5, 4)
+  status           PrescriptionLineVerificationStatus @default(PENDING)
+  verifiedText     String?
+  verifiedByUserId String?
+  verifiedAt       DateTime?
+  createdAt        DateTime                           @default(now())
+  updatedAt        DateTime                           @updatedAt
+  transcription    PrescriptionTranscription          @relation(fields: [transcriptionId], references: [id], onDelete: Cascade)
+  mapping          PrescriptionLineMapping?
+
+  @@unique([transcriptionId, lineNumber])
+  @@index([status, createdAt])
+}
+
+model PrescriptionLineMapping {
+  id                     String                        @id @default(cuid())
+  transcriptionLineId    String                        @unique
+  offeringId             String?
+  availability           PrescriptionLineAvailability
+  quantity               Decimal?                      @db.Decimal(38, 6)
+  configurationVersionId String?
+  balanceRevision        Int?
+  isAlternative          Boolean                       @default(false)
+  customerWording        String?
+  mappedByUserId         String
+  mappedAt               DateTime                      @default(now())
+  createdAt              DateTime                      @default(now())
+  updatedAt              DateTime                      @updatedAt
+  transcriptionLine      PrescriptionTranscriptionLine @relation(fields: [transcriptionLineId], references: [id], onDelete: Cascade)
+  offering               SellableOffering?             @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+
+  @@index([offeringId])
+  @@index([availability, mappedAt])
+}
+
+model PrescriptionPharmacistReview {
+  id                 String                         @id @default(cuid())
+  requestId          String
+  mediaRevision      Int
+  transcriptRevision Int
+  decision           PrescriptionPharmacistDecision
+  reason             String?
+  pharmacistUserId   String
+  pharmacistRoleId   String
+  createdAt          DateTime                       @default(now())
+  request            PrescriptionRequest            @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, createdAt])
+  @@index([pharmacistUserId, createdAt])
+}
+
+model PrescriptionRequestAuditEvent {
+  id          String                            @id @default(cuid())
+  tenantId    String
+  storeId     String
+  requestId   String
+  type        PrescriptionRequestAuditEventType
+  actorUserId String?
+  fromStatus  PrescriptionRequestStatus?
+  toStatus    PrescriptionRequestStatus?
+  reason      String?
+  payload     Json?
+  effectiveAt DateTime                          @default(now())
+  createdAt   DateTime                          @default(now())
+  tenant      Tenant                            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store       Store                             @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  request     PrescriptionRequest               @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, effectiveAt])
+  @@index([tenantId, storeId, effectiveAt])
+}

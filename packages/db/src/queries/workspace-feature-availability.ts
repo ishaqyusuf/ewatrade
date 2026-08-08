@@ -6,6 +6,7 @@ export type WorkspaceFeatureAvailability = {
   hasCustomers: boolean
   hasInventoryActivity: boolean
   hasOrders: boolean
+  hasPrescriptionCommerce: boolean
   hasProductItems: boolean
   hasReportableActivity: boolean
   hasServiceItems: boolean
@@ -20,6 +21,7 @@ type WorkspaceFeaturePresence = {
   customer: unknown
   inventoryActivity: unknown
   order: unknown
+  prescriptionCommerce: unknown
   serviceJob: unknown
   staff: unknown
 }
@@ -39,6 +41,7 @@ export function deriveWorkspaceFeatureAvailability(
     hasCustomers: input.customer !== null,
     hasInventoryActivity,
     hasOrders,
+    hasPrescriptionCommerce: input.prescriptionCommerce !== null,
     hasProductItems,
     hasReportableActivity: hasOrders || hasServiceJobs || hasInventoryActivity,
     hasServiceItems,
@@ -65,6 +68,7 @@ export async function getWorkspaceFeatureAvailability(
     directoryCustomer,
     staff,
     inventoryActivity,
+    prescriptionCommerce,
   ] = await Promise.all([
     db.catalogItem.findMany({
       distinct: ["kind"],
@@ -136,6 +140,13 @@ export async function getWorkspaceFeatureAvailability(
       select: { id: true },
       where: storeScope,
     }),
+    db.prescriptionStoreSettings.findFirst({
+      select: { id: true },
+      where: {
+        ...storeScope,
+        status: "ACTIVE",
+      },
+    }),
   ])
 
   return deriveWorkspaceFeatureAvailability({
@@ -144,6 +155,7 @@ export async function getWorkspaceFeatureAvailability(
     customer: directoryCustomer ?? identifiedOrderCustomer,
     inventoryActivity,
     order,
+    prescriptionCommerce,
     serviceJob,
     staff,
     storeId: input.storeId,

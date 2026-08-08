@@ -378,7 +378,7 @@ export const serviceQuoteIssueSchema = z
       )
       .min(1)
       .max(100),
-    requestId: z.string().trim().min(1).optional(),
+    requestId: z.string().trim().min(1),
     storeId: z.string().trim().min(1).optional(),
     taxMinor: z.number().int().nonnegative().optional(),
   })

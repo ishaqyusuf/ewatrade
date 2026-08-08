@@ -330,6 +330,40 @@ enum ServiceQuoteStatus {
   REVOKED
 }
 
+enum CommerceQuoteSourceType {
+  SERVICE_REQUEST
+  PRESCRIPTION_REQUEST
+}
+
+enum CommerceQuoteVersionStatus {
+  DRAFT
+  ISSUED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  SUPERSEDED
+  REVOKED
+}
+
+enum CommerceQuoteAvailabilityOutcome {
+  FULL
+  PARTIAL
+  UNAVAILABLE
+}
+
+enum CommerceQuoteLineOutcome {
+  INCLUDED
+  ALTERNATIVE
+  UNAVAILABLE
+  DECLINED
+}
+
+enum CommerceQuoteFulfilmentType {
+  UNSPECIFIED
+  PICKUP
+  DELIVERY
+}
+
 enum CustomerTrackingStatus {
   ACTIVE
   REVOKED
@@ -356,6 +390,125 @@ enum ServiceDeliveryAttemptStatus {
   DELIVERED
   FAILED
   CANCELLED
+}
+
+enum PrescriptionCommerceStoreStatus {
+  DISABLED
+  ACTIVE
+  SUSPENDED
+}
+
+enum PrescriptionStoreRoleType {
+  ATTENDANT
+  PHARMACIST
+}
+
+enum PrescriptionStoreRoleStatus {
+  ACTIVE
+  SUSPENDED
+  REVOKED
+}
+
+enum PrescriptionStoreAuditEventType {
+  SETTINGS_UPDATED
+  ROLE_ASSIGNED
+  ROLE_REVOKED
+  ACTIVATED
+  DEACTIVATED
+}
+
+enum PrescriptionChannelStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum PrescriptionRequestStatus {
+  RECEIVED
+  MEDIA_REVIEW
+  NEEDS_CLEARER_MEDIA
+  TRANSCRIBING
+  ATTENDANT_VERIFICATION
+  PHARMACIST_REVIEW
+  NEEDS_CLARIFICATION
+  READY_TO_QUOTE
+  QUOTED
+  CONVERTED
+  DECLINED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum PrescriptionRequestSource {
+  WEB
+  WHATSAPP
+  STAFF_WALK_IN
+  STAFF_PHONE
+}
+
+enum PrescriptionFulfilmentPreference {
+  UNSPECIFIED
+  PICKUP
+  DELIVERY
+}
+
+enum PrescriptionMediaStatus {
+  PENDING
+  SAFE
+  QUARANTINED
+  REJECTED
+  DELETED
+}
+
+enum PrescriptionMediaAccessAction {
+  UPLOADED
+  SCANNED
+  ACCESSED
+  QUARANTINED
+  REJECTED
+  DELETED
+}
+
+enum PrescriptionTranscriptionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  SUPERSEDED
+}
+
+enum PrescriptionLineVerificationStatus {
+  PENDING
+  VERIFIED
+  UNREADABLE
+}
+
+enum PrescriptionLineAvailability {
+  AVAILABLE
+  PARTIAL
+  UNAVAILABLE
+  RESTRICTED
+  DECLINED
+}
+
+enum PrescriptionPharmacistDecision {
+  RELEASED
+  NEEDS_CLARIFICATION
+  DECLINED
+}
+
+enum PrescriptionRequestAuditEventType {
+  RECEIVED
+  STATUS_CHANGED
+  MEDIA_REVISION_CREATED
+  CLEARER_MEDIA_REQUESTED
+  TRANSCRIPTION_REQUESTED
+  TRANSCRIPTION_COMPLETED
+  LINE_VERIFIED
+  PHARMACIST_REVIEWED
+  QUOTE_ISSUED
+  CONVERTED
+  WITHDRAWN
+  EXPIRED
 }
 
 enum BillingProvider {
@@ -472,6 +625,198 @@ enum PaymentStatus {
   PAID
   FAILED
   REFUNDED
+}
+
+enum HostedPaymentStatus {
+  CREATED
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+  PARTIALLY_REFUNDED
+  REFUNDED
+}
+
+enum PaymentProviderEventOutcome {
+  RECEIVED
+  PROCESSED
+  IGNORED
+  REJECTED
+}
+
+enum PrescriptionRefundStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+enum PrescriptionRefundProviderDispatchState {
+  READY
+  OUTCOME_UNKNOWN
+  NEEDS_REVIEW
+  CONFIRMED
+}
+
+enum PrescriptionPickupStatus {
+  PREPARING
+  READY
+  HANDED_OFF
+  EXCEPTION
+  ABANDONED
+  CANCELLED
+}
+
+enum PrescriptionPickupEventType {
+  CREATED
+  PACKED
+  READY
+  CODE_FAILED
+  HANDED_OFF
+  EXCEPTION_RECORDED
+  ABANDONED
+  CANCELLED
+}
+
+enum PrescriptionDeliveryZoneStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PrescriptionDeliveryZoneMatchType {
+  POSTAL_PREFIX
+  LOCALITY
+}
+
+enum PrescriptionDeliveryFeePolicy {
+  FIXED
+  MANUAL
+}
+
+enum DeliveryEligibilityStatus {
+  ELIGIBLE
+  INELIGIBLE
+  MANUAL_REVIEW
+}
+
+enum PrescriptionDeliveryStatus {
+  READY_FOR_ASSIGNMENT
+  ASSIGNED
+  COLLECTED
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+  RESCHEDULED
+  RETURNED_TO_PHARMACY
+  CANCELLED
+}
+
+enum PrescriptionDeliveryEventType {
+  CREATED
+  ASSIGNED
+  REASSIGNED
+  COLLECTED
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+  RESCHEDULED
+  RETURNED_TO_PHARMACY
+  CANCELLED
+}
+
+enum WhatsAppConnectionStatus {
+  DRAFT
+  TESTING
+  ACTIVE
+  RECONNECTING
+  SUSPENDED
+  REVOKED
+}
+
+enum WhatsAppBindingStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum WhatsAppInboundEventStatus {
+  RECEIVED
+  PROCESSING
+  PROCESSED
+  FAILED
+  IGNORED
+}
+
+enum PrescriptionCommunicationType {
+  QUOTE_READY
+  CLARIFICATION
+  PAYMENT_RECEIPT
+  PICKUP_READY
+  DELIVERY_PROGRESS
+  DELIVERY_FAILED
+  EXPIRY
+}
+
+enum CommunicationIntentStatus {
+  PENDING
+  PROCESSING
+  SENT
+  DEFERRED
+  FAILED
+}
+
+enum CommunicationAttemptStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum PrescriptionQuickActionType {
+  PICKUP
+  DELIVERY
+  ASK_PHARMACY
+  REVIEW_AND_PAY
+}
+
+enum PrescriptionPrivacyRequestType {
+  ACCESS
+  CORRECTION
+  EXPORT
+  RESTRICTION
+  ERASURE
+}
+
+enum PrescriptionPrivacyRequestStatus {
+  PENDING
+  VERIFIED
+  PROCESSING
+  COMPLETED
+  REJECTED
+}
+
+enum PrescriptionIncidentType {
+  SUSPEND_COMMERCE
+  FREEZE_PROCESSING
+  REVOKE_PUBLIC_LINKS
+  REVOKE_WHATSAPP
+  BREAK_GLASS
+}
+
+enum PrescriptionIncidentStatus {
+  ACTIVE
+  RESOLVED
+  EXPIRED
+}
+
+enum PrescriptionUsageEventType {
+  REQUEST_RECEIVED
+  QUOTE_ISSUED
+  ORDER_CREATED
+  PAYMENT_SUCCEEDED
+  MESSAGE_SENT
+  PICKUP_COMPLETED
+  DELIVERY_COMPLETED
 }
 
 enum CommercialOrderReminderTiming {

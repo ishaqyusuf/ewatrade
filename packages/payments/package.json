@@ -1,0 +1,20 @@
+{
+  "name": "@ewatrade/payments",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@ewatrade/tsconfig": "workspace:*",
+    "@types/bun": "latest",
+    "@types/node": "^24.6.0",
+    "typescript": "catalog:"
+  }
+}

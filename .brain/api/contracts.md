@@ -180,6 +180,18 @@
 - Payments and refunds append idempotent `CommercialOrderPayment` facts. The
   Order stores the derived paid amount and exposes paid, balance and payment
   status; a command cannot overpay or refund more than was collected.
+- A synchronous successful provider refund commits its refund ledger fact,
+  Commercial Order balance, refund status, and hosted-payment status in one
+  Tenant/Store-scoped transaction; a repeated provider result is idempotent.
+- Refund creation locks the payment intent and reserves pending plus successful
+  refund amounts before any provider call, preventing concurrent over-refunds.
+- Refund provider dispatch persists `READY`, `OUTCOME_UNKNOWN`, `NEEDS_REVIEW`,
+  and `CONFIRMED` states plus a dispatch count. A repeated command can claim
+  never-dispatched work, but an indeterminate attempt is reconciled across the
+  provider refund list by its unique merchant note before any further action.
+  One absence after a 24-hour consistency window may be requeued under a row
+  lock; a second uncertain attempt escalates to manual review and is never
+  blindly redispatched.
 - Order projections expose the tenant actor referenced by
   `createdByUserId` as `createdBy`. Payment projections similarly expose
   `recordedByUserId` as `recordedBy`. Missing or no-longer-active membership
@@ -215,6 +227,47 @@
 - Mobile suppresses operational search inputs while offline and disables the
   Home global-search action. Product/Service creation entry points are also
   disabled; offline Order creation remains available.
+
+## Prescription Commerce
+
+- Queue contracts use Tenant/Store-scoped cursor pagination, bounded query and
+  filters, allowlisted sort tuples, lightweight rows, and a separate authorized
+  detail query. Prescription text, medicine lines, raw phones, media, and
+  addresses are excluded from list projections.
+- Intake validates consent, page count, size, MIME type, and an idempotency
+  fingerprint before private-media persistence. Slow work receives only record
+  identifiers and reloads sensitive data inside the job.
+- OCR output is a draft. Every current line must be explicitly resolved by an
+  attendant, and only a verified pharmacist can release the current revision.
+- Commerce Quote Versions are immutable. Acceptance requires the current,
+  issued, unexpired version plus one opaque token; retries return the same
+  Commercial Order/payment intent.
+- Fulfilment choice precedes payment when fee or eligibility changes. `Pick up`,
+  `Delivery`, `Ask pharmacy`, and `Review & pay` are opaque idempotent actions;
+  a message/button never establishes payment.
+- Hosted payment callbacks verify signature, amount, currency, provider
+  reference, and current Order before appending payment facts. Raw card data is
+  never accepted.
+- Public status, re-upload, quote, payment, and pickup access use scoped opaque
+  capabilities stored as digests. Invalid, expired, revoked, stale, or
+  cross-Store capabilities return not-found or conflict without disclosing the
+  target.
+- WhatsApp runtime resolves `phone_number_id` to one active Tenant Connection,
+  then resolves one Store using opaque channel/action context, and only then
+  reads Redis state or persists content. Ambiguity fails closed.
+- Conversation state uses a Store-bounded context key after routing. Meta
+  delivery/read/failure receipts bypass intake and update only the scoped
+  communication attempt matched by provider message id and Connection. Receipt
+  transitions are row-locked and monotonic, preserving the first delivery/read
+  timestamps under duplicate or concurrent webhooks.
+- Central-number routing may use a short-lived Connection/customer selection
+  containing only Tenant/Store identity; request id and content remain solely
+  in the Store-bounded conversation state.
+- Embedded Signup callback state and number discovery are encrypted and
+  short-lived. The client receives identifiers/readiness only, never access
+  tokens or credential references.
+- Workspace availability exposes `hasPrescriptionCommerce` only after active
+  Store setup; it controls navigation visibility but is not authorization.
 
 ## Services
 

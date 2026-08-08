@@ -5,6 +5,27 @@ Pending work that is identified but not actively being executed.
 
 ## Items
 
+### Prescription Commerce design-partner discovery and pilot readiness
+
+- Priority: High
+- Description: Validate the Prescription Commerce product and commercial model
+  with a pharmacy design partner. Complete pharmacy baseline research,
+  PCN/electronic-pharmacy role confirmation, privacy and prescription-media
+  controls, pharmacy-owned WABA/number and provider onboarding validation,
+  live recipient-number routing canary, OCR provider
+  evaluation, operating SOPs, integration inventory, delivery-zone policy, and
+  the controlled active-test plan before production launch.
+- Related Feature: Prescription Commerce
+- Decision Files:
+  `.brain/decisions/ADR-0026-prescription-commerce-product-and-operating-boundary.md`,
+  `.brain/decisions/ADR-0027-tenant-owned-multi-pharmacy-whatsapp-connections.md`
+- Commercialization Package: `output/commercialization/README.md`
+- Spec File: `.scratch/prescription-commerce/spec.md`
+- Spec Status: Ready for Agent
+- Delivery Status: Source implemented; backlog covers design-partner and
+  production-readiness gates only
+- Created Date: 2026-08-07
+
 ### Mobile paginated query direction contract
 
 - Priority: High

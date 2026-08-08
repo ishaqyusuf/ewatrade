@@ -14,6 +14,7 @@
   "scripts": {
     "build": "bun run db:generate && tsc --noEmit",
     "seed:catalog-units": "bun scripts/seed-catalog-unit-definitions.ts",
+    "backfill:service-quotes": "bun scripts/backfill-service-quotes-to-commerce.ts",
     "db:push": "prisma db push",
     "lint": "biome check .",
     "typecheck": "bun run db:generate && tsc --noEmit",
@@ -25,6 +26,7 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@ewatrade/prescriptions": "workspace:*",
     "@ewatrade/utils": "workspace:*",
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.0.0",

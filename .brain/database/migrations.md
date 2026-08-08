@@ -146,6 +146,32 @@ resolved their configured Neon targets but failed with the existing restricted
 schema-engine error. An elevated production retry was denied by the safety
 gate, so no shared-database schema change is confirmed.
 
+## Prescription Commerce Migration State
+
+On 2026-08-09 the Prisma source schema was expanded with the shared Commerce
+Quote aggregate and Prescription Commerce setup, request, media, transcription,
+review, payment, pickup, delivery, WhatsApp, privacy, incident, retention, and
+usage models. Prisma format and generation completed successfully. The
+repository also contains an idempotent Service Quote backfill script that maps
+legacy immutable Service Quote versions into Commerce Quotes before the legacy
+model is contracted.
+
+The same pending Prescription Commerce schema batch includes refund-provider
+dispatch state, dispatch count, and claim timestamps used to distinguish
+never-dispatched work, indeterminate external outcomes, manual review, and
+confirmed results. Prisma format and generation completed after this addition;
+it remains covered by the same unapproved shared-database migration gate below.
+
+The required root `bun db:migrate` and `bun db:push` commands were attempted.
+The configured `local` profile resolves to a shared Neon target rather than a
+local disposable database. The sandboxed attempts could not reach that target,
+and the elevated migration was denied because the user has not explicitly
+authorized this shared-database schema mutation. No migration file was
+hand-authored and no database write is claimed. Migration generation,
+backfill/validation, legacy contraction, and schema push remain release gates
+that must run under an explicitly approved database change window with backup,
+row-count reconciliation, and rollback ownership.
+
 ## Commercial Order Delivery Scheduling Migration State
 
 On 2026-07-25 the Prisma schema added nullable

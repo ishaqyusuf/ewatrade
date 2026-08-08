@@ -13,10 +13,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ewatrade/communications": "workspace:*",
     "@ewatrade/db": "workspace:*",
     "@ewatrade/domains": "workspace:*",
     "@ewatrade/email": "workspace:*",
     "@ewatrade/notifications": "workspace:*",
+    "@ewatrade/prescriptions": "workspace:*",
     "@trigger.dev/build": "4.0.1",
     "@trigger.dev/sdk": "4.0.1"
   },

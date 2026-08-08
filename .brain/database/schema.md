@@ -129,6 +129,37 @@ persistence boundary. Clients never access the database directly.
 
 ## Removed Prototype Schema
 
+## Prescription Commerce
+
+- `PrescriptionStoreSettings`, `PrescriptionStoreRole`, and Store audit/channel
+  records own activation, policy, verified professional assignments, and public
+  intake readiness.
+- `PrescriptionRequest` owns source/contact facts, privacy restriction,
+  revisioned private media, OCR transcription/lines, catalogue mappings,
+  pharmacist decisions, and append-only audit history.
+- `CommerceQuote`, immutable `CommerceQuoteVersion`, and
+  `CommerceQuoteLine` are the shared source-typed Quote aggregate used by both
+  Service and Prescription flows. A Quote has exactly one typed source.
+- Payment intent/provider/refund records and pickup/delivery aggregates retain
+  idempotent operational history without storing card data. Delivery addresses
+  and retrievable pickup codes are encrypted; digests remain for comparisons.
+- Successful hosted refunds also append a `CommercialOrderPayment` refund fact
+  and update the derived Order balance in the same scoped transaction.
+- `PrescriptionPaymentRefund.providerDispatchState` and
+  `providerDispatchClaimedAt` form a durable provider-attempt seam. New work is
+  `READY`, a claimed/indeterminate attempt is `OUTCOME_UNKNOWN`, a repeated
+  uncertain attempt is `NEEDS_REVIEW`, and a matched provider result is
+  `CONFIRMED`; `providerDispatchCount` bounds automated requeue.
+- WhatsApp Connection, Store binding, inbound event, redacted routing alert,
+  connection audit, Embedded Signup session, communication intent/attempt, and
+  quick-action records implement dynamic pharmacy-owned direct Meta routing.
+- Communication attempts retain normalized sent/delivered/read/failed receipt
+  state and timestamps matched by Connection and provider message id.
+- Retention policies, privacy requests, incident controls, and usage events
+  provide Store-scoped compliance and de-identified commercial reporting.
+
+## Removed Prototype Schema
+
 The current Prisma schema no longer declares old Product/ProductVariant,
 InventoryItem, unit-template/price-history, stock delivery/movement, staff
 wallet, cart/order/POS session, Product share-link, legacy customer bridge, delivery

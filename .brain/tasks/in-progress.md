@@ -1,5 +1,14 @@
 # In Progress
 
+- Complete the Prescription Commerce production rollout after the 01-20 source
+  implementation. Remaining gates: explicitly approved shared-Neon migration,
+  Service Quote backfill/reconciliation and legacy contraction, live private
+  media/OCR providers, pharmacy-owned Meta WABA/number and template approvals,
+  Paystack canary, legal/privacy/retention sign-off, delivery SOP approval,
+  authenticated desktop/mobile browser QA, load/concurrency/security testing,
+  and one monitored test-pharmacy canary. No live provider or production schema
+  change is claimed. Started Date: 2026-08-09.
+
 - Generate and apply the Prisma migration for Commercial Order delivery
   scheduling and reminders once local PostgreSQL/Docker is available, then run
   the required local, remote-development, and production push workflow under
