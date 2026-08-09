@@ -6,11 +6,19 @@
 
 **Status:** implemented-source; delivery SOP acceptance pending
 
-- [ ] Only paid, delivery-eligible, packed, and ready orders can enter delivery assignment.
-- [ ] The assignment view exposes only the minimum courier information required to complete delivery and maintains tenant/store scoping.
-- [ ] Authorized staff can assign/reassign a courier and record assigned, collected, in-transit, delivered, failed, and rescheduled transitions.
-- [ ] Pharmacy-to-courier handoff and customer delivery proof are explicit, timestamped, auditable, and protected against duplicate completion.
-- [ ] Customer notifications remain neutral and provide secure status actions instead of including prescription contents.
-- [ ] Failed contact, unsafe delivery, wrong address, customer refusal, damaged package, return-to-pharmacy, refund, and escalation paths are supported.
-- [ ] A provider-neutral delivery boundary allows manual operation initially and future courier integration without changing the domain lifecycle.
+**Verification note (2026-08-09):** paid/eligible/packed readiness, minimum
+courier projection, manual provider boundary, assignment/reassignment, proof-
+required delivery, structured failure/recovery, neutral communication intents,
+and terminal state rules are source-complete. Delivery transitions now lock the
+exact Tenant/Store assignment row before replay and transition checks, preventing
+concurrent duplicate completion. Focused failure and recovery tests pass; full
+delivery customer E2E and SOP acceptance remain open.
+
+- [x] Only paid, delivery-eligible, packed, and ready orders can enter delivery assignment.
+- [x] The assignment view exposes only the minimum courier information required to complete delivery and maintains tenant/store scoping.
+- [x] Authorized staff can assign/reassign a courier and record assigned, collected, in-transit, delivered, failed, and rescheduled transitions.
+- [x] Pharmacy-to-courier handoff and customer delivery proof are explicit, timestamped, auditable, and protected against duplicate completion.
+- [x] Customer notifications remain neutral and provide secure status actions instead of including prescription contents.
+- [x] Failed contact, unsafe delivery, wrong address, customer refusal, damaged package, return-to-pharmacy, refund, and escalation paths are supported.
+- [x] A provider-neutral delivery boundary allows manual operation initially and future courier integration without changing the domain lifecycle.
 - [ ] Permission, transition, duplicate-event, failure-recovery, privacy, and end-to-end delivery tests are included.

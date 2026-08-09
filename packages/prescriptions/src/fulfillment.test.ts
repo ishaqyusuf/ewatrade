@@ -14,6 +14,17 @@ describe("prescription fulfillment rules", () => {
     expect(() => assertDeliveryTransition("delivered", "in_transit")).toThrow()
   })
 
+  test("allows explicit delivery recovery without reopening terminal outcomes", () => {
+    expect(() =>
+      assertDeliveryTransition("failed", "rescheduled"),
+    ).not.toThrow()
+    expect(() =>
+      assertDeliveryTransition("returned_to_pharmacy", "rescheduled"),
+    ).not.toThrow()
+    expect(() => assertDeliveryTransition("delivered", "rescheduled")).toThrow()
+    expect(() => assertDeliveryTransition("cancelled", "assigned")).toThrow()
+  })
+
   test("fails ambiguous delivery rules safely", () => {
     expect(
       evaluateDeliveryZone(

@@ -1135,9 +1135,31 @@ export async function transitionPrescriptionDelivery(
     )
   }
   return db.$transaction(async (tx) => {
-    const assignment = await tx.prescriptionDeliveryAssignment.findFirst({
+    const identity = await tx.prescriptionDeliveryAssignment.findFirst({
+      select: { id: true },
       where: {
         id: input.assignmentId,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    })
+    if (!identity) {
+      throw new PrescriptionFulfillmentError(
+        "FULFILLMENT_NOT_FOUND",
+        "Delivery was not found.",
+      )
+    }
+    await tx.$queryRaw`
+      SELECT "id"
+      FROM "PrescriptionDeliveryAssignment"
+      WHERE "id" = ${identity.id}
+        AND "tenantId" = ${input.tenantId}
+        AND "storeId" = ${input.storeId}
+      FOR UPDATE
+    `
+    const assignment = await tx.prescriptionDeliveryAssignment.findFirst({
+      where: {
+        id: identity.id,
         storeId: input.storeId,
         tenantId: input.tenantId,
       },

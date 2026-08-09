@@ -90,6 +90,8 @@ integration path to the broader EwaTrade commerce platform.
   proof, failure handling, and service recovery.
 - Pickup handoff serializes on the Tenant/Store-scoped fulfilment row before
   replay and state checks, so concurrent staff commands cannot hand off twice.
+- Delivery transitions apply the same scoped row-lock discipline before replay
+  and state checks, keeping proof-backed completion terminal under concurrency.
 - Operations: role-based inbox, ownership, service-level timers, templates,
   escalation, branch configuration, audit history, and POS/inventory/accounting
   integration path.

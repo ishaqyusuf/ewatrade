@@ -10,6 +10,7 @@ describe("prescription delivery failure handling", () => {
     const events: unknown[] = []
     const orderUpdates: unknown[] = []
     const transaction = {
+      $queryRaw: async () => [{ id: "assignment-1" }],
       commercialOrder: {
         findUnique: async () => ({ customerPhone: "+2348000000000" }),
         update: async (input: unknown) => {
