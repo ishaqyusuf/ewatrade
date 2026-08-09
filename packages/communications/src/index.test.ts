@@ -4,6 +4,7 @@ import { createHmac } from "node:crypto"
 import {
   InMemoryConversationStateStore,
   conversationStateKey,
+  createEmbeddedSignupState,
   extractWhatsAppChannelContext,
   isWithinWhatsAppSessionWindow,
   parseMetaWhatsAppEvents,
@@ -12,6 +13,7 @@ import {
   protectCommunicationsCredential,
   resolveCommunicationsActionId,
   resolveCommunicationsCredential,
+  verifyEmbeddedSignupState,
   verifyMetaWebhookSignature,
 } from "./index"
 
@@ -175,5 +177,42 @@ describe("direct Meta WhatsApp contract", () => {
     const reference = protectCommunicationsActionId("rx:opaque-action")
     expect(reference).not.toContain("rx:opaque-action")
     expect(resolveCommunicationsActionId(reference)).toBe("rx:opaque-action")
+  })
+
+  test("signs Embedded Signup state and rejects tampered or expired callbacks", () => {
+    const secret = "embedded-signup-secret"
+    const state = createEmbeddedSignupState(
+      {
+        storeId: "store-1",
+        tenantId: "tenant-1",
+        userId: "owner-1",
+      },
+      secret,
+    )
+    expect(verifyEmbeddedSignupState(state, secret)).toMatchObject({
+      storeId: "store-1",
+      tenantId: "tenant-1",
+      userId: "owner-1",
+    })
+    expect(verifyEmbeddedSignupState(`${state}tampered`, secret)).toBeNull()
+
+    const expiredPayload = Buffer.from(
+      JSON.stringify({
+        expiresAt: Date.now() - 1,
+        nonce: "expired-nonce",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+        userId: "owner-1",
+      }),
+    ).toString("base64url")
+    const expiredSignature = createHmac("sha256", secret)
+      .update(expiredPayload)
+      .digest("base64url")
+    expect(
+      verifyEmbeddedSignupState(
+        `${expiredPayload}.${expiredSignature}`,
+        secret,
+      ),
+    ).toBeNull()
   })
 })

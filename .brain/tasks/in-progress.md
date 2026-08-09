@@ -22,6 +22,9 @@
   A focused Neon web-origin rerun proves row-locked concurrent pickup handoff;
   fixed/manual delivery-zone boundary rules and explicit Tenant scoping are
   source-tested, while delivery customer-flow acceptance remains open.
+  Embedded Signup tamper/expiry/session scope and the dynamic connection
+  readiness job now have focused fake-provider tests; live Meta and template
+  canaries remain open.
   Remaining gates: production
   Service Quote backfill/reconciliation and legacy contraction, live private
   media/OCR providers, pharmacy-owned Meta WABA/number and template approvals,

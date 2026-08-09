@@ -111,7 +111,10 @@ contracting legacy Service Quote tables.
   tests pass for two connection-specific sender credentials and
   `phone_number_id` values, one customer's isolated pharmacy threads, a central
   number with two explicit branch choices, and fail-closed cross-Tenant Store
-  bindings. No live Meta message or provider mutation was performed.
+  bindings. Embedded Signup state/session tests reject tampering, expiry, and
+  scope mismatch; readiness-job tests cover pending credential, WABA/number,
+  webhook, templates, outbound capability, and persisted retryable failure. No
+  live Meta message or provider mutation was performed.
 - Automated failure injection: 31 focused provider, domain, repository, and job
   tests pass across storage rejection/unavailability, deterministic OCR
   timeout/unavailability, Meta media/send failures, failed payment, structured

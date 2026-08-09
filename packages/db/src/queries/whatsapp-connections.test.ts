@@ -3,11 +3,58 @@ import { describe, expect, test } from "bun:test"
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
   consumePrescriptionQuickAction,
+  getWhatsAppEmbeddedSignupSession,
   recordWhatsAppCommunicationStatus,
   resolveWhatsAppInboundConnection,
   resolveWhatsAppStatusConnection,
   setWhatsAppConnectionLifecycle,
 } from "./whatsapp-connections"
+
+describe("WhatsApp Embedded Signup session", () => {
+  test("requires one unconsumed, unexpired, user-and-Store-scoped capability", async () => {
+    const queries: unknown[] = []
+    const db = {
+      whatsAppEmbeddedSignupSession: {
+        findFirst: async (query: unknown) => {
+          queries.push(query)
+          return {
+            discoveredNumbers: [
+              {
+                businessDisplayName: "Pharmacy One",
+                displayNumber: "+2348000000000",
+                phoneNumberId: "phone-1",
+                wabaId: "waba-1",
+              },
+            ],
+            expiresAt: new Date("2026-08-09T12:00:00.000Z"),
+          }
+        },
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      getWhatsAppEmbeddedSignupSession(db, {
+        publicToken: "signup-token",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+        userId: "owner-1",
+      }),
+    ).resolves.toMatchObject({
+      numbers: [{ phoneNumberId: "phone-1", wabaId: "waba-1" }],
+    })
+    expect(queries[0]).toMatchObject({
+      where: {
+        consumedAt: null,
+        expiresAt: { gt: expect.any(Date) },
+        publicTokenDigest: expect.any(String),
+        storeId: "store-1",
+        tenantId: "tenant-1",
+        userId: "owner-1",
+      },
+    })
+    expect(JSON.stringify(queries[0])).not.toContain("signup-token")
+  })
+})
 
 describe("WhatsApp inbound connection routing", () => {
   test("returns every active same-Tenant branch and requires explicit Store selection", async () => {
