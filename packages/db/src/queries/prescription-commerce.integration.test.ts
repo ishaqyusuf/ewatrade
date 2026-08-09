@@ -66,7 +66,7 @@ const databaseIntegrationEnabled =
 
 if (databaseIntegrationEnabled) {
   if (
-    process.env.EWATRADE_DATABASE_PROFILE_VERIFIED !== "1" ||
+    process.env.DATABASE_PROFILE_VERIFIED !== "1" ||
     process.env.DEV_PROFILE !== "local"
   ) {
     throw new Error(
