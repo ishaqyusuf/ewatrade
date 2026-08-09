@@ -103,10 +103,11 @@ integration path to the broader EwaTrade commerce platform.
 - The pharmacist remains the professional release gate.
 - Original output, corrections, reviewer identity, and timestamps form the
   audit history.
-- The attendant workspace shows original pages beside the draft, creates a new
-  revision for corrections/additions/deletions, and exposes history to the
-  pharmacist. Pharmacist mappings explicitly capture alternatives and
-  customer-visible wording.
+- The attendant workspace shows short-lived authorized original pages beside
+  the draft, with page selection, previous/next navigation, and 90-degree
+  rotation. It creates a new revision for corrections/additions/deletions and
+  exposes history to the pharmacist. Pharmacist mappings explicitly capture
+  alternatives and customer-visible wording.
 - Safety, privacy, or pharmacy-error incidents are rollout-stopping
   guardrails, irrespective of commercial conversion.
 

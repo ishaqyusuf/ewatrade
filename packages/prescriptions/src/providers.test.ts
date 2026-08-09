@@ -102,6 +102,17 @@ describe("Prescription provider contracts", () => {
     expect(
       await provider.transcribe({
         mediaRevision: 1,
+        mode: "low-confidence",
+        objectKeys: ["page-1"],
+        requestId: "request-1",
+      }),
+    ).toMatchObject({
+      lines: [{ confidence: 0.25 }],
+      outcome: "completed",
+    })
+    expect(
+      await provider.transcribe({
+        mediaRevision: 1,
         mode: "partial",
         objectKeys: ["page-1"],
         requestId: "request-1",

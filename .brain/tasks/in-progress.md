@@ -13,7 +13,11 @@
   prove independent pharmacy senders, central/branch routing, and
   same-customer Tenant/Store isolation plus deterministic storage, OCR, Meta,
   payment, notification, delivery, stale-action, and credential-revocation
-  failure handling. Remaining gates: production
+  failure handling. Focused intake and safety tests additionally prove exact
+  Store-role attribution, idempotent intake, inactive-Store rejection,
+  callback replay, expiring re-upload, revision invalidation, and private-media
+  page navigation/rotation is now source-complete in the attendant workspace.
+  Remaining gates: production
   Service Quote backfill/reconciliation and legacy contraction, live private
   media/OCR providers, pharmacy-owned Meta WABA/number and template approvals,
   Paystack canary, legal/privacy/retention sign-off, delivery SOP approval,

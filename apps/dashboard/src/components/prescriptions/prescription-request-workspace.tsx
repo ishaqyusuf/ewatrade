@@ -10,6 +10,7 @@ import { useFormContext } from "react-hook-form"
 
 import type { PrescriptionSheetMode } from "@/hooks/use-prescription-params"
 import type { PrescriptionWorkspaceFormValues } from "./form-context"
+import { PrescriptionMediaViewer } from "./prescription-media-viewer"
 import { PrescriptionSheetHeader } from "./prescription-sheet-header"
 
 type RequestDetail = RouterOutputs["prescriptions"]["detail"]
@@ -165,6 +166,21 @@ export function PrescriptionRequestWorkspace({
     pharmacistReview.isPending ||
     issueQuote.isPending
 
+  const mediaViewer = currentMedia.length ? (
+    <PrescriptionMediaViewer
+      isAuthorizing={mediaAccess.isPending}
+      media={currentMedia}
+      mediaUrls={mediaUrls}
+      onAuthorize={(mediaId) =>
+        mediaAccess.mutate({
+          mediaId,
+          reason: "Operational prescription review",
+          storeId,
+        })
+      }
+    />
+  ) : null
+
   const confirmPharmacistDecision = () => {
     if (!transcript || !pendingDecision) return
     setError(null)
@@ -242,55 +258,9 @@ export function PrescriptionRequestWorkspace({
         </div>
       </dl>
 
-      {[
-        "details",
-        "media-review",
-        "attendant-review",
-        "pharmacist-review",
-      ].includes(mode) && currentMedia.length ? (
-        <section className="grid gap-3">
-          <h4 className="font-medium">Private media</h4>
-          {currentMedia.map((media) => (
-            <div
-              key={media.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-sm"
-            >
-              <div>
-                <p>Page {media.pageNumber}</p>
-                <Badge className="mt-1 rounded-full">
-                  {formatStatus(media.status)}
-                </Badge>
-              </div>
-              {mediaUrls[media.id] ? (
-                <a
-                  className="inline-flex h-8 items-center justify-center rounded-md border border-border bg-background px-3 text-sm font-medium"
-                  href={mediaUrls[media.id]}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  View once
-                </a>
-              ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={media.status !== "SAFE" || mediaAccess.isPending}
-                  onClick={() =>
-                    mediaAccess.mutate({
-                      mediaId: media.id,
-                      reason: "Operational prescription review",
-                      storeId,
-                    })
-                  }
-                >
-                  Authorize view
-                </Button>
-              )}
-            </div>
-          ))}
-        </section>
-      ) : null}
+      {["details", "media-review", "pharmacist-review"].includes(mode)
+        ? mediaViewer
+        : null}
 
       {(mode === "attendant-review" || mode === "pharmacist-review") &&
       request.transcriptions.length ? (
@@ -367,100 +337,103 @@ export function PrescriptionRequestWorkspace({
       {mode === "attendant-review" &&
       request.status === "ATTENDANT_VERIFICATION" &&
       transcript ? (
-        <section className="grid gap-3">
-          <h4 className="font-medium">Verify every transcription line</h4>
-          <p className="text-sm text-muted-foreground">
-            OCR is a draft only. Confirmation here is not clinical approval.
-          </p>
-          <label className="grid gap-1 text-sm">
-            Correct, delete, or add draft lines
-            <textarea
-              className="min-h-32 rounded-lg border border-border bg-background p-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              value={editableRevisionText}
-              onChange={(event) =>
-                setValue("revisionText", event.target.value, {
-                  shouldDirty: true,
-                })
-              }
-            />
-          </label>
-          <Button
-            disabled={isPending || !editableRevisionText.trim()}
-            onClick={() =>
-              reviseTranscription.mutate({
-                expectedTranscriptRevision: transcript.revision,
-                lines: editableRevisionText
-                  .split(/\r?\n/)
-                  .filter((line) => line.trim()),
-                requestId,
-                storeId,
-              })
-            }
-            type="button"
-            variant="outline"
-          >
-            Save transcription revision
-          </Button>
-          {transcript.lines.map((line) => (
-            <div key={line.id} className="grid gap-2 rounded-lg border p-3">
-              <p className="text-xs text-muted-foreground">
-                Draft line {line.lineNumber}
-              </p>
-              <input
-                className={fieldClass}
-                value={
-                  verifiedText[line.id] ?? line.verifiedText ?? line.draftText
-                }
+        <div className="grid gap-6 xl:grid-cols-2">
+          {mediaViewer}
+          <section className="grid content-start gap-3">
+            <h4 className="font-medium">Verify every transcription line</h4>
+            <p className="text-sm text-muted-foreground">
+              OCR is a draft only. Confirmation here is not clinical approval.
+            </p>
+            <label className="grid gap-1 text-sm">
+              Correct, delete, or add draft lines
+              <textarea
+                className="min-h-32 rounded-lg border border-border bg-background p-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                value={editableRevisionText}
                 onChange={(event) =>
-                  setValue(
-                    "verifiedText",
-                    { ...verifiedText, [line.id]: event.target.value },
-                    { shouldDirty: true },
-                  )
+                  setValue("revisionText", event.target.value, {
+                    shouldDirty: true,
+                  })
                 }
               />
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  disabled={verifyLine.isPending}
-                  onClick={() =>
-                    verifyLine.mutate({
-                      lineId: line.id,
-                      status: "verified",
-                      storeId,
-                      verifiedText:
-                        verifiedText[line.id] ??
-                        line.verifiedText ??
-                        line.draftText,
-                    })
+            </label>
+            <Button
+              disabled={isPending || !editableRevisionText.trim()}
+              onClick={() =>
+                reviseTranscription.mutate({
+                  expectedTranscriptRevision: transcript.revision,
+                  lines: editableRevisionText
+                    .split(/\r?\n/)
+                    .filter((line) => line.trim()),
+                  requestId,
+                  storeId,
+                })
+              }
+              type="button"
+              variant="outline"
+            >
+              Save transcription revision
+            </Button>
+            {transcript.lines.map((line) => (
+              <div key={line.id} className="grid gap-2 rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">
+                  Draft line {line.lineNumber}
+                </p>
+                <input
+                  className={fieldClass}
+                  value={
+                    verifiedText[line.id] ?? line.verifiedText ?? line.draftText
                   }
-                >
-                  Verify line
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={verifyLine.isPending}
-                  onClick={() =>
-                    verifyLine.mutate({
-                      lineId: line.id,
-                      status: "unreadable",
-                      storeId,
-                    })
+                  onChange={(event) =>
+                    setValue(
+                      "verifiedText",
+                      { ...verifiedText, [line.id]: event.target.value },
+                      { shouldDirty: true },
+                    )
                   }
-                >
-                  Mark unreadable
-                </Button>
+                />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    disabled={verifyLine.isPending}
+                    onClick={() =>
+                      verifyLine.mutate({
+                        lineId: line.id,
+                        status: "verified",
+                        storeId,
+                        verifiedText:
+                          verifiedText[line.id] ??
+                          line.verifiedText ??
+                          line.draftText,
+                      })
+                    }
+                  >
+                    Verify line
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={verifyLine.isPending}
+                    onClick={() =>
+                      verifyLine.mutate({
+                        lineId: line.id,
+                        status: "unreadable",
+                        storeId,
+                      })
+                    }
+                  >
+                    Mark unreadable
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
-          <Button
-            disabled={isPending}
-            onClick={() => submitForPharmacist.mutate({ requestId, storeId })}
-          >
-            Send to pharmacist
-          </Button>
-        </section>
+            ))}
+            <Button
+              disabled={isPending}
+              onClick={() => submitForPharmacist.mutate({ requestId, storeId })}
+            >
+              Send to pharmacist
+            </Button>
+          </section>
+        </div>
       ) : null}
 
       {mode === "pharmacist-review" &&
