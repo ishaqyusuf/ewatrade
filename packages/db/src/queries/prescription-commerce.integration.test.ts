@@ -7,6 +7,7 @@ import {
   MembershipRole,
   OrderStatus,
   PaymentStatus,
+  PrescriptionMediaStatus,
   PrescriptionPickupStatus,
   PrescriptionRequestSource,
   PrescriptionRequestStatus,
@@ -16,21 +17,30 @@ import {
   TenantType,
 } from "../../generated/prisma/enums"
 import { createSimpleCatalogItem } from "./catalog"
+import { getCatalogOfferingAvailability } from "./catalog-inventory"
 import {
   handoffPrescriptionPickup,
+  listPrescriptionPickupQueue,
   markPrescriptionPickupReady,
 } from "./prescription-fulfillment"
 import {
   attachPrescriptionHostedCheckout,
+  getPublicPrescriptionPaymentStatus,
   preparePrescriptionHostedCheckout,
   processPrescriptionPaymentProviderEvent,
 } from "./prescription-payments"
+import { getPrescriptionOperationsReport } from "./prescription-reporting"
 import {
   acceptPrescriptionPickupQuote,
+  completePrescriptionTranscription,
   ensurePrescriptionChannel,
+  getPrescriptionRequest,
+  getPublicPrescriptionQuote,
+  getPublicPrescriptionRequestStatus,
   issuePrescriptionQuote,
+  markPrescriptionMediaReadyForTranscription,
+  recordPrescriptionMediaSafety,
   recordPrescriptionPharmacistReview,
-  startManualPrescriptionTranscription,
   submitPrescriptionForPharmacistReview,
   submitPublicPrescriptionRequest,
   submitStaffPrescriptionRequest,
@@ -121,6 +131,7 @@ async function deleteAcceptanceFixture(
 describeWithDatabase("prescription commerce database acceptance", () => {
   let actorUserId: string
   let db: PrismaClient
+  let fixtureStartedAt: Date
   let offeringId: string
   let publicToken: string
   let storeId: string
@@ -129,6 +140,7 @@ describeWithDatabase("prescription commerce database acceptance", () => {
   beforeAll(async () => {
     getDatabaseUrl()
     db = (await import("../client")).prisma
+    fixtureStartedAt = new Date(Date.now() - 60_000)
 
     const fixtureId = randomUUID()
     const actor = await db.user.create({
@@ -252,8 +264,17 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       customerName: "Synthetic Acceptance Customer",
       customerPhone: "+2348111111111",
       fulfilmentPreference: "pickup" as const,
-      manualIntakeText: "Acceptance Medicine, one tablet",
-      media: [],
+      media: [
+        {
+          clientMediaId: `${origin}-media-${runId}`,
+          mediaType: "image/jpeg",
+          objectKey: `private/${tenantId}/${storeId}/${runId}/page-1.jpg`,
+          originalFileName: "safe-test-prescription.jpg",
+          pageNumber: 1,
+          sha256: "a".repeat(64),
+          sizeBytes: 1_024,
+        },
+      ],
     }
     if (origin === "web") {
       return submitPublicPrescriptionRequest(db, { ...common, publicToken })
@@ -279,13 +300,44 @@ describeWithDatabase("prescription commerce database acceptance", () => {
     const runId = randomUUID()
     const intake = await submit(origin, runId)
     expect(intake.created).toBe(true)
+    if (!intake.statusToken) {
+      throw new Error("Prescription status token was not issued.")
+    }
 
-    await startManualPrescriptionTranscription(db, {
+    const media = await db.prescriptionMedia.findFirstOrThrow({
+      where: { requestId: intake.requestId, storeId, tenantId },
+    })
+    await recordPrescriptionMediaSafety(db, {
+      mediaId: media.id,
+      outcome: "safe",
+      providerEventId: `${origin}-safety-${runId}`,
+      safetyMetadata: { adapter: "deterministic-acceptance" },
+      storeId,
+      tenantId,
+    })
+    const transcription = await markPrescriptionMediaReadyForTranscription(db, {
       actorUserId,
       requestId: intake.requestId,
       storeId,
       tenantId,
     })
+    await completePrescriptionTranscription(db, {
+      lines: [
+        {
+          confidence: 0.99,
+          draftText: "Acceptance Medicine, one tablet",
+          lineNumber: 1,
+        },
+      ],
+      providerKey: "deterministic-acceptance",
+      providerOperationId: `${origin}-ocr-${runId}`,
+      transcriptionId: transcription.id,
+    })
+    const safeMedia = await db.prescriptionMedia.findUniqueOrThrow({
+      where: { id: media.id },
+    })
+    expect(safeMedia.status).toBe(PrescriptionMediaStatus.SAFE)
+
     const request = await db.prescriptionRequest.findFirstOrThrow({
       include: {
         transcriptions: {
@@ -296,7 +348,15 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       where: { id: intake.requestId, storeId, tenantId },
     })
     const line = request.transcriptions[0]?.lines[0]
-    if (!line) throw new Error("Manual transcription line was not created.")
+    if (!line) throw new Error("OCR transcription line was not created.")
+    await expect(
+      submitPrescriptionForPharmacistReview(db, {
+        actorUserId,
+        requestId: request.id,
+        storeId,
+        tenantId,
+      }),
+    ).rejects.toMatchObject({ code: "TRANSCRIPT_NOT_READY" })
     await verifyPrescriptionTranscriptionLine(db, {
       actorUserId,
       lineId: line.id,
@@ -328,6 +388,11 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       storeId,
       tenantId,
     })
+    const inventoryBeforeAcceptance = await getCatalogOfferingAvailability(db, {
+      offeringId,
+      storeId,
+      tenantId,
+    })
     const quote = await issuePrescriptionQuote(db, {
       actorUserId,
       availabilityOutcome: "full",
@@ -339,6 +404,19 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       tenantId,
     })
     if (!quote.token) throw new Error("Quote acceptance token was not issued.")
+    const publicQuote = await getPublicPrescriptionQuote(db, {
+      acceptanceToken: quote.token,
+    })
+    expect(publicQuote).toMatchObject({
+      availabilityOutcome: "full",
+      fulfilmentType: "pickup",
+      storeName: "Acceptance Pharmacy",
+      totalMinor: 2_500,
+    })
+    expect(publicQuote.lines).toHaveLength(1)
+    expect(JSON.stringify(publicQuote)).not.toMatch(
+      /objectKey|providerOperationId|tenantId/i,
+    )
     const acceptanceInput = {
       acceptanceToken: quote.token,
       clientAcceptanceId: `${origin}-acceptance-${runId}`,
@@ -350,6 +428,14 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       acceptanceInput,
     )
     expect(acceptanceReplay.orderId).toBe(accepted.orderId)
+    const inventoryAfterAcceptance = await getCatalogOfferingAvailability(db, {
+      offeringId,
+      storeId,
+      tenantId,
+    })
+    expect(Number(inventoryAfterAcceptance.reservedQuantity)).toBe(
+      Number(inventoryBeforeAcceptance.reservedQuantity) + 1,
+    )
 
     const checkout = await preparePrescriptionHostedCheckout(db, {
       acceptanceToken: quote.token,
@@ -376,12 +462,27 @@ describeWithDatabase("prescription commerce database acceptance", () => {
     await expect(
       processPrescriptionPaymentProviderEvent(db, paymentInput),
     ).resolves.toEqual({ replay: true })
+    await expect(
+      getPublicPrescriptionPaymentStatus(db, {
+        statusToken: checkout.statusToken,
+      }),
+    ).resolves.toMatchObject({
+      amountPaidMinor: 2_500,
+      balanceDueMinor: 0,
+      status: "paid",
+      totalMinor: 2_500,
+    })
 
     const fulfillment = await db.prescriptionPickupFulfillment.findFirstOrThrow(
       {
         where: { orderId: accepted.orderId, storeId, tenantId },
       },
     )
+    const preparingQueue = await listPrescriptionPickupQueue(db, {
+      storeId,
+      tenantId,
+    })
+    expect(preparingQueue.map((item) => item.id)).toContain(fulfillment.id)
     const ready = await markPrescriptionPickupReady(db, {
       actorUserId,
       checks: { label_matches: true, pharmacist_released: true },
@@ -389,6 +490,17 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       storeId,
       tenantId,
     })
+    const publicReadyStatus = await getPublicPrescriptionRequestStatus(db, {
+      statusToken: intake.statusToken,
+    })
+    expect(publicReadyStatus).toMatchObject({
+      pickup: { code: ready.pickupCode },
+      status: "converted",
+      storeName: "Acceptance Pharmacy",
+    })
+    expect(JSON.stringify(publicReadyStatus)).not.toMatch(
+      /Acceptance Medicine|example\.invalid|2348111111111|objectKey/i,
+    )
     const handoffInput = {
       actorUserId,
       clientOperationId: `${origin}-handoff-${runId}`,
@@ -421,16 +533,59 @@ describeWithDatabase("prescription commerce database acceptance", () => {
     expect(completedOrder.paymentStatus).toBe(PaymentStatus.PAID)
     expect(completedOrder.status).toBe(OrderStatus.COMPLETED)
     expect(completedPickup.status).toBe(PrescriptionPickupStatus.HANDED_OFF)
+    await expect(
+      getPublicPrescriptionRequestStatus(db, {
+        statusToken: intake.statusToken,
+      }),
+    ).resolves.toMatchObject({ pickup: null, status: "converted" })
+    const managementRequest = await getPrescriptionRequest(db, {
+      actorUserId,
+      reason: "acceptance_evidence",
+      requestId: request.id,
+      storeId,
+      tenantId,
+    })
+    expect(managementRequest.auditEvents.map((event) => event.type)).toEqual(
+      expect.arrayContaining([
+        "RECEIVED",
+        "TRANSCRIPTION_REQUESTED",
+        "TRANSCRIPTION_COMPLETED",
+        "LINE_VERIFIED",
+        "PHARMACIST_REVIEWED",
+        "QUOTE_ISSUED",
+        "CONVERTED",
+      ]),
+    )
+    const report = await getPrescriptionOperationsReport(db, {
+      from: fixtureStartedAt,
+      storeId,
+      tenantId,
+      to: new Date(Date.now() + 60_000),
+    })
+    expect(report.channelMix[completedRequest.source.toLowerCase()]).toBe(1)
+    expect(report.payment.paidCount).toBeGreaterThanOrEqual(1)
+    expect(report.pickupCompleted).toBeGreaterThanOrEqual(1)
+    expect(report.usage.map((event) => event.eventType)).toEqual(
+      expect.arrayContaining([
+        "REQUEST_RECEIVED",
+        "QUOTE_ISSUED",
+        "ORDER_CREATED",
+        "PAYMENT_SUCCEEDED",
+        "PICKUP_COMPLETED",
+      ]),
+    )
     return completedRequest.source
   }
 
-  test("completes idempotent paid pickup lifecycles from web, staff, and WhatsApp intake", async () => {
-    expect(await completePickup("web")).toBe(PrescriptionRequestSource.WEB)
-    expect(await completePickup("staff")).toBe(
-      PrescriptionRequestSource.STAFF_WALK_IN,
-    )
-    expect(await completePickup("whatsapp")).toBe(
-      PrescriptionRequestSource.WHATSAPP,
-    )
-  }, 300_000)
+  const origins = [
+    ["web", PrescriptionRequestSource.WEB],
+    ["staff", PrescriptionRequestSource.STAFF_WALK_IN],
+    ["whatsapp", PrescriptionRequestSource.WHATSAPP],
+  ] as const
+
+  for (const [origin, expectedSource] of origins) {
+    test(`completes a safe-media paid pickup lifecycle from ${origin} intake`, async () => {
+      expect(await completePickup(origin)).toBe(expectedSource)
+    }, 180_000)
+  }
 })

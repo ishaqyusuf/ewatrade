@@ -6,7 +6,7 @@
 
 **Status:** partially verified; external acceptance gates pending
 
-- [ ] Automated acceptance tests cover web, staff-assisted, and WhatsApp intake through review, quote, payment, and pickup or delivery completion.
+- [x] Automated acceptance tests cover web, staff-assisted, and WhatsApp intake through review, quote, payment, and pickup or delivery completion.
 - [ ] Multi-pharmacy tests prove sender identity, `phone_number_id` routing, tenant/store isolation, central/branch bindings, and the same customer contacting different pharmacies.
 - [ ] Failure-injection evidence covers storage, OCR, Meta, payment, notification, delivery, duplicate callback, stale action, and credential-revocation scenarios.
 - [ ] Accessibility, responsive/mobile, performance, retry, concurrency, security, privacy, and audit checks meet the thresholds defined in the approved spec.
@@ -18,14 +18,15 @@
 Authenticated Neon-development QA now covers setup gating, policy/role
 onboarding, activation, empty queue, staff-assisted intake, explicit
 success-to-attendant-review routing, and desktop/mobile sheet scrolling. The
-Neon-backed database acceptance test additionally runs web, staff-assisted,
-and WhatsApp manual-text origins through attendant verification, pharmacist
-release, inventory-backed Quote issuance, idempotent pickup acceptance, hosted
-payment callback/replay, packing, secure pickup code, and idempotent handoff.
+Neon-backed database acceptance tests additionally run web, staff-assisted,
+and WhatsApp safe-media origins through deterministic safety review and OCR,
+attendant verification, pharmacist release, inventory-backed Quote issuance,
+idempotent pickup acceptance, hosted payment callback/replay, packing, secure
+pickup code, and idempotent handoff. They assert customer-safe request, Quote,
+and payment views plus management audit, inventory reservation, pickup queue,
+reporting, and commercial-usage projections.
 The existing communications/job suites cover scoped same-customer threads,
 multi-pharmacy Redis context, signature rejection, retries, and opaque quick
-actions. These are partial evidence only: delivery-origin parity, full
-media/safety/OCR and customer-safe projection coverage,
-multi-pharmacy/provider failure coverage, accessibility, performance,
-concurrency, and security remain open acceptance work; therefore the broader
-first acceptance item stays open.
+actions. Delivery-origin parity, multi-pharmacy/provider failure coverage,
+accessibility, performance, concurrency, and security remain open acceptance
+work under the separate gates above.

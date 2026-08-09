@@ -7,8 +7,10 @@
   source-complete. The Neon development schema, empty-dataset Service Quote
   backfill, authenticated setup, staff-intake, and desktop/mobile sheet QA are
   complete. A disposable Neon integration fixture also proves web,
-  staff-assisted, and WhatsApp origins through paid pickup handoff with
-  idempotent acceptance, callback, and handoff. Remaining gates: production
+  staff-assisted, and WhatsApp safe-media origins through deterministic
+  safety/OCR, professional review, observable projections, and paid pickup
+  handoff with idempotent acceptance, callback, and handoff. Remaining gates:
+  production
   Service Quote backfill/reconciliation and legacy contraction, live private
   media/OCR providers, pharmacy-owned Meta WABA/number and template approvals,
   Paystack canary, legal/privacy/retention sign-off, delivery SOP approval,

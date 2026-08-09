@@ -260,10 +260,13 @@ and cannot be resolved without a post-use review.
 - `.scratch/prescription-commerce/spec.md`
 - Label: `implementation-in-review`
 - Status: source implemented; external acceptance gates pending
-- Primary test seam: one domain repository/API lifecycle from Prescription
-  Request submission through OCR draft, mandatory attendant verification,
-  pharmacist release, current Quote acceptance, Commercial Order/payment, and
-  pickup or delivery handoff.
+- Primary test seam: Neon-backed domain repository/API lifecycles for web,
+  staff-assisted, and WhatsApp safe-media submission through deterministic
+  safety/OCR, mandatory attendant verification, pharmacist release, current
+  Quote acceptance, Commercial Order/payment, and pickup handoff. The tests
+  inspect customer-safe, management, inventory, payment, audit, reporting, and
+  usage projections; delivery and live-provider acceptance remain external
+  gates.
 
 ## Related Product Areas
 
