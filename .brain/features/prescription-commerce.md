@@ -20,11 +20,14 @@ and desktop/mobile global-sheet QA. A separate disposable Neon fixture now
 proves web, staff-assisted, and WhatsApp safe-media origins through
 deterministic safety/OCR, human verification, pharmacist release,
 inventory-backed Quote, idempotent pickup acceptance, hosted-payment
-callback/replay, and secure pickup handoff. Focused
+callback/replay, and secure pickup handoff. The same origins now also complete
+fixed-zone delivery Quote revision, concurrent acceptance, exact payment,
+packing, courier assignment, collected/in-transit transitions, and proof-backed
+idempotent delivery. Focused
 communications/database/job tests prove independent pharmacy senders,
 `phone_number_id` routing, central-number branch selection, and same-customer
-Tenant/Store isolation. Live Meta, Paystack, private-media/OCR, cross-channel
-delivery parity, load/security, production backfill, and production schema
+Tenant/Store isolation. Live Meta, Paystack, private-media/OCR, courier/SOP,
+load/security, production backfill, and production schema
 rollout remain open gates.
 
 Deterministic failure injection covers private-storage unavailability, OCR
@@ -284,10 +287,12 @@ and cannot be resolved without a post-use review.
 - Primary test seam: Neon-backed domain repository/API lifecycles for web,
   staff-assisted, and WhatsApp safe-media submission through deterministic
   safety/OCR, mandatory attendant verification, pharmacist release, current
-  Quote acceptance, Commercial Order/payment, and pickup handoff. The tests
+  Quote acceptance, Commercial Order/payment, pickup handoff, and fixed-zone
+  delivery completion. The tests
   inspect customer-safe, management, inventory, payment, audit, reporting, and
-  usage projections. Concurrent identical pickup acceptance is exercised for
-  every origin and resolves to one Order; delivery and live-provider acceptance
+  usage projections. Concurrent identical pickup and delivery acceptance is
+  exercised for every origin and resolves to one Order; delivery completion is
+  proof-backed and duplicate-safe. Live-provider and courier/SOP acceptance
   remain external gates.
 - The shared Commerce Quote seam has complementary migration evidence for the
   existing Service journey: a two-version legacy Quote survives idempotent

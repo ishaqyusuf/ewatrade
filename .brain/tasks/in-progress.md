@@ -23,7 +23,11 @@
   three origins after adding loser-transaction recovery to the idempotency seam.
   A focused Neon web-origin rerun proves row-locked concurrent pickup handoff;
   fixed/manual delivery-zone boundary rules and explicit Tenant scoping are
-  source-tested, while delivery customer-flow acceptance remains open.
+  source-tested. A second Neon matrix now completes fixed-zone delivery for all
+  three origins through Quote revision, concurrent acceptance, exact payment,
+  preparation, courier assignment, proof-backed duplicate-safe completion,
+  privacy projections, reporting, usage, and terminal queue removal. A focused
+  current-source rerun also rejects an actor without a Store role.
   The legacy Service Quote backfill regression proves complete mapped-graph
   preservation and rejects same-count corruption, while a profile-attested
   current Service Request-to-Commerce-Quote-to-Commercial-Order Neon lifecycle
@@ -37,7 +41,7 @@
   Service Quote backfill/reconciliation and legacy contraction, live private
   media/OCR providers, pharmacy-owned Meta WABA/number and template approvals,
   Paystack canary, legal/privacy/retention sign-off, delivery SOP approval,
-  cross-channel delivery E2E, load/concurrency/security testing,
+  live courier/provider acceptance, load/concurrency/security testing,
   and one monitored test-pharmacy canary. No live provider or production schema
   change is claimed. Started Date: 2026-08-09.
 

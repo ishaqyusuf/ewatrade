@@ -587,6 +587,13 @@ export async function listPrescriptionDeliveryQueue(
     where: {
       paymentStatus: PaymentStatus.PAID,
       prescriptionDeliveryAddress: { isNot: null },
+      status: {
+        in: [
+          OrderStatus.CONFIRMED,
+          OrderStatus.FULFILLING,
+          OrderStatus.OUT_FOR_DELIVERY,
+        ],
+      },
       storeId: input.storeId,
       tenantId: input.tenantId,
     },
@@ -1220,9 +1227,11 @@ export async function transitionPrescriptionDelivery(
         status:
           mapped === PrescriptionDeliveryStatus.DELIVERED
             ? OrderStatus.COMPLETED
-            : mapped === PrescriptionDeliveryStatus.IN_TRANSIT
-              ? OrderStatus.OUT_FOR_DELIVERY
-              : OrderStatus.FULFILLING,
+            : mapped === PrescriptionDeliveryStatus.CANCELLED
+              ? OrderStatus.CANCELLED
+              : mapped === PrescriptionDeliveryStatus.IN_TRANSIT
+                ? OrderStatus.OUT_FOR_DELIVERY
+                : OrderStatus.FULFILLING,
       },
       where: { id: assignment.orderId },
     })

@@ -7,6 +7,7 @@ import {
   MembershipRole,
   OrderStatus,
   PaymentStatus,
+  PrescriptionDeliveryStatus,
   PrescriptionMediaStatus,
   PrescriptionPickupStatus,
   PrescriptionRequestSource,
@@ -19,9 +20,15 @@ import {
 import { createSimpleCatalogItem } from "./catalog"
 import { getCatalogOfferingAvailability } from "./catalog-inventory"
 import {
+  createPrescriptionDeliveryAssignment,
   handoffPrescriptionPickup,
+  listPrescriptionDeliveryQueue,
   listPrescriptionPickupQueue,
+  markPrescriptionDeliveryReady,
   markPrescriptionPickupReady,
+  revisePrescriptionQuoteForDelivery,
+  transitionPrescriptionDelivery,
+  upsertPrescriptionDeliveryZone,
 } from "./prescription-fulfillment"
 import {
   attachPrescriptionHostedCheckout,
@@ -31,6 +38,7 @@ import {
 } from "./prescription-payments"
 import { getPrescriptionOperationsReport } from "./prescription-reporting"
 import {
+  acceptPrescriptionDeliveryQuote,
   acceptPrescriptionPickupQuote,
   completePrescriptionTranscription,
   ensurePrescriptionChannel,
@@ -114,6 +122,8 @@ async function deleteAcceptanceFixture(
       where: { tenantId },
     })
     await tx.prescriptionPickupFulfillment.deleteMany({ where: { tenantId } })
+    await tx.prescriptionDeliveryAssignment.deleteMany({ where: { tenantId } })
+    await tx.prescriptionDeliveryAddress.deleteMany({ where: { tenantId } })
     await tx.prescriptionPaymentIntent.deleteMany({ where: { tenantId } })
     await tx.commerceQuote.deleteMany({ where: { tenantId } })
     await tx.prescriptionRequest.deleteMany({ where: { tenantId } })
@@ -127,6 +137,7 @@ async function deleteAcceptanceFixture(
     await tx.stockMovement.deleteMany({ where: { operation: { tenantId } } })
     await tx.stockOperation.deleteMany({ where: { tenantId } })
     await tx.stockBalanceSource.deleteMany({ where: { tenantId } })
+    await tx.prescriptionDeliveryZone.deleteMany({ where: { tenantId } })
     await tx.catalogPriceChange.deleteMany({ where: { tenantId } })
     await tx.catalogCommandReceipt.deleteMany({ where: { tenantId } })
     await tx.catalogItem.deleteMany({ where: { tenantId } })
@@ -190,7 +201,7 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       actorUserId,
       consentVersion: "acceptance-v1",
       contactPolicy: "Use neutral order notifications only.",
-      deliveryEnabled: false,
+      deliveryEnabled: true,
       operatingHours: [
         {
           closesAt: "18:00",
@@ -201,6 +212,18 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       ],
       pickupEnabled: true,
       servicePolicy: "A pharmacist must release every prescription.",
+      storeId,
+      tenantId,
+    })
+    await upsertPrescriptionDeliveryZone(db, {
+      actorUserId,
+      currencyCode: "NGN",
+      feePolicy: "fixed",
+      fixedFeeMinor: 500,
+      matchType: "locality",
+      matchValues: ["Acceptance District"],
+      name: "Acceptance District",
+      promiseText: "Delivery within four hours",
       storeId,
       tenantId,
     })
@@ -282,7 +305,11 @@ describeWithDatabase("prescription commerce database acceptance", () => {
     await db.$disconnect()
   })
 
-  async function submit(origin: IntakeOrigin, runId: string) {
+  async function submit(
+    origin: IntakeOrigin,
+    runId: string,
+    fulfilmentPreference: "delivery" | "pickup",
+  ) {
     const common = {
       clientRequestId: `${origin}-request-${runId}`,
       consentAcceptedAt: new Date(),
@@ -290,7 +317,7 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       customerEmail: `${origin}-${runId}@example.invalid`,
       customerName: "Synthetic Acceptance Customer",
       customerPhone: "+2348111111111",
-      fulfilmentPreference: "pickup" as const,
+      fulfilmentPreference,
       media: [
         {
           clientMediaId: `${origin}-media-${runId}`,
@@ -323,9 +350,12 @@ describeWithDatabase("prescription commerce database acceptance", () => {
     })
   }
 
-  async function completePickup(origin: IntakeOrigin) {
+  async function prepareReleasedQuote(
+    origin: IntakeOrigin,
+    fulfilmentPreference: "delivery" | "pickup",
+  ) {
     const runId = randomUUID()
-    const intake = await submit(origin, runId)
+    const intake = await submit(origin, runId, fulfilmentPreference)
     expect(intake.created).toBe(true)
     if (!intake.statusToken) {
       throw new Error("Prescription status token was not issued.")
@@ -444,14 +474,26 @@ describeWithDatabase("prescription commerce database acceptance", () => {
     expect(JSON.stringify(publicQuote)).not.toMatch(
       /objectKey|providerOperationId|tenantId/i,
     )
-    const acceptanceInput = {
-      acceptanceToken: quote.token,
-      clientAcceptanceId: `${origin}-acceptance-${runId}`,
-      partialAcknowledged: false,
+    return {
+      intake,
+      inventoryBeforeAcceptance,
+      quoteToken: quote.token,
+      request,
+      runId,
+      statusToken: intake.statusToken,
     }
+  }
+
+  async function acceptAndPay(input: {
+    accept: () => ReturnType<typeof acceptPrescriptionPickupQuote>
+    origin: IntakeOrigin
+    quoteToken: string
+    runId: string
+    totalMinor: number
+  }) {
     const [accepted, acceptanceReplay] = await Promise.all([
-      acceptPrescriptionPickupQuote(db, acceptanceInput),
-      acceptPrescriptionPickupQuote(db, acceptanceInput),
+      input.accept(),
+      input.accept(),
     ])
     expect(acceptanceReplay.orderId).toBe(accepted.orderId)
     const inventoryAfterAcceptance = await getCatalogOfferingAvailability(db, {
@@ -459,15 +501,12 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       storeId,
       tenantId,
     })
-    expect(Number(inventoryAfterAcceptance.reservedQuantity)).toBe(
-      Number(inventoryBeforeAcceptance.reservedQuantity) + 1,
-    )
 
     const checkout = await preparePrescriptionHostedCheckout(db, {
-      acceptanceToken: quote.token,
-      clientPaymentId: `${origin}-payment-${runId}`,
+      acceptanceToken: input.quoteToken,
+      clientPaymentId: `${input.origin}-payment-${input.runId}`,
       provider: "acceptance-fake",
-      statusToken: `${origin}-status-${runId}`,
+      statusToken: `${input.origin}-status-${input.runId}`,
     })
     await attachPrescriptionHostedCheckout(db, {
       checkoutUrl: `https://payments.example.invalid/${checkout.intentId}`,
@@ -477,7 +516,7 @@ describeWithDatabase("prescription commerce database acceptance", () => {
     const paymentInput = {
       amountMinor: checkout.amountMinor,
       currencyCode: checkout.currencyCode,
-      eventId: `${origin}-provider-event-${runId}`,
+      eventId: `${input.origin}-provider-event-${input.runId}`,
       provider: "acceptance-fake",
       providerReference: checkout.providerReference,
       status: "paid" as const,
@@ -493,11 +532,31 @@ describeWithDatabase("prescription commerce database acceptance", () => {
         statusToken: checkout.statusToken,
       }),
     ).resolves.toMatchObject({
-      amountPaidMinor: 2_500,
+      amountPaidMinor: input.totalMinor,
       balanceDueMinor: 0,
       status: "paid",
+      totalMinor: input.totalMinor,
+    })
+    return { accepted, inventoryAfterAcceptance }
+  }
+
+  async function completePickup(origin: IntakeOrigin) {
+    const prepared = await prepareReleasedQuote(origin, "pickup")
+    const acceptanceInput = {
+      acceptanceToken: prepared.quoteToken,
+      clientAcceptanceId: `${origin}-acceptance-${prepared.runId}`,
+      partialAcknowledged: false,
+    }
+    const { accepted, inventoryAfterAcceptance } = await acceptAndPay({
+      accept: () => acceptPrescriptionPickupQuote(db, acceptanceInput),
+      origin,
+      quoteToken: prepared.quoteToken,
+      runId: prepared.runId,
       totalMinor: 2_500,
     })
+    expect(Number(inventoryAfterAcceptance.reservedQuantity)).toBe(
+      Number(prepared.inventoryBeforeAcceptance.reservedQuantity) + 1,
+    )
 
     const fulfillment = await db.prescriptionPickupFulfillment.findFirstOrThrow(
       {
@@ -517,7 +576,7 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       tenantId,
     })
     const publicReadyStatus = await getPublicPrescriptionRequestStatus(db, {
-      statusToken: intake.statusToken,
+      statusToken: prepared.statusToken,
     })
     expect(publicReadyStatus).toMatchObject({
       pickup: { code: ready.pickupCode },
@@ -529,7 +588,7 @@ describeWithDatabase("prescription commerce database acceptance", () => {
     )
     const handoffInput = {
       actorUserId,
-      clientOperationId: `${origin}-handoff-${runId}`,
+      clientOperationId: `${origin}-handoff-${prepared.runId}`,
       collectorName: "Synthetic Acceptance Customer",
       fulfillmentId: fulfillment.id,
       pickupCode: ready.pickupCode,
@@ -546,7 +605,7 @@ describeWithDatabase("prescription commerce database acceptance", () => {
     const [completedRequest, completedOrder, completedPickup] =
       await Promise.all([
         db.prescriptionRequest.findUniqueOrThrow({
-          where: { id: request.id },
+          where: { id: prepared.request.id },
         }),
         db.commercialOrder.findUniqueOrThrow({
           where: { id: accepted.orderId },
@@ -561,13 +620,13 @@ describeWithDatabase("prescription commerce database acceptance", () => {
     expect(completedPickup.status).toBe(PrescriptionPickupStatus.HANDED_OFF)
     await expect(
       getPublicPrescriptionRequestStatus(db, {
-        statusToken: intake.statusToken,
+        statusToken: prepared.statusToken,
       }),
     ).resolves.toMatchObject({ pickup: null, status: "converted" })
     const managementRequest = await getPrescriptionRequest(db, {
       actorUserId,
       reason: "acceptance_evidence",
-      requestId: request.id,
+      requestId: prepared.request.id,
       storeId,
       tenantId,
     })
@@ -588,7 +647,9 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       tenantId,
       to: new Date(Date.now() + 60_000),
     })
-    expect(report.channelMix[completedRequest.source.toLowerCase()]).toBe(1)
+    expect(
+      report.channelMix[completedRequest.source.toLowerCase()],
+    ).toBeGreaterThanOrEqual(1)
     expect(report.payment.paidCount).toBeGreaterThanOrEqual(1)
     expect(report.pickupCompleted).toBeGreaterThanOrEqual(1)
     expect(report.usage.map((event) => event.eventType)).toEqual(
@@ -603,6 +664,227 @@ describeWithDatabase("prescription commerce database acceptance", () => {
     return completedRequest.source
   }
 
+  async function completeDelivery(origin: IntakeOrigin) {
+    const prepared = await prepareReleasedQuote(origin, "delivery")
+    const deliverySelection = await revisePrescriptionQuoteForDelivery(db, {
+      acceptanceToken: prepared.quoteToken,
+      address: {
+        addressLine1: "1 Synthetic Acceptance Road",
+        locality: " acceptance   district ",
+        postalCode: "100001",
+        recipientName: "Synthetic Acceptance Customer",
+        recipientPhone: "+2348111111111",
+        region: "Lagos",
+      },
+    })
+    expect(deliverySelection.outcome).toBe("eligible")
+    if (!deliverySelection.acceptanceToken) {
+      throw new Error("Delivery Quote token was not issued.")
+    }
+    await expect(
+      getPublicPrescriptionQuote(db, {
+        acceptanceToken: prepared.quoteToken,
+      }),
+    ).rejects.toThrow("Quote is unavailable")
+    const deliveryQuote = await getPublicPrescriptionQuote(db, {
+      acceptanceToken: deliverySelection.acceptanceToken,
+    })
+    expect(deliveryQuote).toMatchObject({
+      accepted: false,
+      fulfilmentFeeMinor: 500,
+      fulfilmentPromise: "Delivery within four hours",
+      fulfilmentType: "delivery",
+      storeName: "Acceptance Pharmacy",
+      totalMinor: 3_000,
+      version: 2,
+    })
+    expect(JSON.stringify(deliveryQuote)).not.toMatch(
+      /Acceptance Road|2348111111111|objectKey|tenantId/i,
+    )
+
+    const acceptanceInput = {
+      acceptanceToken: deliverySelection.acceptanceToken,
+      clientAcceptanceId: `${origin}-delivery-acceptance-${prepared.runId}`,
+      partialAcknowledged: false,
+    }
+    const { accepted, inventoryAfterAcceptance } = await acceptAndPay({
+      accept: () => acceptPrescriptionDeliveryQuote(db, acceptanceInput),
+      origin,
+      quoteToken: deliverySelection.acceptanceToken,
+      runId: prepared.runId,
+      totalMinor: 3_000,
+    })
+    expect(Number(inventoryAfterAcceptance.reservedQuantity)).toBe(
+      Number(prepared.inventoryBeforeAcceptance.reservedQuantity) + 1,
+    )
+
+    const beforePacking = await listPrescriptionDeliveryQueue(db, {
+      storeId,
+      tenantId,
+    })
+    expect(beforePacking.map((item) => item.id)).toContain(accepted.orderId)
+    await expect(
+      markPrescriptionDeliveryReady(db, {
+        actorUserId: `unauthorized-${prepared.runId}`,
+        checks: { label_matches: true, pharmacist_released: true },
+        orderId: accepted.orderId,
+        storeId,
+        tenantId,
+      }),
+    ).rejects.toThrow()
+    const ready = await markPrescriptionDeliveryReady(db, {
+      actorUserId,
+      checks: { label_matches: true, pharmacist_released: true },
+      orderId: accepted.orderId,
+      storeId,
+      tenantId,
+    })
+    expect(ready.assignment.status).toBe(
+      PrescriptionDeliveryStatus.READY_FOR_ASSIGNMENT,
+    )
+    const assigned = await createPrescriptionDeliveryAssignment(db, {
+      actorUserId,
+      courierDisplayName: "Synthetic Courier",
+      courierPhoneMasked: "******1111",
+      courierReference: `courier-${prepared.runId}`,
+      orderId: accepted.orderId,
+      storeId,
+      tenantId,
+    })
+    expect(assigned.status).toBe(PrescriptionDeliveryStatus.ASSIGNED)
+
+    const operationalQueue = await listPrescriptionDeliveryQueue(db, {
+      storeId,
+      tenantId,
+    })
+    const queueItem = operationalQueue.find(
+      (item) => item.id === accepted.orderId,
+    )
+    expect(queueItem).toMatchObject({
+      prescriptionDeliveryAddress: {
+        feeMinor: 500,
+        promiseText: "Delivery within four hours",
+      },
+      prescriptionDeliveryAssignment: {
+        courierDisplayName: "Synthetic Courier",
+        courierReference: `courier-${prepared.runId}`,
+        status: "ASSIGNED",
+      },
+      totalMinor: 3_000,
+    })
+    expect(JSON.stringify(queueItem)).not.toMatch(
+      /Acceptance Road|2348111111111|Acceptance Medicine|objectKey|transcription|credential/i,
+    )
+    await expect(
+      listPrescriptionDeliveryQueue(db, {
+        storeId,
+        tenantId: "cross-tenant-acceptance",
+      }),
+    ).resolves.toEqual([])
+
+    const assignmentId = ready.assignment.id
+    await transitionPrescriptionDelivery(db, {
+      actorUserId,
+      assignmentId,
+      clientOperationId: `${origin}-delivery-collected-${prepared.runId}`,
+      status: "collected",
+      storeId,
+      tenantId,
+    })
+    await transitionPrescriptionDelivery(db, {
+      actorUserId,
+      assignmentId,
+      clientOperationId: `${origin}-delivery-transit-${prepared.runId}`,
+      status: "in_transit",
+      storeId,
+      tenantId,
+    })
+    const completionInput = {
+      actorUserId,
+      assignmentId,
+      clientOperationId: `${origin}-delivery-completed-${prepared.runId}`,
+      proofReference: `proof-${prepared.runId}`,
+      status: "delivered" as const,
+      storeId,
+      tenantId,
+    }
+    const completions = await Promise.all([
+      transitionPrescriptionDelivery(db, completionInput),
+      transitionPrescriptionDelivery(db, completionInput),
+    ])
+    expect(completions.map((result) => result.assignment.status)).toEqual([
+      PrescriptionDeliveryStatus.DELIVERED,
+      PrescriptionDeliveryStatus.DELIVERED,
+    ])
+
+    const [completedOrder, completedDelivery, completionEvents] =
+      await Promise.all([
+        db.commercialOrder.findUniqueOrThrow({
+          where: { id: accepted.orderId },
+        }),
+        db.prescriptionDeliveryAssignment.findUniqueOrThrow({
+          include: { address: true },
+          where: { id: assignmentId },
+        }),
+        db.prescriptionDeliveryEvent.findMany({
+          orderBy: { effectiveAt: "asc" },
+          where: { assignmentId },
+        }),
+      ])
+    expect(completedOrder).toMatchObject({
+      paymentStatus: PaymentStatus.PAID,
+      status: OrderStatus.COMPLETED,
+      totalMinor: 3_000,
+    })
+    expect(completedDelivery).toMatchObject({
+      proofReference: `proof-${prepared.runId}`,
+      status: PrescriptionDeliveryStatus.DELIVERED,
+    })
+    expect(completedDelivery.address.encryptedPayload).not.toMatch(
+      /Acceptance Road|2348111111111/,
+    )
+    expect(completionEvents.map((event) => event.type)).toEqual([
+      "CREATED",
+      "ASSIGNED",
+      "COLLECTED",
+      "IN_TRANSIT",
+      "DELIVERED",
+    ])
+    expect(
+      completionEvents.filter(
+        (event) => event.idempotencyKey === completionInput.clientOperationId,
+      ),
+    ).toHaveLength(1)
+    const afterCompletion = await listPrescriptionDeliveryQueue(db, {
+      storeId,
+      tenantId,
+    })
+    expect(afterCompletion.map((item) => item.id)).not.toContain(
+      accepted.orderId,
+    )
+    const communicationIntents =
+      await db.prescriptionCommunicationIntent.findMany({
+        where: { orderId: accepted.orderId, storeId, tenantId },
+      })
+    expect(communicationIntents.map((intent) => intent.type)).toEqual(
+      expect.arrayContaining(["DELIVERY_PROGRESS"]),
+    )
+    expect(JSON.stringify(communicationIntents)).not.toMatch(
+      /Acceptance Road|Acceptance Medicine|objectKey|transcription/i,
+    )
+    const report = await getPrescriptionOperationsReport(db, {
+      from: fixtureStartedAt,
+      storeId,
+      tenantId,
+      to: new Date(Date.now() + 60_000),
+    })
+    expect(report.deliveryCompleted).toBeGreaterThanOrEqual(1)
+    expect(report.usage.map((event) => event.eventType)).toContain(
+      "DELIVERY_COMPLETED",
+    )
+    return completedOrder.id
+  }
+
   const origins = [
     ["web", PrescriptionRequestSource.WEB],
     ["staff", PrescriptionRequestSource.STAFF_WALK_IN],
@@ -613,6 +895,10 @@ describeWithDatabase("prescription commerce database acceptance", () => {
     test(`completes a safe-media paid pickup lifecycle from ${origin} intake`, async () => {
       expect(await completePickup(origin)).toBe(expectedSource)
     }, 180_000)
+
+    test(`completes a fixed-fee paid delivery lifecycle from ${origin} intake`, async () => {
+      expect(await completeDelivery(origin)).toEqual(expect.any(String))
+    }, 240_000)
   }
 
   test("completes the Commerce Quote Service request-to-order lifecycle", async () => {

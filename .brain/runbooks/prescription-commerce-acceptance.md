@@ -115,10 +115,19 @@ contracting legacy Service Quote tables.
   now races two identical pickup-acceptance commands and proves that both
   callers resolve to one committed Order. A focused web-origin rerun also races
   two handoff commands and resolves both to the one completed fulfilment. The
-  profile-attested integration tests passed with 81 assertions and removed their run-owned synthetic
+  pickup matrix passed with 78 assertions and removed its run-owned synthetic
   Tenant/User fixture in one atomic cleanup.
   Hosted-Neon latency also proved that the shared Prisma client requires the
   bounded 10-second wait/30-second interactive-transaction policy.
+- Automated Neon delivery acceptance: the same three origins independently
+  completed fixed-zone address eligibility, immutable delivery Quote revision,
+  stale-token rejection, concurrent idempotent acceptance, exact paid checkout,
+  inventory reservation, packing, courier assignment, collected/in-transit
+  transitions, proof-backed duplicate-safe delivery, neutral communications,
+  privacy-safe queue/address projections, reporting, usage, and terminal queue
+  removal. The current-source three-origin matrix passed with 102 assertions,
+  including an explicit unauthorized-actor rejection for every origin. No
+  courier or external provider was called.
 - Automated multi-pharmacy routing: focused communications, database, and job
   tests pass for two connection-specific sender credentials and
   `phone_number_id` values, one customer's isolated pharmacy threads, a central
@@ -134,10 +143,10 @@ contracting legacy Service Quote tables.
   revocation. The separate Neon lifecycle proves duplicate payment-callback
   replay. Provider failures remain fake or deterministic; live canaries are
   still required.
-- Remaining acceptance: cross-channel delivery E2E, live provider
-  failure canaries, accessibility automation, load/concurrency/security,
+- Remaining acceptance: live provider and courier failure canaries, delivery
+  SOP sign-off, accessibility automation, load/concurrency/security,
   production Service Quote reconciliation/contraction, and production rollout.
-- Automated baseline: 440 tests pass with 1,335 assertions and eleven database
+- Automated baseline: 442 tests pass with 1,339 assertions and fourteen database
   integration hooks/tests skip by default; the same five unrelated
   mobile-navigation/Retail-Ops mock failures remain tracked outside
   Prescription Commerce. The opt-in Prescription Commerce Neon tests pass

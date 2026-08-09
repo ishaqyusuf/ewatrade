@@ -28,9 +28,13 @@ reporting, and commercial-usage projections.
 The communications/database/job suites cover scoped same-customer threads,
 multi-pharmacy Redis context, connection-specific credentials and sender ids,
 central-number branch selection, cross-Tenant binding rejection, signature
-rejection, retries, and opaque quick actions. Delivery-origin parity, provider
-canaries, accessibility, performance, concurrency, and security remain open
-acceptance work under the separate gates above. Deterministic failure-injection
+rejection, retries, and opaque quick actions. A Neon-backed fixed-zone delivery
+matrix now covers web, staff-assisted, and WhatsApp origins through delivery
+Quote revision, concurrent acceptance, paid Order, packing, courier assignment,
+proof-backed duplicate-safe completion, privacy-safe projections, reporting,
+usage, and terminal queue removal. Provider canaries, accessibility,
+performance, broad concurrency, and security remain open acceptance work under
+the separate gates above. Deterministic failure-injection
 tests now cover private-storage unavailability; OCR timeout/unavailability;
 Meta media and outbound-notification failures; failed payment and duplicate
 callback handling; a structured delivery failure; expired/consumed quick

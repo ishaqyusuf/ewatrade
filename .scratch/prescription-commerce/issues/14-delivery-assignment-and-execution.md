@@ -9,10 +9,15 @@
 **Verification note (2026-08-09):** paid/eligible/packed readiness, minimum
 courier projection, manual provider boundary, assignment/reassignment, proof-
 required delivery, structured failure/recovery, neutral communication intents,
-and terminal state rules are source-complete. Delivery transitions now lock the
-exact Tenant/Store assignment row before replay and transition checks, preventing
-concurrent duplicate completion. Focused failure and recovery tests pass; full
-delivery customer E2E and SOP acceptance remain open.
+and terminal state rules are source-complete. Delivery transitions lock the
+exact Tenant/Store assignment row before replay and transition checks. The
+Neon matrix now proves paid preparation, courier assignment, collected,
+in-transit and delivered transitions, proof, audit events, duplicate completion,
+terminal queue removal, reporting and usage for web, staff-assisted and
+WhatsApp origins. A focused rerun rejects an actor without a Store role; domain
+and repository tests cover invalid terminal transitions, failure recovery,
+cancellation and active-queue filtering. Live courier/SOP acceptance remains a
+separate production gate.
 
 - [x] Only paid, delivery-eligible, packed, and ready orders can enter delivery assignment.
 - [x] The assignment view exposes only the minimum courier information required to complete delivery and maintains tenant/store scoping.
@@ -21,4 +26,4 @@ delivery customer E2E and SOP acceptance remain open.
 - [x] Customer notifications remain neutral and provide secure status actions instead of including prescription contents.
 - [x] Failed contact, unsafe delivery, wrong address, customer refusal, damaged package, return-to-pharmacy, refund, and escalation paths are supported.
 - [x] A provider-neutral delivery boundary allows manual operation initially and future courier integration without changing the domain lifecycle.
-- [ ] Permission, transition, duplicate-event, failure-recovery, privacy, and end-to-end delivery tests are included.
+- [x] Permission, transition, duplicate-event, failure-recovery, privacy, and end-to-end delivery tests are included.
