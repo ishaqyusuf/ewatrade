@@ -5,6 +5,7 @@ import {
   attachPrescriptionRefundProviderResult,
   claimPrescriptionRefundProviderDispatch,
   createPrescriptionRefund,
+  getPublicPrescriptionPaymentStatus,
   processPrescriptionPaymentProviderEvent,
   resolvePrescriptionRefundReconciliationMiss,
 } from "./prescription-payments"
@@ -55,6 +56,79 @@ describe("prescription payment provider failures", () => {
         where: { id: "payment-1" },
       },
     ])
+  })
+
+  test("rejects a mismatched amount before creating payment ledger facts", async () => {
+    const eventUpdates: unknown[] = []
+    const transaction = {
+      prescriptionPaymentIntent: {
+        findUnique: async () => ({
+          amountMinor: 2_500,
+          currencyCode: "NGN",
+          id: "payment-1",
+          orderId: "order-1",
+          status: "PENDING",
+          storeId: "store-1",
+          tenantId: "tenant-1",
+        }),
+      },
+      prescriptionPaymentProviderEvent: {
+        create: async () => ({ id: "event-1" }),
+        findUnique: async () => null,
+        update: async (input: unknown) => {
+          eventUpdates.push(input)
+          return input
+        },
+      },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+    } as unknown as PrismaClient
+
+    await expect(
+      processPrescriptionPaymentProviderEvent(db, {
+        amountMinor: 2_400,
+        currencyCode: "NGN",
+        eventId: "charge.success:payment-1",
+        provider: "fake-hosted",
+        providerReference: "payment-reference-1",
+        status: "paid",
+      }),
+    ).rejects.toMatchObject({ code: "AMOUNT_MISMATCH" })
+    expect(eventUpdates).toEqual([
+      {
+        data: { outcome: "REJECTED", processedAt: expect.any(Date) },
+        where: { id: "event-1" },
+      },
+    ])
+  })
+
+  test("projects an expired checkout without exposing Order or prescription data", async () => {
+    const db = {
+      prescriptionPaymentIntent: {
+        findUnique: async () => ({
+          currencyCode: "NGN",
+          expiresAt: new Date("2026-08-09T09:00:00.000Z"),
+          order: { amountPaidMinor: 0, totalMinor: 2_500 },
+          orderId: "private-order-1",
+          status: "PENDING",
+        }),
+      },
+    } as unknown as PrismaClient
+
+    const status = await getPublicPrescriptionPaymentStatus(db, {
+      now: new Date("2026-08-09T10:00:00.000Z"),
+      statusToken: "status-token",
+    })
+    expect(status).toEqual({
+      amountPaidMinor: 0,
+      balanceDueMinor: 2_500,
+      currencyCode: "NGN",
+      status: "expired",
+      totalMinor: 2_500,
+    })
+    expect(JSON.stringify(status)).not.toContain("private-order-1")
   })
 })
 

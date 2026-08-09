@@ -83,7 +83,8 @@ integration path to the broader EwaTrade commerce platform.
   substitution controls, pharmacist approval, quote release, and exception
   reasons.
 - Commerce: full/partial/unavailable states, itemised and versioned quotes,
-  acceptance, payment, receipt, reconciliation, cancellation, and refunds.
+  concurrent-safe acceptance, provider-hosted payment, neutral receipt/status,
+  expiry, reconciliation, cancellation, and locked idempotent refunds.
 - Fulfilment: packing, ready status, pickup code, authorised collection,
   configurable delivery zones, eligibility, courier assignment, tracking,
   proof, failure handling, and service recovery.

@@ -169,7 +169,7 @@ export async function attachPrescriptionHostedCheckout(
 
 export async function getPublicPrescriptionPaymentStatus(
   db: PrismaClient,
-  input: { statusToken: string },
+  input: { now?: Date; statusToken: string },
 ) {
   const intent = await db.prescriptionPaymentIntent.findUnique({
     include: { order: { select: { amountPaidMinor: true, totalMinor: true } } },
@@ -181,6 +181,11 @@ export async function getPublicPrescriptionPaymentStatus(
       "Payment status is unavailable.",
     )
   }
+  const expired =
+    (intent.status === HostedPaymentStatus.CREATED ||
+      intent.status === HostedPaymentStatus.PENDING) &&
+    intent.expiresAt !== null &&
+    intent.expiresAt <= (input.now ?? new Date())
   return {
     amountPaidMinor: intent.order.amountPaidMinor,
     balanceDueMinor: Math.max(
@@ -188,7 +193,7 @@ export async function getPublicPrescriptionPaymentStatus(
       intent.order.totalMinor - intent.order.amountPaidMinor,
     ),
     currencyCode: intent.currencyCode,
-    status: intent.status.toLowerCase(),
+    status: expired ? ("expired" as const) : intent.status.toLowerCase(),
     totalMinor: intent.order.totalMinor,
   }
 }
