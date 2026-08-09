@@ -110,19 +110,22 @@ thin webhook transport and deduplicated identifier-driven jobs.
   `prescription-whatsapp-inbound.ts`, `prescription-communication-dispatch.ts`,
   `whatsapp-connection-test.ts`, media/transcription/privacy/retention tasks and
   commercial-order reminders.
-- Acceptance: `packages/db/src/queries/prescription-commerce.integration.test.ts`
-  plus focused Service, Prescription, Communications, DB and job tests.
+- Acceptance: focused specs under
+  `packages/db/src/queries/acceptance/service-commerce/` plus Service,
+  Prescription, Communications, DB and job tests.
 
-### Paused Working-Tree Prefactor
+### Completed Ticket 01 Compatibility Prefactor
 
-Before ADR-0030, Ticket 01 began an uncommitted compatibility prefactor that
-creates `packages/service-commerce`, splits the broad Neon acceptance file into
-`packages/db/src/queries/acceptance/service-commerce/`, and passes the existing
-Service/Pharmacy matrix on the verified local Neon profile. It is not an
-accepted implementation: its source enum still reflects the superseded
-two-source contract and must be reconciled with `commerce_inquiry`, Progressive
-Catalog and the revised ticket before work resumes. Documentation must not
-represent Ticket 01 complete or the revised batch approved from this evidence.
+Ticket 01 creates `packages/service-commerce`, defines the exact three-source
+contract (`service | prescription | commerce_inquiry`), exposes the minimal
+channel/capability/readiness/action/fulfilment vocabulary, and validates source
+references at the adapter boundary. It also splits the broad Neon acceptance
+file into `packages/db/src/queries/acceptance/service-commerce/` with a shared
+run-owned fixture and bounded atomic cleanup. The compatibility matrix passed
+on the verified `.env.local` Neon profile before the source contract was
+reconciled; focused contract tests and both affected package typechecks pass
+after reconciliation. No caller ownership, persistence model, production
+schema, provider configuration, or contraction changes in Ticket 01.
 
 Current divergence to remove deliberately: the Service workspace owns local
 sheet instances and manually edits `URLSearchParams`; Prescription already has

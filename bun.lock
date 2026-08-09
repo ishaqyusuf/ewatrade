@@ -401,6 +401,18 @@
         "typescript": "catalog:",
       },
     },
+    "packages/service-commerce": {
+      "name": "@ewatrade/service-commerce",
+      "version": "1.0.0",
+      "dependencies": {
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@ewatrade/tsconfig": "workspace:*",
+        "@types/bun": "latest",
+        "typescript": "catalog:",
+      },
+    },
     "packages/tenant-url": {
       "name": "@ewatrade/tenant-url",
       "version": "1.0.0",

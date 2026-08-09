@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 - Define Service Commerce Boundary And Compatibility Contract.
 
-**Status:** approved; blocked by Ticket 01
+**Status:** ready for implementation
 
 **Approval:** Original and revised Progressive Catalog scope owner-approved on
 2026-08-09.

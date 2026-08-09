@@ -304,11 +304,12 @@
 - Privacy identity verification records the verifying user, timestamp, and a
   bounded evidence/method reference before processing can be queued.
 
-## Planned Service Commerce Progressive Catalog
+## Service Commerce Source Contract And Planned Progressive Catalog
 
-This contract is approved as an architecture amendment in ADR-0030 but is not
-implemented. Source work remains paused until the revised ticket batch is
-owner-approved.
+ADR-0030 and the revised ticket batch are owner-approved. Ticket 01 implements
+the focused `@ewatrade/service-commerce` source-reference and minimal
+capability vocabulary only. Commerce Inquiry persistence/lifecycle and the
+Progressive Catalog commands below remain owned by later blocked tickets.
 
 - The exhaustive source reference is `service | prescription |
   commerce_inquiry`; Commerce Inquiry is limited to Product demand requiring

@@ -54,9 +54,11 @@ The platform reuses existing bounded contexts rather than replacing them:
   projections from authoritative lifecycle events.
 
 `ServiceRequest` and `PrescriptionRequest` remain separate source aggregates.
-A typed interoperability contract will expose the minimum common source
-reference, lifecycle and allowed-command vocabulary only after compatibility
-tests protect both paths.
+Ticket 01 now exposes the exact typed source reference and minimal shared
+channel/capability/readiness/action/fulfilment vocabulary through
+`@ewatrade/service-commerce`; it does not merge their lifecycles or database
+models. Split compatibility acceptance protects both paths before ownership
+moves.
 
 Exact Product selections continue through the current cart/Commercial Order
 path. ADR-0030 approves `commerce_inquiry` as a narrow Commerce-owned source
