@@ -6,6 +6,15 @@
 
 **Status:** implemented-source; legal/privacy sign-off pending
 
+**Verification note (2026-08-09):** independent audit/commercial cutoffs now
+drive the identifier-only retention job; mutable customer/audit content is
+redacted idempotently while lifecycle/accounting tombstones remain. Sensitive
+detail, media, pharmacist-decision, transcript, credential, and emergency reads
+are Store-scoped and queryable. Personal break-glass grants expire within 60
+minutes, are conspicuous, log every use, never grant pharmacist release, and
+require a post-use review reason. Focused retention and authorization tests and
+DB/API/dashboard/jobs typechecks pass; legal/privacy acceptance remains open.
+
 - [ ] Configurable retention policies cover raw media, derived transcripts, messages, secure tokens, addresses, audit evidence, and commercial records with documented legal/business boundaries.
 - [ ] Scheduled lifecycle jobs expire or delete eligible sensitive artifacts idempotently and preserve only justified tombstones or immutable accounting evidence.
 - [ ] Authorized staff can perform access, correction, export, restriction, and erasure workflows with identity verification, structured reasons, and an audit trail.

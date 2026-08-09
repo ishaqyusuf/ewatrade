@@ -66,6 +66,13 @@
 - Operational roles may act only inside the active Tenant/Store and current
   request state. Every professional or fulfilment transition re-checks role,
   revision, and state server-side.
+- Owner/Admin may create a personal emergency grant only with a reason and an
+  expiry no more than 60 minutes away. It permits audited queue/detail/media
+  access inside that Store only, is shown conspicuously, and requires a
+  post-use review reason. It does not grant pharmacist release authority.
+- Compliance personnel are represented by the existing Owner/Admin setup
+  permission and can query purpose-labelled sensitive-access history. Tenant
+  and Store predicates are mandatory at every access-event boundary.
 - Public customers receive no ambient read permission. Every route/action is
   limited by a single-purpose opaque capability and an allowlisted projection.
 - WhatsApp webhooks use verified Meta signatures; payment callbacks use verified

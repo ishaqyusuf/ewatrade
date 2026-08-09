@@ -37,29 +37,36 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
     trpc.prescriptions.connectWhatsAppManually.mutationOptions({
       onError: (error) => setMessage(error.message),
       onSuccess: async () => {
-        setMessage("Connection saved. Readiness testing is running.")
         await invalidate()
+        setMessage("Connection saved. Readiness testing is running.")
       },
     }),
   )
   const retest = useMutation(
     trpc.prescriptions.retestWhatsAppConnection.mutationOptions({
+      onError: (error) => setMessage(error.message),
       onSuccess: async () => {
-        setMessage("Connection test queued.")
         await invalidate()
+        setMessage("Connection test queued.")
       },
     }),
   )
   const lifecycle = useMutation(
     trpc.prescriptions.updateWhatsAppConnectionLifecycle.mutationOptions({
-      onSuccess: invalidate,
+      onError: (error) => setMessage(error.message),
+      onSuccess: async () => {
+        await invalidate()
+        setMessage("Connection lifecycle updated.")
+      },
     }),
   )
+
   const suspendBinding = useMutation(
     trpc.prescriptions.suspendWhatsAppStoreBinding.mutationOptions({
+      onError: (error) => setMessage(error.message),
       onSuccess: async () => {
-        setMessage("This sender is no longer routed to the current Store.")
         await invalidate()
+        setMessage("This sender is no longer routed to the current Store.")
       },
     }),
   )
@@ -67,12 +74,35 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
     trpc.prescriptions.selectWhatsAppEmbeddedSignupNumber.mutationOptions({
       onError: (error) => setMessage(error.message),
       onSuccess: async () => {
-        setMessage("Number selected. Readiness testing is running.")
         window.history.replaceState({}, "", window.location.pathname)
         await invalidate()
+        setMessage("Number selected. Readiness testing is running.")
       },
     }),
   )
+
+  if (connections.isLoading || embedded.isLoading) {
+    return <div className="h-64 animate-pulse rounded-xl bg-muted" />
+  }
+  const queryError = connections.error ?? embedded.error
+  if (queryError) {
+    return (
+      <div className="grid gap-3 rounded-xl border border-destructive/30 p-5">
+        <p role="alert" className="text-sm text-destructive">
+          {queryError.message}
+        </p>
+        <Button
+          className="w-fit"
+          onClick={() =>
+            void Promise.all([connections.refetch(), embedded.refetch()])
+          }
+          variant="outline"
+        >
+          Try again
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <section className="grid gap-5 rounded-xl border border-border bg-card p-5">
@@ -111,6 +141,10 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
           {selection.isLoading ? (
             <p className="text-sm text-muted-foreground">
               Loading authorized numbers…
+            </p>
+          ) : selection.error ? (
+            <p role="alert" className="text-sm text-destructive">
+              {selection.error.message}
             </p>
           ) : selection.data?.numbers.length ? (
             <div className="grid gap-3">

@@ -92,7 +92,12 @@ export function createPrescriptionColumns(
       className: "w-24 text-right",
       header: "Actions",
       key: "actions",
-      render: (request) => <PrescriptionActionsMenu requestId={request.id} />,
+      render: (request) => (
+        <PrescriptionActionsMenu
+          requestId={request.id}
+          status={request.status}
+        />
+      ),
     },
   ]
 }

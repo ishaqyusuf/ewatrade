@@ -5,9 +5,11 @@ import {
   PRESCRIPTION_STATUSES,
   usePrescriptionFilterParams,
 } from "@/hooks/use-prescription-filter-params"
+import { useTRPC } from "@/trpc/client"
 import { Button } from "@ewatrade/ui"
 import { Search01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 
 function label(value: string) {
@@ -17,8 +19,12 @@ function label(value: string) {
     .join(" ")
 }
 
-export function PrescriptionSearchFilter() {
+export function PrescriptionSearchFilter({ storeId }: { storeId: string }) {
+  const trpc = useTRPC()
   const { filter, hasFilters, setFilter } = usePrescriptionFilterParams()
+  const context = useQuery(
+    trpc.prescriptions.queueContext.queryOptions({ storeId }),
+  )
   const [query, setQuery] = useState(filter.q ?? "")
 
   useEffect(() => setQuery(filter.q ?? ""), [filter.q])
@@ -63,6 +69,41 @@ export function PrescriptionSearchFilter() {
           </option>
         ))}
       </select>
+      <select
+        aria-label="Filter by assignee"
+        className="h-10 rounded-lg border border-border bg-background px-3 text-sm"
+        value={filter.assignees?.[0] ?? ""}
+        onChange={(event) =>
+          setFilter({
+            assignees: event.target.value ? [event.target.value] : null,
+          })
+        }
+      >
+        <option value="">All assignees</option>
+        {(context.data?.assignees ?? []).map((assignee) => (
+          <option key={assignee.id} value={assignee.id}>
+            {assignee.name}
+          </option>
+        ))}
+      </select>
+      <label className="grid gap-1 text-xs text-muted-foreground">
+        From
+        <input
+          className="h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground"
+          type="date"
+          value={filter.from ?? ""}
+          onChange={(event) => setFilter({ from: event.target.value || null })}
+        />
+      </label>
+      <label className="grid gap-1 text-xs text-muted-foreground">
+        Before
+        <input
+          className="h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground"
+          type="date"
+          value={filter.to ?? ""}
+          onChange={(event) => setFilter({ to: event.target.value || null })}
+        />
+      </label>
       <select
         aria-label="Filter by source"
         className="h-10 rounded-lg border border-border bg-background px-3 text-sm"

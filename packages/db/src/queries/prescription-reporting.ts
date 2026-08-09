@@ -10,6 +10,62 @@ export type PrescriptionUsageAmounts = {
   taxMinor?: number | null
 }
 
+const costApplicability = {
+  deliveryCostMinor: ["DELIVERY_COMPLETED"],
+  metaCostMinor: ["MESSAGE_SENT"],
+  paymentProviderFeeMinor: ["PAYMENT_SUCCEEDED"],
+  pharmacyRevenueMinor: ["ORDER_CREATED"],
+  platformChargeMinor: [
+    "DELIVERY_COMPLETED",
+    "MESSAGE_SENT",
+    "ORDER_CREATED",
+    "PAYMENT_SUCCEEDED",
+    "PICKUP_COMPLETED",
+    "QUOTE_ISSUED",
+    "REQUEST_RECEIVED",
+  ],
+  taxMinor: ["ORDER_CREATED"],
+} satisfies Record<keyof PrescriptionUsageAmounts, string[]>
+
+export function summarizePrescriptionUsageAmounts(
+  usage: Array<{ amounts: unknown; eventType: string }>,
+) {
+  return Object.fromEntries(
+    Object.entries(costApplicability).map(([key, eventTypes]) => {
+      let amountMinor = 0
+      let observedCount = 0
+      let unknownCount = 0
+      for (const event of usage) {
+        if (!eventTypes.includes(event.eventType)) continue
+        const amounts =
+          event.amounts &&
+          typeof event.amounts === "object" &&
+          !Array.isArray(event.amounts)
+            ? (event.amounts as Record<string, unknown>)
+            : {}
+        const value = amounts[key]
+        if (typeof value === "number" && Number.isSafeInteger(value)) {
+          amountMinor += value
+          observedCount += 1
+        } else {
+          unknownCount += 1
+        }
+      }
+      return [
+        key,
+        {
+          amountMinor: observedCount > 0 ? amountMinor : null,
+          observedCount,
+          unknownCount,
+        },
+      ]
+    }),
+  ) as Record<
+    keyof PrescriptionUsageAmounts,
+    { amountMinor: number | null; observedCount: number; unknownCount: number }
+  >
+}
+
 export async function recordPrescriptionUsageEvent(
   db: PrismaClient,
   input: {
@@ -87,32 +143,48 @@ export function prescriptionReviewDurationPairs(
   }))
 }
 
+export function prescriptionReportStoreScope(input: {
+  storeId?: string | null
+  tenantId: string
+}) {
+  return {
+    ...(input.storeId ? { storeId: input.storeId } : {}),
+    tenantId: input.tenantId,
+  }
+}
+
 export async function getPrescriptionOperationsReport(
   db: PrismaClient,
   input: {
     from: Date
-    storeId: string
+    storeId?: string | null
     tenantId: string
     to: Date
   },
 ) {
+  const reportScope = prescriptionReportStoreScope(input)
+  const storeScope = input.storeId ? { storeId: input.storeId } : {}
   const scope = {
     createdAt: { gte: input.from, lt: input.to },
-    storeId: input.storeId,
-    tenantId: input.tenantId,
+    ...reportScope,
   }
   const [
-    store,
+    tenant,
+    stores,
     requests,
-    quoteCount,
+    quotes,
     paymentIntents,
     pickups,
     deliveries,
     usage,
   ] = await Promise.all([
-    db.store.findFirstOrThrow({
+    db.tenant.findFirstOrThrow({
       select: { currencyCode: true },
-      where: { id: input.storeId, tenantId: input.tenantId },
+      where: { id: input.tenantId },
+    }),
+    db.store.findMany({
+      select: { id: true, name: true },
+      where: { id: input.storeId ?? undefined, tenantId: input.tenantId },
     }),
     db.prescriptionRequest.findMany({
       select: {
@@ -124,14 +196,20 @@ export async function getPrescriptionOperationsReport(
         convertedAt: true,
         createdAt: true,
         source: true,
+        storeId: true,
       },
       where: scope,
     }),
-    db.commerceQuote.count({
+    db.commerceQuote.findMany({
+      select: {
+        currentVersion: {
+          select: { availabilityOutcome: true, status: true },
+        },
+      },
       where: {
         createdAt: scope.createdAt,
         sourceType: "PRESCRIPTION_REQUEST",
-        storeId: input.storeId,
+        ...storeScope,
         tenantId: input.tenantId,
       },
     }),
@@ -142,7 +220,7 @@ export async function getPrescriptionOperationsReport(
     db.prescriptionPickupFulfillment.count({
       where: {
         createdAt: scope.createdAt,
-        storeId: input.storeId,
+        ...storeScope,
         tenantId: input.tenantId,
         status: "HANDED_OFF",
       },
@@ -150,7 +228,7 @@ export async function getPrescriptionOperationsReport(
     db.prescriptionDeliveryAssignment.count({
       where: {
         createdAt: scope.createdAt,
-        storeId: input.storeId,
+        ...storeScope,
         tenantId: input.tenantId,
         status: "DELIVERED",
       },
@@ -164,7 +242,7 @@ export async function getPrescriptionOperationsReport(
       },
       where: {
         occurredAt: { gte: input.from, lt: input.to },
-        storeId: input.storeId,
+        ...storeScope,
         tenantId: input.tenantId,
       },
     }),
@@ -180,7 +258,8 @@ export async function getPrescriptionOperationsReport(
   )
   return {
     channelMix,
-    currencyCode: store.currencyCode,
+    costs: summarizePrescriptionUsageAmounts(usage),
+    currencyCode: tenant.currencyCode,
     conversionRate:
       requests.length > 0
         ? requests.filter((request) => request.convertedAt).length /
@@ -196,9 +275,33 @@ export async function getPrescriptionOperationsReport(
       totalAttempts: paymentIntents.length,
     },
     pickupCompleted: pickups,
-    quoteCount,
+    quoteCount: quotes.length,
+    quoteOutcomes: {
+      accepted: quotes.filter(
+        (quote) => quote.currentVersion?.status === "ACCEPTED",
+      ).length,
+      declined: quotes.filter(
+        (quote) => quote.currentVersion?.status === "DECLINED",
+      ).length,
+      full: quotes.filter(
+        (quote) => quote.currentVersion?.availabilityOutcome === "FULL",
+      ).length,
+      partial: quotes.filter(
+        (quote) => quote.currentVersion?.availabilityOutcome === "PARTIAL",
+      ).length,
+      unavailable: quotes.filter(
+        (quote) => quote.currentVersion?.availabilityOutcome === "UNAVAILABLE",
+      ).length,
+    },
     requestCount: requests.length,
     reviewTimeMs: averageDurationMs(prescriptionReviewDurationPairs(requests)),
+    scope: input.storeId ? "store" : "tenant",
+    storeBreakdown: stores.map((store) => ({
+      name: store.name,
+      requestCount: requests.filter((request) => request.storeId === store.id)
+        .length,
+      storeId: store.id,
+    })),
     usage,
   }
 }
@@ -213,16 +316,38 @@ export async function reconcilePrescriptionUsageEvents(
   })
   const missingSources: Array<{ sourceId: string; sourceType: string }> = []
   for (const event of events) {
+    const sourceScope = {
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    }
     const exists =
       event.sourceType === "request"
-        ? await db.prescriptionRequest.count({ where: { id: event.sourceId } })
+        ? await db.prescriptionRequest.count({
+            where: { id: event.sourceId, ...sourceScope },
+          })
         : event.sourceType === "order"
-          ? await db.commercialOrder.count({ where: { id: event.sourceId } })
+          ? await db.commercialOrder.count({
+              where: { id: event.sourceId, ...sourceScope },
+            })
           : event.sourceType === "payment"
             ? await db.prescriptionPaymentIntent.count({
-                where: { id: event.sourceId },
+                where: { id: event.sourceId, ...sourceScope },
               })
-            : 1
+            : event.sourceType === "quote"
+              ? await db.commerceQuoteVersion.count({
+                  where: {
+                    id: event.sourceId,
+                    quote: { is: sourceScope },
+                  },
+                })
+              : event.sourceType === "communication_attempt"
+                ? await db.prescriptionCommunicationAttempt.count({
+                    where: {
+                      id: event.sourceId,
+                      intent: { is: sourceScope },
+                    },
+                  })
+                : 0
     if (!exists) {
       missingSources.push({
         sourceId: event.sourceId,

@@ -1,11 +1,11 @@
 model Store {
-  id                                String                            @id @default(cuid())
+  id                                String                             @id @default(cuid())
   tenantId                          String
   slug                              String
   name                              String
   description                       String?
-  status                            StoreStatus                       @default(DRAFT)
-  currencyCode                      String                            @default("NGN")
+  status                            StoreStatus                        @default(DRAFT)
+  currencyCode                      String                             @default("NGN")
   supportPhone                      String?
   supportEmail                      String?
   addressLine1                      String?
@@ -14,11 +14,11 @@ model Store {
   region                            String?
   postalCode                        String?
   countryCode                       String?
-  isMarketplaceLive                 Boolean                           @default(false)
+  isMarketplaceLive                 Boolean                            @default(false)
   metadata                          Json?
-  createdAt                         DateTime                          @default(now())
-  updatedAt                         DateTime                          @updatedAt
-  tenant                            Tenant                            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                         DateTime                           @default(now())
+  updatedAt                         DateTime                           @updatedAt
+  tenant                            Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   retailOpsStaffProfiles            RetailOpsStaffProfile[]
   pages                             Page[]
   sites                             Site[]
@@ -55,6 +55,7 @@ model Store {
   prescriptionRetentionPolicy       PrescriptionRetentionPolicy?
   prescriptionPrivacyRequests       PrescriptionPrivacyRequest[]
   prescriptionIncidentControls      PrescriptionIncidentControl[]
+  prescriptionSensitiveAccessEvents PrescriptionSensitiveAccessEvent[]
   prescriptionUsageEvents           PrescriptionUsageEvent[]
   commerceQuotes                    CommerceQuote[]
   catalogOfferingAvailability       StoreOfferingAvailability[]
@@ -63,8 +64,8 @@ model Store {
   stockOperations                   StockOperation[]
   stockReservations                 StockReservation[]
   stockCounts                       StockCount[]
-  outboundStockTransfers            StockTransfer[]                   @relation("StockTransferSourceStore")
-  inboundStockTransfers             StockTransfer[]                   @relation("StockTransferTargetStore")
+  outboundStockTransfers            StockTransfer[]                    @relation("StockTransferSourceStore")
+  inboundStockTransfers             StockTransfer[]                    @relation("StockTransferTargetStore")
   inventoryCloseouts                InventoryCloseout[]
   commercialOrders                  CommercialOrder[]
   commercialOrderPayments           CommercialOrderPayment[]

@@ -1,10 +1,19 @@
 "use client"
 
-import { usePrescriptionParams } from "@/hooks/use-prescription-params"
+import {
+  prescriptionSheetModeForStatus,
+  usePrescriptionParams,
+} from "@/hooks/use-prescription-params"
 import { Button } from "@ewatrade/ui"
 import type { MouseEvent } from "react"
 
-export function PrescriptionActionsMenu({ requestId }: { requestId: string }) {
+export function PrescriptionActionsMenu({
+  requestId,
+  status,
+}: {
+  requestId: string
+  status: string
+}) {
   const { setParams } = usePrescriptionParams()
   return (
     <Button
@@ -15,7 +24,7 @@ export function PrescriptionActionsMenu({ requestId }: { requestId: string }) {
         event.stopPropagation()
         setParams({
           prescriptionId: requestId,
-          prescriptionSheet: "details",
+          prescriptionSheet: prescriptionSheetModeForStatus(status),
         })
       }}
     >

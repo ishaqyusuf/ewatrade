@@ -409,6 +409,7 @@ model PrescriptionRetentionPolicy {
   secureTokenDays      Int      @default(30)
   addressDays          Int      @default(30)
   commercialRecordDays Int      @default(2555)
+  auditEvidenceDays    Int      @default(2555)
   legalHold            Boolean  @default(false)
   updatedByUserId      String
   createdAt            DateTime @default(now())
@@ -442,23 +443,45 @@ model PrescriptionPrivacyRequest {
 }
 
 model PrescriptionIncidentControl {
-  id                String                     @id @default(cuid())
-  tenantId          String
-  storeId           String
-  type              PrescriptionIncidentType
-  status            PrescriptionIncidentStatus @default(ACTIVE)
-  reason            String
-  activatedByUserId String
-  resolvedByUserId  String?
-  activatedAt       DateTime                   @default(now())
-  expiresAt         DateTime?
-  resolvedAt        DateTime?
-  createdAt         DateTime                   @default(now())
-  updatedAt         DateTime                   @updatedAt
-  tenant            Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store             Store                      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  id                    String                             @id @default(cuid())
+  tenantId              String
+  storeId               String
+  type                  PrescriptionIncidentType
+  status                PrescriptionIncidentStatus         @default(ACTIVE)
+  reason                String
+  activatedByUserId     String
+  resolvedByUserId      String?
+  activatedAt           DateTime                           @default(now())
+  expiresAt             DateTime?
+  resolvedAt            DateTime?
+  createdAt             DateTime                           @default(now())
+  updatedAt             DateTime                           @updatedAt
+  tenant                Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                 Store                              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  sensitiveAccessEvents PrescriptionSensitiveAccessEvent[]
 
   @@index([tenantId, storeId, status, activatedAt])
+}
+
+model PrescriptionSensitiveAccessEvent {
+  id                String                       @id @default(cuid())
+  tenantId          String
+  storeId           String
+  requestId         String?
+  incidentControlId String?
+  actorUserId       String
+  accessType        String
+  reason            String
+  effectiveAt       DateTime                     @default(now())
+  createdAt         DateTime                     @default(now())
+  tenant            Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                        @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  request           PrescriptionRequest?         @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  incidentControl   PrescriptionIncidentControl? @relation(fields: [incidentControlId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, storeId, effectiveAt])
+  @@index([requestId, effectiveAt])
+  @@index([incidentControlId, effectiveAt])
 }
 
 model PrescriptionUsageEvent {

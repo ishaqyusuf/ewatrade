@@ -5,6 +5,7 @@ import {
   assertPrescriptionRequestTransition,
   createPrescriptionIntakeFingerprint,
   normalizePrescriptionMediaManifest,
+  prescriptionQueueWhere,
   requiresVerifiedTranscript,
 } from "./prescription-requests"
 
@@ -145,5 +146,32 @@ describe("Prescription Request lifecycle", () => {
         partialAcknowledged: true,
       }),
     ).toThrow("not a prescription pickup Quote")
+  })
+
+  test("builds tenant-scoped assignee and date-range queue predicates", () => {
+    expect(
+      prescriptionQueueWhere({
+        assignees: ["user-1"],
+        from: "2026-08-01",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+        to: "2026-08-10",
+      }),
+    ).toMatchObject({
+      createdAt: {
+        gte: new Date("2026-08-01T00:00:00.000Z"),
+        lt: new Date("2026-08-10T00:00:00.000Z"),
+      },
+      OR: [
+        { staffAssistedByUserId: { in: ["user-1"] } },
+        {
+          pharmacistReviews: {
+            some: { pharmacistUserId: { in: ["user-1"] } },
+          },
+        },
+      ],
+      storeId: "store-1",
+      tenantId: "tenant-1",
+    })
   })
 })

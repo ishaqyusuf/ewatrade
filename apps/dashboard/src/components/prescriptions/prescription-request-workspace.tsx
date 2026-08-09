@@ -7,6 +7,7 @@ import { Badge, Button } from "@ewatrade/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 
+import type { PrescriptionSheetMode } from "@/hooks/use-prescription-params"
 import { PrescriptionSheetHeader } from "./prescription-sheet-header"
 
 type RequestDetail = RouterOutputs["prescriptions"]["detail"]
@@ -25,9 +26,11 @@ function formatStatus(value: string) {
 }
 
 export function PrescriptionRequestWorkspace({
+  mode,
   requestId,
   storeId,
 }: {
+  mode: PrescriptionSheetMode
   requestId: string
   storeId: string
 }) {
@@ -59,6 +62,9 @@ export function PrescriptionRequestWorkspace({
   >({})
   const [prices, setPrices] = useState<Record<string, string>>({})
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({})
+  const [pendingDecision, setPendingDecision] = useState<
+    "declined" | "needs_clarification" | "released" | null
+  >(null)
 
   const refresh = async () => {
     await Promise.all([
@@ -131,6 +137,21 @@ export function PrescriptionRequestWorkspace({
   const currentMedia = request.media.filter(
     (media) => media.revision === request.currentMediaRevision,
   )
+  const allowedStatuses: Partial<Record<PrescriptionSheetMode, string[]>> = {
+    "attendant-review": ["ATTENDANT_VERIFICATION"],
+    "media-review": ["RECEIVED", "MEDIA_REVIEW", "NEEDS_CLEARER_MEDIA"],
+    "pharmacist-review": ["PHARMACIST_REVIEW"],
+    quote: ["READY_TO_QUOTE"],
+  }
+  const allowed = allowedStatuses[mode]
+  if (allowed && !allowed.includes(request.status)) {
+    return (
+      <p role="alert" className="text-sm text-destructive">
+        This request has moved to {formatStatus(request.status)}. Close and
+        reopen it from the queue to continue in the current workflow.
+      </p>
+    )
+  }
   const isPending =
     startTranscription.isPending ||
     clearerMedia.isPending ||
@@ -139,29 +160,43 @@ export function PrescriptionRequestWorkspace({
     pharmacistReview.isPending ||
     issueQuote.isPending
 
-  const release = () => {
-    if (!transcript) return
+  const confirmPharmacistDecision = () => {
+    if (!transcript || !pendingDecision) return
     setError(null)
-    pharmacistReview.mutate({
-      decision: "released",
-      expectedMediaRevision: request.currentMediaRevision,
-      expectedTranscriptRevision: transcript.revision,
-      lines: transcript.lines.map((line) => {
-        const mapping = lineMapping[line.id] ?? {
-          availability: "available" as const,
-          offeringId: "",
-          quantity: "1",
-        }
-        return {
-          availability: mapping.availability,
-          offeringId: mapping.offeringId || undefined,
-          quantity: mapping.quantity || undefined,
-          transcriptionLineId: line.id,
-        }
-      }),
-      requestId,
-      storeId,
-    })
+    pharmacistReview.mutate(
+      {
+        decision: pendingDecision,
+        expectedMediaRevision: request.currentMediaRevision,
+        expectedTranscriptRevision: transcript.revision,
+        lines:
+          pendingDecision === "released"
+            ? transcript.lines.map((line) => {
+                const mapping = lineMapping[line.id] ?? {
+                  availability: "available" as const,
+                  offeringId: "",
+                  quantity: "1",
+                }
+                return {
+                  availability: mapping.availability,
+                  offeringId: mapping.offeringId || undefined,
+                  quantity: mapping.quantity || undefined,
+                  transcriptionLineId: line.id,
+                }
+              })
+            : [],
+        reason:
+          pendingDecision === "declined"
+            ? "Pharmacist declined after review"
+            : pendingDecision === "needs_clarification"
+              ? "Customer clarification required"
+              : undefined,
+        requestId,
+        storeId,
+      },
+      {
+        onSuccess: () => setPendingDecision(null),
+      },
+    )
   }
 
   const quote = () => {
@@ -198,7 +233,8 @@ export function PrescriptionRequestWorkspace({
         </div>
       </dl>
 
-      {currentMedia.length ? (
+      {(mode === "details" || mode === "media-review") &&
+      currentMedia.length ? (
         <section className="grid gap-3">
           <h4 className="font-medium">Private media</h4>
           {currentMedia.map((media) => (
@@ -243,7 +279,8 @@ export function PrescriptionRequestWorkspace({
         </section>
       ) : null}
 
-      {(request.status === "RECEIVED" || request.status === "MEDIA_REVIEW") &&
+      {mode === "media-review" &&
+      (request.status === "RECEIVED" || request.status === "MEDIA_REVIEW") &&
       currentMedia.length ? (
         <section className="grid gap-3 rounded-lg border border-border p-4">
           <h4 className="font-medium">Media review</h4>
@@ -282,7 +319,9 @@ export function PrescriptionRequestWorkspace({
         </section>
       ) : null}
 
-      {request.status === "ATTENDANT_VERIFICATION" && transcript ? (
+      {mode === "attendant-review" &&
+      request.status === "ATTENDANT_VERIFICATION" &&
+      transcript ? (
         <section className="grid gap-3">
           <h4 className="font-medium">Verify every transcription line</h4>
           <p className="text-sm text-muted-foreground">
@@ -349,7 +388,9 @@ export function PrescriptionRequestWorkspace({
         </section>
       ) : null}
 
-      {request.status === "PHARMACIST_REVIEW" && transcript ? (
+      {mode === "pharmacist-review" &&
+      request.status === "PHARMACIST_REVIEW" &&
+      transcript ? (
         <section className="grid gap-3">
           <h4 className="font-medium">
             Pharmacist review and catalogue mapping
@@ -422,48 +463,67 @@ export function PrescriptionRequestWorkspace({
             )
           })}
           <div className="grid gap-2 sm:grid-cols-3">
-            <Button disabled={isPending} onClick={release}>
+            <Button
+              disabled={isPending}
+              onClick={() => setPendingDecision("released")}
+            >
               Release for quote
             </Button>
             <Button
               variant="outline"
               disabled={isPending}
-              onClick={() =>
-                pharmacistReview.mutate({
-                  decision: "needs_clarification",
-                  expectedMediaRevision: request.currentMediaRevision,
-                  expectedTranscriptRevision: transcript.revision,
-                  lines: [],
-                  reason: "Customer clarification required",
-                  requestId,
-                  storeId,
-                })
-              }
+              onClick={() => setPendingDecision("needs_clarification")}
             >
               Request clarification
             </Button>
             <Button
               variant="destructive"
               disabled={isPending}
-              onClick={() =>
-                pharmacistReview.mutate({
-                  decision: "declined",
-                  expectedMediaRevision: request.currentMediaRevision,
-                  expectedTranscriptRevision: transcript.revision,
-                  lines: [],
-                  reason: "Pharmacist declined after review",
-                  requestId,
-                  storeId,
-                })
-              }
+              onClick={() => setPendingDecision("declined")}
             >
               Decline
             </Button>
           </div>
+          {pendingDecision ? (
+            <div
+              className="grid gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950"
+              role="alertdialog"
+              aria-labelledby="pharmacist-decision-title"
+            >
+              <div>
+                <h5 id="pharmacist-decision-title" className="font-medium">
+                  Confirm professional decision
+                </h5>
+                <p className="mt-1 text-sm">
+                  {formatStatus(pendingDecision)} for media revision{" "}
+                  {request.currentMediaRevision} and transcript revision{" "}
+                  {transcript.revision}. This command is audited and revalidated
+                  server-side.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  disabled={pharmacistReview.isPending}
+                  onClick={confirmPharmacistDecision}
+                >
+                  {pharmacistReview.isPending
+                    ? "Confirming…"
+                    : "Confirm decision"}
+                </Button>
+                <Button
+                  disabled={pharmacistReview.isPending}
+                  onClick={() => setPendingDecision(null)}
+                  variant="outline"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </section>
       ) : null}
 
-      {request.status === "READY_TO_QUOTE" && transcript ? (
+      {mode === "quote" && request.status === "READY_TO_QUOTE" && transcript ? (
         <section className="grid gap-3">
           <h4 className="font-medium">Prepare pickup quote</h4>
           {transcript.lines.map((line) => (

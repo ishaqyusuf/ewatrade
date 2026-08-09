@@ -41,7 +41,15 @@ export default async function Page() {
           </Button>
         </header>
         <Suspense fallback={<div className="h-72 animate-pulse bg-muted" />}>
-          <PrescriptionReport from={from} storeId={store.id} to={to} />
+          <PrescriptionReport
+            from={from}
+            initialStoreId={store.id}
+            stores={ctx.stores.map((item) => ({
+              id: item.id,
+              name: item.name,
+            }))}
+            to={to}
+          />
         </Suspense>
       </div>
     </HydrateClient>

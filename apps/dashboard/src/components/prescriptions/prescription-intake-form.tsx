@@ -46,7 +46,7 @@ export function PrescriptionIntakeForm({ storeId }: { storeId: string }) {
         })
         setParams({
           prescriptionId: result.requestId,
-          prescriptionSheet: "details",
+          prescriptionSheet: "success",
         })
       },
     }),

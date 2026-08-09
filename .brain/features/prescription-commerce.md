@@ -129,9 +129,15 @@ integration path to the broader EwaTrade commerce platform.
 ## Midday Dashboard Conformance
 
 - The route is a server composition/prefetch boundary. Typed `nuqs` loaders and
-  hooks share filter, sort, selected-request, and sheet state across refreshes.
+  hooks share assignee/date/status/source filters, sort, selected-request, and
+  explicit intake/media/attendant/pharmacist/quote/success sheet modes across
+  refreshes.
 - The always-mounted Prescription Request sheet is owned by `GlobalSheets`, and
   the feature page composes only the header, queue, and fulfilment panels.
+- The header shows current Store activation/readiness. Actionable rows open the
+  matching state controller and fail closed after a stale state transition.
+  Pharmacist release, clarification, and decline require a visible revisioned
+  confirmation before the separate server command runs.
 - Staff intake, Store settings, and professional-role forms reuse Zod field
   contracts from the Prescription package. Quote command derivation also lives
   in that package rather than the dashboard component.
@@ -189,6 +195,17 @@ Guardrails are zero safety incidents, privacy incidents, and pharmacy errors.
 Pilot reporting must be de-identified. The commercial workbook must not store
 patient names, phone numbers, prescription images, diagnoses, medicine details,
 or other clinical content.
+
+Operational reporting is available for one Store or all Tenant Stores. Quote
+outcomes, channel mix, conversion, payment, pickup, delivery, review time, and
+Store breakdowns derive from canonical lifecycle facts. EwaTrade charges,
+Meta costs, provider fees, delivery costs, tax, and pharmacy revenue stay
+separate; missing provider amounts render as unknown.
+
+Retention independently covers clinical artifacts, audit evidence, and
+commercial identity. Sensitive reads are purpose-audited. Break-glass access
+is personal, visible, limited to 60 minutes, does not bypass pharmacist release,
+and cannot be resolved without a post-use review.
 
 ## Production Readiness Dependencies
 

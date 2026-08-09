@@ -87,27 +87,27 @@ model PrescriptionChannel {
 }
 
 model PrescriptionRequest {
-  id                        String                           @id @default(cuid())
+  id                        String                             @id @default(cuid())
   tenantId                  String
   storeId                   String
   channelId                 String?
   clientRequestId           String
   payloadHash               String
   reference                 String
-  statusTokenDigest         String?                          @unique
+  statusTokenDigest         String?                            @unique
   statusTokenExpiresAt      DateTime
-  reuploadTokenDigest       String?                          @unique
+  reuploadTokenDigest       String?                            @unique
   reuploadTokenExpiresAt    DateTime?
-  status                    PrescriptionRequestStatus        @default(RECEIVED)
+  status                    PrescriptionRequestStatus          @default(RECEIVED)
   source                    PrescriptionRequestSource
-  fulfilmentPreference      PrescriptionFulfilmentPreference @default(UNSPECIFIED)
+  fulfilmentPreference      PrescriptionFulfilmentPreference   @default(UNSPECIFIED)
   customerName              String?
   customerPhone             String?
   customerEmail             String?
   consentVersion            String
   consentAcceptedAt         DateTime
   sourceContext             Json?
-  currentMediaRevision      Int                              @default(1)
+  currentMediaRevision      Int                                @default(1)
   currentTranscriptRevision Int?
   clearerMediaReason        String?
   staffAssistedByUserId     String?
@@ -116,15 +116,16 @@ model PrescriptionRequest {
   withdrawnAt               DateTime?
   privacyRestrictedAt       DateTime?
   expiresAt                 DateTime?
-  createdAt                 DateTime                         @default(now())
-  updatedAt                 DateTime                         @updatedAt
-  tenant                    Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store                     Store                            @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  channel                   PrescriptionChannel?             @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  createdAt                 DateTime                           @default(now())
+  updatedAt                 DateTime                           @updatedAt
+  tenant                    Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                     Store                              @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  channel                   PrescriptionChannel?               @relation(fields: [channelId], references: [id], onDelete: SetNull)
   media                     PrescriptionMedia[]
   transcriptions            PrescriptionTranscription[]
   pharmacistReviews         PrescriptionPharmacistReview[]
   auditEvents               PrescriptionRequestAuditEvent[]
+  sensitiveAccessEvents     PrescriptionSensitiveAccessEvent[]
 
   @@unique([tenantId, clientRequestId])
   @@unique([tenantId, reference])

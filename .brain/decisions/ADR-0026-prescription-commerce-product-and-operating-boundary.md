@@ -38,6 +38,13 @@ approving medicine.
 - Production launch depends on PCN/electronic-pharmacy role confirmation,
   Nigerian privacy approval, private prescription-media controls, delivery
   SOPs, and explicit operational ownership.
+- Emergency access is an audited Store-scoped incident control, not a role.
+  It belongs to the activating manager, expires within one hour, never grants
+  pharmacist release, is conspicuous while active, and requires post-use
+  review. Ordinary and emergency sensitive reads share one access-event model.
+- Commercial reporting remains de-identified and separates EwaTrade, Meta,
+  payment-provider, delivery, tax, and pharmacy-owned amounts; unknown external
+  costs remain unknown.
 
 ## Consequences
 

@@ -162,6 +162,13 @@ never-dispatched work, indeterminate external outcomes, manual review, and
 confirmed results. Prisma format and generation completed after this addition;
 it remains covered by the same unapproved shared-database migration gate below.
 
+The pending batch now also includes `PrescriptionRetentionPolicy.auditEvidenceDays`
+and `PrescriptionSensitiveAccessEvent`. Prisma format/generation and source
+typechecks pass; no shared schema application is claimed. The rollout must
+backfill the audit-retention default before enabling the retention job and must
+verify access-event indexes and Tenant/Store foreign keys in the same approved
+change window.
+
 The required root `bun db:migrate` and `bun db:push` commands were attempted.
 The configured `local` profile resolves to a shared Neon target rather than a
 local disposable database. The sandboxed attempts could not reach that target,

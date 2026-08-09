@@ -103,6 +103,11 @@ Privacy and retention records point to Tenant/Store and affected requests.
 Erasure removes provider media first, then redacts mutable sensitive records;
 legal holds and active incident freezes block destructive completion.
 
+`Tenant + Store + actor -> PrescriptionSensitiveAccessEvent -> PrescriptionRequest?|PrescriptionIncidentControl?`
+
+Break-glass grants belong to one actor, Tenant, and Store, expire within one
+hour, and link grant/use/review evidence without broadening ordinary roles.
+
 ## Requests, Quotes And Tracking
 
 `ServiceRequestForm -> allowed SellableOffering`

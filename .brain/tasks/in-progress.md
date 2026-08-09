@@ -1,7 +1,10 @@
 # In Progress
 
 - Complete the Prescription Commerce production rollout after the 01-20 source
-  implementation. Remaining gates: explicitly approved shared-Neon migration,
+  implementation and final review fixes. Explicit sheet modes, queue facets,
+  header readiness, confirmed clinical actions, executable audit/commercial
+  retention, sensitive-access/break-glass controls, and Tenant reporting are
+  source-complete. Remaining gates: explicitly approved shared-Neon migration,
   Service Quote backfill/reconciliation and legacy contraction, live private
   media/OCR providers, pharmacy-owned Meta WABA/number and template approvals,
   Paystack canary, legal/privacy/retention sign-off, delivery SOP approval,

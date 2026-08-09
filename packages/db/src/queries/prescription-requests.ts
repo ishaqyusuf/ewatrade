@@ -32,6 +32,10 @@ import {
 } from "./commerce-quotes"
 import { createCommercialOrderInTransaction } from "./commercial-orders"
 import {
+  assertPrescriptionOperationalOrBreakGlassAccess,
+  recordPrescriptionSensitiveAccess,
+} from "./prescription-compliance"
+import {
   assertActivePrescriptionStore,
   assertAnyPrescriptionStoreRole,
   assertPrescriptionStoreRole,
@@ -803,7 +807,9 @@ export async function getPublicPrescriptionRequestStatus(
 }
 
 export type PrescriptionQueueInput = {
+  assignees?: string[] | null
   cursor?: string | null
+  from?: string | null
   pageSize?: number
   q?: string | null
   sort?:
@@ -816,6 +822,51 @@ export type PrescriptionQueueInput = {
   statuses?: PrescriptionRequestStatusValue[] | null
   storeId: string
   tenantId: string
+  to?: string | null
+}
+
+export function prescriptionQueueWhere(
+  input: PrescriptionQueueInput,
+): Prisma.PrescriptionRequestWhereInput {
+  return {
+    ...(input.assignees?.length
+      ? {
+          OR: [
+            { staffAssistedByUserId: { in: input.assignees } },
+            {
+              pharmacistReviews: {
+                some: { pharmacistUserId: { in: input.assignees } },
+              },
+            },
+          ],
+        }
+      : {}),
+    ...(input.from || input.to
+      ? {
+          createdAt: {
+            ...(input.from
+              ? { gte: new Date(`${input.from}T00:00:00.000Z`) }
+              : {}),
+            ...(input.to ? { lt: new Date(`${input.to}T00:00:00.000Z`) } : {}),
+          },
+        }
+      : {}),
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+    ...(input.q?.trim()
+      ? { reference: { contains: input.q.trim(), mode: "insensitive" } }
+      : {}),
+    ...(input.sources?.length
+      ? { source: { in: input.sources.map((source) => sourceMap[source]) } }
+      : {}),
+    ...(input.statuses?.length
+      ? {
+          status: {
+            in: input.statuses.map((status) => statusInputMap[status]),
+          },
+        }
+      : {}),
+  }
 }
 
 export async function listPrescriptionRequests(
@@ -848,23 +899,7 @@ export async function listPrescriptionRequests(
     },
     skip: input.cursor ? 1 : 0,
     take: pageSize + 1,
-    where: {
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-      ...(input.q?.trim()
-        ? { reference: { contains: input.q.trim(), mode: "insensitive" } }
-        : {}),
-      ...(input.sources?.length
-        ? { source: { in: input.sources.map((source) => sourceMap[source]) } }
-        : {}),
-      ...(input.statuses?.length
-        ? {
-            status: {
-              in: input.statuses.map((status) => statusInputMap[status]),
-            },
-          }
-        : {}),
-    },
+    where: prescriptionQueueWhere(input),
   })
   const hasNextPage = rows.length > pageSize
   const data = rows.slice(0, pageSize).map((request) => ({
@@ -905,7 +940,14 @@ const prescriptionDetailInclude = {
 
 export async function getPrescriptionRequest(
   db: PrismaClient,
-  input: { requestId: string; storeId: string; tenantId: string },
+  input: {
+    actorUserId: string
+    breakGlassControlId?: string | null
+    reason: string
+    requestId: string
+    storeId: string
+    tenantId: string
+  },
 ) {
   const request = await db.prescriptionRequest.findFirst({
     include: prescriptionDetailInclude,
@@ -921,6 +963,20 @@ export async function getPrescriptionRequest(
       "Prescription Request not found.",
     )
   }
+  const accessTypes = ["customer_data"]
+  if (request.transcriptions.length) accessTypes.push("transcript")
+  if (request.pharmacistReviews.length) {
+    accessTypes.push("pharmacist_decision")
+  }
+  await recordPrescriptionSensitiveAccess(db, {
+    accessTypes,
+    actorUserId: input.actorUserId,
+    incidentControlId: input.breakGlassControlId,
+    reason: input.reason,
+    requestId: request.id,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+  })
   return request
 }
 
@@ -1061,28 +1117,14 @@ export async function recordPrescriptionMediaAccess(
   },
 ) {
   await assertActivePrescriptionStore(db, input)
-  const role = await db.prescriptionStoreRole.findFirst({
-    where: {
-      role: {
-        in: [
-          PrescriptionStoreRoleType.ATTENDANT,
-          PrescriptionStoreRoleType.PHARMACIST,
-        ],
-      },
-      status: PrescriptionStoreRoleStatus.ACTIVE,
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-      userId: input.actorUserId,
-    },
+  const access = await assertPrescriptionOperationalOrBreakGlassAccess(db, {
+    actorUserId: input.actorUserId,
+    reason: input.reason,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
   })
-  if (!role) {
-    throw new PrescriptionRequestError(
-      "REQUEST_CONFLICT",
-      "An active Store-scoped prescription role is required.",
-    )
-  }
   const media = await db.prescriptionMedia.findFirst({
-    select: { id: true, objectKey: true, status: true },
+    select: { id: true, objectKey: true, requestId: true, status: true },
     where: {
       id: input.mediaId,
       status: PrescriptionMediaStatus.SAFE,
@@ -1096,6 +1138,15 @@ export async function recordPrescriptionMediaAccess(
       "Authorized prescription media was not found.",
     )
   }
+  await recordPrescriptionSensitiveAccess(db, {
+    accessTypes: ["customer_data"],
+    actorUserId: input.actorUserId,
+    incidentControlId: access.breakGlassControlId,
+    reason: input.reason,
+    requestId: media.requestId,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+  })
   await db.prescriptionMediaAccessEvent.create({
     data: {
       action: PrescriptionMediaAccessAction.ACCESSED,

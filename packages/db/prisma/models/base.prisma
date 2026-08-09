@@ -64,6 +64,7 @@ model Tenant {
   prescriptionRetentionPolicies      PrescriptionRetentionPolicy[]
   prescriptionPrivacyRequests        PrescriptionPrivacyRequest[]
   prescriptionIncidentControls       PrescriptionIncidentControl[]
+  prescriptionSensitiveAccessEvents  PrescriptionSensitiveAccessEvent[]
   prescriptionUsageEvents            PrescriptionUsageEvent[]
   commerceQuotes                     CommerceQuote[]
   catalogItems                       CatalogItem[]

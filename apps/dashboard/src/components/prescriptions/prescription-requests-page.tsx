@@ -12,7 +12,7 @@ export function PrescriptionRequestsPage({
 }) {
   return (
     <div className="flex flex-1 flex-col gap-6 p-6 lg:p-8">
-      <PrescriptionHeader storeName={store.name} />
+      <PrescriptionHeader storeId={store.id} storeName={store.name} />
       <PrescriptionDataTable storeId={store.id} timeZone={timeZone} />
       <PrescriptionFulfillmentPanel storeId={store.id} />
     </div>

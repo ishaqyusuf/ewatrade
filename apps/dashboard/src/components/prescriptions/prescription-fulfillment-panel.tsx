@@ -9,6 +9,7 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const [pickupCode, setPickupCode] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const pickup = useQuery(
     trpc.prescriptions.pickupQueue.queryOptions({ storeId }),
   )
@@ -25,37 +26,69 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
       }),
     ])
   }
+  const mutationOptions = {
+    onError: (failure: { message: string }) => setError(failure.message),
+    onSuccess: async () => {
+      await invalidate()
+      setError(null)
+    },
+  }
   const ready = useMutation(
     trpc.prescriptions.markPickupReady.mutationOptions({
       onSuccess: async (result) => {
-        setPickupCode(result.pickupCode)
         await invalidate()
+        setPickupCode(result.pickupCode)
+        setError(null)
       },
+      onError: mutationOptions.onError,
     }),
   )
   const handoff = useMutation(
-    trpc.prescriptions.handoffPickup.mutationOptions({ onSuccess: invalidate }),
+    trpc.prescriptions.handoffPickup.mutationOptions(mutationOptions),
   )
   const pickupException = useMutation(
     trpc.prescriptions.recordPickupException.mutationOptions({
-      onSuccess: invalidate,
+      ...mutationOptions,
     }),
   )
   const assign = useMutation(
     trpc.prescriptions.assignDelivery.mutationOptions({
-      onSuccess: invalidate,
+      ...mutationOptions,
     }),
   )
   const deliveryReady = useMutation(
     trpc.prescriptions.markDeliveryReady.mutationOptions({
-      onSuccess: invalidate,
+      ...mutationOptions,
     }),
   )
   const transition = useMutation(
     trpc.prescriptions.transitionDelivery.mutationOptions({
-      onSuccess: invalidate,
+      ...mutationOptions,
     }),
   )
+
+  if (pickup.isLoading || delivery.isLoading) {
+    return <div className="h-48 animate-pulse rounded-xl bg-muted" />
+  }
+  const queryError = pickup.error ?? delivery.error
+  if (queryError) {
+    return (
+      <div className="grid gap-3 border border-destructive/30 p-5">
+        <p role="alert" className="text-sm text-destructive">
+          {queryError.message}
+        </p>
+        <Button
+          className="w-fit"
+          onClick={() =>
+            void Promise.all([pickup.refetch(), delivery.refetch()])
+          }
+          variant="outline"
+        >
+          Try again
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <details className="border border-border bg-card">
@@ -63,6 +96,11 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
         Pickup and delivery operations
       </summary>
       <div className="grid gap-6 border-t border-border p-5 xl:grid-cols-2">
+        {error ? (
+          <p role="alert" className="text-sm text-destructive xl:col-span-2">
+            {error}
+          </p>
+        ) : null}
         <section className="grid content-start gap-3">
           <h2 className="font-semibold">Paid pickup preparation</h2>
           {pickupCode ? (

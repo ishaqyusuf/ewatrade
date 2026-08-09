@@ -126,6 +126,14 @@ authenticated dashboard.
   pickup/delivery operations, privacy requests, incidents, reporting, manual
   WhatsApp setup, Embedded Signup selection, connection readiness/lifecycle,
   and Store binding management.
+- The protected queue context exposes lightweight readiness and allowlisted
+  assignee facets. Queue filters include shareable assignee and UTC date
+  boundaries. The reporting query accepts one authorized Store or the whole
+  active Tenant and returns de-identified Store breakdowns and separated cost
+  categories.
+- Sensitive detail/media/setup reads append access events. A personal
+  Owner/Admin break-glass grant lasts at most 60 minutes, is conspicuous in the
+  queue, logs each emergency access, and requires a reviewed resolution reason.
 - Public tRPC router `prescriptionAccess` owns capability-scoped web intake,
   status, re-upload, Quote review/acceptance, fulfilment choice, hosted payment,
   and pickup-code projections. The browser never supplies Tenant/Store ids as

@@ -40,6 +40,11 @@ export async function runPrescriptionRetention(
     }
     await dependencies.complete({
       addressIds: batch.addressIds,
+      auditRequestEventIds: batch.auditRequestEventIds,
+      auditSensitiveAccessEventIds: batch.auditSensitiveAccessEventIds,
+      auditStoreEventIds: batch.auditStoreEventIds,
+      commercialOrderIds: batch.commercialOrderIds,
+      commercialRequestIds: batch.commercialRequestIds,
       mediaIds: deletedMediaIds,
       messageIds: batch.messageIds,
       storeId: batch.storeId,

@@ -6,6 +6,14 @@
 
 **Status:** implemented-source; production reconciliation pending
 
+**Verification note (2026-08-09):** the report API/UI now supports one Store or
+the active Tenant, exposes Store breakdowns and Quote outcomes, and separately
+projects platform, Meta, payment-provider, delivery, tax, and pharmacy-revenue
+amounts. Missing applicable costs remain `null` with an unknown count. Usage
+reconciliation now verifies every known source type under Tenant/Store scope.
+Focused metric/cost/multi-store tests and DB/API/dashboard typechecks pass;
+production reconciliation remains open.
+
 - [ ] Store- and tenant-scoped dashboards report request volume, channel mix, review time, quote outcomes, conversion, payment, pickup, and delivery performance.
 - [ ] Metrics are derived from canonical lifecycle events with documented definitions, time zones, denominators, and late-event behavior.
 - [ ] Reports use identifiers and aggregates rather than prescription text, medicine names, media, addresses, or unnecessary customer data.

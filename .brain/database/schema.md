@@ -155,8 +155,17 @@ persistence boundary. Clients never access the database directly.
   quick-action records implement dynamic pharmacy-owned direct Meta routing.
 - Communication attempts retain normalized sent/delivered/read/failed receipt
   state and timestamps matched by Connection and provider message id.
-- Retention policies, privacy requests, incident controls, and usage events
-  provide Store-scoped compliance and de-identified commercial reporting.
+- Retention policies independently cover raw media, transcripts, messages,
+  tokens, addresses, audit evidence, and commercial records. Expiry preserves
+  immutable lifecycle/accounting facts while redacting mutable content and
+  customer identity.
+- `PrescriptionSensitiveAccessEvent` records Store-scoped transcript,
+  customer-data, pharmacist-decision, credential, and break-glass access.
+  `PrescriptionIncidentControl` supplies personal, time-bounded break-glass
+  grants and their required post-use reviews.
+- Usage events provide de-identified Store and Tenant reporting with platform,
+  Meta, payment-provider, delivery, tax, and pharmacy-revenue amounts kept in
+  separate nullable fields.
 
 ## Removed Prototype Schema
 

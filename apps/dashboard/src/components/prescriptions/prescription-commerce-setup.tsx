@@ -113,8 +113,8 @@ export function PrescriptionCommerceSetup({
     trpc.prescriptions.updateSettings.mutationOptions({
       onError: (error) => setMessage(error.message),
       onSuccess: async () => {
-        setMessage("Prescription Commerce settings saved.")
         await invalidateSetup()
+        setMessage("Prescription Commerce settings saved.")
       },
     }),
   )
@@ -122,9 +122,9 @@ export function PrescriptionCommerceSetup({
     trpc.prescriptions.assignRole.mutationOptions({
       onError: (error) => setMessage(error.message),
       onSuccess: async () => {
-        setMessage("Prescription role assigned.")
-        roleForm.reset()
         await invalidateSetup()
+        roleForm.reset()
+        setMessage("Prescription role assigned.")
       },
     }),
   )
@@ -132,8 +132,8 @@ export function PrescriptionCommerceSetup({
     trpc.prescriptions.revokeRole.mutationOptions({
       onError: (error) => setMessage(error.message),
       onSuccess: async () => {
-        setMessage("Prescription role revoked.")
         await invalidateSetup()
+        setMessage("Prescription role revoked.")
       },
     }),
   )
@@ -141,12 +141,12 @@ export function PrescriptionCommerceSetup({
     trpc.prescriptions.setActivation.mutationOptions({
       onError: (error) => setMessage(error.message),
       onSuccess: async (result) => {
+        await invalidateSetup()
         setMessage(
           result.settings.status === "active"
             ? "Prescription Commerce activated."
             : "Prescription Commerce deactivated.",
         )
-        await invalidateSetup()
       },
     }),
   )
@@ -162,10 +162,17 @@ export function PrescriptionCommerceSetup({
 
   if (setupQuery.error || !setupQuery.data) {
     return (
-      <div className="p-6 lg:p-8">
+      <div className="grid gap-3 p-6 lg:p-8">
         <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
           {setupQuery.error?.message ?? "Prescription setup is unavailable."}
         </p>
+        <Button
+          className="w-fit"
+          onClick={() => void setupQuery.refetch()}
+          variant="outline"
+        >
+          Try again
+        </Button>
       </div>
     )
   }

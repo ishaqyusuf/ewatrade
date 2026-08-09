@@ -231,9 +231,10 @@
 ## Prescription Commerce
 
 - Queue contracts use Tenant/Store-scoped cursor pagination, bounded query and
-  filters, allowlisted sort tuples, lightweight rows, and a separate authorized
-  detail query. Prescription text, medicine lines, raw phones, media, and
-  addresses are excluded from list projections.
+  filters (status, source, assignee, and half-open UTC received-date range),
+  allowlisted sort tuples, lightweight rows, and a separate authorized detail
+  query. Prescription text, medicine lines, raw phones, media, and addresses
+  are excluded from list projections.
 - Intake validates consent, page count, size, MIME type, and an idempotency
   fingerprint before private-media persistence. Slow work receives only record
   identifiers and reloads sensitive data inside the job.
@@ -274,6 +275,19 @@
   tokens or credential references.
 - Workspace availability exposes `hasPrescriptionCommerce` only after active
   Store setup; it controls navigation visibility but is not authorization.
+- Detail, media, pharmacist-decision, transcript, and credential reads append
+  purpose-labelled `PrescriptionSensitiveAccessEvent` records. Ordinary roles
+  remain Store-scoped. A break-glass fallback is personal, manager-created,
+  conspicuous, at most 60 minutes, re-audited on each use, and cannot be closed
+  without a post-use review reason.
+- Retention applies independent cutoffs to clinical artifacts, audit evidence,
+  and commercial identity. It redacts mutable content idempotently while
+  retaining minimal lifecycle/accounting tombstones. Legal hold stops claims.
+- Reports use canonical event occurrence timestamps and a half-open `[from,to)`
+  window. Denominators include all in-scope requests; late events appear in the
+  period containing their authoritative event timestamp. Tenant reports are
+  aggregates plus Store breakdowns. Missing provider costs remain `null` with
+  an unknown count and are never estimated or merged into platform charges.
 
 ## Services
 

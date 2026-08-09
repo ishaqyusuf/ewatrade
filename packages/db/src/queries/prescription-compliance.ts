@@ -6,15 +6,158 @@ import {
   PrescriptionMediaStatus,
   PrescriptionPrivacyRequestStatus,
   PrescriptionPrivacyRequestType,
+  PrescriptionStoreRoleStatus,
+  PrescriptionStoreRoleType,
 } from "../../generated/prisma/enums"
 
 export class PrescriptionComplianceError extends Error {}
+
+export function assertPrescriptionBreakGlassWindow(input: {
+  expiresAt?: Date
+  now?: Date
+}) {
+  if (!input.expiresAt) {
+    throw new PrescriptionComplianceError(
+      "Break-glass access must have an expiry.",
+    )
+  }
+  const durationMs =
+    input.expiresAt.getTime() - (input.now ?? new Date()).getTime()
+  if (durationMs <= 0 || durationMs > 60 * 60_000) {
+    throw new PrescriptionComplianceError(
+      "Break-glass access must expire within 60 minutes.",
+    )
+  }
+}
+
+export function prescriptionRetentionCutoffs(
+  policy: {
+    addressDays: number
+    auditEvidenceDays: number
+    commercialRecordDays: number
+    messageDays: number
+    rawMediaDays: number
+    secureTokenDays: number
+    transcriptDays: number
+  },
+  now = new Date(),
+) {
+  const before = (days: number) => new Date(now.getTime() - days * 86_400_000)
+  return {
+    addressBefore: before(policy.addressDays),
+    auditBefore: before(policy.auditEvidenceDays),
+    commercialBefore: before(policy.commercialRecordDays),
+    mediaBefore: before(policy.rawMediaDays),
+    messageBefore: before(policy.messageDays),
+    tokenBefore: before(policy.secureTokenDays),
+    transcriptBefore: before(policy.transcriptDays),
+  }
+}
+
+export async function recordPrescriptionSensitiveAccess(
+  db: PrismaClient | Prisma.TransactionClient,
+  input: {
+    accessTypes: string[]
+    actorUserId: string
+    incidentControlId?: string | null
+    reason: string
+    requestId?: string | null
+    storeId: string
+    tenantId: string
+  },
+) {
+  const reason = input.reason.trim()
+  if (!reason || input.accessTypes.length === 0) {
+    throw new PrescriptionComplianceError(
+      "Sensitive access requires a reason and access type.",
+    )
+  }
+  return db.prescriptionSensitiveAccessEvent.createMany({
+    data: [...new Set(input.accessTypes)].map((accessType) => ({
+      accessType,
+      actorUserId: input.actorUserId,
+      incidentControlId: input.incidentControlId,
+      reason,
+      requestId: input.requestId,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })),
+  })
+}
+
+export async function authorizePrescriptionBreakGlassAccess(
+  db: PrismaClient,
+  input: {
+    actorUserId: string
+    reason: string
+    requestId?: string
+    storeId: string
+    tenantId: string
+  },
+) {
+  const control = await db.prescriptionIncidentControl.findFirst({
+    where: {
+      activatedByUserId: input.actorUserId,
+      expiresAt: { gt: new Date() },
+      status: PrescriptionIncidentStatus.ACTIVE,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      type: PrescriptionIncidentType.BREAK_GLASS,
+    },
+  })
+  if (!control) {
+    throw new PrescriptionComplianceError(
+      "An active, personal break-glass grant is required.",
+    )
+  }
+  await recordPrescriptionSensitiveAccess(db, {
+    accessTypes: ["break_glass_used"],
+    actorUserId: input.actorUserId,
+    incidentControlId: control.id,
+    reason: input.reason,
+    requestId: input.requestId,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+  })
+  return { controlId: control.id, expiresAt: control.expiresAt }
+}
+
+export async function assertPrescriptionOperationalOrBreakGlassAccess(
+  db: PrismaClient,
+  input: {
+    actorUserId: string
+    reason: string
+    requestId?: string
+    storeId: string
+    tenantId: string
+  },
+) {
+  const role = await db.prescriptionStoreRole.findFirst({
+    select: { id: true },
+    where: {
+      role: {
+        in: [
+          PrescriptionStoreRoleType.ATTENDANT,
+          PrescriptionStoreRoleType.PHARMACIST,
+        ],
+      },
+      status: PrescriptionStoreRoleStatus.ACTIVE,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      userId: input.actorUserId,
+    },
+  })
+  if (role) return { breakGlassControlId: null, roleId: role.id }
+  const grant = await authorizePrescriptionBreakGlassAccess(db, input)
+  return { breakGlassControlId: grant.controlId, roleId: null }
+}
 
 export async function upsertPrescriptionRetentionPolicy(
   db: PrismaClient,
   input: {
     actorUserId: string
     addressDays: number
+    auditEvidenceDays: number
     commercialRecordDays: number
     legalHold: boolean
     messageDays: number
@@ -27,6 +170,7 @@ export async function upsertPrescriptionRetentionPolicy(
 ) {
   for (const value of [
     input.addressDays,
+    input.auditEvidenceDays,
     input.commercialRecordDays,
     input.messageDays,
     input.rawMediaDays,
@@ -42,6 +186,7 @@ export async function upsertPrescriptionRetentionPolicy(
   return db.prescriptionRetentionPolicy.upsert({
     create: {
       addressDays: input.addressDays,
+      auditEvidenceDays: input.auditEvidenceDays,
       commercialRecordDays: input.commercialRecordDays,
       legalHold: input.legalHold,
       messageDays: input.messageDays,
@@ -54,6 +199,7 @@ export async function upsertPrescriptionRetentionPolicy(
     },
     update: {
       addressDays: input.addressDays,
+      auditEvidenceDays: input.auditEvidenceDays,
       commercialRecordDays: input.commercialRecordDays,
       legalHold: input.legalHold,
       messageDays: input.messageDays,
@@ -82,7 +228,7 @@ export async function claimPrescriptionRetentionBatch(
   })
   if (!policy || policy.legalHold) return null
   const limit = Math.min(Math.max(input.limit ?? 100, 1), 500)
-  const mediaBefore = new Date(Date.now() - policy.rawMediaDays * 86_400_000)
+  const cutoffs = prescriptionRetentionCutoffs(policy)
   return {
     addressIds: (
       await db.prescriptionDeliveryAddress.findMany({
@@ -90,9 +236,88 @@ export async function claimPrescriptionRetentionBatch(
         take: limit,
         where: {
           createdAt: {
-            lt: new Date(Date.now() - policy.addressDays * 86_400_000),
+            lt: cutoffs.addressBefore,
           },
           storeId: policy.storeId,
+        },
+      })
+    ).map((item) => item.id),
+    auditRequestEventIds: (
+      await db.prescriptionRequestAuditEvent.findMany({
+        select: { id: true },
+        take: limit,
+        where: {
+          effectiveAt: { lt: cutoffs.auditBefore },
+          NOT: { payload: { equals: { retained: true } } },
+          storeId: policy.storeId,
+          tenantId: policy.tenantId,
+        },
+      })
+    ).map((item) => item.id),
+    auditSensitiveAccessEventIds: (
+      await db.prescriptionSensitiveAccessEvent.findMany({
+        select: { id: true },
+        take: limit,
+        where: {
+          effectiveAt: { lt: cutoffs.auditBefore },
+          reason: { not: "retained_audit_tombstone" },
+          storeId: policy.storeId,
+          tenantId: policy.tenantId,
+        },
+      })
+    ).map((item) => item.id),
+    auditStoreEventIds: (
+      await db.prescriptionStoreAuditEvent.findMany({
+        select: { id: true },
+        take: limit,
+        where: {
+          effectiveAt: { lt: cutoffs.auditBefore },
+          NOT: { payload: { equals: { retained: true } } },
+          storeId: policy.storeId,
+          tenantId: policy.tenantId,
+        },
+      })
+    ).map((item) => item.id),
+    commercialOrderIds: (
+      await db.commercialOrder.findMany({
+        select: { id: true },
+        take: limit,
+        where: {
+          acceptedCommerceQuoteVersion: {
+            is: {
+              quote: {
+                is: {
+                  sourceType: "PRESCRIPTION_REQUEST",
+                  storeId: policy.storeId,
+                  tenantId: policy.tenantId,
+                },
+              },
+            },
+          },
+          createdAt: { lt: cutoffs.commercialBefore },
+          OR: [
+            { customerEmail: { not: null } },
+            { customerName: { not: null } },
+            { customerPhone: { not: null } },
+            { notes: { not: null } },
+          ],
+          storeId: policy.storeId,
+          tenantId: policy.tenantId,
+        },
+      })
+    ).map((item) => item.id),
+    commercialRequestIds: (
+      await db.prescriptionRequest.findMany({
+        select: { id: true },
+        take: limit,
+        where: {
+          createdAt: { lt: cutoffs.commercialBefore },
+          NOT: { sourceContext: { equals: { retained: false } } },
+          status: {
+            in: ["CONVERTED", "DECLINED", "WITHDRAWN", "EXPIRED"],
+          },
+          storeId: policy.storeId,
+          tenantId: policy.tenantId,
         },
       })
     ).map((item) => item.id),
@@ -102,7 +327,7 @@ export async function claimPrescriptionRetentionBatch(
       where: {
         status: { not: PrescriptionMediaStatus.DELETED },
         storeId: policy.storeId,
-        uploadedAt: { lt: mediaBefore },
+        uploadedAt: { lt: cutoffs.mediaBefore },
       },
     }),
     messageIds: (
@@ -113,7 +338,7 @@ export async function claimPrescriptionRetentionBatch(
           storeId: policy.storeId,
           tenantId: policy.tenantId,
           receivedAt: {
-            lt: new Date(Date.now() - policy.messageDays * 86_400_000),
+            lt: cutoffs.messageBefore,
           },
         },
       })
@@ -126,7 +351,7 @@ export async function claimPrescriptionRetentionBatch(
         take: limit,
         where: {
           createdAt: {
-            lt: new Date(Date.now() - policy.secureTokenDays * 86_400_000),
+            lt: cutoffs.tokenBefore,
           },
           OR: [
             { reuploadTokenDigest: { not: null } },
@@ -143,7 +368,7 @@ export async function claimPrescriptionRetentionBatch(
         take: limit,
         where: {
           createdAt: {
-            lt: new Date(Date.now() - policy.transcriptDays * 86_400_000),
+            lt: cutoffs.transcriptBefore,
           },
           request: { storeId: policy.storeId },
         },
@@ -163,6 +388,11 @@ export async function completePrescriptionRetentionBatch(
   db: PrismaClient,
   input: {
     addressIds: string[]
+    auditRequestEventIds: string[]
+    auditSensitiveAccessEventIds: string[]
+    auditStoreEventIds: string[]
+    commercialOrderIds: string[]
+    commercialRequestIds: string[]
     mediaIds: string[]
     messageIds: string[]
     storeId: string
@@ -235,8 +465,65 @@ export async function completePrescriptionRetentionBatch(
         tenantId: input.tenantId,
       },
     })
+    await tx.prescriptionRequest.updateMany({
+      data: {
+        clearerMediaReason: null,
+        customerEmail: null,
+        customerName: null,
+        customerPhone: null,
+        sourceContext: { retained: false },
+      },
+      where: {
+        id: { in: input.commercialRequestIds },
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    })
+    await tx.commercialOrder.updateMany({
+      data: {
+        customerEmail: null,
+        customerName: null,
+        customerPhone: null,
+        notes: null,
+      },
+      where: {
+        id: { in: input.commercialOrderIds },
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    })
+    await tx.prescriptionRequestAuditEvent.updateMany({
+      data: { payload: { retained: true }, reason: null },
+      where: {
+        id: { in: input.auditRequestEventIds },
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    })
+    await tx.prescriptionStoreAuditEvent.updateMany({
+      data: { payload: { retained: true } },
+      where: {
+        id: { in: input.auditStoreEventIds },
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    })
+    await tx.prescriptionSensitiveAccessEvent.updateMany({
+      data: { reason: "retained_audit_tombstone" },
+      where: {
+        id: { in: input.auditSensitiveAccessEventIds },
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    })
     return {
       addressesRedacted: input.addressIds.length,
+      auditEvidenceRedacted:
+        input.auditRequestEventIds.length +
+        input.auditSensitiveAccessEventIds.length +
+        input.auditStoreEventIds.length,
+      commercialOrdersRedacted: input.commercialOrderIds.length,
+      commercialRequestsRedacted: input.commercialRequestIds.length,
       mediaDeleted: media.length,
       messagesRedacted: input.messageIds.length,
       secureTokensExpired: input.tokenRequestIds.length,
@@ -609,10 +896,8 @@ export async function activatePrescriptionIncidentControl(
   },
 ) {
   const type = input.type.toUpperCase() as PrescriptionIncidentType
-  if (type === PrescriptionIncidentType.BREAK_GLASS && !input.expiresAt) {
-    throw new PrescriptionComplianceError(
-      "Break-glass access must have an expiry.",
-    )
+  if (type === PrescriptionIncidentType.BREAK_GLASS) {
+    assertPrescriptionBreakGlassWindow({ expiresAt: input.expiresAt })
   }
   return db.$transaction(async (tx) => {
     const control = await tx.prescriptionIncidentControl.create({
@@ -625,6 +910,16 @@ export async function activatePrescriptionIncidentControl(
         type,
       },
     })
+    if (type === PrescriptionIncidentType.BREAK_GLASS) {
+      await recordPrescriptionSensitiveAccess(tx, {
+        accessTypes: ["break_glass_granted"],
+        actorUserId: input.actorUserId,
+        incidentControlId: control.id,
+        reason: input.reason,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      })
+    }
     if (
       type === PrescriptionIncidentType.SUSPEND_COMMERCE ||
       type === PrescriptionIncidentType.FREEZE_PROCESSING
@@ -655,21 +950,38 @@ export async function resolvePrescriptionIncidentControl(
   input: {
     actorUserId: string
     controlId: string
+    reviewReason: string
     storeId: string
     tenantId: string
   },
 ) {
-  return db.prescriptionIncidentControl.update({
-    data: {
-      resolvedAt: new Date(),
-      resolvedByUserId: input.actorUserId,
-      status: PrescriptionIncidentStatus.RESOLVED,
-    },
-    where: {
-      id: input.controlId,
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-    },
+  return db.$transaction(async (tx) => {
+    const control = await tx.prescriptionIncidentControl.findFirstOrThrow({
+      where: {
+        id: input.controlId,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    })
+    const resolved = await tx.prescriptionIncidentControl.update({
+      data: {
+        resolvedAt: new Date(),
+        resolvedByUserId: input.actorUserId,
+        status: PrescriptionIncidentStatus.RESOLVED,
+      },
+      where: { id: control.id },
+    })
+    if (control.type === PrescriptionIncidentType.BREAK_GLASS) {
+      await recordPrescriptionSensitiveAccess(tx, {
+        accessTypes: ["break_glass_reviewed"],
+        actorUserId: input.actorUserId,
+        incidentControlId: control.id,
+        reason: input.reviewReason,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      })
+    }
+    return resolved
   })
 }
 
@@ -678,39 +990,51 @@ export async function listPrescriptionComplianceEvents(
   input: { limit?: number; storeId: string; tenantId: string },
 ) {
   const limit = Math.min(Math.max(input.limit ?? 100, 1), 500)
-  const [mediaAccess, requestAudit, incidents, privacyRequests, whatsappAudit] =
-    await Promise.all([
-      db.prescriptionMediaAccessEvent.findMany({
-        orderBy: { effectiveAt: "desc" },
-        take: limit,
-        where: { storeId: input.storeId, tenantId: input.tenantId },
-      }),
-      db.prescriptionRequestAuditEvent.findMany({
-        orderBy: { effectiveAt: "desc" },
-        take: limit,
-        where: { storeId: input.storeId, tenantId: input.tenantId },
-      }),
-      db.prescriptionIncidentControl.findMany({
-        orderBy: { activatedAt: "desc" },
-        take: limit,
-        where: { storeId: input.storeId, tenantId: input.tenantId },
-      }),
-      db.prescriptionPrivacyRequest.findMany({
-        orderBy: { createdAt: "desc" },
-        take: limit,
-        where: { storeId: input.storeId, tenantId: input.tenantId },
-      }),
-      db.whatsAppConnectionAuditEvent.findMany({
-        orderBy: { effectiveAt: "desc" },
-        take: limit,
-        where: { storeId: input.storeId, tenantId: input.tenantId },
-      }),
-    ])
+  const [
+    mediaAccess,
+    requestAudit,
+    sensitiveAccess,
+    incidents,
+    privacyRequests,
+    whatsappAudit,
+  ] = await Promise.all([
+    db.prescriptionMediaAccessEvent.findMany({
+      orderBy: { effectiveAt: "desc" },
+      take: limit,
+      where: { storeId: input.storeId, tenantId: input.tenantId },
+    }),
+    db.prescriptionRequestAuditEvent.findMany({
+      orderBy: { effectiveAt: "desc" },
+      take: limit,
+      where: { storeId: input.storeId, tenantId: input.tenantId },
+    }),
+    db.prescriptionSensitiveAccessEvent.findMany({
+      orderBy: { effectiveAt: "desc" },
+      take: limit,
+      where: { storeId: input.storeId, tenantId: input.tenantId },
+    }),
+    db.prescriptionIncidentControl.findMany({
+      orderBy: { activatedAt: "desc" },
+      take: limit,
+      where: { storeId: input.storeId, tenantId: input.tenantId },
+    }),
+    db.prescriptionPrivacyRequest.findMany({
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      where: { storeId: input.storeId, tenantId: input.tenantId },
+    }),
+    db.whatsAppConnectionAuditEvent.findMany({
+      orderBy: { effectiveAt: "desc" },
+      take: limit,
+      where: { storeId: input.storeId, tenantId: input.tenantId },
+    }),
+  ])
   return {
     incidents,
     mediaAccess,
     privacyRequests,
     requestAudit,
+    sensitiveAccess,
     whatsappAudit,
   }
 }

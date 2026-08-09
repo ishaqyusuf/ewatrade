@@ -32,24 +32,31 @@ export default async function PrescriptionsRoutePage({ searchParams }: Props) {
   if (!store) redirect("/setup")
 
   const filter = await loadPrescriptionFilterParams(searchParams)
-  await getQueryClient()
-    .prefetchInfiniteQuery(
+  const queryClient = getQueryClient()
+  await Promise.all([
+    queryClient.prefetchQuery(
+      trpc.prescriptions.queueContext.queryOptions({ storeId: store.id }),
+    ),
+    queryClient.prefetchInfiniteQuery(
       trpc.prescriptions.queue.infiniteQueryOptions(
         {
+          assignees: filter.assignees,
+          from: filter.from,
           pageSize: 25,
           q: filter.q,
           sort: filter.sort,
           sources: filter.sources,
           statuses: filter.statuses,
           storeId: store.id,
+          to: filter.to,
         },
         {
           getNextPageParam: (lastPage) => lastPage.meta.cursor ?? undefined,
           retry: false,
         },
       ),
-    )
-    .catch(() => undefined)
+    ),
+  ]).catch(() => undefined)
 
   return (
     <HydrateClient>

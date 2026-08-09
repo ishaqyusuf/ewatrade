@@ -6,6 +6,7 @@ import {
   PrescriptionStoreRoleStatus,
   PrescriptionStoreRoleType,
 } from "../../generated/prisma/enums"
+import { recordPrescriptionSensitiveAccess } from "./prescription-compliance"
 
 export type PrescriptionStoreRoleInput = "attendant" | "pharmacist"
 
@@ -258,7 +259,7 @@ function evaluateStoredReadiness(input: {
 
 export async function getPrescriptionStoreSetup(
   db: PrismaClient,
-  input: { storeId: string; tenantId: string },
+  input: { actorUserId: string; storeId: string; tenantId: string },
 ) {
   const store = await requireStore(db, input)
   const [settings, roles, memberships, auditEvents] = await Promise.all([
@@ -291,6 +292,15 @@ export async function getPrescriptionStoreSetup(
     memberships.map((membership) => [membership.userId, membership]),
   )
   const readiness = evaluateStoredReadiness({ roles, settings })
+  if (roles.some((role) => role.credentialReference)) {
+    await recordPrescriptionSensitiveAccess(db, {
+      accessTypes: ["credential"],
+      actorUserId: input.actorUserId,
+      reason: "prescription_store_setup",
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
+  }
 
   return {
     auditEvents: auditEvents.map((event) => ({
@@ -331,6 +341,69 @@ export async function getPrescriptionStoreSetup(
     }),
     settings: serializeSettings(settings, store.id),
     store,
+  }
+}
+
+export async function getPrescriptionQueueContext(
+  db: PrismaClient,
+  input: { actorUserId: string; storeId: string; tenantId: string },
+) {
+  const store = await requireStore(db, input)
+  const [settings, roles, activeBreakGlass] = await Promise.all([
+    db.prescriptionStoreSettings.findUnique({ where: { storeId: store.id } }),
+    db.prescriptionStoreRole.findMany({
+      where: {
+        status: PrescriptionStoreRoleStatus.ACTIVE,
+        storeId: store.id,
+        tenantId: input.tenantId,
+      },
+    }),
+    db.prescriptionIncidentControl.findFirst({
+      select: { expiresAt: true, id: true, reason: true },
+      where: {
+        activatedByUserId: input.actorUserId,
+        expiresAt: { gt: new Date() },
+        status: "ACTIVE",
+        storeId: store.id,
+        tenantId: input.tenantId,
+        type: "BREAK_GLASS",
+      },
+    }),
+  ])
+  const userIds = [...new Set(roles.map((role) => role.userId))]
+  const memberships = await db.membership.findMany({
+    include: {
+      user: {
+        select: { displayName: true, email: true, id: true, name: true },
+      },
+    },
+    where: {
+      status: MembershipStatus.ACTIVE,
+      tenantId: input.tenantId,
+      userId: { in: userIds },
+    },
+  })
+  const memberByUserId = new Map(
+    memberships.map((membership) => [membership.userId, membership]),
+  )
+  return {
+    activeBreakGlass,
+    assignees: userIds.map((userId) => {
+      const membership = memberByUserId.get(userId)
+      return {
+        id: userId,
+        name:
+          membership?.user.displayName ??
+          membership?.user.name ??
+          membership?.user.email ??
+          "Former team member",
+        roles: roles
+          .filter((role) => role.userId === userId)
+          .map((role) => mapRole(role.role)),
+      }
+    }),
+    readiness: evaluateStoredReadiness({ roles, settings }),
+    status: settings?.status.toLowerCase() ?? "disabled",
   }
 }
 

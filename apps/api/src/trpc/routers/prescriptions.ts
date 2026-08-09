@@ -6,10 +6,12 @@ import {
 import { protectCommunicationsActionId } from "@ewatrade/communications"
 import {
   PrescriptionCommerceError,
+  PrescriptionComplianceError,
   PrescriptionRequestError,
   activatePrescriptionIncidentControl,
   approvePrescriptionManualDeliveryFee,
   assertAnyPrescriptionStoreRole,
+  assertPrescriptionOperationalOrBreakGlassAccess,
   assignPrescriptionStoreRole,
   attachPrescriptionRefundProviderResult,
   claimPrescriptionRefundProviderDispatch,
@@ -24,6 +26,7 @@ import {
   getPrescriptionNotificationContext,
   getPrescriptionOperationsReport,
   getPrescriptionPrivacyRequestResult,
+  getPrescriptionQueueContext,
   getPrescriptionRequest,
   getPrescriptionRetentionPolicy,
   getPrescriptionStoreSetup,
@@ -167,6 +170,14 @@ async function run<T>(action: () => Promise<T>) {
   try {
     return await action()
   } catch (error) {
+    if (error instanceof PrescriptionComplianceError) {
+      throw new TRPCError({
+        code: error.message.includes("active, personal break-glass")
+          ? "FORBIDDEN"
+          : "BAD_REQUEST",
+        message: error.message,
+      })
+    }
     if (error instanceof PrescriptionCommerceError) {
       throw prescriptionError(error)
     }
@@ -190,12 +201,43 @@ async function run<T>(action: () => Promise<T>) {
 }
 
 export const prescriptionsRouter = createTRPCRouter({
+  queueContext: protectedProcedure
+    .input(prescriptionStoreSetupSchema)
+    .query(async ({ ctx, input }) => {
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      await run(() =>
+        assertPrescriptionOperationalOrBreakGlassAccess(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          reason: "emergency_queue_context",
+          storeId,
+          tenantId: ctx.tenantContext.tenant.id,
+        }),
+      )
+      return getPrescriptionQueueContext(ctx.db, {
+        actorUserId: ctx.session.user.id,
+        storeId,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+    }),
+
   report: protectedProcedure
     .input(prescriptionReportSchema)
     .query(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
+      const storeId = input.storeId
+        ? resolveStoreId(
+            ctx.tenantContext.stores,
+            ctx.tenantContext.activeStore,
+            input.storeId,
+          )
+        : null
       return getPrescriptionOperationsReport(ctx.db, {
         ...input,
+        storeId,
         tenantId: ctx.tenantContext.tenant.id,
       })
     }),
@@ -797,10 +839,11 @@ export const prescriptionsRouter = createTRPCRouter({
         input.storeId,
       )
       await run(() =>
-        assertAnyPrescriptionStoreRole(ctx.db, {
+        assertPrescriptionOperationalOrBreakGlassAccess(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          reason: "emergency_queue_access",
           storeId,
           tenantId: ctx.tenantContext.tenant.id,
-          userId: ctx.session.user.id,
         }),
       )
       return run(() =>
@@ -820,15 +863,20 @@ export const prescriptionsRouter = createTRPCRouter({
         ctx.tenantContext.activeStore,
         input.storeId,
       )
-      await run(() =>
-        assertAnyPrescriptionStoreRole(ctx.db, {
+      const access = await run(() =>
+        assertPrescriptionOperationalOrBreakGlassAccess(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          reason: "operational_request_workspace",
+          requestId: input.requestId,
           storeId,
           tenantId: ctx.tenantContext.tenant.id,
-          userId: ctx.session.user.id,
         }),
       )
       return run(() =>
         getPrescriptionRequest(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          breakGlassControlId: access.breakGlassControlId,
+          reason: "operational_request_workspace",
           requestId: input.requestId,
           storeId,
           tenantId: ctx.tenantContext.tenant.id,
@@ -1088,6 +1136,7 @@ export const prescriptionsRouter = createTRPCRouter({
       )
       return run(() =>
         getPrescriptionStoreSetup(ctx.db, {
+          actorUserId: ctx.session.user.id,
           storeId,
           tenantId: ctx.tenantContext.tenant.id,
         }),

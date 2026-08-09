@@ -343,6 +343,7 @@ export const whatsappEmbeddedSignupSelectionSchema =
 export const prescriptionRetentionPolicySchema = z
   .object({
     addressDays: z.number().int().min(1).max(3_650),
+    auditEvidenceDays: z.number().int().min(1).max(3_650),
     commercialRecordDays: z.number().int().min(1).max(3_650),
     legalHold: z.boolean(),
     messageDays: z.number().int().min(1).max(3_650),
@@ -410,6 +411,7 @@ export const prescriptionIncidentSchema = z
 export const prescriptionIncidentIdSchema = z
   .object({
     controlId: z.string().trim().min(1),
+    reviewReason: z.string().trim().min(1).max(500),
     storeId: storeIdSchema,
   })
   .strict()
@@ -417,7 +419,7 @@ export const prescriptionIncidentIdSchema = z
 export const prescriptionReportSchema = z
   .object({
     from: z.coerce.date(),
-    storeId: storeIdSchema,
+    storeId: storeIdSchema.nullable().optional(),
     to: z.coerce.date(),
   })
   .strict()
@@ -435,7 +437,9 @@ export const prescriptionReuploadSchema = z
 
 export const prescriptionQueueSchema = z
   .object({
+    assignees: z.array(z.string().trim().min(1)).max(50).nullable().optional(),
     cursor: z.string().trim().min(1).nullable().optional(),
+    from: z.iso.date().nullable().optional(),
     pageSize: z.number().int().min(1).max(100).default(25),
     q: z.string().trim().max(120).nullable().optional(),
     sort: z
@@ -452,6 +456,7 @@ export const prescriptionQueueSchema = z
       .nullable()
       .optional(),
     storeId: storeIdSchema,
+    to: z.iso.date().nullable().optional(),
   })
   .strict()
 

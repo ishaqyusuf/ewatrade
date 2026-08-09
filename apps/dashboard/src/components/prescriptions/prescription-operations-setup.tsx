@@ -13,6 +13,8 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
   const queryClient = useQueryClient()
   const [message, setMessage] = useState<string | null>(null)
   const [exportRequestId, setExportRequestId] = useState("")
+  const onMutationError = (error: { message: string }) =>
+    setMessage(error.message)
   const zones = useQuery(
     trpc.prescriptions.deliveryZones.queryOptions({ storeId }),
   )
@@ -34,82 +36,112 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
   })
   const saveZone = useMutation(
     trpc.prescriptions.upsertDeliveryZone.mutationOptions({
+      onError: onMutationError,
       onSuccess: async () => {
-        setMessage("Delivery zone saved.")
         await queryClient.invalidateQueries({
           queryKey: trpc.prescriptions.deliveryZones.queryKey({ storeId }),
         })
+        setMessage("Delivery zone saved.")
       },
     }),
   )
   const saveRetention = useMutation(
     trpc.prescriptions.updateRetentionPolicy.mutationOptions({
+      onError: onMutationError,
       onSuccess: async () => {
-        setMessage("Retention policy saved.")
         await queryClient.invalidateQueries({
           queryKey: trpc.prescriptions.retentionPolicy.queryKey({ storeId }),
         })
+        setMessage("Retention policy saved.")
       },
     }),
   )
   const approveManualFee = useMutation(
     trpc.prescriptions.approveManualDeliveryFee.mutationOptions({
+      onError: onMutationError,
       onSuccess: async () => {
-        setMessage(
-          "Manual delivery fee approved and the customer was notified where possible.",
-        )
         await queryClient.invalidateQueries({
           queryKey: trpc.prescriptions.manualDeliveryReviews.queryKey({
             storeId,
           }),
         })
+        setMessage(
+          "Manual delivery fee approved and the customer was notified where possible.",
+        )
       },
     }),
   )
   const incident = useMutation(
     trpc.prescriptions.activateIncident.mutationOptions({
+      onError: onMutationError,
       onSuccess: async () => {
-        setMessage("Incident control activated and audited.")
         await queryClient.invalidateQueries({
           queryKey: trpc.prescriptions.complianceEvents.queryKey({ storeId }),
         })
+        setMessage("Incident control activated and audited.")
       },
     }),
   )
   const resolveIncident = useMutation(
     trpc.prescriptions.resolveIncident.mutationOptions({
+      onError: onMutationError,
       onSuccess: async () => {
-        setMessage(
-          "Incident control resolved. Reactivation remains a separate explicit step.",
-        )
         await queryClient.invalidateQueries({
           queryKey: trpc.prescriptions.complianceEvents.queryKey({ storeId }),
         })
+        setMessage(
+          "Incident control resolved. Reactivation remains a separate explicit step.",
+        )
       },
     }),
   )
   const createPrivacy = useMutation(
     trpc.prescriptions.createPrivacyRequest.mutationOptions({
+      onError: onMutationError,
       onSuccess: async () => {
-        setMessage(
-          "Privacy request recorded. Verify identity before processing.",
-        )
         await queryClient.invalidateQueries({
           queryKey: trpc.prescriptions.complianceEvents.queryKey({ storeId }),
         })
+        setMessage(
+          "Privacy request recorded. Verify identity before processing.",
+        )
       },
     }),
   )
   const verifyPrivacy = useMutation(
     trpc.prescriptions.verifyPrivacyRequest.mutationOptions({
+      onError: onMutationError,
       onSuccess: async () => {
-        setMessage("Identity verified. Privacy processing was queued.")
         await queryClient.invalidateQueries({
           queryKey: trpc.prescriptions.complianceEvents.queryKey({ storeId }),
         })
+        setMessage("Identity verified. Privacy processing was queued.")
       },
     }),
   )
+  const requiredQueries = [zones, retention, manualReviews, compliance]
+  if (requiredQueries.some((query) => query.isLoading)) {
+    return <div className="h-72 animate-pulse rounded-xl bg-muted" />
+  }
+  const queryError = requiredQueries.find((query) => query.error)?.error
+  if (queryError) {
+    return (
+      <div className="grid gap-3 rounded-xl border border-destructive/30 p-5">
+        <p role="alert" className="text-sm text-destructive">
+          {queryError.message}
+        </p>
+        <Button
+          className="w-fit"
+          onClick={() =>
+            void Promise.all(requiredQueries.map((query) => query.refetch()))
+          }
+          variant="outline"
+        >
+          Try again
+        </Button>
+      </div>
+    )
+  }
   const policy = retention.data
 
   return (
@@ -265,6 +297,7 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
               Number(data.get(key) || fallback)
             saveRetention.mutate({
               addressDays: days("addressDays", 30),
+              auditEvidenceDays: days("auditEvidenceDays", 2555),
               commercialRecordDays: days("commercialRecordDays", 2555),
               legalHold: data.get("legalHold") === "yes",
               messageDays: days("messageDays", 90),
@@ -280,6 +313,11 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
             ["transcriptDays", "Transcripts", policy?.transcriptDays ?? 90],
             ["messageDays", "Messages", policy?.messageDays ?? 90],
             ["addressDays", "Addresses", policy?.addressDays ?? 30],
+            [
+              "auditEvidenceDays",
+              "Audit evidence",
+              policy?.auditEvidenceDays ?? 2555,
+            ],
             ["secureTokenDays", "Secure tokens", policy?.secureTokenDays ?? 30],
             [
               "commercialRecordDays",
@@ -439,14 +477,20 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
           onSubmit={(event) => {
             event.preventDefault()
             const data = new FormData(event.currentTarget)
+            const type = String(data.get("type")) as
+              | "break_glass"
+              | "freeze_processing"
+              | "revoke_public_links"
+              | "revoke_whatsapp"
+              | "suspend_commerce"
             incident.mutate({
+              expiresAt:
+                type === "break_glass"
+                  ? new Date(Date.now() + 30 * 60_000)
+                  : undefined,
               reason: String(data.get("reason") ?? ""),
               storeId,
-              type: String(data.get("type")) as
-                | "freeze_processing"
-                | "revoke_public_links"
-                | "revoke_whatsapp"
-                | "suspend_commerce",
+              type,
             })
           }}
         >
@@ -458,6 +502,9 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
             </option>
             <option value="revoke_public_links">Revoke public links</option>
             <option value="revoke_whatsapp">Suspend WhatsApp routing</option>
+            <option value="break_glass">
+              Personal emergency access (30 minutes)
+            </option>
           </select>
           <input
             className={fieldClass}
@@ -477,24 +524,62 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
             {compliance.data.incidents
               .filter((control) => control.status === "ACTIVE")
               .map((control) => (
-                <div
-                  className="flex items-center justify-between gap-2 border border-border p-3 text-sm"
+                <form
+                  className="grid gap-2 border border-border p-3 text-sm"
                   key={control.id}
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    const data = new FormData(event.currentTarget)
+                    resolveIncident.mutate({
+                      controlId: control.id,
+                      reviewReason: String(data.get("reviewReason") ?? ""),
+                      storeId,
+                    })
+                  }}
                 >
-                  <span>{control.type.toLowerCase().replaceAll("_", " ")}</span>
+                  <span className="font-medium">
+                    {control.type.toLowerCase().replaceAll("_", " ")}
+                  </span>
+                  <input
+                    className={fieldClass}
+                    name="reviewReason"
+                    placeholder="Required outcome and post-use review"
+                    required
+                  />
                   <Button
-                    onClick={() =>
-                      resolveIncident.mutate({ controlId: control.id, storeId })
-                    }
+                    disabled={resolveIncident.isPending}
                     size="sm"
-                    type="button"
+                    type="submit"
                     variant="outline"
                   >
                     Resolve
                   </Button>
-                </div>
+                </form>
               ))}
           </div>
+        ) : null}
+        {compliance.data?.sensitiveAccess.length ? (
+          <details className="border-t border-border pt-4">
+            <summary className="cursor-pointer text-sm font-medium">
+              Sensitive access history
+            </summary>
+            <div className="mt-3 grid gap-2">
+              {compliance.data.sensitiveAccess.map((access) => (
+                <div
+                  className="border border-border p-3 text-xs"
+                  key={access.id}
+                >
+                  <p className="font-medium">
+                    {access.accessType.replaceAll("_", " ")} ·{" "}
+                    {access.actorUserId}
+                  </p>
+                  <p className="mt-1 text-muted-foreground">
+                    {access.effectiveAt.toLocaleString()} · {access.reason}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </details>
         ) : null}
       </section>
     </div>

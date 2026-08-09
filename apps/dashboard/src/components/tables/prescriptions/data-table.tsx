@@ -3,6 +3,7 @@
 import { DashboardTable } from "@/components/dashboard/dashboard-table"
 import { usePrescriptionFilterParams } from "@/hooks/use-prescription-filter-params"
 import { usePrescriptionParams } from "@/hooks/use-prescription-params"
+import { prescriptionSheetModeForStatus } from "@/hooks/use-prescription-params"
 import { useTRPC } from "@/trpc/client"
 import { Button } from "@ewatrade/ui"
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query"
@@ -24,12 +25,15 @@ export function PrescriptionDataTable({
   const query = useSuspenseInfiniteQuery(
     trpc.prescriptions.queue.infiniteQueryOptions(
       {
+        assignees: filter.assignees,
+        from: filter.from,
         pageSize: 25,
         q: filter.q,
         sort: filter.sort,
         sources: filter.sources,
         statuses: filter.statuses,
         storeId,
+        to: filter.to,
       },
       {
         getNextPageParam: (lastPage) => lastPage.meta.cursor ?? undefined,
@@ -55,7 +59,7 @@ export function PrescriptionDataTable({
         onRowClick={(request) =>
           setParams({
             prescriptionId: request.id,
-            prescriptionSheet: "details",
+            prescriptionSheet: prescriptionSheetModeForStatus(request.status),
           })
         }
       />

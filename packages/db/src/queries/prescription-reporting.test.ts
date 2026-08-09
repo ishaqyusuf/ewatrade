@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test"
 
 import {
   averageDurationMs,
+  prescriptionReportStoreScope,
   prescriptionReviewDurationPairs,
+  summarizePrescriptionUsageAmounts,
 } from "./prescription-reporting"
 
 describe("prescription reporting definitions", () => {
@@ -41,5 +43,47 @@ describe("prescription reporting definitions", () => {
         ]),
       ),
     ).toBe(420_000)
+  })
+
+  test("keeps provider charges, platform charges, tax, and revenue separate", () => {
+    expect(
+      summarizePrescriptionUsageAmounts([
+        {
+          amounts: {
+            pharmacyRevenueMinor: 12_000,
+            platformChargeMinor: 300,
+            taxMinor: 900,
+          },
+          eventType: "ORDER_CREATED",
+        },
+        {
+          amounts: { paymentProviderFeeMinor: 180 },
+          eventType: "PAYMENT_SUCCEEDED",
+        },
+        { amounts: {}, eventType: "MESSAGE_SENT" },
+      ]),
+    ).toMatchObject({
+      metaCostMinor: {
+        amountMinor: null,
+        observedCount: 0,
+        unknownCount: 1,
+      },
+      paymentProviderFeeMinor: { amountMinor: 180, unknownCount: 0 },
+      pharmacyRevenueMinor: { amountMinor: 12_000, unknownCount: 0 },
+      platformChargeMinor: { amountMinor: 300, unknownCount: 2 },
+      taxMinor: { amountMinor: 900, unknownCount: 0 },
+    })
+  })
+
+  test("supports tenant-wide and explicit Store report scopes", () => {
+    expect(prescriptionReportStoreScope({ tenantId: "tenant-1" })).toEqual({
+      tenantId: "tenant-1",
+    })
+    expect(
+      prescriptionReportStoreScope({
+        storeId: "store-2",
+        tenantId: "tenant-1",
+      }),
+    ).toEqual({ storeId: "store-2", tenantId: "tenant-1" })
   })
 })
