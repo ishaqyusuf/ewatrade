@@ -2,8 +2,10 @@ import { describe, expect, test } from "bun:test"
 
 import {
   InMemoryPrivateMediaProvider,
+  type PrivateMediaProvider,
   createDeterministicMediaSafetyProvider,
   createDeterministicOcrProvider,
+  storePrescriptionMedia,
   validatePrescriptionMedia,
 } from "./providers"
 
@@ -47,6 +49,35 @@ describe("Prescription provider contracts", () => {
     })
     expect(delivery.expiresAt).toEqual(new Date(31_000))
     expect(delivery.url).not.toContain(object.objectKey)
+  })
+
+  test("propagates private storage failure without returning a media manifest", async () => {
+    const unavailableStorage = {
+      createAuthorizedDelivery: async () => {
+        throw new Error("storage unavailable")
+      },
+      delete: async () => undefined,
+      get: async () => {
+        throw new Error("storage unavailable")
+      },
+      put: async () => {
+        throw new Error("storage unavailable")
+      },
+    } satisfies PrivateMediaProvider
+
+    await expect(
+      storePrescriptionMedia(
+        {
+          bytes: new Uint8Array([1, 2, 3]),
+          clientMediaId: "media-1",
+          mediaType: "image/jpeg",
+          originalFileName: "prescription.jpg",
+          pageNumber: 1,
+          scopeId: "tenant-1/store-1/request-1",
+        },
+        unavailableStorage,
+      ),
+    ).rejects.toThrow("storage unavailable")
   })
 
   test("provides deterministic OCR success, partial, timeout, and unavailable outcomes", async () => {

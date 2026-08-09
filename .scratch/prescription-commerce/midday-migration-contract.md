@@ -178,7 +178,7 @@ desktop/mobile browser QA pass. The owner-without-professional-role setup gate,
 policy/role onboarding, activation, empty queue, staff-assisted intake,
 URL-owned global sheet, explicit success and attendant-review modes, and mobile
 sheet scrolling were exercised against the Neon development database. The full
-suite reports 405 passing, ten skipped, and five unrelated existing
+suite reports 414 passing, ten skipped, and five unrelated existing
 mobile-navigation/Retail-Ops fixture failures. Accessibility automation, load,
 live Meta, Paystack, full cross-channel E2E, and production rollout remain
 acceptance gates rather than being represented as complete.

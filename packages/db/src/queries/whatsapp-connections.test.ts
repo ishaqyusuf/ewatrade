@@ -2,9 +2,11 @@ import { describe, expect, test } from "bun:test"
 
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
+  consumePrescriptionQuickAction,
   recordWhatsAppCommunicationStatus,
   resolveWhatsAppInboundConnection,
   resolveWhatsAppStatusConnection,
+  setWhatsAppConnectionLifecycle,
 } from "./whatsapp-connections"
 
 describe("WhatsApp inbound connection routing", () => {
@@ -54,11 +56,20 @@ describe("WhatsApp inbound connection routing", () => {
     })
   })
 
-  test("fails closed when an active binding crosses the connection Tenant", async () => {
+  test("fails the whole route when any active binding crosses the connection Tenant", async () => {
     const db = {
       whatsAppConnection: {
         findFirst: async () => ({
           bindings: [
+            {
+              store: {
+                name: "Central Pharmacy",
+                prescriptionSettings: { status: "ACTIVE" },
+                tenantId: "tenant-1",
+              },
+              storeId: "store-1",
+              tenantId: "tenant-1",
+            },
             {
               store: {
                 name: "Other Pharmacy",
@@ -196,5 +207,63 @@ describe("WhatsApp communication receipts", () => {
         providerMessageId: "wamid.late",
       }),
     ).toEqual({ connectionId: "suspended-connection", tenantId: "tenant-1" })
+  })
+})
+
+describe("WhatsApp failure controls", () => {
+  test("rejects a stale or already consumed quick action", async () => {
+    const transaction = {
+      prescriptionQuickAction: {
+        findFirst: async () => null,
+      },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+    } as unknown as PrismaClient
+
+    await expect(
+      consumePrescriptionQuickAction(db, {
+        actionId: "rx:expired-capability",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      }),
+    ).rejects.toMatchObject({ code: "QUICK_ACTION_INVALID" })
+  })
+
+  test("revokes a credential by suspending only its Tenant bindings", async () => {
+    const bindingUpdates: unknown[] = []
+    const transaction = {
+      whatsAppConnection: {
+        update: async () => ({ id: "connection-1", status: "REVOKED" }),
+      },
+      whatsAppConnectionAuditEvent: {
+        create: async (input: unknown) => input,
+      },
+      whatsAppStoreBinding: {
+        updateMany: async (input: unknown) => {
+          bindingUpdates.push(input)
+          return { count: 2 }
+        },
+      },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+    } as unknown as PrismaClient
+
+    await setWhatsAppConnectionLifecycle(db, {
+      actorUserId: "user-1",
+      connectionId: "connection-1",
+      status: "revoked",
+      tenantId: "tenant-1",
+    })
+
+    expect(bindingUpdates).toEqual([
+      {
+        data: { status: "SUSPENDED" },
+        where: { connectionId: "connection-1", tenantId: "tenant-1" },
+      },
+    ])
   })
 })

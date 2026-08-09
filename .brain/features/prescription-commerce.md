@@ -27,6 +27,12 @@ Tenant/Store isolation. Live Meta, Paystack, private-media/OCR, cross-channel
 delivery parity, load/security, production backfill, and production schema
 rollout remain open gates.
 
+Deterministic failure injection covers private-storage unavailability, OCR
+timeout/unavailability, Meta media/send failure, failed payment and duplicate
+callback handling, structured delivery failure, stale quick actions, and
+Tenant-scoped credential revocation. These source tests do not replace live
+provider canaries.
+
 ## Product Definition
 
 Prescription Commerce is a pharmacy-owned digital operating layer for intake,

@@ -11,7 +11,9 @@
   safety/OCR, professional review, observable projections, and paid pickup
   handoff with idempotent acceptance, callback, and handoff. Focused tests also
   prove independent pharmacy senders, central/branch routing, and
-  same-customer Tenant/Store isolation. Remaining gates: production
+  same-customer Tenant/Store isolation plus deterministic storage, OCR, Meta,
+  payment, notification, delivery, stale-action, and credential-revocation
+  failure handling. Remaining gates: production
   Service Quote backfill/reconciliation and legacy contraction, live private
   media/OCR providers, pharmacy-owned Meta WABA/number and template approvals,
   Paystack canary, legal/privacy/retention sign-off, delivery SOP approval,

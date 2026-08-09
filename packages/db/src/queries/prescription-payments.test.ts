@@ -5,8 +5,58 @@ import {
   attachPrescriptionRefundProviderResult,
   claimPrescriptionRefundProviderDispatch,
   createPrescriptionRefund,
+  processPrescriptionPaymentProviderEvent,
   resolvePrescriptionRefundReconciliationMiss,
 } from "./prescription-payments"
+
+describe("prescription payment provider failures", () => {
+  test("records a failed callback without creating payment or receipt facts", async () => {
+    const intentUpdates: unknown[] = []
+    const transaction = {
+      prescriptionPaymentIntent: {
+        findUnique: async () => ({
+          amountMinor: 2_500,
+          currencyCode: "NGN",
+          id: "payment-1",
+          orderId: "order-1",
+          status: "PENDING",
+          storeId: "store-1",
+          tenantId: "tenant-1",
+        }),
+        update: async (input: unknown) => {
+          intentUpdates.push(input)
+          return input
+        },
+      },
+      prescriptionPaymentProviderEvent: {
+        create: async () => ({ id: "event-1" }),
+        findUnique: async () => null,
+        update: async (input: unknown) => input,
+      },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+    } as unknown as PrismaClient
+
+    await expect(
+      processPrescriptionPaymentProviderEvent(db, {
+        amountMinor: 2_500,
+        currencyCode: "NGN",
+        eventId: "charge.failed:payment-1",
+        provider: "fake-hosted",
+        providerReference: "payment-reference-1",
+        status: "failed",
+      }),
+    ).resolves.toEqual({ communicationIntentId: null, replay: false })
+    expect(intentUpdates).toEqual([
+      {
+        data: { failedAt: expect.any(Date), status: "FAILED" },
+        where: { id: "payment-1" },
+      },
+    ])
+  })
+})
 
 describe("prescription refund provider result", () => {
   test("marks an existing refund command as a replay so provider work is not repeated", async () => {

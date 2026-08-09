@@ -109,10 +109,17 @@ contracting legacy Service Quote tables.
   `phone_number_id` values, one customer's isolated pharmacy threads, a central
   number with two explicit branch choices, and fail-closed cross-Tenant Store
   bindings. No live Meta message or provider mutation was performed.
+- Automated failure injection: 31 focused provider, domain, repository, and job
+  tests pass across storage rejection/unavailability, deterministic OCR
+  timeout/unavailability, Meta media/send failures, failed payment, structured
+  delivery failure, stale quick actions, and Tenant-scoped credential
+  revocation. The separate Neon lifecycle proves duplicate payment-callback
+  replay. Provider failures remain fake or deterministic; live canaries are
+  still required.
 - Remaining acceptance: cross-channel delivery E2E, live provider
   failure canaries, accessibility automation, load/concurrency/security,
   production Service Quote reconciliation/contraction, and production rollout.
-- Automated baseline: 405 tests pass and ten database integration hooks/tests
+- Automated baseline: 414 tests pass and ten database integration hooks/tests
   skip by default; five unrelated mobile-navigation/Retail-Ops mock failures
   remain tracked outside Prescription Commerce. The opt-in Prescription
   Commerce Neon test passes separately.

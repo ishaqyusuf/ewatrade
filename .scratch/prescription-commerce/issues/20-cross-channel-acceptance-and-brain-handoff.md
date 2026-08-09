@@ -8,7 +8,7 @@
 
 - [x] Automated acceptance tests cover web, staff-assisted, and WhatsApp intake through review, quote, payment, and pickup or delivery completion.
 - [x] Multi-pharmacy tests prove sender identity, `phone_number_id` routing, tenant/store isolation, central/branch bindings, and the same customer contacting different pharmacies.
-- [ ] Failure-injection evidence covers storage, OCR, Meta, payment, notification, delivery, duplicate callback, stale action, and credential-revocation scenarios.
+- [x] Failure-injection evidence covers storage, OCR, Meta, payment, notification, delivery, duplicate callback, stale action, and credential-revocation scenarios.
 - [ ] Accessibility, responsive/mobile, performance, retry, concurrency, security, privacy, and audit checks meet the thresholds defined in the approved spec.
 - [x] Production integrations remain fail closed until external legal, operational, provider, template, security, retention, and canary gates are explicitly satisfied.
 - [x] A manual QA runbook records fixtures, test pharmacy setup, expected transitions, observable evidence, rollback, and incident procedures.
@@ -29,5 +29,9 @@ The communications/database/job suites cover scoped same-customer threads,
 multi-pharmacy Redis context, connection-specific credentials and sender ids,
 central-number branch selection, cross-Tenant binding rejection, signature
 rejection, retries, and opaque quick actions. Delivery-origin parity, provider
-failure coverage, accessibility, performance, concurrency, and security remain
-open acceptance work under the separate gates above.
+canaries, accessibility, performance, concurrency, and security remain open
+acceptance work under the separate gates above. Deterministic failure-injection
+tests now cover private-storage unavailability; OCR timeout/unavailability;
+Meta media and outbound-notification failures; failed payment and duplicate
+callback handling; a structured delivery failure; expired/consumed quick
+actions; and Tenant-scoped credential revocation.

@@ -92,6 +92,8 @@
 - WhatsApp inbound resolution accepts only active bindings whose binding and
   Store Tenant both match the recipient `phone_number_id` Connection Tenant.
   A cross-Tenant or empty binding set fails before customer content is read.
+- Credential revocation suspends bindings with explicit Connection and Tenant
+  predicates; it cannot disable another Tenant's sender binding.
 - Sensitive media access is short-lived and authorized. Credentials, raw
   capability tokens, prescription text, delivery address, pickup code, and
   customer contact are excluded from routine logs, analytics, and audit detail.

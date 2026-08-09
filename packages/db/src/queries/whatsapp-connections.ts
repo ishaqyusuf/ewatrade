@@ -478,11 +478,20 @@ export async function resolveWhatsAppInboundConnection(
       "No active WhatsApp routing context was found.",
     )
   }
+  if (
+    connection.bindings.some(
+      (binding) =>
+        binding.tenantId !== connection.tenantId ||
+        binding.store.tenantId !== connection.tenantId,
+    )
+  ) {
+    throw new WhatsAppConnectionError(
+      "CONNECTION_NOT_FOUND",
+      "No active WhatsApp routing context was found.",
+    )
+  }
   const bindings = connection.bindings.filter(
-    (binding) =>
-      binding.tenantId === connection.tenantId &&
-      binding.store.tenantId === connection.tenantId &&
-      binding.store.prescriptionSettings?.status === "ACTIVE",
+    (binding) => binding.store.prescriptionSettings?.status === "ACTIVE",
   )
   if (!bindings.length) {
     throw new WhatsAppConnectionError(
@@ -1061,7 +1070,7 @@ export async function setWhatsAppConnectionLifecycle(
     })
     await tx.whatsAppStoreBinding.updateMany({
       data: { status: WhatsAppBindingStatus.SUSPENDED },
-      where: { connectionId: connection.id },
+      where: { connectionId: connection.id, tenantId: input.tenantId },
     })
     await tx.whatsAppConnectionAuditEvent.create({
       data: {

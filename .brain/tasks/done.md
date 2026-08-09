@@ -22,7 +22,9 @@
   pharmacist-released paid pickup completion, and observable customer,
   management, inventory, payment, audit, and usage projections with 81
   assertions, while the shared Prisma client uses bounded remote-database
-  transaction options. The repository baseline is 405 passing,
+  transaction options. Multi-pharmacy sender/routing/isolation and the bounded
+  deterministic failure matrix are also automated. The repository baseline is
+  414 passing,
   ten opt-in database hooks/tests skipped, and the same five unrelated
   mobile-navigation/Retail-Ops mock failures; cross-channel delivery,
   live-provider, production backfill/contraction, and production rollout remain

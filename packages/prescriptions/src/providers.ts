@@ -169,14 +169,17 @@ async function sha256(bytes: Uint8Array) {
   ).join("")
 }
 
-export async function storePrescriptionMedia(input: {
-  bytes: Uint8Array
-  clientMediaId: string
-  mediaType: string
-  originalFileName: string
-  pageNumber: number
-  scopeId: string
-}) {
+export async function storePrescriptionMedia(
+  input: {
+    bytes: Uint8Array
+    clientMediaId: string
+    mediaType: string
+    originalFileName: string
+    pageNumber: number
+    scopeId: string
+  },
+  provider: PrivateMediaProvider = getConfiguredPrivateMediaProvider(),
+) {
   const descriptor = {
     mediaType: input.mediaType,
     pageNumber: input.pageNumber,
@@ -184,7 +187,7 @@ export async function storePrescriptionMedia(input: {
   }
   validatePrescriptionMedia(descriptor)
   const objectKey = `prescriptions/${input.scopeId}/${crypto.randomUUID()}`
-  const stored = await getConfiguredPrivateMediaProvider().put({
+  const stored = await provider.put({
     bytes: input.bytes,
     mediaType: descriptor.mediaType,
     objectKey,
