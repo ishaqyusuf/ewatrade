@@ -509,12 +509,12 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       storeId,
       tenantId,
     }
-    await expect(handoffPrescriptionPickup(db, handoffInput)).resolves.toEqual({
-      handedOff: true,
-    })
-    await expect(handoffPrescriptionPickup(db, handoffInput)).resolves.toEqual({
-      handedOff: true,
-    })
+    await expect(
+      Promise.all([
+        handoffPrescriptionPickup(db, handoffInput),
+        handoffPrescriptionPickup(db, handoffInput),
+      ]),
+    ).resolves.toEqual([{ handedOff: true }, { handedOff: true }])
 
     const [completedRequest, completedOrder, completedPickup] =
       await Promise.all([

@@ -101,8 +101,9 @@ contracting legacy Service Quote tables.
   Quote, and payment views plus management audit, inventory reservation,
   pickup queue, reporting, and usage projections were asserted. Each origin
   now races two identical pickup-acceptance commands and proves that both
-  callers resolve to one committed Order. The profile-attested integration
-  tests passed with 81 assertions and removed their run-owned synthetic
+  callers resolve to one committed Order. A focused web-origin rerun also races
+  two handoff commands and resolves both to the one completed fulfilment. The
+  profile-attested integration tests passed with 81 assertions and removed their run-owned synthetic
   Tenant/User fixture in one atomic cleanup.
   Hosted-Neon latency also proved that the shared Prisma client requires the
   bounded 10-second wait/30-second interactive-transaction policy.

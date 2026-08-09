@@ -189,7 +189,11 @@ export async function revisePrescriptionQuoteForDelivery(
     )
   }
   const zones = await db.prescriptionDeliveryZone.findMany({
-    where: { status: "ACTIVE", storeId: current.quote.storeId },
+    where: {
+      status: "ACTIVE",
+      storeId: current.quote.storeId,
+      tenantId: current.quote.tenantId,
+    },
   })
   const result = evaluateDeliveryZone(
     zones.map((zone) => ({
@@ -712,9 +716,31 @@ export async function handoffPrescriptionPickup(
     userId: input.actorUserId,
   })
   return db.$transaction(async (tx) => {
-    const fulfillment = await tx.prescriptionPickupFulfillment.findFirst({
+    const identity = await tx.prescriptionPickupFulfillment.findFirst({
+      select: { id: true },
       where: {
         id: input.fulfillmentId,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    })
+    if (!identity) {
+      throw new PrescriptionFulfillmentError(
+        "FULFILLMENT_NOT_FOUND",
+        "Pickup was not found.",
+      )
+    }
+    await tx.$queryRaw`
+      SELECT "id"
+      FROM "PrescriptionPickupFulfillment"
+      WHERE "id" = ${identity.id}
+        AND "tenantId" = ${input.tenantId}
+        AND "storeId" = ${input.storeId}
+      FOR UPDATE
+    `
+    const fulfillment = await tx.prescriptionPickupFulfillment.findFirst({
+      where: {
+        id: identity.id,
         storeId: input.storeId,
         tenantId: input.tenantId,
       },

@@ -19,6 +19,9 @@
   page navigation/rotation is now source-complete in the attendant workspace.
   The Neon matrix also proves concurrent identical pickup acceptance for all
   three origins after adding loser-transaction recovery to the idempotency seam.
+  A focused Neon web-origin rerun proves row-locked concurrent pickup handoff;
+  fixed/manual delivery-zone boundary rules and explicit Tenant scoping are
+  source-tested, while delivery customer-flow acceptance remains open.
   Remaining gates: production
   Service Quote backfill/reconciliation and legacy contraction, live private
   media/OCR providers, pharmacy-owned Meta WABA/number and template approvals,

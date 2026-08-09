@@ -88,6 +88,8 @@ integration path to the broader EwaTrade commerce platform.
 - Fulfilment: packing, ready status, pickup code, authorised collection,
   configurable delivery zones, eligibility, courier assignment, tracking,
   proof, failure handling, and service recovery.
+- Pickup handoff serializes on the Tenant/Store-scoped fulfilment row before
+  replay and state checks, so concurrent staff commands cannot hand off twice.
 - Operations: role-based inbox, ownership, service-level timers, templates,
   escalation, branch configuration, audit history, and POS/inventory/accounting
   integration path.
