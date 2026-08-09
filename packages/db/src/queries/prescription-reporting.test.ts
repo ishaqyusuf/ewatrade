@@ -5,6 +5,7 @@ import {
   isInPrescriptionReportWindow,
   prescriptionReportStoreScope,
   prescriptionReviewDurationPairs,
+  summarizePrescriptionQuoteVersionEvents,
   summarizePrescriptionUsageAmounts,
 } from "./prescription-reporting"
 
@@ -26,6 +27,43 @@ describe("prescription reporting definitions", () => {
         window,
       ),
     ).toBe(false)
+  })
+
+  test("counts lifecycle events from superseded Quote Versions", () => {
+    const window = {
+      from: new Date("2026-08-01T00:00:00.000Z"),
+      to: new Date("2026-09-01T00:00:00.000Z"),
+    }
+    expect(
+      summarizePrescriptionQuoteVersionEvents(
+        [
+          {
+            acceptedAt: null,
+            availabilityOutcome: "PARTIAL",
+            declinedAt: new Date("2026-08-10T10:00:00.000Z"),
+            issuedAt: new Date("2026-08-09T10:00:00.000Z"),
+            status: "DECLINED",
+          },
+          {
+            acceptedAt: new Date("2026-08-12T10:00:00.000Z"),
+            availabilityOutcome: "FULL",
+            declinedAt: null,
+            issuedAt: new Date("2026-08-11T10:00:00.000Z"),
+            status: "ACCEPTED",
+          },
+        ],
+        window,
+      ),
+    ).toEqual({
+      quoteCount: 2,
+      quoteOutcomes: {
+        accepted: 1,
+        declined: 1,
+        full: 1,
+        partial: 1,
+        unavailable: 0,
+      },
+    })
   })
 
   test("uses only completed non-negative lifecycle durations", () => {

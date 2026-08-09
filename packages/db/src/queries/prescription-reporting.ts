@@ -160,6 +160,44 @@ export function isInPrescriptionReportWindow(
   return Boolean(value && value >= input.from && value < input.to)
 }
 
+export function summarizePrescriptionQuoteVersionEvents(
+  versions: Array<{
+    acceptedAt: Date | null
+    availabilityOutcome: string
+    declinedAt: Date | null
+    issuedAt: Date | null
+    status: string
+  }>,
+  input: { from: Date; to: Date },
+) {
+  const issued = versions.filter((version) =>
+    isInPrescriptionReportWindow(version.issuedAt, input),
+  )
+  return {
+    quoteCount: issued.length,
+    quoteOutcomes: {
+      accepted: versions.filter(
+        (version) =>
+          version.status === "ACCEPTED" &&
+          isInPrescriptionReportWindow(version.acceptedAt, input),
+      ).length,
+      declined: versions.filter(
+        (version) =>
+          version.status === "DECLINED" &&
+          isInPrescriptionReportWindow(version.declinedAt, input),
+      ).length,
+      full: issued.filter((version) => version.availabilityOutcome === "FULL")
+        .length,
+      partial: issued.filter(
+        (version) => version.availabilityOutcome === "PARTIAL",
+      ).length,
+      unavailable: issued.filter(
+        (version) => version.availabilityOutcome === "UNAVAILABLE",
+      ).length,
+    },
+  }
+}
+
 export async function getPrescriptionOperationsReport(
   db: PrismaClient,
   input: {
@@ -179,7 +217,7 @@ export async function getPrescriptionOperationsReport(
     tenant,
     stores,
     requests,
-    quotes,
+    quoteVersions,
     paymentIntents,
     pickups,
     deliveries,
@@ -207,31 +245,27 @@ export async function getPrescriptionOperationsReport(
       },
       where: scope,
     }),
-    db.commerceQuote.findMany({
+    db.commerceQuoteVersion.findMany({
       select: {
-        currentVersion: {
-          select: {
-            acceptedAt: true,
-            availabilityOutcome: true,
-            declinedAt: true,
-            issuedAt: true,
-            status: true,
-          },
-        },
+        acceptedAt: true,
+        availabilityOutcome: true,
+        declinedAt: true,
+        issuedAt: true,
+        status: true,
       },
       where: {
-        currentVersion: {
+        OR: [
+          { acceptedAt: scope.createdAt },
+          { declinedAt: scope.createdAt },
+          { issuedAt: scope.createdAt },
+        ],
+        quote: {
           is: {
-            OR: [
-              { acceptedAt: scope.createdAt },
-              { declinedAt: scope.createdAt },
-              { issuedAt: scope.createdAt },
-            ],
+            sourceType: "PRESCRIPTION_REQUEST",
+            ...storeScope,
+            tenantId: input.tenantId,
           },
         },
-        sourceType: "PRESCRIPTION_REQUEST",
-        ...storeScope,
-        tenantId: input.tenantId,
       },
     }),
     db.prescriptionPaymentIntent.findMany({
@@ -287,8 +321,9 @@ export async function getPrescriptionOperationsReport(
       ["PAID", "PARTIALLY_REFUNDED", "REFUNDED"].includes(intent.status) &&
       isInPrescriptionReportWindow(intent.paidAt, input),
   )
-  const issuedQuotes = quotes.filter((quote) =>
-    isInPrescriptionReportWindow(quote.currentVersion?.issuedAt, input),
+  const quoteSummary = summarizePrescriptionQuoteVersionEvents(
+    quoteVersions,
+    input,
   )
   return {
     channelMix,
@@ -311,28 +346,7 @@ export async function getPrescriptionOperationsReport(
       ).length,
     },
     pickupCompleted: pickups,
-    quoteCount: issuedQuotes.length,
-    quoteOutcomes: {
-      accepted: quotes.filter(
-        (quote) =>
-          quote.currentVersion?.status === "ACCEPTED" &&
-          isInPrescriptionReportWindow(quote.currentVersion.acceptedAt, input),
-      ).length,
-      declined: quotes.filter(
-        (quote) =>
-          quote.currentVersion?.status === "DECLINED" &&
-          isInPrescriptionReportWindow(quote.currentVersion.declinedAt, input),
-      ).length,
-      full: issuedQuotes.filter(
-        (quote) => quote.currentVersion?.availabilityOutcome === "FULL",
-      ).length,
-      partial: issuedQuotes.filter(
-        (quote) => quote.currentVersion?.availabilityOutcome === "PARTIAL",
-      ).length,
-      unavailable: issuedQuotes.filter(
-        (quote) => quote.currentVersion?.availabilityOutcome === "UNAVAILABLE",
-      ).length,
-    },
+    ...quoteSummary,
     requestCount: requests.length,
     reviewTimeMs: averageDurationMs(prescriptionReviewDurationPairs(requests)),
     scope: input.storeId ? "store" : "tenant",
