@@ -235,9 +235,11 @@ also spread across API/DB rather than a focused reusable package.
 - Move request/Quote-driven draft matching and price suggestion into the shared
   Catalog-adoption controller. Prescription components retain only verified
   line review and pharmacist release inputs.
-- Split `prescription-commerce.integration.test.ts` into the planned acceptance
-  directory with one shared fixture/atomic teardown module and separate pickup,
-  delivery, Pharmacy, Service migration and cross-vertical specs.
+- Further split the completed Ticket 01 acceptance directory only as later
+  behavior lands: Ticket 08 separates fixed/manual delivery concerns, and
+  Tickets 10/12/13 add Pharmacy-adaptation and cross-vertical specs. The deleted
+  `prescription-commerce.integration.test.ts` monolith must not be recreated;
+  all specs continue to use the centralized run-owned atomic teardown boundary.
 
 ### Delete Only After Ticket 13 Switch/Contraction Approval
 
@@ -564,6 +566,31 @@ reversible presentation state; authoritative lifecycle state always refetches.
 6. Switch: change ownership only after compatibility and rollback evidence.
 7. Contract: remove old names/models/exports only under separately approved
    production reconciliation and rollout tickets.
+
+### Rollback Conditions
+
+- Prefactor/expand stops when the shared contract suite, current Service path,
+  or current Pharmacy pickup/delivery compatibility matrix regresses. Because
+  Ticket 01 has no caller or schema switch, rollback is removal of the unused
+  new export/package change while the authoritative vertical entrypoints remain
+  untouched; the split tests may remain if they preserve the same evidence.
+- Adapt/graduate/prove stops on any Tenant/Store isolation failure, projection
+  privacy leak, incompatible public URL/result, concurrency/idempotency
+  regression, history loss, invented stock, policy bypass, or failed required
+  desktop/mobile/Neon acceptance. Disable the new Store capability, stop its
+  identifier-only jobs, retain compatibility exports/readers and reconcile
+  additive data before another attempt. Never roll back by deleting customer,
+  Quote, Order, audit, Catalog-price or inventory-ledger history.
+- Switch is reversed to the compatibility entrypoint if monitored Service or
+  Pharmacy outcomes diverge, authorization/readiness becomes uncertain, or a
+  required provider canary fails. The old path remains deployable until the
+  observation window and reconciliation report pass; no old export or column
+  is removed in the switch phase.
+- Contract does not start until every old caller is absent, production
+  reconciliation is clean, rollback observation has passed and the owner has
+  separately approved removal. A failed contraction deploy restores the prior
+  application artifact and compatible reader/export; destructive schema
+  cleanup is not retried until the discrepancy is understood and reconciled.
 
 Approved target ownership:
 

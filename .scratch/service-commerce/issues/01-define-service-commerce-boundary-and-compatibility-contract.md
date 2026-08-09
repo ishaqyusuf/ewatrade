@@ -7,8 +7,8 @@
 **Status:** complete on 2026-08-09
 
 **Approval:** The original slice and ADR-0030's revised source vocabulary were
-owner-approved on 2026-08-09. The compatibility prefactor is now being
-reconciled with the exact amended contract.
+owner-approved on 2026-08-09. The compatibility prefactor was reconciled with
+the exact amended contract before this ticket was marked complete.
 
 - [x] Verify the inspected ownership/file map in `.scratch/service-commerce/midday-migration-contract.md` against the approved implementation baseline and amend it before code only if that baseline changed.
 - [x] Define a minimal shared vocabulary for `service`, `prescription` and the
