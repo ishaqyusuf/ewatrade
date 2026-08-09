@@ -17,11 +17,11 @@ Report scope is shareable URL state with explicit error recovery. Quote issue,
 accept/decline, payment, pickup handoff, and delivery completion are assigned to
 the half-open window containing their authoritative lifecycle timestamp.
 
-- [ ] Store- and tenant-scoped dashboards report request volume, channel mix, review time, quote outcomes, conversion, payment, pickup, and delivery performance.
-- [ ] Metrics are derived from canonical lifecycle events with documented definitions, time zones, denominators, and late-event behavior.
-- [ ] Reports use identifiers and aggregates rather than prescription text, medicine names, media, addresses, or unnecessary customer data.
-- [ ] Usage events are emitted exactly once for defined billable actions and can be reconciled to source requests, orders, messages, and fulfilments by authorized operators.
-- [ ] EwaTrade platform charges, Meta conversation/template charges, payment-provider fees, delivery costs, taxes, and pharmacy revenue are represented separately.
-- [ ] Missing provider-cost data is shown as unknown rather than silently estimated or folded into platform pricing.
-- [ ] Exports and report APIs enforce active tenant/store context and permission boundaries.
-- [ ] Metric-definition, deduplication, reconciliation, privacy, permission, and multi-store tests are included.
+- [x] Store- and tenant-scoped dashboards report request volume, channel mix, review time, quote outcomes, conversion, payment, pickup, and delivery performance.
+- [x] Metrics are derived from canonical lifecycle events with documented definitions, time zones, denominators, and late-event behavior.
+- [x] Reports use identifiers and aggregates rather than prescription text, medicine names, media, addresses, or unnecessary customer data.
+- [x] Usage events are emitted exactly once for defined billable actions and can be reconciled to source requests, orders, messages, and fulfilments by authorized operators.
+- [x] EwaTrade platform charges, Meta conversation/template charges, payment-provider fees, delivery costs, taxes, and pharmacy revenue are represented separately.
+- [x] Missing provider-cost data is shown as unknown rather than silently estimated or folded into platform pricing.
+- [x] Exports and report APIs enforce active tenant/store context and permission boundaries.
+- [x] Metric-definition, deduplication, reconciliation, privacy, permission, and multi-store tests are included.
