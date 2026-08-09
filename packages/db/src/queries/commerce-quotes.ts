@@ -662,7 +662,7 @@ export async function getPublicCommerceQuote(
 }
 
 export async function getCommerceQuoteAcceptanceContext(
-  tx: Prisma.TransactionClient,
+  tx: PrismaClient | Prisma.TransactionClient,
   input: { acceptanceToken: string; clientAcceptanceId: string },
 ) {
   const access = await resolveCommerceQuoteAccess(tx, input)

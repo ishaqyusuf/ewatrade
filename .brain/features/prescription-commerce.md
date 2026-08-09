@@ -101,6 +101,9 @@ integration path to the broader EwaTrade commerce platform.
 - The original prescription remains visible during verification.
 - Every line requires an explicit attendant review before pharmacist release.
 - The pharmacist remains the professional release gate.
+- A payable pharmacist mapping requires an active Store Product Offering, a
+  positive exact quantity, and enough current available stock. Its inventory
+  configuration and balance revision are captured for Quote acceptance.
 - Original output, corrections, reviewer identity, and timestamps form the
   audit history.
 - The attendant workspace shows short-lived authorized original pages beside
@@ -276,8 +279,9 @@ and cannot be resolved without a post-use review.
   safety/OCR, mandatory attendant verification, pharmacist release, current
   Quote acceptance, Commercial Order/payment, and pickup handoff. The tests
   inspect customer-safe, management, inventory, payment, audit, reporting, and
-  usage projections; delivery and live-provider acceptance remain external
-  gates.
+  usage projections. Concurrent identical pickup acceptance is exercised for
+  every origin and resolves to one Order; delivery and live-provider acceptance
+  remain external gates.
 
 ## Related Product Areas
 

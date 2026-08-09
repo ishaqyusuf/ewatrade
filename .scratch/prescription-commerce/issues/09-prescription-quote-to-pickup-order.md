@@ -6,11 +6,19 @@
 
 **Status:** implemented-source; production acceptance pending
 
-- [ ] A released request can produce full, partial, or unavailable Quote outcomes with explicit included, substituted, unavailable, and declined lines.
-- [ ] Each commercial or availability change creates a new immutable Quote version and supersedes older customer actions safely.
-- [ ] The secure customer page shows the current version, expiry, store identity, pickup terms, exact item totals, and pharmacy-approved alternatives.
-- [ ] Accepting a partial quote requires explicit customer acknowledgement and never silently includes unavailable or declined lines.
-- [ ] Accepting the current pickup Quote is atomic and idempotently creates one Commercial Order, line snapshots, totals, and inventory reservations.
-- [ ] Expired, superseded, withdrawn, declined, or already accepted versions cannot create another order.
-- [ ] Reservation failure leaves no partially accepted quote or order and returns an actionable response to staff and customer.
-- [ ] End-to-end tests prove Prescription Request to pharmacist release to Quote to pickup order, including retries and concurrent acceptance.
+**Verification note (2026-08-09):** Commerce Quote invariants cover typed full,
+partial, and unavailable versions, line outcomes, digested capabilities, expiry,
+supersession, acknowledgement, and idempotency. The atomic acceptance transaction
+creates inventory-revision-bound Order snapshots and pickup fulfilment or rolls
+back as one unit. A verified `.env.local` Neon run now races two identical
+acceptance commands for each web, staff, and WhatsApp origin; all six callers
+resolve to exactly one Order, and the 3-test/81-assertion lifecycle matrix passes.
+
+- [x] A released request can produce full, partial, or unavailable Quote outcomes with explicit included, substituted, unavailable, and declined lines.
+- [x] Each commercial or availability change creates a new immutable Quote version and supersedes older customer actions safely.
+- [x] The secure customer page shows the current version, expiry, store identity, pickup terms, exact item totals, and pharmacy-approved alternatives.
+- [x] Accepting a partial quote requires explicit customer acknowledgement and never silently includes unavailable or declined lines.
+- [x] Accepting the current pickup Quote is atomic and idempotently creates one Commercial Order, line snapshots, totals, and inventory reservations.
+- [x] Expired, superseded, withdrawn, declined, or already accepted versions cannot create another order.
+- [x] Reservation failure leaves no partially accepted quote or order and returns an actionable response to staff and customer.
+- [x] End-to-end tests prove Prescription Request to pharmacist release to Quote to pickup order, including retries and concurrent acceptance.

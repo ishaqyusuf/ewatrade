@@ -422,11 +422,10 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       clientAcceptanceId: `${origin}-acceptance-${runId}`,
       partialAcknowledged: false,
     }
-    const accepted = await acceptPrescriptionPickupQuote(db, acceptanceInput)
-    const acceptanceReplay = await acceptPrescriptionPickupQuote(
-      db,
-      acceptanceInput,
-    )
+    const [accepted, acceptanceReplay] = await Promise.all([
+      acceptPrescriptionPickupQuote(db, acceptanceInput),
+      acceptPrescriptionPickupQuote(db, acceptanceInput),
+    ])
     expect(acceptanceReplay.orderId).toBe(accepted.orderId)
     const inventoryAfterAcceptance = await getCatalogOfferingAvailability(db, {
       offeringId,

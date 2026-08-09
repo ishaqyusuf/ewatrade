@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test"
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
   assertPrescriptionPickupQuoteAcceptance,
+  assertPrescriptionReleaseLineAvailability,
   assertPrescriptionRequestTransition,
   createPrescriptionIntakeFingerprint,
   normalizePrescriptionMediaManifest,
@@ -223,6 +224,43 @@ describe("Prescription Request lifecycle", () => {
         partialAcknowledged: true,
       }),
     ).toThrow("not a prescription pickup Quote")
+  })
+
+  test("requires a positive mapped quantity and enough stock before release", () => {
+    expect(() =>
+      assertPrescriptionReleaseLineAvailability({
+        availability: "available",
+        offeringId: "offering-1",
+      }),
+    ).toThrow("Product Offering and quantity")
+    expect(() =>
+      assertPrescriptionReleaseLineAvailability({
+        availability: "partial",
+        offeringId: "offering-1",
+        quantity: "0",
+      }),
+    ).toThrow("positive decimal quantity")
+    expect(() =>
+      assertPrescriptionReleaseLineAvailability({
+        availability: "available",
+        availableOfferingQuantity: "1",
+        offeringId: "offering-1",
+        quantity: "2",
+      }),
+    ).toThrow("enough available stock")
+    expect(
+      assertPrescriptionReleaseLineAvailability({
+        availability: "partial",
+        availableOfferingQuantity: "2",
+        offeringId: "offering-1",
+        quantity: "1.5",
+      }),
+    ).toBe("1.5")
+    expect(
+      assertPrescriptionReleaseLineAvailability({
+        availability: "unavailable",
+      }),
+    ).toBeNull()
   })
 
   test("builds tenant-scoped assignee and date-range queue predicates", () => {

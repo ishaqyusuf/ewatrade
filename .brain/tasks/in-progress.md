@@ -17,6 +17,8 @@
   Store-role attribution, idempotent intake, inactive-Store rejection,
   callback replay, expiring re-upload, revision invalidation, and private-media
   page navigation/rotation is now source-complete in the attendant workspace.
+  The Neon matrix also proves concurrent identical pickup acceptance for all
+  three origins after adding loser-transaction recovery to the idempotency seam.
   Remaining gates: production
   Service Quote backfill/reconciliation and legacy contraction, live private
   media/OCR providers, pharmacy-owned Meta WABA/number and template approvals,

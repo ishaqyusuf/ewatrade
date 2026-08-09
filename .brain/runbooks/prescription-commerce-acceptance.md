@@ -99,9 +99,11 @@ contracting legacy Service Quote tables.
   fake hosted checkout, paid callback and callback replay, packing,
   pickup-code verification, and idempotent handoff. Customer-safe request,
   Quote, and payment views plus management audit, inventory reservation,
-  pickup queue, reporting, and usage projections were asserted. The
-  profile-attested integration tests passed with 81 assertions and removed
-  their run-owned synthetic Tenant/User fixture in one atomic cleanup.
+  pickup queue, reporting, and usage projections were asserted. Each origin
+  now races two identical pickup-acceptance commands and proves that both
+  callers resolve to one committed Order. The profile-attested integration
+  tests passed with 81 assertions and removed their run-owned synthetic
+  Tenant/User fixture in one atomic cleanup.
   Hosted-Neon latency also proved that the shared Prisma client requires the
   bounded 10-second wait/30-second interactive-transaction policy.
 - Automated multi-pharmacy routing: focused communications, database, and job

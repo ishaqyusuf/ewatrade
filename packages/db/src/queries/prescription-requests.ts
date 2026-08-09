@@ -1,7 +1,11 @@
 import { createHash, randomBytes } from "node:crypto"
 
 import { decryptPrescriptionData } from "@ewatrade/prescriptions"
-import type { Prisma, PrismaClient } from "../../generated/prisma/client"
+import {
+  compareExactDecimals,
+  parseExactDecimal,
+} from "@ewatrade/utils/exact-decimal"
+import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
   CatalogRecordStatus,
   CommerceQuoteAvailabilityOutcome,
@@ -1882,6 +1886,42 @@ export type PharmacistLineDecision = {
   transcriptionLineId: string
 }
 
+export function assertPrescriptionReleaseLineAvailability(input: {
+  availability: PharmacistLineDecision["availability"]
+  availableOfferingQuantity?: string
+  offeringId?: string | null
+  quantity?: string | null
+}) {
+  const payable =
+    input.availability === "available" || input.availability === "partial"
+  if (!payable) return null
+  if (!input.offeringId || !input.quantity) {
+    throw new PrescriptionRequestError(
+      "TRANSCRIPT_NOT_READY",
+      "Available lines require a Product Offering and quantity.",
+    )
+  }
+  let quantity: string
+  try {
+    quantity = parseExactDecimal(input.quantity, { allowZero: false })
+  } catch {
+    throw new PrescriptionRequestError(
+      "TRANSCRIPT_NOT_READY",
+      "Available lines require a positive decimal quantity.",
+    )
+  }
+  if (
+    input.availableOfferingQuantity !== undefined &&
+    compareExactDecimals(quantity, input.availableOfferingQuantity) > 0
+  ) {
+    throw new PrescriptionRequestError(
+      "TRANSCRIPT_NOT_READY",
+      "Mapped Product Offering does not have enough available stock.",
+    )
+  }
+  return quantity
+}
+
 export async function recordPrescriptionPharmacistReview(
   db: PrismaClient,
   input: {
@@ -1946,16 +1986,7 @@ export async function recordPrescriptionPharmacistReview(
       unavailable: PrescriptionLineAvailability.UNAVAILABLE,
     } as const
     for (const line of input.lines) {
-      if (
-        (line.availability === "available" ||
-          line.availability === "partial") &&
-        !line.offeringId
-      ) {
-        throw new PrescriptionRequestError(
-          "TRANSCRIPT_NOT_READY",
-          "Available lines must map to a Product Offering.",
-        )
-      }
+      assertPrescriptionReleaseLineAvailability(line)
       let inventorySnapshot:
         | Awaited<ReturnType<typeof getCatalogOfferingAvailability>>
         | undefined
@@ -1983,6 +2014,10 @@ export async function recordPrescriptionPharmacistReview(
           tenantId: input.tenantId,
         })
       }
+      assertPrescriptionReleaseLineAvailability({
+        ...line,
+        availableOfferingQuantity: inventorySnapshot?.availableOfferingQuantity,
+      })
       await tx.prescriptionLineMapping.upsert({
         create: {
           availability: availabilityMap[line.availability],
@@ -2429,6 +2464,33 @@ async function acceptPrescriptionQuoteForFulfilment(
       }
     })
   } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      const context = await getCommerceQuoteAcceptanceContext(db, input)
+      if (context.replayOrderId) {
+        const order = await db.commercialOrder.findFirstOrThrow({
+          select: { customerPhone: true, storeId: true, tenantId: true },
+          where: {
+            id: context.replayOrderId,
+            storeId: context.version.quote.storeId,
+            tenantId: context.version.quote.tenantId,
+          },
+        })
+        return {
+          notification: order.customerPhone
+            ? {
+                customerPhone: order.customerPhone,
+                storeId: order.storeId,
+                tenantId: order.tenantId,
+              }
+            : null,
+          orderId: context.replayOrderId,
+          versionId: context.version.id,
+        }
+      }
+    }
     if (error instanceof CommerceQuoteError) {
       throw new PrescriptionRequestError(
         error.code === "PUBLIC_TOKEN_INVALID"
