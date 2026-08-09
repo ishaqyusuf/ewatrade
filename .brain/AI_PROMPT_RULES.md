@@ -21,8 +21,12 @@ Keep AI-generated work aligned with repository architecture and documentation st
 - Reuse a running development stack when available. Otherwise start the required
   root `bun run dev` profile in a dedicated managed terminal session and keep
   that session available for logs and shutdown.
-- Use port-free Portless URLs for website work: `http://ewatrade.localhost` and `http://ewatrade-dashboard.localhost`. Any explicit port on a named host is a Portless bug that must be fixed before proceeding.
-- Prisma schema/database changes must use the repository Prisma workflow, followed by `bun run db:push --local` and `bun run db:push --prod`; use `--preview` only when explicitly requested. Do not manually create migration files or force destructive changes without approval.
+- Use port-free Portless URLs for website work: `https://ewatrade.localhost` and `https://ewatrade-dashboard.localhost`. Any explicit port on a named host is a Portless bug that must be fixed before proceeding.
+- `.env.local` always selects EwaTrade's Neon development database. Never use
+  local Docker/PostgreSQL as a fallback. Prisma schema/database changes must use
+  the repository workflow followed by `bun run db:push --local`; preview and
+  production operations require separate explicit authorization. Do not
+  manually create migrations or force destructive changes without approval.
 
 ## Global Personal Coding Rules
 <!-- BEGIN Global Personal Coding Rules -->

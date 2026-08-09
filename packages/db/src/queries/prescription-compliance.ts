@@ -95,16 +95,7 @@ export async function authorizePrescriptionBreakGlassAccess(
     tenantId: string
   },
 ) {
-  const control = await db.prescriptionIncidentControl.findFirst({
-    where: {
-      activatedByUserId: input.actorUserId,
-      expiresAt: { gt: new Date() },
-      status: PrescriptionIncidentStatus.ACTIVE,
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-      type: PrescriptionIncidentType.BREAK_GLASS,
-    },
-  })
+  const control = await findActivePrescriptionBreakGlassControl(db, input)
   if (!control) {
     throw new PrescriptionComplianceError(
       "An active, personal break-glass grant is required.",
@@ -122,12 +113,61 @@ export async function authorizePrescriptionBreakGlassAccess(
   return { controlId: control.id, expiresAt: control.expiresAt }
 }
 
+function findActivePrescriptionBreakGlassControl(
+  db: PrismaClient,
+  input: { actorUserId: string; storeId: string; tenantId: string },
+) {
+  return db.prescriptionIncidentControl.findFirst({
+    select: { expiresAt: true, id: true },
+    where: {
+      activatedByUserId: input.actorUserId,
+      expiresAt: { gt: new Date() },
+      status: PrescriptionIncidentStatus.ACTIVE,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      type: PrescriptionIncidentType.BREAK_GLASS,
+    },
+  })
+}
+
 export async function assertPrescriptionOperationalOrBreakGlassAccess(
   db: PrismaClient,
   input: {
     actorUserId: string
     reason: string
     requestId?: string
+    storeId: string
+    tenantId: string
+  },
+) {
+  const access = await getPrescriptionOperationalAccessState(db, input)
+  if (access.roleId) {
+    return { breakGlassControlId: null, roleId: access.roleId }
+  }
+  if (!access.breakGlassControlId || !access.breakGlassExpiresAt) {
+    throw new PrescriptionComplianceError(
+      "An active, personal break-glass grant is required.",
+    )
+  }
+  await recordPrescriptionSensitiveAccess(db, {
+    accessTypes: ["break_glass_used"],
+    actorUserId: input.actorUserId,
+    incidentControlId: access.breakGlassControlId,
+    reason: input.reason,
+    requestId: input.requestId,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+  })
+  return {
+    breakGlassControlId: access.breakGlassControlId,
+    roleId: null,
+  }
+}
+
+export async function getPrescriptionOperationalAccessState(
+  db: PrismaClient,
+  input: {
+    actorUserId: string
     storeId: string
     tenantId: string
   },
@@ -147,9 +187,23 @@ export async function assertPrescriptionOperationalOrBreakGlassAccess(
       userId: input.actorUserId,
     },
   })
-  if (role) return { breakGlassControlId: null, roleId: role.id }
-  const grant = await authorizePrescriptionBreakGlassAccess(db, input)
-  return { breakGlassControlId: grant.controlId, roleId: null }
+  if (role) {
+    return {
+      breakGlassControlId: null,
+      breakGlassExpiresAt: null,
+      canAccess: true,
+      roleId: role.id,
+      source: "professional_role" as const,
+    }
+  }
+  const control = await findActivePrescriptionBreakGlassControl(db, input)
+  return {
+    breakGlassControlId: control?.id ?? null,
+    breakGlassExpiresAt: control?.expiresAt ?? null,
+    canAccess: Boolean(control),
+    roleId: null,
+    source: control ? ("break_glass" as const) : null,
+  }
 }
 
 export async function upsertPrescriptionRetentionPolicy(

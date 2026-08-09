@@ -1,4 +1,5 @@
 import {
+  prescriptionRequestStatusSchema,
   prescriptionRoleAssignmentFields,
   prescriptionStaffIntakeFields,
   prescriptionStoreSettingsFields,
@@ -66,22 +67,6 @@ const prescriptionSourceSchema = z.enum([
   "staff_walk_in",
   "web",
   "whatsapp",
-])
-
-const prescriptionRequestStatusSchema = z.enum([
-  "attendant_verification",
-  "converted",
-  "declined",
-  "expired",
-  "media_review",
-  "needs_clarification",
-  "needs_clearer_media",
-  "pharmacist_review",
-  "quoted",
-  "ready_to_quote",
-  "received",
-  "transcribing",
-  "withdrawn",
 ])
 
 const fulfilmentPreferenceSchema = z.enum(["delivery", "pickup", "unspecified"])
@@ -447,6 +432,7 @@ export const prescriptionQueueSchema = z
   .object({
     assignees: z.array(z.string().trim().min(1)).max(50).nullable().optional(),
     cursor: z.string().trim().min(1).nullable().optional(),
+    direction: z.enum(["forward", "backward"]).optional(),
     from: z.iso.date().nullable().optional(),
     pageSize: z.number().int().min(1).max(100).default(25),
     q: z.string().trim().max(120).nullable().optional(),

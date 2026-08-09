@@ -170,14 +170,18 @@ Backend ownership:
 - [x] Setup and professional-role UI audited against the contract.
 - [x] Midday WhatsApp runtime and setup reference re-inspected before tickets 15-17.
 - [x] Provider packages and durable jobs audited.
-- [ ] Focused tests, typechecks, lint, and browser QA passed.
+- [x] Focused tests, typechecks, targeted lint, and authenticated desktop/mobile browser QA passed.
 - [x] Final conformance deviations and production gates recorded in Brain.
 
-Focused tests, the root typecheck, and targeted Biome checks pass. Browser QA
-remains open because the browser harness could not reach the healthy local
-dashboard server; authenticated desktop/mobile, accessibility, load, live Meta,
-Paystack, and schema-rollout checks remain production acceptance gates rather
-than being represented as complete.
+Focused tests, the root typecheck, targeted Biome checks, and authenticated
+desktop/mobile browser QA pass. The owner-without-professional-role setup gate,
+policy/role onboarding, activation, empty queue, staff-assisted intake,
+URL-owned global sheet, explicit success and attendant-review modes, and mobile
+sheet scrolling were exercised against the Neon development database. The full
+suite reports 405 passing, five skipped, and five unrelated existing
+mobile-navigation/Retail-Ops fixture failures. Accessibility automation, load,
+live Meta, Paystack, full cross-channel E2E, and production rollout remain
+acceptance gates rather than being represented as complete.
 
 The 2026-08-09 security regression suite additionally proves that WhatsApp
 Quote actions retain only a capability digest and internal Quote Version id;
@@ -188,8 +192,9 @@ Final review follow-up added every explicit sheet mode, shareable
 assignee/date filters, header readiness, stale-mode rejection, revisioned
 professional confirmation, and loading/error/retry states for setup and
 fulfilment. Focused queue, sheet-routing, retention, break-glass, reporting,
-and cost-projection tests pass. Authenticated browser/E2E acceptance remains
-the deliberately open item in the combined QA gate above.
+and cost-projection tests pass. Authenticated desktop/mobile browser QA is
+complete; full cross-channel/provider E2E remains deliberately open in the
+combined acceptance gate above.
 
 The repeat conformance review additionally made success IDs fail closed,
 placed all editable sheet state under form-context ownership, added immutable

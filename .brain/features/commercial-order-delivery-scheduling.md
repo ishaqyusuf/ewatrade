@@ -2,8 +2,10 @@
 
 ## Status
 
-Implemented in source on 2026-07-25. Database migration generation remains
-blocked until a local PostgreSQL/Docker engine is available.
+Implemented in source on 2026-07-25. The current Prisma schema was synchronized
+to Neon development on 2026-08-09. A release migration artifact and separately
+authorized production rollout remain open; local Docker/PostgreSQL is not a
+fallback.
 
 ## Checkout
 

@@ -69,6 +69,9 @@
 - Sensitive pickup/delivery queue projections require an active Store
   attendant/pharmacist role or personal audited break-glass; ordinary Store
   membership alone is insufficient.
+- Any authenticated Store member may resolve only their own Prescription
+  workspace-access projection. It reveals no role assignment, incident detail,
+  or patient data and does not replace the guarded operational read.
 - Only an active Store attendant can create a corrected transcription revision.
   Manager privacy verification persists verifier identity and a bounded
   evidence reference before execution.

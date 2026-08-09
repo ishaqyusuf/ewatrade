@@ -10,7 +10,16 @@
 - [ ] Multi-pharmacy tests prove sender identity, `phone_number_id` routing, tenant/store isolation, central/branch bindings, and the same customer contacting different pharmacies.
 - [ ] Failure-injection evidence covers storage, OCR, Meta, payment, notification, delivery, duplicate callback, stale action, and credential-revocation scenarios.
 - [ ] Accessibility, responsive/mobile, performance, retry, concurrency, security, privacy, and audit checks meet the thresholds defined in the approved spec.
-- [ ] Production integrations remain fail closed until external legal, operational, provider, template, security, retention, and canary gates are explicitly satisfied.
-- [ ] A manual QA runbook records fixtures, test pharmacy setup, expected transitions, observable evidence, rollback, and incident procedures.
-- [ ] Brain feature, architecture, ADR, API, permission, database, migration, relationship, and task-state documents reflect the final implementation.
-- [ ] Any deferred external launch requirement or residual risk is recorded as owned follow-up work rather than represented as complete.
+- [x] Production integrations remain fail closed until external legal, operational, provider, template, security, retention, and canary gates are explicitly satisfied.
+- [x] A manual QA runbook records fixtures, test pharmacy setup, expected transitions, observable evidence, rollback, and incident procedures.
+- [x] Brain feature, architecture, ADR, API, permission, database, migration, relationship, and task-state documents reflect the final implementation.
+- [x] Any deferred external launch requirement or residual risk is recorded as owned follow-up work rather than represented as complete.
+
+Authenticated Neon-development QA now covers setup gating, policy/role
+onboarding, activation, empty queue, staff-assisted intake, explicit
+success-to-attendant-review routing, and desktop/mobile sheet scrolling. The
+existing communications/job suites cover scoped same-customer threads,
+multi-pharmacy Redis context, signature rejection, retries, and opaque quick
+actions. These are partial evidence only: the first four acceptance items stay
+open until the complete cross-channel/provider, accessibility, performance,
+concurrency, security, and failure matrix is automated and executed.

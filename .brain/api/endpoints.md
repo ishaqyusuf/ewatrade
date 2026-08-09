@@ -131,6 +131,11 @@ authenticated dashboard.
   boundaries. The reporting query accepts one authorized Store or the whole
   active Tenant and returns de-identified Store breakdowns and separated cost
   categories.
+- `prescriptions.workspaceAccess` returns only the current user's Store-scoped
+  operational capability source (`professional_role`, `break_glass`, or none).
+  It lets the server route prefetch setup or the first queue without deriving
+  authority from client-visible role lists; queue/detail procedures still
+  enforce and audit access independently.
 - `prescriptions.reviseTranscription` is an attendant-only, revision-guarded
   line correction/addition/deletion command. Pickup and delivery queue reads
   require the same operational-role or audited break-glass access as the

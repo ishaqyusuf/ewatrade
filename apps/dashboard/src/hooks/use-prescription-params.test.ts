@@ -14,4 +14,12 @@ describe("Prescription sheet routing", () => {
     expect(prescriptionSheetModeForStatus("ready_to_quote")).toBe("quote")
     expect(prescriptionSheetModeForStatus("converted")).toBe("details")
   })
+
+  test("keeps a newly created attendant request in the review controller", () => {
+    const createdRequest = { status: "ATTENDANT_VERIFICATION" }
+
+    expect(prescriptionSheetModeForStatus(createdRequest.status)).toBe(
+      "attendant-review",
+    )
+  })
 })

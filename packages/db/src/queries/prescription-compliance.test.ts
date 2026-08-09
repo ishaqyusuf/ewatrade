@@ -4,10 +4,33 @@ import type { PrismaClient } from "../../generated/prisma/client"
 import {
   assertPrescriptionBreakGlassWindow,
   assertPrescriptionOperationalOrBreakGlassAccess,
+  getPrescriptionOperationalAccessState,
   prescriptionRetentionCutoffs,
 } from "./prescription-compliance"
 
 describe("Prescription compliance controls", () => {
+  test("projects professional and break-glass workspace access at the repository boundary", async () => {
+    const db = {
+      prescriptionIncidentControl: {
+        findFirst: async () => ({
+          expiresAt: new Date("2026-08-09T11:00:00.000Z"),
+          id: "control-1",
+        }),
+      },
+      prescriptionStoreRole: {
+        findFirst: async () => null,
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      getPrescriptionOperationalAccessState(db, {
+        actorUserId: "manager-1",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      }),
+    ).resolves.toMatchObject({ canAccess: true, source: "break_glass" })
+  })
+
   test("requires a future break-glass expiry no more than one hour away", () => {
     const now = new Date("2026-08-09T10:00:00.000Z")
     expect(() =>

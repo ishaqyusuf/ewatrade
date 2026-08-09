@@ -10,6 +10,29 @@ export const PRESCRIPTION_OPERATING_DAYS = [
   "sunday",
 ] as const
 
+export const PRESCRIPTION_REQUEST_STATUSES = [
+  "attendant_verification",
+  "converted",
+  "declined",
+  "expired",
+  "media_review",
+  "needs_clarification",
+  "needs_clearer_media",
+  "pharmacist_review",
+  "quoted",
+  "ready_to_quote",
+  "received",
+  "transcribing",
+  "withdrawn",
+] as const
+
+export const prescriptionRequestStatusSchema = z.enum(
+  PRESCRIPTION_REQUEST_STATUSES,
+)
+export type PrescriptionRequestStatus = z.infer<
+  typeof prescriptionRequestStatusSchema
+>
+
 const optionalTrimmedString = (schema: z.ZodString) =>
   z.preprocess(
     (value) =>
@@ -17,18 +40,20 @@ const optionalTrimmedString = (schema: z.ZodString) =>
     schema.optional(),
   )
 
+const optionalOperatingTimeSchema = z
+  .union([
+    z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use a 24-hour HH:mm time."),
+    z.literal(""),
+  ])
+  .optional()
+  .transform((value) => value || undefined)
+
 export const prescriptionOperatingHoursSchema = z
   .object({
-    closesAt: z
-      .string()
-      .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use a 24-hour HH:mm time.")
-      .optional(),
+    closesAt: optionalOperatingTimeSchema,
     day: z.enum(PRESCRIPTION_OPERATING_DAYS),
     isClosed: z.boolean(),
-    opensAt: z
-      .string()
-      .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use a 24-hour HH:mm time.")
-      .optional(),
+    opensAt: optionalOperatingTimeSchema,
   })
   .strict()
   .superRefine((value, ctx) => {

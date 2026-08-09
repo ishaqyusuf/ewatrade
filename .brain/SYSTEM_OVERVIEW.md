@@ -40,6 +40,9 @@ High-level summary of the platform, its business domains, and the current implem
   Communications. The source implementation includes manual and Embedded
   Signup, pending-to-active readiness, scoped Redis state, and redacted routing
   alerts.
+- Local application, Prisma, fixture, and browser-QA work uses the Neon
+  development database selected by `.env.local`; EwaTrade does not use a local
+  Docker/PostgreSQL fallback.
 
 ## Existing Domain Docs
 - `.brain/modules/*.md` contains capability-level module notes.
@@ -50,11 +53,12 @@ High-level summary of the platform, its business domains, and the current implem
 - Managed object storage and a trusted media safety pipeline are not selected;
   optional device-retained Service Evidence therefore remains private and
   cannot be published.
-- Behavioral web/mobile/database validation is intentionally deferred to a
-  separate owner-requested testing goal.
+- Prescription Commerce now has authenticated desktop/mobile and Neon
+  development validation. Broader cross-product and full cross-channel
+  behavioral validation remains separate follow-up work.
 - Managed domain database deployment and live registrar/payment/hosting
-  acceptance are blocked pending local Docker, approved shared-schema writes,
-  credentials and canaries.
+  acceptance are blocked pending the production rollout, credentials, and
+  canaries; the current Prisma schema is present in Neon development.
 - Prescription Commerce extends shared Quote, Order, payment, messaging,
   inventory, and delivery primitives with private media, mandatory OCR line
   verification, pharmacist release, multi-Tenant inbound WhatsApp routing,

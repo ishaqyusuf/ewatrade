@@ -70,6 +70,35 @@ alerts, connection audits, incident state, provider dashboard receipts, and
 database row counts. Compare source Quote and legacy-backfill counts before
 contracting legacy Service Quote tables.
 
+## 2026-08-09 Neon Development Evidence
+
+- Database target: the non-production Neon database selected by `.env.local`.
+  Local Docker/PostgreSQL was not used and is not an allowed fallback.
+- Schema: `db:migrate --local` detected historical drift and requested a reset;
+  the reset was refused. `db:push --local` synchronized the schema without a
+  data-loss override. Prisma migration status then reported 28 migrations and
+  an up-to-date schema.
+- Backfill: the idempotent Service Quote backfill ran twice with zero Commerce,
+  legacy, or migrated rows in the empty development dataset. This is not
+  production reconciliation or authorization to contract legacy models.
+- Disposable pharmacy fixture: `Nile Market QA 2157482`, with synthetic owner,
+  policy, weekday opening hours, weekend closure, pickup enabled, attendant and
+  externally verified pharmacist roles. No real patient data was used.
+- Authenticated browser QA: Owner-without-professional-role fails closed to the
+  setup CTA; after setup and activation, the empty queue renders without an
+  unauthorized request. Desktop and 375-by-812 mobile intake sheets scroll to
+  consent and actions. A synthetic staff-assisted request reaches explicit
+  success and opens its `attendant-review` URL-owned controller.
+- WhatsApp setup correctly remains unavailable without Meta credentials and
+  presents manual/Embedded Signup guidance for a pharmacy-owned number. No
+  external Meta message, Paystack charge, or provider mutation was performed.
+- Remaining acceptance: full web/WhatsApp pickup and delivery E2E, provider
+  failure canaries, accessibility automation, load/concurrency/security,
+  production Service Quote reconciliation/contraction, and production rollout.
+- Automated baseline: 405 tests pass and five database integration tests skip;
+  five unrelated mobile-navigation/Retail-Ops mock failures remain tracked
+  outside Prescription Commerce.
+
 ## Rollback
 
 1. Suspend the affected Store binding or whole Connection; do not delete audit

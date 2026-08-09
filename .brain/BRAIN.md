@@ -35,9 +35,10 @@ Central index for ewatrade product, architecture, engineering, database, API, de
 - Prescription Commerce source now implements pharmacy-owned intake,
   transcription/human review, quotation, payment, pickup/delivery, privacy,
   reporting, and tenant-owned multi-pharmacy direct Meta WhatsApp onboarding
-  and routing. Shared-database rollout, live media/OCR/Meta/payment canaries,
-  PCN/privacy authority, delivery SOPs, and design-partner acceptance remain
-  production prerequisites.
+  and routing. The Neon development schema and authenticated desktop/mobile
+  setup/intake QA are complete. Production schema/backfill/contraction, live
+  media/OCR/Meta/payment canaries, PCN/privacy authority, delivery SOPs, and
+  design-partner acceptance remain production prerequisites.
 
 ## Key References
 - [System Overview](./SYSTEM_OVERVIEW.md)

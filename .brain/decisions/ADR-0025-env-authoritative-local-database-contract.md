@@ -1,6 +1,6 @@
 # ADR-0025: Environment-Authoritative Database Contract
 
-- Status: accepted
+- Status: partially superseded by ADR-0028 for EwaTrade's `.env.local` target
 - Date: 2026-07-28
 
 ## Context
@@ -17,9 +17,9 @@ Compose, while other local projects need independent host ports.
   followed by exactly one profile file. Prisma and generic root tooling do not
   scan package-level env paths or legacy filename aliases.
 - Every profile file owns its `DATABASE_URL`; the value never falls back to
-  `.env` or another profile. `.env.local` may point to local Docker PostgreSQL
-  or a hosted non-production database, while `.env.dev` represents hosted
-  development.
+  `.env` or another profile. At the time of this decision `.env.local` could
+  point to Docker or hosted non-production PostgreSQL. ADR-0028 now requires
+  EwaTrade's `.env.local` to select its Neon development database.
 - A hosted runtime may inject `DATABASE_URL` through the process only when the
   selected profile file is absent. If that file exists, even an incomplete
   profile remains authoritative and cannot inherit an injected target.

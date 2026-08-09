@@ -26,8 +26,8 @@ Longer-horizon sequencing across major implementation phases.
 - Cross-check File: .brain/research/2026-07-24-domain-provider-primary-source-review.md
 - Created Date: 2026-07-24
 - Started Date: 2026-07-24
-- Blockers: Docker/local migration, approved production and remote-development
-  schema deployment, provider/payment/hosting credentials, commercial/legal
+- Blockers: approved production schema deployment, provider/payment/hosting
+  credentials, commercial/legal
   acceptance, Android/dashboard runtime QA, and live `.com.ng`/`.com` canaries.
 
 ### Product And Service Catalog Items

@@ -13,8 +13,14 @@
   retry, reporting-timestamp, and quote-command regressions; 25 navigation/workspace tests; full monorepo
   typecheck; targeted Biome; full suite 359 passing with five skipped and five
   unrelated existing fixture/navigation failures. Production build was blocked
-  by Turbopack sandbox port binding after a network-enabled retry; schema
-  migration and browser/provider canaries remain tracked in progress.
+  by Turbopack sandbox port binding after a network-enabled retry. Follow-up on
+  2026-08-09 synchronized the Neon development schema without Docker or reset,
+  ran the zero-row idempotent Service Quote backfill twice, and completed
+  authenticated policy/role onboarding, staff intake, and desktop/mobile sheet
+  QA. The final repository baseline is 405 passing, five skipped, and the same
+  five unrelated mobile-navigation/Retail-Ops mock failures; full cross-channel,
+  live-provider, production backfill/contraction, and production rollout remain
+  tracked in progress.
 
 - Synthesised the approved Prescription Commerce direction into one local
   ready-for-agent PRD with 118 user stories, explicit bounded-context, schema,

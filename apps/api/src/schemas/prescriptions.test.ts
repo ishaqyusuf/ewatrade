@@ -95,13 +95,14 @@ describe("Prescription Commerce setup schemas", () => {
   test("bounds and allowlists queue pagination, filters, and sort", () => {
     expect(
       prescriptionQueueSchema.parse({
+        direction: "forward",
         pageSize: 25,
         sort: ["created_at", "desc"],
         sources: ["web", "whatsapp"],
         statuses: ["media_review", "pharmacist_review"],
         storeId: "store-1",
       }),
-    ).toMatchObject({ pageSize: 25 })
+    ).toMatchObject({ direction: "forward", pageSize: 25 })
     expect(() =>
       prescriptionQueueSchema.parse({
         pageSize: 101,

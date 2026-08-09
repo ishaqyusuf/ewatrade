@@ -9,13 +9,15 @@
 - Applied historical migrations are immutable history and are not deleted merely
   because their models were later removed.
 - Since 2026-07-31, `db:generate`, `db:migrate`, `db:pull`, `db:push`, and `db:studio` use `local-infra-kit/bin/db.ts`. Each defaults to local and accepts only `--local`, `--dev`, `--preview`, or `--prod`. `db:sync` defaults to production → local and supports explicit local → preview publishing.
-- Since 2026-08-03, local and preview database commands may target local or
-  hosted PostgreSQL. Connected non-production commands compare canonical
+- Since 2026-08-09, EwaTrade's `.env.local` targets its hosted Neon development
+  database. The database-profile loader rejects non-Neon local-mode URLs, so
+  local Docker/PostgreSQL is not an allowed fallback; every other
+  non-production profile also rejects loopback hosts. Connected non-production
+  commands compare canonical
   database identity against production and refuse a match. Generic identity
   uses normalized protocol/host, effective port and decoded database path;
   Neon direct/pooler routes share one endpoint identity, while Supabase uses
-  decoded project references regardless of role or pooler port. Docker starts
-  only for a selected local Compose target.
+  decoded project references regardless of role or pooler port.
 - Since 2026-08-03, root tooling loads `.env` plus exactly one of `.env.local`,
   `.env.dev`, `.env.preview`, or `.env.production`. Each profile file owns its
   `DATABASE_URL`; preview does not inherit local values, and production
@@ -174,15 +176,20 @@ final conformance review. Retention execution now carries Tenant and Store
 through every candidate read and redaction write; Store-only rollout is not
 supported.
 
-The required root `bun db:migrate` and `bun db:push` commands were attempted.
-The configured `local` profile resolves to a shared Neon target rather than a
-local disposable database. The sandboxed attempts could not reach that target,
-and the elevated migration was denied because the user has not explicitly
-authorized this shared-database schema mutation. No migration file was
-hand-authored and no database write is claimed. Migration generation,
-backfill/validation, legacy contraction, and schema push remain release gates
-that must run under an explicitly approved database change window with backup,
-row-count reconciliation, and rollback ownership.
+On 2026-08-09 the owner confirmed that `.env.local` is the Neon development
+database and authorized the development rollout. `bun run db:migrate --local`
+reached Neon but Prisma detected broad historical drift and requested a reset;
+the reset was refused. `bun run db:push --local` then applied the current Prisma
+schema without a data-loss override and reported the schema in sync. The
+idempotent Service Quote backfill ran twice and reported zero Commerce, legacy,
+or migrated rows on this empty development dataset. After the schema was
+proven current, the historical migration ledger was reconciled; Prisma reports
+28 migrations and an up-to-date Neon development schema.
+
+Production was not touched. Production Service Quote reconciliation, legacy
+model contraction, provider canaries, and the separately authorized production
+migration remain release gates. Local Docker/PostgreSQL was not used and must
+not be used as a fallback under ADR-0028.
 
 ## Commercial Order Delivery Scheduling Migration State
 
@@ -212,6 +219,12 @@ explicitly authorize a shared production mutation. The elevated
 remote-development push reached Neon but stopped at Prisma's data-loss safeguard
 for the already-pending Tenant/order-number uniqueness change; no
 `--accept-data-loss` override was used. No database write is claimed.
+
+ADR-0028 now supersedes Docker as the local target. The 2026-08-09 guarded
+`db:push --local` synchronized the complete current Prisma schema, including
+these scheduling fields, to Neon development without reset or data-loss flags.
+A release migration artifact and production rollout remain separately
+authorized gates.
 # Hybrid QA cleanup
 
 - Adds tenant QA lifecycle fields and global purge-run receipts. Apply the

@@ -1,7 +1,11 @@
 "use client"
 
-import { usePrescriptionParams } from "@/hooks/use-prescription-params"
+import {
+  prescriptionSheetModeForStatus,
+  usePrescriptionParams,
+} from "@/hooks/use-prescription-params"
 import { useTRPC } from "@/trpc/client"
+import type { PrescriptionRequestStatus } from "@ewatrade/prescriptions/schemas"
 import { useQuery } from "@tanstack/react-query"
 
 import {
@@ -25,7 +29,11 @@ export function PrescriptionSheetContent({ storeId }: { storeId: string }) {
       <PrescriptionRequestSuccess
         requestId={prescriptionId}
         storeId={storeId}
-        onView={() => setParams({ prescriptionSheet: "details" })}
+        onView={(status) =>
+          setParams({
+            prescriptionSheet: prescriptionSheetModeForStatus(status),
+          })
+        }
       />
     )
   }
@@ -52,7 +60,9 @@ function PrescriptionRequestSuccess({
   requestId,
   storeId,
 }: {
-  onView: () => void
+  onView: (
+    status: PrescriptionRequestStatus | Uppercase<PrescriptionRequestStatus>,
+  ) => void
   requestId: string
   storeId: string
 }) {
@@ -81,7 +91,7 @@ function PrescriptionRequestSuccess({
       <button
         className="h-10 rounded-lg border border-border bg-background px-3 text-sm font-medium"
         type="button"
-        onClick={onView}
+        onClick={() => onView(detail.data.status)}
       >
         View request
       </button>

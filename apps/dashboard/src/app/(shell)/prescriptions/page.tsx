@@ -6,6 +6,7 @@ import { canUseSalesOperations } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, getQueryClient, trpc } from "@/trpc/server"
+import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import type { Metadata } from "next"
 import { ErrorBoundary } from "next/dist/client/components/error-boundary"
 import { redirect } from "next/navigation"
@@ -30,32 +31,53 @@ export default async function PrescriptionsRoutePage({ searchParams }: Props) {
   if (!canUseSalesOperations(ctx.membership.role)) redirect("/")
   const store = ctx.activeStore ?? ctx.stores[0] ?? null
   if (!store) redirect("/setup")
+  const membershipRole = normalizeRole(ctx.membership.role)
+  const canManagePrescriptionSetup = Boolean(
+    membershipRole && canManageTenant(membershipRole),
+  )
 
   const filter = await loadPrescriptionFilterParams(searchParams)
   const queryClient = getQueryClient()
+  const accessOptions = trpc.prescriptions.workspaceAccess.queryOptions({
+    storeId: store.id,
+  })
+  await queryClient.prefetchQuery(accessOptions)
+  const access = queryClient.getQueryData(accessOptions.queryKey)
   await Promise.all([
-    queryClient.prefetchQuery(
-      trpc.prescriptions.queueContext.queryOptions({ storeId: store.id }),
-    ),
-    queryClient.prefetchInfiniteQuery(
-      trpc.prescriptions.queue.infiniteQueryOptions(
-        {
-          assignees: filter.assignees,
-          from: filter.from,
-          pageSize: 25,
-          q: filter.q,
-          sort: filter.sort,
-          sources: filter.sources,
-          statuses: filter.statuses,
-          storeId: store.id,
-          to: filter.to,
-        },
-        {
-          getNextPageParam: (lastPage) => lastPage.meta.cursor ?? undefined,
-          retry: false,
-        },
-      ),
-    ),
+    ...(canManagePrescriptionSetup
+      ? [
+          queryClient.prefetchQuery(
+            trpc.prescriptions.setup.queryOptions({ storeId: store.id }),
+          ),
+        ]
+      : []),
+    ...(access?.canAccess
+      ? [
+          queryClient.prefetchQuery(
+            trpc.prescriptions.queueContext.queryOptions({ storeId: store.id }),
+          ),
+          queryClient.prefetchInfiniteQuery(
+            trpc.prescriptions.queue.infiniteQueryOptions(
+              {
+                assignees: filter.assignees,
+                from: filter.from,
+                pageSize: 25,
+                q: filter.q,
+                sort: filter.sort,
+                sources: filter.sources,
+                statuses: filter.statuses,
+                storeId: store.id,
+                to: filter.to,
+              },
+              {
+                getNextPageParam: (lastPage) =>
+                  lastPage.meta.cursor ?? undefined,
+                retry: false,
+              },
+            ),
+          ),
+        ]
+      : []),
   ]).catch(() => undefined)
 
   return (
@@ -63,6 +85,7 @@ export default async function PrescriptionsRoutePage({ searchParams }: Props) {
       <ErrorBoundary errorComponent={WorkspaceError}>
         <Suspense fallback={<PrescriptionTableSkeleton />}>
           <PrescriptionRequestsPage
+            canManageSetup={canManagePrescriptionSetup}
             store={{ id: store.id, name: store.name }}
             timeZone={ctx.tenant.timezone}
           />

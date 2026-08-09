@@ -4,19 +4,21 @@
   implementation and final review fixes. Explicit sheet modes, queue facets,
   header readiness, confirmed clinical actions, executable audit/commercial
   retention, sensitive-access/break-glass controls, and Tenant reporting are
-  source-complete. Remaining gates: explicitly approved shared-Neon migration,
-  Service Quote backfill/reconciliation and legacy contraction, live private
+  source-complete. The Neon development schema, empty-dataset Service Quote
+  backfill, authenticated setup, staff-intake, and desktop/mobile sheet QA are
+  complete. Remaining gates: production Service Quote backfill/reconciliation
+  and legacy contraction, live private
   media/OCR providers, pharmacy-owned Meta WABA/number and template approvals,
   Paystack canary, legal/privacy/retention sign-off, delivery SOP approval,
-  authenticated desktop/mobile browser QA, load/concurrency/security testing,
+  full cross-channel E2E, load/concurrency/security testing,
   and one monitored test-pharmacy canary. No live provider or production schema
   change is claimed. Started Date: 2026-08-09.
 
-- Generate and apply the Prisma migration for Commercial Order delivery
-  scheduling and reminders once local PostgreSQL/Docker is available, then run
-  the required local, remote-development, and production push workflow under
-  the existing database safety gates. Source implementation, focused tests,
-  and package/mobile typechecks are complete. Started Date: 2026-07-25.
+- Complete the release migration artifact and separately authorized production
+  rollout for Commercial Order delivery scheduling and reminders. The source
+  implementation, focused tests, package/mobile typechecks, and current Neon
+  development schema synchronization are complete. Local Docker/PostgreSQL is
+  not a fallback. Started Date: 2026-07-25.
 
 - Implement managed domain purchasing and storefront connection using GO54 for
   `.com.ng`, Openprovider for global domains, Paystack checkout, and Vercel

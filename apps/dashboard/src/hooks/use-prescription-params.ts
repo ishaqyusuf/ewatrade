@@ -1,3 +1,4 @@
+import type { PrescriptionRequestStatus } from "@ewatrade/prescriptions/schemas"
 import { useQueryStates } from "nuqs"
 import { createLoader, parseAsString, parseAsStringEnum } from "nuqs/server"
 
@@ -21,16 +22,27 @@ const PRESCRIPTION_SHEET_MODES: PrescriptionSheetMode[] = [
 ]
 
 export function prescriptionSheetModeForStatus(
-  status: string,
+  status: PrescriptionRequestStatus | Uppercase<PrescriptionRequestStatus>,
 ): PrescriptionSheetMode {
-  if (["received", "media_review", "needs_clearer_media"].includes(status)) {
-    return "media-review"
-  }
-  if (status === "attendant_verification") return "attendant-review"
-  if (status === "pharmacist_review") return "pharmacist-review"
-  if (status === "ready_to_quote") return "quote"
-  return "details"
+  const normalizedStatus = status.toLowerCase() as PrescriptionRequestStatus
+  return PRESCRIPTION_SHEET_MODE_BY_STATUS[normalizedStatus]
 }
+
+const PRESCRIPTION_SHEET_MODE_BY_STATUS = {
+  attendant_verification: "attendant-review",
+  converted: "details",
+  declined: "details",
+  expired: "details",
+  media_review: "media-review",
+  needs_clarification: "details",
+  needs_clearer_media: "media-review",
+  pharmacist_review: "pharmacist-review",
+  quoted: "details",
+  ready_to_quote: "quote",
+  received: "media-review",
+  transcribing: "details",
+  withdrawn: "details",
+} satisfies Record<PrescriptionRequestStatus, PrescriptionSheetMode>
 
 const prescriptionParamsSchema = {
   prescriptionId: parseAsString,

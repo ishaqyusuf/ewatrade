@@ -33,10 +33,11 @@ Canonical stack reference for current implementation choices.
 - Environment runtime: root tooling loads shared defaults from `.env` followed
   by exactly one profile file: `.env.local`, `.env.dev`, `.env.preview`, or
   `.env.production`. Every profile file owns its `DATABASE_URL`; aliases and
-  package-path scanning are excluded from the root loader. Docker starts only
-  when a selected URL identifies the local Compose database. Every connected
-  local, dev, or preview command verifies that its target differs from the
-  database identified by `.env.production`.
+  package-path scanning are excluded from the root loader. EwaTrade's
+  `.env.local` selects the hosted Neon development database; local Docker is
+  not used or started as a fallback. Every connected local, dev, or preview
+  command verifies that its target differs from the database identified by
+  `.env.production`.
 - Development command router: `bun run dev` selects the environment profile
   with `--local`, `--dev`, `--preview`, or `--prod`, then forwards package
   filters to Turbo. When dev is required and not already running, launch the
@@ -50,4 +51,4 @@ Canonical stack reference for current implementation choices.
 
 ## Excluded Stack
 - Supabase is not part of the current platform design.
-- Local named-host dev: workspace `dev` scripts are Portless-backed directly without `PORTLESS_PORT`, so local named-host URLs do not include a proxy port. Marketing uses `http://ewatrade.localhost` and dashboard uses `http://ewatrade-dashboard.localhost`. An explicit port on a named host is a blocking Portless defect, not an accepted fallback.
+- Local named-host dev: workspace `dev` scripts are Portless-backed directly without `PORTLESS_PORT`, so local named-host URLs do not include a proxy port. Marketing uses `https://ewatrade.localhost` and dashboard uses `https://ewatrade-dashboard.localhost`. An explicit port on a named host is a blocking Portless defect, not an accepted fallback.

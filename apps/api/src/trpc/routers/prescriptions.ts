@@ -24,6 +24,7 @@ import {
   ensurePrescriptionChannel,
   getPrescriptionChannel,
   getPrescriptionNotificationContext,
+  getPrescriptionOperationalAccessState,
   getPrescriptionOperationsReport,
   getPrescriptionPrivacyRequestResult,
   getPrescriptionQueueContext,
@@ -204,6 +205,24 @@ async function run<T>(action: () => Promise<T>) {
 }
 
 export const prescriptionsRouter = createTRPCRouter({
+  workspaceAccess: protectedProcedure
+    .input(prescriptionStoreSetupSchema)
+    .query(({ ctx, input }) => {
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      return getPrescriptionOperationalAccessState(ctx.db, {
+        actorUserId: ctx.session.user.id,
+        storeId,
+        tenantId: ctx.tenantContext.tenant.id,
+      }).then((access) => ({
+        canAccess: access.canAccess,
+        source: access.source,
+      }))
+    }),
+
   queueContext: protectedProcedure
     .input(prescriptionStoreSetupSchema)
     .query(async ({ ctx, input }) => {
@@ -323,6 +342,7 @@ export const prescriptionsRouter = createTRPCRouter({
       )
       const request = await verifyPrescriptionPrivacyRequest(ctx.db, {
         actorUserId: ctx.session.user.id,
+        identityVerificationEvidence: input.identityVerificationEvidence,
         privacyRequestId: input.privacyRequestId,
         storeId,
         tenantId: ctx.tenantContext.tenant.id,

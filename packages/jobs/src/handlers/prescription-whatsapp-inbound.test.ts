@@ -214,7 +214,7 @@ describe("WhatsApp prescription intake job", () => {
 
     expect(intents[0]?.payload).toEqual({
       secureUrl:
-        "http://ewatrade-storefront.localhost/prescription-quote/public-capability",
+        "https://ewatrade-storefront.localhost/prescription-quote/public-capability",
     })
     expect(JSON.stringify(intents[0]?.payload)).not.toContain(
       "quote-version-secret-internal-id",

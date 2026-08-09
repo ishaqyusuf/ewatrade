@@ -13,6 +13,13 @@ the discovery, authority, privacy, media, provider, template, canary, and
 operating gates below. The hospital-adjacent pharmacy remains the proposed
 first design partner, not the product boundary.
 
+The Neon development schema was synchronized on 2026-08-09 without Docker or a
+destructive reset. An authenticated disposable pharmacy completed policy and
+role setup, activation, staff-assisted intake, explicit success/review routing,
+and desktop/mobile global-sheet QA. Live Meta, Paystack, private-media/OCR,
+full cross-channel E2E, load/security, production backfill, and production
+schema rollout remain open gates.
+
 ## Product Definition
 
 Prescription Commerce is a pharmacy-owned digital operating layer for intake,
@@ -161,9 +168,10 @@ integration path to the broader EwaTrade commerce platform.
    never displaces the working sender until this check passes.
 5. Passing readiness activates the binding and suspends the replaced binding.
    Failed replacement or credential rotation leaves current routing intact.
-6. The Store is activated only after its pharmacy policy, fulfilment options,
-   professional roles, and WhatsApp readiness gates pass. Public links then use
-   the active Store-bound sender and an opaque Store routing context.
+6. The Store can activate its private web/staff workflow after pharmacy policy,
+   fulfilment, and professional-role gates pass. WhatsApp remains unavailable
+   until its separate connection readiness passes; only then does the public
+   WhatsApp link use the active Store-bound sender and opaque Store context.
 
 Central group numbers may bind multiple Stores, but every new conversation
 must carry an opaque Store channel context or an explicit Store choice. Unknown

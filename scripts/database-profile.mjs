@@ -1,5 +1,20 @@
+import { BlockList, isIP } from "node:net"
 import path from "node:path"
 import { readEnvironmentFile } from "./environment-profile.mjs"
+
+const localDatabaseAddresses = new BlockList()
+localDatabaseAddresses.addSubnet("127.0.0.0", 8, "ipv4")
+localDatabaseAddresses.addAddress("0.0.0.0", "ipv4")
+localDatabaseAddresses.addAddress("::", "ipv6")
+localDatabaseAddresses.addAddress("::1", "ipv6")
+localDatabaseAddresses.addSubnet("::ffff:7f00:0", 104, "ipv6")
+
+const localDatabaseHostnames = new Set([
+  "docker.for.mac.localhost",
+  "ewatrade-postgres",
+  "host.docker.internal",
+  "postgres",
+])
 
 export function databaseProfileForEnv(env) {
   const selectedProfile = env.DEV_PROFILE ?? env.APP_ENV
@@ -39,6 +54,14 @@ export function applyDatabaseProfile(env, productionDatabaseUrl) {
 
   assertValidDatabaseUrl(databaseUrl, profile)
 
+  if (profile === "local") {
+    assertNeonDevelopmentDatabaseUrl(databaseUrl)
+  }
+
+  if (profile !== "prod") {
+    assertNotLoopbackDatabaseUrl(databaseUrl, profile)
+  }
+
   if (profile !== "prod") {
     const productionUrl = productionDatabaseUrl?.trim()
 
@@ -76,6 +99,53 @@ function assertValidDatabaseUrl(value, profile) {
   } catch {
     throw new Error(`Invalid DATABASE_URL for ${profile}.`)
   }
+}
+
+function assertNeonDevelopmentDatabaseUrl(value) {
+  const hostname = new URL(value).hostname.toLowerCase().replace(/\.$/, "")
+
+  if (!hostname.endsWith(".neon.tech")) {
+    throw new Error(
+      "local mode requires the Neon development DATABASE_URL from .env.local; Docker and loopback PostgreSQL are not allowed.",
+    )
+  }
+}
+
+function assertNotLoopbackDatabaseUrl(value, profile) {
+  const hostname = normalizeDatabaseHost(new URL(value).hostname)
+
+  if (isLocalDatabaseHost(hostname)) {
+    throw new Error(
+      `${profile} mode refuses local Docker or loopback PostgreSQL. Use the configured hosted database profile.`,
+    )
+  }
+}
+
+function normalizeDatabaseHost(hostname) {
+  const normalized = hostname.toLowerCase().replace(/\.$/, "")
+  return normalized.startsWith("[") && normalized.endsWith("]")
+    ? normalized.slice(1, -1)
+    : normalized
+}
+
+function isLocalDatabaseHost(hostname) {
+  if (
+    hostname === "localhost" ||
+    hostname.endsWith(".localhost") ||
+    hostname.endsWith(".docker.internal") ||
+    localDatabaseHostnames.has(hostname)
+  ) {
+    return true
+  }
+
+  if (/^127(?:\.|$)/.test(hostname)) return true
+
+  const family = isIP(hostname)
+  return family === 4
+    ? localDatabaseAddresses.check(hostname, "ipv4")
+    : family === 6
+      ? localDatabaseAddresses.check(hostname, "ipv6")
+      : false
 }
 
 function databaseTargetsEqual(left, right) {

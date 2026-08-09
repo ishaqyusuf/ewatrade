@@ -22,9 +22,12 @@ Shared engineering rules for future implementation work.
 - Root tooling loads `.env` and exactly one of `.env.local`, `.env.dev`,
   `.env.preview`, or `.env.production`. Each profile file owns its
   `DATABASE_URL`; root tooling must not scan package env files or accept
-  filename aliases. Docker connection settings are derived transiently only
-  for a selected local Docker target. Connected local, dev, and preview
-  database commands must reject the `.env.production` database identity.
+  filename aliases. EwaTrade's `.env.local` must select its Neon
+  non-production development database. Do not start, require, or fall back to
+  Docker/PostgreSQL; the EwaTrade database-profile loader must reject non-Neon
+  local-mode URLs and loopback hosts for every non-production profile.
+  Connected local, dev, and preview database commands must reject the
+  `.env.production` database identity.
 - Platform-injected `DATABASE_URL` is accepted only when the selected profile
   file is absent. An existing profile file never inherits that process value.
 
@@ -44,14 +47,17 @@ Shared engineering rules for future implementation work.
   `bun run dev --local -f mobile api jobs dashboard marketing storefront pos`
   for full local mobile and website QA. Keep the single managed root session
   running for logs and shutdown.
-- Website QA must use Portless hostnames without explicit ports. The canonical local website URLs are `http://ewatrade.localhost` for marketing and `http://ewatrade-dashboard.localhost` for dashboard; use the corresponding repository Portless app names for storefront, POS, and API flows.
+- Website QA must use Portless hostnames without explicit ports. The canonical local website URLs are `https://ewatrade.localhost` for marketing and `https://ewatrade-dashboard.localhost` for dashboard; use the corresponding repository Portless app names for storefront, POS, and API flows.
 - A named Portless URL with an appended port, including `ewatrade.localhost:1441`, is a broken configuration. Stop website QA, diagnose and fix the Portless bug, and verify the port-free URL before proceeding.
 - Do not add separate `dev:portless` root or workspace scripts. Workspace `dev` scripts are already Portless-backed, and the root `bun run dev --filter ...` router should remain the only development entrypoint.
 - Workspace Portless scripts should not set `PORTLESS_PORT`; leaving the proxy on the standard HTTP/HTTPS port keeps local named-host URLs portless, matching the Halalvest setup. They may set `PORTLESS_WILDCARD=${PORTLESS_WILDCARD:-1}` and `PORTLESS_SYNC_HOSTS=${PORTLESS_SYNC_HOSTS:-0}`.
 - Raw localhost ports may be inspected only while diagnosing Portless itself; they are not valid website QA URLs and do not allow work to proceed past a broken named host.
 - Expo mobile development defaults to `EXPO_PORT=3096`, which is the next local 309x port after storefront `3091`, marketing/web `3092`, POS `3093`, dashboard `3094`, and API `3095`.
 - `bun run kill:ports` discovers numeric env variables ending in `_PORT` and ignores names containing `PORTLESS`, matching the SchoolClerk kill-port convention. Keep every project-owned dev port declared as an individual `*_PORT` env variable instead of adding aggregate kill lists.
-- After every Prisma schema/database update, run the repository-required migration workflow and then run `bun run db:push --local` and `bun run db:push --prod`; use `--preview` only when explicitly requested.
+- After every Prisma schema/database update, run the repository-required
+  migration workflow and `bun run db:push --local` against the Neon development
+  database. Preview and production pushes, migrations, backfills, contractions,
+  resets, or data-loss flags require separate explicit authorization.
 - Database generate/migrate/pull/push/studio actions use the shared
   `local-infra-kit` router. Keep one root command per action and only raw
   package implementations; every root action defaults to local and accepts

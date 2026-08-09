@@ -275,6 +275,10 @@
   tokens or credential references.
 - Workspace availability exposes `hasPrescriptionCommerce` only after active
   Store setup; it controls navigation visibility but is not authorization.
+- The authenticated Prescription workspace-access projection is Tenant/Store
+  scoped and returns only `canAccess` plus an allowlisted capability source.
+  It is a routing/prefetch hint, not authority: every queue/detail read repeats
+  the professional-role or personal break-glass guard server-side.
 - Detail, media, pharmacist-decision, transcript, and credential reads append
   purpose-labelled `PrescriptionSensitiveAccessEvent` records. Ordinary roles
   remain Store-scoped. A break-glass fallback is personal, manager-created,

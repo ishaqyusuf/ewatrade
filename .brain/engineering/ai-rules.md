@@ -19,14 +19,20 @@ Repository-specific rules for AI contributors.
 - For full local cross-surface QA, use
   `bun run dev --local -f mobile api jobs dashboard marketing storefront pos`.
   Do not start the same workspaces separately.
-- Use Portless website URLs without explicit ports. The canonical local marketing and dashboard URLs are `http://ewatrade.localhost` and `http://ewatrade-dashboard.localhost`.
+- Use Portless website URLs without explicit ports. The canonical local marketing and dashboard URLs are `https://ewatrade.localhost` and `https://ewatrade-dashboard.localhost`.
 - Treat `.env` plus exactly one selected root profile file as the complete
   environment contract: `.env.local`, `.env.dev`, `.env.preview`, or
   `.env.production`. Every profile file must own its `DATABASE_URL`; do not add
   filename aliases, package-path scanning, mode-specific URL aliases,
-  database-port registries, or script fallbacks. Local, dev, and preview may
-  select local Docker or hosted non-production databases. Connected
-  non-production commands must fail closed when `.env.production` cannot
-  identify production or when the selected target resolves to it.
+  database-port registries, or script fallbacks. For EwaTrade, `.env.local`
+  always selects the Neon non-production development database. Never start,
+  require, or fall back to local Docker/PostgreSQL; the EwaTrade profile loader
+  must reject non-Neon local-mode URLs and every non-production profile must
+  reject loopback database hosts. Connected non-production commands must fail
+  closed when `.env.production` cannot identify production or when the selected
+  target resolves to it.
 - Treat any Portless URL that gains an explicit port, such as `ewatrade.localhost:1441`, as a bug. Diagnose and fix the Portless setup before proceeding with website work.
-- After any Prisma schema/database update, follow the repository migration workflow, then run `bun run db:push --local` and `bun run db:push --prod`; use `--preview` only when explicitly requested.
+- After any Prisma schema/database update, follow the repository migration
+  workflow and run `bun run db:push --local` against the Neon development
+  database. Run preview or production database commands only when the user has
+  explicitly authorized that target and rollout.
