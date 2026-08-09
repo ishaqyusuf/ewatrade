@@ -22,6 +22,10 @@
   A focused Neon web-origin rerun proves row-locked concurrent pickup handoff;
   fixed/manual delivery-zone boundary rules and explicit Tenant scoping are
   source-tested, while delivery customer-flow acceptance remains open.
+  The legacy Service Quote backfill regression and a profile-attested current
+  Service Request-to-Commerce-Quote-to-Commercial-Order Neon lifecycle now
+  cover the pre/post migration behavior; production reconciliation and legacy
+  contraction remain separately gated.
   Embedded Signup tamper/expiry/session scope and the dynamic connection
   readiness job now have focused fake-provider tests; live Meta and template
   canaries remain open.

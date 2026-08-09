@@ -81,6 +81,14 @@ contracting legacy Service Quote tables.
 - Backfill: the idempotent Service Quote backfill ran twice with zero Commerce,
   legacy, or migrated rows in the empty development dataset. This is not
   production reconciliation or authorization to contract legacy models.
+- Service Quote regression: a run-owned synthetic Service Offering and public
+  Request Form completed submission and replay, Commerce Quote issuance and
+  public read, acceptance and replay, Request conversion, and exact Commercial
+  Order creation on the profile-attested Neon development database. The test
+  passed with nine assertions and cleaned the Service Request/Form graph inside
+  the same bounded Tenant/User teardown transaction. Together with the
+  two-version legacy backfill regression, this covers pre/post migration
+  behavior without claiming production reconciliation.
 - Disposable pharmacy fixture: `Nile Market QA 2157482`, with synthetic owner,
   policy, weekday opening hours, weekend closure, pickup enabled, attendant and
   externally verified pharmacist roles. No real patient data was used.

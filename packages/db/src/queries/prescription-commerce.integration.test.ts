@@ -52,6 +52,13 @@ import {
   setPrescriptionStoreActivation,
   updatePrescriptionStoreSettings,
 } from "./prescription-settings"
+import {
+  acceptServiceQuote,
+  createServiceRequestForm,
+  getPublicServiceQuote,
+  issueServiceQuote,
+  submitPublicServiceRequest,
+} from "./service-public"
 
 const databaseUrl = process.env.DATABASE_URL
 const databaseIntegrationEnabled =
@@ -110,6 +117,8 @@ async function deleteAcceptanceFixture(
     await tx.prescriptionPaymentIntent.deleteMany({ where: { tenantId } })
     await tx.commerceQuote.deleteMany({ where: { tenantId } })
     await tx.prescriptionRequest.deleteMany({ where: { tenantId } })
+    await tx.serviceRequest.deleteMany({ where: { tenantId } })
+    await tx.serviceRequestForm.deleteMany({ where: { tenantId } })
     await tx.stockReservation.deleteMany({ where: { tenantId } })
     await tx.offeringSnapshot.deleteMany({
       where: { orderLine: { order: { tenantId } } },
@@ -134,6 +143,7 @@ describeWithDatabase("prescription commerce database acceptance", () => {
   let fixtureStartedAt: Date
   let offeringId: string
   let publicToken: string
+  let serviceOfferingId: string
   let storeId: string
   let tenantId: string
 
@@ -244,6 +254,23 @@ describeWithDatabase("prescription commerce database acceptance", () => {
     if (!offering)
       throw new Error("Acceptance Product Offering was not created.")
     offeringId = offering.id
+
+    const serviceItem = await createSimpleCatalogItem(db, {
+      actorUserId,
+      authorizationPolicy: "on_order_confirmation",
+      clientOperationId: `prescription-acceptance-service-${fixtureId}`,
+      kind: "service",
+      name: "Acceptance Consultation",
+      priceMinor: 7_500,
+      quantityScale: 0,
+      storeId,
+      tenantId,
+      workPolicy: "charge_only",
+    })
+    const serviceOffering = serviceItem.variants[0]?.offerings[0]
+    if (!serviceOffering)
+      throw new Error("Acceptance Service Offering was not created.")
+    serviceOfferingId = serviceOffering.id
   })
 
   afterAll(async () => {
@@ -587,4 +614,96 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       expect(await completePickup(origin)).toBe(expectedSource)
     }, 180_000)
   }
+
+  test("completes the Commerce Quote Service request-to-order lifecycle", async () => {
+    const runId = randomUUID()
+    const requestForm = await createServiceRequestForm(db, {
+      actorUserId,
+      label: "Acceptance Service Form",
+      offeringIds: [serviceOfferingId],
+      storeId,
+      tenantId,
+    })
+    const requestInput = {
+      clientRequestId: `service-request-${runId}`,
+      customerEmail: `service-${runId}@example.invalid`,
+      customerName: "Synthetic Service Customer",
+      customerPhone: "+2348222222222",
+      details: "Synthetic regression request.",
+      formToken: requestForm.token,
+      lines: [
+        {
+          offeringId: serviceOfferingId,
+          quantity: "1",
+        },
+      ],
+    }
+    const request = await submitPublicServiceRequest(db, requestInput)
+    await expect(
+      submitPublicServiceRequest(db, requestInput),
+    ).resolves.toMatchObject({ id: request.id })
+
+    const issued = await issueServiceQuote(db, {
+      actorUserId,
+      clientQuoteId: `service-quote-${runId}`,
+      clientVersionId: `service-quote-version-${runId}`,
+      lines: [
+        {
+          offeringId: serviceOfferingId,
+          quantity: "1",
+          unitPriceMinor: 7_500,
+        },
+      ],
+      requestId: request.id,
+      storeId,
+      tenantId,
+    })
+    if (!issued.token) throw new Error("Service Quote token was not issued.")
+    await expect(
+      getPublicServiceQuote(db, { acceptanceToken: issued.token }),
+    ).resolves.toMatchObject({
+      accepted: false,
+      sourceType: "service_request",
+      storeName: "Acceptance Pharmacy",
+      totalMinor: 7_500,
+      version: 1,
+    })
+
+    const acceptanceInput = {
+      acceptanceToken: issued.token,
+      actorUserId,
+      clientAcceptanceId: `service-acceptance-${runId}`,
+    }
+    const accepted = await acceptServiceQuote(db, acceptanceInput)
+    await expect(acceptServiceQuote(db, acceptanceInput)).resolves.toEqual(
+      accepted,
+    )
+
+    const [convertedRequest, order, publicAccepted] = await Promise.all([
+      db.serviceRequest.findUniqueOrThrow({ where: { id: request.id } }),
+      db.commercialOrder.findUniqueOrThrow({
+        include: { lines: true },
+        where: { id: accepted.orderId },
+      }),
+      getPublicServiceQuote(db, { acceptanceToken: issued.token }),
+    ])
+    expect(convertedRequest.status).toBe("CONVERTED")
+    expect(convertedRequest.convertedAt).toBeInstanceOf(Date)
+    expect(order).toMatchObject({
+      customerEmail: requestInput.customerEmail,
+      customerName: requestInput.customerName,
+      customerPhone: requestInput.customerPhone,
+      storeId,
+      tenantId,
+      totalMinor: 7_500,
+    })
+    expect(order.lines).toHaveLength(1)
+    expect(order.lines[0]).toMatchObject({
+      kind: "SERVICE",
+      offeringId: serviceOfferingId,
+      totalMinor: 7_500,
+      unitPriceMinor: 7_500,
+    })
+    expect(publicAccepted).toMatchObject({ accepted: true, totalMinor: 7_500 })
+  }, 180_000)
 })

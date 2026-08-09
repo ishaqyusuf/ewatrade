@@ -287,6 +287,12 @@ and cannot be resolved without a post-use review.
   usage projections. Concurrent identical pickup acceptance is exercised for
   every origin and resolves to one Order; delivery and live-provider acceptance
   remain external gates.
+- The shared Commerce Quote seam also has pre/post migration evidence for the
+  existing Service journey: a two-version legacy Quote survives idempotent
+  backfill, while a profile-attested Neon Service Request completes current
+  public submission, Quote issue/read, idempotent acceptance, conversion, and
+  exact Commercial Order creation. Production reconciliation and legacy model
+  contraction remain release gates.
 
 ## Related Product Areas
 
