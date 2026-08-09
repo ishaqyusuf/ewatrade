@@ -3,8 +3,85 @@ import { describe, expect, test } from "bun:test"
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
   recordWhatsAppCommunicationStatus,
+  resolveWhatsAppInboundConnection,
   resolveWhatsAppStatusConnection,
 } from "./whatsapp-connections"
+
+describe("WhatsApp inbound connection routing", () => {
+  test("returns every active same-Tenant branch and requires explicit Store selection", async () => {
+    const db = {
+      whatsAppConnection: {
+        findFirst: async () => ({
+          bindings: [
+            {
+              store: {
+                name: "Central Pharmacy",
+                prescriptionSettings: { status: "ACTIVE" },
+                tenantId: "tenant-1",
+              },
+              storeId: "store-1",
+              tenantId: "tenant-1",
+            },
+            {
+              store: {
+                name: "Airport Branch",
+                prescriptionSettings: { status: "ACTIVE" },
+                tenantId: "tenant-1",
+              },
+              storeId: "store-2",
+              tenantId: "tenant-1",
+            },
+          ],
+          credentialReference: "credential-1",
+          id: "connection-1",
+          phoneNumberId: "phone-1",
+          tenantId: "tenant-1",
+        }),
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      resolveWhatsAppInboundConnection(db, { phoneNumberId: "phone-1" }),
+    ).resolves.toMatchObject({
+      bindings: [
+        { storeId: "store-1", tenantId: "tenant-1" },
+        { storeId: "store-2", tenantId: "tenant-1" },
+      ],
+      connectionId: "connection-1",
+      phoneNumberId: "phone-1",
+      requiresStoreSelection: true,
+      tenantId: "tenant-1",
+    })
+  })
+
+  test("fails closed when an active binding crosses the connection Tenant", async () => {
+    const db = {
+      whatsAppConnection: {
+        findFirst: async () => ({
+          bindings: [
+            {
+              store: {
+                name: "Other Pharmacy",
+                prescriptionSettings: { status: "ACTIVE" },
+                tenantId: "tenant-2",
+              },
+              storeId: "store-2",
+              tenantId: "tenant-2",
+            },
+          ],
+          credentialReference: "credential-1",
+          id: "connection-1",
+          phoneNumberId: "phone-1",
+          tenantId: "tenant-1",
+        }),
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      resolveWhatsAppInboundConnection(db, { phoneNumberId: "phone-1" }),
+    ).rejects.toMatchObject({ code: "CONNECTION_NOT_FOUND" })
+  })
+})
 
 describe("WhatsApp communication receipts", () => {
   test("records a read timestamp without crossing the connection/tenant scope", async () => {

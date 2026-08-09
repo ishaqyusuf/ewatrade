@@ -9,8 +9,9 @@
   complete. A disposable Neon integration fixture also proves web,
   staff-assisted, and WhatsApp safe-media origins through deterministic
   safety/OCR, professional review, observable projections, and paid pickup
-  handoff with idempotent acceptance, callback, and handoff. Remaining gates:
-  production
+  handoff with idempotent acceptance, callback, and handoff. Focused tests also
+  prove independent pharmacy senders, central/branch routing, and
+  same-customer Tenant/Store isolation. Remaining gates: production
   Service Quote backfill/reconciliation and legacy contraction, live private
   media/OCR providers, pharmacy-owned Meta WABA/number and template approvals,
   Paystack canary, legal/privacy/retention sign-off, delivery SOP approval,

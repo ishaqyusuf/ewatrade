@@ -261,7 +261,10 @@
   capability forms through one Commerce Quote access boundary.
 - WhatsApp runtime resolves `phone_number_id` to one active Tenant Connection,
   then resolves one Store using opaque channel/action context, and only then
-  reads Redis state or persists content. Ambiguity fails closed.
+  reads Redis state or persists content. Active bindings are independently
+  checked against both the Connection Tenant and Store Tenant; corrupted or
+  cross-Tenant bindings are excluded and an empty result fails closed.
+  Ambiguity fails closed.
 - Conversation state uses a Store-bounded context key after routing. Meta
   delivery/read/failure receipts bypass intake and update only the scoped
   communication attempt matched by provider message id and Connection. Receipt

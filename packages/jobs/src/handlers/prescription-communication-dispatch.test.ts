@@ -80,4 +80,101 @@ describe("prescription communication dispatch", () => {
       /medicine|prescription contents/i,
     )
   })
+
+  test("keeps one customer's pharmacy senders isolated by connection and Store", async () => {
+    const sent: unknown[] = []
+    const state = new InMemoryConversationStateStore()
+    const recipientReference = "2348000000000"
+    const claims = {
+      "intent-1": {
+        connectionId: "connection-1",
+        credentialReference: "credential-1",
+        phoneNumberId: "phone-1",
+        storeId: "store-1",
+      },
+      "intent-2": {
+        connectionId: "connection-2",
+        credentialReference: "credential-2",
+        phoneNumberId: "phone-2",
+        storeId: "store-2",
+      },
+    } as const
+    for (const claim of Object.values(claims)) {
+      const contextId = prescriptionConversationContextId(claim.storeId)
+      await state.set({
+        connectionId: claim.connectionId,
+        contextId,
+        externalCustomerId: recipientReference,
+        state: {
+          contextId,
+          lastSeenAt: new Date().toISOString(),
+          storeId: claim.storeId,
+          tenantId: `tenant-${claim.storeId.slice(-1)}`,
+        },
+      })
+    }
+    const provider = {
+      key: "fake",
+      discover: async () => [],
+      exchangeEmbeddedSignupCode: async () => ({ accessToken: "token" }),
+      fetchMedia: async () => ({
+        bytes: new Uint8Array(),
+        mediaType: "image/jpeg",
+      }),
+      sendButtons: async (input) => {
+        sent.push(input)
+        return { messageId: `message-${sent.length}` }
+      },
+      sendTemplate: async () => ({ messageId: "unused" }),
+      sendText: async () => ({ messageId: "unused" }),
+      testConnection: async () => ({
+        businessVerified: true,
+        displayNumber: "+2348000000000",
+        numberVerified: true,
+        outboundVerified: true,
+        webhookSubscribed: true,
+        templatesReady: true,
+        templateConfiguration: {},
+      }),
+    } satisfies WhatsAppProvider
+
+    for (const intentId of ["intent-1", "intent-2"] as const) {
+      const claim = claims[intentId]
+      await runPrescriptionCommunicationDispatch(
+        { intentId },
+        {
+          claim: async () => ({
+            attemptId: `attempt-${intentId.slice(-1)}`,
+            ...claim,
+            intentId,
+            payload: {
+              actions: [{ protectedId: "encrypted-action", title: "Pick up" }],
+            },
+            recipientReference,
+            templateConfiguration: {},
+            type: "quote_ready",
+          }),
+          complete: async () => undefined,
+          provider,
+          resolveActionId: () => "rx:opaque",
+          resolveCredential: (reference) =>
+            `access-token-${reference.slice(-1)}`,
+          state,
+        },
+      )
+    }
+
+    expect(sent).toEqual([
+      expect.objectContaining({
+        accessToken: "access-token-1",
+        phoneNumberId: "phone-1",
+        to: recipientReference,
+      }),
+      expect.objectContaining({
+        accessToken: "access-token-2",
+        phoneNumberId: "phone-2",
+        to: recipientReference,
+      }),
+    ])
+  })
 })

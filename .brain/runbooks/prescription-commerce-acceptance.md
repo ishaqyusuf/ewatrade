@@ -104,6 +104,11 @@ contracting legacy Service Quote tables.
   their run-owned synthetic Tenant/User fixture in one atomic cleanup.
   Hosted-Neon latency also proved that the shared Prisma client requires the
   bounded 10-second wait/30-second interactive-transaction policy.
+- Automated multi-pharmacy routing: focused communications, database, and job
+  tests pass for two connection-specific sender credentials and
+  `phone_number_id` values, one customer's isolated pharmacy threads, a central
+  number with two explicit branch choices, and fail-closed cross-Tenant Store
+  bindings. No live Meta message or provider mutation was performed.
 - Remaining acceptance: cross-channel delivery E2E, live provider
   failure canaries, accessibility automation, load/concurrency/security,
   production Service Quote reconciliation/contraction, and production rollout.

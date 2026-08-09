@@ -89,6 +89,9 @@
 - Jobs receive identifiers, reload the authoritative Tenant/Store entity, and
   fail closed for revoked credentials, inactive bindings, privacy restriction,
   legal hold, stale revision, or ambiguous routing.
+- WhatsApp inbound resolution accepts only active bindings whose binding and
+  Store Tenant both match the recipient `phone_number_id` Connection Tenant.
+  A cross-Tenant or empty binding set fails before customer content is read.
 - Sensitive media access is short-lived and authorized. Credentials, raw
   capability tokens, prescription text, delivery address, pickup code, and
   customer contact are excluded from routine logs, analytics, and audit detail.

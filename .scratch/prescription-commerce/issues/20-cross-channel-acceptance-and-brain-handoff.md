@@ -7,7 +7,7 @@
 **Status:** partially verified; external acceptance gates pending
 
 - [x] Automated acceptance tests cover web, staff-assisted, and WhatsApp intake through review, quote, payment, and pickup or delivery completion.
-- [ ] Multi-pharmacy tests prove sender identity, `phone_number_id` routing, tenant/store isolation, central/branch bindings, and the same customer contacting different pharmacies.
+- [x] Multi-pharmacy tests prove sender identity, `phone_number_id` routing, tenant/store isolation, central/branch bindings, and the same customer contacting different pharmacies.
 - [ ] Failure-injection evidence covers storage, OCR, Meta, payment, notification, delivery, duplicate callback, stale action, and credential-revocation scenarios.
 - [ ] Accessibility, responsive/mobile, performance, retry, concurrency, security, privacy, and audit checks meet the thresholds defined in the approved spec.
 - [x] Production integrations remain fail closed until external legal, operational, provider, template, security, retention, and canary gates are explicitly satisfied.
@@ -25,8 +25,9 @@ idempotent pickup acceptance, hosted payment callback/replay, packing, secure
 pickup code, and idempotent handoff. They assert customer-safe request, Quote,
 and payment views plus management audit, inventory reservation, pickup queue,
 reporting, and commercial-usage projections.
-The existing communications/job suites cover scoped same-customer threads,
-multi-pharmacy Redis context, signature rejection, retries, and opaque quick
-actions. Delivery-origin parity, multi-pharmacy/provider failure coverage,
-accessibility, performance, concurrency, and security remain open acceptance
-work under the separate gates above.
+The communications/database/job suites cover scoped same-customer threads,
+multi-pharmacy Redis context, connection-specific credentials and sender ids,
+central-number branch selection, cross-Tenant binding rejection, signature
+rejection, retries, and opaque quick actions. Delivery-origin parity, provider
+failure coverage, accessibility, performance, concurrency, and security remain
+open acceptance work under the separate gates above.

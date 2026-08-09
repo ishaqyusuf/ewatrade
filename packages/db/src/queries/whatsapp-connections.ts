@@ -479,7 +479,10 @@ export async function resolveWhatsAppInboundConnection(
     )
   }
   const bindings = connection.bindings.filter(
-    (binding) => binding.store.prescriptionSettings?.status === "ACTIVE",
+    (binding) =>
+      binding.tenantId === connection.tenantId &&
+      binding.store.tenantId === connection.tenantId &&
+      binding.store.prescriptionSettings?.status === "ACTIVE",
   )
   if (!bindings.length) {
     throw new WhatsAppConnectionError(
