@@ -1,13 +1,15 @@
 # In Progress
 
-- Obtain owner approval for the proposed Service Commerce platform migration
-  batch. ADR-0029 and `.scratch/service-commerce/spec.md` define a horizontal
-  capability layer over existing Catalog, Customer, Commerce, Service
+- Execute the owner-approved Service Commerce platform migration batch in
+  dependency order. ADR-0029 and `.scratch/service-commerce/spec.md` define a
+  horizontal capability layer over existing Catalog, Customer, Commerce, Service
   Operations, Fulfilment, Communications and Reporting boundaries. Pharmacy
   Commerce remains the first regulated vertical; an appointment business is
   the second validation vertical. Thirteen dependency-ordered tickets are
-  proposed in `.scratch/service-commerce/issues/`, all explicitly awaiting
-  owner approval. No platform code/schema/provider migration has started.
+  owner-approved in `.scratch/service-commerce/issues/`. Ticket 01 is
+  `ready-for-agent`; Tickets 02-13 are approved but blocked. No platform
+  code/schema/provider migration has started, and production operations remain
+  separately authorized.
   Started Date: 2026-08-09.
 
 - Complete the Prescription Commerce production rollout after the 01-20 source

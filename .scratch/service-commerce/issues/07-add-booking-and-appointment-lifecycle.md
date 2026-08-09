@@ -4,9 +4,9 @@
 
 **Blocked by:** 02 - Configure Business Capability Profile; 03 - Establish Customer Request Interoperability Contract; 06 - Reuse Quote Payment And Order Conversion.
 
-**Status:** proposed; awaiting owner approval
+**Status:** approved; blocked
 
-**Approval gate:** Planning only. Do not implement until the owner explicitly approves this ticket batch.
+**Approval:** Owner-approved on 2026-08-09. Start only after every listed blocker is complete.
 
 - [ ] Model bookable Offerings, resources, Store timezone, availability rules, exceptions, duration, lead time and capacity with explicit ownership.
 - [ ] Represent scheduled, confirmed, arrived, in-service, completed, cancelled and no-show states independently from payment state.

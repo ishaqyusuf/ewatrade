@@ -4,9 +4,9 @@
 
 **Blocked by:** 03 - Establish Customer Request Interoperability Contract; 04 - Generalize WhatsApp Connection And Location Binding; 05 - Deliver Channel-Neutral Request Intake; 06 - Reuse Quote Payment And Order Conversion; 08 - Extract Shared Pickup And Delivery Fulfilment; 09 - Deliver State-Aware Customer Actions And Notifications; 11 - Enforce Vertical And Jurisdiction Eligibility.
 
-**Status:** proposed; awaiting owner approval
+**Status:** approved; blocked
 
-**Approval gate:** Planning only. Do not implement until the owner explicitly approves this ticket batch.
+**Approval:** Owner-approved on 2026-08-09. Start only after every listed blocker is complete.
 
 - [ ] Keep `PrescriptionRequest`, private media, safety/OCR, transcription revisions, attendant verification and pharmacist release authoritative in Pharmacy Commerce.
 - [ ] Preserve credentialed professional roles, audited confirmation, inventory-backed mapping, retention, incident and personal break-glass rules.

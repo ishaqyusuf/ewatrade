@@ -4,9 +4,9 @@
 
 **Blocked by:** 04 - Generalize WhatsApp Connection And Location Binding; 06 - Reuse Quote Payment And Order Conversion; 07 - Add Booking And Appointment Lifecycle; 08 - Extract Shared Pickup And Delivery Fulfilment; 09 - Deliver State-Aware Customer Actions And Notifications; 10 - Adapt Pharmacy Commerce To Service Commerce; 11 - Enforce Vertical And Jurisdiction Eligibility; 12 - Validate Second Vertical Appointment Business.
 
-**Status:** proposed; awaiting owner approval
+**Status:** approved; blocked
 
-**Approval gate:** Planning only. Do not implement until the owner explicitly approves this ticket batch.
+**Approval:** Owner-approved on 2026-08-09. Start only after every listed blocker is complete.
 
 - [ ] Run the deterministic `.env.local` Neon primary seam for both verticals and web, staff-assisted and WhatsApp origins: connection, request, Quote or booking, payment, and pickup/delivery/service completion.
 - [ ] Build Tenant/Store-scoped cross-vertical reporting projections for channel mix, Requests, Quotes, bookings, payment, pickup, delivery, service completion, reliability and usage from authoritative lifecycle occurrence timestamps.

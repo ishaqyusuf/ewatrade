@@ -2,20 +2,21 @@
 
 ## Status
 
-Product and architecture direction approved on 2026-08-09 through ADR-0029.
-The implementation plan is proposed and awaits owner approval. No Service
-Commerce platform migration code is authorized by this document.
+Product, architecture and the dependency-ordered source implementation batch
+were approved on 2026-08-09 through ADR-0029 and the owner decision. Ticket 01
+is the active `ready-for-agent` frontier; later tickets are approved but blocked.
+Production schema/provider operations remain separately authorized.
 
 Pharmacy Commerce is the first regulated vertical and retains its completed
-implementation evidence and outstanding production gates. The first proposed
-non-regulated validation vertical is an appointment-based business such as a
-salon or consultation practice.
+implementation evidence and outstanding production gates. The approved second
+validation vertical is an appointment-based business such as a salon or
+consultation practice.
 
 ## Sources Of Truth
 
 - Decision: `.brain/decisions/ADR-0029-service-commerce-platform-core-and-vertical-capability-extensions.md`
 - Specification: `.scratch/service-commerce/spec.md`
-- Proposed tickets and approval order: `.scratch/service-commerce/issues/README.md`
+- Approved tickets and execution order: `.scratch/service-commerce/issues/README.md`
 - Midday migration contract: `.scratch/service-commerce/midday-migration-contract.md`
 - Existing Service foundation: `.brain/features/generic-service-operations.md`
 - First vertical: `.brain/features/prescription-commerce.md`
@@ -135,7 +136,7 @@ permission merely because a WhatsApp connection is technically ready.
 
 ## Second Vertical
 
-An appointment-based business is the proposed proving case because it adds one
+An appointment-based business is the approved proving case because it adds one
 genuinely new shared capability—booking—while exercising existing Service
 Requests, Quotes, payments and notifications without prescription rules. The
 acceptance must prove that the business can configure services and resources,
@@ -173,7 +174,7 @@ payment, reschedule/cancel, remind the customer and complete the service.
 
 ## Migration And Acceptance
 
-The migration is expand-contract and starts only after ticket approval:
+The approved migration is expand-contract and proceeds by ticket frontier:
 
 1. Record current ownership and compatibility contracts.
 2. Add capability/readiness and interoperability seams without changing
@@ -190,13 +191,14 @@ All local database work uses the verified `.env.local` Neon development
 database. Local Docker/PostgreSQL is prohibited. Production schema, provider or
 business activation remains separately authorized.
 
-## Approval Frontier
+## Execution Frontier
 
-The owner must approve the proposed ticket batch before implementation begins.
-Until then:
+The owner approved the source ticket batch on 2026-08-09. Ticket 01 may start;
+later tickets wait for their declared blockers. Throughout execution:
 
-- no Prisma or production contract migration;
-- no renaming or contraction of Prescription Commerce;
-- no live Meta/Twilio/provider mutation;
+- no production Prisma operation without separate authorization;
+- no renaming or contraction of Prescription Commerce before its approved
+  switch/contraction gate;
+- no live Meta/Twilio/provider mutation without separate authorization;
 - no claim that Pharmacy WhatsApp is policy-approved; and
 - no change to completed Prescription Commerce ticket status.

@@ -4,9 +4,9 @@
 
 **Blocked by:** None - first expand-contract slice.
 
-**Status:** proposed; awaiting owner approval
+**Status:** ready-for-agent
 
-**Approval gate:** Planning only. Do not implement until the owner explicitly approves this ticket batch.
+**Approval:** Owner-approved on 2026-08-09. This is the active implementation frontier and may start now.
 
 - [ ] Verify the inspected ownership/file map in `.scratch/service-commerce/midday-migration-contract.md` against the approved implementation baseline and amend it before code only if that baseline changed.
 - [ ] Define a minimal shared vocabulary for source kind/reference, channel origin, capability/readiness, allowed action and fulfilment option without a universal request table.

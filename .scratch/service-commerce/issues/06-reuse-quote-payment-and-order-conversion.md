@@ -4,9 +4,9 @@
 
 **Blocked by:** 03 - Establish Customer Request Interoperability Contract.
 
-**Status:** proposed; awaiting owner approval
+**Status:** approved; blocked
 
-**Approval gate:** Planning only. Do not implement until the owner explicitly approves this ticket batch.
+**Approval:** Owner-approved on 2026-08-09. Start only after every listed blocker is complete.
 
 - [ ] Accept typed source refs and source-owned eligibility/release facts while keeping monetary/version truth in Commerce.
 - [ ] Preserve immutable Quote versions, current-version capabilities, expiry, exact totals, Offering snapshots and fulfilment promises.

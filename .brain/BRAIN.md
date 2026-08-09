@@ -24,8 +24,9 @@ Central index for ewatrade product, architecture, engineering, database, API, de
 - ADR-0029 defines Service Commerce as the horizontal request-to-quote/booking,
   payment, pickup/delivery, service-completion and customer-communications
   capability direction. Pharmacy Commerce is the first regulated vertical and
-  an appointment business is the proposed second validation vertical. The
-  migration tickets remain proposed and no platform implementation is approved.
+  an appointment business is the second validation vertical. The owner approved
+  the source migration batch on 2026-08-09; Ticket 01 is ready for agent work
+  and later tickets remain blocked by their declared dependencies.
 - Mobile includes a tenant-wide global search across Orders, Customers,
   Catalog, Service Jobs, and permitted Staff, plus contextual order creation
   and auditable order/payment actor attribution.
@@ -45,7 +46,7 @@ Central index for ewatrade product, architecture, engineering, database, API, de
   media/OCR/Meta/payment canaries, PCN/privacy authority, delivery SOPs, and
   design-partner acceptance remain production prerequisites.
   Its completed source/tickets remain the first-vertical evidence and are not
-  replaced by the proposed Service Commerce planning batch.
+  replaced by the approved Service Commerce migration batch.
 
 ## Key References
 - [System Overview](./SYSTEM_OVERVIEW.md)

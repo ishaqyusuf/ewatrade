@@ -37,7 +37,8 @@ High-level summary of the platform, its business domains, and the current implem
   existing Catalog, Customer, Commerce, Service Operations, Fulfilment,
   Communications and Reporting boundaries. Existing `ServiceRequest` and
   `PrescriptionRequest` aggregates stay authoritative; no universal request
-  table or platform migration is approved yet.
+  table is planned. The source ticket batch is approved for dependency-ordered
+  implementation, with production operations separately gated.
 - Managed domain source supports GO54 `.com.ng`, Openprovider `.com`, Paystack
   checkout and Vercel connection behind server-only adapters and jobs.
 - Prescription Commerce defines pharmacy-owned WABAs/numbers, one shared
@@ -70,6 +71,6 @@ High-level summary of the platform, its business domains, and the current implem
   verification, pharmacist release, multi-Tenant inbound WhatsApp routing,
   privacy/retention controls, and commercial reporting. Production schema and
   live-provider acceptance remain gated.
-- The proposed Service Commerce migration must preserve Generic Service and
+- The approved Service Commerce migration must preserve Generic Service and
   Prescription compatibility, add booking as an explicit capability, and prove
   an appointment-based second vertical before any contraction.

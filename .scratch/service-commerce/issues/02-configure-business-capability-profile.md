@@ -4,9 +4,9 @@
 
 **Blocked by:** 01 - Define Service Commerce Boundary And Compatibility Contract.
 
-**Status:** proposed; awaiting owner approval
+**Status:** approved; blocked
 
-**Approval gate:** Planning only. Do not implement until the owner explicitly approves this ticket batch.
+**Approval:** Owner-approved on 2026-08-09. Start only after every listed blocker is complete.
 
 - [ ] Define shared Zod contracts for capability configuration, readiness blockers, operational access and customer-visible availability.
 - [ ] Keep Tenant/Store/role/exception authorization at API and repository boundaries; clients render the returned access state.

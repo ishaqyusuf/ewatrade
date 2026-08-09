@@ -1,6 +1,6 @@
 # Service Commerce Platform Specification
 
-**Status:** proposed; implementation not approved
+**Status:** approved for source implementation in dependency order
 
 **Date:** 2026-08-09
 
@@ -58,9 +58,9 @@ layer references them through typed source kinds and opaque identifiers; it
 does not create a universal request table. Pharmacy-specific media, OCR,
 attendant/pharmacist review, privacy and retention remain in Pharmacy Commerce.
 
-The migration is expand-contract and planning-only until the owner approves
-the ticket batch. No implementation, schema change, provider mutation or
-production rollout is approved by this specification.
+The owner approved the expand-contract source ticket batch on 2026-08-09.
+Implementation proceeds one dependency-frontier ticket at a time. Production
+schema changes, provider mutations and rollout remain separately authorized.
 
 ## User Stories
 
@@ -272,8 +272,8 @@ production rollout is approved by this specification.
     and contract phases with rollback and explicit production authorization.
 77. As a contributor, development database acceptance runs only against the
     verified `.env.local` Neon profile and never local Docker/PostgreSQL.
-78. As the product owner, every proposed ticket remains unapproved until I
-    explicitly authorize implementation.
+78. As the product owner, my 2026-08-09 approval authorizes source work only in
+    dependency order; production database/provider operations remain separate.
 
 ## Implementation Decisions
 
@@ -376,7 +376,8 @@ fixture cleanup.
 
 ## Out Of Scope
 
-- Implementing any ticket before explicit owner approval.
+- Implementing a ticket before its blockers complete or beyond the approved
+  source scope.
 - A universal `CustomerRequest` database aggregate.
 - An arbitrary no-code workflow builder or customer-programmable state machine.
 - A marketplace that owns the merchant/customer relationship.
@@ -400,5 +401,5 @@ fixture cleanup.
 - The integration acceptance file and run-owned teardown are already large.
   The fulfilment extraction ticket must split fixture helpers and lifecycle
   specs while preserving one bounded atomic cleanup boundary.
-- Every ticket in `.scratch/service-commerce/issues/` is `proposed; awaiting
-  owner approval`. Approval of this spec alone is not approval to code them.
+- The batch was owner-approved on 2026-08-09. Ticket 01 is `ready-for-agent`;
+  later tickets remain `approved; blocked` until their dependencies complete.

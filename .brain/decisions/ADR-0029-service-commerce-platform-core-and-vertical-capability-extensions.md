@@ -2,9 +2,10 @@
 
 ## Status
 
-Accepted as the product and architecture direction on 2026-08-09. This ADR
-does not approve platform migration work. Implementation may begin only after
-the owner approves the proposed tickets in `.scratch/service-commerce/issues/`.
+Accepted as the product and architecture direction on 2026-08-09. The owner
+approved the source implementation ticket batch on the same date. Work may
+proceed one dependency-frontier ticket at a time; production database/provider
+operations remain separately authorized.
 
 ## Context
 

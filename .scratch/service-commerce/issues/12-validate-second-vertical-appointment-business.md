@@ -4,9 +4,9 @@
 
 **Blocked by:** 05 - Deliver Channel-Neutral Request Intake; 06 - Reuse Quote Payment And Order Conversion; 07 - Add Booking And Appointment Lifecycle; 09 - Deliver State-Aware Customer Actions And Notifications; 11 - Enforce Vertical And Jurisdiction Eligibility.
 
-**Status:** proposed; awaiting owner approval
+**Status:** approved; blocked
 
-**Approval gate:** Planning only. Do not implement until the owner explicitly approves this ticket batch.
+**Approval:** Owner-approved on 2026-08-09. Start only after every listed blocker is complete.
 
 - [ ] Create a run-owned Tenant/Store fixture with Service Offerings, resources, availability, payment policy and web/staff/WhatsApp capabilities.
 - [ ] Complete web, staff-assisted and WhatsApp requests through slot selection/confirmation, exact deposit or payment, reminders and service completion.

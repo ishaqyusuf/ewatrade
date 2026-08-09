@@ -4,9 +4,9 @@
 
 **Blocked by:** 03 - Establish Customer Request Interoperability Contract; 04 - Generalize WhatsApp Connection And Location Binding; 11 - Enforce Vertical And Jurisdiction Eligibility.
 
-**Status:** proposed; awaiting owner approval
+**Status:** approved; blocked
 
-**Approval gate:** Planning only. Do not implement until the owner explicitly approves this ticket batch.
+**Approval:** Owner-approved on 2026-08-09. Start only after every listed blocker is complete.
 
 - [ ] Define shared intake envelope fields for channel, opaque Store context, client/provider idempotency, consent/opt-in facts and source-specific payload.
 - [ ] Resolve Tenant, Store, capability, source adapter and authorization before persisting content.

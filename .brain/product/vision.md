@@ -44,10 +44,10 @@ Build commerce and logistics infrastructure for African merchants that combines 
   deliver or complete a service.
 - Pharmacy Commerce remains the first regulated vertical and safety benchmark;
   it is not diluted into a generic workflow. An appointment business is the
-  proposed second vertical to prove the shared booking/channel/commerce seams.
+  approved second vertical to prove the shared booking/channel/commerce seams.
 - Businesses own their customer-facing WhatsApp WABA/number and associated
   provider usage. EwaTrade may operate one application/webhook and reusable
   provider-neutral infrastructure.
-- The platform migration is proposed and awaits explicit ticket approval. The
-  recommended strategy is incremental extraction with compatibility evidence,
-  not a rewrite.
+- The source platform migration batch was approved on 2026-08-09. Execution is
+  incremental extraction with compatibility evidence in declared dependency
+  order, not a rewrite; production operations remain separately authorized.

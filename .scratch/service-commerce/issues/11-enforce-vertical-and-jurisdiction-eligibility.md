@@ -4,9 +4,9 @@
 
 **Blocked by:** 01 - Define Service Commerce Boundary And Compatibility Contract; 02 - Configure Business Capability Profile; 04 - Generalize WhatsApp Connection And Location Binding.
 
-**Status:** proposed; awaiting owner approval
+**Status:** approved; blocked
 
-**Approval gate:** Planning only. Do not implement until the owner explicitly approves this ticket batch.
+**Approval:** Owner-approved on 2026-08-09. Start only after every listed blocker is complete.
 
 - [ ] Define typed policy outcomes for allowed, restricted, pending evidence, expired approval and prohibited combinations.
 - [ ] Require explicit Store jurisdiction, vertical, channel, licence/approval reference, reviewer, effective/expiry dates and reason.

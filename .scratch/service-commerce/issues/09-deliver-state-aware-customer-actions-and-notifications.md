@@ -4,9 +4,9 @@
 
 **Blocked by:** 04 - Generalize WhatsApp Connection And Location Binding; 06 - Reuse Quote Payment And Order Conversion; 07 - Add Booking And Appointment Lifecycle; 08 - Extract Shared Pickup And Delivery Fulfilment; 11 - Enforce Vertical And Jurisdiction Eligibility.
 
-**Status:** proposed; awaiting owner approval
+**Status:** approved; blocked
 
-**Approval gate:** Planning only. Do not implement until the owner explicitly approves this ticket batch.
+**Approval:** Owner-approved on 2026-08-09. Start only after every listed blocker is complete.
 
 - [ ] Define one exhaustive server-side action registry keyed by typed state/capability/policy rather than UI string switches.
 - [ ] Generate opaque, expiring, single-purpose, idempotent capabilities bound to the current internal version and Store.

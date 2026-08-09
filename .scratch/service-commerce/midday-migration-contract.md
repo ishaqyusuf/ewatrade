@@ -1,6 +1,6 @@
 # Service Commerce Midday Migration Contract
 
-**Status:** proposed; implementation not approved
+**Status:** approved for source implementation in dependency order
 
 **Source baseline:** Midday workspace inspected on 2026-08-09
 
@@ -9,8 +9,9 @@
 ## Purpose
 
 This contract translates the approved Service Commerce direction into the
-repository's required Midday implementation shape. It is a constraint on any
-later approved ticket, not authorization to change code.
+repository's required Midday implementation shape. The owner approved the
+source ticket batch on 2026-08-09; each ticket must still satisfy its blockers,
+and production database/provider operations remain separately authorized.
 
 ## Canonical Midday References
 
@@ -482,7 +483,7 @@ reversible presentation state; authoritative lifecycle state always refetches.
 6. Contract: remove old names/models/exports only under separately approved
    production reconciliation and rollout tickets.
 
-Expected target ownership after approval:
+Approved target ownership:
 
 - `packages/*`: focused Service Commerce contracts/rules/adapters.
 - `packages/db/src/queries/*`: source, booking, fulfilment, connection and

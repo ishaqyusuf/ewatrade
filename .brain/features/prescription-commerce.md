@@ -3,10 +3,12 @@
 ## Status
 
 ADR-0029 now positions Pharmacy Commerce as the first regulated vertical on the
-proposed horizontal Service Commerce capability platform. This does not change
+approved horizontal Service Commerce capability platform. This does not change
 the implemented pharmacy behavior, reopen completed tickets, approve a code
-migration, or relax any production gate. The proposed migration/spec/tickets
-live under `.scratch/service-commerce/` and await explicit owner approval.
+migration by itself, or relax any production gate. The owner separately
+approved the Service Commerce source ticket batch on 2026-08-09; Ticket 01 may
+start, while later work follows its blockers. The migration/spec/tickets live
+under `.scratch/service-commerce/`.
 
 The source implementation for tickets 01-19 and the source/runbook portion of
 ticket 20 were completed on 2026-08-09 using the Midday migration contract at

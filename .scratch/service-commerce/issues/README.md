@@ -1,17 +1,19 @@
-# Service Commerce Proposed Ticket Batch
+# Service Commerce Approved Ticket Batch
 
-**Status:** proposed; awaiting owner approval
+**Status:** owner-approved on 2026-08-09
 
-**Implementation authorization:** none
+**Implementation authorization:** approved in dependency order; Ticket 01 is
+the current frontier
 
-This batch implements ADR-0029 and `.scratch/service-commerce/spec.md` only
-after explicit owner approval. Approving the architecture direction or reading
-this batch does not start code work.
+This batch implements ADR-0029 and `.scratch/service-commerce/spec.md`. The
+owner approved the batch on 2026-08-09. Source implementation may proceed one
+frontier ticket at a time; production schema/provider operations remain
+separately authorized.
 
-## Recommended Approval Decision
+## Execution Rule
 
-Approve the batch as one migration program, then execute one ticket at a time
-through its blocking edges. Ticket 01 is the only valid starting slice. Any
+Execute one ticket at a time through its blocking edges. Ticket 01 is the only
+current starting slice. Any
 scope or dependency change should update the spec, ADR/Brain and affected
 tickets before implementation.
 

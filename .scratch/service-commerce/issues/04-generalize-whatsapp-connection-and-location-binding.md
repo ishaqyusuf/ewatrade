@@ -4,9 +4,9 @@
 
 **Blocked by:** 01 - Define Service Commerce Boundary And Compatibility Contract; 02 - Configure Business Capability Profile.
 
-**Status:** proposed; awaiting owner approval
+**Status:** approved; blocked
 
-**Approval gate:** Planning only. Do not implement until the owner explicitly approves this ticket batch.
+**Approval:** Owner-approved on 2026-08-09. Start only after every listed blocker is complete.
 
 - [ ] Keep each business's WABA, number, sender identity, credential reference, templates, billing owner and lifecycle Tenant-owned.
 - [ ] Preserve one EwaTrade Meta application/webhook with recipient `phone_number_id` resolution before customer or request lookup.

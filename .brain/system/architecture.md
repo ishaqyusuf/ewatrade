@@ -154,8 +154,8 @@ Describe the intended technical architecture and responsibility boundaries for t
 - No Supabase dependency in the current architecture.
 - No direct client access to the database.
 - No universal customer-request table or arbitrary workflow engine.
-- No platform code migration before owner approval of the proposed Service
-  Commerce tickets.
+- Service Commerce migration work follows the owner-approved ticket dependency
+  frontier; production schema/provider operations remain separately authorized.
 
 ## Open Items
 - If cross-device or public Service Evidence is enabled, configure managed

@@ -4,9 +4,9 @@
 
 **Blocked by:** 01 - Define Service Commerce Boundary And Compatibility Contract; 02 - Configure Business Capability Profile.
 
-**Status:** proposed; awaiting owner approval
+**Status:** approved; blocked
 
-**Approval gate:** Planning only. Do not implement until the owner explicitly approves this ticket batch.
+**Approval:** Owner-approved on 2026-08-09. Start only after every listed blocker is complete.
 
 - [ ] Define an exhaustive source registry for current `service` and `prescription` kinds, exact Product cart/Order commands, and any discovery-approved narrow Commerce inquiry source, with typed adapters owned outside UI components.
 - [ ] Return normalized customer-safe summary, current state, Store identity, capability/readiness and allowed commands without flattening private vertical data.
