@@ -127,8 +127,8 @@ contracting legacy Service Quote tables.
   duplicate-safe delivery, neutral communications, privacy-safe queue/address
   projections, reporting, usage, and terminal queue removal. Every origin also
   rejects unpaid preparation, unpaid/unpacked assignment, and an actor without
-  a Store role. The current-source three-origin matrix passed with 123
-  assertions. A separate manual-zone route passed with 18 assertions through
+  a Store role. The current-source three-origin matrix passed with 120
+  assertions. A separate manual-zone route passed with 17 assertions through
   authorized reasoned-fee approval, immutable Quote revision, stale-token
   rejection, address-safe public output, idempotent acceptance, exact payment,
   and one inventory reservation. No courier or external provider was called.

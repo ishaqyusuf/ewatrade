@@ -497,8 +497,9 @@ describeWithDatabase("prescription commerce database acceptance", () => {
     }
   }
 
-  async function acceptAndPay(input: {
-    accept: () => ReturnType<typeof acceptPrescriptionPickupQuote>
+  async function acceptAndPay<TAccepted extends { orderId: string }>(input: {
+    accept: () => Promise<TAccepted>
+    afterAcceptance?: (accepted: TAccepted) => Promise<void>
     origin: IntakeOrigin
     quoteToken: string
     runId: string
@@ -509,6 +510,7 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       input.accept(),
     ])
     expect(acceptanceReplay.orderId).toBe(accepted.orderId)
+    await input.afterAcceptance?.(accepted)
     const inventoryAfterAcceptance = await getCatalogOfferingAvailability(db, {
       offeringId,
       storeId,
@@ -720,31 +722,29 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       clientAcceptanceId: `${origin}-delivery-acceptance-${prepared.runId}`,
       partialAcknowledged: false,
     }
-    const acceptedBeforePayment = await acceptPrescriptionDeliveryQuote(
-      db,
-      acceptanceInput,
-    )
-    await expect(
-      markPrescriptionDeliveryReady(db, {
-        actorUserId,
-        checks: { label_matches: true, pharmacist_released: true },
-        orderId: acceptedBeforePayment.orderId,
-        storeId,
-        tenantId,
-      }),
-    ).rejects.toThrow()
-    await expect(
-      createPrescriptionDeliveryAssignment(db, {
-        actorUserId,
-        courierDisplayName: "Premature Courier",
-        courierReference: `premature-unpaid-${prepared.runId}`,
-        orderId: acceptedBeforePayment.orderId,
-        storeId,
-        tenantId,
-      }),
-    ).rejects.toThrow()
     const { accepted, inventoryAfterAcceptance } = await acceptAndPay({
       accept: () => acceptPrescriptionDeliveryQuote(db, acceptanceInput),
+      afterAcceptance: async (acceptedBeforePayment) => {
+        await expect(
+          markPrescriptionDeliveryReady(db, {
+            actorUserId,
+            checks: { label_matches: true, pharmacist_released: true },
+            orderId: acceptedBeforePayment.orderId,
+            storeId,
+            tenantId,
+          }),
+        ).rejects.toThrow()
+        await expect(
+          createPrescriptionDeliveryAssignment(db, {
+            actorUserId,
+            courierDisplayName: "Premature Courier",
+            courierReference: `premature-unpaid-${prepared.runId}`,
+            orderId: acceptedBeforePayment.orderId,
+            storeId,
+            tenantId,
+          }),
+        ).rejects.toThrow()
+      },
       origin,
       quoteToken: deliverySelection.acceptanceToken,
       runId: prepared.runId,
@@ -753,7 +753,6 @@ describeWithDatabase("prescription commerce database acceptance", () => {
     expect(Number(inventoryAfterAcceptance.reservedQuantity)).toBe(
       Number(prepared.inventoryBeforeAcceptance.reservedQuantity) + 1,
     )
-    expect(accepted.orderId).toBe(acceptedBeforePayment.orderId)
     await expect(
       createPrescriptionDeliveryAssignment(db, {
         actorUserId,
@@ -1047,27 +1046,24 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       clientAcceptanceId: `manual-delivery-acceptance-${prepared.runId}`,
       partialAcknowledged: false,
     }
-    const acceptedBeforePayment = await acceptPrescriptionDeliveryQuote(
-      db,
-      acceptanceInput,
-    )
-    await expect(
-      markPrescriptionDeliveryReady(db, {
-        actorUserId,
-        checks: { label_matches: true, pharmacist_released: true },
-        orderId: acceptedBeforePayment.orderId,
-        storeId,
-        tenantId,
-      }),
-    ).rejects.toThrow()
     const { accepted, inventoryAfterAcceptance } = await acceptAndPay({
       accept: () => acceptPrescriptionDeliveryQuote(db, acceptanceInput),
+      afterAcceptance: async (acceptedBeforePayment) => {
+        await expect(
+          markPrescriptionDeliveryReady(db, {
+            actorUserId,
+            checks: { label_matches: true, pharmacist_released: true },
+            orderId: acceptedBeforePayment.orderId,
+            storeId,
+            tenantId,
+          }),
+        ).rejects.toThrow()
+      },
       origin: "web",
       quoteToken: approved.acceptanceToken,
       runId: `manual-${prepared.runId}`,
       totalMinor: 3_250,
     })
-    expect(accepted.orderId).toBe(acceptedBeforePayment.orderId)
     expect(Number(inventoryAfterAcceptance.reservedQuantity)).toBe(
       Number(prepared.inventoryBeforeAcceptance.reservedQuantity) + 1,
     )
