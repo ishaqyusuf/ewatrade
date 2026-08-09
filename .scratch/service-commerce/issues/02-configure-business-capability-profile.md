@@ -1,0 +1,18 @@
+# 02 - Configure Business Capability Profile
+
+**What to build:** Give each Store a server-owned Service Commerce capability and readiness profile for requests, quotes, bookings, payments, pickup, delivery and allowed channels.
+
+**Blocked by:** 01 - Define Service Commerce Boundary And Compatibility Contract.
+
+**Status:** proposed; awaiting owner approval
+
+**Approval gate:** Planning only. Do not implement until the owner explicitly approves this ticket batch.
+
+- [ ] Define shared Zod contracts for capability configuration, readiness blockers, operational access and customer-visible availability.
+- [ ] Keep Tenant/Store/role/exception authorization at API and repository boundaries; clients render the returned access state.
+- [ ] Support per-Store activation while retaining Tenant-level administration and billing ownership.
+- [ ] Make incomplete setup, restricted vertical policy, unavailable provider and disabled capability distinct states with actionable recovery.
+- [ ] Add a Midday-style setup surface with server prefetch/hydration, URL-owned safe scope, focused forms, exact invalidation and explicit loading/error/empty states.
+- [ ] Audit every activation/configuration change with actor, Store, previous/current value and reason.
+- [ ] Test owners/admins/operators, ordinary staff, personal exceptional access where applicable, disabled Stores and cross-Tenant/Store attempts.
+- [ ] Update Brain feature, API permission/contract and database docs for any approved schema/API changes.

@@ -6,6 +6,11 @@ Accepted as a commercialization and validation direction on 2026-08-07.
 Implementation and production launch remain unapproved until the evidence and
 readiness gates in `.brain/features/prescription-commerce.md` are met.
 
+ADR-0029 supersedes only this ADR's platform-category boundary: Service
+Commerce is now the horizontal capability platform and Pharmacy Commerce is its
+first regulated vertical. This ADR remains authoritative for the pharmacy
+product, clinical authority, safety, privacy, fulfilment and operating model.
+
 ## Context
 
 The initial opportunity came from a large pharmacy serving customers around a

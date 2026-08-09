@@ -25,6 +25,10 @@ Operational summary of the platform and how its major domains fit together.
   remain online-only.
 - Service work uses Intake, Jobs/Job Lines, assignments, due commitments,
   evidence, Requests, versioned Quotes and scoped customer tracking.
+- Service Commerce is the approved capability direction for channel-neutral
+  customer requests, Quotes, bookings, payments, pickup/delivery and service
+  completion. It composes existing bounded contexts and retains typed vertical
+  source aggregates rather than introducing a universal request model.
 - Managed storefront domains separate quote/payment/registrar state from
   ownership/DNS/SSL connection state and preserve the free platform hostname.
 
@@ -41,8 +45,11 @@ Operational summary of the platform and how its major domains fit together.
 - POS cashier
 - Self-service checkout
 - WhatsApp commerce
+- Service Commerce
+- Pharmacy Commerce vertical
 
 ## Source Docs
 - `.brain/modules/*.md`
 - `.brain/workflows/order-delivery-flow.md`
 - `.brain/architecture/multi-tenant.md`
+- `.brain/features/service-commerce.md`

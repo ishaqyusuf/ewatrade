@@ -38,6 +38,14 @@ Describe the intended technical architecture and responsibility boundaries for t
 - Service Operations owns Intake, Job/Line allocation, work state, assignments,
   promises, notes, exceptions, evidence and rework. Customer Access owns public
   Requests, Quote acceptance and safe tracking projections.
+- Service Commerce composes Catalog, Customer, Customer Access, Commerce,
+  Service Operations, Fulfilment, Communications and Reporting through typed
+  capability and source-adapter contracts. `ServiceRequest` and
+  `PrescriptionRequest` remain distinct sources; a universal request table and
+  arbitrary workflow engine are explicit non-goals.
+- Booking is a first-class capability with resource availability, contention,
+  schedule, payment policy, reschedule/cancel and reminder semantics. It is not
+  stored as generic metadata or embedded in Prescription Commerce.
 - Managed Domains owns immutable quotes, encrypted registrant profiles,
   payment/registration orders, registrar lifecycle and independent
   ownership/DNS/SSL connections. `@ewatrade/domains` owns external adapters;
@@ -90,7 +98,24 @@ Describe the intended technical architecture and responsibility boundaries for t
 - Merchant tenants and dispatch tenants are isolated in storage and authorization.
 - Public marketplace reads must only expose explicitly public data.
 
-## Prescription WhatsApp Channel Boundary
+## Business WhatsApp Connection Boundary
+
+- A Tenant owns each business WhatsApp Connection, including WABA/number,
+  sender identity, credential reference, template state, billing owner,
+  lifecycle and Store bindings. EwaTrade may share one Meta application and
+  webhook, but unrelated businesses never share a permanent customer-facing
+  sender identity.
+- Direct Meta Cloud API remains the initial provider transport following
+  Midday's webhook/job separation. Twilio or a BSP is optional behind
+  Communications and cannot own Tenant routing or business workflow truth.
+- Web, staff and WhatsApp are channel adapters. The resolved Store capability,
+  vertical policy and source aggregate determine available Quote, booking,
+  payment, pickup, delivery and human-escalation actions.
+- Store capability and vertical/jurisdiction policy are server projections.
+  Unknown, inactive, ambiguous, prohibited and cross-Tenant routes fail closed
+  before customer content is persisted.
+
+### Pharmacy WhatsApp Extension
 
 - The pharmacy or pharmacy group owns its WhatsApp Business Account and public
   number. EwaTrade uses one Meta application and verified webhook surface for
@@ -121,10 +146,16 @@ Describe the intended technical architecture and responsibility boundaries for t
 - Sender replacement and credential rotation are staged. The working binding
   remains active until readiness promotes the pending route; failed readiness
   cannot silently interrupt an existing pharmacy number.
+- Pharmacy WhatsApp remains independently gated by current Meta regulated-
+  vertical policy, Nigerian law/licensing, privacy and operating approval even
+  when the underlying Connection is technically ready.
 
 ## Explicit Non-Goals
 - No Supabase dependency in the current architecture.
 - No direct client access to the database.
+- No universal customer-request table or arbitrary workflow engine.
+- No platform code migration before owner approval of the proposed Service
+  Commerce tickets.
 
 ## Open Items
 - If cross-device or public Service Evidence is enabled, configure managed

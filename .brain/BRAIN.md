@@ -21,6 +21,11 @@ Central index for ewatrade product, architecture, engineering, database, API, de
 - Catalog, exact inventory, tenant Customer directory, Commercial Orders,
   generic Service Operations, customer request/quote/tracking, offline replay,
   staff, billing, storefront, and messaging foundations are implemented.
+- ADR-0029 defines Service Commerce as the horizontal request-to-quote/booking,
+  payment, pickup/delivery, service-completion and customer-communications
+  capability direction. Pharmacy Commerce is the first regulated vertical and
+  an appointment business is the proposed second validation vertical. The
+  migration tickets remain proposed and no platform implementation is approved.
 - Mobile includes a tenant-wide global search across Orders, Customers,
   Catalog, Service Jobs, and permitted Staff, plus contextual order creation
   and auditable order/payment actor attribution.
@@ -39,6 +44,8 @@ Central index for ewatrade product, architecture, engineering, database, API, de
   setup/intake QA are complete. Production schema/backfill/contraction, live
   media/OCR/Meta/payment canaries, PCN/privacy authority, delivery SOPs, and
   design-partner acceptance remain production prerequisites.
+  Its completed source/tickets remain the first-vertical evidence and are not
+  replaced by the proposed Service Commerce planning batch.
 
 ## Key References
 - [System Overview](./SYSTEM_OVERVIEW.md)
@@ -54,4 +61,5 @@ Central index for ewatrade product, architecture, engineering, database, API, de
 - [Mobile Global Search And Commerce Attribution](./features/mobile-global-search-and-commerce-attribution.md)
 - [Offline Order Operations](./features/offline-order-operations.md)
 - [Prescription Commerce](./features/prescription-commerce.md)
+- [Service Commerce](./features/service-commerce.md)
 - [Tasks Backlog](./tasks/backlog.md)

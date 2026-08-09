@@ -13,7 +13,8 @@ High-level summary of the platform, its business domains, and the current implem
 - Dispatch network coordination
 - POS and self-service checkout
 - WhatsApp-assisted commerce flows
-- Pharmacy-owned Prescription Commerce workflows
+- Service Commerce request, quote, booking, payment and fulfilment capabilities
+- Pharmacy-owned Prescription Commerce as the first regulated vertical
 
 ## Architecture Snapshot
 - Implemented platform shape: Next.js and Expo clients backed by Hono/tRPC and
@@ -32,6 +33,11 @@ High-level summary of the platform, its business domains, and the current implem
   operational writes require a connection.
 - Public Service Request, Quote acceptance, and tracking live on storefront
   routes; authenticated dashboards never live on a business subdomain.
+- Service Commerce is the approved horizontal architecture direction over the
+  existing Catalog, Customer, Commerce, Service Operations, Fulfilment,
+  Communications and Reporting boundaries. Existing `ServiceRequest` and
+  `PrescriptionRequest` aggregates stay authoritative; no universal request
+  table or platform migration is approved yet.
 - Managed domain source supports GO54 `.com.ng`, Openprovider `.com`, Paystack
   checkout and Vercel connection behind server-only adapters and jobs.
 - Prescription Commerce defines pharmacy-owned WABAs/numbers, one shared
@@ -64,3 +70,6 @@ High-level summary of the platform, its business domains, and the current implem
   verification, pharmacist release, multi-Tenant inbound WhatsApp routing,
   privacy/retention controls, and commercial reporting. Production schema and
   live-provider acceptance remain gated.
+- The proposed Service Commerce migration must preserve Generic Service and
+  Prescription compatibility, add booking as an explicit capability, and prove
+  an appointment-based second vertical before any contraction.

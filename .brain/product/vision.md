@@ -21,6 +21,8 @@ Build commerce and logistics infrastructure for African merchants that combines 
 - Strong multi-store and multi-tenant model
 - Website builder and marketplace support
 - Messaging and assisted checkout workflows
+- Business-owned WhatsApp connections that convert customer conversations into
+  governed requests, Quotes, bookings, payments and fulfilment actions
 - Offline-first sales, inventory, rep sessions, and reconciliation for small retail teams
 
 ## Retail Ops Product Direction
@@ -34,3 +36,18 @@ Build commerce and logistics infrastructure for African merchants that combines 
 - Retail Ops/Sales is the first ewatrade wedge because it creates daily operational value before broader storefront, marketplace, logistics, and automation layers are fully mature.
 - The wedge should prove merchant onboarding, product/unit modeling, stock ledger, staff workflow, offline sync, reconciliation, reports, and subscription packaging.
 - See `.brain/features/retail-ops-sales-product.md` for the A-to-Z product direction.
+
+## Service Commerce Direction
+
+- Service Commerce is the horizontal capability direction for businesses that
+  receive customer intent and then quote, book, charge, prepare, hand off,
+  deliver or complete a service.
+- Pharmacy Commerce remains the first regulated vertical and safety benchmark;
+  it is not diluted into a generic workflow. An appointment business is the
+  proposed second vertical to prove the shared booking/channel/commerce seams.
+- Businesses own their customer-facing WhatsApp WABA/number and associated
+  provider usage. EwaTrade may operate one application/webhook and reusable
+  provider-neutral infrastructure.
+- The platform migration is proposed and awaits explicit ticket approval. The
+  recommended strategy is incremental extraction with compatibility evidence,
+  not a rewrite.
