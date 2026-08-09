@@ -16,9 +16,12 @@ first design partner, not the product boundary.
 The Neon development schema was synchronized on 2026-08-09 without Docker or a
 destructive reset. An authenticated disposable pharmacy completed policy and
 role setup, activation, staff-assisted intake, explicit success/review routing,
-and desktop/mobile global-sheet QA. Live Meta, Paystack, private-media/OCR,
-full cross-channel E2E, load/security, production backfill, and production
-schema rollout remain open gates.
+and desktop/mobile global-sheet QA. A separate disposable Neon fixture now
+proves web, staff-assisted, and WhatsApp origins through human verification,
+pharmacist release, inventory-backed Quote, idempotent pickup acceptance,
+hosted-payment callback/replay, and secure pickup handoff. Live Meta, Paystack,
+private-media/OCR, cross-channel delivery parity, load/security, production
+backfill, and production schema rollout remain open gates.
 
 ## Product Definition
 

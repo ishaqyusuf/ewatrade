@@ -24,6 +24,12 @@ to be available.
 - EwaTrade agents and developers must not start, require, or fall back to a
   local Docker/PostgreSQL database. If Neon is temporarily unavailable, retry
   or report the failure; do not silently change database targets.
+- The shared Prisma client uses a bounded 10-second transaction-acquisition
+  wait and 30-second interactive-transaction timeout. Opt-in database tests
+  import that client only after the canonical local profile attests the Neon
+  target, so legitimate audited multi-write commands are not governed by
+  Prisma's five-second local default; commands must still keep transaction work
+  finite.
 - Connected local commands retain the production-identity safety comparison.
   A local command must fail closed if `.env.production` is missing or resolves
   to the same canonical database identity.

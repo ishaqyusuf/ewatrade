@@ -12,10 +12,11 @@ Shared engineering rules for future implementation work.
 - Keep tenant authorization explicit at API and repository boundaries.
 - Prefer shared types/contracts instead of copy-pasted shapes.
 - Update Brain docs in the same change set when architecture or data contracts change.
-- Multi-write catalog creation must keep its idempotent atomic transaction and
-  pass explicit bounded Prisma transaction options (`maxWait: 10_000`,
-  `timeout: 30_000`) because remote database latency can exceed Prisma's
-  five-second interactive default.
+- The shared Prisma client and any independently constructed integration client
+  must use bounded interactive transaction options (`maxWait: 10_000`,
+  `timeout: 30_000`) because remote Neon latency can exceed Prisma's
+  five-second default. Multi-write commands remain atomic and idempotent; do
+  not extend timeouts to hide unbounded work.
 
 ## Local QA And Dev Commands
 

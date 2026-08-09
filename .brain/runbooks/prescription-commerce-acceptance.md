@@ -92,12 +92,22 @@ contracting legacy Service Quote tables.
 - WhatsApp setup correctly remains unavailable without Meta credentials and
   presents manual/Embedded Signup guidance for a pharmacy-owned number. No
   external Meta message, Paystack charge, or provider mutation was performed.
-- Remaining acceptance: full web/WhatsApp pickup and delivery E2E, provider
+- Automated Neon acceptance: a disposable pharmacy and Product completed the
+  production repository flow for web, staff-assisted, and WhatsApp manual-text
+  origins through attendant verification, pharmacist release, inventory-backed
+  Quote, idempotent pickup acceptance, fake hosted checkout, paid callback and
+  callback replay, packing, pickup-code verification, and idempotent handoff.
+  The profile-attested integration test passed with 33 assertions and removed
+  its run-owned synthetic Tenant/User fixture in one atomic cleanup.
+  Hosted-Neon latency also proved that the shared Prisma client requires the
+  bounded 10-second wait/30-second interactive-transaction policy.
+- Remaining acceptance: cross-channel delivery E2E, live provider
   failure canaries, accessibility automation, load/concurrency/security,
   production Service Quote reconciliation/contraction, and production rollout.
-- Automated baseline: 405 tests pass and five database integration tests skip;
-  five unrelated mobile-navigation/Retail-Ops mock failures remain tracked
-  outside Prescription Commerce.
+- Automated baseline: 405 tests pass and eight database integration hooks/tests
+  skip by default; five unrelated mobile-navigation/Retail-Ops mock failures
+  remain tracked outside Prescription Commerce. The opt-in Prescription
+  Commerce Neon test passes separately.
 
 ## Rollback
 

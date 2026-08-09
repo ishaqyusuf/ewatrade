@@ -86,6 +86,8 @@ const env = applyDatabaseProfile(
   loadProductionDatabaseUrl(repoRoot),
 )
 
+env.EWATRADE_DATABASE_PROFILE_VERIFIED = "1"
+
 assertProdDatabaseUrl(env)
 
 const child = spawn(command, args, {

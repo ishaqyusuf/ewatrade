@@ -18,8 +18,14 @@
 Authenticated Neon-development QA now covers setup gating, policy/role
 onboarding, activation, empty queue, staff-assisted intake, explicit
 success-to-attendant-review routing, and desktop/mobile sheet scrolling. The
-existing communications/job suites cover scoped same-customer threads,
+Neon-backed database acceptance test additionally runs web, staff-assisted,
+and WhatsApp manual-text origins through attendant verification, pharmacist
+release, inventory-backed Quote issuance, idempotent pickup acceptance, hosted
+payment callback/replay, packing, secure pickup code, and idempotent handoff.
+The existing communications/job suites cover scoped same-customer threads,
 multi-pharmacy Redis context, signature rejection, retries, and opaque quick
-actions. These are partial evidence only: the first four acceptance items stay
-open until the complete cross-channel/provider, accessibility, performance,
-concurrency, security, and failure matrix is automated and executed.
+actions. These are partial evidence only: delivery-origin parity, full
+media/safety/OCR and customer-safe projection coverage,
+multi-pharmacy/provider failure coverage, accessibility, performance,
+concurrency, and security remain open acceptance work; therefore the broader
+first acceptance item stays open.

@@ -6,11 +6,13 @@
   retention, sensitive-access/break-glass controls, and Tenant reporting are
   source-complete. The Neon development schema, empty-dataset Service Quote
   backfill, authenticated setup, staff-intake, and desktop/mobile sheet QA are
-  complete. Remaining gates: production Service Quote backfill/reconciliation
-  and legacy contraction, live private
+  complete. A disposable Neon integration fixture also proves web,
+  staff-assisted, and WhatsApp origins through paid pickup handoff with
+  idempotent acceptance, callback, and handoff. Remaining gates: production
+  Service Quote backfill/reconciliation and legacy contraction, live private
   media/OCR providers, pharmacy-owned Meta WABA/number and template approvals,
   Paystack canary, legal/privacy/retention sign-off, delivery SOP approval,
-  full cross-channel E2E, load/concurrency/security testing,
+  cross-channel delivery E2E, load/concurrency/security testing,
   and one monitored test-pharmacy canary. No live provider or production schema
   change is claimed. Started Date: 2026-08-09.
 

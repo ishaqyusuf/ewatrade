@@ -17,8 +17,12 @@ export const prisma =
   globalThis.__ewatradePrisma__ ??
   new PrismaClient({
     adapter: new PrismaPg({
-      connectionString: databaseUrl
-    })
+      connectionString: databaseUrl,
+    }),
+    transactionOptions: {
+      maxWait: 10_000,
+      timeout: 30_000,
+    },
   })
 
 if (process.env.NODE_ENV !== "production") {

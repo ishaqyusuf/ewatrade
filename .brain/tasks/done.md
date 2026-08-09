@@ -17,8 +17,12 @@
   2026-08-09 synchronized the Neon development schema without Docker or reset,
   ran the zero-row idempotent Service Quote backfill twice, and completed
   authenticated policy/role onboarding, staff intake, and desktop/mobile sheet
-  QA. The final repository baseline is 405 passing, five skipped, and the same
-  five unrelated mobile-navigation/Retail-Ops mock failures; full cross-channel,
+  QA. A further Neon-backed acceptance test now passes all web,
+  staff-assisted, and WhatsApp origins through pharmacist-released paid pickup
+  completion with 33 assertions, while the shared Prisma client uses bounded
+  remote-database transaction options. The repository baseline is 405 passing,
+  eight opt-in database hooks/tests skipped, and the same five unrelated
+  mobile-navigation/Retail-Ops mock failures; cross-channel delivery,
   live-provider, production backfill/contraction, and production rollout remain
   tracked in progress.
 
