@@ -1,15 +1,18 @@
 # In Progress
 
-- Execute the owner-approved Service Commerce platform migration batch in
-  dependency order. ADR-0029 and `.scratch/service-commerce/spec.md` define a
-  horizontal capability layer over existing Catalog, Customer, Commerce, Service
-  Operations, Fulfilment, Communications and Reporting boundaries. Pharmacy
-  Commerce remains the first regulated vertical; an appointment business is
-  the second validation vertical. Thirteen dependency-ordered tickets are
-  owner-approved in `.scratch/service-commerce/issues/`. Ticket 01 is
-  `ready-for-agent`; Tickets 02-13 are approved but blocked. No platform
-  code/schema/provider migration has started, and production operations remain
-  separately authorized.
+- Amend and then execute the Service Commerce platform migration batch in
+  dependency order. ADR-0029 plus ADR-0030 and
+  `.scratch/service-commerce/spec.md` define a horizontal capability layer over
+  existing Catalog, Customer, Commerce, Service Operations, Fulfilment,
+  Communications and Reporting boundaries. Progressive Catalog lets verified
+  demand grow private draft Catalog/price history and later graduate to managed
+  inventory without automatic publication or invented stock. Pharmacy is a
+  thin regulated extension; an appointment business is the second validation
+  vertical. The revised 15-ticket batch in
+  `.scratch/service-commerce/issues/` was owner-approved on 2026-08-09. Ticket
+  01 is in progress: its compatibility prefactor is being reconciled with the
+  amended three-source contract before later tickets begin. No production
+  schema/provider operation is authorized.
   Started Date: 2026-08-09.
 
 - Complete the Prescription Commerce production rollout after the 01-20 source

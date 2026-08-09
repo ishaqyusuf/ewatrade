@@ -7,6 +7,13 @@ approved the source implementation ticket batch on the same date. Work may
 proceed one dependency-frontier ticket at a time; production database/provider
 operations remain separately authorized.
 
+Amended by ADR-0030 on 2026-08-09: Progressive Catalog is now a required shared
+capability, `commerce_inquiry` is the approved narrow Product-demand source,
+and Pharmacy is a thin regulated extension of the single shared commerce
+workspace rather than a parallel end-to-end product. The owner approved the
+revised 15-ticket source batch on 2026-08-09; implementation resumes through
+its declared dependency frontiers.
+
 ## Context
 
 EwaTrade now has two substantial commerce paths around customer intent and
@@ -45,10 +52,10 @@ provider transports remain behind package boundaries.
   may expose common source references, states and commands, but no universal
   `CustomerRequest` table or arbitrary workflow engine is introduced now.
 - Exact in-stock Product demand continues through the existing Storefront/cart
-  and Commercial Order path rather than creating artificial request work. If a
-  Product needs merchant clarification or a Quote before Order creation, the
-  compatibility slice must validate a narrow Commerce-owned inquiry source;
-  it must not relabel the intent as a Service or Prescription Request.
+  and Commercial Order path rather than creating artificial request work.
+  ADR-0030 subsequently approves a narrow Commerce-owned Inquiry when Product
+  demand needs identification, availability confirmation or a Quote; it must
+  not relabel the intent as a Service or Prescription Request.
 - A Store-scoped capability profile declares which combinations of product
   requests, service requests, quotes, bookings, payments, pickup, delivery and
   communication channels the business may activate. The server returns
@@ -94,6 +101,13 @@ provider transports remain behind package boundaries.
   appointment-based vertical, and contract only after cross-vertical evidence.
 - Completed Prescription Commerce tickets remain immutable evidence. They are
   not renamed, reopened or represented as platform implementation.
+- Progressive Catalog reuses private draft Catalog records, immutable Quote
+  history and explicit price-change commands. Requests can grow the Catalog,
+  but cannot publish records, set reusable prices or invent inventory without
+  authorized confirmation.
+- Pharmacy retains `PrescriptionRequest` and regulated evidence/policy while
+  shared channel, Catalog-adoption, Quote, payment, fulfilment and reporting
+  behavior moves under the one Service Commerce umbrella.
 
 ## Consequences
 
@@ -121,6 +135,7 @@ provider transports remain behind package boundaries.
 - `.brain/decisions/ADR-0026-prescription-commerce-product-and-operating-boundary.md`
 - `.brain/decisions/ADR-0027-tenant-owned-multi-pharmacy-whatsapp-connections.md`
 - `.brain/features/service-commerce.md`
+- `.brain/decisions/ADR-0030-progressive-catalog-and-thin-pharmacy-extension.md`
 - `.scratch/service-commerce/spec.md`
 - `.scratch/service-commerce/midday-migration-contract.md`
 - [WhatsApp Business Messaging Policy](https://whatsappbusiness.com/policy/)

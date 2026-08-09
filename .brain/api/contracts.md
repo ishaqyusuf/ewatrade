@@ -304,6 +304,39 @@
 - Privacy identity verification records the verifying user, timestamp, and a
   bounded evidence/method reference before processing can be queued.
 
+## Planned Service Commerce Progressive Catalog
+
+This contract is approved as an architecture amendment in ADR-0030 but is not
+implemented. Source work remains paused until the revised ticket batch is
+owner-approved.
+
+- The exhaustive source reference is `service | prescription |
+  commerce_inquiry`; Commerce Inquiry is limited to Product demand requiring
+  identification, availability confirmation or a Quote. Exact known Products
+  remain cart/Commercial Order commands.
+- Commerce Inquiry uses `received | needs_clarification | ready_to_quote |
+  quoted | converted | declined | withdrawn | expired`; resolving a Catalog
+  line never creates an Order or advances it to `converted`.
+- `catalogMatches` and `priceSuggestions` are authorized Tenant/Store-scoped
+  projections. Suggestions include source, currency and effective time and
+  never read another Tenant or represent missing evidence as zero.
+- `createDraftCatalog`, `linkCatalogOffering`, `promoteCatalogPrice` and
+  `graduateCatalogOffering` are separate commands with role, revision, source,
+  Store and vertical-policy checks. Saving a Quote cannot invoke them
+  implicitly.
+- Draft Catalog records remain private and unavailable to ordinary storefront
+  search. Publication/activation is an explicit command independent of Quote
+  use or managed-inventory graduation.
+- Quote prices are immutable version facts. Catalog price promotion appends an
+  attributed price change and never rewrites historical Quotes or Orders.
+- Product availability is explicitly tracked in-stock, expiring manual/
+  procure-to-order or unavailable. Only tracked in-stock creates a reservation;
+  graduation opening quantity is an explicit Stock Operation, never a value
+  inferred from request/Quote/Order history.
+- Prescription source adapters may propose/link drafts only from human-verified
+  lines. Pharmacist release and vertical policy remain required for Product
+  availability and Quote eligibility; OCR alone is never a Catalog command.
+
 ## Services
 
 - Service Request is unconfirmed intent and creates no Order/work.

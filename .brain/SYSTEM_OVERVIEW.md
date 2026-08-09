@@ -14,7 +14,7 @@ High-level summary of the platform, its business domains, and the current implem
 - POS and self-service checkout
 - WhatsApp-assisted commerce flows
 - Service Commerce request, quote, booking, payment and fulfilment capabilities
-- Pharmacy-owned Prescription Commerce as the first regulated vertical
+- Pharmacy Prescription Operations as the first thin regulated extension
 
 ## Architecture Snapshot
 - Implemented platform shape: Next.js and Expo clients backed by Hono/tRPC and
@@ -36,9 +36,13 @@ High-level summary of the platform, its business domains, and the current implem
 - Service Commerce is the approved horizontal architecture direction over the
   existing Catalog, Customer, Commerce, Service Operations, Fulfilment,
   Communications and Reporting boundaries. Existing `ServiceRequest` and
-  `PrescriptionRequest` aggregates stay authoritative; no universal request
-  table is planned. The source ticket batch is approved for dependency-ordered
-  implementation, with production operations separately gated.
+  `PrescriptionRequest` aggregates stay authoritative and a narrow
+  Commerce-owned Inquiry covers clarification/Quote-needed Product demand; no
+  universal request table is planned. Progressive Catalog reuses private draft
+  Catalog records and attributable Quote/sale price history before a business
+  adopts managed inventory. Pharmacy is a thin regulated extension of the
+  shared commerce workspace. The amended 15-ticket source batch was
+  owner-approved on 2026-08-09, with production operations separately gated.
 - Managed domain source supports GO54 `.com.ng`, Openprovider `.com`, Paystack
   checkout and Vercel connection behind server-only adapters and jobs.
 - Prescription Commerce defines pharmacy-owned WABAs/numbers, one shared
@@ -72,5 +76,6 @@ High-level summary of the platform, its business domains, and the current implem
   privacy/retention controls, and commercial reporting. Production schema and
   live-provider acceptance remain gated.
 - The approved Service Commerce migration must preserve Generic Service and
-  Prescription compatibility, add booking as an explicit capability, and prove
-  an appointment-based second vertical before any contraction.
+  Prescription compatibility, add Progressive Catalog and booking as explicit
+  capabilities, graduate accumulated drafts to managed inventory, and prove an
+  appointment-based second vertical before duplicate orchestration contracts.

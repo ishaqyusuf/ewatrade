@@ -23,10 +23,13 @@ Central index for ewatrade product, architecture, engineering, database, API, de
   staff, billing, storefront, and messaging foundations are implemented.
 - ADR-0029 defines Service Commerce as the horizontal request-to-quote/booking,
   payment, pickup/delivery, service-completion and customer-communications
-  capability direction. Pharmacy Commerce is the first regulated vertical and
-  an appointment business is the second validation vertical. The owner approved
-  the source migration batch on 2026-08-09; Ticket 01 is ready for agent work
-  and later tickets remain blocked by their declared dependencies.
+  capability direction. ADR-0030 adds Progressive Catalog: verified request
+  lines can grow private draft Catalog/price history before full inventory,
+  without automatic publication, reusable-price mutation or invented stock.
+  Pharmacy is a thin regulated extension of the shared workspace and an
+  appointment business is the second validation vertical. The revised
+  15-ticket source batch was owner-approved on 2026-08-09; implementation has
+  resumed from Ticket 01 in dependency order.
 - Mobile includes a tenant-wide global search across Orders, Customers,
   Catalog, Service Jobs, and permitted Staff, plus contextual order creation
   and auditable order/payment actor attribution.
@@ -63,4 +66,5 @@ Central index for ewatrade product, architecture, engineering, database, API, de
 - [Offline Order Operations](./features/offline-order-operations.md)
 - [Prescription Commerce](./features/prescription-commerce.md)
 - [Service Commerce](./features/service-commerce.md)
+- [Progressive Catalog And Thin Pharmacy Extension](./decisions/ADR-0030-progressive-catalog-and-thin-pharmacy-extension.md)
 - [Tasks Backlog](./tasks/backlog.md)

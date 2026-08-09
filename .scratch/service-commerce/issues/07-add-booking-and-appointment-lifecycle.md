@@ -2,11 +2,15 @@
 
 **What to build:** Add a typed Store-scoped booking capability for Service Commerce, including resources, availability, holds/confirmation, payment policy, reminders, reschedule, cancellation and completion.
 
-**Blocked by:** 02 - Configure Business Capability Profile; 03 - Establish Customer Request Interoperability Contract; 06 - Reuse Quote Payment And Order Conversion.
+**Blocked by:** 02 - Configure Business Capability Profile; 03 - Establish
+Customer Request Interoperability Contract; 05 - Deliver Channel-Neutral
+Request Intake; 06 - Reuse Quote Payment And Order Conversion; 11 - Enforce
+Vertical And Jurisdiction Eligibility.
 
-**Status:** approved; blocked
+**Status:** approved; blocked by Tickets 02, 03, 05, 06, and 11
 
-**Approval:** Owner-approved on 2026-08-09. Start only after every listed blocker is complete.
+**Approval:** Original scope and revised dependency order owner-approved on
+2026-08-09.
 
 - [ ] Model bookable Offerings, resources, Store timezone, availability rules, exceptions, duration, lead time and capacity with explicit ownership.
 - [ ] Represent scheduled, confirmed, arrived, in-service, completed, cancelled and no-show states independently from payment state.

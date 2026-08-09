@@ -1,6 +1,6 @@
 # Service Commerce Midday Migration Contract
 
-**Status:** approved for source implementation in dependency order
+**Status:** amended implementation contract approved on 2026-08-09
 
 **Source baseline:** Midday workspace inspected on 2026-08-09
 
@@ -8,10 +8,11 @@
 
 ## Purpose
 
-This contract translates the approved Service Commerce direction into the
-repository's required Midday implementation shape. The owner approved the
-source ticket batch on 2026-08-09; each ticket must still satisfy its blockers,
-and production database/provider operations remain separately authorized.
+This contract translates the Service Commerce direction plus ADR-0030's
+Progressive Catalog/thin-Pharmacy amendment into the repository's required
+Midday implementation shape. The revised 15-ticket source batch was
+owner-approved on 2026-08-09; each ticket must still satisfy its blockers, and
+production database/provider operations remain separately authorized.
 
 ## Canonical Midday References
 
@@ -95,6 +96,14 @@ thin webhook transport and deduplicated identifier-driven jobs.
   and `packages/communications/src/whatsapp.ts`. Generic Service rules are
   currently split across API and DB query modules rather than one reusable
   domain package.
+- Progressive Catalog foundation: `CatalogItem`, `SellableVariant` and
+  `SellableOffering` already support private `DRAFT` status;
+  `CommerceQuoteLine` already stores immutable names/prices and optional
+  Offering linkage; `CatalogPriceChange` records explicit reusable price
+  changes; `CommercialOrderLine` requires an Offering; Product inventory uses
+  separate Unit Configuration, Balance Source, reservation and Stock Operation
+  facts. There is no current source-link/verified-alias, historical suggestion,
+  procure-to-order availability or graduation workflow.
 - Persistence: `packages/db/prisma/models/{service-operations,commerce-quotes,commercial-orders,prescription-commerce,prescription-operations}.prisma`
   plus `packages/db/src/queries/{service-public,service-work,service-settings,service-reporting,commerce-quotes,commercial-orders,prescription-requests,prescription-payments,prescription-fulfillment,prescription-reporting,prescription-compliance,whatsapp-connections}.ts`.
 - Jobs: `packages/jobs/src/{tasks,handlers}/service-notification-dispatch.ts`,
@@ -103,6 +112,17 @@ thin webhook transport and deduplicated identifier-driven jobs.
   commercial-order reminders.
 - Acceptance: `packages/db/src/queries/prescription-commerce.integration.test.ts`
   plus focused Service, Prescription, Communications, DB and job tests.
+
+### Paused Working-Tree Prefactor
+
+Before ADR-0030, Ticket 01 began an uncommitted compatibility prefactor that
+creates `packages/service-commerce`, splits the broad Neon acceptance file into
+`packages/db/src/queries/acceptance/service-commerce/`, and passes the existing
+Service/Pharmacy matrix on the verified local Neon profile. It is not an
+accepted implementation: its source enum still reflects the superseded
+two-source contract and must be reconciled with `commerce_inquiry`, Progressive
+Catalog and the revised ticket before work resumes. Documentation must not
+represent Ticket 01 complete or the revised batch approved from this evidence.
 
 Current divergence to remove deliberately: the Service workspace owns local
 sheet instances and manually edits `URLSearchParams`; Prescription already has
@@ -115,29 +135,37 @@ also spread across API/DB rather than a focused reusable package.
 
 - `packages/service-commerce/package.json`, `tsconfig.json`, `src/index.ts`
 - `packages/service-commerce/src/schemas/index.ts` as a thin barrel over
-  `source.ts`, `capability.ts`, `action.ts`, `booking.ts` and `fulfillment.ts`
+  `source.ts`, `capability.ts`, `catalog-adoption.ts`, `action.ts`, `booking.ts`
+  and `fulfillment.ts`
 - `packages/service-commerce/src/sources.ts`: exhaustive adapters and exact
-  Product cart/Order versus discovery-approved inquiry boundary
+  Product cart/Order versus approved narrow Commerce Inquiry boundary
 - `packages/service-commerce/src/capabilities.ts`: Store readiness and vertical
   policy inputs/results
+- `packages/service-commerce/src/catalog-adoption.ts`: draft resolution,
+  verified matching, price-suggestion precedence, availability commitments and
+  graduation rules
 - `packages/service-commerce/src/actions.ts`: state-aware opaque action rules
 - `packages/service-commerce/src/bookings.ts`: availability, contention and
   lifecycle rules
 - `packages/service-commerce/src/fulfillment.ts`: shared pickup/delivery rules
 - Matching focused `*.test.ts` files beside every domain module
 - `packages/db/prisma/models/service-commerce.prisma`: Store capability,
-  vertical eligibility, opaque action, usage/cost facts and any approved narrow
-  inquiry records
+  vertical eligibility, opaque action, usage/cost facts and narrow Commerce
+  Inquiry records
+- `packages/db/prisma/models/catalog-adoption.prisma`: source-to-draft links,
+  verified aliases, availability attestations, explicit Catalog price-decision
+  attribution and graduation audit without duplicating Catalog Items
 - `packages/db/prisma/models/service-bookings.prisma`: booking/resource,
   availability, exception, hold, event and policy snapshots
 - `packages/db/src/queries/service-commerce-access.ts`
 - `packages/db/src/queries/service-commerce-sources.ts`
+- `packages/db/src/queries/service-commerce-catalog.ts`
 - `packages/db/src/queries/service-commerce-bookings.ts`
 - `packages/db/src/queries/service-commerce-fulfillment.ts`
 - `packages/db/src/queries/service-commerce-reporting.ts`
 - `apps/api/src/schemas/service-commerce.ts`
 - `apps/api/src/trpc/routers/service-commerce/index.ts` as a thin composed
-  router over `access.ts`, `queue.ts`, `actions.ts`, `bookings.ts`,
+  router over `access.ts`, `queue.ts`, `catalog.ts`, `actions.ts`, `bookings.ts`,
   `fulfillment.ts` and `reporting.ts`
 - `apps/dashboard/src/app/(shell)/service-commerce/page.tsx`
 - `apps/dashboard/src/app/(shell)/service-commerce/reports/page.tsx`
@@ -145,6 +173,7 @@ also spread across API/DB rather than a focused reusable package.
 - `apps/dashboard/src/hooks/use-service-commerce-params.ts`
 - `apps/dashboard/src/hooks/use-service-commerce-filter-params.ts`
 - `apps/dashboard/src/components/service-commerce/{service-commerce-header,open-service-commerce-sheet,service-commerce-search-filter,service-commerce-sheet-header,service-commerce-sheet-content,form-context,service-commerce-workspace,service-commerce-setup,service-commerce-report}.tsx`
+- `apps/dashboard/src/components/service-commerce/catalog-adoption/{catalog-match,price-suggestions,draft-catalog-form,inventory-graduation-form}.tsx`
 - `apps/dashboard/src/components/service-commerce/service-commerce-controllers.ts`
   as the single exhaustive mode-to-controller/schema/id map
 - `apps/dashboard/src/components/sheets/service-commerce-sheet.tsx`
@@ -181,6 +210,9 @@ also spread across API/DB rather than a focused reusable package.
 - Existing Services/Prescriptions routes, components, hooks and public pages:
   use compatible shared projections/commands incrementally and retain their
   vertical-specific UI and URLs until switch approval.
+- Existing Catalog creation, price-history and inventory query modules: expose
+  authorized draft-create, explicit price-promotion and graduation seams while
+  retaining Catalog ownership and Stock Operation authority.
 - Existing jobs: adapt notification/WhatsApp identifiers to shared Connection
   and source refs while prescription media/OCR/privacy jobs remain vertical.
 - Brain/API/database/runbook docs in the same ticket that changes their truth.
@@ -197,6 +229,9 @@ also spread across API/DB rather than a focused reusable package.
 - Move generalized WhatsApp connection/readiness contracts out of
   prescription-named exports while leaving Pharmacy channel policy and setup
   copy in `components/prescriptions/`.
+- Move request/Quote-driven draft matching and price suggestion into the shared
+  Catalog-adoption controller. Prescription components retain only verified
+  line review and pharmacist release inputs.
 - Split `prescription-commerce.integration.test.ts` into the planned acceptance
   directory with one shared fixture/atomic teardown module and separate pickup,
   delivery, Pharmacy, Service migration and cross-vertical specs.
@@ -211,6 +246,10 @@ also spread across API/DB rather than a focused reusable package.
   compatibility tests move.
 - Prescription-named WhatsApp compatibility exports only after Pharmacy and
   appointment verticals pass and no external caller remains.
+- Duplicate Prescription Quote/payment/pickup/delivery/reporting orchestration
+  after the shared workspace and source adapter pass Pharmacy acceptance;
+  `PrescriptionRequest`, private media/review/privacy records and regulated
+  policy are not contraction targets.
 - No source aggregate, production table, public URL or completed Pharmacy
   ticket is deleted by default; each needs reconciliation and owner-approved
   contraction.
@@ -235,8 +274,8 @@ also spread across API/DB rather than a focused reusable package.
 - Dashboard/application code authenticates, resolves Tenant/Store, loads
   safe URL state, prefetches typed bounded queries and composes workspaces.
 - Reusable Service Commerce schemas, capability/action rules, source adapters,
-  booking rules, fulfilment rules and provider contracts live in focused
-  packages with thin barrel exports.
+  Progressive Catalog rules, booking rules, fulfilment rules and provider
+  contracts live in focused packages with thin barrel exports.
 - API schemas are shared Zod contracts. tRPC/Hono procedures authorize and
   orchestrate; they do not own domain derivation or database transactions.
 - Query modules own persistence and must accept explicit Tenant/Store context
@@ -279,7 +318,8 @@ also spread across API/DB rather than a focused reusable package.
   `queue` only when access/readiness permits. Access-fetch failure renders a
   retry boundary and never speculatively loads private queue data.
 - `service-commerce-header.tsx` shows Store name, capability readiness text,
-  pending restriction count and links to setup/reporting. It composes
+  Catalog adoption mode, unresolved draft count, pending restriction count and
+  links to setup/reporting. It composes
   `service-commerce-search-filter.tsx` and
   `open-service-commerce-sheet.tsx`; it does not calculate policy.
 - The primary open control is `New request`. It is rendered only from the
@@ -294,13 +334,16 @@ also spread across API/DB rather than a focused reusable package.
 
 `use-service-commerce-params.ts` and its server loader own:
 
-- `serviceCommerceSheet`: enum `intake | request | quote | booking | fulfillment | connection | setup | success`
-- `sourceKind`: initial enum `service | prescription`; absent for exact Product
-  cart/Order flows. Ticket 03 may add `commerce_inquiry` only if its documented
-  discovery gate approves the narrow source and updates this contract first.
-- `sourceId`, `quoteId`, `bookingId`, `orderId`: opaque strings used only with
-  the matching mode/source; mutually irrelevant ids are cleared on transitions
-- `successKind`: enum `request | quote | booking | payment | pickup | delivery`
+- `serviceCommerceSheet`: enum `intake | request | quote | catalog_draft |
+  inventory_graduation | booking | fulfillment | connection | setup | success`
+- `sourceKind`: exact enum `service | prescription | commerce_inquiry`; absent
+  for exact Product cart/Order flows. `commerce_inquiry` is restricted to
+  Product demand requiring identification, availability confirmation or Quote.
+- `sourceId`, `sourceLineId`, `catalogItemId`, `offeringId`, `quoteId`,
+  `bookingId`, `orderId`: opaque strings used only with the matching
+  mode/source; mutually irrelevant ids are cleared on transitions
+- `successKind`: enum `request | catalog_draft | catalog_price |
+  inventory_graduation | quote | booking | payment | pickup | delivery`
   and `successId`: revalidated by an authorized detail/status query before any
   success copy renders
 
@@ -311,6 +354,7 @@ also spread across API/DB rather than a focused reusable package.
 - `sourceKinds`: array of the source enum above
 - `channels`: array of `web | staff | whatsapp`
 - `fulfillment`: array of `none | service | pickup | delivery`
+- `catalogStates`: array of `unresolved | draft | linked | graduated`
 - `assignees`: array of opaque user ids returned by the scoped filter-options
   query
 - `start`, `end`: ISO date-only values interpreted as a Store-timezone
@@ -341,13 +385,18 @@ not-found/forbidden state; it never falls through to another mode.
   and renders readiness/current-version context; it performs no fetching or
   state inference.
 - `service-commerce-sheet-content.tsx` handles loading/error/retry and delegates
-  to focused intake, request, quote, booking, fulfilment, connection, setup or
-  revalidated-success content. Unsupported combinations return a closed/error
+  to focused intake, request, quote, Catalog draft, inventory graduation,
+  booking, fulfilment, connection, setup or revalidated-success content.
+  Unsupported combinations return a closed/error
   state.
 - `form-context.tsx` creates one RHF provider for the active editable command
   using the matching shared Zod schema. Source-specific draft fields render
   through typed adapter slots; Pharmacy media/review context remains in the
   Prescription package/component tree.
+- `catalog_draft` resolves one verified source line, displays ranked existing
+  Offering matches, and creates/links a private draft only after confirmation.
+  `inventory_graduation` edits missing Catalog/inventory facts and submits one
+  explicit graduation command; neither mode publishes implicitly.
 - Move `service-intake-form.tsx`, `service-request-form.tsx` and
   `service-quote-form.tsx` presentation into focused shared content only after
   compatibility tests. `service-job-workspace.tsx` stays in Service Work.
@@ -368,7 +417,8 @@ not-found/forbidden state; it never falls through to another mode.
   `nextAction`, `commercial`, `fulfillment`, `assignee`, `updatedAt`, `actions`.
   `reference` and `customer` are sticky on desktop only; private content is not
   a column. `commercial` displays allowlisted Quote/payment/booking summary,
-  never provider ids. `nextAction` is server-projected.
+  never provider ids. It also shows an allowlisted unresolved/draft/linked/
+  graduated Catalog badge. `nextAction` is server-projected.
 - Row click opens the server-projected default detail mode and writes only
   `sourceKind`, `sourceId` and the matching sheet. Links, menu triggers, action
   buttons and customer controls call `stopPropagation`; keyboard Enter/Space
@@ -377,6 +427,10 @@ not-found/forbidden state; it never falls through to another mode.
   acceptance, booking, payment/refund, pickup/delivery and cancellation actions
   open a confirmed controller or scoped public/provider page; they never fire
   from the menu without confirmation.
+- `Resolve Catalog` appears only when the server projects an unresolved
+  verified line and the actor can manage progressive Catalog. `Update Catalog
+  price` is separate from editing the Quote and always opens confirmation with
+  affected Offering/Store scope, prior price and suggestion source.
 - `table-header.tsx` maps only the sort allowlist above. Unknown column sort
   metadata is inert. Filters use scoped option queries; clearing filters keeps
   sort/Store and returns the unfiltered queue.
@@ -395,18 +449,29 @@ subrouters that expose these procedures over shared schemas and explicit
 repository commands:
 
 - `workspaceAccess({ storeId? }) -> { tenantId, store, stores?, capabilities,
-  restrictions, canCreateAssistedRequest, canManage, canReport }`; tenant id is
-  server/private output and never a public projection.
+  restrictions, catalogAdoption, canCreateAssistedRequest, canManage,
+  canReport }`; tenant id is server/private output and never a public
+  projection.
 - `filterOptions({ storeId }) -> { assignees, statuses, sourceKinds, channels,
-  fulfillment }`, scoped to authorized options only.
+  fulfillment, catalogStates }`, scoped to authorized options only.
 - `queue({ storeId, cursor?, limit, q?, statuses?, sourceKinds?, channels?,
-  fulfillment?, assignees?, start?, end?, sort, direction }) -> { data, meta:
-  { cursor? } }`; `limit` defaults to 50 and is capped at 100.
+  fulfillment?, catalogStates?, assignees?, start?, end?, sort, direction }) ->
+  { data, meta: { cursor? } }`; `limit` defaults to 50 and is capped at 100.
 - `detail({ storeId, source: { kind, id } })` returns the source-owned
   authorized detail plus common `allowedActions`; heavy/private fields remain
   source-specific and purpose-audited.
+- `catalogMatches({ storeId, source, sourceLineId })` returns existing/draft
+  Offerings ranked by verified aliases and allowlisted similarity; raw private
+  source content is not returned outside its authorized detail.
+- `priceSuggestions({ storeId, source, sourceLineId, offeringId? })` returns
+  attributable Store-first current/accepted/completed price facts with currency
+  and effective time; unknown is explicit.
+- `createDraftCatalog`, `linkCatalogOffering`, `promoteCatalogPrice` and
+  `graduateCatalogOffering` are separate confirmed mutations. They never run as
+  a side effect of opening or saving a Quote draft.
 - `report({ storeId?, start, end })` returns allowlisted aggregate lifecycle,
-  usage, cost-known/unknown and reliability projections.
+  Progressive Catalog capture/graduation, usage, cost-known/unknown and
+  reliability projections.
 - `submitIntake`, `executeAction`, booking commands and fulfilment commands use
   discriminated shared inputs and delegate to one source/domain command. There
   is no generic free-form mutation.
@@ -415,8 +480,8 @@ Repository pagination uses a stable `(allowlistedSortValue, id)` cursor and
 adds Tenant + Store predicates before filters. Search targets only reference,
 allowlisted customer display fields and source-approved search text. Date
 filters use canonical lifecycle/queue timestamps and `[start,end)`. Assignee,
-status, source, channel and fulfilment values are validated shared enums; an
-empty/invalid allowlist never broadens a query.
+status, source, channel, fulfilment and Catalog-state values are validated
+shared enums; an empty/invalid allowlist never broadens a query.
 
 After an awaited successful mutation, invalidate exact keys in this order:
 
@@ -424,8 +489,10 @@ After an awaited successful mutation, invalidate exact keys in this order:
 2. `queue` prefixes for the affected Store and any authorized Tenant-wide view;
 3. `workspaceAccess` only when setup/readiness/connection/policy changed;
 4. `filterOptions` only when assignee/capability options changed;
-5. `report` only for lifecycle, payment, booking, fulfilment, usage/cost events;
-6. current public status/Quote/booking capability where customer state changed.
+5. Catalog match/price/adoption queries plus Catalog lists only when a draft,
+   alias, reusable price, availability or graduation fact changed;
+6. `report` only for lifecycle, payment, booking, fulfilment, usage/cost events;
+7. current public status/Quote/booking capability where customer state changed.
 
 Refetch/invalidation completes before success mode/toast. Errors remain visible
 with retry and preserve safe draft data. Optimistic writes are limited to
@@ -433,12 +500,21 @@ reversible presentation state; authoritative lifecycle state always refetches.
 
 ## Service Commerce Domain Contract
 
-- `ServiceRequest` and `PrescriptionRequest` stay authoritative. One exhaustive
-  typed source registry exposes shared references/projections/commands; UI
-  components never traverse or infer vertical policy.
-- Exact Product selections reuse cart/Commercial Order commands. If discovery
-  approves a narrow Commerce inquiry for clarification/Quote-needed Product
-  demand, it is a separate typed source rather than a universal request model.
+- `ServiceRequest`, `PrescriptionRequest` and the narrow Commerce-owned
+  `CommerceInquiry` stay authoritative. One exhaustive typed source registry
+  exposes shared references/projections/commands; UI components never traverse
+  or infer vertical policy.
+- Exact Product selections reuse cart/Commercial Order commands. Clarification/
+  Quote-needed Product demand uses `commerce_inquiry`, a separate typed source
+  rather than a universal request model.
+- Commerce Inquiry owns Product-demand lines and the exact lifecycle `received |
+  needs_clarification | ready_to_quote | quoted | converted | declined |
+  withdrawn | expired`. Draft Catalog resolution cannot convert it; only
+  current Quote acceptance creates the Order and terminal conversion.
+- Progressive Catalog reuses private draft Catalog records. Source links and
+  verified aliases enable future matching; Quote prices remain immutable
+  transaction facts; Catalog price promotion is explicit; stock is never
+  inferred from demand or sales.
 - Store capability/readiness and vertical/jurisdiction eligibility are server
   projections. Clients do not reconstruct authorization from roles/settings.
 - Commerce Quote/Order/payment rules remain in Commerce. Booking owns schedule
@@ -473,14 +549,17 @@ reversible presentation state; authoritative lifecycle state always refetches.
 
 1. Prefactor: document ownership, create compatibility tests, split oversized
    acceptance fixtures and centralize bounded run-owned cleanup.
-2. Expand: add shared package contracts and server capability projections while
-   old Pharmacy/Service exports remain authoritative.
+2. Expand: add shared package contracts, server capability/policy projections,
+   Commerce Inquiry and Progressive Catalog seams while old Pharmacy/Service
+   exports remain authoritative.
 3. Adapt: route callers through source adapters, generalized Connection/Binding,
-   reusable Commerce and Fulfilment seams, and booking.
-4. Prove: run Pharmacy and appointment vertical acceptance on `.env.local`
+   Progressive Catalog, reusable Commerce/Fulfilment seams and booking.
+4. Graduate: prove progressive Catalog records can become managed inventory
+   without losing linked request/Quote/Order/price history.
+5. Prove: run Pharmacy and appointment vertical acceptance on `.env.local`
    Neon plus authenticated desktop/mobile browser QA.
-5. Switch: change ownership only after compatibility and rollback evidence.
-6. Contract: remove old names/models/exports only under separately approved
+6. Switch: change ownership only after compatibility and rollback evidence.
+7. Contract: remove old names/models/exports only under separately approved
    production reconciliation and rollout tickets.
 
 Approved target ownership:
@@ -499,6 +578,9 @@ Approved target ownership:
 - Focused unit, repository, API, job and compatibility suites.
 - Fresh concurrency plus replay for Quote acceptance, booking contention,
   payment callbacks, pickup handoff and delivery completion.
+- Progressive Catalog capture, private-state/publication, price suggestion and
+  promotion, Tenant/Store/currency isolation, procure-to-order expiry and
+  inventory graduation with history preservation.
 - Deterministic cross-channel/cross-vertical Neon seam using only the verified
   `.env.local` development profile; local Docker/PostgreSQL is prohibited.
 - Authenticated desktop/mobile and public browser acceptance.

@@ -2,11 +2,16 @@
 
 **What to build:** Project and deliver only the customer actions valid for the current source version, Store capabilities, vertical policy and channel, including Request quote, Book, Pay now, Pick up, Delivery and Talk to staff.
 
-**Blocked by:** 04 - Generalize WhatsApp Connection And Location Binding; 06 - Reuse Quote Payment And Order Conversion; 07 - Add Booking And Appointment Lifecycle; 08 - Extract Shared Pickup And Delivery Fulfilment; 11 - Enforce Vertical And Jurisdiction Eligibility.
+**Blocked by:** 04 - Generalize WhatsApp Connection And Location Binding; 05 -
+Deliver Channel-Neutral Request Intake; 06 - Reuse Quote Payment And Order
+Conversion; 07 - Add Booking And Appointment Lifecycle; 08 - Extract Shared
+Pickup And Delivery Fulfilment; 11 - Enforce Vertical And Jurisdiction
+Eligibility.
 
-**Status:** approved; blocked
+**Status:** approved; blocked by Tickets 04, 05, 06, 07, 08, and 11
 
-**Approval:** Owner-approved on 2026-08-09. Start only after every listed blocker is complete.
+**Approval:** Original scope and revised dependency order owner-approved on
+2026-08-09.
 
 - [ ] Define one exhaustive server-side action registry keyed by typed state/capability/policy rather than UI string switches.
 - [ ] Generate opaque, expiring, single-purpose, idempotent capabilities bound to the current internal version and Store.

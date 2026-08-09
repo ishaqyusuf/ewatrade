@@ -4,12 +4,17 @@
 
 **Blocked by:** None - first expand-contract slice.
 
-**Status:** ready-for-agent
+**Status:** in progress
 
-**Approval:** Owner-approved on 2026-08-09. This is the active implementation frontier and may start now.
+**Approval:** The original slice and ADR-0030's revised source vocabulary were
+owner-approved on 2026-08-09. The compatibility prefactor is now being
+reconciled with the exact amended contract.
 
 - [ ] Verify the inspected ownership/file map in `.scratch/service-commerce/midday-migration-contract.md` against the approved implementation baseline and amend it before code only if that baseline changed.
-- [ ] Define a minimal shared vocabulary for source kind/reference, channel origin, capability/readiness, allowed action and fulfilment option without a universal request table.
+- [ ] Define a minimal shared vocabulary for `service`, `prescription` and the
+  narrow `commerce_inquiry` source kind/reference, channel origin,
+  capability/readiness, allowed action and fulfilment option without a
+  universal request table.
 - [ ] Preserve `ServiceRequest` and `PrescriptionRequest` as authoritative aggregates with typed adapters rather than cross-imported database models.
 - [ ] Add compatibility tests that capture current Generic Service and Pharmacy Commerce outcomes before ownership moves.
 - [ ] Document expand, compatibility, switch and contraction checkpoints plus rollback conditions; no contraction is part of this ticket.

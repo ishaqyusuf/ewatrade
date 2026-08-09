@@ -4,13 +4,17 @@
 
 **Blocked by:** 01 - Define Service Commerce Boundary And Compatibility Contract.
 
-**Status:** approved; blocked
+**Status:** approved; blocked by Ticket 01
 
-**Approval:** Owner-approved on 2026-08-09. Start only after every listed blocker is complete.
+**Approval:** Original and revised Progressive Catalog scope owner-approved on
+2026-08-09.
 
 - [ ] Define shared Zod contracts for capability configuration, readiness blockers, operational access and customer-visible availability.
 - [ ] Keep Tenant/Store/role/exception authorization at API and repository boundaries; clients render the returned access state.
 - [ ] Support per-Store activation while retaining Tenant-level administration and billing ownership.
+- [ ] Add a server-owned Catalog adoption mode of `progressive` or
+  `inventory_managed`, with separate readiness for private draft capture,
+  public activation, tracked stock and procure-to-order policy.
 - [ ] Make incomplete setup, restricted vertical policy, unavailable provider and disabled capability distinct states with actionable recovery.
 - [ ] Add a Midday-style setup surface with server prefetch/hydration, URL-owned safe scope, focused forms, exact invalidation and explicit loading/error/empty states.
 - [ ] Audit every activation/configuration change with actor, Store, previous/current value and reason.

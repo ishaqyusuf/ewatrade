@@ -2,11 +2,15 @@
 
 **What to build:** Generalize the implemented Tenant WhatsApp Connection and Store binding from prescription naming to a business-neutral channel boundary while preserving every pharmacy routing and readiness invariant.
 
-**Blocked by:** 01 - Define Service Commerce Boundary And Compatibility Contract; 02 - Configure Business Capability Profile.
+**Blocked by:** 01 - Define Service Commerce Boundary And Compatibility
+Contract; 02 - Configure Business Capability Profile; 03 - Establish Customer
+Request Interoperability Contract; 11 - Enforce Vertical And Jurisdiction
+Eligibility.
 
-**Status:** approved; blocked
+**Status:** approved; blocked by Tickets 01, 02, 03, and 11
 
-**Approval:** Owner-approved on 2026-08-09. Start only after every listed blocker is complete.
+**Approval:** Original scope and revised dependency order owner-approved on
+2026-08-09.
 
 - [ ] Keep each business's WABA, number, sender identity, credential reference, templates, billing owner and lifecycle Tenant-owned.
 - [ ] Preserve one EwaTrade Meta application/webhook with recipient `phone_number_id` resolution before customer or request lookup.

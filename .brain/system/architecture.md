@@ -41,8 +41,19 @@ Describe the intended technical architecture and responsibility boundaries for t
 - Service Commerce composes Catalog, Customer, Customer Access, Commerce,
   Service Operations, Fulfilment, Communications and Reporting through typed
   capability and source-adapter contracts. `ServiceRequest` and
-  `PrescriptionRequest` remain distinct sources; a universal request table and
+  `PrescriptionRequest` remain distinct sources; `CommerceInquiry` is the
+  narrow Product clarification/Quote source; a universal request table and
   arbitrary workflow engine are explicit non-goals.
+- Progressive Catalog resolves verified source lines against existing or
+  private `DRAFT` Catalog graphs, projects attributable price history, and
+  requires explicit commands for reusable price promotion, publication and
+  managed-inventory graduation. Quotes never invent stock; exact reservations
+  and opening counts remain Inventory-owned ledger operations.
+- Pharmacy uses the single shared commerce workspace and retains only its
+  regulated source, media/OCR, professional-release, substitution,
+  privacy/retention, break-glass and policy extensions. Duplicate Pharmacy
+  channel, Quote, payment, fulfilment and reporting orchestration is a
+  post-acceptance contraction target, not a permanent second platform.
 - Booking is a first-class capability with resource availability, contention,
   schedule, payment policy, reschedule/cancel and reminder semantics. It is not
   stored as generic metadata or embedded in Prescription Commerce.
@@ -154,8 +165,9 @@ Describe the intended technical architecture and responsibility boundaries for t
 - No Supabase dependency in the current architecture.
 - No direct client access to the database.
 - No universal customer-request table or arbitrary workflow engine.
-- Service Commerce migration work follows the owner-approved ticket dependency
-  frontier; production schema/provider operations remain separately authorized.
+- Service Commerce migration work is authorized under ADR-0030's approved
+  15-ticket dependency frontier; production schema/provider operations remain
+  separately authorized.
 
 ## Open Items
 - If cross-device or public Service Evidence is enabled, configure managed

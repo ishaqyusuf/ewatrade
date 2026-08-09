@@ -2,10 +2,11 @@
 
 ## Status
 
-Product, architecture and the dependency-ordered source implementation batch
-were approved on 2026-08-09 through ADR-0029 and the owner decision. Ticket 01
-is the active `ready-for-agent` frontier; later tickets are approved but blocked.
-Production schema/provider operations remain separately authorized.
+The original product direction was approved on 2026-08-09 through ADR-0029.
+ADR-0030 now amends it with Progressive Catalog and a thinner Pharmacy
+extension. The owner approved the revised dependency-ordered 15-ticket batch
+on 2026-08-09; source implementation has resumed at Ticket 01. Production
+schema/provider operations remain separately authorized.
 
 Pharmacy Commerce is the first regulated vertical and retains its completed
 implementation evidence and outstanding production gates. The approved second
@@ -15,6 +16,8 @@ consultation practice.
 ## Sources Of Truth
 
 - Decision: `.brain/decisions/ADR-0029-service-commerce-platform-core-and-vertical-capability-extensions.md`
+- Progressive Catalog/Pharmacy amendment:
+  `.brain/decisions/ADR-0030-progressive-catalog-and-thin-pharmacy-extension.md`
 - Specification: `.scratch/service-commerce/spec.md`
 - Approved tickets and execution order: `.scratch/service-commerce/issues/README.md`
 - Midday migration contract: `.scratch/service-commerce/midday-migration-contract.md`
@@ -29,6 +32,11 @@ WhatsApp, decide what it can offer, and move the customer through the allowed
 combination of Quote, booking, payment, pickup, delivery and service completion.
 It is a capability platform, not a marketplace, chatbot builder, universal
 request table or arbitrary workflow engine.
+
+The customer-facing product may present this umbrella as **Assisted Commerce**
+or **Requests & Quotes**. The internal Service Commerce name remains during
+expand-contract migration so code and persistence are not renamed before the
+revised switch gate.
 
 The platform reuses existing bounded contexts rather than replacing them:
 
@@ -51,9 +59,36 @@ reference, lifecycle and allowed-command vocabulary only after compatibility
 tests protect both paths.
 
 Exact Product selections continue through the current cart/Commercial Order
-path. Product demand that genuinely needs merchant clarification or a Quote is
-not forced into `ServiceRequest`; the first compatibility ticket must validate
-whether a narrow Commerce inquiry source is required before adding it.
+path. ADR-0030 approves `commerce_inquiry` as a narrow Commerce-owned source
+for Product demand that genuinely needs identification, availability
+confirmation or a Quote. It is not a universal request and is never relabelled
+as a Service or Prescription Request.
+
+## Progressive Catalog Adoption
+
+A Store may operate in a progressive Catalog mode before adopting complete
+managed inventory:
+
+1. An operator resolves each verified request line against an existing
+   Offering or creates a private `DRAFT` Item/Variant/Offering.
+2. Matching uses Tenant/Store-scoped verified aliases and source links. Raw
+   customer text, OCR and provider payloads never create public Catalog data.
+3. Price suggestions show attributable current Offering price, recent accepted
+   Quote or completed sale, Store-first and Tenant-wide only when authorized.
+   Each suggestion includes source, currency and effective time.
+4. The operator may enter a different Quote price. It changes only the
+   immutable Quote version unless a separate confirmed command updates the
+   reusable Catalog price and records a `CatalogPriceChange`.
+5. A Quote, request or sale never invents stock. Exact inventory reservations
+   require configured balance sources and sufficient quantity. A progressive
+   Product can instead use an explicit expiring manual/procure-to-order
+   availability commitment when Store and vertical policy permit it.
+6. Graduation enriches the same Catalog records with missing classification,
+   units, variants, SKUs/barcodes, Store availability and verified opening
+   stock. Quote, Order, price and source history remains linked.
+
+Draft, active, publicly visible and exact-inventory-ready are separate states.
+No request automatically publishes a Product, Service or medicine.
 
 ## Store Capability Profile
 
@@ -118,7 +153,9 @@ the client renders the returned capabilities and recovery states.
 
 ## Pharmacy Vertical
 
-Pharmacy Commerce consumes shared Service Commerce capabilities but retains:
+Pharmacy is a thin regulated extension of the single Service Commerce
+workspace. It does not retain separate channel, Catalog-adoption, Quote,
+payment, pickup, delivery or reporting implementations. It does retain:
 
 - private prescription media and time-limited access;
 - deterministic or approved media safety and OCR adapters;
@@ -127,6 +164,12 @@ Pharmacy Commerce consumes shared Service Commerce capabilities but retains:
 - regulated-item, privacy, retention, audit and break-glass rules;
 - inventory-backed payable mapping; and
 - pharmacy-specific pickup preparation and delivery release policy.
+
+A human-verified Prescription line may link or propose a private Catalog draft.
+OCR alone cannot create or publish medicine. Any in-stock or procure-to-order
+availability commitment remains pharmacist-released and policy-gated. The
+separate `PrescriptionRequest` aggregate enforces those rules; it is not a
+second commerce platform.
 
 As checked against Meta's published policy on 2026-08-09, drugs and healthcare
 commerce are regulated and Nigeria is not in the published over-the-counter
@@ -174,18 +217,22 @@ payment, reschedule/cancel, remind the customer and complete the service.
 
 ## Migration And Acceptance
 
-The approved migration is expand-contract and proceeds by ticket frontier:
+The amended migration remains expand-contract and proceeds by ticket frontier:
 
 1. Record current ownership and compatibility contracts.
-2. Add capability/readiness and interoperability seams without changing
-   existing pharmacy or generic service behavior.
-3. Generalize WhatsApp connection/binding and channel intake naming behind
+2. Add capability/readiness, source interoperability and vertical-policy seams
+   without changing existing pharmacy or generic service behavior.
+3. Add narrow Commerce Inquiry plus Progressive Catalog capture, matching,
+   price suggestions and explicit price promotion.
+4. Generalize WhatsApp connection/binding and channel intake naming behind
    stable contracts.
-4. Reuse Quote, payment, booking, pickup and delivery capabilities.
-5. Adapt Pharmacy Commerce and prove no regression.
-6. Prove the appointment vertical without prescription dependencies.
-7. Run cross-vertical browser, accessibility, isolation, performance, privacy,
-   security and failure-recovery acceptance before any contraction.
+5. Reuse Quote, payment, booking, pickup and delivery capabilities and prove
+   graduation from progressive Catalog to managed inventory.
+6. Adapt Pharmacy as a thin regulated extension and prove no regression.
+7. Prove the appointment vertical without prescription dependencies.
+8. Run cross-vertical browser, accessibility, isolation, performance, privacy,
+   security and failure-recovery acceptance before duplicate orchestration is
+   contracted.
 
 All local database work uses the verified `.env.local` Neon development
 database. Local Docker/PostgreSQL is prohibited. Production schema, provider or
@@ -193,8 +240,10 @@ business activation remains separately authorized.
 
 ## Execution Frontier
 
-The owner approved the source ticket batch on 2026-08-09. Ticket 01 may start;
-later tickets wait for their declared blockers. Throughout execution:
+The owner requested the batch be amended and approved the exact revised
+15-ticket breakdown on 2026-08-09. The revised batch adds Tickets 03A and 06A,
+changes blocking edges, and is now executing from Ticket 01. Throughout
+execution:
 
 - no production Prisma operation without separate authorization;
 - no renaming or contraction of Prescription Commerce before its approved

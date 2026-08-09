@@ -25,6 +25,22 @@
   closeout and corrections require the corresponding operator/manager
   capability; destructive/manager review actions are not available publicly.
 
+### Planned Progressive Catalog Extension
+
+- Progressive draft capture requires an authorized Store capability plus
+  source-line read access; it does not grant general Catalog management or
+  public publication.
+- An attendant may link an existing Offering, create an allowed private draft
+  and select/enter a Quote price. Promoting a reusable Catalog price,
+  activating/publishing an Offering and graduating to managed inventory require
+  the corresponding Catalog-management permission and explicit confirmation.
+- Opening stock remains an Inventory command with verified quantity and Stock
+  Operation attribution. Request, Quote and sales-history read permission can
+  never create or alter stock.
+- Prescription lines require human verification before draft/link access and
+  pharmacist release before regulated availability or Quote commitment. OCR,
+  ordinary Tenant membership and technical WhatsApp readiness grant neither.
+
 ## Commercial Orders
 
 - Order creation/list/read require commercial/POS capability.

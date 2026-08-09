@@ -1,6 +1,6 @@
 # Service Commerce Platform Specification
 
-**Status:** approved for source implementation in dependency order
+**Status:** amended specification approved on 2026-08-09; source implementation authorized in dependency order
 
 **Date:** 2026-08-09
 
@@ -58,9 +58,11 @@ layer references them through typed source kinds and opaque identifiers; it
 does not create a universal request table. Pharmacy-specific media, OCR,
 attendant/pharmacist review, privacy and retention remain in Pharmacy Commerce.
 
-The owner approved the expand-contract source ticket batch on 2026-08-09.
-Implementation proceeds one dependency-frontier ticket at a time. Production
-schema changes, provider mutations and rollout remain separately authorized.
+The owner approved the original expand-contract source ticket batch on
+2026-08-09 and requested the Progressive Catalog/thin-Pharmacy amendment later
+the same day. The owner approved the revised dependency graph on 2026-08-09,
+and source implementation resumes from Ticket 01. Production schema changes,
+provider mutations and rollout remain separately authorized.
 
 ## User Stories
 
@@ -103,8 +105,31 @@ schema changes, provider mutations and rollout remain separately authorized.
     through the existing cart/Commercial Order path without an artificial
     request record.
 12b. As a product customer whose demand needs clarification or a negotiated
-    Quote, my intent uses a narrow Commerce-owned inquiry source if discovery
-    proves one is required; it is not mislabeled as a Service Request.
+    Quote, my intent uses the approved narrow Commerce-owned `commerce_inquiry`
+    source; it is not mislabeled as a Service Request.
+
+### Progressive Catalog And Inventory Adoption
+
+12c. As a business without a complete Catalog, I can resolve a verified request
+    line to an existing Offering or create a private draft Product/Service
+    Catalog graph without publishing it.
+12d. As an attendant preparing a Quote, I can see price suggestions from the
+    current Offering, recent accepted Quotes and completed sales, with Store,
+    currency, source and effective time visible.
+12e. As an attendant, I can enter a different current Quote price without
+    silently changing the reusable Catalog price.
+12f. As an authorized Catalog manager, I can explicitly promote a confirmed
+    price into Catalog price history with actor, reason and source attribution.
+12g. As a business, a request, Quote or sale never creates fictional stock. I
+    must either use sufficient tracked stock or record an expiring manual/
+    procure-to-order availability commitment allowed by Store and vertical
+    policy.
+12h. As a business adopting full inventory later, I can enrich the same draft
+    records with classification, units, variants, SKUs/barcodes, Store
+    availability and verified opening stock without losing request, Quote,
+    Order or price history.
+12i. As a customer, draft or progressively captured items remain private until
+    an authorized publish/activation command explicitly makes them available.
 
 ### Channel-Neutral Intake
 
@@ -157,7 +182,9 @@ schema changes, provider mutations and rollout remain separately authorized.
 31. As a customer, a changed price, item, slot, address, delivery fee or promise
     supersedes the old capability and requires review of the new total.
 32. As a business, Order creation, inventory reservation and downstream work
-    happen atomically and exactly once.
+    happen atomically and exactly once when exact stock is configured; an
+    allowed procure-to-order item instead creates one explicit procurement/
+    fulfilment commitment and never a fabricated reservation.
 33. As a customer, `Pay now` opens a scoped EwaTrade/provider-hosted checkout;
     opening a link or tapping a button never marks payment successful.
 34. As a business, only verified provider callbacks or authorized recorded
@@ -234,7 +261,9 @@ schema changes, provider mutations and rollout remain separately authorized.
 63. As a pharmacist, I remain the only professional release authority and can
     clarify, decline, map availability or release a revisioned decision.
 64. As a pharmacy, payable lines require active Store Product Offerings and
-    sufficient current inventory, with version/revision facts captured.
+    either sufficient current inventory or an explicitly permitted,
+    pharmacist-released procure-to-order availability attestation, with
+    version/revision and expiry facts captured.
 65. As a privacy lead, prescription media, transcripts, addresses, access,
     retention, incidents and break-glass remain under pharmacy-specific rules.
 66. As a platform operator, generic capability extraction cannot weaken a
@@ -272,8 +301,9 @@ schema changes, provider mutations and rollout remain separately authorized.
     and contract phases with rollback and explicit production authorization.
 77. As a contributor, development database acceptance runs only against the
     verified `.env.local` Neon profile and never local Docker/PostgreSQL.
-78. As the product owner, my 2026-08-09 approval authorizes source work only in
-    dependency order; production database/provider operations remain separate.
+78. As the product owner, I approved the exact amended 15-ticket breakdown on
+    2026-08-09; implementation follows its blockers and keeps production
+    database/provider operations separately gated.
 
 ## Implementation Decisions
 
@@ -285,11 +315,45 @@ schema changes, provider mutations and rollout remain separately authorized.
 - Introduce shared Service Commerce contracts only for proven interoperability:
   source kind/reference, capability/readiness, allowed actions, channel origin,
   fulfilment option and public projection.
+- The exact initial source registry is `service | prescription |
+  commerce_inquiry`. Commerce Inquiry is Product clarification/Quote demand,
+  not a universal request and not an alternative to exact cart/Order flow.
+- Commerce Inquiry owns only pre-Order Product intent and its requested lines.
+  Its exact lifecycle is `received | needs_clarification | ready_to_quote |
+  quoted | converted | declined | withdrawn | expired`. Quote acceptance—not
+  line resolution or Catalog creation—converts it to one Order.
 - Keep source-specific commands behind adapters. Do not switch on vertical
   names throughout UI/API code; use an exhaustive registry at the boundary.
 - Do not add a universal request table or generic state-machine JSON.
 - Booking receives explicit typed models and commands because capacity and time
   conflicts are domain facts, not presentation metadata.
+
+### Progressive Catalog Boundary
+
+- Reuse `DRAFT` Catalog Items, Variants and Offerings rather than adding a
+  second candidate Catalog. Add typed source-origin and verified-alias records
+  only where existing Catalog/Quote history cannot express the relationship.
+- A draft Offering may be transacted only through the current authorized Quote
+  capability that created/resolved it. It is not public or generally sellable.
+- Suggestion precedence is current Offering price, recent accepted Store Quote,
+  completed Store sale, then authorized Tenant history. Draft/rejected Quotes,
+  other Tenants, mismatched currencies and expired availability cannot suggest
+  a current price.
+- Applying a suggestion or entering a price writes the immutable Quote version.
+  Catalog price promotion is a separate confirmed command that records a
+  `CatalogPriceChange`; it never rewrites historical Quote/Order snapshots. If
+  the existing Offering price is Tenant-wide, confirmation names the impact on
+  every bound Store; a Store-specific Quote is not silently promoted as a
+  Store-specific reusable price that the Catalog does not support.
+- Progressive Product availability is explicit: tracked in-stock, expiring
+  manual/procure-to-order, or unavailable. Only tracked in-stock acceptance
+  reserves a configured balance source.
+- Graduation performs verified Catalog enrichment and an explicit opening-stock
+  operation. It never derives stock from Quote or sales counts.
+- Service Offerings graduate through classification, duration/work/booking
+  policy and price completion; they do not acquire stock semantics.
+- Human confirmation owns matching. Automated similarity may rank candidates
+  but cannot merge, publish, price, substitute or create medicine autonomously.
 
 ### Midday Architecture
 
@@ -327,14 +391,18 @@ schema changes, provider mutations and rollout remain separately authorized.
 ### Migration Sequence
 
 1. Inventory current ownership and lock compatibility evidence.
-2. Add Store capability/readiness and source interoperability contracts.
-3. Generalize WhatsApp Connection/Binding naming and channel routing behind
+2. Add Store capability/readiness, source interoperability and vertical policy.
+3. Add Commerce Inquiry and Progressive Catalog capture/price suggestions.
+4. Generalize WhatsApp Connection/Binding naming and channel routing behind
    stable exports.
-4. Converge channel-neutral intake and shared Quote/payment/Order seams.
-5. Add booking, then extract reusable pickup/delivery and actions.
-6. Adapt Pharmacy Commerce without changing its vertical rules.
-7. Prove the appointment vertical.
-8. Run cross-vertical acceptance and only then consider contraction.
+5. Converge channel-neutral intake and shared Quote/payment/Order seams.
+6. Prove progressive-to-managed-inventory graduation.
+7. Add booking, then extract reusable pickup/delivery and actions.
+8. Adapt Pharmacy as a thin regulated extension without weakening its source
+   rules.
+9. Prove the appointment vertical.
+10. Run cross-vertical acceptance and only then consider contraction of
+    duplicate orchestration.
 
 ## Testing Decisions
 
@@ -354,6 +422,10 @@ fixture cleanup.
 
 - Compatibility tests protect existing Generic Service and Pharmacy Commerce
   paths before extraction and after each seam moves.
+- Progressive Catalog tests cover private draft creation, deterministic
+  matching, Store-first price suggestions, explicit override/promotion,
+  currency/Tenant isolation, stale availability, tracked versus procure-to-
+  order acceptance and graduation without history loss.
 - Unit tests cover exhaustive capability/action registries, vertical policy,
   booking availability/conflicts, fulfilment eligibility and cost attribution.
 - Repository tests cover cross-Tenant/Store rejection, atomic write graphs,
@@ -379,6 +451,9 @@ fixture cleanup.
 - Implementing a ticket before its blockers complete or beyond the approved
   source scope.
 - A universal `CustomerRequest` database aggregate.
+- A second candidate Catalog parallel to the existing draft Catalog graph.
+- Automatic public Catalog publication, reusable price updates, stock creation,
+  Product substitution or medicine mapping from raw customer/OCR text.
 - An arbitrary no-code workflow builder or customer-programmable state machine.
 - A marketplace that owns the merchant/customer relationship.
 - One shared EwaTrade WhatsApp sender for unrelated businesses.
@@ -401,5 +476,6 @@ fixture cleanup.
 - The integration acceptance file and run-owned teardown are already large.
   The fulfilment extraction ticket must split fixture helpers and lifecycle
   specs while preserving one bounded atomic cleanup boundary.
-- The batch was owner-approved on 2026-08-09. Ticket 01 is `ready-for-agent`;
-  later tickets remain `approved; blocked` until their dependencies complete.
+- The original batch was owner-approved on 2026-08-09. The owner then requested
+  this amendment and approved the revised 15-ticket batch and dependency graph
+  on the same date before source implementation resumed.

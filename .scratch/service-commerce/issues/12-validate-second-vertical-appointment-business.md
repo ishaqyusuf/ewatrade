@@ -2,13 +2,21 @@
 
 **What to build:** Configure and exercise an appointment-based business such as a salon or consultation practice through the shared Service Commerce capabilities, proving reuse without importing prescription concepts.
 
-**Blocked by:** 05 - Deliver Channel-Neutral Request Intake; 06 - Reuse Quote Payment And Order Conversion; 07 - Add Booking And Appointment Lifecycle; 09 - Deliver State-Aware Customer Actions And Notifications; 11 - Enforce Vertical And Jurisdiction Eligibility.
+**Blocked by:** 03A — Grow The Private Catalog From Requests And Quotes; 05 -
+Deliver Channel-Neutral Request Intake; 06 - Reuse Quote Payment And Order
+Conversion; 06A — Graduate Progressive Catalog To Managed Inventory; 07 - Add
+Booking And Appointment Lifecycle; 09 - Deliver State-Aware Customer Actions
+And Notifications; 11 - Enforce Vertical And Jurisdiction Eligibility.
 
-**Status:** approved; blocked
+**Status:** approved; blocked by Tickets 03A, 05, 06, 06A, 07, 09, and 11
 
-**Approval:** Owner-approved on 2026-08-09. Start only after every listed blocker is complete.
+**Approval:** Original and revised Progressive Catalog validation scope
+owner-approved on 2026-08-09.
 
 - [ ] Create a run-owned Tenant/Store fixture with Service Offerings, resources, availability, payment policy and web/staff/WhatsApp capabilities.
+- [ ] Start with an incomplete Service Catalog, capture at least one requested
+  Service as a private draft, use attributable price history, then graduate it
+  without importing Product-stock or prescription concepts.
 - [ ] Complete web, staff-assisted and WhatsApp requests through slot selection/confirmation, exact deposit or payment, reminders and service completion.
 - [ ] Exercise reschedule, cancellation/refund, no availability, concurrent slot contention, stale action and provider notification failure.
 - [ ] Prove one business-owned WhatsApp sender and Store binding without any pharmacy channel, model, role, media or release dependency.

@@ -28,7 +28,11 @@ Operational summary of the platform and how its major domains fit together.
 - Service Commerce is the approved capability direction for channel-neutral
   customer requests, Quotes, bookings, payments, pickup/delivery and service
   completion. It composes existing bounded contexts and retains typed vertical
-  source aggregates rather than introducing a universal request model.
+  source aggregates plus one narrow Commerce Inquiry rather than introducing a
+  universal request model. Progressive Catalog lets verified requests create
+  private draft Catalog records and attributable price history before managed
+  inventory; Pharmacy remains a thin regulated source/policy extension of the
+  shared workspace.
 - Managed storefront domains separate quote/payment/registrar state from
   ownership/DNS/SSL connection state and preserve the free platform hostname.
 
