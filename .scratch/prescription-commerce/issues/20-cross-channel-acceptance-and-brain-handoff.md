@@ -31,8 +31,10 @@ central-number branch selection, cross-Tenant binding rejection, signature
 rejection, retries, and opaque quick actions. A Neon-backed fixed-zone delivery
 matrix now covers web, staff-assisted, and WhatsApp origins through delivery
 Quote revision, concurrent acceptance, paid Order, packing, courier assignment,
+premature-operation rejection, failed-delivery recovery/reassignment,
 proof-backed duplicate-safe completion, privacy-safe projections, reporting,
-usage, and terminal queue removal. Provider canaries, accessibility,
+usage, and terminal queue removal. A separate authorized manual-fee path reaches
+paid acceptance with exact totals. Provider canaries, accessibility,
 performance, broad concurrency, and security remain open acceptance work under
 the separate gates above. Deterministic failure-injection
 tests now cover private-storage unavailability; OCR timeout/unavailability;

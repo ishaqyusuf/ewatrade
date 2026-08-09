@@ -11,11 +11,12 @@ courier projection, manual provider boundary, assignment/reassignment, proof-
 required delivery, structured failure/recovery, neutral communication intents,
 and terminal state rules are source-complete. Delivery transitions lock the
 exact Tenant/Store assignment row before replay and transition checks. The
-Neon matrix now proves paid preparation, courier assignment, collected,
-in-transit and delivered transitions, proof, audit events, duplicate completion,
-terminal queue removal, reporting and usage for web, staff-assisted and
-WhatsApp origins. A focused rerun rejects an actor without a Store role; domain
-and repository tests cover invalid terminal transitions, failure recovery,
+Neon matrix now rejects unpaid preparation, unpaid/unpacked assignment, and an
+actor without a Store role before proving paid preparation, courier assignment,
+structured failure, rescheduling, reassignment, collected, in-transit and
+delivered transitions, proof, audit events, duplicate completion, terminal
+queue removal, reporting and usage for web, staff-assisted and WhatsApp
+origins. Domain and repository tests cover invalid terminal transitions,
 cancellation and active-queue filtering. Live courier/SOP acceptance remains a
 separate production gate.
 

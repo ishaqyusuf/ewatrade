@@ -20,9 +20,11 @@ import {
 import { createSimpleCatalogItem } from "./catalog"
 import { getCatalogOfferingAvailability } from "./catalog-inventory"
 import {
+  approvePrescriptionManualDeliveryFee,
   createPrescriptionDeliveryAssignment,
   handoffPrescriptionPickup,
   listPrescriptionDeliveryQueue,
+  listPrescriptionManualDeliveryReviews,
   listPrescriptionPickupQueue,
   markPrescriptionDeliveryReady,
   markPrescriptionPickupReady,
@@ -224,6 +226,17 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       matchValues: ["Acceptance District"],
       name: "Acceptance District",
       promiseText: "Delivery within four hours",
+      storeId,
+      tenantId,
+    })
+    await upsertPrescriptionDeliveryZone(db, {
+      actorUserId,
+      currencyCode: "NGN",
+      feePolicy: "manual",
+      matchType: "locality",
+      matchValues: ["Manual Review District"],
+      name: "Manual Review District",
+      promiseText: "Delivery after staff confirmation",
       storeId,
       tenantId,
     })
@@ -707,6 +720,29 @@ describeWithDatabase("prescription commerce database acceptance", () => {
       clientAcceptanceId: `${origin}-delivery-acceptance-${prepared.runId}`,
       partialAcknowledged: false,
     }
+    const acceptedBeforePayment = await acceptPrescriptionDeliveryQuote(
+      db,
+      acceptanceInput,
+    )
+    await expect(
+      markPrescriptionDeliveryReady(db, {
+        actorUserId,
+        checks: { label_matches: true, pharmacist_released: true },
+        orderId: acceptedBeforePayment.orderId,
+        storeId,
+        tenantId,
+      }),
+    ).rejects.toThrow()
+    await expect(
+      createPrescriptionDeliveryAssignment(db, {
+        actorUserId,
+        courierDisplayName: "Premature Courier",
+        courierReference: `premature-unpaid-${prepared.runId}`,
+        orderId: acceptedBeforePayment.orderId,
+        storeId,
+        tenantId,
+      }),
+    ).rejects.toThrow()
     const { accepted, inventoryAfterAcceptance } = await acceptAndPay({
       accept: () => acceptPrescriptionDeliveryQuote(db, acceptanceInput),
       origin,
@@ -717,6 +753,17 @@ describeWithDatabase("prescription commerce database acceptance", () => {
     expect(Number(inventoryAfterAcceptance.reservedQuantity)).toBe(
       Number(prepared.inventoryBeforeAcceptance.reservedQuantity) + 1,
     )
+    expect(accepted.orderId).toBe(acceptedBeforePayment.orderId)
+    await expect(
+      createPrescriptionDeliveryAssignment(db, {
+        actorUserId,
+        courierDisplayName: "Premature Courier",
+        courierReference: `premature-unpacked-${prepared.runId}`,
+        orderId: accepted.orderId,
+        storeId,
+        tenantId,
+      }),
+    ).rejects.toThrow()
 
     const beforePacking = await listPrescriptionDeliveryQueue(db, {
       storeId,
@@ -753,6 +800,39 @@ describeWithDatabase("prescription commerce database acceptance", () => {
     })
     expect(assigned.status).toBe(PrescriptionDeliveryStatus.ASSIGNED)
 
+    const failed = await transitionPrescriptionDelivery(db, {
+      actorUserId,
+      assignmentId: ready.assignment.id,
+      clientOperationId: `${origin}-delivery-failed-${prepared.runId}`,
+      reason: "Synthetic customer unavailable",
+      status: "failed",
+      storeId,
+      tenantId,
+    })
+    expect(failed.assignment.status).toBe(PrescriptionDeliveryStatus.FAILED)
+    const rescheduled = await transitionPrescriptionDelivery(db, {
+      actorUserId,
+      assignmentId: ready.assignment.id,
+      clientOperationId: `${origin}-delivery-rescheduled-${prepared.runId}`,
+      reason: "Synthetic customer confirmed a new time",
+      status: "rescheduled",
+      storeId,
+      tenantId,
+    })
+    expect(rescheduled.assignment.status).toBe(
+      PrescriptionDeliveryStatus.RESCHEDULED,
+    )
+    const reassigned = await createPrescriptionDeliveryAssignment(db, {
+      actorUserId,
+      courierDisplayName: "Synthetic Recovery Courier",
+      courierPhoneMasked: "******2222",
+      courierReference: `recovery-courier-${prepared.runId}`,
+      orderId: accepted.orderId,
+      storeId,
+      tenantId,
+    })
+    expect(reassigned.status).toBe(PrescriptionDeliveryStatus.ASSIGNED)
+
     const operationalQueue = await listPrescriptionDeliveryQueue(db, {
       storeId,
       tenantId,
@@ -766,8 +846,8 @@ describeWithDatabase("prescription commerce database acceptance", () => {
         promiseText: "Delivery within four hours",
       },
       prescriptionDeliveryAssignment: {
-        courierDisplayName: "Synthetic Courier",
-        courierReference: `courier-${prepared.runId}`,
+        courierDisplayName: "Synthetic Recovery Courier",
+        courierReference: `recovery-courier-${prepared.runId}`,
         status: "ASSIGNED",
       },
       totalMinor: 3_000,
@@ -846,6 +926,9 @@ describeWithDatabase("prescription commerce database acceptance", () => {
     expect(completionEvents.map((event) => event.type)).toEqual([
       "CREATED",
       "ASSIGNED",
+      "FAILED",
+      "RESCHEDULED",
+      "ASSIGNED",
       "COLLECTED",
       "IN_TRANSIT",
       "DELIVERED",
@@ -867,7 +950,7 @@ describeWithDatabase("prescription commerce database acceptance", () => {
         where: { orderId: accepted.orderId, storeId, tenantId },
       })
     expect(communicationIntents.map((intent) => intent.type)).toEqual(
-      expect.arrayContaining(["DELIVERY_PROGRESS"]),
+      expect.arrayContaining(["DELIVERY_FAILED", "DELIVERY_PROGRESS"]),
     )
     expect(JSON.stringify(communicationIntents)).not.toMatch(
       /Acceptance Road|Acceptance Medicine|objectKey|transcription/i,
@@ -898,8 +981,97 @@ describeWithDatabase("prescription commerce database acceptance", () => {
 
     test(`completes a fixed-fee paid delivery lifecycle from ${origin} intake`, async () => {
       expect(await completeDelivery(origin)).toEqual(expect.any(String))
-    }, 240_000)
+    }, 360_000)
   }
+
+  test("completes an authorized manual-fee delivery quote through paid acceptance", async () => {
+    const prepared = await prepareReleasedQuote("web", "delivery")
+    const manualSelection = await revisePrescriptionQuoteForDelivery(db, {
+      acceptanceToken: prepared.quoteToken,
+      address: {
+        addressLine1: "2 Synthetic Manual Review Road",
+        locality: " manual review district ",
+        postalCode: "100002",
+        recipientName: "Synthetic Acceptance Customer",
+        recipientPhone: "+2348111111111",
+        region: "Lagos",
+      },
+    })
+    expect(manualSelection).toMatchObject({
+      acceptanceToken: null,
+      outcome: "manual_review",
+    })
+    if (manualSelection.outcome !== "manual_review") {
+      throw new Error("Manual delivery review was not created.")
+    }
+    const reviews = await listPrescriptionManualDeliveryReviews(db, {
+      storeId,
+      tenantId,
+    })
+    expect(reviews.map((review) => review.id)).toContain(
+      manualSelection.manualReviewId,
+    )
+    const clientDecisionId = `manual-delivery-${prepared.runId}`
+    const approved = await approvePrescriptionManualDeliveryFee(db, {
+      actorUserId,
+      addressId: manualSelection.manualReviewId,
+      clientDecisionId,
+      feeMinor: 750,
+      reason: "Synthetic courier estimate confirmed",
+      storeId,
+      tenantId,
+    })
+    if (!approved.acceptanceToken) {
+      throw new Error("Approved manual delivery token was not issued.")
+    }
+    await expect(
+      getPublicPrescriptionQuote(db, {
+        acceptanceToken: prepared.quoteToken,
+      }),
+    ).rejects.toThrow("Quote is unavailable")
+    const manualQuote = await getPublicPrescriptionQuote(db, {
+      acceptanceToken: approved.acceptanceToken,
+    })
+    expect(manualQuote).toMatchObject({
+      fulfilmentFeeMinor: 750,
+      fulfilmentPromise: "Delivery after staff confirmation",
+      fulfilmentType: "delivery",
+      totalMinor: 3_250,
+      version: 2,
+    })
+    expect(JSON.stringify(manualQuote)).not.toMatch(
+      /Manual Review Road|2348111111111|evaluationReason|tenantId/i,
+    )
+    const acceptanceInput = {
+      acceptanceToken: approved.acceptanceToken,
+      clientAcceptanceId: `manual-delivery-acceptance-${prepared.runId}`,
+      partialAcknowledged: false,
+    }
+    const acceptedBeforePayment = await acceptPrescriptionDeliveryQuote(
+      db,
+      acceptanceInput,
+    )
+    await expect(
+      markPrescriptionDeliveryReady(db, {
+        actorUserId,
+        checks: { label_matches: true, pharmacist_released: true },
+        orderId: acceptedBeforePayment.orderId,
+        storeId,
+        tenantId,
+      }),
+    ).rejects.toThrow()
+    const { accepted, inventoryAfterAcceptance } = await acceptAndPay({
+      accept: () => acceptPrescriptionDeliveryQuote(db, acceptanceInput),
+      origin: "web",
+      quoteToken: approved.acceptanceToken,
+      runId: `manual-${prepared.runId}`,
+      totalMinor: 3_250,
+    })
+    expect(accepted.orderId).toBe(acceptedBeforePayment.orderId)
+    expect(Number(inventoryAfterAcceptance.reservedQuantity)).toBe(
+      Number(prepared.inventoryBeforeAcceptance.reservedQuantity) + 1,
+    )
+  }, 360_000)
 
   test("completes the Commerce Quote Service request-to-order lifecycle", async () => {
     const runId = randomUUID()

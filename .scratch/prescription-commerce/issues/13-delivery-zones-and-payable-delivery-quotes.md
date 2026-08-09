@@ -16,7 +16,11 @@ transaction. A disposable Neon fixture now exercises web, staff-assisted, and
 WhatsApp origins through fixed-zone address selection, immutable delivery Quote
 revision, stale-token rejection, concurrent acceptance, exact fee/payment,
 address-safe projections, inventory reservation, and Tenant/Store-scoped queue
-reads. Live delivery SOP acceptance remains a separate production gate.
+reads. A separate Neon path now proves manual-zone review, authorized
+reasoned-fee approval, immutable Quote revision, stale-token rejection,
+address-safe public output, idempotent acceptance, exact payment, and one
+inventory reservation. Live delivery SOP acceptance remains a separate
+production gate.
 
 - [x] Owner/admin users can enable delivery and configure service areas, fixed or manual fee policy, promise text, and unavailable-area behavior per store.
 - [x] Customers enter or confirm delivery details through a secure scoped route; sensitive address fields are not placed in URLs, analytics, or routine logs.

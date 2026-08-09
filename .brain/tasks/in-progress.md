@@ -25,9 +25,11 @@
   fixed/manual delivery-zone boundary rules and explicit Tenant scoping are
   source-tested. A second Neon matrix now completes fixed-zone delivery for all
   three origins through Quote revision, concurrent acceptance, exact payment,
-  preparation, courier assignment, proof-backed duplicate-safe completion,
-  privacy projections, reporting, usage, and terminal queue removal. A focused
-  current-source rerun also rejects an actor without a Store role.
+  preparation, courier assignment, structured failure/recovery/reassignment,
+  proof-backed duplicate-safe completion, privacy projections, reporting,
+  usage, and terminal queue removal. Every origin rejects unpaid/unpacked
+  operations and an actor without a Store role; a separate Neon route proves
+  authorized manual-fee review through exact paid acceptance.
   The legacy Service Quote backfill regression proves complete mapped-graph
   preservation and rejects same-count corruption, while a profile-attested
   current Service Request-to-Commerce-Quote-to-Commercial-Order Neon lifecycle

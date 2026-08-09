@@ -22,8 +22,9 @@ deterministic safety/OCR, human verification, pharmacist release,
 inventory-backed Quote, idempotent pickup acceptance, hosted-payment
 callback/replay, and secure pickup handoff. The same origins now also complete
 fixed-zone delivery Quote revision, concurrent acceptance, exact payment,
-packing, courier assignment, collected/in-transit transitions, and proof-backed
-idempotent delivery. Focused
+packing, courier assignment, failed-delivery recovery/reassignment,
+collected/in-transit transitions, and proof-backed idempotent delivery. A
+separate authorized manual-fee route reaches exact paid acceptance. Focused
 communications/database/job tests prove independent pharmacy senders,
 `phone_number_id` routing, central-number branch selection, and same-customer
 Tenant/Store isolation. Live Meta, Paystack, private-media/OCR, courier/SOP,
@@ -292,8 +293,10 @@ and cannot be resolved without a post-use review.
   inspect customer-safe, management, inventory, payment, audit, reporting, and
   usage projections. Concurrent identical pickup and delivery acceptance is
   exercised for every origin and resolves to one Order; delivery completion is
-  proof-backed and duplicate-safe. Live-provider and courier/SOP acceptance
-  remain external gates.
+  proof-backed and duplicate-safe. The primary delivery seam also rejects
+  unpaid/unpacked operations, recovers a structured failed delivery, and proves
+  reasoned manual-fee approval. Live-provider and courier/SOP acceptance remain
+  external gates.
 - The shared Commerce Quote seam has complementary migration evidence for the
   existing Service journey: a two-version legacy Quote survives idempotent
   full-graph backfill reconciliation and same-count corruption fails closed,
