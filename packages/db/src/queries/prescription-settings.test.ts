@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test"
 
+import type { PrismaClient } from "../../generated/prisma/client"
 import {
+  assertActivePrescriptionStore,
+  assertPrescriptionStoreRole,
   evaluatePrescriptionStoreReadiness,
   validatePrescriptionRoleAssignment,
 } from "./prescription-settings"
@@ -70,5 +73,115 @@ describe("Prescription Commerce store readiness", () => {
         role: "attendant",
       }),
     ).toEqual({ credentialReference: null, credentialVerifiedAt: null })
+  })
+})
+
+describe("Prescription Commerce Store authorization", () => {
+  test("requires active settings in the exact Tenant and Store", async () => {
+    const queries: unknown[] = []
+    const db = {
+      prescriptionStoreSettings: {
+        findFirst: async (input: unknown) => {
+          queries.push(input)
+          return null
+        },
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      assertActivePrescriptionStore(db, {
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      }),
+    ).rejects.toMatchObject({ code: "PRESCRIPTION_NOT_ACTIVE" })
+    expect(queries).toEqual([
+      {
+        where: {
+          status: "ACTIVE",
+          storeId: "store-1",
+          tenantId: "tenant-1",
+        },
+      },
+    ])
+  })
+
+  test("accepts only the requested active Store role and verified pharmacist", async () => {
+    const roleQueries: unknown[] = []
+    let currentRole: Record<string, unknown> | null = {
+      credentialReference: null,
+      credentialVerifiedAt: null,
+      id: "attendant-role",
+    }
+    const db = {
+      prescriptionStoreRole: {
+        findFirst: async (input: unknown) => {
+          roleQueries.push(input)
+          return currentRole
+        },
+      },
+      prescriptionStoreSettings: {
+        findFirst: async () => ({ id: "settings-1" }),
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      assertPrescriptionStoreRole(db, {
+        role: "attendant",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+        userId: "user-1",
+      }),
+    ).resolves.toMatchObject({ id: "attendant-role" })
+    currentRole = {
+      credentialReference: null,
+      credentialVerifiedAt: null,
+      id: "pharmacist-role",
+    }
+    await expect(
+      assertPrescriptionStoreRole(db, {
+        role: "pharmacist",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+        userId: "user-2",
+      }),
+    ).rejects.toMatchObject({ code: "PRESCRIPTION_ROLE_REQUIRED" })
+    currentRole = null
+    await expect(
+      assertPrescriptionStoreRole(db, {
+        role: "attendant",
+        storeId: "other-store",
+        tenantId: "tenant-1",
+        userId: "ordinary-user",
+      }),
+    ).rejects.toMatchObject({ code: "PRESCRIPTION_ROLE_REQUIRED" })
+    expect(roleQueries).toEqual([
+      {
+        where: {
+          role: "ATTENDANT",
+          status: "ACTIVE",
+          storeId: "store-1",
+          tenantId: "tenant-1",
+          userId: "user-1",
+        },
+      },
+      {
+        where: {
+          role: "PHARMACIST",
+          status: "ACTIVE",
+          storeId: "store-1",
+          tenantId: "tenant-1",
+          userId: "user-2",
+        },
+      },
+      {
+        where: {
+          role: "ATTENDANT",
+          status: "ACTIVE",
+          storeId: "other-store",
+          tenantId: "tenant-1",
+          userId: "ordinary-user",
+        },
+      },
+    ])
   })
 })

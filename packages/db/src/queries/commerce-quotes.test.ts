@@ -4,6 +4,7 @@ import type { PrismaClient } from "../../generated/prisma/client"
 import {
   assertCommerceQuoteSource,
   assertQuoteVersionAcceptable,
+  getCommerceQuoteAcceptanceContext,
   resolveCommerceQuoteAccess,
 } from "./commerce-quotes"
 
@@ -52,6 +53,86 @@ describe("Commerce Quote invariants", () => {
         versionId: "version_1",
       }),
     ).toThrow("Only the current unexpired Quote Version can be accepted")
+
+    for (const status of [
+      "accepted",
+      "declined",
+      "draft",
+      "expired",
+      "revoked",
+      "superseded",
+    ] as const) {
+      expect(() =>
+        assertQuoteVersionAcceptable({
+          currentVersionId: "version_1",
+          expiresAt: null,
+          now,
+          status,
+          versionId: "version_1",
+        }),
+      ).toThrow("Only the current unexpired Quote Version can be accepted")
+    }
+  })
+
+  test("replays only the original acceptance command identity", async () => {
+    let reads = 0
+    const db = {
+      commerceQuoteVersion: {
+        findFirst: async () => {
+          reads += 1
+          return reads === 1
+            ? { id: "version-1" }
+            : {
+                acceptanceClientId: "acceptance-1",
+                acceptedOrderId: "order-1",
+                id: "version-1",
+                quote: { currentVersionId: "version-1" },
+                status: "ACCEPTED",
+              }
+        },
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      getCommerceQuoteAcceptanceContext(db, {
+        acceptanceToken: "opaque-token",
+        clientAcceptanceId: "acceptance-1",
+      }),
+    ).resolves.toMatchObject({ replayOrderId: "order-1" })
+    reads = 0
+    await expect(
+      getCommerceQuoteAcceptanceContext(db, {
+        acceptanceToken: "opaque-token",
+        clientAcceptanceId: "different-acceptance",
+      }),
+    ).rejects.toMatchObject({ code: "IDEMPOTENCY_MISMATCH" })
+  })
+
+  test("prevents an unavailable current Quote from creating an Order", async () => {
+    let reads = 0
+    const db = {
+      commerceQuoteVersion: {
+        findFirst: async () => {
+          reads += 1
+          return reads === 1
+            ? { id: "version-1" }
+            : {
+                availabilityOutcome: "UNAVAILABLE",
+                expiresAt: null,
+                id: "version-1",
+                quote: { currentVersionId: "version-1" },
+                status: "ISSUED",
+              }
+        },
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      getCommerceQuoteAcceptanceContext(db, {
+        acceptanceToken: "opaque-token",
+        clientAcceptanceId: "acceptance-1",
+      }),
+    ).rejects.toMatchObject({ code: "QUOTE_CONFLICT" })
   })
 
   test("resolves a WhatsApp Quote capability by digest without storing its bearer token", async () => {

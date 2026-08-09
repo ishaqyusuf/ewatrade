@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test"
 
+import { canManageTenant, ewatradeRoles } from "@ewatrade/auth"
+
 import {
   prescriptionActivationSchema,
   prescriptionPrivacyRequestSchema,
@@ -10,6 +12,22 @@ import {
 } from "./prescriptions"
 
 describe("Prescription Commerce setup schemas", () => {
+  test("reserves setup authority for Owner and Admin", () => {
+    expect(
+      Object.fromEntries(
+        ewatradeRoles.map((role) => [role, canManageTenant(role)]),
+      ),
+    ).toEqual({
+      ADMIN: true,
+      CASHIER: false,
+      MANAGER: false,
+      MEMBER: false,
+      OPERATOR: false,
+      OWNER: true,
+      SUPPORT: false,
+    })
+  })
+
   test("accepts a complete store policy configuration", () => {
     expect(
       prescriptionStoreSettingsUpdateSchema.parse({
