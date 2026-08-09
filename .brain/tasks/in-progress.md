@@ -16,16 +16,20 @@
   failure handling. Focused intake and safety tests additionally prove exact
   Store-role attribution, idempotent intake, inactive-Store rejection,
   callback replay, expiring re-upload, revision invalidation, and private-media
-  page navigation/rotation is now source-complete in the attendant workspace.
+  page navigation/rotation are source-complete in the attendant workspace;
+  short-lived viewer grants now expose reauthorization after expiry/embed
+  failure and share the API media contract.
   The Neon matrix also proves concurrent identical pickup acceptance for all
   three origins after adding loser-transaction recovery to the idempotency seam.
   A focused Neon web-origin rerun proves row-locked concurrent pickup handoff;
   fixed/manual delivery-zone boundary rules and explicit Tenant scoping are
   source-tested, while delivery customer-flow acceptance remains open.
-  The legacy Service Quote backfill regression and a profile-attested current
-  Service Request-to-Commerce-Quote-to-Commercial-Order Neon lifecycle now
-  cover the pre/post migration behavior; production reconciliation and legacy
-  contraction remain separately gated.
+  The legacy Service Quote backfill regression proves complete mapped-graph
+  preservation and rejects same-count corruption, while a profile-attested
+  current Service Request-to-Commerce-Quote-to-Commercial-Order Neon lifecycle
+  covers the post-migration runtime. A complete retired-runtime before/after
+  behavioral regression, production reconciliation, and legacy contraction
+  remain separately gated.
   Embedded Signup tamper/expiry/session scope and the dynamic connection
   readiness job now have focused fake-provider tests; live Meta and template
   canaries remain open.

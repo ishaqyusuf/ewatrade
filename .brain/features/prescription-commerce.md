@@ -113,9 +113,11 @@ integration path to the broader EwaTrade commerce platform.
   audit history.
 - The attendant workspace shows short-lived authorized original pages beside
   the draft, with page selection, previous/next navigation, and 90-degree
-  rotation. It creates a new revision for corrections/additions/deletions and
-  exposes history to the pharmacist. Pharmacist mappings explicitly capture
-  alternatives and customer-visible wording.
+  rotation. It tracks each grant expiry and exposes reauthorization after an
+  expired or failed embed. It creates a new revision for
+  corrections/additions/deletions and exposes history to the pharmacist.
+  Pharmacist mappings explicitly capture alternatives and customer-visible
+  wording.
 - Safety, privacy, or pharmacy-error incidents are rollout-stopping
   guardrails, irrespective of commercial conversion.
 
@@ -287,12 +289,13 @@ and cannot be resolved without a post-use review.
   usage projections. Concurrent identical pickup acceptance is exercised for
   every origin and resolves to one Order; delivery and live-provider acceptance
   remain external gates.
-- The shared Commerce Quote seam also has pre/post migration evidence for the
+- The shared Commerce Quote seam has complementary migration evidence for the
   existing Service journey: a two-version legacy Quote survives idempotent
-  backfill, while a profile-attested Neon Service Request completes current
-  public submission, Quote issue/read, idempotent acceptance, conversion, and
-  exact Commercial Order creation. Production reconciliation and legacy model
-  contraction remain release gates.
+  full-graph backfill reconciliation and same-count corruption fails closed,
+  while a profile-attested Neon Service Request completes the current public
+  submission, Quote issue/read, idempotent acceptance, conversion, and exact
+  Commercial Order creation. The retired runtime is not executed end to end;
+  production reconciliation and legacy model contraction remain release gates.
 
 ## Related Product Areas
 

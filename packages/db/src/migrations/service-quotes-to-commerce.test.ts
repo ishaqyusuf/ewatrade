@@ -179,23 +179,99 @@ describe("legacy Service Quote backfill", () => {
     ])
   })
 
-  test("treats a matching migrated version count as an idempotent replay", async () => {
+  function replayFixture() {
+    const createdAt = new Date("2026-08-01T10:00:00.000Z")
+    const line = {
+      catalogItemName: "Laundry",
+      createdAt,
+      offeringId: "offering-1",
+      offeringName: "Standard",
+      optionSelections: [],
+      quantity: "1",
+      totalMinor: 2_000,
+      unitPriceMinor: 2_000,
+      variantName: "Shirt",
+    }
+    const legacyVersion = {
+      acceptanceClientId: null,
+      acceptanceTokenDigest: "digest-1",
+      acceptedAt: null,
+      acceptedOrderId: null,
+      clientVersionId: "client-version-1",
+      createdAt,
+      createdByUserId: "user-1",
+      currencyCode: "NGN",
+      discountMinor: 0,
+      expiresAt: null,
+      id: "legacy-version-1",
+      issuedAt: createdAt,
+      lines: [line],
+      payloadHash: "payload-1",
+      status: "ISSUED",
+      subtotalMinor: 2_000,
+      supersededAt: null,
+      taxMinor: 0,
+      totalMinor: 2_000,
+      version: 1,
+    }
+    const legacy = {
+      clientQuoteId: "legacy-client-quote",
+      createdAt,
+      createdByUserId: "user-1",
+      currentVersionId: legacyVersion.id,
+      id: "legacy-quote-1",
+      requestId: "service-request-1",
+      storeId: "store-1",
+      tenantId: "tenant-1",
+      updatedAt: createdAt,
+      versions: [legacyVersion],
+    }
+    const existing = {
+      clientQuoteId: legacy.clientQuoteId,
+      createdAt,
+      createdByUserId: legacy.createdByUserId,
+      currentVersion: { clientVersionId: legacyVersion.clientVersionId },
+      id: "commerce-quote-1",
+      sourceId: legacy.requestId,
+      sourceType: "SERVICE_REQUEST",
+      storeId: legacy.storeId,
+      tenantId: legacy.tenantId,
+      versions: [
+        {
+          ...legacyVersion,
+          availabilityOutcome: "FULL",
+          customerNote: null,
+          declinedAt: null,
+          fulfilmentFeeMinor: 0,
+          fulfilmentPromise: null,
+          fulfilmentType: "UNSPECIFIED",
+          id: "commerce-version-1",
+          lines: [
+            {
+              ...line,
+              balanceRevision: null,
+              configurationVersionId: null,
+              customerNote: null,
+              outcome: "INCLUDED",
+              sourceLineId: null,
+            },
+          ],
+          quoteId: "commerce-quote-1",
+          revokedAt: null,
+        },
+      ],
+    }
+    return { existing, legacy }
+  }
+
+  test("reconciles a complete matching Commerce graph before treating replay as migrated", async () => {
+    const { existing, legacy } = replayFixture()
     const db = {
       commerceQuote: {
         count: async () => 1,
-        findUnique: async () => ({ id: "commerce-quote-1" }),
+        findUnique: async () => existing,
       },
-      commerceQuoteVersion: { count: async () => 2 },
-      serviceQuote: {
-        findMany: async () => [
-          {
-            id: "legacy-quote-1",
-            requestId: "service-request-1",
-            tenantId: "tenant-1",
-            versions: [{}, {}],
-          },
-        ],
-      },
+      serviceQuote: { findMany: async () => [legacy] },
     } as unknown as PrismaClient
 
     await expect(backfillServiceQuotesToCommerce(db)).resolves.toEqual({
@@ -204,5 +280,23 @@ describe("legacy Service Quote backfill", () => {
       legacyCount: 1,
       migrated: 0,
     })
+  })
+
+  test("rejects a same-count Commerce graph with corrupted history", async () => {
+    const { existing, legacy } = replayFixture()
+    const [existingVersion] = existing.versions
+    if (!existingVersion) throw new Error("Replay fixture has no version.")
+    existingVersion.totalMinor = 1_999
+    const db = {
+      commerceQuote: {
+        count: async () => 1,
+        findUnique: async () => existing,
+      },
+      serviceQuote: { findMany: async () => [legacy] },
+    } as unknown as PrismaClient
+
+    await expect(backfillServiceQuotesToCommerce(db)).rejects.toThrow(
+      "does not match legacy Quote",
+    )
   })
 })

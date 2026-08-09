@@ -10,7 +10,11 @@ import { useFormContext } from "react-hook-form"
 
 import type { PrescriptionSheetMode } from "@/hooks/use-prescription-params"
 import type { PrescriptionWorkspaceFormValues } from "./form-context"
-import { PrescriptionMediaViewer } from "./prescription-media-viewer"
+import {
+  type PrescriptionMediaGrant,
+  PrescriptionMediaViewer,
+} from "./prescription-media-viewer"
+import { formatPrescriptionStatus } from "./prescription-presentation"
 import { PrescriptionSheetHeader } from "./prescription-sheet-header"
 
 type RequestDetail = RouterOutputs["prescriptions"]["detail"]
@@ -22,10 +26,6 @@ function currentTranscript(request: RequestDetail) {
   return request.transcriptions.find(
     (item) => item.revision === request.currentTranscriptRevision,
   )
-}
-
-function formatStatus(value: string) {
-  return value.toLowerCase().replaceAll("_", " ")
 }
 
 export function PrescriptionRequestWorkspace({
@@ -52,7 +52,9 @@ export function PrescriptionRequestWorkspace({
   const revisionText = watch("revisionText")
   const verifiedText = watch("verifiedText")
   const [error, setError] = useState<string | null>(null)
-  const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({})
+  const [mediaGrants, setMediaGrants] = useState<
+    Record<string, PrescriptionMediaGrant>
+  >({})
   const [pendingDecision, setPendingDecision] = useState<
     "declined" | "needs_clarification" | "released" | null
   >(null)
@@ -75,9 +77,12 @@ export function PrescriptionRequestWorkspace({
     trpc.prescriptions.mediaAccess.mutationOptions({
       onError: mutationOptions.onError,
       onSuccess: (delivery) =>
-        setMediaUrls((current) => ({
+        setMediaGrants((current) => ({
           ...current,
-          [delivery.mediaId]: delivery.url,
+          [delivery.mediaId]: {
+            expiresAt: delivery.expiresAt,
+            url: delivery.url,
+          },
         })),
     }),
   )
@@ -152,8 +157,8 @@ export function PrescriptionRequestWorkspace({
   if (allowed && !allowed.includes(request.status)) {
     return (
       <p role="alert" className="text-sm text-destructive">
-        This request has moved to {formatStatus(request.status)}. Close and
-        reopen it from the queue to continue in the current workflow.
+        This request has moved to {formatPrescriptionStatus(request.status)}.
+        Close and reopen it from the queue to continue in the current workflow.
       </p>
     )
   }
@@ -170,14 +175,15 @@ export function PrescriptionRequestWorkspace({
     <PrescriptionMediaViewer
       isAuthorizing={mediaAccess.isPending}
       media={currentMedia}
-      mediaUrls={mediaUrls}
-      onAuthorize={(mediaId) =>
+      mediaGrants={mediaGrants}
+      onAuthorize={(mediaId) => {
+        setError(null)
         mediaAccess.mutate({
           mediaId,
           reason: "Operational prescription review",
           storeId,
         })
-      }
+      }}
     />
   ) : null
 
@@ -243,17 +249,19 @@ export function PrescriptionRequestWorkspace({
     <div className="grid gap-6">
       <PrescriptionSheetHeader
         reference={request.reference}
-        status={formatStatus(request.status)}
+        status={formatPrescriptionStatus(request.status)}
       />
       <dl className="grid grid-cols-2 gap-3 text-sm">
         <div>
           <dt className="text-muted-foreground">Source</dt>
-          <dd className="mt-1 capitalize">{formatStatus(request.source)}</dd>
+          <dd className="mt-1 capitalize">
+            {formatPrescriptionStatus(request.source)}
+          </dd>
         </div>
         <div>
           <dt className="text-muted-foreground">Fulfilment</dt>
           <dd className="mt-1 capitalize">
-            {formatStatus(request.fulfilmentPreference)}
+            {formatPrescriptionStatus(request.fulfilmentPreference)}
           </dd>
         </div>
       </dl>
@@ -276,7 +284,8 @@ export function PrescriptionRequestWorkspace({
                 open={revision.revision === request.currentTranscriptRevision}
               >
                 <summary className="cursor-pointer text-sm font-medium">
-                  Revision {revision.revision} · {formatStatus(revision.status)}
+                  Revision {revision.revision} ·{" "}
+                  {formatPrescriptionStatus(revision.status)}
                 </summary>
                 <ol className="mt-3 grid gap-1 text-sm">
                   {revision.lines.map((line) => (
@@ -601,7 +610,7 @@ export function PrescriptionRequestWorkspace({
                   Confirm professional decision
                 </h5>
                 <p className="mt-1 text-sm">
-                  {formatStatus(pendingDecision)} for media revision{" "}
+                  {formatPrescriptionStatus(pendingDecision)} for media revision{" "}
                   {request.currentMediaRevision} and transcript revision{" "}
                   {transcript.revision}. This command is audited and revalidated
                   server-side.
@@ -655,7 +664,9 @@ export function PrescriptionRequestWorkspace({
                 />
               ) : (
                 <Badge className="w-fit rounded-full">
-                  {formatStatus(line.mapping?.availability ?? "unavailable")}
+                  {formatPrescriptionStatus(
+                    line.mapping?.availability ?? "unavailable",
+                  )}
                 </Badge>
               )}
             </div>

@@ -10,10 +10,12 @@
 authorized-delivery boundary, sensitive-access audit, deterministic safety fake,
 callback replay protection, and Store-scoped predicates are covered by focused
 tests. The dashboard now provides an authorized in-workspace viewer with page
-selection, previous/next navigation, and rotation. Re-upload uses a digested
-72-hour capability, increments the media revision, supersedes active transcripts,
-and fails expired/unknown capabilities closed. Live storage/scanning canaries and
-browser acceptance remain external gates.
+selection, previous/next navigation, rotation, expiry-aware grant replacement,
+and explicit reauthorization after an expired or failed embed. Re-upload uses a
+digested 72-hour capability, increments the media revision, supersedes active
+transcripts, and fails expired/unknown capabilities closed. Focused grant tests
+cover expiry and failed embeds; live storage/scanning canaries and browser
+acceptance remain external gates.
 
 - [x] Newly uploaded media passes through explicit pending, safe, quarantined, rejected, and deleted states before transcription can begin.
 - [x] Staff access uses short-lived authorized delivery rather than public URLs, and every sensitive-media access is audited.

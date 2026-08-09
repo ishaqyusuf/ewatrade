@@ -1,38 +1,68 @@
 "use client"
 
+import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Badge, Button } from "@ewatrade/ui"
 import { useEffect, useState } from "react"
 
-type PrescriptionMediaItem = {
-  id: string
-  mediaType: string
-  pageNumber: number
-  status: string
-}
+import { formatPrescriptionStatus } from "./prescription-presentation"
 
-function formatStatus(value: string) {
-  return value.toLowerCase().replaceAll("_", " ")
+type PrescriptionMediaItem =
+  RouterOutputs["prescriptions"]["detail"]["media"][number]
+export type PrescriptionMediaGrant = Pick<
+  RouterOutputs["prescriptions"]["mediaAccess"],
+  "expiresAt" | "url"
+>
+
+export function isPrescriptionMediaGrantUsable(
+  grant: PrescriptionMediaGrant | undefined,
+  now: number,
+  failed: boolean,
+) {
+  return Boolean(grant && !failed && grant.expiresAt.getTime() > now)
 }
 
 export function PrescriptionMediaViewer({
   isAuthorizing,
   media,
-  mediaUrls,
+  mediaGrants,
   onAuthorize,
 }: {
   isAuthorizing: boolean
   media: PrescriptionMediaItem[]
-  mediaUrls: Record<string, string>
+  mediaGrants: Record<string, PrescriptionMediaGrant>
   onAuthorize: (mediaId: string) => void
 }) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [rotation, setRotation] = useState(0)
+  const [failedGrantKey, setFailedGrantKey] = useState<string | null>(null)
+  const [now, setNow] = useState(() => Date.now())
   const selected = media[selectedIndex]
-  const selectedUrl = selected ? mediaUrls[selected.id] : undefined
+  const selectedGrant = selected ? mediaGrants[selected.id] : undefined
+  const selectedGrantKey =
+    selected && selectedGrant
+      ? `${selected.id}:${selectedGrant.url}`
+      : undefined
+  const grantUsable = isPrescriptionMediaGrantUsable(
+    selectedGrant,
+    now,
+    failedGrantKey === selectedGrantKey,
+  )
+  const selectedUrl = grantUsable ? selectedGrant?.url : undefined
 
   useEffect(() => {
     if (selectedIndex >= media.length) setSelectedIndex(0)
   }, [media.length, selectedIndex])
+
+  useEffect(() => {
+    if (!selectedGrant) return
+    const remaining = selectedGrant.expiresAt.getTime() - Date.now()
+    if (remaining <= 0) {
+      setNow(Date.now())
+      return
+    }
+    const timeout = window.setTimeout(() => setNow(Date.now()), remaining + 50)
+    return () => window.clearTimeout(timeout)
+  }, [selectedGrant])
 
   if (!selected) return null
 
@@ -47,7 +77,9 @@ export function PrescriptionMediaViewer({
             Page {selected.pageNumber} of {media.length}
           </p>
         </div>
-        <Badge className="rounded-full">{formatStatus(selected.status)}</Badge>
+        <Badge className="rounded-full">
+          {formatPrescriptionStatus(selected.status)}
+        </Badge>
       </div>
 
       <div className="flex min-h-80 items-center justify-center overflow-auto rounded-lg border border-border bg-muted/30 p-3">
@@ -56,6 +88,7 @@ export function PrescriptionMediaViewer({
             aria-label={`Authorized prescription page ${selected.pageNumber}`}
             className="h-96 w-full origin-center transition-transform"
             data={selectedUrl}
+            onError={() => setFailedGrantKey(selectedGrantKey ?? null)}
             style={{ transform: `rotate(${rotation}deg)` }}
             type={selected.mediaType}
           >
@@ -66,7 +99,11 @@ export function PrescriptionMediaViewer({
         ) : (
           <div className="grid max-w-sm justify-items-center gap-3 text-center">
             <p className="text-sm text-muted-foreground">
-              Authorize a short-lived private view before opening this page.
+              {failedGrantKey === selectedGrantKey
+                ? "The private view could not be loaded. Authorize a new link and try again."
+                : selectedGrant
+                  ? "This private view expired. Authorize a new short-lived link."
+                  : "Authorize a short-lived private view before opening this page."}
             </p>
             <Button
               type="button"
@@ -126,6 +163,17 @@ export function PrescriptionMediaViewer({
           >
             Rotate right
           </Button>
+          {selectedUrl ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={isAuthorizing}
+              onClick={() => onAuthorize(selected.id)}
+            >
+              Reauthorize view
+            </Button>
+          ) : null}
         </div>
       </div>
 

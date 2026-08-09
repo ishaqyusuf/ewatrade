@@ -87,8 +87,12 @@ contracting legacy Service Quote tables.
   Order creation on the profile-attested Neon development database. The test
   passed with nine assertions and cleaned the Service Request/Form graph inside
   the same bounded Tenant/User teardown transaction. Together with the
-  two-version legacy backfill regression, this covers pre/post migration
-  behavior without claiming production reconciliation.
+  two-version legacy backfill regression, this proves historical graph
+  preservation plus the current runtime without claiming execution of the
+  retired pre-migration journey or production reconciliation. Backfill replay
+  now reconciles Quote identity, every version and line, current-version
+  mapping, tokens, statuses, totals, and accepted-Order links; same-count
+  corruption fails closed.
 - Disposable pharmacy fixture: `Nile Market QA 2157482`, with synthetic owner,
   policy, weekday opening hours, weekend closure, pickup enabled, attendant and
   externally verified pharmacist roles. No real patient data was used.
