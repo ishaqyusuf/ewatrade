@@ -83,6 +83,10 @@ integration path to the broader EwaTrade commerce platform.
 - The pharmacist remains the professional release gate.
 - Original output, corrections, reviewer identity, and timestamps form the
   audit history.
+- The attendant workspace shows original pages beside the draft, creates a new
+  revision for corrections/additions/deletions, and exposes history to the
+  pharmacist. Pharmacist mappings explicitly capture alternatives and
+  customer-visible wording.
 - Safety, privacy, or pharmacy-error incidents are rollout-stopping
   guardrails, irrespective of commercial conversion.
 
@@ -201,6 +205,9 @@ outcomes, channel mix, conversion, payment, pickup, delivery, review time, and
 Store breakdowns derive from canonical lifecycle facts. EwaTrade charges,
 Meta costs, provider fees, delivery costs, tax, and pharmacy revenue stay
 separate; missing provider amounts render as unknown.
+Report Store scope is URL-owned/shareable. Issuance, acceptance, payment,
+pickup handoff, and delivery completion are counted by authoritative occurrence
+time in the half-open report window, not record creation time.
 
 Retention independently covers clinical artifacts, audit evidence, and
 commercial identity. Sensitive reads are purpose-audited. Break-glass access

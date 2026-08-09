@@ -153,6 +153,13 @@ export function prescriptionReportStoreScope(input: {
   }
 }
 
+export function isInPrescriptionReportWindow(
+  value: Date | null | undefined,
+  input: { from: Date; to: Date },
+) {
+  return Boolean(value && value >= input.from && value < input.to)
+}
+
 export async function getPrescriptionOperationsReport(
   db: PrismaClient,
   input: {
@@ -203,23 +210,45 @@ export async function getPrescriptionOperationsReport(
     db.commerceQuote.findMany({
       select: {
         currentVersion: {
-          select: { availabilityOutcome: true, status: true },
+          select: {
+            acceptedAt: true,
+            availabilityOutcome: true,
+            declinedAt: true,
+            issuedAt: true,
+            status: true,
+          },
         },
       },
       where: {
-        createdAt: scope.createdAt,
+        currentVersion: {
+          is: {
+            OR: [
+              { acceptedAt: scope.createdAt },
+              { declinedAt: scope.createdAt },
+              { issuedAt: scope.createdAt },
+            ],
+          },
+        },
         sourceType: "PRESCRIPTION_REQUEST",
         ...storeScope,
         tenantId: input.tenantId,
       },
     }),
     db.prescriptionPaymentIntent.findMany({
-      select: { amountMinor: true, status: true },
-      where: scope,
+      select: {
+        amountMinor: true,
+        createdAt: true,
+        paidAt: true,
+        status: true,
+      },
+      where: {
+        OR: [{ createdAt: scope.createdAt }, { paidAt: scope.createdAt }],
+        ...reportScope,
+      },
     }),
     db.prescriptionPickupFulfillment.count({
       where: {
-        createdAt: scope.createdAt,
+        handedOffAt: scope.createdAt,
         ...storeScope,
         tenantId: input.tenantId,
         status: "HANDED_OFF",
@@ -227,7 +256,7 @@ export async function getPrescriptionOperationsReport(
     }),
     db.prescriptionDeliveryAssignment.count({
       where: {
-        createdAt: scope.createdAt,
+        deliveredAt: scope.createdAt,
         ...storeScope,
         tenantId: input.tenantId,
         status: "DELIVERED",
@@ -253,8 +282,13 @@ export async function getPrescriptionOperationsReport(
       requests.filter((request) => request.source === source).length,
     ]),
   )
-  const paid = paymentIntents.filter((intent) =>
-    ["PAID", "PARTIALLY_REFUNDED", "REFUNDED"].includes(intent.status),
+  const paid = paymentIntents.filter(
+    (intent) =>
+      ["PAID", "PARTIALLY_REFUNDED", "REFUNDED"].includes(intent.status) &&
+      isInPrescriptionReportWindow(intent.paidAt, input),
+  )
+  const issuedQuotes = quotes.filter((quote) =>
+    isInPrescriptionReportWindow(quote.currentVersion?.issuedAt, input),
   )
   return {
     channelMix,
@@ -272,24 +306,30 @@ export async function getPrescriptionOperationsReport(
         0,
       ),
       paidCount: paid.length,
-      totalAttempts: paymentIntents.length,
+      totalAttempts: paymentIntents.filter((intent) =>
+        isInPrescriptionReportWindow(intent.createdAt, input),
+      ).length,
     },
     pickupCompleted: pickups,
-    quoteCount: quotes.length,
+    quoteCount: issuedQuotes.length,
     quoteOutcomes: {
       accepted: quotes.filter(
-        (quote) => quote.currentVersion?.status === "ACCEPTED",
+        (quote) =>
+          quote.currentVersion?.status === "ACCEPTED" &&
+          isInPrescriptionReportWindow(quote.currentVersion.acceptedAt, input),
       ).length,
       declined: quotes.filter(
-        (quote) => quote.currentVersion?.status === "DECLINED",
+        (quote) =>
+          quote.currentVersion?.status === "DECLINED" &&
+          isInPrescriptionReportWindow(quote.currentVersion.declinedAt, input),
       ).length,
-      full: quotes.filter(
+      full: issuedQuotes.filter(
         (quote) => quote.currentVersion?.availabilityOutcome === "FULL",
       ).length,
-      partial: quotes.filter(
+      partial: issuedQuotes.filter(
         (quote) => quote.currentVersion?.availabilityOutcome === "PARTIAL",
       ).length,
-      unavailable: quotes.filter(
+      unavailable: issuedQuotes.filter(
         (quote) => quote.currentVersion?.availabilityOutcome === "UNAVAILABLE",
       ).length,
     },

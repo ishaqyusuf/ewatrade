@@ -190,3 +190,9 @@ professional confirmation, and loading/error/retry states for setup and
 fulfilment. Focused queue, sheet-routing, retention, break-glass, reporting,
 and cost-projection tests pass. Authenticated browser/E2E acceptance remains
 the deliberately open item in the combined QA gate above.
+
+The repeat conformance review additionally made success IDs fail closed,
+placed all editable sheet state under form-context ownership, added immutable
+attendant transcription revisions and pharmacist alternative/customer wording,
+Tenant+Store retention predicates, guarded fulfilment reads, URL-owned report
+scope, canonical lifecycle-time reporting, and auditable privacy verification.

@@ -13,6 +13,8 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
   const queryClient = useQueryClient()
   const [message, setMessage] = useState<string | null>(null)
   const [exportRequestId, setExportRequestId] = useState("")
+  const [identityVerificationEvidence, setIdentityVerificationEvidence] =
+    useState("")
   const onMutationError = (error: { message: string }) =>
     setMessage(error.message)
   const zones = useQuery(
@@ -115,6 +117,7 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
         await queryClient.invalidateQueries({
           queryKey: trpc.prescriptions.complianceEvents.queryKey({ storeId }),
         })
+        setIdentityVerificationEvidence("")
         setMessage("Identity verified. Privacy processing was queued.")
       },
     }),
@@ -423,19 +426,35 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
                 </span>
                 <div className="flex gap-2">
                   {request.status === "PENDING" ? (
-                    <Button
-                      onClick={() =>
-                        verifyPrivacy.mutate({
-                          privacyRequestId: request.id,
-                          storeId,
-                        })
-                      }
-                      size="sm"
-                      type="button"
-                      variant="outline"
-                    >
-                      Verify identity & process
-                    </Button>
+                    <div className="grid gap-2">
+                      <input
+                        className={fieldClass}
+                        aria-label="Identity verification evidence"
+                        placeholder="Verification method and evidence reference"
+                        value={identityVerificationEvidence}
+                        onChange={(event) =>
+                          setIdentityVerificationEvidence(event.target.value)
+                        }
+                      />
+                      <Button
+                        disabled={
+                          verifyPrivacy.isPending ||
+                          !identityVerificationEvidence.trim()
+                        }
+                        onClick={() =>
+                          verifyPrivacy.mutate({
+                            identityVerificationEvidence,
+                            privacyRequestId: request.id,
+                            storeId,
+                          })
+                        }
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        Verify identity & process
+                      </Button>
+                    </div>
                   ) : null}
                   {request.status === "COMPLETED" &&
                   (request.type === "ACCESS" || request.type === "EXPORT") ? (

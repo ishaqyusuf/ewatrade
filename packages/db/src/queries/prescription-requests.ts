@@ -1695,6 +1695,119 @@ export async function verifyPrescriptionTranscriptionLine(
   })
 }
 
+export function normalizePrescriptionTranscriptionRevision(lines: string[]) {
+  const normalized = lines.map((line) => line.trim()).filter(Boolean)
+  if (normalized.length < 1 || normalized.length > 100) {
+    throw new PrescriptionRequestError(
+      "TRANSCRIPT_NOT_READY",
+      "A transcription revision requires between one and 100 lines.",
+    )
+  }
+  return normalized
+}
+
+export async function revisePrescriptionTranscriptionLines(
+  db: PrismaClient,
+  input: {
+    actorUserId: string
+    expectedTranscriptRevision: number
+    lines: string[]
+    requestId: string
+    storeId: string
+    tenantId: string
+  },
+) {
+  await assertPrescriptionStoreRole(db, {
+    ...input,
+    role: "attendant",
+    userId: input.actorUserId,
+  })
+  const lines = normalizePrescriptionTranscriptionRevision(input.lines)
+  return db.$transaction(async (tx) => {
+    const request = await tx.prescriptionRequest.findFirst({
+      include: {
+        transcriptions: {
+          include: { lines: { orderBy: { lineNumber: "asc" } } },
+          orderBy: { revision: "desc" },
+        },
+      },
+      where: {
+        currentTranscriptRevision: input.expectedTranscriptRevision,
+        id: input.requestId,
+        status: PrescriptionRequestStatus.ATTENDANT_VERIFICATION,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    })
+    const current = request?.transcriptions.find(
+      (item) => item.revision === input.expectedTranscriptRevision,
+    )
+    if (!request || !current) {
+      throw new PrescriptionRequestError(
+        "REQUEST_CONFLICT",
+        "The current transcription changed before this revision was saved.",
+      )
+    }
+    const unchanged =
+      current.lines.length === lines.length &&
+      current.lines.every(
+        (line, index) =>
+          (line.verifiedText ?? line.draftText).trim() === lines[index],
+      )
+    if (unchanged) return current
+
+    await tx.prescriptionTranscription.update({
+      data: {
+        status: PrescriptionTranscriptionStatus.SUPERSEDED,
+        supersededAt: new Date(),
+      },
+      where: { id: current.id },
+    })
+    const revision =
+      Math.max(...request.transcriptions.map((item) => item.revision)) + 1
+    const revised = await tx.prescriptionTranscription.create({
+      data: {
+        completedAt: new Date(),
+        mediaRevision: current.mediaRevision,
+        providerKey: "attendant-revision",
+        requestId: request.id,
+        requestedByUserId: input.actorUserId,
+        revision,
+        status: PrescriptionTranscriptionStatus.COMPLETED,
+        lines: {
+          create: lines.map((draftText, index) => ({
+            draftText,
+            lineNumber: index + 1,
+          })),
+        },
+      },
+      include: { lines: { orderBy: { lineNumber: "asc" } } },
+    })
+    await tx.prescriptionRequest.update({
+      data: { currentTranscriptRevision: revision },
+      where: { id: request.id },
+    })
+    await tx.prescriptionRequestAuditEvent.create({
+      data: {
+        actorUserId: input.actorUserId,
+        effectiveAt: new Date(),
+        fromStatus: request.status,
+        payload: {
+          lineCount: lines.length,
+          revision,
+          supersededRevision: current.revision,
+        },
+        requestId: request.id,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+        toStatus: request.status,
+        type: PrescriptionRequestAuditEventType.TRANSCRIPTION_COMPLETED,
+      },
+    })
+    return revised
+  })
+}
+
 export async function submitPrescriptionForPharmacistReview(
   db: PrismaClient,
   input: {

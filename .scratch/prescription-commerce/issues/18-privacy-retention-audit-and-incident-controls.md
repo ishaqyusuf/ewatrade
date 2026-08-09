@@ -14,6 +14,9 @@ are Store-scoped and queryable. Personal break-glass grants expire within 60
 minutes, are conspicuous, log every use, never grant pharmacist release, and
 require a post-use review reason. Focused retention and authorization tests and
 DB/API/dashboard/jobs typechecks pass; legal/privacy acceptance remains open.
+Identity verification now persists the verifying user, timestamp, and bounded
+evidence reference before the privacy job is queued. Retention claims and every
+candidate/redaction predicate carry Tenant and Store explicitly.
 
 - [ ] Configurable retention policies cover raw media, derived transcripts, messages, secure tokens, addresses, audit evidence, and commercial records with documented legal/business boundaries.
 - [ ] Scheduled lifecycle jobs expire or delete eligible sensitive artifacts idempotently and preserve only justified tombstones or immutable accounting evidence.

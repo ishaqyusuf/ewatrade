@@ -131,6 +131,12 @@ authenticated dashboard.
   boundaries. The reporting query accepts one authorized Store or the whole
   active Tenant and returns de-identified Store breakdowns and separated cost
   categories.
+- `prescriptions.reviseTranscription` is an attendant-only, revision-guarded
+  line correction/addition/deletion command. Pickup and delivery queue reads
+  require the same operational-role or audited break-glass access as the
+  Prescription Request queue.
+- `prescriptions.verifyPrivacyRequest` requires bounded identity-verification
+  evidence and persists the verifier before enqueueing privacy execution.
 - Sensitive detail/media/setup reads append access events. A personal
   Owner/Admin break-glass grant lasts at most 60 minutes, is conspicuous in the
   queue, logs each emergency access, and requires a reviewed resolution reason.

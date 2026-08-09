@@ -2,12 +2,32 @@ import { describe, expect, test } from "bun:test"
 
 import {
   averageDurationMs,
+  isInPrescriptionReportWindow,
   prescriptionReportStoreScope,
   prescriptionReviewDurationPairs,
   summarizePrescriptionUsageAmounts,
 } from "./prescription-reporting"
 
 describe("prescription reporting definitions", () => {
+  test("places late lifecycle events in their half-open occurrence window", () => {
+    const window = {
+      from: new Date("2026-08-01T00:00:00.000Z"),
+      to: new Date("2026-09-01T00:00:00.000Z"),
+    }
+    expect(
+      isInPrescriptionReportWindow(
+        new Date("2026-08-31T23:59:59.999Z"),
+        window,
+      ),
+    ).toBe(true)
+    expect(
+      isInPrescriptionReportWindow(
+        new Date("2026-09-01T00:00:00.000Z"),
+        window,
+      ),
+    ).toBe(false)
+  })
+
   test("uses only completed non-negative lifecycle durations", () => {
     expect(
       averageDurationMs([

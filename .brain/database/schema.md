@@ -137,6 +137,8 @@ persistence boundary. Clients never access the database directly.
 - `PrescriptionRequest` owns source/contact facts, privacy restriction,
   revisioned private media, OCR transcription/lines, catalogue mappings,
   pharmacist decisions, and append-only audit history.
+- Attendant corrections create a new `PrescriptionTranscription` revision and
+  supersede, but never overwrite, the prior OCR/reviewer-visible revision.
 - `CommerceQuote`, immutable `CommerceQuoteVersion`, and
   `CommerceQuoteLine` are the shared source-typed Quote aggregate used by both
   Service and Prescription flows. A Quote has exactly one typed source.
@@ -163,6 +165,8 @@ persistence boundary. Clients never access the database directly.
   customer-data, pharmacist-decision, credential, and break-glass access.
   `PrescriptionIncidentControl` supplies personal, time-bounded break-glass
   grants and their required post-use reviews.
+- `PrescriptionPrivacyRequest` retains the verifying user, verification time,
+  and bounded identity-verification evidence reference.
 - Usage events provide de-identified Store and Tenant reporting with platform,
   Meta, payment-provider, delivery, tax, and pharmacy-revenue amounts kept in
   separate nullable fields.

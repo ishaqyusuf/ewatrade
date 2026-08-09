@@ -51,6 +51,7 @@ import {
   requestClearerPrescriptionMedia,
   resolvePrescriptionIncidentControl,
   resolvePrescriptionRefundReconciliationMiss,
+  revisePrescriptionTranscriptionLines,
   revokePrescriptionStoreRole,
   setPrescriptionStoreActivation,
   setWhatsAppConnectionLifecycle,
@@ -99,6 +100,7 @@ import {
   prescriptionPickupReadySchema,
   prescriptionPrivacyRequestIdSchema,
   prescriptionPrivacyRequestSchema,
+  prescriptionPrivacyVerificationSchema,
   prescriptionQueueSchema,
   prescriptionQuoteIssueSchema,
   prescriptionRefundSchema,
@@ -110,6 +112,7 @@ import {
   prescriptionStaffIntakeSchema,
   prescriptionStoreSettingsUpdateSchema,
   prescriptionStoreSetupSchema,
+  prescriptionTranscriptionRevisionSchema,
   whatsappConnectionIdSchema,
   whatsappConnectionLifecycleSchema,
   whatsappEmbeddedSignupSelectionSchema,
@@ -310,7 +313,7 @@ export const prescriptionsRouter = createTRPCRouter({
     }),
 
   verifyPrivacyRequest: protectedProcedure
-    .input(prescriptionPrivacyRequestIdSchema)
+    .input(prescriptionPrivacyVerificationSchema)
     .mutation(async ({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
       const storeId = resolveStoreId(
@@ -624,30 +627,50 @@ export const prescriptionsRouter = createTRPCRouter({
 
   pickupQueue: protectedProcedure
     .input(prescriptionStoreSetupSchema)
-    .query(({ ctx, input }) => {
+    .query(async ({ ctx, input }) => {
       const storeId = resolveStoreId(
         ctx.tenantContext.stores,
         ctx.tenantContext.activeStore,
         input.storeId,
       )
-      return listPrescriptionPickupQueue(ctx.db, {
-        storeId,
-        tenantId: ctx.tenantContext.tenant.id,
-      })
+      await run(() =>
+        assertPrescriptionOperationalOrBreakGlassAccess(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          reason: "operational_pickup_queue",
+          storeId,
+          tenantId: ctx.tenantContext.tenant.id,
+        }),
+      )
+      return run(() =>
+        listPrescriptionPickupQueue(ctx.db, {
+          storeId,
+          tenantId: ctx.tenantContext.tenant.id,
+        }),
+      )
     }),
 
   deliveryQueue: protectedProcedure
     .input(prescriptionStoreSetupSchema)
-    .query(({ ctx, input }) => {
+    .query(async ({ ctx, input }) => {
       const storeId = resolveStoreId(
         ctx.tenantContext.stores,
         ctx.tenantContext.activeStore,
         input.storeId,
       )
-      return listPrescriptionDeliveryQueue(ctx.db, {
-        storeId,
-        tenantId: ctx.tenantContext.tenant.id,
-      })
+      await run(() =>
+        assertPrescriptionOperationalOrBreakGlassAccess(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          reason: "operational_delivery_queue",
+          storeId,
+          tenantId: ctx.tenantContext.tenant.id,
+        }),
+      )
+      return run(() =>
+        listPrescriptionDeliveryQueue(ctx.db, {
+          storeId,
+          tenantId: ctx.tenantContext.tenant.id,
+        }),
+      )
     }),
 
   markPickupReady: protectedProcedure
@@ -999,6 +1022,18 @@ export const prescriptionsRouter = createTRPCRouter({
     .mutation(({ ctx, input }) =>
       run(() =>
         verifyPrescriptionTranscriptionLine(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+        }),
+      ),
+    ),
+
+  reviseTranscription: protectedProcedure
+    .input(prescriptionTranscriptionRevisionSchema)
+    .mutation(({ ctx, input }) =>
+      run(() =>
+        revisePrescriptionTranscriptionLines(ctx.db, {
           actorUserId: ctx.session.user.id,
           ...input,
           tenantId: ctx.tenantContext.tenant.id,

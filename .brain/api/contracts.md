@@ -288,6 +288,11 @@
   period containing their authoritative event timestamp. Tenant reports are
   aggregates plus Store breakdowns. Missing provider costs remain `null` with
   an unknown count and are never estimated or merged into platform charges.
+- Attendant edits create a new immutable transcription revision rather than
+  rewriting OCR output. Corrections, additions, and deletions retain the prior
+  revision for pharmacist comparison with the original media.
+- Privacy identity verification records the verifying user, timestamp, and a
+  bounded evidence/method reference before processing can be queued.
 
 ## Services
 

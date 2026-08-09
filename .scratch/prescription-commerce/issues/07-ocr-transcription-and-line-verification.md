@@ -6,6 +6,12 @@
 
 **Status:** implemented-source; live-provider acceptance pending
 
+**Verification note (2026-08-09):** the attendant sheet now keeps original
+private pages beside editable lines. Corrections, additions, and deletions
+create a new guarded transcription revision, supersede without overwriting the
+prior draft, and remain visible in revision history. Focused normalization and
+revision tests/typechecks pass; live OCR and browser acceptance remain open.
+
 - [ ] Safe reviewed media can enqueue an idempotent OCR/transcription job and move through `TRANSCRIBING` into `ATTENDANT_VERIFICATION`.
 - [ ] A provider-neutral OCR interface and deterministic fake support success, low-confidence, partial, timeout, and unavailable outcomes.
 - [ ] The review UI shows original pages beside draft lines and supports correction, deletion, addition, and explicit unreadable marking.

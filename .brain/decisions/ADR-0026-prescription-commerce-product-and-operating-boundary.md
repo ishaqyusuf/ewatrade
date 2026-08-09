@@ -28,7 +28,9 @@ approving medicine.
   the pharmacy's WhatsApp chat, and both routes converge on one pharmacy-owned
   request queue.
 - OCR produces an editable transcription only. Mandatory line-by-line attendant
-  verification and licensed-pharmacist release are hard gates.
+  verification and licensed-pharmacist release are hard gates. Attendant edits
+  create a new immutable revision so the pharmacist can compare original media,
+  OCR output, and correction history.
 - Pickup and delivery are explicit alternatives. Delivery fees and eligibility
   are pharmacy-configured service-zone policy, not universal promises.
 - The commercialization model is hybrid B2B2C: implementation, branch
@@ -44,7 +46,8 @@ approving medicine.
   review. Ordinary and emergency sensitive reads share one access-event model.
 - Commercial reporting remains de-identified and separates EwaTrade, Meta,
   payment-provider, delivery, tax, and pharmacy-owned amounts; unknown external
-  costs remain unknown.
+  costs remain unknown. Lifecycle outcomes belong to the report period of their
+  authoritative occurrence timestamp, independent of record creation.
 
 ## Consequences
 

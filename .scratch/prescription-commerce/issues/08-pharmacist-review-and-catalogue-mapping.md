@@ -6,6 +6,11 @@
 
 **Status:** implemented-source; production acceptance pending
 
+**Verification note (2026-08-09):** pharmacist review now shows original media
+and all transcription revisions together. Each line captures availability,
+offering, quantity, explicit alternative/substitution state, and
+customer-visible wording before the revision-confirmed release command.
+
 - [ ] Only a pharmacist with an active credentialed role for the current store can perform professional release actions.
 - [ ] The pharmacist sees original media, the verified transcript, revision history, and any unreadable or unresolved lines together.
 - [ ] Each releasable line maps to an existing Product Offering and records quantity, availability, restriction, substitution, and customer-visible wording.

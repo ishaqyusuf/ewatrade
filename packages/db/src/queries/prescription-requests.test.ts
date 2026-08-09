@@ -5,11 +5,25 @@ import {
   assertPrescriptionRequestTransition,
   createPrescriptionIntakeFingerprint,
   normalizePrescriptionMediaManifest,
+  normalizePrescriptionTranscriptionRevision,
   prescriptionQueueWhere,
   requiresVerifiedTranscript,
 } from "./prescription-requests"
 
 describe("Prescription Request lifecycle", () => {
+  test("normalizes attendant additions, corrections, and deletions as a new revision", () => {
+    expect(
+      normalizePrescriptionTranscriptionRevision([
+        " corrected first line ",
+        "",
+        "new second line",
+      ]),
+    ).toEqual(["corrected first line", "new second line"])
+    expect(() => normalizePrescriptionTranscriptionRevision([])).toThrow(
+      "between one and 100 lines",
+    )
+  })
+
   test("moves reviewed media through transcription and both human gates", () => {
     expect(() =>
       assertPrescriptionRequestTransition("received", "media_review"),

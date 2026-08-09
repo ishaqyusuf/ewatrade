@@ -1,36 +1,44 @@
 "use client"
 
+import { usePrescriptionReportParams } from "@/hooks/use-prescription-report-params"
 import { useTRPC } from "@/trpc/client"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
-import { useState } from "react"
 
 export function PrescriptionReport({
   from,
-  initialStoreId,
   stores,
   to,
 }: {
   from: Date
-  initialStoreId: string
   stores: Array<{ id: string; name: string }>
   to: Date
 }) {
   const trpc = useTRPC()
-  const [storeId, setStoreId] = useState<string | null>(initialStoreId)
+  const { setStoreId, storeId } = usePrescriptionReportParams()
   const report = useQuery(
     trpc.prescriptions.report.queryOptions({ from, storeId, to }),
   )
   if (report.isLoading) {
     return <div className="h-72 animate-pulse bg-muted" />
   }
-  if (!report.data) {
+  if (report.isError) {
     return (
-      <p role="alert" className="text-sm text-destructive">
-        Prescription reporting is unavailable.
-      </p>
+      <div className="grid gap-3">
+        <p role="alert" className="text-sm text-destructive">
+          {report.error.message}
+        </p>
+        <button
+          className="h-10 w-fit rounded-lg border border-border bg-background px-3 text-sm font-medium"
+          onClick={() => report.refetch()}
+          type="button"
+        >
+          Retry report
+        </button>
+      </div>
     )
   }
+  if (!report.data) return null
   const data = report.data
   const costLabels = {
     deliveryCostMinor: "Delivery costs",

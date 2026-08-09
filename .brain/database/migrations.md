@@ -169,6 +169,11 @@ backfill the audit-retention default before enabling the retention job and must
 verify access-event indexes and Tenant/Store foreign keys in the same approved
 change window.
 
+The pending batch also adds privacy-request verifier/evidence columns from the
+final conformance review. Retention execution now carries Tenant and Store
+through every candidate read and redaction write; Store-only rollout is not
+supported.
+
 The required root `bun db:migrate` and `bun db:push` commands were attempted.
 The configured `local` profile resolves to a shared Neon target rather than a
 local disposable database. The sandboxed attempts could not reach that target,

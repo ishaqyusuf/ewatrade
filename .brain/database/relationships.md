@@ -100,6 +100,9 @@ actions and public capabilities point to one operation through digests; they do
 not form a global customer identity.
 
 Privacy and retention records point to Tenant/Store and affected requests.
+Privacy verification evidence and verifier identity remain on the privacy
+request. Retention claims carry Tenant and Store together through every
+candidate read and redaction write.
 Erasure removes provider media first, then redacts mutable sensitive records;
 legal holds and active incident freezes block destructive completion.
 

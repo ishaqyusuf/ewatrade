@@ -6,8 +6,10 @@ import { buildPrescriptionQuoteCommand } from "@ewatrade/prescriptions/quotes"
 import { Badge, Button } from "@ewatrade/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
+import { useFormContext } from "react-hook-form"
 
 import type { PrescriptionSheetMode } from "@/hooks/use-prescription-params"
+import type { PrescriptionWorkspaceFormValues } from "./form-context"
 import { PrescriptionSheetHeader } from "./prescription-sheet-header"
 
 type RequestDetail = RouterOutputs["prescriptions"]["detail"]
@@ -42,25 +44,13 @@ export function PrescriptionRequestWorkspace({
       { retry: false },
     ),
   )
+  const { setValue, watch } = useFormContext<PrescriptionWorkspaceFormValues>()
+  const clearerReason = watch("clearerReason")
+  const lineMapping = watch("lineMapping")
+  const prices = watch("prices")
+  const revisionText = watch("revisionText")
+  const verifiedText = watch("verifiedText")
   const [error, setError] = useState<string | null>(null)
-  const [clearerReason, setClearerReason] = useState("")
-  const [verifiedText, setVerifiedText] = useState<Record<string, string>>({})
-  const [lineMapping, setLineMapping] = useState<
-    Record<
-      string,
-      {
-        availability:
-          | "available"
-          | "declined"
-          | "partial"
-          | "restricted"
-          | "unavailable"
-        offeringId: string
-        quantity: string
-      }
-    >
-  >({})
-  const [prices, setPrices] = useState<Record<string, string>>({})
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({})
   const [pendingDecision, setPendingDecision] = useState<
     "declined" | "needs_clarification" | "released" | null
@@ -99,6 +89,15 @@ export function PrescriptionRequestWorkspace({
   const verifyLine = useMutation(
     trpc.prescriptions.verifyLine.mutationOptions(mutationOptions),
   )
+  const reviseTranscription = useMutation(
+    trpc.prescriptions.reviseTranscription.mutationOptions({
+      onError: mutationOptions.onError,
+      onSuccess: async () => {
+        setValue("revisionText", "")
+        await refresh()
+      },
+    }),
+  )
   const submitForPharmacist = useMutation(
     trpc.prescriptions.submitForPharmacistReview.mutationOptions(
       mutationOptions,
@@ -121,7 +120,6 @@ export function PrescriptionRequestWorkspace({
       },
     ),
   )
-
   if (detail.isLoading) {
     return <div className="h-48 animate-pulse rounded-lg bg-muted" />
   }
@@ -134,6 +132,12 @@ export function PrescriptionRequestWorkspace({
   }
   const request = detail.data
   const transcript = currentTranscript(request)
+  const editableRevisionText =
+    revisionText ||
+    transcript?.lines
+      .map((line) => line.verifiedText ?? line.draftText)
+      .join("\n") ||
+    ""
   const currentMedia = request.media.filter(
     (media) => media.revision === request.currentMediaRevision,
   )
@@ -156,6 +160,7 @@ export function PrescriptionRequestWorkspace({
     startTranscription.isPending ||
     clearerMedia.isPending ||
     verifyLine.isPending ||
+    reviseTranscription.isPending ||
     submitForPharmacist.isPending ||
     pharmacistReview.isPending ||
     issueQuote.isPending
@@ -173,11 +178,15 @@ export function PrescriptionRequestWorkspace({
             ? transcript.lines.map((line) => {
                 const mapping = lineMapping[line.id] ?? {
                   availability: "available" as const,
+                  customerWording: "",
+                  isAlternative: false,
                   offeringId: "",
                   quantity: "1",
                 }
                 return {
                   availability: mapping.availability,
+                  customerWording: mapping.customerWording || undefined,
+                  isAlternative: mapping.isAlternative,
                   offeringId: mapping.offeringId || undefined,
                   quantity: mapping.quantity || undefined,
                   transcriptionLineId: line.id,
@@ -233,8 +242,12 @@ export function PrescriptionRequestWorkspace({
         </div>
       </dl>
 
-      {(mode === "details" || mode === "media-review") &&
-      currentMedia.length ? (
+      {[
+        "details",
+        "media-review",
+        "attendant-review",
+        "pharmacist-review",
+      ].includes(mode) && currentMedia.length ? (
         <section className="grid gap-3">
           <h4 className="font-medium">Private media</h4>
           {currentMedia.map((media) => (
@@ -279,6 +292,34 @@ export function PrescriptionRequestWorkspace({
         </section>
       ) : null}
 
+      {(mode === "attendant-review" || mode === "pharmacist-review") &&
+      request.transcriptions.length ? (
+        <section className="grid gap-3">
+          <h4 className="font-medium">Transcription revision history</h4>
+          {request.transcriptions
+            .slice()
+            .sort((left, right) => right.revision - left.revision)
+            .map((revision) => (
+              <details
+                className="rounded-lg border border-border p-3"
+                key={revision.id}
+                open={revision.revision === request.currentTranscriptRevision}
+              >
+                <summary className="cursor-pointer text-sm font-medium">
+                  Revision {revision.revision} · {formatStatus(revision.status)}
+                </summary>
+                <ol className="mt-3 grid gap-1 text-sm">
+                  {revision.lines.map((line) => (
+                    <li key={line.id}>
+                      {line.lineNumber}. {line.verifiedText ?? line.draftText}
+                    </li>
+                  ))}
+                </ol>
+              </details>
+            ))}
+        </section>
+      ) : null}
+
       {mode === "media-review" &&
       (request.status === "RECEIVED" || request.status === "MEDIA_REVIEW") &&
       currentMedia.length ? (
@@ -299,7 +340,11 @@ export function PrescriptionRequestWorkspace({
             <input
               className={fieldClass}
               value={clearerReason}
-              onChange={(event) => setClearerReason(event.target.value)}
+              onChange={(event) =>
+                setValue("clearerReason", event.target.value, {
+                  shouldDirty: true,
+                })
+              }
               placeholder="Neutral reason for clearer images"
             />
             <Button
@@ -327,6 +372,35 @@ export function PrescriptionRequestWorkspace({
           <p className="text-sm text-muted-foreground">
             OCR is a draft only. Confirmation here is not clinical approval.
           </p>
+          <label className="grid gap-1 text-sm">
+            Correct, delete, or add draft lines
+            <textarea
+              className="min-h-32 rounded-lg border border-border bg-background p-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              value={editableRevisionText}
+              onChange={(event) =>
+                setValue("revisionText", event.target.value, {
+                  shouldDirty: true,
+                })
+              }
+            />
+          </label>
+          <Button
+            disabled={isPending || !editableRevisionText.trim()}
+            onClick={() =>
+              reviseTranscription.mutate({
+                expectedTranscriptRevision: transcript.revision,
+                lines: editableRevisionText
+                  .split(/\r?\n/)
+                  .filter((line) => line.trim()),
+                requestId,
+                storeId,
+              })
+            }
+            type="button"
+            variant="outline"
+          >
+            Save transcription revision
+          </Button>
           {transcript.lines.map((line) => (
             <div key={line.id} className="grid gap-2 rounded-lg border p-3">
               <p className="text-xs text-muted-foreground">
@@ -338,10 +412,11 @@ export function PrescriptionRequestWorkspace({
                   verifiedText[line.id] ?? line.verifiedText ?? line.draftText
                 }
                 onChange={(event) =>
-                  setVerifiedText((current) => ({
-                    ...current,
-                    [line.id]: event.target.value,
-                  }))
+                  setValue(
+                    "verifiedText",
+                    { ...verifiedText, [line.id]: event.target.value },
+                    { shouldDirty: true },
+                  )
                 }
               />
               <div className="flex gap-2">
@@ -402,6 +477,8 @@ export function PrescriptionRequestWorkspace({
           {transcript.lines.map((line) => {
             const mapping = lineMapping[line.id] ?? {
               availability: "available" as const,
+              customerWording: "",
+              isAlternative: false,
               offeringId: "",
               quantity: "1",
             }
@@ -414,14 +491,18 @@ export function PrescriptionRequestWorkspace({
                   className={fieldClass}
                   value={mapping.availability}
                   onChange={(event) =>
-                    setLineMapping((current) => ({
-                      ...current,
-                      [line.id]: {
-                        ...mapping,
-                        availability: event.target
-                          .value as typeof mapping.availability,
+                    setValue(
+                      "lineMapping",
+                      {
+                        ...lineMapping,
+                        [line.id]: {
+                          ...mapping,
+                          availability: event.target
+                            .value as typeof mapping.availability,
+                        },
                       },
-                    }))
+                      { shouldDirty: true },
+                    )
                   }
                 >
                   <option value="available">Available</option>
@@ -434,10 +515,17 @@ export function PrescriptionRequestWorkspace({
                   className={fieldClass}
                   value={mapping.offeringId}
                   onChange={(event) =>
-                    setLineMapping((current) => ({
-                      ...current,
-                      [line.id]: { ...mapping, offeringId: event.target.value },
-                    }))
+                    setValue(
+                      "lineMapping",
+                      {
+                        ...lineMapping,
+                        [line.id]: {
+                          ...mapping,
+                          offeringId: event.target.value,
+                        },
+                      },
+                      { shouldDirty: true },
+                    )
                   }
                 >
                   <option value="">No Product Offering</option>
@@ -451,14 +539,59 @@ export function PrescriptionRequestWorkspace({
                   className={fieldClass}
                   value={mapping.quantity}
                   onChange={(event) =>
-                    setLineMapping((current) => ({
-                      ...current,
-                      [line.id]: { ...mapping, quantity: event.target.value },
-                    }))
+                    setValue(
+                      "lineMapping",
+                      {
+                        ...lineMapping,
+                        [line.id]: {
+                          ...mapping,
+                          quantity: event.target.value,
+                        },
+                      },
+                      { shouldDirty: true },
+                    )
                   }
                   inputMode="decimal"
                   placeholder="Quantity"
                 />
+                <input
+                  className={fieldClass}
+                  value={mapping.customerWording}
+                  onChange={(event) =>
+                    setValue(
+                      "lineMapping",
+                      {
+                        ...lineMapping,
+                        [line.id]: {
+                          ...mapping,
+                          customerWording: event.target.value,
+                        },
+                      },
+                      { shouldDirty: true },
+                    )
+                  }
+                  placeholder="Customer-visible wording"
+                />
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    checked={mapping.isAlternative}
+                    type="checkbox"
+                    onChange={(event) =>
+                      setValue(
+                        "lineMapping",
+                        {
+                          ...lineMapping,
+                          [line.id]: {
+                            ...mapping,
+                            isAlternative: event.target.checked,
+                          },
+                        },
+                        { shouldDirty: true },
+                      )
+                    }
+                  />
+                  Explicit alternative or substitution
+                </label>
               </div>
             )
           })}
@@ -540,10 +673,11 @@ export function PrescriptionRequestWorkspace({
                   placeholder="Unit price"
                   value={prices[line.id] ?? ""}
                   onChange={(event) =>
-                    setPrices((current) => ({
-                      ...current,
-                      [line.id]: event.target.value,
-                    }))
+                    setValue(
+                      "prices",
+                      { ...prices, [line.id]: event.target.value },
+                      { shouldDirty: true },
+                    )
                   }
                 />
               ) : (

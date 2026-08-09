@@ -183,33 +183,29 @@ export async function upsertPrescriptionRetentionPolicy(
       )
     }
   }
-  return db.prescriptionRetentionPolicy.upsert({
-    create: {
-      addressDays: input.addressDays,
-      auditEvidenceDays: input.auditEvidenceDays,
-      commercialRecordDays: input.commercialRecordDays,
-      legalHold: input.legalHold,
-      messageDays: input.messageDays,
-      rawMediaDays: input.rawMediaDays,
-      secureTokenDays: input.secureTokenDays,
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-      transcriptDays: input.transcriptDays,
-      updatedByUserId: input.actorUserId,
-    },
-    update: {
-      addressDays: input.addressDays,
-      auditEvidenceDays: input.auditEvidenceDays,
-      commercialRecordDays: input.commercialRecordDays,
-      legalHold: input.legalHold,
-      messageDays: input.messageDays,
-      rawMediaDays: input.rawMediaDays,
-      secureTokenDays: input.secureTokenDays,
-      transcriptDays: input.transcriptDays,
-      updatedByUserId: input.actorUserId,
-    },
-    where: { storeId: input.storeId },
+  const existing = await db.prescriptionRetentionPolicy.findFirst({
+    select: { id: true },
+    where: { storeId: input.storeId, tenantId: input.tenantId },
   })
+  const values = {
+    addressDays: input.addressDays,
+    auditEvidenceDays: input.auditEvidenceDays,
+    commercialRecordDays: input.commercialRecordDays,
+    legalHold: input.legalHold,
+    messageDays: input.messageDays,
+    rawMediaDays: input.rawMediaDays,
+    secureTokenDays: input.secureTokenDays,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+    transcriptDays: input.transcriptDays,
+    updatedByUserId: input.actorUserId,
+  }
+  return existing
+    ? db.prescriptionRetentionPolicy.update({
+        data: values,
+        where: { id: existing.id },
+      })
+    : db.prescriptionRetentionPolicy.create({ data: values })
 }
 
 export async function getPrescriptionRetentionPolicy(
@@ -221,10 +217,10 @@ export async function getPrescriptionRetentionPolicy(
 
 export async function claimPrescriptionRetentionBatch(
   db: PrismaClient,
-  input: { limit?: number; storeId: string },
+  input: { limit?: number; storeId: string; tenantId: string },
 ) {
-  const policy = await db.prescriptionRetentionPolicy.findUnique({
-    where: { storeId: input.storeId },
+  const policy = await db.prescriptionRetentionPolicy.findFirst({
+    where: { storeId: input.storeId, tenantId: input.tenantId },
   })
   if (!policy || policy.legalHold) return null
   const limit = Math.min(Math.max(input.limit ?? 100, 1), 500)
@@ -239,6 +235,7 @@ export async function claimPrescriptionRetentionBatch(
             lt: cutoffs.addressBefore,
           },
           storeId: policy.storeId,
+          tenantId: policy.tenantId,
         },
       })
     ).map((item) => item.id),
@@ -327,6 +324,7 @@ export async function claimPrescriptionRetentionBatch(
       where: {
         status: { not: PrescriptionMediaStatus.DELETED },
         storeId: policy.storeId,
+        tenantId: policy.tenantId,
         uploadedAt: { lt: cutoffs.mediaBefore },
       },
     }),
@@ -370,7 +368,10 @@ export async function claimPrescriptionRetentionBatch(
           createdAt: {
             lt: cutoffs.transcriptBefore,
           },
-          request: { storeId: policy.storeId },
+          request: {
+            storeId: policy.storeId,
+            tenantId: policy.tenantId,
+          },
         },
       })
     ).map((item) => item.id),
@@ -379,7 +380,7 @@ export async function claimPrescriptionRetentionBatch(
 
 export async function listPrescriptionRetentionStoreIds(db: PrismaClient) {
   return db.prescriptionRetentionPolicy.findMany({
-    select: { storeId: true },
+    select: { storeId: true, tenantId: true },
     where: { legalHold: false },
   })
 }
@@ -418,7 +419,11 @@ export async function completePrescriptionRetentionBatch(
         safetyMetadata: { retained: false },
         status: PrescriptionMediaStatus.DELETED,
       },
-      where: { id: { in: media.map((item) => item.id) } },
+      where: {
+        id: { in: media.map((item) => item.id) },
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
     })
     if (media.length) {
       await tx.prescriptionMediaAccessEvent.createMany({
@@ -565,6 +570,7 @@ export async function verifyPrescriptionPrivacyRequest(
   db: PrismaClient,
   input: {
     actorUserId: string
+    identityVerificationEvidence: string
     privacyRequestId: string
     storeId: string
     tenantId: string
@@ -572,7 +578,9 @@ export async function verifyPrescriptionPrivacyRequest(
 ) {
   return db.prescriptionPrivacyRequest.update({
     data: {
+      identityVerificationEvidence: input.identityVerificationEvidence.trim(),
       identityVerifiedAt: new Date(),
+      identityVerifiedByUserId: input.actorUserId,
       status: PrescriptionPrivacyRequestStatus.VERIFIED,
     },
     where: {

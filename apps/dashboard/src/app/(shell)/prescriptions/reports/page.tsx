@@ -1,4 +1,5 @@
 import { PrescriptionReport } from "@/components/prescriptions/prescription-report"
+import { loadPrescriptionReportParams } from "@/hooks/use-prescription-report-params"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, prefetch, trpc } from "@/trpc/server"
@@ -10,7 +11,11 @@ import { Suspense } from "react"
 
 export const metadata: Metadata = { title: "Prescription reports | EwaTrade" }
 
-export default async function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const session = await getServerSession()
   const ctx = session ? await getActiveTenant(session.user.id) : null
   if (!session || !ctx) redirect("/")
@@ -18,8 +23,16 @@ export default async function Page() {
   if (!store) redirect("/setup")
   const to = new Date()
   const from = new Date(to.getTime() - 30 * 86_400_000)
+  const reportParams = await loadPrescriptionReportParams(searchParams)
+  const reportStoreId = reportParams.storeId
+    ? (ctx.stores.find((item) => item.id === reportParams.storeId)?.id ?? null)
+    : null
   await prefetch(
-    trpc.prescriptions.report.queryOptions({ from, storeId: store.id, to }),
+    trpc.prescriptions.report.queryOptions({
+      from,
+      storeId: reportStoreId,
+      to,
+    }),
   )
   return (
     <HydrateClient>
@@ -27,7 +40,7 @@ export default async function Page() {
         <header className="flex items-end justify-between gap-4 border-b border-border pb-6">
           <div>
             <p className="text-sm text-muted-foreground">
-              {store.name} · Last 30 days
+              All tenant stores · Last 30 days
             </p>
             <h1 className="mt-1 text-2xl font-semibold">
               Prescription operations
@@ -43,7 +56,6 @@ export default async function Page() {
         <Suspense fallback={<div className="h-72 animate-pulse bg-muted" />}>
           <PrescriptionReport
             from={from}
-            initialStoreId={store.id}
             stores={ctx.stores.map((item) => ({
               id: item.id,
               name: item.name,

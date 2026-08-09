@@ -66,6 +66,12 @@
 - Operational roles may act only inside the active Tenant/Store and current
   request state. Every professional or fulfilment transition re-checks role,
   revision, and state server-side.
+- Sensitive pickup/delivery queue projections require an active Store
+  attendant/pharmacist role or personal audited break-glass; ordinary Store
+  membership alone is insufficient.
+- Only an active Store attendant can create a corrected transcription revision.
+  Manager privacy verification persists verifier identity and a bounded
+  evidence reference before execution.
 - Owner/Admin may create a personal emergency grant only with a reason and an
   expiry no more than 60 minutes away. It permits audited queue/detail/media
   access inside that Store only, is shown conspicuously, and requires a

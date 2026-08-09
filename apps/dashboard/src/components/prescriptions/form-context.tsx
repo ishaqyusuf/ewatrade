@@ -5,9 +5,31 @@ import {
   type PrescriptionStaffIntakeFormValues,
   prescriptionStaffIntakeFormSchema,
 } from "@ewatrade/prescriptions/schemas"
-import { FormProvider } from "react-hook-form"
+import { FormProvider, useForm } from "react-hook-form"
 
 export type PrescriptionIntakeFormValues = PrescriptionStaffIntakeFormValues
+
+export type PrescriptionWorkspaceFormValues = {
+  clearerReason: string
+  lineMapping: Record<
+    string,
+    {
+      availability:
+        | "available"
+        | "declined"
+        | "partial"
+        | "restricted"
+        | "unavailable"
+      customerWording: string
+      isAlternative: boolean
+      offeringId: string
+      quantity: string
+    }
+  >
+  prices: Record<string, string>
+  revisionText: string
+  verifiedText: Record<string, string>
+}
 
 export function PrescriptionFormContext({
   children,
@@ -30,5 +52,23 @@ export function PrescriptionFormContext({
       mode: "onChange",
     },
   )
+  return <FormProvider {...form}>{children}</FormProvider>
+}
+
+export function PrescriptionWorkspaceFormContext({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const form = useForm<PrescriptionWorkspaceFormValues>({
+    defaultValues: {
+      clearerReason: "",
+      lineMapping: {},
+      prices: {},
+      revisionText: "",
+      verifiedText: {},
+    },
+    mode: "onChange",
+  })
   return <FormProvider {...form}>{children}</FormProvider>
 }

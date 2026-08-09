@@ -10,17 +10,20 @@ import {
 } from "@ewatrade/prescriptions"
 
 type Dependencies = {
-  claim(storeId: string): ReturnType<typeof claimPrescriptionRetentionBatch>
+  claim(input: {
+    storeId: string
+    tenantId: string
+  }): ReturnType<typeof claimPrescriptionRetentionBatch>
   complete(
     input: Parameters<typeof completePrescriptionRetentionBatch>[1],
   ): Promise<unknown>
-  listStores(): Promise<Array<{ storeId: string }>>
+  listStores(): Promise<Array<{ storeId: string; tenantId: string }>>
   media: PrivateMediaProvider
 }
 
 function defaultDependencies(): Dependencies {
   return {
-    claim: (storeId) => claimPrescriptionRetentionBatch(prisma, { storeId }),
+    claim: (input) => claimPrescriptionRetentionBatch(prisma, input),
     complete: (input) => completePrescriptionRetentionBatch(prisma, input),
     listStores: () => listPrescriptionRetentionStoreIds(prisma),
     media: getConfiguredPrivateMediaProvider(),
@@ -30,8 +33,8 @@ function defaultDependencies(): Dependencies {
 export async function runPrescriptionRetention(
   dependencies: Dependencies = defaultDependencies(),
 ) {
-  for (const { storeId } of await dependencies.listStores()) {
-    const batch = await dependencies.claim(storeId)
+  for (const { storeId, tenantId } of await dependencies.listStores()) {
+    const batch = await dependencies.claim({ storeId, tenantId })
     if (!batch) continue
     const deletedMediaIds: string[] = []
     for (const media of batch.media) {

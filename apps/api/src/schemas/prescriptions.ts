@@ -393,6 +393,14 @@ export const prescriptionPrivacyRequestIdSchema = z
   })
   .strict()
 
+export const prescriptionPrivacyVerificationSchema = z
+  .object({
+    identityVerificationEvidence: z.string().trim().min(1).max(500),
+    privacyRequestId: z.string().trim().min(1),
+    storeId: storeIdSchema,
+  })
+  .strict()
+
 export const prescriptionIncidentSchema = z
   .object({
     expiresAt: z.coerce.date().optional(),
@@ -488,6 +496,15 @@ export const prescriptionLineVerificationSchema = z
     status: z.enum(["unreadable", "verified"]),
     storeId: storeIdSchema,
     verifiedText: z.string().trim().min(1).max(4_000).nullable().optional(),
+  })
+  .strict()
+
+export const prescriptionTranscriptionRevisionSchema = z
+  .object({
+    expectedTranscriptRevision: z.number().int().min(1),
+    lines: z.array(z.string().trim().min(1).max(4_000)).min(1).max(100),
+    requestId: z.string().trim().min(1),
+    storeId: storeIdSchema,
   })
   .strict()
 

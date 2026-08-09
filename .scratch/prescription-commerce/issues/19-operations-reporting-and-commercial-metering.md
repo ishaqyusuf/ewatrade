@@ -13,6 +13,9 @@ amounts. Missing applicable costs remain `null` with an unknown count. Usage
 reconciliation now verifies every known source type under Tenant/Store scope.
 Focused metric/cost/multi-store tests and DB/API/dashboard typechecks pass;
 production reconciliation remains open.
+Report scope is shareable URL state with explicit error recovery. Quote issue,
+accept/decline, payment, pickup handoff, and delivery completion are assigned to
+the half-open window containing their authoritative lifecycle timestamp.
 
 - [ ] Store- and tenant-scoped dashboards report request volume, channel mix, review time, quote outcomes, conversion, payment, pickup, and delivery performance.
 - [ ] Metrics are derived from canonical lifecycle events with documented definitions, time zones, denominators, and late-event behavior.
