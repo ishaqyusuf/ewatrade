@@ -133,10 +133,11 @@ contracting legacy Service Quote tables.
 - Remaining acceptance: cross-channel delivery E2E, live provider
   failure canaries, accessibility automation, load/concurrency/security,
   production Service Quote reconciliation/contraction, and production rollout.
-- Automated baseline: 414 tests pass and ten database integration hooks/tests
-  skip by default; five unrelated mobile-navigation/Retail-Ops mock failures
-  remain tracked outside Prescription Commerce. The opt-in Prescription
-  Commerce Neon test passes separately.
+- Automated baseline: 438 tests pass with 1,330 assertions and eleven database
+  integration hooks/tests skip by default; the same five unrelated
+  mobile-navigation/Retail-Ops mock failures remain tracked outside
+  Prescription Commerce. The opt-in Prescription Commerce Neon tests pass
+  separately.
 
 ## Rollback
 
