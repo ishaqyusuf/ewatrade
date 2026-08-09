@@ -178,3 +178,8 @@ remains open because the browser harness could not reach the healthy local
 dashboard server; authenticated desktop/mobile, accessibility, load, live Meta,
 Paystack, and schema-rollout checks remain production acceptance gates rather
 than being represented as complete.
+
+The 2026-08-09 security regression suite additionally proves that WhatsApp
+Quote actions retain only a capability digest and internal Quote Version id;
+the raw capability is used only to construct the scoped public URL, and Quote
+display, fulfilment, and checkout share the same revalidating access boundary.

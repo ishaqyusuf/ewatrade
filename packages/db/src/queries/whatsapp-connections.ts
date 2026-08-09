@@ -947,7 +947,7 @@ export async function createPrescriptionQuickAction(
   input: {
     action: "ask_pharmacy" | "delivery" | "pickup" | "review_and_pay"
     entityId: string
-    entityType: "order" | "quote_access"
+    entityType: "order" | "quote_version"
     expiresAt: Date
     storeId: string
     tenantId: string
@@ -1028,6 +1028,7 @@ export async function consumePrescriptionQuickAction(
       action: action.action.toLowerCase(),
       entityId: action.entityId,
       entityType: action.entityType,
+      publicAccessToken: rawToken,
     }
   })
 }

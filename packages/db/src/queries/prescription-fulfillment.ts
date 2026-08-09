@@ -22,6 +22,7 @@ import {
   PrescriptionPickupEventType,
   PrescriptionPickupStatus,
 } from "../../generated/prisma/enums"
+import { resolveCommerceQuoteAccess } from "./commerce-quotes"
 import { assertAnyPrescriptionStoreRole } from "./prescription-settings"
 
 export class PrescriptionFulfillmentError extends Error {
@@ -154,6 +155,7 @@ export async function revisePrescriptionQuoteForDelivery(
     }
   },
 ) {
+  const access = await resolveCommerceQuoteAccess(db, input)
   const current = await db.commerceQuoteVersion.findFirst({
     include: {
       lines: true,
@@ -163,7 +165,16 @@ export async function revisePrescriptionQuoteForDelivery(
         },
       },
     },
-    where: { acceptanceTokenDigest: digest(input.acceptanceToken) },
+    where: {
+      id: access.versionId,
+      ...(access.storeId && access.tenantId
+        ? {
+            quote: {
+              is: { storeId: access.storeId, tenantId: access.tenantId },
+            },
+          }
+        : {}),
+    },
   })
   if (
     !current ||

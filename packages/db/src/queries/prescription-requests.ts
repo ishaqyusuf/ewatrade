@@ -2082,6 +2082,7 @@ async function acceptPrescriptionQuoteForFulfilment(
               }
             : null,
           orderId: context.replayOrderId,
+          versionId: context.version.id,
         }
       }
       const { version } = context
@@ -2260,6 +2261,7 @@ async function acceptPrescriptionQuoteForFulfilment(
             }
           : null,
         orderId: order.id,
+        versionId: version.id,
       }
     })
   } catch (error) {

@@ -168,4 +168,58 @@ describe("WhatsApp prescription intake job", () => {
       { failureCode: "processing_failed", inboundEventId: "inbound-3" },
     ])
   })
+
+  test("turns a digested quick-action token into a secure Quote URL without exposing the durable entity id", async () => {
+    const intents: Array<{ payload: unknown }> = []
+
+    const result = await runPrescriptionWhatsAppInbound(
+      { inboundEventId: "inbound-4" },
+      {
+        claim: async () => ({
+          connectionId: "connection-1",
+          credentialReference: "unused-for-action",
+          externalCustomerId: "2348000000000",
+          inboundEventId: "inbound-4",
+          messageType: "interactive",
+          normalizedPayload: { quickActionId: "rx:public-capability" },
+          phoneNumberId: "phone-1",
+          providerEventId: "message-4",
+          requestId: null,
+          storeId: "store-1",
+          tenantId: "tenant-1",
+        }),
+        complete: async () => undefined,
+        continueRequest: async () => null,
+        consumeQuickAction: async () => ({
+          action: "pickup",
+          entityId: "quote-version-secret-internal-id",
+          entityType: "quote_version",
+          publicAccessToken: "public-capability",
+        }),
+        createIntent: async (input) => {
+          intents.push(input)
+          return { id: "intent-1" }
+        },
+        enqueueDispatch: async () => undefined,
+        enqueueSafety: async () => undefined,
+        provider,
+        state: new InMemoryConversationStateStore(),
+        submit: async () => ({
+          created: true,
+          reference: "RX-4",
+          requestId: "request-4",
+        }),
+      },
+    )
+
+    expect(intents[0]?.payload).toEqual({
+      secureUrl:
+        "http://ewatrade-storefront.localhost/prescription-quote/public-capability",
+    })
+    expect(JSON.stringify(intents[0]?.payload)).not.toContain(
+      "quote-version-secret-internal-id",
+    )
+    expect(result).toMatchObject({ entityType: "quote_version" })
+    expect(JSON.stringify(result)).not.toContain("public-capability")
+  })
 })

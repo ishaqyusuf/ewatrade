@@ -152,6 +152,7 @@ export async function runPrescriptionWhatsAppInbound(
         action: string
         entityId: string
         entityType: string
+        publicAccessToken: string
       }
       const storefrontUrl =
         process.env.STOREFRONT_URL?.replace(/\/$/, "") ??
@@ -159,9 +160,9 @@ export async function runPrescriptionWhatsAppInbound(
       const intent = await dependencies.createIntent({
         deduplicationKey: `quick-action:${claim.providerEventId}`,
         payload:
-          action.entityType === "quote_access"
+          action.entityType === "quote_version"
             ? {
-                secureUrl: `${storefrontUrl}/prescription-quote/${action.entityId}`,
+                secureUrl: `${storefrontUrl}/prescription-quote/${action.publicAccessToken}`,
               }
             : {},
         recipientReference: claim.externalCustomerId,
@@ -172,7 +173,11 @@ export async function runPrescriptionWhatsAppInbound(
       })
       await dependencies.enqueueDispatch(intent.id)
       await dependencies.complete({ inboundEventId: claim.inboundEventId })
-      return action
+      return {
+        action: action.action,
+        entityId: action.entityId,
+        entityType: action.entityType,
+      }
     }
     const media = []
     if (mediaId) {

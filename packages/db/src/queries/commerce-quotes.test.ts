@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test"
 
+import type { PrismaClient } from "../../generated/prisma/client"
 import {
   assertCommerceQuoteSource,
   assertQuoteVersionAcceptable,
+  resolveCommerceQuoteAccess,
 } from "./commerce-quotes"
 
 describe("Commerce Quote invariants", () => {
@@ -14,7 +16,10 @@ describe("Commerce Quote invariants", () => {
       }),
     ).toEqual({ sourceId: "service_request_1", sourceType: "service_request" })
     expect(() =>
-      assertCommerceQuoteSource({ sourceId: "", sourceType: "service_request" }),
+      assertCommerceQuoteSource({
+        sourceId: "",
+        sourceType: "service_request",
+      }),
     ).toThrow("Quote source is required")
   })
 
@@ -47,5 +52,41 @@ describe("Commerce Quote invariants", () => {
         versionId: "version_1",
       }),
     ).toThrow("Only the current unexpired Quote Version can be accepted")
+  })
+
+  test("resolves a WhatsApp Quote capability by digest without storing its bearer token", async () => {
+    const rawToken = "opaque-quick-action-token"
+    const db = {
+      commerceQuoteVersion: {
+        findFirst: async () => null,
+      },
+      prescriptionQuickAction: {
+        findFirst: async (input: {
+          where: {
+            entityType: string
+            expiresAt: { gt: Date }
+            tokenDigest: string
+          }
+        }) => {
+          expect(input.where.entityType).toBe("quote_version")
+          expect(input.where.expiresAt.gt).toBeInstanceOf(Date)
+          expect(input.where.tokenDigest).not.toBe(rawToken)
+          return {
+            entityId: "quote-version-1",
+            storeId: "store-1",
+            tenantId: "tenant-1",
+          }
+        },
+      },
+    } as unknown as PrismaClient
+
+    const access = await resolveCommerceQuoteAccess(db, {
+      acceptanceToken: rawToken,
+    })
+    expect(access).toEqual({
+      storeId: "store-1",
+      tenantId: "tenant-1",
+      versionId: "quote-version-1",
+    })
   })
 })

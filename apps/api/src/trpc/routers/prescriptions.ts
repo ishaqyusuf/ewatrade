@@ -542,8 +542,8 @@ export const prescriptionsRouter = createTRPCRouter({
       if (result.acceptanceToken && result.customerPhone && result.requestId) {
         const action = await createPrescriptionQuickAction(ctx.db, {
           action: "delivery",
-          entityId: result.acceptanceToken,
-          entityType: "quote_access",
+          entityId: result.versionId,
+          entityType: "quote_version",
           expiresAt: new Date(Date.now() + 24 * 60 * 60_000),
           storeId: input.storeId,
           tenantId: ctx.tenantContext.tenant.id,
@@ -1006,8 +1006,8 @@ export const prescriptionsRouter = createTRPCRouter({
                   (
                     await createPrescriptionQuickAction(ctx.db, {
                       action,
-                      entityId: quote.token,
-                      entityType: "quote_access",
+                      entityId: quote.versionId,
+                      entityType: "quote_version",
                       expiresAt,
                       storeId: input.storeId,
                       tenantId: ctx.tenantContext.tenant.id,

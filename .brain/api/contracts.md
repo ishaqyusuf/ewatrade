@@ -252,6 +252,12 @@
   capabilities stored as digests. Invalid, expired, revoked, stale, or
   cross-Store capabilities return not-found or conflict without disclosing the
   target.
+- A WhatsApp Quote quick-action row stores only the action-token digest and the
+  internal Quote Version id under its Tenant/Store scope. The raw action token
+  is returned once to construct the secure customer URL; neither it nor the
+  Quote acceptance bearer is persisted as `entityId`. Quote display,
+  fulfilment selection, and hosted checkout resolve and revalidate both public
+  capability forms through one Commerce Quote access boundary.
 - WhatsApp runtime resolves `phone_number_id` to one active Tenant Connection,
   then resolves one Store using opaque channel/action context, and only then
   reads Redis state or persists content. Ambiguity fails closed.

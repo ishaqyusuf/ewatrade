@@ -604,6 +604,7 @@ export async function getPublicCommerceQuote(
   db: PrismaClient,
   input: { acceptanceToken: string },
 ) {
+  const access = await resolveCommerceQuoteAccess(db, input)
   const version = await db.commerceQuoteVersion.findFirst({
     include: {
       lines: true,
@@ -615,7 +616,7 @@ export async function getPublicCommerceQuote(
         },
       },
     },
-    where: { acceptanceTokenDigest: digest(input.acceptanceToken) },
+    where: quoteAccessWhere(access),
   })
   if (
     !version ||
@@ -664,9 +665,10 @@ export async function getCommerceQuoteAcceptanceContext(
   tx: Prisma.TransactionClient,
   input: { acceptanceToken: string; clientAcceptanceId: string },
 ) {
+  const access = await resolveCommerceQuoteAccess(tx, input)
   const version = await tx.commerceQuoteVersion.findFirst({
     include: { lines: true, quote: true },
-    where: { acceptanceTokenDigest: digest(input.acceptanceToken) },
+    where: quoteAccessWhere(access),
   })
   if (!version) {
     throw new CommerceQuoteError(
@@ -705,6 +707,59 @@ export async function getCommerceQuoteAcceptanceContext(
     )
   }
   return { replayOrderId: null, version }
+}
+
+type CommerceQuoteAccess = {
+  storeId?: string
+  tenantId?: string
+  versionId: string
+}
+
+function quoteAccessWhere(
+  access: CommerceQuoteAccess,
+): Prisma.CommerceQuoteVersionWhereInput {
+  return {
+    id: access.versionId,
+    ...(access.storeId && access.tenantId
+      ? {
+          quote: {
+            is: { storeId: access.storeId, tenantId: access.tenantId },
+          },
+        }
+      : {}),
+  }
+}
+
+export async function resolveCommerceQuoteAccess(
+  db: PrismaClient | Prisma.TransactionClient,
+  input: { acceptanceToken: string },
+): Promise<CommerceQuoteAccess> {
+  const tokenDigest = digest(input.acceptanceToken)
+  const version = await db.commerceQuoteVersion.findFirst({
+    select: { id: true },
+    where: { acceptanceTokenDigest: tokenDigest },
+  })
+  if (version) return { versionId: version.id }
+
+  const action = await db.prescriptionQuickAction.findFirst({
+    select: { entityId: true, storeId: true, tenantId: true },
+    where: {
+      entityType: "quote_version",
+      expiresAt: { gt: new Date() },
+      tokenDigest,
+    },
+  })
+  if (!action) {
+    throw new CommerceQuoteError(
+      "PUBLIC_TOKEN_INVALID",
+      "Quote is unavailable.",
+    )
+  }
+  return {
+    storeId: action.storeId,
+    tenantId: action.tenantId,
+    versionId: action.entityId,
+  }
 }
 
 export async function recordCommerceQuoteAcceptance(

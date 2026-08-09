@@ -6,6 +6,13 @@
 
 **Status:** implemented-source; live Meta/template canary pending
 
+**Verification note (2026-08-09):** focused database and inbound-job regression
+tests prove that Quote quick actions persist only a token digest plus the
+Store-scoped Quote Version id, while the one-time raw capability constructs the
+secure customer URL without exposing the durable id. Database, jobs, and API
+typechecks pass. Live Meta/template and complete cross-channel acceptance remain
+tracked by ticket 20.
+
 - [ ] Provider-neutral notification intents map to per-WABA approved templates and active customer-service-window behavior.
 - [ ] Prescription, Quote, Payment, and Fulfilment domains record or enqueue provider-neutral communication intent only; they do not call Meta, construct Graph API requests, or wait for provider delivery.
 - [ ] Durable notification jobs carry identifiers and tenant/store context rather than hydrated sensitive records, reload current Quote/Order/connection state through package/query APIs, and delegate delivery to the shared Communications package.

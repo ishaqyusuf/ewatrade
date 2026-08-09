@@ -7,6 +7,7 @@ import {
   PrescriptionRefundProviderDispatchState,
   PrescriptionRefundStatus,
 } from "../../generated/prisma/enums"
+import { resolveCommerceQuoteAccess } from "./commerce-quotes"
 import { recordCommercialOrderPaymentInTransaction } from "./commercial-payments"
 
 export class PrescriptionPaymentError extends Error {
@@ -41,11 +42,22 @@ export async function preparePrescriptionHostedCheckout(
   },
 ) {
   return db.$transaction(async (tx) => {
+    const access = await resolveCommerceQuoteAccess(tx, input)
     const version = await tx.commerceQuoteVersion.findFirst({
       include: { quote: true },
       where: {
-        acceptanceTokenDigest: digest(input.acceptanceToken),
         acceptedOrderId: { not: null },
+        id: access.versionId,
+        ...(access.storeId && access.tenantId
+          ? {
+              quote: {
+                is: {
+                  storeId: access.storeId,
+                  tenantId: access.tenantId,
+                },
+              },
+            }
+          : {}),
         status: "ACCEPTED",
       },
     })

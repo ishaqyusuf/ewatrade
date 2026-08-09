@@ -115,7 +115,11 @@ integration path to the broader EwaTrade commerce platform.
 - WhatsApp quick actions use opaque, idempotent payloads. `Pick up`, `Delivery`,
   and `Ask pharmacy` resolve fulfilment first; `Review & pay` appears only after
   the exact payable Quote is fixed and opens scoped EwaTrade and hosted-checkout
-  surfaces.
+  surfaces. Durable action rows store a digest of the short-lived public
+  capability and the internal Quote Version id; raw Quote/action bearer tokens
+  are never stored as action entity identifiers. Public Quote, fulfilment, and
+  checkout commands resolve either capability to the same Store-scoped current
+  Quote Version and revalidate its state.
 - Meta usage, optional provider surcharge, number/sender fees, and EwaTrade
   support are metered separately. Volatile provider rates are not domain
   constants or hidden medicine-price adjustments.

@@ -71,8 +71,8 @@ async function acceptQuoteWithReviewPay(
   if (result.notification) {
     const action = await createPrescriptionQuickAction(db, {
       action: "review_and_pay",
-      entityId: input.acceptanceToken,
-      entityType: "quote_access",
+      entityId: result.versionId,
+      entityType: "quote_version",
       expiresAt: new Date(Date.now() + 24 * 60 * 60_000),
       storeId: result.notification.storeId,
       tenantId: result.notification.tenantId,

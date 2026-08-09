@@ -55,6 +55,12 @@ rules into provider code.
 - Fulfilment is selected before payment whenever it changes fee, promise, or
   eligibility. `Review & pay` opens a scoped EwaTrade page and hosted checkout;
   WhatsApp button or navigation events never establish payment.
+- Quote quick actions durably target the internal Quote Version and store only
+  a digest of their short-lived public capability. Raw Quote acceptance and
+  quick-action bearer tokens are not durable entity identifiers. The Commerce
+  Quote boundary resolves either capability and rechecks Tenant, Store,
+  current-version, expiry, and lifecycle state before display, fulfilment, or
+  checkout.
 - External message rates and optional provider surcharges are metered by
   connection and billing owner but are not hardcoded into prescription domain
   logic or customer medicine prices.
