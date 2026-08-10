@@ -345,8 +345,27 @@ production database.
 The run-owned generic-media Neon acceptance passed the non-Pharmacy bag-image
 repository seam through safe private media, replay, cross-scope rejection,
 human observation and private Catalog draft provenance with 7 assertions.
-Public-web/generic-WhatsApp adapters, authenticated browser QA, live
-Meta/storage/scanner canaries and production rollout remain open gates.
+Complete cross-source public-web/generic-WhatsApp acceptance, authenticated
+browser QA, live Meta/storage/scanner canaries and production rollout remain
+open gates.
+
+## Channel-Neutral Intake Attribution Migration State
+
+On 2026-08-10 Prisma generated and applied
+`20260810192915_channel_neutral_intake_attribution` through the canonical
+verified `.env.local` Neon development profile. It adds typed Service Request
+channel origin, nullable staff creator, consent/contact-opt-in facts and
+Tenant-idempotent provider event identity across Service Request, Commerce
+Inquiry and Prescription Request. Commerce Inquiry user attribution becomes
+nullable so public/provider work does not fabricate a User.
+
+`bun db:migrate` generated the artifact; no migration SQL was hand-authored.
+After transient Neon connectivity recovered, `bun db:push` reported the
+development database already in sync. No Docker/local PostgreSQL, reset,
+data-loss flag or production database was used. The run-owned channel-neutral
+Neon acceptance passed web Product Inquiry replay, staff Generic Service,
+generic WhatsApp Inquiry and exact-Product recovery with 5 assertions.
+Complete cross-source media/isolation and browser acceptance remain open.
 
 # Hybrid QA cleanup
 

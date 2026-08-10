@@ -105,6 +105,8 @@ model PrescriptionRequest {
   customerPhone             String?
   customerEmail             String?
   consentVersion            String
+  contactOptIn              Boolean                            @default(false)
+  providerEventId           String?
   consentAcceptedAt         DateTime
   sourceContext             Json?
   currentMediaRevision      Int                                @default(1)
@@ -128,6 +130,7 @@ model PrescriptionRequest {
   sensitiveAccessEvents     PrescriptionSensitiveAccessEvent[]
 
   @@unique([tenantId, clientRequestId])
+  @@unique([tenantId, providerEventId])
   @@unique([tenantId, reference])
   @@index([tenantId, storeId, status, createdAt])
   @@index([tenantId, storeId, source, createdAt])

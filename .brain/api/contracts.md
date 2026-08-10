@@ -466,8 +466,37 @@ implements the Progressive Catalog commands below.
   or phone identifier. Multiple active senders suppress WhatsApp rather than
   guessing a route.
 - Inbound events retain the resolved vertical. The runtime queues Pharmacy only
-  for Pharmacy and preserves generic Service events for Ticket 05; it does not
-  interpret media or choose an aggregate.
+  for Pharmacy and generic Service only for the channel-neutral worker. Generic
+  intake requires the explicit Store-scoped `intent:product` selection; absent
+  selection returns `source_selection_required` and no aggregate is guessed.
+
+### Implemented channel-neutral intake contract
+
+- `serviceCommerce.submitPublicIntake`, `submitStaffIntake` and internal
+  `submitWhatsAppIntake` accept the same strict envelope but each endpoint is
+  schema-locked to its own channel/context. Public web carries only the opaque
+  current entry token; protected staff Store selection is resolved from the
+  authenticated Tenant; internal WhatsApp carries the claimed inbound event
+  and provider identity.
+- The public entry projection returns allowlisted request kinds, not source or
+  Store identifiers. `product_inquiry` opens the generic request page;
+  `prescription` resolves the current source-owned Pharmacy capability through
+  a server redirect. Generic WhatsApp is advertised only when the generic
+  Service route itself is policy-ready.
+- The repository re-resolves Store, active attendant, readiness and policy
+  before delegating to one explicit `commerce_inquiry | service |
+  prescription | exact_product` intent. Source aggregates retain lifecycle and
+  command ownership. Exact Product returns `use_cart`.
+- Success returns only channel, replay flag and typed source reference. Expected
+  stale/disabled/ambiguous/unsupported failures return an allowlisted recovery;
+  unknown database/provider failures are rethrown for retry/observability.
+- Entry revision and inbound-event `PROCESSING` state are asserted again inside
+  the exact source write transaction. A transient generic WhatsApp failure
+  releases the event to `RECEIVED` before throwing so the durable retry can
+  claim it again; terminal unsupported/selection failures remain explicit.
+- `clientCommandId` and optional `providerEventId` are persisted with consent
+  and origin attribution. Provider replay is Tenant-idempotent; staff user
+  attribution is never inferred for public or provider-created records.
 
 ### Implemented generic media contract
 

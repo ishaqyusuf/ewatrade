@@ -45,6 +45,10 @@ import {
   assertPrescriptionStoreRole,
 } from "./prescription-settings"
 import {
+  type ServiceCommerceIntakeAuthorizationContext,
+  assertServiceCommerceIntakeContextInTransaction,
+} from "./service-commerce-intake-context"
+import {
   assertServiceCommercePolicyAllowedInTransaction,
   evaluateServiceCommercePolicyBatchInTransaction,
 } from "./service-commerce-policy"
@@ -162,7 +166,9 @@ function json(value: unknown): Prisma.InputJsonValue {
 
 export function createPrescriptionIntakeFingerprint(input: {
   clientRequestId: string
+  consentVersion?: string
   contact?: string | null
+  contactOptIn?: boolean
   media: Array<
     Pick<
       PrescriptionMediaManifestInput,
@@ -171,6 +177,7 @@ export function createPrescriptionIntakeFingerprint(input: {
   >
   source: "staff_phone" | "staff_walk_in" | "web" | "whatsapp"
   storeId: string
+  providerEventId?: string
 }) {
   return digest(
     stableJson({
@@ -179,6 +186,15 @@ export function createPrescriptionIntakeFingerprint(input: {
       media: [...input.media].sort((a, b) => a.pageNumber - b.pageNumber),
       source: input.source,
       storeId: input.storeId,
+      ...(input.consentVersion || input.contactOptIn || input.providerEventId
+        ? {
+            attribution: {
+              consentVersion: input.consentVersion?.trim() || null,
+              contactOptIn: input.contactOptIn ?? false,
+              providerEventId: input.providerEventId?.trim() || null,
+            },
+          }
+        : {}),
     }),
   )
 }
@@ -417,17 +433,21 @@ export type CreatePrescriptionRequestInput = {
   clientRequestId: string
   consentAcceptedAt: Date
   consentVersion: string
+  contactOptIn?: boolean
   customerEmail?: string | null
   customerName?: string | null
   customerPhone?: string | null
   fulfilmentPreference: "delivery" | "pickup" | "unspecified"
   manualIntakeText?: string | null
   media: PrescriptionMediaManifestInput[]
+  intakeContext?: ServiceCommerceIntakeAuthorizationContext
+  providerEventId?: string
   source: keyof typeof sourceMap
   sourceContext?: Record<string, unknown> | null
   staffAssistedByUserId?: string | null
   storeId: string
   tenantId: string
+  useChannelNeutralAttribution?: boolean
 }
 
 async function createPrescriptionRequest(
@@ -446,123 +466,208 @@ async function createPrescriptionRequest(
   }
   const clientRequestId = input.clientRequestId.trim()
   const payloadHash = createPrescriptionIntakeFingerprint({
-    clientRequestId,
+    clientRequestId:
+      input.useChannelNeutralAttribution && input.providerEventId
+        ? `provider:${input.providerEventId.trim()}`
+        : clientRequestId,
+    consentVersion: input.useChannelNeutralAttribution
+      ? input.consentVersion
+      : undefined,
     contact: input.customerPhone ?? input.customerEmail,
+    contactOptIn: input.useChannelNeutralAttribution
+      ? input.contactOptIn
+      : undefined,
     media,
     source: input.source,
     storeId: input.storeId,
+    providerEventId: input.useChannelNeutralAttribution
+      ? input.providerEventId
+      : undefined,
   })
   const statusToken = token()
   const statusTokenExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1_000)
 
-  const result = await db.$transaction(async (tx) => {
-    const policyChannel =
-      input.source === "web"
-        ? "web"
-        : input.source === "whatsapp"
-          ? "whatsapp"
-          : "staff"
-    await assertServiceCommercePolicyAllowedInTransaction(tx, {
-      actorUserId: input.staffAssistedByUserId ?? `public_${policyChannel}`,
-      channel: policyChannel,
-      purpose: "prescription_request_intake",
-      storeId: input.storeId,
-      subject: "intake",
-      tenantId: input.tenantId,
-      vertical: "pharmacy",
-    })
-    const existing = await tx.prescriptionRequest.findUnique({
-      where: {
-        tenantId_clientRequestId: {
-          clientRequestId,
+  const providerEventId = input.providerEventId?.trim() || null
+  const result = await db
+    .$transaction(async (tx) => {
+      const policyChannel =
+        input.source === "web"
+          ? "web"
+          : input.source === "whatsapp"
+            ? "whatsapp"
+            : "staff"
+      await assertServiceCommerceIntakeContextInTransaction(tx, {
+        context: input.intakeContext,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+        vertical: "pharmacy",
+      })
+      if (input.staffAssistedByUserId) {
+        await assertPrescriptionStoreRole(tx, {
+          role: "attendant",
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+          userId: input.staffAssistedByUserId,
+        })
+      } else {
+        await assertActivePrescriptionStore(tx, input)
+      }
+      const channel = input.channelId
+        ? await tx.prescriptionChannel.findFirst({
+            select: { id: true },
+            where: {
+              id: input.channelId,
+              status: PrescriptionChannelStatus.ACTIVE,
+              storeId: input.storeId,
+              tenantId: input.tenantId,
+              ...(input.source === "web"
+                ? { webEnabled: true }
+                : input.source === "whatsapp"
+                  ? { whatsappEnabled: true }
+                  : { staffEnabled: true }),
+            },
+          })
+        : null
+      if (!channel) {
+        throw new PrescriptionRequestError(
+          "PUBLIC_ACCESS_INVALID",
+          "The selected Prescription channel is no longer active.",
+        )
+      }
+      await assertServiceCommercePolicyAllowedInTransaction(tx, {
+        actorUserId: input.staffAssistedByUserId ?? `public_${policyChannel}`,
+        channel: policyChannel,
+        purpose: "prescription_request_intake",
+        storeId: input.storeId,
+        subject: "intake",
+        tenantId: input.tenantId,
+        vertical: "pharmacy",
+      })
+      const existing = await tx.prescriptionRequest.findFirst({
+        where: {
+          OR: [
+            { clientRequestId },
+            ...(providerEventId ? [{ providerEventId }] : []),
+          ],
           tenantId: input.tenantId,
         },
-      },
+      })
+      if (existing) {
+        if (
+          existing.payloadHash !== payloadHash ||
+          existing.storeId !== input.storeId
+        ) {
+          throw new PrescriptionRequestError(
+            "IDEMPOTENCY_MISMATCH",
+            "This intake identity was already used with different details.",
+          )
+        }
+        return { created: false as const, request: existing }
+      }
+
+      const request = await tx.prescriptionRequest.create({
+        data: {
+          channelId: input.channelId,
+          clientRequestId,
+          consentAcceptedAt: input.consentAcceptedAt,
+          consentVersion: input.consentVersion.trim(),
+          contactOptIn: input.contactOptIn ?? false,
+          customerEmail: input.customerEmail?.trim() || null,
+          customerName: input.customerName?.trim() || null,
+          customerPhone: input.customerPhone?.trim() || null,
+          fulfilmentPreference: fulfilmentMap[input.fulfilmentPreference],
+          payloadHash,
+          providerEventId,
+          reference: makeReference(),
+          source: sourceMap[input.source],
+          sourceContext:
+            input.sourceContext || manualIntakeText
+              ? json({
+                  ...(input.sourceContext ?? {}),
+                  ...(manualIntakeText ? { manualIntakeText } : {}),
+                })
+              : undefined,
+          staffAssistedByUserId: input.staffAssistedByUserId,
+          statusTokenDigest: digest(statusToken),
+          statusTokenExpiresAt,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+          media: {
+            create: media.map((page) => ({
+              clientMediaId: page.clientMediaId,
+              mediaType: page.mediaType,
+              objectKey: page.objectKey,
+              originalFileName: page.originalFileName,
+              pageNumber: page.pageNumber,
+              revision: 1,
+              sha256: page.sha256,
+              sizeBytes: page.sizeBytes,
+              storeId: input.storeId,
+              tenantId: input.tenantId,
+              accessEvents: {
+                create: {
+                  action: PrescriptionMediaAccessAction.UPLOADED,
+                  storeId: input.storeId,
+                  tenantId: input.tenantId,
+                },
+              },
+            })),
+          },
+          auditEvents: {
+            create: {
+              actorUserId: input.staffAssistedByUserId,
+              payload: json({ source: input.source }),
+              storeId: input.storeId,
+              tenantId: input.tenantId,
+              type: PrescriptionRequestAuditEventType.RECEIVED,
+            },
+          },
+        },
+      })
+      await tx.prescriptionUsageEvent.create({
+        data: {
+          deduplicationKey: `request-received:${request.id}`,
+          dimensions: json({ source: input.source }),
+          eventType: "REQUEST_RECEIVED",
+          occurredAt: request.createdAt,
+          sourceId: request.id,
+          sourceType: "request",
+          storeId: request.storeId,
+          tenantId: request.tenantId,
+        },
+      })
+      return { created: true as const, request }
     })
-    if (existing) {
+    .catch(async (error: unknown) => {
       if (
-        existing.payloadHash !== payloadHash ||
-        existing.storeId !== input.storeId
+        !(
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002"
+        )
       ) {
+        throw error
+      }
+      const replay = await db.prescriptionRequest.findFirst({
+        where: {
+          OR: [
+            { clientRequestId },
+            ...(providerEventId ? [{ providerEventId }] : []),
+          ],
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        },
+      })
+      if (!replay) {
+        throw error
+      }
+      if (replay.payloadHash !== payloadHash) {
         throw new PrescriptionRequestError(
           "IDEMPOTENCY_MISMATCH",
           "This intake identity was already used with different details.",
         )
       }
-      return { created: false as const, request: existing }
-    }
-
-    const request = await tx.prescriptionRequest.create({
-      data: {
-        channelId: input.channelId,
-        clientRequestId,
-        consentAcceptedAt: input.consentAcceptedAt,
-        consentVersion: input.consentVersion.trim(),
-        customerEmail: input.customerEmail?.trim() || null,
-        customerName: input.customerName?.trim() || null,
-        customerPhone: input.customerPhone?.trim() || null,
-        fulfilmentPreference: fulfilmentMap[input.fulfilmentPreference],
-        payloadHash,
-        reference: makeReference(),
-        source: sourceMap[input.source],
-        sourceContext:
-          input.sourceContext || manualIntakeText
-            ? json({
-                ...(input.sourceContext ?? {}),
-                ...(manualIntakeText ? { manualIntakeText } : {}),
-              })
-            : undefined,
-        staffAssistedByUserId: input.staffAssistedByUserId,
-        statusTokenDigest: digest(statusToken),
-        statusTokenExpiresAt,
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-        media: {
-          create: media.map((page) => ({
-            clientMediaId: page.clientMediaId,
-            mediaType: page.mediaType,
-            objectKey: page.objectKey,
-            originalFileName: page.originalFileName,
-            pageNumber: page.pageNumber,
-            revision: 1,
-            sha256: page.sha256,
-            sizeBytes: page.sizeBytes,
-            storeId: input.storeId,
-            tenantId: input.tenantId,
-            accessEvents: {
-              create: {
-                action: PrescriptionMediaAccessAction.UPLOADED,
-                storeId: input.storeId,
-                tenantId: input.tenantId,
-              },
-            },
-          })),
-        },
-        auditEvents: {
-          create: {
-            actorUserId: input.staffAssistedByUserId,
-            payload: json({ source: input.source }),
-            storeId: input.storeId,
-            tenantId: input.tenantId,
-            type: PrescriptionRequestAuditEventType.RECEIVED,
-          },
-        },
-      },
+      return { created: false as const, request: replay }
     })
-    await tx.prescriptionUsageEvent.create({
-      data: {
-        deduplicationKey: `request-received:${request.id}`,
-        dimensions: json({ source: input.source }),
-        eventType: "REQUEST_RECEIVED",
-        occurredAt: request.createdAt,
-        sourceId: request.id,
-        sourceType: "request",
-        storeId: request.storeId,
-        tenantId: request.tenantId,
-      },
-    })
-    return { created: true as const, request }
-  })
 
   return {
     created: result.created,
@@ -630,6 +735,52 @@ export async function submitStaffPrescriptionRequest(
     ...input,
     channelId: channel.id,
     staffAssistedByUserId: input.actorUserId,
+  })
+}
+
+export async function submitServiceCommercePrescriptionRequest(
+  db: PrismaClient,
+  input: Omit<
+    CreatePrescriptionRequestInput,
+    "channelId" | "source" | "staffAssistedByUserId"
+  > & {
+    actorUserId: string
+    channel: "staff" | "web" | "whatsapp"
+    providerEventId?: string
+  },
+) {
+  if (input.channel === "staff") {
+    return submitStaffPrescriptionRequest(db, {
+      ...input,
+      source: "staff_walk_in",
+    })
+  }
+  const channel = await db.prescriptionChannel.findFirst({
+    where: {
+      status: PrescriptionChannelStatus.ACTIVE,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      ...(input.channel === "web"
+        ? { webEnabled: true }
+        : { whatsappEnabled: true }),
+    },
+  })
+  if (!channel) {
+    throw new PrescriptionRequestError(
+      "PUBLIC_ACCESS_INVALID",
+      `Prescription ${input.channel} intake is unavailable.`,
+    )
+  }
+  await assertActivePrescriptionStore(db, input)
+  return createPrescriptionRequest(db, {
+    ...input,
+    channelId: channel.id,
+    source: input.channel,
+    sourceContext:
+      input.channel === "whatsapp"
+        ? { providerEventId: input.providerEventId }
+        : undefined,
+    useChannelNeutralAttribution: true,
   })
 }
 

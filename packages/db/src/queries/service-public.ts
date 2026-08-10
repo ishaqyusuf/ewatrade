@@ -5,7 +5,7 @@ import {
   parseExactDecimal,
 } from "@ewatrade/utils/exact-decimal"
 
-import type { Prisma, PrismaClient } from "../../generated/prisma/client"
+import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
   CatalogRecordStatus,
   CommerceQuoteSourceType,
@@ -13,6 +13,7 @@ import {
   OfferingPricingPolicy,
   PaymentStatus,
   SellableOfferingKind,
+  ServiceCommerceIntakeChannelOrigin,
   ServiceDeliveryAttemptStatus,
   ServiceEvidenceUploadStatus,
   ServiceEvidenceVisibility,
@@ -36,6 +37,10 @@ import {
   recordCommerceQuoteAcceptance,
 } from "./commerce-quotes"
 import { createCommercialOrderInTransaction } from "./commercial-orders"
+import {
+  type ServiceCommerceIntakeAuthorizationContext,
+  assertServiceCommerceIntakeContextInTransaction,
+} from "./service-commerce-intake-context"
 import {
   assertServiceCommercePolicyAllowedInTransaction,
   evaluateServiceCommercePolicy,
@@ -66,6 +71,12 @@ function stableJson(value: unknown): string {
 function hash(value: unknown) {
   return digest(stableJson(value))
 }
+
+const intakeChannelOriginMap = {
+  staff: ServiceCommerceIntakeChannelOrigin.STAFF,
+  web: ServiceCommerceIntakeChannelOrigin.WEB,
+  whatsapp: ServiceCommerceIntakeChannelOrigin.WHATSAPP,
+} as const
 
 function json(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue
@@ -359,21 +370,29 @@ export async function getPublicServiceRequestForm(
 export async function submitPublicServiceRequest(
   db: PrismaClient,
   input: {
+    actorUserId?: string
+    channelOrigin?: "staff" | "web" | "whatsapp"
     clientRequestId: string
+    consent?: { contactOptIn: boolean; privacyNoticeVersion: string }
     customerEmail?: string
     customerName: string
     customerPhone?: string
     details?: string
     formToken: string
+    intakeContext?: ServiceCommerceIntakeAuthorizationContext
     lines: Array<{
       details?: string
       offeringId: string
       quantity: string
     }>
+    expectedScope?: { storeId: string; tenantId: string }
+    providerEventId?: string
     requestedAt?: Date
   },
 ) {
   const now = new Date()
+  const channelOrigin = input.channelOrigin ?? "web"
+  const providerEventId = input.providerEventId?.trim() || null
   const payloadHash = hash({
     customerEmail: input.customerEmail?.trim() || null,
     customerName: input.customerName.trim(),
@@ -381,117 +400,180 @@ export async function submitPublicServiceRequest(
     details: input.details?.trim() || null,
     lines: input.lines,
     requestedAt: input.requestedAt ?? null,
+    ...(input.channelOrigin || input.consent || input.providerEventId
+      ? {
+          attribution: {
+            channelOrigin,
+            consent: input.consent ?? null,
+            providerEventId: input.providerEventId?.trim() || null,
+          },
+        }
+      : {}),
   })
-  return db.$transaction(async (tx) => {
-    const form = await tx.serviceRequestForm.findFirst({
-      include: {
-        offerings: {
-          include: {
-            offering: {
-              include: {
-                serviceOffering: true,
-                variant: {
-                  include: {
-                    selections: { include: { group: true, value: true } },
+  try {
+    return await db.$transaction(async (tx) => {
+      const form = await tx.serviceRequestForm.findFirst({
+        include: {
+          offerings: {
+            include: {
+              offering: {
+                include: {
+                  serviceOffering: true,
+                  variant: {
+                    include: {
+                      selections: { include: { group: true, value: true } },
+                    },
                   },
                 },
               },
             },
           },
         },
-      },
-      where: {
-        AND: [
-          { OR: [{ activeFrom: null }, { activeFrom: { lte: now } }] },
-          { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
-        ],
-        publicTokenDigest: digest(input.formToken),
-        status: ServiceRequestFormStatus.ACTIVE,
-      },
-    })
-    if (!form) {
-      throw new CatalogError(
-        "PUBLIC_TOKEN_INVALID",
-        "This Service Request Form is unavailable.",
-      )
-    }
-    await assertServiceCommercePolicyAllowedInTransaction(tx, {
-      actorUserId: "public_service_request",
-      channel: "web",
-      purpose: "public_service_request_intake",
-      storeId: form.storeId,
-      subject: "intake",
-      tenantId: form.tenantId,
-      vertical: "service",
-    })
-    const previous = await tx.serviceRequest.findUnique({
-      where: {
-        tenantId_clientRequestId: {
-          clientRequestId: input.clientRequestId,
-          tenantId: form.tenantId,
+        where: {
+          AND: [
+            { OR: [{ activeFrom: null }, { activeFrom: { lte: now } }] },
+            { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+          ],
+          publicTokenDigest: digest(input.formToken),
+          status: ServiceRequestFormStatus.ACTIVE,
         },
-      },
-    })
-    if (previous) {
-      if (previous.payloadHash !== payloadHash) {
-        throw new CatalogError(
-          "IDEMPOTENCY_MISMATCH",
-          "This request command was already used with different details.",
-        )
-      }
-      return previous
-    }
-    const allowed = new Map(
-      form.offerings.map((row) => [row.offeringId, row.offering]),
-    )
-    const normalizedLines = input.lines.map((line) => {
-      const offering = allowed.get(line.offeringId)
-      if (!offering?.serviceOffering) {
-        throw new CatalogError(
-          "OFFERING_UNAVAILABLE",
-          "Request selected an Offering outside this Form.",
-        )
-      }
-      const requestedQuantity = parseExactDecimal(line.quantity, {
-        allowZero: false,
-        maxScale: offering.serviceOffering.quantityScale,
       })
-      return { line, offering, requestedQuantity }
-    })
-    const request = await tx.serviceRequest.create({
-      data: {
-        clientRequestId: input.clientRequestId,
-        payloadHash,
-        customerEmail: input.customerEmail?.trim() || null,
-        customerName: input.customerName.trim(),
-        customerPhone: input.customerPhone?.trim() || null,
-        details: input.details?.trim() || null,
-        requestFormId: form.id,
-        requestedAt: input.requestedAt,
+      if (!form) {
+        throw new CatalogError(
+          "PUBLIC_TOKEN_INVALID",
+          "This Service Request Form is unavailable.",
+        )
+      }
+      if (
+        input.expectedScope &&
+        (form.storeId !== input.expectedScope.storeId ||
+          form.tenantId !== input.expectedScope.tenantId)
+      ) {
+        throw new CatalogError(
+          "PUBLIC_TOKEN_INVALID",
+          "This Service Request Form is unavailable for the selected Store.",
+        )
+      }
+      await assertServiceCommerceIntakeContextInTransaction(tx, {
+        context: input.intakeContext,
         storeId: form.storeId,
         tenantId: form.tenantId,
-      },
-    })
-    for (const { line, offering, requestedQuantity } of normalizedLines) {
-      await tx.serviceRequestLine.create({
-        data: {
-          details: line.details?.trim() || null,
-          offeringId: offering.id,
-          offeringName: offering.name,
-          optionSelections: json(
-            offering.variant.selections.map((selection) => ({
-              group: selection.group.name,
-              value: selection.value.label,
-            })),
-          ),
-          requestId: request.id,
-          requestedQuantity,
-          variantName: offering.variant.name,
+        vertical: "service",
+      })
+      await assertServiceCommercePolicyAllowedInTransaction(tx, {
+        actorUserId:
+          input.actorUserId ?? `public_service_request_${channelOrigin}`,
+        channel: channelOrigin,
+        purpose: "public_service_request_intake",
+        storeId: form.storeId,
+        subject: "intake",
+        tenantId: form.tenantId,
+        vertical: "service",
+      })
+      const previous = await tx.serviceRequest.findFirst({
+        where: {
+          OR: [
+            { clientRequestId: input.clientRequestId },
+            ...(providerEventId ? [{ providerEventId }] : []),
+          ],
+          tenantId: form.tenantId,
         },
       })
+      if (previous) {
+        if (previous.payloadHash !== payloadHash) {
+          throw new CatalogError(
+            "IDEMPOTENCY_MISMATCH",
+            "This request command was already used with different details.",
+          )
+        }
+        return { ...previous, created: false as const }
+      }
+      const allowed = new Map(
+        form.offerings.map((row) => [row.offeringId, row.offering]),
+      )
+      const normalizedLines = input.lines.map((line) => {
+        const offering = allowed.get(line.offeringId)
+        if (!offering?.serviceOffering) {
+          throw new CatalogError(
+            "OFFERING_UNAVAILABLE",
+            "Request selected an Offering outside this Form.",
+          )
+        }
+        const requestedQuantity = parseExactDecimal(line.quantity, {
+          allowZero: false,
+          maxScale: offering.serviceOffering.quantityScale,
+        })
+        return { line, offering, requestedQuantity }
+      })
+      const request = await tx.serviceRequest.create({
+        data: {
+          clientRequestId: input.clientRequestId,
+          channelOrigin: intakeChannelOriginMap[channelOrigin],
+          consentVersion: input.consent?.privacyNoticeVersion,
+          contactOptIn: input.consent?.contactOptIn ?? false,
+          createdByUserId: channelOrigin === "staff" ? input.actorUserId : null,
+          payloadHash,
+          providerEventId,
+          customerEmail: input.customerEmail?.trim() || null,
+          customerName: input.customerName.trim(),
+          customerPhone: input.customerPhone?.trim() || null,
+          details: input.details?.trim() || null,
+          requestFormId: form.id,
+          requestedAt: input.requestedAt,
+          storeId: form.storeId,
+          tenantId: form.tenantId,
+        },
+      })
+      for (const { line, offering, requestedQuantity } of normalizedLines) {
+        await tx.serviceRequestLine.create({
+          data: {
+            details: line.details?.trim() || null,
+            offeringId: offering.id,
+            offeringName: offering.name,
+            optionSelections: json(
+              offering.variant.selections.map((selection) => ({
+                group: selection.group.name,
+                value: selection.value.label,
+              })),
+            ),
+            requestId: request.id,
+            requestedQuantity,
+            variantName: offering.variant.name,
+          },
+        })
+      }
+      return { ...request, created: true as const }
+    })
+  } catch (error) {
+    if (
+      !(
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      )
+    ) {
+      throw error
     }
-    return request
-  })
+    const replay = await db.serviceRequest.findFirst({
+      where: {
+        OR: [
+          { clientRequestId: input.clientRequestId },
+          ...(providerEventId ? [{ providerEventId }] : []),
+        ],
+        requestForm: { publicTokenDigest: digest(input.formToken) },
+        ...(input.expectedScope ?? {}),
+      },
+    })
+    if (!replay) {
+      throw error
+    }
+    if (replay.payloadHash !== payloadHash) {
+      throw new CatalogError(
+        "IDEMPOTENCY_MISMATCH",
+        "This request command was already used with different details.",
+      )
+    }
+    return { ...replay, created: false as const }
+  }
 }
 
 export async function updateServiceRequestDisposition(

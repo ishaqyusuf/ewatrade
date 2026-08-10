@@ -26,6 +26,10 @@ import {
 } from "./commerce-quotes"
 import { createCommercialOrderInTransaction } from "./commercial-orders"
 import { getServiceCommerceWorkspaceAccess } from "./service-commerce-access"
+import {
+  type ServiceCommerceIntakeAuthorizationContext,
+  assertServiceCommerceIntakeContextInTransaction,
+} from "./service-commerce-intake-context"
 import { assertServiceCommercePolicyAllowedInTransaction } from "./service-commerce-policy"
 import type { DbClient } from "./types"
 
@@ -186,24 +190,87 @@ async function assertInquiryOperator(
   return workspace
 }
 
+async function assertInquiryChannelReady(
+  db: DbClient,
+  input: {
+    channelOrigin: "staff" | "web" | "whatsapp"
+    storeId: string
+    tenantId: string
+  },
+) {
+  const [store, attendant] = await Promise.all([
+    db.store.findFirst({
+      select: {
+        serviceCommerceProfile: {
+          select: {
+            intakeEnabled: true,
+            staffEnabled: true,
+            status: true,
+            webEnabled: true,
+            whatsappEnabled: true,
+          },
+        },
+      },
+      where: { id: input.storeId, status: "ACTIVE", tenantId: input.tenantId },
+    }),
+    db.serviceCommerceStoreTeamAssignment.findFirst({
+      select: { id: true },
+      where: {
+        capability: "ATTENDANT",
+        membership: {
+          acceptedAt: { not: null },
+          status: "ACTIVE",
+          tenantId: input.tenantId,
+        },
+        status: "ACTIVE",
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    }),
+  ])
+  const profile = store?.serviceCommerceProfile
+  const channelEnabled =
+    input.channelOrigin === "staff"
+      ? profile?.staffEnabled
+      : input.channelOrigin === "web"
+        ? profile?.webEnabled
+        : profile?.whatsappEnabled
+  if (
+    !profile ||
+    profile.status !== "ACTIVE" ||
+    !profile.intakeEnabled ||
+    !channelEnabled ||
+    !attendant
+  ) {
+    throw new CommerceInquiryError(
+      "NOT_READY",
+      "Service Commerce intake is not ready for this Store.",
+    )
+  }
+}
+
 export type CreateCommerceInquiryInput = {
   actorUserId: string
   channelOrigin: "staff" | "web" | "whatsapp"
   clientInquiryId: string
+  consent?: { contactOptIn: boolean; privacyNoticeVersion: string }
   customerEmail?: string
   customerName: string
   customerPhone?: string
   demand: ServiceCommerceProductDemand
   lines: Array<{ description: string; requestedQuantity?: string }>
+  intakeContext?: ServiceCommerceIntakeAuthorizationContext
+  providerEventId?: string
   storeId: string
   summary: string
   tenantId: string
   vertical: ServiceCommerceVertical
 }
 
-export async function createCommerceInquiry(
+async function createCommerceInquiryWithAuthorization(
   db: DbClient,
   input: CreateCommerceInquiryInput,
+  authorization: "channel" | "operator",
 ) {
   const demand = serviceCommerceProductDemandSchema.parse(input.demand)
   if (demand.kind === "exact_product") {
@@ -263,10 +330,28 @@ export async function createCommerceInquiry(
     storeId: input.storeId,
     summary,
     vertical: input.vertical,
+    ...(input.consent || input.providerEventId
+      ? {
+          attribution: {
+            consent: input.consent ?? null,
+            providerEventId: input.providerEventId?.trim() || null,
+          },
+        }
+      : {}),
   })
 
   return db.$transaction(async (tx) => {
-    await assertInquiryOperator(tx, input)
+    if (authorization === "operator") {
+      await assertInquiryOperator(tx, input)
+    } else {
+      await assertInquiryChannelReady(tx, input)
+    }
+    await assertServiceCommerceIntakeContextInTransaction(tx, {
+      context: input.intakeContext,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      vertical: input.vertical,
+    })
     await assertServiceCommercePolicyAllowedInTransaction(tx, {
       actorUserId: input.actorUserId,
       channel: input.channelOrigin,
@@ -276,37 +361,54 @@ export async function createCommerceInquiry(
       tenantId: input.tenantId,
       vertical: input.vertical,
     })
-    const inquiry = await tx.commerceInquiry.upsert({
-      create: {
-        channelOrigin: mapChannelOrigin(input.channelOrigin),
-        clientInquiryId,
-        createdByUserId: input.actorUserId,
-        customerEmail: input.customerEmail?.trim() || null,
-        customerName,
-        customerPhone: input.customerPhone?.trim() || null,
-        demandReason: mapDemandReason(demand.reason),
-        payloadHash,
-        lines: {
-          create: lines.map((line) => ({
-            ...line,
-            storeId: input.storeId,
-            tenantId: input.tenantId,
-          })),
-        },
-        storeId: input.storeId,
-        summary,
-        tenantId: input.tenantId,
-        vertical: mapVertical(input.vertical),
-      },
+    const providerEventId = input.providerEventId?.trim() || null
+    const existingInquiry = await tx.commerceInquiry.findFirst({
       include: { lines: { orderBy: { position: "asc" } } },
-      update: {},
       where: {
-        tenantId_clientInquiryId: {
-          clientInquiryId,
-          tenantId: input.tenantId,
-        },
+        OR: [
+          { clientInquiryId },
+          ...(providerEventId ? [{ providerEventId }] : []),
+        ],
+        tenantId: input.tenantId,
       },
     })
+    const inquiry =
+      existingInquiry ??
+      (await tx.commerceInquiry.upsert({
+        create: {
+          channelOrigin: mapChannelOrigin(input.channelOrigin),
+          clientInquiryId,
+          consentVersion: input.consent?.privacyNoticeVersion,
+          contactOptIn: input.consent?.contactOptIn ?? false,
+          createdByUserId:
+            input.channelOrigin === "staff" ? input.actorUserId : null,
+          customerEmail: input.customerEmail?.trim() || null,
+          customerName,
+          customerPhone: input.customerPhone?.trim() || null,
+          demandReason: mapDemandReason(demand.reason),
+          payloadHash,
+          lines: {
+            create: lines.map((line) => ({
+              ...line,
+              storeId: input.storeId,
+              tenantId: input.tenantId,
+            })),
+          },
+          storeId: input.storeId,
+          summary,
+          tenantId: input.tenantId,
+          providerEventId,
+          vertical: mapVertical(input.vertical),
+        },
+        include: { lines: { orderBy: { position: "asc" } } },
+        update: {},
+        where: {
+          tenantId_clientInquiryId: {
+            clientInquiryId,
+            tenantId: input.tenantId,
+          },
+        },
+      }))
     if (
       inquiry.payloadHash !== payloadHash ||
       inquiry.storeId !== input.storeId ||
@@ -341,9 +443,24 @@ export async function createCommerceInquiry(
     return {
       id: inquiry.id,
       lines: inquiry.lines.map((line) => ({ id: line.id })),
+      replayed: Boolean(existingAudit),
       state: normalizeCommerceInquiryState(inquiry.status),
     }
   })
+}
+
+export function createCommerceInquiry(
+  db: DbClient,
+  input: CreateCommerceInquiryInput,
+) {
+  return createCommerceInquiryWithAuthorization(db, input, "operator")
+}
+
+export function createChannelCommerceInquiry(
+  db: DbClient,
+  input: CreateCommerceInquiryInput,
+) {
+  return createCommerceInquiryWithAuthorization(db, input, "channel")
 }
 
 export async function transitionCommerceInquiry(

@@ -52,6 +52,10 @@ import {
   serviceCommerceMediaSafetyHandler,
 } from "./handlers/service-commerce-media-safety"
 import {
+  type ServiceCommerceWhatsAppInboundPayload,
+  serviceCommerceWhatsAppInboundHandler,
+} from "./handlers/service-commerce-whatsapp-inbound"
+import {
   type ServiceNotificationDispatchPayload,
   serviceNotificationDispatchHandler,
 } from "./handlers/service-notification-dispatch"
@@ -68,6 +72,7 @@ export const jobIds = {
   serviceCommerceMediaIngest: "service-commerce.media-ingest",
   serviceCommerceMediaSafety: "service-commerce.media-safety",
   serviceCommerceMediaRetention: "service-commerce.media-retention",
+  serviceCommerceWhatsAppInbound: "service-commerce.whatsapp-inbound",
   domainRegistration: "domains.registration",
   domainConnectionVerification: "domains.connection.verify",
   domainReconciliation: "domains.reconcile",
@@ -224,6 +229,18 @@ export async function enqueuePrescriptionWhatsAppInbound(
   )
 }
 
+export async function enqueueServiceCommerceWhatsAppInbound(
+  inboundEventId: string,
+) {
+  const payload: ServiceCommerceWhatsAppInboundPayload = { inboundEventId }
+  await triggerJob(
+    jobIds.serviceCommerceWhatsAppInbound,
+    serviceCommerceWhatsAppInboundHandler,
+    payload,
+    { maxAttempts: 4 },
+  )
+}
+
 export async function enqueuePrescriptionCommunicationDispatch(
   intentId: string,
 ) {
@@ -292,6 +309,7 @@ export {
 export { prescriptionTranscriptionHandler }
 export { prescriptionMediaSafetyHandler }
 export { prescriptionWhatsAppInboundHandler }
+export { serviceCommerceWhatsAppInboundHandler }
 export { prescriptionCommunicationDispatchHandler }
 export { whatsappConnectionTestHandler }
 export { prescriptionPrivacyRequestHandler }
@@ -309,6 +327,7 @@ export type {
 export type { PrescriptionTranscriptionPayload }
 export type { PrescriptionMediaSafetyPayload }
 export type { PrescriptionWhatsAppInboundPayload }
+export type { ServiceCommerceWhatsAppInboundPayload }
 export type { PrescriptionCommunicationDispatchPayload }
 export type { WhatsAppConnectionTestPayload }
 export type { PrescriptionPrivacyRequestPayload }

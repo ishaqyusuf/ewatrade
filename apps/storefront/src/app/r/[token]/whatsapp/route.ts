@@ -4,7 +4,7 @@ import { resolveCustomerEntryPointWhatsAppRedirect } from "@ewatrade/db/queries"
 export const dynamic = "force-dynamic"
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ token: string }> },
 ) {
   const { token } = await context.params
@@ -22,6 +22,10 @@ export async function GET(
       status: 404,
     })
   }
-  const text = encodeURIComponent(`Start ewastore:${action.contextToken}`)
+  const intent = new URL(request.url).searchParams.get("intent")
+  const selection = intent === "product" ? " intent:product" : ""
+  const text = encodeURIComponent(
+    `Start ewastore:${action.contextToken}${selection}`,
+  )
   return Response.redirect(`https://wa.me/${phone}?text=${text}`, 302)
 }

@@ -410,6 +410,9 @@ describe("stable customer entry point", () => {
           whatsappEnabled: true,
         }),
       },
+      serviceCommerceStoreTeamAssignment: {
+        findFirst: async () => ({ id: "assignment_1" }),
+      },
       whatsAppStoreBinding: {
         findMany: async () => [
           { connection: { status: "ACTIVE" }, status: "ACTIVE" },
@@ -433,6 +436,7 @@ describe("stable customer entry point", () => {
     })
     expect(result).toEqual({
       actions: ["request_online", "chat_on_whatsapp"],
+      requestKinds: ["product_inquiry", "prescription"],
       storeName: "Main Store",
     })
     expect(JSON.stringify(result)).not.toContain("tenant_1")
@@ -462,6 +466,9 @@ describe("stable customer entry point", () => {
           whatsappEnabled: true,
         }),
       },
+      serviceCommerceStoreTeamAssignment: {
+        findFirst: async () => ({ id: "assignment_1" }),
+      },
       store: { findFirst: async () => ({ countryCode: "NG" }) },
       whatsAppStoreBinding: {
         findMany: async () => [
@@ -481,6 +488,7 @@ describe("stable customer entry point", () => {
       }),
     ).resolves.toEqual({
       actions: ["request_online"],
+      requestKinds: ["product_inquiry", "prescription"],
       storeName: "Main Store",
     })
   })
@@ -508,6 +516,9 @@ describe("stable customer entry point", () => {
           webEnabled: true,
           whatsappEnabled: true,
         }),
+      },
+      serviceCommerceStoreTeamAssignment: {
+        findFirst: async () => ({ id: "assignment_1" }),
       },
       store: { findFirst: async () => ({ countryCode: "NG" }) },
       whatsAppStoreBinding: {

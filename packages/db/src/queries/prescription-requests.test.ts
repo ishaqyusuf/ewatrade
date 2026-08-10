@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 
-import type { PrismaClient } from "../../generated/prisma/client"
+import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
   assertPrescriptionPickupQuoteAcceptance,
   assertPrescriptionReleaseLineAvailability,
@@ -18,12 +18,27 @@ import {
 } from "./prescription-requests"
 import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service-commerce-policy"
 
-function createIntakeDb(input?: { active?: boolean; attendant?: boolean }) {
+function createIntakeDb(input?: {
+  active?: boolean
+  attendant?: boolean
+  uniqueConflict?: boolean
+}) {
   let persisted: Record<string, unknown> | null = null
   const channelQueries: unknown[] = []
   const requestCreates: Array<Record<string, unknown>> = []
   const roleQueries: unknown[] = []
   const transaction = {
+    prescriptionChannel: {
+      findFirst: async () => ({ id: "channel-1" }),
+    },
+    prescriptionStoreRole: {
+      findFirst: async () =>
+        input?.attendant === false ? null : { id: "role-1" },
+    },
+    prescriptionStoreSettings: {
+      findFirst: async () =>
+        input?.active === false ? null : { id: "settings-1" },
+    },
     serviceCommercePolicyAuditEvent: {
       createMany: async () => ({ count: 1 }),
     },
@@ -42,9 +57,15 @@ function createIntakeDb(input?: { active?: boolean; attendant?: boolean }) {
           id: "request-1",
           reference: "RX-TEST",
         }
+        if (input?.uniqueConflict) {
+          throw new Prisma.PrismaClientKnownRequestError(
+            "Concurrent request already committed.",
+            { clientVersion: "test", code: "P2002" },
+          )
+        }
         return persisted
       },
-      findUnique: async () => persisted,
+      findFirst: async () => persisted,
     },
     prescriptionUsageEvent: { create: async () => ({ id: "usage-1" }) },
   }
@@ -59,6 +80,9 @@ function createIntakeDb(input?: { active?: boolean; attendant?: boolean }) {
         channelQueries.push(query)
         return { id: "channel-1", storeId: "store-1", tenantId: "tenant-1" }
       },
+    },
+    prescriptionRequest: {
+      findFirst: async () => persisted,
     },
     prescriptionStoreRole: {
       findFirst: async (query: unknown) => {
@@ -393,6 +417,28 @@ describe("Prescription Request lifecycle", () => {
         customerPhone: "+2348111111111",
       }),
     ).rejects.toMatchObject({ code: "IDEMPOTENCY_MISMATCH" })
+  })
+
+  test("recovers the concurrent first-create loser as an idempotent replay", async () => {
+    const { db, requestCreates } = createIntakeDb({ uniqueConflict: true })
+
+    await expect(
+      submitPublicPrescriptionRequest(db, {
+        clientRequestId: "public-request-race",
+        consentAcceptedAt: new Date("2026-08-10T10:00:00.000Z"),
+        consentVersion: "2026-08-10",
+        customerName: "Ada",
+        fulfilmentPreference: "pickup",
+        manualIntakeText: "One prescription item",
+        media: [],
+        publicToken: "public-token",
+      }),
+    ).resolves.toMatchObject({
+      created: false,
+      requestId: "request-1",
+      statusToken: null,
+    })
+    expect(requestCreates).toHaveLength(1)
   })
 
   test("fails public intake closed when Prescription Commerce is inactive", async () => {

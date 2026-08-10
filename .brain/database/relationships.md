@@ -204,6 +204,13 @@ connection/binding persistence during expand-contract. A stable entry token
 resolves current Store, policy, attendant and unambiguous sender facts at read
 time; it contains no Tenant, Store or provider identifier.
 
+`CustomerEntryPoint | StoreTeamAssignment | WhatsAppInboundEvent -> channel-neutral intake envelope -> CommerceInquiry | ServiceRequest | PrescriptionRequest`
+
+The left side supplies context and authorization only. The explicit intent
+selects the existing source command; no polymorphic Request row or shared
+lifecycle is created. Provider events remain Tenant-idempotent and source rows
+retain their Store and source-specific policy relationships.
+
 `ServiceRequestLine | PrescriptionTranscriptionLine | CommerceInquiryLine -> ServiceCommerceSourceAttachment -> ServiceCommerceMediaAsset`
 
 `ServiceCommerceSourceAttachment -> ServiceCommerceVerifiedObservation -> CatalogSourceLineLink`

@@ -233,12 +233,17 @@ authenticated dashboard.
   blocked WhatsApp channel exposes neither availability nor its number.
 - `GET|POST /api/webhooks/whatsapp` verifies Meta subscription/signatures and
   delegates normalized inbound events to the connection-resolving runtime.
+- `serviceCommerce.submitPublicIntake`, `submitStaffIntake`, and internal
+  `submitWhatsAppIntake` expose the channel-neutral intake contract. The public
+  Store entry also serves `/request/[token]`; `/r/[token]/whatsapp?intent=product`
+  opens the explicit generic Product Inquiry flow.
 - `GET /api/communications/whatsapp/embedded-signup/callback` validates signed
   state, exchanges the Meta code, persists encrypted short-lived discovery,
   and redirects to explicit dashboard number selection.
 - `POST /api/webhooks/prescription-payments/:provider` verifies the raw provider
   callback before creating idempotent payment facts.
-- Trigger tasks own media safety, OCR/transcription, WhatsApp inbound
+- Trigger tasks own generic Service Commerce and Pharmacy WhatsApp inbound,
+  generic media retrieval/safety, OCR/transcription,
   continuation, communication dispatch, connection readiness, privacy
   execution, and retention.
 # Platform QA maintenance

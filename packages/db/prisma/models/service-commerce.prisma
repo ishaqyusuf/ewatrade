@@ -40,6 +40,12 @@ enum CommerceInquiryChannelOrigin {
   WHATSAPP
 }
 
+enum ServiceCommerceIntakeChannelOrigin {
+  WEB
+  STAFF
+  WHATSAPP
+}
+
 enum CommerceInquiryAuditEventType {
   CREATED
   STATE_CHANGED
@@ -220,11 +226,14 @@ model CommerceInquiry {
   vertical        ServiceCommercePolicyVertical @default(SERVICE)
   demandReason    CommerceInquiryDemandReason
   channelOrigin   CommerceInquiryChannelOrigin
+  consentVersion  String?
+  contactOptIn    Boolean                       @default(false)
+  providerEventId String?
   summary         String
   customerName    String
   customerEmail   String?
   customerPhone   String?
-  createdByUserId String
+  createdByUserId String?
   convertedAt     DateTime?
   createdAt       DateTime                      @default(now())
   updatedAt       DateTime                      @updatedAt
@@ -234,6 +243,7 @@ model CommerceInquiry {
   lines           CommerceInquiryLine[]
 
   @@unique([tenantId, clientInquiryId])
+  @@unique([tenantId, providerEventId])
   @@index([tenantId, storeId, status, createdAt])
 }
 

@@ -997,6 +997,29 @@ export async function markWhatsAppInboundEventProcessed(
   })
 }
 
+export async function releaseWhatsAppInboundEventForRetry(
+  db: PrismaClient,
+  input: {
+    failureCode: string
+    inboundEventId: string
+    storeId: string
+    tenantId: string
+  },
+) {
+  return db.whatsAppInboundEvent.updateMany({
+    data: {
+      failureCode: input.failureCode.trim().slice(0, 120),
+      status: WhatsAppInboundEventStatus.RECEIVED,
+    },
+    where: {
+      id: input.inboundEventId,
+      status: WhatsAppInboundEventStatus.PROCESSING,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    },
+  })
+}
+
 export async function createPrescriptionCommunicationIntent(
   db: PrismaClient,
   input: {

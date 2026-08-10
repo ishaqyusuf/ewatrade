@@ -9,7 +9,9 @@ codes, request media/verified observations and exact selectable Offer Options.
 ADR-0032 adds Store team routing and optional exact-version quotation release
 approval. The owner approved the revised dependency-ordered 17-ticket batch
 through 2026-08-10. Tickets 01, 02, 03, 11 and 03A are complete. Tickets 04 and
-04A have source-complete foundations; Ticket 05 is the active dependency
+04A have source-complete foundations. Ticket 05 now has its shared source/API,
+public Product-inquiry and explicit product-selected generic WhatsApp adapters;
+its full origin/source/media/browser matrix remains the active dependency
 frontier. Production schema/provider
 operations remain separately authorized.
 
@@ -267,6 +269,39 @@ Generic connection, binding, link and QR configuration moves out of
 Prescription settings. Category-specific compliance retains Pharmacy roles,
 consent, professional policies and clinical operating controls.
 
+## Channel-Neutral Intake
+
+One strict intake envelope now carries `web | staff | whatsapp`, an opaque
+entry/Store/inbound-event context, client and provider idempotency, consent and
+one explicit source intent. The shared dispatcher resolves the current Store,
+active attendant, channel/policy state and source boundary before calling the
+authoritative Commerce Inquiry, Service Request or Prescription Request
+command. It never infers a source from free text and exact Product selection
+returns `use_cart` rather than creating an artificial Request.
+
+The stable `/r/[token]` page exposes only currently allowed source choices: it
+can open `/request/[token]` for a Product Inquiry and delegates Pharmacy to its
+existing secure Prescription entry capability rather than routing clinical
+content through the generic page.
+Its server action re-resolves the entry capability before accepting customer
+content. The WhatsApp Product option includes an allowlisted `intent:product`
+selection in the initial context message; conversation state preserves that
+choice by Store, and the generic durable worker rejects unselected messages
+with `source_selection_required`. A selected bag image/document creates or
+replays the Commerce Inquiry, records its provider descriptor against the
+current source line/version and delegates private retrieval and safety to the
+Ticket 04A media jobs. Pharmacy WhatsApp continues through its existing
+source-owned clinical handler.
+
+Channel attribution is additive: non-staff records do not fabricate a User,
+staff preserves its exact actor, provider events are Tenant-idempotent, and
+public/API results contain only the accepted source reference or a typed safe
+recovery. Entry revision or claimed inbound-event state is checked again inside
+the same transaction that writes the source, closing revoke/write races. The
+verified Neon acceptance proves web Product Inquiry replay,
+staff Generic Service, generic WhatsApp Inquiry and exact-Product cart recovery.
+The complete Pharmacy/media/cross-scope matrix and browser pass remain open.
+
 ## Generic Request Media
 
 Any eligible source can receive an image or approved document through web,
@@ -469,9 +504,10 @@ The owner approved the Progressive Catalog amendment on 2026-08-09 and the
 Customer Channels/media/Offer Options plus Store team/Quote approval amendments
 on 2026-08-10. The exact 17-ticket batch adds Tickets 03A, 04A, 06A and 06B.
 Tickets 01, 02, 03, 11 and 03A are complete. Tickets 04 and 04A now have their
-source foundations; Ticket 05 owns the remaining public-web and generic
-WhatsApp intake adapters. Browser/live-provider acceptance remains open. Throughout
-execution:
+source foundations. Ticket 05 has the shared dispatcher plus initial
+public-web and generic WhatsApp Product Inquiry adapters; its complete
+origin/source/media and browser acceptance remains open. Browser/live-provider
+acceptance remains open. Throughout execution:
 
 - no production Prisma operation without separate authorization;
 - no renaming or contraction of Prescription Commerce before its approved

@@ -117,6 +117,9 @@ persistence boundary. Clients never access the database directly.
   Customer Request. It carries Tenant/Store, idempotent client identity and
   payload hash, channel, bounded customer contact, demand reason, summary and
   the explicit received-to-converted/terminal lifecycle.
+- Channel-neutral attribution adds nullable consent version and provider event
+  identity plus contact opt-in. Public/provider-created Inquiries keep
+  `createdByUserId = null`; staff preserves its authenticated user.
 - `CommerceInquiryLine` stores one ordered bounded Product description and an
   optional exact requested quantity under the same Tenant/Store/Inquiry scope.
   It has no automatic Catalog publication, stock or Order side effect.
@@ -158,6 +161,12 @@ persistence boundary. Clients never access the database directly.
 - `CommerceInquiry.vertical` binds each Inquiry to the policy vertical used by
   its source projection, Quote command and public acceptance. It does not merge
   Service and Pharmacy aggregate lifecycles.
+- `ServiceRequest` now records typed `WEB | STAFF | WHATSAPP` origin, nullable
+  staff creator, consent/contact opt-in and provider event identity.
+  `PrescriptionRequest` adds contact opt-in and provider event identity while
+  retaining its own source, consent, role, safety and clinical lifecycle.
+  Tenant/provider-event unique constraints make webhook replay additive and
+  fail closed across Stores.
 
 ## Customer Channels And Generic Request Media
 

@@ -503,10 +503,18 @@ export function isWithinWhatsAppSessionWindow(
 
 export type ConversationState = {
   contextId: string
+  intakeKind?: "commerce_inquiry"
   lastSeenAt: string
   requestId?: string
   storeId: string
   tenantId: string
+}
+
+export function extractCustomerChannelIntakeSelection(text?: string | null) {
+  if (!text) return null
+  return /(?:^|\s)intent:product(?:\s|$)/i.test(text)
+    ? ("commerce_inquiry" as const)
+    : null
 }
 
 export interface ConversationStateStore {

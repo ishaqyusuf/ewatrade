@@ -1,5 +1,6 @@
 import {
   customerChannelConversationContextId,
+  extractCustomerChannelIntakeSelection,
   extractWhatsAppChannelContext,
   getConfiguredConversationStateStore,
   parseMetaWhatsAppEvents,
@@ -18,7 +19,10 @@ import {
   resolveWhatsAppInboundStore,
   resolveWhatsAppStatusConnection,
 } from "@ewatrade/db/queries"
-import { enqueuePrescriptionWhatsAppInbound } from "@ewatrade/jobs"
+import {
+  enqueuePrescriptionWhatsAppInbound,
+  enqueueServiceCommerceWhatsAppInbound,
+} from "@ewatrade/jobs"
 
 function required(name: string) {
   const value = process.env[name]?.trim()
@@ -153,13 +157,23 @@ export async function handleWhatsAppWebhookRequest(request: Request) {
       contextId,
       externalCustomerId: event.externalCustomerId,
     })
+    const intakeKind =
+      binding.routeVertical === "service"
+        ? (extractCustomerChannelIntakeSelection(event.text) ??
+          existingState?.intakeKind)
+        : undefined
     await state.set({
       connectionId: route.connectionId,
       contextId,
       externalCustomerId: event.externalCustomerId,
       state: {
         contextId,
+        intakeKind,
         lastSeenAt: new Date().toISOString(),
+        requestId:
+          existingState?.storeId === binding.storeId
+            ? existingState.requestId
+            : undefined,
         storeId: binding.storeId,
         tenantId: binding.tenantId,
       },
@@ -173,6 +187,7 @@ export async function handleWhatsAppWebhookRequest(request: Request) {
         normalizedPayload: {
           mediaId: event.media?.id,
           mediaType: event.media?.mediaType,
+          intakeKind,
           quickActionId: event.quickActionId,
           storeId: binding.storeId,
           text: event.text,
@@ -199,6 +214,8 @@ export async function handleWhatsAppWebhookRequest(request: Request) {
     }
     if (binding.routeVertical === "pharmacy") {
       await enqueuePrescriptionWhatsAppInbound(inbound.id)
+    } else {
+      await enqueueServiceCommerceWhatsAppInbound(inbound.id)
     }
   }
   return new Response(JSON.stringify({ received: true }), {

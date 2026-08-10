@@ -618,7 +618,7 @@ async function getPublicCustomerEntryPointInTransaction(
       "This customer entry point is unavailable.",
     )
   }
-  const [profile, bindings, outcomes] = await Promise.all([
+  const [profile, bindings, attendant, outcomes] = await Promise.all([
     db.serviceCommerceStoreProfile.findFirst({
       select: {
         intakeEnabled: true,
@@ -635,6 +635,20 @@ async function getPublicCustomerEntryPointInTransaction(
       select: { connection: { select: { status: true } }, status: true },
       where: {
         connection: { tenantId: entryPoint.tenantId },
+        storeId: entryPoint.storeId,
+        tenantId: entryPoint.tenantId,
+      },
+    }),
+    db.serviceCommerceStoreTeamAssignment.findFirst({
+      select: { id: true },
+      where: {
+        capability: "ATTENDANT",
+        membership: {
+          acceptedAt: { not: null },
+          status: "ACTIVE",
+          tenantId: entryPoint.tenantId,
+        },
+        status: "ACTIVE",
         storeId: entryPoint.storeId,
         tenantId: entryPoint.tenantId,
       },
@@ -656,19 +670,26 @@ async function getPublicCustomerEntryPointInTransaction(
       tenantId: entryPoint.tenantId,
     }),
   ])
-  const profileReady = profile?.status === "ACTIVE" && profile.intakeEnabled
+  const profileReady =
+    profile?.status === "ACTIVE" && profile.intakeEnabled && Boolean(attendant)
   const actions: ServiceCommercePublicEntryAction[] = []
-  const webAllowed =
-    policyAllows(outcomes, [0, 1]) || policyAllows(outcomes, [2, 3])
-  if (profileReady && profile.webEnabled && webAllowed) {
+  const webVerticals = {
+    pharmacy:
+      Boolean(profileReady && profile?.webEnabled) &&
+      policyAllows(outcomes, [2, 3]),
+    service:
+      Boolean(profileReady && profile?.webEnabled) &&
+      policyAllows(outcomes, [0, 1]),
+  }
+  const webAllowed = webVerticals.service || webVerticals.pharmacy
+  if (webAllowed) {
     actions.push("request_online")
   }
   const activeWhatsAppBindings = bindings.filter(
     (binding) =>
       binding.status === "ACTIVE" && binding.connection.status === "ACTIVE",
   )
-  const whatsappAllowed =
-    policyAllows(outcomes, [4, 5]) || policyAllows(outcomes, [6, 7])
+  const whatsappAllowed = policyAllows(outcomes, [4, 5])
   if (
     profileReady &&
     profile.whatsappEnabled &&
@@ -677,16 +698,97 @@ async function getPublicCustomerEntryPointInTransaction(
   ) {
     actions.push("chat_on_whatsapp")
   }
-  return { actions, storeName: entryPoint.store.name }
+  const requestKinds = [
+    ...(webVerticals.service ? (["product_inquiry"] as const) : []),
+    ...(webVerticals.pharmacy ? (["prescription"] as const) : []),
+  ]
+  return {
+    actions,
+    requestKinds,
+    storeName: entryPoint.store.name,
+    webVerticals,
+  }
 }
 
 export async function getPublicCustomerEntryPoint(
   db: PrismaClient,
   input: { publicToken: string },
 ) {
-  return db.$transaction((tx) =>
-    getPublicCustomerEntryPointInTransaction(tx, input),
-  )
+  return db.$transaction(async (tx) => {
+    const { actions, requestKinds, storeName } =
+      await getPublicCustomerEntryPointInTransaction(tx, input)
+    return { actions, requestKinds, storeName }
+  })
+}
+
+export async function resolveCustomerEntryPointPrescriptionRedirect(
+  db: PrismaClient,
+  input: { publicToken: string },
+) {
+  return db.$transaction(async (tx) => {
+    const projection = await getPublicCustomerEntryPointInTransaction(tx, input)
+    if (!projection.webVerticals.pharmacy) {
+      throw new CustomerChannelsError(
+        "NOT_FOUND",
+        "Prescription intake is unavailable for this customer entry point.",
+      )
+    }
+    const entryPoint = await tx.customerEntryPoint.findFirst({
+      select: { storeId: true, tenantId: true },
+      where: {
+        publicTokenDigest: digest(input.publicToken),
+        status: "PUBLISHED",
+      },
+    })
+    const channel = entryPoint
+      ? await tx.prescriptionChannel.findFirst({
+          select: { publicToken: true },
+          where: {
+            status: "ACTIVE",
+            storeId: entryPoint.storeId,
+            tenantId: entryPoint.tenantId,
+            webEnabled: true,
+            store: { prescriptionSettings: { status: "ACTIVE" } },
+          },
+        })
+      : null
+    if (!channel) {
+      throw new CustomerChannelsError(
+        "NOT_FOUND",
+        "Prescription intake is unavailable for this customer entry point.",
+      )
+    }
+    return channel
+  })
+}
+
+export async function resolveCustomerEntryPointIntakeContext(
+  db: PrismaClient,
+  input: { publicToken: string },
+) {
+  return db.$transaction(async (tx) => {
+    const projection = await getPublicCustomerEntryPointInTransaction(tx, input)
+    if (!projection.actions.includes("request_online")) {
+      throw new CustomerChannelsError(
+        "NOT_FOUND",
+        "Online requests are unavailable for this customer entry point.",
+      )
+    }
+    const entryPoint = await tx.customerEntryPoint.findFirst({
+      select: { id: true, revision: true, storeId: true, tenantId: true },
+      where: {
+        publicTokenDigest: digest(input.publicToken),
+        status: "PUBLISHED",
+      },
+    })
+    if (!entryPoint) {
+      throw new CustomerChannelsError(
+        "NOT_FOUND",
+        "This customer entry point is unavailable.",
+      )
+    }
+    return { ...entryPoint, webVerticals: projection.webVerticals }
+  })
 }
 
 export async function resolveCustomerEntryPointWhatsAppRedirect(

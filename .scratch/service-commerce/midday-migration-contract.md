@@ -143,6 +143,16 @@ version authorization remain mandatory.
   approval; Pharmacy attendant/pharmacist roles cannot become that shared seam.
 - Persistence: `packages/db/prisma/models/{service-operations,commerce-quotes,commercial-orders,prescription-commerce,prescription-operations}.prisma`
   plus `packages/db/src/queries/{service-public,service-work,service-settings,service-reporting,commerce-quotes,commercial-orders,prescription-requests,prescription-payments,prescription-fulfillment,prescription-reporting,prescription-compliance,whatsapp-connections}.ts`.
+- Ticket 05 expand state now adds the DB-free intake contract in
+  `packages/service-commerce/src/schemas/intake.ts`, the scoped dispatcher in
+  `packages/db/src/queries/service-commerce-intake.ts`, channel-locked API
+  composition in `apps/api/src/schemas/service-commerce-intake.ts` and
+  `apps/api/src/trpc/routers/service-commerce/intake.ts`, the public Product
+  Inquiry adapter at `apps/storefront/src/app/request/[token]/page.tsx`, and
+  the explicit product-selected generic WhatsApp worker at
+  `packages/jobs/src/{handlers,tasks}/service-commerce-whatsapp-inbound.ts`.
+  Complete cross-source/media/browser acceptance remains open; existing
+  vertical URLs and handlers are still compatibility owners.
 - Jobs: `packages/jobs/src/{tasks,handlers}/service-notification-dispatch.ts`,
   `prescription-whatsapp-inbound.ts`, `prescription-communication-dispatch.ts`,
   `whatsapp-connection-test.ts`, media/transcription/privacy/retention tasks and
@@ -248,9 +258,10 @@ also spread across API/DB rather than a focused reusable package.
 - `packages/db/src/queries/service-commerce-reporting.ts`
 - `apps/api/src/schemas/service-commerce.ts`
 - `apps/api/src/schemas/service-commerce-media.ts`
+- `apps/api/src/schemas/service-commerce-intake.ts`
 - `apps/api/src/schemas/service-commerce-quote-approval.ts`
 - `apps/api/src/trpc/routers/service-commerce/index.ts` as a thin composed
-  router over `access.ts`, `queue.ts`, `catalog.ts`, `media.ts`,
+  router over `access.ts`, `queue.ts`, `catalog.ts`, `intake.ts`, `media.ts`,
   `quote-approvals.ts`, `actions.ts`, `bookings.ts`, `fulfillment.ts` and
   `reporting.ts`
 - `apps/dashboard/src/app/(shell)/service-commerce/page.tsx`
@@ -282,10 +293,14 @@ also spread across API/DB rather than a focused reusable package.
 - `packages/jobs/src/tasks/service-commerce-notification-dispatch.ts` and
   `service-commerce-booking-reminders.ts`
 - `packages/jobs/src/tasks/service-commerce-media-{ingest,safety,retention}.ts`
+- `packages/jobs/src/tasks/service-commerce-whatsapp-inbound.ts`
 - `packages/jobs/src/handlers/service-commerce-notification-dispatch.ts` and
   `service-commerce-booking-reminders.ts`, with focused tests
 - `packages/jobs/src/handlers/service-commerce-media-{ingest,safety,retention}.ts`
   with identifier-only payloads, bounded retry/reconciliation and focused tests
+- `packages/jobs/src/handlers/service-commerce-whatsapp-inbound.ts`, which
+  requires an explicit source selection and delegates media descriptors to the
+  generic ingest job rather than downloading or interpreting bytes itself
 - Focused dashboard component tests and split Neon acceptance specs under
   `packages/db/src/queries/acceptance/service-commerce/`.
 

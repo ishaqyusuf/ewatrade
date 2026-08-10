@@ -329,31 +329,37 @@ model ServiceRequestFormOffering {
 }
 
 model ServiceRequest {
-  id              String               @id @default(cuid())
+  id              String                             @id @default(cuid())
   tenantId        String
   storeId         String
   requestFormId   String
   clientRequestId String
   payloadHash     String
-  status          ServiceRequestStatus @default(SUBMITTED)
+  channelOrigin   ServiceCommerceIntakeChannelOrigin @default(WEB)
+  createdByUserId String?
+  providerEventId String?
+  consentVersion  String?
+  contactOptIn    Boolean                            @default(false)
+  status          ServiceRequestStatus               @default(SUBMITTED)
   customerName    String
   customerEmail   String?
   customerPhone   String?
   requestedAt     DateTime?
   details         String?
   staffResponse   String?
-  currentQuoteId  String?              @unique
+  currentQuoteId  String?                            @unique
   convertedAt     DateTime?
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store           Store                @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  requestForm     ServiceRequestForm   @relation(fields: [requestFormId], references: [id], onDelete: Restrict)
-  currentQuote    ServiceQuote?        @relation("ServiceRequestCurrentQuote", fields: [currentQuoteId], references: [id], onDelete: SetNull)
+  createdAt       DateTime                           @default(now())
+  updatedAt       DateTime                           @updatedAt
+  tenant          Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store           Store                              @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  requestForm     ServiceRequestForm                 @relation(fields: [requestFormId], references: [id], onDelete: Restrict)
+  currentQuote    ServiceQuote?                      @relation("ServiceRequestCurrentQuote", fields: [currentQuoteId], references: [id], onDelete: SetNull)
   lines           ServiceRequestLine[]
-  quotes          ServiceQuote[]       @relation("ServiceRequestQuotes")
+  quotes          ServiceQuote[]                     @relation("ServiceRequestQuotes")
 
   @@unique([tenantId, clientRequestId])
+  @@unique([tenantId, providerEventId])
   @@index([tenantId, storeId, status, createdAt])
   @@index([requestFormId, createdAt])
 }

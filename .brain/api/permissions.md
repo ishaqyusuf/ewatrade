@@ -120,6 +120,14 @@
 
 ## Customer Channels And Generic Media
 
+- Public intake re-resolves the current opaque entry, Store, active attendant,
+  enabled channel and policy before accepting content. A public caller cannot
+  supply Tenant or Store authority.
+- Staff intake requires an authenticated Tenant membership plus an active
+  Store attendant assignment; Pharmacy sources then compose their existing
+  Store-role/professional checks. The internal WhatsApp procedure requires the
+  internal API key and a currently claimed inbound event whose provider/store
+  routing is revalidated by the repository and job.
 - Owner/Admin manages provider connections, Store bindings and entry-point
   lifecycle. Store team assignment accepts only an already accepted active
   Tenant Membership and never creates identity, role or professional authority.

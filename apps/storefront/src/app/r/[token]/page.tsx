@@ -37,6 +37,8 @@ export default async function CustomerEntryPage({ params }: Props) {
   const entryPoint = await loadEntryPoint(token)
   const canRequest = entryPoint.actions.includes("request_online")
   const canChat = entryPoint.actions.includes("chat_on_whatsapp")
+  const canRequestProduct = entryPoint.requestKinds.includes("product_inquiry")
+  const canSubmitPrescription = entryPoint.requestKinds.includes("prescription")
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -56,7 +58,7 @@ export default async function CustomerEntryPage({ params }: Props) {
         </div>
       </section>
       <section className="mx-auto grid max-w-3xl gap-4 px-5 py-10 md:grid-cols-2 md:px-8">
-        {canRequest ? (
+        {canRequest && canRequestProduct ? (
           <a
             className="grid min-h-40 content-between rounded-xl border border-border bg-card p-6 transition-colors hover:border-primary"
             href={`/request/${encodeURIComponent(token)}`}
@@ -74,18 +76,36 @@ export default async function CustomerEntryPage({ params }: Props) {
             </span>
           </a>
         ) : null}
-        {canChat ? (
+        {canRequest && canSubmitPrescription ? (
           <a
             className="grid min-h-40 content-between rounded-xl border border-border bg-card p-6 transition-colors hover:border-primary"
-            href={`/r/${encodeURIComponent(token)}/whatsapp`}
+            href={`/r/${encodeURIComponent(token)}/prescription`}
           >
             <span>
               <span className="block text-lg font-semibold">
-                Chat on WhatsApp
+                Send a prescription
               </span>
               <span className="mt-2 block text-sm text-muted-foreground">
-                Open the business&apos;s current WhatsApp sender with this Store
-                context attached.
+                Continue through the Pharmacy&apos;s secure clinical intake.
+              </span>
+            </span>
+            <span className="mt-6 text-sm font-medium text-primary">
+              Continue securely →
+            </span>
+          </a>
+        ) : null}
+        {canChat ? (
+          <a
+            className="grid min-h-40 content-between rounded-xl border border-border bg-card p-6 transition-colors hover:border-primary"
+            href={`/r/${encodeURIComponent(token)}/whatsapp?intent=product`}
+          >
+            <span>
+              <span className="block text-lg font-semibold">
+                Ask about a product on WhatsApp
+              </span>
+              <span className="mt-2 block text-sm text-muted-foreground">
+                Send a product photo or description to the business&apos;s
+                current WhatsApp sender with this Store context attached.
               </span>
             </span>
             <span className="mt-6 text-sm font-medium text-primary">
@@ -93,7 +113,7 @@ export default async function CustomerEntryPage({ params }: Props) {
             </span>
           </a>
         ) : null}
-        {!canRequest && !canChat ? (
+        {!canRequestProduct && !canSubmitPrescription && !canChat ? (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-amber-950 md:col-span-2">
             <h2 className="font-semibold">Channels temporarily unavailable</h2>
             <p className="mt-2 text-sm">

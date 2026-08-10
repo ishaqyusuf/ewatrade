@@ -6,6 +6,7 @@ import {
   conversationStateKey,
   createEmbeddedSignupState,
   customerChannelConversationContextId,
+  extractCustomerChannelIntakeSelection,
   extractWhatsAppChannelContext,
   isWithinWhatsAppSessionWindow,
   parseMetaWhatsAppEvents,
@@ -160,6 +161,17 @@ describe("direct Meta WhatsApp contract", () => {
     expect(extractWhatsAppChannelContext(`Start ewastore:${token}`)).toBe(token)
     expect(
       extractWhatsAppChannelContext("Send my prescription here"),
+    ).toBeNull()
+  })
+
+  test("extracts only an explicit generic intake selection", () => {
+    expect(
+      extractCustomerChannelIntakeSelection(
+        "Start ewastore:opaque intent:product",
+      ),
+    ).toBe("commerce_inquiry")
+    expect(
+      extractCustomerChannelIntakeSelection("Is this available?"),
     ).toBeNull()
   })
 
