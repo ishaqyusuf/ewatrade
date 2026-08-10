@@ -4,11 +4,11 @@
 
 **Blocked by:** 04 - Generalize WhatsApp Connection And Location Binding; 05 -
 Deliver Channel-Neutral Request Intake; 06 - Reuse Quote Payment And Order
-Conversion; 07 - Add Booking And Appointment Lifecycle; 08 - Extract Shared
-Pickup And Delivery Fulfilment; 11 - Enforce Vertical And Jurisdiction
-Eligibility.
+Conversion; 06B - Enforce Store Quotation Approval And Release; 07 - Add
+Booking And Appointment Lifecycle; 08 - Extract Shared Pickup And Delivery
+Fulfilment; 11 - Enforce Vertical And Jurisdiction Eligibility.
 
-**Status:** approved; blocked by Tickets 04, 05, 06, 07, 08, and 11
+**Status:** approved; blocked by Tickets 04, 05, 06, 06B, 07, 08, and 11
 
 **Approval:** Original scope and revised dependency order owner-approved on
 2026-08-09; selectable Offer Option actions approved on 2026-08-10.
@@ -22,5 +22,8 @@ Eligibility.
 - [ ] Render authoritative Offer Option actions such as `Choose red small` and
   `Choose black large` with each exact price. UI/templates consume Ticket 06's
   server projection and never calculate exclusivity, selected state or totals.
+- [ ] Never project/send a pending or rejected Quote. Approval request/decision
+  notifications are staff-facing; customer `View quote`, `Choose` and `Pay`
+  actions appear only after Ticket 06B's exact-version release succeeds.
 - [ ] Persist provider-neutral intents and idempotent attempt/receipt facts with template and service-window enforcement.
 - [ ] Test every action's positive, stale, consumed, cross-Tenant, disabled, provider-failure and replay path.

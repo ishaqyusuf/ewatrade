@@ -10,7 +10,8 @@ remain separately authorized.
 Amended by ADR-0031 on 2026-08-10: generic private Media Assets, typed Source
 Attachments and Human-Verified Observations may feed Progressive Catalog;
 Pharmacy owns the additional clinical record and professional interpretation,
-not the generic channel/storage mechanism. The batch is now 16 tickets.
+not the generic channel/storage mechanism. ADR-0032 adds Store team routing and
+optional exact-version Quote release approval. The batch is now 17 tickets.
 
 ## Context
 
@@ -123,3 +124,4 @@ Offering snapshots. Inventory quantities remain separate ledger facts.
 - `.scratch/service-commerce/midday-migration-contract.md`
 - `.scratch/service-commerce/issues/README.md`
 - `.brain/decisions/ADR-0031-customer-channels-generic-request-media-and-selectable-offers.md`
+- `.brain/decisions/ADR-0032-store-team-routing-and-quote-release-approval.md`

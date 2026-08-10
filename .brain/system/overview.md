@@ -32,8 +32,10 @@ Operational summary of the platform and how its major domains fit together.
   universal request model. Progressive Catalog lets verified requests create
   private draft Catalog records and attributable price history before managed
   inventory. Customer Channels owns multiple business Connections, stable
-  Store entry links/QR codes and generic private request media; Pharmacy remains
-  a thin regulated clinical source/policy extension of the shared workspace.
+  Store entry links/QR codes, Store team routing and generic private request
+  media. Quote release is either explicitly attendant-trusted or requires an
+  exact-version Store approver; Pharmacy remains a thin regulated clinical
+  source/policy extension of the shared workspace.
 - Managed storefront domains separate quote/payment/registrar state from
   ownership/DNS/SSL connection state and preserve the free platform hostname.
 

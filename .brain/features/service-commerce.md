@@ -6,7 +6,8 @@ The original product direction was approved on 2026-08-09 through ADR-0029.
 ADR-0030 now amends it with Progressive Catalog and a thinner Pharmacy
 extension. ADR-0031 adds generic Customer Channels, stable entry links/QR
 codes, request media/verified observations and exact selectable Offer Options.
-The owner approved the revised dependency-ordered 16-ticket batch through
+ADR-0032 adds Store team routing and optional exact-version quotation release
+approval. The owner approved the revised dependency-ordered 17-ticket batch through
 2026-08-10. Tickets 01, 02, 03 and 11 are complete; Ticket 03A is in progress
 and Ticket 04 is the parallel dependency frontier. Production schema/provider
 operations remain separately authorized.
@@ -23,6 +24,8 @@ consultation practice.
   `.brain/decisions/ADR-0030-progressive-catalog-and-thin-pharmacy-extension.md`
 - Customer Channels/media/Offer Options amendment:
   `.brain/decisions/ADR-0031-customer-channels-generic-request-media-and-selectable-offers.md`
+- Store team/Quote release amendment:
+  `.brain/decisions/ADR-0032-store-team-routing-and-quote-release-approval.md`
 - Specification: `.scratch/service-commerce/spec.md`
 - Approved tickets and execution order: `.scratch/service-commerce/issues/README.md`
 - Midday migration contract: `.scratch/service-commerce/midday-migration-contract.md`
@@ -111,6 +114,7 @@ has configured and is allowed to use:
 - provider-hosted or recorded payments;
 - pickup and delivery;
 - private customer-request attachments;
+- Store team routing and quotation release policy;
 - web, staff-assisted and WhatsApp channels; and
 - vertical/jurisdiction eligibility.
 
@@ -237,6 +241,21 @@ or Store id. The entry page reloads current Store/channel/policy facts and
 shows only permitted choices such as `Request online` and `Chat on WhatsApp`.
 Connection replacement therefore does not invalidate printed QR codes.
 
+The `configure` stage also includes **Team & routing** and **Quotation
+approval** for each Store. Team assignments reference accepted active Tenant
+memberships; `Add team member` reuses the staff invite flow rather than creating
+a channel account. A membership may be assigned as an attendant, quotation
+approver, pharmacist or any permitted combination. The first two are generic
+Store capabilities; pharmacist authority remains Pharmacy-owned.
+
+The explicit default release mode is `attendant_can_release`, presented as
+`Require approval before sending` switched off. Assigned attendants can prepare
+and release a Quote without another decision. When approval is enabled, at
+least one selected active Store approver other than the Quote creator must
+approve the exact current Quote Version before it becomes customer-visible.
+Although configured in Customer Channels onboarding, this is a Store Commerce
+policy and governs web, staff, QR and WhatsApp equally.
+
 Generic connection, binding, link and QR configuration moves out of
 Prescription settings. Category-specific compliance retains Pharmacy roles,
 consent, professional policies and clinical operating controls.
@@ -280,14 +299,25 @@ fulfilment and total. Selection is current-version/expiry guarded, idempotent
 and revalidates availability; only the selected option may be accepted, ordered,
 reserved or paid. Existing simple Quotes migrate as one default option.
 
+Quote preparation and customer release are separate server commands. The
+default attendant mode may perform both atomically. Approval-required mode
+keeps the current version as private `DRAFT` with a `pending` approval record,
+without a usable acceptance token or outbound intent, and leaves the source in
+its pre-Quote state. The exact-version approval transaction alone changes it to
+`ISSUED`, transitions the source to quoted, records issued audit/usage facts and
+creates the public capability. Rejection retains a `rejected` decision and
+requires a new immutable version; revision supersedes only a still-pending
+decision and emits no issued fact.
+
 ## Customer Lifecycle
 
 1. The customer enters through a stable Store link/QR, staff-assisted flow or
    the Store's WhatsApp identity.
 2. The channel resolves the Tenant, Store, capability profile and appropriate
    source aggregate before content is persisted.
-3. The business clarifies intent and either accepts direct intake, issues a
-   versioned Quote, or offers valid booking slots.
+3. The business clarifies intent and either accepts direct intake, prepares a
+   versioned Quote for immediate or approval-gated release, or offers valid
+   booking slots.
 4. The server projects only the actions valid for the current version and
    policy: `Request quote`, `Choose option`, `Book`, `Pay now`, `Pick up`, `Delivery`,
    `Talk to staff`, reschedule or cancel.
@@ -409,12 +439,12 @@ The amended migration remains expand-contract and proceeds by ticket frontier:
 3. Add narrow Commerce Inquiry plus Progressive Catalog capture, matching,
    price suggestions and explicit price promotion.
 4. Generalize WhatsApp Connection/Binding, move setup to Customer Channels and
-   publish stable Store entry links/QR codes.
+   publish stable Store entry links/QR codes with Store attendant routing.
 5. Add generic private request media/attachments/verified observations, then
    let channel-neutral intake consume the stable entry point.
 6. Reuse Quote, selectable Offer Option, payment, booking, pickup and delivery
-   capabilities and prove graduation from progressive Catalog to managed
-   inventory.
+   capabilities; add optional exact-version quotation approval; and prove
+   graduation from progressive Catalog to managed inventory.
 7. Adapt Pharmacy as a thin regulated extension and prove no regression.
 8. Prove the appointment vertical without prescription dependencies.
 9. Run bag-seller, Pharmacy and appointment browser/Neon acceptance plus
@@ -429,8 +459,9 @@ business activation remains separately authorized.
 ## Execution Frontier
 
 The owner approved the Progressive Catalog amendment on 2026-08-09 and the
-Customer Channels/media/Offer Options amendment on 2026-08-10. The exact
-16-ticket batch adds Tickets 03A, 04A and 06A. Tickets 01, 02, 03 and 11 are
+Customer Channels/media/Offer Options plus Store team/Quote approval amendments
+on 2026-08-10. The exact 17-ticket batch adds Tickets 03A, 04A, 06A and 06B.
+Tickets 01, 02, 03 and 11 are
 complete; Ticket 03A is in progress and Ticket 04 is the parallel frontier.
 Ticket 04A waits for both. Throughout
 execution:

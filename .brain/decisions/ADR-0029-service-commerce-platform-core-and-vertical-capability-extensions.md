@@ -18,8 +18,9 @@ Amended by ADR-0031 on 2026-08-10: Customer Channels owns multiple business
 Connections, Store bindings and stable entry links/QR codes; generic request
 media owns private transport/storage/safety and verified observations; Pharmacy
 retains clinical interpretation and release; mutually exclusive commercial
-alternatives use exact selectable Offer Options. The approved source batch is
-now 16 tickets.
+alternatives use exact selectable Offer Options. ADR-0032 further adds Store
+team routing and optional exact-version Quote release approval. The approved
+source batch is now 17 tickets.
 
 ## Context
 
@@ -145,6 +146,7 @@ provider transports remain behind package boundaries.
 - `.brain/features/service-commerce.md`
 - `.brain/decisions/ADR-0030-progressive-catalog-and-thin-pharmacy-extension.md`
 - `.brain/decisions/ADR-0031-customer-channels-generic-request-media-and-selectable-offers.md`
+- `.brain/decisions/ADR-0032-store-team-routing-and-quote-release-approval.md`
 - `.scratch/service-commerce/spec.md`
 - `.scratch/service-commerce/midday-migration-contract.md`
 - [WhatsApp Business Messaging Policy](https://whatsappbusiness.com/policy/)

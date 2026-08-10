@@ -53,6 +53,10 @@ Describe the intended technical architecture and responsibility boundaries for t
   and stable `/r/[token]` entry links/QR codes. Generic request media owns
   private assets, typed source attachments, safety/retry/grants and Human-
   Verified Observations; verticals add interpretation and policy extensions.
+- Store operational assignments compose attendant and quotation-approver
+  capabilities from active Tenant memberships. Commerce owns the Store release
+  policy and exact Quote-Version approval; channel transports cannot decide or
+  bypass it. Pharmacy professional release remains a separate gate.
 - Commerce Quote owns exact mutually exclusive Offer Options. Unselected
   alternatives are not payable lines and cannot reach Order, reservation or
   payment; existing simple Quotes expand as one default option.
@@ -173,7 +177,7 @@ Describe the intended technical architecture and responsibility boundaries for t
 - No direct client access to the database.
 - No universal customer-request table or arbitrary workflow engine.
 - Service Commerce migration work is authorized under ADR-0030 plus ADR-0031's
-  approved 16-ticket dependency frontier; production schema/provider
+  approved 17-ticket dependency frontier; production schema/provider
   operations remain separately authorized.
 
 ## Open Items

@@ -8,9 +8,10 @@
   demand grow private draft Catalog/price history and later graduate to managed
   inventory without automatic publication or invented stock. ADR-0031 adds
   generic Customer Channels, stable Store links/QR codes, private request
-  media/verified observations and exact selectable Offer Options. Pharmacy is a
+  media/verified observations, exact selectable Offer Options, Store attendant
+  routing and optional exact-version Quote approval. Pharmacy is a
   thin regulated extension; an appointment business is the second validation
-  vertical. The revised 16-ticket batch in
+  vertical. The revised 17-ticket batch in
   `.scratch/service-commerce/issues/` was owner-approved through 2026-08-10.
   Ticket 01 is complete: the focused package exposes the exact three-source contract,
   the broad acceptance file is split by lifecycle behind one run-owned atomic

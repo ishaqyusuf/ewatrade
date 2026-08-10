@@ -10,11 +10,13 @@ Grow The Private Catalog From Requests And Quotes; 04 - Generalize WhatsApp
 Connection And Location Binding; 04A - Establish Generic Customer Request
 Media And Verified Observations; 05 - Deliver Channel-Neutral Request Intake;
 06 - Reuse Quote Payment And Order Conversion; 06A — Graduate Progressive
-Catalog To Managed Inventory; 08 - Extract Shared Pickup And Delivery
-Fulfilment; 09 - Deliver State-Aware Customer Actions And Notifications; 11 -
-Enforce Vertical And Jurisdiction Eligibility.
+Catalog To Managed Inventory; 06B - Enforce Store Quotation Approval And
+Release; 08 - Extract Shared Pickup And Delivery Fulfilment; 09 - Deliver State-
+Aware Customer Actions And Notifications; 11 - Enforce Vertical And
+Jurisdiction Eligibility.
 
-**Status:** approved; blocked by Tickets 03A, 04, 04A, 05, 06, 06A, 08, and 09
+**Status:** approved; blocked by Tickets 03A, 04, 04A, 05, 06, 06A, 06B, 08,
+and 09
 
 **Approval:** Original and revised thin-Pharmacy/Progressive Catalog scope
 owner-approved on 2026-08-09; generic Customer Channels/media ownership
@@ -35,6 +37,10 @@ amendment approved on 2026-08-10.
 - [ ] Preserve credentialed professional roles, audited confirmation, inventory-backed mapping, retention, incident and personal break-glass rules.
 - [ ] Route web, staff and technically eligible WhatsApp origins through shared adapters without merging customer threads or prescription content.
 - [ ] Use shared Quote/payment/pickup/delivery/actions only after the pharmacist/source adapter returns the required release and policy facts.
+- [ ] Let a pharmacist also receive a generic Store attendant and/or quotation-
+  approver assignment without equating those commercial capabilities with
+  licence status. Clinical release must precede any applicable commercial Quote
+  approval, and neither decision satisfies the other.
 - [ ] Preserve every completed Prescription Commerce compatibility and Neon acceptance test; completed tickets remain historical evidence.
 - [ ] Keep Pharmacy WhatsApp disabled when Meta policy, jurisdiction, legal, licence, template or operating approval is absent, regardless of technical connection readiness.
 - [ ] Provide a staged switch and rollback; no prescription-named persistence contraction occurs in this ticket.

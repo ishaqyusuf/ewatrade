@@ -5,9 +5,10 @@
 Accepted as a product and architecture amendment on 2026-08-10. The owner
 approved `Settings > Channels`, multiple business-owned connections, stable
 Store entry links/QR codes, generic customer-request media and non-additive
-selectable commercial alternatives. The Service Commerce source batch is now
-16 tickets; production storage, scanner, provider and database rollout remain
-separately authorized.
+selectable commercial alternatives. This amendment produced a 16-ticket batch;
+ADR-0032 subsequently adds Store team routing and Quote release approval,
+making the current batch 17 tickets. Production storage, scanner, provider and
+database rollout remain separately authorized.
 
 ## Context
 
@@ -120,3 +121,4 @@ choice.
 - `.scratch/service-commerce/spec.md`
 - `.scratch/service-commerce/midday-migration-contract.md`
 - `.scratch/service-commerce/issues/04a-establish-generic-customer-request-media-and-verified-observations.md`
+- `.brain/decisions/ADR-0032-store-team-routing-and-quote-release-approval.md`

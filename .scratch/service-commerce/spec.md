@@ -54,6 +54,7 @@ The platform will provide:
 - business-owned WhatsApp connections with explicit Store bindings; and
 - generic private request media, typed attachments and human-verified
   observations; stable Store entry links/QR codes; and
+- Store attendant routing plus optional exact-version quotation approval; and
 - vertical/jurisdiction policy that can add restrictions without contaminating
   the shared core.
 
@@ -71,7 +72,8 @@ and source implementation resumes from Ticket 01. Production schema changes,
 provider mutations and rollout remain separately authorized.
 On 2026-08-10 the owner approved ADR-0031's Customer Channels, stable entry
 link/QR, generic request-media and selectable Offer Option amendment. The batch
-now contains 16 dependency-ordered tickets.
+was further amended by ADR-0032 with Store team routing and Quote release
+approval and now contains 17 dependency-ordered tickets.
 
 ## User Stories
 
@@ -178,6 +180,15 @@ now contains 16 dependency-ordered tickets.
 18g. As a privacy lead, generic media has Tenant/Store isolation, private
     storage, access audit and baseline retention/deletion while a regulated
     vertical may impose stricter interpretation, access and retention rules.
+18h. As a Store owner, I assign accepted active team members as attendants who
+    handle requests, regardless of whether they also hold a pharmacist or other
+    vertical role.
+18i. As a Store owner, quotation approval is explicitly off by default so an
+    assigned attendant may release the correct Quote; when I enable it, I must
+    select at least one active quotation approver.
+18j. As an approver, I approve or reject the exact current Quote Version, not a
+    mutable request or future revision. A creator cannot approve their own
+    version when approval is required.
 
 ### WhatsApp Business Onboarding And Routing
 
@@ -216,6 +227,18 @@ now contains 16 dependency-ordered tickets.
 29b. As a business, an Offer Option selection is current-version and expiry
     checked, revalidates availability and yields one exact payable option.
     Unselected options cannot create an Order, reservation or payment.
+29c. As an assigned attendant at a Store using the default release mode, I can
+    prepare and send a Quote without waiting for a second person.
+29d. As an assigned attendant at a Store requiring approval, I can prepare and
+    submit a private Quote Version but cannot expose, send, accept or charge it
+    until an active selected approver releases that exact version.
+29e. As a quotation approver, my decision records the version, policy revision,
+    actor, time and bounded reason; revising a pending Quote supersedes that
+    pending decision, while approved/rejected history remains immutable and
+    never authorizes the new version.
+29f. As a pharmacist who is also assigned as an attendant or approver, my
+    commercial capabilities compose with—but never replace—clinical review and
+    professional release.
 30. As a customer, I can accept only the current Quote version and receive the
     same Order when identical acceptance commands race or replay.
 31. As a customer, a changed price, item, slot, address, delivery fee or promise
@@ -344,9 +367,10 @@ now contains 16 dependency-ordered tickets.
 77. As a contributor, development database acceptance runs only against the
     verified `.env.local` Neon profile and never local Docker/PostgreSQL.
 78. As the product owner, I approved the Progressive Catalog amendment on
-    2026-08-09 and the exact 16-ticket Customer Channels/media/Offer Options
-    amendment on 2026-08-10; implementation follows its blockers and keeps production
-    database/provider operations separately gated.
+    2026-08-09 and the exact 17-ticket Customer Channels/media/Offer Options/
+    Store team/Quote approval amendments on 2026-08-10; implementation follows
+    their blockers and keeps production database/provider operations separately
+    gated.
 
 ## Implementation Decisions
 
@@ -439,6 +463,44 @@ now contains 16 dependency-ordered tickets.
 - The existing `alternative` Quote-line outcome is not an exclusive-choice
   model and must not add every displayed alternative into the payable total.
 
+### Store Team And Quote Release Boundary
+
+- Customer Channels composes Store team routing and Quote policy in onboarding,
+  but neither is stored on a WhatsApp Connection. The same assignments and
+  release policy govern web, staff, QR and WhatsApp origins.
+- Team assignments reference active Tenant memberships and add Store-scoped
+  `attendant` or `quote_approver` capabilities. Existing staff invitation owns
+  identity creation. A vertical role such as pharmacist is independent and may
+  coexist on the same person.
+- Existing source-owned Service/Pharmacy actor authorization remains a narrow
+  compatibility input until audited reconciliation creates explicit Store
+  assignments. New Store publish requires an attendant; Tenant role alone does
+  not infer one or broaden access.
+- Release mode is exactly `attendant_can_release | approval_required` and is
+  revisioned. The first is the explicit default. Existing Stores resolve to
+  that typed compatibility default until an approved backfill persists it;
+  absent or malformed client state never chooses authority.
+- In default mode, one active assigned attendant may prepare and release the
+  exact version atomically. In approval-required mode, preparation creates a
+  private `DRAFT` version plus a `pending` approval record without a public
+  acceptance capability or outbound notification; it leaves the source pre-
+  Quote until an active selected approver other than its creator decides.
+- Approval decision lifecycle is `pending | approved | rejected | superseded`.
+  Approval atomically changes `DRAFT` to `ISSUED`; staff rejection does not use
+  customer `DECLINED` and requires a new immutable version before resubmission.
+  Revision supersedes only a still-pending decision and preserves historical
+  approved/rejected facts.
+- Release is the sole atomic owner of source quoted transition, issued audit/
+  usage, public capability and notification eligibility. Exact replay cannot
+  duplicate them, and rejection/revision emits no issued lifecycle fact.
+- Approval/rejection is bound to Tenant, Store, source, Quote, Quote Version,
+  policy revision and actor. Revision, revocation or supersession invalidates
+  the pending decision. Approval revalidates current policy, professional
+  release, Offer Options, totals, availability and expiry in the release
+  transaction.
+- Clinical/professional release, Quote approval, customer Offer Option
+  selection and customer acceptance are distinct commands and audit facts.
+
 ### Midday Architecture
 
 - Server route: authenticate, resolve Tenant/Store, load typed URL state,
@@ -470,6 +532,9 @@ now contains 16 dependency-ordered tickets.
   channels`. It lists multiple Tenant Connections and Store bindings. Its
   publish step creates a stable Store entry page, share link and QR code; the
   QR never embeds a mutable provider number.
+- The `configure` step includes Store `Team & routing` and `Quotation approval`.
+  `Assign attendants` selects active team memberships; `Require approval before
+  sending` is off by default and reveals the active approver selector when on.
 - Direct Meta is the default adapter. Twilio/BSP adoption requires a separate
   cost/support decision but not a domain migration.
 - Pricing is read from current provider facts or configuration. Meta currently
@@ -485,12 +550,13 @@ now contains 16 dependency-ordered tickets.
 2. Add Store capability/readiness, source interoperability and vertical policy.
 3. Add Commerce Inquiry and Progressive Catalog capture/price suggestions.
 4. Generalize WhatsApp Connection/Binding naming and channel routing behind
-   stable exports, then publish the stable Store entry link/QR from Customer
-   Channels.
+   stable exports, assign the Store attendants, then publish the stable Store
+   entry link/QR from Customer Channels.
 5. Add generic private request media, typed attachments and Human-Verified
    Observations, then let channel-neutral intake consume that entry point.
 6. Extract shared Quote/payment/Order seams including exact selectable Offer
-   Options, then prove progressive-to-managed-inventory graduation.
+   Options, add optional exact-version quotation release approval, then prove
+   progressive-to-managed-inventory graduation.
 7. Add booking, then extract reusable pickup/delivery and actions.
 8. Adapt Pharmacy as a thin regulated extension without weakening its source
    rules.
@@ -526,6 +592,10 @@ fixture cleanup.
 - A non-Pharmacy bag-seller acceptance path proves image -> Human-Verified
   Observation -> Catalog match/private draft -> two mutually exclusive priced
   Offer Options -> one selected exact Quote/Order/payment/fulfilment outcome.
+- Quote release tests cover the explicit default attendant path and the
+  approval-required path across web/staff/WhatsApp, including rejection,
+  revision, creator self-approval denial, removed approver, concurrency/replay,
+  policy revision and pharmacist-plus-attendant capability composition.
 - Unit tests cover exhaustive capability/action registries, vertical policy,
   booking availability/conflicts, fulfilment eligibility and cost attribution.
 - Repository tests cover cross-Tenant/Store rejection, atomic write graphs,
@@ -580,5 +650,5 @@ fixture cleanup.
   specs while preserving one bounded atomic cleanup boundary.
 - The original and Progressive Catalog batches were owner-approved on
   2026-08-09. The owner approved ADR-0031's Customer Channels, generic request
-  media and Offer Options amendment on 2026-08-10, producing the current
-  16-ticket dependency graph.
+  media and Offer Options amendment plus ADR-0032's Store team/Quote release
+  amendment on 2026-08-10, producing the current 17-ticket dependency graph.

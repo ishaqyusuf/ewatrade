@@ -16,6 +16,7 @@ High-level summary of the platform, its business domains, and the current implem
 - Service Commerce request, quote, booking, payment and fulfilment capabilities
 - Customer Channels, stable Store entry links/QR codes and generic private
   request media/verified observations
+- Store team routing and optional version-specific quotation release approval
 - Pharmacy Prescription Operations as the first thin regulated extension
 
 ## Architecture Snapshot
@@ -45,7 +46,7 @@ High-level summary of the platform, its business domains, and the current implem
   adopts managed inventory. Generic media transport/storage is shared while
   Pharmacy retains clinical interpretation; mutually exclusive Offer Options
   have exact non-additive totals. Pharmacy is a thin regulated extension of the
-  shared commerce workspace. The amended 16-ticket source batch was
+  shared commerce workspace. The amended 17-ticket source batch was
   owner-approved through 2026-08-10, with production operations separately
   gated.
 - Managed domain source supports GO54 `.com.ng`, Openprovider `.com`, Paystack

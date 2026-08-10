@@ -12,7 +12,8 @@ This contract translates the Service Commerce direction plus ADR-0030's
 Progressive Catalog/thin-Pharmacy amendment into the repository's required
 Midday implementation shape. ADR-0031 adds generic Customer Channels, stable
 entry links/QR codes, request media/verified observations and selectable Offer
-Options. The revised 16-ticket source batch was owner-approved through
+Options. ADR-0032 adds Store team routing and optional exact-version quotation
+release approval. The revised 17-ticket source batch was owner-approved through
 2026-08-10; each ticket must still satisfy its blockers, and production
 database/provider operations remain separately authorized.
 
@@ -136,6 +137,10 @@ version authorization remain mandatory.
 - `CommerceQuoteLine` has an `ALTERNATIVE` outcome, but current monetary logic
   treats it as payable and adds it to Quote totals. It is not a safe model for
   mutually exclusive red-small versus black-large Offer Options.
+- `issueCommerceQuote` currently creates a new version directly as `ISSUED` and
+  returns its public token. There is no Store-generic attendant assignment,
+  quotation-approver assignment, release policy or version-specific commercial
+  approval; Pharmacy attendant/pharmacist roles cannot become that shared seam.
 - Persistence: `packages/db/prisma/models/{service-operations,commerce-quotes,commercial-orders,prescription-commerce,prescription-operations}.prisma`
   plus `packages/db/src/queries/{service-public,service-work,service-settings,service-reporting,commerce-quotes,commercial-orders,prescription-requests,prescription-payments,prescription-fulfillment,prescription-reporting,prescription-compliance,whatsapp-connections}.ts`.
 - Jobs: `packages/jobs/src/{tasks,handlers}/service-notification-dispatch.ts`,
@@ -192,7 +197,7 @@ also spread across API/DB rather than a focused reusable package.
 - `packages/service-commerce/package.json`, `tsconfig.json`, `src/index.ts`
 - `packages/service-commerce/src/schemas/index.ts` as a thin barrel over
   `source.ts`, `capability.ts`, `catalog-adoption.ts`, `media.ts`, `action.ts`,
-  `booking.ts` and `fulfillment.ts`
+  `quote-approval.ts`, `booking.ts` and `fulfillment.ts`
 - `packages/service-commerce/src/sources.ts`: exhaustive adapters and exact
   Product cart/Order versus approved narrow Commerce Inquiry boundary
 - `packages/service-commerce/src/capabilities.ts`: Store readiness and vertical
@@ -204,6 +209,8 @@ also spread across API/DB rather than a focused reusable package.
   Source Attachment, Human-Verified Observation, lifecycle/safety/retry and
   baseline retention rules plus private-storage/safety provider contracts
 - `packages/service-commerce/src/actions.ts`: state-aware opaque action rules
+- `packages/service-commerce/src/quote-approval.ts`: Store team capability,
+  explicit release-mode, version decision and allowed-command rules
 - `packages/service-commerce/src/bookings.ts`: availability, contention and
   lifecycle rules
 - `packages/service-commerce/src/fulfillment.ts`: shared pickup/delivery rules
@@ -218,6 +225,12 @@ also spread across API/DB rather than a focused reusable package.
   Media Asset, typed Source Attachment, revisioned Verified Observation,
   access/safety/retry/retention audit and optional compatibility linkage from
   Pharmacy clinical media without deleting `PrescriptionMedia`
+- `packages/db/prisma/models/service-commerce-quote-approval.prisma`: Store
+  team assignments, revisioned Quote release policy, exact-version approval
+  request/decision and audit facts using existing Membership identities. Team
+  assignment is unique by Tenant/Store/Membership/capability; policy is unique
+  by Store; approval is unique by Tenant/Store/Quote Version with append-only
+  state-transition audit
 - `packages/db/prisma/models/commerce-quotes.prisma`: additive immutable Offer
   Option/selection records and exact per-option totals; existing simple Quote
   versions expand as one default option
@@ -229,14 +242,17 @@ also spread across API/DB rather than a focused reusable package.
 - `packages/db/src/queries/service-commerce-media-assets.ts`
 - `packages/db/src/queries/service-commerce-attachments.ts`
 - `packages/db/src/queries/service-commerce-observations.ts`
+- `packages/db/src/queries/service-commerce-quote-approvals.ts`
 - `packages/db/src/queries/service-commerce-bookings.ts`
 - `packages/db/src/queries/service-commerce-fulfillment.ts`
 - `packages/db/src/queries/service-commerce-reporting.ts`
 - `apps/api/src/schemas/service-commerce.ts`
 - `apps/api/src/schemas/service-commerce-media.ts`
+- `apps/api/src/schemas/service-commerce-quote-approval.ts`
 - `apps/api/src/trpc/routers/service-commerce/index.ts` as a thin composed
-  router over `access.ts`, `queue.ts`, `catalog.ts`, `media.ts`, `actions.ts`,
-  `bookings.ts`, `fulfillment.ts` and `reporting.ts`
+  router over `access.ts`, `queue.ts`, `catalog.ts`, `media.ts`,
+  `quote-approvals.ts`, `actions.ts`, `bookings.ts`, `fulfillment.ts` and
+  `reporting.ts`
 - `apps/dashboard/src/app/(shell)/service-commerce/page.tsx`
 - `apps/dashboard/src/app/(shell)/service-commerce/reports/page.tsx`
 - `apps/dashboard/src/app/(shell)/settings/service-commerce/page.tsx`
@@ -250,7 +266,7 @@ also spread across API/DB rather than a focused reusable package.
 - `apps/dashboard/src/components/service-commerce/{service-commerce-header,open-service-commerce-sheet,service-commerce-search-filter,service-commerce-sheet-header,service-commerce-sheet-content,form-context,service-commerce-workspace,service-commerce-setup,service-commerce-report}.tsx`
 - `apps/dashboard/src/components/service-commerce/catalog-adoption/{catalog-match,price-suggestions,draft-catalog-form,inventory-graduation-form}.tsx`
 - `apps/dashboard/src/components/service-commerce/media/{attachment-list,attachment-uploader,media-viewer,observation-form,media-status}.tsx`
-- `apps/dashboard/src/components/customer-channels/{channels-header,connections-list,connection-form,store-binding-form,entry-point-card,qr-code-card}.tsx`
+- `apps/dashboard/src/components/customer-channels/{channels-header,connections-list,connection-form,store-binding-form,team-routing-form,quote-approval-form,entry-point-card,qr-code-card}.tsx`
 - `apps/dashboard/src/components/service-commerce/service-commerce-controllers.ts`
   as the single exhaustive mode-to-controller/schema/id map
 - `apps/dashboard/src/components/sheets/service-commerce-sheet.tsx`
@@ -284,6 +300,12 @@ also spread across API/DB rather than a focused reusable package.
 - Existing Commerce Quote schemas/queries: migrate simple Quotes to one default
   Offer Option and make alternative selection exact, idempotent and non-
   additive before any selected option can reach Order/payment/reservation.
+- Existing Commerce Quote schemas/queries: split version preparation from
+  customer release. Preserve the direct `ISSUED` result only through the
+  explicit attendant-release policy; approval-required versions remain private
+  `DRAFT` and leave the source pre-Quote until the exact-version decision
+  transaction creates the public capability, transitions the source to quoted
+  and appends issued audit/usage facts exactly once.
 - `packages/db/src/queries/whatsapp-connections.ts` and tests: generalize
   connection/binding naming behind compatible exports and retain whole-route
   cross-Tenant rejection.
@@ -448,15 +470,22 @@ also spread across API/DB rather than a focused reusable package.
   `connection`. Pharmacy professional actions stay inside Pharmacy detail,
   never the generic header.
 - `settings/channels/page.tsx` authenticates, resolves Tenant and authorized
-  Store scope, prefetches a lightweight Connection/Binding/entry-point list and
-  composes `Customer channels`. The page shows multiple Connections with
-  lifecycle, provider/public number, billing owner and bound Stores; it does
-  not infer readiness or legal permission from the business category.
+  Store scope, prefetches lightweight Connection/Binding/entry-point plus Store
+  team/release-policy projections and composes `Customer channels`. The page
+  shows multiple Connections with lifecycle, provider/public number, billing
+  owner and bound Stores; it does not infer readiness, membership activity,
+  approval authority or legal permission in the client.
 - `Connect WhatsApp` opens `connection`; an existing connection opens
   `connection` with its opaque id; `Configure locations` opens a binding step;
-  `Share link & QR` opens `entry_point`. Setup/configure/test/publish are
+  `Assign attendants` opens `team`; `Quotation approval` opens `quote_policy`;
+  and `Share link & QR` opens `entry_point`. Setup/configure/test/publish are
   explicit states, and replacement never hides or mutates the working route
   before server readiness promotes the candidate.
+- The team step lists only accepted active Tenant memberships and links `Add
+  team member` to the existing invite flow. The policy step uses an explicit
+  `Require approval before sending` switch, off by default; when on, it requires
+  one or more active Store approvers and explains that Quote creators cannot
+  approve their own versions.
 - The entry-point card previews the stable `/r/[token]` page and offers Copy
   link/Download QR. The public page resolves current Store/channel/policy facts
   on every visit and displays only permitted actions such as `Request online`
@@ -468,17 +497,20 @@ also spread across API/DB rather than a focused reusable package.
 
 - `serviceCommerceSheet`: enum `intake | request | quote | catalog_draft |
   inventory_graduation | media | attachment_review | booking | fulfillment |
-  connection | entry_point | setup | success`
+  connection | team | quote_policy | quote_approval | entry_point | setup |
+  success`
 - `sourceKind`: exact enum `service | prescription | commerce_inquiry`; absent
   for exact Product cart/Order flows. `commerce_inquiry` is restricted to
   Product demand requiring identification, availability confirmation or Quote.
 - `sourceId`, `sourceLineId`, `catalogItemId`, `offeringId`, `quoteId`,
   `bookingId`, `orderId`, `connectionId`, `entryPointId`, `mediaAssetId`,
-  `attachmentId`: opaque strings used only with the matching
+  `attachmentId`, `membershipId`, `quoteApprovalId`: opaque strings used only
+  with the matching
   mode/source; mutually irrelevant ids are cleared on transitions
 - `successKind`: enum `request | catalog_draft | catalog_price |
   inventory_graduation | media | observation | connection | entry_point |
-  quote | offer_selection | booking | payment | pickup | delivery`
+  team_assignment | quote_policy | quote_approval | quote | offer_selection |
+  booking | payment | pickup | delivery`
   and `successId`: revalidated by an authorized detail/status query before any
   success copy renders
 
@@ -490,6 +522,7 @@ also spread across API/DB rather than a focused reusable package.
 - `channels`: array of `web | staff | whatsapp`
 - `fulfillment`: array of `none | service | pickup | delivery`
 - `catalogStates`: array of `unresolved | draft | linked | graduated`
+- `approvalStates`: array of `not_required | pending | approved | rejected`
 - `assignees`: array of opaque user ids returned by the scoped filter-options
   query
 - `start`, `end`: ISO date-only values interpreted as a Store-timezone
@@ -528,8 +561,8 @@ embed-error state. Reopening must reauthorize rather than reuse an expired URL.
   state inference.
 - `service-commerce-sheet-content.tsx` handles loading/error/retry and delegates
   to focused intake, request, quote, Catalog draft, inventory graduation,
-  media/attachment review, booking, fulfilment, connection, entry-point,
-  setup or revalidated-success content.
+  media/attachment review, booking, fulfilment, connection, team routing,
+  Quote policy/approval, entry-point, setup or revalidated-success content.
   Unsupported combinations return a closed/error
   state.
 - `form-context.tsx` creates one RHF provider for the active editable command
@@ -537,6 +570,14 @@ embed-error state. Reopening must reauthorize rather than reuse an expired URL.
   through typed adapter slots. Generic observation drafts live here; Pharmacy
   clinical comparison/review context remains in the Prescription package/
   component tree.
+- `team` uses membership selectors from the scoped active-team query and never
+  accepts raw email/phone identity. `quote_policy` uses one revisioned RHF
+  policy form; enabling approval reveals the approver selector and blocks save
+  until at least one different active approver is eligible.
+- `quote_approval` fetches the exact pending Quote Version and renders creator,
+  source, lines/Offer Options, currency, exact total, fulfilment, expiry and
+  policy revision. Approve/reject are confirmed commands with pending/error/
+  retry state; a stale version or assignment change closes to safe recovery.
 - `media` projects pending/safe/quarantined/rejected/retryable/deleted status,
   uses a short-lived server grant only for a permitted safe asset, and restores
   `Authorize/Retry` after expiry or image/PDF embed failure.
@@ -570,7 +611,8 @@ embed-error state. Reopening must reauthorize rather than reuse an expired URL.
   `reference` and `customer` are sticky on desktop only; private content is not
   a column. `commercial` displays allowlisted Quote/payment/booking summary,
   never provider ids. It also shows an allowlisted unresolved/draft/linked/
-  graduated Catalog badge. `nextAction` is server-projected.
+  graduated Catalog badge plus safe Quote approval state. `nextAction` is
+  server-projected.
 - Row click opens the server-projected default detail mode and writes only
   `sourceKind`, `sourceId` and the matching sheet. Links, menu triggers, action
   buttons and customer controls call `stopPropagation`; keyboard Enter/Space
@@ -583,6 +625,9 @@ embed-error state. Reopening must reauthorize rather than reuse an expired URL.
   verified line and the actor can manage progressive Catalog. `Update Catalog
   price` is separate from editing the Quote and always opens confirmation with
   affected Offering/Store scope, prior price and suggestion source.
+- `Approve quote`/`Reject quote` appear only for an active selected approver on
+  the exact pending version and open `quote_approval`; they never mutate from
+  the row menu.
 - `table-header.tsx` maps only the sort allowlist above. Unknown column sort
   metadata is inert. Filters use scoped option queries; clearing filters keeps
   sort/Store and returns the unfiltered queue.
@@ -605,9 +650,11 @@ repository commands:
   canReport }`; tenant id is server/private output and never a public
   projection.
 - `filterOptions({ storeId }) -> { assignees, statuses, sourceKinds, channels,
-  fulfillment, catalogStates }`, scoped to authorized options only.
+  fulfillment, catalogStates, approvalStates }`, scoped to authorized options
+  only.
 - `queue({ storeId, cursor?, limit, q?, statuses?, sourceKinds?, channels?,
-  fulfillment?, catalogStates?, assignees?, start?, end?, sort, direction }) ->
+  fulfillment?, catalogStates?, approvalStates?, assignees?, start?, end?,
+  sort, direction }) ->
   { data, meta: { cursor? } }`; `limit` defaults to 50 and is capped at 100.
 - `detail({ storeId, source: { kind, id } })` returns the source-owned
   authorized detail plus common `allowedActions`; heavy/private fields remain
@@ -637,6 +684,14 @@ repository commands:
   `saveStoreBindings`, `testConnection`, `publishEntryPoint` and
   `entryPointPreview` back `Settings > Channels`; no client picks readiness or
   activates a candidate before the server readiness result.
+- `storeTeam({ storeId })`, `assignStoreTeamCapability`,
+  `revokeStoreTeamCapability` and `activeTeamOptions` return/use existing active
+  Tenant memberships with explicit Store predicates. Raw email/phone never
+  identifies an assignment command.
+- `quoteReleasePolicy({ storeId })` and `updateQuoteReleasePolicy` expose an
+  explicit revisioned `attendant_can_release | approval_required` mode. The
+  latter is Owner/Admin-only, requires expected revision/reason, and requires a
+  non-empty active approver set when approval is enabled.
 - Public `entryPoint({ token })` returns Store display identity and only the
   currently permitted web/WhatsApp start actions. Missing, revoked, ambiguous,
   policy-blocked or stale routes collapse to a safe unavailable/recovery
@@ -646,6 +701,16 @@ repository commands:
   option identity, label, exact total/expiry and allowed action; selection
   revalidates current version, availability and Store policy before creating
   the sole payable selection.
+- Source Quote commands delegate to `prepareQuoteVersion`. In default mode an
+  active assigned attendant may atomically release it; in approval-required
+  mode it returns a private `DRAFT` plus `pending` approval result.
+  `approveQuoteVersion` and
+  `rejectQuoteVersion` require the pending id, expected Quote/Version/policy
+  revisions and bounded reason. Approval revalidates every authority and
+  commercial fact in the transaction that changes the version to `ISSUED`,
+  moves the source to quoted, appends issued audit/usage facts and creates its
+  public capability exactly once. Rejection/revision emits none of those issued
+  effects. No separate client `release=true` flag exists.
 - `report({ storeId?, start, end })` returns allowlisted aggregate lifecycle,
   Progressive Catalog capture/graduation, usage, cost-known/unknown and
   reliability projections.
@@ -658,7 +723,8 @@ adds Tenant + Store predicates before filters. Search targets only reference,
 allowlisted customer display fields and source-approved search text. Date
 filters use canonical lifecycle/queue timestamps and `[start,end)`. Assignee,
 status, source, channel, fulfilment and Catalog-state values are validated
-shared enums; an empty/invalid allowlist never broadens a query.
+shared enums; approval state is also an allowlisted shared enum. An empty or
+invalid allowlist never broadens a query.
 
 After an awaited successful mutation, invalidate exact keys in this order:
 
@@ -673,8 +739,10 @@ After an awaited successful mutation, invalidate exact keys in this order:
    cached as durable query truth;
 7. Connection/Binding/entry-point lists plus `workspaceAccess` only when channel
    setup/readiness/publish facts changed;
-8. `report` only for lifecycle, payment, booking, fulfilment, usage/cost events;
-9. current public status/Quote/booking/entry capability where customer state changed.
+8. Store team/release-policy, pending-approval queue, Quote detail and action
+   projections when an assignment, policy or decision changes;
+9. `report` only for lifecycle, payment, booking, fulfilment, usage/cost events;
+10. current public status/Quote/booking/entry capability where customer state changed.
 
 Refetch/invalidation completes before success mode/toast. Errors remain visible
 with retry and preserve safe draft data. Optimistic writes are limited to
@@ -733,6 +801,30 @@ reversible presentation state; authoritative lifecycle state always refetches.
   Existing simple Quotes map to one default option; alternatives are not
   payable until one current option is selected. Only that selection can flow
   into acceptance, Order, reservation and payment.
+- Store team assignments are scoped operational capabilities over active
+  Tenant memberships, not global auth roles or Pharmacy roles. One membership
+  may carry attendant, quotation-approver and vertical capabilities
+  independently.
+- Existing Service/Pharmacy actor checks remain compatibility adapters until an
+  audited reconciliation maps only already-authorized people to explicit Store
+  assignments. New Store publish requires one active attendant; generic Tenant
+  role alone never infers or broadens assignment.
+- Quote release mode is exactly `attendant_can_release | approval_required`.
+  The first is the explicit schema/default/backfill behavior. The second keeps
+  prepared versions private until an active different Store approver approves
+  the exact current Quote/Version under the same current policy revision.
+- Approval, clinical release, Offer Option selection and customer acceptance
+  remain different commands. Revised/revoked/superseded versions cannot inherit
+  an approval, and public/channel projections never expose a pending version.
+- The existing Quote Version `DRAFT` status is the sole persisted private-
+  prepared state. Its version-owned approval record is exactly `pending |
+  approved | rejected | superseded`; staff rejection never uses customer
+  `DECLINED`. Approval changes `DRAFT` to `ISSUED`; rejection requires a new
+  immutable version for resubmission, and revision supersedes only pending
+  decisions while preserving approved/rejected history.
+- Preparation leaves the source pre-Quote. Release atomically owns the source
+  quoted transition, issued audit/usage and public capability; exact replay is
+  side-effect free and rejection/revision emits no issued fact.
 - Every Quote version has at least one immutable option. Each option exposes an
   opaque id, customer label, complete line set, currency, subtotal, discount,
   tax, fulfilment fee, exact total, availability outcome, fulfilment promise
@@ -790,11 +882,12 @@ reversible presentation state; authoritative lifecycle state always refetches.
    Commerce Inquiry and Progressive Catalog seams while old Pharmacy/Service
    exports remain authoritative.
 3. Adapt channels/media: move generic Connection/Binding setup to Customer
-   Channels, add stable entry links/QR codes and route web/staff/WhatsApp media
-   through generic assets/attachments/observations while compatibility readers
-   remain.
+   Channels, add stable entry links/QR codes and Store attendant routing, and
+   route web/staff/WhatsApp media through generic assets/attachments/
+   observations while compatibility readers remain.
 4. Adapt commerce: route callers through source adapters, Progressive Catalog,
-   exact Offer Options, reusable Commerce/Fulfilment seams and booking.
+   exact Offer Options, explicit Store Quote release policy/approval, reusable
+   Commerce/Fulfilment seams and booking.
 5. Graduate: prove progressive Catalog records can become managed inventory
    without losing linked request/Quote/Order/price history.
 6. Prove: run bag-seller, Pharmacy and appointment vertical acceptance on
@@ -813,7 +906,8 @@ reversible presentation state; authoritative lifecycle state always refetches.
 - Adapt/graduate/prove stops on any Tenant/Store isolation failure, projection
   privacy leak, incompatible public URL/result, concurrency/idempotency
   regression, lost/duplicated attachment, unsafe media access, incorrect
-  alternative total/selection, history loss, invented stock, policy bypass, or
+  alternative total/selection, unapproved Quote release, stale approval reuse,
+  history loss, invented stock, policy bypass, or
   failed required desktop/mobile/Neon acceptance. Disable the new Store
   capability, stop its identifier-only jobs, retain compatibility exports and
   readers, and reconcile additive data before another attempt. Never roll back
@@ -856,9 +950,15 @@ Approved target ownership:
   match/private draft, two exclusive priced Offer Options, one idempotent
   selection and one exact Quote/Order/payment/fulfilment path. Unselected
   options contribute zero payable/reservation effect.
+- Store team/Quote release acceptance covers the explicit default attendant
+  path and approval-required path across origins: configuration, pending
+  privacy, approve/reject/revise, creator self-approval denial, removed/
+  suspended approver, policy revision, concurrent decision/replay and
+  pharmacist-plus-attendant composition.
 - `Settings > Channels` desktop/mobile QA for multiple Connections, Store
-  assignment, pending/replacement readiness, stable entry preview, Copy link,
-  Download QR and current web/WhatsApp action projection.
+  assignment, team routing, Quote policy/approver selection, pending/
+  replacement readiness, stable entry preview, Copy link, Download QR and
+  current web/WhatsApp action projection.
 - Deterministic cross-channel/cross-vertical Neon seam using only the verified
   `.env.local` development profile; local Docker/PostgreSQL is prohibited.
 - Authenticated desktop/mobile and public browser acceptance.

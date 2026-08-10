@@ -24,6 +24,11 @@ owner-approved on 2026-08-09; selectable Offer Option amendment approved on
 - [ ] Preserve existing simple Quotes as one default payable option during
   expand-contract migration and reconcile the current `alternative` line
   outcome so it cannot accidentally charge every displayed alternative.
+- [ ] Leave one server-owned preparation/release seam for Ticket 06B: no public
+  token, outbound action or customer acceptance may be created outside the
+  authoritative release command, and source `QUOTED` transition/audit/usage
+  effects must be callable idempotently from that same transaction.
+  Compatibility remains direct-issued until the explicit Store policy lands.
 - [ ] Make fresh concurrent and replayed acceptance resolve to one Order/work/reservation graph or a typed conflict.
 - [ ] Keep hosted checkout preparation separate from verified callback/payment ledger mutation; navigation never establishes payment.
 - [ ] Preserve idempotent mismatch, failure, callback replay, cancellation and Tenant/Store-scoped refund behavior.

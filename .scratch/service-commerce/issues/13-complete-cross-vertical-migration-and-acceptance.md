@@ -9,18 +9,19 @@ Service Commerce migration and acceptance gates.
 Generalize WhatsApp Connection And Location Binding; 04A - Establish Generic
 Customer Request Media And Verified Observations; 06 - Reuse Quote Payment
 And Order Conversion; 06A — Graduate Progressive Catalog To Managed Inventory;
-07 - Add Booking And Appointment Lifecycle; 08 - Extract Shared Pickup And
-Delivery Fulfilment; 09 - Deliver State-Aware Customer Actions And
-Notifications; 10 - Adapt Pharmacy Commerce To Service Commerce; 11 - Enforce
-Vertical And Jurisdiction Eligibility; 12 - Validate Second Vertical
-Appointment Business.
+06B - Enforce Store Quotation Approval And Release; 07 - Add Booking And
+Appointment Lifecycle; 08 - Extract Shared Pickup And Delivery Fulfilment; 09 -
+Deliver State-Aware Customer Actions And Notifications; 10 - Adapt Pharmacy
+Commerce To Service Commerce; 11 - Enforce Vertical And Jurisdiction
+Eligibility; 12 - Validate Second Vertical Appointment Business.
 
-**Status:** approved; blocked by Tickets 03A, 04, 04A, 06, 06A, 07, 08, 09, 10,
-11, and 12
+**Status:** approved; blocked by Tickets 03A, 04, 04A, 06, 06A, 06B, 07, 08,
+09, 10, 11, and 12
 
 **Approval:** Original scope and revised Progressive Catalog batch approved on
 2026-08-09; generic Customer Channels/media/Offer Options amendment approved
-on 2026-08-10 as part of the revised 16-ticket batch.
+on 2026-08-10, followed by Store team/Quote release approval as part of the
+revised 17-ticket batch.
 
 - [ ] Run the deterministic `.env.local` Neon primary seam for both verticals and web, staff-assisted and WhatsApp origins: connection, request, Quote or booking, payment, and pickup/delivery/service completion.
 - [ ] Run a cross-vertical progressive-adoption seam from unmatched demand to
@@ -35,6 +36,9 @@ on 2026-08-10 as part of the revised 16-ticket batch.
   unsafe/quarantined media, grant expiry/reauthorize, stale observation,
   retention and Tenant/Store isolation independently from Pharmacy's extra
   OCR/clinical-review controls.
+- [ ] Prove Store attendant routing and both release modes across web, staff and
+  WhatsApp, including approval/rejection/revision, creator self-approval denial,
+  membership removal, concurrent decision/replay and pharmacist composition.
 - [ ] Build Tenant/Store-scoped cross-vertical reporting projections for channel mix, Requests, Quotes, bookings, payment, pickup, delivery, service completion, reliability and usage from authoritative lifecycle occurrence timestamps.
 - [ ] Report Progressive Catalog demand resolved, draft created, existing
   Offering matched, Quote override, explicit reusable-price promotion,

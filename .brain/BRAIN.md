@@ -30,9 +30,11 @@ Central index for ewatrade product, architecture, engineering, database, API, de
   entry links/QR codes under Customer Channels; adds generic private request
   media/verified observations; and makes mutually exclusive Offer Options
   non-additive commercial truth.
+  ADR-0032 adds Store team routing plus an explicit default-attendant or
+  approval-required Quote release policy without coupling either to WhatsApp.
   Pharmacy is a thin regulated extension of the shared workspace and an
   appointment business is the second validation vertical. The revised
-  16-ticket source batch was owner-approved through 2026-08-10. Ticket 01's exact
+  17-ticket source batch was owner-approved through 2026-08-10. Ticket 01's exact
   source/compatibility boundary, Ticket 02's Store capability/readiness
   profile, and Ticket 03's three-source customer-safe interoperability plus
   narrow Commerce Inquiry lifecycle and Ticket 11's policy boundary are
@@ -75,4 +77,5 @@ Central index for ewatrade product, architecture, engineering, database, API, de
 - [Service Commerce](./features/service-commerce.md)
 - [Progressive Catalog And Thin Pharmacy Extension](./decisions/ADR-0030-progressive-catalog-and-thin-pharmacy-extension.md)
 - [Customer Channels, Generic Request Media And Selectable Offers](./decisions/ADR-0031-customer-channels-generic-request-media-and-selectable-offers.md)
+- [Store Team Routing And Quote Release Approval](./decisions/ADR-0032-store-team-routing-and-quote-release-approval.md)
 - [Tasks Backlog](./tasks/backlog.md)

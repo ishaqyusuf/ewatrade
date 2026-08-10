@@ -28,6 +28,15 @@ Eligibility.
   `setup -> configure -> test -> publish` controls. `Connect WhatsApp` is the
   CTA; generic connection configuration no longer belongs under Prescription
   settings.
+- [ ] Add a Store-scoped **Team & routing** configuration step that assigns
+  accepted active Tenant memberships as attendants for requests from any
+  channel. `Add team member` delegates to existing staff invitation; Channels
+  does not create identity or infer a pharmacist licence.
+- [ ] Preserve existing source-owned Service/Pharmacy actor checks through a
+  narrow compatibility adapter, reconcile only already-authorized people into
+  explicit Store assignments with audit, and require at least one active
+  attendant before a new Store entry point can publish. Tenant role alone never
+  grants or backfills Store access.
 - [ ] Publish a stable, Store-scoped, previewable and revocable EwaTrade entry
   page plus Copy link/Download QR actions. The QR carries only the opaque entry
   token and resolves current allowed web/WhatsApp choices; it never embeds a
@@ -41,5 +50,8 @@ Eligibility.
 - [ ] Prove that connection replacement preserves the stable entry URL/printed
   QR and that central/multi-Store entry requires an opaque Store link or
   explicit branch choice before customer content is accepted.
+- [ ] Prove per-Store attendant routing, membership suspension/removal and the
+  same person's independent attendant/Pharmacy role composition. Ticket 06B
+  owns quotation approver assignment and the commercial release workflow.
 - [ ] Test same-customer isolation, unknown recipient, signature failure, duplicate webhook, revoked credentials, connection replacement and central branch switching.
 - [ ] Recheck current Meta policy/pricing at release and keep pharmacy activation separately fail closed.

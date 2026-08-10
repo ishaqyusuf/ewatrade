@@ -16,6 +16,9 @@ generic attachment scope approved on 2026-08-10.
 
 - [ ] Define shared intake envelope fields for channel, opaque Store context, client/provider idempotency, consent/opt-in facts and source-specific payload.
 - [ ] Resolve Tenant, Store, capability, source adapter and authorization before persisting content.
+- [ ] Route accepted work to Ticket 04's Store attendants/queue without making
+  channel origin an authorization role; unassigned or inactive-team state has
+  explicit owner recovery and never falls back across Stores.
 - [ ] Keep web, staff and WhatsApp as adapters; none owns Request lifecycle or duplicates domain commands.
 - [ ] Preserve explicit staff actor attribution and provider event identity without exposing private content in logs or URLs.
 - [ ] Return the same accepted result for duplicate submission/webhook replay and reject payload-hash mismatches.
