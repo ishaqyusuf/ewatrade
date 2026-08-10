@@ -14,6 +14,8 @@ High-level summary of the platform, its business domains, and the current implem
 - POS and self-service checkout
 - WhatsApp-assisted commerce flows
 - Service Commerce request, quote, booking, payment and fulfilment capabilities
+- Customer Channels, stable Store entry links/QR codes and generic private
+  request media/verified observations
 - Pharmacy Prescription Operations as the first thin regulated extension
 
 ## Architecture Snapshot
@@ -40,9 +42,12 @@ High-level summary of the platform, its business domains, and the current implem
   Commerce-owned Inquiry covers clarification/Quote-needed Product demand; no
   universal request table is planned. Progressive Catalog reuses private draft
   Catalog records and attributable Quote/sale price history before a business
-  adopts managed inventory. Pharmacy is a thin regulated extension of the
-  shared commerce workspace. The amended 15-ticket source batch was
-  owner-approved on 2026-08-09, with production operations separately gated.
+  adopts managed inventory. Generic media transport/storage is shared while
+  Pharmacy retains clinical interpretation; mutually exclusive Offer Options
+  have exact non-additive totals. Pharmacy is a thin regulated extension of the
+  shared commerce workspace. The amended 16-ticket source batch was
+  owner-approved through 2026-08-10, with production operations separately
+  gated.
 - Managed domain source supports GO54 `.com.ng`, Openprovider `.com`, Paystack
   checkout and Vercel connection behind server-only adapters and jobs.
 - Prescription Commerce defines pharmacy-owned WABAs/numbers, one shared
@@ -62,8 +67,9 @@ High-level summary of the platform, its business domains, and the current implem
 
 ## Current Gaps
 - Managed object storage and a trusted media safety pipeline are not selected;
-  optional device-retained Service Evidence therefore remains private and
-  cannot be published.
+  ADR-0031 and Ticket 04A define the required generic provider boundary, but
+  live storage/scanner rollout remains gated. Optional device-retained Service
+  Evidence therefore remains private and cannot be published.
 - Prescription Commerce now has authenticated desktop/mobile and Neon
   development validation. Broader cross-product and full cross-channel
   behavioral validation remains separate follow-up work.

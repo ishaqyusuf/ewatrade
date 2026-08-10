@@ -49,9 +49,16 @@ Describe the intended technical architecture and responsibility boundaries for t
   requires explicit commands for reusable price promotion, publication and
   managed-inventory graduation. Quotes never invent stock; exact reservations
   and opening counts remain Inventory-owned ledger operations.
+- Customer Channels owns multiple Tenant Connections, explicit Store bindings
+  and stable `/r/[token]` entry links/QR codes. Generic request media owns
+  private assets, typed source attachments, safety/retry/grants and Human-
+  Verified Observations; verticals add interpretation and policy extensions.
+- Commerce Quote owns exact mutually exclusive Offer Options. Unselected
+  alternatives are not payable lines and cannot reach Order, reservation or
+  payment; existing simple Quotes expand as one default option.
 - Pharmacy uses the single shared commerce workspace and retains only its
-  regulated source, media/OCR, professional-release, substitution,
-  privacy/retention, break-glass and policy extensions. Duplicate Pharmacy
+  regulated source, clinical media/OCR interpretation, professional-release,
+  substitution, privacy/retention, break-glass and policy extensions. Duplicate Pharmacy
   channel, Quote, payment, fulfilment and reporting orchestration is a
   post-acceptance contraction target, not a permanent second platform.
 - Booking is a first-class capability with resource availability, contention,
@@ -165,9 +172,9 @@ Describe the intended technical architecture and responsibility boundaries for t
 - No Supabase dependency in the current architecture.
 - No direct client access to the database.
 - No universal customer-request table or arbitrary workflow engine.
-- Service Commerce migration work is authorized under ADR-0030's approved
-  15-ticket dependency frontier; production schema/provider operations remain
-  separately authorized.
+- Service Commerce migration work is authorized under ADR-0030 plus ADR-0031's
+  approved 16-ticket dependency frontier; production schema/provider
+  operations remain separately authorized.
 
 ## Open Items
 - If cross-device or public Service Evidence is enabled, configure managed

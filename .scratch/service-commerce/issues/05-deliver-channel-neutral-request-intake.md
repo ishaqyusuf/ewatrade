@@ -4,13 +4,15 @@
 
 **Blocked by:** 03 - Establish Customer Request Interoperability Contract; 03A —
 Grow The Private Catalog From Requests And Quotes; 04 - Generalize WhatsApp
-Connection And Location Binding; 11 - Enforce Vertical And Jurisdiction
+Connection And Location Binding; 04A - Establish Generic Customer Request
+Media And Verified Observations; 11 - Enforce Vertical And Jurisdiction
 Eligibility.
 
-**Status:** approved; blocked by Tickets 03, 03A, 04, and 11
+**Status:** approved; blocked by Tickets 03A, 04, and 04A
 
 **Approval:** Original and revised Progressive Catalog intake scope
-owner-approved on 2026-08-09.
+owner-approved on 2026-08-09; use of the Ticket 04 stable entry point and the
+generic attachment scope approved on 2026-08-10.
 
 - [ ] Define shared intake envelope fields for channel, opaque Store context, client/provider idempotency, consent/opt-in facts and source-specific payload.
 - [ ] Resolve Tenant, Store, capability, source adapter and authorization before persisting content.
@@ -18,7 +20,16 @@ owner-approved on 2026-08-09.
 - [ ] Preserve explicit staff actor attribution and provider event identity without exposing private content in logs or URLs.
 - [ ] Return the same accepted result for duplicate submission/webhook replay and reject payload-hash mismatches.
 - [ ] Provide safe stale, disabled, ambiguous, unsupported and temporary-failure recovery responses.
+- [ ] Consume Ticket 04's stable Store entry point as an intake adapter. The
+  resolved page may begin only a currently permitted web/WhatsApp request and
+  must re-resolve Store/channel/policy state before customer content is
+  accepted; this ticket does not recreate link/QR configuration.
 - [ ] Test all three origins for exact Product demand, `commerce_inquiry`,
   progressive draft resolution, Generic Service and the compatible Pharmacy
-  path, including cross-Tenant routing and inactive Store rejection.
-- [ ] Keep media/safety/OCR entirely within source-specific policy when a source requires it.
+  path, including image/document attachments, cross-Tenant routing and inactive
+  Store rejection. Include entry-token replay/revocation and central branch
+  resolution without retesting QR generation as intake ownership.
+- [ ] Reuse Ticket 04A for generic attachment ingestion, private storage,
+  safety, retry and verified observations. Source/vertical interpretation,
+  command eligibility and retention extensions stay source-owned; Pharmacy
+  OCR and clinical review remain Pharmacy-specific.

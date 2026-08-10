@@ -26,13 +26,17 @@ Central index for ewatrade product, architecture, engineering, database, API, de
   capability direction. ADR-0030 adds Progressive Catalog: verified request
   lines can grow private draft Catalog/price history before full inventory,
   without automatic publication, reusable-price mutation or invented stock.
+  ADR-0031 moves multiple business Connections, Store bindings and stable
+  entry links/QR codes under Customer Channels; adds generic private request
+  media/verified observations; and makes mutually exclusive Offer Options
+  non-additive commercial truth.
   Pharmacy is a thin regulated extension of the shared workspace and an
   appointment business is the second validation vertical. The revised
-  15-ticket source batch was owner-approved on 2026-08-09. Ticket 01's exact
+  16-ticket source batch was owner-approved through 2026-08-10. Ticket 01's exact
   source/compatibility boundary, Ticket 02's Store capability/readiness
   profile, and Ticket 03's three-source customer-safe interoperability plus
-  narrow Commerce Inquiry lifecycle are complete. Ticket 11 is the next
-  dependency frontier.
+  narrow Commerce Inquiry lifecycle and Ticket 11's policy boundary are
+  complete. Ticket 03A is in progress and Ticket 04 is the parallel frontier.
 - Mobile includes a tenant-wide global search across Orders, Customers,
   Catalog, Service Jobs, and permitted Staff, plus contextual order creation
   and auditable order/payment actor attribution.
@@ -70,4 +74,5 @@ Central index for ewatrade product, architecture, engineering, database, API, de
 - [Prescription Commerce](./features/prescription-commerce.md)
 - [Service Commerce](./features/service-commerce.md)
 - [Progressive Catalog And Thin Pharmacy Extension](./decisions/ADR-0030-progressive-catalog-and-thin-pharmacy-extension.md)
+- [Customer Channels, Generic Request Media And Selectable Offers](./decisions/ADR-0031-customer-channels-generic-request-media-and-selectable-offers.md)
 - [Tasks Backlog](./tasks/backlog.md)

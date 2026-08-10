@@ -4,10 +4,12 @@
 
 The original product direction was approved on 2026-08-09 through ADR-0029.
 ADR-0030 now amends it with Progressive Catalog and a thinner Pharmacy
-extension. The owner approved the revised dependency-ordered 15-ticket batch
-on 2026-08-09. Tickets 01, 02, 03 and 11 are complete; Tickets 03A and 04 are
-the next dependency frontier. Production schema/provider operations remain separately
-authorized.
+extension. ADR-0031 adds generic Customer Channels, stable entry links/QR
+codes, request media/verified observations and exact selectable Offer Options.
+The owner approved the revised dependency-ordered 16-ticket batch through
+2026-08-10. Tickets 01, 02, 03 and 11 are complete; Ticket 03A is in progress
+and Ticket 04 is the parallel dependency frontier. Production schema/provider
+operations remain separately authorized.
 
 Pharmacy Commerce is the first regulated vertical and retains its completed
 implementation evidence and outstanding production gates. The approved second
@@ -19,6 +21,8 @@ consultation practice.
 - Decision: `.brain/decisions/ADR-0029-service-commerce-platform-core-and-vertical-capability-extensions.md`
 - Progressive Catalog/Pharmacy amendment:
   `.brain/decisions/ADR-0030-progressive-catalog-and-thin-pharmacy-extension.md`
+- Customer Channels/media/Offer Options amendment:
+  `.brain/decisions/ADR-0031-customer-channels-generic-request-media-and-selectable-offers.md`
 - Specification: `.scratch/service-commerce/spec.md`
 - Approved tickets and execution order: `.scratch/service-commerce/issues/README.md`
 - Midday migration contract: `.scratch/service-commerce/midday-migration-contract.md`
@@ -52,6 +56,8 @@ The platform reuses existing bounded contexts rather than replacing them:
   completion.
 - Communications: WhatsApp/web/staff channel facts, templates, attempts,
   receipts and provider adapters.
+- Generic request media: private Media Assets, typed Source Attachments,
+  Human-Verified Observations, safety/retry/grants and baseline retention.
 - Reporting: channel, conversion, fulfilment, reliability, usage and cost
   projections from authoritative lifecycle events.
 
@@ -104,6 +110,7 @@ has configured and is allowed to use:
 - bookings and resource availability;
 - provider-hosted or recorded payments;
 - pickup and delivery;
+- private customer-request attachments;
 - web, staff-assisted and WhatsApp channels; and
 - vertical/jurisdiction eligibility.
 
@@ -215,16 +222,74 @@ same transaction. Accepted conversion forwards that snapshot to Commercial
 Order reservation, so internal inventory revision fields never come from the
 attendant or public client.
 
+## Customer Channels And Entry Points
+
+Business-owned channel setup lives under **Settings > Channels** with the page
+title **Customer channels**. It lists multiple Tenant Connections, lifecycle,
+billing owner and explicit Store bindings. `Connect WhatsApp` starts the
+focused setup flow; business category may recommend defaults but never grants
+policy, legal or operational authority.
+
+The setup lifecycle is `setup -> configure -> test -> publish`. Publish creates
+a stable Store customer entry page, share link and QR code. The QR resolves an
+EwaTrade `/r/[token]` page and never embeds a mutable WhatsApp number, Tenant id
+or Store id. The entry page reloads current Store/channel/policy facts and
+shows only permitted choices such as `Request online` and `Chat on WhatsApp`.
+Connection replacement therefore does not invalidate printed QR codes.
+
+Generic connection, binding, link and QR configuration moves out of
+Prescription settings. Category-specific compliance retains Pharmacy roles,
+consent, professional policies and clinical operating controls.
+
+## Generic Request Media
+
+Any eligible source can receive an image or approved document through web,
+staff-assisted or WhatsApp intake:
+
+`attachments` is a disabled-by-default Store capability. Business category may
+recommend it, but current channel/source/provider/policy readiness is evaluated
+server-side before customer content or staff access is permitted.
+
+1. A private Media Asset records Tenant/Store, channel origin, content digest,
+   allowlisted metadata, safety/lifecycle, retry, access and retention facts.
+2. A typed Source Attachment binds the asset to one authorized current
+   Service Request, Commerce Inquiry or Prescription Request/version.
+3. An authorized human may create a revisioned Human-Verified Observation such
+   as `bag / red / small`.
+4. Progressive Catalog may match/link/create a private draft only from that
+   verified fact. Raw media, customer text, provider payload, safety output or
+   automated classification never becomes Catalog/price/stock/Order truth.
+
+Provider media retrieval, storage and safety work uses identifier-only jobs
+with bounded retry. Staff viewing uses short-lived server-authorized grants and
+restores retry/reauthorization after expiry or embed failure. Public projections
+contain safe status/recovery only, never object keys, provider ids, signed URLs
+or customer content.
+
+Pharmacy may reuse generic bytes/storage/grant mechanics while retaining an
+authoritative clinical `PrescriptionMedia` extension for original-versus-OCR
+comparison, human line verification, pharmacist release, sensitive access,
+regulated retention and break-glass. Generic safety is not clinical approval.
+
+## Selectable Offer Options
+
+A Commerce Quote may expose immutable mutually exclusive Offer Options. For a
+bag request, `red small - NGN 20,000` and `black large - NGN 30,000` are choices,
+not two additive payable lines. Each option owns exact lines, availability,
+fulfilment and total. Selection is current-version/expiry guarded, idempotent
+and revalidates availability; only the selected option may be accepted, ordered,
+reserved or paid. Existing simple Quotes migrate as one default option.
+
 ## Customer Lifecycle
 
-1. The customer enters through a Store link, QR code, staff-assisted flow or
+1. The customer enters through a stable Store link/QR, staff-assisted flow or
    the Store's WhatsApp identity.
 2. The channel resolves the Tenant, Store, capability profile and appropriate
    source aggregate before content is persisted.
 3. The business clarifies intent and either accepts direct intake, issues a
    versioned Quote, or offers valid booking slots.
 4. The server projects only the actions valid for the current version and
-   policy: `Request quote`, `Book`, `Pay now`, `Pick up`, `Delivery`,
+   policy: `Request quote`, `Choose option`, `Book`, `Pay now`, `Pick up`, `Delivery`,
    `Talk to staff`, reschedule or cancel.
 5. Quote acceptance, booking and payment are idempotent commands. Fulfilment
    fees, promises and eligibility are fixed before payment when they change the
@@ -258,14 +323,19 @@ attendant or public client.
 - State-aware quick actions carry opaque short-lived capabilities. They never
   include sensitive content or treat button navigation as payment, booking or
   fulfilment truth.
+- Inbound image/document descriptors flow to generic request-media ingestion
+  after Connection/Store/policy resolution. Communications does not call a
+  Prescription storage command or interpret the attachment.
 
 ## Pharmacy Vertical
 
 Pharmacy is a thin regulated extension of the single Service Commerce
-workspace. It does not retain separate channel, Catalog-adoption, Quote,
-payment, pickup, delivery or reporting implementations. It does retain:
+workspace. Its current channel, Catalog-adoption, Quote, payment, pickup,
+delivery and reporting implementations remain compatible during migration but
+are not intended to survive as a second commerce platform after the approved
+switch and contraction gates. Pharmacy continues to retain:
 
-- private prescription media and time-limited access;
+- clinical Prescription media records and additional professional access;
 - deterministic or approved media safety and OCR adapters;
 - mandatory human line verification;
 - licensed-pharmacist release and substitution controls;
@@ -293,6 +363,11 @@ Requests, Quotes, payments and notifications without prescription rules. The
 acceptance must prove that the business can configure services and resources,
 receive web/staff/WhatsApp demand, offer or confirm a slot, collect the allowed
 payment, reschedule/cancel, remind the customer and complete the service.
+
+The bag seller is a separate non-regulated media/Commerce proving seam, not a
+replacement second vertical. It validates generic attachment, observation,
+Progressive Catalog, Offer Option, Quote/payment and fulfilment behavior before
+the appointment vertical validates booking/resource reuse.
 
 ## Cost And Billing Boundary
 
@@ -333,13 +408,17 @@ The amended migration remains expand-contract and proceeds by ticket frontier:
    without changing existing pharmacy or generic service behavior.
 3. Add narrow Commerce Inquiry plus Progressive Catalog capture, matching,
    price suggestions and explicit price promotion.
-4. Generalize WhatsApp connection/binding and channel intake naming behind
-   stable contracts.
-5. Reuse Quote, payment, booking, pickup and delivery capabilities and prove
-   graduation from progressive Catalog to managed inventory.
-6. Adapt Pharmacy as a thin regulated extension and prove no regression.
-7. Prove the appointment vertical without prescription dependencies.
-8. Run cross-vertical browser, accessibility, isolation, performance, privacy,
+4. Generalize WhatsApp Connection/Binding, move setup to Customer Channels and
+   publish stable Store entry links/QR codes.
+5. Add generic private request media/attachments/verified observations, then
+   let channel-neutral intake consume the stable entry point.
+6. Reuse Quote, selectable Offer Option, payment, booking, pickup and delivery
+   capabilities and prove graduation from progressive Catalog to managed
+   inventory.
+7. Adapt Pharmacy as a thin regulated extension and prove no regression.
+8. Prove the appointment vertical without prescription dependencies.
+9. Run bag-seller, Pharmacy and appointment browser/Neon acceptance plus
+   accessibility, isolation, performance, privacy,
    security and failure-recovery acceptance before duplicate orchestration is
    contracted.
 
@@ -349,10 +428,11 @@ business activation remains separately authorized.
 
 ## Execution Frontier
 
-The owner requested the batch be amended and approved the exact revised
-15-ticket breakdown on 2026-08-09. The revised batch adds Tickets 03A and 06A.
-Tickets 01, 02, 03 and 11 are complete and execution proceeds to Tickets 03A
-and 04. Throughout
+The owner approved the Progressive Catalog amendment on 2026-08-09 and the
+Customer Channels/media/Offer Options amendment on 2026-08-10. The exact
+16-ticket batch adds Tickets 03A, 04A and 06A. Tickets 01, 02, 03 and 11 are
+complete; Ticket 03A is in progress and Ticket 04 is the parallel frontier.
+Ticket 04A waits for both. Throughout
 execution:
 
 - no production Prisma operation without separate authorization;

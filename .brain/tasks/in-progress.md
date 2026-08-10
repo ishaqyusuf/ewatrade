@@ -6,11 +6,13 @@
   existing Catalog, Customer, Commerce, Service Operations, Fulfilment,
   Communications and Reporting boundaries. Progressive Catalog lets verified
   demand grow private draft Catalog/price history and later graduate to managed
-  inventory without automatic publication or invented stock. Pharmacy is a
+  inventory without automatic publication or invented stock. ADR-0031 adds
+  generic Customer Channels, stable Store links/QR codes, private request
+  media/verified observations and exact selectable Offer Options. Pharmacy is a
   thin regulated extension; an appointment business is the second validation
-  vertical. The revised 15-ticket batch in
-  `.scratch/service-commerce/issues/` was owner-approved on 2026-08-09. Ticket
-  01 is complete: the focused package exposes the exact three-source contract,
+  vertical. The revised 16-ticket batch in
+  `.scratch/service-commerce/issues/` was owner-approved through 2026-08-10.
+  Ticket 01 is complete: the focused package exposes the exact three-source contract,
   the broad acceptance file is split by lifecycle behind one run-owned atomic
   fixture, and compatibility evidence remains green. Ticket 02 is complete:
   Store capability/readiness profiles are disabled by default, Tenant/Store
@@ -41,7 +43,9 @@
   gate passed 9 assertions and all 10 established compatibility scenarios pass;
   the final combined run's manual-fee `P2028` passed an isolated 17-assertion
   rerun.
-  Tickets 03A and 04 are the next dependency frontier. The full test gate has
+  Ticket 03A is in progress and Ticket 04 is the parallel dependency frontier;
+  Ticket 04A waits for both and then establishes generic attachment/media
+  ingestion before channel-neutral intake. The full test gate has
   five separately reproducible
   failures in unrelated in-progress mobile navigation and Retail Ops test
   fakes; Service Commerce focused and Neon gates are green. No production

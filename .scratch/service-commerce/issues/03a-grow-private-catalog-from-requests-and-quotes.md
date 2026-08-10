@@ -10,10 +10,12 @@ inventing stock.
 Customer Request Interoperability Contract; 11 - Enforce Vertical And
 Jurisdiction Eligibility.
 
-**Status:** approved; blocked by Tickets 02, 03, and 11
+**Status:** in progress; blockers complete
 
 **Approval:** Added by the owner-requested Progressive Catalog amendment and
-owner-approved as part of the revised batch on 2026-08-09.
+owner-approved as part of the revised batch on 2026-08-09. Its future generic
+verified-observation input was approved on 2026-08-10 without changing the
+current Ticket 03A frontier.
 
 - [ ] Add a Store capability/adoption mode that distinguishes progressive
   Catalog operation from managed inventory without weakening role or vertical
@@ -21,6 +23,9 @@ owner-approved as part of the revised batch on 2026-08-09.
 - [ ] Use the existing private `DRAFT` Item, Variant and Offering graph; record
   typed source-line origin and human-verified aliases instead of creating a
   parallel candidate Catalog.
+- [ ] Keep the match/create/link boundary able to consume Ticket 04A's typed
+  Human-Verified Observation without accepting raw media, provider payload,
+  customer text or automated inference as verified Catalog truth.
 - [ ] Resolve Generic Service, Commerce Inquiry and human-verified Prescription
   lines through one shared match/create/link seam while retaining their
   separate source aggregates.

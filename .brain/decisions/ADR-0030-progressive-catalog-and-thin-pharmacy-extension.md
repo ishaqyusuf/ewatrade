@@ -7,6 +7,11 @@ approved the revised 15-ticket source batch on the same date. Source work may
 resume in declared dependency order; production database/provider operations
 remain separately authorized.
 
+Amended by ADR-0031 on 2026-08-10: generic private Media Assets, typed Source
+Attachments and Human-Verified Observations may feed Progressive Catalog;
+Pharmacy owns the additional clinical record and professional interpretation,
+not the generic channel/storage mechanism. The batch is now 16 tickets.
+
 ## Context
 
 Many first customers will begin with assisted requests and Quotes before they
@@ -66,7 +71,7 @@ Offering snapshots. Inventory quantities remain separate ledger facts.
   medicine.
 - Service Commerce is the single business-facing assisted-commerce workspace
   and shared lifecycle. Pharmacy is a thin regulated extension that owns only
-  prescription media/OCR, human verification, pharmacist release,
+  prescription clinical media/OCR, human verification, pharmacist release,
   substitution, privacy/retention, break-glass and regulated eligibility.
 - `PrescriptionRequest` and its private clinical records remain a focused
   source aggregate. Keeping that aggregate does not authorize duplicate
@@ -117,3 +122,4 @@ Offering snapshots. Inventory quantities remain separate ledger facts.
 - `.scratch/service-commerce/spec.md`
 - `.scratch/service-commerce/midday-migration-contract.md`
 - `.scratch/service-commerce/issues/README.md`
+- `.brain/decisions/ADR-0031-customer-channels-generic-request-media-and-selectable-offers.md`

@@ -1,8 +1,10 @@
 # Service Commerce Platform Specification
 
-**Status:** amended specification approved on 2026-08-09; source implementation authorized in dependency order
+**Status:** amended specification approved through 2026-08-10; source implementation authorized in dependency order
 
 **Date:** 2026-08-09
+
+**Last amended:** 2026-08-10
 
 **First vertical:** Pharmacy Commerce
 
@@ -50,19 +52,26 @@ The platform will provide:
 - reusable pickup and delivery fulfilment;
 - server-projected customer actions and notifications;
 - business-owned WhatsApp connections with explicit Store bindings; and
+- generic private request media, typed attachments and human-verified
+  observations; stable Store entry links/QR codes; and
 - vertical/jurisdiction policy that can add restrictions without contaminating
   the shared core.
 
 `ServiceRequest` and `PrescriptionRequest` remain authoritative. The shared
 layer references them through typed source kinds and opaque identifiers; it
-does not create a universal request table. Pharmacy-specific media, OCR,
-attendant/pharmacist review, privacy and retention remain in Pharmacy Commerce.
+does not create a universal request table. Generic media transport, private
+storage, safety/retry, delivery grants and baseline retention are shared.
+Pharmacy-specific clinical media records, OCR, attendant/pharmacist review,
+privacy and regulated retention remain in Pharmacy Commerce.
 
 The owner approved the original expand-contract source ticket batch on
 2026-08-09 and requested the Progressive Catalog/thin-Pharmacy amendment later
 the same day. The owner approved the revised dependency graph on 2026-08-09,
 and source implementation resumes from Ticket 01. Production schema changes,
 provider mutations and rollout remain separately authorized.
+On 2026-08-10 the owner approved ADR-0031's Customer Channels, stable entry
+link/QR, generic request-media and selectable Offer Option amendment. The batch
+now contains 16 dependency-ordered tickets.
 
 ## User Stories
 
@@ -146,6 +155,30 @@ provider mutations and rollout remain separately authorized.
 18. As a customer, I receive a safe recovery route when my action expires or
     the business changes the current Quote, slot or fulfilment choice.
 
+### Customer Channels, Entry Points And Request Media
+
+18a. As a business owner, I manage every business-owned connection under
+    `Settings > Channels`, where I can see multiple Connections, lifecycle,
+    billing owner and Store assignments without entering Prescription setup.
+18b. As an administrator, I complete `setup -> configure -> test -> publish`
+    for a connection while an existing working route remains active until its
+    replacement passes readiness.
+18c. As a Store owner, I publish a stable customer entry page, link and QR code
+    that expose only currently allowed web and WhatsApp choices. Replacing a
+    number or provider does not require reprinting the QR.
+18d. As a customer, I can attach an image or approved document to an eligible
+    Product, Service or Prescription request through web, staff-assisted or
+    WhatsApp intake without entering the wrong vertical lifecycle.
+18e. As an operator, I can view only safety-permitted attachments through a
+    short-lived authorized grant and can recover explicitly from pending,
+    rejected, provider-download, scanner, re-upload or expired-grant states.
+18f. As an attendant, I can record a revisioned, attributable Human-Verified
+    Observation such as `bag / red / small` from a safe attachment. Automated
+    suggestions cannot become verified Catalog, price, stock or Order truth.
+18g. As a privacy lead, generic media has Tenant/Store isolation, private
+    storage, access audit and baseline retention/deletion while a regulated
+    vertical may impose stricter interpretation, access and retention rules.
+
 ### WhatsApp Business Onboarding And Routing
 
 19. As a business owner, I connect my own WABA and public number so customers
@@ -177,6 +210,12 @@ provider mutations and rollout remain separately authorized.
 
 29. As an operator, I can issue a versioned Quote from an eligible Request with
     immutable customer-visible lines, prices, promise, expiry and fulfilment.
+29a. As a customer, when a business offers red-small at NGN 20,000 and
+    black-large at NGN 30,000 as alternatives, I choose one immutable Offer
+    Option; the system never adds both choices into a NGN 50,000 payable total.
+29b. As a business, an Offer Option selection is current-version and expiry
+    checked, revalidates availability and yields one exact payable option.
+    Unselected options cannot create an Order, reservation or payment.
 30. As a customer, I can accept only the current Quote version and receive the
     same Order when identical acceptance commands race or replay.
 31. As a customer, a changed price, item, slot, address, delivery fee or promise
@@ -238,7 +277,8 @@ provider mutations and rollout remain separately authorized.
 ### State-Aware Actions And Communications
 
 54. As a customer, I see only actions valid now, such as `Request quote`,
-    `Book`, `Pay now`, `Pick up`, `Delivery` or `Talk to staff`.
+    `Choose red small`, `Book`, `Pay now`, `Pick up`, `Delivery` or
+    `Talk to staff`.
 55. As a customer, every action is clear about the next consequence, current
     total, fulfilment choice or appointment time before confirmation.
 56. As a developer, button payloads contain opaque capabilities rather than
@@ -264,8 +304,10 @@ provider mutations and rollout remain separately authorized.
     either sufficient current inventory or an explicitly permitted,
     pharmacist-released procure-to-order availability attestation, with
     version/revision and expiry facts captured.
-65. As a privacy lead, prescription media, transcripts, addresses, access,
-    retention, incidents and break-glass remain under pharmacy-specific rules.
+65. As a privacy lead, the shared Media Asset may carry private bytes and safe
+    delivery mechanics, while the Prescription clinical record, OCR,
+    transcripts, addresses, professional access, regulated retention,
+    incidents and break-glass remain under pharmacy-specific rules.
 66. As a platform operator, generic capability extraction cannot weaken a
     completed pharmacy authorization, privacy, idempotency or audit invariant.
 67. As a business owner, technical WhatsApp readiness does not activate a
@@ -301,8 +343,9 @@ provider mutations and rollout remain separately authorized.
     and contract phases with rollback and explicit production authorization.
 77. As a contributor, development database acceptance runs only against the
     verified `.env.local` Neon profile and never local Docker/PostgreSQL.
-78. As the product owner, I approved the exact amended 15-ticket breakdown on
-    2026-08-09; implementation follows its blockers and keeps production
+78. As the product owner, I approved the Progressive Catalog amendment on
+    2026-08-09 and the exact 16-ticket Customer Channels/media/Offer Options
+    amendment on 2026-08-10; implementation follows its blockers and keeps production
     database/provider operations separately gated.
 
 ## Implementation Decisions
@@ -327,6 +370,31 @@ provider mutations and rollout remain separately authorized.
 - Do not add a universal request table or generic state-machine JSON.
 - Booking receives explicit typed models and commands because capacity and time
   conflicts are domain facts, not presentation metadata.
+
+### Generic Media And Observation Boundary
+
+- A private Media Asset owns bytes/metadata, channel origin, content digest,
+  allowlisted type/size, safety/lifecycle state, retry, short-lived delivery,
+  baseline retention and access audit. A typed Source Attachment links it to
+  the current `service | prescription | commerce_inquiry` source/version.
+- `attachments` is an explicit Store capability and is disabled by default.
+  Category may recommend it; the server still requires current channel,
+  source, provider and vertical-policy readiness before intake or viewing.
+- A Human-Verified Observation is a revisioned, attributable interpretation of
+  one safe attachment and optional source line. It can feed matching or draft
+  preparation, but it is not Catalog, price, availability, stock, professional
+  release or Order truth.
+- Web, staff and WhatsApp adapters resolve Store/channel/policy before content
+  persistence and hand only identifiers to durable retrieval/safety jobs.
+  Provider bytes, credentials, signed URLs and customer content never enter job
+  payloads, public projections, logs or URL state.
+- Pharmacy retains a clinical extension over the generic asset: original-media
+  comparison, OCR/transcription, human line verification, pharmacist release,
+  professional access, regulated retention and break-glass. Existing
+  `PrescriptionMedia` contracts stay compatible during expand-contract.
+- Generic OCR/vision may suggest observations only under a separately approved
+  provider contract; it cannot mark them human-verified or trigger Catalog or
+  commercial commands.
 
 ### Progressive Catalog Boundary
 
@@ -355,6 +423,22 @@ provider mutations and rollout remain separately authorized.
 - Human confirmation owns matching. Automated similarity may rank candidates
   but cannot merge, publish, price, substitute or create medicine autonomously.
 
+### Selectable Offer Options Boundary
+
+- Every Commerce Quote version has one or more immutable Offer Options. A
+  simple existing Quote maps to one default option; a multi-option Quote keeps
+  each alternative's complete lines, currency, availability/fulfilment facts
+  and exact total separate.
+- A multi-option Quote is not payable until the customer explicitly selects one
+  current option. Selection is idempotent, expected-version and expiry guarded,
+  revalidates availability, and records one authoritative choice. Competing
+  different selections produce typed stale/conflict recovery.
+- Only the selected/default option can reach acceptance, Order conversion,
+  inventory reservation/procurement and payment. Unselected options have no
+  monetary, stock or fulfilment effect.
+- The existing `alternative` Quote-line outcome is not an exclusive-choice
+  model and must not add every displayed alternative into the payable total.
+
 ### Midday Architecture
 
 - Server route: authenticate, resolve Tenant/Store, load typed URL state,
@@ -372,6 +456,9 @@ provider mutations and rollout remain separately authorized.
   provider writes/reconciliation and safe retry semantics.
 - WhatsApp: follow Midday's direct Meta transport/webhook/job separation, but
   replace its global sender assumption with Tenant Connection + Store Binding.
+- Media UI: adapt Midday Vault's upload progress, private preview, processing
+  status, retry and empty/error patterns, while keeping EwaTrade's short-lived
+  server grant, Tenant/Store policy and source-version requirements.
 
 ### WhatsApp Setup And Costs
 
@@ -379,6 +466,10 @@ provider mutations and rollout remain separately authorized.
   Connections; every `phone_number_id` is resolved before customer content.
 - Connection lifecycle is pending, active, suspended/revoked/replaced, with
   two-phase credential/route rotation.
+- Dashboard connection ownership is `Settings > Channels` / `Customer
+  channels`. It lists multiple Tenant Connections and Store bindings. Its
+  publish step creates a stable Store entry page, share link and QR code; the
+  QR never embeds a mutable provider number.
 - Direct Meta is the default adapter. Twilio/BSP adoption requires a separate
   cost/support decision but not a domain migration.
 - Pricing is read from current provider facts or configuration. Meta currently
@@ -394,9 +485,12 @@ provider mutations and rollout remain separately authorized.
 2. Add Store capability/readiness, source interoperability and vertical policy.
 3. Add Commerce Inquiry and Progressive Catalog capture/price suggestions.
 4. Generalize WhatsApp Connection/Binding naming and channel routing behind
-   stable exports.
-5. Converge channel-neutral intake and shared Quote/payment/Order seams.
-6. Prove progressive-to-managed-inventory graduation.
+   stable exports, then publish the stable Store entry link/QR from Customer
+   Channels.
+5. Add generic private request media, typed attachments and Human-Verified
+   Observations, then let channel-neutral intake consume that entry point.
+6. Extract shared Quote/payment/Order seams including exact selectable Offer
+   Options, then prove progressive-to-managed-inventory graduation.
 7. Add booking, then extract reusable pickup/delivery and actions.
 8. Adapt Pharmacy as a thin regulated extension without weakening its source
    rules.
@@ -426,6 +520,12 @@ fixture cleanup.
   matching, Store-first price suggestions, explicit override/promotion,
   currency/Tenant isolation, stale availability, tracked versus procure-to-
   order acceptance and graduation without history loss.
+- Generic media tests cover web/staff/WhatsApp image/document ingestion,
+  provider replay/retry, safety failure, short-lived grant recovery, stale
+  source/observation rejection, baseline retention and Tenant/Store isolation.
+- A non-Pharmacy bag-seller acceptance path proves image -> Human-Verified
+  Observation -> Catalog match/private draft -> two mutually exclusive priced
+  Offer Options -> one selected exact Quote/Order/payment/fulfilment outcome.
 - Unit tests cover exhaustive capability/action registries, vertical policy,
   booking availability/conflicts, fulfilment eligibility and cost attribution.
 - Repository tests cover cross-Tenant/Store rejection, atomic write graphs,
@@ -454,6 +554,8 @@ fixture cleanup.
 - A second candidate Catalog parallel to the existing draft Catalog graph.
 - Automatic public Catalog publication, reusable price updates, stock creation,
   Product substitution or medicine mapping from raw customer/OCR text.
+- Public object URLs, raw attachment/provider data in source JSON, or treating
+  safety/OCR/vision output as a Human-Verified Observation.
 - An arbitrary no-code workflow builder or customer-programmable state machine.
 - A marketplace that owns the merchant/customer relationship.
 - One shared EwaTrade WhatsApp sender for unrelated businesses.
@@ -476,6 +578,7 @@ fixture cleanup.
 - The integration acceptance file and run-owned teardown are already large.
   The fulfilment extraction ticket must split fixture helpers and lifecycle
   specs while preserving one bounded atomic cleanup boundary.
-- The original batch was owner-approved on 2026-08-09. The owner then requested
-  this amendment and approved the revised 15-ticket batch and dependency graph
-  on the same date before source implementation resumed.
+- The original and Progressive Catalog batches were owner-approved on
+  2026-08-09. The owner approved ADR-0031's Customer Channels, generic request
+  media and Offer Options amendment on 2026-08-10, producing the current
+  16-ticket dependency graph.

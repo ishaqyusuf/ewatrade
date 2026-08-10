@@ -31,8 +31,9 @@ Operational summary of the platform and how its major domains fit together.
   source aggregates plus one narrow Commerce Inquiry rather than introducing a
   universal request model. Progressive Catalog lets verified requests create
   private draft Catalog records and attributable price history before managed
-  inventory; Pharmacy remains a thin regulated source/policy extension of the
-  shared workspace.
+  inventory. Customer Channels owns multiple business Connections, stable
+  Store entry links/QR codes and generic private request media; Pharmacy remains
+  a thin regulated clinical source/policy extension of the shared workspace.
 - Managed storefront domains separate quote/payment/registrar state from
   ownership/DNS/SSL connection state and preserve the free platform hostname.
 

@@ -11,7 +11,8 @@ And Notifications; 11 - Enforce Vertical And Jurisdiction Eligibility.
 **Status:** approved; blocked by Tickets 03A, 05, 06, 06A, 07, 09, and 11
 
 **Approval:** Original and revised Progressive Catalog validation scope
-owner-approved on 2026-08-09.
+owner-approved on 2026-08-09; optional generic media boundary assertion
+approved on 2026-08-10.
 
 - [ ] Create a run-owned Tenant/Store fixture with Service Offerings, resources, availability, payment policy and web/staff/WhatsApp capabilities.
 - [ ] Start with an incomplete Service Catalog, capture at least one requested
@@ -20,6 +21,9 @@ owner-approved on 2026-08-09.
 - [ ] Complete web, staff-assisted and WhatsApp requests through slot selection/confirmation, exact deposit or payment, reminders and service completion.
 - [ ] Exercise reschedule, cancellation/refund, no availability, concurrent slot contention, stale action and provider notification failure.
 - [ ] Prove one business-owned WhatsApp sender and Store binding without any pharmacy channel, model, role, media or release dependency.
+- [ ] Prove that a vertical which does not enable attachments imports no media
+  or Pharmacy dependency, while the shared capability remains available for a
+  future image/document-assisted request without changing booking rules.
 - [ ] Assert customer-safe public/WhatsApp projections and Tenant/Store isolation for the same customer across the appointment business and pharmacy.
 - [ ] Verify management queues plus the authoritative lifecycle, usage and audit facts that Ticket 13 will consume; defer shared report and provider-cost projection acceptance to Ticket 13.
 - [ ] Run authenticated desktop/mobile setup/workspace and public journey QA including keyboard, scroll, accessibility and error recovery.

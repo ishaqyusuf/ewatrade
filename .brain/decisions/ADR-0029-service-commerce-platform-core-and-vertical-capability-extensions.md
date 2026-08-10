@@ -14,6 +14,13 @@ workspace rather than a parallel end-to-end product. The owner approved the
 revised 15-ticket source batch on 2026-08-09; implementation resumes through
 its declared dependency frontiers.
 
+Amended by ADR-0031 on 2026-08-10: Customer Channels owns multiple business
+Connections, Store bindings and stable entry links/QR codes; generic request
+media owns private transport/storage/safety and verified observations; Pharmacy
+retains clinical interpretation and release; mutually exclusive commercial
+alternatives use exact selectable Offer Options. The approved source batch is
+now 16 tickets.
+
 ## Context
 
 EwaTrade now has two substantial commerce paths around customer intent and
@@ -81,8 +88,9 @@ provider transports remain behind package boundaries.
   resource, promise, reschedule, cancellation and reminder semantics. It does
   not get embedded in Prescription Commerce or reduced to a generic JSON
   workflow.
-- Vertical policy extensions own exceptional requirements. Pharmacy keeps
-  private prescription media, safety/OCR, attendant verification, pharmacist
+- Vertical policy extensions own exceptional requirements. Generic private
+  media transport/storage follows ADR-0031; Pharmacy keeps its clinical media
+  record, safety/OCR interpretation, attendant verification, pharmacist
   release, retention, break-glass and regulated-channel controls. Other
   verticals add their own eligibility without weakening the platform core.
 - WhatsApp policy, local law and provider approval are launch gates by vertical
@@ -136,6 +144,7 @@ provider transports remain behind package boundaries.
 - `.brain/decisions/ADR-0027-tenant-owned-multi-pharmacy-whatsapp-connections.md`
 - `.brain/features/service-commerce.md`
 - `.brain/decisions/ADR-0030-progressive-catalog-and-thin-pharmacy-extension.md`
+- `.brain/decisions/ADR-0031-customer-channels-generic-request-media-and-selectable-offers.md`
 - `.scratch/service-commerce/spec.md`
 - `.scratch/service-commerce/midday-migration-contract.md`
 - [WhatsApp Business Messaging Policy](https://whatsappbusiness.com/policy/)
