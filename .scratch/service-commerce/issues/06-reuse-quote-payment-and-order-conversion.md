@@ -48,7 +48,7 @@ owner-approved on 2026-08-09; selectable Offer Option amendment approved on
 
 ## Verification Evidence
 
-- Focused Quote, Catalog and Pharmacy request/fulfilment suites: 62 tests, 156
+- Focused Quote, Catalog and Pharmacy request/fulfilment suites: 62 tests, 157
   assertions; API Option schemas: 3 tests, 5 assertions; DB, API and Storefront
   typechecks plus scoped Biome checks pass.
 - Post-release `.env.local` Neon acceptance: multi-option Commerce Inquiry,

@@ -59,6 +59,12 @@ export default async function Page({
   const { token } = await params
   const query = await searchParams
   const quote = await load(token)
+  const displayedOption =
+    quote.options.find((option) => option.id === quote.selectedOptionId) ??
+    (quote.options.length === 1 ? quote.options[0] : null)
+  const displayOnlyAlternatives =
+    displayedOption?.lines.filter((line) => line.outcome === "alternative") ??
+    []
   return (
     <main className="min-h-screen bg-background text-foreground">
       <section className="mx-auto grid max-w-3xl gap-6 px-5 py-12 md:px-8">
@@ -145,6 +151,37 @@ export default async function Page({
                 </p>
               </div>
             ))}
+            {displayOnlyAlternatives.length > 0 ? (
+              <aside
+                aria-labelledby="display-only-alternatives"
+                className="grid gap-3 border-t border-border pt-4"
+              >
+                <div>
+                  <h2 className="font-semibold" id="display-only-alternatives">
+                    Other suggested alternatives
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    These suggestions are not included in your total or order.
+                  </p>
+                </div>
+                {displayOnlyAlternatives.map((line, index) => (
+                  <div
+                    className="flex items-start justify-between gap-4"
+                    key={`${line.catalogItemName}:alternative:${index}`}
+                  >
+                    <div>
+                      <p className="font-medium">{line.catalogItemName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {line.quantity ? `${line.quantity} · ` : ""}Not included
+                      </p>
+                    </div>
+                    <p className="font-medium">
+                      {formatMinorMoney(line.totalMinor, quote.currencyCode)}
+                    </p>
+                  </div>
+                ))}
+              </aside>
+            ) : null}
             <div className="flex justify-between border-t border-border pt-4 text-lg font-semibold">
               <span>Total</span>
               <span>

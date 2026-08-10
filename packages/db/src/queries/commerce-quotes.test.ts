@@ -657,7 +657,7 @@ describe("Commerce Quote invariants", () => {
     })
   })
 
-  test("selects one current option idempotently inside the Quote transaction", async () => {
+  test("selects one current option idempotently without validating display-only alternatives", async () => {
     type Selection = {
       clientSelectionId: string
       optionId: string
@@ -667,6 +667,7 @@ describe("Commerce Quote invariants", () => {
     let selection: null | Selection = null
     let simulateConcurrentWinner = true
     let authorized = 0
+    const offeringReads: string[] = []
     const transactionOptions: unknown[] = []
     const version = () => ({
       expiresAt: new Date("2099-01-01T00:00:00.000Z"),
@@ -682,6 +683,15 @@ describe("Commerce Quote invariants", () => {
               balanceRevision: null,
               configurationVersionId: null,
               offeringId: "offering-red",
+              outcome: "INCLUDED",
+              quantity: { toString: () => "1" },
+            },
+            {
+              availabilityAttestationId: null,
+              balanceRevision: null,
+              configurationVersionId: null,
+              offeringId: "display-only-alternative",
+              outcome: "ALTERNATIVE",
               quantity: { toString: () => "1" },
             },
           ],
@@ -736,11 +746,17 @@ describe("Commerce Quote invariants", () => {
         },
       },
       sellableOffering: {
-        findFirst: async () => ({
-          kind: "SERVICE",
-          status: "DRAFT",
-          storeAvailability: [],
-        }),
+        findFirst: async (input: { where: { id: string } }) => {
+          offeringReads.push(input.where.id)
+          return {
+            kind:
+              input.where.id === "display-only-alternative"
+                ? "PRODUCT_UNIT"
+                : "SERVICE",
+            status: "DRAFT",
+            storeAvailability: [],
+          }
+        },
       },
     } as unknown as PrismaClient
     const command = {
@@ -761,6 +777,7 @@ describe("Commerce Quote invariants", () => {
       versionId: "version-1",
     })
     expect(authorized).toBe(3)
+    expect(offeringReads).toEqual(["offering-red"])
     expect(transactionOptions).toEqual([
       { maxWait: 10_000, timeout: 30_000 },
       { maxWait: 10_000, timeout: 30_000 },

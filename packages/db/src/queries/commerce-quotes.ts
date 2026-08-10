@@ -1707,7 +1707,9 @@ export async function selectCommerceQuoteOption(
       )
     }
     await assertSelectedOptionAvailability(tx, {
-      lines: option.lines,
+      lines: option.lines.filter(
+        (line) => line.outcome === CommerceQuoteLineOutcome.INCLUDED,
+      ),
       storeId: version.quote.storeId,
       tenantId: version.quote.tenantId,
     })
