@@ -1,4 +1,5 @@
 export * from "./action"
 export * from "./capability"
 export * from "./fulfillment"
+export * from "./profile"
 export * from "./source"

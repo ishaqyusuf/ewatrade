@@ -1,0 +1,72 @@
+enum ServiceCommerceProfileStatus {
+  DISABLED
+  ACTIVE
+  SUSPENDED
+}
+
+enum ServiceCommerceCatalogAdoptionMode {
+  PROGRESSIVE
+  INVENTORY_MANAGED
+}
+
+enum ServiceCommerceStoreAuditEventType {
+  PROFILE_CREATED
+  SETTINGS_UPDATED
+  ACTIVATED
+  DEACTIVATED
+  SUSPENDED
+}
+
+model ServiceCommerceStoreProfile {
+  id                           String                             @id @default(cuid())
+  tenantId                     String
+  storeId                      String                             @unique
+  status                       ServiceCommerceProfileStatus       @default(DISABLED)
+  revision                     Int                                @default(0)
+  catalogAdoptionMode          ServiceCommerceCatalogAdoptionMode @default(PROGRESSIVE)
+  intakeEnabled                Boolean                            @default(false)
+  quoteEnabled                 Boolean                            @default(false)
+  bookingEnabled               Boolean                            @default(false)
+  paymentEnabled               Boolean                            @default(false)
+  pickupEnabled                Boolean                            @default(false)
+  deliveryEnabled              Boolean                            @default(false)
+  serviceCompletionEnabled     Boolean                            @default(false)
+  webEnabled                   Boolean                            @default(false)
+  staffEnabled                 Boolean                            @default(false)
+  whatsappEnabled              Boolean                            @default(false)
+  progressiveCatalogEnabled    Boolean                            @default(false)
+  procureToOrderEnabled        Boolean                            @default(false)
+  policyRestrictedCapabilities String[]                           @default([])
+  activatedAt                  DateTime?
+  activatedByUserId            String?
+  deactivatedAt                DateTime?
+  deactivatedByUserId          String?
+  createdAt                    DateTime                           @default(now())
+  updatedAt                    DateTime                           @updatedAt
+  tenant                       Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                        Store                              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  auditEvents                  ServiceCommerceStoreAuditEvent[]
+
+  @@index([tenantId, status, updatedAt])
+}
+
+model ServiceCommerceStoreAuditEvent {
+  id               String                             @id @default(cuid())
+  tenantId         String
+  storeId          String
+  profileId        String
+  type             ServiceCommerceStoreAuditEventType
+  actorUserId      String
+  reason           String
+  previousSnapshot Json?
+  currentSnapshot  Json
+  effectiveAt      DateTime                           @default(now())
+  createdAt        DateTime                           @default(now())
+  tenant           Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store            Store                              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  profile          ServiceCommerceStoreProfile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, storeId, effectiveAt])
+  @@index([profileId, effectiveAt])
+  @@index([actorUserId, effectiveAt])
+}

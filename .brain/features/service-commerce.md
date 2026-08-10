@@ -5,8 +5,8 @@
 The original product direction was approved on 2026-08-09 through ADR-0029.
 ADR-0030 now amends it with Progressive Catalog and a thinner Pharmacy
 extension. The owner approved the revised dependency-ordered 15-ticket batch
-on 2026-08-09; source implementation has resumed at Ticket 01. Production
-schema/provider operations remain separately authorized.
+on 2026-08-09. Tickets 01 and 02 are complete; Ticket 03 is the next dependency
+frontier. Production schema/provider operations remain separately authorized.
 
 Pharmacy Commerce is the first regulated vertical and retains its completed
 implementation evidence and outstanding production gates. The approved second
@@ -108,6 +108,32 @@ has configured and is allowed to use:
 Tenant membership alone never grants operational authority. API and repository
 boundaries resolve Tenant, Store, role, feature state and exceptional access;
 the client renders the returned capabilities and recovery states.
+
+Ticket 02 implements this projection through a disabled-by-default
+`ServiceCommerceStoreProfile`, append-only `ServiceCommerceStoreAuditEvent`,
+and the protected `serviceCommerce` router. Owner/Admin may configure and
+activate an authorized Store; Manager/Cashier/Operator may operate enabled
+capabilities; ordinary Member/Support access remains read-only and cannot
+mutate. No shared personal-exception model exists for this capability yet, so
+the returned `exceptionalAccess` is explicitly false rather than inferred in
+the client.
+
+The `/settings/service-commerce` workspace uses server prefetch/hydration,
+typed `storeId` URL scope, shared Zod/RHF configuration, explicit loading/error
+and read-only states, confirmation before activation, and exact access-query
+invalidation before success. Readiness distinguishes disabled, incomplete
+setup, vertical-policy restriction, provider outage, tracked-inventory state,
+private draft capture, public activation, and procure-to-order policy.
+An enabled WhatsApp capability is `setup_required` when no Store binding
+exists and `unavailable` when its binding or Tenant-owned Connection is not
+active. A server-owned Store-profile restriction takes precedence and projects
+the named capability as `restricted`; setup clients cannot write that policy
+input. Suspended profiles are rendered distinctly and cannot be reactivated
+or deactivated through the generic command. Activation and active-profile
+updates re-evaluate the same scoped runtime facts transactionally and require
+at least one available channel plus one available Quote/booking outcome.
+Ticket 11 owns the authorized jurisdiction/evidence command that maintains
+those inputs and the separately approved Nigerian Pharmacy WhatsApp decision.
 
 ## Customer Lifecycle
 
@@ -243,8 +269,8 @@ business activation remains separately authorized.
 ## Execution Frontier
 
 The owner requested the batch be amended and approved the exact revised
-15-ticket breakdown on 2026-08-09. The revised batch adds Tickets 03A and 06A,
-changes blocking edges, and is now executing from Ticket 01. Throughout
+15-ticket breakdown on 2026-08-09. The revised batch adds Tickets 03A and 06A.
+Tickets 01 and 02 are complete and execution proceeds to Ticket 03. Throughout
 execution:
 
 - no production Prisma operation without separate authorization;

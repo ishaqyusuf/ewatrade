@@ -53,6 +53,8 @@ belong to `ServiceJob`; charge-only Service lines allocate no work.
 
 `Store -> ServiceStoreSettings`
 
+`Tenant + Store -> ServiceCommerceStoreProfile -> ServiceCommerceStoreAuditEvent`
+
 Payment/refund facts derive the Order balance. Store Service settings are read
 and snapshotted during Intake; later setting changes do not rewrite existing
 Order charges.
@@ -61,6 +63,11 @@ count, resulting Order status, and actor so retries cannot repeat inventory
 effects or reuse one identity for a different Order.
 Order reminder deliveries also point to Tenant and Store. Their unique
 Order/timing/recipient-email identity prevents duplicate daily email delivery.
+
+The Service Commerce profile is Store-unique but carries Tenant explicitly.
+Every repository read/write predicates both ids; audit events retain the same
+Tenant/Store pair and the profile relation so cross-Store or cross-Tenant
+configuration cannot be inferred from a global profile id.
 
 New Order numbers are allocated once across the Tenant rather than per Store.
 The counter increment and Order creation share one database transaction, so a

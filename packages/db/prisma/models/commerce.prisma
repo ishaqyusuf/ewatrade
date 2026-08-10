@@ -33,6 +33,8 @@ model Store {
   serviceQuotes                     ServiceQuote[]
   serviceNotificationIntents        ServiceNotificationIntent[]
   serviceSettings                   ServiceStoreSettings?
+  serviceCommerceProfile            ServiceCommerceStoreProfile?
+  serviceCommerceAuditEvents        ServiceCommerceStoreAuditEvent[]
   prescriptionSettings              PrescriptionStoreSettings?
   prescriptionRoles                 PrescriptionStoreRole[]
   prescriptionAuditEvents           PrescriptionStoreAuditEvent[]

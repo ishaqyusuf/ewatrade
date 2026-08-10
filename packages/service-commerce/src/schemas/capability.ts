@@ -8,6 +8,8 @@ export const SERVICE_COMMERCE_CAPABILITIES = [
   "pickup",
   "delivery",
   "service_completion",
+  "web",
+  "staff",
   "whatsapp",
   "progressive_catalog",
 ] as const

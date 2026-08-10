@@ -13,9 +13,8 @@ date; production schema/provider operations remain separately authorized.
 
 ## Execution Rule
 
-Execute one ticket at a time through its blocking edges. Ticket 01 remains the
-only starting slice; its partially started compatibility prefactor must be
-reconciled with the exact amended source contract before continuing. Any scope
+Execute one ticket at a time through its blocking edges. Tickets 01 and 02 are
+complete; Ticket 03 is the next dependency frontier. Any scope
 or dependency change should update the spec, ADR/Brain and affected tickets
 before implementation.
 

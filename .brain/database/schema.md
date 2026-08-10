@@ -97,6 +97,23 @@ persistence boundary. Clients never access the database directly.
 - Notification Intents carry a required channel and optional scheduled time;
   Manual Shares and Delivery Attempts remain separate from Service work state.
 
+## Service Commerce Capability Profile
+
+- `ServiceCommerceStoreProfile` is one optional, disabled-by-default profile
+  per Store and always carries both Tenant and Store identity.
+- Its explicit capability flags cover intake, Quote, booking, payment, pickup,
+  delivery, service completion, web, staff, WhatsApp and Progressive Catalog.
+  `catalogAdoptionMode` is `PROGRESSIVE` or `INVENTORY_MANAGED`; reusable
+  procure-to-order policy is independent.
+- Status/revision and attributed activation/deactivation fields support
+  fail-closed readiness plus optimistic concurrency.
+- `policyRestrictedCapabilities` is a server-owned allowlisted capability
+  input. The setup command cannot write it; Ticket 11 owns its future
+  jurisdiction/evidence-backed maintenance command.
+- `ServiceCommerceStoreAuditEvent` appends actor, reason, event type and
+  previous/current JSON snapshots for every profile create, settings update,
+  activation and deactivation.
+
 ## Offline
 
 - `Tenant.metadata.offlineOperationsEnabled` controls offline access and

@@ -12,8 +12,23 @@
   `.scratch/service-commerce/issues/` was owner-approved on 2026-08-09. Ticket
   01 is complete: the focused package exposes the exact three-source contract,
   the broad acceptance file is split by lifecycle behind one run-owned atomic
-  fixture, and compatibility evidence remains green. Ticket 02 is the next
-  dependency frontier. No production schema/provider operation is authorized.
+  fixture, and compatibility evidence remains green. Ticket 02 is complete:
+  Store capability/readiness profiles are disabled by default, Tenant/Store
+  authorization and revisioned audit commands are server-owned, the Midday
+  setup workspace passed desktop/tablet/mobile save-and-activate QA, and the
+  additive schema plus initial-create/activation concurrency and audit
+  integration passed on `.env.local` Neon. Scoped WhatsApp binding/Connection
+  state and the profile-owned policy allowlist now produce distinct setup,
+  provider and restriction recovery states; generic activation fails closed
+  for suspended profiles and for a sole channel/outcome that is not
+  runtime-ready. The development schema is synchronized non-destructively;
+  Prisma's
+  existing broad ledger drift prevented migration-artifact generation, so no
+  reset was accepted and production remains untouched. Ticket 03 is the next
+  dependency frontier. The full test gate has five separately reproducible
+  failures in unrelated in-progress mobile navigation and Retail Ops test
+  fakes; Ticket 02's focused and Neon gates are green. No production
+  schema/provider operation is authorized.
   Started Date: 2026-08-09.
 
 - Complete the Prescription Commerce production rollout after the 01-20 source

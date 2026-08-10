@@ -338,6 +338,36 @@ Progressive Catalog commands below remain owned by later blocked tickets.
   lines. Pharmacist release and vertical policy remain required for Product
   availability and Quote eligibility; OCR alone is never a Catalog command.
 
+### Implemented Store capability/readiness contract
+
+- Profile status is `disabled | active | suspended`; Catalog adoption is
+  `progressive | inventory_managed`. Capabilities are explicit booleans, not
+  role-derived client state.
+- Capability readiness is `available | setup_required | restricted |
+  unavailable` with allowlisted blockers and recovery actions. Disabled Store,
+  disabled/suspended profile, disabled capability, incomplete setup, policy
+  restriction and provider outage remain distinct.
+- Activation requires an active Store, intake, at least one web/staff/WhatsApp
+  channel, at least one Quote/booking outcome and Progressive Catalog when that
+  adoption mode is selected. At least one configured channel and one outcome
+  must also be runtime `available`; setup, restriction or provider failure on
+  the only configured option fails activation and active-profile updates.
+- A suspended profile cannot be changed by the generic activation command.
+  That transition requires a future policy-authorized flow. For WhatsApp, no
+  Store binding is `setup_incomplete`; a non-active Binding or Connection is
+  `provider_unavailable`; and a server-owned Store-profile restriction is
+  `policy_restricted` and takes precedence. Ticket 11 adds the authorized
+  jurisdiction and approval-evidence command that maintains this input without
+  changing these readiness states.
+- Catalog adoption projects private draft capture, public activation, tracked
+  inventory and procure-to-order independently. A request/Quote still cannot
+  publish Catalog data or invent stock.
+- Commands require `storeId`, `expectedRevision`, a 3-240 character reason and
+  shared Zod settings. Tenant id and actor id come only from authenticated
+  context; repository reads/writes still predicate Tenant plus Store. Initial
+  create and later updates translate optimistic/unique races to the same typed
+  conflict rather than leaking a provider error.
+
 ## Services
 
 - Service Request is unconfirmed intent and creates no Order/work.

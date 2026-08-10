@@ -12,6 +12,7 @@ import { prescriptionAccessRouter } from "./prescription-access"
 import { retailOpsRouter } from "./retail-ops"
 import { searchRouter } from "./search"
 import { serviceAccessRouter } from "./service-access"
+import { serviceCommerceRouter } from "./service-commerce"
 import { serviceCommunicationsRouter } from "./service-communications"
 import { serviceReportingRouter } from "./service-reporting"
 import { servicesRouter } from "./services"
@@ -30,6 +31,7 @@ export const appRouter = createTRPCRouter({
   offline: offlineRouter,
   qaMaintenance: qaMaintenanceRouter,
   serviceAccess: serviceAccessRouter,
+  serviceCommerce: serviceCommerceRouter,
   serviceCommunications: serviceCommunicationsRouter,
   services: servicesRouter,
   serviceReporting: serviceReportingRouter,

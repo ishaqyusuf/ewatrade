@@ -225,6 +225,30 @@ ADR-0028 now supersedes Docker as the local target. The 2026-08-09 guarded
 these scheduling fields, to Neon development without reset or data-loss flags.
 A release migration artifact and production rollout remain separately
 authorized gates.
+
+## Service Commerce Capability Profile Migration State
+
+On 2026-08-10 the Prisma source schema added the Store-unique
+`ServiceCommerceStoreProfile`, append-only
+`ServiceCommerceStoreAuditEvent`, their lifecycle/adoption enums, and explicit
+Tenant/Store relations. The profile also carries a server-owned
+`policyRestrictedCapabilities` allowlist; setup clients cannot mutate it and
+Ticket 11 owns its future evidence-backed command. Prisma format/generation and
+focused package, DB, API and dashboard typechecks passed.
+
+The required `bun db:migrate` used the verified `.env.local` Neon development
+profile and skipped local PostgreSQL/Docker. Prisma detected broad pre-existing
+schema-to-ledger drift across the earlier Prescription Commerce graph and
+requested a destructive reset; the reset was refused. `bun db:push` then
+applied this additive profile schema non-destructively and reported the Neon
+development schema in sync. A focused Neon test raced initial profile creation
+and revisioned activation, proved typed loser conflicts, Tenant/Store isolation
+and append-only audit, then atomically removed its run-owned fixture.
+
+No migration file was hand-authored and production was not touched. A
+deployable migration artifact plus ledger reconciliation remains an explicit
+release gate; the development schema synchronization is not represented as
+production migration evidence.
 # Hybrid QA cleanup
 
 - Adds tenant QA lifecycle fields and global purge-run receipts. Apply the

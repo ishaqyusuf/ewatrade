@@ -21,6 +21,7 @@
     "@ewatrade/jobs": "workspace:*",
     "@ewatrade/payments": "workspace:*",
     "@ewatrade/prescriptions": "workspace:*",
+    "@ewatrade/service-commerce": "workspace:*",
     "@ewatrade/utils": "workspace:*",
     "@hono/trpc-server": "^0.4.2",
     "@hono/zod-openapi": "^1.4.0",

@@ -41,6 +41,8 @@ model Tenant {
   customerTrackingAccess             CustomerTrackingAccess[]
   serviceNotificationIntents         ServiceNotificationIntent[]
   serviceStoreSettings               ServiceStoreSettings[]
+  serviceCommerceStoreProfiles       ServiceCommerceStoreProfile[]
+  serviceCommerceStoreAuditEvents    ServiceCommerceStoreAuditEvent[]
   prescriptionStoreSettings          PrescriptionStoreSettings[]
   prescriptionStoreRoles             PrescriptionStoreRole[]
   prescriptionStoreAuditEvents       PrescriptionStoreAuditEvent[]

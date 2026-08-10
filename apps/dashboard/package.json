@@ -15,6 +15,7 @@
     "@ewatrade/db": "workspace:*",
     "@ewatrade/jobs": "workspace:*",
     "@ewatrade/prescriptions": "workspace:*",
+    "@ewatrade/service-commerce": "workspace:*",
     "@ewatrade/ui": "workspace:*",
     "@ewatrade/utils": "workspace:*",
     "@hookform/resolvers": "^5.2.2",

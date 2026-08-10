@@ -22,6 +22,7 @@
         "@ewatrade/jobs": "workspace:*",
         "@ewatrade/payments": "workspace:*",
         "@ewatrade/prescriptions": "workspace:*",
+        "@ewatrade/service-commerce": "workspace:*",
         "@ewatrade/utils": "workspace:*",
         "@hono/trpc-server": "^0.4.2",
         "@hono/zod-openapi": "^1.4.0",
@@ -46,6 +47,7 @@
         "@ewatrade/db": "workspace:*",
         "@ewatrade/jobs": "workspace:*",
         "@ewatrade/prescriptions": "workspace:*",
+        "@ewatrade/service-commerce": "workspace:*",
         "@ewatrade/ui": "workspace:*",
         "@ewatrade/utils": "workspace:*",
         "@hookform/resolvers": "^5.2.2",
@@ -294,6 +296,7 @@
       "version": "1.0.0",
       "dependencies": {
         "@ewatrade/prescriptions": "workspace:*",
+        "@ewatrade/service-commerce": "workspace:*",
         "@ewatrade/utils": "workspace:*",
         "@prisma/adapter-pg": "^7.7.0",
         "@prisma/client": "^7.0.0",
@@ -886,6 +889,8 @@
     "@ewatrade/pos": ["@ewatrade/pos@workspace:apps/pos"],
 
     "@ewatrade/prescriptions": ["@ewatrade/prescriptions@workspace:packages/prescriptions"],
+
+    "@ewatrade/service-commerce": ["@ewatrade/service-commerce@workspace:packages/service-commerce"],
 
     "@ewatrade/storefront": ["@ewatrade/storefront@workspace:apps/storefront"],
 

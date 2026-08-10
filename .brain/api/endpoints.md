@@ -90,6 +90,24 @@ Typed tRPC routers are the primary application contract.
   `recordDeliveryAttempt`,
   `serviceReporting.summary`, `serviceReporting.auditExport`.
 
+## Service Commerce
+
+- Protected `serviceCommerce.workspaceAccess` resolves an optional authorized
+  Store selection and returns only the server-owned access, configuration,
+  readiness, activation blockers, revision, Store summary and Tenant billing
+  ownership projection. WhatsApp readiness reads its scoped binding/Connection
+  lifecycle, while restrictions come from the profile's server-owned
+  capability input; no credential, customer content or private policy reason
+  is returned.
+- Protected `serviceCommerce.updateProfile` requires Store scope, expected
+  revision, shared settings and a bounded reason. It updates/creates the
+  profile and audit event atomically.
+- Protected `serviceCommerce.setActivation` requires the same scope, revision
+  and reason plus the requested active state. Activation re-evaluates blockers
+  and scoped provider/policy readiness inside the transaction before a
+  revision-guarded state and audit write. It requires an available channel and
+  Quote/booking outcome and fails closed for suspended profiles.
+
 ## Staff And Billing
 
 The retained `retailOps` router contains only staff membership/onboarding and

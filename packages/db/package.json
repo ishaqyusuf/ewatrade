@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@ewatrade/prescriptions": "workspace:*",
+    "@ewatrade/service-commerce": "workspace:*",
     "@ewatrade/utils": "workspace:*",
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.0.0",

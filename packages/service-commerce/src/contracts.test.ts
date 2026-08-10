@@ -9,7 +9,11 @@ import {
   SERVICE_COMMERCE_SOURCE_KINDS,
   adaptServiceCommerceSource,
   createServiceCommerceSourceRegistry,
+  deriveServiceCommerceReadiness,
+  getServiceCommerceActivationBlockers,
+  getServiceCommerceRuntimeActivationBlockers,
   serviceCommerceCapabilityStateSchema,
+  serviceCommerceProfileConfigurationSchema,
   serviceCommerceSourceRefSchema,
 } from "."
 
@@ -54,6 +58,8 @@ describe("Service Commerce interoperability contracts", () => {
       "pickup",
       "delivery",
       "service_completion",
+      "web",
+      "staff",
       "whatsapp",
       "progressive_catalog",
     ])
@@ -156,5 +162,205 @@ describe("Service Commerce interoperability contracts", () => {
         { id: "source-with-invalid-reference" },
       ),
     ).toThrow()
+  })
+
+  test("distinguishes disabled, setup, policy and provider readiness", () => {
+    const configuration = serviceCommerceProfileConfigurationSchema.parse({
+      catalogAdoptionMode: "progressive",
+      capabilities: {
+        intake: true,
+        quote: true,
+        booking: false,
+        payment: true,
+        pickup: false,
+        delivery: false,
+        service_completion: false,
+        web: true,
+        staff: true,
+        whatsapp: true,
+        progressive_catalog: true,
+      },
+      procureToOrderEnabled: false,
+      status: "active",
+    })
+
+    const readiness = deriveServiceCommerceReadiness({
+      configuration,
+      providerUnavailable: ["whatsapp"],
+      restricted: ["payment"],
+      setupRequired: ["quote"],
+      storeActive: true,
+      trackedInventoryReady: false,
+    })
+
+    expect(readiness.capabilities.intake).toEqual({
+      blockers: [],
+      readiness: "available",
+      recovery: null,
+    })
+    expect(readiness.capabilities.booking).toEqual({
+      blockers: ["capability_disabled"],
+      readiness: "unavailable",
+      recovery: "manage_setup",
+    })
+    expect(readiness.capabilities.quote).toEqual({
+      blockers: ["setup_incomplete"],
+      readiness: "setup_required",
+      recovery: "manage_setup",
+    })
+    expect(readiness.capabilities.payment).toEqual({
+      blockers: ["policy_restricted"],
+      readiness: "restricted",
+      recovery: "review_policy",
+    })
+    expect(readiness.capabilities.whatsapp).toEqual({
+      blockers: ["provider_unavailable"],
+      readiness: "unavailable",
+      recovery: "retry_provider",
+    })
+    expect(readiness.catalogAdoption).toEqual({
+      mode: "progressive",
+      privateDraftCapture: "available",
+      procureToOrder: "setup_required",
+      publicActivation: "setup_required",
+      trackedInventory: "setup_required",
+    })
+  })
+
+  test("fails every capability closed when the Store or profile is inactive", () => {
+    const configuration = serviceCommerceProfileConfigurationSchema.parse({
+      catalogAdoptionMode: "inventory_managed",
+      capabilities: Object.fromEntries(
+        SERVICE_COMMERCE_CAPABILITIES.map((capability) => [capability, true]),
+      ),
+      procureToOrderEnabled: true,
+      status: "active",
+    })
+
+    const inactiveStore = deriveServiceCommerceReadiness({
+      configuration,
+      providerUnavailable: [],
+      restricted: [],
+      setupRequired: [],
+      storeActive: false,
+      trackedInventoryReady: true,
+    })
+    expect(inactiveStore.capabilities.intake).toEqual({
+      blockers: ["store_inactive"],
+      readiness: "unavailable",
+      recovery: "activate_store",
+    })
+    expect(inactiveStore.catalogAdoption).toMatchObject({
+      privateDraftCapture: "unavailable",
+      procureToOrder: "unavailable",
+      publicActivation: "unavailable",
+      trackedInventory: "unavailable",
+    })
+
+    const disabledProfile = deriveServiceCommerceReadiness({
+      configuration: { ...configuration, status: "disabled" },
+      providerUnavailable: [],
+      restricted: [],
+      setupRequired: [],
+      storeActive: true,
+      trackedInventoryReady: true,
+    })
+    expect(disabledProfile.capabilities.intake).toEqual({
+      blockers: ["profile_disabled"],
+      readiness: "unavailable",
+      recovery: "manage_setup",
+    })
+    expect(disabledProfile.catalogAdoption).toMatchObject({
+      privateDraftCapture: "unavailable",
+      procureToOrder: "unavailable",
+      publicActivation: "unavailable",
+      trackedInventory: "unavailable",
+    })
+  })
+
+  test("requires a Store, intake, channel, outcome and progressive Catalog before activation", () => {
+    const configuration = serviceCommerceProfileConfigurationSchema.parse({
+      catalogAdoptionMode: "progressive",
+      capabilities: {
+        booking: false,
+        delivery: false,
+        intake: false,
+        payment: false,
+        pickup: false,
+        progressive_catalog: false,
+        quote: false,
+        service_completion: false,
+        staff: false,
+        web: false,
+        whatsapp: false,
+      },
+      procureToOrderEnabled: false,
+      status: "disabled",
+    })
+
+    expect(
+      getServiceCommerceActivationBlockers({
+        configuration,
+        storeActive: false,
+      }),
+    ).toEqual([
+      "store_inactive",
+      "intake_disabled",
+      "channel_missing",
+      "outcome_missing",
+      "progressive_catalog_disabled",
+    ])
+    expect(
+      getServiceCommerceActivationBlockers({
+        configuration: {
+          ...configuration,
+          capabilities: {
+            ...configuration.capabilities,
+            intake: true,
+            quote: true,
+            progressive_catalog: true,
+            web: true,
+          },
+        },
+        storeActive: true,
+      }),
+    ).toEqual([])
+  })
+
+  test("requires at least one ready channel and outcome at activation time", () => {
+    const configuration = serviceCommerceProfileConfigurationSchema.parse({
+      catalogAdoptionMode: "progressive",
+      capabilities: {
+        booking: true,
+        delivery: false,
+        intake: true,
+        payment: false,
+        pickup: false,
+        progressive_catalog: true,
+        quote: false,
+        service_completion: false,
+        staff: false,
+        web: false,
+        whatsapp: true,
+      },
+      procureToOrderEnabled: false,
+      status: "active",
+    })
+    const readiness = deriveServiceCommerceReadiness({
+      configuration,
+      providerUnavailable: ["whatsapp"],
+      restricted: [],
+      setupRequired: ["booking"],
+      storeActive: true,
+      trackedInventoryReady: false,
+    })
+
+    expect(
+      getServiceCommerceRuntimeActivationBlockers({
+        configuration,
+        readiness,
+        storeActive: true,
+      }),
+    ).toEqual(["channel_unavailable", "outcome_unavailable"])
   })
 })

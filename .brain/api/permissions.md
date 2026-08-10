@@ -128,6 +128,26 @@
 - Request Form reads/submission, current Quote reads/acceptance and Tracking
   reads are public only through valid opaque, active and unexpired tokens.
 
+## Service Commerce
+
+- Any active Tenant member may receive the allowlisted profile/readiness
+  projection for an authorized Store; this read does not grant operation or
+  configuration authority.
+- Owner/Admin may configure and activate Service Commerce for an authorized
+  Store. Manager/Cashier/Operator may operate capabilities only when the
+  returned server state allows them. Member/Support remain non-operational.
+- No applicable shared personal exceptional-access grant exists yet;
+  `exceptionalAccess` is returned false and clients cannot synthesize one from
+  roles or Prescription break-glass state.
+- Every profile and audit repository boundary carries Tenant plus Store.
+  Expected revision, activation blockers and management authority are checked
+  inside the same bounded transaction as the profile/audit writes.
+- Provider and restriction readiness is server-owned. The projection reads
+  only Tenant/Store-scoped WhatsApp lifecycle and profile restriction facts;
+  setup clients cannot write or clear a restriction, infer provider readiness
+  or generically reactivate a suspended profile. Ticket 11 owns the future
+  authorized policy-evidence command.
+
 ## Offline
 
 - Authenticated commercial/POS roles may read the Tenant offline policy;

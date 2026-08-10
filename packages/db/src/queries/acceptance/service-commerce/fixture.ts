@@ -72,6 +72,8 @@ async function deleteAcceptanceFixture(
       where: { paymentIntentId: { in: paymentIntentIds } },
     })
     await tx.prescriptionCommunicationIntent.deleteMany({ where: { tenantId } })
+    await tx.serviceCommerceStoreAuditEvent.deleteMany({ where: { tenantId } })
+    await tx.serviceCommerceStoreProfile.deleteMany({ where: { tenantId } })
     await tx.prescriptionPickupFulfillment.deleteMany({ where: { tenantId } })
     await tx.prescriptionDeliveryAssignment.deleteMany({ where: { tenantId } })
     await tx.prescriptionDeliveryAddress.deleteMany({ where: { tenantId } })
