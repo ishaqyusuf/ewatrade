@@ -8,6 +8,7 @@ import {
   getPublicCommerceInquiryQuote,
   getServiceCommerceCustomerRequestProjection,
   issueCommerceInquiryQuote,
+  selectCommerceInquiryQuoteOption,
   transitionCommerceInquiry,
 } from "@ewatrade/db/queries"
 import { TRPCError } from "@trpc/server"
@@ -17,6 +18,7 @@ import {
   commerceInquiryQuoteIssueSchema,
   commerceInquiryTransitionSchema,
   publicCommerceInquiryQuoteAcceptSchema,
+  publicCommerceInquiryQuoteOptionSelectSchema,
   publicCommerceInquiryQuoteSchema,
   serviceCommerceSourceProjectionSchema,
 } from "../../../schemas/service-commerce-inquiries"
@@ -88,6 +90,16 @@ export const serviceCommerceInquiryRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         return await acceptCommerceInquiryQuote(ctx.db, input)
+      } catch {
+        publicFailure()
+      }
+    }),
+
+  selectInquiryQuoteOption: publicProcedure
+    .input(publicCommerceInquiryQuoteOptionSelectSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await selectCommerceInquiryQuoteOption(ctx.db, input)
       } catch {
         publicFailure()
       }

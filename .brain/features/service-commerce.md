@@ -12,10 +12,11 @@ through 2026-08-10. Tickets 01, 02, 03, 11, 03A and 05 are complete. Tickets 04
 and 04A have source-complete foundations. Ticket 05 adds the shared source/API,
 public Product-inquiry and explicit product-selected generic WhatsApp adapters,
 with combined focused, verified-Neon and desktop/mobile browser acceptance.
-Ticket 06 is the active source frontier. Its DB-free mutually exclusive Offer
-Option contracts and additive development-Neon persistence are complete;
-runtime issuance, selection, acceptance compatibility and release-seam work
-remain in progress. Production schema/provider operations remain separately
+Ticket 06 is the active source frontier. Its mutually exclusive Offer Option
+contracts, additive development-Neon persistence, shared issuance, idempotent
+selection, selected-only acceptance and private prepare/release transaction are
+source-complete. Post-release Neon/browser revalidation remains open before the
+ticket can close. Production schema/provider operations remain separately
 authorized.
 
 Pharmacy Commerce is the first regulated vertical and retains its completed
@@ -347,6 +348,19 @@ fulfilment and total. Selection is current-version/expiry guarded, idempotent
 and revalidates availability; only the selected option may be accepted, ordered,
 reserved or paid. Existing simple Quotes migrate as one default option.
 
+New shared issuers and Pharmacy delivery-fee revisions persist at least one
+Option and attach every new line to its owner. Existing immutable versions are
+not rewritten; their Version-level facts and directly attached lines project as
+one synthetic default Option. A Pharmacy `alternative` line remains a labelled
+substitute for its requested line inside one selected/default Option; mutually
+exclusive whole-Quote choices must be separate Options and therefore cannot be
+added together accidentally.
+
+Accepted-Quote price evidence and reusable-price promotion resolve only the
+selected/default Option. Prices shown in an unselected immutable Option remain
+historical Quote facts but cannot become a future suggestion or reusable
+Catalog price.
+
 Quote preparation and customer release are separate server commands. The
 default attendant mode may perform both atomically. Approval-required mode
 keeps the current version as private `DRAFT` with a `pending` approval record,
@@ -512,8 +526,8 @@ on 2026-08-10. The exact 17-ticket batch adds Tickets 03A, 04A, 06A and 06B.
 Tickets 01, 02, 03, 11, 03A and 05 are complete. Tickets 04 and 04A have their
 source foundations, and Ticket 05 supplies the accepted channel-neutral intake
 adapters and combined origin/source/media/browser evidence. Ticket 06 has
-completed its Offer Option contract/additive-persistence slice and remains the
-active source frontier for runtime issuance, selection and acceptance.
+completed its source implementation and remains the active frontier for its
+post-release Neon/browser evidence and closure.
 Live-provider acceptance remains open. Throughout
 execution:
 

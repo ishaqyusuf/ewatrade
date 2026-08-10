@@ -845,6 +845,8 @@ export async function getServiceCommerceCatalogPricePromotionImpact(
             sourceLineId: input.sourceLineId,
           },
         },
+        optionSelection: true,
+        options: { select: { id: true } },
         quote: true,
       },
       where: {
@@ -878,7 +880,22 @@ export async function getServiceCommerceCatalogPricePromotionImpact(
       where: { offeringId: link.offeringId, tenantId: input.tenantId },
     }),
   ])
-  const line = quoteVersion?.lines[0]
+  const line = quoteVersion
+    ? quoteVersion.options.length === 0
+      ? quoteVersion.lines.find((candidate) => !candidate.quoteOptionId)
+      : quoteVersion.options.length === 1
+        ? quoteVersion.lines.find(
+            (candidate) =>
+              candidate.quoteOptionId === quoteVersion.options[0]?.id,
+          )
+        : quoteVersion.optionSelection
+          ? quoteVersion.lines.find(
+              (candidate) =>
+                candidate.quoteOptionId ===
+                quoteVersion.optionSelection?.optionId,
+            )
+          : undefined
+    : undefined
   if (!quoteVersion || !line || line.unitPriceMinor === null) {
     throw new ServiceCommerceCatalogError(
       "NOT_READY",

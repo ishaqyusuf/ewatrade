@@ -3,12 +3,14 @@ import { randomUUID } from "node:crypto"
 import { afterAll, beforeAll, expect, setDefaultTimeout, test } from "bun:test"
 import type { ServiceCommerceProfileSettings } from "@ewatrade/service-commerce"
 
+import { createSimpleCatalogItem } from "../../catalog"
 import {
   CommerceInquiryError,
   acceptCommerceInquiryQuote,
   createCommerceInquiry,
   getPublicCommerceInquiryQuote,
   issueCommerceInquiryQuote,
+  selectCommerceInquiryQuoteOption,
   transitionCommerceInquiry,
 } from "../../commerce-inquiries"
 import {
@@ -126,7 +128,12 @@ describeWithServiceCommerceDatabase(
       const inquiry = await createCommerceInquiry(fixture.db, inquiryInput)
       await expect(
         createCommerceInquiry(fixture.db, inquiryInput),
-      ).resolves.toEqual(inquiry)
+      ).resolves.toMatchObject({
+        id: inquiry.id,
+        lines: inquiry.lines,
+        replayed: true,
+        state: inquiry.state,
+      })
 
       const projection = await getServiceCommerceCustomerRequestProjection(
         fixture.db,
@@ -167,20 +174,54 @@ describeWithServiceCommerceDatabase(
 
       const inquiryLineId = inquiry.lines[0]?.id
       if (!inquiryLineId) throw new Error("Inquiry line was not created.")
+      const blackBagItem = await createSimpleCatalogItem(fixture.db, {
+        actorUserId: fixture.actorUserId,
+        canonicalUnitName: "piece",
+        clientOperationId: `black-bag-${runId}`,
+        kind: "product",
+        name: "Black large bag",
+        openingStockQuantity: "5",
+        priceMinor: 3_000,
+        storeId: fixture.storeId,
+        tenantId: fixture.tenantId,
+      })
+      const blackBagOffering = blackBagItem.variants[0]?.offerings[0]
+      if (!blackBagOffering)
+        throw new Error("Black bag Offering was not created.")
 
       const quoteInput: Parameters<typeof issueCommerceInquiryQuote>[1] = {
         actorUserId: fixture.actorUserId,
-        availabilityOutcome: "full",
         clientQuoteId: `inquiry-quote-${runId}`,
         clientVersionId: `inquiry-version-${runId}`,
         inquiryId: inquiry.id,
-        lines: [
+        options: [
           {
-            offeringId: fixture.offeringId,
-            outcome: "included",
-            quantity: "1",
-            sourceLineId: inquiryLineId,
-            unitPriceMinor: 2_650,
+            availabilityOutcome: "full",
+            clientOptionId: `red-small-${runId}`,
+            label: "Red small",
+            lines: [
+              {
+                offeringId: fixture.offeringId,
+                outcome: "included",
+                quantity: "1",
+                sourceLineId: inquiryLineId,
+                unitPriceMinor: 2_650,
+              },
+            ],
+          },
+          {
+            availabilityOutcome: "full",
+            clientOptionId: `black-large-${runId}`,
+            label: "Black large",
+            lines: [
+              {
+                offeringId: blackBagOffering.id,
+                outcome: "included",
+                quantity: "1",
+                sourceLineId: inquiryLineId,
+                unitPriceMinor: 3_000,
+              },
+            ],
           },
         ],
         storeId: fixture.storeId,
@@ -222,8 +263,10 @@ describeWithServiceCommerceDatabase(
         }),
       ).resolves.toMatchObject({
         accepted: false,
+        payable: false,
+        requiresSelection: true,
         sourceType: "commerce_inquiry",
-        totalMinor: 2_650,
+        totalMinor: 0,
       })
       await expect(
         getPublicCommerceInquiryQuote(fixture.db, {
@@ -231,14 +274,92 @@ describeWithServiceCommerceDatabase(
         }),
       ).resolves.toMatchObject({
         accepted: false,
+        payable: false,
+        requiresSelection: true,
         sourceType: "commerce_inquiry",
-        totalMinor: 2_650,
+        totalMinor: 0,
       })
 
       const acceptanceInput = {
         acceptanceToken: issued.token,
         clientAcceptanceId: `inquiry-acceptance-${runId}`,
       }
+      await expect(
+        acceptCommerceInquiryQuote(fixture.db, acceptanceInput),
+      ).rejects.toMatchObject({ code: "QUOTE_CONFLICT" })
+      const publicQuote = await getPublicCommerceInquiryQuote(fixture.db, {
+        acceptanceToken: issued.token,
+      })
+      const blackOption = publicQuote.options.find(
+        (option) => option.label === "Black large",
+      )
+      const redOption = publicQuote.options.find(
+        (option) => option.label === "Red small",
+      )
+      if (!blackOption || !redOption) {
+        throw new Error("Both bag Offer Options were not projected.")
+      }
+      const selectionCommandId = `inquiry-selection-${runId}`
+      const selectionInput = {
+        acceptanceToken: issued.token,
+        clientSelectionId: selectionCommandId,
+        optionId: blackOption.id,
+      }
+      const competingSelectionInput = {
+        ...selectionInput,
+        optionId: redOption.id,
+      }
+      const selectionRace = await Promise.allSettled([
+        selectCommerceInquiryQuoteOption(fixture.db, selectionInput),
+        selectCommerceInquiryQuoteOption(fixture.db, competingSelectionInput),
+      ])
+      const winningSelections = selectionRace.filter(
+        (result) => result.status === "fulfilled",
+      )
+      const losingSelections = selectionRace.filter(
+        (result) => result.status === "rejected",
+      )
+      expect(winningSelections).toHaveLength(1)
+      expect(losingSelections).toHaveLength(1)
+      expect(losingSelections[0]).toMatchObject({
+        reason: { code: "IDEMPOTENCY_MISMATCH" },
+      })
+      const winningSelection = winningSelections[0]
+      if (winningSelection?.status !== "fulfilled") {
+        throw new Error("One Offer Option must win the selection race.")
+      }
+      const selectedOptionId = winningSelection.value.optionId
+      const selectedBlack = selectedOptionId === blackOption.id
+      const replaySelectionInput = selectedBlack
+        ? selectionInput
+        : competingSelectionInput
+      await expect(
+        selectCommerceInquiryQuoteOption(fixture.db, replaySelectionInput),
+      ).resolves.toMatchObject({ optionId: selectedOptionId })
+      await expect(
+        selectCommerceInquiryQuoteOption(fixture.db, {
+          ...replaySelectionInput,
+          optionId: selectedBlack ? redOption.id : blackOption.id,
+        }),
+      ).rejects.toMatchObject({ code: "IDEMPOTENCY_MISMATCH" })
+      await expect(
+        getPublicCommerceInquiryQuote(fixture.db, {
+          acceptanceToken: issued.token,
+        }),
+      ).resolves.toMatchObject({
+        lines: [
+          {
+            catalogItemName: selectedBlack
+              ? "Black large bag"
+              : "Acceptance Medicine",
+            totalMinor: selectedBlack ? 3_000 : 2_650,
+          },
+        ],
+        payable: true,
+        requiresSelection: false,
+        selectedOptionId,
+        totalMinor: selectedBlack ? 3_000 : 2_650,
+      })
       const accepted = await acceptCommerceInquiryQuote(
         fixture.db,
         acceptanceInput,
@@ -272,13 +393,13 @@ describeWithServiceCommerceDatabase(
         customerPhone: inquiryInput.customerPhone,
         storeId: fixture.storeId,
         tenantId: fixture.tenantId,
-        totalMinor: 2_650,
+        totalMinor: selectedBlack ? 3_000 : 2_650,
       })
       expect(order.lines).toHaveLength(1)
       expect(order.lines[0]).toMatchObject({
         kind: "PRODUCT_UNIT",
-        offeringId: fixture.offeringId,
-        unitPriceMinor: 2_650,
+        offeringId: selectedBlack ? blackBagOffering.id : fixture.offeringId,
+        unitPriceMinor: selectedBlack ? 3_000 : 2_650,
       })
       expect(audit.map((event) => event.type)).toEqual([
         "CREATED",

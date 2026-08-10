@@ -213,6 +213,9 @@ export async function prepareReleasedPrescriptionQuote(
   expect(publicQuote).toMatchObject({
     availabilityOutcome: "full",
     fulfilmentType: "pickup",
+    options: [{ label: "Quote", totalMinor: 2_500 }],
+    payable: true,
+    requiresSelection: false,
     storeName: "Acceptance Pharmacy",
     totalMinor: 2_500,
   })

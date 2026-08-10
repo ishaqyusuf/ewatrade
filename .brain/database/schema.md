@@ -136,9 +136,9 @@ persistence boundary. Clients never access the database directly.
 - `CommerceQuoteOption` stores one immutable, mutually exclusive commercial
   choice inside a Quote Version, including its customer-safe label, exact
   monetary components, availability and fulfilment facts. Every new Quote
-  Version must ultimately expose at least one option; existing versions remain
-  readable through the compatibility projection until the runtime/backfill
-  phase is complete.
+  Version now persists at least one option. Existing immutable Versions are not
+  rewritten: the runtime safely projects their directly attached lines and
+  Version totals as one synthetic default Option.
 - `CommerceQuoteOptionSelection` stores at most one idempotent customer choice
   per Quote Version. The server verifies the selected Option belongs to that
   Version inside the selection transaction. Selection is not acceptance and

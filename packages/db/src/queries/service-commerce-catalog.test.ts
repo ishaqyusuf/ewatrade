@@ -621,8 +621,31 @@ describe("Service Commerce Catalog pricing and availability reads", () => {
           return [
             {
               id: "quote-line-1",
+              quoteOption: {
+                quoteVersionId: "quote-version-1",
+                selection: { quoteVersionId: "quote-version-1" },
+              },
+              quoteOptionId: "option-selected",
+              quoteVersionId: "quote-version-1",
               unitPriceMinor: 900,
               quoteVersion: {
+                _count: { options: 2 },
+                acceptedAt: now,
+                currencyCode: "NGN",
+                quote: { storeId: "store-1" },
+              },
+            },
+            {
+              id: "quote-line-unselected",
+              quoteOption: {
+                quoteVersionId: "quote-version-1",
+                selection: null,
+              },
+              quoteOptionId: "option-unselected",
+              quoteVersionId: "quote-version-1",
+              unitPriceMinor: 1_200,
+              quoteVersion: {
+                _count: { options: 2 },
                 acceptedAt: now,
                 currencyCode: "NGN",
                 quote: { storeId: "store-1" },
@@ -679,6 +702,12 @@ describe("Service Commerce Catalog pricing and availability reads", () => {
       scope: "offering",
       source: "current_offering",
     })
+    expect(result.evidence).toContainEqual(
+      expect.objectContaining({ evidenceId: "quote-line-1" }),
+    )
+    expect(result.evidence).not.toContainEqual(
+      expect.objectContaining({ evidenceId: "quote-line-unselected" }),
+    )
     expect(quoteWhere).toMatchObject({
       quoteVersion: { quote: { storeId: "store-1", tenantId: "tenant-1" } },
     })
@@ -817,6 +846,7 @@ describe("Service Commerce Catalog pricing and availability reads", () => {
   test("computes promotion impact from every bound Store and writes the reusable price atomically after explicit confirmation", async () => {
     const calls: string[] = []
     let quoteVersionWhere: Record<string, unknown> | undefined
+    let projectedQuoteOptionId = "option-other"
     const tx = {
       ...policyFakes("price_promotion"),
       catalogPriceChange: {
@@ -852,7 +882,11 @@ describe("Service Commerce Catalog pricing and availability reads", () => {
           return {
             currencyCode: "NGN",
             id: "quote-version-1",
-            lines: [{ unitPriceMinor: 900 }],
+            lines: [
+              { quoteOptionId: projectedQuoteOptionId, unitPriceMinor: 900 },
+            ],
+            optionSelection: { optionId: "option-selected" },
+            options: [{ id: "option-selected" }, { id: "option-other" }],
             quote: {},
           }
         },
@@ -890,6 +924,15 @@ describe("Service Commerce Catalog pricing and availability reads", () => {
       sourceType: "COMMERCE_INQUIRY",
       sourceVersionFingerprint: source.ref.fingerprint,
     })
+
+    await expect(
+      getServiceCommerceCatalogPricePromotionImpact(tx as never, {
+        ...scope,
+        expectedSourceFingerprint: source.ref.fingerprint,
+        quoteId: "quote-1",
+      }),
+    ).rejects.toMatchObject({ code: "NOT_READY" })
+    projectedQuoteOptionId = "option-selected"
 
     const impact = await getServiceCommerceCatalogPricePromotionImpact(
       tx as never,

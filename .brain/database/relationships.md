@@ -68,8 +68,10 @@ belong to `ServiceJob`; charge-only Service lines allocate no work.
 The selection command predicates both Quote Version and Option identity inside
 one transaction, so a choice cannot point across immutable versions. Existing
 legacy lines may remain directly attached to their Version during
-expand-contract; the runtime/backfill phase will project them as one default
-Option before any contraction is considered.
+expand-contract; the runtime projects them as one synthetic default Option.
+This compatibility mapping avoids a destructive historical rewrite. A future
+contraction may be considered only after production reconciliation proves no
+unsupported writer remains.
 
 Payment/refund facts derive the Order balance. Store Service settings are read
 and snapshotted during Intake; later setting changes do not rewrite existing

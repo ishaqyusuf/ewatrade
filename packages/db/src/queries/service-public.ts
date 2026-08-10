@@ -35,6 +35,7 @@ import {
   getPublicCommerceQuote,
   issueCommerceQuote,
   recordCommerceQuoteAcceptance,
+  selectCommerceQuoteOption,
 } from "./commerce-quotes"
 import { createCommercialOrderInTransaction } from "./commercial-orders"
 import {
@@ -628,11 +629,26 @@ export async function issueServiceQuote(
     clientVersionId: string
     discountMinor?: number
     expiresAt?: Date
-    lines: Array<{
+    lines?: Array<{
       offeringId: string
       quantity: string
       sourceLineId?: string
       unitPriceMinor: number
+    }>
+    options?: Array<{
+      clientOptionId: string
+      discountMinor?: number
+      fulfilmentFeeMinor?: number
+      fulfilmentPromise?: string
+      fulfilmentType?: "delivery" | "pickup" | "unspecified"
+      label: string
+      lines: Array<{
+        offeringId: string
+        quantity: string
+        sourceLineId?: string
+        unitPriceMinor: number
+      }>
+      taxMinor?: number
     }>
     requestId?: string
     storeId: string
@@ -660,20 +676,33 @@ export async function issueServiceQuote(
           vertical: "service",
         })
       },
-      availabilityOutcome: "full",
       clientQuoteId: input.clientQuoteId,
       clientVersionId: input.clientVersionId,
-      discountMinor: input.discountMinor,
       expiresAt: input.expiresAt,
-      fulfilmentType: "unspecified",
-      lines: input.lines.map((line) => ({
-        ...line,
-        outcome: "included" as const,
-      })),
+      ...(input.options
+        ? {
+            options: input.options.map((option) => ({
+              ...option,
+              availabilityOutcome: "full" as const,
+              lines: option.lines.map((line) => ({
+                ...line,
+                outcome: "included" as const,
+              })),
+            })),
+          }
+        : {
+            availabilityOutcome: "full" as const,
+            discountMinor: input.discountMinor,
+            fulfilmentType: "unspecified" as const,
+            lines: (input.lines ?? []).map((line) => ({
+              ...line,
+              outcome: "included" as const,
+            })),
+            taxMinor: input.taxMinor,
+          }),
       sourceId: input.requestId,
       sourceType: "service_request",
       storeId: input.storeId,
-      taxMinor: input.taxMinor,
       tenantId: input.tenantId,
     })
   } catch (error) {
@@ -776,7 +805,7 @@ export async function acceptServiceQuote(
   try {
     return await db.$transaction(async (tx) => {
       const context = await getCommerceQuoteAcceptanceContext(tx, input)
-      const { version } = context
+      const { payable, version } = context
       if (
         version.quote.sourceType !== CommerceQuoteSourceType.SERVICE_REQUEST
       ) {
@@ -802,6 +831,12 @@ export async function acceptServiceQuote(
           orderId: context.replayOrderId,
         }
       }
+      if (!payable) {
+        throw new CommerceQuoteError(
+          "QUOTE_CONFLICT",
+          "Choose one Offer Option before accepting this Quote.",
+        )
+      }
       const request = await tx.serviceRequest.findFirst({
         where: {
           id: version.quote.sourceId,
@@ -815,10 +850,7 @@ export async function acceptServiceQuote(
           "Service Request source not found.",
         )
       }
-      const payableLines = version.lines.filter(
-        (line) => line.outcome === "INCLUDED" || line.outcome === "ALTERNATIVE",
-      )
-      const completePayableLines = payableLines.map((line) => {
+      const completePayableLines = payable.lines.map((line) => {
         if (
           !line.offeringId ||
           !line.quantity ||
@@ -842,12 +874,12 @@ export async function acceptServiceQuote(
         customerName: request.customerName,
         customerPhone: request.customerPhone ?? undefined,
         createTrackedServiceWork: false,
-        discountMinor: version.discountMinor,
+        discountMinor: payable.discountMinor,
         lines: completePayableLines,
         schemaVersion: 1,
-        serviceChargeMinor: version.fulfilmentFeeMinor,
+        serviceChargeMinor: payable.fulfilmentFeeMinor,
         storeId: version.quote.storeId,
-        taxMinor: version.taxMinor,
+        taxMinor: payable.taxMinor,
         tenantId: version.quote.tenantId,
       })
       const jobId = await createTrackedJobsForOrder(tx, {
@@ -870,6 +902,41 @@ export async function acceptServiceQuote(
         where: { id: request.id },
       })
       return { jobId, orderId: order.id }
+    })
+  } catch (error) {
+    if (error instanceof CommerceQuoteError) throw mapCommerceQuoteError(error)
+    throw error
+  }
+}
+
+export async function selectServiceQuoteOption(
+  db: PrismaClient,
+  input: {
+    acceptanceToken: string
+    clientSelectionId: string
+    optionId: string
+  },
+) {
+  try {
+    return await selectCommerceQuoteOption(db, {
+      ...input,
+      authorize: async (tx, quote) => {
+        if (quote.sourceType !== CommerceQuoteSourceType.SERVICE_REQUEST) {
+          throw new CommerceQuoteError(
+            "PUBLIC_TOKEN_INVALID",
+            "Quote is unavailable.",
+          )
+        }
+        await assertServiceCommercePolicyAllowedInTransaction(tx, {
+          actorUserId: "public_quote_option_selection",
+          channel: "web",
+          purpose: "service_quote_option_selection",
+          storeId: quote.storeId,
+          subject: "quote",
+          tenantId: quote.tenantId,
+          vertical: "service",
+        })
+      },
     })
   } catch (error) {
     if (error instanceof CommerceQuoteError) throw mapCommerceQuoteError(error)

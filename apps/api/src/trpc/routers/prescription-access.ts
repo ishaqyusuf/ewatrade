@@ -16,6 +16,7 @@ import {
   preparePrescriptionHostedCheckout,
   replacePrescriptionMedia,
   revisePrescriptionQuoteForDelivery,
+  selectPrescriptionQuoteOption,
   submitPublicPrescriptionRequest,
 } from "@ewatrade/db/queries"
 import {
@@ -34,6 +35,7 @@ import {
   prescriptionPublicChannelSchema,
   prescriptionPublicIntakeSchema,
   prescriptionPublicQuoteAcceptSchema,
+  prescriptionPublicQuoteOptionSelectSchema,
   prescriptionPublicQuoteSchema,
   prescriptionReuploadSchema,
   prescriptionStatusSchema,
@@ -190,6 +192,12 @@ export const prescriptionAccessRouter = createTRPCRouter({
     .input(prescriptionPublicQuoteSchema)
     .query(({ ctx, input }) =>
       runPublic(() => getPublicPrescriptionQuote(ctx.db, input)),
+    ),
+
+  selectQuoteOption: publicProcedure
+    .input(prescriptionPublicQuoteOptionSelectSchema)
+    .mutation(({ ctx, input }) =>
+      runPublic(() => selectPrescriptionQuoteOption(ctx.db, input)),
     ),
 
   acceptPickupQuote: publicProcedure

@@ -566,3 +566,11 @@ export const prescriptionPublicQuoteAcceptSchema = z
     partialAcknowledged: z.boolean(),
   })
   .strict()
+
+export const prescriptionPublicQuoteOptionSelectSchema = z
+  .object({
+    acceptanceToken: z.string().trim().min(20).max(200),
+    clientSelectionId: z.string().trim().min(1).max(160),
+    optionId: z.string().trim().min(1).max(191),
+  })
+  .strict()

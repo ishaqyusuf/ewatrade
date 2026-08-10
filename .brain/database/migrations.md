@@ -275,16 +275,20 @@ On 2026-08-10 Ticket 06 began its expand phase with generated migration
 `CommerceQuoteOption`, one-per-Version `CommerceQuoteOptionSelection`, and the
 nullable compatibility link from existing Quote lines to their owning Option.
 The nullable link deliberately preserves existing immutable Quote Versions;
-runtime projection/backfill must expose those versions as one default Option
-before any future contraction is considered.
+the implemented runtime exposes those versions as one synthetic default Option
+without rewriting historical Quote/Order snapshots. Every new shared issuer
+and Pharmacy delivery-fee revision now persists an owning Option for each line.
+No destructive data backfill is required before expand-phase compatibility;
+production reconciliation remains mandatory before any future contraction.
 
 The required root workflow used only the verified `.env.local` Neon
 development profile and explicitly skipped local PostgreSQL/Docker. Prisma
 generated and applied the migration, and `bun db:push` then reported the
 development database already synchronized. No migration SQL was hand-authored,
 no reset or data-loss override was used, and no production database was
-touched. Runtime issuance, selection, acceptance compatibility and production
-rollout remain open Ticket 06 gates.
+touched. Runtime issuance, idempotent selection, selected-only acceptance and
+the private prepare/release transaction are source-complete. The post-release
+Neon/browser recheck and production rollout remain open Ticket 06 gates.
 
 ## Service Commerce Vertical Policy Migration State
 

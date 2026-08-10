@@ -240,9 +240,21 @@
   identifiers and reloads sensitive data inside the job.
 - OCR output is a draft. Every current line must be explicitly resolved by an
   attendant, and only a verified pharmacist can release the current revision.
-- Commerce Quote Versions are immutable. Acceptance requires the current,
-  issued, unexpired version plus one opaque token; retries return the same
-  Commercial Order/payment intent.
+- Commerce Quote Versions are immutable. Each newly issued Version owns one or
+  more immutable Offer Options; a legacy Version with no stored Option projects
+  as one synthetic default for expand-contract compatibility. A multi-option
+  Version is deliberately non-payable until one exact current Option is chosen.
+  Selection uses the opaque Quote capability plus an idempotent client command,
+  rechecks Store policy and every selected Offering/availability snapshot, and
+  records at most one choice for that Version. A competing choice returns a
+  typed idempotency conflict and creates no Order, reservation or payment.
+- Acceptance requires the current, issued, unexpired version plus one opaque
+  token and, when applicable, its stored selection. Only the selected/default
+  Option's lines and exact monetary/fulfilment facts reach Order creation;
+  retries return the same Commercial Order/payment intent.
+- Accepted-Quote price suggestions and reusable Catalog price-promotion impact
+  admit only the selected/default Option. Unselected immutable Option lines are
+  excluded even though they remain visible in Quote history.
 - Fulfilment choice precedes payment when fee or eligibility changes. `Pick up`,
   `Delivery`, `Ask pharmacy`, and `Review & pay` are opaque idempotent actions;
   a message/button never establishes payment.

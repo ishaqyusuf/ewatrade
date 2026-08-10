@@ -11,6 +11,7 @@ import {
   listServiceRequestForms,
   listServiceRequests,
   revokeCustomerTrackingAccess,
+  selectServiceQuoteOption,
   submitPublicServiceRequest,
   updateServiceRequestDisposition,
 } from "@ewatrade/db/queries"
@@ -18,6 +19,7 @@ import { TRPCError } from "@trpc/server"
 
 import {
   publicServiceQuoteAcceptSchema,
+  publicServiceQuoteOptionSelectSchema,
   publicServiceQuoteSchema,
   publicServiceRequestFormSchema,
   publicServiceRequestSubmitSchema,
@@ -87,6 +89,17 @@ export const serviceAccessRouter = createTRPCRouter({
           actorUserId: "public_quote_acceptance",
           ...input,
         })
+      } catch (error) {
+        if (isPublicFailure(error)) throw publicFailure()
+        throw error
+      }
+    }),
+
+  selectQuoteOption: publicProcedure
+    .input(publicServiceQuoteOptionSelectSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await selectServiceQuoteOption(ctx.db, input)
       } catch (error) {
         if (isPublicFailure(error)) throw publicFailure()
         throw error

@@ -9,7 +9,9 @@ import {
 } from "@ewatrade/prescriptions"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import {
+  CommerceQuoteAvailabilityOutcome,
   CommerceQuoteFulfilmentType,
+  type CommerceQuoteLineOutcome,
   CommerceQuoteSourceType,
   CommerceQuoteVersionStatus,
   DeliveryEligibilityStatus,
@@ -22,7 +24,10 @@ import {
   PrescriptionPickupEventType,
   PrescriptionPickupStatus,
 } from "../../generated/prisma/enums"
-import { resolveCommerceQuoteAccess } from "./commerce-quotes"
+import {
+  resolveCommerceQuoteAccess,
+  resolveCommerceQuotePayableState,
+} from "./commerce-quotes"
 import { assertAnyPrescriptionStoreRole } from "./prescription-settings"
 import {
   assertServiceCommercePolicyAllowedInTransaction,
@@ -50,12 +55,102 @@ function token() {
   return randomBytes(32).toString("base64url")
 }
 
+type PrescriptionDeliveryQuoteLine = {
+  availabilityAttestationId: null | string
+  balanceRevision: null | number
+  catalogItemName: string
+  configurationVersionId: null | string
+  customerNote: null | string
+  offeringId: null | string
+  offeringName: string
+  optionSelections: Prisma.JsonValue
+  outcome: CommerceQuoteLineOutcome
+  quantity: null | Prisma.Decimal
+  sourceLineId: null | string
+  totalMinor: number
+  unitPriceMinor: null | number
+  variantName: string
+}
+
+async function persistPrescriptionDeliveryQuoteOption(
+  tx: Prisma.TransactionClient,
+  input: {
+    availabilityOutcome: CommerceQuoteAvailabilityOutcome
+    clientOptionId: string
+    currencyCode: string
+    customerNote: null | string
+    discountMinor: number
+    fulfilmentFeeMinor: number
+    fulfilmentPromise: null | string
+    lines: PrescriptionDeliveryQuoteLine[]
+    quoteVersionId: string
+    subtotalMinor: number
+    taxMinor: number
+    totalMinor: number
+  },
+) {
+  const option = await tx.commerceQuoteOption.create({
+    data: {
+      availabilityOutcome: input.availabilityOutcome,
+      clientOptionId: input.clientOptionId,
+      currencyCode: input.currencyCode,
+      customerNote: input.customerNote,
+      discountMinor: input.discountMinor,
+      fulfilmentFeeMinor: input.fulfilmentFeeMinor,
+      fulfilmentPromise: input.fulfilmentPromise,
+      fulfilmentType: CommerceQuoteFulfilmentType.DELIVERY,
+      label: "Delivery",
+      position: 0,
+      quoteVersionId: input.quoteVersionId,
+      subtotalMinor: input.subtotalMinor,
+      taxMinor: input.taxMinor,
+      totalMinor: input.totalMinor,
+    },
+  })
+  await tx.commerceQuoteLine.createMany({
+    data: input.lines.map((line) => ({
+      availabilityAttestationId: line.availabilityAttestationId,
+      balanceRevision: line.balanceRevision,
+      catalogItemName: line.catalogItemName,
+      configurationVersionId: line.configurationVersionId,
+      customerNote: line.customerNote,
+      offeringId: line.offeringId,
+      offeringName: line.offeringName,
+      optionSelections: line.optionSelections as Prisma.InputJsonValue,
+      outcome: line.outcome,
+      quantity: line.quantity,
+      quoteOptionId: option.id,
+      quoteVersionId: input.quoteVersionId,
+      sourceLineId: line.sourceLineId,
+      totalMinor: line.totalMinor,
+      unitPriceMinor: line.unitPriceMinor,
+      variantName: line.variantName,
+    })),
+  })
+}
+
 function pickupStatus(value: PrescriptionPickupStatus) {
   return value.toLowerCase() as Parameters<typeof assertPickupTransition>[0]
 }
 
 function deliveryStatus(value: PrescriptionDeliveryStatus) {
   return value.toLowerCase() as Parameters<typeof assertDeliveryTransition>[0]
+}
+
+function prescriptionQuoteAvailability(value: string) {
+  switch (value) {
+    case CommerceQuoteAvailabilityOutcome.FULL:
+      return CommerceQuoteAvailabilityOutcome.FULL
+    case CommerceQuoteAvailabilityOutcome.PARTIAL:
+      return CommerceQuoteAvailabilityOutcome.PARTIAL
+    case CommerceQuoteAvailabilityOutcome.UNAVAILABLE:
+      return CommerceQuoteAvailabilityOutcome.UNAVAILABLE
+    default:
+      throw new PrescriptionFulfillmentError(
+        "FULFILLMENT_CONFLICT",
+        "Quote availability is invalid.",
+      )
+  }
 }
 
 async function assertPrescriptionFulfillmentPolicy(
@@ -213,6 +308,8 @@ export async function revisePrescriptionQuoteForDelivery(
   const current = await db.commerceQuoteVersion.findFirst({
     include: {
       lines: true,
+      optionSelection: true,
+      options: { include: { lines: true }, orderBy: { position: "asc" } },
       quote: {
         include: {
           store: { include: { prescriptionSettings: true } },
@@ -242,6 +339,14 @@ export async function revisePrescriptionQuoteForDelivery(
       "Delivery is unavailable for this Quote.",
     )
   }
+  const payableState = resolveCommerceQuotePayableState(current)
+  if (!payableState.payable || payableState.requiresSelection) {
+    throw new PrescriptionFulfillmentError(
+      "FULFILLMENT_CONFLICT",
+      "Choose one Offer Option before arranging delivery.",
+    )
+  }
+  const payable = payableState.payable
   const zones = await db.prescriptionDeliveryZone.findMany({
     where: {
       status: "ACTIVE",
@@ -330,12 +435,14 @@ export async function revisePrescriptionQuoteForDelivery(
     const version = await tx.commerceQuoteVersion.create({
       data: {
         acceptanceTokenDigest: digest(rawToken),
-        availabilityOutcome: current.availabilityOutcome,
+        availabilityOutcome: prescriptionQuoteAvailability(
+          payable.availabilityOutcome,
+        ),
         clientVersionId: `delivery-${randomBytes(12).toString("hex")}`,
         createdByUserId: "public_delivery_selection",
         currencyCode: current.currencyCode,
-        customerNote: current.customerNote,
-        discountMinor: current.discountMinor,
+        customerNote: payable.customerNote ?? null,
+        discountMinor: payable.discountMinor,
         expiresAt: current.expiresAt,
         fulfilmentFeeMinor: result.feeMinor,
         fulfilmentPromise: result.zone.promiseText,
@@ -346,33 +453,31 @@ export async function revisePrescriptionQuoteForDelivery(
         ),
         quoteId: current.quoteId,
         status: CommerceQuoteVersionStatus.ISSUED,
-        subtotalMinor: current.subtotalMinor,
-        taxMinor: current.taxMinor,
+        subtotalMinor: payable.subtotalMinor,
+        taxMinor: payable.taxMinor,
         totalMinor:
-          current.subtotalMinor -
-          current.discountMinor +
-          current.taxMinor +
+          payable.subtotalMinor -
+          payable.discountMinor +
+          payable.taxMinor +
           result.feeMinor,
         version: current.version + 1,
       },
     })
-    await tx.commerceQuoteLine.createMany({
-      data: current.lines.map((line) => ({
-        balanceRevision: line.balanceRevision,
-        catalogItemName: line.catalogItemName,
-        configurationVersionId: line.configurationVersionId,
-        customerNote: line.customerNote,
-        offeringId: line.offeringId,
-        offeringName: line.offeringName,
-        optionSelections: line.optionSelections as Prisma.InputJsonValue,
-        outcome: line.outcome,
-        quantity: line.quantity,
-        quoteVersionId: version.id,
-        sourceLineId: line.sourceLineId,
-        totalMinor: line.totalMinor,
-        unitPriceMinor: line.unitPriceMinor,
-        variantName: line.variantName,
-      })),
+    await persistPrescriptionDeliveryQuoteOption(tx, {
+      availabilityOutcome: prescriptionQuoteAvailability(
+        payable.availabilityOutcome,
+      ),
+      clientOptionId: `${version.clientVersionId}:default`,
+      currencyCode: current.currencyCode,
+      customerNote: payable.customerNote ?? null,
+      discountMinor: payable.discountMinor,
+      fulfilmentFeeMinor: result.feeMinor,
+      fulfilmentPromise: result.zone.promiseText,
+      lines: payable.lines,
+      quoteVersionId: version.id,
+      subtotalMinor: payable.subtotalMinor,
+      taxMinor: payable.taxMinor,
+      totalMinor: version.totalMinor,
     })
     await tx.prescriptionDeliveryAddress.create({
       data: {
@@ -475,7 +580,15 @@ export async function approvePrescriptionManualDeliveryFee(
     const address = await tx.prescriptionDeliveryAddress.findFirst({
       include: {
         quoteVersion: {
-          include: { lines: true, quote: true },
+          include: {
+            lines: true,
+            optionSelection: true,
+            options: {
+              include: { lines: true },
+              orderBy: { position: "asc" },
+            },
+            quote: true,
+          },
         },
       },
       where: {
@@ -517,15 +630,25 @@ export async function approvePrescriptionManualDeliveryFee(
         "This manual delivery review is no longer current.",
       )
     }
+    const payableState = resolveCommerceQuotePayableState(current)
+    if (!payableState.payable || payableState.requiresSelection) {
+      throw new PrescriptionFulfillmentError(
+        "FULFILLMENT_CONFLICT",
+        "Choose one Offer Option before approving delivery.",
+      )
+    }
+    const payable = payableState.payable
     const version = await tx.commerceQuoteVersion.create({
       data: {
         acceptanceTokenDigest: digest(rawToken),
-        availabilityOutcome: current.availabilityOutcome,
+        availabilityOutcome: prescriptionQuoteAvailability(
+          payable.availabilityOutcome,
+        ),
         clientVersionId: input.clientDecisionId,
         createdByUserId: input.actorUserId,
         currencyCode: current.currencyCode,
-        customerNote: current.customerNote,
-        discountMinor: current.discountMinor,
+        customerNote: payable.customerNote ?? null,
+        discountMinor: payable.discountMinor,
         expiresAt: current.expiresAt,
         fulfilmentFeeMinor: input.feeMinor,
         fulfilmentPromise: address.promiseText,
@@ -536,33 +659,31 @@ export async function approvePrescriptionManualDeliveryFee(
         ),
         quoteId: current.quoteId,
         status: CommerceQuoteVersionStatus.ISSUED,
-        subtotalMinor: current.subtotalMinor,
-        taxMinor: current.taxMinor,
+        subtotalMinor: payable.subtotalMinor,
+        taxMinor: payable.taxMinor,
         totalMinor:
-          current.subtotalMinor -
-          current.discountMinor +
-          current.taxMinor +
+          payable.subtotalMinor -
+          payable.discountMinor +
+          payable.taxMinor +
           input.feeMinor,
         version: current.version + 1,
       },
     })
-    await tx.commerceQuoteLine.createMany({
-      data: current.lines.map((line) => ({
-        balanceRevision: line.balanceRevision,
-        catalogItemName: line.catalogItemName,
-        configurationVersionId: line.configurationVersionId,
-        customerNote: line.customerNote,
-        offeringId: line.offeringId,
-        offeringName: line.offeringName,
-        optionSelections: line.optionSelections as Prisma.InputJsonValue,
-        outcome: line.outcome,
-        quantity: line.quantity,
-        quoteVersionId: version.id,
-        sourceLineId: line.sourceLineId,
-        totalMinor: line.totalMinor,
-        unitPriceMinor: line.unitPriceMinor,
-        variantName: line.variantName,
-      })),
+    await persistPrescriptionDeliveryQuoteOption(tx, {
+      availabilityOutcome: prescriptionQuoteAvailability(
+        payable.availabilityOutcome,
+      ),
+      clientOptionId: `${version.clientVersionId}:default`,
+      currencyCode: current.currencyCode,
+      customerNote: payable.customerNote ?? null,
+      discountMinor: payable.discountMinor,
+      fulfilmentFeeMinor: input.feeMinor,
+      fulfilmentPromise: address.promiseText,
+      lines: payable.lines,
+      quoteVersionId: version.id,
+      subtotalMinor: payable.subtotalMinor,
+      taxMinor: payable.taxMinor,
+      totalMinor: version.totalMinor,
     })
     await tx.prescriptionDeliveryAddress.update({
       data: {

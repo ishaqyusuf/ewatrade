@@ -23,6 +23,7 @@ import {
   getPublicCommerceQuote,
   issueCommerceQuote,
   recordCommerceQuoteAcceptance,
+  selectCommerceQuoteOption,
 } from "./commerce-quotes"
 import { createCommercialOrderInTransaction } from "./commercial-orders"
 import { getServiceCommerceWorkspaceAccess } from "./service-commerce-access"
@@ -591,7 +592,7 @@ export async function issueCommerceInquiryQuote(
   db: PrismaClient,
   input: {
     actorUserId: string
-    availabilityOutcome: "full" | "partial" | "unavailable"
+    availabilityOutcome?: "full" | "partial" | "unavailable"
     clientQuoteId: string
     clientVersionId: string
     customerNote?: string
@@ -601,7 +602,7 @@ export async function issueCommerceInquiryQuote(
     fulfilmentPromise?: string
     fulfilmentType?: "delivery" | "pickup" | "unspecified"
     inquiryId: string
-    lines: Array<{
+    lines?: Array<{
       availabilityAttestationId?: string
       customerNote?: string
       offeringId?: string
@@ -609,6 +610,26 @@ export async function issueCommerceInquiryQuote(
       quantity?: string
       sourceLineId: string
       unitPriceMinor?: number
+    }>
+    options?: Array<{
+      availabilityOutcome: "full" | "partial" | "unavailable"
+      clientOptionId: string
+      customerNote?: string
+      discountMinor?: number
+      fulfilmentFeeMinor?: number
+      fulfilmentPromise?: string
+      fulfilmentType?: "delivery" | "pickup" | "unspecified"
+      label: string
+      lines: Array<{
+        availabilityAttestationId?: string
+        customerNote?: string
+        offeringId?: string
+        outcome: "alternative" | "declined" | "included" | "unavailable"
+        quantity?: string
+        sourceLineId: string
+        unitPriceMinor?: number
+      }>
+      taxMinor?: number
     }>
     storeId: string
     taxMinor?: number
@@ -654,7 +675,7 @@ export async function acceptCommerceInquiryQuote(
 ) {
   return db.$transaction(async (tx) => {
     const context = await getCommerceQuoteAcceptanceContext(tx, input)
-    const { version } = context
+    const { payable, version } = context
     if (version.quote.sourceType !== CommerceQuoteSourceType.COMMERCE_INQUIRY) {
       throw new CommerceQuoteError(
         "QUOTE_CONFLICT",
@@ -684,16 +705,19 @@ export async function acceptCommerceInquiryQuote(
       vertical: normalizeVertical(inquiry.vertical),
     })
     if (context.replayOrderId) return { orderId: context.replayOrderId }
+    if (!payable) {
+      throw new CommerceQuoteError(
+        "QUOTE_CONFLICT",
+        "Choose one Offer Option before accepting this Quote.",
+      )
+    }
     if (inquiry.status !== CommerceInquiryStatus.QUOTED) {
       throw new CommerceQuoteError(
         "QUOTE_SOURCE_NOT_FOUND",
         "Commerce Inquiry source not found.",
       )
     }
-    const payableLines = version.lines.filter(
-      (line) => line.outcome === "INCLUDED" || line.outcome === "ALTERNATIVE",
-    )
-    const completePayableLines = payableLines.map((line) => {
+    const completePayableLines = payable.lines.map((line) => {
       if (!line.offeringId || !line.quantity || line.unitPriceMinor === null) {
         throw new CommerceQuoteError(
           "QUOTE_CONFLICT",
@@ -736,9 +760,10 @@ export async function acceptCommerceInquiryQuote(
         trustedUnitPriceMinor: line.unitPriceMinor,
       })),
       schemaVersion: 1,
-      serviceChargeMinor: version.fulfilmentFeeMinor,
+      discountMinor: payable.discountMinor,
+      serviceChargeMinor: payable.fulfilmentFeeMinor,
       storeId: version.quote.storeId,
-      taxMinor: version.taxMinor,
+      taxMinor: payable.taxMinor,
       tenantId: version.quote.tenantId,
     })
     await recordCommerceQuoteAcceptance(tx, {
@@ -776,5 +801,49 @@ export async function acceptCommerceInquiryQuote(
       },
     })
     return { orderId: order.id }
+  })
+}
+
+export async function selectCommerceInquiryQuoteOption(
+  db: PrismaClient,
+  input: {
+    acceptanceToken: string
+    clientSelectionId: string
+    optionId: string
+  },
+) {
+  return selectCommerceQuoteOption(db, {
+    ...input,
+    authorize: async (tx, quote) => {
+      if (quote.sourceType !== CommerceQuoteSourceType.COMMERCE_INQUIRY) {
+        throw new CommerceQuoteError(
+          "PUBLIC_TOKEN_INVALID",
+          "Quote is unavailable.",
+        )
+      }
+      const inquiry = await tx.commerceInquiry.findFirst({
+        select: { vertical: true },
+        where: {
+          id: quote.sourceId,
+          storeId: quote.storeId,
+          tenantId: quote.tenantId,
+        },
+      })
+      if (!inquiry) {
+        throw new CommerceQuoteError(
+          "PUBLIC_TOKEN_INVALID",
+          "Quote is unavailable.",
+        )
+      }
+      await assertServiceCommercePolicyAllowedInTransaction(tx, {
+        actorUserId: "public_quote_option_selection",
+        channel: "web",
+        purpose: "commerce_inquiry_quote_option_selection",
+        storeId: quote.storeId,
+        subject: "quote",
+        tenantId: quote.tenantId,
+        vertical: normalizeVertical(inquiry.vertical),
+      })
+    },
   })
 }

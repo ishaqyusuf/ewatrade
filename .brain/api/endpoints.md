@@ -83,7 +83,8 @@ Typed tRPC routers are the primary application contract.
   `publishEvidence`, `revokeEvidence`.
 - Customer access: `serviceAccess.createRequestForm`, `requestForms`,
   `requestForm` (public), `submitRequest` (public), `requests`,
-  `updateRequest`, `issueQuote`, `quote` (public), `acceptQuote` (public),
+  `updateRequest`, `issueQuote`, `quote` (public), `selectQuoteOption`
+  (public), `acceptQuote` (public),
   `createTracking`, `revokeTracking`, `tracking` (public).
 - Communications/reporting: `serviceCommunications.createIntent`,
   `createBatchIntents`, `providerStatus`, `recordManualShare`,
@@ -124,13 +125,17 @@ Typed tRPC routers are the primary application contract.
   cart/Commercial Order handling; generic transitions cannot set quoted or
   converted.
 - Protected `serviceCommerce.issueInquiryQuote` issues an immutable Commerce
-  Quote for a ready Inquiry and Product Offerings only. Authorization/readiness
-  is checked inside the Quote transaction; identical retries return a usable
-  secondary opaque token without repeating lifecycle effects.
-- Public `serviceCommerce.inquiryQuote` and `acceptInquiryQuote` use the opaque
-  Commerce Quote token. Acceptance is idempotent and creates one Commercial
-  Order before marking the Inquiry converted. An exact accepted replay
-  reauthorizes current policy and returns the original Order after conversion.
+  Quote with one or more exact Offer Options for a ready Inquiry and Product
+  Offerings only. Authorization/readiness is checked inside the Quote
+  transaction; identical retries return a usable secondary opaque token
+  without repeating lifecycle effects.
+- Public `serviceCommerce.inquiryQuote`, `selectInquiryQuoteOption` and
+  `acceptInquiryQuote` use the opaque Commerce Quote token. Selection is
+  current-version guarded and idempotent; acceptance remains unavailable until
+  one of multiple Options wins. Acceptance creates one Commercial Order from
+  only that selected/default Option before marking the Inquiry converted. An
+  exact accepted replay reauthorizes current policy and returns the original
+  Order after conversion.
 - Protected `serviceCommerce.catalogMatches` and `catalogPriceSuggestions`
   resolve one authorized typed source line, fail closed on policy/scope drift,
   and return ranked private/active Offerings plus attributable Store-first
@@ -226,9 +231,10 @@ authenticated dashboard.
   Owner/Admin break-glass grant lasts at most 60 minutes, is conspicuous in the
   queue, logs each emergency access, and requires a reviewed resolution reason.
 - Public tRPC router `prescriptionAccess` owns capability-scoped web intake,
-  status, re-upload, Quote review/acceptance, fulfilment choice, hosted payment,
-  and pickup-code projections. The browser never supplies Tenant/Store ids as
-  authority. Upload/re-upload, checkout and fulfilment commands reauthorize
+  status, re-upload, Quote review/Offer Option selection/acceptance, fulfilment
+  choice, hosted payment, and pickup-code projections. The browser never
+  supplies Tenant/Store ids as authority. Upload/re-upload, checkout and
+  fulfilment commands reauthorize
   current Pharmacy policy before governed persistence or provider work; a
   blocked WhatsApp channel exposes neither availability nor its number.
 - `GET|POST /api/webhooks/whatsapp` verifies Meta subscription/signatures and

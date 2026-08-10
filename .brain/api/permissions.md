@@ -195,9 +195,13 @@
   unsupported and cross-scope refs return no source detail. Prescription's
   shared projection selects status only and cannot become a clinical-detail
   access path.
-- Public Inquiry Quote read/accept commands require the opaque Quote token and
-  deliberately collapse invalid source, state and token failures to an
-  unavailable response.
+- Public Service, Inquiry and Prescription Quote selection requires the opaque
+  Quote token, an opaque Option id and an idempotent command identity. The
+  repository reauthorizes the source vertical/policy inside the transaction;
+  clients cannot submit Tenant/Store scope or turn selection into acceptance.
+- Public Inquiry Quote read/select/accept commands deliberately collapse
+  invalid source, state and token failures to an unavailable response. A
+  competing valid choice is a typed conflict and creates no commercial graph.
 
 ## Offline
 

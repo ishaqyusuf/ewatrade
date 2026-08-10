@@ -33,6 +33,7 @@ import {
   getPublicCommerceQuote,
   issueCommerceQuote,
   recordCommerceQuoteAcceptance,
+  selectCommerceQuoteOption,
 } from "./commerce-quotes"
 import { createCommercialOrderInTransaction } from "./commercial-orders"
 import {
@@ -2462,6 +2463,48 @@ export async function getPublicPrescriptionQuote(
   return quote
 }
 
+export async function selectPrescriptionQuoteOption(
+  db: PrismaClient,
+  input: {
+    acceptanceToken: string
+    clientSelectionId: string
+    optionId: string
+  },
+) {
+  try {
+    return await selectCommerceQuoteOption(db, {
+      ...input,
+      authorize: async (tx, quote) => {
+        if (quote.sourceType !== CommerceQuoteSourceType.PRESCRIPTION_REQUEST) {
+          throw new CommerceQuoteError(
+            "PUBLIC_TOKEN_INVALID",
+            "This prescription Quote is unavailable.",
+          )
+        }
+        await assertServiceCommercePolicyAllowedInTransaction(tx, {
+          actorUserId: "public_prescription_quote_option_selection",
+          channel: "web",
+          purpose: "prescription_quote_option_selection",
+          storeId: quote.storeId,
+          subject: "quote",
+          tenantId: quote.tenantId,
+          vertical: "pharmacy",
+        })
+      },
+    })
+  } catch (error) {
+    if (error instanceof CommerceQuoteError) {
+      throw new PrescriptionRequestError(
+        error.code === "PUBLIC_TOKEN_INVALID"
+          ? "PUBLIC_ACCESS_INVALID"
+          : "REQUEST_CONFLICT",
+        error.message,
+      )
+    }
+    throw error
+  }
+}
+
 export function assertPrescriptionPickupQuoteAcceptance(input: {
   availabilityOutcome: "full" | "partial" | "unavailable"
   fulfilmentType: "delivery" | "pickup" | "unspecified"
@@ -2511,7 +2554,7 @@ async function acceptPrescriptionQuoteForFulfilment(
   try {
     return await db.$transaction(async (tx) => {
       const context = await getCommerceQuoteAcceptanceContext(tx, input)
-      const { version } = context
+      const { payable, version } = context
       if (
         version.quote.sourceType !==
         CommerceQuoteSourceType.PRESCRIPTION_REQUEST
@@ -2560,8 +2603,14 @@ async function acceptPrescriptionQuoteForFulfilment(
           versionId: context.version.id,
         }
       }
+      if (!payable) {
+        throw new CommerceQuoteError(
+          "QUOTE_CONFLICT",
+          "Choose one Offer Option before accepting this Quote.",
+        )
+      }
       try {
-        const fulfilmentType = version.fulfilmentType.toLowerCase() as
+        const fulfilmentType = payable.fulfilmentType.toLowerCase() as
           | "delivery"
           | "pickup"
           | "unspecified"
@@ -2571,7 +2620,7 @@ async function acceptPrescriptionQuoteForFulfilment(
           )
         }
         if (
-          version.availabilityOutcome ===
+          payable.availabilityOutcome ===
             CommerceQuoteAvailabilityOutcome.PARTIAL &&
           !input.partialAcknowledged
         ) {
@@ -2599,11 +2648,7 @@ async function acceptPrescriptionQuoteForFulfilment(
           "Prescription Request source not found.",
         )
       }
-      const payableLines = version.lines.filter(
-        (line) =>
-          line.outcome === CommerceQuoteLineOutcome.INCLUDED ||
-          line.outcome === CommerceQuoteLineOutcome.ALTERNATIVE,
-      )
+      const payableLines = payable.lines
       if (
         payableLines.some(
           (line) =>
@@ -2626,7 +2671,7 @@ async function acceptPrescriptionQuoteForFulfilment(
         customerName: request.customerName ?? undefined,
         customerPhone: request.customerPhone ?? undefined,
         createTrackedServiceWork: false,
-        discountMinor: version.discountMinor,
+        discountMinor: payable.discountMinor,
         lines: payableLines.map((line) => {
           if (
             !line.offeringId ||
@@ -2649,9 +2694,9 @@ async function acceptPrescriptionQuoteForFulfilment(
           }
         }),
         schemaVersion: 1,
-        serviceChargeMinor: version.fulfilmentFeeMinor,
+        serviceChargeMinor: payable.fulfilmentFeeMinor,
         storeId: version.quote.storeId,
-        taxMinor: version.taxMinor,
+        taxMinor: payable.taxMinor,
         tenantId: version.quote.tenantId,
       })
       await recordCommerceQuoteAcceptance(tx, {

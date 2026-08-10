@@ -95,10 +95,21 @@ export async function getServiceCommerceCatalogPriceSuggestions(
   const [quoteLines, saleLines] = await Promise.all([
     db.commerceQuoteLine.findMany({
       include: {
-        quoteVersion: { include: { quote: { select: { storeId: true } } } },
+        quoteOption: {
+          select: {
+            quoteVersionId: true,
+            selection: { select: { quoteVersionId: true } },
+          },
+        },
+        quoteVersion: {
+          include: {
+            _count: { select: { options: true } },
+            quote: { select: { storeId: true } },
+          },
+        },
       },
       orderBy: { quoteVersion: { acceptedAt: "desc" } },
-      take: input.includeTenantHistory ? 20 : 10,
+      take: input.includeTenantHistory ? 80 : 40,
       where: {
         offeringId: offering.id,
         quoteVersion: {
@@ -143,8 +154,21 @@ export async function getServiceCommerceCatalogPriceSuggestions(
       tenantId: input.tenantId,
     })
   }
+  const quoteEvidenceLimit = input.includeTenantHistory ? 20 : 10
+  let quoteEvidenceCount = 0
   for (const line of quoteLines) {
     if (line.unitPriceMinor === null || !line.quoteVersion.acceptedAt) continue
+    const optionCount = line.quoteVersion._count.options
+    const payableOption =
+      optionCount === 0
+        ? line.quoteOptionId === null
+        : optionCount === 1
+          ? line.quoteOption?.quoteVersionId === line.quoteVersionId
+          : line.quoteOption?.quoteVersionId === line.quoteVersionId &&
+            line.quoteOption.selection?.quoteVersionId === line.quoteVersionId
+    if (!payableOption) {
+      continue
+    }
     const currentStore = line.quoteVersion.quote.storeId === input.storeId
     evidence.push(
       currentStore
@@ -172,6 +196,8 @@ export async function getServiceCommerceCatalogPriceSuggestions(
             tenantId: input.tenantId,
           },
     )
+    quoteEvidenceCount += 1
+    if (quoteEvidenceCount >= quoteEvidenceLimit) break
   }
   for (const line of saleLines) {
     const currentStore = line.order.storeId === input.storeId

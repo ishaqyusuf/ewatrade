@@ -79,6 +79,9 @@ describeWithServiceCommerceDatabase(
         getPublicServiceQuote(fixture.db, { acceptanceToken: issued.token }),
       ).resolves.toMatchObject({
         accepted: false,
+        options: [{ label: "Quote", totalMinor: 7_500 }],
+        payable: true,
+        requiresSelection: false,
         sourceType: "service_request",
         storeName: "Acceptance Pharmacy",
         totalMinor: 7_500,
