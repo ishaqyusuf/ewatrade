@@ -306,10 +306,10 @@
 
 ## Service Commerce Source Contract And Planned Progressive Catalog
 
-ADR-0030 and the revised ticket batch are owner-approved. Ticket 01 implements
-the focused `@ewatrade/service-commerce` source-reference and minimal
-capability vocabulary only. Commerce Inquiry persistence/lifecycle and the
-Progressive Catalog commands below remain owned by later blocked tickets.
+ADR-0030 and the revised ticket batch are owner-approved. Tickets 01-03 now
+implement the focused source vocabulary, Store readiness boundary, normalized
+source projection and narrow Commerce Inquiry lifecycle. Progressive Catalog
+commands below remain owned by Ticket 03A.
 
 - The exhaustive source reference is `service | prescription |
   commerce_inquiry`; Commerce Inquiry is limited to Product demand requiring
@@ -318,6 +318,30 @@ Progressive Catalog commands below remain owned by later blocked tickets.
 - Commerce Inquiry uses `received | needs_clarification | ready_to_quote |
   quoted | converted | declined | withdrawn | expired`; resolving a Catalog
   line never creates an Order or advances it to `converted`.
+- `serviceCommerce.sourceProjection` accepts one strict typed source ref and an
+  optional authorized Store. It authorizes the actor and active Store profile
+  before its exhaustive source loader and returns only Store identity,
+  normalized state, neutral summary, capability readiness and allowed actions.
+- Exact Product demand is a discriminated `exact_product` input with only
+  `add_to_cart | create_commercial_order`. Inquiry creation accepts only
+  `needs_identification | needs_availability_confirmation | needs_quote` and
+  rejects exact Product input before opening a transaction.
+- Existing Service and Prescription public tokens and routes remain their
+  source-owned contracts. The shared source ref is an authenticated internal
+  dispatch identity and is never substituted for a public bearer token.
+- Inquiry state changes are revision-safe scoped commands. `QUOTED` is written
+  only by Commerce Quote issuance; `CONVERTED` is written only after accepted
+  Quote Order creation and acceptance recording in the same transaction.
+- Inquiry Quote issuance re-authorizes Store operation/readiness inside its
+  write transaction. An identical replay returns a new opaque secondary token
+  backed by one rotatable digest; it does not store raw bearer data, invalidate
+  the original token or repeat Quote/Inquiry effects. A `QUOTED` Inquiry is
+  bound to its existing `clientQuoteId`; another Quote identity fails with an
+  idempotency mismatch. New immutable versions remain scoped to that existing
+  Quote identity. The server derives Product inventory configuration and
+  balance revisions during Inquiry Quote issuance; public or attendant inputs
+  cannot supply those trusted snapshots, and accepted conversion passes them
+  to the Commercial Order reservation boundary.
 - `catalogMatches` and `priceSuggestions` are authorized Tenant/Store-scoped
   projections. Suggestions include source, currency and effective time and
   never read another Tenant or represent missing evidence as zero.

@@ -113,6 +113,23 @@ persistence boundary. Clients never access the database directly.
 - `ServiceCommerceStoreAuditEvent` appends actor, reason, event type and
   previous/current JSON snapshots for every profile create, settings update,
   activation and deactivation.
+- `CommerceInquiry` is a narrow Product pre-order aggregate, not a universal
+  Customer Request. It carries Tenant/Store, idempotent client identity and
+  payload hash, channel, bounded customer contact, demand reason, summary and
+  the explicit received-to-converted/terminal lifecycle.
+- `CommerceInquiryLine` stores one ordered bounded Product description and an
+  optional exact requested quantity under the same Tenant/Store/Inquiry scope.
+  It has no automatic Catalog publication, stock or Order side effect.
+- `CommerceInquiryAuditEvent` appends actor, scoped lifecycle transition,
+  optional reason and Quote/conversion attribution. It contains no provider
+  payload or private Prescription data.
+- `CommerceQuoteSourceType.COMMERCE_INQUIRY` lets immutable Quote versions
+  reference the Inquiry without replacing Service or Prescription source
+  identity.
+- `CommerceQuoteReplayAccessToken` stores at most one rotatable digest per
+  Quote Version under Tenant/Store scope. It recovers an idempotent Inquiry
+  issuance response without storing raw bearer tokens or invalidating the
+  version's original access token.
 
 ## Offline
 

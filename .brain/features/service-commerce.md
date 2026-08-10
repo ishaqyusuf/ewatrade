@@ -5,8 +5,9 @@
 The original product direction was approved on 2026-08-09 through ADR-0029.
 ADR-0030 now amends it with Progressive Catalog and a thinner Pharmacy
 extension. The owner approved the revised dependency-ordered 15-ticket batch
-on 2026-08-09. Tickets 01 and 02 are complete; Ticket 03 is the next dependency
-frontier. Production schema/provider operations remain separately authorized.
+on 2026-08-09. Tickets 01, 02 and 03 are complete; Ticket 11 is the next
+dependency frontier. Production schema/provider operations remain separately
+authorized.
 
 Pharmacy Commerce is the first regulated vertical and retains its completed
 implementation evidence and outstanding production gates. The approved second
@@ -135,6 +136,45 @@ at least one available channel plus one available Quote/booking outcome.
 Ticket 11 owns the authorized jurisdiction/evidence command that maintains
 those inputs and the separately approved Nigerian Pharmacy WhatsApp decision.
 
+## Customer Request Interoperability
+
+Ticket 03 implements one typed, customer-safe projection across the three
+approved source kinds without introducing a universal request aggregate. The
+projection contains the typed source reference, normalized lifecycle state,
+Store identity, capability/readiness states and currently allowed customer
+actions. Source loading is selected through one exhaustive registry after
+Tenant, Store, actor and active-profile checks; missing, stale and cross-scope
+references fail closed.
+
+`ServiceRequest` and `PrescriptionRequest` retain their existing persistence,
+public bearer-token routes, private management detail, review commands and
+audit behavior. Prescription projection reads only its status and emits the
+neutral summary `Prescription request`; it never loads or returns media,
+transcripts, review content or customer identity.
+
+`CommerceInquiry` is the third narrow source and is owned by Commerce. It is
+created only for Product demand that needs identification, availability
+confirmation or a Quote. Exact known Product demand is rejected before an
+Inquiry transaction and stays on `add_to_cart` or `create_commercial_order`.
+Its lifecycle is `received`, `needs_clarification`, `ready_to_quote`, `quoted`,
+`converted`, `declined`, `withdrawn`, `expired`. Generic state commands cannot
+set `quoted` or `converted`: Quote issuance owns the former and idempotent
+Quote acceptance creates the Commercial Order before atomically owning the
+latter. Catalog resolution alone has no Order/conversion command.
+
+Inquiry Quote authorization/readiness is re-evaluated inside the same bounded
+transaction as Quote persistence and lifecycle transition. A replay of the
+same issuance identity rotates one digest-only secondary access token and
+returns its raw value once; the original public Quote token remains valid and
+no raw bearer token is stored. Once an Inquiry is quoted, it is bound to that
+Quote command identity: a different `clientQuoteId` fails closed, while a new
+immutable version under the same Quote identity remains a valid revision.
+For payable Inquiry Product lines, the Quote command captures the current
+Tenant/Store-scoped inventory configuration and balance revision inside the
+same transaction. Accepted conversion forwards that snapshot to Commercial
+Order reservation, so internal inventory revision fields never come from the
+attendant or public client.
+
 ## Customer Lifecycle
 
 1. The customer enters through a Store link, QR code, staff-assisted flow or
@@ -248,7 +288,8 @@ payment, reschedule/cancel, remind the customer and complete the service.
 The amended migration remains expand-contract and proceeds by ticket frontier:
 
 1. Record current ownership and compatibility contracts.
-2. Add capability/readiness, source interoperability and vertical-policy seams
+2. Add capability/readiness and source interoperability seams, then the
+   vertical-policy seam
    without changing existing pharmacy or generic service behavior.
 3. Add narrow Commerce Inquiry plus Progressive Catalog capture, matching,
    price suggestions and explicit price promotion.

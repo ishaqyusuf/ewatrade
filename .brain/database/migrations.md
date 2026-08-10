@@ -249,6 +249,24 @@ No migration file was hand-authored and production was not touched. A
 deployable migration artifact plus ledger reconciliation remains an explicit
 release gate; the development schema synchronization is not represented as
 production migration evidence.
+
+## Service Commerce Inquiry Migration State
+
+On 2026-08-10 Ticket 03 added `CommerceInquiry`, ordered
+`CommerceInquiryLine`, `CommerceInquiryAuditEvent`, their explicit
+lifecycle/demand/channel/audit enums, Tenant/Store relations and
+`COMMERCE_INQUIRY` as a Commerce Quote source. It also adds the one-per-Version
+digest-only `CommerceQuoteReplayAccessToken` used for safe issuance replay.
+Prisma format, generation and validation passed.
+
+The required root migration workflow targeted the verified `.env.local` Neon
+development database and explicitly skipped local PostgreSQL/Docker. The first
+sandboxed attempts failed at network schema-engine access; the approved network
+retry of `bun db:push` applied the additive schema, `bun db:migrate` completed
+against the same verified profile without a reset, and the final push reported
+the database already in sync. No data-loss override, manual migration file,
+local database or production database was used. A deployable production
+migration artifact remains a separate release gate.
 # Hybrid QA cleanup
 
 - Adds tenant QA lifecycle fields and global purge-run receipts. Apply the

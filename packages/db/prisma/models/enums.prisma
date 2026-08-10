@@ -333,6 +333,7 @@ enum ServiceQuoteStatus {
 enum CommerceQuoteSourceType {
   SERVICE_REQUEST
   PRESCRIPTION_REQUEST
+  COMMERCE_INQUIRY
 }
 
 enum CommerceQuoteVersionStatus {

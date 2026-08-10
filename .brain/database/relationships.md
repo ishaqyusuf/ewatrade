@@ -55,6 +55,12 @@ belong to `ServiceJob`; charge-only Service lines allocate no work.
 
 `Tenant + Store -> ServiceCommerceStoreProfile -> ServiceCommerceStoreAuditEvent`
 
+`Tenant + Store -> CommerceInquiry -> CommerceInquiryLine|CommerceInquiryAuditEvent`
+
+`CommerceInquiry -> CommerceQuote -> CommerceQuoteVersion -> CommercialOrder`
+
+`CommerceQuoteVersion -> CommerceQuoteReplayAccessToken`
+
 Payment/refund facts derive the Order balance. Store Service settings are read
 and snapshotted during Intake; later setting changes do not rewrite existing
 Order charges.
@@ -68,6 +74,15 @@ The Service Commerce profile is Store-unique but carries Tenant explicitly.
 Every repository read/write predicates both ids; audit events retain the same
 Tenant/Store pair and the profile relation so cross-Store or cross-Tenant
 configuration cannot be inferred from a global profile id.
+
+Commerce Inquiry is a separate Commerce-owned Product uncertainty aggregate.
+It has no polymorphic relation to ServiceRequest or PrescriptionRequest and no
+universal CustomerRequest parent. Quote issuance moves only a ready Inquiry to
+quoted; accepted Quote Order creation moves only that scoped quoted Inquiry to
+converted in the same bounded transaction.
+The optional replay-token child contains only a rotatable digest and explicit
+Tenant/Store scope; both original and current replay tokens resolve to the same
+current Quote Version.
 
 New Order numbers are allocated once across the Tenant rather than per Store.
 The counter increment and Order creation share one database transaction, so a

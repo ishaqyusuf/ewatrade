@@ -17,6 +17,36 @@ enum ServiceCommerceStoreAuditEventType {
   SUSPENDED
 }
 
+enum CommerceInquiryStatus {
+  RECEIVED
+  NEEDS_CLARIFICATION
+  READY_TO_QUOTE
+  QUOTED
+  CONVERTED
+  DECLINED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum CommerceInquiryDemandReason {
+  NEEDS_IDENTIFICATION
+  NEEDS_AVAILABILITY_CONFIRMATION
+  NEEDS_QUOTE
+}
+
+enum CommerceInquiryChannelOrigin {
+  WEB
+  STAFF
+  WHATSAPP
+}
+
+enum CommerceInquiryAuditEventType {
+  CREATED
+  STATE_CHANGED
+  QUOTE_ISSUED
+  CONVERTED
+}
+
 model ServiceCommerceStoreProfile {
   id                           String                             @id @default(cuid())
   tenantId                     String
@@ -69,4 +99,71 @@ model ServiceCommerceStoreAuditEvent {
   @@index([tenantId, storeId, effectiveAt])
   @@index([profileId, effectiveAt])
   @@index([actorUserId, effectiveAt])
+}
+
+/// Narrow Product pre-order demand whose exact Offering is not yet ready for
+/// cart or Commercial Order creation. This is intentionally not a universal
+/// request aggregate; ServiceRequest and PrescriptionRequest stay authoritative.
+model CommerceInquiry {
+  id              String                       @id @default(cuid())
+  tenantId        String
+  storeId         String
+  clientInquiryId String
+  payloadHash     String
+  status          CommerceInquiryStatus        @default(RECEIVED)
+  demandReason    CommerceInquiryDemandReason
+  channelOrigin   CommerceInquiryChannelOrigin
+  summary         String
+  customerName    String
+  customerEmail   String?
+  customerPhone   String?
+  createdByUserId String
+  convertedAt     DateTime?
+  createdAt       DateTime                     @default(now())
+  updatedAt       DateTime                     @updatedAt
+  tenant          Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store           Store                        @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  auditEvents     CommerceInquiryAuditEvent[]
+  lines           CommerceInquiryLine[]
+
+  @@unique([tenantId, clientInquiryId])
+  @@index([tenantId, storeId, status, createdAt])
+}
+
+model CommerceInquiryLine {
+  id                String          @id @default(cuid())
+  tenantId          String
+  storeId           String
+  inquiryId         String
+  description       String
+  requestedQuantity Decimal?        @db.Decimal(38, 6)
+  position          Int
+  createdAt         DateTime        @default(now())
+  tenant            Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store           @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  inquiry           CommerceInquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  @@unique([inquiryId, position])
+  @@index([tenantId, storeId, createdAt])
+  @@index([inquiryId, createdAt])
+}
+
+model CommerceInquiryAuditEvent {
+  id          String                        @id @default(cuid())
+  tenantId    String
+  storeId     String
+  inquiryId   String
+  type        CommerceInquiryAuditEventType
+  actorUserId String
+  fromStatus  CommerceInquiryStatus?
+  toStatus    CommerceInquiryStatus
+  reason      String?
+  createdAt   DateTime                      @default(now())
+  tenant      Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store       Store                         @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  inquiry     CommerceInquiry               @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, storeId, createdAt])
+  @@index([inquiryId, createdAt])
+  @@index([actorUserId, createdAt])
 }

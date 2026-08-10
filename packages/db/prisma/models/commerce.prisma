@@ -35,6 +35,10 @@ model Store {
   serviceSettings                   ServiceStoreSettings?
   serviceCommerceProfile            ServiceCommerceStoreProfile?
   serviceCommerceAuditEvents        ServiceCommerceStoreAuditEvent[]
+  commerceInquiries                 CommerceInquiry[]
+  commerceInquiryLines              CommerceInquiryLine[]
+  commerceInquiryAuditEvents        CommerceInquiryAuditEvent[]
+  commerceQuoteReplayAccessTokens   CommerceQuoteReplayAccessToken[]
   prescriptionSettings              PrescriptionStoreSettings?
   prescriptionRoles                 PrescriptionStoreRole[]
   prescriptionAuditEvents           PrescriptionStoreAuditEvent[]

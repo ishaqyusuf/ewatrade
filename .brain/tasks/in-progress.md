@@ -24,8 +24,16 @@
   runtime-ready. The development schema is synchronized non-destructively;
   Prisma's
   existing broad ledger drift prevented migration-artifact generation, so no
-  reset was accepted and production remains untouched. Ticket 03 is the next
-  dependency frontier. The full test gate has five separately reproducible
+  reset was accepted and production remains untouched. Ticket 03 is complete:
+  one exhaustive source projection preserves Service and Prescription
+  ownership/privacy, while the narrow Commerce Inquiry lifecycle routes exact
+  Product demand away from artificial work and allows only accepted Quote
+  conversion to create an Order. Its additive schema is synchronized to the
+  verified `.env.local` Neon database; 57 focused tests pass with 172
+  assertions, and the run-owned Neon acceptance passes with 22 assertions and
+  atomic fixture cleanup. Ticket 11 is the next dependency frontier. The full
+  test gate has
+  five separately reproducible
   failures in unrelated in-progress mobile navigation and Retail Ops test
   fakes; Ticket 02's focused and Neon gates are green. No production
   schema/provider operation is authorized.

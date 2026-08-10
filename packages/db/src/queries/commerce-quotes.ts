@@ -8,6 +8,8 @@ import {
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import {
   CatalogRecordStatus,
+  CommerceInquiryAuditEventType,
+  CommerceInquiryStatus,
   CommerceQuoteAvailabilityOutcome,
   CommerceQuoteFulfilmentType,
   CommerceQuoteLineOutcome,
@@ -18,8 +20,12 @@ import {
   SellableOfferingKind,
   ServiceRequestStatus,
 } from "../../generated/prisma/enums"
+import { getCatalogOfferingAvailability } from "./catalog-inventory"
 
-export type CommerceQuoteSourceType = "prescription_request" | "service_request"
+export type CommerceQuoteSourceType =
+  | "commerce_inquiry"
+  | "prescription_request"
+  | "service_request"
 
 export type CommerceQuoteVersionStatus =
   | "accepted"
@@ -73,6 +79,24 @@ export function assertCommerceQuoteSource(input: {
   return { sourceId, sourceType: input.sourceType }
 }
 
+export function assertQuotedSourceQuoteIdentity(input: {
+  alreadyQuoted: boolean
+  bindToExistingQuote: boolean
+  existingClientQuoteId: string | null
+  requestedClientQuoteId: string
+}) {
+  if (
+    input.alreadyQuoted &&
+    input.bindToExistingQuote &&
+    input.existingClientQuoteId !== input.requestedClientQuoteId
+  ) {
+    throw new CommerceQuoteError(
+      "IDEMPOTENCY_MISMATCH",
+      "This quoted source is already bound to another Quote command identity.",
+    )
+  }
+}
+
 export function assertQuoteVersionAcceptable(input: {
   currentVersionId: string | null
   expiresAt: Date | null
@@ -121,9 +145,12 @@ function json(value: unknown): Prisma.InputJsonValue {
 }
 
 function mapSourceType(sourceType: CommerceQuoteSourceType) {
-  return sourceType === "prescription_request"
-    ? CommerceQuoteSourceTypeEnum.PRESCRIPTION_REQUEST
-    : CommerceQuoteSourceTypeEnum.SERVICE_REQUEST
+  const sourceTypes = {
+    commerce_inquiry: CommerceQuoteSourceTypeEnum.COMMERCE_INQUIRY,
+    prescription_request: CommerceQuoteSourceTypeEnum.PRESCRIPTION_REQUEST,
+    service_request: CommerceQuoteSourceTypeEnum.SERVICE_REQUEST,
+  } satisfies Record<CommerceQuoteSourceType, CommerceQuoteSourceTypeEnum>
+  return sourceTypes[sourceType]
 }
 
 function mapLineOutcome(outcome: CommerceQuoteLineOutcomeInput) {
@@ -195,6 +222,7 @@ export type IssueCommerceQuoteLineInput = {
 
 export type IssueCommerceQuoteInput = {
   actorUserId: string
+  authorize?: (tx: Prisma.TransactionClient) => Promise<void>
   availabilityOutcome: CommerceQuoteAvailabilityOutcomeInput
   clientQuoteId: string
   clientVersionId: string
@@ -212,48 +240,254 @@ export type IssueCommerceQuoteInput = {
   tenantId: string
 }
 
-async function assertSourceExists(
-  tx: Prisma.TransactionClient,
-  input: {
-    sourceId: string
-    sourceType: CommerceQuoteSourceType
-    storeId: string
-    tenantId: string
-  },
-) {
-  if (input.sourceType === "service_request") {
-    const source = await tx.serviceRequest.findFirst({
-      select: { id: true },
-      where: {
-        id: input.sourceId,
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-      },
-    })
-    if (!source) {
-      throw new CommerceQuoteError(
-        "QUOTE_SOURCE_NOT_FOUND",
-        "Service Request source not found.",
-      )
-    }
-    return
-  }
-  const source = await tx.prescriptionRequest.findFirst({
-    select: { id: true },
-    where: {
-      id: input.sourceId,
-      status: PrescriptionRequestStatus.READY_TO_QUOTE,
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-    },
-  })
-  if (!source) {
-    throw new CommerceQuoteError(
-      "QUOTE_SOURCE_NOT_FOUND",
-      "Released Prescription Request source not found.",
-    )
-  }
+type QuoteSourceHandlerInput = {
+  actorUserId: string
+  lines: IssueCommerceQuoteLineInput[]
+  sourceId: string
+  storeId: string
+  tenantId: string
 }
+
+type QuoteSourceState = { alreadyQuoted: boolean }
+
+type QuoteSourceHandler = {
+  allowedOfferingKind: SellableOfferingKind
+  bindQuotedSourceToExistingQuote: boolean
+  load: (
+    tx: Prisma.TransactionClient,
+    input: QuoteSourceHandlerInput,
+  ) => Promise<QuoteSourceState>
+  prepareLines: (
+    tx: Prisma.TransactionClient,
+    input: QuoteSourceHandlerInput,
+  ) => Promise<IssueCommerceQuoteLineInput[]>
+  recordIssued: (
+    tx: Prisma.TransactionClient,
+    input: QuoteSourceHandlerInput & { versionId: string },
+    state: QuoteSourceState,
+  ) => Promise<void>
+  recoverIssuanceToken: boolean
+  requiresInventorySnapshot: boolean
+  validateLines: (
+    tx: Prisma.TransactionClient,
+    input: QuoteSourceHandlerInput,
+  ) => Promise<void>
+}
+
+const quoteSourceHandlers = {
+  commerce_inquiry: {
+    allowedOfferingKind: SellableOfferingKind.PRODUCT_UNIT,
+    bindQuotedSourceToExistingQuote: true,
+    load: async (tx, input) => {
+      const source = await tx.commerceInquiry.findFirst({
+        select: { status: true },
+        where: {
+          id: input.sourceId,
+          status: {
+            in: [
+              CommerceInquiryStatus.READY_TO_QUOTE,
+              CommerceInquiryStatus.QUOTED,
+            ],
+          },
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        },
+      })
+      if (!source) {
+        throw new CommerceQuoteError(
+          "QUOTE_SOURCE_NOT_FOUND",
+          "Ready Commerce Inquiry source not found.",
+        )
+      }
+      return { alreadyQuoted: source.status === CommerceInquiryStatus.QUOTED }
+    },
+    prepareLines: async (tx, input) => {
+      const snapshots = new Map<
+        string,
+        Awaited<ReturnType<typeof getCatalogOfferingAvailability>>
+      >()
+      for (const line of input.lines) {
+        if (
+          !line.offeringId ||
+          (line.outcome !== "included" && line.outcome !== "alternative") ||
+          snapshots.has(line.offeringId)
+        ) {
+          continue
+        }
+        snapshots.set(
+          line.offeringId,
+          await getCatalogOfferingAvailability(tx, {
+            offeringId: line.offeringId,
+            storeId: input.storeId,
+            tenantId: input.tenantId,
+          }),
+        )
+      }
+      return input.lines.map((line) => {
+        const snapshot = line.offeringId
+          ? snapshots.get(line.offeringId)
+          : undefined
+        return snapshot
+          ? {
+              ...line,
+              balanceRevision: snapshot.revision,
+              configurationVersionId: snapshot.configurationVersionId,
+            }
+          : line
+      })
+    },
+    recordIssued: async (tx, input, state) => {
+      if (state.alreadyQuoted) return
+      if (
+        (
+          await tx.commerceInquiry.updateMany({
+            data: { status: CommerceInquiryStatus.QUOTED },
+            where: {
+              id: input.sourceId,
+              status: CommerceInquiryStatus.READY_TO_QUOTE,
+              storeId: input.storeId,
+              tenantId: input.tenantId,
+            },
+          })
+        ).count !== 1
+      ) {
+        throw new CommerceQuoteError(
+          "QUOTE_CONFLICT",
+          "Commerce Inquiry changed before Quote issuance.",
+        )
+      }
+      await tx.commerceInquiryAuditEvent.create({
+        data: {
+          actorUserId: input.actorUserId,
+          fromStatus: CommerceInquiryStatus.READY_TO_QUOTE,
+          inquiryId: input.sourceId,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+          toStatus: CommerceInquiryStatus.QUOTED,
+          type: CommerceInquiryAuditEventType.QUOTE_ISSUED,
+        },
+      })
+    },
+    recoverIssuanceToken: true,
+    requiresInventorySnapshot: true,
+    validateLines: async (tx, input) => {
+      const sourceLineIds = input.lines.flatMap((line) =>
+        line.sourceLineId?.trim() ? [line.sourceLineId.trim()] : [],
+      )
+      const uniqueSourceLineIds = [...new Set(sourceLineIds)]
+      if (
+        sourceLineIds.length !== input.lines.length ||
+        uniqueSourceLineIds.length !== input.lines.length ||
+        (await tx.commerceInquiryLine.count({
+          where: {
+            id: { in: uniqueSourceLineIds },
+            inquiryId: input.sourceId,
+            storeId: input.storeId,
+            tenantId: input.tenantId,
+          },
+        })) !== input.lines.length
+      ) {
+        throw new CommerceQuoteError(
+          "QUOTE_CONFLICT",
+          "Every Commerce Inquiry Quote line must reference one current Inquiry line.",
+        )
+      }
+    },
+  },
+  service_request: {
+    allowedOfferingKind: SellableOfferingKind.SERVICE,
+    bindQuotedSourceToExistingQuote: false,
+    load: async (tx, input) => {
+      const source = await tx.serviceRequest.findFirst({
+        select: { status: true },
+        where: {
+          id: input.sourceId,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        },
+      })
+      if (!source) {
+        throw new CommerceQuoteError(
+          "QUOTE_SOURCE_NOT_FOUND",
+          "Service Request source not found.",
+        )
+      }
+      return { alreadyQuoted: source.status === ServiceRequestStatus.QUOTED }
+    },
+    prepareLines: async (_tx, input) => input.lines,
+    recordIssued: async (tx, input) => {
+      await tx.serviceRequest.updateMany({
+        data: { status: ServiceRequestStatus.QUOTED },
+        where: {
+          id: input.sourceId,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        },
+      })
+    },
+    recoverIssuanceToken: false,
+    requiresInventorySnapshot: false,
+    validateLines: async () => {},
+  },
+  prescription_request: {
+    allowedOfferingKind: SellableOfferingKind.PRODUCT_UNIT,
+    bindQuotedSourceToExistingQuote: false,
+    load: async (tx, input) => {
+      const source = await tx.prescriptionRequest.findFirst({
+        select: { id: true },
+        where: {
+          id: input.sourceId,
+          status: PrescriptionRequestStatus.READY_TO_QUOTE,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        },
+      })
+      if (!source) {
+        throw new CommerceQuoteError(
+          "QUOTE_SOURCE_NOT_FOUND",
+          "Released Prescription Request source not found.",
+        )
+      }
+      return { alreadyQuoted: false }
+    },
+    prepareLines: async (_tx, input) => input.lines,
+    recordIssued: async (tx, input) => {
+      await tx.prescriptionRequest.updateMany({
+        data: { status: PrescriptionRequestStatus.QUOTED },
+        where: {
+          id: input.sourceId,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        },
+      })
+      await tx.prescriptionRequestAuditEvent.create({
+        data: {
+          actorUserId: input.actorUserId,
+          fromStatus: PrescriptionRequestStatus.READY_TO_QUOTE,
+          requestId: input.sourceId,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+          toStatus: PrescriptionRequestStatus.QUOTED,
+          type: PrescriptionRequestAuditEventType.QUOTE_ISSUED,
+        },
+      })
+      await tx.prescriptionUsageEvent.create({
+        data: {
+          deduplicationKey: `quote-issued:${input.versionId}`,
+          eventType: "QUOTE_ISSUED",
+          occurredAt: new Date(),
+          sourceId: input.versionId,
+          sourceType: "quote",
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        },
+      })
+    },
+    recoverIssuanceToken: false,
+    requiresInventorySnapshot: true,
+    validateLines: async () => {},
+  },
+} satisfies Record<CommerceQuoteSourceType, QuoteSourceHandler>
 
 export async function issueCommerceQuote(
   db: PrismaClient,
@@ -276,6 +510,7 @@ export async function issueCommerceQuote(
   })
 
   return db.$transaction(async (tx) => {
+    await input.authorize?.(tx)
     const store = await tx.store.findFirst({
       select: { currencyCode: true, id: true },
       where: { id: input.storeId, tenantId: input.tenantId },
@@ -283,7 +518,32 @@ export async function issueCommerceQuote(
     if (!store) {
       throw new CommerceQuoteError("STORE_NOT_FOUND", "Store not found.")
     }
-    await assertSourceExists(tx, { ...input, ...source })
+    const sourceHandler = quoteSourceHandlers[source.sourceType]
+    const sourceInput = { ...input, sourceId: source.sourceId }
+    const sourceState = await sourceHandler.load(tx, sourceInput)
+    await sourceHandler.validateLines(tx, sourceInput)
+
+    if (
+      sourceState.alreadyQuoted &&
+      sourceHandler.bindQuotedSourceToExistingQuote
+    ) {
+      const existingSourceQuote = await tx.commerceQuote.findUnique({
+        select: { clientQuoteId: true },
+        where: {
+          tenantId_sourceType_sourceId: {
+            sourceId: source.sourceId,
+            sourceType: mapSourceType(source.sourceType),
+            tenantId: input.tenantId,
+          },
+        },
+      })
+      assertQuotedSourceQuoteIdentity({
+        alreadyQuoted: sourceState.alreadyQuoted,
+        bindToExistingQuote: sourceHandler.bindQuotedSourceToExistingQuote,
+        existingClientQuoteId: existingSourceQuote?.clientQuoteId ?? null,
+        requestedClientQuoteId: input.clientQuoteId,
+      })
+    }
 
     const quote = await tx.commerceQuote.upsert({
       create: {
@@ -328,6 +588,23 @@ export async function issueCommerceQuote(
           "This Quote version command was already used with different details.",
         )
       }
+      if (sourceHandler.recoverIssuanceToken) {
+        await tx.commerceQuoteReplayAccessToken.upsert({
+          create: {
+            storeId: input.storeId,
+            tenantId: input.tenantId,
+            tokenDigest: digest(rawToken),
+            versionId: previousVersion.id,
+          },
+          update: { tokenDigest: digest(rawToken) },
+          where: { versionId: previousVersion.id },
+        })
+        return {
+          quoteId: quote.id,
+          token: rawToken,
+          versionId: previousVersion.id,
+        }
+      }
       return { quoteId: quote.id, token: null, versionId: previousVersion.id }
     }
 
@@ -343,13 +620,15 @@ export async function issueCommerceQuote(
       )
     }
 
-    if (input.lines.length < 1 || input.lines.length > 100) {
+    const commandLines = await sourceHandler.prepareLines(tx, sourceInput)
+
+    if (commandLines.length < 1 || commandLines.length > 100) {
       throw new CommerceQuoteError(
         "QUOTE_CONFLICT",
         "A Quote requires between one and 100 lines.",
       )
     }
-    const mappedOfferingIds = input.lines.flatMap((line) =>
+    const mappedOfferingIds = commandLines.flatMap((line) =>
       line.offeringId ? [line.offeringId] : [],
     )
     const offerings = await tx.sellableOffering.findMany({
@@ -378,7 +657,7 @@ export async function issueCommerceQuote(
     }
     const byId = new Map(offerings.map((offering) => [offering.id, offering]))
     let subtotalMinor = 0
-    const resolvedLines = input.lines.map((line) => {
+    const resolvedLines = commandLines.map((line) => {
       const payable =
         line.outcome === "included" || line.outcome === "alternative"
       const offering = line.offeringId ? byId.get(line.offeringId) : undefined
@@ -394,32 +673,20 @@ export async function issueCommerceQuote(
           "Quote contains a Store-unavailable Offering.",
         )
       }
-      if (
-        input.sourceType === "service_request" &&
-        offering?.kind !== SellableOfferingKind.SERVICE
-      ) {
+      if (offering && offering.kind !== sourceHandler.allowedOfferingKind) {
         throw new CommerceQuoteError(
           "OFFERING_UNAVAILABLE",
-          "A Service Request Quote can contain only Service Offerings.",
+          "Quote line Offering kind does not match its source.",
         )
       }
       if (
-        input.sourceType === "prescription_request" &&
-        offering?.kind !== SellableOfferingKind.PRODUCT_UNIT
-      ) {
-        throw new CommerceQuoteError(
-          "OFFERING_UNAVAILABLE",
-          "A Prescription Request Quote can contain only Product Unit Offerings.",
-        )
-      }
-      if (
-        input.sourceType === "prescription_request" &&
+        sourceHandler.requiresInventorySnapshot &&
         payable &&
         (!line.configurationVersionId || line.balanceRevision === undefined)
       ) {
         throw new CommerceQuoteError(
           "QUOTE_CONFLICT",
-          "Prescription Quote lines require inventory revision snapshots.",
+          "Product Quote lines require inventory revision snapshots.",
         )
       }
 
@@ -474,15 +741,15 @@ export async function issueCommerceQuote(
       }
     })
 
-    const payableCount = input.lines.filter(
+    const payableCount = commandLines.filter(
       (line) => line.outcome === "included" || line.outcome === "alternative",
     ).length
     if (
       (input.availabilityOutcome === "unavailable" && payableCount !== 0) ||
       (input.availabilityOutcome === "full" &&
-        payableCount !== input.lines.length) ||
+        payableCount !== commandLines.length) ||
       (input.availabilityOutcome === "partial" &&
-        (payableCount === 0 || payableCount === input.lines.length))
+        (payableCount === 0 || payableCount === commandLines.length))
     ) {
       throw new CommerceQuoteError(
         "QUOTE_CONFLICT",
@@ -562,39 +829,11 @@ export async function issueCommerceQuote(
       data: { currentVersionId: version.id },
       where: { id: quote.id },
     })
-    if (source.sourceType === "service_request") {
-      await tx.serviceRequest.update({
-        data: { status: ServiceRequestStatus.QUOTED },
-        where: { id: source.sourceId },
-      })
-    } else {
-      await tx.prescriptionRequest.update({
-        data: { status: PrescriptionRequestStatus.QUOTED },
-        where: { id: source.sourceId },
-      })
-      await tx.prescriptionRequestAuditEvent.create({
-        data: {
-          actorUserId: input.actorUserId,
-          fromStatus: PrescriptionRequestStatus.READY_TO_QUOTE,
-          requestId: source.sourceId,
-          storeId: input.storeId,
-          tenantId: input.tenantId,
-          toStatus: PrescriptionRequestStatus.QUOTED,
-          type: PrescriptionRequestAuditEventType.QUOTE_ISSUED,
-        },
-      })
-      await tx.prescriptionUsageEvent.create({
-        data: {
-          deduplicationKey: `quote-issued:${version.id}`,
-          eventType: "QUOTE_ISSUED",
-          occurredAt: new Date(),
-          sourceId: version.id,
-          sourceType: "quote",
-          storeId: input.storeId,
-          tenantId: input.tenantId,
-        },
-      })
-    }
+    await sourceHandler.recordIssued(
+      tx,
+      { ...sourceInput, versionId: version.id },
+      sourceState,
+    )
 
     return { quoteId: quote.id, token: rawToken, versionId: version.id }
   })
@@ -740,6 +979,12 @@ export async function resolveCommerceQuoteAccess(
     where: { acceptanceTokenDigest: tokenDigest },
   })
   if (version) return { versionId: version.id }
+
+  const replayAccess = await db.commerceQuoteReplayAccessToken.findFirst({
+    select: { storeId: true, tenantId: true, versionId: true },
+    where: { tokenDigest },
+  })
+  if (replayAccess) return replayAccess
 
   const action = await db.prescriptionQuickAction.findFirst({
     select: { entityId: true, storeId: true, tenantId: true },

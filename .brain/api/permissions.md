@@ -147,6 +147,16 @@
   setup clients cannot write or clear a restriction, infer provider readiness
   or generically reactivate a suspended profile. Ticket 11 owns the future
   authorized policy-evidence command.
+- Service Commerce operators may create, project, transition and Quote an
+  Inquiry only for an active authorized Store whose server readiness allows
+  assisted intake. The repository performs that check before any source load.
+- Every source loader and Inquiry command predicates Tenant plus Store; stale,
+  unsupported and cross-scope refs return no source detail. Prescription's
+  shared projection selects status only and cannot become a clinical-detail
+  access path.
+- Public Inquiry Quote read/accept commands require the opaque Quote token and
+  deliberately collapse invalid source, state and token failures to an
+  unavailable response.
 
 ## Offline
 

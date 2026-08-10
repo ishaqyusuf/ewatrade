@@ -29,8 +29,10 @@ Central index for ewatrade product, architecture, engineering, database, API, de
   Pharmacy is a thin regulated extension of the shared workspace and an
   appointment business is the second validation vertical. The revised
   15-ticket source batch was owner-approved on 2026-08-09. Ticket 01's exact
-  source/compatibility boundary and Ticket 02's Store capability/readiness
-  profile are complete; Ticket 03 is the next dependency frontier.
+  source/compatibility boundary, Ticket 02's Store capability/readiness
+  profile, and Ticket 03's three-source customer-safe interoperability plus
+  narrow Commerce Inquiry lifecycle are complete. Ticket 11 is the next
+  dependency frontier.
 - Mobile includes a tenant-wide global search across Orders, Customers,
   Catalog, Service Jobs, and permitted Staff, plus contextual order creation
   and auditable order/payment actor attribution.

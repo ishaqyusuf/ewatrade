@@ -4,7 +4,9 @@ import type { PrismaClient } from "../../generated/prisma/client"
 import {
   assertCommerceQuoteSource,
   assertQuoteVersionAcceptable,
+  assertQuotedSourceQuoteIdentity,
   getCommerceQuoteAcceptanceContext,
+  issueCommerceQuote,
   resolveCommerceQuoteAccess,
 } from "./commerce-quotes"
 
@@ -22,6 +24,12 @@ describe("Commerce Quote invariants", () => {
         sourceType: "service_request",
       }),
     ).toThrow("Quote source is required")
+    expect(
+      assertCommerceQuoteSource({
+        sourceId: "inquiry_1",
+        sourceType: "commerce_inquiry",
+      }),
+    ).toEqual({ sourceId: "inquiry_1", sourceType: "commerce_inquiry" })
   })
 
   test("accepts only the current issued unexpired version", () => {
@@ -72,6 +80,25 @@ describe("Commerce Quote invariants", () => {
         }),
       ).toThrow("Only the current unexpired Quote Version can be accepted")
     }
+  })
+
+  test("binds an already-quoted Inquiry to its original Quote identity", () => {
+    expect(() =>
+      assertQuotedSourceQuoteIdentity({
+        alreadyQuoted: true,
+        bindToExistingQuote: true,
+        existingClientQuoteId: "quote-command-1",
+        requestedClientQuoteId: "quote-command-1",
+      }),
+    ).not.toThrow()
+    expect(() =>
+      assertQuotedSourceQuoteIdentity({
+        alreadyQuoted: true,
+        bindToExistingQuote: true,
+        existingClientQuoteId: "quote-command-1",
+        requestedClientQuoteId: "different-quote-command",
+      }),
+    ).toThrow("already bound to another Quote command identity")
   })
 
   test("replays only the original acceptance command identity", async () => {
@@ -135,10 +162,50 @@ describe("Commerce Quote invariants", () => {
     ).rejects.toMatchObject({ code: "QUOTE_CONFLICT" })
   })
 
+  test("runs a source authorization callback inside the Quote transaction", async () => {
+    let inTransaction = false
+    let authorized = false
+    const client = {
+      $transaction: async (
+        callback: (tx: PrismaClient) => Promise<unknown>,
+      ) => {
+        inTransaction = true
+        try {
+          return await callback(client as unknown as PrismaClient)
+        } finally {
+          inTransaction = false
+        }
+      },
+      store: { findFirst: async () => null },
+    } as unknown as PrismaClient
+
+    await expect(
+      issueCommerceQuote(client, {
+        actorUserId: "actor-1",
+        authorize: async () => {
+          expect(inTransaction).toBe(true)
+          authorized = true
+        },
+        availabilityOutcome: "unavailable",
+        clientQuoteId: "quote-command-1",
+        clientVersionId: "quote-version-command-1",
+        lines: [{ outcome: "unavailable", sourceLineId: "source-line-1" }],
+        sourceId: "inquiry-1",
+        sourceType: "commerce_inquiry",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      }),
+    ).rejects.toMatchObject({ code: "STORE_NOT_FOUND" })
+    expect(authorized).toBe(true)
+  })
+
   test("resolves a WhatsApp Quote capability by digest without storing its bearer token", async () => {
     const rawToken = "opaque-quick-action-token"
     const db = {
       commerceQuoteVersion: {
+        findFirst: async () => null,
+      },
+      commerceQuoteReplayAccessToken: {
         findFirst: async () => null,
       },
       prescriptionQuickAction: {
@@ -168,6 +235,27 @@ describe("Commerce Quote invariants", () => {
       storeId: "store-1",
       tenantId: "tenant-1",
       versionId: "quote-version-1",
+    })
+  })
+
+  test("resolves a rotatable replay token without invalidating the original Quote token", async () => {
+    const db = {
+      commerceQuoteReplayAccessToken: {
+        findFirst: async () => ({
+          storeId: "store-1",
+          tenantId: "tenant-1",
+          versionId: "version-1",
+        }),
+      },
+      commerceQuoteVersion: { findFirst: async () => null },
+    } as unknown as PrismaClient
+
+    await expect(
+      resolveCommerceQuoteAccess(db, { acceptanceToken: "replayed-token" }),
+    ).resolves.toEqual({
+      storeId: "store-1",
+      tenantId: "tenant-1",
+      versionId: "version-1",
     })
   })
 })

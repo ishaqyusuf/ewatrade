@@ -107,6 +107,21 @@ Typed tRPC routers are the primary application contract.
   and scoped provider/policy readiness inside the transaction before a
   revision-guarded state and audit write. It requires an available channel and
   Quote/booking outcome and fails closed for suspended profiles.
+- Protected `serviceCommerce.sourceProjection` resolves an exhaustive
+  `service | prescription | commerce_inquiry` ref only after Tenant, Store,
+  actor and active-profile authorization. It returns the customer-safe shared
+  projection and never returns vertical-private data.
+- Protected `serviceCommerce.createInquiry` and `transitionInquiry` own the
+  narrow Product-uncertainty lifecycle. Exact Product inputs are rejected for
+  cart/Commercial Order handling; generic transitions cannot set quoted or
+  converted.
+- Protected `serviceCommerce.issueInquiryQuote` issues an immutable Commerce
+  Quote for a ready Inquiry and Product Offerings only. Authorization/readiness
+  is checked inside the Quote transaction; identical retries return a usable
+  secondary opaque token without repeating lifecycle effects.
+- Public `serviceCommerce.inquiryQuote` and `acceptInquiryQuote` use the opaque
+  Commerce Quote token. Acceptance is idempotent and creates one Commercial
+  Order before marking the Inquiry converted.
 
 ## Staff And Billing
 

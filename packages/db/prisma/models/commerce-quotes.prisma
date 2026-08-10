@@ -52,12 +52,29 @@ model CommerceQuoteVersion {
   currentForQuote             CommerceQuote?                   @relation("CommerceQuoteCurrentVersion")
   acceptedOrder               CommercialOrder?                 @relation(fields: [acceptedOrderId], references: [id], onDelete: Restrict)
   lines                       CommerceQuoteLine[]
+  replayAccessToken           CommerceQuoteReplayAccessToken?
   prescriptionDeliveryAddress PrescriptionDeliveryAddress?
 
   @@unique([quoteId, version])
   @@unique([quoteId, clientVersionId])
   @@index([status, expiresAt])
   @@index([acceptedOrderId])
+}
+
+/// One rotatable digest used to recover an idempotent Quote issuance response
+/// without storing a raw bearer token or invalidating the original token.
+model CommerceQuoteReplayAccessToken {
+  versionId   String               @id
+  tenantId    String
+  storeId     String
+  tokenDigest String               @unique
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  version     CommerceQuoteVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store       Store                @relation(fields: [storeId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, storeId, updatedAt])
 }
 
 model CommerceQuoteLine {

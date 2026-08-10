@@ -4,8 +4,11 @@ import {
   SERVICE_COMMERCE_ACTIONS,
   SERVICE_COMMERCE_CAPABILITIES,
   SERVICE_COMMERCE_CHANNEL_ORIGINS,
+  SERVICE_COMMERCE_EXACT_PRODUCT_COMMANDS,
   SERVICE_COMMERCE_FULFILLMENT_OPTIONS,
+  SERVICE_COMMERCE_PRODUCT_DEMAND_REASONS,
   SERVICE_COMMERCE_READINESS_STATES,
+  SERVICE_COMMERCE_REQUEST_STATES,
   SERVICE_COMMERCE_SOURCE_KINDS,
   adaptServiceCommerceSource,
   createServiceCommerceSourceRegistry,
@@ -13,6 +16,8 @@ import {
   getServiceCommerceActivationBlockers,
   getServiceCommerceRuntimeActivationBlockers,
   serviceCommerceCapabilityStateSchema,
+  serviceCommerceCustomerRequestProjectionSchema,
+  serviceCommerceProductDemandSchema,
   serviceCommerceProfileConfigurationSchema,
   serviceCommerceSourceRefSchema,
 } from "."
@@ -40,6 +45,59 @@ describe("Service Commerce interoperability contracts", () => {
       serviceCommerceSourceRefSchema.safeParse({
         id: "generic-request-1",
         kind: "customer_request",
+      }).success,
+    ).toBe(false)
+  })
+
+  test("keeps one normalized lifecycle without creating a universal aggregate", () => {
+    expect(SERVICE_COMMERCE_REQUEST_STATES).toEqual([
+      "received",
+      "needs_clarification",
+      "ready_to_quote",
+      "quoted",
+      "converted",
+      "declined",
+      "withdrawn",
+      "expired",
+    ])
+    expect(
+      serviceCommerceCustomerRequestProjectionSchema.parse({
+        allowedCommands: ["request_quote", "talk_to_staff"],
+        capabilities: [{ capability: "quote", readiness: "available" }],
+        source: { id: "request-1", kind: "prescription" },
+        state: "ready_to_quote",
+        store: { id: "store-1", name: "Main Store" },
+        summary: "Prescription request",
+      }),
+    ).toMatchObject({
+      source: { kind: "prescription" },
+      state: "ready_to_quote",
+    })
+  })
+
+  test("routes exact Product demand to cart or Order and reserves inquiries for uncertainty", () => {
+    expect(SERVICE_COMMERCE_EXACT_PRODUCT_COMMANDS).toEqual([
+      "add_to_cart",
+      "create_commercial_order",
+    ])
+    expect(SERVICE_COMMERCE_PRODUCT_DEMAND_REASONS).toEqual([
+      "needs_identification",
+      "needs_availability_confirmation",
+      "needs_quote",
+    ])
+    expect(
+      serviceCommerceProductDemandSchema.parse({
+        command: "create_commercial_order",
+        kind: "exact_product",
+      }),
+    ).toEqual({
+      command: "create_commercial_order",
+      kind: "exact_product",
+    })
+    expect(
+      serviceCommerceProductDemandSchema.safeParse({
+        kind: "commerce_inquiry",
+        reason: "exact_product",
       }).success,
     ).toBe(false)
   })
