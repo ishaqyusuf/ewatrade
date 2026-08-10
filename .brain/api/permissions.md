@@ -25,7 +25,7 @@
   closeout and corrections require the corresponding operator/manager
   capability; destructive/manager review actions are not available publicly.
 
-### Planned Progressive Catalog Extension
+### Progressive Catalog
 
 - Progressive draft capture requires an authorized Store capability plus
   source-line read access; it does not grant general Catalog management or
@@ -40,6 +40,10 @@
 - Prescription lines require human verification before draft/link access and
   pharmacist release before regulated availability or Quote commitment. OCR,
   ordinary Tenant membership and technical WhatsApp readiness grant neither.
+- Match, suggestion, draft, link and availability repositories re-evaluate the
+  active Store profile and exact vertical/channel/subject policy. Reusable
+  Tenant-wide price promotion additionally requires sales-management authority;
+  the client cannot widen history or affected-Store scope.
 
 ## Commercial Orders
 

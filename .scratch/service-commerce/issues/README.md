@@ -16,10 +16,10 @@ production schema/provider operations remain separately authorized.
 
 ## Execution Rule
 
-Execute one ticket at a time through its blocking edges. Tickets 01, 02, 03 and
-11 are complete; Ticket 03A is in progress and Ticket 04 is the parallel
-dependency frontier. Ticket 04A begins only after both foundations are
-complete. Any scope or dependency change should update the spec, ADR/Brain and
+Execute one ticket at a time through its blocking edges. Tickets 01, 02, 03,
+11 and 03A are complete; Ticket 04 is the active dependency frontier. Ticket
+04A begins after Ticket 04 completes. Any scope or dependency change should
+update the spec, ADR/Brain and
 affected tickets before implementation.
 
 ## Dependency-Ordered Waves

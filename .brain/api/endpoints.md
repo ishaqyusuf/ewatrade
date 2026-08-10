@@ -131,6 +131,26 @@ Typed tRPC routers are the primary application contract.
   Commerce Quote token. Acceptance is idempotent and creates one Commercial
   Order before marking the Inquiry converted. An exact accepted replay
   reauthorizes current policy and returns the original Order after conversion.
+- Protected `serviceCommerce.catalogMatches` and `catalogPriceSuggestions`
+  resolve one authorized typed source line, fail closed on policy/scope drift,
+  and return ranked private/active Offerings plus attributable Store-first
+  price evidence. Missing price history is an explicit unknown result.
+- Protected `serviceCommerce.createCatalogDraft` and
+  `linkCatalogOffering` are idempotent reviewed-source commands. Generic raw
+  request wording is only a fingerprinted source snapshot; the operator must
+  provide the confirmed Catalog name/alias. Draft creation reuses the private
+  Item/Variant/Offering graph and never publishes a record, creates Store
+  availability or creates a stock balance source.
+- Protected `serviceCommerce.attestCatalogAvailability` records tracked,
+  expiring manual procure-to-order or unavailable evidence. Tracked evidence
+  requires an already-configured Store balance; the read never creates one.
+  Every available result commits a maximum quantity that Quote preparation
+  cannot exceed. A private draft cannot claim tracked stock before its separate
+  managed-inventory graduation.
+- Protected `serviceCommerce.catalogPricePromotionImpact` and
+  `promoteCatalogPrice` separate an immutable Quote price from a confirmed,
+  manager-gated reusable Offering price change and return every affected Store
+  before mutation.
 
 ## Staff And Billing
 

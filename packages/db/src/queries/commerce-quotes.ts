@@ -7,6 +7,7 @@ import {
 
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import {
+  CatalogAvailabilityAttestationType,
   CatalogRecordStatus,
   CommerceInquiryAuditEventType,
   CommerceInquiryStatus,
@@ -21,6 +22,10 @@ import {
   ServiceRequestStatus,
 } from "../../generated/prisma/enums"
 import { getCatalogOfferingAvailability } from "./catalog-inventory"
+import {
+  resolveCatalogAvailabilityAttestationForQuote,
+  resolveCatalogSourceLinkForQuote,
+} from "./service-commerce-catalog"
 
 export type CommerceQuoteSourceType =
   | "commerce_inquiry"
@@ -206,6 +211,9 @@ function lineTotal(unitPriceMinor: number, quantity: string) {
 }
 
 export type IssueCommerceQuoteLineInput = {
+  availabilityAttestationId?: string
+  availabilityAttestationType?: CatalogAvailabilityAttestationType
+  catalogSourceVerified?: boolean
   balanceRevision?: number
   catalogItemName?: string
   customerNote?: string
@@ -218,6 +226,20 @@ export type IssueCommerceQuoteLineInput = {
   sourceLineId?: string
   unitPriceMinor?: number
   variantName?: string
+}
+
+export function quoteLineRequiresStoreAvailability(input: {
+  catalogSourceVerified?: boolean
+  kind: SellableOfferingKind
+  status: CatalogRecordStatus
+  usesManualAttestation: boolean
+}) {
+  if (input.usesManualAttestation) return false
+  return !(
+    input.kind === SellableOfferingKind.SERVICE &&
+    input.status === CatalogRecordStatus.DRAFT &&
+    input.catalogSourceVerified === true
+  )
 }
 
 export type IssueCommerceQuoteInput = {
@@ -304,34 +326,70 @@ const quoteSourceHandlers = {
     prepareLines: async (tx, input) => {
       const snapshots = new Map<
         string,
-        Awaited<ReturnType<typeof getCatalogOfferingAvailability>>
+        Pick<
+          IssueCommerceQuoteLineInput,
+          | "availabilityAttestationId"
+          | "availabilityAttestationType"
+          | "balanceRevision"
+          | "catalogSourceVerified"
+          | "configurationVersionId"
+        >
       >()
       for (const line of input.lines) {
+        const snapshotKey = `${line.sourceLineId ?? ""}:${line.offeringId ?? ""}`
         if (
           !line.offeringId ||
           (line.outcome !== "included" && line.outcome !== "alternative") ||
-          snapshots.has(line.offeringId)
+          snapshots.has(snapshotKey)
         ) {
           continue
         }
-        snapshots.set(
-          line.offeringId,
-          await getCatalogOfferingAvailability(tx, {
+        if (line.availabilityAttestationId && line.sourceLineId) {
+          if (!line.quantity) {
+            throw new CommerceQuoteError(
+              "QUOTE_CONFLICT",
+              "Availability-backed Quote lines require a committed quantity.",
+            )
+          }
+          const attestation =
+            await resolveCatalogAvailabilityAttestationForQuote(tx, {
+              actorUserId: input.actorUserId,
+              attestationId: line.availabilityAttestationId,
+              offeringId: line.offeringId,
+              source: { id: input.sourceId, kind: "commerce_inquiry" },
+              sourceLineId: line.sourceLineId,
+              storeId: input.storeId,
+              tenantId: input.tenantId,
+              quantity: line.quantity,
+            })
+          snapshots.set(snapshotKey, {
+            availabilityAttestationId: attestation.id,
+            availabilityAttestationType: attestation.type,
+            balanceRevision: attestation.balanceRevision ?? undefined,
+            catalogSourceVerified: true,
+            configurationVersionId:
+              attestation.configurationVersionId ?? undefined,
+          })
+        } else {
+          const inventory = await getCatalogOfferingAvailability(tx, {
             offeringId: line.offeringId,
             storeId: input.storeId,
             tenantId: input.tenantId,
-          }),
-        )
+          })
+          snapshots.set(snapshotKey, {
+            balanceRevision: inventory.revision,
+            configurationVersionId: inventory.configurationVersionId,
+          })
+        }
       }
       return input.lines.map((line) => {
         const snapshot = line.offeringId
-          ? snapshots.get(line.offeringId)
+          ? snapshots.get(`${line.sourceLineId ?? ""}:${line.offeringId}`)
           : undefined
         return snapshot
           ? {
               ...line,
-              balanceRevision: snapshot.revision,
-              configurationVersionId: snapshot.configurationVersionId,
+              ...snapshot,
             }
           : line
       })
@@ -414,7 +472,48 @@ const quoteSourceHandlers = {
       }
       return { alreadyQuoted: source.status === ServiceRequestStatus.QUOTED }
     },
-    prepareLines: async (_tx, input) => input.lines,
+    prepareLines: async (tx, input) => {
+      const requestLines = await tx.serviceRequestLine.findMany({
+        select: { id: true, offeringId: true },
+        where: { requestId: input.sourceId },
+      })
+      const directByOffering = new Map(
+        requestLines.map((line) => [line.offeringId, line.id]),
+      )
+      const prepared: IssueCommerceQuoteLineInput[] = []
+      for (const line of input.lines) {
+        if (!line.offeringId) {
+          prepared.push(line)
+          continue
+        }
+        const sourceLineId =
+          line.sourceLineId ?? directByOffering.get(line.offeringId)
+        if (!sourceLineId) {
+          throw new CommerceQuoteError(
+            "QUOTE_CONFLICT",
+            "Every Service Quote line must resolve to its current request line.",
+          )
+        }
+        const offering = await tx.sellableOffering.findFirst({
+          select: { status: true },
+          where: { id: line.offeringId, tenantId: input.tenantId },
+        })
+        let catalogSourceVerified = false
+        if (offering?.status === CatalogRecordStatus.DRAFT) {
+          await resolveCatalogSourceLinkForQuote(tx, {
+            actorUserId: input.actorUserId,
+            offeringId: line.offeringId,
+            source: { id: input.sourceId, kind: "service" },
+            sourceLineId,
+            storeId: input.storeId,
+            tenantId: input.tenantId,
+          })
+          catalogSourceVerified = true
+        }
+        prepared.push({ ...line, catalogSourceVerified, sourceLineId })
+      }
+      return prepared
+    },
     recordIssued: async (tx, input) => {
       await tx.serviceRequest.updateMany({
         data: { status: ServiceRequestStatus.QUOTED },
@@ -645,7 +744,9 @@ export async function issueCommerceQuote(
       },
       where: {
         id: { in: mappedOfferingIds },
-        status: CatalogRecordStatus.ACTIVE,
+        status: {
+          in: [CatalogRecordStatus.ACTIVE, CatalogRecordStatus.DRAFT],
+        },
         tenantId: input.tenantId,
       },
     })
@@ -667,7 +768,29 @@ export async function issueCommerceQuote(
           "Included Quote lines require an active Offering.",
         )
       }
-      if (offering && !offering.storeAvailability[0]?.isAvailable) {
+      const usesManualAttestation =
+        line.availabilityAttestationType ===
+        CatalogAvailabilityAttestationType.MANUAL_PROCURE_TO_ORDER
+      if (
+        offering?.status === CatalogRecordStatus.DRAFT &&
+        !usesManualAttestation &&
+        !line.catalogSourceVerified
+      ) {
+        throw new CommerceQuoteError(
+          "OFFERING_UNAVAILABLE",
+          "Private draft Offerings require a current verified source link.",
+        )
+      }
+      if (
+        offering &&
+        quoteLineRequiresStoreAvailability({
+          catalogSourceVerified: line.catalogSourceVerified,
+          kind: offering.kind,
+          status: offering.status,
+          usesManualAttestation,
+        }) &&
+        !offering.storeAvailability[0]?.isAvailable
+      ) {
         throw new CommerceQuoteError(
           "OFFERING_UNAVAILABLE",
           "Quote contains a Store-unavailable Offering.",
@@ -682,6 +805,7 @@ export async function issueCommerceQuote(
       if (
         sourceHandler.requiresInventorySnapshot &&
         payable &&
+        !usesManualAttestation &&
         (!line.configurationVersionId || line.balanceRevision === undefined)
       ) {
         throw new CommerceQuoteError(
@@ -716,6 +840,7 @@ export async function issueCommerceQuote(
       }
 
       return {
+        availabilityAttestationId: line.availabilityAttestationId ?? null,
         balanceRevision: line.balanceRevision ?? null,
         catalogItemName:
           offering?.catalogItem.name ?? line.catalogItemName?.trim() ?? "Item",

@@ -7,9 +7,9 @@ ADR-0030 now amends it with Progressive Catalog and a thinner Pharmacy
 extension. ADR-0031 adds generic Customer Channels, stable entry links/QR
 codes, request media/verified observations and exact selectable Offer Options.
 ADR-0032 adds Store team routing and optional exact-version quotation release
-approval. The owner approved the revised dependency-ordered 17-ticket batch through
-2026-08-10. Tickets 01, 02, 03 and 11 are complete; Ticket 03A is in progress
-and Ticket 04 is the parallel dependency frontier. Production schema/provider
+approval. The owner approved the revised dependency-ordered 17-ticket batch
+through 2026-08-10. Tickets 01, 02, 03, 11 and 03A are complete; Ticket 04 is
+the active dependency frontier. Production schema/provider
 operations remain separately authorized.
 
 Pharmacy Commerce is the first regulated vertical and retains its completed
@@ -82,10 +82,13 @@ as a Service or Prescription Request.
 A Store may operate in a progressive Catalog mode before adopting complete
 managed inventory:
 
-1. An operator resolves each verified request line against an existing
+1. An operator reviews a fingerprinted request line against an existing
    Offering or creates a private `DRAFT` Item/Variant/Offering.
-2. Matching uses Tenant/Store-scoped verified aliases and source links. Raw
-   customer text, OCR and provider payloads never create public Catalog data.
+2. Generic Service/Inquiry wording is explicitly an unverified source snapshot:
+   it may rank candidates, but only the operator-confirmed Catalog name/alias is
+   reusable truth. Prescription uses human-verified line evidence, and Ticket
+   04A will add revisioned generic Human-Verified Observations. Raw customer
+   text, OCR and provider payloads never become Catalog truth automatically.
 3. Price suggestions show attributable current Offering price, recent accepted
    Quote or completed sale, Store-first and Tenant-wide only when authorized.
    Each suggestion includes source, currency and effective time.
@@ -95,7 +98,10 @@ managed inventory:
 5. A Quote, request or sale never invents stock. Exact inventory reservations
    require configured balance sources and sufficient quantity. A progressive
    Product can instead use an explicit expiring manual/procure-to-order
-   availability commitment when Store and vertical policy permit it.
+   availability commitment when Store and vertical policy permit it. Tracked
+   and manual evidence commit a maximum quantity that a Quote cannot exceed.
+   Tracked applies only to an active, inventory-configured Offering; a private
+   draft remains manual/unavailable until explicit Ticket 06A graduation.
 6. Graduation enriches the same Catalog records with missing classification,
    units, variants, SKUs/barcodes, Store availability and verified opening
    stock. Quote, Order, price and source history remains linked.
@@ -461,9 +467,8 @@ business activation remains separately authorized.
 The owner approved the Progressive Catalog amendment on 2026-08-09 and the
 Customer Channels/media/Offer Options plus Store team/Quote approval amendments
 on 2026-08-10. The exact 17-ticket batch adds Tickets 03A, 04A, 06A and 06B.
-Tickets 01, 02, 03 and 11 are
-complete; Ticket 03A is in progress and Ticket 04 is the parallel frontier.
-Ticket 04A waits for both. Throughout
+Tickets 01, 02, 03, 11 and 03A are complete; Ticket 04 is the active frontier.
+Ticket 04A now waits only for Ticket 04. Throughout
 execution:
 
 - no production Prisma operation without separate authorization;

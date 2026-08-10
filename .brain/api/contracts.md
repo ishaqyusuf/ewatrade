@@ -304,12 +304,12 @@
 - Privacy identity verification records the verifying user, timestamp, and a
   bounded evidence/method reference before processing can be queued.
 
-## Service Commerce Source Contract And Planned Progressive Catalog
+## Service Commerce Source And Progressive Catalog Contract
 
 ADR-0030 and the revised ticket batch are owner-approved. Tickets 01-03 now
 implement the focused source vocabulary, Store readiness boundary, normalized
-source projection and narrow Commerce Inquiry lifecycle. Progressive Catalog
-commands below remain owned by Ticket 03A.
+source projection and narrow Commerce Inquiry lifecycle. Ticket 03A now also
+implements the Progressive Catalog commands below.
 
 - The exhaustive source reference is `service | prescription |
   commerce_inquiry`; Commerce Inquiry is limited to Product demand requiring
@@ -345,6 +345,12 @@ commands below remain owned by Ticket 03A.
 - `catalogMatches` and `priceSuggestions` are authorized Tenant/Store-scoped
   projections. Suggestions include source, currency and effective time and
   never read another Tenant or represent missing evidence as zero.
+- A generic Service/Inquiry line enters this boundary as a fingerprinted
+  `source_snapshot`, not as verified truth. It may assist candidate ranking,
+  but only the operator-confirmed Catalog name/alias is persisted as reusable
+  Catalog meaning. Prescription uses the separate `human_verified` evidence
+  variant; Ticket 04A will supply the same variant from revisioned generic
+  Human-Verified Observations.
 - `createDraftCatalog`, `linkCatalogOffering`, `promoteCatalogPrice` and
   `graduateCatalogOffering` are separate commands with role, revision, source,
   Store and vertical-policy checks. Saving a Quote cannot invoke them
@@ -356,11 +362,22 @@ commands below remain owned by Ticket 03A.
   attributed price change and never rewrites historical Quotes or Orders.
 - Product availability is explicitly tracked in-stock, expiring manual/
   procure-to-order or unavailable. Only tracked in-stock creates a reservation;
+  every available attestation owns an immutable maximum quantity and Quote
+  preparation rejects a missing or larger quantity. Tracked requires an active
+  inventory-configured Offering and existing balance; a private draft remains
+  manual/unavailable until explicit graduation;
   graduation opening quantity is an explicit Stock Operation, never a value
   inferred from request/Quote/Order history.
 - Prescription source adapters may propose/link drafts only from human-verified
   lines. Pharmacist release and vertical policy remain required for Product
   availability and Quote eligibility; OCR alone is never a Catalog command.
+- Source fingerprints cover source-snapshot or human-verified line content and
+  revision facts, not aggregate lifecycle timestamps. Issuing a Quote therefore
+  cannot stale its own Catalog link, while a genuine line, transcript or
+  mapping change does.
+- Draft/link/availability/promotion command identities bind to normalized
+  payload hashes. Replaying an identity with changed input fails with an
+  idempotency mismatch.
 
 ### Implemented Store capability/readiness contract
 

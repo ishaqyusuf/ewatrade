@@ -439,7 +439,10 @@ approval and now contains 17 dependency-ordered tickets.
   Store-specific reusable price that the Catalog does not support.
 - Progressive Product availability is explicit: tracked in-stock, expiring
   manual/procure-to-order, or unavailable. Only tracked in-stock acceptance
-  reserves a configured balance source.
+  reserves a configured balance source. Tracked in-stock applies only to an
+  active Offering with explicit unit, Store-availability and existing-balance
+  configuration; a private draft uses manual/unavailable until Ticket 06A
+  explicitly graduates it, and neither path publishes implicitly.
 - Graduation performs verified Catalog enrichment and an explicit opening-stock
   operation. It never derives stock from Quote or sales counts.
 - Service Offerings graduate through classification, duration/work/booking

@@ -297,6 +297,34 @@ manual-fee delivery scenario hit a transient Neon transaction-start `P2028`
 and then passed its isolated rerun with 17 assertions. A deployable migration
 artifact, ledger reconciliation and production rollout remain separately
 authorized gates.
+## Service Commerce Progressive Catalog Migration State
+
+On 2026-08-10 Ticket 03A added the generated Progressive Catalog persistence:
+`CatalogSourceLineLink`, `CatalogVerifiedAlias`,
+`CatalogAvailabilityAttestation`, `CatalogPricePromotion`, their typed enums,
+and Quote-line availability attribution. The same generated migration also
+captures the previously synchronized Prescription/Service Commerce foundation
+that had been absent from the historical ledger.
+
+At the owner's explicit request, only the verified `.env.local` Neon
+development database was reset. The canonical profile confirmed the Neon target
+was not production and skipped local PostgreSQL/Docker. Prisma reapplied the 28
+historical migrations, then `bun db:migrate` generated and applied
+`20260810144357_service_commerce_prescription_and_catalog_foundation` as
+migration 29. `bun db:push` reported the database already synchronized. No
+migration SQL was hand-authored and no production database was touched.
+
+The run-owned Neon acceptance passed staff and web Product-inquiry paths
+through fingerprinted source snapshots, operator-confirmed aliases, private
+draft capture, quantity-bounded expiring manual availability and immutable
+Quote creation. It also passed a Service Request through the same private-draft
+and Quote boundary; the staff Product path additionally proved explicit
+reusable-price promotion without Store availability or stock-source creation.
+An additional active inventory-configured Offering path proved tracked
+availability snapshots without creating a balance. All four scenarios passed
+together with 15 assertions. Production rollout remains a separately
+authorized release action.
+
 # Hybrid QA cleanup
 
 - Adds tenant QA lifecycle fields and global purge-run receipts. Apply the

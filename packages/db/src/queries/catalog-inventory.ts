@@ -53,6 +53,7 @@ function assertSchemaVersion(schemaVersion: number) {
 async function resolveOfferingInventory(
   db: InventoryDb,
   input: { offeringId: string; storeId: string; tenantId: string },
+  options: { createBalanceSource: boolean } = { createBalanceSource: true },
 ) {
   const offering = await db.sellableOffering.findFirst({
     include: {
@@ -128,28 +129,43 @@ async function resolveOfferingInventory(
     )
   }
 
-  const balance = await db.stockBalanceSource.upsert({
-    create: {
-      inventoryUnitId: balanceUnit.id,
-      kind: usesSharedPool
-        ? StockBalanceKind.SHARED_POOL
-        : StockBalanceKind.PACKAGED_STOCK,
-      productId: product.id,
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-      variantId: offering.variantId,
-    },
-    update: {},
-    where: {
-      storeId_variantId_inventoryUnitId_custodyType_custodyReferenceId: {
-        custodyReferenceId: "",
-        custodyType: StockCustodyType.STORE,
-        inventoryUnitId: balanceUnit.id,
-        storeId: input.storeId,
-        variantId: offering.variantId,
-      },
-    },
-  })
+  const balanceKey = {
+    custodyReferenceId: "",
+    custodyType: StockCustodyType.STORE,
+    inventoryUnitId: balanceUnit.id,
+    storeId: input.storeId,
+    variantId: offering.variantId,
+  }
+  const balance = options.createBalanceSource
+    ? await db.stockBalanceSource.upsert({
+        create: {
+          inventoryUnitId: balanceUnit.id,
+          kind: usesSharedPool
+            ? StockBalanceKind.SHARED_POOL
+            : StockBalanceKind.PACKAGED_STOCK,
+          productId: product.id,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+          variantId: offering.variantId,
+        },
+        update: {},
+        where: {
+          storeId_variantId_inventoryUnitId_custodyType_custodyReferenceId:
+            balanceKey,
+        },
+      })
+    : await db.stockBalanceSource.findUnique({
+        where: {
+          storeId_variantId_inventoryUnitId_custodyType_custodyReferenceId:
+            balanceKey,
+        },
+      })
+  if (!balance || balance.tenantId !== input.tenantId) {
+    throw new CatalogError(
+      "OFFERING_UNAVAILABLE",
+      "Tracked availability requires an existing Store balance source.",
+    )
+  }
 
   return { balance, configuration, enteredUnit, offering, usesSharedPool }
 }
@@ -229,6 +245,37 @@ export async function getCatalogOfferingAvailability(
             InventoryUnitStockBehavior.ALTERNATE_TRANSACTION
           ? ("alternate_transaction" as const)
           : ("canonical_shared" as const),
+  }
+}
+
+/**
+ * Read-only availability for Progressive Catalog attestations. Unlike the
+ * general inventory helper, this never creates a zero balance source merely
+ * because a request or Quote inspected the Offering.
+ */
+export async function getConfiguredCatalogOfferingAvailability(
+  db: InventoryDb,
+  input: { offeringId: string; storeId: string; tenantId: string },
+) {
+  const resolved = await resolveOfferingInventory(db, input, {
+    createBalanceSource: false,
+  })
+  const availableBalanceQuantity = balanceAvailable(resolved.balance)
+  const availableOfferingQuantity = resolved.usesSharedPool
+    ? floorExactDecimalQuotient(
+        availableBalanceQuantity,
+        resolved.enteredUnit.factor.toString(),
+        resolved.enteredUnit.transactionScale,
+      )
+    : parseExactDecimal(availableBalanceQuantity, {
+        maxScale: resolved.enteredUnit.transactionScale,
+      })
+  return {
+    availableBalanceQuantity,
+    availableOfferingQuantity,
+    balanceSourceId: resolved.balance.id,
+    configurationVersionId: resolved.configuration.id,
+    revision: resolved.balance.revision,
   }
 }
 

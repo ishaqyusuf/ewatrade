@@ -69,6 +69,7 @@ export const commerceInquiryTransitionSchema = z
 
 const inquiryQuoteLineSchema = z
   .object({
+    availabilityAttestationId: z.string().trim().min(1).max(191).optional(),
     customerNote: z.string().trim().max(500).optional(),
     offeringId: z.string().trim().min(1).max(191).optional(),
     outcome: z.enum(["alternative", "declined", "included", "unavailable"]),

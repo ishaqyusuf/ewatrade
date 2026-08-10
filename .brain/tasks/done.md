@@ -1,5 +1,21 @@
 # Done
 
+- Completed Service Commerce Ticket 03A with one Progressive Catalog boundary
+  for Commerce Inquiry, Service Request and human-verified Prescription source
+  lines. Generic request wording remains a fingerprinted source snapshot used
+  only for assisted matching; operators confirm reusable aliases. The Store can
+  create/link private draft Offerings, read Store-first price evidence, record
+  quantity-bounded manual or tracked availability, issue immutable Quote prices
+  and separately promote a reusable Tenant-wide price with repository-level
+  management authority and full Store-impact confirmation. Private drafts do
+  not publish or invent stock; tracked availability requires an active,
+  inventory-configured Offering. Completed Date: 2026-08-10. Checks Run: 37
+  focused tests / 95 assertions; shared, DB, API and dashboard typechecks;
+  Prisma validation; targeted Biome; authenticated desktop/mobile Midday sheet
+  QA; and four verified `.env.local` Neon scenarios / 15 assertions. The owner-
+  approved development reset generated/applied migration 29 and `db:push`
+  confirmed synchronization; no Docker or production database was used.
+
 - Completed Service Commerce Ticket 11 with a fail-closed, server-only
   vertical/jurisdiction policy boundary. Added typed outcomes and independent
   Catalog-adoption subjects, revisioned Tenant/Store decisions, private

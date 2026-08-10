@@ -1,0 +1,138 @@
+enum CatalogSourceLineType {
+  SERVICE_REQUEST
+  PRESCRIPTION_REQUEST
+  COMMERCE_INQUIRY
+}
+
+enum CatalogAvailabilityAttestationType {
+  TRACKED_IN_STOCK
+  MANUAL_PROCURE_TO_ORDER
+  UNAVAILABLE
+}
+
+enum CatalogReusablePriceScope {
+  TENANT
+}
+
+/// Human-confirmed resolution of one vertical-owned source line to the shared
+/// Catalog graph. Generic source wording remains an unverified snapshot; the
+/// source aggregate is reloaded before this link is used.
+model CatalogSourceLineLink {
+  id                       String                           @id @default(cuid())
+  tenantId                 String
+  storeId                  String
+  sourceType               CatalogSourceLineType
+  sourceId                 String
+  sourceLineId             String
+  sourceVersionFingerprint String
+  offeringId               String
+  verifiedLabel            String
+  clientOperationId        String
+  payloadHash              String
+  linkedByUserId           String
+  createdAt                DateTime                         @default(now())
+  updatedAt                DateTime                         @updatedAt
+  tenant                   Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                    Store                            @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  offering                 SellableOffering                 @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  aliases                  CatalogVerifiedAlias[]
+  availabilityAttestations CatalogAvailabilityAttestation[]
+  pricePromotions          CatalogPricePromotion[]
+
+  @@unique([tenantId, clientOperationId])
+  @@unique([tenantId, storeId, sourceType, sourceId, sourceLineId])
+  @@index([tenantId, storeId, createdAt])
+  @@index([offeringId, createdAt])
+}
+
+/// A human-confirmed alias assists ranking only. The same normalized alias may
+/// legitimately point to competing Offerings and never auto-merges records.
+model CatalogVerifiedAlias {
+  id               String                 @id @default(cuid())
+  tenantId         String
+  storeId          String
+  offeringId       String
+  sourceLinkId     String?
+  normalizedAlias  String
+  displayAlias     String
+  verifiedByUserId String
+  createdAt        DateTime               @default(now())
+  tenant           Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store            Store                  @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  offering         SellableOffering       @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  sourceLink       CatalogSourceLineLink? @relation(fields: [sourceLinkId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, storeId, offeringId, normalizedAlias])
+  @@index([tenantId, storeId, normalizedAlias])
+  @@index([sourceLinkId, createdAt])
+}
+
+/// Expiring availability evidence for one verified source link. It never
+/// creates inventory; tracked evidence references an existing configured
+/// balance source and manual evidence records a procure-to-order commitment.
+model CatalogAvailabilityAttestation {
+  id                       String                             @id @default(cuid())
+  tenantId                 String
+  storeId                  String
+  sourceLinkId             String
+  offeringId               String
+  type                     CatalogAvailabilityAttestationType
+  sourceVersionFingerprint String
+  quantity                 Decimal?                           @db.Decimal(38, 6)
+  configurationVersionId   String?
+  balanceSourceId          String?
+  balanceRevision          Int?
+  expiresAt                DateTime?
+  clientOperationId        String
+  payloadHash              String
+  attestedByUserId         String
+  reason                   String
+  supersededAt             DateTime?
+  createdAt                DateTime                           @default(now())
+  tenant                   Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                    Store                              @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  sourceLink               CatalogSourceLineLink              @relation(fields: [sourceLinkId], references: [id], onDelete: Cascade)
+  offering                 SellableOffering                   @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  configurationVersion     UnitConfigurationVersion?          @relation(fields: [configurationVersionId], references: [id], onDelete: Restrict)
+  balanceSource            StockBalanceSource?                @relation(fields: [balanceSourceId], references: [id], onDelete: Restrict)
+  quoteLines               CommerceQuoteLine[]
+
+  @@unique([tenantId, clientOperationId])
+  @@index([tenantId, storeId, createdAt])
+  @@index([sourceLinkId, supersededAt, createdAt])
+  @@index([offeringId, expiresAt])
+}
+
+/// Separate, confirmed promotion of one immutable Quote price to the reusable
+/// Tenant-wide Offering price. Quote and Order snapshots remain unchanged.
+model CatalogPricePromotion {
+  id                 String                    @id @default(cuid())
+  tenantId           String
+  storeId            String
+  sourceLinkId       String
+  offeringId         String
+  quoteVersionId     String
+  priceChangeId      String                    @unique
+  clientOperationId  String
+  payloadHash        String
+  scope              CatalogReusablePriceScope @default(TENANT)
+  previousPriceMinor Int?
+  priceMinor         Int
+  currencyCode       String
+  affectedStoreIds   String[]
+  promotedByUserId   String
+  reason             String
+  createdAt          DateTime                  @default(now())
+  tenant             Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store              Store                     @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  sourceLink         CatalogSourceLineLink     @relation(fields: [sourceLinkId], references: [id], onDelete: Restrict)
+  offering           SellableOffering          @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  quoteVersion       CommerceQuoteVersion      @relation(fields: [quoteVersionId], references: [id], onDelete: Restrict)
+  priceChange        CatalogPriceChange        @relation(fields: [priceChangeId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, clientOperationId])
+  @@index([tenantId, storeId, createdAt])
+  @@index([sourceLinkId, createdAt])
+  @@index([offeringId, createdAt])
+  @@index([quoteVersionId, createdAt])
+}

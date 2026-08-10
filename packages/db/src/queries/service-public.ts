@@ -236,37 +236,40 @@ export async function listServiceRequests(
   const quoteByRequestId = new Map(
     quotes.map((quote) => [quote.sourceId, quote.currentVersion]),
   )
-  return requests.map((request) => ({
-    createdAt: request.createdAt,
-    currentQuote: quoteByRequestId.get(request.id)
-      ? {
-          currencyCode: quoteByRequestId.get(request.id)!.currencyCode,
-          expiresAt: quoteByRequestId.get(request.id)!.expiresAt,
-          status: quoteByRequestId.get(request.id)!.status,
-          totalMinor: quoteByRequestId.get(request.id)!.totalMinor,
-          version: quoteByRequestId.get(request.id)!.version,
-        }
-      : null,
-    customerEmail: request.customerEmail,
-    customerName: request.customerName,
-    customerPhone: request.customerPhone,
-    details: request.details,
-    formLabel: request.requestForm.label,
-    id: request.id,
-    lines: request.lines.map((line) => ({
-      details: line.details,
-      fixedPriceMinor: line.offering.fixedPriceMinor,
-      id: line.id,
-      offeringId: line.offeringId,
-      offeringName: line.offeringName,
-      quantity: line.requestedQuantity.toString(),
-      variantName: line.variantName,
-    })),
-    requestedAt: request.requestedAt,
-    staffResponse: request.staffResponse,
-    status: request.status,
-    storeId: request.storeId,
-  }))
+  return requests.map((request) => {
+    const currentQuote = quoteByRequestId.get(request.id)
+    return {
+      createdAt: request.createdAt,
+      currentQuote: currentQuote
+        ? {
+            currencyCode: currentQuote.currencyCode,
+            expiresAt: currentQuote.expiresAt,
+            status: currentQuote.status,
+            totalMinor: currentQuote.totalMinor,
+            version: currentQuote.version,
+          }
+        : null,
+      customerEmail: request.customerEmail,
+      customerName: request.customerName,
+      customerPhone: request.customerPhone,
+      details: request.details,
+      formLabel: request.requestForm.label,
+      id: request.id,
+      lines: request.lines.map((line) => ({
+        details: line.details,
+        fixedPriceMinor: line.offering.fixedPriceMinor,
+        id: line.id,
+        offeringId: line.offeringId,
+        offeringName: line.offeringName,
+        quantity: line.requestedQuantity.toString(),
+        variantName: line.variantName,
+      })),
+      requestedAt: request.requestedAt,
+      staffResponse: request.staffResponse,
+      status: request.status,
+      storeId: request.storeId,
+    }
+  })
 }
 
 export async function getPublicServiceRequestForm(
@@ -441,7 +444,7 @@ export async function submitPublicServiceRequest(
     const allowed = new Map(
       form.offerings.map((row) => [row.offeringId, row.offering]),
     )
-    for (const line of input.lines) {
+    const normalizedLines = input.lines.map((line) => {
       const offering = allowed.get(line.offeringId)
       if (!offering?.serviceOffering) {
         throw new CatalogError(
@@ -449,11 +452,12 @@ export async function submitPublicServiceRequest(
           "Request selected an Offering outside this Form.",
         )
       }
-      parseExactDecimal(line.quantity, {
+      const requestedQuantity = parseExactDecimal(line.quantity, {
         allowZero: false,
         maxScale: offering.serviceOffering.quantityScale,
       })
-    }
+      return { line, offering, requestedQuantity }
+    })
     const request = await tx.serviceRequest.create({
       data: {
         clientRequestId: input.clientRequestId,
@@ -468,8 +472,7 @@ export async function submitPublicServiceRequest(
         tenantId: form.tenantId,
       },
     })
-    for (const line of input.lines) {
-      const offering = allowed.get(line.offeringId)!
+    for (const { line, offering, requestedQuantity } of normalizedLines) {
       await tx.serviceRequestLine.create({
         data: {
           details: line.details?.trim() || null,
@@ -482,10 +485,7 @@ export async function submitPublicServiceRequest(
             })),
           ),
           requestId: request.id,
-          requestedQuantity: parseExactDecimal(line.quantity, {
-            allowZero: false,
-            maxScale: offering.serviceOffering!.quantityScale,
-          }),
+          requestedQuantity,
           variantName: offering.variant.name,
         },
       })
@@ -549,6 +549,7 @@ export async function issueServiceQuote(
     lines: Array<{
       offeringId: string
       quantity: string
+      sourceLineId?: string
       unitPriceMinor: number
     }>
     requestId?: string
@@ -634,7 +635,14 @@ async function createTrackedJobsForOrder(
     },
   })
   for (const orderLine of lines) {
-    const policy = orderLine.offering.serviceOffering!.authorizationPolicy
+    const serviceOffering = orderLine.offering.serviceOffering
+    if (!serviceOffering) {
+      throw new CatalogError(
+        "SERVICE_JOB_NOT_FOUND",
+        "Tracked Service Offering was not found.",
+      )
+    }
+    const policy = serviceOffering.authorizationPolicy
     const authorizationStatus =
       policy === WorkAuthorizationPolicy.ON_ORDER_CONFIRMATION ||
       (policy === WorkAuthorizationPolicy.AFTER_REQUIRED_PAYMENT &&
@@ -728,17 +736,23 @@ export async function acceptServiceQuote(
       const payableLines = version.lines.filter(
         (line) => line.outcome === "INCLUDED" || line.outcome === "ALTERNATIVE",
       )
-      if (
-        payableLines.some(
-          (line) =>
-            !line.offeringId || !line.quantity || line.unitPriceMinor === null,
-        )
-      ) {
-        throw new CommerceQuoteError(
-          "QUOTE_CONFLICT",
-          "Accepted Quote contains an incomplete payable line.",
-        )
-      }
+      const completePayableLines = payableLines.map((line) => {
+        if (
+          !line.offeringId ||
+          !line.quantity ||
+          line.unitPriceMinor === null
+        ) {
+          throw new CommerceQuoteError(
+            "QUOTE_CONFLICT",
+            "Accepted Quote contains an incomplete payable line.",
+          )
+        }
+        return {
+          offeringId: line.offeringId,
+          quantity: line.quantity.toString(),
+          trustedUnitPriceMinor: line.unitPriceMinor,
+        }
+      })
       const order = await createCommercialOrderInTransaction(tx, {
         actorUserId: input.actorUserId,
         clientOrderId: `${input.clientAcceptanceId}:order`,
@@ -747,11 +761,7 @@ export async function acceptServiceQuote(
         customerPhone: request.customerPhone ?? undefined,
         createTrackedServiceWork: false,
         discountMinor: version.discountMinor,
-        lines: payableLines.map((line) => ({
-          offeringId: line.offeringId!,
-          quantity: line.quantity!.toString(),
-          trustedUnitPriceMinor: line.unitPriceMinor!,
-        })),
+        lines: completePayableLines,
         schemaVersion: 1,
         serviceChargeMinor: version.fulfilmentFeeMinor,
         storeId: version.quote.storeId,

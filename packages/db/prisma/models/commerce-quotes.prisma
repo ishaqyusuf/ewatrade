@@ -54,6 +54,7 @@ model CommerceQuoteVersion {
   lines                       CommerceQuoteLine[]
   replayAccessToken           CommerceQuoteReplayAccessToken?
   prescriptionDeliveryAddress PrescriptionDeliveryAddress?
+  catalogPricePromotions      CatalogPricePromotion[]
 
   @@unique([quoteId, version])
   @@unique([quoteId, clientVersionId])
@@ -78,26 +79,29 @@ model CommerceQuoteReplayAccessToken {
 }
 
 model CommerceQuoteLine {
-  id                     String                   @id @default(cuid())
-  quoteVersionId         String
-  sourceLineId           String?
-  offeringId             String?
-  outcome                CommerceQuoteLineOutcome @default(INCLUDED)
-  catalogItemName        String
-  variantName            String
-  optionSelections       Json
-  offeringName           String
-  quantity               Decimal?                 @db.Decimal(38, 6)
-  unitPriceMinor         Int?
-  totalMinor             Int                      @default(0)
-  customerNote           String?
-  configurationVersionId String?
-  balanceRevision        Int?
-  createdAt              DateTime                 @default(now())
-  quoteVersion           CommerceQuoteVersion     @relation(fields: [quoteVersionId], references: [id], onDelete: Cascade)
-  offering               SellableOffering?        @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  id                        String                          @id @default(cuid())
+  quoteVersionId            String
+  sourceLineId              String?
+  offeringId                String?
+  outcome                   CommerceQuoteLineOutcome        @default(INCLUDED)
+  catalogItemName           String
+  variantName               String
+  optionSelections          Json
+  offeringName              String
+  quantity                  Decimal?                        @db.Decimal(38, 6)
+  unitPriceMinor            Int?
+  totalMinor                Int                             @default(0)
+  customerNote              String?
+  configurationVersionId    String?
+  balanceRevision           Int?
+  availabilityAttestationId String?
+  createdAt                 DateTime                        @default(now())
+  quoteVersion              CommerceQuoteVersion            @relation(fields: [quoteVersionId], references: [id], onDelete: Cascade)
+  offering                  SellableOffering?               @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  availabilityAttestation   CatalogAvailabilityAttestation? @relation(fields: [availabilityAttestationId], references: [id], onDelete: Restrict)
 
   @@index([quoteVersionId])
   @@index([offeringId])
   @@index([sourceLineId])
+  @@index([availabilityAttestationId])
 }

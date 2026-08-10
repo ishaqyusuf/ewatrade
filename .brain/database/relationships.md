@@ -173,6 +173,24 @@ business writes a new merchant Tenant, active OWNER Membership, and first Store
 in one transaction; it never reuses the active Tenant's Store or operational
 records.
 
+## Progressive Catalog Adoption
+
+`ServiceRequestLine | PrescriptionTranscriptionLine | CommerceInquiryLine -> CatalogSourceLineLink -> SellableOffering`
+
+`CatalogSourceLineLink -> CatalogVerifiedAlias[]`
+
+`CatalogSourceLineLink -> CatalogAvailabilityAttestation[] -> CommerceQuoteLine[]`
+
+`CommerceQuoteVersion + CatalogSourceLineLink -> CatalogPricePromotion -> CatalogPriceChange`
+
+The source aggregate remains authoritative. The link holds a content
+fingerprint and operator-confirmed alias, not raw media/OCR/provider data.
+Generic Service/Inquiry wording remains an unverified source snapshot;
+Prescription can carry human-verified provenance and Ticket 04A will add the
+same evidence variant for generic observations. Availability evidence is
+quantity-bounded and separate from stock authority, and reusable price
+promotion never rewrites the Quote Version or Commercial Order snapshot.
+
 ## Managed Domains
 
 `Tenant -> DomainRegistrantProfile`

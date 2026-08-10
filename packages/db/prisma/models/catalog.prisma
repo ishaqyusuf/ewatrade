@@ -115,24 +115,24 @@ model SellableVariantSelection {
 }
 
 model SellableOffering {
-  id                          String                       @id @default(cuid())
+  id                          String                           @id @default(cuid())
   tenantId                    String
   catalogItemId               String
   variantId                   String
   key                         String
   kind                        SellableOfferingKind
-  status                      CatalogRecordStatus          @default(DRAFT)
+  status                      CatalogRecordStatus              @default(DRAFT)
   name                        String
   pricingPolicy               OfferingPricingPolicy
   fixedPriceMinor             Int?
   currencyCode                String
-  sortOrder                   Int                          @default(0)
-  createdAt                   DateTime                     @default(now())
-  updatedAt                   DateTime                     @updatedAt
+  sortOrder                   Int                              @default(0)
+  createdAt                   DateTime                         @default(now())
+  updatedAt                   DateTime                         @updatedAt
   archivedAt                  DateTime?
-  tenant                      Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  catalogItem                 CatalogItem                  @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
-  variant                     SellableVariant              @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  tenant                      Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  catalogItem                 CatalogItem                      @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+  variant                     SellableVariant                  @relation(fields: [variantId], references: [id], onDelete: Cascade)
   productUnitOffering         ProductUnitOffering?
   serviceOffering             ServiceOffering?
   storeAvailability           StoreOfferingAvailability[]
@@ -145,6 +145,10 @@ model SellableOffering {
   serviceQuoteLines           ServiceQuoteLine[]
   commerceQuoteLines          CommerceQuoteLine[]
   prescriptionLineMappings    PrescriptionLineMapping[]
+  catalogSourceLineLinks      CatalogSourceLineLink[]
+  catalogVerifiedAliases      CatalogVerifiedAlias[]
+  availabilityAttestations    CatalogAvailabilityAttestation[]
+  pricePromotions             CatalogPricePromotion[]
 
   @@unique([catalogItemId, key])
   @@index([tenantId, status, updatedAt])
@@ -200,23 +204,24 @@ model UnitDefinition {
 }
 
 model UnitConfigurationVersion {
-  id                    String                  @id @default(cuid())
-  productId             String
-  version               Int
-  status                UnitConfigurationStatus @default(DRAFT)
-  canonicalBalanceScale Int                     @default(0)
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime                @updatedAt
-  publishedAt           DateTime?
-  supersededAt          DateTime?
-  product               CatalogProduct          @relation("CatalogProductUnitConfigurations", fields: [productId], references: [id], onDelete: Cascade)
-  currentForProduct     CatalogProduct?         @relation("CatalogProductCurrentUnitConfiguration")
-  units                 InventoryUnit[]
-  stockMovements        StockMovement[]
-  stockReservations     StockReservation[]
-  stockCountLines       StockCountLine[]
-  stockTransfers        StockTransfer[]
-  offeringSnapshots     OfferingSnapshot[]
+  id                              String                           @id @default(cuid())
+  productId                       String
+  version                         Int
+  status                          UnitConfigurationStatus          @default(DRAFT)
+  canonicalBalanceScale           Int                              @default(0)
+  createdAt                       DateTime                         @default(now())
+  updatedAt                       DateTime                         @updatedAt
+  publishedAt                     DateTime?
+  supersededAt                    DateTime?
+  product                         CatalogProduct                   @relation("CatalogProductUnitConfigurations", fields: [productId], references: [id], onDelete: Cascade)
+  currentForProduct               CatalogProduct?                  @relation("CatalogProductCurrentUnitConfiguration")
+  units                           InventoryUnit[]
+  stockMovements                  StockMovement[]
+  stockReservations               StockReservation[]
+  stockCountLines                 StockCountLine[]
+  stockTransfers                  StockTransfer[]
+  offeringSnapshots               OfferingSnapshot[]
+  catalogAvailabilityAttestations CatalogAvailabilityAttestation[]
 
   @@unique([productId, version])
   @@index([productId, status])
@@ -267,7 +272,7 @@ model StoreOfferingAvailability {
 }
 
 model CatalogPriceChange {
-  id                 String           @id @default(cuid())
+  id                 String                 @id @default(cuid())
   tenantId           String
   offeringId         String
   previousPriceMinor Int?
@@ -275,10 +280,11 @@ model CatalogPriceChange {
   currencyCode       String
   changedByUserId    String?
   reason             String?
-  effectiveAt        DateTime         @default(now())
-  createdAt          DateTime         @default(now())
-  tenant             Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  offering           SellableOffering @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  effectiveAt        DateTime               @default(now())
+  createdAt          DateTime               @default(now())
+  tenant             Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  offering           SellableOffering       @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  promotion          CatalogPricePromotion?
 
   @@index([tenantId, effectiveAt])
   @@index([offeringId, effectiveAt])
@@ -303,36 +309,37 @@ model CatalogCommandReceipt {
 }
 
 model StockBalanceSource {
-  id                    String                  @id @default(cuid())
-  tenantId              String
-  storeId               String
-  productId             String
-  variantId             String
-  inventoryUnitId       String
-  kind                  StockBalanceKind
-  custodyType           StockCustodyType        @default(STORE)
-  custodyReferenceId    String                  @default("")
-  parentBalanceSourceId String?
-  onHandQuantity        Decimal                 @default(0) @db.Decimal(38, 18)
-  reservedQuantity      Decimal                 @default(0) @db.Decimal(38, 18)
-  revision              Int                     @default(0)
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime                @updatedAt
-  tenant                Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store                 Store                   @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  product               CatalogProduct          @relation(fields: [productId], references: [id], onDelete: Restrict)
-  variant               SellableVariant         @relation(fields: [variantId], references: [id], onDelete: Restrict)
-  inventoryUnit         InventoryUnit           @relation(fields: [inventoryUnitId], references: [id], onDelete: Restrict)
-  parentBalanceSource   StockBalanceSource?     @relation("StockBalanceCustody", fields: [parentBalanceSourceId], references: [id], onDelete: Restrict)
-  custodyBalances       StockBalanceSource[]    @relation("StockBalanceCustody")
-  movements             StockMovement[]
-  reservations          StockReservation[]
-  stockCountLines       StockCountLine[]
-  outboundTransfers     StockTransfer[]         @relation("StockTransferSourceBalance")
-  transitTransfers      StockTransfer[]         @relation("StockTransferTransitBalance")
-  closeoutLines         InventoryCloseoutLine[]
-  offeringSnapshots     OfferingSnapshot[]
-  productReturns        ProductReturn[]
+  id                              String                           @id @default(cuid())
+  tenantId                        String
+  storeId                         String
+  productId                       String
+  variantId                       String
+  inventoryUnitId                 String
+  kind                            StockBalanceKind
+  custodyType                     StockCustodyType                 @default(STORE)
+  custodyReferenceId              String                           @default("")
+  parentBalanceSourceId           String?
+  onHandQuantity                  Decimal                          @default(0) @db.Decimal(38, 18)
+  reservedQuantity                Decimal                          @default(0) @db.Decimal(38, 18)
+  revision                        Int                              @default(0)
+  createdAt                       DateTime                         @default(now())
+  updatedAt                       DateTime                         @updatedAt
+  tenant                          Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                           Store                            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product                         CatalogProduct                   @relation(fields: [productId], references: [id], onDelete: Restrict)
+  variant                         SellableVariant                  @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  inventoryUnit                   InventoryUnit                    @relation(fields: [inventoryUnitId], references: [id], onDelete: Restrict)
+  parentBalanceSource             StockBalanceSource?              @relation("StockBalanceCustody", fields: [parentBalanceSourceId], references: [id], onDelete: Restrict)
+  custodyBalances                 StockBalanceSource[]             @relation("StockBalanceCustody")
+  movements                       StockMovement[]
+  reservations                    StockReservation[]
+  stockCountLines                 StockCountLine[]
+  catalogAvailabilityAttestations CatalogAvailabilityAttestation[]
+  outboundTransfers               StockTransfer[]                  @relation("StockTransferSourceBalance")
+  transitTransfers                StockTransfer[]                  @relation("StockTransferTransitBalance")
+  closeoutLines                   InventoryCloseoutLine[]
+  offeringSnapshots               OfferingSnapshot[]
+  productReturns                  ProductReturn[]
 
   @@unique([storeId, variantId, inventoryUnitId, custodyType, custodyReferenceId])
   @@index([tenantId, storeId, kind])

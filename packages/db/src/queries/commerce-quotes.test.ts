@@ -7,10 +7,38 @@ import {
   assertQuotedSourceQuoteIdentity,
   getCommerceQuoteAcceptanceContext,
   issueCommerceQuote,
+  quoteLineRequiresStoreAvailability,
   resolveCommerceQuoteAccess,
 } from "./commerce-quotes"
 
 describe("Commerce Quote invariants", () => {
+  test("lets only source-verified private Service drafts bypass Product availability", () => {
+    expect(
+      quoteLineRequiresStoreAvailability({
+        catalogSourceVerified: true,
+        kind: "SERVICE",
+        status: "DRAFT",
+        usesManualAttestation: false,
+      }),
+    ).toBe(false)
+    expect(
+      quoteLineRequiresStoreAvailability({
+        catalogSourceVerified: true,
+        kind: "PRODUCT_UNIT",
+        status: "DRAFT",
+        usesManualAttestation: false,
+      }),
+    ).toBe(true)
+    expect(
+      quoteLineRequiresStoreAvailability({
+        catalogSourceVerified: false,
+        kind: "SERVICE",
+        status: "DRAFT",
+        usesManualAttestation: false,
+      }),
+    ).toBe(true)
+  })
+
   test("requires exactly one typed source", () => {
     expect(
       assertCommerceQuoteSource({

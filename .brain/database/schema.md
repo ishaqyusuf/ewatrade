@@ -130,6 +130,22 @@ persistence boundary. Clients never access the database directly.
   Quote Version under Tenant/Store scope. It recovers an idempotent Inquiry
   issuance response without storing raw bearer tokens or invalidating the
   version's original access token.
+- `CatalogSourceLineLink` binds one Tenant/Store-scoped Service Request,
+  Prescription Request or Commerce Inquiry line to an existing Offering using
+  a content fingerprint and idempotent command payload hash. Generic Service/
+  Inquiry provenance is an unverified source snapshot; Prescription provenance
+  is human-verified. The stored label is the operator-confirmed Catalog alias,
+  never an automatically trusted copy of customer wording.
+- `CatalogVerifiedAlias` stores Store-scoped, human-attributed ranking aliases.
+  Identical aliases may point to competing Offerings and never auto-merge them.
+- `CatalogAvailabilityAttestation` records tracked configured inventory,
+  expiring manual procure-to-order or unavailable evidence. It may reference an
+  existing Unit Configuration and Stock Balance revision but never creates
+  either while reading or quoting. Available attestations own a committed
+  maximum quantity enforced again during Quote preparation.
+- `CatalogPricePromotion` attributes the explicit promotion of one immutable
+  Quote line price to the reusable Tenant-wide Offering price, its appended
+  `CatalogPriceChange`, affected Stores, actor and reason.
 - `ServiceCommercePolicyDecision` stores one revisioned current decision for
   Tenant, Store, vertical, Store jurisdiction, channel and typed subject. It
   keeps private evidence/licence/approval references, reviewer, effective and

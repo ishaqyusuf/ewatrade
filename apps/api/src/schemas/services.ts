@@ -372,6 +372,7 @@ export const serviceQuoteIssueSchema = z
           .object({
             offeringId: z.string().trim().min(1),
             quantity: exactServiceQuantitySchema,
+            sourceLineId: z.string().trim().min(1).optional(),
             unitPriceMinor: z.number().int().nonnegative().max(100_000_000),
           })
           .strict(),

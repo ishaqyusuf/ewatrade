@@ -44,8 +44,15 @@
   gate passed 9 assertions and all 10 established compatibility scenarios pass;
   the final combined run's manual-fee `P2028` passed an isolated 17-assertion
   rerun.
-  Ticket 03A is in progress and Ticket 04 is the parallel dependency frontier;
-  Ticket 04A waits for both and then establishes generic attachment/media
+  Ticket 03A is complete: fingerprinted source snapshots and human-verified
+  Prescription evidence feed one private Catalog seam; raw customer wording is
+  never automatically reusable truth. Store-first price suggestions,
+  quantity-bounded manual/tracked availability, immutable Quote pricing,
+  manager-gated reusable-price promotion and the Midday global sheet are
+  source-complete. The verified `.env.local` Neon development run passes four
+  Product/Service scenarios with 15 assertions, and authenticated desktop/
+  mobile sheet QA passed. Ticket 04 is now the active dependency frontier;
+  Ticket 04A waits for it and then establishes generic attachment/media
   ingestion before channel-neutral intake. The full test gate has
   five separately reproducible
   failures in unrelated in-progress mobile navigation and Retail Ops test

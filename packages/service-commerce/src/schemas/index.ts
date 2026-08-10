@@ -1,5 +1,6 @@
 export * from "./action"
 export * from "./capability"
+export * from "./catalog-adoption"
 export * from "./fulfillment"
 export * from "./profile"
 export * from "./policy"

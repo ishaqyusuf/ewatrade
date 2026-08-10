@@ -485,6 +485,7 @@ export async function issueCommerceInquiryQuote(
     fulfilmentType?: "delivery" | "pickup" | "unspecified"
     inquiryId: string
     lines: Array<{
+      availabilityAttestationId?: string
       customerNote?: string
       offeringId?: string
       outcome: "alternative" | "declined" | "included" | "unavailable"

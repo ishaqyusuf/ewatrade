@@ -1,4 +1,5 @@
 export * from "./capabilities"
+export * from "./catalog-adoption"
 export * from "./policy"
 export * from "./schemas"
 export * from "./sources"

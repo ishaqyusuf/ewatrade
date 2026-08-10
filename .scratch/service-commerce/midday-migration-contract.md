@@ -765,6 +765,10 @@ reversible presentation state; authoritative lifecycle state always refetches.
   verified aliases enable future matching; Quote prices remain immutable
   transaction facts; Catalog price promotion is explicit; stock is never
   inferred from demand or sales.
+- Tracked availability is permitted only for an active Offering with explicit
+  unit, Store-availability and existing-balance configuration. A private draft
+  stays manual/unavailable until the separate Ticket 06A graduation command;
+  neither linking nor quoting makes it active.
 - Generic Media Assets own private storage/safety/retry/access/retention facts;
   typed Source Attachments bind assets to one current source/version; Human-
   Verified Observations provide attributable meaning. No attachment or
