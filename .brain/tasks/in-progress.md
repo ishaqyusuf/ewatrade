@@ -63,7 +63,10 @@
   revocation and central-branch matrix. Desktop/mobile Portless browser QA
   passed the public entry and Product Inquiry submission/success flow with no
   console errors against a temporary run-owned Neon fixture; cleanup was
-  verified. Ticket 06 is now the active source frontier.
+  verified. Ticket 06 is now in progress: mutually exclusive Offer Option
+  contracts and additive persistence are complete on the verified development
+  Neon database; runtime issuance, selection, acceptance compatibility and the
+  preparation/release seam remain open.
   Live Meta/storage/scanner release gates remain open. The focused
   Customer Channels/media matrix passes 71 tests and 177 assertions; the
   run-owned `.env.local` Neon bag-media seam passes 7 assertions. The full test gate has

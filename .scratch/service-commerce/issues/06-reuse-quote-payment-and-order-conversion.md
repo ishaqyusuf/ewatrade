@@ -5,7 +5,9 @@
 **Blocked by:** 03 - Establish Customer Request Interoperability Contract; 03A —
 Grow The Private Catalog From Requests And Quotes.
 
-**Status:** approved; blockers complete; next source ticket
+**Status:** in progress; shared Offer Option contracts and additive persistence
+are complete on the verified development Neon database. Runtime issuance,
+selection, acceptance compatibility and release-seam work remain open.
 
 **Approval:** Original and revised Progressive Catalog Quote/Order scope
 owner-approved on 2026-08-09; selectable Offer Option amendment approved on

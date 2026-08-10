@@ -268,6 +268,24 @@ the database already in sync. No data-loss override, manual migration file,
 local database or production database was used. A deployable production
 migration artifact remains a separate release gate.
 
+## Service Commerce Quote Option Migration State
+
+On 2026-08-10 Ticket 06 began its expand phase with generated migration
+`20260810203510_commerce_quote_options`. It adds immutable
+`CommerceQuoteOption`, one-per-Version `CommerceQuoteOptionSelection`, and the
+nullable compatibility link from existing Quote lines to their owning Option.
+The nullable link deliberately preserves existing immutable Quote Versions;
+runtime projection/backfill must expose those versions as one default Option
+before any future contraction is considered.
+
+The required root workflow used only the verified `.env.local` Neon
+development profile and explicitly skipped local PostgreSQL/Docker. Prisma
+generated and applied the migration, and `bun db:push` then reported the
+development database already synchronized. No migration SQL was hand-authored,
+no reset or data-loss override was used, and no production database was
+touched. Runtime issuance, selection, acceptance compatibility and production
+rollout remain open Ticket 06 gates.
+
 ## Service Commerce Vertical Policy Migration State
 
 On 2026-08-10 Ticket 11 added typed vertical/channel/subject/outcome/audit

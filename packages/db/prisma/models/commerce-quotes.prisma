@@ -52,6 +52,8 @@ model CommerceQuoteVersion {
   currentForQuote             CommerceQuote?                   @relation("CommerceQuoteCurrentVersion")
   acceptedOrder               CommercialOrder?                 @relation(fields: [acceptedOrderId], references: [id], onDelete: Restrict)
   lines                       CommerceQuoteLine[]
+  options                     CommerceQuoteOption[]
+  optionSelection             CommerceQuoteOptionSelection?
   replayAccessToken           CommerceQuoteReplayAccessToken?
   prescriptionDeliveryAddress PrescriptionDeliveryAddress?
   catalogPricePromotions      CatalogPricePromotion[]
@@ -60,6 +62,51 @@ model CommerceQuoteVersion {
   @@unique([quoteId, clientVersionId])
   @@index([status, expiresAt])
   @@index([acceptedOrderId])
+}
+
+/// One immutable, mutually exclusive commercial choice within a Quote
+/// Version. Simple legacy Quotes are projected/backfilled as one default
+/// option; multi-option versions are not payable until one option is selected.
+model CommerceQuoteOption {
+  id                  String                           @id @default(cuid())
+  quoteVersionId      String
+  clientOptionId      String
+  label               String
+  position            Int
+  availabilityOutcome CommerceQuoteAvailabilityOutcome
+  fulfilmentType      CommerceQuoteFulfilmentType      @default(UNSPECIFIED)
+  currencyCode        String
+  subtotalMinor       Int
+  discountMinor       Int                              @default(0)
+  taxMinor            Int                              @default(0)
+  fulfilmentFeeMinor  Int                              @default(0)
+  totalMinor          Int
+  customerNote        String?
+  fulfilmentPromise   String?
+  createdAt           DateTime                         @default(now())
+  quoteVersion        CommerceQuoteVersion             @relation(fields: [quoteVersionId], references: [id], onDelete: Cascade)
+  lines               CommerceQuoteLine[]
+  selection           CommerceQuoteOptionSelection?
+
+  @@unique([quoteVersionId, clientOptionId])
+  @@unique([quoteVersionId, position])
+  @@index([quoteVersionId, totalMinor])
+}
+
+/// The sole idempotent customer choice for a multi-option Quote Version.
+/// Selection is distinct from Quote acceptance and cannot itself create an
+/// Order, reservation or payment.
+model CommerceQuoteOptionSelection {
+  quoteVersionId    String               @id
+  optionId          String               @unique
+  clientSelectionId String
+  payloadHash       String
+  selectedAt        DateTime             @default(now())
+  quoteVersion      CommerceQuoteVersion @relation(fields: [quoteVersionId], references: [id], onDelete: Cascade)
+  option            CommerceQuoteOption  @relation(fields: [optionId], references: [id], onDelete: Restrict)
+
+  @@unique([quoteVersionId, clientSelectionId])
+  @@index([selectedAt])
 }
 
 /// One rotatable digest used to recover an idempotent Quote issuance response
@@ -81,6 +128,7 @@ model CommerceQuoteReplayAccessToken {
 model CommerceQuoteLine {
   id                        String                          @id @default(cuid())
   quoteVersionId            String
+  quoteOptionId             String?
   sourceLineId              String?
   offeringId                String?
   outcome                   CommerceQuoteLineOutcome        @default(INCLUDED)
@@ -97,10 +145,12 @@ model CommerceQuoteLine {
   availabilityAttestationId String?
   createdAt                 DateTime                        @default(now())
   quoteVersion              CommerceQuoteVersion            @relation(fields: [quoteVersionId], references: [id], onDelete: Cascade)
+  quoteOption               CommerceQuoteOption?            @relation(fields: [quoteOptionId], references: [id], onDelete: Cascade)
   offering                  SellableOffering?               @relation(fields: [offeringId], references: [id], onDelete: Restrict)
   availabilityAttestation   CatalogAvailabilityAttestation? @relation(fields: [availabilityAttestationId], references: [id], onDelete: Restrict)
 
   @@index([quoteVersionId])
+  @@index([quoteOptionId])
   @@index([offeringId])
   @@index([sourceLineId])
   @@index([availabilityAttestationId])

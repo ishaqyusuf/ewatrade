@@ -61,6 +61,16 @@ belong to `ServiceJob`; charge-only Service lines allocate no work.
 
 `CommerceQuoteVersion -> CommerceQuoteReplayAccessToken`
 
+`CommerceQuoteVersion -> CommerceQuoteOption[] -> CommerceQuoteLine[]`
+
+`CommerceQuoteVersion -> CommerceQuoteOptionSelection -> CommerceQuoteOption`
+
+The selection command predicates both Quote Version and Option identity inside
+one transaction, so a choice cannot point across immutable versions. Existing
+legacy lines may remain directly attached to their Version during
+expand-contract; the runtime/backfill phase will project them as one default
+Option before any contraction is considered.
+
 Payment/refund facts derive the Order balance. Store Service settings are read
 and snapshotted during Intake; later setting changes do not rewrite existing
 Order charges.

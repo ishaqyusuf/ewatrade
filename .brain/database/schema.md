@@ -133,6 +133,19 @@ persistence boundary. Clients never access the database directly.
   Quote Version under Tenant/Store scope. It recovers an idempotent Inquiry
   issuance response without storing raw bearer tokens or invalidating the
   version's original access token.
+- `CommerceQuoteOption` stores one immutable, mutually exclusive commercial
+  choice inside a Quote Version, including its customer-safe label, exact
+  monetary components, availability and fulfilment facts. Every new Quote
+  Version must ultimately expose at least one option; existing versions remain
+  readable through the compatibility projection until the runtime/backfill
+  phase is complete.
+- `CommerceQuoteOptionSelection` stores at most one idempotent customer choice
+  per Quote Version. The server verifies the selected Option belongs to that
+  Version inside the selection transaction. Selection is not acceptance and
+  cannot itself create an Order, reservation or payment.
+- `CommerceQuoteLine.quoteOptionId` additively associates a line with its
+  owning Option. It remains nullable only for existing-version compatibility
+  during expand-contract migration.
 - `CatalogSourceLineLink` binds one Tenant/Store-scoped Service Request,
   Prescription Request or Commerce Inquiry line to an existing Offering using
   a content fingerprint and idempotent command payload hash. Generic Service/
