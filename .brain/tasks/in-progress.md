@@ -63,13 +63,15 @@
   revocation and central-branch matrix. Desktop/mobile Portless browser QA
   passed the public entry and Product Inquiry submission/success flow with no
   console errors against a temporary run-owned Neon fixture; cleanup was
-  verified. Ticket 06 is now in progress: mutually exclusive Offer Option
-  contracts and additive persistence are complete on the verified development
-  Neon database; runtime issuance, idempotent selection, selected-only
+  verified. Ticket 06 is complete: mutually exclusive Offer Option contracts,
+  additive persistence, runtime issuance, idempotent selection, selected-only
   acceptance, legacy default projection and the preparation/release transaction
-  are source-complete. The pre-release Neon matrix passed, while the exact
-  post-release recheck is currently blocked by Neon P1001 reachability; browser
-  evidence and final Ticket 06 closure therefore remain open.
+  pass focused checks. The exact post-release `.env.local` Neon matrix passes 5
+  tests and 116 assertions across multi-option Inquiry, generic Service and
+  Pharmacy web/staff/WhatsApp pickup; desktop/mobile browser QA also passes
+  selection, payable-total and one-Order acceptance states without console
+  errors or mobile overflow. The synthetic fixture was removed. Ticket 06A is
+  now the active source frontier.
   Live Meta/storage/scanner release gates remain open. The focused
   Customer Channels/media matrix passes 71 tests and 177 assertions; the
   run-owned `.env.local` Neon bag-media seam passes 7 assertions. The full test gate has

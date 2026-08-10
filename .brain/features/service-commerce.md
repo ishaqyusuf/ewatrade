@@ -8,16 +8,16 @@ extension. ADR-0031 adds generic Customer Channels, stable entry links/QR
 codes, request media/verified observations and exact selectable Offer Options.
 ADR-0032 adds Store team routing and optional exact-version quotation release
 approval. The owner approved the revised dependency-ordered 17-ticket batch
-through 2026-08-10. Tickets 01, 02, 03, 11, 03A and 05 are complete. Tickets 04
+through 2026-08-10. Tickets 01, 02, 03, 11, 03A, 05 and 06 are complete. Tickets 04
 and 04A have source-complete foundations. Ticket 05 adds the shared source/API,
 public Product-inquiry and explicit product-selected generic WhatsApp adapters,
 with combined focused, verified-Neon and desktop/mobile browser acceptance.
-Ticket 06 is the active source frontier. Its mutually exclusive Offer Option
-contracts, additive development-Neon persistence, shared issuance, idempotent
-selection, selected-only acceptance and private prepare/release transaction are
-source-complete. Post-release Neon/browser revalidation remains open before the
-ticket can close. Production schema/provider operations remain separately
-authorized.
+Ticket 06 is complete. Its mutually exclusive Offer Option contracts, additive
+development-Neon persistence, shared issuance, idempotent selection,
+selected-only acceptance and private prepare/release transaction pass focused,
+post-release Neon and desktop/mobile browser acceptance. Ticket 06A is the
+active source frontier. Production schema/provider operations remain
+separately authorized.
 
 Pharmacy Commerce is the first regulated vertical and retains its completed
 implementation evidence and outstanding production gates. The approved second
@@ -523,11 +523,11 @@ business activation remains separately authorized.
 The owner approved the Progressive Catalog amendment on 2026-08-09 and the
 Customer Channels/media/Offer Options plus Store team/Quote approval amendments
 on 2026-08-10. The exact 17-ticket batch adds Tickets 03A, 04A, 06A and 06B.
-Tickets 01, 02, 03, 11, 03A and 05 are complete. Tickets 04 and 04A have their
+Tickets 01, 02, 03, 11, 03A, 05 and 06 are complete. Tickets 04 and 04A have their
 source foundations, and Ticket 05 supplies the accepted channel-neutral intake
-adapters and combined origin/source/media/browser evidence. Ticket 06 has
-completed its source implementation and remains the active frontier for its
-post-release Neon/browser evidence and closure.
+adapters and combined origin/source/media/browser evidence. Ticket 06 now has
+focused, post-release verified-Neon and desktop/mobile browser evidence;
+Ticket 06A is the active source frontier.
 Live-provider acceptance remains open. Throughout
 execution:
 

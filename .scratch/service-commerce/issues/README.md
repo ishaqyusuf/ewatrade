@@ -17,9 +17,9 @@ production schema/provider operations remain separately authorized.
 ## Execution Rule
 
 Execute one ticket at a time through its blocking edges. Tickets 01, 02, 03,
-11, 03A and 05 are complete. Tickets 04 and 04A have source-complete
+11, 03A, 05 and 06 are complete. Tickets 04 and 04A have source-complete
 foundations; their remaining recommendation/team/live-provider release gates
-stay open while Ticket 06 is the active source frontier. Any scope or dependency
+stay open while Ticket 06A is the active source frontier. Any scope or dependency
 change should update the spec, ADR/Brain and
 affected tickets before implementation.
 
