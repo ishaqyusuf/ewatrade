@@ -39,9 +39,10 @@ Central index for ewatrade product, architecture, engineering, database, API, de
   profile, and Ticket 03's three-source customer-safe interoperability plus
   narrow Commerce Inquiry lifecycle and Ticket 11's policy boundary are
   complete. Ticket 03A is complete; Tickets 04 and 04A have source-complete
-  foundations. Ticket 05 now has its shared dispatcher, public Product Inquiry
-  page and explicit generic WhatsApp Product/media adapter; its complete
-  origin/source/media/browser matrix is the active dependency frontier.
+  foundations, and Ticket 05 is complete with its shared dispatcher, public
+  Product Inquiry page, explicit generic WhatsApp Product/media adapter,
+  verified-Neon origin matrix and desktop/mobile public browser pass. Ticket
+  06 is the active source frontier.
 - Mobile includes a tenant-wide global search across Orders, Customers,
   Catalog, Service Jobs, and permitted Staff, plus contextual order creation
   and auditable order/payment actor attribution.

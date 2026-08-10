@@ -8,11 +8,11 @@ extension. ADR-0031 adds generic Customer Channels, stable entry links/QR
 codes, request media/verified observations and exact selectable Offer Options.
 ADR-0032 adds Store team routing and optional exact-version quotation release
 approval. The owner approved the revised dependency-ordered 17-ticket batch
-through 2026-08-10. Tickets 01, 02, 03, 11 and 03A are complete. Tickets 04 and
-04A have source-complete foundations. Ticket 05 now has its shared source/API,
-public Product-inquiry and explicit product-selected generic WhatsApp adapters;
-its full origin/source/media/browser matrix remains the active dependency
-frontier. Production schema/provider
+through 2026-08-10. Tickets 01, 02, 03, 11, 03A and 05 are complete. Tickets 04
+and 04A have source-complete foundations. Ticket 05 adds the shared source/API,
+public Product-inquiry and explicit product-selected generic WhatsApp adapters,
+with combined focused, verified-Neon and desktop/mobile browser acceptance.
+Ticket 06 is the active source frontier. Production schema/provider
 operations remain separately authorized.
 
 Pharmacy Commerce is the first regulated vertical and retains its completed
@@ -298,9 +298,12 @@ staff preserves its exact actor, provider events are Tenant-idempotent, and
 public/API results contain only the accepted source reference or a typed safe
 recovery. Entry revision or claimed inbound-event state is checked again inside
 the same transaction that writes the source, closing revoke/write races. The
-verified Neon acceptance proves web Product Inquiry replay,
-staff Generic Service, generic WhatsApp Inquiry and exact-Product cart recovery.
-The complete Pharmacy/media/cross-scope matrix and browser pass remain open.
+verified Neon acceptance proves all three origins for Product Inquiry and
+Generic Service, replay and exact-Product cart recovery. Focused source-owned
+suites provide the progressive Catalog, image/PDF, Pharmacy, cross-scope,
+revocation and central-branch rows. The public entry and Product Inquiry flow
+also passed desktop/mobile Portless browser QA against a temporary verified-
+Neon fixture with no console errors; cleanup was verified explicitly.
 
 ## Generic Request Media
 
@@ -503,11 +506,11 @@ business activation remains separately authorized.
 The owner approved the Progressive Catalog amendment on 2026-08-09 and the
 Customer Channels/media/Offer Options plus Store team/Quote approval amendments
 on 2026-08-10. The exact 17-ticket batch adds Tickets 03A, 04A, 06A and 06B.
-Tickets 01, 02, 03, 11 and 03A are complete. Tickets 04 and 04A now have their
-source foundations. Ticket 05 has the shared dispatcher plus initial
-public-web and generic WhatsApp Product Inquiry adapters; its complete
-origin/source/media and browser acceptance remains open. Browser/live-provider
-acceptance remains open. Throughout execution:
+Tickets 01, 02, 03, 11, 03A and 05 are complete. Tickets 04 and 04A have their
+source foundations, and Ticket 05 supplies the accepted channel-neutral intake
+adapters and combined origin/source/media/browser evidence. Ticket 06 is the
+active source frontier. Live-provider acceptance remains open. Throughout
+execution:
 
 - no production Prisma operation without separate authorization;
 - no renaming or contraction of Prescription Commerce before its approved

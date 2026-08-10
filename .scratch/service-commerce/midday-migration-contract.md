@@ -151,8 +151,10 @@ version authorization remain mandatory.
   Inquiry adapter at `apps/storefront/src/app/request/[token]/page.tsx`, and
   the explicit product-selected generic WhatsApp worker at
   `packages/jobs/src/{handlers,tasks}/service-commerce-whatsapp-inbound.ts`.
-  Complete cross-source/media/browser acceptance remains open; existing
-  vertical URLs and handlers are still compatibility owners.
+  Combined focused/source-owned suites, the verified-Neon eight-assertion
+  origin matrix and desktop/mobile public browser QA complete Ticket 05's
+  cross-source/media/browser gate; existing vertical URLs and handlers remain
+  compatibility owners.
 - Jobs: `packages/jobs/src/{tasks,handlers}/service-notification-dispatch.ts`,
   `prescription-whatsapp-inbound.ts`, `prescription-communication-dispatch.ts`,
   `whatsapp-connection-test.ts`, media/transcription/privacy/retention tasks and

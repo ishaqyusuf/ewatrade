@@ -151,6 +151,35 @@ describeWithServiceCommerceDatabase(
         source: web.status === "accepted" ? web.source : undefined,
       })
 
+      const staffInquiry = await submitServiceCommerceIntake(fixture.db, {
+        actorUserId: fixture.actorUserId,
+        envelope: {
+          channel: "staff",
+          clientCommandId: `staff-inquiry-${runId}`,
+          consent: {
+            contactOptIn: false,
+            privacyNoticeVersion: "acceptance-v1",
+          },
+          context: { kind: "store", storeId: fixture.storeId },
+          intent: {
+            customer: { name: "Staff Bag Customer" },
+            demand: {
+              kind: "commerce_inquiry",
+              reason: "needs_availability_confirmation",
+            },
+            kind: "commerce_inquiry",
+            lines: [{ description: "Blue medium bag" }],
+            summary: "Confirm this blue medium bag",
+          },
+        },
+        tenantId: fixture.tenantId,
+      })
+      expect(staffInquiry).toMatchObject({
+        channel: "staff",
+        source: { kind: "commerce_inquiry" },
+        status: "accepted",
+      })
+
       const service = await submitServiceCommerceIntake(fixture.db, {
         actorUserId: fixture.actorUserId,
         envelope: {
@@ -172,6 +201,29 @@ describeWithServiceCommerceDatabase(
       })
       expect(service).toMatchObject({
         channel: "staff",
+        source: { kind: "service" },
+        status: "accepted",
+      })
+
+      const webService = await submitServiceCommerceIntake(fixture.db, {
+        envelope: {
+          channel: "web",
+          clientCommandId: `web-service-${runId}`,
+          consent: {
+            contactOptIn: true,
+            privacyNoticeVersion: "acceptance-v1",
+          },
+          context: { kind: "entry_point", token: entryToken },
+          intent: {
+            customer: { name: "Web Service Customer" },
+            formToken,
+            kind: "service",
+            lines: [{ offeringId: fixture.serviceOfferingId, quantity: "1" }],
+          },
+        },
+      })
+      expect(webService).toMatchObject({
+        channel: "web",
         source: { kind: "service" },
         status: "accepted",
       })
@@ -221,6 +273,53 @@ describeWithServiceCommerceDatabase(
       expect(whatsapp).toMatchObject({
         channel: "whatsapp",
         source: { kind: "commerce_inquiry" },
+        status: "accepted",
+      })
+
+      const serviceProviderEventId = `wamid-service-${runId}`
+      const serviceInbound = await fixture.db.whatsAppInboundEvent.create({
+        data: {
+          connectionId,
+          externalCustomerId: "+2348022222223",
+          messageType: "text",
+          normalizedPayload: {
+            intakeKind: "service",
+            text: "I need a consultation",
+          },
+          providerEventId: serviceProviderEventId,
+          routeVertical: "SERVICE",
+          status: "PROCESSING",
+          storeId: fixture.storeId,
+          tenantId: fixture.tenantId,
+        },
+      })
+      const whatsAppService = await submitServiceCommerceIntake(fixture.db, {
+        envelope: {
+          channel: "whatsapp",
+          clientCommandId: `whatsapp:${serviceProviderEventId}`,
+          consent: {
+            contactOptIn: false,
+            privacyNoticeVersion: "whatsapp-customer-initiated-v1",
+          },
+          context: {
+            inboundEventId: serviceInbound.id,
+            kind: "inbound_event",
+          },
+          intent: {
+            customer: {
+              name: "WhatsApp service customer",
+              phone: "+2348022222223",
+            },
+            formToken,
+            kind: "service",
+            lines: [{ offeringId: fixture.serviceOfferingId, quantity: "1" }],
+          },
+          providerEventId: serviceProviderEventId,
+        },
+      })
+      expect(whatsAppService).toMatchObject({
+        channel: "whatsapp",
+        source: { kind: "service" },
         status: "accepted",
       })
 

@@ -78,6 +78,96 @@ describe("Service Commerce channel-neutral intake repository", () => {
     ).rejects.toMatchObject({ code: "FORBIDDEN" })
   })
 
+  test("keeps exact Product demand on Commerce for public and WhatsApp contexts", async () => {
+    const publicClient = {
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback(publicClient),
+      customerEntryPoint: {
+        findFirst: async () => ({
+          id: "entry_1",
+          revision: 1,
+          status: "PUBLISHED",
+          store: { name: "Bag Store" },
+          storeId: "store_1",
+          tenantId: "tenant_1",
+        }),
+      },
+      serviceCommercePolicyAuditEvent: {
+        createMany: async () => ({ count: 1 }),
+      },
+      serviceCommercePolicyDecision: {
+        findMany: async () => allowedServiceCommercePolicyDecisionRows(),
+      },
+      serviceCommerceStoreProfile: {
+        findFirst: async () => ({
+          intakeEnabled: true,
+          status: "ACTIVE",
+          webEnabled: true,
+          whatsappEnabled: false,
+        }),
+      },
+      serviceCommerceStoreTeamAssignment: {
+        findFirst: async () => ({ id: "assignment_1" }),
+      },
+      store: { findFirst: async () => ({ countryCode: "NG" }) },
+      whatsAppStoreBinding: { findMany: async () => [] },
+    }
+    await expect(
+      submitServiceCommerceIntake(dbClient(publicClient), {
+        envelope: {
+          channel: "web",
+          clientCommandId: "web-product-1",
+          consent,
+          context: { kind: "entry_point", token: "entry-token" },
+          intent: {
+            kind: "exact_product",
+            offeringId: "offering_1",
+            quantity: "1",
+          },
+        },
+      }),
+    ).resolves.toEqual({
+      action: "use_cart",
+      code: "unsupported",
+      status: "recovery",
+    })
+
+    const whatsAppClient = {
+      serviceCommerceStoreTeamAssignment: {
+        findFirst: async () => ({ id: "assignment_1" }),
+      },
+      whatsAppInboundEvent: {
+        findFirst: async () => ({
+          id: "event_1",
+          providerEventId: "wamid_1",
+          routeVertical: "SERVICE",
+          storeId: "store_1",
+          tenantId: "tenant_1",
+        }),
+      },
+    }
+    await expect(
+      submitServiceCommerceIntake(dbClient(whatsAppClient), {
+        envelope: {
+          channel: "whatsapp",
+          clientCommandId: "whatsapp-product-1",
+          consent,
+          context: { inboundEventId: "event_1", kind: "inbound_event" },
+          intent: {
+            kind: "exact_product",
+            offeringId: "offering_1",
+            quantity: "1",
+          },
+          providerEventId: "wamid_1",
+        },
+      }),
+    ).resolves.toEqual({
+      action: "use_cart",
+      code: "unsupported",
+      status: "recovery",
+    })
+  })
+
   test("re-resolves a public entry and replays one Inquiry without duplicating its audit", async () => {
     let inquiry: Record<string, unknown> | null = null
     let createdAudit = false

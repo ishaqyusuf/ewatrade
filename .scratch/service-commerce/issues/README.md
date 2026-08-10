@@ -17,10 +17,10 @@ production schema/provider operations remain separately authorized.
 ## Execution Rule
 
 Execute one ticket at a time through its blocking edges. Tickets 01, 02, 03,
-11 and 03A are complete. Tickets 04 and 04A have source-complete foundations;
-their browser/live-provider and cross-channel acceptance remains open while
-Ticket 05 is the active dependency frontier. Any scope or dependency change should
-update the spec, ADR/Brain and
+11, 03A and 05 are complete. Tickets 04 and 04A have source-complete
+foundations; their remaining recommendation/team/live-provider release gates
+stay open while Ticket 06 is the active source frontier. Any scope or dependency
+change should update the spec, ADR/Brain and
 affected tickets before implementation.
 
 ## Dependency-Ordered Waves

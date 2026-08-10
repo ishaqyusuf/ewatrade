@@ -68,7 +68,7 @@ export default async function CustomerEntryPage({ params }: Props) {
                 Request online
               </span>
               <span className="mt-2 block text-sm text-muted-foreground">
-                Send product or service details securely on EwaTrade.
+                Send product details securely on EwaTrade.
               </span>
             </span>
             <span className="mt-6 text-sm font-medium text-primary">

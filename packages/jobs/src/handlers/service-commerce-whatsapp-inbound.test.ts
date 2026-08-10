@@ -97,6 +97,45 @@ describe("Service Commerce WhatsApp inbound", () => {
     expect(calls).toEqual(["record-media", "enqueue-media", "complete:ok"])
   })
 
+  test("records a customer PDF as a private document before ingestion", async () => {
+    const calls: string[] = []
+    let mediaInput: {
+      fileName: string
+      kind: string
+      mimeType: string
+    } | null = null
+    const injected = dependencies(
+      {
+        intakeKind: "commerce_inquiry",
+        mediaId: "document_provider_1",
+        mediaType: "application/pdf",
+      },
+      calls,
+    )
+    injected.recordMedia = async (input) => {
+      mediaInput = input
+      calls.push("record-media")
+      return {
+        attachment: { id: "attachment_1" },
+        media: { id: "media_1" },
+        replayed: false,
+      } as never
+    }
+
+    await expect(
+      runServiceCommerceWhatsAppInbound(
+        { inboundEventId: "event_1" },
+        injected,
+      ),
+    ).resolves.toMatchObject({ status: "accepted" })
+    expect(mediaInput).toMatchObject({
+      fileName: "customer-document.pdf",
+      kind: "document",
+      mimeType: "application/pdf",
+    })
+    expect(calls).toEqual(["record-media", "enqueue-media", "complete:ok"])
+  })
+
   test("releases transient failures for durable retry", async () => {
     const calls: string[] = []
     const injected = dependencies(

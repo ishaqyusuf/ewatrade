@@ -53,13 +53,17 @@
   Product/Service scenarios with 15 assertions, and authenticated desktop/
   mobile sheet QA passed. Tickets 04 and 04A now have source-complete Customer
   Channels and generic private-media foundations on the verified development
-  Neon database. Ticket 05 remains the active dependency frontier. Its strict
-  shared envelope, Tenant/Store/attendant dispatcher, channel-locked API,
+  Neon database. Ticket 05 is complete. Its strict shared envelope,
+  Tenant/Store/attendant dispatcher, channel-locked API,
   `/request/[token]` Product Inquiry page and explicit product-selected generic
   WhatsApp image/document worker are source-complete. A run-owned verified-Neon
-  test passes web Inquiry replay, staff Generic Service, generic WhatsApp
-  Inquiry and exact-Product recovery with 5 assertions. The complete Pharmacy/
-  media/cross-scope matrix and authenticated browser acceptance remain open.
+  test passes all three origins for Commerce Inquiry and Generic Service plus
+  replay and exact-Product recovery with 8 assertions. Dedicated source suites
+  complete the progressive-Catalog, image/PDF, Pharmacy, cross-scope,
+  revocation and central-branch matrix. Desktop/mobile Portless browser QA
+  passed the public entry and Product Inquiry submission/success flow with no
+  console errors against a temporary run-owned Neon fixture; cleanup was
+  verified. Ticket 06 is now the active source frontier.
   Live Meta/storage/scanner release gates remain open. The focused
   Customer Channels/media matrix passes 71 tests and 177 assertions; the
   run-owned `.env.local` Neon bag-media seam passes 7 assertions. The full test gate has

@@ -8,11 +8,11 @@ Connection And Location Binding; 04A - Establish Generic Customer Request
 Media And Verified Observations; 11 - Enforce Vertical And Jurisdiction
 Eligibility.
 
-**Status:** in progress; blockers complete. The shared envelope, protected
-dispatcher, public web Product-inquiry page, staff procedure and explicit
-product-selected generic WhatsApp/image-document adapter are source-complete.
-The complete origin/source/media isolation matrix and authenticated browser
-acceptance remain open.
+**Status:** complete. The shared envelope, protected dispatcher, public web
+Product-inquiry page, staff procedure and explicit product-selected generic
+WhatsApp image/document adapter are source-complete. Focused, verified-Neon and
+desktop/mobile browser acceptance cover the combined origin/source/media and
+isolation matrix.
 
 **Approval:** Original and revised Progressive Catalog intake scope
 owner-approved on 2026-08-09; use of the Ticket 04 stable entry point and the
@@ -31,7 +31,7 @@ generic attachment scope approved on 2026-08-10.
   resolved page may begin only a currently permitted web/WhatsApp request and
   must re-resolve Store/channel/policy state before customer content is
   accepted; this ticket does not recreate link/QR configuration.
-- [ ] Test all three origins for exact Product demand, `commerce_inquiry`,
+- [x] Test all three origins for exact Product demand, `commerce_inquiry`,
   progressive draft resolution, Generic Service and the compatible Pharmacy
   path, including image/document attachments, cross-Tenant routing and inactive
   Store rejection. Include entry-token replay/revocation and central branch
@@ -40,3 +40,23 @@ generic attachment scope approved on 2026-08-10.
   safety, retry and verified observations. Source/vertical interpretation,
   command eligibility and retention extensions stay source-owned; Pharmacy
   OCR and clinical review remain Pharmacy-specific.
+
+## Evidence
+
+- `channel-neutral-intake.integration.test.ts` passes on the verified
+  `.env.local` Neon development database with all three origins for Commerce
+  Inquiry and Generic Service, replay and exact-Product recovery (8 assertions,
+  atomic run-owned cleanup). Focused intake tests add web/WhatsApp exact-Product
+  contexts, concurrent Service/Prescription first-create recovery and stale
+  entry/provider context rejection.
+- `catalog-adoption.integration.test.ts`, `media.integration.test.ts`, the
+  generic WhatsApp worker suite and Prescription pickup acceptance supply the
+  progressive-draft, image/PDF, cross-scope and compatible Pharmacy rows
+  without duplicating their source-owned lifecycles. Customer Channels and
+  WhatsApp resolver suites cover revocation, central branch selection,
+  ambiguity and same-customer Store isolation.
+- On 2026-08-10 the public `/r/[token]` entry and `/request/[token]` Product
+  Inquiry flow passed desktop/mobile Portless browser QA against a temporary
+  verified-Neon fixture: separate Product/secure-Prescription choices, valid
+  submission and mobile success state, with no console errors. The exact QA
+  fixture was removed and a follow-up query verified zero entry rows.
