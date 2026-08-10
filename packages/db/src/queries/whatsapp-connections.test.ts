@@ -6,11 +6,13 @@ import {
   claimPrescriptionCommunicationIntent,
   claimWhatsAppInboundEvent,
   consumePrescriptionQuickAction,
+  getPendingWhatsAppEmbeddedSignupSession,
   getWhatsAppEmbeddedSignupSession,
   recordWhatsAppCommunicationStatus,
   recordWhatsAppConnectionTest,
   recordWhatsAppInboundEvent,
   resolveWhatsAppInboundConnection,
+  resolveWhatsAppInboundStore,
   resolveWhatsAppStatusConnection,
   setWhatsAppConnectionLifecycle,
 } from "./whatsapp-connections"
@@ -87,9 +89,154 @@ describe("WhatsApp Embedded Signup session", () => {
     })
     expect(JSON.stringify(queries[0])).not.toContain("signup-token")
   })
+
+  test("resolves the latest authenticated pending session without a URL bearer token", async () => {
+    const queries: unknown[] = []
+    const db = {
+      whatsAppEmbeddedSignupSession: {
+        findFirst: async (query: unknown) => {
+          queries.push(query)
+          return {
+            discoveredNumbers: [
+              {
+                displayNumber: "+2348000000000",
+                phoneNumberId: "phone-1",
+                wabaId: "waba-1",
+              },
+            ],
+            expiresAt: new Date("2026-08-09T12:00:00.000Z"),
+          }
+        },
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      getPendingWhatsAppEmbeddedSignupSession(db, {
+        storeId: "store-1",
+        tenantId: "tenant-1",
+        userId: "owner-1",
+      }),
+    ).resolves.toMatchObject({ numbers: [{ phoneNumberId: "phone-1" }] })
+    expect(queries[0]).toMatchObject({
+      orderBy: { createdAt: "desc" },
+      where: {
+        consumedAt: null,
+        expiresAt: { gt: expect.any(Date) },
+        storeId: "store-1",
+        tenantId: "tenant-1",
+        userId: "owner-1",
+      },
+    })
+    expect(JSON.stringify(queries[0])).not.toContain("publicToken")
+  })
 })
 
 describe("WhatsApp inbound connection routing", () => {
+  test("resolves a generic Store entry token with Service policy", async () => {
+    const queries: unknown[] = []
+    const transaction = {
+      serviceCommercePolicyAuditEvent: {
+        createMany: async () => ({ count: 2 }),
+      },
+      serviceCommercePolicyDecision: {
+        findMany: async () =>
+          allowedServiceCommercePolicyDecisionRows().filter(
+            (decision) =>
+              decision.channel === "WHATSAPP" &&
+              (decision.subject === "WHATSAPP" ||
+                decision.subject === "INTAKE") &&
+              decision.vertical === "SERVICE",
+          ),
+      },
+      store: { findFirst: async () => ({ countryCode: "NG" }) },
+      whatsAppStoreBinding: {
+        findFirst: async (query: unknown) => {
+          queries.push(query)
+          return {
+            store: {
+              customerEntryPoint: {
+                publicToken: "opaque-entry-token-123456789",
+                status: "PUBLISHED",
+              },
+              prescriptionSettings: null,
+              serviceCommerceProfile: {
+                intakeEnabled: true,
+                status: "ACTIVE",
+                whatsappEnabled: true,
+              },
+            },
+            storeId: "store-1",
+            tenantId: "tenant-1",
+          }
+        },
+      },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+    } as unknown as PrismaClient
+
+    await expect(
+      resolveWhatsAppInboundStore(db, {
+        channelToken: "opaque-entry-token-123456789",
+        connectionId: "connection-1",
+        tenantId: "tenant-1",
+      }),
+    ).resolves.toMatchObject({ storeId: "store-1", tenantId: "tenant-1" })
+    expect(queries[0]).toMatchObject({
+      where: {
+        store: {
+          OR: expect.arrayContaining([
+            {
+              customerEntryPoint: {
+                is: {
+                  publicToken: "opaque-entry-token-123456789",
+                  status: "PUBLISHED",
+                },
+              },
+            },
+          ]),
+        },
+      },
+    })
+  })
+
+  test("returns an active generic Service Commerce Store without Pharmacy setup", async () => {
+    const db = {
+      whatsAppConnection: {
+        findFirst: async () => ({
+          bindings: [
+            {
+              store: {
+                name: "Bag Store",
+                prescriptionSettings: null,
+                serviceCommerceProfile: {
+                  intakeEnabled: true,
+                  status: "ACTIVE",
+                  whatsappEnabled: true,
+                },
+                tenantId: "tenant-1",
+              },
+              storeId: "store-1",
+              tenantId: "tenant-1",
+            },
+          ],
+          credentialReference: "credential-1",
+          id: "connection-1",
+          phoneNumberId: "phone-1",
+          tenantId: "tenant-1",
+        }),
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      resolveWhatsAppInboundConnection(db, { phoneNumberId: "phone-1" }),
+    ).resolves.toMatchObject({
+      bindings: [{ storeId: "store-1", storeName: "Bag Store" }],
+      requiresStoreSelection: false,
+    })
+  })
+
   test("returns every active same-Tenant branch and requires explicit Store selection", async () => {
     const db = {
       whatsAppConnection: {
@@ -291,6 +438,85 @@ describe("WhatsApp communication receipts", () => {
 })
 
 describe("WhatsApp failure controls", () => {
+  test("activates a technically ready generic Service binding without Pharmacy templates or settings", async () => {
+    let bindingActivations = 0
+    let pharmacyChannelWrites = 0
+    const transaction = {
+      prescriptionChannel: {
+        updateMany: async () => {
+          pharmacyChannelWrites += 1
+          return { count: 0 }
+        },
+      },
+      serviceCommercePolicyAuditEvent: {
+        createMany: async () => ({ count: 2 }),
+      },
+      serviceCommercePolicyDecision: {
+        findMany: async () =>
+          allowedServiceCommercePolicyDecisionRows().filter(
+            (decision) =>
+              decision.channel === "WHATSAPP" &&
+              (decision.subject === "WHATSAPP" ||
+                decision.subject === "INTAKE") &&
+              decision.vertical === "SERVICE",
+          ),
+      },
+      store: {
+        findFirst: async () => ({
+          countryCode: "NG",
+          prescriptionSettings: null,
+          serviceCommerceProfile: {
+            intakeEnabled: true,
+            status: "ACTIVE",
+            whatsappEnabled: true,
+          },
+        }),
+      },
+      whatsAppConnection: {
+        findFirstOrThrow: async () => ({
+          id: "connection-1",
+          pendingCredentialReference: null,
+          status: "DRAFT",
+        }),
+        update: async () => ({ id: "connection-1", status: "ACTIVE" }),
+      },
+      whatsAppConnectionAuditEvent: { create: async () => ({ id: "audit-1" }) },
+      whatsAppStoreBinding: {
+        findMany: async (input: {
+          where: { status: "ACTIVE" | "PENDING" }
+        }) =>
+          input.where.status === "PENDING"
+            ? [{ id: "binding-1", storeId: "store-1" }]
+            : [{ storeId: "store-1" }],
+        updateMany: async (input: {
+          where: { id?: string | { not: string } }
+        }) => {
+          if (input.where.id === "binding-1") bindingActivations += 1
+          return { count: input.where.id === "binding-1" ? 1 : 0 }
+        },
+      },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+    } as unknown as PrismaClient
+
+    await recordWhatsAppConnectionTest(db, {
+      businessVerified: true,
+      connectionId: "connection-1",
+      displayNumber: "+2348000000000",
+      numberVerified: true,
+      outboundVerified: true,
+      templatesReady: false,
+      templateConfiguration: {},
+      tenantId: "tenant-1",
+      webhookSubscribed: true,
+    })
+
+    expect(bindingActivations).toBe(1)
+    expect(pharmacyChannelWrites).toBe(0)
+  })
+
   test("does not activate a technically ready Pharmacy binding without intake policy", async () => {
     let bindingActivations = 0
     let channelStoreIds: string[] = []
@@ -320,11 +546,12 @@ describe("WhatsApp failure controls", () => {
           input.where.status === "PENDING"
             ? [{ id: "binding-1", storeId: "store-1" }]
             : [],
-        update: async () => {
-          bindingActivations += 1
-          return { id: "binding-1" }
+        updateMany: async (input: {
+          where: { id?: string | { not: string } }
+        }) => {
+          if (input.where.id === "binding-1") bindingActivations += 1
+          return { count: input.where.id === "binding-1" ? 1 : 0 }
         },
-        updateMany: async () => ({ count: 0 }),
       },
     }
     const db = {
@@ -376,6 +603,48 @@ describe("WhatsApp failure controls", () => {
       }),
     ).rejects.toMatchObject({ code: "POLICY_BLOCKED" })
     expect(inboundWrites).toBe(0)
+  })
+
+  test("persists a generic inbound event with its Service route instead of Pharmacy", async () => {
+    let create: Record<string, unknown> | undefined
+    const transaction = {
+      serviceCommercePolicyAuditEvent: {
+        createMany: async () => ({ count: 1 }),
+      },
+      serviceCommercePolicyDecision: {
+        findMany: async () =>
+          allowedServiceCommercePolicyDecisionRows().filter(
+            (decision) =>
+              decision.channel === "WHATSAPP" &&
+              decision.subject === "INTAKE" &&
+              decision.vertical === "SERVICE",
+          ),
+      },
+      store: { findFirst: async () => ({ countryCode: "NG" }) },
+      whatsAppInboundEvent: {
+        upsert: async (input: { create: Record<string, unknown> }) => {
+          create = input.create
+          return { id: "inbound-service-1" }
+        },
+      },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+    } as unknown as PrismaClient
+
+    await recordWhatsAppInboundEvent(db, {
+      connectionId: "connection-1",
+      externalCustomerId: "customer-1",
+      messageType: "media",
+      normalizedPayload: { mediaId: "provider-media-1" },
+      providerEventId: "provider-event-service-1",
+      routeVertical: "service",
+      storeId: "store-1",
+      tenantId: "tenant-1",
+    })
+
+    expect(create).toMatchObject({ routeVertical: "SERVICE" })
   })
 
   test("rechecks policy at inbound job claim and fails before processing", async () => {

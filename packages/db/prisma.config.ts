@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url"
 import { defineConfig, env } from "prisma/config"
 import {
   applyDatabaseProfile,
+  directDatabaseUrlForPrismaCli,
   loadProductionDatabaseUrl,
 } from "../../scripts/database-profile.mjs"
 import { loadRootEnvironment } from "../../scripts/environment-profile.mjs"
@@ -26,7 +27,7 @@ loadEnv()
 
 export default defineConfig({
   datasource: {
-    url: env("DATABASE_URL"),
+    url: directDatabaseUrlForPrismaCli(env("DATABASE_URL")),
   },
   migrations: {
     path: "prisma/migrations",

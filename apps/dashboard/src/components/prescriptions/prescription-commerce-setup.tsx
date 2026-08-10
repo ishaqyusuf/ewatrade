@@ -12,11 +12,10 @@ import {
 } from "@ewatrade/prescriptions/schemas"
 import { Button } from "@ewatrade/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import Link from "next/link"
 import { useEffect, useState } from "react"
 import { z } from "zod"
 import { PrescriptionOperationsSetup } from "./prescription-operations-setup"
-import { PrescriptionPublicChannel } from "./prescription-public-channel"
-import { WhatsAppConnectionSetup } from "./whatsapp-connection-setup"
 
 const DAYS = PRESCRIPTION_OPERATING_DAYS
 type SettingsFormValues = PrescriptionStoreSettingsFormValues
@@ -471,8 +470,22 @@ export function PrescriptionCommerceSetup({
           </section>
         </div>
       </div>
-      <PrescriptionPublicChannel storeId={storeId} />
-      <WhatsAppConnectionSetup storeId={storeId} />
+      <section className="grid gap-3 rounded-xl border border-border bg-card p-5">
+        <div>
+          <h2 className="font-semibold">Customer channels</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            WhatsApp connections, Store routing and shareable customer links are
+            configured once for the whole business. Pharmacy setup here remains
+            responsible for professional roles and regulated controls.
+          </p>
+        </div>
+        <Link
+          className="inline-flex h-10 w-fit items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium hover:bg-muted"
+          href={`/settings/channels?storeId=${encodeURIComponent(storeId)}`}
+        >
+          Open Customer channels
+        </Link>
+      </section>
       <PrescriptionOperationsSetup storeId={storeId} />
     </div>
   )

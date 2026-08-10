@@ -340,6 +340,7 @@
         "@ewatrade/email": "workspace:*",
         "@ewatrade/notifications": "workspace:*",
         "@ewatrade/prescriptions": "workspace:*",
+        "@ewatrade/service-commerce": "workspace:*",
         "@trigger.dev/build": "4.0.1",
         "@trigger.dev/sdk": "4.0.1",
       },

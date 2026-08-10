@@ -4,8 +4,10 @@ import { useZodForm } from "@/hooks/use-zod-form"
 import {
   type ServiceCommerceCatalogDraftFormValues,
   type ServiceCommerceCatalogPricePromotionFormValues,
+  type ServiceCommerceHumanVerifiedObservationDraft,
   serviceCommerceCatalogDraftFormSchema,
   serviceCommerceCatalogPricePromotionFormSchema,
+  serviceCommerceHumanVerifiedObservationDraftSchema,
 } from "@ewatrade/service-commerce"
 import { useEffect } from "react"
 import { FormProvider } from "react-hook-form"
@@ -23,6 +25,24 @@ function useRegisteredFormReset(
       reset()
     }
   }, [registerReset, reset])
+}
+
+export function ServiceCommerceObservationFormProvider({
+  children,
+  registerReset,
+}: {
+  children: React.ReactNode
+  registerReset: RegisterServiceCommerceFormReset
+}) {
+  const form = useZodForm<ServiceCommerceHumanVerifiedObservationDraft>(
+    serviceCommerceHumanVerifiedObservationDraftSchema,
+    {
+      defaultValues: { attributes: [], displayLabel: "" },
+      mode: "onChange",
+    },
+  )
+  useRegisteredFormReset(form.reset, registerReset)
+  return <FormProvider {...form}>{children}</FormProvider>
 }
 
 export function ServiceCommerceCatalogFormProvider({

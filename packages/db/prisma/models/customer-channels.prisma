@@ -1,0 +1,121 @@
+enum ServiceCommerceStoreTeamCapability {
+  ATTENDANT
+  QUOTE_APPROVER
+}
+
+enum ServiceCommerceStoreTeamAssignmentStatus {
+  ACTIVE
+  SUSPENDED
+  REVOKED
+}
+
+enum ServiceCommerceStoreTeamAuditEventType {
+  ASSIGNED
+  SUSPENDED
+  REVOKED
+}
+
+enum CustomerEntryPointStatus {
+  DRAFT
+  PUBLISHED
+  REVOKED
+}
+
+enum CustomerEntryPointAuditEventType {
+  PUBLISHED
+  REPUBLISHED
+  REVOKED
+}
+
+/// Store-scoped operational capability over an existing Tenant Membership.
+/// It does not grant a Tenant role or any vertical/professional credential.
+model ServiceCommerceStoreTeamAssignment {
+  id                String                                   @id @default(cuid())
+  tenantId          String
+  storeId           String
+  membershipId      String
+  capability        ServiceCommerceStoreTeamCapability
+  status            ServiceCommerceStoreTeamAssignmentStatus @default(ACTIVE)
+  revision          Int                                      @default(1)
+  assignedByUserId  String
+  suspendedAt       DateTime?
+  suspendedByUserId String?
+  revokedAt         DateTime?
+  revokedByUserId   String?
+  createdAt         DateTime                                 @default(now())
+  updatedAt         DateTime                                 @updatedAt
+  tenant            Tenant                                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                                    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  membership        Membership                               @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  auditEvents       ServiceCommerceStoreTeamAuditEvent[]
+
+  @@unique([storeId, membershipId, capability])
+  @@index([tenantId, storeId, capability, status])
+  @@index([membershipId, status])
+}
+
+/// Append-only operational assignment audit. The subject is a Membership id,
+/// never an email address or phone number.
+model ServiceCommerceStoreTeamAuditEvent {
+  id                  String                                 @id @default(cuid())
+  tenantId            String
+  storeId             String
+  assignmentId        String
+  actorUserId         String
+  subjectMembershipId String
+  type                ServiceCommerceStoreTeamAuditEventType
+  reason              String
+  assignmentRevision  Int
+  createdAt           DateTime                               @default(now())
+  tenant              Tenant                                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store               Store                                  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  assignment          ServiceCommerceStoreTeamAssignment     @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, storeId, createdAt])
+  @@index([assignmentId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
+/// Stable Store-scoped public capability. The public token resolves current
+/// channel and policy facts at visit time, so number/provider rotation does not
+/// invalidate printed links or QR codes.
+model CustomerEntryPoint {
+  id                String                         @id @default(cuid())
+  tenantId          String
+  storeId           String                         @unique
+  publicToken       String                         @unique
+  publicTokenDigest String                         @unique
+  status            CustomerEntryPointStatus       @default(DRAFT)
+  revision          Int                            @default(1)
+  createdByUserId   String
+  publishedAt       DateTime?
+  publishedByUserId String?
+  revokedAt         DateTime?
+  revokedByUserId   String?
+  createdAt         DateTime                       @default(now())
+  updatedAt         DateTime                       @updatedAt
+  tenant            Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  auditEvents       CustomerEntryPointAuditEvent[]
+
+  @@index([tenantId, status, updatedAt])
+}
+
+model CustomerEntryPointAuditEvent {
+  id                 String                           @id @default(cuid())
+  tenantId           String
+  storeId            String
+  entryPointId       String
+  actorUserId        String
+  type               CustomerEntryPointAuditEventType
+  entryPointRevision Int
+  reason             String
+  createdAt          DateTime                         @default(now())
+  tenant             Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store              Store                            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  entryPoint         CustomerEntryPoint               @relation(fields: [entryPointId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, storeId, createdAt])
+  @@index([entryPointId, createdAt])
+  @@index([actorUserId, createdAt])
+}

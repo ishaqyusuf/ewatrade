@@ -22,18 +22,36 @@ export const serviceCommerceCatalogCreateDraftSchema = sourceLineSchema
     draftKind: z.enum(["product", "service"]),
     expectedSourceFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
     name: z.string().trim().min(1).max(191),
-    verifiedAlias: z.string().trim().min(1).max(500),
+    verifiedAlias: z.string().trim().min(1).max(500).optional(),
+    verifiedObservationId: idSchema.optional(),
   })
   .strict()
+  .superRefine((input, context) => {
+    if (!input.verifiedAlias && !input.verifiedObservationId) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "A verified alias or human observation is required.",
+      })
+    }
+  })
 
 export const serviceCommerceCatalogLinkOfferingSchema = sourceLineSchema
   .extend({
     clientOperationId: idSchema,
     expectedSourceFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
     offeringId: idSchema,
-    verifiedAlias: z.string().trim().min(1).max(500),
+    verifiedAlias: z.string().trim().min(1).max(500).optional(),
+    verifiedObservationId: idSchema.optional(),
   })
   .strict()
+  .superRefine((input, context) => {
+    if (!input.verifiedAlias && !input.verifiedObservationId) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "A verified alias or human observation is required.",
+      })
+    }
+  })
 
 export const serviceCommerceCatalogAttestAvailabilitySchema = sourceLineSchema
   .extend({

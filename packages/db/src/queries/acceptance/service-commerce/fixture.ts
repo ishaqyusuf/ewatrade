@@ -5,6 +5,7 @@ import { describe } from "bun:test"
 import type { PrismaClient } from "../../../../generated/prisma/client"
 import {
   MembershipRole,
+  MembershipStatus,
   QaDataClassification,
   ServiceCommercePolicyChannel,
   ServiceCommercePolicyOutcome,
@@ -15,6 +16,7 @@ import {
   TenantType,
 } from "../../../../generated/prisma/enums"
 import { createSimpleCatalogItem } from "../../catalog"
+import { assignCustomerChannelAttendant } from "../../customer-channels"
 import { upsertPrescriptionDeliveryZone } from "../../prescription-fulfillment"
 import { ensurePrescriptionChannel } from "../../prescription-requests"
 import {
@@ -80,6 +82,20 @@ async function deleteAcceptanceFixture(
     // foreign keys, so remove them before the decisions and tenant-owned Store.
     await tx.serviceCommercePolicyAuditEvent.deleteMany({ where: { tenantId } })
     await tx.serviceCommercePolicyDecision.deleteMany({ where: { tenantId } })
+    await tx.serviceCommerceMediaAuditEvent.deleteMany({ where: { tenantId } })
+    await tx.serviceCommerceVerifiedObservation.deleteMany({
+      where: { tenantId },
+    })
+    await tx.serviceCommerceSourceAttachment.deleteMany({ where: { tenantId } })
+    await tx.serviceCommerceMediaAsset.deleteMany({ where: { tenantId } })
+    await tx.customerEntryPointAuditEvent.deleteMany({ where: { tenantId } })
+    await tx.customerEntryPoint.deleteMany({ where: { tenantId } })
+    await tx.serviceCommerceStoreTeamAuditEvent.deleteMany({
+      where: { tenantId },
+    })
+    await tx.serviceCommerceStoreTeamAssignment.deleteMany({
+      where: { tenantId },
+    })
     await tx.serviceCommerceStoreAuditEvent.deleteMany({ where: { tenantId } })
     await tx.serviceCommerceStoreProfile.deleteMany({ where: { tenantId } })
     await tx.commerceInquiryAuditEvent.deleteMany({ where: { tenantId } })
@@ -142,11 +158,19 @@ export async function createServiceCommerceAcceptanceFixture(): Promise<ServiceC
         slug: `service-commerce-acceptance-${fixtureId}`,
         type: TenantType.MERCHANT,
         users: {
-          create: { role: MembershipRole.OWNER, userId: actor.id },
+          create: {
+            acceptedAt: fixtureStartedAt,
+            role: MembershipRole.OWNER,
+            status: MembershipStatus.ACTIVE,
+            userId: actor.id,
+          },
         },
       },
     })
     tenantId = tenant.id
+    const membership = await db.membership.findFirstOrThrow({
+      where: { tenantId: tenant.id, userId: actor.id },
+    })
     const store = await db.store.create({
       data: {
         countryCode: "NG",
@@ -157,6 +181,13 @@ export async function createServiceCommerceAcceptanceFixture(): Promise<ServiceC
         supportPhone: "+2348000000000",
         tenantId: tenant.id,
       },
+    })
+    await assignCustomerChannelAttendant(db, {
+      actorUserId: actor.id,
+      membershipId: membership.id,
+      reason: "Acceptance fixture Store attendant",
+      storeId: store.id,
+      tenantId: tenant.id,
     })
 
     // Neon acceptance runs must state policy facts explicitly. These fixture-only

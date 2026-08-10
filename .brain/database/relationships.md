@@ -191,6 +191,32 @@ same evidence variant for generic observations. Availability evidence is
 quantity-bounded and separate from stock authority, and reusable price
 promotion never rewrites the Quote Version or Commercial Order snapshot.
 
+## Customer Channels And Generic Media
+
+`Tenant -> WhatsAppConnection -> WhatsAppStoreBinding -> Store`
+
+`Membership -> ServiceCommerceStoreTeamAssignment -> Store`
+
+`Store -> CustomerEntryPoint -> CustomerEntryPointAuditEvent`
+
+The business-neutral Customer Channels boundary delegates to existing
+connection/binding persistence during expand-contract. A stable entry token
+resolves current Store, policy, attendant and unambiguous sender facts at read
+time; it contains no Tenant, Store or provider identifier.
+
+`ServiceRequestLine | PrescriptionTranscriptionLine | CommerceInquiryLine -> ServiceCommerceSourceAttachment -> ServiceCommerceMediaAsset`
+
+`ServiceCommerceSourceAttachment -> ServiceCommerceVerifiedObservation -> CatalogSourceLineLink`
+
+`ServiceCommerceMediaAsset -> ServiceCommerceMediaAuditEvent`
+
+Media Assets own private transport/storage/safety/retention. Attachments own the
+typed source/version relationship. Observations own human-attributed meaning.
+Only an observation may feed Catalog provenance; raw media, provider payloads
+and automated safety output never become Catalog, price, stock or Order truth.
+`PrescriptionMedia` may reference a generic asset while remaining the
+authoritative clinical review and retention extension.
+
 ## Managed Domains
 
 `Tenant -> DomainRegistrantProfile`

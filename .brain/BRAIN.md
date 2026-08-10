@@ -38,7 +38,8 @@ Central index for ewatrade product, architecture, engineering, database, API, de
   source/compatibility boundary, Ticket 02's Store capability/readiness
   profile, and Ticket 03's three-source customer-safe interoperability plus
   narrow Commerce Inquiry lifecycle and Ticket 11's policy boundary are
-  complete. Ticket 03A is in progress and Ticket 04 is the parallel frontier.
+  complete. Ticket 03A is complete; Tickets 04 and 04A have source-complete
+  foundations, and Ticket 05 is the active dependency frontier.
 - Mobile includes a tenant-wide global search across Orders, Customers,
   Catalog, Service Jobs, and permitted Staff, plus contextual order creation
   and auditable order/payment actor attribution.

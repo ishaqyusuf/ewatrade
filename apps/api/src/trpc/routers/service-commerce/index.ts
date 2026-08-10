@@ -1,12 +1,16 @@
 import { mergeRouters } from "../../init"
 import { serviceCommerceAccessRouter } from "./access"
 import { serviceCommerceCatalogRouter } from "./catalog"
+import { serviceCommerceChannelsRouter } from "./channels"
 import { serviceCommerceInquiryRouter } from "./inquiries"
+import { serviceCommerceMediaRouter } from "./media"
 import { serviceCommercePolicyRouter } from "./policy"
 
 export const serviceCommerceRouter = mergeRouters(
   serviceCommerceAccessRouter,
   serviceCommerceCatalogRouter,
+  serviceCommerceChannelsRouter,
   serviceCommerceInquiryRouter,
+  serviceCommerceMediaRouter,
   serviceCommercePolicyRouter,
 )

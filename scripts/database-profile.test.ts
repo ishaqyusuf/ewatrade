@@ -4,10 +4,26 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import {
   applyDatabaseProfile,
+  directDatabaseUrlForPrismaCli,
   loadProductionDatabaseUrl,
 } from "./database-profile.mjs"
 
 describe("database profile", () => {
+  test("uses Neon's direct endpoint for Prisma CLI migration operations", () => {
+    expect(
+      directDatabaseUrlForPrismaCli(
+        "postgresql://owner:secret@ep-development-pooler.eu-west-2.aws.neon.tech/ewatrade?sslmode=require",
+      ),
+    ).toBe(
+      "postgresql://owner:secret@ep-development.eu-west-2.aws.neon.tech/ewatrade?sslmode=require",
+    )
+    expect(
+      directDatabaseUrlForPrismaCli(
+        "postgresql://owner:secret@development.example.com/ewatrade",
+      ),
+    ).toBe("postgresql://owner:secret@development.example.com/ewatrade")
+  })
+
   test("uses the Neon development DATABASE_URL without generating aliases", () => {
     const env = applyDatabaseProfile(
       {

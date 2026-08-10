@@ -13,6 +13,8 @@ import type { DbClient } from "./types"
 type Call = { args: Record<string, unknown>; name: string }
 
 const profile = {
+  attachmentsEnabled: false,
+  attachmentsProviderReady: false,
   bookingEnabled: false,
   catalogAdoptionMode: "PROGRESSIVE",
   deliveryEnabled: false,
@@ -34,6 +36,7 @@ const profile = {
 
 const settings = {
   capabilities: {
+    attachments: false,
     booking: false,
     delivery: false,
     intake: true,

@@ -2,13 +2,17 @@
 
 import { useServiceCommerceParams } from "@/hooks/use-service-commerce-params"
 
+import { CustomerChannelSheetContent } from "@/components/customer-channels/customer-channel-sheet-content"
 import { CatalogDraftForm } from "./catalog-adoption/catalog-draft-form"
 import { CatalogPricePromotionForm } from "./catalog-adoption/catalog-price-promotion-form"
 import {
   type RegisterServiceCommerceFormReset,
   ServiceCommerceCatalogFormProvider,
   ServiceCommerceCatalogPriceFormProvider,
+  ServiceCommerceObservationFormProvider,
 } from "./form-context"
+import { MediaViewer } from "./media/media-viewer"
+import { ObservationForm } from "./media/observation-form"
 import { SERVICE_COMMERCE_CONTROLLERS } from "./service-commerce-controllers"
 
 export function ServiceCommerceSheetContent({
@@ -26,7 +30,36 @@ export function ServiceCommerceSheetContent({
     return <Unavailable message={controller.description} />
   }
   const missing = controller.requiredIds.some((id) => !params[id])
-  if (missing || mode !== "catalog_draft") {
+  if (missing) {
+    return (
+      <Unavailable message="This link is incomplete, stale, or no longer authorized." />
+    )
+  }
+  if (mode === "connection" || mode === "team" || mode === "entry_point") {
+    return (
+      <CustomerChannelSheetContent
+        mode={mode}
+        registerFormReset={registerFormReset}
+        storeId={storeId}
+      />
+    )
+  }
+  if (mode === "media") {
+    return <MediaViewer storeId={storeId} />
+  }
+  if (mode === "attachment_review") {
+    return (
+      <div className="grid gap-6 lg:grid-cols-2">
+        <MediaViewer storeId={storeId} />
+        <ServiceCommerceObservationFormProvider
+          registerReset={registerFormReset}
+        >
+          <ObservationForm storeId={storeId} />
+        </ServiceCommerceObservationFormProvider>
+      </div>
+    )
+  }
+  if (mode !== "catalog_draft") {
     return (
       <Unavailable message="This link is incomplete, stale, or no longer authorized." />
     )

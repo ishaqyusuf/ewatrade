@@ -159,6 +159,34 @@ persistence boundary. Clients never access the database directly.
   its source projection, Quote command and public acceptance. It does not merge
   Service and Pharmacy aggregate lifecycles.
 
+## Customer Channels And Generic Request Media
+
+- `ServiceCommerceStoreTeamAssignment` grants a Store-scoped `ATTENDANT` or
+  future `QUOTE_APPROVER` capability only to an accepted active Tenant
+  Membership. Suspension/revocation and append-only audit never grant a Tenant
+  role or Pharmacy credential.
+- `CustomerEntryPoint` owns one stable opaque public capability per Store.
+  Publish/revoke uses optimistic revisions and append-only audit; current
+  channel and policy choices resolve at visit time, so sender rotation does not
+  change the public URL or QR code.
+- Existing `WhatsAppConnection` and `WhatsAppStoreBinding` tables remain the
+  physical compatibility models during expand-contract. Business-neutral
+  Customer Channels exports own new callers without a risky table rename.
+- `ServiceCommerceMediaAsset` owns private object, provider retrieval,
+  signature/type/size, safety, retry and retention facts. Provider connection,
+  provider media and object references remain server-private.
+- `ServiceCommerceSourceAttachment` binds an asset to a typed current Service,
+  Prescription or Commerce Inquiry source/version. Revisioned
+  `ServiceCommerceVerifiedObservation` records attributable human meaning;
+  `CatalogSourceLineLink.verifiedObservationId` preserves that provenance.
+- `ServiceCommerceMediaAuditEvent` is append-only for reference, storage,
+  retrieval, safety, viewing, observation, retention and deletion decisions.
+  Pharmacy may link the generic asset from `PrescriptionMedia` while retaining
+  stricter clinical controls.
+- Store profiles add disabled-by-default `attachmentsEnabled` and server-owned
+  `attachmentsProviderReady`. `WhatsAppInboundEvent.routeVertical` records the
+  resolved vertical without making Communications own domain routing.
+
 ## Offline
 
 - `Tenant.metadata.offlineOperationsEnabled` controls offline access and

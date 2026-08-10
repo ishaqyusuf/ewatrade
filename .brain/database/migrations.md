@@ -325,6 +325,29 @@ availability snapshots without creating a balance. All four scenarios passed
 together with 15 assertions. Production rollout remains a separately
 authorized release action.
 
+## Customer Channels And Generic Media Migration State
+
+On 2026-08-10 the canonical verified `.env.local` Neon development workflow
+generated and applied two additive Prisma migrations:
+
+- `20260810165318_customer_channels_and_store_team` adds Store team assignments,
+  assignment audit, stable Customer entry points and entry-point audit.
+- `20260810180355_generic_customer_request_media` adds private Media Assets,
+  typed Source Attachments, revisioned Verified Observations, media audit,
+  disabled-by-default attachment readiness, optional Prescription/Catalog
+  provenance links and resolved inbound vertical attribution.
+
+`bun db:migrate` generated both artifacts through Prisma; no migration SQL was
+hand-authored. `bun db:push` reported the verified development database in sync.
+Neither operation used Docker/local PostgreSQL, a reset, a data-loss flag or a
+production database.
+
+The run-owned generic-media Neon acceptance passed the non-Pharmacy bag-image
+repository seam through safe private media, replay, cross-scope rejection,
+human observation and private Catalog draft provenance with 7 assertions.
+Public-web/generic-WhatsApp adapters, authenticated browser QA, live
+Meta/storage/scanner canaries and production rollout remain open gates.
+
 # Hybrid QA cleanup
 
 - Adds tenant QA lifecycle fields and global purge-run receipts. Apply the

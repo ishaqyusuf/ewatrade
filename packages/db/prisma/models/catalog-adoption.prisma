@@ -18,7 +18,7 @@ enum CatalogReusablePriceScope {
 /// Catalog graph. Generic source wording remains an unverified snapshot; the
 /// source aggregate is reloaded before this link is used.
 model CatalogSourceLineLink {
-  id                       String                           @id @default(cuid())
+  id                       String                              @id @default(cuid())
   tenantId                 String
   storeId                  String
   sourceType               CatalogSourceLineType
@@ -26,15 +26,17 @@ model CatalogSourceLineLink {
   sourceLineId             String
   sourceVersionFingerprint String
   offeringId               String
+  verifiedObservationId    String?                             @unique
   verifiedLabel            String
   clientOperationId        String
   payloadHash              String
   linkedByUserId           String
-  createdAt                DateTime                         @default(now())
-  updatedAt                DateTime                         @updatedAt
-  tenant                   Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store                    Store                            @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  offering                 SellableOffering                 @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  createdAt                DateTime                            @default(now())
+  updatedAt                DateTime                            @updatedAt
+  tenant                   Tenant                              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                    Store                               @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  offering                 SellableOffering                    @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  verifiedObservation      ServiceCommerceVerifiedObservation? @relation(fields: [verifiedObservationId], references: [id], onDelete: SetNull)
   aliases                  CatalogVerifiedAlias[]
   availabilityAttestations CatalogAvailabilityAttestation[]
   pricePromotions          CatalogPricePromotion[]

@@ -1,0 +1,196 @@
+enum ServiceCommerceMediaKind {
+  IMAGE
+  DOCUMENT
+}
+
+enum ServiceCommerceMediaChannelOrigin {
+  WEB
+  STAFF
+  WHATSAPP
+}
+
+enum ServiceCommerceMediaLifecycle {
+  PENDING_UPLOAD
+  PENDING_RETRIEVAL
+  STORED
+  SAFETY_PENDING
+  SAFE
+  QUARANTINED
+  REJECTED
+  RETRYABLE
+  RETENTION_HOLD
+  DELETED
+}
+
+enum ServiceCommerceMediaRetentionClass {
+  ORDINARY_COMMERCE
+  CLINICAL_EXTENSION
+}
+
+enum ServiceCommerceSourceAttachmentLifecycle {
+  ACTIVE
+  REPLACED
+  REMOVED
+}
+
+enum ServiceCommerceVerifiedObservationLifecycle {
+  CURRENT
+  SUPERSEDED
+  WITHDRAWN
+}
+
+enum ServiceCommerceMediaAuditEventType {
+  REFERENCE_RECORDED
+  UPLOAD_STORED
+  RETRIEVAL_ATTEMPTED
+  RETRY_SCHEDULED
+  SAFETY_REQUESTED
+  SAFETY_RECORDED
+  VIEW_AUTHORIZED
+  ATTACHMENT_REPLACED
+  ATTACHMENT_REMOVED
+  OBSERVATION_VERIFIED
+  OBSERVATION_SUPERSEDED
+  OBSERVATION_WITHDRAWN
+  RETENTION_HELD
+  DELETED
+}
+
+/// Private binary-object lifecycle. Provider ids, object references and raw
+/// safety metadata never enter public projections or identifier-only jobs.
+model ServiceCommerceMediaAsset {
+  id                   String                             @id @default(cuid())
+  tenantId             String
+  storeId              String
+  kind                 ServiceCommerceMediaKind
+  channelOrigin        ServiceCommerceMediaChannelOrigin
+  clientMediaId        String
+  provider             String?
+  /// Private sender/connection lookup used only by identifier-only provider
+  /// retrieval jobs. Never expose this value in public or staff projections.
+  providerConnectionId String?
+  providerMediaId      String?
+  originalFileName     String
+  declaredMediaType    String
+  verifiedMediaType    String?
+  declaredSizeBytes    Int?
+  verifiedSizeBytes    Int?
+  contentDigest        String?
+  objectKey            String?
+  lifecycle            ServiceCommerceMediaLifecycle      @default(PENDING_UPLOAD)
+  retentionClass       ServiceCommerceMediaRetentionClass @default(ORDINARY_COMMERCE)
+  safetyProvider       String?
+  safetyMetadata       Json?
+  retrievalAttempts    Int                                @default(0)
+  safetyAttempts       Int                                @default(0)
+  lastFailureCode      String?
+  nextRetryAt          DateTime?
+  storedAt             DateTime?
+  safetyResolvedAt     DateTime?
+  retentionUntil       DateTime
+  retentionHoldAt      DateTime?
+  deletedAt            DateTime?
+  createdByUserId      String?
+  createdAt            DateTime                           @default(now())
+  updatedAt            DateTime                           @updatedAt
+  tenant               Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                Store                              @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  attachments          ServiceCommerceSourceAttachment[]
+  auditEvents          ServiceCommerceMediaAuditEvent[]
+  prescriptionMedia    PrescriptionMedia?
+
+  @@unique([tenantId, channelOrigin, clientMediaId])
+  @@unique([tenantId, provider, providerMediaId])
+  @@index([tenantId, storeId, lifecycle, createdAt])
+  @@index([tenantId, storeId, providerConnectionId])
+  @@index([lifecycle, nextRetryAt])
+  @@index([retentionClass, retentionUntil, lifecycle])
+}
+
+/// Typed polymorphic link to an existing authoritative source aggregate.
+/// Source ids remain private; adapters validate the matching source/version.
+model ServiceCommerceSourceAttachment {
+  id                     String                                   @id @default(cuid())
+  tenantId               String
+  storeId                String
+  mediaAssetId           String
+  sourceKind             CommerceQuoteSourceType
+  sourceId               String
+  sourceVersion          String
+  sourceLineId           String?
+  lifecycle              ServiceCommerceSourceAttachmentLifecycle @default(ACTIVE)
+  revision               Int                                      @default(1)
+  attachedByUserId       String?
+  replacedAt             DateTime?
+  replacedByMediaAssetId String?
+  removedAt              DateTime?
+  removedByUserId        String?
+  createdAt              DateTime                                 @default(now())
+  updatedAt              DateTime                                 @updatedAt
+  tenant                 Tenant                                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                  Store                                    @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  mediaAsset             ServiceCommerceMediaAsset                @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
+  observations           ServiceCommerceVerifiedObservation[]
+  auditEvents            ServiceCommerceMediaAuditEvent[]
+
+  @@unique([tenantId, sourceKind, sourceId, sourceVersion, mediaAssetId])
+  @@index([tenantId, storeId, sourceKind, sourceId, lifecycle])
+  @@index([mediaAssetId, lifecycle])
+}
+
+/// Human-attributed meaning for one safe attachment. It is evidence for
+/// matching only and is never Catalog, price, stock or Order truth by itself.
+model ServiceCommerceVerifiedObservation {
+  id                 String                                      @id @default(cuid())
+  tenantId           String
+  storeId            String
+  attachmentId       String
+  revision           Int
+  lifecycle          ServiceCommerceVerifiedObservationLifecycle @default(CURRENT)
+  currentKey         String?                                     @unique
+  displayLabel       String
+  attributes         Json
+  sourceVersion      String
+  sourceLineId       String?
+  verifiedByUserId   String
+  verifiedAt         DateTime                                    @default(now())
+  supersededAt       DateTime?
+  withdrawnAt        DateTime?
+  withdrawnByUserId  String?
+  createdAt          DateTime                                    @default(now())
+  tenant             Tenant                                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store              Store                                       @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  attachment         ServiceCommerceSourceAttachment             @relation(fields: [attachmentId], references: [id], onDelete: Restrict)
+  auditEvents        ServiceCommerceMediaAuditEvent[]
+  catalogSourceLinks CatalogSourceLineLink[]
+
+  @@unique([attachmentId, revision])
+  @@index([tenantId, storeId, lifecycle, verifiedAt])
+}
+
+model ServiceCommerceMediaAuditEvent {
+  id            String                              @id @default(cuid())
+  tenantId      String
+  storeId       String
+  mediaAssetId  String
+  attachmentId  String?
+  observationId String?
+  type          ServiceCommerceMediaAuditEventType
+  actorUserId   String?
+  reason        String
+  lifecycle     ServiceCommerceMediaLifecycle?
+  attempt       Int?
+  metadata      Json?
+  effectiveAt   DateTime                            @default(now())
+  createdAt     DateTime                            @default(now())
+  tenant        Tenant                              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store         Store                               @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  mediaAsset    ServiceCommerceMediaAsset           @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+  attachment    ServiceCommerceSourceAttachment?    @relation(fields: [attachmentId], references: [id], onDelete: SetNull)
+  observation   ServiceCommerceVerifiedObservation? @relation(fields: [observationId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, storeId, effectiveAt])
+  @@index([mediaAssetId, effectiveAt])
+  @@index([attachmentId, effectiveAt])
+  @@index([observationId, effectiveAt])
+}

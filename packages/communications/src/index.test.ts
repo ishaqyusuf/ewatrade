@@ -5,6 +5,7 @@ import {
   InMemoryConversationStateStore,
   conversationStateKey,
   createEmbeddedSignupState,
+  customerChannelConversationContextId,
   extractWhatsAppChannelContext,
   isWithinWhatsAppSessionWindow,
   parseMetaWhatsAppEvents,
@@ -147,9 +148,16 @@ describe("direct Meta WhatsApp contract", () => {
     })
   })
 
+  test("uses a business-neutral Store conversation context", () => {
+    expect(customerChannelConversationContextId("store-1")).toBe(
+      "customer-channel-store:store-1",
+    )
+  })
+
   test("extracts only an explicit opaque Store routing context", () => {
     const token = "branch_token_1234567890"
     expect(extractWhatsAppChannelContext(`Start rxstore:${token}`)).toBe(token)
+    expect(extractWhatsAppChannelContext(`Start ewastore:${token}`)).toBe(token)
     expect(
       extractWhatsAppChannelContext("Send my prescription here"),
     ).toBeNull()

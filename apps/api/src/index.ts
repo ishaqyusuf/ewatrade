@@ -12,6 +12,8 @@ import { registerDomainPaystackWebhook } from "./domains/paystack-webhook"
 import { registerPrescriptionMediaDeliveryRoutes } from "./prescriptions/media-delivery"
 import { registerPrescriptionPaystackWebhook } from "./prescriptions/paystack-webhook"
 import { registerSelfServiceStoreDetectionRoutes } from "./self-service/store-detection"
+import { registerServiceCommerceMediaDeliveryRoutes } from "./service-commerce/media-delivery"
+import { registerServiceCommerceMediaUploadRoutes } from "./service-commerce/media-upload"
 import { createTRPCContext } from "./trpc/init"
 import { appRouter } from "./trpc/routers/_app"
 import { getRequestTrace } from "./utils/request-trace"
@@ -113,6 +115,8 @@ registerBillingProviderEventRoutes(app)
 registerDomainPaystackWebhook(app)
 registerSelfServiceStoreDetectionRoutes(app)
 registerPrescriptionMediaDeliveryRoutes(app)
+registerServiceCommerceMediaDeliveryRoutes(app)
+registerServiceCommerceMediaUploadRoutes(app)
 registerPrescriptionPaystackWebhook(app)
 registerWhatsAppWebhookRoutes(app)
 registerWhatsAppEmbeddedSignupRoutes(app)

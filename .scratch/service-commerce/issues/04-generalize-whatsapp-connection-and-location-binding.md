@@ -10,44 +10,44 @@ Contract; 02 - Configure Business Capability Profile; 03 - Establish Customer
 Request Interoperability Contract; 11 - Enforce Vertical And Jurisdiction
 Eligibility.
 
-**Status:** approved; blockers complete
+**Status:** source-complete; browser/release acceptance remains open
 
 **Approval:** Original scope and revised dependency order owner-approved on
 2026-08-09; Customer Channels settings/media-descriptor amendment approved on
 2026-08-10.
 
-- [ ] Keep each business's WABA, number, sender identity, credential reference, templates, billing owner and lifecycle Tenant-owned.
-- [ ] Preserve one EwaTrade Meta application/webhook with recipient `phone_number_id` resolution before customer or request lookup.
-- [ ] Replace prescription-specific binding names behind stable exports using expand-contract compatibility; do not rewrite live callers in one step.
-- [ ] Preserve manual onboarding, Embedded Signup, explicit authorized-number selection, pending binding and identifier-only readiness jobs.
-- [ ] Preserve two-phase replacement/rotation so a failed candidate never displaces a working route.
-- [ ] Support branch-specific and central group numbers only with explicit opaque Store context; reject any ambiguous or cross-Tenant active binding as a whole route.
-- [ ] Keep direct Meta Cloud API as the initial adapter and Twilio/BSP optional behind provider-neutral Communications.
-- [ ] Add `Settings > Channels` with page title `Customer channels`, a multiple-
+- [x] Keep each business's WABA, number, sender identity, credential reference, templates, billing owner and lifecycle Tenant-owned.
+- [x] Preserve one EwaTrade Meta application/webhook with recipient `phone_number_id` resolution before customer or request lookup.
+- [x] Replace prescription-specific binding names behind stable exports using expand-contract compatibility; do not rewrite live callers in one step.
+- [x] Preserve manual onboarding, Embedded Signup, explicit authorized-number selection, pending binding and identifier-only readiness jobs.
+- [x] Preserve two-phase replacement/rotation so a failed candidate never displaces a working route.
+- [x] Support branch-specific and central group numbers only with explicit opaque Store context; reject any ambiguous or cross-Tenant active binding as a whole route.
+- [x] Keep direct Meta Cloud API as the initial adapter and Twilio/BSP optional behind provider-neutral Communications.
+- [x] Add `Settings > Channels` with page title `Customer channels`, a multiple-
   connection list, lifecycle/readiness status, Store assignments and focused
   `setup -> configure -> test -> publish` controls. `Connect WhatsApp` is the
   CTA; generic connection configuration no longer belongs under Prescription
   settings.
-- [ ] Add a Store-scoped **Team & routing** configuration step that assigns
+- [x] Add a Store-scoped **Team & routing** configuration step that assigns
   accepted active Tenant memberships as attendants for requests from any
   channel. `Add team member` delegates to existing staff invitation; Channels
   does not create identity or infer a pharmacist licence.
-- [ ] Preserve existing source-owned Service/Pharmacy actor checks through a
+- [x] Preserve existing source-owned Service/Pharmacy actor checks through a
   narrow compatibility adapter, reconcile only already-authorized people into
   explicit Store assignments with audit, and require at least one active
   attendant before a new Store entry point can publish. Tenant role alone never
   grants or backfills Store access.
-- [ ] Publish a stable, Store-scoped, previewable and revocable EwaTrade entry
+- [x] Publish a stable, Store-scoped, previewable and revocable EwaTrade entry
   page plus Copy link/Download QR actions. The QR carries only the opaque entry
   token and resolves current allowed web/WhatsApp choices; it never embeds a
   raw provider number, Tenant/Store id or mutable route.
 - [ ] Let business category and onboarding facts recommend connection defaults
   without treating category, technical readiness or client state as legal or
   operational authorization.
-- [ ] Normalize inbound image/document descriptors as business-neutral channel
+- [x] Normalize inbound image/document descriptors as business-neutral channel
   facts for Ticket 04A; connection/webhook code must not call a Prescription
   storage command or interpret the attachment.
-- [ ] Prove that connection replacement preserves the stable entry URL/printed
+- [x] Prove that connection replacement preserves the stable entry URL/printed
   QR and that central/multi-Store entry requires an opaque Store link or
   explicit branch choice before customer content is accepted.
 - [ ] Prove per-Store attendant routing, membership suspension/removal and the

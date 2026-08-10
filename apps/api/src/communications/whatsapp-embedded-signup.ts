@@ -7,13 +7,15 @@ import { prisma } from "@ewatrade/db"
 import { createWhatsAppEmbeddedSignupSession } from "@ewatrade/db/queries"
 import type { OpenAPIHono } from "@hono/zod-openapi"
 
-function dashboardRedirect(status: string, selectionToken?: string) {
+function dashboardRedirect(status: string) {
   const dashboard =
     process.env.NEXT_PUBLIC_DASHBOARD_URL?.replace(/\/$/, "") ??
     "http://ewatrade-dashboard.localhost"
-  const url = new URL(`${dashboard}/settings/prescriptions`)
+  const url = new URL(`${dashboard}/settings/channels`)
   url.searchParams.set("whatsapp", status)
-  if (selectionToken) url.searchParams.set("whatsapp_selection", selectionToken)
+  if (status === "select-number") {
+    url.searchParams.set("serviceCommerceSheet", "connection")
+  }
   return url.toString()
 }
 
@@ -48,7 +50,7 @@ export function registerWhatsAppEmbeddedSignupRoutes(app: OpenAPIHono) {
         })
         if (!numbers.length)
           return c.redirect(dashboardRedirect("no-number"), 302)
-        const session = await createWhatsAppEmbeddedSignupSession(prisma, {
+        await createWhatsAppEmbeddedSignupSession(prisma, {
           credentialReference: protectCommunicationsCredential(
             authorization.accessToken,
           ),
@@ -57,10 +59,7 @@ export function registerWhatsAppEmbeddedSignupRoutes(app: OpenAPIHono) {
           tenantId: verified.tenantId,
           userId: verified.userId,
         })
-        return c.redirect(
-          dashboardRedirect("select-number", session.publicToken),
-          302,
-        )
+        return c.redirect(dashboardRedirect("select-number"), 302)
       } catch {
         return c.redirect(dashboardRedirect("failed"), 302)
       }

@@ -57,6 +57,7 @@ export const serviceCommerceActivationBlockerSchema = z.enum(
 
 export const serviceCommerceCapabilityConfigurationSchema = z
   .object({
+    attachments: z.boolean().default(false),
     booking: z.boolean(),
     delivery: z.boolean(),
     intake: z.boolean(),

@@ -274,22 +274,23 @@ model WhatsAppStoreBinding {
 }
 
 model WhatsAppInboundEvent {
-  id                 String                     @id @default(cuid())
+  id                 String                        @id @default(cuid())
   tenantId           String
   storeId            String
   connectionId       String
-  providerEventId    String                     @unique
+  providerEventId    String                        @unique
   externalCustomerId String
   messageType        String
+  routeVertical      ServiceCommercePolicyVertical @default(PHARMACY)
   normalizedPayload  Json
-  status             WhatsAppInboundEventStatus @default(RECEIVED)
+  status             WhatsAppInboundEventStatus    @default(RECEIVED)
   requestId          String?
-  receivedAt         DateTime                   @default(now())
+  receivedAt         DateTime                      @default(now())
   processedAt        DateTime?
   failureCode        String?
-  tenant             Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store              Store                      @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  connection         WhatsAppConnection         @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  tenant             Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store              Store                         @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  connection         WhatsAppConnection            @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, storeId, receivedAt])
   @@index([connectionId, externalCustomerId, receivedAt])

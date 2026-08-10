@@ -1,5 +1,7 @@
 export * from "./capabilities"
 export * from "./catalog-adoption"
+export * from "./customer-channels"
+export * from "./media"
 export * from "./policy"
 export * from "./schemas"
 export * from "./sources"

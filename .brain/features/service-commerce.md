@@ -8,8 +8,9 @@ extension. ADR-0031 adds generic Customer Channels, stable entry links/QR
 codes, request media/verified observations and exact selectable Offer Options.
 ADR-0032 adds Store team routing and optional exact-version quotation release
 approval. The owner approved the revised dependency-ordered 17-ticket batch
-through 2026-08-10. Tickets 01, 02, 03, 11 and 03A are complete; Ticket 04 is
-the active dependency frontier. Production schema/provider
+through 2026-08-10. Tickets 01, 02, 03, 11 and 03A are complete. Tickets 04 and
+04A have source-complete foundations; Ticket 05 is the active dependency
+frontier. Production schema/provider
 operations remain separately authorized.
 
 Pharmacy Commerce is the first regulated vertical and retains its completed
@@ -467,8 +468,9 @@ business activation remains separately authorized.
 The owner approved the Progressive Catalog amendment on 2026-08-09 and the
 Customer Channels/media/Offer Options plus Store team/Quote approval amendments
 on 2026-08-10. The exact 17-ticket batch adds Tickets 03A, 04A, 06A and 06B.
-Tickets 01, 02, 03, 11 and 03A are complete; Ticket 04 is the active frontier.
-Ticket 04A now waits only for Ticket 04. Throughout
+Tickets 01, 02, 03, 11 and 03A are complete. Tickets 04 and 04A now have their
+source foundations; Ticket 05 owns the remaining public-web and generic
+WhatsApp intake adapters. Browser/live-provider acceptance remains open. Throughout
 execution:
 
 - no production Prisma operation without separate authorization;

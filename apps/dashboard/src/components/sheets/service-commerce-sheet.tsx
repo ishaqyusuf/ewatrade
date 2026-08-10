@@ -18,6 +18,7 @@ export function ServiceCommerceSheet({ storeId }: { storeId: string }) {
   const params = useServiceCommerceParams()
   const formResets = useRef(new Set<() => void>())
   const mode = params.serviceCommerceSheet
+  const resolvedStoreId = params.storeId ?? storeId
   const controller = mode ? SERVICE_COMMERCE_CONTROLLERS[mode] : null
 
   const registerFormReset = useCallback((reset: () => void) => {
@@ -28,12 +29,39 @@ export function ServiceCommerceSheet({ storeId }: { storeId: string }) {
   const close = async () => {
     for (const reset of formResets.current) reset()
     const invalidations: Array<Promise<unknown>> = []
+    if (mode === "connection" || mode === "team" || mode === "entry_point") {
+      invalidations.push(
+        queryClient.invalidateQueries({
+          exact: true,
+          queryKey: trpc.serviceCommerce.channelWorkspace.queryKey({
+            storeId: resolvedStoreId,
+          }),
+        }),
+        queryClient.invalidateQueries({
+          exact: true,
+          queryKey: trpc.serviceCommerce.workspaceAccess.queryKey({
+            storeId: resolvedStoreId,
+          }),
+        }),
+      )
+    }
+    if (params.attachmentId) {
+      invalidations.push(
+        queryClient.invalidateQueries({
+          exact: true,
+          queryKey: trpc.serviceCommerce.mediaAttachment.queryKey({
+            attachmentId: params.attachmentId,
+            storeId: resolvedStoreId,
+          }),
+        }),
+      )
+    }
     if (params.sourceKind && params.sourceId && params.sourceLineId) {
       const source = { id: params.sourceId, kind: params.sourceKind }
       const matchesInput = {
         source,
         sourceLineId: params.sourceLineId,
-        storeId,
+        storeId: resolvedStoreId,
       }
       const matchesKey =
         trpc.serviceCommerce.catalogMatches.queryKey(matchesInput)
@@ -52,7 +80,7 @@ export function ServiceCommerceSheet({ storeId }: { storeId: string }) {
               offeringId: params.offeringId,
               source,
               sourceLineId: params.sourceLineId,
-              storeId,
+              storeId: resolvedStoreId,
             }),
           }),
         )
@@ -67,7 +95,7 @@ export function ServiceCommerceSheet({ storeId }: { storeId: string }) {
                 quoteId: params.quoteId,
                 source,
                 sourceLineId: params.sourceLineId,
-                storeId,
+                storeId: resolvedStoreId,
               },
             ),
           }),
@@ -88,7 +116,7 @@ export function ServiceCommerceSheet({ storeId }: { storeId: string }) {
       {mode ? (
         <ServiceCommerceSheetContent
           registerFormReset={registerFormReset}
-          storeId={storeId}
+          storeId={resolvedStoreId}
         />
       ) : null}
     </DashboardSheet>

@@ -34,6 +34,7 @@ import {
 
 const settings: ServiceCommerceProfileSettings = {
   capabilities: {
+    attachments: false,
     booking: false,
     delivery: false,
     intake: true,

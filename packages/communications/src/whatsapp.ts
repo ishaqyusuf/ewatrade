@@ -231,7 +231,7 @@ export class DirectMetaWhatsAppProvider implements WhatsAppProvider {
       ? Boolean(
           await this.sendText({
             ...input,
-            body: "EwaTrade connection test. No prescription information is included.",
+            body: "EwaTrade connection test. No customer information is included.",
             to: input.testRecipient,
           }),
         )
@@ -484,7 +484,9 @@ export function parseMetaWhatsAppEvents(value: unknown) {
 }
 
 export function extractWhatsAppChannelContext(text?: string) {
-  const match = text?.match(/(?:^|\s)rxstore:([A-Za-z0-9_-]{16,128})(?:\s|$)/)
+  const match = text?.match(
+    /(?:^|\s)(?:ewastore|rxstore):([A-Za-z0-9_-]{16,128})(?:\s|$)/,
+  )
   return match?.[1] ?? null
 }
 
@@ -544,6 +546,13 @@ export function prescriptionConversationContextId(storeId: string) {
     throw new Error("Store id is required for conversation state.")
   }
   return `prescription-store:${storeId}`
+}
+
+export function customerChannelConversationContextId(storeId: string) {
+  if (!storeId.trim()) {
+    throw new Error("Store id is required for conversation state.")
+  }
+  return `customer-channel-store:${storeId}`
 }
 
 function conversationRoutingSelectionKey(input: {

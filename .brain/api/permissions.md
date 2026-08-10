@@ -118,6 +118,25 @@
   capability tokens, prescription text, delivery address, pickup code, and
   customer contact are excluded from routine logs, analytics, and audit detail.
 
+## Customer Channels And Generic Media
+
+- Owner/Admin manages provider connections, Store bindings and entry-point
+  lifecycle. Store team assignment accepts only an already accepted active
+  Tenant Membership and never creates identity, role or professional authority.
+- An active Store attendant may access only their Store's current source-bound
+  attachment metadata, request a short-lived viewer grant and record a human
+  observation. Every path carries Tenant plus Store predicates and rechecks
+  source revision, capability, provider readiness and vertical policy.
+- Public entry tokens are opaque single-purpose capabilities. Public projections
+  reveal only current allowed start actions and never Tenant/Store ids,
+  credentials, provider media ids, object keys or private customer content.
+- Staff upload verifies bytes server-side before storage. WhatsApp retrieval
+  reloads the active scoped Connection/Binding at job time. Safety and retention
+  jobs receive identifiers only; unknown/revoked/cross-scope facts fail closed.
+- Media is not viewable before `SAFE`. Viewer grants expire after 60 seconds and
+  are one-time in the development provider. Observation authority is human and
+  attributable; automated classification remains non-authoritative.
+
 ## Services
 
 - Operators may create/confirm Intake, read the queue/Job, self-assign, progress

@@ -1,93 +1,101 @@
 model Store {
-  id                                String                             @id @default(cuid())
-  tenantId                          String
-  slug                              String
-  name                              String
-  description                       String?
-  status                            StoreStatus                        @default(DRAFT)
-  currencyCode                      String                             @default("NGN")
-  supportPhone                      String?
-  supportEmail                      String?
-  addressLine1                      String?
-  addressLine2                      String?
-  city                              String?
-  region                            String?
-  postalCode                        String?
-  countryCode                       String?
-  isMarketplaceLive                 Boolean                            @default(false)
-  metadata                          Json?
-  createdAt                         DateTime                           @default(now())
-  updatedAt                         DateTime                           @updatedAt
-  tenant                            Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  retailOpsStaffProfiles            RetailOpsStaffProfile[]
-  pages                             Page[]
-  sites                             Site[]
-  themes                            Theme[]
-  templates                         Template[]
-  offlineDevices                    OfflineDevice[]
-  offlineCommands                   OfflineCommand[]
-  serviceIntakes                    ServiceIntake[]
-  serviceJobs                       ServiceJob[]
-  serviceRequestForms               ServiceRequestForm[]
-  serviceRequests                   ServiceRequest[]
-  serviceQuotes                     ServiceQuote[]
-  serviceNotificationIntents        ServiceNotificationIntent[]
-  serviceSettings                   ServiceStoreSettings?
-  serviceCommerceProfile            ServiceCommerceStoreProfile?
-  serviceCommerceAuditEvents        ServiceCommerceStoreAuditEvent[]
-  serviceCommercePolicyDecisions    ServiceCommercePolicyDecision[]
-  serviceCommercePolicyAuditEvents  ServiceCommercePolicyAuditEvent[]
-  commerceInquiries                 CommerceInquiry[]
-  commerceInquiryLines              CommerceInquiryLine[]
-  commerceInquiryAuditEvents        CommerceInquiryAuditEvent[]
-  commerceQuoteReplayAccessTokens   CommerceQuoteReplayAccessToken[]
-  prescriptionSettings              PrescriptionStoreSettings?
-  prescriptionRoles                 PrescriptionStoreRole[]
-  prescriptionAuditEvents           PrescriptionStoreAuditEvent[]
-  prescriptionChannel               PrescriptionChannel?
-  prescriptionRequests              PrescriptionRequest[]
-  prescriptionMedia                 PrescriptionMedia[]
-  prescriptionMediaAccessEvents     PrescriptionMediaAccessEvent[]
-  prescriptionRequestAuditEvents    PrescriptionRequestAuditEvent[]
-  prescriptionPaymentIntents        PrescriptionPaymentIntent[]
-  prescriptionPaymentRefunds        PrescriptionPaymentRefund[]
-  prescriptionPickupFulfillments    PrescriptionPickupFulfillment[]
-  prescriptionDeliveryZones         PrescriptionDeliveryZone[]
-  prescriptionDeliveryAddresses     PrescriptionDeliveryAddress[]
-  prescriptionDeliveryAssignments   PrescriptionDeliveryAssignment[]
-  whatsappStoreBindings             WhatsAppStoreBinding[]
-  whatsappInboundEvents             WhatsAppInboundEvent[]
-  whatsappEmbeddedSignupSessions    WhatsAppEmbeddedSignupSession[]
-  prescriptionCommunicationIntents  PrescriptionCommunicationIntent[]
-  prescriptionQuickActions          PrescriptionQuickAction[]
-  prescriptionRetentionPolicy       PrescriptionRetentionPolicy?
-  prescriptionPrivacyRequests       PrescriptionPrivacyRequest[]
-  prescriptionIncidentControls      PrescriptionIncidentControl[]
-  prescriptionSensitiveAccessEvents PrescriptionSensitiveAccessEvent[]
-  prescriptionUsageEvents           PrescriptionUsageEvent[]
-  commerceQuotes                    CommerceQuote[]
-  catalogOfferingAvailability       StoreOfferingAvailability[]
-  catalogCommandReceipts            CatalogCommandReceipt[]
-  catalogSourceLineLinks            CatalogSourceLineLink[]
-  catalogVerifiedAliases            CatalogVerifiedAlias[]
-  catalogAvailabilityAttestations   CatalogAvailabilityAttestation[]
-  catalogPricePromotions            CatalogPricePromotion[]
-  stockBalanceSources               StockBalanceSource[]
-  stockOperations                   StockOperation[]
-  stockReservations                 StockReservation[]
-  stockCounts                       StockCount[]
-  outboundStockTransfers            StockTransfer[]                    @relation("StockTransferSourceStore")
-  inboundStockTransfers             StockTransfer[]                    @relation("StockTransferTargetStore")
-  inventoryCloseouts                InventoryCloseout[]
-  commercialOrders                  CommercialOrder[]
-  commercialOrderPayments           CommercialOrderPayment[]
-  commercialOrderReminderSettings   CommercialOrderReminderSettings?
-  commercialOrderReminderDeliveries CommercialOrderReminderDelivery[]
-  productReturns                    ProductReturn[]
-  domainQuotes                      DomainQuote[]
-  domainOrders                      DomainOrder[]
-  managedDomains                    ManagedDomain[]
-  domainConnections                 DomainConnection[]
+  id                                  String                               @id @default(cuid())
+  tenantId                            String
+  slug                                String
+  name                                String
+  description                         String?
+  status                              StoreStatus                          @default(DRAFT)
+  currencyCode                        String                               @default("NGN")
+  supportPhone                        String?
+  supportEmail                        String?
+  addressLine1                        String?
+  addressLine2                        String?
+  city                                String?
+  region                              String?
+  postalCode                          String?
+  countryCode                         String?
+  isMarketplaceLive                   Boolean                              @default(false)
+  metadata                            Json?
+  createdAt                           DateTime                             @default(now())
+  updatedAt                           DateTime                             @updatedAt
+  tenant                              Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  retailOpsStaffProfiles              RetailOpsStaffProfile[]
+  pages                               Page[]
+  sites                               Site[]
+  themes                              Theme[]
+  templates                           Template[]
+  offlineDevices                      OfflineDevice[]
+  offlineCommands                     OfflineCommand[]
+  serviceIntakes                      ServiceIntake[]
+  serviceJobs                         ServiceJob[]
+  serviceRequestForms                 ServiceRequestForm[]
+  serviceRequests                     ServiceRequest[]
+  serviceQuotes                       ServiceQuote[]
+  serviceNotificationIntents          ServiceNotificationIntent[]
+  serviceSettings                     ServiceStoreSettings?
+  serviceCommerceProfile              ServiceCommerceStoreProfile?
+  serviceCommerceAuditEvents          ServiceCommerceStoreAuditEvent[]
+  serviceCommercePolicyDecisions      ServiceCommercePolicyDecision[]
+  serviceCommercePolicyAuditEvents    ServiceCommercePolicyAuditEvent[]
+  commerceInquiries                   CommerceInquiry[]
+  commerceInquiryLines                CommerceInquiryLine[]
+  commerceInquiryAuditEvents          CommerceInquiryAuditEvent[]
+  commerceQuoteReplayAccessTokens     CommerceQuoteReplayAccessToken[]
+  prescriptionSettings                PrescriptionStoreSettings?
+  prescriptionRoles                   PrescriptionStoreRole[]
+  prescriptionAuditEvents             PrescriptionStoreAuditEvent[]
+  prescriptionChannel                 PrescriptionChannel?
+  prescriptionRequests                PrescriptionRequest[]
+  prescriptionMedia                   PrescriptionMedia[]
+  prescriptionMediaAccessEvents       PrescriptionMediaAccessEvent[]
+  prescriptionRequestAuditEvents      PrescriptionRequestAuditEvent[]
+  prescriptionPaymentIntents          PrescriptionPaymentIntent[]
+  prescriptionPaymentRefunds          PrescriptionPaymentRefund[]
+  prescriptionPickupFulfillments      PrescriptionPickupFulfillment[]
+  prescriptionDeliveryZones           PrescriptionDeliveryZone[]
+  prescriptionDeliveryAddresses       PrescriptionDeliveryAddress[]
+  prescriptionDeliveryAssignments     PrescriptionDeliveryAssignment[]
+  whatsappStoreBindings               WhatsAppStoreBinding[]
+  whatsappInboundEvents               WhatsAppInboundEvent[]
+  whatsappEmbeddedSignupSessions      WhatsAppEmbeddedSignupSession[]
+  serviceCommerceStoreTeamAssignments ServiceCommerceStoreTeamAssignment[]
+  serviceCommerceStoreTeamAuditEvents ServiceCommerceStoreTeamAuditEvent[]
+  customerEntryPoint                  CustomerEntryPoint?
+  customerEntryPointAuditEvents       CustomerEntryPointAuditEvent[]
+  serviceCommerceMediaAssets          ServiceCommerceMediaAsset[]
+  serviceCommerceSourceAttachments    ServiceCommerceSourceAttachment[]
+  serviceCommerceVerifiedObservations ServiceCommerceVerifiedObservation[]
+  serviceCommerceMediaAuditEvents     ServiceCommerceMediaAuditEvent[]
+  prescriptionCommunicationIntents    PrescriptionCommunicationIntent[]
+  prescriptionQuickActions            PrescriptionQuickAction[]
+  prescriptionRetentionPolicy         PrescriptionRetentionPolicy?
+  prescriptionPrivacyRequests         PrescriptionPrivacyRequest[]
+  prescriptionIncidentControls        PrescriptionIncidentControl[]
+  prescriptionSensitiveAccessEvents   PrescriptionSensitiveAccessEvent[]
+  prescriptionUsageEvents             PrescriptionUsageEvent[]
+  commerceQuotes                      CommerceQuote[]
+  catalogOfferingAvailability         StoreOfferingAvailability[]
+  catalogCommandReceipts              CatalogCommandReceipt[]
+  catalogSourceLineLinks              CatalogSourceLineLink[]
+  catalogVerifiedAliases              CatalogVerifiedAlias[]
+  catalogAvailabilityAttestations     CatalogAvailabilityAttestation[]
+  catalogPricePromotions              CatalogPricePromotion[]
+  stockBalanceSources                 StockBalanceSource[]
+  stockOperations                     StockOperation[]
+  stockReservations                   StockReservation[]
+  stockCounts                         StockCount[]
+  outboundStockTransfers              StockTransfer[]                      @relation("StockTransferSourceStore")
+  inboundStockTransfers               StockTransfer[]                      @relation("StockTransferTargetStore")
+  inventoryCloseouts                  InventoryCloseout[]
+  commercialOrders                    CommercialOrder[]
+  commercialOrderPayments             CommercialOrderPayment[]
+  commercialOrderReminderSettings     CommercialOrderReminderSettings?
+  commercialOrderReminderDeliveries   CommercialOrderReminderDelivery[]
+  productReturns                      ProductReturn[]
+  domainQuotes                        DomainQuote[]
+  domainOrders                        DomainOrder[]
+  managedDomains                      ManagedDomain[]
+  domainConnections                   DomainConnection[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, status])

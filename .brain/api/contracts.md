@@ -449,6 +449,51 @@ implements the Progressive Catalog commands below.
 - Progressive draft capture, Catalog publication, procure-to-order, price
   promotion and managed-inventory graduation are independently typed subjects.
 
+### Implemented Customer Channels contract
+
+- A Tenant may own multiple WhatsApp Connections and bind each to explicit
+  Stores. The generic API delegates to compatibility persistence; no new caller
+  depends on Prescription settings or credentials.
+- Setup is `setup -> configure -> test -> publish`. A pending/replacement sender
+  never displaces the working active route before the identifier-only readiness
+  task succeeds. Ambiguous or cross-Tenant active binding graphs fail as a
+  whole route.
+- Team routing assigns only an accepted active Tenant Membership to one Store.
+  It grants an operational attendant capability, not a Tenant role or Pharmacy
+  licence. Publication requires at least one active attendant.
+- A stable `/r/[token]` entry resolves current channel/policy facts and therefore
+  survives sender rotation. The token/QR contains no Tenant, Store, connection
+  or phone identifier. Multiple active senders suppress WhatsApp rather than
+  guessing a route.
+- Inbound events retain the resolved vertical. The runtime queues Pharmacy only
+  for Pharmacy and preserves generic Service events for Ticket 05; it does not
+  interpret media or choose an aggregate.
+
+### Implemented generic media contract
+
+- Media intake is exactly `image | document` and `web | staff | whatsapp`, with
+  allowlisted MIME/signature, 10 MiB per object and 12 active attachments per
+  source. Client/provider identity is idempotent inside Tenant scope.
+- Persistence separates private Media Asset, typed Source Attachment and
+  revisioned Human-Verified Observation. Source adapters revalidate the exact
+  Tenant, Store, source, source line and source version before intake, metadata,
+  view or observation.
+- The server rechecks channel, attachment capability, provider readiness and
+  vertical policy. WhatsApp retrieval additionally binds the private provider
+  media id to an active scoped Connection/Binding. Jobs carry identifiers only.
+- Lifecycle is explicit: pending upload/retrieval, stored, safety pending, safe,
+  quarantined, rejected, retryable, retention hold and deleted. Retry never
+  turns a missing private object into public truth; retention deletion is
+  idempotent.
+- Staff metadata contains safe lifecycle/recovery only. Viewing requires an
+  active attendant, current source, safe active attachment and a one-time
+  60-second grant; expiry or embed failure restores authorization.
+- Only an attributed current observation may feed Progressive Catalog matching
+  and private draft creation. Raw bytes, customer wording, provider payload or
+  automated safety output cannot publish, price, reserve or order.
+- Ordinary Commerce has a baseline 365-day retention class. Pharmacy may attach
+  a clinical extension and retain Prescription-owned OCR/review/access policy.
+
 ## Services
 
 - Service Request is unconfirmed intent and creates no Order/work.

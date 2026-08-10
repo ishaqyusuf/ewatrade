@@ -158,6 +158,8 @@ model PrescriptionMedia {
   tenant           Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   store            Store                          @relation(fields: [storeId], references: [id], onDelete: Restrict)
   request          PrescriptionRequest            @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  mediaAssetId     String?                        @unique
+  mediaAsset       ServiceCommerceMediaAsset?     @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull)
   accessEvents     PrescriptionMediaAccessEvent[]
 
   @@unique([tenantId, clientMediaId])

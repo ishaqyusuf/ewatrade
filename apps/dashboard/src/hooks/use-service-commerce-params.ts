@@ -60,6 +60,7 @@ const serviceCommerceParams = {
   sourceId: parseAsString,
   sourceKind: parseAsStringEnum([...SOURCE_KINDS]),
   sourceLineId: parseAsString,
+  storeId: parseAsString,
   successId: parseAsString,
   successKind: parseAsStringEnum([...SUCCESS_KINDS]),
 }

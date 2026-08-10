@@ -69,6 +69,7 @@ const channelFromDb = {
 } satisfies Record<ServiceCommercePolicyChannel, ServiceCommerceChannelOrigin>
 
 const subjectToDb = {
+  attachments: ServiceCommercePolicySubjectEnum.ATTACHMENTS,
   booking: ServiceCommercePolicySubjectEnum.BOOKING,
   catalog_publication: ServiceCommercePolicySubjectEnum.CATALOG_PUBLICATION,
   delivery: ServiceCommercePolicySubjectEnum.DELIVERY,

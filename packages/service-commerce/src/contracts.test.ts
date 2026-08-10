@@ -110,6 +110,7 @@ describe("Service Commerce interoperability contracts", () => {
     ])
     expect(SERVICE_COMMERCE_CAPABILITIES).toEqual([
       "intake",
+      "attachments",
       "quote",
       "booking",
       "payment",
@@ -250,6 +251,8 @@ describe("Service Commerce interoperability contracts", () => {
       storeActive: true,
       trackedInventoryReady: false,
     })
+
+    expect(configuration.capabilities.attachments).toBe(false)
 
     expect(readiness.capabilities.intake).toEqual({
       blockers: [],

@@ -51,9 +51,13 @@
   manager-gated reusable-price promotion and the Midday global sheet are
   source-complete. The verified `.env.local` Neon development run passes four
   Product/Service scenarios with 15 assertions, and authenticated desktop/
-  mobile sheet QA passed. Ticket 04 is now the active dependency frontier;
-  Ticket 04A waits for it and then establishes generic attachment/media
-  ingestion before channel-neutral intake. The full test gate has
+  mobile sheet QA passed. Tickets 04 and 04A now have source-complete Customer
+  Channels and generic private-media foundations on the verified development
+  Neon database. Ticket 05 is the active dependency frontier and owns the
+  remaining public-web/generic-WhatsApp intake adapters. Authenticated browser
+  QA and live Meta/storage/scanner release gates remain open. The focused
+  Customer Channels/media matrix passes 71 tests and 177 assertions; the
+  run-owned `.env.local` Neon bag-media seam passes 7 assertions. The full test gate has
   five separately reproducible
   failures in unrelated in-progress mobile navigation and Retail Ops test
   fakes; Service Commerce focused and Neon gates are green. No production

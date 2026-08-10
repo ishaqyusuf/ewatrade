@@ -151,6 +151,24 @@ Typed tRPC routers are the primary application contract.
   `promoteCatalogPrice` separate an immutable Quote price from a confirmed,
   manager-gated reusable Offering price change and return every affected Store
   before mutation.
+- Protected Customer Channels procedures expose the scoped workspace, manual
+  or Embedded WhatsApp setup, explicit Store bindings, connection retest and
+  lifecycle, Store attendant assignment/revocation, and stable entry-point
+  publish/revoke. Owner/Admin owns provider setup; accepted active Memberships
+  are the only assignable Store attendants.
+- Public `serviceCommerce.publicCustomerEntryPoint` resolves only a digest of
+  the opaque `/r/[token]` capability and returns current allowed request/chat
+  actions. It returns no Tenant/Store/provider id or mutable sender number when
+  routing is missing or ambiguous.
+- Protected media procedures expose policy-authorized safe attachment metadata,
+  60-second one-time viewer grants and revisioned human observation. Internal
+  procedures own commit, safety and retry transitions. Raw provider ids,
+  storage keys and bytes never enter tRPC projections.
+- `POST /api/service-commerce/media/upload` is the authenticated staff multipart
+  boundary. It resolves Tenant/Store/attendant/source/policy, verifies bytes
+  server-side, stores privately, commits the scoped asset and enqueues an
+  identifier-only safety task. `GET /api/service-commerce/media/[token]`
+  consumes a one-time short-lived viewer capability.
 
 ## Staff And Billing
 

@@ -2,6 +2,7 @@ import { z } from "zod"
 
 export const SERVICE_COMMERCE_CAPABILITIES = [
   "intake",
+  "attachments",
   "quote",
   "booking",
   "payment",

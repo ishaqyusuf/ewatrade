@@ -42,6 +42,18 @@ export function databaseProfileForEnv(env) {
   return "local"
 }
 
+export function directDatabaseUrlForPrismaCli(databaseUrl) {
+  const url = new URL(databaseUrl)
+  const hostname = url.hostname.toLowerCase().replace(/\.$/, "")
+  if (!hostname.endsWith(".neon.tech")) return databaseUrl
+  const labels = hostname.split(".")
+  const endpoint = labels[0]
+  if (!endpoint?.endsWith("-pooler")) return databaseUrl
+  labels[0] = endpoint.slice(0, -"-pooler".length)
+  url.hostname = labels.join(".")
+  return url.toString()
+}
+
 export function applyDatabaseProfile(env, productionDatabaseUrl) {
   const profile = databaseProfileForEnv(env)
   const databaseUrl = env.DATABASE_URL?.trim()

@@ -26,6 +26,7 @@ import type { DbClient } from "./types"
 
 const configurationDefaults: ServiceCommerceProfileConfiguration = {
   capabilities: {
+    attachments: false,
     booking: false,
     delivery: false,
     intake: false,
@@ -44,6 +45,8 @@ const configurationDefaults: ServiceCommerceProfileConfiguration = {
 }
 
 type PersistedProfile = {
+  attachmentsEnabled: boolean
+  attachmentsProviderReady: boolean
   bookingEnabled: boolean
   catalogAdoptionMode: ServiceCommerceCatalogAdoptionMode
   deliveryEnabled: boolean
@@ -97,6 +100,7 @@ function mapPersistedProfile(
   if (!profile) return configurationDefaults
   return {
     capabilities: {
+      attachments: profile.attachmentsEnabled,
       booking: profile.bookingEnabled,
       delivery: profile.deliveryEnabled,
       intake: profile.intakeEnabled,
@@ -117,6 +121,7 @@ function mapPersistedProfile(
 
 function toPersistence(settings: ServiceCommerceProfileSettings) {
   return {
+    attachmentsEnabled: settings.capabilities.attachments,
     bookingEnabled: settings.capabilities.booking,
     catalogAdoptionMode:
       settings.catalogAdoptionMode === "inventory_managed"
@@ -191,6 +196,12 @@ async function resolveServiceCommerceReadinessFacts(
   ])
   const setupRequired: ServiceCommerceCapability[] = []
   const providerUnavailable: ServiceCommerceCapability[] = []
+  if (
+    configuration.capabilities.attachments &&
+    !profile?.attachmentsProviderReady
+  ) {
+    providerUnavailable.push("attachments")
+  }
   if (configuration.capabilities.booking) setupRequired.push("booking")
   if (configuration.capabilities.pickup) setupRequired.push("pickup")
   if (configuration.capabilities.delivery) setupRequired.push("delivery")

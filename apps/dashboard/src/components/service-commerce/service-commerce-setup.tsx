@@ -20,6 +20,7 @@ const CAPABILITY_LABELS: Record<
   (typeof SERVICE_COMMERCE_CAPABILITIES)[number],
   string
 > = {
+  attachments: "Customer attachments",
   booking: "Bookings",
   delivery: "Delivery",
   intake: "Customer requests",
@@ -47,6 +48,7 @@ const ACTIVATION_LABELS: Record<string, string> = {
 
 const defaultSettings: SettingsValues = {
   capabilities: {
+    attachments: false,
     booking: false,
     delivery: false,
     intake: true,

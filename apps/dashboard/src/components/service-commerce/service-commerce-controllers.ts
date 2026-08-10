@@ -3,7 +3,9 @@ import type { ServiceCommerceSheetMode } from "@/hooks/use-service-commerce-para
 type ControllerDefinition = {
   description: string
   implemented: boolean
-  requiredIds: Array<"sourceId" | "sourceKind" | "sourceLineId">
+  requiredIds: Array<
+    "attachmentId" | "sourceId" | "sourceKind" | "sourceLineId"
+  >
   title: string
 }
 
@@ -15,7 +17,13 @@ const unavailable = (title: string): ControllerDefinition => ({
 })
 
 export const SERVICE_COMMERCE_CONTROLLERS = {
-  attachment_review: unavailable("Review attachment"),
+  attachment_review: {
+    description:
+      "Review a safety-permitted attachment and record attributable customer-request meaning.",
+    implemented: true,
+    requiredIds: ["attachmentId"],
+    title: "Review attachment",
+  },
   booking: unavailable("Booking"),
   catalog_draft: {
     description:
@@ -24,17 +32,41 @@ export const SERVICE_COMMERCE_CONTROLLERS = {
     requiredIds: ["sourceKind", "sourceId", "sourceLineId"],
     title: "Resolve Catalog item",
   },
-  connection: unavailable("Customer channel"),
-  entry_point: unavailable("Share customer entry point"),
+  connection: {
+    description:
+      "Connect, configure and test one business-owned WhatsApp sender.",
+    implemented: true,
+    requiredIds: [],
+    title: "Customer channel",
+  },
+  entry_point: {
+    description:
+      "Publish or revoke this Store's stable customer link and QR code.",
+    implemented: true,
+    requiredIds: [],
+    title: "Share customer entry point",
+  },
   fulfillment: unavailable("Fulfilment"),
   intake: unavailable("New customer request"),
   inventory_graduation: unavailable("Graduate inventory"),
-  media: unavailable("Customer media"),
+  media: {
+    description:
+      "Inspect private customer media through a short-lived authorized view.",
+    implemented: true,
+    requiredIds: ["attachmentId"],
+    title: "Customer attachment",
+  },
   quote: unavailable("Quotation"),
   quote_approval: unavailable("Quotation approval"),
   quote_policy: unavailable("Quotation policy"),
   request: unavailable("Customer request"),
   setup: unavailable("Service Commerce setup"),
   success: unavailable("Completed"),
-  team: unavailable("Channel attendants"),
+  team: {
+    description:
+      "Assign accepted active team memberships to customer requests for this Store.",
+    implemented: true,
+    requiredIds: [],
+    title: "Channel attendants",
+  },
 } satisfies Record<ServiceCommerceSheetMode, ControllerDefinition>

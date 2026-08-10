@@ -40,6 +40,18 @@ import {
   prescriptionWhatsAppInboundHandler,
 } from "./handlers/prescription-whatsapp-inbound"
 import {
+  type ServiceCommerceMediaIngestPayload,
+  serviceCommerceMediaIngestHandler,
+} from "./handlers/service-commerce-media-ingest"
+import {
+  type ServiceCommerceMediaRetentionPayload,
+  serviceCommerceMediaRetentionHandler,
+} from "./handlers/service-commerce-media-retention"
+import {
+  type ServiceCommerceMediaSafetyPayload,
+  serviceCommerceMediaSafetyHandler,
+} from "./handlers/service-commerce-media-safety"
+import {
   type ServiceNotificationDispatchPayload,
   serviceNotificationDispatchHandler,
 } from "./handlers/service-notification-dispatch"
@@ -53,6 +65,9 @@ export const jobIds = {
   qaPurge: "platform.qa.purge",
   notificationDispatch: "notifications.dispatch",
   serviceNotificationDispatch: "services.notification.dispatch",
+  serviceCommerceMediaIngest: "service-commerce.media-ingest",
+  serviceCommerceMediaSafety: "service-commerce.media-safety",
+  serviceCommerceMediaRetention: "service-commerce.media-retention",
   domainRegistration: "domains.registration",
   domainConnectionVerification: "domains.connection.verify",
   domainReconciliation: "domains.reconcile",
@@ -139,6 +154,39 @@ export async function enqueueServiceNotificationIntent(intentId: string) {
     jobIds.serviceNotificationDispatch,
     serviceNotificationDispatchHandler,
     payload,
+  )
+}
+
+export async function enqueueServiceCommerceMediaIngest(
+  input: ServiceCommerceMediaIngestPayload,
+) {
+  await triggerJob(
+    jobIds.serviceCommerceMediaIngest,
+    serviceCommerceMediaIngestHandler,
+    input,
+    { maxAttempts: 4 },
+  )
+}
+
+export async function enqueueServiceCommerceMediaSafety(
+  input: ServiceCommerceMediaSafetyPayload,
+) {
+  await triggerJob(
+    jobIds.serviceCommerceMediaSafety,
+    serviceCommerceMediaSafetyHandler,
+    input,
+    { maxAttempts: 4 },
+  )
+}
+
+export async function enqueueServiceCommerceMediaRetention(
+  input: ServiceCommerceMediaRetentionPayload,
+) {
+  await triggerJob(
+    jobIds.serviceCommerceMediaRetention,
+    serviceCommerceMediaRetentionHandler,
+    input,
+    { maxAttempts: 4 },
   )
 }
 
@@ -236,6 +284,11 @@ export { runInBackground, runWithRetry } from "./queue"
 export { isTriggerConfigured, triggerJob } from "./trigger"
 export { notificationDispatchHandler }
 export { serviceNotificationDispatchHandler }
+export {
+  serviceCommerceMediaIngestHandler,
+  serviceCommerceMediaRetentionHandler,
+  serviceCommerceMediaSafetyHandler,
+}
 export { prescriptionTranscriptionHandler }
 export { prescriptionMediaSafetyHandler }
 export { prescriptionWhatsAppInboundHandler }
@@ -248,6 +301,11 @@ export { commercialOrderRemindersHandler }
 export { qaPurgeHandler } from "./handlers/qa-purge"
 export { customerMessagingProviderStatus }
 export type { NotificationDispatchPayload, ServiceNotificationDispatchPayload }
+export type {
+  ServiceCommerceMediaIngestPayload,
+  ServiceCommerceMediaRetentionPayload,
+  ServiceCommerceMediaSafetyPayload,
+}
 export type { PrescriptionTranscriptionPayload }
 export type { PrescriptionMediaSafetyPayload }
 export type { PrescriptionWhatsAppInboundPayload }

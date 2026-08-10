@@ -70,6 +70,7 @@ enum ServiceCommercePolicySubject {
   STAFF
   WHATSAPP
   PROGRESSIVE_CATALOG
+  ATTACHMENTS
   PROGRESSIVE_DRAFT_CAPTURE
   CATALOG_PUBLICATION
   PROCURE_TO_ORDER
@@ -110,6 +111,8 @@ model ServiceCommerceStoreProfile {
   staffEnabled                 Boolean                            @default(false)
   whatsappEnabled              Boolean                            @default(false)
   progressiveCatalogEnabled    Boolean                            @default(false)
+  attachmentsEnabled           Boolean                            @default(false)
+  attachmentsProviderReady     Boolean                            @default(false)
   procureToOrderEnabled        Boolean                            @default(false)
   policyRestrictedCapabilities String[]                           @default([])
   activatedAt                  DateTime?

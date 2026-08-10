@@ -32,6 +32,13 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
       { retry: false },
     ),
   )
+  const attachment = useQuery(
+    trpc.serviceCommerce.mediaAttachment.queryOptions(
+      { attachmentId: params.attachmentId ?? "", storeId },
+      { enabled: Boolean(params.attachmentId), retry: false },
+    ),
+  )
+  const verifiedObservation = attachment.data?.observation
   const selected = matches.data?.matches.find(
     (match) => match.offeringId === selectedOfferingId,
   )
@@ -48,10 +55,18 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
   )
 
   useEffect(() => {
-    const label = matches.data?.sourceLine.displayLabel
+    const label =
+      verifiedObservation?.displayLabel ?? matches.data?.sourceLine.displayLabel
     if (!label || form.formState.isDirty) return
-    form.reset({ name: label, verifiedAlias: "" })
-  }, [form, matches.data?.sourceLine.displayLabel])
+    form.reset({
+      name: label,
+      verifiedAlias: verifiedObservation?.displayLabel ?? "",
+    })
+  }, [
+    form,
+    matches.data?.sourceLine.displayLabel,
+    verifiedObservation?.displayLabel,
+  ])
 
   const invalidate = async () => {
     const invalidations = [
@@ -196,6 +211,7 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
             Confirmed Catalog alias
             <input
               className="h-10 rounded-lg border border-border bg-background px-3"
+              readOnly={Boolean(verifiedObservation)}
               {...form.register("verifiedAlias")}
             />
           </label>
@@ -211,6 +227,7 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
                 sourceLineId,
                 storeId,
                 verifiedAlias: form.getValues("verifiedAlias"),
+                verifiedObservationId: verifiedObservation?.id,
               })
             }}
             type="button"
@@ -233,6 +250,7 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
             sourceLineId,
             storeId,
             verifiedAlias: values.verifiedAlias,
+            verifiedObservationId: verifiedObservation?.id,
           })
         })}
       >
@@ -259,6 +277,7 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
           Confirmed Catalog alias
           <input
             className="h-10 rounded-lg border border-border bg-background px-3"
+            readOnly={Boolean(verifiedObservation)}
             {...form.register("verifiedAlias")}
           />
         </label>

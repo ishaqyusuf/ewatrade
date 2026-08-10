@@ -13,6 +13,7 @@ import {
 import {
   assertServiceCommercePolicyAllowedInTransaction,
   evaluateServiceCommercePolicy,
+  evaluateServiceCommercePolicyBatchInTransaction,
   evaluateServiceCommercePolicyInTransaction,
 } from "./service-commerce-policy"
 
@@ -239,6 +240,81 @@ export async function getWhatsAppEmbeddedSignupSession(
     : null
 }
 
+export async function getPendingWhatsAppEmbeddedSignupSession(
+  db: PrismaClient,
+  input: { storeId: string; tenantId: string; userId: string },
+) {
+  const session = await db.whatsAppEmbeddedSignupSession.findFirst({
+    orderBy: { createdAt: "desc" },
+    where: {
+      consumedAt: null,
+      expiresAt: { gt: new Date() },
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      userId: input.userId,
+    },
+  })
+  return session
+    ? {
+        expiresAt: session.expiresAt,
+        numbers: parseDiscoveredNumbers(session.discoveredNumbers),
+      }
+    : null
+}
+
+async function completeEmbeddedSignupSession(
+  tx: Prisma.TransactionClient,
+  input: {
+    actorUserId: string
+    billingOwner?: string
+    phoneNumberId: string
+    storeId: string
+    tenantId: string
+    testRecipient: string
+  },
+  sessionWhere: Prisma.WhatsAppEmbeddedSignupSessionWhereInput,
+) {
+  const session = await tx.whatsAppEmbeddedSignupSession.findFirst({
+    orderBy: { createdAt: "desc" },
+    where: {
+      consumedAt: null,
+      expiresAt: { gt: new Date() },
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      userId: input.actorUserId,
+      ...sessionWhere,
+    },
+  })
+  const selected = session
+    ? parseDiscoveredNumbers(session.discoveredNumbers).find(
+        (number) => number.phoneNumberId === input.phoneNumberId,
+      )
+    : null
+  if (!session || !selected) {
+    throw new WhatsAppConnectionError(
+      "CONNECTION_NOT_FOUND",
+      "This Embedded Signup selection has expired or is invalid.",
+    )
+  }
+  const connection = await upsertWhatsAppConnectionWithBinding(tx, {
+    actorUserId: input.actorUserId,
+    billingOwner: input.billingOwner,
+    businessDisplayName: selected.businessDisplayName,
+    credentialReference: session.credentialReference,
+    displayNumber: selected.displayNumber,
+    phoneNumberId: selected.phoneNumberId,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+    testRecipient: input.testRecipient,
+    wabaId: selected.wabaId,
+  })
+  await tx.whatsAppEmbeddedSignupSession.update({
+    data: { consumedAt: new Date(), credentialReference: "consumed" },
+    where: { id: session.id },
+  })
+  return { connectionId: connection.id, status: connection.status }
+}
+
 export async function completeWhatsAppEmbeddedSignupSession(
   db: PrismaClient,
   input: {
@@ -251,46 +327,25 @@ export async function completeWhatsAppEmbeddedSignupSession(
     testRecipient: string
   },
 ) {
-  return db.$transaction(async (tx) => {
-    const session = await tx.whatsAppEmbeddedSignupSession.findFirst({
-      where: {
-        consumedAt: null,
-        expiresAt: { gt: new Date() },
-        publicTokenDigest: digest(input.publicToken),
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-        userId: input.actorUserId,
-      },
-    })
-    const selected = session
-      ? parseDiscoveredNumbers(session.discoveredNumbers).find(
-          (number) => number.phoneNumberId === input.phoneNumberId,
-        )
-      : null
-    if (!session || !selected) {
-      throw new WhatsAppConnectionError(
-        "CONNECTION_NOT_FOUND",
-        "This Embedded Signup selection has expired or is invalid.",
-      )
-    }
-    const connection = await upsertWhatsAppConnectionWithBinding(tx, {
-      actorUserId: input.actorUserId,
-      billingOwner: input.billingOwner,
-      businessDisplayName: selected.businessDisplayName,
-      credentialReference: session.credentialReference,
-      displayNumber: selected.displayNumber,
-      phoneNumberId: selected.phoneNumberId,
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-      testRecipient: input.testRecipient,
-      wabaId: selected.wabaId,
-    })
-    await tx.whatsAppEmbeddedSignupSession.update({
-      data: { consumedAt: new Date(), credentialReference: "consumed" },
-      where: { id: session.id },
-    })
-    return { connectionId: connection.id, status: connection.status }
-  })
+  return db.$transaction((tx) =>
+    completeEmbeddedSignupSession(tx, input, {
+      publicTokenDigest: digest(input.publicToken),
+    }),
+  )
+}
+
+export async function completePendingWhatsAppEmbeddedSignupSession(
+  db: PrismaClient,
+  input: {
+    actorUserId: string
+    billingOwner?: string
+    phoneNumberId: string
+    storeId: string
+    tenantId: string
+    testRecipient: string
+  },
+) {
+  return db.$transaction((tx) => completeEmbeddedSignupSession(tx, input, {}))
 }
 
 export async function getWhatsAppConnectionForBackend(
@@ -355,8 +410,7 @@ export async function recordWhatsAppConnectionTest(
       input.businessVerified &&
       input.numberVerified &&
       input.outboundVerified &&
-      input.webhookSubscribed &&
-      input.templatesReady
+      input.webhookSubscribed
     const testingRotation = Boolean(
       current.status === WhatsAppConnectionStatus.ACTIVE &&
         current.pendingCredentialReference,
@@ -396,39 +450,72 @@ export async function recordWhatsAppConnectionTest(
       where: { id: input.connectionId, tenantId: input.tenantId },
     })
     if (ready) {
+      const pharmacyActivatedStoreIds: string[] = []
       const pendingBindings = await tx.whatsAppStoreBinding.findMany({
         select: { id: true, storeId: true },
         where: {
           connectionId: updated.id,
           status: WhatsAppBindingStatus.PENDING,
+          tenantId: input.tenantId,
         },
       })
       for (const binding of pendingBindings) {
-        const policy = await evaluateServiceCommercePolicyInTransaction(tx, {
-          actorUserId: "system_whatsapp_connection_test",
-          channel: "whatsapp",
-          purpose: "prescription_whatsapp_binding_activation",
-          storeId: binding.storeId,
-          subject: "whatsapp",
-          tenantId: input.tenantId,
-          vertical: "pharmacy",
+        const store = await tx.store.findFirst({
+          select: {
+            prescriptionSettings: { select: { status: true } },
+            serviceCommerceProfile: {
+              select: {
+                intakeEnabled: true,
+                status: true,
+                whatsappEnabled: true,
+              },
+            },
+          },
+          where: { id: binding.storeId, tenantId: input.tenantId },
         })
-        const intakePolicy = await evaluateServiceCommercePolicyInTransaction(
+        if (!store) continue
+        const verticals: Array<"pharmacy" | "service"> = []
+        if (
+          store.serviceCommerceProfile?.status === "ACTIVE" &&
+          store.serviceCommerceProfile.intakeEnabled &&
+          store.serviceCommerceProfile.whatsappEnabled
+        ) {
+          verticals.push("service")
+        }
+        if (store.prescriptionSettings?.status === "ACTIVE") {
+          verticals.push("pharmacy")
+        }
+        if (verticals.length === 0) continue
+        const policy = await evaluateServiceCommercePolicyBatchInTransaction(
           tx,
           {
             actorUserId: "system_whatsapp_connection_test",
-            channel: "whatsapp",
-            purpose: "prescription_whatsapp_binding_intake_activation",
+            purpose: "customer_channel_binding_activation",
+            scopes: verticals.flatMap((vertical) => [
+              {
+                channel: "whatsapp" as const,
+                subject: "whatsapp" as const,
+                vertical,
+              },
+              {
+                channel: "whatsapp" as const,
+                subject: "intake" as const,
+                vertical,
+              },
+            ]),
             storeId: binding.storeId,
-            subject: "intake",
             tenantId: input.tenantId,
-            vertical: "pharmacy",
           },
         )
-        if (
-          policy.outcome !== "allowed" ||
-          intakePolicy.outcome !== "allowed"
-        ) {
+        const allowedVerticals = verticals.filter((vertical, index) => {
+          const offset = index * 2
+          return (
+            policy[offset]?.outcome === "allowed" &&
+            policy[offset + 1]?.outcome === "allowed" &&
+            (vertical !== "pharmacy" || input.templatesReady)
+          )
+        })
+        if (allowedVerticals.length === 0) {
           continue
         }
         await tx.whatsAppStoreBinding.updateMany({
@@ -437,34 +524,35 @@ export async function recordWhatsAppConnectionTest(
             id: { not: binding.id },
             status: WhatsAppBindingStatus.ACTIVE,
             storeId: binding.storeId,
+            tenantId: input.tenantId,
           },
         })
-        await tx.whatsAppStoreBinding.update({
+        const activated = await tx.whatsAppStoreBinding.updateMany({
           data: {
             activatedAt: new Date(),
             status: WhatsAppBindingStatus.ACTIVE,
           },
-          where: { id: binding.id },
+          where: {
+            id: binding.id,
+            status: WhatsAppBindingStatus.PENDING,
+            storeId: binding.storeId,
+            tenantId: input.tenantId,
+          },
+        })
+        if (activated.count !== 1) continue
+        if (allowedVerticals.includes("pharmacy")) {
+          pharmacyActivatedStoreIds.push(binding.storeId)
+        }
+      }
+      if (pharmacyActivatedStoreIds.length > 0) {
+        await tx.prescriptionChannel.updateMany({
+          data: { whatsappEnabled: true },
+          where: {
+            storeId: { in: pharmacyActivatedStoreIds },
+            tenantId: input.tenantId,
+          },
         })
       }
-      await tx.prescriptionChannel.updateMany({
-        data: { whatsappEnabled: true },
-        where: {
-          storeId: {
-            in: updated.id
-              ? (
-                  await tx.whatsAppStoreBinding.findMany({
-                    select: { storeId: true },
-                    where: {
-                      connectionId: updated.id,
-                      status: WhatsAppBindingStatus.ACTIVE,
-                    },
-                  })
-                ).map((binding) => binding.storeId)
-              : [],
-          },
-        },
-      })
     }
     await tx.whatsAppConnectionAuditEvent.create({
       data: {
@@ -493,7 +581,10 @@ export async function resolveWhatsAppInboundConnection(
       bindings: {
         include: {
           store: {
-            include: { prescriptionSettings: true },
+            include: {
+              prescriptionSettings: true,
+              serviceCommerceProfile: true,
+            },
           },
         },
         where: { status: WhatsAppBindingStatus.ACTIVE },
@@ -522,13 +613,19 @@ export async function resolveWhatsAppInboundConnection(
       "No active WhatsApp routing context was found.",
     )
   }
-  const bindings = connection.bindings.filter(
-    (binding) => binding.store.prescriptionSettings?.status === "ACTIVE",
-  )
+  const bindings = connection.bindings.filter((binding) => {
+    const serviceReady =
+      binding.store.serviceCommerceProfile?.status === "ACTIVE" &&
+      binding.store.serviceCommerceProfile.intakeEnabled &&
+      binding.store.serviceCommerceProfile.whatsappEnabled
+    const pharmacyReady =
+      binding.store.prescriptionSettings?.status === "ACTIVE"
+    return serviceReady || pharmacyReady
+  })
   if (!bindings.length) {
     throw new WhatsAppConnectionError(
       "CONNECTION_NOT_FOUND",
-      "No active prescription Store binding was found.",
+      "No active customer-channel Store binding was found.",
     )
   }
   return {
@@ -571,15 +668,17 @@ export async function resolveWhatsAppStatusConnection(
   }
 }
 
-export async function resolveWhatsAppInboundStore(
-  db: PrismaClient,
-  input: {
-    channelToken?: string
-    connectionId: string
-    quickActionId?: string
-    storeId?: string
-    tenantId: string
-  },
+type WhatsAppInboundStoreInput = {
+  channelToken?: string
+  connectionId: string
+  quickActionId?: string
+  storeId?: string
+  tenantId: string
+}
+
+async function resolveWhatsAppInboundStoreInTransaction(
+  db: Prisma.TransactionClient,
+  input: WhatsAppInboundStoreInput,
 ) {
   const quickActionToken = input.quickActionId?.startsWith("rx:")
     ? input.quickActionId.slice(3)
@@ -592,6 +691,24 @@ export async function resolveWhatsAppInboundStore(
   }
   const binding = await db.whatsAppStoreBinding.findFirst({
     select: {
+      store: {
+        select: {
+          customerEntryPoint: {
+            select: { publicToken: true, status: true },
+          },
+          prescriptionChannel: {
+            select: { publicToken: true, status: true, whatsappEnabled: true },
+          },
+          prescriptionSettings: { select: { status: true } },
+          serviceCommerceProfile: {
+            select: {
+              intakeEnabled: true,
+              status: true,
+              whatsappEnabled: true,
+            },
+          },
+        },
+      },
       storeId: true,
       tenantId: true,
     },
@@ -601,14 +718,26 @@ export async function resolveWhatsAppInboundStore(
       storeId: input.storeId,
       tenantId: input.tenantId,
       store: {
-        prescriptionChannel: input.channelToken
-          ? {
-              is: {
-                publicToken: input.channelToken,
-                status: "ACTIVE",
-                whatsappEnabled: true,
+        OR: input.channelToken
+          ? [
+              {
+                customerEntryPoint: {
+                  is: {
+                    publicToken: input.channelToken,
+                    status: "PUBLISHED",
+                  },
+                },
               },
-            }
+              {
+                prescriptionChannel: {
+                  is: {
+                    publicToken: input.channelToken,
+                    status: "ACTIVE",
+                    whatsappEnabled: true,
+                  },
+                },
+              },
+            ]
           : undefined,
         prescriptionQuickActions: quickActionToken
           ? {
@@ -619,7 +748,6 @@ export async function resolveWhatsAppInboundStore(
               },
             }
           : undefined,
-        prescriptionSettings: { status: "ACTIVE" },
       },
     },
   })
@@ -629,22 +757,81 @@ export async function resolveWhatsAppInboundStore(
       "No active Store binding matches this WhatsApp context.",
     )
   }
-  const policy = await evaluateServiceCommercePolicy(db, {
-    actorUserId: "public_whatsapp_routing",
-    channel: "whatsapp",
-    purpose: "prescription_whatsapp_inbound_route",
-    storeId: binding.storeId,
-    subject: "intake",
-    tenantId: binding.tenantId,
-    vertical: "pharmacy",
-  })
-  if (policy.outcome !== "allowed") {
+  const genericEntry = Boolean(
+    input.channelToken &&
+      binding.store.customerEntryPoint?.status === "PUBLISHED" &&
+      binding.store.customerEntryPoint.publicToken === input.channelToken,
+  )
+  const prescriptionEntry = Boolean(
+    input.channelToken &&
+      binding.store.prescriptionChannel?.status === "ACTIVE" &&
+      binding.store.prescriptionChannel.whatsappEnabled &&
+      binding.store.prescriptionChannel.publicToken === input.channelToken,
+  )
+  const serviceConfigured =
+    binding.store.serviceCommerceProfile?.status === "ACTIVE" &&
+    binding.store.serviceCommerceProfile.intakeEnabled &&
+    binding.store.serviceCommerceProfile.whatsappEnabled
+  const pharmacyConfigured =
+    binding.store.prescriptionSettings?.status === "ACTIVE"
+  const verticals: Array<"pharmacy" | "service"> = []
+  if (genericEntry && serviceConfigured) {
+    verticals.push("service")
+  } else if ((prescriptionEntry || quickActionToken) && pharmacyConfigured) {
+    verticals.push("pharmacy")
+  } else if (!input.channelToken && !quickActionToken) {
+    // Compatibility: an established Pharmacy route keeps its existing
+    // single-Store behavior. A non-Pharmacy Store uses the generic Service
+    // route. Multi-vertical entry is explicit through the stable entry page.
+    if (pharmacyConfigured) verticals.push("pharmacy")
+    else if (serviceConfigured) verticals.push("service")
+  }
+  if (verticals.length === 0) {
     throw new WhatsAppConnectionError(
       "CONNECTION_NOT_FOUND",
       "No active Store binding matches this WhatsApp context.",
     )
   }
-  return binding
+  const evaluations = await evaluateServiceCommercePolicyBatchInTransaction(
+    db,
+    {
+      actorUserId: "public_whatsapp_routing",
+      purpose: "customer_channel_whatsapp_inbound_route",
+      scopes: verticals.flatMap((vertical) => [
+        {
+          channel: "whatsapp" as const,
+          subject: "whatsapp" as const,
+          vertical,
+        },
+        { channel: "whatsapp" as const, subject: "intake" as const, vertical },
+      ]),
+      storeId: binding.storeId,
+      tenantId: binding.tenantId,
+    },
+  )
+  const allowedVerticals = verticals.filter((_, index) => {
+    const offset = index * 2
+    return (
+      evaluations[offset]?.outcome === "allowed" &&
+      evaluations[offset + 1]?.outcome === "allowed"
+    )
+  })
+  if (allowedVerticals.length !== 1) {
+    throw new WhatsAppConnectionError(
+      "CONNECTION_NOT_FOUND",
+      "No unambiguous Store channel route matches this WhatsApp context.",
+    )
+  }
+  return { ...binding, routeVertical: allowedVerticals[0] }
+}
+
+export async function resolveWhatsAppInboundStore(
+  db: PrismaClient,
+  input: WhatsAppInboundStoreInput,
+) {
+  return db.$transaction((tx) =>
+    resolveWhatsAppInboundStoreInTransaction(tx, input),
+  )
 }
 
 export async function recordWhatsAppInboundEvent(
@@ -656,19 +843,21 @@ export async function recordWhatsAppInboundEvent(
     normalizedPayload: Record<string, unknown>
     providerEventId: string
     requestId?: string
+    routeVertical?: "pharmacy" | "service"
     storeId: string
     tenantId: string
   },
 ) {
   return db.$transaction(async (tx) => {
+    const routeVertical = input.routeVertical ?? "pharmacy"
     await assertServiceCommercePolicyAllowedInTransaction(tx, {
       actorUserId: "public_whatsapp_webhook",
       channel: "whatsapp",
-      purpose: "prescription_whatsapp_inbound_persist",
+      purpose: "customer_channel_whatsapp_inbound_persist",
       storeId: input.storeId,
       subject: "intake",
       tenantId: input.tenantId,
-      vertical: "pharmacy",
+      vertical: routeVertical,
     })
     return tx.whatsAppInboundEvent.upsert({
       create: {
@@ -678,6 +867,7 @@ export async function recordWhatsAppInboundEvent(
         normalizedPayload: input.normalizedPayload as Prisma.InputJsonValue,
         providerEventId: input.providerEventId,
         requestId: input.requestId,
+        routeVertical: routeVertical === "pharmacy" ? "PHARMACY" : "SERVICE",
         storeId: input.storeId,
         tenantId: input.tenantId,
       },
@@ -747,13 +937,13 @@ export async function claimWhatsAppInboundEvent(
       return null
     }
     const policy = await evaluateServiceCommercePolicyInTransaction(tx, {
-      actorUserId: "job_prescription_whatsapp_inbound",
+      actorUserId: "job_customer_channel_whatsapp_inbound",
       channel: "whatsapp",
-      purpose: "prescription_whatsapp_inbound_claim",
+      purpose: "customer_channel_whatsapp_inbound_claim",
       storeId: event.storeId,
       subject: "intake",
       tenantId: event.tenantId,
-      vertical: "pharmacy",
+      vertical: event.routeVertical === "PHARMACY" ? "pharmacy" : "service",
     })
     if (policy.outcome !== "allowed") {
       await tx.whatsAppInboundEvent.update({
@@ -780,6 +970,10 @@ export async function claimWhatsAppInboundEvent(
       phoneNumberId: event.connection.phoneNumberId,
       providerEventId: event.providerEventId,
       requestId: event.requestId,
+      routeVertical:
+        event.routeVertical === "PHARMACY"
+          ? ("pharmacy" as const)
+          : ("service" as const),
       storeId: event.storeId,
       tenantId: event.tenantId,
     }

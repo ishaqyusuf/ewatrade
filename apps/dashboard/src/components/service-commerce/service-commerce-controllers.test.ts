@@ -18,9 +18,25 @@ describe("Service Commerce sheet controllers", () => {
     })
     expect(
       Object.entries(SERVICE_COMMERCE_CONTROLLERS)
-        .filter(([mode]) => mode !== "catalog_draft")
+        .filter(
+          ([mode]) =>
+            ![
+              "attachment_review",
+              "catalog_draft",
+              "connection",
+              "entry_point",
+              "media",
+              "team",
+            ].includes(mode),
+        )
         .every(([, controller]) => !controller.implemented),
     ).toBe(true)
+    for (const mode of ["connection", "entry_point", "team"] as const) {
+      expect(SERVICE_COMMERCE_CONTROLLERS[mode]).toMatchObject({
+        implemented: true,
+        requiredIds: [],
+      })
+    }
   })
 
   test("clears only sheet-owned mode and entity state on close", () => {

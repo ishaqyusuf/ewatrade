@@ -324,7 +324,62 @@ type LinkCommandInput = CatalogSourceInput & {
   clientOperationId: string
   expectedSourceFingerprint: string
   offeringId: string
-  verifiedAlias: string
+  verifiedAlias?: string
+  verifiedObservationId?: string
+}
+
+async function resolveLinkVerification(
+  tx: Prisma.TransactionClient,
+  input: LinkCommandInput,
+  sourceLine: Awaited<
+    ReturnType<typeof resolveServiceCommerceCatalogSourceLine>
+  >,
+) {
+  if (!input.verifiedObservationId) {
+    const displayAlias = input.verifiedAlias?.trim() ?? ""
+    if (!normalizeAlias(displayAlias)) {
+      throw new ServiceCommerceCatalogError(
+        "INVALID_INPUT",
+        "A verified Catalog alias or current human observation is required.",
+      )
+    }
+    return {
+      displayAlias,
+      verifiedByUserId: input.actorUserId,
+      verifiedObservationId: null,
+    }
+  }
+  const observation = await tx.serviceCommerceVerifiedObservation.findFirst({
+    where: {
+      id: input.verifiedObservationId,
+      lifecycle: "CURRENT",
+      sourceLineId: input.sourceLineId,
+      sourceVersion: sourceLine.ref.sourceVersion,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      attachment: {
+        lifecycle: "ACTIVE",
+        sourceId: input.source.id,
+        sourceKind: quoteSourceTypeByCatalogSource[sourceType(input)],
+        sourceLineId: input.sourceLineId,
+        sourceVersion: sourceLine.ref.sourceVersion,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+        mediaAsset: { lifecycle: "SAFE" },
+      },
+    },
+  })
+  if (!observation || !normalizeAlias(observation.displayLabel)) {
+    throw new ServiceCommerceCatalogError(
+      "NOT_READY",
+      "A current human-verified observation for this safe attachment is required.",
+    )
+  }
+  return {
+    displayAlias: observation.displayLabel.trim(),
+    verifiedByUserId: observation.verifiedByUserId,
+    verifiedObservationId: observation.id,
+  }
 }
 
 async function createSourceLink(
@@ -343,7 +398,8 @@ async function createSourceLink(
       source: input.source,
       sourceLineId: input.sourceLineId,
       storeId: input.storeId,
-      verifiedAlias: normalizeAlias(input.verifiedAlias),
+      verifiedAlias: normalizeAlias(input.verifiedAlias ?? ""),
+      verifiedObservationId: input.verifiedObservationId ?? null,
     })
   const previous = await tx.catalogSourceLineLink.findUnique({
     where: {
@@ -362,6 +418,7 @@ async function createSourceLink(
     }
     return previous
   }
+  const verification = await resolveLinkVerification(tx, input, sourceLine)
   const existing = await tx.catalogSourceLineLink.findUnique({
     where: {
       tenantId_storeId_sourceType_sourceId_sourceLineId: {
@@ -391,10 +448,11 @@ async function createSourceLink(
       sourceVersionFingerprint: sourceLine.ref.fingerprint,
       storeId: input.storeId,
       tenantId: input.tenantId,
-      verifiedLabel: input.verifiedAlias.trim(),
+      verifiedLabel: verification.displayAlias,
+      verifiedObservationId: verification.verifiedObservationId,
     },
   })
-  const normalizedAlias = normalizeAlias(input.verifiedAlias)
+  const normalizedAlias = normalizeAlias(verification.displayAlias)
   if (!normalizedAlias) {
     throw new ServiceCommerceCatalogError(
       "INVALID_INPUT",
@@ -403,13 +461,13 @@ async function createSourceLink(
   }
   await tx.catalogVerifiedAlias.upsert({
     create: {
-      displayAlias: input.verifiedAlias.trim(),
+      displayAlias: verification.displayAlias,
       normalizedAlias,
       offeringId: input.offeringId,
       sourceLinkId: link.id,
       storeId: input.storeId,
       tenantId: input.tenantId,
-      verifiedByUserId: input.actorUserId,
+      verifiedByUserId: verification.verifiedByUserId,
     },
     update: { sourceLinkId: link.id },
     where: {
@@ -484,7 +542,8 @@ export async function createServiceCommerceCatalogDraft(
     draftKind: "product" | "service"
     expectedSourceFingerprint: string
     name: string
-    verifiedAlias: string
+    verifiedAlias?: string
+    verifiedObservationId?: string
   },
 ) {
   try {
@@ -515,7 +574,8 @@ export async function createServiceCommerceCatalogDraft(
         source: input.source,
         sourceLineId: input.sourceLineId,
         storeId: input.storeId,
-        verifiedAlias: normalizeAlias(input.verifiedAlias),
+        verifiedAlias: normalizeAlias(input.verifiedAlias ?? ""),
+        verifiedObservationId: input.verifiedObservationId ?? null,
       })
       const prior = await tx.catalogSourceLineLink.findUnique({
         include: { offering: true },

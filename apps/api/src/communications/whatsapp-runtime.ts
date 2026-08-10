@@ -1,4 +1,5 @@
 import {
+  customerChannelConversationContextId,
   extractWhatsAppChannelContext,
   getConfiguredConversationStateStore,
   parseMetaWhatsAppEvents,
@@ -9,6 +10,7 @@ import {
 import { prisma } from "@ewatrade/db"
 import {
   ServiceCommercePolicyError,
+  WhatsAppConnectionError,
   recordWhatsAppCommunicationStatus,
   recordWhatsAppInboundEvent,
   recordWhatsAppRoutingAlert,
@@ -65,7 +67,8 @@ export async function handleWhatsAppWebhookRequest(request: Request) {
           phoneNumberId: event.phoneNumberId,
           providerMessageId: event.messageId,
         })
-      } catch {
+      } catch (error) {
+        if (!(error instanceof WhatsAppConnectionError)) throw error
         await recordWhatsAppRoutingAlert(prisma, {
           code: "inactive_or_unknown_connection",
           phoneNumberId: event.phoneNumberId,
@@ -91,7 +94,8 @@ export async function handleWhatsAppWebhookRequest(request: Request) {
       route = await resolveWhatsAppInboundConnection(prisma, {
         phoneNumberId: event.phoneNumberId,
       })
-    } catch {
+    } catch (error) {
+      if (!(error instanceof WhatsAppConnectionError)) throw error
       await recordWhatsAppRoutingAlert(prisma, {
         code: "inactive_or_unknown_connection",
         phoneNumberId: event.phoneNumberId,
@@ -123,7 +127,8 @@ export async function handleWhatsAppWebhookRequest(request: Request) {
                 : undefined,
         tenantId: route.tenantId,
       })
-    } catch {
+    } catch (error) {
+      if (!(error instanceof WhatsAppConnectionError)) throw error
       await recordWhatsAppRoutingAlert(prisma, {
         code: "ambiguous_store_binding",
         connectionId: route.connectionId,
@@ -139,7 +144,10 @@ export async function handleWhatsAppWebhookRequest(request: Request) {
       storeId: binding.storeId,
       tenantId: binding.tenantId,
     })
-    const contextId = prescriptionConversationContextId(binding.storeId)
+    const contextId =
+      binding.routeVertical === "pharmacy"
+        ? prescriptionConversationContextId(binding.storeId)
+        : customerChannelConversationContextId(binding.storeId)
     const existingState = await state.get({
       connectionId: route.connectionId,
       contextId,
@@ -176,6 +184,7 @@ export async function handleWhatsAppWebhookRequest(request: Request) {
             : undefined,
         storeId: binding.storeId,
         tenantId: binding.tenantId,
+        routeVertical: binding.routeVertical,
       })
     } catch (error) {
       if (!(error instanceof ServiceCommercePolicyError)) throw error
@@ -188,7 +197,9 @@ export async function handleWhatsAppWebhookRequest(request: Request) {
       })
       continue
     }
-    await enqueuePrescriptionWhatsAppInbound(inbound.id)
+    if (binding.routeVertical === "pharmacy") {
+      await enqueuePrescriptionWhatsAppInbound(inbound.id)
+    }
   }
   return new Response(JSON.stringify({ received: true }), {
     headers: { "content-type": "application/json" },
