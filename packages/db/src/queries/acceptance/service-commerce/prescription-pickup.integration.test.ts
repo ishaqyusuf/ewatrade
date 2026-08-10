@@ -190,5 +190,34 @@ describeWithServiceCommerceDatabase(
         expect(await completePickup(origin)).toBe(expectedSource)
       }, 180_000)
     }
+
+    test("keeps a pharmacist-selected substitute as one included payable Order line", async () => {
+      const prepared = await prepareReleasedPrescriptionQuote(
+        fixture,
+        "staff",
+        "pickup",
+        { isAlternative: true },
+      )
+      expect(prepared.publicQuote.lines).toMatchObject([
+        { outcome: "included", totalMinor: 2_500 },
+      ])
+      expect(prepared.publicQuote.totalMinor).toBe(2_500)
+
+      const accepted = await acceptPrescriptionPickupQuote(fixture.db, {
+        acceptanceToken: prepared.quoteToken,
+        clientAcceptanceId: `staff-substitute-${prepared.runId}`,
+        partialAcknowledged: false,
+      })
+      const order = await fixture.db.commercialOrder.findFirstOrThrow({
+        include: { lines: true },
+        where: {
+          id: accepted.orderId,
+          storeId: fixture.storeId,
+          tenantId: fixture.tenantId,
+        },
+      })
+      expect(order.lines).toHaveLength(1)
+      expect(order.totalMinor).toBe(2_500)
+    }, 180_000)
   },
 )

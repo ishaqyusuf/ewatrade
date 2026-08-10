@@ -28,6 +28,11 @@ import {
   resolveCatalogSourceLinkForQuote,
 } from "./service-commerce-catalog"
 
+const COMMERCE_QUOTE_TRANSACTION_OPTIONS = {
+  maxWait: 10_000,
+  timeout: 30_000,
+} as const
+
 export type CommerceQuoteSourceType =
   | "commerce_inquiry"
   | "prescription_request"
@@ -203,20 +208,71 @@ function serializeLineOutcome(outcome: CommerceQuoteLineOutcome) {
 type QuoteOptionLine = {
   outcome: CommerceQuoteLineOutcome | string
   quoteOptionId?: null | string
+  totalMinor?: number
 }
 
-type QuoteOptionFacts<TLine extends QuoteOptionLine> = {
+type QuoteOptionFacts<
+  TLine extends QuoteOptionLine,
+  TId extends null | string = string,
+> = {
   availabilityOutcome: CommerceQuoteAvailabilityOutcome | string
   customerNote?: null | string
   discountMinor: number
   fulfilmentFeeMinor: number
   fulfilmentPromise?: null | string
   fulfilmentType: CommerceQuoteFulfilmentType | string
-  id: string
+  id: TId
   lines: TLine[]
   subtotalMinor: number
   taxMinor: number
   totalMinor: number
+}
+
+function resolvePayableOption<
+  TLine extends QuoteOptionLine,
+  TId extends null | string,
+>(option: QuoteOptionFacts<TLine, TId>) {
+  const lines = option.lines.filter(
+    (line) => line.outcome === CommerceQuoteLineOutcome.INCLUDED,
+  )
+  if (lines.length === 0) return null
+
+  const hasLegacyAlternatives = option.lines.some(
+    (line) => line.outcome === CommerceQuoteLineOutcome.ALTERNATIVE,
+  )
+  if (!hasLegacyAlternatives) return { ...option, lines }
+
+  const subtotalMinor = lines.reduce((sum, line) => {
+    if (
+      line.totalMinor === undefined ||
+      !Number.isSafeInteger(line.totalMinor) ||
+      line.totalMinor < 0
+    ) {
+      throw new CommerceQuoteError(
+        "QUOTE_CONFLICT",
+        "Legacy Quote alternatives cannot be reconciled safely.",
+      )
+    }
+    return sum + line.totalMinor
+  }, 0)
+  const totalMinor =
+    subtotalMinor -
+    option.discountMinor +
+    option.taxMinor +
+    option.fulfilmentFeeMinor
+  if (!Number.isSafeInteger(totalMinor) || totalMinor < 0) {
+    throw new CommerceQuoteError(
+      "QUOTE_CONFLICT",
+      "Legacy Quote alternatives cannot be reconciled safely.",
+    )
+  }
+  return {
+    ...option,
+    availabilityOutcome: CommerceQuoteAvailabilityOutcome.PARTIAL,
+    lines,
+    subtotalMinor,
+    totalMinor,
+  }
 }
 
 export function resolveCommerceQuotePayableState<
@@ -238,7 +294,7 @@ export function resolveCommerceQuotePayableState<
   const options = version.options ?? []
   if (options.length === 0) {
     return {
-      payable: {
+      payable: resolvePayableOption({
         availabilityOutcome: version.availabilityOutcome,
         customerNote: version.customerNote,
         discountMinor: version.discountMinor,
@@ -246,15 +302,11 @@ export function resolveCommerceQuotePayableState<
         fulfilmentPromise: version.fulfilmentPromise,
         fulfilmentType: version.fulfilmentType,
         id: null,
-        lines: (version.lines ?? []).filter(
-          (line) =>
-            line.outcome === CommerceQuoteLineOutcome.INCLUDED ||
-            line.outcome === CommerceQuoteLineOutcome.ALTERNATIVE,
-        ),
+        lines: version.lines ?? [],
         subtotalMinor: version.subtotalMinor,
         taxMinor: version.taxMinor,
         totalMinor: version.totalMinor,
-      },
+      }),
       requiresSelection: false,
     }
   }
@@ -278,17 +330,11 @@ export function resolveCommerceQuotePayableState<
     : options.length === 1
       ? (options[0] ?? null)
       : null
-  const payable = payableOption
-    ? {
-        ...payableOption,
-        lines: payableOption.lines.filter(
-          (line) =>
-            line.outcome === CommerceQuoteLineOutcome.INCLUDED ||
-            line.outcome === CommerceQuoteLineOutcome.ALTERNATIVE,
-        ),
-      }
-    : null
-  return { payable, requiresSelection: payable === null }
+  const payable = payableOption ? resolvePayableOption(payableOption) : null
+  return {
+    payable,
+    requiresSelection: options.length > 1 && selectedOptionId === null,
+  }
 }
 
 function lineTotal(unitPriceMinor: number, quantity: string) {
@@ -1046,10 +1092,10 @@ export async function issueCommerceQuote(
     const resolvedOptions = preparedOptions.map((option) => {
       let subtotalMinor = 0
       const lines = option.lines.map((line) => {
-        const payable =
-          line.outcome === "included" || line.outcome === "alternative"
+        const payable = line.outcome === "included"
+        const priced = payable || line.outcome === "alternative"
         const offering = line.offeringId ? byId.get(line.offeringId) : undefined
-        if (payable && !offering) {
+        if (priced && !offering) {
           throw new CommerceQuoteError(
             "OFFERING_UNAVAILABLE",
             "Included Quote lines require an active Offering.",
@@ -1104,7 +1150,7 @@ export async function issueCommerceQuote(
         let quantity: string | null = null
         let unitPriceMinor: number | null = null
         let totalMinor = 0
-        if (payable) {
+        if (priced) {
           if (
             line.unitPriceMinor === undefined ||
             !Number.isSafeInteger(line.unitPriceMinor) ||
@@ -1123,7 +1169,7 @@ export async function issueCommerceQuote(
           })
           unitPriceMinor = line.unitPriceMinor
           totalMinor = lineTotal(unitPriceMinor, quantity)
-          subtotalMinor += totalMinor
+          if (payable) subtotalMinor += totalMinor
         }
 
         return {
@@ -1156,7 +1202,7 @@ export async function issueCommerceQuote(
       })
 
       const payableCount = option.lines.filter(
-        (line) => line.outcome === "included" || line.outcome === "alternative",
+        (line) => line.outcome === "included",
       ).length
       if (
         (option.availabilityOutcome === "unavailable" && payableCount !== 0) ||
@@ -1362,53 +1408,52 @@ export async function getPublicCommerceQuote(
       unitPriceMinor: line.unitPriceMinor,
       variantName: line.variantName,
     })
+    const publicOption = (
+      option: QuoteOptionFacts<(typeof version.lines)[number]>,
+      input: { currencyCode: string; label: string; position: number },
+    ) => {
+      const payableOption = resolvePayableOption(option)
+      return {
+        availabilityOutcome: (
+          payableOption?.availabilityOutcome ??
+          CommerceQuoteAvailabilityOutcome.UNAVAILABLE
+        ).toLowerCase(),
+        currencyCode: input.currencyCode,
+        customerNote: option.customerNote,
+        discountMinor: payableOption?.discountMinor ?? 0,
+        fulfilmentFeeMinor: payableOption?.fulfilmentFeeMinor ?? 0,
+        fulfilmentPromise: option.fulfilmentPromise,
+        fulfilmentType: option.fulfilmentType.toLowerCase(),
+        id: option.id,
+        label: input.label,
+        lines: option.lines
+          .filter(
+            (line) =>
+              line.outcome === CommerceQuoteLineOutcome.INCLUDED ||
+              line.outcome === CommerceQuoteLineOutcome.ALTERNATIVE,
+          )
+          .map(publicLine),
+        position: input.position,
+        subtotalMinor: payableOption?.subtotalMinor ?? 0,
+        taxMinor: payableOption?.taxMinor ?? 0,
+        totalMinor: payableOption?.totalMinor ?? 0,
+      }
+    }
     const options =
       version.options.length > 0
-        ? version.options.map((option) => ({
-            availabilityOutcome: option.availabilityOutcome.toLowerCase(),
-            currencyCode: option.currencyCode,
-            customerNote: option.customerNote,
-            discountMinor: option.discountMinor,
-            fulfilmentFeeMinor: option.fulfilmentFeeMinor,
-            fulfilmentPromise: option.fulfilmentPromise,
-            fulfilmentType: option.fulfilmentType.toLowerCase(),
-            id: option.id,
-            label: option.label,
-            lines: option.lines
-              .filter(
-                (line) =>
-                  line.outcome === CommerceQuoteLineOutcome.INCLUDED ||
-                  line.outcome === CommerceQuoteLineOutcome.ALTERNATIVE,
-              )
-              .map(publicLine),
-            position: option.position,
-            subtotalMinor: option.subtotalMinor,
-            taxMinor: option.taxMinor,
-            totalMinor: option.totalMinor,
-          }))
+        ? version.options.map((option) =>
+            publicOption(option, {
+              currencyCode: option.currencyCode,
+              label: option.label,
+              position: option.position,
+            }),
+          )
         : [
-            {
-              availabilityOutcome: version.availabilityOutcome.toLowerCase(),
+            publicOption(version, {
               currencyCode: version.currencyCode,
-              customerNote: version.customerNote,
-              discountMinor: version.discountMinor,
-              fulfilmentFeeMinor: version.fulfilmentFeeMinor,
-              fulfilmentPromise: version.fulfilmentPromise,
-              fulfilmentType: version.fulfilmentType.toLowerCase(),
-              id: version.id,
               label: "Quote",
-              lines: version.lines
-                .filter(
-                  (line) =>
-                    line.outcome === CommerceQuoteLineOutcome.INCLUDED ||
-                    line.outcome === CommerceQuoteLineOutcome.ALTERNATIVE,
-                )
-                .map(publicLine),
               position: 0,
-              subtotalMinor: version.subtotalMinor,
-              taxMinor: version.taxMinor,
-              totalMinor: version.totalMinor,
-            },
+            }),
           ]
     const payable = payableState.payable
     return {
@@ -1678,13 +1723,13 @@ export async function selectCommerceQuoteOption(
   }
 
   try {
-    return await db.$transaction(select)
+    return await db.$transaction(select, COMMERCE_QUOTE_TRANSACTION_OPTIONS)
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
-      return db.$transaction(select)
+      return db.$transaction(select, COMMERCE_QUOTE_TRANSACTION_OPTIONS)
     }
     throw error
   }

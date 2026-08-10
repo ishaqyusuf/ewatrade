@@ -66,11 +66,15 @@
   verified. Ticket 06 is complete: mutually exclusive Offer Option contracts,
   additive persistence, runtime issuance, idempotent selection, selected-only
   acceptance, legacy default projection and the preparation/release transaction
-  pass focused checks. The exact post-release `.env.local` Neon matrix passes 5
-  tests and 116 assertions across multi-option Inquiry, generic Service and
-  Pharmacy web/staff/WhatsApp pickup; desktop/mobile browser QA also passes
-  selection, payable-total and one-Order acceptance states without console
-  errors or mobile overflow. The synthetic fixture was removed. Ticket 06A is
+  pass focused checks. A follow-up revalidation makes legacy commercial
+  alternatives display-only/non-payable, preserves a pharmacist-selected
+  substitute as one included Order line and moves the Storefront public Quote
+  commands behind the typed tRPC boundary. The exact post-release `.env.local`
+  Neon matrix passes 6 tests and 126 assertions across multi-option Inquiry,
+  generic Service, Pharmacy web/staff/WhatsApp pickup and substitute pricing;
+  desktop/mobile browser QA also passes selection, selected-only payable total
+  and one-Order acceptance states without console errors or mobile overflow.
+  The synthetic fixture was removed. Ticket 06A is
   now the active source frontier.
   Live Meta/storage/scanner release gates remain open. The focused
   Customer Channels/media matrix passes 71 tests and 177 assertions; the

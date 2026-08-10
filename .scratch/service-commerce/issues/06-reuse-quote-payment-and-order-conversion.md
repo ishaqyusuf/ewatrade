@@ -5,7 +5,7 @@
 **Blocked by:** 03 - Establish Customer Request Interoperability Contract; 03A —
 Grow The Private Catalog From Requests And Quotes.
 
-**Status:** complete on 2026-08-10. Shared Offer Option contracts, additive
+**Status:** completed on 2026-08-10 and revalidated on 2026-08-11. Shared Offer Option contracts, additive
 persistence, runtime issuance, idempotent selection, selected-only acceptance,
 legacy compatibility and the private preparation/release transaction are
 source-complete. Focused tests, the post-release verified-Neon matrix and
@@ -48,16 +48,22 @@ owner-approved on 2026-08-09; selectable Offer Option amendment approved on
 
 ## Verification Evidence
 
-- Focused Quote, Catalog-price and Pharmacy-fulfilment suites: 41 tests, 96
+- Focused Quote, Catalog and Pharmacy request/fulfilment suites: 62 tests, 156
   assertions; API Option schemas: 3 tests, 5 assertions; DB, API and Storefront
   typechecks plus scoped Biome checks pass.
 - Post-release `.env.local` Neon acceptance: multi-option Commerce Inquiry,
-  generic Service and Pharmacy web/staff/WhatsApp paid-pickup compatibility all
-  pass — 5 tests and 116 assertions — with run-owned atomic fixture cleanup.
+  generic Service, Pharmacy web/staff/WhatsApp paid-pickup compatibility and a
+  pharmacist-selected substitute all pass — 6 tests and 126 assertions — with
+  run-owned atomic fixture cleanup.
 - Desktop 1440×900 and mobile 390×844 browser acceptance proves alternative
   display, no pre-selection Accept CTA, selected-only payable total, one Order
-  acceptance success, zero mobile horizontal overflow and no browser console
-  errors. The temporary browser fixture was removed after the run.
+  acceptance success through the Storefront's typed tRPC boundary, zero mobile
+  horizontal overflow and no browser console errors. The temporary browser
+  fixture was removed after the run.
+- Legacy commercial `alternative` lines remain visible but are excluded from
+  payable totals, reservations, Orders and payments; alternative-only legacy
+  Quotes fail closed. Pharmacy keeps the clinical substitute attribution while
+  emitting the selected substitute as one included commercial line.
 - The machine's system resolver intermittently returned `ENOTFOUND` for the
   Neon pooler. Acceptance used a process-local DNS result with the original
   Neon hostname retained for TLS SNI and the canonical local-profile

@@ -252,6 +252,14 @@
   token and, when applicable, its stored selection. Only the selected/default
   Option's lines and exact monetary/fulfilment facts reach Order creation;
   retries return the same Commercial Order/payment intent.
+- A legacy commercial `ALTERNATIVE` line is customer-visible but non-payable:
+  it is excluded from subtotal, total, reservation, Order and payment facts,
+  and an alternative-only legacy Quote fails closed. Pharmacy retains clinical
+  substitute attribution in its own mapping while sending the selected
+  substitute to Commerce as one `INCLUDED` payable line.
+- Storefront Service and Prescription Quote reads, selection, acceptance and
+  hosted-checkout preparation call the typed public tRPC procedures. Storefront
+  pages do not import repository commands, Prisma or provider adapters.
 - Accepted-Quote price suggestions and reusable Catalog price-promotion impact
   admit only the selected/default Option. Unselected immutable Option lines are
   excluded even though they remain visible in Quote history.

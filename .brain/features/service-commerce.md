@@ -12,10 +12,14 @@ through 2026-08-10. Tickets 01, 02, 03, 11, 03A, 05 and 06 are complete. Tickets
 and 04A have source-complete foundations. Ticket 05 adds the shared source/API,
 public Product-inquiry and explicit product-selected generic WhatsApp adapters,
 with combined focused, verified-Neon and desktop/mobile browser acceptance.
-Ticket 06 is complete. Its mutually exclusive Offer Option contracts, additive
+Ticket 06 was completed and revalidated on 2026-08-11. Its mutually exclusive Offer Option contracts, additive
 development-Neon persistence, shared issuance, idempotent selection,
 selected-only acceptance and private prepare/release transaction pass focused,
-post-release Neon and desktop/mobile browser acceptance. Ticket 06A is the
+post-release Neon and desktop/mobile browser acceptance. Legacy commercial
+alternative lines are display-only and excluded from payable, reservation,
+Order and payment facts; a pharmacist-selected substitute is emitted as the
+single included commercial line while its clinical alternative attribution
+remains source-owned. Ticket 06A is the
 active source frontier. Production schema/provider operations remain
 separately authorized.
 
@@ -351,10 +355,13 @@ reserved or paid. Existing simple Quotes migrate as one default option.
 New shared issuers and Pharmacy delivery-fee revisions persist at least one
 Option and attach every new line to its owner. Existing immutable versions are
 not rewritten; their Version-level facts and directly attached lines project as
-one synthetic default Option. A Pharmacy `alternative` line remains a labelled
-substitute for its requested line inside one selected/default Option; mutually
-exclusive whole-Quote choices must be separate Options and therefore cannot be
-added together accidentally.
+one synthetic default Option. A legacy commercial `alternative` line remains
+visible but is non-payable and cannot contribute to totals, reservations,
+Orders or payments; an alternative-only legacy Quote fails closed. When a
+pharmacist selects a substitute, Pharmacy retains the clinical alternative
+attribution while Commerce receives that chosen substitute as the one
+`included` payable line. Mutually exclusive whole-Quote choices must be
+separate Options and therefore cannot be added together accidentally.
 
 Accepted-Quote price evidence and reusable-price promotion resolve only the
 selected/default Option. Prices shown in an unselected immutable Option remain

@@ -363,9 +363,19 @@ describe("prescription fulfilment policy enforcement", () => {
           input.select
             ? { id: "version-1" }
             : {
+                availabilityOutcome: "FULL",
                 currentVersionId: "version-1",
+                discountMinor: 0,
+                fulfilmentFeeMinor: 0,
+                fulfilmentType: "PICKUP",
                 id: "version-1",
+                lines: [{ outcome: "INCLUDED" }],
+                optionSelection: null,
+                options: [],
                 status: "ISSUED",
+                subtotalMinor: 2_500,
+                taxMinor: 0,
+                totalMinor: 2_500,
                 quote: {
                   currentVersionId: "version-1",
                   sourceType: "PRESCRIPTION_REQUEST",

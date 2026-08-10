@@ -1,40 +1,35 @@
-import { createHash, randomUUID } from "node:crypto"
+import { createHash } from "node:crypto"
 
-import { prisma } from "@ewatrade/db"
-import {
-  CatalogError,
-  acceptServiceQuote,
-  getPublicServiceQuote,
-  selectServiceQuoteOption,
-} from "@ewatrade/db/queries"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { notFound, redirect } from "next/navigation"
 
 import { publicServiceDetail } from "@/lib/service-display"
+import { trpc } from "@/trpc/server"
 
 export const dynamic = "force-dynamic"
 
 async function load(token: string) {
   try {
-    return await getPublicServiceQuote(prisma, { acceptanceToken: token })
-  } catch (error) {
-    if (error instanceof CatalogError) notFound()
-    throw error
+    return await trpc.serviceAccess.quote.query({ acceptanceToken: token })
+  } catch {
+    notFound()
   }
+}
+
+function commandId(prefix: string, token: string) {
+  return `${prefix}:${createHash("sha256").update(token).digest("hex")}`
 }
 
 async function accept(data: FormData) {
   "use server"
   const token = String(data.get("token") ?? "")
   try {
-    await acceptServiceQuote(prisma, {
+    await trpc.serviceAccess.acceptQuote.mutate({
       acceptanceToken: token,
-      actorUserId: "public_quote_acceptance",
-      clientAcceptanceId: `acceptance-${randomUUID()}`,
+      clientAcceptanceId: commandId("service-acceptance", token),
     })
-  } catch (error) {
-    if (error instanceof CatalogError) notFound()
-    throw error
+  } catch {
+    notFound()
   }
   redirect(`/service-quote/${token}?accepted=1`)
 }
@@ -43,16 +38,13 @@ async function selectOption(data: FormData) {
   "use server"
   const token = String(data.get("token") ?? "")
   try {
-    await selectServiceQuoteOption(prisma, {
+    await trpc.serviceAccess.selectQuoteOption.mutate({
       acceptanceToken: token,
-      clientSelectionId: `selection:${createHash("sha256")
-        .update(token)
-        .digest("hex")}`,
+      clientSelectionId: commandId("service-option", token),
       optionId: String(data.get("optionId") ?? ""),
     })
-  } catch (error) {
-    if (error instanceof CatalogError) notFound()
-    throw error
+  } catch {
+    notFound()
   }
   redirect(`/service-quote/${token}?selected=1`)
 }

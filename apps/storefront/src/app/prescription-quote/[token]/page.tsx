@@ -1,19 +1,9 @@
 import { createHash } from "node:crypto"
 
-import { prisma } from "@ewatrade/db"
-import {
-  CommerceQuoteError,
-  PrescriptionRequestError,
-  acceptPrescriptionDeliveryQuote,
-  acceptPrescriptionPickupQuote,
-  attachPrescriptionHostedCheckout,
-  getPublicPrescriptionQuote,
-  preparePrescriptionHostedCheckout,
-  selectPrescriptionQuoteOption,
-} from "@ewatrade/db/queries"
-import { getConfiguredHostedPaymentProvider } from "@ewatrade/payments"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { notFound, redirect } from "next/navigation"
+
+import { trpc } from "@/trpc/server"
 
 export const dynamic = "force-dynamic"
 
@@ -23,14 +13,9 @@ function commandId(prefix: string, token: string) {
 
 async function load(token: string) {
   try {
-    return await getPublicPrescriptionQuote(prisma, { acceptanceToken: token })
-  } catch (error) {
-    if (
-      error instanceof PrescriptionRequestError ||
-      error instanceof CommerceQuoteError
-    )
-      notFound()
-    throw error
+    return await trpc.prescriptionAccess.quote.query({ acceptanceToken: token })
+  } catch {
+    notFound()
   }
 }
 
@@ -38,19 +23,13 @@ async function acceptPickup(data: FormData) {
   "use server"
   const token = String(data.get("token") ?? "")
   try {
-    await acceptPrescriptionPickupQuote(prisma, {
+    await trpc.prescriptionAccess.acceptPickupQuote.mutate({
       acceptanceToken: token,
       clientAcceptanceId: commandId("prescription-pickup", token),
       partialAcknowledged: data.get("partialAcknowledged") === "yes",
     })
-  } catch (error) {
-    if (
-      error instanceof PrescriptionRequestError ||
-      error instanceof CommerceQuoteError
-    ) {
-      redirect(`/prescription-quote/${token}?error=acceptance`)
-    }
-    throw error
+  } catch {
+    redirect(`/prescription-quote/${token}?error=acceptance`)
   }
   redirect(`/prescription-quote/${token}?accepted=1`)
 }
@@ -59,19 +38,13 @@ async function selectOption(data: FormData) {
   "use server"
   const token = String(data.get("token") ?? "")
   try {
-    await selectPrescriptionQuoteOption(prisma, {
+    await trpc.prescriptionAccess.selectQuoteOption.mutate({
       acceptanceToken: token,
       clientSelectionId: commandId("prescription-option", token),
       optionId: String(data.get("optionId") ?? ""),
     })
-  } catch (error) {
-    if (
-      error instanceof PrescriptionRequestError ||
-      error instanceof CommerceQuoteError
-    ) {
-      redirect(`/prescription-quote/${token}?error=selection`)
-    }
-    throw error
+  } catch {
+    redirect(`/prescription-quote/${token}?error=selection`)
   }
   redirect(`/prescription-quote/${token}?selected=1`)
 }
@@ -80,19 +53,13 @@ async function acceptDelivery(data: FormData) {
   "use server"
   const token = String(data.get("token") ?? "")
   try {
-    await acceptPrescriptionDeliveryQuote(prisma, {
+    await trpc.prescriptionAccess.acceptDeliveryQuote.mutate({
       acceptanceToken: token,
       clientAcceptanceId: commandId("prescription-delivery", token),
       partialAcknowledged: data.get("partialAcknowledged") === "yes",
     })
-  } catch (error) {
-    if (
-      error instanceof PrescriptionRequestError ||
-      error instanceof CommerceQuoteError
-    ) {
-      redirect(`/prescription-quote/${token}?error=acceptance`)
-    }
-    throw error
+  } catch {
+    redirect(`/prescription-quote/${token}?error=acceptance`)
   }
   redirect(`/prescription-quote/${token}?accepted=1`)
 }
@@ -105,32 +72,13 @@ async function payNow(data: FormData) {
     .digest("base64url")
   let checkoutUrl: string
   try {
-    const provider = getConfiguredHostedPaymentProvider()
-    const prepared = await preparePrescriptionHostedCheckout(prisma, {
+    const checkout = await trpc.prescriptionAccess.createCheckout.mutate({
       acceptanceToken: token,
       clientPaymentId: commandId("prescription-payment", token),
-      provider: provider.key,
       statusToken,
     })
-    const storefrontUrl =
-      process.env.STOREFRONT_URL?.replace(/\/$/, "") ??
-      "http://ewatrade-storefront.localhost"
-    const checkout = await provider.createCheckout({
-      amountMinor: prepared.amountMinor,
-      callbackUrl: `${storefrontUrl}/prescription-payment/${statusToken}`,
-      currencyCode: prepared.currencyCode,
-      customerEmail: prepared.customerEmail,
-      metadata: { paymentIntentId: prepared.intentId },
-      reference: prepared.providerReference,
-    })
-    await attachPrescriptionHostedCheckout(prisma, {
-      checkoutUrl: checkout.checkoutUrl,
-      expiresAt: checkout.expiresAt,
-      intentId: prepared.intentId,
-      providerReference: prepared.providerReference,
-    })
     checkoutUrl = checkout.checkoutUrl
-  } catch (error) {
+  } catch {
     redirect(`/prescription-quote/${token}?error=payment`)
   }
   redirect(checkoutUrl)

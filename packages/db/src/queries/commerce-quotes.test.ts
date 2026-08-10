@@ -217,6 +217,68 @@ describe("Commerce Quote invariants", () => {
     })
   })
 
+  test("keeps legacy line alternatives visible but never additive or payable", () => {
+    expect(
+      resolveCommerceQuotePayableState({
+        availabilityOutcome: "FULL",
+        discountMinor: 100,
+        fulfilmentFeeMinor: 500,
+        fulfilmentType: "PICKUP",
+        lines: [
+          {
+            id: "included-line",
+            outcome: "INCLUDED",
+            quoteOptionId: null,
+            totalMinor: 20_000,
+          },
+          {
+            id: "displayed-alternative",
+            outcome: "ALTERNATIVE",
+            quoteOptionId: null,
+            totalMinor: 15_000,
+          },
+        ],
+        optionSelection: null,
+        options: [],
+        subtotalMinor: 35_000,
+        taxMinor: 150,
+        totalMinor: 35_550,
+      }),
+    ).toMatchObject({
+      payable: {
+        availabilityOutcome: "PARTIAL",
+        lines: [{ id: "included-line" }],
+        subtotalMinor: 20_000,
+        totalMinor: 20_550,
+      },
+      requiresSelection: false,
+    })
+  })
+
+  test("fails closed when a legacy Quote contains only alternatives", () => {
+    expect(
+      resolveCommerceQuotePayableState({
+        availabilityOutcome: "FULL",
+        discountMinor: 0,
+        fulfilmentFeeMinor: 0,
+        fulfilmentType: "PICKUP",
+        lines: [
+          {
+            id: "displayed-alternative",
+            outcome: "ALTERNATIVE",
+            quoteOptionId: null,
+            totalMinor: 15_000,
+          },
+        ],
+        optionSelection: null,
+        options: [],
+        subtotalMinor: 15_000,
+        taxMinor: 0,
+        totalMinor: 15_000,
+      }),
+    ).toEqual({ payable: null, requiresSelection: false })
+  })
+
   test("normalizes a simple Quote to one default option and rejects mixed input", () => {
     expect(
       normalizeIssueCommerceQuoteOptions({
@@ -605,6 +667,7 @@ describe("Commerce Quote invariants", () => {
     let selection: null | Selection = null
     let simulateConcurrentWinner = true
     let authorized = 0
+    const transactionOptions: unknown[] = []
     const version = () => ({
       expiresAt: new Date("2099-01-01T00:00:00.000Z"),
       id: "version-1",
@@ -644,7 +707,9 @@ describe("Commerce Quote invariants", () => {
     const client = {
       $transaction: async (
         callback: (tx: PrismaClient) => Promise<unknown>,
+        options?: unknown,
       ) => {
+        transactionOptions.push(options)
         accessRead = true
         return callback(client as unknown as PrismaClient)
       },
@@ -696,6 +761,11 @@ describe("Commerce Quote invariants", () => {
       versionId: "version-1",
     })
     expect(authorized).toBe(3)
+    expect(transactionOptions).toEqual([
+      { maxWait: 10_000, timeout: 30_000 },
+      { maxWait: 10_000, timeout: 30_000 },
+      { maxWait: 10_000, timeout: 30_000 },
+    ])
     await expect(
       selectCommerceQuoteOption(client, {
         ...command,

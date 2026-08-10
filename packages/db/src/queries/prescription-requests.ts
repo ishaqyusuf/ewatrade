@@ -2405,9 +2405,7 @@ export async function issuePrescriptionQuote(
         )
       }
       const outcome = payable
-        ? mapping.isAlternative
-          ? ("alternative" as const)
-          : ("included" as const)
+        ? ("included" as const)
         : mapping.availability === PrescriptionLineAvailability.DECLINED
           ? ("declined" as const)
           : ("unavailable" as const)

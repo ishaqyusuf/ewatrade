@@ -80,6 +80,7 @@ export async function prepareReleasedPrescriptionQuote(
   fixture: ServiceCommerceAcceptanceFixture,
   origin: IntakeOrigin,
   fulfillmentPreference: "delivery" | "pickup",
+  options?: { isAlternative?: boolean },
 ) {
   const runId = randomUUID()
   const intake = await submitPrescription(
@@ -179,6 +180,7 @@ export async function prepareReleasedPrescriptionQuote(
     lines: [
       {
         availability: "available",
+        isAlternative: options?.isAlternative,
         offeringId: fixture.offeringId,
         quantity: "1",
         transcriptionLineId: line.id,
@@ -227,6 +229,7 @@ export async function prepareReleasedPrescriptionQuote(
     intake,
     inventoryBeforeAcceptance,
     quoteToken: quote.token,
+    publicQuote,
     request,
     runId,
     statusToken: intake.statusToken,

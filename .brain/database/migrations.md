@@ -287,11 +287,14 @@ generated and applied the migration, and `bun db:push` then reported the
 development database already synchronized. No migration SQL was hand-authored,
 no reset or data-loss override was used, and no production database was
 touched. Runtime issuance, idempotent selection, selected-only acceptance and
-the private prepare/release transaction are source-complete. The post-release
-verified-Neon matrix passes 5 tests and 116 assertions, and desktop/mobile
-browser acceptance is complete with the run-owned fixture removed. Ticket 06
-is complete; deployable production rollout remains separately authorized and
-open.
+the private prepare/release transaction are source-complete. The 2026-08-11
+follow-up revalidation keeps legacy commercial alternative lines visible but
+outside payable totals, reservations, Orders and payments, and proves a
+pharmacist-selected substitute becomes exactly one included commercial Order
+line. The post-release verified-Neon matrix passes 6 tests and 126 assertions,
+and desktop/mobile browser acceptance through the typed tRPC boundary is
+complete with the run-owned fixture removed. Ticket 06 is complete; deployable
+production rollout remains separately authorized and open.
 
 ## Service Commerce Vertical Policy Migration State
 
