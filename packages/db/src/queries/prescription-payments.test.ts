@@ -6,11 +6,141 @@ import {
   claimPrescriptionRefundProviderDispatch,
   createPrescriptionRefund,
   getPublicPrescriptionPaymentStatus,
+  preparePrescriptionHostedCheckout,
   processPrescriptionPaymentProviderEvent,
   resolvePrescriptionRefundReconciliationMiss,
 } from "./prescription-payments"
+import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service-commerce-policy"
 
 describe("prescription payment provider failures", () => {
+  test("blocks checkout intent creation when Pharmacy payment policy is unavailable", async () => {
+    let intentCreated = false
+    const transaction = {
+      commerceQuoteVersion: {
+        findFirst: async (input: { select?: unknown }) =>
+          input.select
+            ? { id: "version-1" }
+            : {
+                acceptedOrderId: "order-1",
+                quote: { storeId: "store-1", tenantId: "tenant-1" },
+              },
+      },
+      commercialOrder: {
+        findFirst: async () => ({
+          customerEmail: "customer@example.com",
+          id: "order-1",
+          paymentStatus: "UNPAID",
+          storeId: "store-1",
+          tenantId: "tenant-1",
+          totalMinor: 2_500,
+        }),
+      },
+      prescriptionPaymentIntent: {
+        create: async () => {
+          intentCreated = true
+          return { id: "intent-1" }
+        },
+      },
+      serviceCommercePolicyAuditEvent: {
+        createMany: async () => ({ count: 1 }),
+      },
+      serviceCommercePolicyDecision: { findMany: async () => [] },
+      store: { findFirst: async () => ({ countryCode: "NG" }) },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+    } as unknown as PrismaClient
+
+    await expect(
+      preparePrescriptionHostedCheckout(db, {
+        acceptanceToken: "quote-token",
+        clientPaymentId: "payment-1",
+        provider: "fake-hosted",
+        statusToken: "status-token",
+      }),
+    ).rejects.toMatchObject({ code: "POLICY_BLOCKED" })
+    expect(intentCreated).toBe(false)
+  })
+
+  test("records paid provider state without persisting a blocked WhatsApp receipt intent", async () => {
+    let communicationWritten = false
+    const decisions = allowedServiceCommercePolicyDecisionRows().map(
+      (decision) =>
+        decision.channel === "WHATSAPP" &&
+        decision.subject === "WHATSAPP" &&
+        decision.vertical === "PHARMACY"
+          ? { ...decision, outcome: "RESTRICTED" as const }
+          : decision,
+    )
+    const transaction = {
+      $queryRaw: async () => [{ id: "order-1" }],
+      commercialOrder: {
+        findFirst: async () => ({
+          amountPaidMinor: 0,
+          id: "order-1",
+          paymentStatus: "PENDING",
+          payments: [],
+          storeId: "store-1",
+          totalMinor: 2_500,
+        }),
+        findUnique: async () => ({ customerPhone: "+2348000000000" }),
+        update: async () => ({ id: "order-1" }),
+      },
+      commercialOrderPayment: {
+        create: async () => ({ id: "ledger-payment-1" }),
+        findUnique: async () => null,
+      },
+      prescriptionCommunicationIntent: {
+        upsert: async () => {
+          communicationWritten = true
+          return { id: "communication-1" }
+        },
+      },
+      prescriptionPaymentIntent: {
+        findUnique: async () => ({
+          amountMinor: 2_500,
+          currencyCode: "NGN",
+          id: "intent-1",
+          orderId: "order-1",
+          providerReference: "payment-reference-1",
+          status: "PENDING",
+          storeId: "store-1",
+          tenantId: "tenant-1",
+        }),
+        update: async () => ({ id: "intent-1" }),
+      },
+      prescriptionPaymentProviderEvent: {
+        create: async () => ({ id: "event-1" }),
+        findUnique: async () => null,
+        update: async () => ({ id: "event-1" }),
+      },
+      prescriptionUsageEvent: { upsert: async () => ({ id: "usage-1" }) },
+      serviceCommercePolicyAuditEvent: {
+        createMany: async () => ({ count: 1 }),
+      },
+      serviceCommercePolicyDecision: { findMany: async () => decisions },
+      serviceJobLine: { findMany: async () => [] },
+      store: { findFirst: async () => ({ countryCode: "NG" }) },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+    } as unknown as PrismaClient
+
+    await expect(
+      processPrescriptionPaymentProviderEvent(db, {
+        amountMinor: 2_500,
+        currencyCode: "NGN",
+        eventId: "charge.success:payment-1",
+        provider: "fake-hosted",
+        providerReference: "payment-reference-1",
+        status: "paid",
+      }),
+    ).resolves.toEqual({ communicationIntentId: null, replay: false })
+    expect(communicationWritten).toBe(false)
+  })
+
   test("records a failed callback without creating payment or receipt facts", async () => {
     const intentUpdates: unknown[] = []
     const transaction = {
@@ -105,17 +235,32 @@ describe("prescription payment provider failures", () => {
   })
 
   test("projects an expired checkout without exposing Order or prescription data", async () => {
-    const db = {
+    const client = {
+      $transaction: async (callback: (tx: unknown) => unknown) =>
+        callback(client),
       prescriptionPaymentIntent: {
         findUnique: async () => ({
           currencyCode: "NGN",
           expiresAt: new Date("2026-08-09T09:00:00.000Z"),
-          order: { amountPaidMinor: 0, totalMinor: 2_500 },
+          order: {
+            amountPaidMinor: 0,
+            storeId: "store-1",
+            tenantId: "tenant-1",
+            totalMinor: 2_500,
+          },
           orderId: "private-order-1",
           status: "PENDING",
         }),
       },
-    } as unknown as PrismaClient
+      serviceCommercePolicyAuditEvent: {
+        createMany: async () => ({ count: 1 }),
+      },
+      serviceCommercePolicyDecision: {
+        findMany: async () => allowedServiceCommercePolicyDecisionRows(),
+      },
+      store: { findFirst: async () => ({ countryCode: "NG" }) },
+    }
+    const db = client as unknown as PrismaClient
 
     const status = await getPublicPrescriptionPaymentStatus(db, {
       now: new Date("2026-08-09T10:00:00.000Z"),

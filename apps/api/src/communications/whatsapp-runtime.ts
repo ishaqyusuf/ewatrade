@@ -8,6 +8,7 @@ import {
 } from "@ewatrade/communications"
 import { prisma } from "@ewatrade/db"
 import {
+  ServiceCommercePolicyError,
   recordWhatsAppCommunicationStatus,
   recordWhatsAppInboundEvent,
   recordWhatsAppRoutingAlert,
@@ -155,25 +156,38 @@ export async function handleWhatsAppWebhookRequest(request: Request) {
         tenantId: binding.tenantId,
       },
     })
-    const inbound = await recordWhatsAppInboundEvent(prisma, {
-      connectionId: route.connectionId,
-      externalCustomerId: event.externalCustomerId,
-      messageType: event.type,
-      normalizedPayload: {
-        mediaId: event.media?.id,
-        mediaType: event.media?.mediaType,
-        quickActionId: event.quickActionId,
+    let inbound: Awaited<ReturnType<typeof recordWhatsAppInboundEvent>>
+    try {
+      inbound = await recordWhatsAppInboundEvent(prisma, {
+        connectionId: route.connectionId,
+        externalCustomerId: event.externalCustomerId,
+        messageType: event.type,
+        normalizedPayload: {
+          mediaId: event.media?.id,
+          mediaType: event.media?.mediaType,
+          quickActionId: event.quickActionId,
+          storeId: binding.storeId,
+          text: event.text,
+        },
+        providerEventId: event.messageId,
+        requestId:
+          existingState?.storeId === binding.storeId
+            ? existingState.requestId
+            : undefined,
         storeId: binding.storeId,
-        text: event.text,
-      },
-      providerEventId: event.messageId,
-      requestId:
-        existingState?.storeId === binding.storeId
-          ? existingState.requestId
-          : undefined,
-      storeId: binding.storeId,
-      tenantId: binding.tenantId,
-    })
+        tenantId: binding.tenantId,
+      })
+    } catch (error) {
+      if (!(error instanceof ServiceCommercePolicyError)) throw error
+      await recordWhatsAppRoutingAlert(prisma, {
+        code: "inactive_or_unknown_connection",
+        connectionId: route.connectionId,
+        phoneNumberId: route.phoneNumberId,
+        providerEventId: event.messageId,
+        tenantId: route.tenantId,
+      })
+      continue
+    }
     await enqueuePrescriptionWhatsAppInbound(inbound.id)
   }
   return new Response(JSON.stringify({ received: true }), {

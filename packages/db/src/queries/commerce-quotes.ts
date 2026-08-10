@@ -841,63 +841,77 @@ export async function issueCommerceQuote(
 
 export async function getPublicCommerceQuote(
   db: PrismaClient,
-  input: { acceptanceToken: string },
-) {
-  const access = await resolveCommerceQuoteAccess(db, input)
-  const version = await db.commerceQuoteVersion.findFirst({
-    include: {
-      lines: true,
+  input: {
+    acceptanceToken: string
+    authorize?: (
+      tx: Prisma.TransactionClient,
       quote: {
-        include: {
-          store: {
-            select: { name: true, supportEmail: true, supportPhone: true },
+        sourceId: string
+        sourceType: CommerceQuoteSourceTypeEnum
+        storeId: string
+        tenantId: string
+      },
+    ) => Promise<void>
+  },
+) {
+  return db.$transaction(async (tx) => {
+    const access = await resolveCommerceQuoteAccess(tx, input)
+    const version = await tx.commerceQuoteVersion.findFirst({
+      include: {
+        lines: true,
+        quote: {
+          include: {
+            store: {
+              select: { name: true, supportEmail: true, supportPhone: true },
+            },
           },
         },
       },
-    },
-    where: quoteAccessWhere(access),
+      where: quoteAccessWhere(access),
+    })
+    if (
+      !version ||
+      version.quote.currentVersionId !== version.id ||
+      (version.status !== CommerceQuoteVersionStatusEnum.ISSUED &&
+        version.status !== CommerceQuoteVersionStatusEnum.ACCEPTED) ||
+      (version.expiresAt && version.expiresAt <= new Date())
+    ) {
+      throw new CommerceQuoteError(
+        "PUBLIC_TOKEN_INVALID",
+        "Quote is unavailable.",
+      )
+    }
+    await input.authorize?.(tx, version.quote)
+    return {
+      accepted: version.status === CommerceQuoteVersionStatusEnum.ACCEPTED,
+      availabilityOutcome: version.availabilityOutcome.toLowerCase(),
+      currencyCode: version.currencyCode,
+      customerNote: version.customerNote,
+      discountMinor: version.discountMinor,
+      expiresAt: version.expiresAt,
+      fulfilmentFeeMinor: version.fulfilmentFeeMinor,
+      fulfilmentPromise: version.fulfilmentPromise,
+      fulfilmentType: version.fulfilmentType.toLowerCase(),
+      lines: version.lines.map((line) => ({
+        catalogItemName: line.catalogItemName,
+        customerNote: line.customerNote,
+        offeringName: line.offeringName,
+        outcome: serializeLineOutcome(line.outcome),
+        quantity: line.quantity?.toString() ?? null,
+        totalMinor: line.totalMinor,
+        unitPriceMinor: line.unitPriceMinor,
+        variantName: line.variantName,
+      })),
+      sourceType: version.quote.sourceType.toLowerCase(),
+      storeName: version.quote.store.name,
+      storeSupportEmail: version.quote.store.supportEmail,
+      storeSupportPhone: version.quote.store.supportPhone,
+      subtotalMinor: version.subtotalMinor,
+      taxMinor: version.taxMinor,
+      totalMinor: version.totalMinor,
+      version: version.version,
+    }
   })
-  if (
-    !version ||
-    version.quote.currentVersionId !== version.id ||
-    (version.status !== CommerceQuoteVersionStatusEnum.ISSUED &&
-      version.status !== CommerceQuoteVersionStatusEnum.ACCEPTED) ||
-    (version.expiresAt && version.expiresAt <= new Date())
-  ) {
-    throw new CommerceQuoteError(
-      "PUBLIC_TOKEN_INVALID",
-      "Quote is unavailable.",
-    )
-  }
-  return {
-    accepted: version.status === CommerceQuoteVersionStatusEnum.ACCEPTED,
-    availabilityOutcome: version.availabilityOutcome.toLowerCase(),
-    currencyCode: version.currencyCode,
-    customerNote: version.customerNote,
-    discountMinor: version.discountMinor,
-    expiresAt: version.expiresAt,
-    fulfilmentFeeMinor: version.fulfilmentFeeMinor,
-    fulfilmentPromise: version.fulfilmentPromise,
-    fulfilmentType: version.fulfilmentType.toLowerCase(),
-    lines: version.lines.map((line) => ({
-      catalogItemName: line.catalogItemName,
-      customerNote: line.customerNote,
-      offeringName: line.offeringName,
-      outcome: serializeLineOutcome(line.outcome),
-      quantity: line.quantity?.toString() ?? null,
-      totalMinor: line.totalMinor,
-      unitPriceMinor: line.unitPriceMinor,
-      variantName: line.variantName,
-    })),
-    sourceType: version.quote.sourceType.toLowerCase(),
-    storeName: version.quote.store.name,
-    storeSupportEmail: version.quote.store.supportEmail,
-    storeSupportPhone: version.quote.store.supportPhone,
-    subtotalMinor: version.subtotalMinor,
-    taxMinor: version.taxMinor,
-    totalMinor: version.totalMinor,
-    version: version.version,
-  }
 }
 
 export async function getCommerceQuoteAcceptanceContext(

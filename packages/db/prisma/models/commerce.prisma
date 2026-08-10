@@ -35,6 +35,8 @@ model Store {
   serviceSettings                   ServiceStoreSettings?
   serviceCommerceProfile            ServiceCommerceStoreProfile?
   serviceCommerceAuditEvents        ServiceCommerceStoreAuditEvent[]
+  serviceCommercePolicyDecisions    ServiceCommercePolicyDecision[]
+  serviceCommercePolicyAuditEvents  ServiceCommercePolicyAuditEvent[]
   commerceInquiries                 CommerceInquiry[]
   commerceInquiryLines              CommerceInquiryLine[]
   commerceInquiryAuditEvents        CommerceInquiryAuditEvent[]

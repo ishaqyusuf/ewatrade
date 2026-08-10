@@ -9,6 +9,11 @@ import {
 } from "../../generated/prisma/enums"
 import { resolveCommerceQuoteAccess } from "./commerce-quotes"
 import { recordCommercialOrderPaymentInTransaction } from "./commercial-payments"
+import {
+  assertServiceCommercePolicyAllowedInTransaction,
+  evaluateServiceCommercePolicy,
+  evaluateServiceCommercePolicyInTransaction,
+} from "./service-commerce-policy"
 
 export class PrescriptionPaymentError extends Error {
   constructor(
@@ -80,6 +85,15 @@ export async function preparePrescriptionHostedCheckout(
         "A customer email is required for hosted checkout.",
       )
     }
+    await assertServiceCommercePolicyAllowedInTransaction(tx, {
+      actorUserId: "public_prescription_checkout",
+      channel: "web",
+      purpose: "prescription_hosted_checkout",
+      storeId: order.storeId,
+      subject: "payment",
+      tenantId: order.tenantId,
+      vertical: "pharmacy",
+    })
     if (order.paymentStatus === "PAID") {
       throw new PrescriptionPaymentError(
         "PAYMENT_CONFLICT",
@@ -172,10 +186,34 @@ export async function getPublicPrescriptionPaymentStatus(
   input: { now?: Date; statusToken: string },
 ) {
   const intent = await db.prescriptionPaymentIntent.findUnique({
-    include: { order: { select: { amountPaidMinor: true, totalMinor: true } } },
+    include: {
+      order: {
+        select: {
+          amountPaidMinor: true,
+          storeId: true,
+          tenantId: true,
+          totalMinor: true,
+        },
+      },
+    },
     where: { statusTokenDigest: digest(input.statusToken) },
   })
   if (!intent) {
+    throw new PrescriptionPaymentError(
+      "PAYMENT_NOT_FOUND",
+      "Payment status is unavailable.",
+    )
+  }
+  const policy = await evaluateServiceCommercePolicy(db, {
+    actorUserId: "public_prescription_payment_status",
+    channel: "web",
+    purpose: "public_prescription_payment_projection",
+    storeId: intent.order.storeId,
+    subject: "payment",
+    tenantId: intent.order.tenantId,
+    vertical: "pharmacy",
+  })
+  if (policy.outcome !== "allowed") {
     throw new PrescriptionPaymentError(
       "PAYMENT_NOT_FOUND",
       "Payment status is unavailable.",
@@ -315,27 +353,38 @@ export async function processPrescriptionPaymentProviderEvent(
           where: { id: intent.orderId },
         })
         if (order?.customerPhone) {
-          const communication = await tx.prescriptionCommunicationIntent.upsert(
-            {
-              create: {
-                deduplicationKey: `payment-receipt:${intent.id}`,
-                orderId: intent.orderId,
-                payload: {},
-                recipientReference: order.customerPhone,
-                storeId: intent.storeId,
-                tenantId: intent.tenantId,
-                type: "PAYMENT_RECEIPT",
-              },
-              update: {},
-              where: {
-                tenantId_deduplicationKey: {
+          const communicationPolicy =
+            await evaluateServiceCommercePolicyInTransaction(tx, {
+              actorUserId: "system_prescription_notification",
+              channel: "whatsapp",
+              purpose: "prescription_payment_receipt_notification",
+              storeId: intent.storeId,
+              subject: "whatsapp",
+              tenantId: intent.tenantId,
+              vertical: "pharmacy",
+            })
+          if (communicationPolicy.outcome === "allowed") {
+            const communication =
+              await tx.prescriptionCommunicationIntent.upsert({
+                create: {
                   deduplicationKey: `payment-receipt:${intent.id}`,
+                  orderId: intent.orderId,
+                  payload: {},
+                  recipientReference: order.customerPhone,
+                  storeId: intent.storeId,
                   tenantId: intent.tenantId,
+                  type: "PAYMENT_RECEIPT",
                 },
-              },
-            },
-          )
-          communicationIntentId = communication.id
+                update: {},
+                where: {
+                  tenantId_deduplicationKey: {
+                    deduplicationKey: `payment-receipt:${intent.id}`,
+                    tenantId: intent.tenantId,
+                  },
+                },
+              })
+            communicationIntentId = communication.id
+          }
         }
       }
     } else if (

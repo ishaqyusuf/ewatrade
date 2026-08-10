@@ -6,6 +6,10 @@ import type { PrismaClient } from "../../../../generated/prisma/client"
 import {
   MembershipRole,
   QaDataClassification,
+  ServiceCommercePolicyChannel,
+  ServiceCommercePolicyOutcome,
+  ServiceCommercePolicySubject,
+  ServiceCommercePolicyVertical,
   StoreStatus,
   TenantMode,
   TenantType,
@@ -72,6 +76,10 @@ async function deleteAcceptanceFixture(
       where: { paymentIntentId: { in: paymentIntentIds } },
     })
     await tx.prescriptionCommunicationIntent.deleteMany({ where: { tenantId } })
+    // Policy audit entries reference policy decisions and Stores with restrictive
+    // foreign keys, so remove them before the decisions and tenant-owned Store.
+    await tx.serviceCommercePolicyAuditEvent.deleteMany({ where: { tenantId } })
+    await tx.serviceCommercePolicyDecision.deleteMany({ where: { tenantId } })
     await tx.serviceCommerceStoreAuditEvent.deleteMany({ where: { tenantId } })
     await tx.serviceCommerceStoreProfile.deleteMany({ where: { tenantId } })
     await tx.commerceInquiryAuditEvent.deleteMany({ where: { tenantId } })
@@ -137,6 +145,7 @@ export async function createServiceCommerceAcceptanceFixture(): Promise<ServiceC
     tenantId = tenant.id
     const store = await db.store.create({
       data: {
+        countryCode: "NG",
         name: "Acceptance Pharmacy",
         slug: "acceptance-pharmacy",
         status: StoreStatus.ACTIVE,
@@ -144,6 +153,31 @@ export async function createServiceCommerceAcceptanceFixture(): Promise<ServiceC
         supportPhone: "+2348000000000",
         tenantId: tenant.id,
       },
+    })
+
+    // Neon acceptance runs must state policy facts explicitly. These fixture-only
+    // approvals include a written reference for Nigerian pharmacy WhatsApp,
+    // keeping all exercised Service Commerce and catalog-adoption paths eligible.
+    await db.serviceCommercePolicyDecision.createMany({
+      data: Object.values(ServiceCommercePolicyVertical).flatMap((vertical) =>
+        Object.values(ServiceCommercePolicyChannel).flatMap((channel) =>
+          Object.values(ServiceCommercePolicySubject).map((subject) => ({
+            approvalReference: `acceptance-policy-approval-${fixtureId}`,
+            channel,
+            effectiveAt: fixtureStartedAt,
+            evidenceReference: `acceptance-policy-evidence-${fixtureId}`,
+            expiresAt: new Date("2030-01-01T00:00:00.000Z"),
+            jurisdictionCode: "NG",
+            outcome: ServiceCommercePolicyOutcome.ALLOWED,
+            reason: "Explicit QA acceptance policy approval",
+            reviewedByUserId: actor.id,
+            storeId: store.id,
+            subject,
+            tenantId: tenant.id,
+            vertical,
+          })),
+        ),
+      ),
     })
 
     await updatePrescriptionStoreSettings(db, {
@@ -210,7 +244,6 @@ export async function createServiceCommerceAcceptanceFixture(): Promise<ServiceC
       storeId: store.id,
       tenantId: tenant.id,
     })
-
     const channel = await ensurePrescriptionChannel(db, {
       actorUserId: actor.id,
       storeId: store.id,

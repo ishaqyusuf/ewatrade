@@ -12,6 +12,7 @@ import {
   ServiceCommerceSourceError,
   getServiceCommerceCustomerRequestProjection,
 } from "./service-commerce-sources"
+import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service-commerce-policy"
 
 function createProjectionDb(input?: {
   role?: string
@@ -52,6 +53,18 @@ function createProjectionDb(input?: {
         return { role: input?.role ?? "OPERATOR" }
       },
     },
+    serviceCommercePolicyAuditEvent: {
+      createMany: async (args: unknown) => {
+        calls.push({ args, name: "policyAudit.createMany" })
+        return { count: 1 }
+      },
+    },
+    serviceCommercePolicyDecision: {
+      findMany: async (args: unknown) => {
+        calls.push({ args, name: "policyDecision.findMany" })
+        return allowedServiceCommercePolicyDecisionRows()
+      },
+    },
     prescriptionRequest: {
       findFirst: async (args: unknown) => {
         calls.push({ args, name: "prescriptionRequest.findFirst" })
@@ -78,6 +91,7 @@ function createProjectionDb(input?: {
       findFirst: async (args: unknown) => {
         calls.push({ args, name: "store.findFirst" })
         return {
+          countryCode: "NG",
           id: "store-1",
           name: "Main Store",
           serviceCommerceProfile: profile,
@@ -193,6 +207,7 @@ describe("Service Commerce source interoperability", () => {
         storeId: "store-1",
         summary: "Known Product",
         tenantId: "tenant-1",
+        vertical: "service",
       }),
     ).rejects.toBeInstanceOf(CommerceInquiryError)
     expect(transactionCalled).toBe(false)
@@ -249,5 +264,51 @@ describe("Service Commerce source interoperability", () => {
         clientAcceptanceId: "acceptance-1",
       }),
     ).rejects.toMatchObject({ code: "QUOTE_CONFLICT" })
+  })
+
+  test("reauthorizes and replays an accepted Inquiry after its source is converted", async () => {
+    let versionReads = 0
+    const client = {
+      $transaction: async (callback: (tx: PrismaClient) => Promise<unknown>) =>
+        callback(client as unknown as PrismaClient),
+      commerceInquiry: {
+        findFirst: async () => ({ status: "CONVERTED", vertical: "SERVICE" }),
+      },
+      commerceQuoteVersion: {
+        findFirst: async () => {
+          versionReads += 1
+          return versionReads === 1
+            ? { id: "version-1" }
+            : {
+                acceptanceClientId: "acceptance-1",
+                acceptedOrderId: "order-1",
+                id: "version-1",
+                lines: [],
+                quote: {
+                  currentVersionId: "version-1",
+                  sourceId: "inquiry-1",
+                  sourceType: "COMMERCE_INQUIRY",
+                  storeId: "store-1",
+                  tenantId: "tenant-1",
+                },
+                status: "ACCEPTED",
+              }
+        },
+      },
+      serviceCommercePolicyAuditEvent: {
+        createMany: async () => ({ count: 1 }),
+      },
+      serviceCommercePolicyDecision: {
+        findMany: async () => allowedServiceCommercePolicyDecisionRows(),
+      },
+      store: { findFirst: async () => ({ countryCode: "NG" }) },
+    } as unknown as PrismaClient
+
+    await expect(
+      acceptCommerceInquiryQuote(client, {
+        acceptanceToken: "inquiry-quote-token",
+        clientAcceptanceId: "acceptance-1",
+      }),
+    ).resolves.toEqual({ orderId: "order-1" })
   })
 })

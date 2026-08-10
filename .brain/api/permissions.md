@@ -143,10 +143,20 @@
   Expected revision, activation blockers and management authority are checked
   inside the same bounded transaction as the profile/audit writes.
 - Provider and restriction readiness is server-owned. The projection reads
-  only Tenant/Store-scoped WhatsApp lifecycle and profile restriction facts;
-  setup clients cannot write or clear a restriction, infer provider readiness
-  or generically reactivate a suspended profile. Ticket 11 owns the future
-  authorized policy-evidence command.
+  Tenant/Store-scoped WhatsApp lifecycle plus current vertical/jurisdiction
+  decisions; setup clients cannot write or clear a restriction, infer provider
+  readiness or generically reactivate a suspended profile. The legacy profile
+  allowlist can only add a restriction and cannot grant permission.
+- Owner/Admin release managers may set/revoke a policy decision only for an
+  authorized Store and active Tenant reviewer with optimistic revision. Safe
+  list reads omit private references; evidence detail requires the same
+  authority and appends an audit. Unauthorized override attempts are audited.
+- Policy checks run at Store-profile and Pharmacy activation, source/public
+  projection, pre-persistence media intake/re-upload, Quote/payment/fulfilment
+  commands, delivery-zone/operational transitions, WhatsApp intent/content
+  persistence and claim, and immediately before provider send. Channel
+  projection requires both channel and intake permission. UI and provider
+  adapters cannot infer an allowed outcome from technical readiness.
 - Service Commerce operators may create, project, transition and Quote an
   Inquiry only for an active authorized Store whose server readiness allows
   assisted intake. The repository performs that check before any source load.

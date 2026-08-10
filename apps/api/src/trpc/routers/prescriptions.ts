@@ -8,10 +8,12 @@ import {
   PrescriptionCommerceError,
   PrescriptionComplianceError,
   PrescriptionRequestError,
+  ServiceCommercePolicyError,
   activatePrescriptionIncidentControl,
   approvePrescriptionManualDeliveryFee,
   assertAnyPrescriptionStoreRole,
   assertPrescriptionOperationalOrBreakGlassAccess,
+  assertServiceCommercePolicyAllowed,
   assignPrescriptionStoreRole,
   attachPrescriptionRefundProviderResult,
   claimPrescriptionRefundProviderDispatch,
@@ -179,6 +181,12 @@ async function run<T>(action: () => Promise<T>) {
         code: error.message.includes("active, personal break-glass")
           ? "FORBIDDEN"
           : "BAD_REQUEST",
+        message: error.message,
+      })
+    }
+    if (error instanceof ServiceCommercePolicyError) {
+      throw new TRPCError({
+        code: error.code === "NOT_FOUND" ? "NOT_FOUND" : "FORBIDDEN",
         message: error.message,
       })
     }
@@ -847,6 +855,17 @@ export const prescriptionsRouter = createTRPCRouter({
           storeId,
           tenantId: ctx.tenantContext.tenant.id,
           userId: ctx.session.user.id,
+        }),
+      )
+      await run(() =>
+        assertServiceCommercePolicyAllowed(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          channel: "staff",
+          purpose: "prescription_staff_media_upload",
+          storeId,
+          subject: "intake",
+          tenantId: ctx.tenantContext.tenant.id,
+          vertical: "pharmacy",
         }),
       )
       return storePrescriptionMediaUpload({

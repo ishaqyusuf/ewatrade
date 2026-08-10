@@ -107,6 +107,14 @@ Typed tRPC routers are the primary application contract.
   and scoped provider/policy readiness inside the transaction before a
   revision-guarded state and audit write. It requires an available channel and
   Quote/booking outcome and fails closed for suspended profiles.
+- Protected `serviceCommerce.policyDecisions` returns safe current decision
+  metadata for an authorized Store without evidence/licence/approval values.
+  `policyDecision` is the separately audited Owner/Admin evidence-detail read.
+- Protected `serviceCommerce.setPolicyDecision` and
+  `revokePolicyDecision` require authorized Store scope, release-manager
+  authority, explicit vertical/jurisdiction/channel/subject, authenticated reviewer attribution,
+  effective/expiry window, private evidence plus approval where allowed, a
+  reason and expected revision. Conflicts and cross-scope inputs fail closed.
 - Protected `serviceCommerce.sourceProjection` resolves an exhaustive
   `service | prescription | commerce_inquiry` ref only after Tenant, Store,
   actor and active-profile authorization. It returns the customer-safe shared
@@ -121,7 +129,8 @@ Typed tRPC routers are the primary application contract.
   secondary opaque token without repeating lifecycle effects.
 - Public `serviceCommerce.inquiryQuote` and `acceptInquiryQuote` use the opaque
   Commerce Quote token. Acceptance is idempotent and creates one Commercial
-  Order before marking the Inquiry converted.
+  Order before marking the Inquiry converted. An exact accepted replay
+  reauthorizes current policy and returns the original Order after conversion.
 
 ## Staff And Billing
 
@@ -181,7 +190,9 @@ authenticated dashboard.
 - Public tRPC router `prescriptionAccess` owns capability-scoped web intake,
   status, re-upload, Quote review/acceptance, fulfilment choice, hosted payment,
   and pickup-code projections. The browser never supplies Tenant/Store ids as
-  authority.
+  authority. Upload/re-upload, checkout and fulfilment commands reauthorize
+  current Pharmacy policy before governed persistence or provider work; a
+  blocked WhatsApp channel exposes neither availability nor its number.
 - `GET|POST /api/webhooks/whatsapp` verifies Meta subscription/signatures and
   delegates normalized inbound events to the connection-resolving runtime.
 - `GET /api/communications/whatsapp/embedded-signup/callback` validates signed

@@ -1,6 +1,7 @@
 import {
   serviceCommerceProductDemandSchema,
   serviceCommerceSourceRefSchema,
+  serviceCommerceVerticalSchema,
 } from "@ewatrade/service-commerce/schemas"
 import { parseExactDecimal } from "@ewatrade/utils/exact-decimal"
 import { z } from "zod"
@@ -47,6 +48,7 @@ export const commerceInquiryCreateSchema = z
       .max(100),
     storeId: z.string().trim().min(1).max(191).optional(),
     summary: z.string().trim().min(1).max(500),
+    vertical: serviceCommerceVerticalSchema,
   })
   .strict()
 

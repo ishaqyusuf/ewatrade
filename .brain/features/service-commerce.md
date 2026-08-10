@@ -5,8 +5,8 @@
 The original product direction was approved on 2026-08-09 through ADR-0029.
 ADR-0030 now amends it with Progressive Catalog and a thinner Pharmacy
 extension. The owner approved the revised dependency-ordered 15-ticket batch
-on 2026-08-09. Tickets 01, 02 and 03 are complete; Ticket 11 is the next
-dependency frontier. Production schema/provider operations remain separately
+on 2026-08-09. Tickets 01, 02, 03 and 11 are complete; Tickets 03A and 04 are
+the next dependency frontier. Production schema/provider operations remain separately
 authorized.
 
 Pharmacy Commerce is the first regulated vertical and retains its completed
@@ -22,6 +22,7 @@ consultation practice.
 - Specification: `.scratch/service-commerce/spec.md`
 - Approved tickets and execution order: `.scratch/service-commerce/issues/README.md`
 - Midday migration contract: `.scratch/service-commerce/midday-migration-contract.md`
+- Policy release gate: `.brain/runbooks/service-commerce-policy-release.md`
 - Existing Service foundation: `.brain/features/generic-service-operations.md`
 - First vertical: `.brain/features/prescription-commerce.md`
 - Midday migration standard: `.scratch/prescription-commerce/midday-migration-contract.md`
@@ -133,8 +134,47 @@ input. Suspended profiles are rendered distinctly and cannot be reactivated
 or deactivated through the generic command. Activation and active-profile
 updates re-evaluate the same scoped runtime facts transactionally and require
 at least one available channel plus one available Quote/booking outcome.
-Ticket 11 owns the authorized jurisdiction/evidence command that maintains
-those inputs and the separately approved Nigerian Pharmacy WhatsApp decision.
+Ticket 11 now owns the authoritative jurisdiction/evidence decision boundary.
+The earlier profile allowlist remains restriction-only compatibility input and
+cannot grant a capability.
+
+## Vertical And Jurisdiction Policy
+
+Ticket 11 implements one server-only policy evaluator for the exact Store,
+vertical, jurisdiction, channel and subject. Outcomes are `allowed`,
+`restricted`, `pending_evidence`, `expired_approval` and `prohibited`. Current
+decisions are revisioned; effective/expiry windows, private evidence/licence/
+approval references, reviewer and reason are explicit. Missing Store
+jurisdiction, absent or malformed evidence, expiry, revocation, ambiguous or
+changed scope all fail closed. No cache is used, so every activation, request,
+public action and job execution reads current facts and appends a safe audit.
+
+Owner/Admin release managers use protected revisioned commands to set or revoke
+decisions. Safe list responses omit private references; a separately
+authorized detail read returns them and is audited. Denied list/evidence reads,
+jurisdiction mismatches, stale revisions, write races and unauthorized override
+attempts are also audited without exposing evidence in logs, public errors,
+URLs or job payloads.
+
+Activation and active-profile edits require at least one actually permitted
+runtime route. Pharmacy activation requires web/staff channel decisions before
+the public channel is created, plus intake, Quote, payment and enabled
+fulfilment paths. Later WhatsApp binding activation requires both its channel
+and intake decisions. Public and staff media uploads, public re-upload, checkout,
+fulfilment selection and every pickup/delivery mutation recheck policy before
+their governed write. Outbound payment/fulfilment intents are created only when
+WhatsApp remains allowed; the commercial operation still completes when only
+the notification is prohibited. WhatsApp rechecks before inbound content
+persistence, at inbound/outbound claim, and again immediately before provider
+send. Provider adapters and UI render the result; they do not decide policy.
+
+Nigeria Pharmacy WhatsApp defaults to `prohibited`. A technically active
+Connection never activates its Store binding or permits intake/send without an
+unexpired explicit written approval decision. QA fixtures use synthetic,
+fixture-only approval references; no real business approval is claimed.
+Progressive draft capture, Catalog publication, procure-to-order, reusable
+price promotion and managed-inventory graduation are independent policy
+subjects rather than one broad Catalog switch.
 
 ## Customer Request Interoperability
 
@@ -239,7 +279,7 @@ availability commitment remains pharmacist-released and policy-gated. The
 separate `PrescriptionRequest` aggregate enforces those rules; it is not a
 second commerce platform.
 
-As checked against Meta's published policy on 2026-08-09, drugs and healthcare
+As checked against Meta's published policy on 2026-08-10, drugs and healthcare
 commerce are regulated and Nigeria is not in the published over-the-counter
 drug exception list. Pharmacy WhatsApp activation therefore remains a separate
 fail-closed legal/provider decision. Web and staff workflows do not inherit
@@ -311,7 +351,8 @@ business activation remains separately authorized.
 
 The owner requested the batch be amended and approved the exact revised
 15-ticket breakdown on 2026-08-09. The revised batch adds Tickets 03A and 06A.
-Tickets 01 and 02 are complete and execution proceeds to Ticket 03. Throughout
+Tickets 01, 02, 03 and 11 are complete and execution proceeds to Tickets 03A
+and 04. Throughout
 execution:
 
 - no production Prisma operation without separate authorization;

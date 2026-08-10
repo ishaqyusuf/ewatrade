@@ -3,6 +3,7 @@ import { createHash } from "node:crypto"
 import {
   type ServiceCommerceProductDemand,
   type ServiceCommerceRequestState,
+  type ServiceCommerceVertical,
   serviceCommerceProductDemandSchema,
 } from "@ewatrade/service-commerce"
 import { parseExactDecimal } from "@ewatrade/utils/exact-decimal"
@@ -14,6 +15,7 @@ import {
   CommerceInquiryStatus,
   CommerceQuoteSourceType,
   SellableOfferingKind,
+  ServiceCommercePolicyVertical,
 } from "../../generated/prisma/enums"
 import {
   CommerceQuoteError,
@@ -24,6 +26,7 @@ import {
 } from "./commerce-quotes"
 import { createCommercialOrderInTransaction } from "./commercial-orders"
 import { getServiceCommerceWorkspaceAccess } from "./service-commerce-access"
+import { assertServiceCommercePolicyAllowedInTransaction } from "./service-commerce-policy"
 import type { DbClient } from "./types"
 
 export type CommerceInquiryErrorCode =
@@ -83,6 +86,18 @@ function mapChannelOrigin(origin: "staff" | "web" | "whatsapp") {
     whatsapp: CommerceInquiryChannelOrigin.WHATSAPP,
   } as const
   return origins[origin]
+}
+
+function mapVertical(vertical: ServiceCommerceVertical) {
+  return vertical === "pharmacy"
+    ? ServiceCommercePolicyVertical.PHARMACY
+    : ServiceCommercePolicyVertical.SERVICE
+}
+
+function normalizeVertical(vertical: ServiceCommercePolicyVertical) {
+  return vertical === ServiceCommercePolicyVertical.PHARMACY
+    ? ("pharmacy" as const)
+    : ("service" as const)
 }
 
 const normalizedInquiryStates = {
@@ -183,6 +198,7 @@ export type CreateCommerceInquiryInput = {
   storeId: string
   summary: string
   tenantId: string
+  vertical: ServiceCommerceVertical
 }
 
 export async function createCommerceInquiry(
@@ -246,10 +262,20 @@ export async function createCommerceInquiry(
     lines,
     storeId: input.storeId,
     summary,
+    vertical: input.vertical,
   })
 
   return db.$transaction(async (tx) => {
     await assertInquiryOperator(tx, input)
+    await assertServiceCommercePolicyAllowedInTransaction(tx, {
+      actorUserId: input.actorUserId,
+      channel: input.channelOrigin,
+      purpose: "commerce_inquiry_intake",
+      storeId: input.storeId,
+      subject: "intake",
+      tenantId: input.tenantId,
+      vertical: input.vertical,
+    })
     const inquiry = await tx.commerceInquiry.upsert({
       create: {
         channelOrigin: mapChannelOrigin(input.channelOrigin),
@@ -270,6 +296,7 @@ export async function createCommerceInquiry(
         storeId: input.storeId,
         summary,
         tenantId: input.tenantId,
+        vertical: mapVertical(input.vertical),
       },
       include: { lines: { orderBy: { position: "asc" } } },
       update: {},
@@ -282,7 +309,8 @@ export async function createCommerceInquiry(
     })
     if (
       inquiry.payloadHash !== payloadHash ||
-      inquiry.storeId !== input.storeId
+      inquiry.storeId !== input.storeId ||
+      inquiry.vertical !== mapVertical(input.vertical)
     ) {
       throw new CommerceInquiryError(
         "CONFLICT",
@@ -348,6 +376,15 @@ export async function transitionCommerceInquiry(
     if (!inquiry) {
       throw new CommerceInquiryError("NOT_FOUND", "Commerce Inquiry not found.")
     }
+    await assertServiceCommercePolicyAllowedInTransaction(tx, {
+      actorUserId: input.actorUserId,
+      channel: "staff",
+      purpose: "commerce_inquiry_transition",
+      storeId: input.storeId,
+      subject: "intake",
+      tenantId: input.tenantId,
+      vertical: normalizeVertical(inquiry.vertical),
+    })
     assertCommerceInquiryTransition({
       from: inquiry.status,
       to: input.targetStatus,
@@ -390,7 +427,40 @@ export async function getPublicCommerceInquiryQuote(
   db: PrismaClient,
   input: { acceptanceToken: string },
 ) {
-  const quote = await getPublicCommerceQuote(db, input)
+  const quote = await getPublicCommerceQuote(db, {
+    ...input,
+    authorize: async (tx, source) => {
+      if (source.sourceType !== CommerceQuoteSourceType.COMMERCE_INQUIRY) {
+        throw new CommerceQuoteError(
+          "PUBLIC_TOKEN_INVALID",
+          "This Commerce Inquiry Quote is unavailable.",
+        )
+      }
+      const inquiry = await tx.commerceInquiry.findFirst({
+        select: { vertical: true },
+        where: {
+          id: source.sourceId,
+          storeId: source.storeId,
+          tenantId: source.tenantId,
+        },
+      })
+      if (!inquiry) {
+        throw new CommerceQuoteError(
+          "PUBLIC_TOKEN_INVALID",
+          "This Commerce Inquiry Quote is unavailable.",
+        )
+      }
+      await assertServiceCommercePolicyAllowedInTransaction(tx, {
+        actorUserId: "public_commerce_inquiry_quote",
+        channel: "web",
+        purpose: "public_commerce_inquiry_quote_projection",
+        storeId: source.storeId,
+        subject: "quote",
+        tenantId: source.tenantId,
+        vertical: normalizeVertical(inquiry.vertical),
+      })
+    },
+  })
   if (quote.sourceType !== "commerce_inquiry") {
     throw new CommerceQuoteError(
       "PUBLIC_TOKEN_INVALID",
@@ -431,6 +501,29 @@ export async function issueCommerceInquiryQuote(
     ...input,
     authorize: async (tx) => {
       await assertInquiryOperator(tx, input)
+      const inquiry = await tx.commerceInquiry.findFirst({
+        select: { vertical: true },
+        where: {
+          id: input.inquiryId,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        },
+      })
+      if (!inquiry) {
+        throw new CommerceInquiryError(
+          "NOT_FOUND",
+          "Commerce Inquiry not found.",
+        )
+      }
+      await assertServiceCommercePolicyAllowedInTransaction(tx, {
+        actorUserId: input.actorUserId,
+        channel: "staff",
+        purpose: "commerce_inquiry_quote_issue",
+        storeId: input.storeId,
+        subject: "quote",
+        tenantId: input.tenantId,
+        vertical: normalizeVertical(inquiry.vertical),
+      })
     },
     sourceId: input.inquiryId,
     sourceType: "commerce_inquiry",
@@ -450,16 +543,30 @@ export async function acceptCommerceInquiryQuote(
         "This Quote is not a Commerce Inquiry Quote.",
       )
     }
-    if (context.replayOrderId) return { orderId: context.replayOrderId }
     const inquiry = await tx.commerceInquiry.findFirst({
       where: {
         id: version.quote.sourceId,
-        status: CommerceInquiryStatus.QUOTED,
         storeId: version.quote.storeId,
         tenantId: version.quote.tenantId,
       },
     })
     if (!inquiry) {
+      throw new CommerceQuoteError(
+        "QUOTE_SOURCE_NOT_FOUND",
+        "Commerce Inquiry source not found.",
+      )
+    }
+    await assertServiceCommercePolicyAllowedInTransaction(tx, {
+      actorUserId: "public_quote_acceptance",
+      channel: "web",
+      purpose: "commerce_inquiry_quote_acceptance",
+      storeId: version.quote.storeId,
+      subject: "quote",
+      tenantId: version.quote.tenantId,
+      vertical: normalizeVertical(inquiry.vertical),
+    })
+    if (context.replayOrderId) return { orderId: context.replayOrderId }
+    if (inquiry.status !== CommerceInquiryStatus.QUOTED) {
       throw new CommerceQuoteError(
         "QUOTE_SOURCE_NOT_FOUND",
         "Commerce Inquiry source not found.",

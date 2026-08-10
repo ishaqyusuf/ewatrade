@@ -7,6 +7,7 @@ import {
   setServiceCommerceStoreProfileActivation,
   updateServiceCommerceStoreProfile,
 } from "./service-commerce-access"
+import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service-commerce-policy"
 import type { DbClient } from "./types"
 
 type Call = { args: Record<string, unknown>; name: string }
@@ -64,6 +65,7 @@ function createDb(input?: {
   const calls: Call[] = []
   const storedProfile = input?.profile === undefined ? profile : input.profile
   const store = {
+    countryCode: "NG",
     id: "store_123",
     name: "Main Store",
     serviceCommerceProfile: storedProfile,
@@ -76,6 +78,18 @@ function createDb(input?: {
       findFirst: async (args: Record<string, unknown>) => {
         calls.push({ args, name: "membership.findFirst" })
         return input?.role === null ? null : { role: input?.role ?? "OWNER" }
+      },
+    },
+    serviceCommercePolicyAuditEvent: {
+      createMany: async (args: Record<string, unknown>) => {
+        calls.push({ args, name: "policyAudit.createMany" })
+        return { count: Array.isArray(args.data) ? args.data.length : 0 }
+      },
+    },
+    serviceCommercePolicyDecision: {
+      findMany: async (args: Record<string, unknown>) => {
+        calls.push({ args, name: "policyDecision.findMany" })
+        return allowedServiceCommercePolicyDecisionRows()
       },
     },
     serviceCommerceStoreAuditEvent: {

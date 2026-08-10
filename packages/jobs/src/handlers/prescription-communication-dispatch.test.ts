@@ -56,6 +56,7 @@ describe("prescription communication dispatch", () => {
     await runPrescriptionCommunicationDispatch(
       { intentId: "intent-1" },
       {
+        authorize: async () => true,
         claim: async () => ({
           attemptId: "attempt-1",
           connectionId: "connection-1",
@@ -67,6 +68,7 @@ describe("prescription communication dispatch", () => {
           phoneNumberId: "phone-1",
           recipientReference: "2348000000000",
           storeId: "store-1",
+          tenantId: "tenant-1",
           templateConfiguration: {},
           type: "quote_ready",
         }),
@@ -129,6 +131,7 @@ describe("prescription communication dispatch", () => {
       await runPrescriptionCommunicationDispatch(
         { intentId },
         {
+          authorize: async () => true,
           claim: async () => ({
             attemptId: `attempt-${intentId.slice(-1)}`,
             ...claim,
@@ -137,6 +140,7 @@ describe("prescription communication dispatch", () => {
               actions: [{ protectedId: "encrypted-action", title: "Pick up" }],
             },
             recipientReference,
+            tenantId: `tenant-${claim.storeId.slice(-1)}`,
             templateConfiguration: {},
             type: "quote_ready",
           }),
@@ -183,6 +187,7 @@ describe("prescription communication dispatch", () => {
       runPrescriptionCommunicationDispatch(
         { intentId: "intent-1" },
         {
+          authorize: async () => true,
           claim: async () => ({
             attemptId: "attempt-1",
             connectionId: "connection-1",
@@ -194,6 +199,7 @@ describe("prescription communication dispatch", () => {
             phoneNumberId: "phone-1",
             recipientReference: "2348000000000",
             storeId: "store-1",
+            tenantId: "tenant-1",
             templateConfiguration: {},
             type: "quote_ready",
           }),
@@ -211,6 +217,49 @@ describe("prescription communication dispatch", () => {
       {
         attemptId: "attempt-1",
         failureCode: "provider_delivery_failed",
+        intentId: "intent-1",
+      },
+    ])
+  })
+
+  test("rechecks policy after claim and before calling the provider", async () => {
+    const completions: unknown[] = []
+    let providerCalls = 0
+
+    await expect(
+      runPrescriptionCommunicationDispatch(
+        { intentId: "intent-1" },
+        {
+          authorize: async () => false,
+          claim: async () => ({
+            attemptId: "attempt-1",
+            connectionId: "connection-1",
+            credentialReference: "credential-1",
+            intentId: "intent-1",
+            payload: {},
+            phoneNumberId: "phone-1",
+            recipientReference: "2348000000000",
+            storeId: "store-1",
+            templateConfiguration: {},
+            tenantId: "tenant-1",
+            type: "quote_ready",
+          }),
+          complete: async (input) => completions.push(input),
+          provider: createProvider(async () => {
+            providerCalls += 1
+            return { messageId: "should-not-send" }
+          }),
+          resolveActionId: () => "rx:opaque",
+          resolveCredential: () => "access-token-1",
+          state: new InMemoryConversationStateStore(),
+        },
+      ),
+    ).resolves.toBeNull()
+    expect(providerCalls).toBe(0)
+    expect(completions).toEqual([
+      {
+        attemptId: "attempt-1",
+        failureCode: "policy_restricted",
         intentId: "intent-1",
       },
     ])

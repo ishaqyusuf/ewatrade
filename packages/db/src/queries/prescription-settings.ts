@@ -7,6 +7,7 @@ import {
   PrescriptionStoreRoleType,
 } from "../../generated/prisma/enums"
 import { recordPrescriptionSensitiveAccess } from "./prescription-compliance"
+import { evaluateServiceCommercePolicyBatchInTransaction } from "./service-commerce-policy"
 
 export type PrescriptionStoreRoleInput = "attendant" | "pharmacist"
 
@@ -641,6 +642,40 @@ export async function setPrescriptionStoreActivation(
         throw new PrescriptionCommerceError(
           "PRESCRIPTION_NOT_READY",
           `Prescription Commerce is not ready: ${readiness.missing.join(", ")}.`,
+        )
+      }
+      const policyScopes = [
+        { channel: "web" as const, subject: "web" as const },
+        { channel: "staff" as const, subject: "staff" as const },
+        { channel: "staff" as const, subject: "intake" as const },
+        { channel: "staff" as const, subject: "quote" as const },
+        { channel: "web" as const, subject: "intake" as const },
+        { channel: "web" as const, subject: "quote" as const },
+        { channel: "web" as const, subject: "payment" as const },
+        ...(settings.pickupEnabled
+          ? [
+              { channel: "staff" as const, subject: "pickup" as const },
+              { channel: "web" as const, subject: "pickup" as const },
+            ]
+          : []),
+        ...(settings.deliveryEnabled
+          ? [
+              { channel: "staff" as const, subject: "delivery" as const },
+              { channel: "web" as const, subject: "delivery" as const },
+            ]
+          : []),
+      ].map((scope) => ({ ...scope, vertical: "pharmacy" as const }))
+      const policy = await evaluateServiceCommercePolicyBatchInTransaction(tx, {
+        actorUserId: input.actorUserId,
+        purpose: "prescription_store_activation",
+        scopes: policyScopes,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      })
+      if (policy.some((decision) => decision.outcome !== "allowed")) {
+        throw new PrescriptionCommerceError(
+          "PRESCRIPTION_NOT_READY",
+          "Prescription Commerce policy approval is incomplete for this Store.",
         )
       }
     }

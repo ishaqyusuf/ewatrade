@@ -36,6 +36,10 @@ import {
   recordCommerceQuoteAcceptance,
 } from "./commerce-quotes"
 import { createCommercialOrderInTransaction } from "./commercial-orders"
+import {
+  assertServiceCommercePolicyAllowedInTransaction,
+  evaluateServiceCommercePolicy,
+} from "./service-commerce-policy"
 
 function token() {
   return randomBytes(32).toString("base64url")
@@ -92,6 +96,15 @@ export async function createServiceRequestForm(
 ) {
   const rawToken = token()
   const form = await db.$transaction(async (tx) => {
+    await assertServiceCommercePolicyAllowedInTransaction(tx, {
+      actorUserId: input.actorUserId,
+      channel: "staff",
+      purpose: "service_request_form_create",
+      storeId: input.storeId,
+      subject: "web",
+      tenantId: input.tenantId,
+      vertical: "service",
+    })
     const offerings = await tx.sellableOffering.count({
       where: {
         id: { in: input.offeringIds },
@@ -292,6 +305,21 @@ export async function getPublicServiceRequestForm(
       "This Service Request Form is unavailable.",
     )
   }
+  const policy = await evaluateServiceCommercePolicy(db, {
+    actorUserId: "public_service_form",
+    channel: "web",
+    purpose: "public_service_form_projection",
+    storeId: form.storeId,
+    subject: "intake",
+    tenantId: form.tenantId,
+    vertical: "service",
+  })
+  if (policy.outcome !== "allowed") {
+    throw new CatalogError(
+      "PUBLIC_TOKEN_INVALID",
+      "This Service Request Form is unavailable.",
+    )
+  }
   return {
     label: form.label,
     offerings: form.offerings.flatMap(({ offering }) => {
@@ -384,6 +412,15 @@ export async function submitPublicServiceRequest(
         "This Service Request Form is unavailable.",
       )
     }
+    await assertServiceCommercePolicyAllowedInTransaction(tx, {
+      actorUserId: "public_service_request",
+      channel: "web",
+      purpose: "public_service_request_intake",
+      storeId: form.storeId,
+      subject: "intake",
+      tenantId: form.tenantId,
+      vertical: "service",
+    })
     const previous = await tx.serviceRequest.findUnique({
       where: {
         tenantId_clientRequestId: {
@@ -529,6 +566,17 @@ export async function issueServiceQuote(
   try {
     return await issueCommerceQuote(db, {
       actorUserId: input.actorUserId,
+      authorize: async (tx) => {
+        await assertServiceCommercePolicyAllowedInTransaction(tx, {
+          actorUserId: input.actorUserId,
+          channel: "staff",
+          purpose: "service_quote_issue",
+          storeId: input.storeId,
+          subject: "quote",
+          tenantId: input.tenantId,
+          vertical: "service",
+        })
+      },
       availabilityOutcome: "full",
       clientQuoteId: input.clientQuoteId,
       clientVersionId: input.clientVersionId,
@@ -638,14 +686,6 @@ export async function acceptServiceQuote(
   try {
     return await db.$transaction(async (tx) => {
       const context = await getCommerceQuoteAcceptanceContext(tx, input)
-      if (context.replayOrderId) {
-        return {
-          jobId: await tx.serviceJob
-            .findFirst({ where: { commercialOrderId: context.replayOrderId } })
-            .then((job) => job?.id ?? null),
-          orderId: context.replayOrderId,
-        }
-      }
       const { version } = context
       if (
         version.quote.sourceType !== CommerceQuoteSourceType.SERVICE_REQUEST
@@ -654,6 +694,23 @@ export async function acceptServiceQuote(
           "QUOTE_CONFLICT",
           "This Quote is not a Service Request Quote.",
         )
+      }
+      await assertServiceCommercePolicyAllowedInTransaction(tx, {
+        actorUserId: input.actorUserId,
+        channel: "web",
+        purpose: "service_quote_acceptance",
+        storeId: version.quote.storeId,
+        subject: "quote",
+        tenantId: version.quote.tenantId,
+        vertical: "service",
+      })
+      if (context.replayOrderId) {
+        return {
+          jobId: await tx.serviceJob
+            .findFirst({ where: { commercialOrderId: context.replayOrderId } })
+            .then((job) => job?.id ?? null),
+          orderId: context.replayOrderId,
+        }
       }
       const request = await tx.serviceRequest.findFirst({
         where: {
@@ -733,7 +790,26 @@ export async function getPublicServiceQuote(
   input: { acceptanceToken: string },
 ) {
   try {
-    const quote = await getPublicCommerceQuote(db, input)
+    const quote = await getPublicCommerceQuote(db, {
+      ...input,
+      authorize: async (tx, source) => {
+        if (source.sourceType !== CommerceQuoteSourceType.SERVICE_REQUEST) {
+          throw new CommerceQuoteError(
+            "PUBLIC_TOKEN_INVALID",
+            "Quote is unavailable.",
+          )
+        }
+        await assertServiceCommercePolicyAllowedInTransaction(tx, {
+          actorUserId: "public_service_quote",
+          channel: "web",
+          purpose: "public_service_quote_projection",
+          storeId: source.storeId,
+          subject: "quote",
+          tenantId: source.tenantId,
+          vertical: "service",
+        })
+      },
+    })
     if (quote.sourceType !== "service_request") {
       throw new CommerceQuoteError(
         "PUBLIC_TOKEN_INVALID",
@@ -863,6 +939,15 @@ export async function getPublicServiceTracking(
         "Tracking access is unavailable.",
       )
     }
+    await assertServiceCommercePolicyAllowedInTransaction(tx, {
+      actorUserId: "public_service_tracking",
+      channel: "web",
+      purpose: "public_service_tracking_projection",
+      storeId: access.serviceJob.storeId,
+      subject: "service_completion",
+      tenantId: access.tenantId,
+      vertical: "service",
+    })
     const now = new Date()
     const windowAge = now.getTime() - access.rateWindowStartedAt.getTime()
     if (windowAge < 60_000 && access.rateWindowCount >= 60) {

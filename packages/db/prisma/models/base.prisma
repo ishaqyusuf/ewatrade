@@ -43,6 +43,8 @@ model Tenant {
   serviceStoreSettings               ServiceStoreSettings[]
   serviceCommerceStoreProfiles       ServiceCommerceStoreProfile[]
   serviceCommerceStoreAuditEvents    ServiceCommerceStoreAuditEvent[]
+  serviceCommercePolicyDecisions     ServiceCommercePolicyDecision[]
+  serviceCommercePolicyAuditEvents   ServiceCommercePolicyAuditEvent[]
   commerceInquiries                  CommerceInquiry[]
   commerceInquiryLines               CommerceInquiryLine[]
   commerceInquiryAuditEvents         CommerceInquiryAuditEvent[]

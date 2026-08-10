@@ -1,5 +1,25 @@
 # Done
 
+- Completed Service Commerce Ticket 11 with a fail-closed, server-only
+  vertical/jurisdiction policy boundary. Added typed outcomes and independent
+  Catalog-adoption subjects, revisioned Tenant/Store decisions, private
+  evidence detail, append-only read/change/override audit, protected release
+  commands, activation/public/intake/Quote/payment/fulfilment enforcement,
+  pre-persistence media gates, and WhatsApp checks before channel exposure,
+  content/intent persistence, durable claim and provider send. Nigeria
+  Pharmacy WhatsApp remains prohibited without explicit unexpired written
+  approval; technical readiness cannot activate its Store binding. Completed
+  Date: 2026-08-10. Checks Run: shared/DB/API/jobs typechecks; focused policy,
+  source, payment, Prescription, WhatsApp and job tests (119 passing / 311
+  assertions); full suite 509 passing / 1,518 assertions,
+  28 opt-in hooks skipped and the same five unrelated navigation/Retail Ops
+  failures; dedicated verified-Neon policy acceptance 1/9 assertions; all 10
+  verified-Neon Service/Inquiry/profile/pickup/delivery compatibility scenarios
+  passed, with the manual-fee case passing an isolated rerun after one transient
+  transaction-start `P2028`. `bun db:push` synchronized the additive development schema;
+  `bun db:migrate` exposed known ledger drift and the requested reset was
+  refused. No production schema/provider activation is claimed.
+
 - Implemented Prescription Commerce tickets 01-19 and the source/runbook
   portion of ticket 20 using the strict Midday migration contract: Store
   activation and professional roles; shared

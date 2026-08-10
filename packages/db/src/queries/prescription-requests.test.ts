@@ -6,6 +6,7 @@ import {
   assertPrescriptionReleaseLineAvailability,
   assertPrescriptionRequestTransition,
   createPrescriptionIntakeFingerprint,
+  getPublicPrescriptionChannel,
   normalizePrescriptionMediaManifest,
   normalizePrescriptionTranscriptionRevision,
   prescriptionQueueWhere,
@@ -15,6 +16,7 @@ import {
   submitPublicPrescriptionRequest,
   submitStaffPrescriptionRequest,
 } from "./prescription-requests"
+import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service-commerce-policy"
 
 function createIntakeDb(input?: { active?: boolean; attendant?: boolean }) {
   let persisted: Record<string, unknown> | null = null
@@ -22,6 +24,15 @@ function createIntakeDb(input?: { active?: boolean; attendant?: boolean }) {
   const requestCreates: Array<Record<string, unknown>> = []
   const roleQueries: unknown[] = []
   const transaction = {
+    serviceCommercePolicyAuditEvent: {
+      createMany: async () => ({ count: 1 }),
+    },
+    serviceCommercePolicyDecision: {
+      findMany: async () => allowedServiceCommercePolicyDecisionRows(),
+    },
+    store: {
+      findFirst: async () => ({ countryCode: "NG" }),
+    },
     prescriptionRequest: {
       create: async ({ data }: { data: Record<string, unknown> }) => {
         requestCreates.push(data)
@@ -75,6 +86,49 @@ const mediaPage = {
 }
 
 describe("Prescription Request lifecycle", () => {
+  test("does not expose a WhatsApp number when channel policy is blocked", async () => {
+    const decisions = allowedServiceCommercePolicyDecisionRows().filter(
+      (decision) =>
+        !(decision.channel === "WHATSAPP" && decision.subject === "INTAKE"),
+    )
+    const db = {
+      prescriptionChannel: {
+        findFirst: async () => ({
+          id: "channel-1",
+          staffEnabled: true,
+          store: {
+            name: "Pharmacy",
+            whatsappStoreBindings: [
+              {
+                connection: {
+                  displayNumber: "+2348000000000",
+                  status: "ACTIVE",
+                },
+                status: "ACTIVE",
+              },
+            ],
+          },
+          storeId: "store-1",
+          tenant: { name: "Tenant" },
+          tenantId: "tenant-1",
+          webEnabled: true,
+          whatsappEnabled: true,
+        }),
+      },
+      serviceCommercePolicyAuditEvent: {
+        createMany: async () => ({ count: 4 }),
+      },
+      serviceCommercePolicyDecision: { findMany: async () => decisions },
+      store: { findFirst: async () => ({ countryCode: "NG" }) },
+    } as unknown as PrismaClient
+
+    const channel = await getPublicPrescriptionChannel(db, {
+      publicToken: "public-token",
+    })
+    expect(channel.supportedChannels.whatsapp).toBe(false)
+    expect(channel.whatsappDisplayNumber).toBeNull()
+  })
+
   test("normalizes attendant additions, corrections, and deletions as a new revision", () => {
     expect(
       normalizePrescriptionTranscriptionRevision([
@@ -520,6 +574,13 @@ describe("Prescription Request lifecycle", () => {
           return { count: 1 }
         },
       },
+      serviceCommercePolicyAuditEvent: {
+        createMany: async () => ({ count: 1 }),
+      },
+      serviceCommercePolicyDecision: {
+        findMany: async () => allowedServiceCommercePolicyDecisionRows(),
+      },
+      store: { findFirst: async () => ({ countryCode: "NG" }) },
     }
     const db = {
       $transaction: async (callback: (tx: typeof transaction) => unknown) =>
@@ -583,5 +644,44 @@ describe("Prescription Request lifecycle", () => {
         reuploadToken: "expired-token",
       }),
     ).rejects.toMatchObject({ code: "PUBLIC_ACCESS_INVALID" })
+  })
+
+  test("rejects clearer-media persistence when Pharmacy web intake policy is unavailable", async () => {
+    let mediaCreated = false
+    const transaction = {
+      prescriptionMedia: {
+        createMany: async () => {
+          mediaCreated = true
+          return { count: 1 }
+        },
+      },
+      prescriptionRequest: {
+        findFirst: async () => ({
+          currentMediaRevision: 1,
+          id: "request-1",
+          reference: "RX-TEST",
+          status: "NEEDS_CLEARER_MEDIA",
+          storeId: "store-1",
+          tenantId: "tenant-1",
+        }),
+      },
+      serviceCommercePolicyAuditEvent: {
+        createMany: async () => ({ count: 1 }),
+      },
+      serviceCommercePolicyDecision: { findMany: async () => [] },
+      store: { findFirst: async () => ({ countryCode: "NG" }) },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+    } as unknown as PrismaClient
+
+    await expect(
+      replacePrescriptionMedia(db, {
+        media: [mediaPage],
+        reuploadToken: "valid-policy-blocked-token",
+      }),
+    ).rejects.toMatchObject({ code: "POLICY_BLOCKED" })
+    expect(mediaCreated).toBe(false)
   })
 })

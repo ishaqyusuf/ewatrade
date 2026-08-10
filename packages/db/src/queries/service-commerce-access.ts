@@ -1,6 +1,7 @@
 import {
   SERVICE_COMMERCE_CAPABILITIES,
   type ServiceCommerceCapability,
+  type ServiceCommercePolicySubject,
   type ServiceCommerceProfileConfiguration,
   type ServiceCommerceProfileSettings,
   deriveServiceCommerceReadiness,
@@ -20,6 +21,7 @@ import {
   WhatsAppBindingStatus,
   WhatsAppConnectionStatus,
 } from "../../generated/prisma/enums"
+import { evaluateServiceCommercePolicyBatchInTransaction } from "./service-commerce-policy"
 import type { DbClient } from "./types"
 
 const configurationDefaults: ServiceCommerceProfileConfiguration = {
@@ -162,7 +164,7 @@ type ServiceCommerceReadinessFacts = {
 
 async function resolveServiceCommerceReadinessFacts(
   db: DbClient,
-  input: { storeId: string; tenantId: string },
+  input: { actorUserId: string; storeId: string; tenantId: string },
   configuration: ServiceCommerceProfileConfiguration,
   profile: PersistedProfile | null,
 ): Promise<ServiceCommerceReadinessFacts> {
@@ -207,9 +209,63 @@ async function resolveServiceCommerceReadinessFacts(
     providerUnavailable.push("whatsapp")
   }
 
+  const configuredChannels = (["staff", "web", "whatsapp"] as const).filter(
+    (channel) => configuration.capabilities[channel],
+  )
+  const policyScopes: Array<{
+    capability: ServiceCommerceCapability
+    channel: (typeof configuredChannels)[number]
+    subject: ServiceCommercePolicySubject
+    vertical: "pharmacy" | "service"
+  }> = []
+  for (const capability of SERVICE_COMMERCE_CAPABILITIES) {
+    if (!configuration.capabilities[capability]) continue
+    const channels =
+      capability === "staff" ||
+      capability === "web" ||
+      capability === "whatsapp"
+        ? [capability]
+        : configuredChannels
+    for (const channel of channels) {
+      for (const vertical of ["service", "pharmacy"] as const) {
+        policyScopes.push({
+          capability,
+          channel,
+          subject: capability,
+          vertical,
+        })
+      }
+    }
+  }
+  const policyEvaluations =
+    policyScopes.length > 0
+      ? await evaluateServiceCommercePolicyBatchInTransaction(db, {
+          actorUserId: input.actorUserId,
+          purpose: "service_commerce_readiness",
+          scopes: policyScopes,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        })
+      : []
+  const policyRestricted = SERVICE_COMMERCE_CAPABILITIES.filter(
+    (capability) =>
+      configuration.capabilities[capability] &&
+      policyScopes.some((scope) => scope.capability === capability) &&
+      !policyScopes.some(
+        (scope, index) =>
+          scope.capability === capability &&
+          policyEvaluations[index]?.outcome === "allowed",
+      ),
+  )
+
   return {
     providerUnavailable,
-    restricted: readPolicyRestrictedCapabilities(profile, configuration),
+    restricted: [
+      ...new Set([
+        ...readPolicyRestrictedCapabilities(profile, configuration),
+        ...policyRestricted,
+      ]),
+    ],
     setupRequired,
     trackedInventoryReady: Boolean(trackedInventory),
   }

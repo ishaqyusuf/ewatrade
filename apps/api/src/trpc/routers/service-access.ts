@@ -1,11 +1,12 @@
 import {
   CatalogError,
+  ServiceCommercePolicyError,
   acceptServiceQuote,
   createCustomerTrackingAccess,
   createServiceRequestForm,
-  getPublicServiceTracking,
   getPublicServiceQuote,
   getPublicServiceRequestForm,
+  getPublicServiceTracking,
   issueServiceQuote,
   listServiceRequestForms,
   listServiceRequests,
@@ -29,11 +30,7 @@ import {
   serviceTrackingCreateSchema,
   serviceTrackingRevokeSchema,
 } from "../../schemas/services"
-import {
-  createTRPCRouter,
-  protectedProcedure,
-  publicProcedure,
-} from "../init"
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "../init"
 import {
   assertServiceManager,
   resolveServiceStoreId,
@@ -46,6 +43,19 @@ function publicFailure() {
   })
 }
 
+function isPublicFailure(error: unknown) {
+  return (
+    error instanceof CatalogError || error instanceof ServiceCommercePolicyError
+  )
+}
+
+function mapProtectedPolicyError(error: unknown): never {
+  if (error instanceof ServiceCommercePolicyError) {
+    throw new TRPCError({ code: "FORBIDDEN", message: error.message })
+  }
+  throw error
+}
+
 export const serviceAccessRouter = createTRPCRouter({
   quote: publicProcedure
     .input(publicServiceQuoteSchema)
@@ -53,7 +63,7 @@ export const serviceAccessRouter = createTRPCRouter({
       try {
         return await getPublicServiceQuote(ctx.db, input)
       } catch (error) {
-        if (error instanceof CatalogError) throw publicFailure()
+        if (isPublicFailure(error)) throw publicFailure()
         throw error
       }
     }),
@@ -64,7 +74,7 @@ export const serviceAccessRouter = createTRPCRouter({
       try {
         return await getPublicServiceRequestForm(ctx.db, input)
       } catch (error) {
-        if (error instanceof CatalogError) throw publicFailure()
+        if (isPublicFailure(error)) throw publicFailure()
         throw error
       }
     }),
@@ -78,26 +88,30 @@ export const serviceAccessRouter = createTRPCRouter({
           ...input,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw publicFailure()
+        if (isPublicFailure(error)) throw publicFailure()
         throw error
       }
     }),
 
   createRequestForm: protectedProcedure
     .input(serviceRequestFormCreateSchema)
-    .mutation(({ ctx, input }) => {
-      assertServiceManager(ctx.tenantContext.membership.role)
-      const storeId = resolveServiceStoreId(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input.storeId,
-      )
-      return createServiceRequestForm(ctx.db, {
-        actorUserId: ctx.session.user.id,
-        ...input,
-        storeId,
-        tenantId: ctx.tenantContext.tenant.id,
-      })
+    .mutation(async ({ ctx, input }) => {
+      try {
+        assertServiceManager(ctx.tenantContext.membership.role)
+        const storeId = resolveServiceStoreId(
+          ctx.tenantContext.stores,
+          ctx.tenantContext.activeStore,
+          input.storeId,
+        )
+        return await createServiceRequestForm(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          ...input,
+          storeId,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        mapProtectedPolicyError(error)
+      }
     }),
 
   createTracking: protectedProcedure
@@ -113,19 +127,23 @@ export const serviceAccessRouter = createTRPCRouter({
 
   issueQuote: protectedProcedure
     .input(serviceQuoteIssueSchema)
-    .mutation(({ ctx, input }) => {
-      assertServiceManager(ctx.tenantContext.membership.role)
-      const storeId = resolveServiceStoreId(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input.storeId,
-      )
-      return issueServiceQuote(ctx.db, {
-        actorUserId: ctx.session.user.id,
-        ...input,
-        storeId,
-        tenantId: ctx.tenantContext.tenant.id,
-      })
+    .mutation(async ({ ctx, input }) => {
+      try {
+        assertServiceManager(ctx.tenantContext.membership.role)
+        const storeId = resolveServiceStoreId(
+          ctx.tenantContext.stores,
+          ctx.tenantContext.activeStore,
+          input.storeId,
+        )
+        return await issueServiceQuote(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          ...input,
+          storeId,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        mapProtectedPolicyError(error)
+      }
     }),
 
   requestForms: protectedProcedure
@@ -165,7 +183,7 @@ export const serviceAccessRouter = createTRPCRouter({
       try {
         return await submitPublicServiceRequest(ctx.db, input)
       } catch (error) {
-        if (error instanceof CatalogError) throw publicFailure()
+        if (isPublicFailure(error)) throw publicFailure()
         throw error
       }
     }),
@@ -176,7 +194,7 @@ export const serviceAccessRouter = createTRPCRouter({
       try {
         return await getPublicServiceTracking(ctx.db, input)
       } catch (error) {
-        if (error instanceof CatalogError) throw publicFailure()
+        if (isPublicFailure(error)) throw publicFailure()
         throw error
       }
     }),

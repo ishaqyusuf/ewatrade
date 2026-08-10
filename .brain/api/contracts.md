@@ -380,9 +380,9 @@ commands below remain owned by Ticket 03A.
   That transition requires a future policy-authorized flow. For WhatsApp, no
   Store binding is `setup_incomplete`; a non-active Binding or Connection is
   `provider_unavailable`; and a server-owned Store-profile restriction is
-  `policy_restricted` and takes precedence. Ticket 11 adds the authorized
-  jurisdiction and approval-evidence command that maintains this input without
-  changing these readiness states.
+  `policy_restricted` and takes precedence. Authoritative Ticket 11 decisions
+  now derive that policy outcome; the legacy allowlist is restriction-only
+  compatibility input and cannot grant a capability.
 - Catalog adoption projects private draft capture, public activation, tracked
   inventory and procure-to-order independently. A request/Quote still cannot
   publish Catalog data or invent stock.
@@ -391,6 +391,46 @@ commands below remain owned by Ticket 03A.
   context; repository reads/writes still predicate Tenant plus Store. Initial
   create and later updates translate optimistic/unique races to the same typed
   conflict rather than leaking a provider error.
+
+### Implemented vertical/jurisdiction policy contract
+
+- Exact policy scope is Tenant + Store + `service | pharmacy` vertical +
+  two-letter Store jurisdiction + `web | staff | whatsapp` channel + one typed
+  capability/Catalog-adoption subject. Clients cannot supply Tenant identity or
+  derive Store jurisdiction.
+- Runtime outcomes are `allowed | restricted | pending_evidence |
+  expired_approval | prohibited`, with safe reason, policy revision and
+  `validUntil`. Missing/changed jurisdiction, absent evidence, future/expired
+  window, revocation and ambiguous facts fail closed. No runtime cache exists;
+  invalidation is therefore each authoritative request/job read.
+- Allowed decisions require a private evidence reference and approval
+  reference. Nigeria Pharmacy WhatsApp has a separate default-prohibited rule
+  and requires an explicit unexpired written approval record even when its
+  Connection and Binding are technically ready.
+- `setPolicyDecision` and `revokePolicyDecision` are optimistic, atomic,
+  Tenant/Store-scoped release-owner commands. Every evaluation, safe list,
+  evidence detail, denied read, change, revoke, jurisdiction mismatch, stale
+  revision/write race and denied override appends an allowlisted audit without
+  copying raw evidence.
+- The public API derives `reviewedByUserId` from the authenticated release
+  owner; clients cannot claim that another user performed the review.
+- Public Service, Prescription and Inquiry entry points collapse a denied
+  result to their existing unavailable contract. Inquiry acceptance checks the
+  exact source and current policy before idempotent replay; the source must be
+  `quoted` only for a fresh conversion, not after the replay already converted
+  it.
+- WhatsApp rejects a denied Store before inbound customer content is stored,
+  rechecks at durable inbound/outbound claim, and rechecks the scoped attempt
+  immediately before provider send. Denial creates no provider call.
+- Pharmacy channel activation and public projection require both the exact
+  channel subject and intake permission. A prohibited WhatsApp route exposes
+  neither availability nor its display number. Media upload/re-upload, hosted
+  checkout, fulfilment acceptance/configuration/progression and notification
+  intent creation reauthorize at their server write boundary. A notification
+  denial skips the intent without rolling back a valid payment or fulfilment
+  transition.
+- Progressive draft capture, Catalog publication, procure-to-order, price
+  promotion and managed-inventory graduation are independently typed subjects.
 
 ## Services
 

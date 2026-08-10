@@ -5,8 +5,10 @@ import {
   assertActivePrescriptionStore,
   assertPrescriptionStoreRole,
   evaluatePrescriptionStoreReadiness,
+  setPrescriptionStoreActivation,
   validatePrescriptionRoleAssignment,
 } from "./prescription-settings"
+import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service-commerce-policy"
 
 describe("Prescription Commerce store readiness", () => {
   test("allows activation only when policy, fulfilment, attendant, and verified pharmacist gates pass", () => {
@@ -73,6 +75,67 @@ describe("Prescription Commerce store readiness", () => {
         role: "attendant",
       }),
     ).toEqual({ credentialReference: null, credentialVerifiedAt: null })
+  })
+
+  test("requires web channel policy before activation succeeds", async () => {
+    const decisions = allowedServiceCommercePolicyDecisionRows().filter(
+      (decision) => !(decision.channel === "WEB" && decision.subject === "WEB"),
+    )
+    let activated = false
+    const transaction = {
+      prescriptionIncidentControl: { findFirst: async () => null },
+      prescriptionStoreAuditEvent: { create: async () => ({ id: "audit-1" }) },
+      prescriptionStoreRole: {
+        findMany: async () => [
+          {
+            credentialReference: null,
+            credentialVerifiedAt: null,
+            role: "ATTENDANT",
+            status: "ACTIVE",
+          },
+          {
+            credentialReference: "licence-1",
+            credentialVerifiedAt: new Date(),
+            role: "PHARMACIST",
+            status: "ACTIVE",
+          },
+        ],
+      },
+      prescriptionStoreSettings: {
+        update: async () => {
+          activated = true
+          return { id: "settings-1" }
+        },
+        upsert: async () => ({
+          contactPolicy: "Contact policy",
+          deliveryEnabled: false,
+          id: "settings-1",
+          operatingHours: [{ day: "monday", isClosed: false }],
+          pickupEnabled: true,
+          servicePolicy: "Service policy",
+        }),
+      },
+      serviceCommercePolicyAuditEvent: {
+        createMany: async () => ({ count: 1 }),
+      },
+      serviceCommercePolicyDecision: { findMany: async () => decisions },
+      store: { findFirst: async () => ({ countryCode: "NG" }) },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+      store: { findFirst: async () => ({ id: "store-1", name: "Store" }) },
+    } as unknown as PrismaClient
+
+    await expect(
+      setPrescriptionStoreActivation(db, {
+        active: true,
+        actorUserId: "owner-1",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      }),
+    ).rejects.toMatchObject({ code: "PRESCRIPTION_NOT_READY" })
+    expect(activated).toBe(false)
   })
 })
 

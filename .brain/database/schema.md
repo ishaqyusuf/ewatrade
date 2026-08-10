@@ -107,9 +107,9 @@ persistence boundary. Clients never access the database directly.
   procure-to-order policy is independent.
 - Status/revision and attributed activation/deactivation fields support
   fail-closed readiness plus optimistic concurrency.
-- `policyRestrictedCapabilities` is a server-owned allowlisted capability
-  input. The setup command cannot write it; Ticket 11 owns its future
-  jurisdiction/evidence-backed maintenance command.
+- `policyRestrictedCapabilities` is a server-owned, restriction-only
+  compatibility input. Setup cannot write it and it cannot grant permission;
+  current `ServiceCommercePolicyDecision` records are authoritative.
 - `ServiceCommerceStoreAuditEvent` appends actor, reason, event type and
   previous/current JSON snapshots for every profile create, settings update,
   activation and deactivation.
@@ -130,6 +130,18 @@ persistence boundary. Clients never access the database directly.
   Quote Version under Tenant/Store scope. It recovers an idempotent Inquiry
   issuance response without storing raw bearer tokens or invalidating the
   version's original access token.
+- `ServiceCommercePolicyDecision` stores one revisioned current decision for
+  Tenant, Store, vertical, Store jurisdiction, channel and typed subject. It
+  keeps private evidence/licence/approval references, reviewer, effective and
+  expiry timestamps, reason, outcome and revocation state. Store deletion is
+  restricted until these governed facts are removed deliberately.
+- `ServiceCommercePolicyAuditEvent` is append-only safe evidence of policy
+  reads, create/update/revoke commands and denied overrides. It records scope,
+  actor, purpose, observed outcome and decision revision, never raw evidence or
+  customer content.
+- `CommerceInquiry.vertical` binds each Inquiry to the policy vertical used by
+  its source projection, Quote command and public acceptance. It does not merge
+  Service and Pharmacy aggregate lifecycles.
 
 ## Offline
 

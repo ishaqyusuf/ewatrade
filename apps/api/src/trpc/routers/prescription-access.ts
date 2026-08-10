@@ -3,6 +3,7 @@ import {
   PrescriptionFulfillmentError,
   PrescriptionPaymentError,
   PrescriptionRequestError,
+  ServiceCommercePolicyError,
   acceptPrescriptionDeliveryQuote,
   acceptPrescriptionPickupQuote,
   attachPrescriptionHostedCheckout,
@@ -53,7 +54,8 @@ async function runPublic<T>(action: () => Promise<T>) {
     if (
       error instanceof PrescriptionRequestError ||
       error instanceof PrescriptionPaymentError ||
-      error instanceof PrescriptionFulfillmentError
+      error instanceof PrescriptionFulfillmentError ||
+      error instanceof ServiceCommercePolicyError
     )
       throw publicFailure()
     throw error

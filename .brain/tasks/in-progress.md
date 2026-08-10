@@ -31,11 +31,20 @@
   conversion to create an Order. Its additive schema is synchronized to the
   verified `.env.local` Neon database; 57 focused tests pass with 172
   assertions, and the run-owned Neon acceptance passes with 22 assertions and
-  atomic fixture cleanup. Ticket 11 is the next dependency frontier. The full
-  test gate has
+  atomic fixture cleanup. Ticket 11 is complete: one revisioned server policy
+  boundary now owns vertical/jurisdiction/channel/subject decisions, private
+  evidence and audit; activation, public/source/media/intake, payment and
+  fulfilment commands plus WhatsApp intent/claim/provider send reauthorize
+  current facts. Nigeria Pharmacy WhatsApp is
+  default-prohibited without an explicit unexpired written approval, while the
+  five Progressive Catalog decisions remain independent. Its dedicated Neon
+  gate passed 9 assertions and all 10 established compatibility scenarios pass;
+  the final combined run's manual-fee `P2028` passed an isolated 17-assertion
+  rerun.
+  Tickets 03A and 04 are the next dependency frontier. The full test gate has
   five separately reproducible
   failures in unrelated in-progress mobile navigation and Retail Ops test
-  fakes; Ticket 02's focused and Neon gates are green. No production
+  fakes; Service Commerce focused and Neon gates are green. No production
   schema/provider operation is authorized.
   Started Date: 2026-08-09.
 

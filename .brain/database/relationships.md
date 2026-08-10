@@ -84,6 +84,14 @@ The optional replay-token child contains only a rotatable digest and explicit
 Tenant/Store scope; both original and current replay tokens resolve to the same
 current Quote Version.
 
+`Tenant + Store -> ServiceCommercePolicyDecision -> ServiceCommercePolicyAuditEvent`
+
+Each decision is unique by Tenant, Store, vertical, jurisdiction, channel and
+subject. Policy evaluation still predicates Tenant plus Store before matching
+the Store's current country code. Audit events retain their own Tenant/Store
+scope and may outlive a revoked decision revision; evidence contents remain on
+the protected decision and never enter public/source projections.
+
 New Order numbers are allocated once across the Tenant rather than per Store.
 The counter increment and Order creation share one database transaction, so a
 failed creation rolls the increment back and concurrent Stores cannot receive

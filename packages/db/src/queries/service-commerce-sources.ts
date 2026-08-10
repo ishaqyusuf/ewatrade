@@ -5,6 +5,7 @@ import {
   type ServiceCommerceRequestState,
   type ServiceCommerceSourceKind,
   type ServiceCommerceSourceRef,
+  type ServiceCommerceVertical,
   serviceCommerceCustomerRequestProjectionSchema,
   serviceCommerceSourceRefSchema,
 } from "@ewatrade/service-commerce"
@@ -14,6 +15,7 @@ import type {
 } from "../../generated/prisma/enums"
 import { normalizeCommerceInquiryState } from "./commerce-inquiries"
 import { getServiceCommerceWorkspaceAccess } from "./service-commerce-access"
+import { evaluateServiceCommercePolicyBatchInTransaction } from "./service-commerce-policy"
 import type { DbClient } from "./types"
 
 export class ServiceCommerceSourceError extends Error {
@@ -29,6 +31,7 @@ export class ServiceCommerceSourceError extends Error {
 type LoadedSource = {
   state: ServiceCommerceRequestState
   summary: string
+  vertical: ServiceCommerceVertical
 }
 
 type SourceLoader = (
@@ -64,7 +67,7 @@ const prescriptionStates = {
 const sourceLoaders = {
   commerce_inquiry: async (db, input) => {
     const inquiry = await db.commerceInquiry.findFirst({
-      select: { status: true, summary: true },
+      select: { status: true, summary: true, vertical: true },
       where: {
         id: input.id,
         storeId: input.storeId,
@@ -75,6 +78,7 @@ const sourceLoaders = {
       ? {
           state: normalizeCommerceInquiryState(inquiry.status),
           summary: inquiry.summary,
+          vertical: inquiry.vertical === "PHARMACY" ? "pharmacy" : "service",
         }
       : null
   },
@@ -91,6 +95,7 @@ const sourceLoaders = {
       ? {
           state: prescriptionStates[request.status],
           summary: "Prescription request",
+          vertical: "pharmacy",
         }
       : null
   },
@@ -107,6 +112,7 @@ const sourceLoaders = {
       ? {
           state: serviceStates[request.status],
           summary: "Service request",
+          vertical: "service",
         }
       : null
   },
@@ -184,11 +190,41 @@ export async function getServiceCommerceCustomerRequestProjection(
     )
   }
 
+  const capabilityScopes = SERVICE_COMMERCE_CAPABILITIES.map((capability) => ({
+    channel:
+      capability === "web" || capability === "whatsapp"
+        ? capability
+        : ("staff" as const),
+    subject: capability,
+    vertical: loaded.vertical,
+  }))
+  const policy = await evaluateServiceCommercePolicyBatchInTransaction(db, {
+    actorUserId: input.actorUserId,
+    purpose: "service_commerce_source_projection",
+    scopes: capabilityScopes,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+  })
+  const sourceReadiness = Object.fromEntries(
+    SERVICE_COMMERCE_CAPABILITIES.map((capability, index) => {
+      const readiness = workspace.readiness.capabilities[capability].readiness
+      return [
+        capability,
+        readiness === "available" && policy[index]?.outcome !== "allowed"
+          ? { capability, readiness: "restricted" as const }
+          : workspace.readiness.capabilities[capability],
+      ]
+    }),
+  ) as typeof workspace.readiness.capabilities
+
   return serviceCommerceCustomerRequestProjectionSchema.parse({
-    allowedCommands: availableActions(loaded.state, workspace.readiness),
+    allowedCommands: availableActions(loaded.state, {
+      ...workspace.readiness,
+      capabilities: sourceReadiness,
+    }),
     capabilities: SERVICE_COMMERCE_CAPABILITIES.map((capability) => ({
       capability,
-      readiness: workspace.readiness.capabilities[capability].readiness,
+      readiness: sourceReadiness[capability].readiness,
     })),
     source,
     state: loaded.state,

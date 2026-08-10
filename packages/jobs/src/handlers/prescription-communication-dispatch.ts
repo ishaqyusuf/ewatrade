@@ -10,6 +10,7 @@ import {
 } from "@ewatrade/communications"
 import { prisma } from "@ewatrade/db/client"
 import {
+  authorizePrescriptionCommunicationAttempt,
   claimPrescriptionCommunicationIntent,
   completePrescriptionCommunicationAttempt,
 } from "@ewatrade/db/queries"
@@ -21,6 +22,12 @@ type Claim = NonNullable<
 >
 
 type Dependencies = {
+  authorize(input: {
+    attemptId: string
+    intentId: string
+    storeId: string
+    tenantId: string
+  }): Promise<boolean>
   claim(input: PrescriptionCommunicationDispatchPayload): Promise<Claim | null>
   complete(input: {
     attemptId: string
@@ -52,6 +59,8 @@ const neutralCopy: Record<string, string> = {
 
 function defaultDependencies(): Dependencies {
   return {
+    authorize: (input) =>
+      authorizePrescriptionCommunicationAttempt(prisma, input),
     claim: (input) => claimPrescriptionCommunicationIntent(prisma, input),
     complete: (input) =>
       completePrescriptionCommunicationAttempt(prisma, input),
@@ -74,6 +83,20 @@ export async function runPrescriptionCommunicationDispatch(
 ) {
   const claim = await dependencies.claim(payload)
   if (!claim) return null
+  const authorized = await dependencies.authorize({
+    attemptId: claim.attemptId,
+    intentId: claim.intentId,
+    storeId: claim.storeId,
+    tenantId: claim.tenantId,
+  })
+  if (!authorized) {
+    await dependencies.complete({
+      attemptId: claim.attemptId,
+      failureCode: "policy_restricted",
+      intentId: claim.intentId,
+    })
+    return null
+  }
   const intentPayload = record(claim.payload)
   const state = await dependencies.state.get({
     connectionId: claim.connectionId,

@@ -47,6 +47,51 @@ enum CommerceInquiryAuditEventType {
   CONVERTED
 }
 
+enum ServiceCommercePolicyVertical {
+  SERVICE
+  PHARMACY
+}
+
+enum ServiceCommercePolicyChannel {
+  WEB
+  STAFF
+  WHATSAPP
+}
+
+enum ServiceCommercePolicySubject {
+  INTAKE
+  QUOTE
+  BOOKING
+  PAYMENT
+  PICKUP
+  DELIVERY
+  SERVICE_COMPLETION
+  WEB
+  STAFF
+  WHATSAPP
+  PROGRESSIVE_CATALOG
+  PROGRESSIVE_DRAFT_CAPTURE
+  CATALOG_PUBLICATION
+  PROCURE_TO_ORDER
+  PRICE_PROMOTION
+  MANAGED_INVENTORY_GRADUATION
+}
+
+enum ServiceCommercePolicyOutcome {
+  ALLOWED
+  RESTRICTED
+  PENDING_EVIDENCE
+  PROHIBITED
+}
+
+enum ServiceCommercePolicyAuditEventType {
+  READ
+  CREATED
+  UPDATED
+  REVOKED
+  OVERRIDE_DENIED
+}
+
 model ServiceCommerceStoreProfile {
   id                           String                             @id @default(cuid())
   tenantId                     String
@@ -101,16 +146,75 @@ model ServiceCommerceStoreAuditEvent {
   @@index([actorUserId, effectiveAt])
 }
 
+/// Current reviewed eligibility decision for one Store, vertical,
+/// jurisdiction, channel and subject. Private evidence references never enter
+/// customer-safe readiness projections.
+model ServiceCommercePolicyDecision {
+  id                String                            @id @default(cuid())
+  tenantId          String
+  storeId           String
+  vertical          ServiceCommercePolicyVertical
+  jurisdictionCode  String
+  channel           ServiceCommercePolicyChannel
+  subject           ServiceCommercePolicySubject
+  outcome           ServiceCommercePolicyOutcome
+  evidenceReference String
+  licenceReference  String?
+  approvalReference String?
+  reviewedByUserId  String
+  effectiveAt       DateTime
+  expiresAt         DateTime
+  reason            String
+  revision          Int                               @default(1)
+  revokedAt         DateTime?
+  createdAt         DateTime                          @default(now())
+  updatedAt         DateTime                          @updatedAt
+  tenant            Tenant                            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                             @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  auditEvents       ServiceCommercePolicyAuditEvent[]
+
+  @@unique([tenantId, storeId, vertical, jurisdictionCode, channel, subject])
+  @@index([tenantId, storeId, expiresAt])
+  @@index([reviewedByUserId, updatedAt])
+}
+
+/// Append-only evidence access/change log. Safe outcome/reason facts are
+/// recorded, never raw evidence contents or public customer data.
+model ServiceCommercePolicyAuditEvent {
+  id               String                              @id @default(cuid())
+  tenantId         String
+  storeId          String
+  decisionId       String?
+  type             ServiceCommercePolicyAuditEventType
+  actorUserId      String
+  vertical         ServiceCommercePolicyVertical
+  jurisdictionCode String
+  channel          ServiceCommercePolicyChannel
+  subject          ServiceCommercePolicySubject
+  observedOutcome  String
+  purpose          String
+  decisionRevision Int?
+  createdAt        DateTime                            @default(now())
+  tenant           Tenant                              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store            Store                               @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  decision         ServiceCommercePolicyDecision?      @relation(fields: [decisionId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, storeId, createdAt])
+  @@index([decisionId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
 /// Narrow Product pre-order demand whose exact Offering is not yet ready for
 /// cart or Commercial Order creation. This is intentionally not a universal
 /// request aggregate; ServiceRequest and PrescriptionRequest stay authoritative.
 model CommerceInquiry {
-  id              String                       @id @default(cuid())
+  id              String                        @id @default(cuid())
   tenantId        String
   storeId         String
   clientInquiryId String
   payloadHash     String
-  status          CommerceInquiryStatus        @default(RECEIVED)
+  status          CommerceInquiryStatus         @default(RECEIVED)
+  vertical        ServiceCommercePolicyVertical @default(SERVICE)
   demandReason    CommerceInquiryDemandReason
   channelOrigin   CommerceInquiryChannelOrigin
   summary         String
@@ -119,10 +223,10 @@ model CommerceInquiry {
   customerPhone   String?
   createdByUserId String
   convertedAt     DateTime?
-  createdAt       DateTime                     @default(now())
-  updatedAt       DateTime                     @updatedAt
-  tenant          Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store           Store                        @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  createdAt       DateTime                      @default(now())
+  updatedAt       DateTime                      @updatedAt
+  tenant          Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store           Store                         @relation(fields: [storeId], references: [id], onDelete: Restrict)
   auditEvents     CommerceInquiryAuditEvent[]
   lines           CommerceInquiryLine[]
 

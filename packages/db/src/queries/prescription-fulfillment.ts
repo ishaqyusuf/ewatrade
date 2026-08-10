@@ -24,6 +24,10 @@ import {
 } from "../../generated/prisma/enums"
 import { resolveCommerceQuoteAccess } from "./commerce-quotes"
 import { assertAnyPrescriptionStoreRole } from "./prescription-settings"
+import {
+  assertServiceCommercePolicyAllowedInTransaction,
+  evaluateServiceCommercePolicyInTransaction,
+} from "./service-commerce-policy"
 
 export class PrescriptionFulfillmentError extends Error {
   constructor(
@@ -52,6 +56,47 @@ function pickupStatus(value: PrescriptionPickupStatus) {
 
 function deliveryStatus(value: PrescriptionDeliveryStatus) {
   return value.toLowerCase() as Parameters<typeof assertDeliveryTransition>[0]
+}
+
+async function assertPrescriptionFulfillmentPolicy(
+  tx: Prisma.TransactionClient,
+  input: {
+    actorUserId: string
+    purpose: string
+    storeId: string
+    subject: "delivery" | "pickup"
+    tenantId: string
+  },
+) {
+  await assertServiceCommercePolicyAllowedInTransaction(tx, {
+    actorUserId: input.actorUserId,
+    channel: "staff",
+    purpose: input.purpose,
+    storeId: input.storeId,
+    subject: input.subject,
+    tenantId: input.tenantId,
+    vertical: "pharmacy",
+  })
+}
+
+async function canCreatePrescriptionFulfillmentNotification(
+  tx: Prisma.TransactionClient,
+  input: {
+    purpose: string
+    storeId: string
+    tenantId: string
+  },
+) {
+  const policy = await evaluateServiceCommercePolicyInTransaction(tx, {
+    actorUserId: "system_prescription_notification",
+    channel: "whatsapp",
+    purpose: input.purpose,
+    storeId: input.storeId,
+    subject: "whatsapp",
+    tenantId: input.tenantId,
+    vertical: "pharmacy",
+  })
+  return policy.outcome === "allowed"
 }
 
 export async function upsertPrescriptionDeliveryZone(
@@ -110,23 +155,32 @@ export async function upsertPrescriptionDeliveryZone(
     promiseText: input.promiseText.trim(),
     updatedByUserId: input.actorUserId,
   }
-  if (input.zoneId) {
-    return db.prescriptionDeliveryZone.update({
-      data,
-      where: {
-        id: input.zoneId,
+  return db.$transaction(async (tx) => {
+    await assertPrescriptionFulfillmentPolicy(tx, {
+      actorUserId: input.actorUserId,
+      purpose: "prescription_delivery_zone_update",
+      storeId: input.storeId,
+      subject: "delivery",
+      tenantId: input.tenantId,
+    })
+    if (input.zoneId) {
+      return tx.prescriptionDeliveryZone.update({
+        data,
+        where: {
+          id: input.zoneId,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        },
+      })
+    }
+    return tx.prescriptionDeliveryZone.create({
+      data: {
+        ...data,
+        createdByUserId: input.actorUserId,
         storeId: input.storeId,
         tenantId: input.tenantId,
       },
     })
-  }
-  return db.prescriptionDeliveryZone.create({
-    data: {
-      ...data,
-      createdByUserId: input.actorUserId,
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-    },
   })
 }
 
@@ -212,38 +266,49 @@ export async function revisePrescriptionQuoteForDelivery(
     input.address,
   )
   if (result.outcome === "manual_review") {
-    const address = await db.prescriptionDeliveryAddress.upsert({
-      create: {
-        eligibilityStatus: DeliveryEligibilityStatus.MANUAL_REVIEW,
-        encryptedPayload: encryptPrescriptionData(input.address),
-        localityFingerprint: prescriptionDataFingerprint(
-          `${input.address.locality}:${input.address.postalCode ?? ""}`,
-        ),
-        promiseText: result.zone.promiseText,
-        quoteVersionId: current.id,
+    return db.$transaction(async (tx) => {
+      await assertServiceCommercePolicyAllowedInTransaction(tx, {
+        actorUserId: "public_delivery_address_selection",
+        channel: "web",
+        purpose: "public_prescription_delivery_address_selection",
         storeId: current.quote.storeId,
+        subject: "delivery",
         tenantId: current.quote.tenantId,
-        zoneId: result.zone.id,
-      },
-      update: {
-        eligibilityStatus: DeliveryEligibilityStatus.MANUAL_REVIEW,
-        encryptedPayload: encryptPrescriptionData(input.address),
-        evaluatedByUserId: null,
-        evaluationReason: null,
-        feeMinor: null,
-        localityFingerprint: prescriptionDataFingerprint(
-          `${input.address.locality}:${input.address.postalCode ?? ""}`,
-        ),
-        promiseText: result.zone.promiseText,
-        zoneId: result.zone.id,
-      },
-      where: { quoteVersionId: current.id },
+        vertical: "pharmacy",
+      })
+      const address = await tx.prescriptionDeliveryAddress.upsert({
+        create: {
+          eligibilityStatus: DeliveryEligibilityStatus.MANUAL_REVIEW,
+          encryptedPayload: encryptPrescriptionData(input.address),
+          localityFingerprint: prescriptionDataFingerprint(
+            `${input.address.locality}:${input.address.postalCode ?? ""}`,
+          ),
+          promiseText: result.zone.promiseText,
+          quoteVersionId: current.id,
+          storeId: current.quote.storeId,
+          tenantId: current.quote.tenantId,
+          zoneId: result.zone.id,
+        },
+        update: {
+          eligibilityStatus: DeliveryEligibilityStatus.MANUAL_REVIEW,
+          encryptedPayload: encryptPrescriptionData(input.address),
+          evaluatedByUserId: null,
+          evaluationReason: null,
+          feeMinor: null,
+          localityFingerprint: prescriptionDataFingerprint(
+            `${input.address.locality}:${input.address.postalCode ?? ""}`,
+          ),
+          promiseText: result.zone.promiseText,
+          zoneId: result.zone.id,
+        },
+        where: { quoteVersionId: current.id },
+      })
+      return {
+        acceptanceToken: null,
+        manualReviewId: address.id,
+        outcome: "manual_review" as const,
+      }
     })
-    return {
-      acceptanceToken: null,
-      manualReviewId: address.id,
-      outcome: "manual_review" as const,
-    }
   }
   if (result.outcome !== "eligible") {
     throw new PrescriptionFulfillmentError(
@@ -253,6 +318,15 @@ export async function revisePrescriptionQuoteForDelivery(
   }
   const rawToken = token()
   return db.$transaction(async (tx) => {
+    await assertServiceCommercePolicyAllowedInTransaction(tx, {
+      actorUserId: "public_delivery_address_selection",
+      channel: "web",
+      purpose: "public_prescription_delivery_address_selection",
+      storeId: current.quote.storeId,
+      subject: "delivery",
+      tenantId: current.quote.tenantId,
+      vertical: "pharmacy",
+    })
     const version = await tx.commerceQuoteVersion.create({
       data: {
         acceptanceTokenDigest: digest(rawToken),
@@ -391,6 +465,13 @@ export async function approvePrescriptionManualDeliveryFee(
   }
   const rawToken = token()
   return db.$transaction(async (tx) => {
+    await assertPrescriptionFulfillmentPolicy(tx, {
+      actorUserId: input.actorUserId,
+      purpose: "prescription_manual_delivery_fee_approval",
+      storeId: input.storeId,
+      subject: "delivery",
+      tenantId: input.tenantId,
+    })
     const address = await tx.prescriptionDeliveryAddress.findFirst({
       include: {
         quoteVersion: {
@@ -627,6 +708,13 @@ export async function markPrescriptionPickupReady(
   const rawCode = randomBytes(6).toString("base64url").slice(0, 8).toUpperCase()
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60_000)
   return db.$transaction(async (tx) => {
+    await assertPrescriptionFulfillmentPolicy(tx, {
+      actorUserId: input.actorUserId,
+      purpose: "prescription_pickup_preparation",
+      storeId: input.storeId,
+      subject: "pickup",
+      tenantId: input.tenantId,
+    })
     const fulfillment = await tx.prescriptionPickupFulfillment.findFirst({
       include: { order: true },
       where: {
@@ -676,26 +764,34 @@ export async function markPrescriptionPickupReady(
         },
       ],
     })
-    const communication = fulfillment.order.customerPhone
-      ? await tx.prescriptionCommunicationIntent.upsert({
-          create: {
-            deduplicationKey: `pickup-ready:${fulfillment.id}:${fulfillment.revision + 1}`,
-            orderId: fulfillment.orderId,
-            payload: {},
-            recipientReference: fulfillment.order.customerPhone,
-            storeId: input.storeId,
-            tenantId: input.tenantId,
-            type: "PICKUP_READY",
-          },
-          update: {},
-          where: {
-            tenantId_deduplicationKey: {
-              deduplicationKey: `pickup-ready:${fulfillment.id}:${fulfillment.revision + 1}`,
-              tenantId: input.tenantId,
-            },
-          },
+    const communicationAllowed = fulfillment.order.customerPhone
+      ? await canCreatePrescriptionFulfillmentNotification(tx, {
+          purpose: "prescription_pickup_ready_notification",
+          storeId: input.storeId,
+          tenantId: input.tenantId,
         })
-      : null
+      : false
+    const communication =
+      fulfillment.order.customerPhone && communicationAllowed
+        ? await tx.prescriptionCommunicationIntent.upsert({
+            create: {
+              deduplicationKey: `pickup-ready:${fulfillment.id}:${fulfillment.revision + 1}`,
+              orderId: fulfillment.orderId,
+              payload: {},
+              recipientReference: fulfillment.order.customerPhone,
+              storeId: input.storeId,
+              tenantId: input.tenantId,
+              type: "PICKUP_READY",
+            },
+            update: {},
+            where: {
+              tenantId_deduplicationKey: {
+                deduplicationKey: `pickup-ready:${fulfillment.id}:${fulfillment.revision + 1}`,
+                tenantId: input.tenantId,
+              },
+            },
+          })
+        : null
     return {
       communicationIntentId: communication?.id ?? null,
       expiresAt,
@@ -723,6 +819,13 @@ export async function handoffPrescriptionPickup(
     userId: input.actorUserId,
   })
   return db.$transaction(async (tx) => {
+    await assertPrescriptionFulfillmentPolicy(tx, {
+      actorUserId: input.actorUserId,
+      purpose: "prescription_pickup_handoff",
+      storeId: input.storeId,
+      subject: "pickup",
+      tenantId: input.tenantId,
+    })
     const identity = await tx.prescriptionPickupFulfillment.findFirst({
       select: { id: true },
       where: {
@@ -875,6 +978,13 @@ export async function markPrescriptionDeliveryReady(
     )
   }
   return db.$transaction(async (tx) => {
+    await assertPrescriptionFulfillmentPolicy(tx, {
+      actorUserId: input.actorUserId,
+      purpose: "prescription_delivery_preparation",
+      storeId: input.storeId,
+      subject: "delivery",
+      tenantId: input.tenantId,
+    })
     const order = await tx.commercialOrder.findFirst({
       include: {
         prescriptionDeliveryAddress: true,
@@ -926,26 +1036,34 @@ export async function markPrescriptionDeliveryReady(
       data: { status: OrderStatus.FULFILLING },
       where: { id: order.id },
     })
-    const communication = order.customerPhone
-      ? await tx.prescriptionCommunicationIntent.upsert({
-          create: {
-            deduplicationKey: `delivery-ready:${assignment.id}`,
-            orderId: order.id,
-            payload: {},
-            recipientReference: order.customerPhone,
-            storeId: input.storeId,
-            tenantId: input.tenantId,
-            type: "DELIVERY_PROGRESS",
-          },
-          update: {},
-          where: {
-            tenantId_deduplicationKey: {
-              deduplicationKey: `delivery-ready:${assignment.id}`,
-              tenantId: input.tenantId,
-            },
-          },
+    const communicationAllowed = order.customerPhone
+      ? await canCreatePrescriptionFulfillmentNotification(tx, {
+          purpose: "prescription_delivery_ready_notification",
+          storeId: input.storeId,
+          tenantId: input.tenantId,
         })
-      : null
+      : false
+    const communication =
+      order.customerPhone && communicationAllowed
+        ? await tx.prescriptionCommunicationIntent.upsert({
+            create: {
+              deduplicationKey: `delivery-ready:${assignment.id}`,
+              orderId: order.id,
+              payload: {},
+              recipientReference: order.customerPhone,
+              storeId: input.storeId,
+              tenantId: input.tenantId,
+              type: "DELIVERY_PROGRESS",
+            },
+            update: {},
+            where: {
+              tenantId_deduplicationKey: {
+                deduplicationKey: `delivery-ready:${assignment.id}`,
+                tenantId: input.tenantId,
+              },
+            },
+          })
+        : null
     return {
       assignment,
       communicationIntentId: communication?.id ?? null,
@@ -972,6 +1090,13 @@ export async function recordPrescriptionPickupException(
     userId: input.actorUserId,
   })
   return db.$transaction(async (tx) => {
+    await assertPrescriptionFulfillmentPolicy(tx, {
+      actorUserId: input.actorUserId,
+      purpose: "prescription_pickup_exception",
+      storeId: input.storeId,
+      subject: "pickup",
+      tenantId: input.tenantId,
+    })
     const fulfillment = await tx.prescriptionPickupFulfillment.findFirst({
       where: {
         id: input.fulfillmentId,
@@ -1047,6 +1172,13 @@ export async function createPrescriptionDeliveryAssignment(
     userId: input.actorUserId,
   })
   return db.$transaction(async (tx) => {
+    await assertPrescriptionFulfillmentPolicy(tx, {
+      actorUserId: input.actorUserId,
+      purpose: "prescription_delivery_assignment",
+      storeId: input.storeId,
+      subject: "delivery",
+      tenantId: input.tenantId,
+    })
     const order = await tx.commercialOrder.findFirst({
       include: {
         prescriptionDeliveryAddress: true,
@@ -1142,6 +1274,13 @@ export async function transitionPrescriptionDelivery(
     )
   }
   return db.$transaction(async (tx) => {
+    await assertPrescriptionFulfillmentPolicy(tx, {
+      actorUserId: input.actorUserId,
+      purpose: "prescription_delivery_transition",
+      storeId: input.storeId,
+      subject: "delivery",
+      tenantId: input.tenantId,
+    })
     const identity = await tx.prescriptionDeliveryAssignment.findFirst({
       select: { id: true },
       where: {
@@ -1260,29 +1399,37 @@ export async function transitionPrescriptionDelivery(
       select: { customerPhone: true },
       where: { id: assignment.orderId },
     })
-    const communication = order?.customerPhone
-      ? await tx.prescriptionCommunicationIntent.upsert({
-          create: {
-            deduplicationKey: `delivery:${assignment.id}:${updated.revision}`,
-            orderId: assignment.orderId,
-            payload: {},
-            recipientReference: order.customerPhone,
-            storeId: input.storeId,
-            tenantId: input.tenantId,
-            type:
-              mapped === PrescriptionDeliveryStatus.FAILED
-                ? "DELIVERY_FAILED"
-                : "DELIVERY_PROGRESS",
-          },
-          update: {},
-          where: {
-            tenantId_deduplicationKey: {
-              deduplicationKey: `delivery:${assignment.id}:${updated.revision}`,
-              tenantId: input.tenantId,
-            },
-          },
+    const communicationAllowed = order?.customerPhone
+      ? await canCreatePrescriptionFulfillmentNotification(tx, {
+          purpose: "prescription_delivery_progress_notification",
+          storeId: input.storeId,
+          tenantId: input.tenantId,
         })
-      : null
+      : false
+    const communication =
+      order?.customerPhone && communicationAllowed
+        ? await tx.prescriptionCommunicationIntent.upsert({
+            create: {
+              deduplicationKey: `delivery:${assignment.id}:${updated.revision}`,
+              orderId: assignment.orderId,
+              payload: {},
+              recipientReference: order.customerPhone,
+              storeId: input.storeId,
+              tenantId: input.tenantId,
+              type:
+                mapped === PrescriptionDeliveryStatus.FAILED
+                  ? "DELIVERY_FAILED"
+                  : "DELIVERY_PROGRESS",
+            },
+            update: {},
+            where: {
+              tenantId_deduplicationKey: {
+                deduplicationKey: `delivery:${assignment.id}:${updated.revision}`,
+                tenantId: input.tenantId,
+              },
+            },
+          })
+        : null
     return {
       assignment: updated,
       communicationIntentId: communication?.id ?? null,

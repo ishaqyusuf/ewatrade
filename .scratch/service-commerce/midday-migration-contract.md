@@ -127,7 +127,7 @@ reconciled; focused contract tests and both affected package typechecks pass
 after reconciliation. No caller ownership, persistence model, production
 schema, provider configuration, or contraction changes in Ticket 01.
 
-### Completed Tickets 02-03 Expansion
+### Completed Tickets 02, 03 And 11 Expansion
 
 Ticket 02 adds the Store-unique capability/readiness profile, server-owned
 restriction input, revisioned audit commands and Midday settings surface.
@@ -138,6 +138,15 @@ transitions cannot mark quoted or converted. Existing Service and Prescription
 public tokens, management detail, vertical commands and audit ownership remain
 unchanged. The additive schema is synchronized to the verified `.env.local`
 Neon development database; production rollout remains separately gated.
+Ticket 11 replaces the profile restriction allowlist as the authoritative
+decision source with revisioned Store, vertical, jurisdiction, channel and
+subject policy records. Missing, expired, revoked, ambiguous and changed facts
+fail closed; private evidence is separately authorized/audited; activation,
+public projections, pre-persistence media intake/re-upload, Quote, payment and
+fulfilment actions plus WhatsApp intent/claim/provider send reauthorize
+server-side. Channel readiness requires both its channel subject and intake.
+The original allowlist remains only a compatibility restriction during
+expand-contract and cannot grant permission.
 
 Current divergence to remove deliberately: the Service workspace owns local
 sheet instances and manually edits `URLSearchParams`; Prescription already has

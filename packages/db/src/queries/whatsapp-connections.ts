@@ -10,6 +10,11 @@ import {
   WhatsAppConnectionStatus,
   WhatsAppInboundEventStatus,
 } from "../../generated/prisma/enums"
+import {
+  assertServiceCommercePolicyAllowedInTransaction,
+  evaluateServiceCommercePolicy,
+  evaluateServiceCommercePolicyInTransaction,
+} from "./service-commerce-policy"
 
 export class WhatsAppConnectionError extends Error {
   constructor(
@@ -399,6 +404,33 @@ export async function recordWhatsAppConnectionTest(
         },
       })
       for (const binding of pendingBindings) {
+        const policy = await evaluateServiceCommercePolicyInTransaction(tx, {
+          actorUserId: "system_whatsapp_connection_test",
+          channel: "whatsapp",
+          purpose: "prescription_whatsapp_binding_activation",
+          storeId: binding.storeId,
+          subject: "whatsapp",
+          tenantId: input.tenantId,
+          vertical: "pharmacy",
+        })
+        const intakePolicy = await evaluateServiceCommercePolicyInTransaction(
+          tx,
+          {
+            actorUserId: "system_whatsapp_connection_test",
+            channel: "whatsapp",
+            purpose: "prescription_whatsapp_binding_intake_activation",
+            storeId: binding.storeId,
+            subject: "intake",
+            tenantId: input.tenantId,
+            vertical: "pharmacy",
+          },
+        )
+        if (
+          policy.outcome !== "allowed" ||
+          intakePolicy.outcome !== "allowed"
+        ) {
+          continue
+        }
         await tx.whatsAppStoreBinding.updateMany({
           data: { status: WhatsAppBindingStatus.SUSPENDED },
           where: {
@@ -597,6 +629,21 @@ export async function resolveWhatsAppInboundStore(
       "No active Store binding matches this WhatsApp context.",
     )
   }
+  const policy = await evaluateServiceCommercePolicy(db, {
+    actorUserId: "public_whatsapp_routing",
+    channel: "whatsapp",
+    purpose: "prescription_whatsapp_inbound_route",
+    storeId: binding.storeId,
+    subject: "intake",
+    tenantId: binding.tenantId,
+    vertical: "pharmacy",
+  })
+  if (policy.outcome !== "allowed") {
+    throw new WhatsAppConnectionError(
+      "CONNECTION_NOT_FOUND",
+      "No active Store binding matches this WhatsApp context.",
+    )
+  }
   return binding
 }
 
@@ -613,19 +660,30 @@ export async function recordWhatsAppInboundEvent(
     tenantId: string
   },
 ) {
-  return db.whatsAppInboundEvent.upsert({
-    create: {
-      connectionId: input.connectionId,
-      externalCustomerId: input.externalCustomerId,
-      messageType: input.messageType,
-      normalizedPayload: input.normalizedPayload as Prisma.InputJsonValue,
-      providerEventId: input.providerEventId,
-      requestId: input.requestId,
+  return db.$transaction(async (tx) => {
+    await assertServiceCommercePolicyAllowedInTransaction(tx, {
+      actorUserId: "public_whatsapp_webhook",
+      channel: "whatsapp",
+      purpose: "prescription_whatsapp_inbound_persist",
       storeId: input.storeId,
+      subject: "intake",
       tenantId: input.tenantId,
-    },
-    update: {},
-    where: { providerEventId: input.providerEventId },
+      vertical: "pharmacy",
+    })
+    return tx.whatsAppInboundEvent.upsert({
+      create: {
+        connectionId: input.connectionId,
+        externalCustomerId: input.externalCustomerId,
+        messageType: input.messageType,
+        normalizedPayload: input.normalizedPayload as Prisma.InputJsonValue,
+        providerEventId: input.providerEventId,
+        requestId: input.requestId,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+      update: {},
+      where: { providerEventId: input.providerEventId },
+    })
   })
 }
 
@@ -681,6 +739,26 @@ export async function claimWhatsAppInboundEvent(
       await tx.whatsAppInboundEvent.update({
         data: {
           failureCode: "ambiguous_store_binding",
+          processedAt: new Date(),
+          status: WhatsAppInboundEventStatus.FAILED,
+        },
+        where: { id: event.id },
+      })
+      return null
+    }
+    const policy = await evaluateServiceCommercePolicyInTransaction(tx, {
+      actorUserId: "job_prescription_whatsapp_inbound",
+      channel: "whatsapp",
+      purpose: "prescription_whatsapp_inbound_claim",
+      storeId: event.storeId,
+      subject: "intake",
+      tenantId: event.tenantId,
+      vertical: "pharmacy",
+    })
+    if (policy.outcome !== "allowed") {
+      await tx.whatsAppInboundEvent.update({
+        data: {
+          failureCode: "policy_restricted",
           processedAt: new Date(),
           status: WhatsAppInboundEventStatus.FAILED,
         },
@@ -746,24 +824,35 @@ export async function createPrescriptionCommunicationIntent(
   },
 ) {
   const type = input.type.toUpperCase() as PrescriptionCommunicationType
-  return db.prescriptionCommunicationIntent.upsert({
-    create: {
-      deduplicationKey: input.deduplicationKey,
-      orderId: input.orderId,
-      payload: input.payload as Prisma.InputJsonValue,
-      recipientReference: input.recipientReference,
-      requestId: input.requestId,
+  return db.$transaction(async (tx) => {
+    await assertServiceCommercePolicyAllowedInTransaction(tx, {
+      actorUserId: "system_prescription_notification",
+      channel: "whatsapp",
+      purpose: "prescription_whatsapp_outbound_create",
       storeId: input.storeId,
+      subject: "whatsapp",
       tenantId: input.tenantId,
-      type,
-    },
-    update: {},
-    where: {
-      tenantId_deduplicationKey: {
+      vertical: "pharmacy",
+    })
+    return tx.prescriptionCommunicationIntent.upsert({
+      create: {
         deduplicationKey: input.deduplicationKey,
+        orderId: input.orderId,
+        payload: input.payload as Prisma.InputJsonValue,
+        recipientReference: input.recipientReference,
+        requestId: input.requestId,
+        storeId: input.storeId,
         tenantId: input.tenantId,
+        type,
       },
-    },
+      update: {},
+      where: {
+        tenantId_deduplicationKey: {
+          deduplicationKey: input.deduplicationKey,
+          tenantId: input.tenantId,
+        },
+      },
+    })
   })
 }
 
@@ -796,6 +885,22 @@ export async function claimPrescriptionCommunicationIntent(
       })
       return null
     }
+    const policy = await evaluateServiceCommercePolicyInTransaction(tx, {
+      actorUserId: "job_prescription_communication_dispatch",
+      channel: "whatsapp",
+      purpose: "prescription_whatsapp_outbound_claim",
+      storeId: intent.storeId,
+      subject: "whatsapp",
+      tenantId: intent.tenantId,
+      vertical: "pharmacy",
+    })
+    if (policy.outcome !== "allowed") {
+      await tx.prescriptionCommunicationIntent.update({
+        data: { status: CommunicationIntentStatus.DEFERRED },
+        where: { id: intent.id },
+      })
+      return null
+    }
     const attemptCount = await tx.prescriptionCommunicationAttempt.count({
       where: { intentId: intent.id },
     })
@@ -820,9 +925,42 @@ export async function claimPrescriptionCommunicationIntent(
       phoneNumberId: binding.connection.phoneNumberId,
       recipientReference: intent.recipientReference,
       storeId: intent.storeId,
+      tenantId: intent.tenantId,
       templateConfiguration: binding.connection.templateConfiguration,
       type: intent.type.toLowerCase(),
     }
+  })
+}
+
+export async function authorizePrescriptionCommunicationAttempt(
+  db: PrismaClient,
+  input: {
+    attemptId: string
+    intentId: string
+    storeId: string
+    tenantId: string
+  },
+) {
+  return db.$transaction(async (tx) => {
+    const attempt = await tx.prescriptionCommunicationAttempt.findFirst({
+      select: { id: true },
+      where: {
+        id: input.attemptId,
+        intentId: input.intentId,
+        intent: { storeId: input.storeId, tenantId: input.tenantId },
+      },
+    })
+    if (!attempt) return false
+    const policy = await evaluateServiceCommercePolicyInTransaction(tx, {
+      actorUserId: "job_prescription_communication_provider_send",
+      channel: "whatsapp",
+      purpose: "prescription_whatsapp_provider_send",
+      storeId: input.storeId,
+      subject: "whatsapp",
+      tenantId: input.tenantId,
+      vertical: "pharmacy",
+    })
+    return policy.outcome === "allowed"
   })
 }
 
@@ -1032,6 +1170,15 @@ export async function consumePrescriptionQuickAction(
         "This action is no longer available.",
       )
     }
+    await assertServiceCommercePolicyAllowedInTransaction(tx, {
+      actorUserId: "public_prescription_quick_action",
+      channel: "whatsapp",
+      purpose: "prescription_whatsapp_quick_action",
+      storeId: input.storeId,
+      subject: "whatsapp",
+      tenantId: input.tenantId,
+      vertical: "pharmacy",
+    })
     await tx.prescriptionQuickAction.update({
       data: { consumedAt: new Date() },
       where: { id: action.id },

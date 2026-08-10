@@ -267,6 +267,36 @@ against the same verified profile without a reset, and the final push reported
 the database already in sync. No data-loss override, manual migration file,
 local database or production database was used. A deployable production
 migration artifact remains a separate release gate.
+
+## Service Commerce Vertical Policy Migration State
+
+On 2026-08-10 Ticket 11 added typed vertical/channel/subject/outcome/audit
+enums, `ServiceCommercePolicyDecision`,
+`ServiceCommercePolicyAuditEvent`, explicit Tenant/Store relations and
+`CommerceInquiry.vertical`. This is additive expand-phase persistence; the
+profile restriction allowlist remains temporarily as a restriction-only
+compatibility field.
+
+The required root workflow used only the verified `.env.local` Neon
+development profile and skipped local PostgreSQL/Docker. Initial sandboxed
+schema-engine access failed. The approved network retry of `bun db:push`
+applied the additive schema without a reset or data-loss flag and reported the
+development schema synchronized. `bun db:migrate` then truthfully detected the
+known broad schema-to-ledger drift across previously pushed Prescription/
+Service Commerce tables and requested a destructive reset; the reset was
+refused. No migration file was hand-authored and no production database was
+touched.
+
+A dedicated run-owned Neon policy fixture passed Store/Tenant isolation,
+jurisdiction change/missing jurisdiction, expiry, revocation, Nigeria Pharmacy
+WhatsApp default prohibition plus explicit QA written approval, and independent
+Catalog subjects with 9 assertions. The established Service, Inquiry, profile,
+pickup and delivery compatibility matrix passed all 10 scenarios after the
+final policy remediation. Nine passed in the combined verified-Neon run; the
+manual-fee delivery scenario hit a transient Neon transaction-start `P2028`
+and then passed its isolated rerun with 17 assertions. A deployable migration
+artifact, ledger reconciliation and production rollout remain separately
+authorized gates.
 # Hybrid QA cleanup
 
 - Adds tenant QA lifecycle fields and global purge-run receipts. Apply the

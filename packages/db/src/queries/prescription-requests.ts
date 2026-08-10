@@ -44,6 +44,10 @@ import {
   assertAnyPrescriptionStoreRole,
   assertPrescriptionStoreRole,
 } from "./prescription-settings"
+import {
+  assertServiceCommercePolicyAllowedInTransaction,
+  evaluateServiceCommercePolicyBatchInTransaction,
+} from "./service-commerce-policy"
 
 export type PrescriptionRequestStatusValue =
   | "attendant_verification"
@@ -364,17 +368,47 @@ export async function getPublicPrescriptionChannel(
       "This prescription intake link is unavailable.",
     )
   }
+  const policy = await evaluateServiceCommercePolicyBatchInTransaction(db, {
+    actorUserId: "public_prescription_channel",
+    purpose: "public_prescription_channel_projection",
+    scopes: [
+      { channel: "staff", subject: "staff", vertical: "pharmacy" },
+      { channel: "web", subject: "web", vertical: "pharmacy" },
+      { channel: "whatsapp", subject: "whatsapp", vertical: "pharmacy" },
+      { channel: "web", subject: "intake", vertical: "pharmacy" },
+      { channel: "whatsapp", subject: "intake", vertical: "pharmacy" },
+    ],
+    storeId: channel.storeId,
+    tenantId: channel.tenantId,
+  })
+  if (policy[1]?.outcome !== "allowed" || policy[3]?.outcome !== "allowed") {
+    throw new PrescriptionRequestError(
+      "PUBLIC_ACCESS_INVALID",
+      "This prescription intake link is unavailable.",
+    )
+  }
   return {
     channelId: channel.id,
     store: { id: channel.storeId, name: channel.store.name },
     tenantName: channel.tenant.name,
     supportedChannels: {
-      staff: channel.staffEnabled,
-      web: channel.webEnabled,
-      whatsapp: channel.whatsappEnabled,
+      staff: channel.staffEnabled && policy[0]?.outcome === "allowed",
+      web:
+        channel.webEnabled &&
+        policy[1]?.outcome === "allowed" &&
+        policy[3]?.outcome === "allowed",
+      whatsapp:
+        channel.whatsappEnabled &&
+        policy[2]?.outcome === "allowed" &&
+        policy[4]?.outcome === "allowed",
     },
     whatsappDisplayNumber:
-      channel.store.whatsappStoreBindings[0]?.connection.displayNumber ?? null,
+      channel.whatsappEnabled &&
+      policy[2]?.outcome === "allowed" &&
+      policy[4]?.outcome === "allowed"
+        ? (channel.store.whatsappStoreBindings[0]?.connection.displayNumber ??
+          null)
+        : null,
   }
 }
 
@@ -422,6 +456,21 @@ async function createPrescriptionRequest(
   const statusTokenExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1_000)
 
   const result = await db.$transaction(async (tx) => {
+    const policyChannel =
+      input.source === "web"
+        ? "web"
+        : input.source === "whatsapp"
+          ? "whatsapp"
+          : "staff"
+    await assertServiceCommercePolicyAllowedInTransaction(tx, {
+      actorUserId: input.staffAssistedByUserId ?? `public_${policyChannel}`,
+      channel: policyChannel,
+      purpose: "prescription_request_intake",
+      storeId: input.storeId,
+      subject: "intake",
+      tenantId: input.tenantId,
+      vertical: "pharmacy",
+    })
     const existing = await tx.prescriptionRequest.findUnique({
       where: {
         tenantId_clientRequestId: {
@@ -632,6 +681,15 @@ export async function continueWhatsAppPrescriptionRequest(
 ) {
   const media = normalizePrescriptionMediaManifest(input.media)
   return db.$transaction(async (tx) => {
+    await assertServiceCommercePolicyAllowedInTransaction(tx, {
+      actorUserId: "job_prescription_whatsapp_inbound",
+      channel: "whatsapp",
+      purpose: "prescription_whatsapp_continuation",
+      storeId: input.storeId,
+      subject: "intake",
+      tenantId: input.tenantId,
+      vertical: "pharmacy",
+    })
     const request = await tx.prescriptionRequest.findFirst({
       where: {
         id: input.requestId,
@@ -748,8 +806,10 @@ export async function getPublicPrescriptionRequestStatus(
       fulfilmentPreference: true,
       id: true,
       reference: true,
+      storeId: true,
       status: true,
       store: { select: { name: true } },
+      tenantId: true,
       updatedAt: true,
     },
     where: {
@@ -763,6 +823,15 @@ export async function getPublicPrescriptionRequestStatus(
       "This prescription status link is unavailable.",
     )
   }
+  await assertServiceCommercePolicyAllowedInTransaction(db, {
+    actorUserId: "public_prescription_status",
+    channel: "web",
+    purpose: "public_prescription_status_projection",
+    storeId: request.storeId,
+    subject: "web",
+    tenantId: request.tenantId,
+    vertical: "pharmacy",
+  })
   const quote = await db.commerceQuote.findFirst({
     select: {
       currentVersion: {
@@ -1253,6 +1322,15 @@ export async function replacePrescriptionMedia(
         "This clearer-media link is unavailable.",
       )
     }
+    await assertServiceCommercePolicyAllowedInTransaction(tx, {
+      actorUserId: "public_prescription_reupload",
+      channel: "web",
+      purpose: "prescription_media_reupload",
+      storeId: request.storeId,
+      subject: "intake",
+      tenantId: request.tenantId,
+      vertical: "pharmacy",
+    })
     const revision = request.currentMediaRevision + 1
     await tx.prescriptionMedia.createMany({
       data: media.map((page) => ({
@@ -2204,7 +2282,26 @@ export async function getPublicPrescriptionQuote(
   db: PrismaClient,
   input: { acceptanceToken: string },
 ) {
-  const quote = await getPublicCommerceQuote(db, input)
+  const quote = await getPublicCommerceQuote(db, {
+    ...input,
+    authorize: async (tx, source) => {
+      if (source.sourceType !== CommerceQuoteSourceType.PRESCRIPTION_REQUEST) {
+        throw new CommerceQuoteError(
+          "PUBLIC_TOKEN_INVALID",
+          "This prescription Quote is unavailable.",
+        )
+      }
+      await assertServiceCommercePolicyAllowedInTransaction(tx, {
+        actorUserId: "public_prescription_quote",
+        channel: "web",
+        purpose: "public_prescription_quote_projection",
+        storeId: source.storeId,
+        subject: "quote",
+        tenantId: source.tenantId,
+        vertical: "pharmacy",
+      })
+    },
+  })
   if (quote.sourceType !== "prescription_request") {
     throw new PrescriptionRequestError(
       "PUBLIC_ACCESS_INVALID",
@@ -2263,6 +2360,34 @@ async function acceptPrescriptionQuoteForFulfilment(
   try {
     return await db.$transaction(async (tx) => {
       const context = await getCommerceQuoteAcceptanceContext(tx, input)
+      const { version } = context
+      if (
+        version.quote.sourceType !==
+        CommerceQuoteSourceType.PRESCRIPTION_REQUEST
+      ) {
+        throw new CommerceQuoteError(
+          "QUOTE_CONFLICT",
+          "This Quote is not a prescription Quote.",
+        )
+      }
+      await assertServiceCommercePolicyAllowedInTransaction(tx, {
+        actorUserId: "public_prescription_quote_acceptance",
+        channel: "web",
+        purpose: "prescription_quote_acceptance",
+        storeId: version.quote.storeId,
+        subject: "quote",
+        tenantId: version.quote.tenantId,
+        vertical: "pharmacy",
+      })
+      await assertServiceCommercePolicyAllowedInTransaction(tx, {
+        actorUserId: "public_prescription_quote_acceptance",
+        channel: "web",
+        purpose: `prescription_${expectedFulfilment}_acceptance`,
+        storeId: version.quote.storeId,
+        subject: expectedFulfilment,
+        tenantId: version.quote.tenantId,
+        vertical: "pharmacy",
+      })
       if (context.replayOrderId) {
         const order = await tx.commercialOrder.findFirstOrThrow({
           select: { customerPhone: true, storeId: true, tenantId: true },
@@ -2283,16 +2408,6 @@ async function acceptPrescriptionQuoteForFulfilment(
           orderId: context.replayOrderId,
           versionId: context.version.id,
         }
-      }
-      const { version } = context
-      if (
-        version.quote.sourceType !==
-        CommerceQuoteSourceType.PRESCRIPTION_REQUEST
-      ) {
-        throw new CommerceQuoteError(
-          "QUOTE_CONFLICT",
-          "This Quote is not a prescription Quote.",
-        )
       }
       try {
         const fulfilmentType = version.fulfilmentType.toLowerCase() as

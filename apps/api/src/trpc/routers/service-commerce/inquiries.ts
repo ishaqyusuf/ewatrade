@@ -1,6 +1,7 @@
 import {
   CommerceInquiryError,
   CommerceQuoteError,
+  ServiceCommercePolicyError,
   ServiceCommerceSourceError,
   acceptCommerceInquiryQuote,
   createCommerceInquiry,
@@ -54,6 +55,12 @@ function mapProtectedError(error: unknown): never {
   }
   if (error instanceof CommerceQuoteError) {
     throw new TRPCError({ code: "CONFLICT", message: error.message })
+  }
+  if (error instanceof ServiceCommercePolicyError) {
+    throw new TRPCError({
+      code: error.code === "FORBIDDEN" ? "FORBIDDEN" : "CONFLICT",
+      message: error.message,
+    })
   }
   throw error
 }

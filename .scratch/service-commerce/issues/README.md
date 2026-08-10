@@ -13,8 +13,8 @@ date; production schema/provider operations remain separately authorized.
 
 ## Execution Rule
 
-Execute one ticket at a time through its blocking edges. Tickets 01, 02 and 03
-are complete; Ticket 11 is the next dependency frontier. Any scope
+Execute one ticket at a time through its blocking edges. Tickets 01, 02, 03 and
+11 are complete; Tickets 03A and 04 are the next dependency frontier. Any scope
 or dependency change should update the spec, ADR/Brain and affected tickets
 before implementation.
 

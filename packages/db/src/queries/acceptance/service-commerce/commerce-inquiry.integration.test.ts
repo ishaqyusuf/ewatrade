@@ -91,6 +91,7 @@ describeWithServiceCommerceDatabase(
           storeId: fixture.storeId,
           summary: "Known catalog Product",
           tenantId: fixture.tenantId,
+          vertical: "service",
         }),
       ).rejects.toBeInstanceOf(CommerceInquiryError)
       expect(
@@ -119,6 +120,7 @@ describeWithServiceCommerceDatabase(
         storeId: fixture.storeId,
         summary: "Please confirm the blue medicine package",
         tenantId: fixture.tenantId,
+        vertical: "service" as const,
       }
       const inquiry = await createCommerceInquiry(fixture.db, inquiryInput)
       await expect(
