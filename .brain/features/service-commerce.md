@@ -497,6 +497,12 @@ template/service-window enforcement and bounded attempt/receipt facts.
 - Direct Meta Cloud API is the initial adapter, matching Midday's transport
   direction. Midday's single global sender is deliberately not copied. Twilio
   is optional future infrastructure behind Communications, not a prerequisite.
+- The dated Meta release checklist treats pricing as a delivered-message,
+  recipient-market/category provider fact and never hardcodes or estimates the
+  Nigeria rate card. It rechecks opt-in, the 24-hour service window, templates,
+  human escalation and regulated-vertical eligibility. Nigeria Pharmacy stays
+  default-prohibited because technical readiness cannot override the current
+  regulated-goods policy or allowed-country scope.
 - State-aware quick actions carry opaque short-lived capabilities. They never
   include sensitive content or treat button navigation as payment, booking or
   fulfilment truth.

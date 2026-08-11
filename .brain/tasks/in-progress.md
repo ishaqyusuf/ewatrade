@@ -61,6 +61,9 @@
   verified-Neon matrix passes 1/16, including replay-safe provider-event storage
   and one atomic worker claim under a concurrent duplicate. Store-team proofs
   keep attendant, pharmacist and commercial-approver capabilities independent.
+  A dated official Meta policy/pricing checklist now records delivered-message
+  market/category pricing and preserves Nigeria Pharmacy's default prohibition;
+  exact rates and policy must still be re-read in the authorized live window.
   Live Meta/provider release acceptance remains open. Ticket 05 is complete.
   Its strict shared envelope,
   Tenant/Store/attendant dispatcher, channel-locked API,

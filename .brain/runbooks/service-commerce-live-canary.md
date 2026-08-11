@@ -57,6 +57,43 @@ logged.
   through an approved operating procedure rather than an invented provider
   integration.
 
+## Current Meta Policy And Pricing Review
+
+Reviewed on 2026-08-11 against Meta's current
+[WhatsApp Business Messaging Policy](https://whatsappbusiness.com/policy/) and
+[WhatsApp Business Platform Pricing](https://whatsappbusiness.com/products/platform-pricing/).
+This is a dated release-readiness snapshot, not a permanent authorization:
+Meta states that policy may change, and the live-window operator must re-open
+both sources before any provider action.
+
+- Platform messages are priced when delivered, using the recipient market and
+  message category. The current categories are marketing, utility,
+  authentication and service. Service messages and utility replies in the
+  user-initiated service window are currently free; qualifying click-to-WhatsApp
+  or Facebook Page entry points have a 72-hour free window. Exact Nigeria rates
+  and volume tiers remain dynamic provider facts and must be captured from the
+  current rate card at the authorized live window; EwaTrade must not hardcode or
+  estimate them.
+- A business may contact only opted-in recipients, must honor opt-out, and may
+  initiate outside the 24-hour customer-service window only with an approved
+  template used for its designated purpose. Automation must retain a clear
+  human-escalation path.
+- Prescription drugs and medical or healthcare products remain regulated or
+  restricted categories. Nigeria does not appear in the current allowed-country
+  list for over-the-counter drug messaging. EwaTrade therefore keeps Nigeria
+  Pharmacy WhatsApp prohibited by default; technical Connection readiness,
+  templates, a local licence or an internal approval cannot independently
+  activate it.
+- Generic Service Commerce still requires current Store policy decisions for
+  WhatsApp and intake, technical Connection readiness, the intended template
+  profile, billing ownership and a consented test recipient. None of those facts
+  authorize Pharmacy or substitute for the live-window policy/rate review.
+
+This review performed no provider, database or customer operation and is not
+legal advice. The live release remains blocked until its separately authorized
+window revalidates the official policy, selected Nigeria rate card, template
+status, scoped Connection and rollback evidence.
+
 ## Live Execution Evidence
 
 For an authorized live canary, record the canary kind, operator, Tenant/Store

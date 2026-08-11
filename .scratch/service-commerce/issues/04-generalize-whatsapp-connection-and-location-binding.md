@@ -56,7 +56,13 @@ Eligibility.
 - [x] Test same-customer isolation, unknown recipient, signature failure,
   duplicate webhook, revoked credentials, connection replacement and central
   branch switching.
-- [ ] Recheck current Meta policy/pricing at release and keep pharmacy activation separately fail closed.
+- [x] Keep Pharmacy activation separately fail closed and document a dated
+  official Meta policy/pricing release checklist without hardcoding rates or
+  treating the review as provider authorization.
+- [ ] At the separately authorized live release window, re-open the official
+  Meta policy and Nigeria rate card, record the current template/category/rate
+  evidence and retain the Pharmacy prohibition unless every external policy,
+  jurisdiction and operating gate is independently satisfied.
 
 ## Evidence
 
@@ -86,5 +92,11 @@ Eligibility.
   branch selection and revocation. Existing Store-team and quote-release proofs
   reject inactive/removed memberships and keep attendant, pharmacist and
   commercial-approver capabilities independent.
-- Live Meta policy/pricing review and provider release acceptance remain open;
-  this evidence does not authorize a live provider action.
+- The 2026-08-11 official Meta review records per-delivered-message,
+  market/category pricing, the 24-hour customer-service/template boundary,
+  opt-in/opt-out and human-escalation requirements. Nigeria is absent from the
+  current OTC-drug allowed-country list, so Pharmacy remains default-prohibited
+  even when the generic Connection is technically ready. Exact rates are not
+  copied into source; they must be re-read at the authorized live window.
+- The live-window Meta policy/pricing recheck and provider release acceptance
+  remain open; this evidence does not authorize a live provider action.
