@@ -163,3 +163,9 @@ revised 17-ticket batch.
   Quote backfill to perform on the observed snapshot. Production migration
   remains blocked pending a separately
   authorized drift-reconciliation plan.
+- A bounded production drift-inventory command is source-verified offline. Its
+  fixed schema/migration/Commerce Quote/Commercial Order reads require a new
+  inventory-specific authorization, approved target fingerprint and separate
+  globally least-privilege credential. It has not been run against production,
+  performs no migration or provider operation and cannot authorize a future
+  reconciliation write.

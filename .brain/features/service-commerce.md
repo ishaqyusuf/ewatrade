@@ -61,6 +61,8 @@ consultation practice.
   `.brain/runbooks/service-commerce-compatibility-inventory.md`
 - Live-provider offline preflight:
   `.brain/runbooks/service-commerce-live-canary.md`
+- Production drift inventory:
+  `.brain/runbooks/service-commerce-production-drift-inventory.md`
 - Existing Service foundation: `.brain/features/generic-service-operations.md`
 - First vertical: `.brain/features/prescription-commerce.md`
 - Midday migration standard: `.scratch/prescription-commerce/midday-migration-contract.md`
@@ -633,6 +635,16 @@ finished, the stock-ledger foundation is a zero-step `42P01` failure because
 from the applied `0001_init` ledger entry are missing. No write or migration was
 performed. Production rollout remains blocked until a separately approved
 migration-ledger/schema-drift reconciliation is designed and reviewed.
+
+A source-verified production drift-inventory command now makes the next
+observation repeatable without making it routine or self-authorizing. The root
+profile wrapper requires a distinct, explicitly targeted read-only credential;
+the collector verifies a strict read-only transaction and global
+least-privilege facts, inspects only fixed migration/schema/Quote/Order
+allowlists, fails closed on bounded metadata and explicitly rolls back. It has
+not been executed against production. A new inventory-specific authorization
+and credential are required before any run, and its observed-only output cannot
+authorize schema reconciliation, rollout or contraction.
 
 Every aggregate report and drill-down now reauthorizes the active manager and
 validated Store at the repository boundary and appends an immutable safe audit

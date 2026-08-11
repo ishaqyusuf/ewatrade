@@ -236,6 +236,11 @@
   applied. It also found seven `CommercialOrder` rows, none with
   `status = COMPLETED`, and no legacy Service Quote graph, so the observed
   snapshot has no historical backfill candidate.
+  A guarded drift-inventory command is source-verified offline for the next
+  bounded observation. It requires a new inventory-specific authorization,
+  approved target fingerprint and separately provisioned globally
+  least-privilege production credential; it has not been run against
+  production and cannot authorize a reconciliation write.
   Once reconciled through an owner-approved production migration operation,
   release the matching API and verify a phone-authenticated Product save with
   option description and opening stock. The production schema itself was
@@ -297,5 +302,7 @@
   live or production gate. The compatibility inventory now distinguishes
   canonical, legacy-history and deliberate dual-owned boundaries and records
   missing runtime rollback controls instead of treating deployment rollback as
-  an in-app switch. Started Date:
+  an in-app switch. The bounded production drift-inventory command is also
+  source-verified offline and remains unexecuted pending a new authorization
+  plus a separately provisioned least-privilege credential. Started Date:
   2026-08-11.

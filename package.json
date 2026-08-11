@@ -22,6 +22,7 @@
     "clean:workspaces": "turbo clean",
     "db:generate": "bun --env-file=/dev/null ../local-infra-kit/bin/db.ts generate --profile ewatrade",
     "db:format": "node ./scripts/with-workspace-env.mjs bun run --cwd packages/db db:format",
+    "db:drift-inventory": "node ./scripts/with-workspace-env.mjs APP_ENV=production DEV_PROFILE=prod REQUIRE_PROD_DATABASE_URL=1 bun packages/db/scripts/service-commerce-production-drift-inventory.ts",
     "db:migrate": "bun --env-file=/dev/null ../local-infra-kit/bin/db.ts migrate --profile ewatrade",
     "db:pull": "bun --env-file=/dev/null ../local-infra-kit/bin/db.ts pull --profile ewatrade",
     "db:push": "bun --env-file=/dev/null ../local-infra-kit/bin/db.ts push --profile ewatrade",

@@ -73,6 +73,11 @@
   rows/versions/lines and zero immutable-history backfill candidates.
   `completedAt` and shared `CommerceQuote` are not installed. No production
   write occurred.
+- A bounded drift-inventory command is now source-verified offline. It requires
+  a separately provisioned least-privilege production credential, a new
+  inventory-specific authorization and the approved target fingerprint; it
+  has not been run against production. See
+  `.brain/runbooks/service-commerce-production-drift-inventory.md`.
 
 ## Open Release Gates
 
@@ -88,7 +93,9 @@
 3. Design, review and execute a production migration-ledger/schema-drift
    reconciliation under a separately approved write operation. Do not run
    `migrate deploy` while `0001_init` is marked applied but its foundational
-   relations are absent and the stock-ledger migration remains unfinished.
+   relations are absent and the stock-ledger migration remains unfinished. A
+   future drift-inventory execution also requires its own read-only credential
+   and authorization; it cannot authorize the reconciliation write.
 
 ## Switch Conditions
 
