@@ -2,6 +2,7 @@ import {
   ServiceCommerceSetup,
   ServiceCommerceSetupSkeleton,
 } from "@/components/service-commerce/service-commerce-setup"
+import { loadServiceCommerceParams } from "@/hooks/use-service-commerce-params"
 import { loadServiceCommerceSetupParams } from "@/hooks/use-service-commerce-setup-params"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
@@ -25,14 +26,41 @@ export default async function ServiceCommerceSettingsPage({
   const ctx = session ? await getActiveTenant(session.user.id) : null
   if (!session || !ctx) redirect("/")
 
-  const params = await loadServiceCommerceSetupParams(searchParams)
+  const [params, sheetParams] = await Promise.all([
+    loadServiceCommerceSetupParams(searchParams),
+    loadServiceCommerceParams(searchParams),
+  ])
   const requestedStore = ctx.stores.find((store) => store.id === params.storeId)
   const store = requestedStore ?? ctx.activeStore ?? ctx.stores[0]
   if (!store) redirect("/setup")
 
-  await prefetch(
-    trpc.serviceCommerce.workspaceAccess.queryOptions({ storeId: store.id }),
-  ).catch(() => undefined)
+  const prefetches = [
+    prefetch(
+      trpc.serviceCommerce.workspaceAccess.queryOptions({ storeId: store.id }),
+    ),
+    prefetch(trpc.catalog.listItems.queryOptions({ kind: "service" })),
+  ]
+  if (sheetParams.offeringId) {
+    prefetches.push(
+      prefetch(
+        trpc.serviceCommerce.bookingConfiguration.queryOptions({
+          offeringId: sheetParams.offeringId,
+          storeId: store.id,
+        }),
+      ),
+    )
+  }
+  if (sheetParams.serviceCommerceSheet === "booking") {
+    prefetches.push(
+      prefetch(
+        trpc.serviceAccess.requests.queryOptions({
+          limit: 100,
+          storeId: store.id,
+        }),
+      ),
+    )
+  }
+  await Promise.all(prefetches).catch(() => undefined)
 
   return (
     <HydrateClient>

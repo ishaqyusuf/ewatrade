@@ -571,7 +571,7 @@ business activation remains separately authorized.
 The owner approved the Progressive Catalog amendment on 2026-08-09 and the
 Customer Channels/media/Offer Options plus Store team/Quote approval amendments
 on 2026-08-10. The exact 17-ticket batch adds Tickets 03A, 04A, 06A and 06B.
-Tickets 01, 02, 03, 11, 03A, 05, 06, 06A, 06B and 08 are complete. Tickets 04 and
+Tickets 01, 02, 03, 11, 03A, 05, 06, 06A, 06B, 08 and 07 are complete. Tickets 04 and
 04A have their
 source foundations, and Ticket 05 supplies the accepted channel-neutral intake
 adapters and combined origin/source/media/browser evidence. Ticket 06 now has
@@ -582,9 +582,15 @@ Ticket 06B passes focused checks, a 2-test/17-assertion verified-Neon release
 matrix and authenticated desktop/mobile Customer Channels QA. Ticket 08 passes
 focused contract/repository/API checks and an 8-test/242-assertion verified-
 Neon pickup/fixed/manual delivery matrix with concurrent preparation,
-assignment and replay recovery. The generated additive migration is applied
-only to the Neon development database; Ticket 07 is the next dependency-ready
-approved source frontier.
+assignment and replay recovery. Ticket 07 adds Store-scoped resources,
+availability, atomic holds, confirmed appointments, immutable policy snapshots,
+separate payment reconciliation, public manage capabilities and durable
+provider-neutral notifications. Its verified-Neon lifecycle passes 1 test and
+29 assertions, while authenticated desktop and 390x844 browser QA covers
+configuration, slot selection, hold, confirmation, cancellation and
+rescheduling. Ticket 09 is the next dependency-ready approved source frontier.
+The generated additive migrations are applied only to the Neon development
+database.
 Live-provider acceptance remains open. Throughout
 execution:
 

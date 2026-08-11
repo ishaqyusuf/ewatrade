@@ -259,6 +259,23 @@ and automated safety output never become Catalog, price, stock or Order truth.
 `PrescriptionMedia` may reference a generic asset while remaining the
 authoritative clinical review and retention extension.
 
+## Service Commerce Booking
+
+`Store -> ServiceBookingStoreSettings`
+
+`Store + SellableOffering -> ServiceBookingOfferingConfig -> ServiceBookingOfferingResource -> ServiceBookingResource`
+
+`ServiceBookingResource -> ServiceBookingAvailabilityRule | ServiceBookingAvailabilityException`
+
+`ServiceRequest -> ServiceBookingHold -> ServiceBooking -> CommerceQuoteVersion? -> CommercialOrder? -> ServiceJob?`
+
+`ServiceBooking -> ServiceBookingAccessCapability | ServiceBookingEvent | ServiceBookingNotificationIntent`
+
+A booking selects one resource configured for that Store/Offering. Holds and
+active bookings consume capacity in the same interval checks; expired/released
+holds do not. Quote linkage requires an accepted Version, while payment status
+is reconciled from Commerce facts and never inferred from booking state.
+
 ## Managed Domains
 
 `Tenant -> DomainRegistrantProfile`

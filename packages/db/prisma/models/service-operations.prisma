@@ -112,6 +112,7 @@ model ServiceJob {
   exceptions            ServiceException[]
   trackingAccess        CustomerTrackingAccess[]
   notificationIntents   ServiceNotificationIntent[]
+  booking               ServiceBooking?
 
   @@unique([tenantId, clientJobId])
   @@index([tenantId, storeId, priority, createdAt])

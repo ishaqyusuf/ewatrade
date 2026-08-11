@@ -324,6 +324,31 @@
 - Privacy identity verification records the verifying user, timestamp, and a
   bounded evidence/method reference before processing can be queued.
 
+## Service Commerce Booking And Appointment Contract
+
+- Booking configuration is Store + Offering scoped and carries an IANA
+  timezone, one selected configured resource per booking, recurring local
+  availability, typed exceptions, duration, lead/hold/horizon/reminder values,
+  payment policy and cancellation/refund policy. Policy revisions are derived
+  by the server and snapshotted at confirmation.
+- Slot reads clamp a page-generated boundary to the authoritative server clock,
+  preventing ordinary request latency from invalidating a current link while
+  never returning a past slot. Holds and confirmations use row locks, bounded
+  Serializable transactions and payload-bound replay identities.
+- Booking lifecycle and payment lifecycle are independent. Only an accepted
+  Commerce Quote may be linked; Request, Order and Service Job relations remain
+  explicit. Reschedule keeps a confirmed booking confirmed and revalidates
+  duration, horizon, resource capacity and current policy.
+- `view_slots`, `confirm` and `view_and_manage` capabilities are short-lived,
+  revocable, purpose-bound and revision-bound. A manage capability may read
+  slots only for its current booking so customer cancel/reschedule remains
+  possible without broad Store authority.
+- Confirmation, reminder, reschedule and cancellation notifications persist as
+  provider-neutral identifier-only intents. Claim reauthorizes policy and
+  booking state before recipient decryption; bounded failure returns eligible
+  work to retry, and the recurring sweeper covers every pending notification
+  type rather than only reminders.
+
 ## Service Commerce Source And Progressive Catalog Contract
 
 ADR-0030 and the revised ticket batch are owner-approved. Tickets 01-03 now

@@ -8,6 +8,7 @@ import {
   WorkAuthorizationStatus,
 } from "../../generated/prisma/enums"
 import { CatalogError } from "./catalog"
+import { reconcileServiceCommerceBookingPaymentInTransaction } from "./service-commerce-bookings"
 import { loadTenantActors } from "./tenant-actors"
 
 export type CommercialPaymentMethodValue =
@@ -230,6 +231,15 @@ export async function recordCommercialOrderPaymentInTransaction(
       paymentStatus: nextStatus,
     },
     where: { id: order.id },
+  })
+  await reconcileServiceCommerceBookingPaymentInTransaction(tx, {
+    actorUserId: input.actorUserId,
+    amountPaidMinor: nextPaid,
+    commercialPaymentId: payment.id,
+    isRefund,
+    orderId: order.id,
+    storeId: order.storeId,
+    tenantId: input.tenantId,
   })
 
   if (nextStatus === PaymentStatus.PAID) {

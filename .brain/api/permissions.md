@@ -179,6 +179,17 @@
 
 ## Service Commerce
 
+- Booking configuration, resource creation, staff holds/confirmation and
+  lifecycle changes require an active accepted Membership, exact Tenant/Store
+  scope, Store attendant authorization, current Service Commerce readiness and
+  the applicable vertical/channel/operation policy decision.
+- Customer slot, hold, confirmation, detail, cancel and reschedule operations
+  are public only through an opaque current booking capability. The capability
+  never grants access to another Store, Offering, source, booking or revision.
+- Notification schedulers and dispatch workers carry only Tenant, Store,
+  intent and actor identifiers. They reauthorize at claim/execution time before
+  decrypting a recipient or invoking a provider.
+
 - Any active Tenant member may receive the allowlisted profile/readiness
   projection for an authorized Store; this read does not grant operation or
   configuration authority.

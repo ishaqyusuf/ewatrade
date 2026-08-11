@@ -1,4 +1,5 @@
 export * from "./action"
+export * from "./booking"
 export * from "./capability"
 export * from "./catalog-adoption"
 export * from "./customer-channels"

@@ -40,6 +40,14 @@ import {
   prescriptionWhatsAppInboundHandler,
 } from "./handlers/prescription-whatsapp-inbound"
 import {
+  type ServiceCommerceBookingNotificationDispatchPayload,
+  serviceCommerceBookingNotificationDispatchHandler,
+} from "./handlers/service-commerce-booking-notification-dispatch"
+import {
+  type ServiceCommerceBookingRemindersPayload,
+  serviceCommerceBookingRemindersHandler,
+} from "./handlers/service-commerce-booking-reminders"
+import {
   type ServiceCommerceMediaIngestPayload,
   serviceCommerceMediaIngestHandler,
 } from "./handlers/service-commerce-media-ingest"
@@ -70,6 +78,9 @@ export const jobIds = {
   notificationDispatch: "notifications.dispatch",
   serviceNotificationDispatch: "services.notification.dispatch",
   serviceCommerceMediaIngest: "service-commerce.media-ingest",
+  serviceCommerceBookingNotificationDispatch:
+    "service-commerce.booking-notification-dispatch",
+  serviceCommerceBookingReminders: "service-commerce.booking-reminders",
   serviceCommerceMediaSafety: "service-commerce.media-safety",
   serviceCommerceMediaRetention: "service-commerce.media-retention",
   serviceCommerceWhatsAppInbound: "service-commerce.whatsapp-inbound",
@@ -170,6 +181,28 @@ export async function enqueueServiceCommerceMediaIngest(
     serviceCommerceMediaIngestHandler,
     input,
     { maxAttempts: 4 },
+  )
+}
+
+export async function enqueueServiceCommerceBookingNotificationDispatch(
+  input: ServiceCommerceBookingNotificationDispatchPayload,
+) {
+  await triggerJob(
+    jobIds.serviceCommerceBookingNotificationDispatch,
+    serviceCommerceBookingNotificationDispatchHandler,
+    input,
+    { maxAttempts: 3 },
+  )
+}
+
+export async function enqueueServiceCommerceBookingReminders(
+  input: ServiceCommerceBookingRemindersPayload,
+) {
+  await triggerJob(
+    jobIds.serviceCommerceBookingReminders,
+    serviceCommerceBookingRemindersHandler,
+    input,
+    { maxAttempts: 3 },
   )
 }
 
@@ -302,6 +335,8 @@ export { isTriggerConfigured, triggerJob } from "./trigger"
 export { notificationDispatchHandler }
 export { serviceNotificationDispatchHandler }
 export {
+  serviceCommerceBookingNotificationDispatchHandler,
+  serviceCommerceBookingRemindersHandler,
   serviceCommerceMediaIngestHandler,
   serviceCommerceMediaRetentionHandler,
   serviceCommerceMediaSafetyHandler,
@@ -320,6 +355,8 @@ export { qaPurgeHandler } from "./handlers/qa-purge"
 export { customerMessagingProviderStatus }
 export type { NotificationDispatchPayload, ServiceNotificationDispatchPayload }
 export type {
+  ServiceCommerceBookingNotificationDispatchPayload,
+  ServiceCommerceBookingRemindersPayload,
   ServiceCommerceMediaIngestPayload,
   ServiceCommerceMediaRetentionPayload,
   ServiceCommerceMediaSafetyPayload,

@@ -120,6 +120,7 @@ describe("prescription payment provider failures", () => {
         createMany: async () => ({ count: 1 }),
       },
       serviceCommercePolicyDecision: { findMany: async () => decisions },
+      serviceBooking: { findMany: async () => [] },
       serviceJobLine: { findMany: async () => [] },
       store: { findFirst: async () => ({ countryCode: "NG" }) },
     }
@@ -435,6 +436,7 @@ describe("prescription refund provider result", () => {
         }),
         update: async () => ({ id: "refund-1", status: "SUCCEEDED" }),
       },
+      serviceBooking: { findMany: async () => [] },
       serviceJobLine: { findMany: async () => [] },
     }
     const db = {

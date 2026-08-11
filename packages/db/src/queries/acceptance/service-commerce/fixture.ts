@@ -69,6 +69,27 @@ async function deleteAcceptanceFixture(
 ) {
   const { tenantId, userIds } = input
   await db.$transaction(async (tx) => {
+    await tx.serviceBookingNotificationIntent.deleteMany({
+      where: { tenantId },
+    })
+    await tx.serviceBookingEvent.deleteMany({ where: { tenantId } })
+    await tx.serviceBookingHold.deleteMany({ where: { tenantId } })
+    await tx.serviceBookingAccessCapability.deleteMany({ where: { tenantId } })
+    await tx.serviceBooking.deleteMany({ where: { tenantId } })
+    await tx.serviceBookingConfigurationEvent.deleteMany({
+      where: { tenantId },
+    })
+    await tx.serviceBookingAvailabilityException.deleteMany({
+      where: { tenantId },
+    })
+    await tx.serviceBookingAvailabilityRule.deleteMany({ where: { tenantId } })
+    await tx.serviceBookingOfferingResource.deleteMany({
+      where: { offeringConfig: { tenantId } },
+    })
+    await tx.serviceBookingOfferingConfig.deleteMany({ where: { tenantId } })
+    await tx.serviceBookingResource.deleteMany({ where: { tenantId } })
+    await tx.serviceBookingStoreSettings.deleteMany({ where: { tenantId } })
+    await tx.serviceJob.deleteMany({ where: { tenantId } })
     const paymentIntentIds = (
       await tx.prescriptionPaymentIntent.findMany({
         select: { id: true },

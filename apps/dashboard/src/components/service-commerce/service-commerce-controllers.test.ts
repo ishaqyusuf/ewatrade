@@ -22,6 +22,7 @@ describe("Service Commerce sheet controllers", () => {
           ([mode]) =>
             ![
               "attachment_review",
+              "booking",
               "catalog_draft",
               "connection",
               "entry_point",
@@ -48,6 +49,10 @@ describe("Service Commerce sheet controllers", () => {
     expect(SERVICE_COMMERCE_CONTROLLERS.quote_approval).toMatchObject({
       implemented: true,
       requiredIds: ["quoteApprovalId"],
+    })
+    expect(SERVICE_COMMERCE_CONTROLLERS.booking).toMatchObject({
+      implemented: true,
+      requiredIds: ["offeringId"],
     })
   })
 

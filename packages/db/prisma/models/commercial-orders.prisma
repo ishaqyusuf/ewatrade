@@ -38,6 +38,7 @@ model CommercialOrder {
   prescriptionPickupFulfillment  PrescriptionPickupFulfillment?
   prescriptionDeliveryAddress    PrescriptionDeliveryAddress?
   prescriptionDeliveryAssignment PrescriptionDeliveryAssignment?
+  serviceBookings                ServiceBooking[]
 
   @@unique([tenantId, clientOrderId])
   @@unique([tenantId, orderNumber])
@@ -120,6 +121,7 @@ model CommercialOrderPayment {
   tenant           Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   store            Store                   @relation(fields: [storeId], references: [id], onDelete: Restrict)
   order            CommercialOrder         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  serviceBookingEvents ServiceBookingEvent[]
 
   @@unique([tenantId, clientPaymentId])
   @@index([orderId, recordedAt])

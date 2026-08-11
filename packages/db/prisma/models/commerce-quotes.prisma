@@ -59,6 +59,7 @@ model CommerceQuoteVersion {
   prescriptionDeliveryAddress PrescriptionDeliveryAddress?
   catalogPricePromotions      CatalogPricePromotion[]
   quoteApproval               ServiceCommerceQuoteApproval?
+  serviceBookings             ServiceBooking[]
 
   @@unique([quoteId, version])
   @@unique([quoteId, clientVersionId])

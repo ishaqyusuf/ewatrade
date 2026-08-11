@@ -80,6 +80,17 @@ model Tenant {
   serviceCommerceSourceAttachments    ServiceCommerceSourceAttachment[]
   serviceCommerceVerifiedObservations ServiceCommerceVerifiedObservation[]
   serviceCommerceMediaAuditEvents     ServiceCommerceMediaAuditEvent[]
+  serviceBookingStoreSettings         ServiceBookingStoreSettings[]
+  serviceBookingOfferingConfigs       ServiceBookingOfferingConfig[]
+  serviceBookingResources             ServiceBookingResource[]
+  serviceBookingAvailabilityRules     ServiceBookingAvailabilityRule[]
+  serviceBookingAvailabilityExceptions ServiceBookingAvailabilityException[]
+  serviceBookingConfigurationEvents    ServiceBookingConfigurationEvent[]
+  serviceBookingHolds                 ServiceBookingHold[]
+  serviceBookings                     ServiceBooking[]
+  serviceBookingEvents                ServiceBookingEvent[]
+  serviceBookingAccessCapabilities    ServiceBookingAccessCapability[]
+  serviceBookingNotificationIntents   ServiceBookingNotificationIntent[]
   prescriptionCommunicationIntents    PrescriptionCommunicationIntent[]
   prescriptionQuickActions            PrescriptionQuickAction[]
   prescriptionRetentionPolicies       PrescriptionRetentionPolicy[]
@@ -279,6 +290,7 @@ model Membership {
   requestedServiceCommerceQuoteApprovals ServiceCommerceQuoteApproval[] @relation("QuoteApprovalRequester")
   decidedServiceCommerceQuoteApprovals ServiceCommerceQuoteApproval[] @relation("QuoteApprovalDecider")
   serviceCommerceQuoteApprovalAuditEvents ServiceCommerceQuoteApprovalAuditEvent[]
+  serviceBookingResources             ServiceBookingResource[]
 
   @@unique([tenantId, userId])
   @@index([tenantId, role])

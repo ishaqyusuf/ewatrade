@@ -419,6 +419,23 @@ was removed atomically after authenticated desktop/mobile Customer Channels
 configuration. Production schema application and business activation remain
 separately authorized.
 
+## Service Commerce Booking Migration State
+
+On 2026-08-11 the canonical verified `.env.local` Neon development workflow
+generated and applied `20260811072717_service_commerce_booking_lifecycle` and
+`20260811074755_service_booking_horizon_alignment`. The first migration adds
+Store/Offering booking configuration, resources, availability, holds,
+appointments, capability digests, typed history and notification outbox
+persistence. The second aligns the database booking horizon default to the
+30-day short-lived manage-capability ceiling.
+
+`bun db:migrate` and `bun db:push` both reported the verified development
+database in sync. No migration SQL was hand-authored and no Docker/local
+PostgreSQL, production database, reset or data-loss override was used. The
+run-owned Neon appointment lifecycle passed 1 test and 29 assertions and its
+Tenant/User fixture was removed atomically. Production rollout remains
+separately authorized.
+
 ## Channel-Neutral Intake Attribution Migration State
 
 On 2026-08-10 Prisma generated and applied

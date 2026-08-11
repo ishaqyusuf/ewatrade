@@ -310,6 +310,23 @@ persistence boundary. Clients never access the database directly.
   Meta, payment-provider, delivery, tax, and pharmacy-revenue amounts kept in
   separate nullable fields.
 
+## Service Commerce Booking
+
+- `ServiceBookingStoreSettings` owns Store timezone, reminder defaults and a
+  revision. `ServiceBookingOfferingConfig` owns Store + Offering duration,
+  lead/hold/horizon, capacity and immutable policy revision sources.
+- `ServiceBookingResource`, `ServiceBookingOfferingResource`,
+  `ServiceBookingAvailabilityRule` and
+  `ServiceBookingAvailabilityException` model selectable Store resources and
+  their recurring/exception availability without inventory semantics.
+- `ServiceBookingHold` is expiring capacity, not a booking. `ServiceBooking`
+  owns the confirmed operational lifecycle plus Request/Quote/Order/Service Job
+  links and immutable timezone/payment/cancellation/refund snapshots.
+- `ServiceBookingAccessCapability` stores only an opaque-token digest with
+  purpose, status, expiry and state revision. `ServiceBookingEvent` and
+  `ServiceBookingConfigurationEvent` preserve typed history;
+  `ServiceBookingNotificationIntent` is the durable provider-neutral outbox.
+
 ## Removed Prototype Schema
 
 The current Prisma schema no longer declares old Product/ProductVariant,

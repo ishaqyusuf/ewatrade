@@ -29,7 +29,13 @@ export const SERVICE_COMMERCE_CONTROLLERS = {
     requiredIds: ["attachmentId"],
     title: "Review attachment",
   },
-  booking: unavailable("Booking"),
+  booking: {
+    description:
+      "Configure Store-scoped availability and create an expiring customer booking capability.",
+    implemented: true,
+    requiredIds: ["offeringId"],
+    title: "Booking and appointments",
+  },
   catalog_draft: {
     description:
       "Match a verified customer request to an existing Offering or create a private draft.",

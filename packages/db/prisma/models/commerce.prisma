@@ -71,6 +71,17 @@ model Store {
   serviceCommerceSourceAttachments    ServiceCommerceSourceAttachment[]
   serviceCommerceVerifiedObservations ServiceCommerceVerifiedObservation[]
   serviceCommerceMediaAuditEvents     ServiceCommerceMediaAuditEvent[]
+  serviceBookingSettings              ServiceBookingStoreSettings?
+  serviceBookingOfferingConfigs       ServiceBookingOfferingConfig[]
+  serviceBookingResources             ServiceBookingResource[]
+  serviceBookingAvailabilityRules     ServiceBookingAvailabilityRule[]
+  serviceBookingAvailabilityExceptions ServiceBookingAvailabilityException[]
+  serviceBookingConfigurationEvents    ServiceBookingConfigurationEvent[]
+  serviceBookingHolds                 ServiceBookingHold[]
+  serviceBookings                     ServiceBooking[]
+  serviceBookingEvents                ServiceBookingEvent[]
+  serviceBookingAccessCapabilities    ServiceBookingAccessCapability[]
+  serviceBookingNotificationIntents   ServiceBookingNotificationIntent[]
   prescriptionCommunicationIntents    PrescriptionCommunicationIntent[]
   prescriptionQuickActions            PrescriptionQuickAction[]
   prescriptionRetentionPolicy         PrescriptionRetentionPolicy?

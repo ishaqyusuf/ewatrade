@@ -1,5 +1,7 @@
 "use client"
 
+import { flattenServiceOfferings } from "@/components/service-work/service-utils"
+import { useServiceCommerceParams } from "@/hooks/use-service-commerce-params"
 import { useServiceCommerceSetupParams } from "@/hooks/use-service-commerce-setup-params"
 import { useZodForm } from "@/hooks/use-zod-form"
 import { useTRPC } from "@/trpc/client"
@@ -75,6 +77,7 @@ export function ServiceCommerceSetup({
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const params = useServiceCommerceSetupParams()
+  const sheetParams = useServiceCommerceParams()
   const storeId = useMemo(
     () =>
       stores.some((store) => store.id === params.storeId)
@@ -89,6 +92,9 @@ export function ServiceCommerceSetup({
       { storeId },
       { retry: false },
     ),
+  )
+  const serviceItems = useQuery(
+    trpc.catalog.listItems.queryOptions({ kind: "service" }, { retry: false }),
   )
   const form = useZodForm<SettingsValues>(
     serviceCommerceProfileSettingsSchema,
@@ -162,6 +168,10 @@ export function ServiceCommerceSetup({
   }
 
   const data = accessQuery.data
+  const bookingOfferings = flattenServiceOfferings(
+    serviceItems.data ?? [],
+    storeId,
+  )
   const active = data.configuration.status === "active"
   const suspended = data.configuration.status === "suspended"
   const canManage = state === "ready"
@@ -373,6 +383,52 @@ export function ServiceCommerceSetup({
               )
             })}
           </ul>
+          <section className="grid gap-3 border-t border-border pt-4">
+            <div>
+              <h2 className="font-semibold">Appointments</h2>
+              <p className="text-sm text-muted-foreground">
+                Configure availability or issue an expiring booking link for an
+                eligible Service offering.
+              </p>
+            </div>
+            {serviceItems.isLoading ? (
+              <div className="h-10 animate-pulse rounded-lg bg-muted" />
+            ) : serviceItems.isError ? (
+              <p className="text-sm text-destructive" role="alert">
+                Service offerings are unavailable. Try again before configuring
+                booking.
+              </p>
+            ) : bookingOfferings.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Add an available Service offering before configuring booking.
+              </p>
+            ) : (
+              <label className="grid gap-2 text-sm">
+                Service offering
+                <select
+                  className="h-10 rounded-lg border border-border bg-background px-3"
+                  defaultValue=""
+                  disabled={!canManage}
+                  onChange={(event) => {
+                    const offeringId = event.target.value
+                    if (!offeringId) return
+                    void sheetParams.setParams({
+                      offeringId,
+                      serviceCommerceSheet: "booking",
+                    })
+                    event.currentTarget.value = ""
+                  }}
+                >
+                  <option value="">Choose an offering</option>
+                  {bookingOfferings.map((offering) => (
+                    <option key={offering.id} value={offering.id}>
+                      {offering.displayName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </section>
         </aside>
       </div>
     </div>

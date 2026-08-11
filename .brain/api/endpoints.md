@@ -93,6 +93,17 @@ Typed tRPC routers are the primary application contract.
 
 ## Service Commerce
 
+- Protected booking procedures are `bookingConfiguration`,
+  `createBookingResource`, `updateBookingConfiguration`,
+  `createBookingCapability`, `holdBookingSlot`, `confirmBooking` and
+  `reviseBooking`. Tenant, Store and actor scope are server-derived; public
+  customer contact is never accepted.
+- Public `publicBookingSlots`, `publicHoldBookingSlot`,
+  `publicConfirmBooking`, `publicBooking` and `publicReviseBooking` accept only
+  short-lived opaque purpose-bound capabilities. Missing, stale, rotated,
+  expired, cross-scope or revision-mismatched capabilities collapse to the
+  same unavailable public response.
+
 - Protected `serviceCommerce.workspaceAccess` resolves an optional authorized
   Store selection and returns only the server-owned access, configuration,
   readiness, activation blockers, revision, Store summary and Tenant billing

@@ -2,10 +2,12 @@
 
 import { useZodForm } from "@/hooks/use-zod-form"
 import {
+  type ServiceCommerceBookingConfiguration,
   type ServiceCommerceCatalogDraftFormValues,
   type ServiceCommerceCatalogGraduationFormValues,
   type ServiceCommerceCatalogPricePromotionFormValues,
   type ServiceCommerceHumanVerifiedObservationDraft,
+  serviceCommerceBookingConfigurationFormSchema,
   serviceCommerceCatalogDraftFormSchema,
   serviceCommerceCatalogGraduationFormSchema,
   serviceCommerceCatalogPricePromotionFormSchema,
@@ -18,6 +20,11 @@ import { FormProvider } from "react-hook-form"
 import { z } from "zod"
 
 export type RegisterServiceCommerceFormReset = (reset: () => void) => () => void
+
+export type ServiceCommerceBookingConfigurationFormValues = Omit<
+  ServiceCommerceBookingConfiguration,
+  "storeId" | "tenantId"
+>
 
 export const serviceCommerceQuoteReleaseSettingsFormSchema = z
   .object({
@@ -185,6 +192,45 @@ export function ServiceCommerceQuoteDecisionFormProvider({
     serviceCommerceQuoteDecisionFormSchema,
     {
       defaultValues: { reason: "" },
+      mode: "onChange",
+    },
+  )
+  useRegisteredFormReset(form.reset, registerReset)
+  return <FormProvider {...form}>{children}</FormProvider>
+}
+
+export function ServiceCommerceBookingConfigurationFormProvider({
+  children,
+  registerReset,
+}: {
+  children: React.ReactNode
+  registerReset: RegisterServiceCommerceFormReset
+}) {
+  const form = useZodForm<ServiceCommerceBookingConfigurationFormValues>(
+    serviceCommerceBookingConfigurationFormSchema,
+    {
+      defaultValues: {
+        availabilityRules: [],
+        bookingHorizonMinutes: 43_200,
+        cancellationPolicy: {
+          allowedUntilMinutesBeforeStart: 1_440,
+          refundPolicy: "manual_review",
+          revision: 0,
+        },
+        exceptions: [],
+        holdDurationMinutes: 15,
+        leadTimeMinutes: 60,
+        offeringId: "",
+        paymentPolicy: {
+          depositMinor: null,
+          requirement: "none",
+          revision: 0,
+        },
+        reminderLeadMinutes: 1_440,
+        resources: [],
+        slotDurationMinutes: 30,
+        timezone: "Africa/Lagos",
+      },
       mode: "onChange",
     },
   )

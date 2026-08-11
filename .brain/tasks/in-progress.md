@@ -94,8 +94,14 @@
   Pharmacy adapter and row-locked payload-bound replay are source-complete.
   The canonical `.env.local` Neon matrix passed 8 tests and 242 assertions
   across pickup, fixed delivery and manual delivery with concurrent prepare/
-  assignment and atomic fixture cleanup. Ticket 07 booking/appointment is the
-  next dependency-ready approved source frontier.
+  assignment and atomic fixture cleanup. Ticket 07 is complete with typed
+  Store resources/availability, capacity-safe holds, confirmation and
+  revisioned customer management, independent payment reconciliation and
+  identifier-only notification jobs. Its canonical Neon lifecycle passed 1
+  test/29 assertions; authenticated desktop and 390x844 dashboard/storefront
+  QA covered configuration, slot selection, hold, confirmation, cancel and
+  reschedule with atomic fixture cleanup. Ticket 09 is the next dependency-
+  ready approved source frontier.
   Live Meta/storage/scanner release gates remain open. The focused
   Customer Channels/media matrix passes 71 tests and 177 assertions; the
   run-owned `.env.local` Neon bag-media seam passes 7 assertions. The full test gate has

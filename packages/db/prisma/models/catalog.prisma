@@ -150,6 +150,7 @@ model SellableOffering {
   catalogVerifiedAliases      CatalogVerifiedAlias[]
   availabilityAttestations    CatalogAvailabilityAttestation[]
   pricePromotions             CatalogPricePromotion[]
+  serviceBookingConfigs       ServiceBookingOfferingConfig[]
 
   @@unique([catalogItemId, key])
   @@index([tenantId, status, updatedAt])

@@ -3,6 +3,7 @@
 import { useServiceCommerceParams } from "@/hooks/use-service-commerce-params"
 
 import { CustomerChannelSheetContent } from "@/components/customer-channels/customer-channel-sheet-content"
+import { BookingWorkspace } from "./booking/booking-workspace"
 import { CatalogDraftForm } from "./catalog-adoption/catalog-draft-form"
 import { CatalogGraduationForm } from "./catalog-adoption/catalog-graduation-form"
 import { CatalogPricePromotionForm } from "./catalog-adoption/catalog-price-promotion-form"
@@ -76,6 +77,14 @@ export function ServiceCommerceSheetContent({
   }
   if (mode === "media") {
     return <MediaViewer storeId={storeId} />
+  }
+  if (mode === "booking") {
+    return (
+      <BookingWorkspace
+        registerFormReset={registerFormReset}
+        storeId={storeId}
+      />
+    )
   }
   if (mode === "attachment_review") {
     return (
