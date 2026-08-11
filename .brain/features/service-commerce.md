@@ -31,9 +31,10 @@ reporting, provider-cost attribution, redacted operations, the non-regulated
 bag-seller lifecycle, generic-media coverage and the cross-origin Quote-release
 matrix plus authenticated report browser acceptance are implemented.
 The development performance targets are measured and the rate boundary is
-enforced;
-production threshold ratification, live providers, production rollout and
-contraction remain open gates.
+enforced. A redacted offline canary preflight performs no provider, database or
+network operation and never authorizes execution. Production threshold
+ratification, live providers, production rollout and contraction remain open
+gates.
 Production schema/provider operations remain separately authorized.
 
 Pharmacy Commerce is the first regulated vertical and retains its completed
@@ -56,6 +57,8 @@ consultation practice.
 - Policy release gate: `.brain/runbooks/service-commerce-policy-release.md`
 - Ticket 13 readiness/rollback report:
   `.brain/runbooks/service-commerce-ticket-13-readiness.md`
+- Live-provider offline preflight:
+  `.brain/runbooks/service-commerce-live-canary.md`
 - Existing Service foundation: `.brain/features/generic-service-operations.md`
 - First vertical: `.brain/features/prescription-commerce.md`
 - Midday migration standard: `.scratch/prescription-commerce/midday-migration-contract.md`
@@ -728,8 +731,10 @@ isolation seam passed 1 test/10 assertions; authenticated desktop and 390px
 browser QA also passed. Ticket 13 is in progress with reporting/cost,
 bag-seller, media and Quote-release source seams plus authenticated report
 browser acceptance verified. Development performance is measured and the rate
-boundary is verified; production threshold ratification, live-provider, production and
-owner-authorized switch/contraction gates remain open. Its final
+boundary is verified. The source-only canary preflight returns only redacted
+readiness with `executionAuthorized: false`; production threshold ratification,
+live-provider, production and owner-authorized switch/contraction gates remain
+open. Its final
 verified-Neon routing matrix
 passed 1 test/13 assertions, the unchanged Pharmacy compatibility matrix passed
 9/248, and the unchanged Generic Service request-to-Order, appointment-work and

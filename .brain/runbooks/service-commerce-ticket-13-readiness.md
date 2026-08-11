@@ -43,6 +43,12 @@
 - Read-only development-Neon legacy census: zero completed Orders, zero missing
   `completedAt`, and zero legacy completed-sale Quote lines. No backfill was
   warranted or performed.
+- Source-only release preflight is fail-closed: API deployment delegates
+  migrations through the interactive production target-fingerprint command;
+  an offline test locks the seven reporting migrations into replay-safe,
+  non-destructive order; and the redacted live-canary preflight performs no
+  database, network or provider operation and always reports
+  `executionAuthorized: false`.
 
 ## Open Release Gates
 
@@ -54,7 +60,10 @@
    source events prove them; otherwise retain the explicit unknown
    classification. The development census was empty and required no mutation.
 3. Complete separately authorized live Meta, payment, private-media/safety/OCR
-   and courier canaries plus privacy/retention signoff.
+   and courier canaries plus privacy/retention signoff. The offline preflight
+   does not close this gate: dedicated payment, production media/safety/OCR and
+   courier canary harnesses remain explicitly unsupported, while Meta still
+   needs an approved live Connection test window.
 4. Reconcile and apply the production migration baseline under an approved
    production operation.
 
@@ -73,9 +82,12 @@ activation.
   Prescription, Service and reporting entry points unchanged; no data rollback
   is required.
 - **After additive migration but before traffic switch:** if reconciliation or
-  read validation fails, disable the new report navigation/API procedures and
-  continue writing existing authoritative lifecycles. Retain additive nullable
-  columns and usage rows for diagnosis; do not destructively reverse them.
+  read validation fails, remove the new report navigation from the release
+  cohort and continue writing existing authoritative lifecycles. Keep the
+  role-gated, audited historical report read available to authorized managers
+  for diagnosis unless a separate security incident requires deployment-level
+  API disablement. Retain additive nullable columns and usage rows; do not
+  destructively reverse them.
 - **After traffic switch:** if scope, privacy, cost, routing or lifecycle parity
   fails, route callers back to the preserved compatibility entry points,
   suspend affected provider dispatch, and reconcile immutable events before

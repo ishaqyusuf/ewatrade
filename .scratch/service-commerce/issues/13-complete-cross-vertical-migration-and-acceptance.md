@@ -137,3 +137,10 @@ revised 17-ticket batch.
   completed Orders missing `completedAt`, and zero legacy completed-sale Quote
   lines. No speculative development backfill was attempted; production history
   still requires its own immutable-evidence reconciliation.
+- The source-only release preflight passes without external access: API deploy
+  migrations route through the interactive production fingerprint guard; the
+  seven reporting migrations have an offline replay-order/destructive-SQL
+  contract; and the allowlisted canary preflight returns only redacted
+  readiness with `executionAuthorized: false`. Payment, production media,
+  safety/OCR, manual courier proof and the live Meta Connection test remain
+  separately authorized open gates.

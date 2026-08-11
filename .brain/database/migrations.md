@@ -522,6 +522,16 @@ no drift or pending migration. No local PostgreSQL/Docker
 fallback, reset, data-loss override, production database or live provider
 operation was used.
 
+The repository now also checks this Ticket 13 migration slice offline: all
+seven artifacts must remain present in lexical replay order, the report-read
+denial enum must precede the `RATE_LIMITED` alteration, and the slice rejects
+data/schema-destructive SQL while allowing the reviewed Store foreign-key
+replacement to `ON DELETE RESTRICT`. API deployment no longer invokes the raw
+package `prisma migrate deploy`; it delegates to `bun run db:migrate --prod`,
+which displays the production target fingerprint and refuses a non-interactive
+production migration. This is source safety, not authorization or evidence that
+the production migration has run.
+
 The migrations do not fabricate historical truth. Existing Catalog resolution
 and Quote override rows keep nullable provenance markers and report as unknown.
 Existing completed Orders without an authoritative completion occurrence keep

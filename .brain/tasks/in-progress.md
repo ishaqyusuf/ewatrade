@@ -282,5 +282,10 @@
   gates are production threshold ratification, live providers, production
   reconciliation, and owner-authorized switch/contraction. A read-only
   development census found no completed Order or legacy sale row to backfill;
-  production history remains separately gated. Started Date:
+  production history remains separately gated. The source-only release
+  preflight now routes API migrations through the interactive production
+  fingerprint guard, validates the seven reporting migrations offline and
+  emits only redacted live-canary readiness with
+  `executionAuthorized: false`; it contacts no database/provider and closes no
+  live or production gate. Started Date:
   2026-08-11.
