@@ -108,9 +108,10 @@ revised 17-ticket batch.
   Meta/object-storage/safety-provider canaries and production retention signoff
   remain separate gates.
 - The final verified-Neon independent/central multi-Store WhatsApp routing
-  matrix passed 1 test and 13 assertions. Its focused routing,
-  connection-rotation and provider-retry suites passed 45 tests and 98
-  assertions. The unchanged
+  matrix passed 1 test and 16 assertions, including replay-safe persistence and
+  exactly one atomic worker claim under a concurrent duplicate. Its focused
+  routing, signature, connection-rotation and provider-retry suites passed 48
+  tests and 108 assertions. The unchanged
   Pharmacy compatibility matrix passed 9 tests and 248 assertions, while the
   unchanged Generic Service request-to-Order, appointment-work and
   cross-vertical isolation matrix passed 3 tests and 75 assertions. All

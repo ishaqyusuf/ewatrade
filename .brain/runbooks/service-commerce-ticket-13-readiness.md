@@ -26,8 +26,9 @@
   checks pass. Seven additive migrations are applied to the verified
   development Neon profile.
 - Final verified-Neon independent/central multi-Store WhatsApp routing: 1 test,
-  13 assertions. Focused routing/rotation/provider retry: 45 tests, 98
-  assertions.
+  16 assertions, including replay-safe persistence and one atomic worker claim
+  under a concurrent duplicate. Focused routing/signature/rotation/provider
+  retry: 48 tests, 108 assertions.
 - Unchanged compatibility reruns: Pharmacy 9 tests/248 assertions; Generic
   Service request-to-Order, appointment-work and cross-vertical isolation 3
   tests/75 assertions. All run-owned fixtures were removed.

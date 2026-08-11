@@ -774,10 +774,10 @@ readiness with `executionAuthorized: false`; production threshold ratification,
 live-provider, production and owner-authorized switch/contraction gates remain
 open. Its final
 verified-Neon routing matrix
-passed 1 test/13 assertions, the unchanged Pharmacy compatibility matrix passed
+passed 1 test/16 assertions, the unchanged Pharmacy compatibility matrix passed
 9/248, and the unchanged Generic Service request-to-Order, appointment-work and
 cross-vertical isolation matrix passed 3/75. The focused routing/provider-retry
-suite passed 45/98, and every run-owned fixture was removed.
+suite passed 48/108, and every run-owned fixture was removed.
 The generated additive migrations are applied only to the Neon development
 database.
 Live-provider acceptance remains open. Throughout

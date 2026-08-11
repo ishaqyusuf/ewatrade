@@ -288,10 +288,10 @@
   bag-seller seam passes 2/16; generic-media tests pass 30/95. The additive
   migrations are applied on verified development Neon. Immutable allowed and
   denied report-read audit is now enforced before repository report queries.
-  The final verified-Neon routing matrix passes 1/13, its focused
-  routing/rotation/provider-retry suite passes 45/98, the unchanged Pharmacy
-  compatibility matrix passes 9/248, and the unchanged Generic Service matrix
-  passes 3/75; every run-owned fixture was removed. Authenticated report
+  The final verified-Neon routing matrix passes 1/16, its focused
+  routing/signature/rotation/provider-retry suite passes 48/108, the unchanged
+  Pharmacy compatibility matrix passes 9/248, and the unchanged Generic Service
+  matrix passes 3/75; every run-owned fixture was removed. Authenticated report
   acceptance passes at 1280x720 and 390x844 for loaded/empty data,
   known-zero/unknown costs, aggregate drill-down, report/detail error and
   recovered retry, safe role denial, typed URL Back/Forward, keyboard access,
