@@ -194,9 +194,26 @@ persistence boundary. Clients never access the database directly.
 ## Customer Channels And Generic Request Media
 
 - `ServiceCommerceStoreTeamAssignment` grants a Store-scoped `ATTENDANT` or
-  future `QUOTE_APPROVER` capability only to an accepted active Tenant
+  `QUOTE_APPROVER` capability only to an accepted active Tenant
   Membership. Suspension/revocation and append-only audit never grant a Tenant
   role or Pharmacy credential.
+- `ServiceCommerceQuoteReleasePolicy` stores one revisioned Store policy with
+  exact `ATTENDANT_CAN_RELEASE | APPROVAL_REQUIRED` mode, selected active
+  approver Membership ids, actor and reason. Existing Stores without a row use
+  the typed attendant-release compatibility default during expansion; any
+  persisted mode requires an active Store attendant assignment.
+- `ServiceCommerceQuoteReleaseCommandReceipt` binds a Tenant client operation
+  identity to its payload hash and resulting policy revision.
+  `ServiceCommerceQuoteReleasePolicyAuditEvent` preserves every mode/approver
+  transition without customer or bearer-capability content.
+- `ServiceCommerceQuoteApproval` owns one exact Quote-Version decision with
+  `PENDING | APPROVED | REJECTED | SUPERSEDED`, requester/decider Memberships,
+  policy revision, stable decision identity and timestamps. Quote Version is
+  unique so a decision cannot float to another revision, total, Option or
+  Store. `ServiceCommerceQuoteApprovalAuditEvent` is append-only transition
+  evidence. Serializable decisions retry one conflict; direct reads/commands
+  and the pending queue atomically supersede stale pending records without
+  rewriting approved or rejected history.
 - `CustomerEntryPoint` owns one stable opaque public capability per Store.
   Publish/revoke uses optimistic revisions and append-only audit; current
   channel and policy choices resolve at visit time, so sender rotation does not

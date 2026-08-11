@@ -500,6 +500,49 @@ implements the Progressive Catalog commands below.
   intake requires the explicit Store-scoped `intent:product` selection; absent
   selection returns `source_selection_required` and no aggregate is guessed.
 
+### Implemented quotation release contract
+
+- Release mode is exactly `attendant_can_release | approval_required` and uses
+  a typed attendant-release compatibility default when no policy row exists.
+  Only Owner/Admin may create or revise the policy; changed-payload replay and
+  stale revisions fail with the same typed conflict contract. After either
+  mode is persisted, release requires an active Store attendant assignment;
+  a generic Tenant role does not inherit the compatibility fallback.
+- Approval-required configuration fails unless an active Store attendant and a
+  selected active approver resolve to different Users. A one-person Store must
+  keep the attendant-release mode or add another accepted team member.
+- Approval-required preparation persists a private `DRAFT` Quote Version and
+  one Tenant/Store/Version-unique `pending` approval. It returns no public
+  acceptance token, Order, reservation, payment or communication intent and
+  leaves the source in its pre-Quote lifecycle.
+- Decision lifecycle is `pending | approved | rejected | superseded` with
+  append-only transition audit. A new immutable revision supersedes only its
+  prior pending decision; approved/rejected history remains immutable evidence.
+- Approval requires a current active selected `QUOTE_APPROVER` Membership that
+  differs from the requester. It revalidates policy revision, Membership and
+  Store assignment, source/vertical/professional readiness, current Version,
+  expiry, selected/default Option totals and availability inside the release
+  transaction. Rejection performs the same identity/authority checks but does
+  not create an issued/public source fact.
+- Issue/approve/reject use bounded Serializable transactions and retry one
+  serialization conflict before returning a typed conflict. Expired,
+  non-current, source-terminal, policy-stale, approverless or availability-
+  stale pending records are atomically superseded and audited; queue
+  reconciliation provides an idempotent backstop for records never reopened.
+- The release transaction is the only writer of Version `ISSUED`, source
+  `QUOTED`, issued audit/usage and the public capability. Exact concurrent
+  replay returns the released result with a fresh rotatable response token and
+  does not repeat lifecycle or notification effects.
+- Prescription release materializes digest-only quick actions and at most one
+  protected `quote-ready:<version>` communication intent in the same
+  transaction. A denied WhatsApp policy is audited and omits those optional
+  channel effects without rolling back valid web/staff release. Enqueue occurs
+  only after commit.
+- Pending-list and detail projections carry safe commercial facts plus
+  server-derived `canPrepare | canRequestApproval | canApprove | canReject |
+  canRelease`. Public and WhatsApp projections expose only released `ISSUED`
+  versions; clients never infer authority from role labels.
+
 ### Implemented channel-neutral intake contract
 
 - `serviceCommerce.submitPublicIntake`, `submitStaffIntake` and internal

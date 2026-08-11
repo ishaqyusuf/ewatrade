@@ -209,7 +209,7 @@ also spread across API/DB rather than a focused reusable package.
 - `packages/service-commerce/package.json`, `tsconfig.json`, `src/index.ts`
 - `packages/service-commerce/src/schemas/index.ts` as a thin barrel over
   `source.ts`, `capability.ts`, `catalog-adoption.ts`, `media.ts`, `action.ts`,
-  `quote-approval.ts`, `booking.ts` and `fulfillment.ts`
+  `quote-release.ts`, `booking.ts` and `fulfillment.ts`
 - `packages/service-commerce/src/sources.ts`: exhaustive adapters and exact
   Product cart/Order versus approved narrow Commerce Inquiry boundary
 - `packages/service-commerce/src/capabilities.ts`: Store readiness and vertical
@@ -221,7 +221,7 @@ also spread across API/DB rather than a focused reusable package.
   Source Attachment, Human-Verified Observation, lifecycle/safety/retry and
   baseline retention rules plus private-storage/safety provider contracts
 - `packages/service-commerce/src/actions.ts`: state-aware opaque action rules
-- `packages/service-commerce/src/quote-approval.ts`: Store team capability,
+- `packages/service-commerce/src/quote-release.ts`: Store team capability,
   explicit release-mode, version decision and allowed-command rules
 - `packages/service-commerce/src/bookings.ts`: availability, contention and
   lifecycle rules
@@ -237,12 +237,11 @@ also spread across API/DB rather than a focused reusable package.
   Media Asset, typed Source Attachment, revisioned Verified Observation,
   access/safety/retry/retention audit and optional compatibility linkage from
   Pharmacy clinical media without deleting `PrescriptionMedia`
-- `packages/db/prisma/models/service-commerce-quote-approval.prisma`: Store
-  team assignments, revisioned Quote release policy, exact-version approval
-  request/decision and audit facts using existing Membership identities. Team
-  assignment is unique by Tenant/Store/Membership/capability; policy is unique
-  by Store; approval is unique by Tenant/Store/Quote Version with append-only
-  state-transition audit
+- `packages/db/prisma/models/customer-channels.prisma`: Store team assignments,
+  revisioned Quote release policy, exact-version approval request/decision and
+  audit facts using existing Membership identities. Team assignment is unique
+  by Tenant/Store/Membership/capability; policy is unique by Store; approval is
+  unique by Tenant/Store/Quote Version with append-only state-transition audit
 - `packages/db/prisma/models/commerce-quotes.prisma`: additive immutable Offer
   Option/selection records and exact per-option totals; existing simple Quote
   versions expand as one default option
@@ -254,17 +253,18 @@ also spread across API/DB rather than a focused reusable package.
 - `packages/db/src/queries/service-commerce-media-assets.ts`
 - `packages/db/src/queries/service-commerce-attachments.ts`
 - `packages/db/src/queries/service-commerce-observations.ts`
-- `packages/db/src/queries/service-commerce-quote-approvals.ts`
+- `packages/db/src/queries/service-commerce-quote-release.ts`
 - `packages/db/src/queries/service-commerce-bookings.ts`
 - `packages/db/src/queries/service-commerce-fulfillment.ts`
 - `packages/db/src/queries/service-commerce-reporting.ts`
 - `apps/api/src/schemas/service-commerce.ts`
 - `apps/api/src/schemas/service-commerce-media.ts`
 - `apps/api/src/schemas/service-commerce-intake.ts`
-- `apps/api/src/schemas/service-commerce-quote-approval.ts`
+- `apps/api/src/schemas/customer-channels.ts` for the focused release-policy,
+  pending-detail and decision schemas
 - `apps/api/src/trpc/routers/service-commerce/index.ts` as a thin composed
   router over `access.ts`, `queue.ts`, `catalog.ts`, `intake.ts`, `media.ts`,
-  `quote-approvals.ts`, `actions.ts`, `bookings.ts`, `fulfillment.ts` and
+  `channels.ts`, `actions.ts`, `bookings.ts`, `fulfillment.ts` and
   `reporting.ts`
 - `apps/dashboard/src/app/(shell)/service-commerce/page.tsx`
 - `apps/dashboard/src/app/(shell)/service-commerce/reports/page.tsx`
@@ -279,7 +279,7 @@ also spread across API/DB rather than a focused reusable package.
 - `apps/dashboard/src/components/service-commerce/{service-commerce-header,open-service-commerce-sheet,service-commerce-search-filter,service-commerce-sheet-header,service-commerce-sheet-content,form-context,service-commerce-workspace,service-commerce-setup,service-commerce-report}.tsx`
 - `apps/dashboard/src/components/service-commerce/catalog-adoption/{catalog-match,price-suggestions,draft-catalog-form,inventory-graduation-form}.tsx`
 - `apps/dashboard/src/components/service-commerce/media/{attachment-list,attachment-uploader,media-viewer,observation-form,media-status}.tsx`
-- `apps/dashboard/src/components/customer-channels/{channels-header,connections-list,connection-form,store-binding-form,team-routing-form,quote-approval-form,entry-point-card,qr-code-card}.tsx`
+- `apps/dashboard/src/components/customer-channels/{channels-header,connections-list,connection-form,store-binding-form,team-routing-form,quote-release-policy-form,quote-approval-form,entry-point-card,qr-code-card}.tsx`
 - `apps/dashboard/src/components/service-commerce/service-commerce-controllers.ts`
   as the single exhaustive mode-to-controller/schema/id map
 - `apps/dashboard/src/components/sheets/service-commerce-sheet.tsx`
@@ -705,7 +705,7 @@ repository commands:
   `revokeStoreTeamCapability` and `activeTeamOptions` return/use existing active
   Tenant memberships with explicit Store predicates. Raw email/phone never
   identifies an assignment command.
-- `quoteReleasePolicy({ storeId })` and `updateQuoteReleasePolicy` expose an
+- `quoteReleaseSettings({ storeId })` and `updateQuoteReleaseSettings` expose an
   explicit revisioned `attendant_can_release | approval_required` mode. The
   latter is Owner/Admin-only, requires expected revision/reason, and requires a
   non-empty active approver set when approval is enabled.
@@ -721,8 +721,8 @@ repository commands:
 - Source Quote commands delegate to `prepareQuoteVersion`. In default mode an
   active assigned attendant may atomically release it; in approval-required
   mode it returns a private `DRAFT` plus `pending` approval result.
-  `approveQuoteVersion` and
-  `rejectQuoteVersion` require the pending id, expected Quote/Version/policy
+  `pendingQuoteApprovals`, `quoteApprovalDetail`, `approveQuoteVersion` and
+  `rejectQuoteVersion` require/return the pending id, exact Quote/Version/policy
   revisions and bounded reason. Approval revalidates every authority and
   commercial fact in the transaction that changes the version to `ISSUED`,
   moves the source to quoted, appends issued audit/usage facts and creates its
@@ -831,7 +831,9 @@ reversible presentation state; authoritative lifecycle state always refetches.
   assignments. New Store publish requires one active attendant; generic Tenant
   role alone never infers or broadens assignment.
 - Quote release mode is exactly `attendant_can_release | approval_required`.
-  The first is the explicit schema/default/backfill behavior. The second keeps
+  The first is the explicit schema/default/backfill behavior; absence-only
+  compatibility ends once a policy is persisted, after which either mode
+  requires an active Store attendant assignment. The second keeps
   prepared versions private until an active different Store approver approves
   the exact current Quote/Version under the same current policy revision.
 - Approval, clinical release, Offer Option selection and customer acceptance
@@ -846,6 +848,10 @@ reversible presentation state; authoritative lifecycle state always refetches.
 - Preparation leaves the source pre-Quote. Release atomically owns the source
   quoted transition, issued audit/usage and public capability; exact replay is
   side-effect free and rejection/revision emits no issued fact.
+- Quote issue/decision commands use bounded Serializable transactions with one
+  serialization-conflict retry. Direct commands/detail and pending-queue
+  reconciliation atomically supersede stale pending decisions and append audit
+  evidence without rewriting approved/rejected history.
 - Every Quote version has at least one immutable option. Each option exposes an
   opaque id, customer label, complete line set, currency, subtotal, discount,
   tax, fulfilment fee, exact total, availability outcome, fulfilment promise

@@ -10,11 +10,13 @@ import type {
 } from "@ewatrade/service-commerce"
 import { Button } from "@ewatrade/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useState } from "react"
+import { useRef, useState } from "react"
 
 import { ConnectionForm } from "./connection-form"
 import { EmbeddedSignupSelection } from "./embedded-signup-selection"
 import { EntryPointCard } from "./entry-point-card"
+import { QuoteApprovalForm } from "./quote-approval-form"
+import { QuoteReleasePolicyForm } from "./quote-release-policy-form"
 import { StoreBindingForm } from "./store-binding-form"
 import { TeamRoutingForm } from "./team-routing-form"
 
@@ -23,7 +25,12 @@ export function CustomerChannelSheetContent({
   registerFormReset,
   storeId,
 }: {
-  mode: "connection" | "entry_point" | "team"
+  mode:
+    | "connection"
+    | "entry_point"
+    | "quote_approval"
+    | "quote_policy"
+    | "team"
   registerFormReset: RegisterServiceCommerceFormReset
   storeId: string
 }) {
@@ -32,6 +39,9 @@ export function CustomerChannelSheetContent({
   const params = useServiceCommerceParams()
   const channelParams = useCustomerChannelParams()
   const [message, setMessage] = useState<string | null>(null)
+  const policyOperationId = useRef(crypto.randomUUID())
+  const approvalDecisionId = useRef(crypto.randomUUID())
+  const rejectionDecisionId = useRef(crypto.randomUUID())
   const [connectionAction, setConnectionAction] = useState<
     "revoked" | "suspended" | null
   >(null)
@@ -54,6 +64,19 @@ export function CustomerChannelSheetContent({
       mode === "connection" && channelParams.whatsapp === "select-number",
     retry: false,
   })
+  const releaseSettings = useQuery({
+    ...trpc.serviceCommerce.quoteReleaseSettings.queryOptions({ storeId }),
+    enabled: mode === "quote_policy",
+    retry: false,
+  })
+  const approvalDetail = useQuery({
+    ...trpc.serviceCommerce.quoteApprovalDetail.queryOptions({
+      approvalId: params.quoteApprovalId ?? "",
+      storeId,
+    }),
+    enabled: mode === "quote_approval" && Boolean(params.quoteApprovalId),
+    retry: false,
+  })
 
   const invalidate = async () => {
     await Promise.all([
@@ -70,6 +93,43 @@ export function CustomerChannelSheetContent({
   const succeeded = async (nextMessage: string) => {
     await invalidate()
     setMessage(nextMessage)
+  }
+
+  const invalidateQuoteApproval = async () => {
+    const invalidations: Array<Promise<unknown>> = [
+      queryClient.invalidateQueries({
+        exact: true,
+        queryKey: trpc.serviceCommerce.pendingQuoteApprovals.queryKey({
+          storeId,
+        }),
+      }),
+    ]
+    if (approvalDetail.data) {
+      invalidations.push(
+        queryClient.invalidateQueries({
+          exact: true,
+          queryKey: trpc.serviceCommerce.sourceProjection.queryKey({
+            source: {
+              id: approvalDetail.data.sourceId,
+              kind: approvalDetail.data.sourceKind,
+            },
+            storeId,
+          }),
+        }),
+      )
+    }
+    if (params.quoteApprovalId) {
+      invalidations.push(
+        queryClient.invalidateQueries({
+          exact: true,
+          queryKey: trpc.serviceCommerce.quoteApprovalDetail.queryKey({
+            approvalId: params.quoteApprovalId,
+            storeId,
+          }),
+        }),
+      )
+    }
+    await Promise.all(invalidations)
   }
 
   const saveConnection = useMutation(
@@ -137,11 +197,58 @@ export function CustomerChannelSheetContent({
       onSuccess: () => succeeded("Customer entry link revoked."),
     }),
   )
+  const updateQuotePolicy = useMutation(
+    trpc.serviceCommerce.updateQuoteReleaseSettings.mutationOptions({
+      onError: (error) => setMessage(error.message),
+      onSuccess: async () => {
+        await Promise.all([
+          queryClient.invalidateQueries({
+            exact: true,
+            queryKey: trpc.serviceCommerce.quoteReleaseSettings.queryKey({
+              storeId,
+            }),
+          }),
+          invalidateQuoteApproval(),
+        ])
+        policyOperationId.current = crypto.randomUUID()
+        setMessage("Quotation approval policy saved.")
+      },
+    }),
+  )
+  const approveQuote = useMutation(
+    trpc.serviceCommerce.approveQuoteVersion.mutationOptions({
+      onError: (error) => setMessage(error.message),
+      onSuccess: async () => {
+        await invalidateQuoteApproval()
+        approvalDecisionId.current = crypto.randomUUID()
+        setMessage("Quotation approved and released to the customer.")
+      },
+    }),
+  )
+  const rejectQuote = useMutation(
+    trpc.serviceCommerce.rejectQuoteVersion.mutationOptions({
+      onError: (error) => setMessage(error.message),
+      onSuccess: async () => {
+        await invalidateQuoteApproval()
+        rejectionDecisionId.current = crypto.randomUUID()
+        setMessage("Quotation version rejected. It remains private.")
+      },
+    }),
+  )
 
-  if (workspace.isLoading || (mode === "connection" && embedded.isLoading)) {
+  if (
+    workspace.isLoading ||
+    (mode === "connection" && embedded.isLoading) ||
+    (mode === "quote_policy" && releaseSettings.isLoading) ||
+    (mode === "quote_approval" && approvalDetail.isLoading)
+  ) {
     return <div className="h-72 animate-pulse rounded-xl bg-muted" />
   }
-  const error = workspace.error ?? embedded.error
+  const error =
+    workspace.error ??
+    (mode === "connection" ? embedded.error : null) ??
+    (mode === "quote_policy" ? releaseSettings.error : null) ??
+    (mode === "quote_approval" ? approvalDetail.error : null)
   if (error || !workspace.data) {
     return (
       <div className="grid gap-3">
@@ -154,7 +261,16 @@ export function CustomerChannelSheetContent({
         <Button
           className="w-fit"
           onClick={() =>
-            void Promise.all([workspace.refetch(), embedded.refetch()])
+            void Promise.all([
+              workspace.refetch(),
+              mode === "connection" ? embedded.refetch() : Promise.resolve(),
+              mode === "quote_policy"
+                ? releaseSettings.refetch()
+                : Promise.resolve(),
+              mode === "quote_approval"
+                ? approvalDetail.refetch()
+                : Promise.resolve(),
+            ])
           }
           variant="outline"
         >
@@ -182,7 +298,10 @@ export function CustomerChannelSheetContent({
     assign.isPending ||
     revokeAttendant.isPending ||
     publish.isPending ||
-    revokeEntry.isPending
+    revokeEntry.isPending ||
+    updateQuotePolicy.isPending ||
+    approveQuote.isPending ||
+    rejectQuote.isPending
 
   return (
     <div className="grid gap-5">
@@ -323,6 +442,48 @@ export function CustomerChannelSheetContent({
           team={data.team}
         />
       ) : null}
+      {mode === "quote_policy" && releaseSettings.data ? (
+        <QuoteReleasePolicyForm
+          isPending={updateQuotePolicy.isPending}
+          onSubmit={(values) =>
+            updateQuotePolicy.mutate({
+              ...values,
+              clientOperationId: policyOperationId.current,
+              expectedRevision: releaseSettings.data.policy.revision,
+              storeId,
+            })
+          }
+          settings={releaseSettings.data}
+        />
+      ) : null}
+      {mode === "quote_approval" && approvalDetail.data ? (
+        <QuoteApprovalForm
+          approval={approvalDetail.data}
+          isPending={approveQuote.isPending || rejectQuote.isPending}
+          onApprove={(values) =>
+            approveQuote.mutate({
+              approvalId: approvalDetail.data.id,
+              clientDecisionId: approvalDecisionId.current,
+              expectedPolicyRevision: approvalDetail.data.policyRevision,
+              quoteId: approvalDetail.data.quoteId,
+              quoteVersionId: approvalDetail.data.quoteVersionId,
+              reason: values.reason,
+              storeId,
+            })
+          }
+          onReject={(values) =>
+            rejectQuote.mutate({
+              approvalId: approvalDetail.data.id,
+              clientDecisionId: rejectionDecisionId.current,
+              expectedPolicyRevision: approvalDetail.data.policyRevision,
+              quoteId: approvalDetail.data.quoteId,
+              quoteVersionId: approvalDetail.data.quoteVersionId,
+              reason: values.reason,
+              storeId,
+            })
+          }
+        />
+      ) : null}
     </div>
   )
 }
@@ -330,12 +491,23 @@ export function CustomerChannelSheetContent({
 function SetupProgress({
   active,
 }: {
-  active: "connection" | "entry_point" | "team"
+  active:
+    | "connection"
+    | "entry_point"
+    | "quote_approval"
+    | "quote_policy"
+    | "team"
 }) {
   const steps = [
     { active: active === "connection", label: "Setup & configure" },
     { active: active === "connection", label: "Test" },
-    { active: active === "team", label: "Assign team" },
+    {
+      active:
+        active === "team" ||
+        active === "quote_policy" ||
+        active === "quote_approval",
+      label: "Team & approval",
+    },
     { active: active === "entry_point", label: "Publish" },
   ]
   return (

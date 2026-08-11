@@ -170,6 +170,19 @@ Typed tRPC routers are the primary application contract.
   lifecycle, Store attendant assignment/revocation, and stable entry-point
   publish/revoke. Owner/Admin owns provider setup; accepted active Memberships
   are the only assignable Store attendants.
+- Protected `serviceCommerce.quoteReleaseSettings` and
+  `updateQuoteReleaseSettings` expose/update the Store's revisioned
+  `attendant_can_release | approval_required` policy. The update is
+  Owner/Admin-only and accepts only selected active Membership ids, expected
+  revision, stable operation id and bounded reason.
+- Protected `serviceCommerce.pendingQuoteApprovals` and
+  `quoteApprovalDetail` return safe Store-scoped pending work plus the exact
+  immutable Quote Version, Option totals, expiry and server-derived decision
+  actions. Manager access does not grant approval authority.
+- Protected `serviceCommerce.approveQuoteVersion` and `rejectQuoteVersion`
+  require the approval, Quote, Version and policy identities plus a stable
+  decision id and reason. Approval is a bounded atomic release command;
+  rejection remains a staff decision and never reuses customer decline.
 - Public `serviceCommerce.publicCustomerEntryPoint` resolves only a digest of
   the opaque `/r/[token]` capability and returns current allowed request/chat
   actions. It returns no Tenant/Store/provider id or mutable sender number when

@@ -71,6 +71,11 @@ model Tenant {
   serviceCommerceStoreTeamAuditEvents ServiceCommerceStoreTeamAuditEvent[]
   customerEntryPoints                 CustomerEntryPoint[]
   customerEntryPointAuditEvents       CustomerEntryPointAuditEvent[]
+  serviceCommerceQuoteReleasePolicies ServiceCommerceQuoteReleasePolicy[]
+  serviceCommerceQuoteReleasePolicyAuditEvents ServiceCommerceQuoteReleasePolicyAuditEvent[]
+  serviceCommerceQuoteReleaseCommandReceipts ServiceCommerceQuoteReleaseCommandReceipt[]
+  serviceCommerceQuoteApprovals       ServiceCommerceQuoteApproval[]
+  serviceCommerceQuoteApprovalAuditEvents ServiceCommerceQuoteApprovalAuditEvent[]
   serviceCommerceMediaAssets          ServiceCommerceMediaAsset[]
   serviceCommerceSourceAttachments    ServiceCommerceSourceAttachment[]
   serviceCommerceVerifiedObservations ServiceCommerceVerifiedObservation[]
@@ -271,6 +276,9 @@ model Membership {
   retailOpsStaffInviteTokens          RetailOpsStaffInviteToken[]
   retailOpsStaffLifecycleEvents       RetailOpsStaffLifecycleEvent[]
   serviceCommerceStoreTeamAssignments ServiceCommerceStoreTeamAssignment[]
+  requestedServiceCommerceQuoteApprovals ServiceCommerceQuoteApproval[] @relation("QuoteApprovalRequester")
+  decidedServiceCommerceQuoteApprovals ServiceCommerceQuoteApproval[] @relation("QuoteApprovalDecider")
+  serviceCommerceQuoteApprovalAuditEvents ServiceCommerceQuoteApprovalAuditEvent[]
 
   @@unique([tenantId, userId])
   @@index([tenantId, role])

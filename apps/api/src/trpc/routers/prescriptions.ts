@@ -1,9 +1,9 @@
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import {
   createEmbeddedSignupState,
+  protectCommunicationsActionId,
   protectCommunicationsCredential,
 } from "@ewatrade/communications"
-import { protectCommunicationsActionId } from "@ewatrade/communications"
 import {
   PrescriptionCommerceError,
   PrescriptionComplianceError,
@@ -1111,50 +1111,13 @@ export const prescriptionsRouter = createTRPCRouter({
         const quote = await issuePrescriptionQuote(ctx.db, {
           actorUserId: ctx.session.user.id,
           ...input,
+          protectActionId: protectCommunicationsActionId,
           tenantId: ctx.tenantContext.tenant.id,
         })
-        const recipient = await getPrescriptionNotificationContext(ctx.db, {
-          requestId: input.requestId,
-          storeId: input.storeId,
-          tenantId: ctx.tenantContext.tenant.id,
-        })
-        if (recipient?.customerPhone && quote.token) {
-          const expiresAt =
-            input.expiresAt ?? new Date(Date.now() + 24 * 60 * 60_000)
-          const actions = await Promise.all(
-            (["pickup", "delivery", "ask_pharmacy"] as const).map(
-              async (action) => ({
-                protectedId: protectCommunicationsActionId(
-                  (
-                    await createPrescriptionQuickAction(ctx.db, {
-                      action,
-                      entityId: quote.versionId,
-                      entityType: "quote_version",
-                      expiresAt,
-                      storeId: input.storeId,
-                      tenantId: ctx.tenantContext.tenant.id,
-                    })
-                  ).actionId,
-                ),
-                title:
-                  action === "pickup"
-                    ? "Pick up"
-                    : action === "delivery"
-                      ? "Delivery"
-                      : "Ask pharmacy",
-              }),
-            ),
+        if (quote.communicationIntentId) {
+          await enqueuePrescriptionCommunicationDispatch(
+            quote.communicationIntentId,
           )
-          const intent = await createPrescriptionCommunicationIntent(ctx.db, {
-            deduplicationKey: `quote-ready:${quote.versionId}`,
-            payload: { actions },
-            recipientReference: recipient.customerPhone,
-            requestId: recipient.id,
-            storeId: input.storeId,
-            tenantId: ctx.tenantContext.tenant.id,
-            type: "quote_ready",
-          })
-          await enqueuePrescriptionCommunicationDispatch(intent.id)
         }
         return quote
       }),

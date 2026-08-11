@@ -27,6 +27,25 @@ enum CustomerEntryPointAuditEventType {
   REVOKED
 }
 
+enum ServiceCommerceQuoteReleaseMode {
+  ATTENDANT_CAN_RELEASE
+  APPROVAL_REQUIRED
+}
+
+enum ServiceCommerceQuoteApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUPERSEDED
+}
+
+enum ServiceCommerceQuoteApprovalAuditEventType {
+  REQUESTED
+  APPROVED
+  REJECTED
+  SUPERSEDED
+}
+
 /// Store-scoped operational capability over an existing Tenant Membership.
 /// It does not grant a Tenant role or any vertical/professional credential.
 model ServiceCommerceStoreTeamAssignment {
@@ -74,6 +93,124 @@ model ServiceCommerceStoreTeamAuditEvent {
   @@index([tenantId, storeId, createdAt])
   @@index([assignmentId, createdAt])
   @@index([actorUserId, createdAt])
+}
+
+/// Revisioned Store commerce policy. Existing Stores without a record resolve
+/// through the typed attendant-release compatibility default during expand.
+model ServiceCommerceQuoteReleasePolicy {
+  id                            String                           @id @default(cuid())
+  tenantId                      String
+  storeId                       String                           @unique
+  mode                          ServiceCommerceQuoteReleaseMode @default(ATTENDANT_CAN_RELEASE)
+  selectedApproverMembershipIds String[]                         @default([])
+  revision                      Int                              @default(1)
+  updatedByUserId               String
+  reason                        String
+  createdAt                     DateTime                         @default(now())
+  updatedAt                     DateTime                         @updatedAt
+  tenant                        Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                         Store                            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  auditEvents                   ServiceCommerceQuoteReleasePolicyAuditEvent[]
+  commandReceipts               ServiceCommerceQuoteReleaseCommandReceipt[]
+
+  @@index([tenantId, mode, updatedAt])
+}
+
+model ServiceCommerceQuoteReleaseCommandReceipt {
+  id                String                            @id @default(cuid())
+  tenantId          String
+  storeId           String
+  policyId          String
+  clientOperationId String
+  payloadHash       String
+  policyRevision    Int
+  createdAt         DateTime                          @default(now())
+  tenant            Tenant                            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  policy            ServiceCommerceQuoteReleasePolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, clientOperationId])
+  @@index([storeId, createdAt])
+  @@index([policyId, createdAt])
+}
+
+model ServiceCommerceQuoteReleasePolicyAuditEvent {
+  id                            String                           @id @default(cuid())
+  tenantId                      String
+  storeId                       String
+  policyId                      String
+  actorUserId                   String
+  fromMode                      ServiceCommerceQuoteReleaseMode?
+  toMode                        ServiceCommerceQuoteReleaseMode
+  selectedApproverMembershipIds String[]                         @default([])
+  policyRevision                Int
+  reason                        String
+  createdAt                     DateTime                         @default(now())
+  tenant                        Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                         Store                            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  policy                        ServiceCommerceQuoteReleasePolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, storeId, createdAt])
+  @@index([policyId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
+/// One exact-version commercial release decision. It never replaces a
+/// vertical professional/clinical decision or a customer decline.
+model ServiceCommerceQuoteApproval {
+  id                    String                                    @id @default(cuid())
+  tenantId              String
+  storeId               String
+  quoteId               String
+  quoteVersionId        String                                    @unique
+  sourceType            CommerceQuoteSourceType
+  sourceId              String
+  status                ServiceCommerceQuoteApprovalStatus        @default(PENDING)
+  requesterMembershipId String
+  decidedByMembershipId String?
+  decisionClientId      String?
+  decisionPayloadHash   String?
+  policyRevision        Int
+  reason                String?
+  requestedAt           DateTime                                  @default(now())
+  decidedAt             DateTime?
+  supersededAt          DateTime?
+  createdAt             DateTime                                  @default(now())
+  updatedAt             DateTime                                  @updatedAt
+  tenant                Tenant                                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                 Store                                     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  quote                 CommerceQuote                             @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quoteVersion          CommerceQuoteVersion                      @relation(fields: [quoteVersionId], references: [id], onDelete: Cascade)
+  requesterMembership   Membership                                @relation("QuoteApprovalRequester", fields: [requesterMembershipId], references: [id], onDelete: Restrict)
+  decidedByMembership   Membership?                               @relation("QuoteApprovalDecider", fields: [decidedByMembershipId], references: [id], onDelete: Restrict)
+  auditEvents           ServiceCommerceQuoteApprovalAuditEvent[]
+
+  @@unique([tenantId, storeId, quoteVersionId])
+  @@index([tenantId, storeId, status, requestedAt])
+  @@index([quoteId, status])
+  @@index([requesterMembershipId, requestedAt])
+  @@index([decidedByMembershipId, decidedAt])
+}
+
+model ServiceCommerceQuoteApprovalAuditEvent {
+  id                String                                       @id @default(cuid())
+  tenantId          String
+  storeId           String
+  approvalId        String
+  actorMembershipId String
+  type              ServiceCommerceQuoteApprovalAuditEventType
+  approvalStatus    ServiceCommerceQuoteApprovalStatus
+  policyRevision    Int
+  reason            String?
+  createdAt         DateTime                                     @default(now())
+  tenant            Tenant                                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                                        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  approval          ServiceCommerceQuoteApproval                  @relation(fields: [approvalId], references: [id], onDelete: Cascade)
+  actorMembership   Membership                                    @relation(fields: [actorMembershipId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, storeId, createdAt])
+  @@index([approvalId, createdAt])
+  @@index([actorMembershipId, createdAt])
 }
 
 /// Stable Store-scoped public capability. The public token resolves current

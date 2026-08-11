@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto"
 
+import { deriveServiceCommerceQuoteReleaseActions } from "@ewatrade/service-commerce"
 import {
   compareExactDecimals,
   multiplyExactDecimals,
@@ -20,6 +21,8 @@ import {
   PrescriptionRequestAuditEventType,
   PrescriptionRequestStatus,
   SellableOfferingKind,
+  ServiceCommerceQuoteApprovalAuditEventType,
+  ServiceCommerceQuoteApprovalStatus,
   ServiceRequestStatus,
 } from "../../generated/prisma/enums"
 import { getCatalogOfferingAvailability } from "./catalog-inventory"
@@ -27,11 +30,49 @@ import {
   resolveCatalogAvailabilityAttestationForQuote,
   resolveCatalogSourceLinkForQuote,
 } from "./service-commerce-catalog"
+import {
+  ServiceCommercePolicyError,
+  assertServiceCommercePolicyAllowedInTransaction,
+} from "./service-commerce-policy"
+import {
+  ServiceCommerceQuoteReleaseError,
+  resolveQuoteReleaseRuntimeFacts,
+  supersedeServiceCommerceQuoteApprovalInTransaction,
+} from "./service-commerce-quote-release"
+import { materializePrescriptionQuoteReadyEffectsInTransaction } from "./whatsapp-connections"
 
 const COMMERCE_QUOTE_TRANSACTION_OPTIONS = {
+  isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
   maxWait: 10_000,
   timeout: 30_000,
 } as const
+
+async function runCommerceQuoteDecisionTransaction<T>(
+  db: PrismaClient,
+  callback: (tx: Prisma.TransactionClient) => Promise<T>,
+) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      return await db.$transaction(callback, COMMERCE_QUOTE_TRANSACTION_OPTIONS)
+    } catch (error) {
+      const retryable =
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2034"
+      if (retryable && attempt === 0) continue
+      if (retryable) {
+        throw new CommerceQuoteError(
+          "QUOTE_CONFLICT",
+          "Quotation release facts changed before this decision completed.",
+        )
+      }
+      throw error
+    }
+  }
+  throw new CommerceQuoteError(
+    "QUOTE_CONFLICT",
+    "Quotation release facts changed before this decision completed.",
+  )
+}
 
 export type CommerceQuoteSourceType =
   | "commerce_inquiry"
@@ -68,6 +109,7 @@ export type CommerceQuoteErrorCode =
   | "OFFERING_UNAVAILABLE"
   | "PUBLIC_TOKEN_INVALID"
   | "QUOTE_CONFLICT"
+  | "QUOTE_RELEASE_FORBIDDEN"
   | "QUOTE_SOURCE_NOT_FOUND"
   | "STORE_NOT_FOUND"
 
@@ -407,6 +449,7 @@ export type IssueCommerceQuoteInput = {
   fulfilmentType?: CommerceQuoteFulfilmentTypeInput
   lines?: IssueCommerceQuoteLineInput[]
   options?: IssueCommerceQuoteOptionInput[]
+  protectActionId?: (actionId: string) => string
   sourceId: string
   sourceType: CommerceQuoteSourceType
   storeId: string
@@ -509,6 +552,10 @@ type QuoteSourceHandlerInput = {
 
 type QuoteSourceState = { alreadyQuoted: boolean }
 
+type QuoteReleaseEffects = {
+  communicationIntentId: null | string
+}
+
 type QuoteSourceHandler = {
   allowedOfferingKind: SellableOfferingKind
   bindQuotedSourceToExistingQuote: boolean
@@ -522,9 +569,13 @@ type QuoteSourceHandler = {
   ) => Promise<IssueCommerceQuoteLineInput[]>
   recordIssued: (
     tx: Prisma.TransactionClient,
-    input: QuoteSourceHandlerInput & { versionId: string },
+    input: QuoteSourceHandlerInput & {
+      actionExpiresAt: Date
+      protectActionId?: (actionId: string) => string
+      versionId: string
+    },
     state: QuoteSourceState,
-  ) => Promise<void>
+  ) => Promise<QuoteReleaseEffects>
   recoverIssuanceToken: boolean
   requiresInventorySnapshot: boolean
   validateLines: (
@@ -632,7 +683,7 @@ const quoteSourceHandlers = {
       })
     },
     recordIssued: async (tx, input, state) => {
-      if (state.alreadyQuoted) return
+      if (state.alreadyQuoted) return { communicationIntentId: null }
       if (
         (
           await tx.commerceInquiry.updateMany({
@@ -662,6 +713,7 @@ const quoteSourceHandlers = {
           type: CommerceInquiryAuditEventType.QUOTE_ISSUED,
         },
       })
+      return { communicationIntentId: null }
     },
     recoverIssuanceToken: true,
     requiresInventorySnapshot: true,
@@ -697,6 +749,13 @@ const quoteSourceHandlers = {
         select: { status: true },
         where: {
           id: input.sourceId,
+          status: {
+            in: [
+              ServiceRequestStatus.SUBMITTED,
+              ServiceRequestStatus.NEEDS_INFORMATION,
+              ServiceRequestStatus.QUOTED,
+            ],
+          },
           storeId: input.storeId,
           tenantId: input.tenantId,
         },
@@ -751,15 +810,29 @@ const quoteSourceHandlers = {
       }
       return prepared
     },
-    recordIssued: async (tx, input) => {
-      await tx.serviceRequest.updateMany({
+    recordIssued: async (tx, input, state) => {
+      if (state.alreadyQuoted) return { communicationIntentId: null }
+      const updated = await tx.serviceRequest.updateMany({
         data: { status: ServiceRequestStatus.QUOTED },
         where: {
           id: input.sourceId,
+          status: {
+            in: [
+              ServiceRequestStatus.SUBMITTED,
+              ServiceRequestStatus.NEEDS_INFORMATION,
+            ],
+          },
           storeId: input.storeId,
           tenantId: input.tenantId,
         },
       })
+      if (updated.count !== 1) {
+        throw new CommerceQuoteError(
+          "QUOTE_CONFLICT",
+          "Service Request changed before Quote release.",
+        )
+      }
+      return { communicationIntentId: null }
     },
     recoverIssuanceToken: false,
     requiresInventorySnapshot: false,
@@ -818,6 +891,15 @@ const quoteSourceHandlers = {
           tenantId: input.tenantId,
         },
       })
+      if (!input.protectActionId) return { communicationIntentId: null }
+      return materializePrescriptionQuoteReadyEffectsInTransaction(tx, {
+        expiresAt: input.actionExpiresAt,
+        protectActionId: input.protectActionId,
+        requestId: input.sourceId,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+        versionId: input.versionId,
+      })
     },
     recoverIssuanceToken: false,
     requiresInventorySnapshot: true,
@@ -829,11 +911,14 @@ async function releasePreparedCommerceQuoteVersion(
   tx: Prisma.TransactionClient,
   input: {
     acceptanceTokenDigest: string
+    actorMembershipId: string
     currentVersionId: null | string
     quoteId: string
     sourceHandler: QuoteSourceHandler
     sourceInput: QuoteSourceHandlerInput
     sourceState: QuoteSourceState
+    actionExpiresAt: Date
+    protectActionId?: (actionId: string) => string
     versionId: string
   },
 ) {
@@ -853,6 +938,34 @@ async function releasePreparedCommerceQuoteVersion(
         "QUOTE_CONFLICT",
         "The current Quote Version changed before release.",
       )
+    }
+    const pendingApproval = await tx.serviceCommerceQuoteApproval.findFirst({
+      select: { id: true, policyRevision: true },
+      where: {
+        quoteVersionId: input.currentVersionId,
+        status: ServiceCommerceQuoteApprovalStatus.PENDING,
+      },
+    })
+    if (pendingApproval) {
+      await tx.serviceCommerceQuoteApproval.update({
+        data: {
+          status: ServiceCommerceQuoteApprovalStatus.SUPERSEDED,
+          supersededAt: new Date(),
+        },
+        where: { id: pendingApproval.id },
+      })
+      await tx.serviceCommerceQuoteApprovalAuditEvent.create({
+        data: {
+          actorMembershipId: input.actorMembershipId,
+          approvalId: pendingApproval.id,
+          approvalStatus: ServiceCommerceQuoteApprovalStatus.SUPERSEDED,
+          policyRevision: pendingApproval.policyRevision,
+          reason: "Superseded by a new immutable Quote Version.",
+          storeId: input.sourceInput.storeId,
+          tenantId: input.sourceInput.tenantId,
+          type: ServiceCommerceQuoteApprovalAuditEventType.SUPERSEDED,
+        },
+      })
     }
   }
   const released = await tx.commerceQuoteVersion.updateMany({
@@ -886,9 +999,14 @@ async function releasePreparedCommerceQuoteVersion(
       "Quote changed before the prepared Version could be released.",
     )
   }
-  await input.sourceHandler.recordIssued(
+  return input.sourceHandler.recordIssued(
     tx,
-    { ...input.sourceInput, versionId: input.versionId },
+    {
+      ...input.sourceInput,
+      actionExpiresAt: input.actionExpiresAt,
+      protectActionId: input.protectActionId,
+      versionId: input.versionId,
+    },
     input.sourceState,
   )
 }
@@ -923,8 +1041,29 @@ export async function issueCommerceQuote(
         },
   )
 
-  return db.$transaction(async (tx) => {
+  return runCommerceQuoteDecisionTransaction(db, async (tx) => {
     await input.authorize?.(tx)
+    let releaseRuntime: Awaited<
+      ReturnType<typeof resolveQuoteReleaseRuntimeFacts>
+    >
+    try {
+      releaseRuntime = await resolveQuoteReleaseRuntimeFacts(tx, {
+        actorUserId: input.actorUserId,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      })
+    } catch (error) {
+      if (error instanceof ServiceCommerceQuoteReleaseError) {
+        throw new CommerceQuoteError("QUOTE_RELEASE_FORBIDDEN", error.message)
+      }
+      throw error
+    }
+    if (!releaseRuntime.actor.attendantActive) {
+      throw new CommerceQuoteError(
+        "QUOTE_RELEASE_FORBIDDEN",
+        "An active Store attendant assignment is required to prepare a Quote.",
+      )
+    }
     const store = await tx.store.findFirst({
       select: { currencyCode: true, id: true },
       where: { id: input.storeId, tenantId: input.tenantId },
@@ -997,6 +1136,7 @@ export async function issueCommerceQuote(
     }
 
     const previousVersion = await tx.commerceQuoteVersion.findUnique({
+      include: { quoteApproval: true },
       where: {
         quoteId_clientVersionId: {
           clientVersionId: input.clientVersionId,
@@ -1011,6 +1151,33 @@ export async function issueCommerceQuote(
           "This Quote version command was already used with different details.",
         )
       }
+      if (previousVersion.status === CommerceQuoteVersionStatusEnum.DRAFT) {
+        return {
+          quoteId: quote.id,
+          releaseState:
+            previousVersion.quoteApproval?.status ===
+            ServiceCommerceQuoteApprovalStatus.REJECTED
+              ? ("rejected" as const)
+              : ("pending_approval" as const),
+          token: null,
+          versionId: previousVersion.id,
+        }
+      }
+      const releaseEffects =
+        source.sourceType === "prescription_request" &&
+        previousVersion.status === CommerceQuoteVersionStatusEnum.ISSUED &&
+        input.protectActionId
+          ? await materializePrescriptionQuoteReadyEffectsInTransaction(tx, {
+              expiresAt:
+                previousVersion.expiresAt ??
+                new Date(Date.now() + 24 * 60 * 60_000),
+              protectActionId: input.protectActionId,
+              requestId: source.sourceId,
+              storeId: input.storeId,
+              tenantId: input.tenantId,
+              versionId: previousVersion.id,
+            })
+          : { communicationIntentId: null }
       if (sourceHandler.recoverIssuanceToken) {
         await tx.commerceQuoteReplayAccessToken.upsert({
           create: {
@@ -1023,12 +1190,20 @@ export async function issueCommerceQuote(
           where: { versionId: previousVersion.id },
         })
         return {
+          communicationIntentId: releaseEffects.communicationIntentId,
           quoteId: quote.id,
+          releaseState: "released" as const,
           token: rawToken,
           versionId: previousVersion.id,
         }
       }
-      return { quoteId: quote.id, token: null, versionId: previousVersion.id }
+      return {
+        communicationIntentId: releaseEffects.communicationIntentId,
+        quoteId: quote.id,
+        releaseState: "released" as const,
+        token: null,
+        versionId: previousVersion.id,
+      }
     }
 
     const current = quote.currentVersionId
@@ -1335,17 +1510,1029 @@ export async function issueCommerceQuote(
         })),
       })
     }
-    await releasePreparedCommerceQuoteVersion(tx, {
+    if (releaseRuntime.policy.mode === "approval_required") {
+      const eligibleApprovers =
+        releaseRuntime.activeApproverMembershipIds.filter(
+          (membershipId) =>
+            releaseRuntime.policy.selectedApproverMembershipIds.includes(
+              membershipId,
+            ) && membershipId !== releaseRuntime.actor.membershipId,
+        )
+      if (eligibleApprovers.length === 0) {
+        throw new CommerceQuoteError(
+          "QUOTE_RELEASE_FORBIDDEN",
+          "Approval-required release needs another active selected approver.",
+        )
+      }
+      if (current) {
+        const superseded = await tx.commerceQuoteVersion.updateMany({
+          data: {
+            status: CommerceQuoteVersionStatusEnum.SUPERSEDED,
+            supersededAt: new Date(),
+          },
+          where: {
+            id: current.id,
+            status: { not: CommerceQuoteVersionStatusEnum.ACCEPTED },
+          },
+        })
+        if (superseded.count !== 1) {
+          throw new CommerceQuoteError(
+            "QUOTE_CONFLICT",
+            "The current Quote Version changed before approval preparation.",
+          )
+        }
+        const pending = await tx.serviceCommerceQuoteApproval.findFirst({
+          where: {
+            quoteVersionId: current.id,
+            status: ServiceCommerceQuoteApprovalStatus.PENDING,
+          },
+        })
+        if (pending) {
+          await tx.serviceCommerceQuoteApproval.update({
+            data: {
+              status: ServiceCommerceQuoteApprovalStatus.SUPERSEDED,
+              supersededAt: new Date(),
+            },
+            where: { id: pending.id },
+          })
+          await tx.serviceCommerceQuoteApprovalAuditEvent.create({
+            data: {
+              actorMembershipId: releaseRuntime.actor.membershipId,
+              approvalId: pending.id,
+              approvalStatus: ServiceCommerceQuoteApprovalStatus.SUPERSEDED,
+              policyRevision: pending.policyRevision,
+              reason: "Superseded by a new immutable Quote Version.",
+              storeId: input.storeId,
+              tenantId: input.tenantId,
+              type: ServiceCommerceQuoteApprovalAuditEventType.SUPERSEDED,
+            },
+          })
+        }
+      }
+      const madeCurrent = await tx.commerceQuote.updateMany({
+        data: { currentVersionId: version.id },
+        where: { currentVersionId: current?.id ?? null, id: quote.id },
+      })
+      if (madeCurrent.count !== 1) {
+        throw new CommerceQuoteError(
+          "QUOTE_CONFLICT",
+          "Quote changed before approval preparation completed.",
+        )
+      }
+      const approval = await tx.serviceCommerceQuoteApproval.create({
+        data: {
+          policyRevision: releaseRuntime.policy.revision,
+          quoteId: quote.id,
+          quoteVersionId: version.id,
+          requesterMembershipId: releaseRuntime.actor.membershipId,
+          sourceId: input.sourceId,
+          sourceType: mapSourceType(input.sourceType),
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        },
+      })
+      await tx.serviceCommerceQuoteApprovalAuditEvent.create({
+        data: {
+          actorMembershipId: releaseRuntime.actor.membershipId,
+          approvalId: approval.id,
+          approvalStatus: ServiceCommerceQuoteApprovalStatus.PENDING,
+          policyRevision: releaseRuntime.policy.revision,
+          reason: "Quotation prepared for Store approval.",
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+          type: ServiceCommerceQuoteApprovalAuditEventType.REQUESTED,
+        },
+      })
+      return {
+        approvalId: approval.id,
+        quoteId: quote.id,
+        releaseState: "pending_approval" as const,
+        token: null,
+        versionId: version.id,
+      }
+    }
+
+    const releaseEffects = await releasePreparedCommerceQuoteVersion(tx, {
       acceptanceTokenDigest: digest(rawToken),
+      actionExpiresAt:
+        input.expiresAt ?? new Date(Date.now() + 24 * 60 * 60_000),
+      actorMembershipId: releaseRuntime.actor.membershipId,
       currentVersionId: current?.id ?? null,
       quoteId: quote.id,
+      protectActionId: input.protectActionId,
       sourceHandler,
       sourceInput,
       sourceState,
       versionId: version.id,
     })
 
-    return { quoteId: quote.id, token: rawToken, versionId: version.id }
+    return {
+      communicationIntentId: releaseEffects.communicationIntentId,
+      quoteId: quote.id,
+      releaseState: "released" as const,
+      token: rawToken,
+      versionId: version.id,
+    }
+  })
+}
+
+function sourceKindFromPersistence(sourceType: CommerceQuoteSourceTypeEnum) {
+  if (sourceType === CommerceQuoteSourceTypeEnum.SERVICE_REQUEST) {
+    return "service_request" as const
+  }
+  if (sourceType === CommerceQuoteSourceTypeEnum.PRESCRIPTION_REQUEST) {
+    return "prescription_request" as const
+  }
+  return "commerce_inquiry" as const
+}
+
+function sourceKindForRelease(sourceType: CommerceQuoteSourceTypeEnum) {
+  if (sourceType === CommerceQuoteSourceTypeEnum.SERVICE_REQUEST) {
+    return "service" as const
+  }
+  if (sourceType === CommerceQuoteSourceTypeEnum.PRESCRIPTION_REQUEST) {
+    return "prescription" as const
+  }
+  return "commerce_inquiry" as const
+}
+
+async function assertQuoteReleaseVerticalPolicy(
+  tx: Prisma.TransactionClient,
+  input: {
+    actorUserId: string
+    sourceId: string
+    sourceType: CommerceQuoteSourceTypeEnum
+    storeId: string
+    tenantId: string
+  },
+) {
+  const vertical =
+    input.sourceType === CommerceQuoteSourceTypeEnum.PRESCRIPTION_REQUEST
+      ? "pharmacy"
+      : input.sourceType === CommerceQuoteSourceTypeEnum.SERVICE_REQUEST
+        ? "service"
+        : (
+            await tx.commerceInquiry.findFirst({
+              select: { vertical: true },
+              where: {
+                id: input.sourceId,
+                storeId: input.storeId,
+                tenantId: input.tenantId,
+              },
+            })
+          )?.vertical.toLowerCase()
+  if (vertical !== "pharmacy" && vertical !== "service") {
+    throw new CommerceQuoteError(
+      "QUOTE_RELEASE_FORBIDDEN",
+      "The quotation source is no longer eligible for release.",
+    )
+  }
+  await assertServiceCommercePolicyAllowedInTransaction(tx, {
+    actorUserId: input.actorUserId,
+    channel: "staff",
+    purpose: "service_commerce_quote_approval_release",
+    storeId: input.storeId,
+    subject: "quote",
+    tenantId: input.tenantId,
+    vertical,
+  })
+}
+
+function inputLineOutcome(
+  outcome: CommerceQuoteLineOutcome,
+): CommerceQuoteLineOutcomeInput {
+  if (outcome === CommerceQuoteLineOutcome.ALTERNATIVE) return "alternative"
+  if (outcome === CommerceQuoteLineOutcome.DECLINED) return "declined"
+  if (outcome === CommerceQuoteLineOutcome.UNAVAILABLE) return "unavailable"
+  return "included"
+}
+
+function assertPreparedQuoteOptionTotals(
+  options: Array<{
+    availabilityOutcome: CommerceQuoteAvailabilityOutcome
+    discountMinor: number
+    fulfilmentFeeMinor: number
+    lines: Array<{ outcome: CommerceQuoteLineOutcome; totalMinor: number }>
+    subtotalMinor: number
+    taxMinor: number
+    totalMinor: number
+  }>,
+) {
+  if (options.length < 1) {
+    throw new CommerceQuoteError(
+      "QUOTE_CONFLICT",
+      "A prepared Quote requires at least one Offer Option.",
+    )
+  }
+  for (const option of options) {
+    const included = option.lines.filter(
+      (line) => line.outcome === CommerceQuoteLineOutcome.INCLUDED,
+    )
+    const subtotalMinor = included.reduce(
+      (total, line) => total + line.totalMinor,
+      0,
+    )
+    const totalMinor =
+      subtotalMinor -
+      option.discountMinor +
+      option.taxMinor +
+      option.fulfilmentFeeMinor
+    const availabilityMatches =
+      (option.availabilityOutcome ===
+        CommerceQuoteAvailabilityOutcome.UNAVAILABLE &&
+        included.length === 0) ||
+      (option.availabilityOutcome === CommerceQuoteAvailabilityOutcome.FULL &&
+        included.length === option.lines.length) ||
+      (option.availabilityOutcome ===
+        CommerceQuoteAvailabilityOutcome.PARTIAL &&
+        included.length > 0 &&
+        included.length < option.lines.length)
+    if (
+      !availabilityMatches ||
+      subtotalMinor !== option.subtotalMinor ||
+      totalMinor !== option.totalMinor ||
+      !Number.isSafeInteger(totalMinor) ||
+      totalMinor < 0
+    ) {
+      throw new CommerceQuoteError(
+        "QUOTE_CONFLICT",
+        "Prepared Quote Option totals or availability changed before release.",
+      )
+    }
+  }
+}
+
+type QuoteApprovalDecisionInput = {
+  actorUserId: string
+  approvalId: string
+  clientDecisionId: string
+  expectedPolicyRevision: number
+  protectActionId?: (actionId: string) => string
+  quoteId: string
+  quoteVersionId: string
+  reason: string
+  storeId: string
+  tenantId: string
+}
+
+async function loadQuoteApprovalDecision(
+  tx: Prisma.TransactionClient,
+  input: QuoteApprovalDecisionInput,
+) {
+  const approval = await tx.serviceCommerceQuoteApproval.findFirst({
+    include: {
+      quote: true,
+      quoteVersion: {
+        include: {
+          options: { include: { lines: true }, orderBy: { position: "asc" } },
+        },
+      },
+    },
+    where: {
+      id: input.approvalId,
+      quoteId: input.quoteId,
+      quoteVersionId: input.quoteVersionId,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    },
+  })
+  if (!approval) {
+    throw new CommerceQuoteError(
+      "QUOTE_RELEASE_FORBIDDEN",
+      "Pending quotation approval was not found.",
+    )
+  }
+  return approval
+}
+
+function pendingApprovalSupersessionReason(
+  approval: Awaited<ReturnType<typeof loadQuoteApprovalDecision>>,
+  runtime: Awaited<ReturnType<typeof resolveQuoteReleaseRuntimeFacts>>,
+  now = new Date(),
+) {
+  if (approval.status !== ServiceCommerceQuoteApprovalStatus.PENDING) {
+    return null
+  }
+  if (
+    approval.quote.currentVersionId !== approval.quoteVersionId ||
+    approval.quoteVersion.status !== CommerceQuoteVersionStatusEnum.DRAFT
+  ) {
+    return "Superseded because the prepared Quote Version is no longer current."
+  }
+  if (
+    approval.quoteVersion.expiresAt &&
+    approval.quoteVersion.expiresAt <= now
+  ) {
+    return "Superseded because the prepared Quote Version expired."
+  }
+  if (
+    runtime.policy.mode !== "approval_required" ||
+    approval.policyRevision !== runtime.policy.revision
+  ) {
+    return "Superseded because the Store quotation release policy changed."
+  }
+  const hasDistinctActiveApprover = runtime.activeApproverMembershipIds.some(
+    (membershipId) =>
+      membershipId !== approval.requesterMembershipId &&
+      runtime.policy.selectedApproverMembershipIds.includes(membershipId),
+  )
+  return hasDistinctActiveApprover
+    ? null
+    : "Superseded because no different selected active approver remains."
+}
+
+async function supersedePendingApproval(
+  tx: Prisma.TransactionClient,
+  input: QuoteApprovalDecisionInput,
+  approval: Awaited<ReturnType<typeof loadQuoteApprovalDecision>>,
+  actorMembershipId: string,
+  reason: string,
+) {
+  await supersedeServiceCommerceQuoteApprovalInTransaction(tx, {
+    actorMembershipId,
+    approvalId: approval.id,
+    policyRevision: approval.policyRevision,
+    quoteVersionId: approval.quoteVersionId,
+    reason,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+  })
+  return { superseded: true as const }
+}
+
+export async function approveCommerceQuoteVersion(
+  db: PrismaClient,
+  input: QuoteApprovalDecisionInput,
+) {
+  const rawToken = token()
+  const decisionPayloadHash = hash({
+    approvalId: input.approvalId,
+    expectedPolicyRevision: input.expectedPolicyRevision,
+    quoteId: input.quoteId,
+    quoteVersionId: input.quoteVersionId,
+    reason: input.reason.trim(),
+    storeId: input.storeId,
+  })
+  const result = await runCommerceQuoteDecisionTransaction(db, async (tx) => {
+    const runtime = await resolveQuoteReleaseRuntimeFacts(tx, input)
+    const approval = await loadQuoteApprovalDecision(tx, input)
+    if (approval.status === ServiceCommerceQuoteApprovalStatus.APPROVED) {
+      const actorStillSelected =
+        runtime.actor.quoteApproverActive &&
+        runtime.policy.revision === input.expectedPolicyRevision &&
+        runtime.policy.selectedApproverMembershipIds.includes(
+          runtime.actor.membershipId,
+        )
+      if (
+        !actorStillSelected ||
+        approval.decisionClientId !== input.clientDecisionId ||
+        approval.decisionPayloadHash !== decisionPayloadHash ||
+        approval.decidedByMembershipId !== runtime.actor.membershipId
+      ) {
+        throw new CommerceQuoteError(
+          "IDEMPOTENCY_MISMATCH",
+          "This quotation approval was already decided with different input.",
+        )
+      }
+      await tx.commerceQuoteReplayAccessToken.upsert({
+        create: {
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+          tokenDigest: digest(rawToken),
+          versionId: approval.quoteVersionId,
+        },
+        update: { tokenDigest: digest(rawToken) },
+        where: { versionId: approval.quoteVersionId },
+      })
+      const releaseEffects =
+        approval.sourceType ===
+          CommerceQuoteSourceTypeEnum.PRESCRIPTION_REQUEST &&
+        approval.quoteVersion.status ===
+          CommerceQuoteVersionStatusEnum.ISSUED &&
+        input.protectActionId
+          ? await materializePrescriptionQuoteReadyEffectsInTransaction(tx, {
+              expiresAt:
+                approval.quoteVersion.expiresAt ??
+                new Date(Date.now() + 24 * 60 * 60_000),
+              protectActionId: input.protectActionId,
+              requestId: approval.sourceId,
+              storeId: input.storeId,
+              tenantId: input.tenantId,
+              versionId: approval.quoteVersionId,
+            })
+          : { communicationIntentId: null }
+      return {
+        approvalId: approval.id,
+        communicationIntentId: releaseEffects.communicationIntentId,
+        quoteId: approval.quoteId,
+        releaseState: "released" as const,
+        token: rawToken,
+        versionId: approval.quoteVersionId,
+      }
+    }
+    const staleReason = pendingApprovalSupersessionReason(approval, runtime)
+    if (staleReason) {
+      return supersedePendingApproval(
+        tx,
+        input,
+        approval,
+        runtime.actor.membershipId,
+        staleReason,
+      )
+    }
+    const sourceType = sourceKindFromPersistence(approval.sourceType)
+    const sourceHandler = quoteSourceHandlers[sourceType]
+    const sourceLines = approval.quoteVersion.options.flatMap((option) =>
+      option.lines.map((line) => ({
+        availabilityAttestationId: line.availabilityAttestationId ?? undefined,
+        balanceRevision: line.balanceRevision ?? undefined,
+        configurationVersionId: line.configurationVersionId ?? undefined,
+        offeringId: line.offeringId ?? undefined,
+        outcome: inputLineOutcome(line.outcome),
+        quantity: line.quantity?.toString(),
+        sourceLineId: line.sourceLineId ?? undefined,
+        unitPriceMinor: line.unitPriceMinor ?? undefined,
+      })),
+    )
+    const sourceInput = {
+      actorUserId: input.actorUserId,
+      lines: sourceLines,
+      sourceId: approval.sourceId,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    }
+    let sourceState: QuoteSourceState
+    try {
+      await assertQuoteReleaseVerticalPolicy(tx, {
+        actorUserId: input.actorUserId,
+        sourceId: approval.sourceId,
+        sourceType: approval.sourceType,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      })
+      sourceState = await sourceHandler.load(tx, sourceInput)
+      for (const option of approval.quoteVersion.options) {
+        await sourceHandler.validateLines(tx, {
+          ...sourceInput,
+          lines: option.lines.map((line) => ({
+            offeringId: line.offeringId ?? undefined,
+            outcome: inputLineOutcome(line.outcome),
+            sourceLineId: line.sourceLineId ?? undefined,
+          })),
+        })
+      }
+      assertPreparedQuoteOptionTotals(approval.quoteVersion.options)
+      for (const option of approval.quoteVersion.options) {
+        await assertSelectedOptionAvailability(tx, {
+          lines: option.lines.filter(
+            (line) => line.outcome === CommerceQuoteLineOutcome.INCLUDED,
+          ),
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        })
+      }
+    } catch (error) {
+      if (
+        !(error instanceof CommerceQuoteError) &&
+        !(error instanceof ServiceCommercePolicyError)
+      ) {
+        throw error
+      }
+      return supersedePendingApproval(
+        tx,
+        input,
+        approval,
+        runtime.actor.membershipId,
+        "Superseded because source, policy, or availability facts no longer permit release.",
+      )
+    }
+    const actions = deriveServiceCommerceQuoteReleaseActions({
+      activeApproverMembershipIds: runtime.activeApproverMembershipIds,
+      actor: runtime.actor,
+      availabilityReady: true,
+      clinicalReleaseReady: true,
+      currentVersionId: approval.quote.currentVersionId ?? "",
+      decision: {
+        id: approval.id,
+        lifecycle: "pending",
+        policyRevision: approval.policyRevision,
+        quoteId: approval.quoteId,
+        quoteVersionId: approval.quoteVersionId,
+        sourceId: approval.sourceId,
+        sourceKind: sourceKindForRelease(approval.sourceType),
+        storeId: approval.storeId,
+        tenantId: approval.tenantId,
+      },
+      expiresAt: approval.quoteVersion.expiresAt,
+      offerOptionsReady: true,
+      policy: runtime.policy,
+      policyRevision: input.expectedPolicyRevision,
+      quoteCreatorMembershipId: approval.requesterMembershipId,
+      quoteId: approval.quoteId,
+      quoteVersionId: approval.quoteVersionId,
+      quoteVersionState:
+        approval.quoteVersion.status === CommerceQuoteVersionStatusEnum.DRAFT
+          ? "draft"
+          : "issued",
+      sourceId: approval.sourceId,
+      sourceKind: sourceKindForRelease(approval.sourceType),
+      storeId: approval.storeId,
+      tenantId: approval.tenantId,
+      verticalEligible: true,
+    })
+    if (!actions.canApprove) {
+      throw new CommerceQuoteError(
+        "QUOTE_RELEASE_FORBIDDEN",
+        "This quotation is no longer eligible for approval.",
+      )
+    }
+    const decided = await tx.serviceCommerceQuoteApproval.updateMany({
+      data: {
+        decidedAt: new Date(),
+        decidedByMembershipId: runtime.actor.membershipId,
+        decisionClientId: input.clientDecisionId,
+        decisionPayloadHash,
+        reason: input.reason.trim(),
+        status: ServiceCommerceQuoteApprovalStatus.APPROVED,
+      },
+      where: {
+        id: approval.id,
+        policyRevision: input.expectedPolicyRevision,
+        status: ServiceCommerceQuoteApprovalStatus.PENDING,
+      },
+    })
+    if (decided.count !== 1) {
+      const concurrent = await loadQuoteApprovalDecision(tx, input)
+      const exactApprovedReplay =
+        concurrent.status === ServiceCommerceQuoteApprovalStatus.APPROVED &&
+        concurrent.decisionClientId === input.clientDecisionId &&
+        concurrent.decisionPayloadHash === decisionPayloadHash &&
+        concurrent.decidedByMembershipId === runtime.actor.membershipId &&
+        runtime.actor.quoteApproverActive &&
+        runtime.policy.revision === input.expectedPolicyRevision &&
+        runtime.policy.selectedApproverMembershipIds.includes(
+          runtime.actor.membershipId,
+        )
+      if (exactApprovedReplay) {
+        await tx.commerceQuoteReplayAccessToken.upsert({
+          create: {
+            storeId: input.storeId,
+            tenantId: input.tenantId,
+            tokenDigest: digest(rawToken),
+            versionId: concurrent.quoteVersionId,
+          },
+          update: { tokenDigest: digest(rawToken) },
+          where: { versionId: concurrent.quoteVersionId },
+        })
+        const releaseEffects =
+          concurrent.sourceType ===
+            CommerceQuoteSourceTypeEnum.PRESCRIPTION_REQUEST &&
+          concurrent.quoteVersion.status ===
+            CommerceQuoteVersionStatusEnum.ISSUED &&
+          input.protectActionId
+            ? await materializePrescriptionQuoteReadyEffectsInTransaction(tx, {
+                expiresAt:
+                  concurrent.quoteVersion.expiresAt ??
+                  new Date(Date.now() + 24 * 60 * 60_000),
+                protectActionId: input.protectActionId,
+                requestId: concurrent.sourceId,
+                storeId: input.storeId,
+                tenantId: input.tenantId,
+                versionId: concurrent.quoteVersionId,
+              })
+            : { communicationIntentId: null }
+        return {
+          approvalId: concurrent.id,
+          communicationIntentId: releaseEffects.communicationIntentId,
+          quoteId: concurrent.quoteId,
+          releaseState: "released" as const,
+          token: rawToken,
+          versionId: concurrent.quoteVersionId,
+        }
+      }
+      throw new CommerceQuoteError(
+        "QUOTE_CONFLICT",
+        "Quotation approval changed before this decision completed.",
+      )
+    }
+    const released = await tx.commerceQuoteVersion.updateMany({
+      data: {
+        acceptanceTokenDigest: digest(rawToken),
+        issuedAt: new Date(),
+        status: CommerceQuoteVersionStatusEnum.ISSUED,
+      },
+      where: {
+        id: approval.quoteVersionId,
+        quoteId: approval.quoteId,
+        status: CommerceQuoteVersionStatusEnum.DRAFT,
+      },
+    })
+    if (released.count !== 1) {
+      throw new CommerceQuoteError(
+        "QUOTE_CONFLICT",
+        "Prepared Quote Version changed before approval release.",
+      )
+    }
+    const releaseEffects = await sourceHandler.recordIssued(
+      tx,
+      {
+        ...sourceInput,
+        actionExpiresAt:
+          approval.quoteVersion.expiresAt ??
+          new Date(Date.now() + 24 * 60 * 60_000),
+        protectActionId: input.protectActionId,
+        versionId: approval.quoteVersionId,
+      },
+      sourceState,
+    )
+    await tx.serviceCommerceQuoteApprovalAuditEvent.create({
+      data: {
+        actorMembershipId: runtime.actor.membershipId,
+        approvalId: approval.id,
+        approvalStatus: ServiceCommerceQuoteApprovalStatus.APPROVED,
+        policyRevision: approval.policyRevision,
+        reason: input.reason.trim(),
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+        type: ServiceCommerceQuoteApprovalAuditEventType.APPROVED,
+      },
+    })
+    return {
+      approvalId: approval.id,
+      communicationIntentId: releaseEffects.communicationIntentId,
+      quoteId: approval.quoteId,
+      releaseState: "released" as const,
+      token: rawToken,
+      versionId: approval.quoteVersionId,
+    }
+  })
+  if ("superseded" in result) {
+    throw new CommerceQuoteError(
+      "QUOTE_RELEASE_FORBIDDEN",
+      "This quotation approval was superseded because its release facts changed.",
+    )
+  }
+  return result
+}
+
+export async function rejectCommerceQuoteVersion(
+  db: PrismaClient,
+  input: QuoteApprovalDecisionInput,
+) {
+  const decisionPayloadHash = hash({
+    approvalId: input.approvalId,
+    expectedPolicyRevision: input.expectedPolicyRevision,
+    quoteId: input.quoteId,
+    quoteVersionId: input.quoteVersionId,
+    reason: input.reason.trim(),
+    storeId: input.storeId,
+  })
+  const result = await runCommerceQuoteDecisionTransaction(db, async (tx) => {
+    const runtime = await resolveQuoteReleaseRuntimeFacts(tx, input)
+    const approval = await loadQuoteApprovalDecision(tx, input)
+    if (approval.status === ServiceCommerceQuoteApprovalStatus.REJECTED) {
+      const actorStillSelected =
+        runtime.actor.quoteApproverActive &&
+        runtime.policy.revision === input.expectedPolicyRevision &&
+        runtime.policy.selectedApproverMembershipIds.includes(
+          runtime.actor.membershipId,
+        )
+      if (
+        !actorStillSelected ||
+        approval.decisionClientId !== input.clientDecisionId ||
+        approval.decisionPayloadHash !== decisionPayloadHash ||
+        approval.decidedByMembershipId !== runtime.actor.membershipId
+      ) {
+        throw new CommerceQuoteError(
+          "IDEMPOTENCY_MISMATCH",
+          "This quotation approval was already decided with different input.",
+        )
+      }
+      return {
+        approvalId: approval.id,
+        releaseState: "rejected" as const,
+        versionId: approval.quoteVersionId,
+      }
+    }
+    const staleReason = pendingApprovalSupersessionReason(approval, runtime)
+    if (staleReason) {
+      return supersedePendingApproval(
+        tx,
+        input,
+        approval,
+        runtime.actor.membershipId,
+        staleReason,
+      )
+    }
+    const sourceHandler =
+      quoteSourceHandlers[sourceKindFromPersistence(approval.sourceType)]
+    try {
+      await sourceHandler.load(tx, {
+        actorUserId: input.actorUserId,
+        lines: [],
+        sourceId: approval.sourceId,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      })
+    } catch (error) {
+      if (!(error instanceof CommerceQuoteError)) throw error
+      return supersedePendingApproval(
+        tx,
+        input,
+        approval,
+        runtime.actor.membershipId,
+        "Superseded because the source lifecycle no longer permits a decision.",
+      )
+    }
+    const actions = deriveServiceCommerceQuoteReleaseActions({
+      activeApproverMembershipIds: runtime.activeApproverMembershipIds,
+      actor: runtime.actor,
+      availabilityReady: false,
+      clinicalReleaseReady: false,
+      currentVersionId: approval.quote.currentVersionId ?? "",
+      decision: {
+        id: approval.id,
+        lifecycle: "pending",
+        policyRevision: approval.policyRevision,
+        quoteId: approval.quoteId,
+        quoteVersionId: approval.quoteVersionId,
+        sourceId: approval.sourceId,
+        sourceKind: sourceKindForRelease(approval.sourceType),
+        storeId: approval.storeId,
+        tenantId: approval.tenantId,
+      },
+      expiresAt: approval.quoteVersion.expiresAt,
+      offerOptionsReady: false,
+      policy: runtime.policy,
+      policyRevision: input.expectedPolicyRevision,
+      quoteCreatorMembershipId: approval.requesterMembershipId,
+      quoteId: approval.quoteId,
+      quoteVersionId: approval.quoteVersionId,
+      quoteVersionState:
+        approval.quoteVersion.status === CommerceQuoteVersionStatusEnum.DRAFT
+          ? "draft"
+          : "issued",
+      sourceId: approval.sourceId,
+      sourceKind: sourceKindForRelease(approval.sourceType),
+      storeId: approval.storeId,
+      tenantId: approval.tenantId,
+      verticalEligible: true,
+    })
+    if (!actions.canReject) {
+      throw new CommerceQuoteError(
+        "QUOTE_RELEASE_FORBIDDEN",
+        "This quotation is no longer eligible for rejection.",
+      )
+    }
+    const rejected = await tx.serviceCommerceQuoteApproval.updateMany({
+      data: {
+        decidedAt: new Date(),
+        decidedByMembershipId: runtime.actor.membershipId,
+        decisionClientId: input.clientDecisionId,
+        decisionPayloadHash,
+        reason: input.reason.trim(),
+        status: ServiceCommerceQuoteApprovalStatus.REJECTED,
+      },
+      where: {
+        id: approval.id,
+        policyRevision: input.expectedPolicyRevision,
+        status: ServiceCommerceQuoteApprovalStatus.PENDING,
+      },
+    })
+    if (rejected.count !== 1) {
+      throw new CommerceQuoteError(
+        "QUOTE_CONFLICT",
+        "Quotation approval changed before this rejection completed.",
+      )
+    }
+    await tx.serviceCommerceQuoteApprovalAuditEvent.create({
+      data: {
+        actorMembershipId: runtime.actor.membershipId,
+        approvalId: approval.id,
+        approvalStatus: ServiceCommerceQuoteApprovalStatus.REJECTED,
+        policyRevision: approval.policyRevision,
+        reason: input.reason.trim(),
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+        type: ServiceCommerceQuoteApprovalAuditEventType.REJECTED,
+      },
+    })
+    return {
+      approvalId: approval.id,
+      releaseState: "rejected" as const,
+      versionId: approval.quoteVersionId,
+    }
+  })
+  if ("superseded" in result) {
+    throw new CommerceQuoteError(
+      "QUOTE_RELEASE_FORBIDDEN",
+      "This quotation approval was superseded because its release facts changed.",
+    )
+  }
+  return result
+}
+
+export async function getCommerceQuoteApprovalDetail(
+  db: PrismaClient,
+  input: {
+    actorUserId: string
+    approvalId: string
+    storeId: string
+    tenantId: string
+  },
+) {
+  return db.$transaction(async (tx) => {
+    const runtime = await resolveQuoteReleaseRuntimeFacts(tx, input)
+    if (
+      !runtime.actor.managerActive &&
+      !runtime.actor.attendantActive &&
+      !runtime.actor.quoteApproverActive
+    ) {
+      throw new CommerceQuoteError(
+        "QUOTE_RELEASE_FORBIDDEN",
+        "An active Store quotation assignment is required.",
+      )
+    }
+    const approval = await tx.serviceCommerceQuoteApproval.findFirst({
+      include: {
+        quote: true,
+        quoteVersion: {
+          include: {
+            options: {
+              include: { lines: true },
+              orderBy: { position: "asc" },
+            },
+          },
+        },
+      },
+      where: {
+        id: input.approvalId,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    })
+    if (!approval) {
+      throw new CommerceQuoteError(
+        "QUOTE_RELEASE_FORBIDDEN",
+        "Quotation approval was not found.",
+      )
+    }
+    let verticalEligible = true
+    let clinicalReleaseReady = true
+    try {
+      await assertQuoteReleaseVerticalPolicy(tx, {
+        actorUserId: input.actorUserId,
+        sourceId: approval.sourceId,
+        sourceType: approval.sourceType,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      })
+      const sourceHandler =
+        quoteSourceHandlers[sourceKindFromPersistence(approval.sourceType)]
+      await sourceHandler.load(tx, {
+        actorUserId: input.actorUserId,
+        lines: [],
+        sourceId: approval.sourceId,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      })
+    } catch (error) {
+      if (
+        !(error instanceof ServiceCommercePolicyError) &&
+        !(error instanceof CommerceQuoteError)
+      ) {
+        throw error
+      }
+      verticalEligible = false
+      clinicalReleaseReady = false
+    }
+    let availabilityReady = approval.quoteVersion.options.length > 0
+    let offerOptionsReady = approval.quoteVersion.options.length > 0
+    if (offerOptionsReady) {
+      try {
+        assertPreparedQuoteOptionTotals(approval.quoteVersion.options)
+        for (const option of approval.quoteVersion.options) {
+          await assertSelectedOptionAvailability(tx, {
+            lines: option.lines.filter(
+              (line) => line.outcome === CommerceQuoteLineOutcome.INCLUDED,
+            ),
+            storeId: input.storeId,
+            tenantId: input.tenantId,
+          })
+        }
+      } catch (error) {
+        if (!(error instanceof CommerceQuoteError)) throw error
+        availabilityReady = false
+        offerOptionsReady = false
+      }
+    }
+    let lifecycle =
+      approval.status === ServiceCommerceQuoteApprovalStatus.APPROVED
+        ? ("approved" as const)
+        : approval.status === ServiceCommerceQuoteApprovalStatus.REJECTED
+          ? ("rejected" as const)
+          : approval.status === ServiceCommerceQuoteApprovalStatus.SUPERSEDED
+            ? ("superseded" as const)
+            : ("pending" as const)
+    const deriveActions = (
+      decisionLifecycle: "approved" | "pending" | "rejected" | "superseded",
+    ) =>
+      deriveServiceCommerceQuoteReleaseActions({
+        activeApproverMembershipIds: runtime.activeApproverMembershipIds,
+        actor: runtime.actor,
+        availabilityReady,
+        clinicalReleaseReady,
+        currentVersionId: approval.quote.currentVersionId ?? "",
+        decision: {
+          id: approval.id,
+          lifecycle: decisionLifecycle,
+          policyRevision: approval.policyRevision,
+          quoteId: approval.quoteId,
+          quoteVersionId: approval.quoteVersionId,
+          sourceId: approval.sourceId,
+          sourceKind: sourceKindForRelease(approval.sourceType),
+          storeId: approval.storeId,
+          tenantId: approval.tenantId,
+        },
+        expiresAt: approval.quoteVersion.expiresAt,
+        offerOptionsReady,
+        policy: runtime.policy,
+        policyRevision: approval.policyRevision,
+        quoteCreatorMembershipId: approval.requesterMembershipId,
+        quoteId: approval.quoteId,
+        quoteVersionId: approval.quoteVersionId,
+        quoteVersionState:
+          approval.quoteVersion.status === CommerceQuoteVersionStatusEnum.DRAFT
+            ? "draft"
+            : "issued",
+        sourceId: approval.sourceId,
+        sourceKind: sourceKindForRelease(approval.sourceType),
+        storeId: approval.storeId,
+        tenantId: approval.tenantId,
+        verticalEligible,
+      })
+    let actions = deriveActions(lifecycle)
+    if (lifecycle === "pending") {
+      const staleReason =
+        pendingApprovalSupersessionReason(approval, runtime) ??
+        (!verticalEligible
+          ? "Superseded because source or policy facts no longer permit release."
+          : !availabilityReady || !offerOptionsReady
+            ? "Superseded because the prepared commercial facts are no longer current."
+            : null)
+      if (staleReason) {
+        await supersedePendingApproval(
+          tx,
+          {
+            actorUserId: input.actorUserId,
+            approvalId: approval.id,
+            clientDecisionId: "reconciliation",
+            expectedPolicyRevision: approval.policyRevision,
+            quoteId: approval.quoteId,
+            quoteVersionId: approval.quoteVersionId,
+            reason: staleReason,
+            storeId: input.storeId,
+            tenantId: input.tenantId,
+          },
+          approval,
+          runtime.actor.membershipId,
+          staleReason,
+        )
+        lifecycle = "superseded"
+        actions = deriveActions(lifecycle)
+      }
+    }
+    return {
+      actions,
+      createdByMembershipId: approval.requesterMembershipId,
+      currencyCode: approval.quoteVersion.currencyCode,
+      expiresAt: approval.quoteVersion.expiresAt,
+      id: approval.id,
+      options: approval.quoteVersion.options.map((option) => ({
+        availabilityOutcome: option.availabilityOutcome.toLowerCase(),
+        id: option.id,
+        label: option.label,
+        lines: option.lines.map((line) => ({
+          catalogItemName: line.catalogItemName,
+          offeringName: line.offeringName,
+          outcome: line.outcome.toLowerCase(),
+          quantity: line.quantity?.toString() ?? null,
+          totalMinor: line.totalMinor,
+          unitPriceMinor: line.unitPriceMinor,
+          variantName: line.variantName,
+        })),
+        totalMinor: option.totalMinor,
+      })),
+      policyRevision: approval.policyRevision,
+      quoteId: approval.quoteId,
+      quoteVersionId: approval.quoteVersionId,
+      requestedAt: approval.requestedAt,
+      sourceId: approval.sourceId,
+      sourceKind: sourceKindForRelease(approval.sourceType),
+      status: lifecycle,
+      totalMinor: approval.quoteVersion.totalMinor,
+      version: approval.quoteVersion.version,
+    }
   })
 }
 

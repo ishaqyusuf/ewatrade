@@ -8,6 +8,7 @@ import {
   consumePrescriptionQuickAction,
   getPendingWhatsAppEmbeddedSignupSession,
   getWhatsAppEmbeddedSignupSession,
+  materializePrescriptionQuoteReadyEffectsInTransaction,
   recordWhatsAppCommunicationStatus,
   recordWhatsAppConnectionTest,
   recordWhatsAppInboundEvent,
@@ -773,6 +774,164 @@ describe("WhatsApp failure controls", () => {
         tenantId: "tenant-1",
       }),
     ).rejects.toMatchObject({ code: "QUICK_ACTION_INVALID" })
+  })
+
+  test("atomically materializes protected quote-ready actions and one intent", async () => {
+    const actionWrites: Array<Record<string, unknown>> = []
+    const intentWrites: Array<Record<string, unknown>> = []
+    const rawActionIds: string[] = []
+    const expiresAt = new Date("2030-01-01T00:00:00.000Z")
+    const transaction = {
+      ...whatsappChannelOnlyPolicy(),
+      prescriptionCommunicationIntent: {
+        findUnique: async () => null,
+        upsert: async (input: { create: Record<string, unknown> }) => {
+          intentWrites.push(input.create)
+          return { id: "intent-1" }
+        },
+      },
+      prescriptionQuickAction: {
+        create: async (input: { data: Record<string, unknown> }) => {
+          actionWrites.push(input.data)
+          return { id: `action-${actionWrites.length}` }
+        },
+      },
+      prescriptionRequest: {
+        findFirst: async (input: { where: Record<string, unknown> }) => {
+          expect(input.where).toEqual({
+            id: "request-1",
+            storeId: "store-1",
+            tenantId: "tenant-1",
+          })
+          return { customerPhone: "+2348000000000", id: "request-1" }
+        },
+      },
+    }
+
+    const result = await materializePrescriptionQuoteReadyEffectsInTransaction(
+      transaction as never,
+      {
+        expiresAt,
+        protectActionId: (actionId) => {
+          rawActionIds.push(actionId)
+          return `protected-action-${rawActionIds.length}`
+        },
+        requestId: "request-1",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+        versionId: "version-1",
+      },
+    )
+
+    expect(result).toEqual({ communicationIntentId: "intent-1" })
+    expect(actionWrites).toHaveLength(3)
+    expect(actionWrites.map((write) => write.action)).toEqual([
+      "PICKUP",
+      "DELIVERY",
+      "ASK_PHARMACY",
+    ])
+    expect(
+      actionWrites.every(
+        (write) =>
+          write.entityId === "version-1" &&
+          write.entityType === "quote_version" &&
+          write.expiresAt === expiresAt &&
+          typeof write.tokenDigest === "string" &&
+          write.tokenDigest.length === 64,
+      ),
+    ).toBe(true)
+    expect(rawActionIds).toHaveLength(3)
+    expect(rawActionIds.every((actionId) => actionId.startsWith("rx:"))).toBe(
+      true,
+    )
+    expect(intentWrites).toEqual([
+      {
+        deduplicationKey: "quote-ready:version-1",
+        orderId: undefined,
+        payload: {
+          actions: [
+            { protectedId: "protected-action-1", title: "Pick up" },
+            { protectedId: "protected-action-2", title: "Delivery" },
+            { protectedId: "protected-action-3", title: "Ask pharmacy" },
+          ],
+        },
+        recipientReference: "+2348000000000",
+        requestId: "request-1",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+        type: "QUOTE_READY",
+      },
+    ])
+    const durableWrites = JSON.stringify({ actionWrites, intentWrites })
+    for (const rawActionId of rawActionIds) {
+      expect(durableWrites).not.toContain(rawActionId)
+      expect(durableWrites).not.toContain(rawActionId.slice(3))
+    }
+  })
+
+  test("reuses an existing quote-ready intent without minting more capabilities", async () => {
+    const transaction = {
+      ...whatsappChannelOnlyPolicy(),
+      prescriptionCommunicationIntent: {
+        findUnique: async () => ({ id: "intent-1" }),
+      },
+      prescriptionRequest: {
+        findFirst: async () => ({
+          customerPhone: "+2348000000000",
+          id: "request-1",
+        }),
+      },
+    }
+
+    await expect(
+      materializePrescriptionQuoteReadyEffectsInTransaction(
+        transaction as never,
+        {
+          expiresAt: new Date("2030-01-01T00:00:00.000Z"),
+          protectActionId: () => {
+            throw new Error("A replay must not mint another action capability.")
+          },
+          requestId: "request-1",
+          storeId: "store-1",
+          tenantId: "tenant-1",
+          versionId: "version-1",
+        },
+      ),
+    ).resolves.toEqual({ communicationIntentId: "intent-1" })
+  })
+
+  test("keeps Quote release valid when WhatsApp notification policy is denied", async () => {
+    const transaction = {
+      ...blockedPharmacyWhatsAppPolicy(),
+      prescriptionCommunicationIntent: {
+        findUnique: async () => null,
+      },
+      prescriptionQuickAction: {
+        create: async () => {
+          throw new Error("Denied notification policy must not mint actions.")
+        },
+      },
+      prescriptionRequest: {
+        findFirst: async () => ({
+          customerPhone: "+2348000000000",
+          id: "request-1",
+        }),
+      },
+    }
+
+    await expect(
+      materializePrescriptionQuoteReadyEffectsInTransaction(
+        transaction as never,
+        {
+          expiresAt: new Date("2030-01-01T00:00:00.000Z"),
+          protectActionId: () => "protected-action",
+          requestId: "request-1",
+          storeId: "store-1",
+          tenantId: "tenant-1",
+          versionId: "version-1",
+        },
+      ),
+    ).resolves.toEqual({ communicationIntentId: null })
   })
 
   test("revokes a credential by suspending only its Tenant bindings", async () => {

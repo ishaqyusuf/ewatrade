@@ -5,13 +5,19 @@ import {
   getServiceCommerceEntryPointPublishBlockers,
 } from "@ewatrade/service-commerce"
 
-import type { PrismaClient } from "../../generated/prisma/client"
+import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import { MembershipRole, MembershipStatus } from "../../generated/prisma/enums"
 import { getServiceCommerceWorkspaceAccess } from "./service-commerce-access"
 import { evaluateServiceCommercePolicyBatchInTransaction } from "./service-commerce-policy"
 import type { DbClient } from "./types"
 
 type CustomerChannelsClient = DbClient
+
+const TEAM_ASSIGNMENT_TRANSACTION_OPTIONS = {
+  isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  maxWait: 10_000,
+  timeout: 30_000,
+} as const
 
 export class CustomerChannelsError extends Error {
   constructor(
@@ -300,7 +306,7 @@ export async function assignCustomerChannelAttendant(
       },
     })
     return { assignmentId: assignment.id, revision: assignment.revision }
-  })
+  }, TEAM_ASSIGNMENT_TRANSACTION_OPTIONS)
 }
 
 export async function revokeCustomerChannelAttendant(
@@ -361,7 +367,7 @@ export async function revokeCustomerChannelAttendant(
       },
     })
     return { assignmentId: assignment.id, revision: input.expectedRevision + 1 }
-  })
+  }, TEAM_ASSIGNMENT_TRANSACTION_OPTIONS)
 }
 
 export async function saveCustomerChannelStoreBindings(

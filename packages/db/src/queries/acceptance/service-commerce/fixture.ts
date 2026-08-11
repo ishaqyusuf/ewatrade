@@ -53,6 +53,7 @@ export const describeWithServiceCommerceDatabase =
 
 export type ServiceCommerceAcceptanceFixture = {
   actorUserId: string
+  cleanupUserIds: string[]
   db: PrismaClient
   fixtureStartedAt: Date
   offeringId: string
@@ -64,9 +65,9 @@ export type ServiceCommerceAcceptanceFixture = {
 
 async function deleteAcceptanceFixture(
   db: PrismaClient,
-  input: { tenantId: string; userId: string },
+  input: { tenantId: string; userIds: string[] },
 ) {
-  const { tenantId, userId } = input
+  const { tenantId, userIds } = input
   await db.$transaction(async (tx) => {
     const paymentIntentIds = (
       await tx.prescriptionPaymentIntent.findMany({
@@ -78,6 +79,19 @@ async function deleteAcceptanceFixture(
       where: { paymentIntentId: { in: paymentIntentIds } },
     })
     await tx.prescriptionCommunicationIntent.deleteMany({ where: { tenantId } })
+    await tx.serviceCommerceQuoteApprovalAuditEvent.deleteMany({
+      where: { tenantId },
+    })
+    await tx.serviceCommerceQuoteApproval.deleteMany({ where: { tenantId } })
+    await tx.serviceCommerceQuoteReleaseCommandReceipt.deleteMany({
+      where: { tenantId },
+    })
+    await tx.serviceCommerceQuoteReleasePolicyAuditEvent.deleteMany({
+      where: { tenantId },
+    })
+    await tx.serviceCommerceQuoteReleasePolicy.deleteMany({
+      where: { tenantId },
+    })
     // Policy audit entries reference policy decisions and Stores with restrictive
     // foreign keys, so remove them before the decisions and tenant-owned Store.
     await tx.serviceCommercePolicyAuditEvent.deleteMany({ where: { tenantId } })
@@ -126,7 +140,7 @@ async function deleteAcceptanceFixture(
     await tx.catalogItem.deleteMany({ where: { tenantId } })
     await tx.tenant.delete({ where: { id: tenantId } })
     await tx.user.deleteMany({
-      where: { id: userId, memberships: { none: {} } },
+      where: { id: { in: userIds }, memberships: { none: {} } },
     })
   })
 }
@@ -324,6 +338,7 @@ export async function createServiceCommerceAcceptanceFixture(): Promise<ServiceC
 
     return {
       actorUserId: actor.id,
+      cleanupUserIds: [actor.id],
       db,
       fixtureStartedAt,
       offeringId: offering.id,
@@ -334,7 +349,10 @@ export async function createServiceCommerceAcceptanceFixture(): Promise<ServiceC
     }
   } catch (error) {
     if (tenantId && actorUserId) {
-      await deleteAcceptanceFixture(db, { tenantId, userId: actorUserId })
+      await deleteAcceptanceFixture(db, {
+        tenantId,
+        userIds: [actorUserId],
+      })
     } else if (actorUserId) {
       await db.user.deleteMany({ where: { id: actorUserId } })
     }
@@ -347,6 +365,36 @@ export async function disposeServiceCommerceAcceptanceFixture(
 ) {
   await deleteAcceptanceFixture(fixture.db, {
     tenantId: fixture.tenantId,
-    userId: fixture.actorUserId,
+    userIds: fixture.cleanupUserIds,
   })
+}
+
+export async function createServiceCommerceAcceptanceMember(
+  fixture: ServiceCommerceAcceptanceFixture,
+  input: { name: string; role?: MembershipRole },
+) {
+  const id = randomUUID()
+  const user = await fixture.db.user.create({
+    data: {
+      email: `service-commerce-member-${id}@example.invalid`,
+      emailVerified: true,
+      name: input.name,
+    },
+  })
+  try {
+    const membership = await fixture.db.membership.create({
+      data: {
+        acceptedAt: fixture.fixtureStartedAt,
+        role: input.role ?? MembershipRole.MEMBER,
+        status: MembershipStatus.ACTIVE,
+        tenantId: fixture.tenantId,
+        userId: user.id,
+      },
+    })
+    fixture.cleanupUserIds.push(user.id)
+    return { membershipId: membership.id, userId: user.id }
+  } catch (error) {
+    await fixture.db.user.delete({ where: { id: user.id } })
+    throw error
+  }
 }

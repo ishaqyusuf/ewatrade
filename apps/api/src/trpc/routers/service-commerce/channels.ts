@@ -1,23 +1,35 @@
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import {
   createEmbeddedSignupState,
+  protectCommunicationsActionId,
   protectCommunicationsCredential,
 } from "@ewatrade/communications"
 import {
+  CommerceQuoteError,
   CustomerChannelsError,
+  ServiceCommerceQuoteReleaseError,
+  approveCommerceQuoteVersion,
   assignCustomerChannelAttendant,
   completeCustomerChannelEmbeddedSignup,
+  getCommerceQuoteApprovalDetail,
   getCustomerChannelEmbeddedSignupSession,
   getCustomerChannelWorkspace,
   getPublicCustomerEntryPoint,
+  getServiceCommerceQuoteReleaseSettings,
+  listPendingServiceCommerceQuoteApprovals,
   publishCustomerEntryPoint,
+  rejectCommerceQuoteVersion,
   revokeCustomerChannelAttendant,
   revokeCustomerEntryPoint,
   saveCustomerChannelStoreBindings,
   saveCustomerWhatsAppConnectionCandidate,
   setCustomerChannelConnectionLifecycle,
+  updateServiceCommerceQuoteReleaseSettings,
 } from "@ewatrade/db/queries"
-import { enqueueWhatsAppConnectionTest } from "@ewatrade/jobs"
+import {
+  enqueuePrescriptionCommunicationDispatch,
+  enqueueWhatsAppConnectionTest,
+} from "@ewatrade/jobs"
 import { TRPCError } from "@trpc/server"
 
 import {
@@ -30,7 +42,12 @@ import {
   customerChannelEntryPointPublishSchema,
   customerChannelEntryPointRevokeSchema,
   customerChannelManualConnectionSchema,
+  customerChannelPendingQuoteApprovalsSchema,
   customerChannelPublicEntryPointSchema,
+  customerChannelQuoteApprovalDecisionSchema,
+  customerChannelQuoteApprovalDetailSchema,
+  customerChannelQuoteReleaseSettingsSchema,
+  customerChannelQuoteReleaseSettingsUpdateSchema,
   customerChannelStoreBindingsSchema,
   customerChannelWorkspaceSchema,
 } from "../../../schemas/customer-channels"
@@ -66,6 +83,35 @@ function mapCustomerChannelsError(error: unknown): never {
   throw error
 }
 
+function mapQuoteReleaseError(error: unknown): never {
+  if (error instanceof ServiceCommerceQuoteReleaseError) {
+    throw new TRPCError({
+      code:
+        error.code === "FORBIDDEN"
+          ? "FORBIDDEN"
+          : error.code === "NOT_FOUND"
+            ? "NOT_FOUND"
+            : error.code === "INVALID_INPUT"
+              ? "BAD_REQUEST"
+              : "CONFLICT",
+      message: error.message,
+    })
+  }
+  if (error instanceof CommerceQuoteError) {
+    throw new TRPCError({
+      code:
+        error.code === "QUOTE_RELEASE_FORBIDDEN"
+          ? "FORBIDDEN"
+          : error.code === "QUOTE_SOURCE_NOT_FOUND" ||
+              error.code === "STORE_NOT_FOUND"
+            ? "NOT_FOUND"
+            : "CONFLICT",
+      message: error.message,
+    })
+  }
+  throw error
+}
+
 function storeId(
   ctx: {
     tenantContext: {
@@ -83,6 +129,28 @@ function storeId(
 }
 
 export const serviceCommerceChannelsRouter = createTRPCRouter({
+  approveQuoteVersion: protectedProcedure
+    .input(customerChannelQuoteApprovalDecisionSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const result = await approveCommerceQuoteVersion(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          protectActionId: protectCommunicationsActionId,
+          storeId: storeId(ctx, input.storeId),
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+        if (result.communicationIntentId) {
+          await enqueuePrescriptionCommunicationDispatch(
+            result.communicationIntentId,
+          )
+        }
+        return result
+      } catch (error) {
+        mapQuoteReleaseError(error)
+      }
+    }),
+
   assignChannelAttendant: protectedProcedure
     .input(customerChannelAttendantAssignSchema)
     .mutation(async ({ ctx, input }) => {
@@ -186,6 +254,65 @@ export const serviceCommerceChannelsRouter = createTRPCRouter({
           code: "NOT_FOUND",
           message: "This customer entry point is unavailable.",
         })
+      }
+    }),
+
+  pendingQuoteApprovals: protectedProcedure
+    .input(customerChannelPendingQuoteApprovalsSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await listPendingServiceCommerceQuoteApprovals(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          storeId: storeId(ctx, input.storeId),
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        mapQuoteReleaseError(error)
+      }
+    }),
+
+  quoteApprovalDetail: protectedProcedure
+    .input(customerChannelQuoteApprovalDetailSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await getCommerceQuoteApprovalDetail(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          approvalId: input.approvalId,
+          storeId: storeId(ctx, input.storeId),
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        mapQuoteReleaseError(error)
+      }
+    }),
+
+  quoteReleaseSettings: protectedProcedure
+    .input(customerChannelQuoteReleaseSettingsSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        assertCustomerChannelsManager(ctx.tenantContext.membership.role)
+        return await getServiceCommerceQuoteReleaseSettings(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          storeId: storeId(ctx, input.storeId),
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        mapQuoteReleaseError(error)
+      }
+    }),
+
+  rejectQuoteVersion: protectedProcedure
+    .input(customerChannelQuoteApprovalDecisionSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await rejectCommerceQuoteVersion(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          storeId: storeId(ctx, input.storeId),
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        mapQuoteReleaseError(error)
       }
     }),
 
@@ -294,5 +421,21 @@ export const serviceCommerceChannelsRouter = createTRPCRouter({
         status: input.status,
         tenantId: ctx.tenantContext.tenant.id,
       })
+    }),
+
+  updateQuoteReleaseSettings: protectedProcedure
+    .input(customerChannelQuoteReleaseSettingsUpdateSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        assertCustomerChannelsManager(ctx.tenantContext.membership.role)
+        return await updateServiceCommerceQuoteReleaseSettings(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          storeId: storeId(ctx, input.storeId),
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        mapQuoteReleaseError(error)
+      }
     }),
 })

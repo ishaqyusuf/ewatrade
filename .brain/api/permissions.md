@@ -136,6 +136,19 @@
 - Owner/Admin manages provider connections, Store bindings and entry-point
   lifecycle. Store team assignment accepts only an already accepted active
   Tenant Membership and never creates identity, role or professional authority.
+- Owner/Admin alone changes the Store quotation-release policy or selected
+  approver set. The command accepts Membership ids from the current active
+  Tenant team projection; email, phone and client role claims never identify an
+  approver.
+- Managers may coordinate the pending-approval queue, but only a currently
+  selected active `QUOTE_APPROVER` assigned to that Store may approve/reject.
+  The creator cannot approve their own Version. An attendant, approver and
+  pharmacist may be the same person only when each independent server-owned
+  capability is current; Pharmacy clinical release remains a separate gate.
+- Public/customer/channel callers never receive a pending Version capability.
+  They can read/accept only a transactionally released `ISSUED` Version through
+  its opaque token. Provider dispatch rechecks channel policy and cannot grant
+  commercial release authority.
 - An active Store attendant may access only their Store's current source-bound
   attachment metadata, request a short-lived viewer grant and record a human
   observation. Every path carries Tenant plus Store predicates and rechecks

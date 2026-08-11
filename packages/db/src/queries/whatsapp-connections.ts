@@ -1020,56 +1020,72 @@ export async function releaseWhatsAppInboundEventForRetry(
   })
 }
 
-export async function createPrescriptionCommunicationIntent(
-  db: PrismaClient,
-  input: {
-    deduplicationKey: string
-    orderId?: string
-    payload: Record<string, unknown>
-    recipientReference: string
-    requestId?: string
-    storeId: string
-    tenantId: string
-    type:
-      | "clarification"
-      | "delivery_failed"
-      | "delivery_progress"
-      | "expiry"
-      | "payment_receipt"
-      | "pickup_ready"
-      | "quote_ready"
-  },
+type PrescriptionCommunicationIntentInput = {
+  deduplicationKey: string
+  orderId?: string
+  payload: Record<string, unknown>
+  recipientReference: string
+  requestId?: string
+  storeId: string
+  tenantId: string
+  type:
+    | "clarification"
+    | "delivery_failed"
+    | "delivery_progress"
+    | "expiry"
+    | "payment_receipt"
+    | "pickup_ready"
+    | "quote_ready"
+}
+
+async function upsertPrescriptionCommunicationIntent(
+  tx: Prisma.TransactionClient,
+  input: PrescriptionCommunicationIntentInput,
 ) {
   const type = input.type.toUpperCase() as PrescriptionCommunicationType
-  return db.$transaction(async (tx) => {
-    await assertServiceCommercePolicyAllowedInTransaction(tx, {
-      actorUserId: "system_prescription_notification",
-      channel: "whatsapp",
-      purpose: "prescription_whatsapp_outbound_create",
+  return tx.prescriptionCommunicationIntent.upsert({
+    create: {
+      deduplicationKey: input.deduplicationKey,
+      orderId: input.orderId,
+      payload: input.payload as Prisma.InputJsonValue,
+      recipientReference: input.recipientReference,
+      requestId: input.requestId,
       storeId: input.storeId,
-      subject: "whatsapp",
       tenantId: input.tenantId,
-      vertical: "pharmacy",
-    })
-    return tx.prescriptionCommunicationIntent.upsert({
-      create: {
+      type,
+    },
+    update: {},
+    where: {
+      tenantId_deduplicationKey: {
         deduplicationKey: input.deduplicationKey,
-        orderId: input.orderId,
-        payload: input.payload as Prisma.InputJsonValue,
-        recipientReference: input.recipientReference,
-        requestId: input.requestId,
-        storeId: input.storeId,
         tenantId: input.tenantId,
-        type,
       },
-      update: {},
-      where: {
-        tenantId_deduplicationKey: {
-          deduplicationKey: input.deduplicationKey,
-          tenantId: input.tenantId,
-        },
-      },
-    })
+    },
+  })
+}
+
+export async function createPrescriptionCommunicationIntentInTransaction(
+  tx: Prisma.TransactionClient,
+  input: PrescriptionCommunicationIntentInput,
+) {
+  await assertServiceCommercePolicyAllowedInTransaction(tx, {
+    actorUserId: "system_prescription_notification",
+    channel: "whatsapp",
+    purpose: "prescription_whatsapp_outbound_create",
+    storeId: input.storeId,
+    subject: "whatsapp",
+    tenantId: input.tenantId,
+    vertical: "pharmacy",
+  })
+  return upsertPrescriptionCommunicationIntent(tx, input)
+}
+
+export async function createPrescriptionCommunicationIntent(
+  db: PrismaClient,
+  input: PrescriptionCommunicationIntentInput,
+) {
+  return db.$transaction(async (tx) => {
+    return createPrescriptionCommunicationIntentInTransaction(tx, input)
   })
 }
 
@@ -1309,16 +1325,18 @@ export async function recordWhatsAppCommunicationStatus(
   })
 }
 
-export async function createPrescriptionQuickAction(
-  db: PrismaClient,
-  input: {
-    action: "ask_pharmacy" | "delivery" | "pickup" | "review_and_pay"
-    entityId: string
-    entityType: "order" | "quote_version"
-    expiresAt: Date
-    storeId: string
-    tenantId: string
-  },
+type PrescriptionQuickActionInput = {
+  action: "ask_pharmacy" | "delivery" | "pickup" | "review_and_pay"
+  entityId: string
+  entityType: "order" | "quote_version"
+  expiresAt: Date
+  storeId: string
+  tenantId: string
+}
+
+async function createPrescriptionQuickActionWithClient(
+  db: WhatsAppConnectionWriteClient,
+  input: PrescriptionQuickActionInput,
 ) {
   const rawToken = randomBytes(24).toString("base64url")
   const action = input.action.toUpperCase() as PrescriptionQuickActionType
@@ -1334,6 +1352,103 @@ export async function createPrescriptionQuickAction(
     },
   })
   return { actionId: `rx:${rawToken}` }
+}
+
+export async function createPrescriptionQuickActionInTransaction(
+  tx: Prisma.TransactionClient,
+  input: PrescriptionQuickActionInput,
+) {
+  return createPrescriptionQuickActionWithClient(tx, input)
+}
+
+export async function createPrescriptionQuickAction(
+  db: PrismaClient,
+  input: PrescriptionQuickActionInput,
+) {
+  return createPrescriptionQuickActionWithClient(db, input)
+}
+
+export async function materializePrescriptionQuoteReadyEffectsInTransaction(
+  tx: Prisma.TransactionClient,
+  input: {
+    expiresAt: Date
+    protectActionId: (actionId: string) => string
+    requestId: string
+    storeId: string
+    tenantId: string
+    versionId: string
+  },
+) {
+  const deduplicationKey = `quote-ready:${input.versionId}`
+  const request = await tx.prescriptionRequest.findFirst({
+    select: { customerPhone: true, id: true },
+    where: {
+      id: input.requestId,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    },
+  })
+  if (!request?.customerPhone) return { communicationIntentId: null }
+
+  const policy = await evaluateServiceCommercePolicyInTransaction(tx, {
+    actorUserId: "system_prescription_notification",
+    channel: "whatsapp",
+    purpose: "prescription_quote_ready_effects",
+    storeId: input.storeId,
+    subject: "whatsapp",
+    tenantId: input.tenantId,
+    vertical: "pharmacy",
+  })
+  if (policy.outcome !== "allowed") return { communicationIntentId: null }
+  const existing = await tx.prescriptionCommunicationIntent.findUnique({
+    select: { id: true },
+    where: {
+      tenantId_deduplicationKey: {
+        deduplicationKey,
+        tenantId: input.tenantId,
+      },
+    },
+  })
+  if (existing) return { communicationIntentId: existing.id }
+
+  const actions: Array<{ protectedId: string; title: string }> = []
+  for (const action of ["pickup", "delivery", "ask_pharmacy"] as const) {
+    const { actionId } = await createPrescriptionQuickActionInTransaction(tx, {
+      action,
+      entityId: input.versionId,
+      entityType: "quote_version",
+      expiresAt: input.expiresAt,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
+    const protectedId = input.protectActionId(actionId)
+    if (
+      !protectedId.trim() ||
+      protectedId.includes(actionId) ||
+      protectedId.includes(actionId.slice(3))
+    ) {
+      throw new Error("A protected Communications action reference is required.")
+    }
+    actions.push({
+      protectedId,
+      title:
+        action === "pickup"
+          ? "Pick up"
+          : action === "delivery"
+            ? "Delivery"
+            : "Ask pharmacy",
+    })
+  }
+  const intent = await upsertPrescriptionCommunicationIntent(tx, {
+    deduplicationKey,
+    payload: { actions },
+    recipientReference: request.customerPhone,
+    requestId: request.id,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+    type: "quote_ready",
+  })
+  return { communicationIntentId: intent.id }
 }
 
 export async function getPrescriptionNotificationContext(

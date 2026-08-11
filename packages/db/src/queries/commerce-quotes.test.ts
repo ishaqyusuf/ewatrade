@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
+  approveCommerceQuoteVersion,
   assertCommerceQuoteSource,
   assertQuoteVersionAcceptable,
   assertQuotedSourceQuoteIdentity,
@@ -9,10 +10,12 @@ import {
   issueCommerceQuote,
   normalizeIssueCommerceQuoteOptions,
   quoteLineRequiresStoreAvailability,
+  rejectCommerceQuoteVersion,
   resolveCommerceQuoteAccess,
   resolveCommerceQuotePayableState,
   selectCommerceQuoteOption,
 } from "./commerce-quotes"
+import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service-commerce-policy"
 
 describe("Commerce Quote invariants", () => {
   test("lets only source-verified private Service drafts bypass Product availability", () => {
@@ -460,6 +463,11 @@ describe("Commerce Quote invariants", () => {
           inTransaction = false
         }
       },
+      membership: {
+        findFirst: async () => ({ id: "membership-1", status: "ACTIVE" }),
+      },
+      serviceCommerceQuoteReleasePolicy: { findFirst: async () => null },
+      serviceCommerceStoreTeamAssignment: { findMany: async () => [] },
       store: { findFirst: async () => null },
     } as unknown as PrismaClient
 
@@ -543,6 +551,11 @@ describe("Commerce Quote invariants", () => {
           return { count: 1 }
         },
       },
+      membership: {
+        findFirst: async () => ({ id: "membership-1", status: "ACTIVE" }),
+      },
+      serviceCommerceQuoteReleasePolicy: { findFirst: async () => null },
+      serviceCommerceStoreTeamAssignment: { findMany: async () => [] },
       sellableOffering: {
         findFirst: async () => ({ status: "ACTIVE" }),
         findMany: async () => [offering],
@@ -595,6 +608,700 @@ describe("Commerce Quote invariants", () => {
       "quote:current:version-1",
       "source:quoted",
     ])
+  })
+
+  test("releases a Prescription Quote with its protected quote-ready effects in one transaction", async () => {
+    const events: string[] = []
+    const offering = {
+      catalogItem: { name: "Medicine" },
+      id: "offering-1",
+      kind: "PRODUCT_UNIT",
+      name: "Medicine bottle",
+      productUnitOffering: {},
+      serviceOffering: null,
+      status: "ACTIVE",
+      storeAvailability: [{ isAvailable: true }],
+      variant: { name: "Default", selections: [] },
+    }
+    const client = {
+      $transaction: async (callback: (tx: PrismaClient) => Promise<unknown>) =>
+        callback(client as unknown as PrismaClient),
+      commerceQuote: {
+        updateMany: async () => ({ count: 1 }),
+        upsert: async () => ({
+          clientQuoteId: "quote-command-rx",
+          currentVersionId: null,
+          id: "quote-1",
+          sourceId: "request-1",
+          sourceType: "PRESCRIPTION_REQUEST",
+          storeId: "store-1",
+        }),
+      },
+      commerceQuoteLine: { createMany: async () => undefined },
+      commerceQuoteOption: {
+        create: async () => ({ id: "option-1" }),
+      },
+      commerceQuoteVersion: {
+        aggregate: async () => ({ _max: { version: null } }),
+        create: async (input: { data: Record<string, unknown> }) => ({
+          ...input.data,
+          id: "version-1",
+          version: 1,
+        }),
+        findUnique: async () => null,
+        updateMany: async () => {
+          events.push("version:issued")
+          return { count: 1 }
+        },
+      },
+      membership: {
+        findFirst: async () => ({ id: "membership-1", status: "ACTIVE" }),
+      },
+      prescriptionCommunicationIntent: {
+        findUnique: async () => null,
+        upsert: async () => {
+          events.push("intent:quote-ready")
+          return { id: "intent-1" }
+        },
+      },
+      prescriptionQuickAction: {
+        create: async () => {
+          events.push("action:create")
+          return { id: `action-${events.length}` }
+        },
+      },
+      prescriptionRequest: {
+        findFirst: async () => ({
+          customerPhone: "+2348000000000",
+          id: "request-1",
+        }),
+        updateMany: async () => {
+          events.push("source:quoted")
+          return { count: 1 }
+        },
+      },
+      prescriptionRequestAuditEvent: {
+        create: async () => {
+          events.push("source:audit")
+        },
+      },
+      prescriptionUsageEvent: {
+        create: async () => {
+          events.push("usage:issued")
+        },
+      },
+      sellableOffering: {
+        findMany: async () => [offering],
+      },
+      serviceCommercePolicyAuditEvent: {
+        createMany: async () => ({ count: 1 }),
+      },
+      serviceCommercePolicyDecision: {
+        findMany: async () => allowedServiceCommercePolicyDecisionRows(),
+      },
+      serviceCommerceQuoteReleasePolicy: { findFirst: async () => null },
+      serviceCommerceStoreTeamAssignment: { findMany: async () => [] },
+      store: {
+        findFirst: async () => ({
+          countryCode: "NG",
+          currencyCode: "NGN",
+          id: "store-1",
+        }),
+      },
+    } as unknown as PrismaClient
+
+    const result = await issueCommerceQuote(client, {
+      actorUserId: "actor-1",
+      availabilityOutcome: "full",
+      clientQuoteId: "quote-command-rx",
+      clientVersionId: "quote-version-rx",
+      expiresAt: new Date("2030-01-01T00:00:00.000Z"),
+      lines: [
+        {
+          balanceRevision: 4,
+          configurationVersionId: "configuration-1",
+          offeringId: "offering-1",
+          outcome: "included",
+          quantity: "1",
+          sourceLineId: "transcription-line-1",
+          unitPriceMinor: 7_500,
+        },
+      ],
+      protectActionId: (actionId) => `protected:${actionId.length}`,
+      sourceId: "request-1",
+      sourceType: "prescription_request",
+      storeId: "store-1",
+      tenantId: "tenant-1",
+    })
+
+    expect(result).toMatchObject({
+      communicationIntentId: "intent-1",
+      quoteId: "quote-1",
+      releaseState: "released",
+      versionId: "version-1",
+    })
+    expect(events).toEqual([
+      "version:issued",
+      "source:quoted",
+      "source:audit",
+      "usage:issued",
+      "action:create",
+      "action:create",
+      "action:create",
+      "intent:quote-ready",
+    ])
+  })
+
+  test("keeps an approval-required Quote private and leaves its source pre-Quote", async () => {
+    const events: string[] = []
+    const offering = {
+      catalogItem: { name: "Consultation" },
+      id: "offering-1",
+      kind: "SERVICE",
+      name: "Standard consultation",
+      productUnitOffering: null,
+      serviceOffering: { quantityScale: 2 },
+      status: "ACTIVE",
+      storeAvailability: [{ isAvailable: true }],
+      variant: { name: "Default", selections: [] },
+    }
+    const client = {
+      $transaction: async (callback: (tx: PrismaClient) => Promise<unknown>) =>
+        callback(client as unknown as PrismaClient),
+      commerceQuote: {
+        updateMany: async () => {
+          events.push("quote:current:version-1")
+          return { count: 1 }
+        },
+        upsert: async () => ({
+          clientQuoteId: "quote-command-approval",
+          currentVersionId: null,
+          id: "quote-1",
+          sourceId: "request-1",
+          sourceType: "SERVICE_REQUEST",
+          storeId: "store-1",
+        }),
+      },
+      commerceQuoteLine: {
+        createMany: async () => {
+          events.push("lines:create")
+        },
+      },
+      commerceQuoteOption: {
+        create: async () => {
+          events.push("option:create")
+          return { id: "option-1" }
+        },
+      },
+      commerceQuoteVersion: {
+        aggregate: async () => ({ _max: { version: null } }),
+        create: async (input: { data: { status: string } }) => {
+          events.push(`version:create:${input.data.status}`)
+          return { ...input.data, id: "version-1", version: 1 }
+        },
+        findUnique: async () => null,
+      },
+      membership: {
+        findFirst: async () => ({
+          id: "membership-attendant",
+          status: "ACTIVE",
+        }),
+      },
+      sellableOffering: {
+        findFirst: async () => ({ status: "ACTIVE" }),
+        findMany: async () => [offering],
+      },
+      serviceCommerceQuoteApproval: {
+        create: async () => {
+          events.push("approval:pending")
+          return { id: "approval-1" }
+        },
+      },
+      serviceCommerceQuoteApprovalAuditEvent: {
+        create: async () => {
+          events.push("approval:audit:requested")
+        },
+      },
+      serviceCommerceQuoteReleasePolicy: {
+        findFirst: async () => ({
+          mode: "APPROVAL_REQUIRED",
+          revision: 3,
+          selectedApproverMembershipIds: ["membership-approver"],
+        }),
+      },
+      serviceCommerceStoreTeamAssignment: {
+        findMany: async () => [
+          { capability: "ATTENDANT", membershipId: "membership-attendant" },
+          {
+            capability: "QUOTE_APPROVER",
+            membershipId: "membership-approver",
+          },
+        ],
+      },
+      serviceRequest: {
+        findFirst: async () => ({ status: "SUBMITTED" }),
+        updateMany: async () => {
+          events.push("source:quoted")
+          return { count: 1 }
+        },
+      },
+      serviceRequestLine: {
+        findMany: async () => [
+          { id: "request-line-1", offeringId: "offering-1" },
+        ],
+      },
+      store: {
+        findFirst: async () => ({ currencyCode: "NGN", id: "store-1" }),
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      issueCommerceQuote(client, {
+        actorUserId: "actor-1",
+        availabilityOutcome: "full",
+        clientQuoteId: "quote-command-approval",
+        clientVersionId: "quote-version-approval",
+        lines: [
+          {
+            offeringId: "offering-1",
+            outcome: "included",
+            quantity: "1",
+            unitPriceMinor: 7_500,
+          },
+        ],
+        sourceId: "request-1",
+        sourceType: "service_request",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      }),
+    ).resolves.toMatchObject({
+      approvalId: "approval-1",
+      releaseState: "pending_approval",
+      token: null,
+      versionId: "version-1",
+    })
+    expect(events).toEqual([
+      "version:create:DRAFT",
+      "option:create",
+      "lines:create",
+      "quote:current:version-1",
+      "approval:pending",
+      "approval:audit:requested",
+    ])
+  })
+
+  test("revalidates and atomically releases one pending approval without creator self-approval", async () => {
+    const events: string[] = []
+    const approval = {
+      decidedByMembershipId: null,
+      decisionClientId: null,
+      decisionPayloadHash: null,
+      id: "approval-1",
+      policyRevision: 3,
+      quote: {
+        currentVersionId: "version-1",
+        id: "quote-1",
+        sourceId: "request-1",
+        sourceType: "SERVICE_REQUEST",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      },
+      quoteId: "quote-1",
+      quoteVersion: {
+        currencyCode: "NGN",
+        expiresAt: new Date("2030-01-01T00:00:00.000Z"),
+        id: "version-1",
+        options: [
+          {
+            availabilityOutcome: "FULL",
+            discountMinor: 0,
+            fulfilmentFeeMinor: 0,
+            lines: [
+              {
+                availabilityAttestationId: null,
+                balanceRevision: null,
+                configurationVersionId: null,
+                offeringId: "offering-1",
+                outcome: "INCLUDED",
+                quantity: new Prisma.Decimal("1"),
+                sourceLineId: "request-line-1",
+                totalMinor: 7_500,
+                unitPriceMinor: 7_500,
+              },
+            ],
+            position: 0,
+            subtotalMinor: 7_500,
+            taxMinor: 0,
+            totalMinor: 7_500,
+          },
+        ],
+        status: "DRAFT",
+      },
+      quoteVersionId: "version-1",
+      requesterMembershipId: "membership-attendant",
+      sourceId: "request-1",
+      sourceType: "SERVICE_REQUEST",
+      status: "PENDING",
+      storeId: "store-1",
+      tenantId: "tenant-1",
+    }
+    const client = {
+      $transaction: async (callback: (tx: PrismaClient) => Promise<unknown>) =>
+        callback(client as unknown as PrismaClient),
+      commerceQuoteVersion: {
+        updateMany: async () => {
+          events.push("version:issued")
+          return { count: 1 }
+        },
+      },
+      membership: {
+        findFirst: async () => ({
+          id: "membership-approver",
+          status: "ACTIVE",
+        }),
+      },
+      sellableOffering: {
+        findFirst: async () => ({
+          kind: "SERVICE",
+          status: "ACTIVE",
+          storeAvailability: [{ isAvailable: true }],
+        }),
+      },
+      serviceCommercePolicyAuditEvent: {
+        createMany: async () => ({ count: 1 }),
+      },
+      serviceCommercePolicyDecision: {
+        findMany: async () => allowedServiceCommercePolicyDecisionRows(),
+      },
+      serviceCommerceQuoteApproval: {
+        findFirst: async () => approval,
+        updateMany: async () => {
+          events.push("approval:approved")
+          return { count: 1 }
+        },
+      },
+      serviceCommerceQuoteApprovalAuditEvent: {
+        create: async () => {
+          events.push("approval:audit:approved")
+        },
+      },
+      serviceCommerceQuoteReleasePolicy: {
+        findFirst: async () => ({
+          mode: "APPROVAL_REQUIRED",
+          revision: 3,
+          selectedApproverMembershipIds: ["membership-approver"],
+        }),
+      },
+      serviceCommerceStoreTeamAssignment: {
+        findMany: async () => [
+          {
+            capability: "QUOTE_APPROVER",
+            membershipId: "membership-approver",
+          },
+        ],
+      },
+      serviceRequest: {
+        findFirst: async () => ({ status: "SUBMITTED" }),
+        updateMany: async () => {
+          events.push("source:quoted")
+          return { count: 1 }
+        },
+      },
+      store: {
+        findFirst: async () => ({ countryCode: "NG", id: "store-1" }),
+      },
+    } as unknown as PrismaClient
+
+    const result = await approveCommerceQuoteVersion(client, {
+      actorUserId: "approver-user",
+      approvalId: "approval-1",
+      clientDecisionId: "decision-1",
+      expectedPolicyRevision: 3,
+      quoteId: "quote-1",
+      quoteVersionId: "version-1",
+      reason: "Commercial details verified",
+      storeId: "store-1",
+      tenantId: "tenant-1",
+    })
+    expect(result).toMatchObject({
+      approvalId: "approval-1",
+      releaseState: "released",
+      versionId: "version-1",
+    })
+    expect(result.token).toBeString()
+    expect(events).toEqual([
+      "approval:approved",
+      "version:issued",
+      "source:quoted",
+      "approval:audit:approved",
+    ])
+  })
+
+  test("approval release atomically materializes Prescription quote-ready effects", async () => {
+    const events: string[] = []
+    const approval = {
+      decidedByMembershipId: null,
+      decisionClientId: null,
+      decisionPayloadHash: null,
+      id: "approval-rx",
+      policyRevision: 3,
+      quote: {
+        currentVersionId: "version-rx",
+        id: "quote-rx",
+        sourceId: "request-rx",
+        sourceType: "PRESCRIPTION_REQUEST",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      },
+      quoteId: "quote-rx",
+      quoteVersion: {
+        currencyCode: "NGN",
+        expiresAt: new Date("2030-01-01T00:00:00.000Z"),
+        id: "version-rx",
+        options: [
+          {
+            availabilityOutcome: "FULL",
+            discountMinor: 0,
+            fulfilmentFeeMinor: 0,
+            lines: [
+              {
+                availabilityAttestationId: "attestation-1",
+                balanceRevision: null,
+                configurationVersionId: null,
+                offeringId: "offering-1",
+                outcome: "INCLUDED",
+                quantity: new Prisma.Decimal("1"),
+                sourceLineId: "transcription-line-1",
+                totalMinor: 7_500,
+                unitPriceMinor: 7_500,
+              },
+            ],
+            position: 0,
+            subtotalMinor: 7_500,
+            taxMinor: 0,
+            totalMinor: 7_500,
+          },
+        ],
+        status: "DRAFT",
+      },
+      quoteVersionId: "version-rx",
+      requesterMembershipId: "membership-attendant",
+      sourceId: "request-rx",
+      sourceType: "PRESCRIPTION_REQUEST",
+      status: "PENDING",
+      storeId: "store-1",
+      tenantId: "tenant-1",
+    }
+    const client = {
+      $transaction: async (callback: (tx: PrismaClient) => Promise<unknown>) =>
+        callback(client as unknown as PrismaClient),
+      catalogAvailabilityAttestation: {
+        findFirst: async () => ({
+          expiresAt: new Date("2030-01-01T00:00:00.000Z"),
+          quantity: new Prisma.Decimal("1"),
+          type: "MANUAL_PROCURE_TO_ORDER",
+        }),
+      },
+      commerceQuoteVersion: {
+        updateMany: async () => {
+          events.push("version:issued")
+          return { count: 1 }
+        },
+      },
+      membership: {
+        findFirst: async () => ({
+          id: "membership-approver",
+          status: "ACTIVE",
+        }),
+      },
+      prescriptionCommunicationIntent: {
+        findUnique: async () => null,
+        upsert: async () => {
+          events.push("intent:quote-ready")
+          return { id: "intent-rx" }
+        },
+      },
+      prescriptionQuickAction: {
+        create: async () => {
+          events.push("action:create")
+          return { id: `action-${events.length}` }
+        },
+      },
+      prescriptionRequest: {
+        findFirst: async () => ({
+          customerPhone: "+2348000000000",
+          id: "request-rx",
+        }),
+        updateMany: async () => {
+          events.push("source:quoted")
+          return { count: 1 }
+        },
+      },
+      prescriptionRequestAuditEvent: {
+        create: async () => {
+          events.push("source:audit")
+        },
+      },
+      prescriptionUsageEvent: {
+        create: async () => {
+          events.push("usage:issued")
+        },
+      },
+      sellableOffering: {
+        findFirst: async () => ({
+          kind: "PRODUCT_UNIT",
+          status: "ACTIVE",
+          storeAvailability: [{ isAvailable: true }],
+        }),
+      },
+      serviceCommercePolicyAuditEvent: {
+        createMany: async () => ({ count: 1 }),
+      },
+      serviceCommercePolicyDecision: {
+        findMany: async () => allowedServiceCommercePolicyDecisionRows(),
+      },
+      serviceCommerceQuoteApproval: {
+        findFirst: async () => approval,
+        updateMany: async () => {
+          events.push("approval:approved")
+          return { count: 1 }
+        },
+      },
+      serviceCommerceQuoteApprovalAuditEvent: {
+        create: async () => {
+          events.push("approval:audit:approved")
+        },
+      },
+      serviceCommerceQuoteReleasePolicy: {
+        findFirst: async () => ({
+          mode: "APPROVAL_REQUIRED",
+          revision: 3,
+          selectedApproverMembershipIds: ["membership-approver"],
+        }),
+      },
+      serviceCommerceStoreTeamAssignment: {
+        findMany: async () => [
+          {
+            capability: "QUOTE_APPROVER",
+            membershipId: "membership-approver",
+          },
+        ],
+      },
+      store: {
+        findFirst: async () => ({ countryCode: "NG", id: "store-1" }),
+      },
+    } as unknown as PrismaClient
+
+    const result = await approveCommerceQuoteVersion(client, {
+      actorUserId: "approver-user",
+      approvalId: "approval-rx",
+      clientDecisionId: "decision-rx",
+      expectedPolicyRevision: 3,
+      protectActionId: (actionId) => `protected:${actionId.length}`,
+      quoteId: "quote-rx",
+      quoteVersionId: "version-rx",
+      reason: "Commercial details verified",
+      storeId: "store-1",
+      tenantId: "tenant-1",
+    })
+
+    expect(result).toMatchObject({
+      approvalId: "approval-rx",
+      communicationIntentId: "intent-rx",
+      releaseState: "released",
+      versionId: "version-rx",
+    })
+    expect(events).toEqual([
+      "approval:approved",
+      "version:issued",
+      "source:quoted",
+      "source:audit",
+      "usage:issued",
+      "action:create",
+      "action:create",
+      "action:create",
+      "intent:quote-ready",
+      "approval:audit:approved",
+    ])
+  })
+
+  test("rejects commercially without releasing the Quote or changing its source", async () => {
+    const events: string[] = []
+    const client = {
+      $transaction: async (callback: (tx: PrismaClient) => Promise<unknown>) =>
+        callback(client as unknown as PrismaClient),
+      membership: {
+        findFirst: async () => ({
+          id: "membership-approver",
+          status: "ACTIVE",
+        }),
+      },
+      serviceCommerceQuoteApproval: {
+        findFirst: async () => ({
+          decidedByMembershipId: null,
+          decisionClientId: null,
+          decisionPayloadHash: null,
+          id: "approval-1",
+          policyRevision: 3,
+          quote: { currentVersionId: "version-1" },
+          quoteId: "quote-1",
+          quoteVersion: {
+            expiresAt: new Date("2030-01-01T00:00:00.000Z"),
+            id: "version-1",
+            status: "DRAFT",
+          },
+          quoteVersionId: "version-1",
+          requesterMembershipId: "membership-attendant",
+          sourceId: "request-1",
+          sourceType: "SERVICE_REQUEST",
+          status: "PENDING",
+          storeId: "store-1",
+          tenantId: "tenant-1",
+        }),
+        updateMany: async () => {
+          events.push("approval:rejected")
+          return { count: 1 }
+        },
+      },
+      serviceCommerceQuoteApprovalAuditEvent: {
+        create: async () => {
+          events.push("approval:audit:rejected")
+        },
+      },
+      serviceCommerceQuoteReleasePolicy: {
+        findFirst: async () => ({
+          mode: "APPROVAL_REQUIRED",
+          revision: 3,
+          selectedApproverMembershipIds: ["membership-approver"],
+        }),
+      },
+      serviceCommerceStoreTeamAssignment: {
+        findMany: async () => [
+          {
+            capability: "QUOTE_APPROVER",
+            membershipId: "membership-approver",
+          },
+        ],
+      },
+      serviceRequest: {
+        findFirst: async () => ({ status: "SUBMITTED" }),
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      rejectCommerceQuoteVersion(client, {
+        actorUserId: "approver-user",
+        approvalId: "approval-1",
+        clientDecisionId: "reject-1",
+        expectedPolicyRevision: 3,
+        quoteId: "quote-1",
+        quoteVersionId: "version-1",
+        reason: "Please revise the quoted scope",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      }),
+    ).resolves.toMatchObject({ releaseState: "rejected" })
+    expect(events).toEqual(["approval:rejected", "approval:audit:rejected"])
   })
 
   test("resolves a WhatsApp Quote capability by digest without storing its bearer token", async () => {
@@ -779,9 +1486,9 @@ describe("Commerce Quote invariants", () => {
     expect(authorized).toBe(3)
     expect(offeringReads).toEqual(["offering-red"])
     expect(transactionOptions).toEqual([
-      { maxWait: 10_000, timeout: 30_000 },
-      { maxWait: 10_000, timeout: 30_000 },
-      { maxWait: 10_000, timeout: 30_000 },
+      { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
+      { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
+      { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
     ])
     await expect(
       selectCommerceQuoteOption(client, {

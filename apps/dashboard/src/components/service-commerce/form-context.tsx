@@ -9,12 +9,46 @@ import {
   serviceCommerceCatalogDraftFormSchema,
   serviceCommerceCatalogGraduationFormSchema,
   serviceCommerceCatalogPricePromotionFormSchema,
+  serviceCommerceChangeReasonSchema,
   serviceCommerceHumanVerifiedObservationDraftSchema,
+  serviceCommerceQuoteReleaseModeSchema,
 } from "@ewatrade/service-commerce"
 import { useEffect } from "react"
 import { FormProvider } from "react-hook-form"
+import { z } from "zod"
 
 export type RegisterServiceCommerceFormReset = (reset: () => void) => () => void
+
+export const serviceCommerceQuoteReleaseSettingsFormSchema = z
+  .object({
+    mode: serviceCommerceQuoteReleaseModeSchema,
+    reason: serviceCommerceChangeReasonSchema,
+    selectedApproverMembershipIds: z.array(z.string().trim().min(1)).max(100),
+  })
+  .strict()
+  .superRefine((input, context) => {
+    if (
+      input.mode === "approval_required" &&
+      input.selectedApproverMembershipIds.length === 0
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Select at least one quotation approver.",
+        path: ["selectedApproverMembershipIds"],
+      })
+    }
+  })
+
+export type ServiceCommerceQuoteReleaseSettingsFormValues = z.infer<
+  typeof serviceCommerceQuoteReleaseSettingsFormSchema
+>
+
+const serviceCommerceQuoteDecisionFormSchema = z
+  .object({ reason: serviceCommerceChangeReasonSchema })
+  .strict()
+export type ServiceCommerceQuoteDecisionFormValues = z.infer<
+  typeof serviceCommerceQuoteDecisionFormSchema
+>
 
 function useRegisteredFormReset(
   reset: () => void,
@@ -111,6 +145,46 @@ export function ServiceCommerceCatalogGraduationFormProvider({
         transactionScale: 0,
         variantName: "",
       },
+      mode: "onChange",
+    },
+  )
+  useRegisteredFormReset(form.reset, registerReset)
+  return <FormProvider {...form}>{children}</FormProvider>
+}
+
+export function ServiceCommerceQuoteReleaseSettingsFormProvider({
+  children,
+  registerReset,
+}: {
+  children: React.ReactNode
+  registerReset: RegisterServiceCommerceFormReset
+}) {
+  const form = useZodForm<ServiceCommerceQuoteReleaseSettingsFormValues>(
+    serviceCommerceQuoteReleaseSettingsFormSchema,
+    {
+      defaultValues: {
+        mode: "attendant_can_release",
+        reason: "Configure quotation release",
+        selectedApproverMembershipIds: [],
+      },
+      mode: "onChange",
+    },
+  )
+  useRegisteredFormReset(form.reset, registerReset)
+  return <FormProvider {...form}>{children}</FormProvider>
+}
+
+export function ServiceCommerceQuoteDecisionFormProvider({
+  children,
+  registerReset,
+}: {
+  children: React.ReactNode
+  registerReset: RegisterServiceCommerceFormReset
+}) {
+  const form = useZodForm<ServiceCommerceQuoteDecisionFormValues>(
+    serviceCommerceQuoteDecisionFormSchema,
+    {
+      defaultValues: { reason: "" },
       mode: "onChange",
     },
   )

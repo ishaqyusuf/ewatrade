@@ -221,10 +221,23 @@ inventory-configured tracked Offering can create a Balance reservation.
 
 `Store -> CustomerEntryPoint -> CustomerEntryPointAuditEvent`
 
+`Store -> ServiceCommerceQuoteReleasePolicy -> ServiceCommerceQuoteReleasePolicyAuditEvent`
+
+`CommerceQuoteVersion -> ServiceCommerceQuoteApproval -> ServiceCommerceQuoteApprovalAuditEvent`
+
 The business-neutral Customer Channels boundary delegates to existing
 connection/binding persistence during expand-contract. A stable entry token
 resolves current Store, policy, attendant and unambiguous sender facts at read
 time; it contains no Tenant, Store or provider identifier.
+
+The release policy is Store-unique and carries Tenant explicitly. Selected
+approvers are current Membership identities checked against Store team
+assignments at command time. Each Quote Approval belongs to exactly one Quote
+Version and references its requester and optional decider Memberships; a new
+immutable Version receives a new decision instead of inheriting authority or
+history. Release and Prescription quote-ready intent materialization share one
+bounded transaction, while provider enqueue remains a post-commit identifier-
+only effect.
 
 `CustomerEntryPoint | StoreTeamAssignment | WhatsAppInboundEvent -> channel-neutral intake envelope -> CommerceInquiry | ServiceRequest | PrescriptionRequest`
 

@@ -32,20 +32,51 @@ export function CustomerChannelsWorkspace({
       { retry: false },
     ),
   )
+  const releaseSettings = useQuery({
+    ...trpc.serviceCommerce.quoteReleaseSettings.queryOptions({
+      storeId: selectedStoreId,
+    }),
+    enabled: Boolean(workspace.data?.access.canManage),
+    retry: false,
+  })
+  const approvals = useQuery(
+    trpc.serviceCommerce.pendingQuoteApprovals.queryOptions(
+      { storeId: selectedStoreId },
+      { retry: false },
+    ),
+  )
 
-  if (workspace.isLoading) return <CustomerChannelsSkeleton />
-  if (workspace.error || !workspace.data) {
+  if (
+    workspace.isLoading ||
+    (workspace.data?.access.canManage && releaseSettings.isLoading) ||
+    approvals.isLoading
+  ) {
+    return <CustomerChannelsSkeleton />
+  }
+  const error = workspace.error ?? releaseSettings.error ?? approvals.error
+  if (
+    error ||
+    !workspace.data ||
+    (workspace.data.access.canManage && !releaseSettings.data) ||
+    !approvals.data
+  ) {
     return (
       <div className="grid gap-3 p-6 lg:p-8">
         <p
           className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
           role="alert"
         >
-          {workspace.error?.message ?? "Customer channels are unavailable."}
+          {error?.message ?? "Customer channels are unavailable."}
         </p>
         <Button
           className="w-fit"
-          onClick={() => void workspace.refetch()}
+          onClick={() =>
+            void Promise.all([
+              workspace.refetch(),
+              releaseSettings.refetch(),
+              approvals.refetch(),
+            ])
+          }
           variant="outline"
         >
           Try again
@@ -88,7 +119,7 @@ export function CustomerChannelsWorkspace({
         }
       />
 
-      <section className="grid gap-4 lg:grid-cols-2">
+      <section className="grid gap-4 lg:grid-cols-3">
         <ChannelTaskCard
           action="Assign attendants"
           description={`${data.team.filter((member) => member.status === "active").length} active attendants. Route accepted team memberships without granting professional credentials.`}
@@ -100,6 +131,23 @@ export function CustomerChannelsWorkspace({
           }
           title="Team & routing"
         />
+        {data.access.canManage && releaseSettings.data ? (
+          <ChannelTaskCard
+            action="Configure approval"
+            description={
+              releaseSettings.data.policy.mode === "approval_required"
+                ? `${releaseSettings.data.policy.selectedApproverMembershipIds.length} selected approver${releaseSettings.data.policy.selectedApproverMembershipIds.length === 1 ? "" : "s"}. Another selected team member must approve each exact Quote Version.`
+                : "Approval is off. Assigned attendants are trusted to prepare and release quotations."
+            }
+            onOpen={() =>
+              void params.setParams({
+                serviceCommerceSheet: "quote_policy",
+                storeId: selectedStoreId,
+              })
+            }
+            title="Quotation approval"
+          />
+        ) : null}
         <ChannelTaskCard
           action={
             data.entryPoint?.status === "published"
@@ -121,8 +169,74 @@ export function CustomerChannelsWorkspace({
           title="Customer entry point"
         />
       </section>
+
+      <section aria-labelledby="pending-approvals-title" className="grid gap-4">
+        <div>
+          <h2 className="font-semibold" id="pending-approvals-title">
+            Pending quotation approvals
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Review the exact immutable version before it becomes visible to the
+            customer.
+          </p>
+        </div>
+        {approvals.data.length > 0 ? (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {approvals.data.map((approval) => (
+              <article
+                className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5"
+                key={approval.id}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {approval.sourceKind.replace("_", " ")}
+                    </p>
+                    <h3 className="font-semibold">
+                      Quote version {approval.version}
+                    </h3>
+                  </div>
+                  <p className="font-semibold tabular-nums">
+                    {formatMoney(approval.totalMinor, approval.currencyCode)}
+                  </p>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {approval.canApprove || approval.canReject
+                    ? "Your selected approver assignment permits a decision."
+                    : "Visible for coordination. Another selected approver must decide."}
+                </p>
+                <Button
+                  className="mt-auto w-fit"
+                  onClick={() =>
+                    void params.setParams({
+                      quoteApprovalId: approval.id,
+                      quoteId: approval.quoteId,
+                      serviceCommerceSheet: "quote_approval",
+                      storeId: selectedStoreId,
+                    })
+                  }
+                  variant="outline"
+                >
+                  Review exact version
+                </Button>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-xl border border-dashed border-border p-5 text-sm text-muted-foreground">
+            No quotations are waiting for approval.
+          </p>
+        )}
+      </section>
     </div>
   )
+}
+
+function formatMoney(amount: number, currencyCode: string) {
+  return new Intl.NumberFormat("en-NG", {
+    currency: currencyCode,
+    style: "currency",
+  }).format(amount / 100)
 }
 
 function ChannelTaskCard({

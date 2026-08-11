@@ -28,9 +28,27 @@ export default async function CustomerChannelsPage({ searchParams }: Props) {
   const store = requestedStore ?? ctx.activeStore ?? ctx.stores[0]
   if (!store) redirect("/setup")
 
-  await prefetch(
-    trpc.serviceCommerce.channelWorkspace.queryOptions({ storeId: store.id }),
-  ).catch(() => undefined)
+  const role = ctx.membership.role.trim().toUpperCase()
+  const prefetches = [
+    prefetch(
+      trpc.serviceCommerce.channelWorkspace.queryOptions({ storeId: store.id }),
+    ),
+    prefetch(
+      trpc.serviceCommerce.pendingQuoteApprovals.queryOptions({
+        storeId: store.id,
+      }),
+    ),
+  ]
+  if (role === "OWNER" || role === "ADMIN") {
+    prefetches.push(
+      prefetch(
+        trpc.serviceCommerce.quoteReleaseSettings.queryOptions({
+          storeId: store.id,
+        }),
+      ),
+    )
+  }
+  await Promise.all(prefetches).catch(() => undefined)
 
   return (
     <HydrateClient>

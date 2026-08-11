@@ -5,7 +5,10 @@
 Accepted as a product and architecture amendment on 2026-08-10. The owner
 approved Store-level attendant assignment and optional quotation approval as
 part of Customer Channels configuration. The Service Commerce source batch is
-now 17 tickets; production schema and rollout remain separately authorized.
+now 17 tickets. Ticket 06B implemented the decision on 2026-08-11, including a
+server-side maker-checker guard that rejects a sole attendant selecting
+themselves as the only approver. Production schema and rollout remain
+separately authorized.
 
 ## Context
 
@@ -46,7 +49,9 @@ a UI-only checkbox or notification cannot safely enforce it.
   approval is configured. Missing/null client state never chooses the mode.
 - During expand-contract, a Store without the new record resolves through the
   typed compatibility default `attendant_can_release`; setup persists the
-  explicit record and reconciliation must backfill it before contraction.
+  explicit record and reconciliation must backfill it before contraction. Once
+  a record exists, either mode requires an active Store attendant assignment;
+  the compatibility fallback no longer applies.
 - In `approval_required` mode, one active Store quotation approver must approve
   the exact current Quote Version before it can become customer-visible. A
   Quote creator cannot approve their own version; a single-person business
@@ -70,6 +75,11 @@ a UI-only checkbox or notification cannot safely enforce it.
 - Any revised Quote Version supersedes the previous pending decision. Approval
   never floats to another version, source, Store, currency, total or Offer
   Option selection.
+- Issue and decision commands serialize policy/team and Quote release facts,
+  retry one serialization conflict, and preserve exact replay. Direct
+  commands/detail plus queue reconciliation atomically supersede pending
+  decisions whose version, expiry, source, policy, approver or availability
+  facts are no longer releasable.
 - Owner/Admin configure the Store team and release policy. Runtime preparation,
   approval and release use server-projected assignments, active membership,
   Store scope, Quote revision, policy revision and vertical eligibility.

@@ -45,6 +45,43 @@ export function ServiceCommerceSheet({ storeId }: { storeId: string }) {
         }),
       )
     }
+    if (mode === "quote_policy") {
+      invalidations.push(
+        queryClient.invalidateQueries({
+          exact: true,
+          queryKey: trpc.serviceCommerce.quoteReleaseSettings.queryKey({
+            storeId: resolvedStoreId,
+          }),
+        }),
+        queryClient.invalidateQueries({
+          exact: true,
+          queryKey: trpc.serviceCommerce.pendingQuoteApprovals.queryKey({
+            storeId: resolvedStoreId,
+          }),
+        }),
+      )
+    }
+    if (mode === "quote_approval") {
+      invalidations.push(
+        queryClient.invalidateQueries({
+          exact: true,
+          queryKey: trpc.serviceCommerce.pendingQuoteApprovals.queryKey({
+            storeId: resolvedStoreId,
+          }),
+        }),
+      )
+      if (params.quoteApprovalId) {
+        invalidations.push(
+          queryClient.invalidateQueries({
+            exact: true,
+            queryKey: trpc.serviceCommerce.quoteApprovalDetail.queryKey({
+              approvalId: params.quoteApprovalId,
+              storeId: resolvedStoreId,
+            }),
+          }),
+        )
+      }
+    }
     if (params.attachmentId) {
       invalidations.push(
         queryClient.invalidateQueries({

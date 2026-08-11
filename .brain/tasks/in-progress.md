@@ -79,7 +79,18 @@
   Product graduation with explicit opening stock, separate publication and a
   later tracked Order with reservation. Authenticated desktop and 390x844
   mobile QA passed graduation, publication, Catalog refresh, stale-id recovery
-  and URL/form cleanup. Ticket 06B is now the active source frontier.
+  and URL/form cleanup. Ticket 06B is complete: Store release policy,
+  selected active Membership approvers, private exact-Version preparation,
+  separate commercial approval/rejection and atomic source/public/Prescription
+  notification release are source-complete. Persisted policy requires an
+  explicit Store attendant, decisions retry one Serializable conflict, and
+  stale pending decisions are atomically superseded/audited across direct and
+  queue reconciliation paths. The verified `.env.local` Neon
+  matrix passed 2 tests and 17 assertions, authenticated desktop/390px mobile
+  Customer Channels configuration passed, and its synthetic Tenant/User was
+  removed atomically. The additive migration is applied only to development;
+  Ticket 08 shared pickup/delivery fulfilment is the next dependency-ready
+  approved source frontier.
   Live Meta/storage/scanner release gates remain open. The focused
   Customer Channels/media matrix passes 71 tests and 177 assertions; the
   run-owned `.env.local` Neon bag-media seam passes 7 assertions. The full test gate has

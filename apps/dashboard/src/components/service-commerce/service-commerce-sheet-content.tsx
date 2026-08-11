@@ -12,6 +12,8 @@ import {
   ServiceCommerceCatalogGraduationFormProvider,
   ServiceCommerceCatalogPriceFormProvider,
   ServiceCommerceObservationFormProvider,
+  ServiceCommerceQuoteDecisionFormProvider,
+  ServiceCommerceQuoteReleaseSettingsFormProvider,
 } from "./form-context"
 import { MediaViewer } from "./media/media-viewer"
 import { ObservationForm } from "./media/observation-form"
@@ -37,14 +39,40 @@ export function ServiceCommerceSheetContent({
       <Unavailable message="This link is incomplete, stale, or no longer authorized." />
     )
   }
-  if (mode === "connection" || mode === "team" || mode === "entry_point") {
-    return (
+  if (
+    mode === "connection" ||
+    mode === "team" ||
+    mode === "entry_point" ||
+    mode === "quote_policy" ||
+    mode === "quote_approval"
+  ) {
+    const channelContent = (
       <CustomerChannelSheetContent
         mode={mode}
         registerFormReset={registerFormReset}
         storeId={storeId}
       />
     )
+    if (mode === "quote_policy") {
+      return (
+        <ServiceCommerceQuoteReleaseSettingsFormProvider
+          registerReset={registerFormReset}
+        >
+          {channelContent}
+        </ServiceCommerceQuoteReleaseSettingsFormProvider>
+      )
+    }
+    if (mode === "quote_approval") {
+      return (
+        <ServiceCommerceQuoteDecisionFormProvider
+          key={params.quoteApprovalId}
+          registerReset={registerFormReset}
+        >
+          {channelContent}
+        </ServiceCommerceQuoteDecisionFormProvider>
+      )
+    }
+    return channelContent
   }
   if (mode === "media") {
     return <MediaViewer storeId={storeId} />

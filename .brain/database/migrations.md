@@ -394,6 +394,31 @@ post-graduation tracked Quote/Order with one reservation against the verified
 Balance Source. The fixture was removed atomically. Production reconciliation
 and rollout remain separately authorized.
 
+## Service Commerce Quote Release Approval Migration State
+
+On 2026-08-11 the canonical verified `.env.local` Neon development workflow
+generated and applied
+`20260811021755_service_commerce_quote_release_approval`. The additive migration
+adds Store release-policy/receipt/audit persistence, exact Quote-Version
+approval/audit persistence, typed release modes and decision lifecycles plus
+their Tenant, Store, Membership, Quote and Version relations.
+Runtime decisions now use bounded Serializable transactions with one conflict
+retry, while direct and queue reconciliation atomically mark stale pending
+records `SUPERSEDED`; this required no follow-up schema change.
+
+`bun db:migrate` generated the artifact through Prisma and `bun db:push`
+reported the verified development schema already synchronized. No migration SQL
+was hand-authored. No Docker/local PostgreSQL, production database, reset,
+data-loss override or live provider operation was used.
+
+The run-owned Neon acceptance passed 2 tests and 17 assertions across private
+preparation, creator denial, a different selected approver, fresh concurrent
+approval and exact replay, atomic source/public release, rejection, immutable
+revision and decision-history preservation. The browser-QA Tenant/User fixture
+was removed atomically after authenticated desktop/mobile Customer Channels
+configuration. Production schema application and business activation remain
+separately authorized.
+
 ## Channel-Neutral Intake Attribution Migration State
 
 On 2026-08-10 Prisma generated and applied

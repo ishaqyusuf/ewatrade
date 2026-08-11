@@ -4,7 +4,12 @@ type ControllerDefinition = {
   description: string
   implemented: boolean
   requiredIds: Array<
-    "attachmentId" | "offeringId" | "sourceId" | "sourceKind" | "sourceLineId"
+    | "attachmentId"
+    | "offeringId"
+    | "quoteApprovalId"
+    | "sourceId"
+    | "sourceKind"
+    | "sourceLineId"
   >
   title: string
 }
@@ -63,8 +68,20 @@ export const SERVICE_COMMERCE_CONTROLLERS = {
     title: "Customer attachment",
   },
   quote: unavailable("Quotation"),
-  quote_approval: unavailable("Quotation approval"),
-  quote_policy: unavailable("Quotation policy"),
+  quote_approval: {
+    description:
+      "Approve or reject the exact current Quote Version without replacing source-owned professional review.",
+    implemented: true,
+    requiredIds: ["quoteApprovalId"],
+    title: "Quotation approval",
+  },
+  quote_policy: {
+    description:
+      "Trust assigned attendants to release quotations or require another selected team member.",
+    implemented: true,
+    requiredIds: [],
+    title: "Quotation policy",
+  },
   request: unavailable("Customer request"),
   setup: unavailable("Service Commerce setup"),
   success: unavailable("Completed"),

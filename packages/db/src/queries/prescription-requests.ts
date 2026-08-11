@@ -2323,6 +2323,7 @@ export async function issuePrescriptionQuote(
       transcriptionLineId: string
       unitPriceMinor?: number
     }>
+    protectActionId?: (actionId: string) => string
     requestId: string
     storeId: string
     taxMinor?: number
@@ -2379,6 +2380,17 @@ export async function issuePrescriptionQuote(
   }
   return issueCommerceQuote(db, {
     actorUserId: input.actorUserId,
+    authorize: async (tx) => {
+      await assertServiceCommercePolicyAllowedInTransaction(tx, {
+        actorUserId: input.actorUserId,
+        channel: "staff",
+        purpose: "prescription_quote_prepare",
+        storeId: input.storeId,
+        subject: "quote",
+        tenantId: input.tenantId,
+        vertical: "pharmacy",
+      })
+    },
     availabilityOutcome: input.availabilityOutcome,
     clientQuoteId: input.clientQuoteId,
     clientVersionId: input.clientVersionId,
@@ -2421,6 +2433,7 @@ export async function issuePrescriptionQuote(
         unitPriceMinor,
       }
     }),
+    protectActionId: input.protectActionId,
     sourceId: request.id,
     sourceType: "prescription_request",
     storeId: input.storeId,

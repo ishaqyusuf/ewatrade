@@ -7,7 +7,8 @@ Customer Request Interoperability Contract; 05 - Deliver Channel-Neutral
 Request Intake; 06 - Reuse Quote Payment And Order Conversion; 11 - Enforce
 Vertical And Jurisdiction Eligibility.
 
-**Status:** approved; blocked by Tickets 02, 03, 05, 06, and 11
+**Status:** approved; prerequisites complete; queued after Ticket 08 by the
+declared wave order
 
 **Approval:** Original scope and revised dependency order owner-approved on
 2026-08-09.

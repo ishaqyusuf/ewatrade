@@ -8,7 +8,8 @@ extension. ADR-0031 adds generic Customer Channels, stable entry links/QR
 codes, request media/verified observations and exact selectable Offer Options.
 ADR-0032 adds Store team routing and optional exact-version quotation release
 approval. The owner approved the revised dependency-ordered 17-ticket batch
-through 2026-08-10. Tickets 01, 02, 03, 11, 03A, 05, 06 and 06A are complete. Tickets 04
+through 2026-08-10. Tickets 01, 02, 03, 11, 03A, 05, 06, 06A and 06B are
+complete. Tickets 04
 and 04A have source-complete foundations. Ticket 05 adds the shared source/API,
 public Product-inquiry and explicit product-selected generic WhatsApp adapters,
 with combined focused, verified-Neon and desktop/mobile browser acceptance.
@@ -21,8 +22,9 @@ Order and payment facts; a pharmacist-selected substitute is emitted as the
 single included commercial line while its clinical alternative attribution
 remains source-owned. Ticket 06A now proves that progressive Product and
 Service records graduate in place without losing source, Quote, Order or price
-history. Ticket 06B is the active source frontier. Production schema/provider operations remain
-separately authorized.
+history. Ticket 06B adds Store-scoped attendant trust or exact-version approval
+with atomic public release and notification effects. Production schema/provider
+operations remain separately authorized.
 
 Pharmacy Commerce is the first regulated vertical and retains its completed
 implementation evidence and outstanding production gates. The approved second
@@ -283,6 +285,25 @@ approve the exact current Quote Version before it becomes customer-visible.
 Although configured in Customer Channels onboarding, this is a Store Commerce
 policy and governs web, staff, QR and WhatsApp equally.
 
+The implemented policy is revisioned and Owner/Admin-only. It stores selected
+accepted active Membership ids, never email/phone or a channel-owned account.
+The expansion compatibility default applies only while no policy row exists;
+once setup persists either mode, Quote preparation requires an active Store
+attendant assignment. Release decisions use bounded Serializable transactions
+with one conflict retry so concurrent identical approvals resolve through the
+same idempotent replay path.
+Preparation under `approval_required` creates one private `DRAFT` version and
+one Quote-Version-unique `pending` decision. The pending queue and detail
+project current server actions for managers, assigned attendants and selected
+approvers; the browser never reconstructs authority from roles.
+Enabling approval also requires at least one active attendant/selected-approver
+pair backed by different Users, so a one-person Store cannot configure a
+permanent self-approval deadlock.
+Expired, replaced, source-terminal, policy-stale, approverless or commercially
+stale pending decisions are atomically marked `superseded` with audit evidence
+from direct commands/detail reads; pending-queue reconciliation is the
+idempotent backstop.
+
 Generic connection, binding, link and QR configuration moves out of
 Prescription settings. Category-specific compliance retains Pharmacy roles,
 consent, professional policies and clinical operating controls.
@@ -387,6 +408,14 @@ its pre-Quote state. The exact-version approval transaction alone changes it to
 creates the public capability. Rejection retains a `rejected` decision and
 requires a new immutable version; revision supersedes only a still-pending
 decision and emits no issued fact.
+
+The release transaction also owns source-specific release effects. For a
+Prescription Quote it creates digest-only pickup, delivery and clarification
+quick actions plus one deduplicated protected `quote-ready:<version>`
+communication intent before commit. A current WhatsApp policy denial is
+audited and omits those channel effects without rolling back the valid web or
+staff Quote release. Provider enqueue remains post-commit and exact replay
+reuses the same durable intent rather than minting customer capabilities again.
 
 ## Customer Lifecycle
 
@@ -540,13 +569,17 @@ business activation remains separately authorized.
 The owner approved the Progressive Catalog amendment on 2026-08-09 and the
 Customer Channels/media/Offer Options plus Store team/Quote approval amendments
 on 2026-08-10. The exact 17-ticket batch adds Tickets 03A, 04A, 06A and 06B.
-Tickets 01, 02, 03, 11, 03A, 05, 06 and 06A are complete. Tickets 04 and 04A have their
+Tickets 01, 02, 03, 11, 03A, 05, 06, 06A and 06B are complete. Tickets 04 and
+04A have their
 source foundations, and Ticket 05 supplies the accepted channel-neutral intake
 adapters and combined origin/source/media/browser evidence. Ticket 06 now has
 focused, post-release verified-Neon and desktop/mobile browser evidence;
 Ticket 06A passed its same-ID progressive-to-managed Neon lifecycle plus
 authenticated desktop/mobile graduation, publication and failure-recovery QA.
-Ticket 06B is the active source frontier.
+Ticket 06B passes focused checks, a 2-test/17-assertion verified-Neon release
+matrix and authenticated desktop/mobile Customer Channels QA. The generated
+additive migration is applied only to the Neon development database; Ticket 08
+is the next dependency-ready approved source frontier.
 Live-provider acceptance remains open. Throughout
 execution:
 
