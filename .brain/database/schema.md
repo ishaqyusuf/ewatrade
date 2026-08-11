@@ -296,6 +296,10 @@ persistence boundary. Clients never access the database directly.
   quick-action records implement dynamic pharmacy-owned direct Meta routing.
 - Communication attempts retain normalized sent/delivered/read/failed receipt
   state and timestamps matched by Connection and provider message id.
+- Generic Service Commerce customer-notification attempts retain an immutable
+  provider Connection id beside the provider operation id. Webhook callbacks
+  append tenant/store-scoped delivered/read/failed receipt rows without
+  reopening current Store binding selection.
 - Retention policies independently cover raw media, transcripts, messages,
   tokens, addresses, audit evidence, and commercial records. Expiry preserves
   immutable lifecycle/accounting facts while redacting mutable content and
@@ -326,6 +330,20 @@ persistence boundary. Clients never access the database directly.
   purpose, status, expiry and state revision. `ServiceBookingEvent` and
   `ServiceBookingConfigurationEvent` preserve typed history;
   `ServiceBookingNotificationIntent` is the durable provider-neutral outbox.
+
+## Service Commerce Customer Actions
+
+- `ServiceCommerceCustomerActionCapability` stores the exhaustive action,
+  channel, source/version, exact target/version/Option, label/consequence,
+  confirmation rule, expiry, payload identity and only the opaque-token digest.
+- `ServiceCommerceCustomerActionExecution` binds one client operation id and
+  payload hash to the capability's completed or recovery result so replay
+  cannot repeat or change the command.
+- `ServiceCommerceCustomerNotificationIntent` stores a protected recipient,
+  message/template/service-window facts and bounded retry state.
+  `ServiceCommerceCustomerNotificationAttempt` and
+  `ServiceCommerceCustomerNotificationReceipt` retain provider-neutral
+  delivery evidence without raw capabilities or customer content.
 
 ## Removed Prototype Schema
 

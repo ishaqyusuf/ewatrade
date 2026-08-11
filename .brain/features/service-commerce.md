@@ -8,8 +8,8 @@ extension. ADR-0031 adds generic Customer Channels, stable entry links/QR
 codes, request media/verified observations and exact selectable Offer Options.
 ADR-0032 adds Store team routing and optional exact-version quotation release
 approval. The owner approved the revised dependency-ordered 17-ticket batch
-through 2026-08-10. Tickets 01, 02, 03, 11, 03A, 05, 06, 06A, 06B and 08 are
-complete. Tickets 04
+through 2026-08-10. Tickets 01, 02, 03, 11, 03A, 05, 06, 06A, 06B, 08, 07 and
+09 are complete. Tickets 04
 and 04A have source-complete foundations. Ticket 05 adds the shared source/API,
 public Product-inquiry and explicit product-selected generic WhatsApp adapters,
 with combined focused, verified-Neon and desktop/mobile browser acceptance.
@@ -439,6 +439,16 @@ reuses the same durable intent rather than minting customer capabilities again.
 7. Stale, expired, ambiguous, unauthorized or cross-Tenant actions fail closed
    and offer a safe recovery path.
 
+Ticket 09 implements this projection through one exhaustive registry for
+`request_quote`, `view_quote`, `choose_quote_option`, `book`, `pay_now`,
+`pick_up`, `delivery`, `talk_to_staff`, `reschedule` and `cancel`. Issuance
+binds each digest-only capability to the exact source and target version,
+channel, Store, expiry and payload identity. Public preview/execution reloads
+current policy, readiness, role and target facts; consequential actions require
+explicit confirmation and payload-bound replay. Optional customer delivery is
+a provider-neutral outbox with protected recipients, identifier-only jobs,
+template/service-window enforcement and bounded attempt/receipt facts.
+
 ## WhatsApp Architecture And Onboarding
 
 - The business owns its WABA and public number. EwaTrade may share one Meta
@@ -571,7 +581,7 @@ business activation remains separately authorized.
 The owner approved the Progressive Catalog amendment on 2026-08-09 and the
 Customer Channels/media/Offer Options plus Store team/Quote approval amendments
 on 2026-08-10. The exact 17-ticket batch adds Tickets 03A, 04A, 06A and 06B.
-Tickets 01, 02, 03, 11, 03A, 05, 06, 06A, 06B, 08 and 07 are complete. Tickets 04 and
+Tickets 01, 02, 03, 11, 03A, 05, 06, 06A, 06B, 08, 07 and 09 are complete. Tickets 04 and
 04A have their
 source foundations, and Ticket 05 supplies the accepted channel-neutral intake
 adapters and combined origin/source/media/browser evidence. Ticket 06 now has
@@ -588,7 +598,19 @@ separate payment reconciliation, public manage capabilities and durable
 provider-neutral notifications. Its verified-Neon lifecycle passes 1 test and
 29 assertions, while authenticated desktop and 390x844 browser QA covers
 configuration, slot selection, hold, confirmation, cancellation and
-rescheduling. Ticket 09 is the next dependency-ready approved source frontier.
+rescheduling. Ticket 09 adds the exhaustive current-state action projection,
+opaque single-purpose capability execution and provider-neutral customer
+notification outbox. Its Direct Meta delivery resolves exactly one active
+Store sender, uses the server-owned approved customer-action template and
+reauthorizes after claim before credential/recipient decryption. A bounded
+five-minute scheduler recovers due outbox work without carrying customer
+content. Direct Meta delivered/read/failed callbacks resolve the immutable
+provider Connection and append scoped generic receipt facts. Its focused suite
+passes 116 tests/300 assertions, its
+verified-Neon lifecycle passes 1 test/6 assertions, and desktop/mobile stale
+capability recovery plus current-action execution/completed/secure Quote
+continuation QA passes against a run-owned fixture that was removed. Tickets
+10 and 12 are the next approved source frontiers.
 The generated additive migrations are applied only to the Neon development
 database.
 Live-provider acceptance remains open. Throughout

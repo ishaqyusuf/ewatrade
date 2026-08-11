@@ -276,6 +276,21 @@ active bookings consume capacity in the same interval checks; expired/released
 holds do not. Quote linkage requires an accepted Version, while payment status
 is reconciled from Commerce facts and never inferred from booking state.
 
+## Service Commerce Customer Actions
+
+`Tenant + Store + Source/Version -> ServiceCommerceCustomerActionCapability -> ServiceCommerceCustomerActionExecution`
+
+`ServiceCommerceCustomerNotificationIntent -> ServiceCommerceCustomerActionCapability[]`
+
+`ServiceCommerceCustomerNotificationIntent -> ServiceCommerceCustomerNotificationAttempt[] | ServiceCommerceCustomerNotificationReceipt[]`
+
+The capability owns one exact current customer purpose and stores only its
+token digest. An optional notification groups the safe actions delivered to one
+protected recipient; attempts/receipts are transport evidence, not source or
+commercial truth. A sent attempt snapshots its provider Connection id, so a
+late Meta receipt resolves the original Tenant/Store intent even after sender
+rotation.
+
 ## Managed Domains
 
 `Tenant -> DomainRegistrantProfile`

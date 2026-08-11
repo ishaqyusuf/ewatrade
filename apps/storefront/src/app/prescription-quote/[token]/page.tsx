@@ -98,6 +98,17 @@ export default async function Page({
   const { token } = await params
   const query = await searchParams
   const quote = await load(token)
+  const canSelect =
+    quote.customerAction === null ||
+    quote.customerAction === "choose_quote_option"
+  const canConfirmFulfilment =
+    quote.customerAction === null ||
+    quote.customerAction ===
+      (quote.fulfilmentType === "delivery" ? "delivery" : "pick_up")
+  const canArrangeDelivery =
+    quote.customerAction === null || quote.customerAction === "delivery"
+  const canPay =
+    quote.customerAction === null || quote.customerAction === "pay_now"
   const partial = quote.availabilityOutcome === "partial"
   const isDelivery = quote.fulfilmentType === "delivery"
   const displayedOption =
@@ -179,12 +190,14 @@ export default async function Page({
                     </li>
                   ))}
                 </ul>
-                <button
-                  className="h-11 bg-primary px-5 text-sm font-medium text-primary-foreground"
-                  type="submit"
-                >
-                  Choose {option.label}
-                </button>
+                {canSelect ? (
+                  <button
+                    className="h-11 bg-primary px-5 text-sm font-medium text-primary-foreground"
+                    type="submit"
+                  >
+                    Choose {option.label}
+                  </button>
+                ) : null}
               </form>
             ))}
           </section>
@@ -254,7 +267,7 @@ export default async function Page({
         )}
         {quote.payable ? (
           <div className="grid gap-2 sm:grid-cols-3" aria-label="Quick options">
-            {!quote.accepted ? (
+            {!quote.accepted && canConfirmFulfilment ? (
               <form action={isDelivery ? acceptDelivery : acceptPickup}>
                 <input name="token" type="hidden" value={token} />
                 {partial ? (
@@ -285,7 +298,7 @@ export default async function Page({
                 {isDelivery ? "Delivery selected" : "Pickup selected"}
               </button>
             )}
-            {!quote.accepted && !isDelivery ? (
+            {!quote.accepted && !isDelivery && canArrangeDelivery ? (
               <a
                 className="flex h-12 items-center justify-center border border-border px-5 text-sm font-medium"
                 href={`/prescription-delivery/${token}`}
@@ -324,7 +337,7 @@ export default async function Page({
             )}
           </div>
         ) : null}
-        {quote.accepted ? (
+        {quote.accepted && canPay ? (
           <form action={payNow}>
             <input name="token" type="hidden" value={token} />
             <button

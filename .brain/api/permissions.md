@@ -189,6 +189,17 @@
 - Notification schedulers and dispatch workers carry only Tenant, Store,
   intent and actor identifiers. They reauthorize at claim/execution time before
   decrypting a recipient or invoking a provider.
+- Issuing customer actions requires an authenticated Service Commerce operator
+  for an authorized Store. The repository then rechecks active Store-attendant
+  authority, source scope, readiness, policy and target state before it creates
+  any capability or notification intent.
+- Public action preview/execution grants only the exact digest-backed purpose
+  encoded by the opaque token. It cannot grant another Tenant/Store/source,
+  another Quote Option or a later version. Explicit confirmation and a stable
+  operation id are required for consequential execution.
+- Notification dispatch reauthorizes the stored actor, Tenant/Store,
+  capability set, template/service window and channel policy before recipient
+  decryption/provider use. Provider failure cannot broaden or revive an action.
 
 - Any active Tenant member may receive the allowlisted profile/readiness
   projection for an authorized Store; this read does not grant operation or

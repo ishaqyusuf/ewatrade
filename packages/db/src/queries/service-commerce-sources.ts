@@ -29,8 +29,12 @@ export class ServiceCommerceSourceError extends Error {
 }
 
 type LoadedSource = {
+  contactOptIn: boolean
+  customerEmail: string | null
+  customerPhone: string | null
   state: ServiceCommerceRequestState
   summary: string
+  updatedAt: Date
   vertical: ServiceCommerceVertical
 }
 
@@ -67,7 +71,15 @@ const prescriptionStates = {
 const sourceLoaders = {
   commerce_inquiry: async (db, input) => {
     const inquiry = await db.commerceInquiry.findFirst({
-      select: { status: true, summary: true, vertical: true },
+      select: {
+        contactOptIn: true,
+        customerEmail: true,
+        customerPhone: true,
+        status: true,
+        summary: true,
+        updatedAt: true,
+        vertical: true,
+      },
       where: {
         id: input.id,
         storeId: input.storeId,
@@ -76,15 +88,25 @@ const sourceLoaders = {
     })
     return inquiry
       ? {
+          contactOptIn: inquiry.contactOptIn,
+          customerEmail: inquiry.customerEmail,
+          customerPhone: inquiry.customerPhone,
           state: normalizeCommerceInquiryState(inquiry.status),
           summary: inquiry.summary,
+          updatedAt: inquiry.updatedAt,
           vertical: inquiry.vertical === "PHARMACY" ? "pharmacy" : "service",
         }
       : null
   },
   prescription: async (db, input) => {
     const request = await db.prescriptionRequest.findFirst({
-      select: { status: true },
+      select: {
+        contactOptIn: true,
+        customerEmail: true,
+        customerPhone: true,
+        status: true,
+        updatedAt: true,
+      },
       where: {
         id: input.id,
         storeId: input.storeId,
@@ -93,15 +115,25 @@ const sourceLoaders = {
     })
     return request
       ? {
+          contactOptIn: request.contactOptIn,
+          customerEmail: request.customerEmail,
+          customerPhone: request.customerPhone,
           state: prescriptionStates[request.status],
           summary: "Prescription request",
+          updatedAt: request.updatedAt,
           vertical: "pharmacy",
         }
       : null
   },
   service: async (db, input) => {
     const request = await db.serviceRequest.findFirst({
-      select: { status: true },
+      select: {
+        contactOptIn: true,
+        customerEmail: true,
+        customerPhone: true,
+        status: true,
+        updatedAt: true,
+      },
       where: {
         id: input.id,
         storeId: input.storeId,
@@ -110,13 +142,33 @@ const sourceLoaders = {
     })
     return request
       ? {
+          contactOptIn: request.contactOptIn,
+          customerEmail: request.customerEmail,
+          customerPhone: request.customerPhone,
           state: serviceStates[request.status],
           summary: "Service request",
+          updatedAt: request.updatedAt,
           vertical: "service",
         }
       : null
   },
 } satisfies Record<ServiceCommerceSourceKind, SourceLoader>
+
+export async function loadServiceCommerceSourceSnapshot(
+  db: DbClient,
+  input: {
+    source: ServiceCommerceSourceRef
+    storeId: string
+    tenantId: string
+  },
+) {
+  const source = serviceCommerceSourceRefSchema.parse(input.source)
+  return sourceLoaders[source.kind](db, {
+    id: source.id,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+  })
+}
 
 function availableActions(
   state: ServiceCommerceRequestState,
@@ -163,6 +215,35 @@ export async function getServiceCommerceCustomerRequestProjection(
     tenantId: string
   },
 ): Promise<ServiceCommerceCustomerRequestProjection> {
+  const context = await resolveServiceCommerceSourceContext(db, input)
+  return serviceCommerceCustomerRequestProjectionSchema.parse({
+    allowedCommands: availableActions(context.loaded.state, {
+      ...context.workspace.readiness,
+      capabilities: context.sourceReadiness,
+    }),
+    capabilities: SERVICE_COMMERCE_CAPABILITIES.map((capability) => ({
+      capability,
+      readiness: context.sourceReadiness[capability].readiness,
+    })),
+    source: context.source,
+    state: context.loaded.state,
+    store: {
+      id: context.workspace.store.id,
+      name: context.workspace.store.name,
+    },
+    summary: context.loaded.summary,
+  })
+}
+
+export async function resolveServiceCommerceSourceContext(
+  db: DbClient,
+  input: {
+    actorUserId: string
+    source: ServiceCommerceSourceRef
+    storeId: string
+    tenantId: string
+  },
+) {
   const source = serviceCommerceSourceRefSchema.parse(input.source)
   const workspace = await getServiceCommerceWorkspaceAccess(db, input)
   if (!workspace.access.canOperate) {
@@ -178,8 +259,8 @@ export async function getServiceCommerceCustomerRequestProjection(
     )
   }
 
-  const loaded = await sourceLoaders[source.kind](db, {
-    id: source.id,
+  const loaded = await loadServiceCommerceSourceSnapshot(db, {
+    source,
     storeId: input.storeId,
     tenantId: input.tenantId,
   })
@@ -217,18 +298,10 @@ export async function getServiceCommerceCustomerRequestProjection(
     }),
   ) as typeof workspace.readiness.capabilities
 
-  return serviceCommerceCustomerRequestProjectionSchema.parse({
-    allowedCommands: availableActions(loaded.state, {
-      ...workspace.readiness,
-      capabilities: sourceReadiness,
-    }),
-    capabilities: SERVICE_COMMERCE_CAPABILITIES.map((capability) => ({
-      capability,
-      readiness: sourceReadiness[capability].readiness,
-    })),
+  return {
+    loaded,
     source,
-    state: loaded.state,
-    store: { id: workspace.store.id, name: workspace.store.name },
-    summary: loaded.summary,
-  })
+    sourceReadiness,
+    workspace,
+  }
 }

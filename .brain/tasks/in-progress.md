@@ -100,8 +100,23 @@
   identifier-only notification jobs. Its canonical Neon lifecycle passed 1
   test/29 assertions; authenticated desktop and 390x844 dashboard/storefront
   QA covered configuration, slot selection, hold, confirmation, cancel and
-  reschedule with atomic fixture cleanup. Ticket 09 is the next dependency-
-  ready approved source frontier.
+  reschedule with atomic fixture cleanup. Ticket 09 is complete: one exhaustive
+  state-aware action registry issues digest-only, expiring capabilities bound
+  to current source/target versions; public preview/execution reauthorize
+  current policy/readiness and explicit confirmation before effects. The
+  provider-neutral notification outbox keeps recipients protected and jobs
+  identifier-only; WhatsApp delivery resolves one active Store sender and the
+  canonical approved template before Direct Meta send, while a bounded
+  scheduler recovers due outbox work, and delayed Direct Meta callbacks append
+  scoped generic delivered/read/failed receipts through the immutable provider
+  Connection reference. Focused checks passed 116 tests/300
+  assertions, the canonical
+  `.env.local` Neon action lifecycle passed 1 test/6 assertions with atomic
+  cleanup. A temporary run-owned Neon fixture then passed 1280x720 plus
+  390x844 current-action, completed-state, secure Quote continuation and stale
+  recovery QA without console errors or overflow, followed by cleanup. Tickets
+  10 and 12 are now the next
+  dependency-ready approved source frontiers.
   Live Meta/storage/scanner release gates remain open. The focused
   Customer Channels/media matrix passes 71 tests and 177 assertions; the
   run-owned `.env.local` Neon bag-media seam passes 7 assertions. The full test gate has

@@ -1,6 +1,9 @@
 import { createHash, randomBytes } from "node:crypto"
 
-import { deriveServiceCommerceQuoteReleaseActions } from "@ewatrade/service-commerce"
+import {
+  type ServiceCommerceAction,
+  deriveServiceCommerceQuoteReleaseActions,
+} from "@ewatrade/service-commerce"
 import {
   compareExactDecimals,
   multiplyExactDecimals,
@@ -26,6 +29,11 @@ import {
   ServiceRequestStatus,
 } from "../../generated/prisma/enums"
 import { getCatalogOfferingAvailability } from "./catalog-inventory"
+import { revalidateCustomerActionCapabilityInTransaction } from "./service-commerce-actions/projection"
+import {
+  customerActionTypes,
+  customerActionValues,
+} from "./service-commerce-actions/shared"
 import {
   resolveCatalogAvailabilityAttestationForQuote,
   resolveCatalogSourceLinkForQuote,
@@ -40,6 +48,14 @@ import {
   supersedeServiceCommerceQuoteApprovalInTransaction,
 } from "./service-commerce-quote-release"
 import { materializePrescriptionQuoteReadyEffectsInTransaction } from "./whatsapp-connections"
+
+const COMMERCE_QUOTE_READ_CUSTOMER_ACTIONS = [
+  "view_quote",
+  "choose_quote_option",
+  "pay_now",
+  "pick_up",
+  "delivery",
+] as const satisfies readonly ServiceCommerceAction[]
 
 const COMMERCE_QUOTE_TRANSACTION_OPTIONS = {
   isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -2552,7 +2568,10 @@ export async function getPublicCommerceQuote(
   },
 ) {
   return db.$transaction(async (tx) => {
-    const access = await resolveCommerceQuoteAccess(tx, input)
+    const access = await resolveCommerceQuoteAccess(tx, {
+      ...input,
+      allowedCustomerActions: COMMERCE_QUOTE_READ_CUSTOMER_ACTIONS,
+    })
     const version = await tx.commerceQuoteVersion.findFirst({
       include: {
         lines: true,
@@ -2649,6 +2668,7 @@ export async function getPublicCommerceQuote(
         payable?.availabilityOutcome.toLowerCase() ??
         version.availabilityOutcome.toLowerCase(),
       currencyCode: version.currencyCode,
+      customerAction: access.customerAction ?? null,
       customerNote: payable?.customerNote ?? version.customerNote,
       discountMinor: payable?.discountMinor ?? 0,
       expiresAt: version.expiresAt,
@@ -2793,8 +2813,8 @@ async function assertSelectedOptionAvailability(
   }
 }
 
-export async function selectCommerceQuoteOption(
-  db: PrismaClient,
+export async function selectCommerceQuoteOptionInTransaction(
+  tx: Prisma.TransactionClient,
   input: {
     acceptanceToken: string
     authorize?: (
@@ -2823,93 +2843,101 @@ export async function selectCommerceQuoteOption(
       "Offer Option selection identity is invalid.",
     )
   }
-  const select = async (tx: Prisma.TransactionClient) => {
-    const access = await resolveCommerceQuoteAccess(tx, input)
-    const version = await tx.commerceQuoteVersion.findFirst({
-      include: {
-        optionSelection: true,
-        options: { include: { lines: true } },
-        quote: true,
-      },
-      where: quoteAccessWhere(access),
-    })
-    if (!version) {
-      throw new CommerceQuoteError(
-        "PUBLIC_TOKEN_INVALID",
-        "Quote is unavailable.",
-      )
-    }
-    try {
-      assertQuoteVersionAcceptable({
-        currentVersionId: version.quote.currentVersionId,
-        expiresAt: version.expiresAt,
-        status: version.status.toLowerCase() as CommerceQuoteVersionStatus,
-        versionId: version.id,
-      })
-    } catch {
-      throw new CommerceQuoteError(
-        "QUOTE_CONFLICT",
-        "Only the current unexpired Quote Version can be selected.",
-      )
-    }
-    await input.authorize?.(tx, version.quote)
-    if (version.options.length < 2) {
-      throw new CommerceQuoteError(
-        "QUOTE_CONFLICT",
-        "This Quote does not require an Offer Option selection.",
-      )
-    }
-    const option = version.options.find((item) => item.id === optionId)
-    if (!option || option.quoteVersionId !== version.id) {
-      throw new CommerceQuoteError(
-        "QUOTE_CONFLICT",
-        "Offer Option is stale or does not belong to this Quote Version.",
-      )
-    }
-    const payloadHash = hash({
-      clientSelectionId,
-      optionId,
+  const access = await resolveCommerceQuoteAccess(tx, {
+    ...input,
+    allowedCustomerActions: ["choose_quote_option"],
+  })
+  const version = await tx.commerceQuoteVersion.findFirst({
+    include: {
+      optionSelection: true,
+      options: { include: { lines: true } },
+      quote: true,
+    },
+    where: quoteAccessWhere(access),
+  })
+  if (!version) {
+    throw new CommerceQuoteError(
+      "PUBLIC_TOKEN_INVALID",
+      "Quote is unavailable.",
+    )
+  }
+  try {
+    assertQuoteVersionAcceptable({
+      currentVersionId: version.quote.currentVersionId,
+      expiresAt: version.expiresAt,
+      status: version.status.toLowerCase() as CommerceQuoteVersionStatus,
       versionId: version.id,
     })
-    if (version.optionSelection) {
-      if (
-        version.optionSelection.clientSelectionId !== clientSelectionId ||
-        version.optionSelection.optionId !== optionId ||
-        version.optionSelection.payloadHash !== payloadHash
-      ) {
-        throw new CommerceQuoteError(
-          "IDEMPOTENCY_MISMATCH",
-          "This Quote Version already has another Offer Option selection.",
-        )
-      }
-      return { optionId, versionId: version.id }
-    }
+  } catch {
+    throw new CommerceQuoteError(
+      "QUOTE_CONFLICT",
+      "Only the current unexpired Quote Version can be selected.",
+    )
+  }
+  await input.authorize?.(tx, version.quote)
+  if (version.options.length < 2) {
+    throw new CommerceQuoteError(
+      "QUOTE_CONFLICT",
+      "This Quote does not require an Offer Option selection.",
+    )
+  }
+  const option = version.options.find((item) => item.id === optionId)
+  if (!option || option.quoteVersionId !== version.id) {
+    throw new CommerceQuoteError(
+      "QUOTE_CONFLICT",
+      "Offer Option is stale or does not belong to this Quote Version.",
+    )
+  }
+  const payloadHash = hash({
+    clientSelectionId,
+    optionId,
+    versionId: version.id,
+  })
+  if (version.optionSelection) {
     if (
-      option.availabilityOutcome ===
-      CommerceQuoteAvailabilityOutcome.UNAVAILABLE
+      version.optionSelection.clientSelectionId !== clientSelectionId ||
+      version.optionSelection.optionId !== optionId ||
+      version.optionSelection.payloadHash !== payloadHash
     ) {
       throw new CommerceQuoteError(
-        "OFFERING_UNAVAILABLE",
-        "Unavailable Offer Options cannot be selected.",
+        "IDEMPOTENCY_MISMATCH",
+        "This Quote Version already has another Offer Option selection.",
       )
     }
-    await assertSelectedOptionAvailability(tx, {
-      lines: option.lines.filter(
-        (line) => line.outcome === CommerceQuoteLineOutcome.INCLUDED,
-      ),
-      storeId: version.quote.storeId,
-      tenantId: version.quote.tenantId,
-    })
-    await tx.commerceQuoteOptionSelection.create({
-      data: {
-        clientSelectionId,
-        optionId: option.id,
-        payloadHash,
-        quoteVersionId: version.id,
-      },
-    })
-    return { optionId: option.id, versionId: version.id }
+    return { optionId, versionId: version.id }
   }
+  if (
+    option.availabilityOutcome === CommerceQuoteAvailabilityOutcome.UNAVAILABLE
+  ) {
+    throw new CommerceQuoteError(
+      "OFFERING_UNAVAILABLE",
+      "Unavailable Offer Options cannot be selected.",
+    )
+  }
+  await assertSelectedOptionAvailability(tx, {
+    lines: option.lines.filter(
+      (line) => line.outcome === CommerceQuoteLineOutcome.INCLUDED,
+    ),
+    storeId: version.quote.storeId,
+    tenantId: version.quote.tenantId,
+  })
+  await tx.commerceQuoteOptionSelection.create({
+    data: {
+      clientSelectionId,
+      optionId: option.id,
+      payloadHash,
+      quoteVersionId: version.id,
+    },
+  })
+  return { optionId: option.id, versionId: version.id }
+}
+
+export async function selectCommerceQuoteOption(
+  db: PrismaClient,
+  input: Parameters<typeof selectCommerceQuoteOptionInTransaction>[1],
+) {
+  const select = (tx: Prisma.TransactionClient) =>
+    selectCommerceQuoteOptionInTransaction(tx, input)
 
   try {
     return await db.$transaction(select, COMMERCE_QUOTE_TRANSACTION_OPTIONS)
@@ -2926,7 +2954,11 @@ export async function selectCommerceQuoteOption(
 
 export async function getCommerceQuoteAcceptanceContext(
   tx: PrismaClient | Prisma.TransactionClient,
-  input: { acceptanceToken: string; clientAcceptanceId: string },
+  input: {
+    acceptanceToken: string
+    allowedCustomerActions?: readonly ServiceCommerceAction[]
+    clientAcceptanceId: string
+  },
 ) {
   const access = await resolveCommerceQuoteAccess(tx, input)
   const version = await tx.commerceQuoteVersion.findFirst({
@@ -3009,6 +3041,7 @@ export async function getCommerceQuoteAcceptanceContext(
 }
 
 type CommerceQuoteAccess = {
+  customerAction?: ServiceCommerceAction
   storeId?: string
   tenantId?: string
   versionId: string
@@ -3031,7 +3064,10 @@ function quoteAccessWhere(
 
 export async function resolveCommerceQuoteAccess(
   db: PrismaClient | Prisma.TransactionClient,
-  input: { acceptanceToken: string },
+  input: {
+    acceptanceToken: string
+    allowedCustomerActions?: readonly ServiceCommerceAction[]
+  },
 ): Promise<CommerceQuoteAccess> {
   const tokenDigest = digest(input.acceptanceToken)
   const version = await db.commerceQuoteVersion.findFirst({
@@ -3054,16 +3090,62 @@ export async function resolveCommerceQuoteAccess(
       tokenDigest,
     },
   })
-  if (!action) {
+  if (action) {
+    return {
+      storeId: action.storeId,
+      tenantId: action.tenantId,
+      versionId: action.entityId,
+    }
+  }
+
+  if (!input.allowedCustomerActions?.length) {
+    throw new CommerceQuoteError(
+      "PUBLIC_TOKEN_INVALID",
+      "Quote is unavailable.",
+    )
+  }
+  const customerAction =
+    await db.serviceCommerceCustomerActionCapability.findFirst({
+      include: { executions: { select: { id: true }, take: 1 } },
+      where: {
+        action: {
+          in: input.allowedCustomerActions.map(
+            (action) => customerActionTypes[action],
+          ),
+        },
+        expiresAt: { gt: new Date() },
+        status: { in: ["ACTIVE", "CONSUMED"] },
+        targetType: { in: ["QUOTE_VERSION", "QUOTE_OPTION"] },
+        tokenDigest,
+      },
+    })
+  let current = false
+  if (customerAction) {
+    try {
+      current = Boolean(
+        await revalidateCustomerActionCapabilityInTransaction(
+          db,
+          customerAction,
+        ),
+      )
+    } catch {
+      current = false
+    }
+  }
+  const completedExactAction =
+    customerAction?.status === "CONSUMED" &&
+    customerAction.executions.length > 0
+  if (!customerAction || (!current && !completedExactAction)) {
     throw new CommerceQuoteError(
       "PUBLIC_TOKEN_INVALID",
       "Quote is unavailable.",
     )
   }
   return {
-    storeId: action.storeId,
-    tenantId: action.tenantId,
-    versionId: action.entityId,
+    customerAction: customerActionValues[customerAction.action],
+    storeId: customerAction.storeId,
+    tenantId: customerAction.tenantId,
+    versionId: customerAction.targetId,
   }
 }
 

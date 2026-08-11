@@ -47,7 +47,10 @@ export async function preparePrescriptionHostedCheckout(
   },
 ) {
   return db.$transaction(async (tx) => {
-    const access = await resolveCommerceQuoteAccess(tx, input)
+    const access = await resolveCommerceQuoteAccess(tx, {
+      ...input,
+      allowedCustomerActions: ["pay_now"],
+    })
     const version = await tx.commerceQuoteVersion.findFirst({
       include: { quote: true },
       where: {

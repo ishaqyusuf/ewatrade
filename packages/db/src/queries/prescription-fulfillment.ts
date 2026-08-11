@@ -361,7 +361,10 @@ export async function revisePrescriptionQuoteForDelivery(
     }
   },
 ) {
-  const access = await resolveCommerceQuoteAccess(db, input)
+  const access = await resolveCommerceQuoteAccess(db, {
+    ...input,
+    allowedCustomerActions: ["delivery"],
+  })
   const current = await db.commerceQuoteVersion.findFirst({
     include: {
       lines: true,

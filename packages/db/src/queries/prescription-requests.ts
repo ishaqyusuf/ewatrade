@@ -2565,7 +2565,12 @@ async function acceptPrescriptionQuoteForFulfilment(
 ) {
   try {
     return await db.$transaction(async (tx) => {
-      const context = await getCommerceQuoteAcceptanceContext(tx, input)
+      const context = await getCommerceQuoteAcceptanceContext(tx, {
+        ...input,
+        allowedCustomerActions: [
+          expectedFulfilment === "delivery" ? "delivery" : "pick_up",
+        ],
+      })
       const { payable, version } = context
       if (
         version.quote.sourceType !==
@@ -2799,7 +2804,12 @@ async function acceptPrescriptionQuoteForFulfilment(
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
-      const context = await getCommerceQuoteAcceptanceContext(db, input)
+      const context = await getCommerceQuoteAcceptanceContext(db, {
+        ...input,
+        allowedCustomerActions: [
+          expectedFulfilment === "delivery" ? "delivery" : "pick_up",
+        ],
+      })
       if (context.replayOrderId) {
         const order = await db.commercialOrder.findFirstOrThrow({
           select: { customerPhone: true, storeId: true, tenantId: true },

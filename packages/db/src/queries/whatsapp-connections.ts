@@ -656,15 +656,43 @@ export async function resolveWhatsAppStatusConnection(
       providerMessageId: input.providerMessageId,
     },
   })
-  if (!attempt?.connectionId) {
+  if (attempt?.connectionId) {
+    return {
+      connectionId: attempt.connectionId,
+      kind: "prescription" as const,
+      tenantId: attempt.intent.tenantId,
+    }
+  }
+  const connection = await db.whatsAppConnection.findUnique({
+    select: { id: true, tenantId: true },
+    where: { phoneNumberId: input.phoneNumberId },
+  })
+  const customerAttempt = connection
+    ? await db.serviceCommerceCustomerNotificationAttempt.findFirst({
+        select: {
+          notificationIntentId: true,
+          storeId: true,
+          tenantId: true,
+        },
+        where: {
+          providerConnectionId: connection.id,
+          providerOperationId: input.providerMessageId,
+          tenantId: connection.tenantId,
+        },
+      })
+    : null
+  if (!connection || !customerAttempt) {
     throw new WhatsAppConnectionError(
       "CONNECTION_NOT_FOUND",
       "WhatsApp status connection was not found.",
     )
   }
   return {
-    connectionId: attempt.connectionId,
-    tenantId: attempt.intent.tenantId,
+    connectionId: connection.id,
+    intentId: customerAttempt.notificationIntentId,
+    kind: "service_commerce" as const,
+    storeId: customerAttempt.storeId,
+    tenantId: customerAttempt.tenantId,
   }
 }
 
@@ -1427,7 +1455,9 @@ export async function materializePrescriptionQuoteReadyEffectsInTransaction(
       protectedId.includes(actionId) ||
       protectedId.includes(actionId.slice(3))
     ) {
-      throw new Error("A protected Communications action reference is required.")
+      throw new Error(
+        "A protected Communications action reference is required.",
+      )
     }
     actions.push({
       protectedId,

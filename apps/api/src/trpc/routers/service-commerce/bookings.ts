@@ -320,6 +320,9 @@ export const serviceCommerceBookingsRouter = createTRPCRouter({
           },
         )
         if (scope.bookingId !== input.bookingId) publicFailure()
+        if (scope.customerAction && scope.customerAction !== input.operation) {
+          publicFailure()
+        }
         const result = await reviseServiceCommerceBooking(ctx.db, {
           ...input,
           issueCapabilityToken: issueServiceCommerceBookingCapabilityToken,

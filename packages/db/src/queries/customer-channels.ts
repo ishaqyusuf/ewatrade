@@ -8,6 +8,7 @@ import {
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import { MembershipRole, MembershipStatus } from "../../generated/prisma/enums"
 import { getServiceCommerceWorkspaceAccess } from "./service-commerce-access"
+import { revalidateCustomerActionCapabilityInTransaction } from "./service-commerce-actions/projection"
 import { evaluateServiceCommercePolicyBatchInTransaction } from "./service-commerce-policy"
 import type { DbClient } from "./types"
 
@@ -607,7 +608,7 @@ async function getPublicCustomerEntryPointInTransaction(
   db: CustomerChannelsClient,
   input: { publicToken: string },
 ) {
-  const entryPoint = await db.customerEntryPoint.findFirst({
+  let entryPoint = await db.customerEntryPoint.findFirst({
     select: {
       store: { select: { name: true } },
       storeId: true,
@@ -618,6 +619,42 @@ async function getPublicCustomerEntryPointInTransaction(
       status: "PUBLISHED",
     },
   })
+  if (!entryPoint) {
+    const actionDelegate = (
+      db as CustomerChannelsClient & {
+        serviceCommerceCustomerActionCapability?: CustomerChannelsClient["serviceCommerceCustomerActionCapability"]
+      }
+    ).serviceCommerceCustomerActionCapability
+    const action = actionDelegate
+      ? await actionDelegate.findFirst({
+          where: {
+            action: "TALK_TO_STAFF",
+            expiresAt: { gt: new Date() },
+            status: { in: ["ACTIVE", "CONSUMED"] },
+            targetType: "CUSTOMER_ENTRY_POINT",
+            tokenDigest: digest(input.publicToken),
+          },
+        })
+      : null
+    if (
+      action &&
+      (await revalidateCustomerActionCapabilityInTransaction(db, action))
+    ) {
+      entryPoint = await db.customerEntryPoint.findFirst({
+        select: {
+          store: { select: { name: true } },
+          storeId: true,
+          tenantId: true,
+        },
+        where: {
+          id: action.targetId,
+          status: "PUBLISHED",
+          storeId: action.storeId,
+          tenantId: action.tenantId,
+        },
+      })
+    }
+  }
   if (!entryPoint) {
     throw new CustomerChannelsError(
       "NOT_FOUND",

@@ -9,17 +9,33 @@ import {
   extractCustomerChannelIntakeSelection,
   extractWhatsAppChannelContext,
   isWithinWhatsAppSessionWindow,
+  issueServiceCommerceCustomerActionToken,
   parseMetaWhatsAppEvents,
   prescriptionConversationContextId,
   protectCommunicationsActionId,
   protectCommunicationsCredential,
+  protectCommunicationsRecipient,
   resolveCommunicationsActionId,
   resolveCommunicationsCredential,
+  resolveCommunicationsRecipient,
   verifyEmbeddedSignupState,
   verifyMetaWebhookSignature,
 } from "./index"
 
 describe("direct Meta WhatsApp contract", () => {
+  test("issues deterministic opaque customer-action capabilities", () => {
+    const input = {
+      clientCapabilityId: "capability-1",
+      storeId: "store-1",
+      tenantId: "tenant-1",
+    }
+    const first = issueServiceCommerceCustomerActionToken(input)
+    expect(first).toBe(issueServiceCommerceCustomerActionToken(input))
+    expect(first).toStartWith("sca1.")
+    expect(first).not.toContain("tenant-1")
+    expect(first).not.toContain("store-1")
+  })
+
   test("validates signatures before parsing normalized inbound events", () => {
     const body = JSON.stringify({ entry: [] })
     const signature = `sha256=${createHmac("sha256", "secret")
@@ -197,6 +213,12 @@ describe("direct Meta WhatsApp contract", () => {
     const reference = protectCommunicationsActionId("rx:opaque-action")
     expect(reference).not.toContain("rx:opaque-action")
     expect(resolveCommunicationsActionId(reference)).toBe("rx:opaque-action")
+  })
+
+  test("encrypts booking notification recipients before persistence", () => {
+    const reference = protectCommunicationsRecipient("+2348000000000")
+    expect(reference).not.toContain("+2348000000000")
+    expect(resolveCommunicationsRecipient(reference)).toBe("+2348000000000")
   })
 
   test("signs Embedded Signup state and rejects tampered or expired callbacks", () => {

@@ -436,6 +436,29 @@ run-owned Neon appointment lifecycle passed 1 test and 29 assertions and its
 Tenant/User fixture was removed atomically. Production rollout remains
 separately authorized.
 
+## Service Commerce Customer Action Migration State
+
+On 2026-08-11 the canonical verified `.env.local` Neon development workflow
+generated and applied `20260811100049_service_commerce_customer_actions`. The
+additive migration creates digest-only current-action capabilities,
+payload-bound execution receipts and the provider-neutral customer
+notification intent/attempt/receipt graph, with explicit Tenant/Store/source/
+target indexes and uniqueness constraints.
+
+The follow-up additive migration
+`20260811110847_service_commerce_customer_notification_receipts` records the
+immutable provider Connection on each sent attempt and indexes it with the
+provider operation id. This lets delayed Direct Meta status callbacks resolve
+the correct generic notification after binding rotation without consulting
+mutable active routing state.
+
+`bun db:migrate` applied both generated artifacts and `bun db:push` reported the
+verified development database already in sync. No migration SQL was
+hand-authored and no Docker/local PostgreSQL, production database, reset or
+data-loss override was used. The run-owned Neon action lifecycle passed 1 test
+with 6 assertions and removed its Tenant/User fixture atomically. Production
+rollout and live provider canaries remain separately authorized.
+
 ## Channel-Neutral Intake Attribution Migration State
 
 On 2026-08-10 Prisma generated and applied

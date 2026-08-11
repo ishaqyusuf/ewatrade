@@ -12,6 +12,7 @@ import { prisma } from "@ewatrade/db"
 import {
   ServiceCommercePolicyError,
   WhatsAppConnectionError,
+  recordServiceCommerceCustomerNotificationReceipt,
   recordWhatsAppCommunicationStatus,
   recordWhatsAppInboundEvent,
   recordWhatsAppRoutingAlert,
@@ -81,16 +82,34 @@ export async function handleWhatsAppWebhookRequest(request: Request) {
         continue
       }
       const timestampSeconds = Number(event.timestamp)
-      await recordWhatsAppCommunicationStatus(prisma, {
-        connectionId: receiptRoute.connectionId,
-        failureCode: event.failureCode,
-        occurredAt: Number.isFinite(timestampSeconds)
-          ? new Date(timestampSeconds * 1_000)
-          : new Date(),
-        providerMessageId: event.messageId,
-        status: event.status,
-        tenantId: receiptRoute.tenantId,
-      })
+      const occurredAt = Number.isFinite(timestampSeconds)
+        ? new Date(timestampSeconds * 1_000)
+        : new Date()
+      if (receiptRoute.kind === "service_commerce") {
+        if (
+          event.status === "delivered" ||
+          event.status === "failed" ||
+          event.status === "read"
+        ) {
+          await recordServiceCommerceCustomerNotificationReceipt(prisma, {
+            intentId: receiptRoute.intentId,
+            occurredAt,
+            providerReceiptId: `${event.messageId}:${event.status}`,
+            status: event.status,
+            storeId: receiptRoute.storeId,
+            tenantId: receiptRoute.tenantId,
+          })
+        }
+      } else {
+        await recordWhatsAppCommunicationStatus(prisma, {
+          connectionId: receiptRoute.connectionId,
+          failureCode: event.failureCode,
+          occurredAt,
+          providerMessageId: event.messageId,
+          status: event.status,
+          tenantId: receiptRoute.tenantId,
+        })
+      }
       continue
     }
     let route: Awaited<ReturnType<typeof resolveWhatsAppInboundConnection>>

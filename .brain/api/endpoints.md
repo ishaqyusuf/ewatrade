@@ -103,6 +103,19 @@ Typed tRPC routers are the primary application contract.
   short-lived opaque purpose-bound capabilities. Missing, stale, rotated,
   expired, cross-scope or revision-mismatched capabilities collapse to the
   same unavailable public response.
+- Protected `serviceCommerce.issueCustomerActions` resolves the authenticated
+  Tenant, authorized Store and operator, projects the current exhaustive
+  action set, persists digest-only capabilities and optionally enqueues one
+  provider-neutral notification after commit.
+- Public `serviceCommerce.customerAction` accepts only an opaque capability
+  token and returns a current safe preview or an unavailable recovery. Public
+  `executeCustomerAction` additionally requires a stable operation id and the
+  explicit confirmation flag; it never accepts Tenant, Store, source or target
+  identifiers.
+- Storefront `/action/[token]` renders the current action/recovery. Booking,
+  support and Quote pages accept only the same revalidated opaque capability;
+  `/commerce-inquiry-quote/[token]` owns Product Inquiry Quote selection and
+  acceptance without exposing internal scope.
 
 - Protected `serviceCommerce.workspaceAccess` resolves an optional authorized
   Store selection and returns only the server-owned access, configuration,

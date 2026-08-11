@@ -29,12 +29,22 @@ import {
   ServiceBookingRefundOutcome,
   ServiceBookingRefundPolicy,
   ServiceBookingStatus,
+  ServiceCommerceCustomerActionCapabilityStatus,
+  ServiceCommerceCustomerActionSourceKind,
+  ServiceCommerceCustomerActionTargetType,
+  ServiceCommerceCustomerActionType,
   ServiceCommercePolicyChannel,
   ServiceJobLineStatus,
   ServiceNotificationChannel,
   ServiceWorkEventType,
   WorkAuthorizationStatus,
 } from "../../../generated/prisma/enums"
+import { revalidateCustomerActionCapabilityInTransaction } from "../service-commerce-actions/projection"
+import {
+  customerActionSourceValues,
+  customerActionTokenDigest,
+  customerActionValues,
+} from "../service-commerce-actions/shared"
 import type { DbClient } from "../types"
 import {
   BOOKING_TRANSACTION_OPTIONS,
@@ -385,12 +395,122 @@ async function lockBooking(
   }
 }
 
+type BookingCustomerAction = "book" | "cancel" | "reschedule"
+
+async function resolveBookingCustomerActionCapability(
+  tx: BookingTransaction,
+  input: {
+    accessToken: string
+    actions: readonly BookingCustomerAction[]
+    now: Date
+  },
+) {
+  const actionDelegate = (
+    tx as BookingTransaction & {
+      serviceCommerceCustomerActionCapability?: BookingTransaction["serviceCommerceCustomerActionCapability"]
+    }
+  ).serviceCommerceCustomerActionCapability
+  if (!actionDelegate) return null
+  const action = await actionDelegate.findFirst({
+    where: {
+      action: {
+        in: input.actions.map((value) =>
+          value === "book"
+            ? ServiceCommerceCustomerActionType.BOOK
+            : value === "cancel"
+              ? ServiceCommerceCustomerActionType.CANCEL
+              : ServiceCommerceCustomerActionType.RESCHEDULE,
+        ),
+      },
+      expiresAt: { gt: input.now },
+      sourceKind: ServiceCommerceCustomerActionSourceKind.SERVICE,
+      status: {
+        in: [
+          ServiceCommerceCustomerActionCapabilityStatus.ACTIVE,
+          ServiceCommerceCustomerActionCapabilityStatus.CONSUMED,
+        ],
+      },
+      targetType: {
+        in: [
+          ServiceCommerceCustomerActionTargetType.SOURCE,
+          ServiceCommerceCustomerActionTargetType.BOOKING,
+        ],
+      },
+      tokenDigest: customerActionTokenDigest(input.accessToken),
+    },
+  })
+  if (
+    !action ||
+    !(await revalidateCustomerActionCapabilityInTransaction(tx, action))
+  ) {
+    return null
+  }
+  const customerAction = customerActionValues[action.action]
+  const source = {
+    id: action.sourceId,
+    kind: customerActionSourceValues[action.sourceKind],
+  } as const
+  if (customerAction === "book") {
+    const offeringConfig = await tx.serviceBookingOfferingConfig.findFirst({
+      where: {
+        id: action.targetId,
+        revision: Number(action.targetVersion),
+        status: ServiceBookingRecordStatus.ACTIVE,
+        storeId: action.storeId,
+        tenantId: action.tenantId,
+      },
+    })
+    if (!offeringConfig) return null
+    return {
+      booking: null,
+      bookingId: null,
+      customerAction,
+      id: action.id,
+      offeringConfig,
+      offeringConfigId: offeringConfig.id,
+      purpose: ServiceBookingAccessPurpose.VIEW_SLOTS,
+      sourceId: action.sourceId,
+      sourceType: bookingSourceType(source),
+      stateRevision: offeringConfig.revision,
+      status: ServiceBookingAccessStatus.ACTIVE,
+      storeId: action.storeId,
+      tenantId: action.tenantId,
+    }
+  }
+  const booking = await tx.serviceBooking.findFirst({
+    include: { offeringConfig: true, resource: true },
+    where: {
+      id: action.targetId,
+      revision: Number(action.targetVersion),
+      storeId: action.storeId,
+      tenantId: action.tenantId,
+    },
+  })
+  if (!booking) return null
+  return {
+    booking,
+    bookingId: booking.id,
+    customerAction,
+    id: action.id,
+    offeringConfig: booking.offeringConfig,
+    offeringConfigId: booking.offeringConfigId,
+    purpose: ServiceBookingAccessPurpose.VIEW_AND_MANAGE,
+    sourceId: action.sourceId,
+    sourceType: bookingSourceType(source),
+    stateRevision: booking.revision,
+    status: ServiceBookingAccessStatus.ACTIVE,
+    storeId: action.storeId,
+    tenantId: action.tenantId,
+  }
+}
+
 async function resolveCapability(
   tx: BookingTransaction,
   input: {
     accessToken: string
     now: Date
     purpose: ServiceBookingAccessPurpose
+    requiredCustomerAction?: "cancel" | "reschedule"
     status?: ServiceBookingAccessStatus | { in: ServiceBookingAccessStatus[] }
   },
 ) {
@@ -403,13 +523,21 @@ async function resolveCapability(
       tokenDigest: bookingTokenDigest(input.accessToken),
     },
   })
-  if (!capability) {
+  if (capability) return capability
+  const customerAction = input.requiredCustomerAction
+    ? await resolveBookingCustomerActionCapability(tx, {
+        accessToken: input.accessToken,
+        actions: [input.requiredCustomerAction],
+        now: input.now,
+      })
+    : null
+  if (!customerAction) {
     throw new ServiceCommerceBookingError(
       "BOOKING_NOT_FOUND",
       "Booking capability is unavailable.",
     )
   }
-  return capability
+  return customerAction
 }
 
 /**
@@ -437,17 +565,30 @@ async function resolveSlotCapability(
     },
   })
   if (
-    !capability ||
-    (capability.purpose === ServiceBookingAccessPurpose.VIEW_AND_MANAGE &&
-      (!capability.booking ||
-        capability.stateRevision !== capability.booking.revision))
+    capability &&
+    capability.purpose === ServiceBookingAccessPurpose.VIEW_AND_MANAGE &&
+    (!capability.booking ||
+      capability.stateRevision !== capability.booking.revision)
   ) {
     throw new ServiceCommerceBookingError(
       "BOOKING_NOT_FOUND",
       "Booking capability is unavailable.",
     )
   }
-  return capability
+  if (capability) return capability
+
+  const customerAction = await resolveBookingCustomerActionCapability(tx, {
+    accessToken: input.accessToken,
+    actions: ["book", "reschedule"],
+    now: input.now,
+  })
+  if (!customerAction) {
+    throw new ServiceCommerceBookingError(
+      "BOOKING_NOT_FOUND",
+      "Booking capability is unavailable.",
+    )
+  }
+  return customerAction
 }
 
 export async function resolveServiceCommerceBookingCapabilityScope(
@@ -465,7 +606,7 @@ export async function resolveServiceCommerceBookingCapabilityScope(
           accessToken: input.accessToken,
           now,
         })
-      : await db.serviceBookingAccessCapability.findFirst({
+      : ((await db.serviceBookingAccessCapability.findFirst({
           include: { booking: true, offeringConfig: true },
           where: {
             expiresAt: { gt: now },
@@ -476,7 +617,17 @@ export async function resolveServiceCommerceBookingCapabilityScope(
             status: ServiceBookingAccessStatus.ACTIVE,
             tokenDigest: bookingTokenDigest(input.accessToken),
           },
-        })
+        })) ??
+        (input.purpose === "view_and_manage"
+          ? await resolveBookingCustomerActionCapability(
+              db as BookingTransaction,
+              {
+                accessToken: input.accessToken,
+                actions: ["cancel", "reschedule"],
+                now,
+              },
+            )
+          : null))
   if (!capability) {
     throw new ServiceCommerceBookingError(
       "BOOKING_NOT_FOUND",
@@ -485,6 +636,8 @@ export async function resolveServiceCommerceBookingCapabilityScope(
   }
   return {
     bookingId: capability.bookingId,
+    customerAction:
+      "customerAction" in capability ? capability.customerAction : null,
     offeringId: capability.offeringConfig.offeringId,
     source: bookingSourceRef({
       sourceId: capability.sourceId,
@@ -1865,6 +2018,10 @@ export async function reviseServiceCommerceBooking(
           accessToken: input.accessToken,
           now,
           purpose: ServiceBookingAccessPurpose.VIEW_AND_MANAGE,
+          requiredCustomerAction:
+            input.operation === "cancel" || input.operation === "reschedule"
+              ? input.operation
+              : undefined,
           status: {
             in: [
               ServiceBookingAccessStatus.ACTIVE,
@@ -2366,15 +2523,21 @@ export async function getPublicServiceCommerceBooking(
   input: { accessToken: string; now?: Date },
 ) {
   const now = input.now ?? new Date()
-  const capability = await db.serviceBookingAccessCapability.findFirst({
-    include: { booking: { include: { resource: true } } },
-    where: {
-      expiresAt: { gt: now },
-      purpose: ServiceBookingAccessPurpose.VIEW_AND_MANAGE,
-      status: ServiceBookingAccessStatus.ACTIVE,
-      tokenDigest: bookingTokenDigest(input.accessToken),
-    },
-  })
+  const capability =
+    (await db.serviceBookingAccessCapability.findFirst({
+      include: { booking: { include: { resource: true } } },
+      where: {
+        expiresAt: { gt: now },
+        purpose: ServiceBookingAccessPurpose.VIEW_AND_MANAGE,
+        status: ServiceBookingAccessStatus.ACTIVE,
+        tokenDigest: bookingTokenDigest(input.accessToken),
+      },
+    })) ??
+    (await resolveBookingCustomerActionCapability(db as BookingTransaction, {
+      accessToken: input.accessToken,
+      actions: ["cancel", "reschedule"],
+      now,
+    }))
   if (
     !capability?.booking ||
     capability.stateRevision !== capability.booking.revision
@@ -2392,15 +2555,20 @@ export async function getPublicServiceCommerceBooking(
     tenantId: capability.tenantId,
   })
   await assertBookingRuntimeReady(db as BookingTransaction, capability)
-  await db.serviceBookingAccessCapability.updateMany({
-    data: { accessCount: { increment: 1 }, lastAccessedAt: now },
-    where: {
-      id: capability.id,
-      stateRevision: capability.stateRevision,
-      status: ServiceBookingAccessStatus.ACTIVE,
-      storeId: capability.storeId,
-      tenantId: capability.tenantId,
-    },
-  })
-  return safeBookingProjection(capability.booking)
+  if (!("customerAction" in capability)) {
+    await db.serviceBookingAccessCapability.updateMany({
+      data: { accessCount: { increment: 1 }, lastAccessedAt: now },
+      where: {
+        id: capability.id,
+        stateRevision: capability.stateRevision,
+        status: ServiceBookingAccessStatus.ACTIVE,
+        storeId: capability.storeId,
+        tenantId: capability.tenantId,
+      },
+    })
+  }
+  const projection = safeBookingProjection(capability.booking)
+  return "customerAction" in capability
+    ? { ...projection, nextOperations: [capability.customerAction] }
+    : projection
 }

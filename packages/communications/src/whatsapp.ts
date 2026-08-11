@@ -8,6 +8,8 @@ import {
 } from "node:crypto"
 import { type RedisClientType, createClient } from "redis"
 
+import { SERVICE_COMMERCE_CUSTOMER_ACTION_TEMPLATE_KEY } from "./service-commerce-action-capability"
+
 const META_GRAPH_URL = "https://graph.facebook.com/v21.0"
 export const WHATSAPP_SESSION_WINDOW_MS = 24 * 60 * 60_000
 
@@ -255,7 +257,7 @@ export class DirectMetaWhatsAppProvider implements WhatsAppProvider {
         .filter((template) => template.status === "APPROVED")
         .map((template) => String(template.name ?? "")),
     )
-    const expectedTemplates = {
+    const requiredTemplates = {
       clarification: "ewatrade_prescription_clarification",
       delivery_failed: "ewatrade_delivery_failed",
       delivery_progress: "ewatrade_delivery_progress",
@@ -264,6 +266,10 @@ export class DirectMetaWhatsAppProvider implements WhatsAppProvider {
       pickup_ready: "ewatrade_pickup_ready",
       quote_ready: "ewatrade_prescription_quote_ready",
     }
+    const optionalTemplates = {
+      customer_actions: SERVICE_COMMERCE_CUSTOMER_ACTION_TEMPLATE_KEY,
+    }
+    const expectedTemplates = { ...requiredTemplates, ...optionalTemplates }
     const templateConfiguration = Object.fromEntries(
       Object.entries(expectedTemplates).filter(([, name]) =>
         approved.has(name),
@@ -276,9 +282,9 @@ export class DirectMetaWhatsAppProvider implements WhatsAppProvider {
       outboundVerified,
       webhookSubscribed:
         Array.isArray(subscriptions.data) && subscriptions.data.length > 0,
-      templatesReady:
-        Object.keys(templateConfiguration).length ===
-        Object.keys(expectedTemplates).length,
+      templatesReady: Object.values(requiredTemplates).every((name) =>
+        approved.has(name),
+      ),
       templateConfiguration: { ...templateConfiguration, language: "en" },
     }
   }
@@ -735,6 +741,22 @@ export function resolveCommunicationsCredential(reference: string) {
     decipher.update(Buffer.from(encrypted, "base64url")),
     decipher.final(),
   ]).toString("utf8")
+}
+
+export function protectCommunicationsRecipient(value: string) {
+  const normalized = value.trim()
+  if (!normalized || normalized.length > 320) {
+    throw new Error("A bounded Communications recipient is required.")
+  }
+  return protectCommunicationsCredential(normalized)
+}
+
+export function resolveCommunicationsRecipient(reference: string) {
+  const value = resolveCommunicationsCredential(reference).trim()
+  if (!value || value.length > 320) {
+    throw new Error("Communications recipient reference is invalid.")
+  }
+  return value
 }
 
 export function protectCommunicationsActionId(actionId: string) {

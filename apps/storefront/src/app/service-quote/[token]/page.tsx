@@ -59,6 +59,10 @@ export default async function Page({
   const { token } = await params
   const query = await searchParams
   const quote = await load(token)
+  const canAccept = quote.customerAction === null
+  const canSelect =
+    quote.customerAction === null ||
+    quote.customerAction === "choose_quote_option"
   const displayedOption =
     quote.options.find((option) => option.id === quote.selectedOptionId) ??
     (quote.options.length === 1 ? quote.options[0] : null)
@@ -118,12 +122,14 @@ export default async function Page({
                     </li>
                   ))}
                 </ul>
-                <button
-                  className="h-11 bg-primary px-5 text-sm font-medium text-primary-foreground"
-                  type="submit"
-                >
-                  Choose {option.label}
-                </button>
+                {canSelect ? (
+                  <button
+                    className="h-11 bg-primary px-5 text-sm font-medium text-primary-foreground"
+                    type="submit"
+                  >
+                    Choose {option.label}
+                  </button>
+                ) : null}
               </form>
             ))}
           </section>
@@ -190,7 +196,7 @@ export default async function Page({
             </div>
           </div>
         )}
-        {!quote.accepted && quote.payable ? (
+        {!quote.accepted && quote.payable && canAccept ? (
           <form action={accept}>
             <input name="token" type="hidden" value={token} />
             <button

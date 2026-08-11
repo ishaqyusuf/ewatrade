@@ -1,0 +1,203 @@
+enum ServiceCommerceCustomerActionType {
+  REQUEST_QUOTE
+  VIEW_QUOTE
+  CHOOSE_QUOTE_OPTION
+  BOOK
+  PAY_NOW
+  PICK_UP
+  DELIVERY
+  TALK_TO_STAFF
+  RESCHEDULE
+  CANCEL
+}
+
+enum ServiceCommerceCustomerActionSourceKind {
+  SERVICE
+  PRESCRIPTION
+  COMMERCE_INQUIRY
+}
+
+enum ServiceCommerceCustomerActionChannel {
+  WEB
+  STAFF
+  WHATSAPP
+}
+
+enum ServiceCommerceCustomerActionTargetType {
+  SOURCE
+  QUOTE_VERSION
+  QUOTE_OPTION
+  BOOKING
+  COMMERCIAL_ORDER
+  CUSTOMER_ENTRY_POINT
+}
+
+enum ServiceCommerceCustomerActionCapabilityStatus {
+  ACTIVE
+  CONSUMED
+  REVOKED
+}
+
+enum ServiceCommerceCustomerActionExecutionOutcome {
+  COMPLETED
+  RECOVERY
+}
+
+enum ServiceCommerceCustomerNotificationStatus {
+  PENDING
+  CLAIMED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  CANCELLED
+}
+
+enum ServiceCommerceCustomerNotificationAttemptStatus {
+  CLAIMED
+  SENT
+  FAILED
+}
+
+enum ServiceCommerceCustomerNotificationReceiptStatus {
+  DELIVERED
+  READ
+  FAILED
+}
+
+/// One short-lived, single-purpose customer action. The raw bearer token is
+/// never stored; every command reloads and revalidates current source/target
+/// facts inside its Tenant + Store boundary.
+model ServiceCommerceCustomerActionCapability {
+  id                   String                                           @id @default(cuid())
+  tenantId             String
+  storeId              String
+  sourceKind           ServiceCommerceCustomerActionSourceKind
+  sourceId             String
+  sourceVersion        DateTime
+  action               ServiceCommerceCustomerActionType
+  channel              ServiceCommerceCustomerActionChannel
+  targetType           ServiceCommerceCustomerActionTargetType
+  targetId             String
+  targetVersion        String
+  targetOptionId       String?
+  clientCapabilityId   String
+  payloadHash          String
+  tokenDigest          String                                           @unique
+  status               ServiceCommerceCustomerActionCapabilityStatus    @default(ACTIVE)
+  label                String
+  consequence          String
+  confirmationRequired Boolean                                          @default(false)
+  amountMinor          Int?
+  currencyCode         String?
+  expiresAt            DateTime
+  consumedAt           DateTime?
+  createdByUserId      String
+  notificationIntentId String?
+  createdAt            DateTime                                         @default(now())
+  updatedAt            DateTime                                         @updatedAt
+  tenant               Tenant                                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                Store                                            @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  notificationIntent   ServiceCommerceCustomerNotificationIntent?       @relation(fields: [notificationIntentId], references: [id], onDelete: SetNull)
+  executions           ServiceCommerceCustomerActionExecution[]
+
+  @@unique([tenantId, clientCapabilityId])
+  @@index([tenantId, storeId, sourceKind, sourceId, status, expiresAt])
+  @@index([targetType, targetId, targetVersion])
+  @@index([notificationIntentId])
+}
+
+model ServiceCommerceCustomerActionExecution {
+  id                String                                           @id @default(cuid())
+  tenantId          String
+  storeId           String
+  capabilityId      String
+  clientOperationId String
+  payloadHash       String
+  outcome           ServiceCommerceCustomerActionExecutionOutcome
+  resultKind        String
+  executedAt        DateTime                                         @default(now())
+  tenant            Tenant                                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                                            @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  capability        ServiceCommerceCustomerActionCapability          @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
+
+  @@unique([capabilityId, clientOperationId])
+  @@index([tenantId, storeId, executedAt])
+}
+
+/// Provider-neutral customer notification. Recipient ciphertext is private;
+/// jobs receive identifiers only and reload current policy before delivery.
+model ServiceCommerceCustomerNotificationIntent {
+  id                       String                                           @id @default(cuid())
+  tenantId                 String
+  storeId                  String
+  clientIntentId           String
+  payloadHash              String
+  channel                  ServiceCommerceCustomerActionChannel
+  protectedRecipient       String
+  messageKind              String
+  templateKey              String?
+  templateRequired         Boolean                                          @default(false)
+  serviceWindowExpiresAt   DateTime?
+  status                   ServiceCommerceCustomerNotificationStatus        @default(PENDING)
+  attemptCount             Int                                              @default(0)
+  maxAttempts              Int                                              @default(3)
+  nextAttemptAt            DateTime                                         @default(now())
+  claimedAt                DateTime?
+  claimExpiresAt           DateTime?
+  lastFailureCode          String?
+  createdByUserId          String
+  createdAt                DateTime                                         @default(now())
+  updatedAt                DateTime                                         @updatedAt
+  sentAt                   DateTime?
+  deliveredAt              DateTime?
+  readAt                   DateTime?
+  tenant                   Tenant                                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                    Store                                            @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  actionCapabilities       ServiceCommerceCustomerActionCapability[]
+  attempts                 ServiceCommerceCustomerNotificationAttempt[]
+  receipts                 ServiceCommerceCustomerNotificationReceipt[]
+
+  @@unique([tenantId, clientIntentId])
+  @@index([tenantId, storeId, status, nextAttemptAt])
+}
+
+model ServiceCommerceCustomerNotificationAttempt {
+  id                  String                                            @id @default(cuid())
+  tenantId            String
+  storeId             String
+  notificationIntentId String
+  attemptNumber       Int
+  status              ServiceCommerceCustomerNotificationAttemptStatus
+  providerKey         String?
+  providerConnectionId String?
+  providerOperationId String?
+  failureCode         String?
+  startedAt           DateTime                                          @default(now())
+  completedAt         DateTime?
+  tenant              Tenant                                            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store               Store                                             @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  notificationIntent  ServiceCommerceCustomerNotificationIntent         @relation(fields: [notificationIntentId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationIntentId, attemptNumber])
+  @@index([tenantId, storeId, startedAt])
+  @@index([tenantId, providerConnectionId, providerOperationId])
+}
+
+model ServiceCommerceCustomerNotificationReceipt {
+  id                  String                                            @id @default(cuid())
+  tenantId            String
+  storeId             String
+  notificationIntentId String
+  providerReceiptId   String
+  status              ServiceCommerceCustomerNotificationReceiptStatus
+  occurredAt          DateTime
+  createdAt           DateTime                                          @default(now())
+  tenant              Tenant                                            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store               Store                                             @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  notificationIntent  ServiceCommerceCustomerNotificationIntent         @relation(fields: [notificationIntentId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, providerReceiptId])
+  @@index([notificationIntentId, occurredAt])
+  @@index([tenantId, storeId, occurredAt])
+}

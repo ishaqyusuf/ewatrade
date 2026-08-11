@@ -130,6 +130,8 @@ describe("Service Commerce interoperability contracts", () => {
     ])
     expect(SERVICE_COMMERCE_ACTIONS).toEqual([
       "request_quote",
+      "view_quote",
+      "choose_quote_option",
       "book",
       "pay_now",
       "pick_up",

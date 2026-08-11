@@ -434,7 +434,49 @@ describe("WhatsApp communication receipts", () => {
         phoneNumberId: "phone-1",
         providerMessageId: "wamid.late",
       }),
-    ).toEqual({ connectionId: "suspended-connection", tenantId: "tenant-1" })
+    ).toEqual({
+      connectionId: "suspended-connection",
+      kind: "prescription",
+      tenantId: "tenant-1",
+    })
+  })
+
+  test("resolves generic customer notification receipts by immutable provider connection", async () => {
+    const db = {
+      prescriptionCommunicationAttempt: { findFirst: async () => null },
+      serviceCommerceCustomerNotificationAttempt: {
+        findFirst: async (input: unknown) => {
+          expect(input).toMatchObject({
+            where: {
+              providerConnectionId: "connection-1",
+              providerOperationId: "wamid.customer-action",
+              tenantId: "tenant-1",
+            },
+          })
+          return {
+            notificationIntentId: "intent-1",
+            storeId: "store-1",
+            tenantId: "tenant-1",
+          }
+        },
+      },
+      whatsAppConnection: {
+        findUnique: async () => ({ id: "connection-1", tenantId: "tenant-1" }),
+      },
+    } as unknown as PrismaClient
+
+    expect(
+      await resolveWhatsAppStatusConnection(db, {
+        phoneNumberId: "phone-1",
+        providerMessageId: "wamid.customer-action",
+      }),
+    ).toEqual({
+      connectionId: "connection-1",
+      intentId: "intent-1",
+      kind: "service_commerce",
+      storeId: "store-1",
+      tenantId: "tenant-1",
+    })
   })
 })
 

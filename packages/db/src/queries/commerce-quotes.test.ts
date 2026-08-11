@@ -1364,6 +1364,29 @@ describe("Commerce Quote invariants", () => {
     })
   })
 
+  test("does not treat a view-only customer action as Quote acceptance authority", async () => {
+    let customerActionReads = 0
+    const db = {
+      commerceQuoteReplayAccessToken: { findFirst: async () => null },
+      commerceQuoteVersion: { findFirst: async () => null },
+      prescriptionQuickAction: { findFirst: async () => null },
+      serviceCommerceCustomerActionCapability: {
+        findFirst: async () => {
+          customerActionReads += 1
+          return null
+        },
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      getCommerceQuoteAcceptanceContext(db, {
+        acceptanceToken: "view-only-action-token",
+        clientAcceptanceId: "acceptance-1",
+      }),
+    ).rejects.toMatchObject({ code: "PUBLIC_TOKEN_INVALID" })
+    expect(customerActionReads).toBe(0)
+  })
+
   test("selects one current option idempotently without validating display-only alternatives", async () => {
     type Selection = {
       clientSelectionId: string

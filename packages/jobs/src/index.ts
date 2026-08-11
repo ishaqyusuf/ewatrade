@@ -48,6 +48,10 @@ import {
   serviceCommerceBookingRemindersHandler,
 } from "./handlers/service-commerce-booking-reminders"
 import {
+  type ServiceCommerceCustomerNotificationDispatchPayload,
+  serviceCommerceCustomerNotificationDispatchHandler,
+} from "./handlers/service-commerce-customer-notification-dispatch"
+import {
   type ServiceCommerceMediaIngestPayload,
   serviceCommerceMediaIngestHandler,
 } from "./handlers/service-commerce-media-ingest"
@@ -80,6 +84,10 @@ export const jobIds = {
   serviceCommerceMediaIngest: "service-commerce.media-ingest",
   serviceCommerceBookingNotificationDispatch:
     "service-commerce.booking-notification-dispatch",
+  serviceCommerceCustomerNotificationDispatch:
+    "service-commerce.customer-notification-dispatch",
+  serviceCommerceCustomerNotificationSchedule:
+    "service-commerce.customer-notification-schedule",
   serviceCommerceBookingReminders: "service-commerce.booking-reminders",
   serviceCommerceMediaSafety: "service-commerce.media-safety",
   serviceCommerceMediaRetention: "service-commerce.media-retention",
@@ -190,6 +198,17 @@ export async function enqueueServiceCommerceBookingNotificationDispatch(
   await triggerJob(
     jobIds.serviceCommerceBookingNotificationDispatch,
     serviceCommerceBookingNotificationDispatchHandler,
+    input,
+    { maxAttempts: 3 },
+  )
+}
+
+export async function enqueueServiceCommerceCustomerNotificationDispatch(
+  input: ServiceCommerceCustomerNotificationDispatchPayload,
+) {
+  await triggerJob(
+    jobIds.serviceCommerceCustomerNotificationDispatch,
+    serviceCommerceCustomerNotificationDispatchHandler,
     input,
     { maxAttempts: 3 },
   )
@@ -337,6 +356,7 @@ export { serviceNotificationDispatchHandler }
 export {
   serviceCommerceBookingNotificationDispatchHandler,
   serviceCommerceBookingRemindersHandler,
+  serviceCommerceCustomerNotificationDispatchHandler,
   serviceCommerceMediaIngestHandler,
   serviceCommerceMediaRetentionHandler,
   serviceCommerceMediaSafetyHandler,
@@ -357,6 +377,7 @@ export type { NotificationDispatchPayload, ServiceNotificationDispatchPayload }
 export type {
   ServiceCommerceBookingNotificationDispatchPayload,
   ServiceCommerceBookingRemindersPayload,
+  ServiceCommerceCustomerNotificationDispatchPayload,
   ServiceCommerceMediaIngestPayload,
   ServiceCommerceMediaRetentionPayload,
   ServiceCommerceMediaSafetyPayload,

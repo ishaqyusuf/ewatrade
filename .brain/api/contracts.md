@@ -349,6 +349,47 @@
   work to retry, and the recurring sweeper covers every pending notification
   type rather than only reminders.
 
+## Service Commerce Customer Action And Notification Contract
+
+- The exhaustive action vocabulary is `request_quote | view_quote |
+  choose_quote_option | book | pay_now | pick_up | delivery | talk_to_staff |
+  reschedule | cancel`. One server registry owns labels, consequences and
+  confirmation requirements; channel clients never recreate the state rules.
+- Issuance derives current source, exact released Quote Version/selected Offer
+  Option, booking, fulfilment, readiness and policy facts. Pending/rejected
+  Quotes and actions not valid for the current state are never projected.
+- A capability is short-lived, single-purpose and bound to Tenant, Store,
+  source kind/id/version, target kind/id/version, optional exact Option,
+  channel, action and payload identity. Persistence stores only its digest;
+  logs, analytics, jobs and notification rows never store the raw bearer.
+- Public preview and execution revalidate capability status/expiry, current
+  source/version, exact target, Store readiness, vertical policy and the
+  creator's current operating authority. Stale, consumed, revoked,
+  cross-scope or unavailable facts collapse to a safe recovery response.
+- Navigation is not business truth. Consequential commands require explicit
+  confirmation and a payload-bound operation id. Quote Option selection runs
+  inside the authoritative Commerce transaction; booking, payment and
+  fulfilment continue through their existing source-owned command boundaries.
+- Provider-neutral notification intents contain a protected recipient and
+  server-owned message/template metadata. WhatsApp claim resolves exactly one
+  active Store Binding/Connection whose approved template configuration
+  contains the canonical customer-action template. Dispatch jobs carry
+  identifiers only, reauthorize again after claim before decrypting
+  credentials/recipient, send through Direct Meta, reconstruct only opaque
+  `/action/[token]` URLs and record bounded attempts/receipts. Direct Meta
+  status callbacks resolve the immutable provider Connection + operation id;
+  delivered/read/failed states update only the matching Tenant/Store generic
+  intent. Each action token remains single-purpose: read-only Quote links
+  cannot accept/pay/choose fulfilment, and booking management accepts only the
+  exact projected reschedule or cancel operation.
+- A five-minute bounded scheduler enumerates due pending, failed or expired-
+  claim intents whose attempt budget remains. It enqueues only actor/Tenant/
+  Store/intent identifiers; the scoped claim remains the authorization and
+  provider-readiness boundary.
+- The release boundary remains authoritative: customer Quote actions appear
+  only after an exact Version is `ISSUED`; a pending or rejected approval can
+  create staff work but cannot create a customer capability or notification.
+
 ## Service Commerce Source And Progressive Catalog Contract
 
 ADR-0030 and the revised ticket batch are owner-approved. Tickets 01-03 now
