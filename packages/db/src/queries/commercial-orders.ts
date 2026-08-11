@@ -10,6 +10,7 @@ import {
 
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
+  CatalogAvailabilityAttestationType,
   CatalogRecordStatus,
   type InventoryUnitStockBehavior,
   OfferingPricingPolicy,
@@ -64,6 +65,7 @@ export type CreateCommercialOrderInput = {
     expectedConfigurationVersionId?: string
     expectedFixedPriceMinor?: number
     offeringId: string
+    progressiveAvailabilityAttestationId?: string
     quantity: string
     trustedUnitPriceMinor?: number
   }>
@@ -513,6 +515,9 @@ export async function createCommercialOrderInTransaction(
   }> = []
 
   for (const lineInput of input.lines) {
+    const progressiveManual = Boolean(
+      lineInput.progressiveAvailabilityAttestationId,
+    )
     const offering = await tx.sellableOffering.findFirst({
       include: {
         catalogItem: { select: { id: true, name: true } },
@@ -527,11 +532,39 @@ export async function createCommercialOrderInTransaction(
       },
       where: {
         id: lineInput.offeringId,
-        status: CatalogRecordStatus.ACTIVE,
+        status: progressiveManual
+          ? { in: [CatalogRecordStatus.ACTIVE, CatalogRecordStatus.DRAFT] }
+          : CatalogRecordStatus.ACTIVE,
         tenantId: input.tenantId,
       },
     })
-    if (!offering || !offering.storeAvailability[0]?.isAvailable) {
+    if (!offering) {
+      throw new CatalogError(
+        "OFFERING_UNAVAILABLE",
+        "An Order line selected an unavailable Offering.",
+      )
+    }
+
+    if (progressiveManual) {
+      const commitment = await tx.catalogAvailabilityAttestation.findFirst({
+        where: {
+          expiresAt: { gt: now },
+          id: lineInput.progressiveAvailabilityAttestationId,
+          offeringId: offering.id,
+          quantity: { gte: parseExactDecimal(lineInput.quantity) },
+          storeId: store.id,
+          supersededAt: null,
+          tenantId: input.tenantId,
+          type: CatalogAvailabilityAttestationType.MANUAL_PROCURE_TO_ORDER,
+        },
+      })
+      if (!commitment) {
+        throw new CatalogError(
+          "OFFERING_UNAVAILABLE",
+          "The progressive availability commitment is stale or unavailable.",
+        )
+      }
+    } else if (!offering.storeAvailability[0]?.isAvailable) {
       throw new CatalogError(
         "OFFERING_UNAVAILABLE",
         "An Order line selected an unavailable Offering.",
@@ -662,7 +695,10 @@ export async function createCommercialOrderInTransaction(
     let reservation:
       | Awaited<ReturnType<typeof reserveCatalogOfferingStockInTransaction>>
       | undefined
-    if (resolved.offering.kind === SellableOfferingKind.PRODUCT_UNIT) {
+    if (
+      resolved.offering.kind === SellableOfferingKind.PRODUCT_UNIT &&
+      !resolved.input.progressiveAvailabilityAttestationId
+    ) {
       if (
         !resolved.input.expectedConfigurationVersionId ||
         !resolved.offering.productUnitOffering

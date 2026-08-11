@@ -15,6 +15,8 @@ enum ServiceCommerceStoreAuditEventType {
   ACTIVATED
   DEACTIVATED
   SUSPENDED
+  CATALOG_GRADUATED
+  CATALOG_PUBLISHED
 }
 
 enum CommerceInquiryStatus {

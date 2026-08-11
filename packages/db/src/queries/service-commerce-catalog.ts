@@ -1036,6 +1036,7 @@ export async function promoteServiceCommerceCatalogPrice(
         data: {
           fixedPriceMinor: input.priceMinor,
           pricingPolicy: OfferingPricingPolicy.FIXED,
+          revision: { increment: 1 },
         },
         where: {
           fixedPriceMinor: input.expectedPreviousPriceMinor,

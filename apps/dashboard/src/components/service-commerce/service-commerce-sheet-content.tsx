@@ -4,10 +4,12 @@ import { useServiceCommerceParams } from "@/hooks/use-service-commerce-params"
 
 import { CustomerChannelSheetContent } from "@/components/customer-channels/customer-channel-sheet-content"
 import { CatalogDraftForm } from "./catalog-adoption/catalog-draft-form"
+import { CatalogGraduationForm } from "./catalog-adoption/catalog-graduation-form"
 import { CatalogPricePromotionForm } from "./catalog-adoption/catalog-price-promotion-form"
 import {
   type RegisterServiceCommerceFormReset,
   ServiceCommerceCatalogFormProvider,
+  ServiceCommerceCatalogGraduationFormProvider,
   ServiceCommerceCatalogPriceFormProvider,
   ServiceCommerceObservationFormProvider,
 } from "./form-context"
@@ -57,6 +59,16 @@ export function ServiceCommerceSheetContent({
           <ObservationForm storeId={storeId} />
         </ServiceCommerceObservationFormProvider>
       </div>
+    )
+  }
+  if (mode === "inventory_graduation") {
+    return (
+      <ServiceCommerceCatalogGraduationFormProvider
+        key={params.offeringId}
+        registerReset={registerFormReset}
+      >
+        <CatalogGraduationForm storeId={storeId} />
+      </ServiceCommerceCatalogGraduationFormProvider>
     )
   }
   if (mode !== "catalog_draft") {

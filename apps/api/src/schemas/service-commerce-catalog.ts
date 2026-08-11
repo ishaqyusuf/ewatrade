@@ -1,4 +1,8 @@
-import { serviceCommerceSourceRefSchema } from "@ewatrade/service-commerce"
+import {
+  serviceCommerceCatalogGraduationFormSchema,
+  serviceCommerceCatalogPublicationFormSchema,
+  serviceCommerceSourceRefSchema,
+} from "@ewatrade/service-commerce"
 import { z } from "zod"
 
 const idSchema = z.string().trim().min(1).max(191)
@@ -117,3 +121,12 @@ export const serviceCommerceCatalogPromotePriceSchema = sourceLineSchema
       })
     }
   })
+
+export const serviceCommerceCatalogGraduationReadinessSchema = z
+  .object({ offeringId: idSchema, storeId: idSchema.optional() })
+  .strict()
+
+export {
+  serviceCommerceCatalogGraduationFormSchema,
+  serviceCommerceCatalogPublicationFormSchema,
+}

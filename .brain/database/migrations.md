@@ -377,6 +377,23 @@ Complete cross-source public-web/generic-WhatsApp acceptance, authenticated
 browser QA, live Meta/storage/scanner canaries and production rollout remain
 open gates.
 
+## Service Commerce Catalog Graduation Migration State
+
+On 2026-08-11 the canonical verified `.env.local` Neon development workflow
+generated and applied
+`20260811000805_service_commerce_catalog_graduation`. The additive migration
+adds Offering revision, Service booking policy/duration and distinct Catalog
+graduation/publication audit events. `bun db:push` then reported the development
+schema in sync. No Docker/local PostgreSQL, production database, reset,
+data-loss override or hand-authored migration SQL was used.
+
+The run-owned acceptance passed eight assertions across a pre-graduation
+manual Product Quote/Order with no reservation, same-ID Product graduation with
+five units of explicit opening stock, separate publication and a
+post-graduation tracked Quote/Order with one reservation against the verified
+Balance Source. The fixture was removed atomically. Production reconciliation
+and rollout remain separately authorized.
+
 ## Channel-Neutral Intake Attribution Migration State
 
 On 2026-08-10 Prisma generated and applied

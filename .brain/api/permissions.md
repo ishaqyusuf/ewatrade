@@ -34,6 +34,11 @@
   and select/enter a Quote price. Promoting a reusable Catalog price,
   activating/publishing an Offering and graduating to managed inventory require
   the corresponding Catalog-management permission and explicit confirmation.
+- Graduation and publication are Owner/Admin Catalog-management operations.
+  They require exact Tenant/Store scope, current Offering revision, stable
+  command identity, reason and the applicable vertical-policy decision. An
+  attendant may prepare and quote progressive demand but cannot silently
+  graduate or publish the reusable Catalog record.
 - Opening stock remains an Inventory command with verified quantity and Stock
   Operation attribution. Request, Quote and sales-history read permission can
   never create or alter stock.

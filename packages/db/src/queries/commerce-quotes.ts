@@ -1744,9 +1744,22 @@ export async function getCommerceQuoteAcceptanceContext(
   const access = await resolveCommerceQuoteAccess(tx, input)
   const version = await tx.commerceQuoteVersion.findFirst({
     include: {
-      lines: true,
+      lines: {
+        include: {
+          availabilityAttestation: { select: { type: true } },
+        },
+      },
       optionSelection: true,
-      options: { include: { lines: true }, orderBy: { position: "asc" } },
+      options: {
+        include: {
+          lines: {
+            include: {
+              availabilityAttestation: { select: { type: true } },
+            },
+          },
+        },
+        orderBy: { position: "asc" },
+      },
       quote: true,
     },
     where: quoteAccessWhere(access),

@@ -56,6 +56,17 @@ export function ServiceCommerceSheet({ storeId }: { storeId: string }) {
         }),
       )
     }
+    if (mode === "inventory_graduation" && params.offeringId) {
+      invalidations.push(
+        queryClient.invalidateQueries({
+          exact: true,
+          queryKey: trpc.serviceCommerce.catalogGraduationReadiness.queryKey({
+            offeringId: params.offeringId,
+            storeId: resolvedStoreId,
+          }),
+        }),
+      )
+    }
     if (params.sourceKind && params.sourceId && params.sourceLineId) {
       const source = { id: params.sourceId, kind: params.sourceKind }
       const matchesInput = {

@@ -179,6 +179,12 @@ enum ServiceWorkPolicy {
   TRACKED
 }
 
+enum ServiceBookingPolicy {
+  NOT_BOOKABLE
+  REQUEST_REQUIRED
+  BOOKING_REQUIRED
+}
+
 enum WorkAuthorizationPolicy {
   ON_ORDER_CONFIRMATION
   AFTER_REQUIRED_PAYMENT

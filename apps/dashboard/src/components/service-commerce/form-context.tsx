@@ -3,9 +3,11 @@
 import { useZodForm } from "@/hooks/use-zod-form"
 import {
   type ServiceCommerceCatalogDraftFormValues,
+  type ServiceCommerceCatalogGraduationFormValues,
   type ServiceCommerceCatalogPricePromotionFormValues,
   type ServiceCommerceHumanVerifiedObservationDraft,
   serviceCommerceCatalogDraftFormSchema,
+  serviceCommerceCatalogGraduationFormSchema,
   serviceCommerceCatalogPricePromotionFormSchema,
   serviceCommerceHumanVerifiedObservationDraftSchema,
 } from "@ewatrade/service-commerce"
@@ -74,6 +76,41 @@ export function ServiceCommerceCatalogPriceFormProvider({
     serviceCommerceCatalogPricePromotionFormSchema,
     {
       defaultValues: { confirmed: false, reason: "" },
+      mode: "onChange",
+    },
+  )
+  useRegisteredFormReset(form.reset, registerReset)
+  return <FormProvider {...form}>{children}</FormProvider>
+}
+
+export function ServiceCommerceCatalogGraduationFormProvider({
+  children,
+  registerReset,
+}: {
+  children: React.ReactNode
+  registerReset: RegisterServiceCommerceFormReset
+}) {
+  const form = useZodForm<ServiceCommerceCatalogGraduationFormValues>(
+    serviceCommerceCatalogGraduationFormSchema,
+    {
+      defaultValues: {
+        barcode: "",
+        canonicalUnitName: "Unit",
+        canonicalUnitSymbol: "",
+        category: "",
+        clientOperationId: "pending",
+        confirmed: true,
+        currencyCode: "NGN",
+        draftKind: "product",
+        expectedOfferingRevision: 0,
+        fixedPriceMinor: 0,
+        openingStockQuantity: "0",
+        offeringId: "pending",
+        reason: "",
+        sku: "",
+        transactionScale: 0,
+        variantName: "",
+      },
       mode: "onChange",
     },
   )

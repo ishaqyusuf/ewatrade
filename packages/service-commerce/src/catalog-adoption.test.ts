@@ -4,10 +4,12 @@ import {
   SERVICE_COMMERCE_CATALOG_AVAILABILITY_OUTCOMES,
   SERVICE_COMMERCE_CATALOG_DRAFT_KINDS,
   SERVICE_COMMERCE_CATALOG_PRICE_SUGGESTION_SOURCES,
+  deriveCatalogGraduationReadiness,
   getCatalogPricePromotionConfirmationImpact,
   selectCatalogPriceSuggestion,
   serviceCommerceCatalogAdoptionGateSchema,
   serviceCommerceCatalogAvailabilityAttestationSchema,
+  serviceCommerceCatalogGraduationFormSchema,
   serviceCommerceCatalogPricePromotionFormSchema,
   serviceCommerceCatalogSourceLineRefSchema,
   serviceCommerceCreateCatalogDraftInputSchema,
@@ -327,5 +329,84 @@ describe("Progressive Catalog adoption contracts", () => {
       affectedStoreIds: ["store-1", "store-2"],
       requiresConfirmation: true,
     })
+  })
+
+  test("projects Product and Service graduation facts without inventing stock", () => {
+    expect(
+      deriveCatalogGraduationReadiness({
+        category: "Bags",
+        currencyMatchesStore: true,
+        draftKind: "product",
+        fixedPriceMinor: 20_000_00,
+        hasProductIdentifier: true,
+        hasProductUnit: true,
+        hasVerifiedOpeningCount: false,
+        serviceBookingPolicy: null,
+        serviceDurationMinutes: null,
+        serviceWorkPolicy: null,
+        variantName: "Red small",
+      }),
+    ).toEqual({ canGraduate: false, missingFacts: ["opening_count"] })
+
+    expect(
+      serviceCommerceCatalogGraduationFormSchema.safeParse({
+        canonicalUnitName: "Bag",
+        category: "Bags",
+        clientOperationId: "graduate-1",
+        confirmed: true,
+        currencyCode: "NGN",
+        draftKind: "product",
+        expectedOfferingRevision: 0,
+        fixedPriceMinor: 20_000_00,
+        openingStockQuantity: "4",
+        offeringId: "offering-1",
+        reason: "Verified opening stock",
+        transactionScale: 0,
+        variantName: "Red small",
+      }).success,
+    ).toBe(false)
+
+    const productGraduation = {
+      canonicalUnitName: "Bag",
+      category: "Bags",
+      clientOperationId: "graduate-precision",
+      confirmed: true as const,
+      currencyCode: "NGN",
+      draftKind: "product" as const,
+      expectedOfferingRevision: 0,
+      fixedPriceMinor: 20_000_00,
+      openingStockQuantity: "1.5",
+      offeringId: "offering-1",
+      reason: "Verified opening stock",
+      sku: "BAG-RED-S",
+      transactionScale: 0,
+      variantName: "Red small",
+    }
+    expect(
+      serviceCommerceCatalogGraduationFormSchema.safeParse(productGraduation)
+        .success,
+    ).toBe(false)
+    expect(
+      serviceCommerceCatalogGraduationFormSchema.safeParse({
+        ...productGraduation,
+        transactionScale: 1,
+      }).success,
+    ).toBe(true)
+
+    expect(
+      deriveCatalogGraduationReadiness({
+        category: "Repairs",
+        currencyMatchesStore: true,
+        draftKind: "service",
+        fixedPriceMinor: 5_000_00,
+        hasProductIdentifier: false,
+        hasProductUnit: false,
+        hasVerifiedOpeningCount: false,
+        serviceBookingPolicy: "request_required",
+        serviceDurationMinutes: 60,
+        serviceWorkPolicy: "tracked",
+        variantName: "Standard repair",
+      }).canGraduate,
+    ).toBe(true)
   })
 })

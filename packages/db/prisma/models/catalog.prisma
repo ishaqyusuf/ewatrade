@@ -127,6 +127,7 @@ model SellableOffering {
   fixedPriceMinor             Int?
   currencyCode                String
   sortOrder                   Int                              @default(0)
+  revision                    Int                              @default(0)
   createdAt                   DateTime                         @default(now())
   updatedAt                   DateTime                         @updatedAt
   archivedAt                  DateTime?
@@ -179,6 +180,8 @@ model ServiceOffering {
   workPolicy          ServiceWorkPolicy       @default(CHARGE_ONLY)
   authorizationPolicy WorkAuthorizationPolicy @default(ON_ORDER_CONFIRMATION)
   quantityScale       Int                     @default(0)
+  durationMinutes     Int?
+  bookingPolicy       ServiceBookingPolicy    @default(NOT_BOOKABLE)
   guidance            String?
   createdAt           DateTime                @default(now())
   updatedAt           DateTime                @updatedAt

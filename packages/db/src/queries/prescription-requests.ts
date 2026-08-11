@@ -7,6 +7,7 @@ import {
 } from "@ewatrade/utils/exact-decimal"
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
+  CatalogAvailabilityAttestationType,
   CatalogRecordStatus,
   CommerceQuoteAvailabilityOutcome,
   CommerceQuoteLineOutcome,
@@ -2653,8 +2654,9 @@ async function acceptPrescriptionQuoteForFulfilment(
             !line.offeringId ||
             !line.quantity ||
             line.unitPriceMinor === null ||
-            !line.configurationVersionId ||
-            line.balanceRevision === null,
+            (line.availabilityAttestation?.type !==
+              CatalogAvailabilityAttestationType.MANUAL_PROCURE_TO_ORDER &&
+              (!line.configurationVersionId || line.balanceRevision === null)),
         )
       ) {
         throw new CommerceQuoteError(
@@ -2675,8 +2677,9 @@ async function acceptPrescriptionQuoteForFulfilment(
             !line.offeringId ||
             !line.quantity ||
             line.unitPriceMinor === null ||
-            !line.configurationVersionId ||
-            line.balanceRevision === null
+            (line.availabilityAttestation?.type !==
+              CatalogAvailabilityAttestationType.MANUAL_PROCURE_TO_ORDER &&
+              (!line.configurationVersionId || line.balanceRevision === null))
           ) {
             throw new CommerceQuoteError(
               "QUOTE_CONFLICT",
@@ -2684,9 +2687,15 @@ async function acceptPrescriptionQuoteForFulfilment(
             )
           }
           return {
-            expectedBalanceRevision: line.balanceRevision,
-            expectedConfigurationVersionId: line.configurationVersionId,
+            expectedBalanceRevision: line.balanceRevision ?? undefined,
+            expectedConfigurationVersionId:
+              line.configurationVersionId ?? undefined,
             offeringId: line.offeringId,
+            progressiveAvailabilityAttestationId:
+              line.availabilityAttestation?.type ===
+              CatalogAvailabilityAttestationType.MANUAL_PROCURE_TO_ORDER
+                ? (line.availabilityAttestationId ?? undefined)
+                : undefined,
             quantity: line.quantity.toString(),
             trustedUnitPriceMinor: line.unitPriceMinor,
           }

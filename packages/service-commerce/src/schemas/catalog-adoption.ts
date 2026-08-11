@@ -52,6 +52,24 @@ export const SERVICE_COMMERCE_CATALOG_AVAILABILITY_VALIDATION_STATUSES = [
   "unavailable",
 ] as const
 
+export const SERVICE_COMMERCE_CATALOG_GRADUATION_MISSING_FACTS = [
+  "category",
+  "variant",
+  "reusable_price",
+  "product_unit",
+  "product_identifier",
+  "opening_count",
+  "service_duration",
+  "service_work_policy",
+  "service_booking_policy",
+] as const
+
+export const SERVICE_COMMERCE_SERVICE_BOOKING_POLICIES = [
+  "not_bookable",
+  "request_required",
+  "booking_required",
+] as const
+
 export const serviceCommerceCatalogDraftKindSchema = z.enum(
   SERVICE_COMMERCE_CATALOG_DRAFT_KINDS,
 )
@@ -70,6 +88,120 @@ export const serviceCommerceCatalogAvailabilityOutcomeSchema = z.enum(
 export const serviceCommerceCatalogAvailabilityValidationStatusSchema = z.enum(
   SERVICE_COMMERCE_CATALOG_AVAILABILITY_VALIDATION_STATUSES,
 )
+export const serviceCommerceCatalogGraduationMissingFactSchema = z.enum(
+  SERVICE_COMMERCE_CATALOG_GRADUATION_MISSING_FACTS,
+)
+export const serviceCommerceServiceBookingPolicySchema = z.enum(
+  SERVICE_COMMERCE_SERVICE_BOOKING_POLICIES,
+)
+
+export const serviceCommerceCatalogGraduationReadinessInputSchema = z
+  .object({
+    category: z.string().trim().nullable(),
+    currencyMatchesStore: z.boolean(),
+    draftKind: serviceCommerceCatalogDraftKindSchema,
+    fixedPriceMinor: moneyMinorSchema.nullable(),
+    hasProductIdentifier: z.boolean(),
+    hasProductUnit: z.boolean(),
+    hasVerifiedOpeningCount: z.boolean(),
+    serviceBookingPolicy: serviceCommerceServiceBookingPolicySchema.nullable(),
+    serviceDurationMinutes: z.number().int().positive().nullable(),
+    serviceWorkPolicy: z.enum(["charge_only", "tracked"]).nullable(),
+    variantName: z.string().trim().nullable(),
+  })
+  .strict()
+
+export const serviceCommerceCatalogGraduationReadinessSchema = z
+  .object({
+    canGraduate: z.boolean(),
+    missingFacts: z.array(serviceCommerceCatalogGraduationMissingFactSchema),
+  })
+  .strict()
+
+const catalogGraduationCommandBaseSchema = z
+  .object({
+    clientOperationId: idSchema,
+    confirmed: z.literal(true),
+    currencyCode: currencyCodeSchema,
+    expectedOfferingRevision: z.number().int().min(0),
+    fixedPriceMinor: moneyMinorSchema,
+    offeringId: idSchema,
+    reason: z.string().trim().min(3).max(240),
+    storeId: idSchema.optional(),
+  })
+  .strict()
+
+export const serviceCommerceProductGraduationFormSchema =
+  catalogGraduationCommandBaseSchema
+    .extend({
+      barcode: z.string().trim().max(191).optional(),
+      canonicalUnitName: z.string().trim().min(1).max(191),
+      canonicalUnitSymbol: z.string().trim().max(32).optional(),
+      category: z.string().trim().min(1).max(191),
+      draftKind: z.literal("product"),
+      openingStockQuantity: z
+        .string()
+        .trim()
+        .regex(/^\d+(?:\.\d+)?$/),
+      sku: z.string().trim().max(191).optional(),
+      transactionScale: z.number().int().min(0).max(6),
+      variantName: z.string().trim().min(1).max(191),
+    })
+    .strict()
+    .superRefine((input, context) => {
+      if (!input.sku && !input.barcode) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "A SKU or barcode is required for managed inventory.",
+          path: ["sku"],
+        })
+      }
+      const fraction = input.openingStockQuantity.split(".")[1] ?? ""
+      if (fraction.replace(/0+$/, "").length > input.transactionScale) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Opening stock exceeds the unit precision of ${input.transactionScale}.`,
+          path: ["openingStockQuantity"],
+        })
+      }
+    })
+
+export const serviceCommerceServiceGraduationFormSchema =
+  catalogGraduationCommandBaseSchema
+    .extend({
+      authorizationPolicy: z.enum([
+        "on_order_confirmation",
+        "after_required_payment",
+        "manual_release",
+      ]),
+      bookingPolicy: serviceCommerceServiceBookingPolicySchema,
+      category: z.string().trim().min(1).max(191),
+      draftKind: z.literal("service"),
+      durationMinutes: z.number().int().positive().max(43_200),
+      guidance: z.string().trim().max(1000).optional(),
+      variantName: z.string().trim().min(1).max(191),
+      workPolicy: z.enum(["charge_only", "tracked"]),
+    })
+    .strict()
+
+export const serviceCommerceCatalogGraduationFormSchema = z.discriminatedUnion(
+  "draftKind",
+  [
+    serviceCommerceProductGraduationFormSchema,
+    serviceCommerceServiceGraduationFormSchema,
+  ],
+)
+
+export const serviceCommerceCatalogPublicationFormSchema = z
+  .object({
+    clientOperationId: idSchema,
+    confirmed: z.literal(true),
+    expectedOfferingRevision: z.number().int().min(0),
+    offeringId: idSchema,
+    reason: z.string().trim().min(3).max(240),
+    storeId: idSchema.optional(),
+  })
+  .strict()
 
 /**
  * A server-owned projection used by repositories and API handlers before a
@@ -338,6 +470,18 @@ export type ServiceCommerceCatalogDraftKind = z.infer<
 >
 export type ServiceCommerceCatalogDraftFormValues = z.infer<
   typeof serviceCommerceCatalogDraftFormSchema
+>
+export type ServiceCommerceCatalogGraduationFormValues = z.infer<
+  typeof serviceCommerceCatalogGraduationFormSchema
+>
+export type ServiceCommerceCatalogGraduationReadiness = z.infer<
+  typeof serviceCommerceCatalogGraduationReadinessSchema
+>
+export type ServiceCommerceCatalogGraduationReadinessInput = z.infer<
+  typeof serviceCommerceCatalogGraduationReadinessInputSchema
+>
+export type ServiceCommerceCatalogPublicationFormValues = z.infer<
+  typeof serviceCommerceCatalogPublicationFormSchema
 >
 export type ServiceCommerceCatalogMatchKind = z.infer<
   typeof serviceCommerceCatalogMatchKindSchema

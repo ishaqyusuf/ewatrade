@@ -9,6 +9,7 @@ import {
 import { parseExactDecimal } from "@ewatrade/utils/exact-decimal"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import {
+  CatalogAvailabilityAttestationType,
   CommerceInquiryAuditEventType,
   CommerceInquiryChannelOrigin,
   CommerceInquiryDemandReason,
@@ -728,6 +729,11 @@ export async function acceptCommerceInquiryQuote(
         balanceRevision: line.balanceRevision ?? undefined,
         configurationVersionId: line.configurationVersionId ?? undefined,
         offeringId: line.offeringId,
+        progressiveAvailabilityAttestationId:
+          line.availabilityAttestation?.type ===
+          CatalogAvailabilityAttestationType.MANUAL_PROCURE_TO_ORDER
+            ? (line.availabilityAttestationId ?? undefined)
+            : undefined,
         quantity: line.quantity.toString(),
         unitPriceMinor: line.unitPriceMinor,
       }
@@ -756,6 +762,8 @@ export async function acceptCommerceInquiryQuote(
         expectedBalanceRevision: line.balanceRevision,
         expectedConfigurationVersionId: line.configurationVersionId,
         offeringId: line.offeringId,
+        progressiveAvailabilityAttestationId:
+          line.progressiveAvailabilityAttestationId,
         quantity: line.quantity,
         trustedUnitPriceMinor: line.unitPriceMinor,
       })),

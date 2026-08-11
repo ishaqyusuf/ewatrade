@@ -96,24 +96,32 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
   const createDraft = useMutation(
     trpc.serviceCommerce.createCatalogDraft.mutationOptions({
       onError: (error) => setMessage(error.message),
-      onSuccess: async () => {
+      onSuccess: async (data) => {
         await invalidate()
         draftCommandId.current = null
-        setMessage(
-          "Private Catalog draft created. Confirm availability before including it in a quotation.",
-        )
+        await params.setParams({
+          offeringId: data.offering.id,
+          serviceCommerceSheet: "inventory_graduation",
+        })
       },
     }),
   )
   const linkOffering = useMutation(
     trpc.serviceCommerce.linkCatalogOffering.mutationOptions({
       onError: (error) => setMessage(error.message),
-      onSuccess: async () => {
+      onSuccess: async (data) => {
         await invalidate()
         linkCommandId.current = null
-        setMessage(
-          "Verified request line linked. The Offering remains private unless separately activated.",
-        )
+        if (selected?.isPrivateDraft) {
+          await params.setParams({
+            offeringId: data.offeringId,
+            serviceCommerceSheet: "inventory_graduation",
+          })
+        } else {
+          setMessage(
+            "Verified request line linked. The Offering remains unchanged unless separately configured.",
+          )
+        }
       },
     }),
   )

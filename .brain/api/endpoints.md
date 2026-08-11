@@ -156,6 +156,15 @@ Typed tRPC routers are the primary application contract.
   `promoteCatalogPrice` separate an immutable Quote price from a confirmed,
   manager-gated reusable Offering price change and return every affected Store
   before mutation.
+- Protected `serviceCommerce.catalogGraduationReadiness` projects the exact
+  Product- or Service-specific facts still missing from one Store Offering.
+  `graduateCatalogOffering` completes those facts in place with an expected
+  revision, idempotency identity, actor and reason; Product opening quantity is
+  posted through an explicit stock operation while Service graduation has no
+  inventory effect.
+- Protected `serviceCommerce.publishCatalogOffering` is a separate confirmed,
+  revisioned command. Graduation never implicitly publishes an Item, Variant,
+  Offering or Store availability record.
 - Protected Customer Channels procedures expose the scoped workspace, manual
   or Embedded WhatsApp setup, explicit Store bindings, connection retest and
   lifecycle, Store attendant assignment/revocation, and stable entry-point

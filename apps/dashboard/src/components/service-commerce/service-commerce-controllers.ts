@@ -4,7 +4,7 @@ type ControllerDefinition = {
   description: string
   implemented: boolean
   requiredIds: Array<
-    "attachmentId" | "sourceId" | "sourceKind" | "sourceLineId"
+    "attachmentId" | "offeringId" | "sourceId" | "sourceKind" | "sourceLineId"
   >
   title: string
 }
@@ -48,7 +48,13 @@ export const SERVICE_COMMERCE_CONTROLLERS = {
   },
   fulfillment: unavailable("Fulfilment"),
   intake: unavailable("New customer request"),
-  inventory_graduation: unavailable("Graduate inventory"),
+  inventory_graduation: {
+    description:
+      "Complete verified Product inventory or Service operating facts without publishing implicitly.",
+    implemented: true,
+    requiredIds: ["offeringId"],
+    title: "Graduate Catalog offering",
+  },
   media: {
     description:
       "Inspect private customer media through a short-lived authorized view.",

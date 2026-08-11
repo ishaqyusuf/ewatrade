@@ -1,10 +1,34 @@
 import type {
   ServiceCommerceCatalogAvailabilityAttestation,
   ServiceCommerceCatalogAvailabilityValidationStatus,
+  ServiceCommerceCatalogGraduationReadiness,
+  ServiceCommerceCatalogGraduationReadinessInput,
   ServiceCommerceCatalogPriceEvidence,
   ServiceCommerceCatalogPriceSuggestion,
   ServiceCommerceCatalogSourceLineRef,
 } from "./schemas/catalog-adoption"
+
+export function deriveCatalogGraduationReadiness(
+  input: ServiceCommerceCatalogGraduationReadinessInput,
+): ServiceCommerceCatalogGraduationReadiness {
+  const missingFacts: ServiceCommerceCatalogGraduationReadiness["missingFacts"] =
+    []
+  if (!input.category?.trim()) missingFacts.push("category")
+  if (!input.variantName?.trim()) missingFacts.push("variant")
+  if (input.fixedPriceMinor === null || !input.currencyMatchesStore) {
+    missingFacts.push("reusable_price")
+  }
+  if (input.draftKind === "product") {
+    if (!input.hasProductUnit) missingFacts.push("product_unit")
+    if (!input.hasProductIdentifier) missingFacts.push("product_identifier")
+    if (!input.hasVerifiedOpeningCount) missingFacts.push("opening_count")
+  } else {
+    if (!input.serviceDurationMinutes) missingFacts.push("service_duration")
+    if (!input.serviceWorkPolicy) missingFacts.push("service_work_policy")
+    if (!input.serviceBookingPolicy) missingFacts.push("service_booking_policy")
+  }
+  return { canGraduate: missingFacts.length === 0, missingFacts }
+}
 
 export function selectCatalogPriceSuggestion(input: {
   currencyCode: string

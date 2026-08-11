@@ -74,8 +74,12 @@
   generic Service, Pharmacy web/staff/WhatsApp pickup and substitute pricing;
   desktop/mobile browser QA also passes selection, selected-only payable total
   and one-Order acceptance states without console errors or mobile overflow.
-  The synthetic fixture was removed. Ticket 06A is
-  now the active source frontier.
+  The synthetic fixture was removed. Ticket 06A is complete: one verified-Neon
+  lifecycle proves a manual progressive Order without reservation, same-ID
+  Product graduation with explicit opening stock, separate publication and a
+  later tracked Order with reservation. Authenticated desktop and 390x844
+  mobile QA passed graduation, publication, Catalog refresh, stale-id recovery
+  and URL/form cleanup. Ticket 06B is now the active source frontier.
   Live Meta/storage/scanner release gates remain open. The focused
   Customer Channels/media matrix passes 71 tests and 177 assertions; the
   run-owned `.env.local` Neon bag-media seam passes 7 assertions. The full test gate has

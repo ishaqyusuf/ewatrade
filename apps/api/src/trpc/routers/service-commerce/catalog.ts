@@ -1,25 +1,35 @@
-import { canManageSalesOperations, normalizeRole } from "@ewatrade/auth/roles"
+import {
+  canManageSalesOperations,
+  canManageTenant,
+  normalizeRole,
+} from "@ewatrade/auth/roles"
 import {
   ServiceCommerceCatalogError,
   ServiceCommercePolicyError,
   attestServiceCommerceCatalogAvailability,
   createServiceCommerceCatalogDraft,
+  getServiceCommerceCatalogGraduationReadiness,
   getServiceCommerceCatalogPricePromotionImpact,
   getServiceCommerceCatalogPriceSuggestions,
+  graduateServiceCommerceCatalogOffering,
   linkServiceCommerceCatalogOffering,
   listServiceCommerceCatalogMatches,
   promoteServiceCommerceCatalogPrice,
+  publishServiceCommerceCatalogOffering,
 } from "@ewatrade/db/queries"
 import { TRPCError } from "@trpc/server"
 
 import {
   serviceCommerceCatalogAttestAvailabilitySchema,
   serviceCommerceCatalogCreateDraftSchema,
+  serviceCommerceCatalogGraduationFormSchema,
+  serviceCommerceCatalogGraduationReadinessSchema,
   serviceCommerceCatalogLinkOfferingSchema,
   serviceCommerceCatalogMatchesSchema,
   serviceCommerceCatalogPricePromotionImpactSchema,
   serviceCommerceCatalogPriceSuggestionsSchema,
   serviceCommerceCatalogPromotePriceSchema,
+  serviceCommerceCatalogPublicationFormSchema,
 } from "../../../schemas/service-commerce-catalog"
 import { createTRPCRouter, protectedProcedure } from "../../init"
 import {
@@ -69,7 +79,63 @@ function scope(
   }
 }
 
+function assertCatalogGraduationManager(role: string) {
+  const normalized = normalizeRole(role)
+  if (!normalized || !canManageTenant(normalized)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message:
+        "Only an Owner or Admin can graduate or publish Catalog records.",
+    })
+  }
+}
+
 export const serviceCommerceCatalogRouter = createTRPCRouter({
+  catalogGraduationReadiness: protectedProcedure
+    .input(serviceCommerceCatalogGraduationReadinessSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        assertCatalogGraduationManager(ctx.tenantContext.membership.role)
+        return await getServiceCommerceCatalogGraduationReadiness(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          offeringId: input.offeringId,
+          ...scope(ctx.tenantContext, input.storeId),
+        })
+      } catch (error) {
+        mapCatalogError(error)
+      }
+    }),
+
+  graduateCatalogOffering: protectedProcedure
+    .input(serviceCommerceCatalogGraduationFormSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        assertCatalogGraduationManager(ctx.tenantContext.membership.role)
+        return await graduateServiceCommerceCatalogOffering(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          ...scope(ctx.tenantContext, input.storeId),
+        })
+      } catch (error) {
+        mapCatalogError(error)
+      }
+    }),
+
+  publishCatalogOffering: protectedProcedure
+    .input(serviceCommerceCatalogPublicationFormSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        assertCatalogGraduationManager(ctx.tenantContext.membership.role)
+        return await publishServiceCommerceCatalogOffering(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          ...scope(ctx.tenantContext, input.storeId),
+        })
+      } catch (error) {
+        mapCatalogError(error)
+      }
+    }),
+
   attestCatalogAvailability: protectedProcedure
     .input(serviceCommerceCatalogAttestAvailabilitySchema)
     .mutation(async ({ ctx, input }) => {

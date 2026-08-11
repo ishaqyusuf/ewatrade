@@ -203,6 +203,16 @@ same evidence variant for generic observations. Availability evidence is
 quantity-bounded and separate from stock authority, and reusable price
 promotion never rewrites the Quote Version or Commercial Order snapshot.
 
+`SellableOffering -> ProductUnitOffering -> UnitConfigurationVersion -> StockBalanceSource -> OPENING_STOCK StockOperation`
+
+`SellableOffering -> ServiceOffering(duration, work policy, authorization policy, booking policy)`
+
+Graduation preserves the same Item, Variant and Offering ids. Product opening
+stock is a separately attributed operation; Service graduation has no stock
+graph. Publication is later and explicit. A pre-graduation manual commitment
+can create a snapshot-only Order without a reservation, while only a published,
+inventory-configured tracked Offering can create a Balance reservation.
+
 ## Customer Channels And Generic Media
 
 `Tenant -> WhatsAppConnection -> WhatsAppStoreBinding -> Store`

@@ -371,10 +371,10 @@ implements the Progressive Catalog commands below.
   Catalog meaning. Prescription uses the separate `human_verified` evidence
   variant; Ticket 04A will supply the same variant from revisioned generic
   Human-Verified Observations.
-- `createDraftCatalog`, `linkCatalogOffering`, `promoteCatalogPrice` and
-  `graduateCatalogOffering` are separate commands with role, revision, source,
-  Store and vertical-policy checks. Saving a Quote cannot invoke them
-  implicitly.
+- `createDraftCatalog`, `linkCatalogOffering`, `promoteCatalogPrice`,
+  `graduateCatalogOffering` and `publishCatalogOffering` are separate commands
+  with role, revision, source, Store and vertical-policy checks. Saving a Quote
+  cannot invoke them implicitly.
 - Draft Catalog records remain private and unavailable to ordinary storefront
   search. Publication/activation is an explicit command independent of Quote
   use or managed-inventory graduation.
@@ -388,6 +388,16 @@ implements the Progressive Catalog commands below.
   manual/unavailable until explicit graduation;
   graduation opening quantity is an explicit Stock Operation, never a value
   inferred from request/Quote/Order history.
+- Graduation preserves the Item, Variant and Offering identities plus every
+  source link, alias, Quote, Order and price-history relation. Product input
+  completes SKU/barcode, unit and opening-count facts; Service input completes
+  duration, work, authorization and booking facts and cannot create stock.
+  Both use the Offering revision and a stable command identity. Publication is
+  a later confirmed command with its own revision check and audit event.
+- A valid manual/procure-to-order attestation may produce a snapshot-only
+  Commercial Order without a reservation after transaction-local revalidation.
+  Only a published, inventory-configured Offering with tracked availability
+  can reserve the verified Balance Source.
 - Prescription source adapters may propose/link drafts only from human-verified
   lines. Pharmacist release and vertical policy remain required for Product
   availability and Quote eligibility; OCR alone is never a Catalog command.

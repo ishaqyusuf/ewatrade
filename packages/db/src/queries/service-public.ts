@@ -7,6 +7,7 @@ import {
 
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
+  CatalogAvailabilityAttestationType,
   CatalogRecordStatus,
   CommerceQuoteSourceType,
   CustomerTrackingStatus,
@@ -862,6 +863,11 @@ export async function acceptServiceQuote(
           )
         }
         return {
+          progressiveAvailabilityAttestationId:
+            line.availabilityAttestation?.type ===
+            CatalogAvailabilityAttestationType.MANUAL_PROCURE_TO_ORDER
+              ? (line.availabilityAttestationId ?? undefined)
+              : undefined,
           offeringId: line.offeringId,
           quantity: line.quantity.toString(),
           trustedUnitPriceMinor: line.unitPriceMinor,

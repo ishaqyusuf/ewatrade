@@ -8,7 +8,7 @@ extension. ADR-0031 adds generic Customer Channels, stable entry links/QR
 codes, request media/verified observations and exact selectable Offer Options.
 ADR-0032 adds Store team routing and optional exact-version quotation release
 approval. The owner approved the revised dependency-ordered 17-ticket batch
-through 2026-08-10. Tickets 01, 02, 03, 11, 03A, 05 and 06 are complete. Tickets 04
+through 2026-08-10. Tickets 01, 02, 03, 11, 03A, 05, 06 and 06A are complete. Tickets 04
 and 04A have source-complete foundations. Ticket 05 adds the shared source/API,
 public Product-inquiry and explicit product-selected generic WhatsApp adapters,
 with combined focused, verified-Neon and desktop/mobile browser acceptance.
@@ -19,8 +19,9 @@ post-release Neon and desktop/mobile browser acceptance. Legacy commercial
 alternative lines are display-only and excluded from payable, reservation,
 Order and payment facts; a pharmacist-selected substitute is emitted as the
 single included commercial line while its clinical alternative attribution
-remains source-owned. Ticket 06A is the
-active source frontier. Production schema/provider operations remain
+remains source-owned. Ticket 06A now proves that progressive Product and
+Service records graduate in place without losing source, Quote, Order or price
+history. Ticket 06B is the active source frontier. Production schema/provider operations remain
 separately authorized.
 
 Pharmacy Commerce is the first regulated vertical and retains its completed
@@ -113,9 +114,18 @@ managed inventory:
    and manual evidence commit a maximum quantity that a Quote cannot exceed.
    Tracked applies only to an active, inventory-configured Offering; a private
    draft remains manual/unavailable until explicit Ticket 06A graduation.
+   A valid manual commitment can create a snapshot-only Commercial Order with
+   no inventory reservation; its scope, expiry and committed quantity are
+   revalidated inside Order creation.
 6. Graduation enriches the same Catalog records with missing classification,
-   units, variants, SKUs/barcodes, Store availability and verified opening
-   stock. Quote, Order, price and source history remains linked.
+   units, variants, SKUs/barcodes and reusable price. Product graduation adds
+   a Unit Configuration, Balance Source and an explicitly verified
+   `OPENING_STOCK` operation. Service graduation instead records duration,
+   work, authorization and booking policy without inventory semantics. Quote,
+   Order, price and source history remains linked.
+7. Graduation and publication are separate confirmed commands. Only a
+   published, inventory-configured Product can later use tracked availability
+   and create stock reservations.
 
 Draft, active, publicly visible and exact-inventory-ready are separate states.
 No request automatically publishes a Product, Service or medicine.
@@ -530,11 +540,13 @@ business activation remains separately authorized.
 The owner approved the Progressive Catalog amendment on 2026-08-09 and the
 Customer Channels/media/Offer Options plus Store team/Quote approval amendments
 on 2026-08-10. The exact 17-ticket batch adds Tickets 03A, 04A, 06A and 06B.
-Tickets 01, 02, 03, 11, 03A, 05 and 06 are complete. Tickets 04 and 04A have their
+Tickets 01, 02, 03, 11, 03A, 05, 06 and 06A are complete. Tickets 04 and 04A have their
 source foundations, and Ticket 05 supplies the accepted channel-neutral intake
 adapters and combined origin/source/media/browser evidence. Ticket 06 now has
 focused, post-release verified-Neon and desktop/mobile browser evidence;
-Ticket 06A is the active source frontier.
+Ticket 06A passed its same-ID progressive-to-managed Neon lifecycle plus
+authenticated desktop/mobile graduation, publication and failure-recovery QA.
+Ticket 06B is the active source frontier.
 Live-provider acceptance remains open. Throughout
 execution:
 

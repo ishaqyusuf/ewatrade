@@ -162,6 +162,16 @@ persistence boundary. Clients never access the database directly.
 - `CatalogPricePromotion` attributes the explicit promotion of one immutable
   Quote line price to the reusable Tenant-wide Offering price, its appended
   `CatalogPriceChange`, affected Stores, actor and reason.
+- `SellableOffering.revision` is the optimistic concurrency boundary for
+  managed graduation, reusable-price changes and later publication.
+- Product graduation completes the existing Offering with a Product Unit
+  Offering, Unit Configuration Version, Store Balance Source and explicit
+  `OPENING_STOCK` operation/movement. Service graduation instead completes its
+  Service Offering with duration plus typed work/booking policy and never
+  creates inventory records.
+- Service Commerce Catalog audit events distinguish `CATALOG_GRADUATED` from
+  the later `CATALOG_PUBLISHED` command so completion never implies public
+  availability.
 - `ServiceCommercePolicyDecision` stores one revisioned current decision for
   Tenant, Store, vertical, Store jurisdiction, channel and typed subject. It
   keeps private evidence/licence/approval references, reviewer, effective and
