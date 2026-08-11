@@ -1,0 +1,256 @@
+Prescription to fulfilment without unnecessary
+movement
+A pharmacy-owned digital service powered by EwaTrade.
+
+MOBILE PITCH
+
+AUGUST 2026
+
+EWATRADE PRESCRIPTION COMMERCE
+
+THE IDEA
+
+Let customers ask the pharmacy
+before they travel
+Send a prescription. Receive an approved quote. Pay. Choose pickup or eligible delivery.
+
+ONE SIMPLE SERVICE
+
+ANY APPROVED SOURCE
+Works for nearby hospitals, distant approved locations, clinics, doctors, diagnostics, pharmacy channels,
+caregivers, and repeat customers.
+
+Fewer unnecessary trips
+Faster answers on price and availability
+Orders can be packed before pickup
+Delivery extends reach where the pharmacy permits
+Every request has a visible status and owner
+
+Mobile pitch | Shareable by WhatsApp
+
+2
+
+EWATRADE PRESCRIPTION COMMERCE
+
+ENTRY POINT
+
+Scan once. Choose how to continue.
+The QR code opens a page with two clear options.
+
+CONTINUE ONLINE
+
+WEB
+A phone-first guided flow for image upload, contact details, quote status, payment, pickup, and delivery.
+
+CONTINUE ON WHATSAPP
+
+WHATSAPP
+Opens the pharmacy's WhatsApp chat using the same approved messaging service and operating queue.
+
+No app installation is required for the first release.
+
+Mobile pitch | Shareable by WhatsApp
+
+3
+
+EWATRADE PRESCRIPTION COMMERCE
+
+THE FLOW
+
+From image to pharmacy-approved
+quote
+Simple outside. Controlled inside.
+
+Send prescription
+1
+
+Photo or PDF plus contact details
+
+OCR creates a draft
+2
+
+Low-confidence text is highlighted
+
+Attendant checks every line
+3
+
+Original image and extracted text are compared
+
+Pharmacist approves
+4
+
+Clarification, alternatives, restrictions, and final quote
+
+Customer decides
+5
+
+Accept, pay, pickup, or choose delivery
+
+Mobile pitch | Shareable by WhatsApp
+
+4
+
+EWATRADE PRESCRIPTION COMMERCE
+
+AI SAFETY
+
+OCR helps with typing. It does not
+make the clinical decision.
+Human checks are built into the operating flow.
+
+1. MACHINE DRAFT
+
+OCR
+The system reads the image and produces editable text with confidence indicators.
+
+2. MANDATORY VERIFICATION
+
+HUMAN CHECK
+The attendant checks the generated result line by line against the original prescription.
+
+3. PROFESSIONAL RELEASE
+
+PHARMACIST
+A licensed pharmacist handles ambiguity, alternatives, restrictions, approval, and dispensing controls.
+
+No raw OCR output becomes a customer quote.
+
+Mobile pitch | Shareable by WhatsApp
+
+5
+
+EWATRADE PRESCRIPTION COMMERCE
+
+FULFILMENT
+
+Pickup or delivery - the customer
+chooses one
+The pharmacy controls price, eligibility, timing, and service area.
+
+PICKUP
+
+READY BEFORE ARRIVAL
+Pay ahead or reserve. The pharmacy packs the order and sends a ready notification with pickup instructions.
+
+1. GENERAL HOSPITAL / CAMPUS
+
+NGN 500
+Initial local-zone example: NGN 500 delivery. Final configuration is agreed with the pharmacy.
+
+2. OTHER LOCATIONS
+
+CALCULATED / CONFIRMED
+Fee is calculated or confirmed based on the approved zone, distance, medicine eligibility, and courier
+availability.
+
+Mobile pitch | Shareable by WhatsApp
+
+6
+
+EWATRADE PRESCRIPTION COMMERCE
+
+WHAT THE PHARMACY GETS
+
+One operating system for every
+prescription channel
+A shared queue replaces fragmented calls, chats, and manual follow-up.
+
+QR, web link, WhatsApp, and staff-assisted intake
+OCR draft with line-by-line verification
+Pharmacist clarification and approval queue
+Availability and itemised quotation
+Payment, receipt, cancellation, and refund controls
+Packing, pickup code, and handoff record
+Delivery zones, dispatch, tracking, and proof
+Roles, service timers, notifications, and audit history
+Conversion, turnaround, stock, reliability, and revenue analytics
+Path to POS, inventory, accounting, and EwaTrade integration
+
+Mobile pitch | Shareable by WhatsApp
+
+7
+
+EWATRADE PRESCRIPTION COMMERCE
+
+WHY IT MATTERS
+
+Better customer experience. Better
+pharmacy control.
+The same workflow can serve one hospital, a city, or approved distant lanes.
+
+CONVERSION
+
+01
+Capture demand before it walks away
+
+SPEED
+
+02
+Quote and pack before arrival
+
+REACH
+
+03
+Offer delivery where the pharmacy approves
+
+CONTROL
+
+04
+Know who handled every step
+
+TRUST
+
+05
+Keep the pharmacist at the release gate
+
+Mobile pitch | Shareable by WhatsApp
+
+8
+
+EWATRADE PRESCRIPTION COMMERCE
+
+PILOT
+
+Start with a controlled active test
+The system is proven with real operations before wider rollout.
+
+Map the current prescription journey
+Configure pharmacy roles, templates, and service zones
+Train attendants and pharmacist reviewers
+Run a controlled live cohort
+Measure quote-to-paid conversion
+Measure quotation turnaround and ready-on-promise
+Track staff workload and OCR correction
+Require zero safety, privacy, and pharmacy-error incidents
+Agree integrations, commercial terms, and rollout only after the evidence
+review
+
+Mobile pitch | Shareable by WhatsApp
+
+9
+
+EWATRADE PRESCRIPTION COMMERCE
+
+PARTNERSHIP
+
+The pharmacy remains the seller and
+professional authority
+EwaTrade provides the digital workflow, integration path, and operational evidence.
+
+PHARMACY
+Owns medicine price, clinical review, substitution, dispensing, customer promise, refund authority, and delivery
+eligibility.
+
+EWATRADE
+Provides intake, OCR assistance, verification workflow, quotation, ordering, payment orchestration, fulfilment
+coordination, reporting, training, and support.
+
+Next step
+Approve a pharmacy discovery workshop and pilot design.
+Regulatory and privacy structure will be confirmed before production launch.
+
+Mobile pitch | Shareable by WhatsApp
+
+10
+
+

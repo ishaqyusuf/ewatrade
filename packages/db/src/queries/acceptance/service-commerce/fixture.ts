@@ -1,7 +1,5 @@
 import { randomUUID } from "node:crypto"
 
-import { describe } from "bun:test"
-
 import type { PrismaClient } from "../../../../generated/prisma/client"
 import {
   MembershipRole,
@@ -25,31 +23,7 @@ import {
   updatePrescriptionStoreSettings,
 } from "../../prescription-settings"
 
-const databaseUrl = process.env.DATABASE_URL
-const databaseIntegrationEnabled =
-  process.env.RUN_DATABASE_INTEGRATION_TESTS === "1"
-
-if (databaseIntegrationEnabled) {
-  if (
-    process.env.DATABASE_PROFILE_VERIFIED !== "1" ||
-    process.env.DEV_PROFILE !== "local"
-  ) {
-    throw new Error(
-      "Service Commerce integration tests require the verified local database profile.",
-    )
-  }
-  const hostname = databaseUrl
-    ? new URL(databaseUrl).hostname.toLowerCase().replace(/\.$/, "")
-    : ""
-  if (!hostname.endsWith(".neon.tech")) {
-    throw new Error(
-      "Service Commerce integration tests require the .env.local Neon development database.",
-    )
-  }
-}
-
-export const describeWithServiceCommerceDatabase =
-  databaseUrl && databaseIntegrationEnabled ? describe : describe.skip
+export { describeWithServiceCommerceDatabase } from "./database"
 
 export type ServiceCommerceAcceptanceFixture = {
   actorUserId: string
@@ -182,7 +156,7 @@ async function deleteAcceptanceFixture(
 }
 
 export async function createServiceCommerceAcceptanceFixture(): Promise<ServiceCommerceAcceptanceFixture> {
-  if (!databaseUrl) {
+  if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL is required for database integration tests.")
   }
   const db = (await import("../../../client")).prisma

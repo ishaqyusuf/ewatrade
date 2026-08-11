@@ -58,7 +58,7 @@ export function BookingClient({
     submitPublicBooking,
     INITIAL_PUBLIC_BOOKING_STATE,
   )
-  const [selected, setSelected] = useState<Slot | null>(slots[0] ?? null)
+  const [selected, setSelected] = useState<Slot | null>(null)
   const operationId = useRef(crypto.randomUUID())
   const selectedLabel = useMemo(
     () =>
@@ -84,7 +84,9 @@ export function BookingClient({
       <section className="grid gap-4 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950">
         <div>
           <h2 className="text-lg font-semibold">Appointment confirmed</h2>
-          <p className="mt-1 text-sm">{state.message}</p>
+          <p aria-live="polite" className="mt-1 text-sm">
+            {state.message}
+          </p>
         </div>
         <dl className="grid gap-3 text-sm sm:grid-cols-2">
           <div>
@@ -210,7 +212,9 @@ export function BookingClient({
       <section className="grid gap-4 rounded-xl border border-primary/30 bg-primary/5 p-5">
         <div>
           <h2 className="text-lg font-semibold">Confirm your appointment</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{state.message}</p>
+          <p aria-live="polite" className="mt-1 text-sm text-muted-foreground">
+            {state.message}
+          </p>
           <p className="mt-2 text-xs text-muted-foreground">
             Hold expires {formatSlot(state.expiresAt, timezone)}.
           </p>
@@ -262,7 +266,8 @@ export function BookingClient({
           you continue.
         </p>
       </div>
-      <div aria-label="Available appointment times" className="grid gap-2">
+      <fieldset className="grid gap-2">
+        <legend className="sr-only">Available appointment times</legend>
         {slots.map((slot) => {
           const active =
             selected?.resourceId === slot.resourceId &&
@@ -292,7 +297,7 @@ export function BookingClient({
             </button>
           )
         })}
-      </div>
+      </fieldset>
       {nextHref ? (
         <nav aria-label="Availability weeks" className="flex flex-wrap gap-2">
           {previousHref ? (
@@ -340,7 +345,7 @@ export function BookingClient({
           type="hidden"
           value={selected ? new Date(selected.endAt).toISOString() : ""}
         />
-        <p className="text-sm text-muted-foreground">
+        <p aria-live="polite" className="text-sm text-muted-foreground">
           {selectedLabel
             ? `Selected: ${selectedLabel}`
             : "Choose a time to continue."}
@@ -378,11 +383,12 @@ function RescheduleSlots({
     submitPublicBooking,
     INITIAL_PUBLIC_BOOKING_STATE,
   )
-  const [selected, setSelected] = useState<Slot | null>(slots[0] ?? null)
+  const [selected, setSelected] = useState<Slot | null>(null)
   return (
     <form action={action} className="grid gap-3 border-t border-border pt-4">
       <h3 className="font-medium">Choose a new time</h3>
-      <div className="grid gap-2">
+      <fieldset className="grid gap-2">
+        <legend className="sr-only">Available reschedule times</legend>
         {slots.map((slot) => {
           const active =
             selected?.resourceId === slot.resourceId &&
@@ -402,7 +408,7 @@ function RescheduleSlots({
             </button>
           )
         })}
-      </div>
+      </fieldset>
       <input name="intent" type="hidden" value="reschedule" />
       <input name="accessToken" type="hidden" value={accessToken} />
       <input name="bookingId" type="hidden" value={booking.id} />

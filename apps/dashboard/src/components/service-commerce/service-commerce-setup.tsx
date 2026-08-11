@@ -394,10 +394,20 @@ export function ServiceCommerceSetup({
             {serviceItems.isLoading ? (
               <div className="h-10 animate-pulse rounded-lg bg-muted" />
             ) : serviceItems.isError ? (
-              <p className="text-sm text-destructive" role="alert">
-                Service offerings are unavailable. Try again before configuring
-                booking.
-              </p>
+              <div className="grid gap-2 text-sm text-destructive" role="alert">
+                <p>
+                  Service offerings are unavailable. Try again before
+                  configuring booking.
+                </p>
+                <Button
+                  className="w-fit"
+                  onClick={() => void serviceItems.refetch()}
+                  size="sm"
+                  variant="outline"
+                >
+                  Retry offerings
+                </Button>
+              </div>
             ) : bookingOfferings.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Add an available Service offering before configuring booking.

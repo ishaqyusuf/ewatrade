@@ -1,0 +1,331 @@
+Turn every prescription into a
+managed digital order
+A pharmacy-owned service for quotation, payment, pickup, and delivery - powered by
+EwaTrade.
+
+PHARMACY PARTNERSHIP PROPOSAL
+
+AUGUST 2026
+
+EWATRADE PRESCRIPTION COMMERCE
+
+THE OPPORTUNITY
+
+Customers should not need to travel just to
+discover price and availability
+Prescription demand reaches a pharmacy through many channels. Today, staff and customers often coordinate
+it through fragmented calls, chats, and physical visits.
+
+For customers
+
+For the pharmacy
+
+Get a clear, pharmacy-approved quote remotely; pay
+ahead; choose pickup or an eligible delivery option;
+receive timely updates.
+
+Create one visible queue for prescription intake,
+verification, quotation, payment, packing, handoff, and
+performance reporting.
+
+The same service can support prescriptions from:
+Nearby hospitals and clinics
+Doctors and diagnostic centres
+Distant hospitals within approved service lanes
+The pharmacy website, social pages, WhatsApp, and storefront
+Repeat customers, caregivers, and chronic-care refill workflows
+
+Confidential partnership proposal
+
+2
+
+EWATRADE PRESCRIPTION COMMERCE
+
+HOW IT WORKS
+
+A simple customer journey with
+professional controls behind it
+The QR code or link opens a choice: continue online or continue in the pharmacy's WhatsApp chat.
+
+1
+
+2
+
+3
+
+4
+
+5
+
+Open
+
+Choose
+
+Send
+
+Approve
+
+Fulfil
+
+Scan QR or use a
+shared link
+
+Online service or
+pharmacy WhatsApp
+
+Upload the prescription
+and contact details
+
+Staff verify; pharmacist
+releases quote
+
+Pay, pickup, or choose
+eligible delivery
+
+PICKUP
+
+DELIVERY
+
+The order can be packed before arrival. The customer
+receives a ready notification and presents a pickup code
+or approved identification.
+
+The pharmacy can offer configured zones: an initial
+hospital/campus lane may be NGN 500, while other
+locations are calculated or confirmed.
+
+Delivery eligibility and fees remain configurable by the pharmacy and can reflect distance, item type, operating hours,
+courier availability, and regulatory policy.
+
+Confidential partnership proposal
+
+3
+
+EWATRADE PRESCRIPTION COMMERCE
+
+AI WITH ACCOUNTABILITY
+
+Faster transcription without surrendering
+professional judgment
+OCR helps reduce retyping. It is never the final authority.
+
+Image check
+
+OCR draft
+
+The service checks capture quality and requests a
+clearer image when needed.
+
+The system extracts likely prescription lines and
+highlights uncertainty.
+
+Line-by-line check
+
+Pharmacist release
+
+An attendant compares every generated line with the
+original image and corrects any difference.
+
+A licensed pharmacist handles clarification, alternatives,
+restrictions, approval, and dispensing controls.
+
+The system does not diagnose, prescribe, or automatically substitute medicine. The pharmacy
+remains accountable for professional review, sale, and dispensing.
+
+Confidential partnership proposal
+
+4
+
+EWATRADE PRESCRIPTION COMMERCE
+
+COMPLETE SERVICE
+
+Everything required to manage the order
+from first contact to handoff
+EwaTrade connects the customer-facing experience to the pharmacy's operating queue.
+
+Intake
+
+Verification
+
+QR, web link, WhatsApp, mobile capture, image/PDF
+upload, consent and contact.
+
+Image quality, OCR draft, line correction, audit history,
+exception queue.
+
+Quotation
+
+Payment
+
+Availability status, itemised price, partial quote,
+clarification, validity and alternatives.
+
+Accept quote, payment link, receipt, reconciliation,
+cancellation and refund handling.
+
+Pickup
+
+Delivery
+
+Packing queue, ready notification, pickup code,
+authorised collector and handoff record.
+
+Zones, fees, eligibility, dispatch assignment, tracking,
+proof and failure handling.
+
+Operations
+
+Management
+
+Staff roles, ownership, timers, templates, escalation,
+branch and channel configuration.
+
+Conversion, turnaround, availability, reliability, revenue
+and source analytics.
+
+Confidential partnership proposal
+
+5
+
+EWATRADE PRESCRIPTION COMMERCE
+
+BUSINESS VALUE
+
+A better experience that also improves
+operational visibility
+The partnership is designed around outcomes the pharmacy can measure.
+
+Convert more demand
+
+Reduce avoidable waiting
+
+Capture prescriptions before customers travel or buy
+elsewhere.
+
+Quote and pack before pickup, with clearer promises
+and status.
+
+Control every handoff
+
+Extend service reach
+
+See who verified, approved, packed, assigned, and
+completed each request.
+
+Offer selected delivery zones without making every
+location a universal promise.
+
+Learn what drives sales
+
+Build lasting customer trust
+
+Measure sources, availability, quote time, conversion,
+delivery choice, and failures.
+
+Use transparent quotes, pharmacist oversight, reliable
+updates, and traceable resolution.
+
+Confidential partnership proposal
+
+6
+
+EWATRADE PRESCRIPTION COMMERCE
+
+DESIGN-PARTNER PILOT
+
+Start controlled, learn quickly, and protect
+normal pharmacy operations
+The pilot is configured with the pharmacy team and expands only after agreed service and safety gates.
+
+Discover
+
+Map current prescription channels, responsibilities, stock workflow, customer questions, delivery rules,
+and compliance requirements.
+
+Configure
+
+Launch QR/web/WhatsApp intake, verification queue, pharmacist quote, pickup, and selected delivery
+lanes.
+
+Operate
+
+Run a controlled set of real requests with staff support, daily exception review, and clear escalation.
+
+Measure
+
+Review conversion, quote time, ready-on-promise, workload, customer feedback, stock coverage,
+safety, and privacy.
+
+Decide
+
+Agree the production scope, integrations, commercial terms, service levels, and rollout sequence.
+
+Confidential partnership proposal
+
+7
+
+EWATRADE PRESCRIPTION COMMERCE
+
+PARTNERSHIP ROLES
+
+Clear ownership keeps the service safe and
+commercially credible
+The operating and regulatory model is confirmed before production launch.
+
+The pharmacy
+
+EwaTrade
+
+Provides executive sponsor, licensed pharmacist
+oversight, catalogue and pricing authority, prescription
+and substitution policy, dispensing, packing, refund
+approval, and delivery eligibility rules.
+
+Provides product configuration, intake channels,
+workflow, transcription assistance, ordering and
+payment orchestration, customer updates, fulfilment
+coordination, reporting, training, and technical support.
+
+Production readiness includes:
+Approved PCN/electronic-pharmacy role and licence pathway
+Documented privacy roles, retention, access, deletion, and incident response
+Managed private prescription media storage and audit logs
+Delivery SOP and exclusions for restricted, controlled, cold-chain, or unsuitable items
+Staff training, service levels, fallback procedures, and management reporting
+
+Confidential partnership proposal
+
+8
+
+EWATRADE PRESCRIPTION COMMERCE
+
+NEXT STEP
+
+Approve a discovery workshop and pilot
+design
+The immediate goal is a jointly approved operating blueprint - not a premature technology rollout.
+
+WORKSHOP OUTPUT
+
+90-120 MINUTES
+Current-state map, target customer flow, staff roles, service zones, compliance questions, integration scope, pilot cohort,
+measurement plan, and decision calendar.
+
+Suggested participants
+Owner or executive sponsor
+Superintendent or pharmacist lead
+Branch/operations manager
+Customer service or WhatsApp owner
+Finance/POS or inventory owner
+Privacy/legal representative
+Dispatch or delivery owner
+
+EwaTrade Prescription Commerce
+A safer, faster route from prescription to pharmacy fulfilment.
+
+Confidential partnership proposal
+
+9
+
+

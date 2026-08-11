@@ -946,7 +946,10 @@ function FieldError({ message }: { message?: string }) {
 
 function BookingNotice({ message }: { message: string }) {
   return (
-    <output className="block rounded-lg border border-border bg-muted/40 p-4 text-sm">
+    <output
+      aria-live="polite"
+      className="block rounded-lg border border-border bg-muted/40 p-4 text-sm"
+    >
       {message}
     </output>
   )

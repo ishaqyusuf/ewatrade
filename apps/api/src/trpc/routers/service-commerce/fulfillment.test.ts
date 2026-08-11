@@ -7,9 +7,15 @@ const createCaller = createCallerFactory(serviceCommerceFulfillmentRouter)
 
 function caller(overrides?: { attendant?: boolean; sourceId?: string }) {
   const calls: string[] = []
-  const db = {
-    $transaction: async (callback: (tx: typeof db) => Promise<unknown>) =>
-      callback(db),
+  type FakeDb = {
+    $transaction: (
+      callback: (tx: FakeDb) => Promise<unknown>,
+    ) => Promise<unknown>
+    commercialOrder: { findFirst: () => Promise<unknown> }
+    serviceCommerceStoreTeamAssignment: { findFirst: () => Promise<unknown> }
+  }
+  const db: FakeDb = {
+    $transaction: async (callback) => callback(db),
     commercialOrder: {
       findFirst: async () => {
         calls.push("order")

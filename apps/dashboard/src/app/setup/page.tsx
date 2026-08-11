@@ -234,9 +234,7 @@ export default function SetupPage() {
               id="operating-model"
               value={operatingModel}
               onChange={(event) =>
-                setOperatingModel(
-                  event.target.value as BusinessOperatingModel,
-                )
+                setOperatingModel(event.target.value as BusinessOperatingModel)
               }
               className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm outline-none transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
             >

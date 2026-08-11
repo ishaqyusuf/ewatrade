@@ -1,0 +1,108 @@
+.page {
+  --operator-ink: #10251d;
+  --operator-orange: #ff6f3d;
+  isolation: isolate;
+}
+
+.heroGrid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(23, 56, 43, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(23, 56, 43, 0.07) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, black, transparent 86%);
+}
+
+.board {
+  border: 1px solid rgba(23, 56, 43, 0.28);
+  box-shadow: 18px 18px 0 rgba(16, 37, 29, 0.16);
+}
+
+.orangeBlock {
+  transform: rotate(5deg);
+}
+
+.activeDot {
+  animation: operator-pulse 2.2s ease-out infinite;
+}
+
+.marquee {
+  overflow: hidden;
+}
+
+.marqueeTrack {
+  display: flex;
+  width: max-content;
+  gap: 1.25rem;
+  animation: operator-marquee 32s linear infinite;
+}
+
+.syncPulse > span {
+  animation: operator-status 1.8s ease-in-out infinite;
+}
+
+.formShell > div {
+  height: 100%;
+  border-radius: 0;
+  border-color: rgba(23, 56, 43, 0.22);
+  background: #f8f8f3;
+  box-shadow: 8px 8px 0 rgba(16, 37, 29, 0.11);
+}
+
+.formShell input,
+.formShell textarea {
+  border-radius: 0;
+  border-color: rgba(23, 56, 43, 0.25);
+  background: #f3f2eb;
+}
+
+.formShell button {
+  border-radius: 0;
+  background: var(--operator-orange);
+  color: var(--operator-ink);
+}
+
+.formShell button:hover {
+  background: #ff845d;
+}
+
+@keyframes operator-marquee {
+  to {
+    transform: translateX(calc(-50% - 0.625rem));
+  }
+}
+
+@keyframes operator-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 111, 61, 0.52);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 10px rgba(255, 111, 61, 0);
+  }
+}
+
+@keyframes operator-status {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (max-width: 640px) {
+  .board {
+    box-shadow: 9px 9px 0 rgba(16, 37, 29, 0.16);
+  }
+
+  .heroGrid {
+    background-size: 28px 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activeDot,
+  .marqueeTrack,
+  .syncPulse > span {
+    animation: none;
+  }
+}

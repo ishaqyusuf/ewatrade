@@ -7,8 +7,9 @@ import { domainsRouter } from "./domains"
 import { inventoryRouter } from "./inventory"
 import { offlineRouter } from "./offline"
 import { ordersRouter } from "./orders"
-import { prescriptionsRouter } from "./prescriptions"
 import { prescriptionAccessRouter } from "./prescription-access"
+import { prescriptionsRouter } from "./prescriptions"
+import { qaMaintenanceRouter } from "./qa-maintenance"
 import { retailOpsRouter } from "./retail-ops"
 import { searchRouter } from "./search"
 import { serviceAccessRouter } from "./service-access"
@@ -17,7 +18,6 @@ import { serviceCommunicationsRouter } from "./service-communications"
 import { serviceReportingRouter } from "./service-reporting"
 import { servicesRouter } from "./services"
 import { tenantRouter } from "./tenant"
-import { qaMaintenanceRouter } from "./qa-maintenance"
 
 export const appRouter = createTRPCRouter({
   auth: authRouter,

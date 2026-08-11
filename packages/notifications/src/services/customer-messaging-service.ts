@@ -42,6 +42,7 @@ function responseAttemptId(value: unknown) {
 
 export class CustomerMessagingService {
   async send(input: {
+    actions?: Array<{ label: string; url: string }>
     channel: CustomerMessageChannel
     intentId: string
     message: string
@@ -59,6 +60,7 @@ export class CustomerMessagingService {
     if (config.token) headers.authorization = `Bearer ${config.token}`
     const response = await fetch(config.url, {
       body: JSON.stringify({
+        actions: input.actions,
         intentId: input.intentId,
         message: input.message,
         to: input.to,

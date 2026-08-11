@@ -1,6 +1,7 @@
 import {
   type ServiceCommerceDeliveryStatus,
   type ServiceCommerceFulfillmentContext,
+  type ServiceCommerceFulfillmentProjection,
   type ServiceCommercePickupStatus,
   deriveServiceCommerceFulfillmentGates,
   deriveServiceCommerceFulfillmentNextOperations,
@@ -506,7 +507,7 @@ export async function getServiceCommerceFulfillmentOrder(
   input: ServiceCommerceFulfillmentContext & {
     actorUserId: string
   },
-) {
+): Promise<ServiceCommerceFulfillmentProjection> {
   return db.$transaction(async (tx) => {
     await assertServiceCommerceFulfillmentAttendantInTransaction(tx, input)
     return resolveServiceCommerceFulfillmentOrderInTransaction(tx, input)

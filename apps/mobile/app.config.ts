@@ -1,29 +1,37 @@
-import type { ExpoConfig } from "expo/config"
+import type { ExpoConfig } from "expo/config";
 
-export const UPDATE_VERSION = "2026.07.25.06"
+export const UPDATE_VERSION = "2026.07.25.06";
 
 const PROJECT = {
-   default: {id: "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b",slug: "ewatrade", owner: "cipron-startups" },
-   fallback: {id: "5d765962-42a1-4a9e-a01c-122149c3cec4",slug:"ewatrade-2",owner:"startups-2" }
-}
-const {id: PROJECT_ID, slug:SLUG, owner:OWNER } = PROJECT.fallback;
+  default: {
+    id: "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b",
+    slug: "ewatrade",
+    owner: "cipron-startups",
+  },
+  fallback: {
+    id: "5d765962-42a1-4a9e-a01c-122149c3cec4",
+    slug: "ewatrade-2",
+    owner: "startups-2",
+  },
+};
+const { id: PROJECT_ID, slug: SLUG, owner: OWNER } = PROJECT.default;
 const appVariant =
   process.env.APP_VARIANT ??
   process.env.EXPO_PUBLIC_APP_VARIANT ??
-  (process.env.EAS_BUILD_PROFILE === "development" ? "development" : undefined)
+  (process.env.EAS_BUILD_PROFILE === "development" ? "development" : undefined);
 
-const normalizedAppVariant = (appVariant ?? "production").toLowerCase()
+const normalizedAppVariant = (appVariant ?? "production").toLowerCase();
 const isDevelopmentBuild =
-  normalizedAppVariant === "development" || normalizedAppVariant === "dev"
+  normalizedAppVariant === "development" || normalizedAppVariant === "dev";
 const autoUpdateOnForeground =
-  process.env.EXPO_PUBLIC_AUTO_UPDATE_ON_FOREGROUND !== "false"
+  process.env.EXPO_PUBLIC_AUTO_UPDATE_ON_FOREGROUND !== "false";
 const autoUpdateForegroundCooldownMs = Number(
   process.env.EXPO_PUBLIC_AUTO_UPDATE_FOREGROUND_COOLDOWN_MS ?? 5 * 60 * 1000,
-)
+);
 const googleIosUrlScheme = getGoogleIosUrlScheme(
   process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ??
     process.env.GOOGLE_IOS_CLIENT_ID,
-)
+);
 const googleSignInPlugin: NonNullable<ExpoConfig["plugins"]> =
   googleIosUrlScheme
     ? [
@@ -34,7 +42,7 @@ const googleSignInPlugin: NonNullable<ExpoConfig["plugins"]> =
           },
         ],
       ]
-    : []
+    : [];
 
 const variantConfig = isDevelopmentBuild
   ? {
@@ -70,11 +78,11 @@ const variantConfig = isDevelopmentBuild
         splashLight: "./assets/icons/splash-logo.png",
         splashDark: "./assets/icons/splash-logo.png",
       },
-    }
+    };
 
 const config: ExpoConfig = {
   name: variantConfig.name,
-  slug:SLUG,
+  slug: SLUG,
   owner: OWNER,
   version: "1.0.0",
   orientation: "portrait",
@@ -191,9 +199,9 @@ const config: ExpoConfig = {
     },
     router: {},
   },
-}
+};
 
-export default config
+export default config;
 
 function getPrimaryGoogleClientId(value?: string) {
   return (
@@ -201,14 +209,14 @@ function getPrimaryGoogleClientId(value?: string) {
       ?.split(",")
       .map((item) => item.trim())
       .find(Boolean) ?? ""
-  )
+  );
 }
 
 function getGoogleIosUrlScheme(value?: string) {
-  const clientId = getPrimaryGoogleClientId(value)
-  const googleSuffix = ".apps.googleusercontent.com"
+  const clientId = getPrimaryGoogleClientId(value);
+  const googleSuffix = ".apps.googleusercontent.com";
 
-  if (!clientId.endsWith(googleSuffix)) return undefined
+  if (!clientId.endsWith(googleSuffix)) return undefined;
 
-  return `com.googleusercontent.apps.${clientId.slice(0, -googleSuffix.length)}`
+  return `com.googleusercontent.apps.${clientId.slice(0, -googleSuffix.length)}`;
 }

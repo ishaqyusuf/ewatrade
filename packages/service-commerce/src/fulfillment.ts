@@ -47,6 +47,21 @@ const DELIVERY_TRANSITIONS: Record<
   returned_to_store: ["cancelled", "rescheduled"],
 }
 
+export function deriveServiceCommerceFulfillmentNextOperations(input: {
+  kind: "pickup"
+  status: ServiceCommercePickupStatus
+}):
+  | readonly []
+  | readonly ["handoff", "record_exception"]
+  | readonly ["prepare", "record_exception"]
+export function deriveServiceCommerceFulfillmentNextOperations(input: {
+  kind: "delivery"
+  status: ServiceCommerceDeliveryStatus | null
+}):
+  | readonly []
+  | readonly ["assign", "transition"]
+  | readonly ["prepare"]
+  | readonly ["transition"]
 export function deriveServiceCommerceFulfillmentNextOperations(
   input:
     | { kind: "delivery"; status: ServiceCommerceDeliveryStatus | null }

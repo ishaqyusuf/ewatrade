@@ -29,9 +29,7 @@ export const retailOpsStaffListSchema = retailOpsStoreScopeSchema.extend({
     .enum(["admin", "all", "cashier", "manager", "operator", "owner"])
     .default("all"),
   search: z.string().trim().min(1).max(120).optional(),
-  status: z
-    .enum(["active", "all", "invited", "suspended"])
-    .default("all"),
+  status: z.enum(["active", "all", "invited", "suspended"]).default("all"),
 })
 
 export const retailOpsUpdateStaffStatusSchema =

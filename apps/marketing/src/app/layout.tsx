@@ -16,9 +16,9 @@ const fraunces = Fraunces({
 })
 
 export const metadata: Metadata = {
-  title: "ewatrade — Commerce, logistics, and merchant operations",
+  title: "EwaTrade — The operating layer behind the shop",
   description:
-    "ewatrade combines branded storefronts, merchant operations, dispatch coordination, POS workflows, and customer messaging into one multi-tenant platform.",
+    "Keep catalog, customers, orders, inventory, and service work on one commercial thread across every store and team.",
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",

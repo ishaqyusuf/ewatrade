@@ -12,6 +12,13 @@ Central index for ewatrade product, architecture, engineering, database, API, de
 - Important project reference: `school-clerk` at `/Users/M1PRO/Documents/code/school-clerk` for SaaS administration, school/tenant workflows, and operational dashboard patterns when relevant.
 - Important project reference: `plotkeys` at `/Users/M1PRO/Documents/code/plot-keys` for notifications, email, jobs, and tenant/domain utility patterns when relevant.
 - Important project reference: `halaal-coperative` at `/Users/M1PRO/Documents/code/halaal-coperative` for cooperative commerce, member/account workflows, and finance-oriented product patterns when relevant.
+- Important remote project reference: `t3code` at
+  `https://github.com/pingdotgg/t3code` for Expo mobile runtime separation,
+  reconnect/outbox resilience, adaptive phone/tablet presentation and
+  native-compatible EAS delivery when relevant. See
+  `.brain/research/2026-08-10-t3-code-mobile-reference.md`; do not treat its
+  agent domain, Effect RPC stack or custom native terminal/diff modules as
+  EwaTrade architecture defaults.
 
 ## Current State
 - The repository is an active Bun monorepo with Next.js dashboard, marketing,

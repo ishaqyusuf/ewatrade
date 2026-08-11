@@ -59,7 +59,24 @@ Capture public marketing interest from merchants and partners through the market
 - In sandboxed Codex runs, the command may require elevated local-network permission so the verifier can connect to the already-running local marketing and dashboard dev servers.
 
 ## UI
-- Hero CTA links jump to the relevant lead capture forms.
+- The root marketing route is a thin version resolver. `MARKETING_EXPERIENCE`
+  selects a registered experience id, and production falls back to the most
+  recent production-ready experience when a requested experience is still a
+  draft.
+- Registered experiences are `legacy-v1` and `operator-v2`. The legacy page is
+  the production-ready fallback while `operator-v2` completes launch review.
+- Draft experiences are available at
+  `/preview/marketing/<experience>` without indexing. Production previews
+  require a constant-time match against
+  `MARKETING_EXPERIENCE_PREVIEW_TOKEN`; non-production previews remain open for
+  local design and QA work.
+- `operator-v2` positions EwaTrade as the operating layer behind the shop. Its
+  visual and copy system tells the implemented Catalog -> request/quote/order
+  -> inventory/customer/service-work story, with multi-store and supported
+  offline-order replay evidence. It intentionally excludes future dispatch,
+  payment-hardware, or marketplace claims.
+- Hero CTA links jump to the relevant lead capture forms or `/signup` when
+  public signup is enabled.
 - Early access form captures richer context for outreach.
 - Waitlist form captures lightweight intent with name and email only.
 - Successful and failed submissions also emit client-side toast notifications through `@ewatrade/notifications-react`.
