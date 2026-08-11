@@ -76,7 +76,12 @@ revised 17-ticket batch.
   source checks remain evidenced below.
 - [x] Reconcile any approved schema/backfill on the verified Neon development profile; local Docker/PostgreSQL remains prohibited.
 - [ ] Keep live Meta, payment, media/OCR, courier and production database canaries as explicit separately authorized gates.
-- [ ] Produce a switch/rollback report and request owner authorization before production rollout or contracting any compatibility model/export.
+- [x] Produce the switch/rollback report, compatibility inventory and exact
+  owner-decision record before production rollout or contraction.
+- [ ] Obtain explicit owner authorization for the selected production cohort,
+  rollback owner and release reference after every preceding live-provider,
+  threshold and production-reconciliation gate passes; authorize contraction
+  separately after the observation window.
 - [x] Update Brain architecture, feature, API, permission, database, migration, runbook and task-state docs with exact evidence and remaining blockers.
 
 ## Evidence recorded on 2026-08-11

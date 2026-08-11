@@ -103,6 +103,29 @@
    future drift-inventory execution also requires its own read-only credential
    and authorization; it cannot authorize the reconciliation write.
 
+## Owner Authorization Record
+
+**Status:** pending. This section is the bounded decision record; a generic
+"authorized" response cannot be reused across rows because each row has a
+different external effect, operator and rollback boundary.
+
+| Gate | Required owner/provider record | Current state |
+| --- | --- | --- |
+| Production report thresholds | Approve or revise p95 15 seconds, maximum 30 seconds and 30 reads per actor/Tenant per rolling 60 seconds; name capacity owner and effective release | Development measurement and rate-boundary evidence only |
+| Meta live window | Tenant, Store, Connection, consented test recipient, approved operator/window, current template/category/Nigeria rate-card evidence and rollback owner | Offline probe blocked; no provider call authorized |
+| Pharmacy Paystack canary | Payment owner, Pharmacy policy/legal approval, test account/credential, non-customer mailbox, amount/currency, callback window and refund authority | Dedicated canary execution remains unsupported and unapproved |
+| Generic media and Pharmacy media/OCR | Selected storage/scanner/OCR providers, processing region, DPA/privacy/retention approvals, credentials, benign test asset and deletion evidence | Production adapters and provider decisions absent |
+| Manual courier proof | Approved SOP, designated test Order/courier/address, proof expectations and incident/rollback owner | Manual provider exists; operating proof unapproved |
+| Production drift inventory | Dedicated least-privilege read-only credential, exact target fingerprint and inventory-specific authorization | Required environment facts absent; command not executed |
+| Production reconciliation write | Reviewed ledger/schema repair plan, backup/PITR checkpoint, operator/window, exact write authority and stop/rollback criteria | Current baseline is drifted and unsafe for `migrate deploy` |
+| Traffic switch | Selected cohort, deployment reference, monitoring owner, provider/job controls and rollback trigger | Not authorized; compatibility readers/writers retained |
+| Compatibility contraction | Separate post-observation approval proving no reader, writer, job or rollback depends on each named artifact | Prohibited before successful switch observation |
+
+Every authorization must identify its row and evidence reference. Provider,
+database-write, traffic-switch and contraction authority are not transitive.
+An approved read-only preflight cannot authorize a write or provider call, and
+a successful switch cannot authorize later deletion.
+
 ## Switch Conditions
 
 The owner should authorize a production switch only after every open gate has

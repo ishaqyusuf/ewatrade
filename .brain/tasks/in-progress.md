@@ -301,9 +301,12 @@
   clean healthy-state consoles and responsive containment; its exact run-owned
   Tenant, Store, users, sessions, audits and usage rows were removed and
   verified at zero. The development performance targets are measured and the
-  rate boundary is enforced; remaining
-  gates are production threshold ratification, live providers, production
-  migration-drift reconciliation, and owner-authorized switch/contraction. A
+  rate boundary is enforced; remaining gates are production threshold
+  ratification, live providers, production migration-drift reconciliation, and
+  owner-authorized switch/contraction. The switch/rollback report and
+  compatibility inventory are source-complete; the readiness runbook now has a
+  row-specific authorization record so read-only, provider, write, switch and
+  contraction authority cannot be conflated. A
   read-only development census and the authorized read-only production census
   found no completed Order or legacy sale row to backfill; the production
   census made no writes. The source-only release
