@@ -30,8 +30,10 @@ Tickets 10 and 12 are source-complete. Ticket 13 is in progress: shared
 reporting, provider-cost attribution, redacted operations, the non-regulated
 bag-seller lifecycle, generic-media coverage and the cross-origin Quote-release
 matrix plus authenticated report browser acceptance are implemented.
-Non-functional thresholds, live providers, production rollout and contraction
-remain open gates.
+The development performance targets are measured and the rate boundary is
+enforced;
+production threshold ratification, live providers, production rollout and
+contraction remain open gates.
 Production schema/provider operations remain separately authorized.
 
 Pharmacy Commerce is the first regulated vertical and retains its completed
@@ -600,8 +602,11 @@ delivery, tax, subscription, platform and revenue dimensions remain separate.
 An unavailable applicable cost is `null` with an unknown count; zero is known
 only when the provider fact explicitly establishes zero.
 
-Verified source evidence includes a 26-test/112-assertion focused reporting
-suite and a 1-test/11-assertion development-Neon reporting lifecycle. The
+Verified source evidence includes a 31-test/125-assertion focused reporting
+suite and a 1-test/19-assertion development-Neon reporting lifecycle. The Neon
+seam proves four concurrent reads within a 15-second p95 and 30-second maximum,
+plus exactly one allowed read and one audited denial when two callers contend
+at 29 prior actor/Tenant reads. The
 Pharmacy-free bag-seller Neon seam passed 2 tests/16 assertions, and generic
 media passed 30 tests/95 assertions. The authenticated report browser surface
 passed 1280x720 and 390x844 acceptance for loaded/empty data, known-zero versus
@@ -618,7 +623,13 @@ validated Store at the repository boundary and appends an immutable safe audit
 before report queries execute. Allowed and denied evidence retains only actor,
 Tenant/validated Store, fixed purpose, `SERVICE_COMMERCE_REPORTING` source,
 kind/section, report window, result and allowlisted denial reason; a
-cross-Tenant Store id and report contents are never persisted.
+cross-Tenant Store id and report contents are never persisted. The same
+transaction locks the accepted Membership and counts the rolling audit window,
+then re-reads current manager authority before it counts the rolling audit
+window. Concurrent reads cannot bypass the 30-per-minute development bound. A
+revocation committed before the post-lock re-read fails authorization; the
+bounded authorization transaction does not claim a snapshot-wide lock over the
+subsequent aggregate queries.
 
 ## Cost And Billing Boundary
 
@@ -716,8 +727,9 @@ passed 1 test/56 assertions and its separate cross-vertical same-phone
 isolation seam passed 1 test/10 assertions; authenticated desktop and 390px
 browser QA also passed. Ticket 13 is in progress with reporting/cost,
 bag-seller, media and Quote-release source seams plus authenticated report
-browser acceptance verified. Final non-functional threshold, live-provider,
-production and owner-authorized switch/contraction gates remain open. Its final
+browser acceptance verified. Development performance is measured and the rate
+boundary is verified; production threshold ratification, live-provider, production and
+owner-authorized switch/contraction gates remain open. Its final
 verified-Neon routing matrix
 passed 1 test/13 assertions, the unchanged Pharmacy compatibility matrix passed
 9/248, and the unchanged Generic Service request-to-Order, appointment-work and

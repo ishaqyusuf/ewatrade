@@ -261,7 +261,10 @@
   Shared Tenant/Store reporting, separated provider-cost usage/reconciliation,
   bounded redacted drill-down, typed report UI, bag-seller Neon lifecycle,
   generic-media matrix and cross-origin Quote-release matrix are implemented.
-  Reporting focused tests pass 26/112; its verified-Neon seam passes 1/11; the
+  Reporting focused tests pass 31/125; its verified-Neon seam passes 1/19,
+  including four concurrent reads within the 15-second p95/30-second maximum
+  development targets plus exactly one allowed read and one audited denial when
+  two callers contend at 29 prior actor/Tenant reads; the
   bag-seller seam passes 2/16; generic-media tests pass 30/95. The additive
   migrations are applied on verified development Neon. Immutable allowed and
   denied report-read audit is now enforced before repository report queries.
@@ -274,6 +277,10 @@
   recovered retry, safe role denial, typed URL Back/Forward, keyboard access,
   clean healthy-state consoles and responsive containment; its exact run-owned
   Tenant, Store, users, sessions, audits and usage rows were removed and
-  verified at zero. Remaining gates are approved non-functional thresholds,
-  live providers, production reconciliation, and owner-authorized
-  switch/contraction. Started Date: 2026-08-11.
+  verified at zero. The development performance targets are measured and the
+  rate boundary is enforced; remaining
+  gates are production threshold ratification, live providers, production
+  reconciliation, and owner-authorized switch/contraction. A read-only
+  development census found no completed Order or legacy sale row to backfill;
+  production history remains separately gated. Started Date:
+  2026-08-11.

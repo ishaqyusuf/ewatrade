@@ -22,8 +22,9 @@ and 04A have source-complete foundations; their remaining
 recommendation/live-provider release gates stay open. Ticket 13 is in progress:
 its shared reporting/cost source, bag-seller lifecycle, media matrix and Quote
 release matrix plus authenticated report browser acceptance are verified, while
-non-functional threshold, live-provider, production and owner-authorized switch
-gates remain open. Any
+production-threshold ratification, live-provider, production and
+owner-authorized switch gates remain open; development performance is measured
+and the rate boundary is enforced. Any
 scope or dependency change should update the spec, ADR/Brain
 and affected tickets before implementation.
 

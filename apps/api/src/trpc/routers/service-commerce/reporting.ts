@@ -22,6 +22,12 @@ function mapReportingError(error: unknown): never {
   if (error instanceof Error && error.message === "REPORT_STORE_NOT_FOUND") {
     throw new TRPCError({ code: "NOT_FOUND", message: "Store not found." })
   }
+  if (error instanceof Error && error.message === "REPORT_RATE_LIMITED") {
+    throw new TRPCError({
+      code: "TOO_MANY_REQUESTS",
+      message: "Too many report reads. Try again in a minute.",
+    })
+  }
   throw error
 }
 

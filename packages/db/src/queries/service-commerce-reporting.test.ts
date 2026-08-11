@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { SERVICE_COMMERCE_REPORT_RATE_LIMIT_MAX_READS } from "@ewatrade/service-commerce"
 
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
@@ -24,6 +25,40 @@ function dbClient(client: Record<string, unknown>) {
   return client as unknown as PrismaClient
 }
 
+function reportAccessClient(client: Record<string, unknown>) {
+  const transactionClient = new Proxy(client, {
+    get(target, property, receiver) {
+      if (property === "$queryRaw") {
+        return property in target
+          ? Reflect.get(target, property, receiver)
+          : async () => [{ id: "membership_1" }]
+      }
+      if (property === "serviceCommerceReportReadAuditEvent") {
+        return {
+          count: async () => 0,
+          ...(Reflect.get(target, property, receiver) as Record<
+            string,
+            unknown
+          >),
+        }
+      }
+      return Reflect.get(target, property, receiver)
+    },
+  })
+
+  return dbClient(
+    new Proxy(transactionClient, {
+      get(target, property, receiver) {
+        if (property === "$transaction") {
+          return async (callback: (tx: unknown) => Promise<unknown>) =>
+            callback(transactionClient)
+        }
+        return Reflect.get(target, property, receiver)
+      },
+    }),
+  )
+}
+
 function reportingClient(calls: Array<{ name: string; value: unknown }>) {
   function findMany(name: string, rows: unknown[] = []) {
     return async (value: unknown) => {
@@ -32,7 +67,7 @@ function reportingClient(calls: Array<{ name: string; value: unknown }>) {
     }
   }
 
-  return dbClient({
+  return reportAccessClient({
     catalogAvailabilityAttestation: {
       findMany: findMany("catalogAvailabilityAttestation.findMany"),
     },
@@ -403,7 +438,7 @@ describe("Service Commerce reporting repository contract", () => {
 
   test("audits denied report access before any lifecycle query", async () => {
     const calls: Array<{ name: string; value: unknown }> = []
-    const db = dbClient({
+    const db = reportAccessClient({
       membership: {
         findFirst: async (value: unknown) => {
           calls.push({ name: "membership.findFirst", value })
@@ -450,7 +485,7 @@ describe("Service Commerce reporting repository contract", () => {
 
   test("never persists an unverified cross-Tenant Store id in denied audit evidence", async () => {
     const audits: unknown[] = []
-    const db = dbClient({
+    const db = reportAccessClient({
       membership: {
         findFirst: async () => ({ id: "membership_1", role: "MANAGER" }),
       },
@@ -485,9 +520,152 @@ describe("Service Commerce reporting repository contract", () => {
     expect(JSON.stringify(audits)).not.toContain("foreign_store")
   })
 
+  test("serializes actor reads and audits the exact request that exceeds the bounded rate", async () => {
+    const calls: Array<{ name: string; value: unknown }> = []
+    let observedTransactionOptions: unknown
+    const client = {
+      $queryRaw: async (...value: unknown[]) => {
+        calls.push({ name: "$queryRaw", value })
+        return [{ id: "membership_1" }]
+      },
+      membership: {
+        findFirst: async (value: unknown) => {
+          calls.push({ name: "membership.findFirst", value })
+          return { id: "membership_1", role: "MANAGER" }
+        },
+      },
+      serviceCommerceReportReadAuditEvent: {
+        count: async (value: unknown) => {
+          calls.push({
+            name: "serviceCommerceReportReadAuditEvent.count",
+            value,
+          })
+          return SERVICE_COMMERCE_REPORT_RATE_LIMIT_MAX_READS
+        },
+        create: async (value: unknown) => {
+          calls.push({
+            name: "serviceCommerceReportReadAuditEvent.create",
+            value,
+          })
+          return { id: "report_read_audit_limited" }
+        },
+      },
+      store: {
+        findFirst: async () => {
+          throw new Error(
+            "Store lookup must not run after the limit is reached",
+          )
+        },
+      },
+    }
+    const db = dbClient({
+      ...client,
+      $transaction: async (
+        callback: (tx: unknown) => Promise<unknown>,
+        options: unknown,
+      ) => {
+        observedTransactionOptions = options
+        return callback(client)
+      },
+    })
+
+    await expect(
+      authorizeServiceCommerceReportRead(db, {
+        actorUserId: "manager_1",
+        end: window.end,
+        kind: "report",
+        now: new Date("2031-02-10T10:00:00.000Z"),
+        start: window.start,
+        storeId: scope.storeId,
+        tenantId: scope.tenantId,
+      }),
+    ).rejects.toThrow("REPORT_RATE_LIMITED")
+    expect(calls.map((call) => call.name)).toEqual([
+      "membership.findFirst",
+      "$queryRaw",
+      "membership.findFirst",
+      "serviceCommerceReportReadAuditEvent.count",
+      "serviceCommerceReportReadAuditEvent.create",
+    ])
+    expect(calls.at(-1)).toEqual({
+      name: "serviceCommerceReportReadAuditEvent.create",
+      value: {
+        data: expect.objectContaining({
+          actorUserId: "manager_1",
+          denialReason: "RATE_LIMITED",
+          outcome: "DENIED",
+          storeId: undefined,
+          tenantId: scope.tenantId,
+        }),
+      },
+    })
+    expect(observedTransactionOptions).toEqual({
+      maxWait: 10_000,
+      timeout: 30_000,
+    })
+  })
+
+  test("fails closed when manager authority changes while the membership lock is acquired", async () => {
+    const calls: string[] = []
+    let membershipRead = 0
+    const client = {
+      $queryRaw: async () => {
+        calls.push("membership.lock")
+        return [{ id: "membership_1" }]
+      },
+      membership: {
+        findFirst: async () => {
+          membershipRead += 1
+          calls.push(`membership.read.${membershipRead}`)
+          return membershipRead === 1
+            ? { id: "membership_1", role: "MANAGER" }
+            : null
+        },
+      },
+      serviceCommerceReportReadAuditEvent: {
+        count: async () => {
+          throw new Error("Rate count must not run after authority is revoked")
+        },
+        create: async (value: { data: { denialReason?: string } }) => {
+          calls.push(`audit.${value.data.denialReason}`)
+          return { id: "report_read_audit_revoked" }
+        },
+      },
+      store: {
+        findFirst: async () => {
+          throw new Error(
+            "Store lookup must not run after authority is revoked",
+          )
+        },
+      },
+    }
+    const db = dbClient({
+      ...client,
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback(client),
+    })
+
+    await expect(
+      authorizeServiceCommerceReportRead(db, {
+        actorUserId: "manager_1",
+        end: window.end,
+        kind: "report",
+        start: window.start,
+        storeId: scope.storeId,
+        tenantId: scope.tenantId,
+      }),
+    ).rejects.toThrow("REPORT_ACCESS_FORBIDDEN")
+    expect(calls).toEqual([
+      "membership.read.1",
+      "membership.lock",
+      "membership.read.2",
+      "audit.ACCESS_FORBIDDEN",
+    ])
+  })
+
   test("fails closed before report queries when immutable audit persistence fails", async () => {
     let reportQueried = false
-    const db = dbClient({
+    const db = reportAccessClient({
       membership: {
         findFirst: async () => ({ id: "membership_1", role: "MANAGER" }),
       },
@@ -859,7 +1037,7 @@ describe("Service Commerce reporting repository contract", () => {
 
   test("returns a reporting drill-down that is role-gated and contains no customer, media, or provider operation secrets", async () => {
     const calls: Array<{ name: string; value: unknown }> = []
-    const db = dbClient({
+    const db = reportAccessClient({
       membership: {
         findFirst: async (value: unknown) => {
           calls.push({ name: "membership.findFirst", value })
@@ -997,28 +1175,31 @@ describe("Service Commerce reporting repository contract", () => {
         { effectiveAt: new Date("2031-02-08T10:00:00.000Z") },
       ],
     }
-    const db = new Proxy(
-      {
-        membership: {
-          findFirst: async () => ({ id: "membership_1", role: "MANAGER" }),
+    const db = reportAccessClient(
+      new Proxy(
+        {
+          membership: {
+            findFirst: async () => ({ id: "membership_1", role: "MANAGER" }),
+          },
+          serviceCommerceReportReadAuditEvent: {
+            create: async () => ({ id: "report_read_audit_1" }),
+          },
+          store: {
+            findFirst: async () => ({ id: scope.storeId }),
+            findMany: async () => [],
+          },
         },
-        serviceCommerceReportReadAuditEvent: {
-          create: async () => ({ id: "report_read_audit_1" }),
+        {
+          get(target, property) {
+            if (property in target)
+              return target[property as keyof typeof target]
+            return {
+              findMany: async () => rowSets[String(property)] ?? [],
+            }
+          },
         },
-        store: {
-          findFirst: async () => ({ id: scope.storeId }),
-          findMany: async () => [],
-        },
-      },
-      {
-        get(target, property) {
-          if (property in target) return target[property as keyof typeof target]
-          return {
-            findMany: async () => rowSets[String(property)] ?? [],
-          }
-        },
-      },
-    ) as unknown as PrismaClient
+      ),
+    )
 
     const lifecycle = await getServiceCommerceReportDrilldown(db, {
       actorUserId: "manager_1",

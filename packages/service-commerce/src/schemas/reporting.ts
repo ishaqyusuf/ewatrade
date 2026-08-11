@@ -31,6 +31,17 @@ export const SERVICE_COMMERCE_REPORT_MAX_WINDOW_MILLISECONDS =
  */
 export const SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT = 10_000
 
+/**
+ * Pilot thresholds protect remote-Neon reporting without turning an
+ * unavailable provider or an oversized query into an unbounded request.
+ * Production rollout still requires an owner-reviewed threshold decision.
+ */
+export const SERVICE_COMMERCE_REPORT_RATE_LIMIT_WINDOW_MILLISECONDS = 60_000
+export const SERVICE_COMMERCE_REPORT_RATE_LIMIT_MAX_READS = 30
+export const SERVICE_COMMERCE_REPORT_PILOT_CONCURRENT_READS = 4
+export const SERVICE_COMMERCE_REPORT_PILOT_P95_TARGET_MILLISECONDS = 15_000
+export const SERVICE_COMMERCE_REPORT_PILOT_MAX_TARGET_MILLISECONDS = 30_000
+
 export const SERVICE_COMMERCE_REPORT_DRILLDOWN_SECTIONS = [
   "lifecycle",
   "catalog",

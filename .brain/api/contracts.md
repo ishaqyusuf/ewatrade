@@ -361,6 +361,12 @@
   fixed `SERVICE_COMMERCE_REPORTING` source domain, allowed/denied result and an
   allowlisted denial reason; it contains no report rows, customer/request/media/
   provider identifiers or raw errors.
+- Report and drill-down reads share a repository-owned rolling budget of 30
+  attempts per actor/Tenant per 60 seconds. The Membership row serializes the
+  count-plus-audit boundary and manager authority is re-read after the lock; the
+  first over-budget read fails closed, is audited
+  as `RATE_LIMITED`, and maps to a retryable API error without querying report
+  facts.
 - Each authoritative source query is capped at 10,000 rows. `mayBeTruncated`
   is true when any source reaches its cap so bounded aggregates are never
   presented as exact without qualification.

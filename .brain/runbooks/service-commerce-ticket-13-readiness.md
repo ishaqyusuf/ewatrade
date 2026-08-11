@@ -6,11 +6,14 @@
 
 ## Verified Development Evidence
 
-- Shared report contracts/repository/API/URL behavior: 26 tests, 112
+- Shared report contracts/repository/API/URL behavior: 31 tests, 125
   assertions.
-- Verified-Neon reporting lifecycle: 1 test, 11 assertions, with scoped
+- Verified-Neon reporting lifecycle: 1 test, 19 assertions, with scoped
   half-open occurrence windows, explicit unknown/zero cost and redacted
-  drill-down plus persisted allowed report/drill-down audit evidence.
+  drill-down plus persisted allowed report/drill-down audit evidence. Four
+  concurrent reads stayed within the 15-second p95 and 30-second maximum
+  development targets; two callers contending after 29 reads yielded one
+  allowed read and one audited denial.
 - Pharmacy-free bag-seller WhatsApp media-to-Order path: 2 tests, 16
   assertions.
 - Generic media replay/retry/quarantine/grant/scope matrix: 30 tests, 95
@@ -20,7 +23,7 @@
   membership removal and pharmacist composition are covered. The membership
   case is independently executable rather than relying on test order.
 - DB, API, dashboard, jobs, communications and shared-contract TypeScript
-  checks pass. Six additive migrations are applied to the verified
+  checks pass. Seven additive migrations are applied to the verified
   development Neon profile.
 - Final verified-Neon independent/central multi-Store WhatsApp routing: 1 test,
   13 assertions. Focused routing/rotation/provider retry: 45 tests, 98
@@ -37,13 +40,19 @@
   presentation is source/unit-verified rather than browser-synthesized. The
   exact Tenant, Store, users, sessions, report audits and usage rows were
   removed and verified at zero.
+- Read-only development-Neon legacy census: zero completed Orders, zero missing
+  `completedAt`, and zero legacy completed-sale Quote lines. No backfill was
+  warranted or performed.
 
 ## Open Release Gates
 
-1. Approve numeric performance, contention and rate-limit thresholds, then run
-   the corresponding bounded report/provider/security tests.
-2. Reconcile legacy completed-sale timestamps only where immutable source
-   events prove them; otherwise retain the explicit unknown classification.
+1. Ratify production performance, contention and rate-limit thresholds. The
+   development performance targets are measured and the rate boundary is
+   enforced; this does not approve a
+   production capacity or pricing decision.
+2. Reconcile production legacy completed-sale timestamps only where immutable
+   source events prove them; otherwise retain the explicit unknown
+   classification. The development census was empty and required no mutation.
 3. Complete separately authorized live Meta, payment, private-media/safety/OCR
    and courier canaries plus privacy/retention signoff.
 4. Reconcile and apply the production migration baseline under an approved

@@ -18,9 +18,10 @@ Eligibility; 12 - Validate Second Vertical Appointment Business.
 **Status:** in progress on 2026-08-11. The shared reporting/cost source,
 immutable report-read audit, bag-seller lifecycle, generic-media matrix,
 cross-origin Quote-release matrix and authenticated report browser acceptance
-are implemented and verified on the development profile. Final non-functional
-threshold, live-provider, production and owner-authorized switch/contraction
-gates remain open.
+are implemented and verified on the development profile. Final
+production-threshold ratification, live-provider, production and
+owner-authorized switch/contraction gates remain open; development performance
+is measured and the rate boundary is enforced.
 
 **Approval:** Original scope and revised Progressive Catalog batch approved on
 2026-08-09; generic Customer Channels/media/Offer Options amendment approved
@@ -66,7 +67,11 @@ revised 17-ticket batch.
   source/unit-verified rather than synthesized with a 10,000-row browser
   fixture. Reports are authenticated-only; Tickets 03A and 12 retain the
   global-sheet and public-booking browser evidence respectively.
-- [ ] Complete performance, contention, rate-limit, security, privacy, audit, retention and cost-attribution checks at approved thresholds.
+- [ ] Ratify production performance, contention and rate-limit thresholds.
+  The bounded development pilot is complete at four concurrent report reads,
+  p95 <= 15 seconds, maximum <= 30 seconds and 30 reads per actor/Tenant per
+  rolling 60 seconds; security, privacy, audit, retention and cost-attribution
+  source checks remain evidenced below.
 - [x] Reconcile any approved schema/backfill on the verified Neon development profile; local Docker/PostgreSQL remains prohibited.
 - [ ] Keep live Meta, payment, media/OCR, courier and production database canaries as explicit separately authorized gates.
 - [ ] Produce a switch/rollback report and request owner authorization before production rollout or contracting any compatibility model/export.
@@ -74,14 +79,22 @@ revised 17-ticket batch.
 
 ## Evidence recorded on 2026-08-11
 
-- The focused reporting contract/repository/API/URL suite passed 26 tests and
-  112 assertions. The verified-Neon reporting seam passed 1 test and 11
+- The focused reporting contract/repository/API/URL suite passed 31 tests and
+  125 assertions. The verified-Neon reporting seam passed 1 test and 19
   assertions with half-open occurrence windows, scoped lifecycle totals,
   explicit known-zero versus unknown cost, immutable usage replay and redacted
-  drill-down. Repository authorization now appends safe immutable allowed or
+  drill-down. Four concurrent reads remained within the 15-second p95 and
+  30-second maximum development targets; two concurrent callers at 29 prior
+  reads produced exactly one allowed read and one fail-closed `RATE_LIMITED`
+  audit. Repository
+  authorization now appends safe immutable allowed or
   denied report-read evidence before report queries; the Neon seam verifies
   actor, Tenant/Store, fixed purpose/source domain, kind/section, window and
   result.
+- A focused revocation-race regression proves that authority is re-read after
+  the Membership lock. A revocation committed before that re-read cannot consume
+  the rate budget or pass authorization; the bounded transaction does not claim
+  a snapshot-wide lock over subsequent aggregate queries.
 - The Pharmacy-free bag-seller Neon seam passed 2 tests and 16 assertions from
   WhatsApp image intake through safe media, attributed observation, two
   mutually exclusive NGN options, exact selected Order/payment and pickup.
@@ -113,10 +126,14 @@ revised 17-ticket batch.
   and the 10,000-row truncation warning remains source/unit-verified rather
   than browser-synthesized. The exact Tenant, Store, users, sessions, report
   audits and usage rows were removed and verified at zero.
-- Prisma generated six additive migrations and all six are reconciled on the
+- Prisma generated seven additive migrations and all seven are reconciled on the
   verified development Neon profile. The report-read artifact was generated
   from migration history using an empty run-owned Neon shadow database that
   was dropped; its source/Store-FK follow-up used and dropped a second empty
   run-owned shadow. The prior schema pushes were recorded as applied and
-  `migrate status` reports all 45 migrations current. No local PostgreSQL or production
+  `migrate status` reports all 46 migrations current. No local PostgreSQL or production
   database was used.
+- A read-only verified-development census found zero completed Orders, zero
+  completed Orders missing `completedAt`, and zero legacy completed-sale Quote
+  lines. No speculative development backfill was attempted; production history
+  still requires its own immutable-evidence reconciliation.

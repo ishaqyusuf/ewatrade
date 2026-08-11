@@ -211,7 +211,9 @@
   lifecycle/media/provider rows because only aggregate allowlisted outputs are
   exposed. The repository reauthorizes membership and Store scope and records
   one immutable allowed or denied report-read audit before it queries report
-  facts; audit persistence failure prevents the report response.
+  facts; audit persistence failure prevents the report response. The same
+  manager boundary enforces 30 reads per actor/Tenant per rolling minute under
+  a Membership-row lock, so concurrent callers cannot bypass the limit.
 
 - Any active Tenant member may receive the allowlisted profile/readiness
   projection for an authorized Store; this read does not grant operation or

@@ -52,6 +52,7 @@ enum ServiceCommerceReportDrilldownSection {
 
 enum ServiceCommerceReportReadDenialReason {
   ACCESS_FORBIDDEN
+  RATE_LIMITED
   STORE_NOT_FOUND
 }
 

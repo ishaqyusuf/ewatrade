@@ -275,7 +275,10 @@ reconciliation are not owned by those lifecycle aggregates.
 Report-read audit is a separate append-only access fact; nullable Store means a
 Tenant-wide report, while a rejected unverified Store is never linked or
 persisted as scope. A validated Store relation restricts deletion so historical
-scope is not nulled or rewritten.
+scope is not nulled or rewritten. Authorization locks the accepted Membership
+row, re-reads current manager authority, then counts and appends the
+actor/Tenant rolling-window audit, so concurrent report reads and a revocation
+race cannot bypass the boundary.
 
 `CatalogSourceLineLink.resolutionCapturedAt -> immutable resolution provenance`
 

@@ -4,6 +4,11 @@ import {
   SERVICE_COMMERCE_COST_KINDS,
   SERVICE_COMMERCE_REPORT_CHANNELS,
   SERVICE_COMMERCE_REPORT_DRILLDOWN_SECTIONS,
+  SERVICE_COMMERCE_REPORT_PILOT_CONCURRENT_READS,
+  SERVICE_COMMERCE_REPORT_PILOT_MAX_TARGET_MILLISECONDS,
+  SERVICE_COMMERCE_REPORT_PILOT_P95_TARGET_MILLISECONDS,
+  SERVICE_COMMERCE_REPORT_RATE_LIMIT_MAX_READS,
+  SERVICE_COMMERCE_REPORT_RATE_LIMIT_WINDOW_MILLISECONDS,
   SERVICE_COMMERCE_REPORT_SOURCES,
   isServiceCommerceReportOccurrenceInWindow,
   serviceCommerceRedactedObservabilitySchema,
@@ -14,6 +19,14 @@ import {
 } from "."
 
 describe("Service Commerce reporting contracts", () => {
+  test("defines bounded pilot performance and actor-scoped read-rate thresholds", () => {
+    expect(SERVICE_COMMERCE_REPORT_RATE_LIMIT_MAX_READS).toBe(30)
+    expect(SERVICE_COMMERCE_REPORT_RATE_LIMIT_WINDOW_MILLISECONDS).toBe(60_000)
+    expect(SERVICE_COMMERCE_REPORT_PILOT_CONCURRENT_READS).toBe(4)
+    expect(SERVICE_COMMERCE_REPORT_PILOT_P95_TARGET_MILLISECONDS).toBe(15_000)
+    expect(SERVICE_COMMERCE_REPORT_PILOT_MAX_TARGET_MILLISECONDS).toBe(30_000)
+  })
+
   test("uses an explicit, bounded report scope and a half-open occurrence window", () => {
     const input = serviceCommerceReportInputSchema.parse({
       end: new Date("2026-09-01T00:00:00.000Z"),

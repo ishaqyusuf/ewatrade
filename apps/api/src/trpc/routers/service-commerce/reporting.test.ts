@@ -5,18 +5,26 @@ import { serviceCommerceReportingRouter } from "./reporting"
 
 const createCaller = createCallerFactory(serviceCommerceReportingRouter)
 
-function reportingDb(role: string, auditWrites: unknown[]) {
+function reportingDb(
+  role: string,
+  auditWrites: unknown[],
+  recentReadCount = 0,
+) {
   const model = {
     findFirst: async () => null,
     findFirstOrThrow: async () => ({ currencyCode: "NGN", timezone: "UTC" }),
     findMany: async () => [],
   }
-  return new Proxy(
+  const client: Record<string, unknown> = new Proxy(
     {
+      $queryRaw: async () => [{ id: "membership_1" }],
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback(client),
       membership: {
         findFirst: async () => ({ id: "membership_1", role }),
       },
       serviceCommerceReportReadAuditEvent: {
+        count: async () => recentReadCount,
         create: async (value: unknown) => {
           auditWrites.push(value)
           return { id: "report_read_audit_1" }
@@ -36,11 +44,16 @@ function reportingDb(role: string, auditWrites: unknown[]) {
       },
     },
   )
+  return client
 }
 
-function caller(role: string, auditWrites: unknown[] = []) {
+function caller(
+  role: string,
+  auditWrites: unknown[] = [],
+  recentReadCount = 0,
+) {
   return createCaller({
-    db: reportingDb(role, auditWrites),
+    db: reportingDb(role, auditWrites, recentReadCount),
     session: { user: { id: "actor_1" } },
     tenantContext: {
       activeStore: { id: "store_1" },
@@ -88,6 +101,12 @@ describe("Service Commerce reporting router", () => {
     await expect(
       caller("MANAGER").report({ ...reportWindow, storeId: "another_tenant" }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" })
+  })
+
+  test("maps a repository read-rate denial to a retryable API error", async () => {
+    await expect(
+      caller("MANAGER", [], 30).report(reportWindow),
+    ).rejects.toMatchObject({ code: "TOO_MANY_REQUESTS" })
   })
 
   test("derives actor scope for an allowlisted aggregate drill-down", async () => {

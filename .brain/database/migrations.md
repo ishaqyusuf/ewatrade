@@ -479,7 +479,7 @@ Complete cross-source media/isolation and browser acceptance remain open.
 
 ## Service Commerce Reporting And Historical Truth Migration State
 
-On 2026-08-11 Prisma generated six additive development migrations:
+On 2026-08-11 Prisma generated seven additive development migrations:
 
 - `20260811144714_service_commerce_reporting_usage` adds the immutable
   Tenant/Store/source usage and separated-cost ledger.
@@ -495,8 +495,11 @@ On 2026-08-11 Prisma generated six additive development migrations:
 - `20260811203000_service_commerce_report_read_source` adds the fixed reporting
   source domain and changes validated Store audit history from `SET NULL` to
   restrictive deletion so its scope remains immutable.
+- `20260811210000_service_commerce_report_rate_limit` adds the allowlisted
+  `RATE_LIMITED` report-read denial reason used by the atomic actor/Tenant
+  rolling-window boundary.
 
-All six artifacts are reconciled on the canonical verified `.env.local` Neon
+All seven artifacts are reconciled on the canonical verified `.env.local` Neon
 development profile. For the fifth artifact, the required `bun db:migrate` and
 `bun db:push` workflow was run; the initial sandboxed schema-engine calls did
 not complete, while the approved cache-capable push synchronized the additive
@@ -506,7 +509,16 @@ immediately. The fixed source/Store-FK follow-up used the same generated-diff
 workflow with the run-owned `ewatrade_prisma_audit_source_shadow` database,
 also dropped immediately. Because the identical schema already existed from
 the push, Prisma marked both generated migrations applied; `prisma migrate
-status` reports all 45 migrations and the database schema up to date. No local PostgreSQL/Docker
+status` reports all 46 migrations and the database schema up to date. The
+seventh artifact was generated and applied by `bun run db:migrate --local`; the
+required `bun run db:push --local` then reported the same development schema in
+sync. Prisma initially named the generated artifact `20260811190231`, which
+would sort before the committed migration that creates its enum on a fresh
+database. Its directory was therefore renamed to replay-safe
+`20260811210000` without altering the generated SQL, and the exact finished
+development-ledger row was renamed after verifying the old/new identities.
+`bun run db:migrate --local` then replay-checked the ordered history and reported
+no drift or pending migration. No local PostgreSQL/Docker
 fallback, reset, data-loss override, production database or live provider
 operation was used.
 
@@ -517,6 +529,9 @@ Existing completed Orders without an authoritative completion occurrence keep
 unknown-evidence count and excludes them from automatic chronology. A future
 production reconciliation may fill a marker only where an authoritative
 immutable event proves the time, and remains owner-authorized release work.
+The read-only verified-development census returned zero completed Orders, zero
+completed Orders missing `completedAt`, and zero legacy completed-sale Quote
+lines, so no development backfill mutation was warranted.
 
 During Prisma schema-engine diagnosis an empty development-Neon shadow database
 named `ewatrade_prisma_shadow` was created and then dropped. It contained no
@@ -524,8 +539,12 @@ application data and is not recoverable; the application development database
 was not deleted or reset.
 
 Verified development evidence after application includes the bag-seller seam
-(2 tests/16 assertions) and reporting seam (1 test/11 assertions), both with
-run-owned cleanup. Production application/reconciliation remains open.
+(2 tests/16 assertions) and reporting seam (1 test/19 assertions), both with
+run-owned cleanup. The reporting seam also proves four concurrent reads within
+the bounded pilot targets plus one allowed read and one fail-closed denial when
+two callers contend at 29 prior actor/Tenant reads. Production
+application/reconciliation and
+threshold ratification remain open.
 
 # Hybrid QA cleanup
 

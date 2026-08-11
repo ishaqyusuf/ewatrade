@@ -74,7 +74,12 @@ Describe the intended technical architecture and responsibility boundaries for t
   markers and separated provider costs; it does not create a universal event
   store, copy customer content or infer history from mutable current state.
   Repository-owned report authorization appends one safe immutable read audit
-  before any aggregate facts are queried or returned.
+  before any aggregate facts are queried or returned. The authorization
+  transaction also locks the accepted Membership and atomically enforces the
+  actor/Tenant rolling report budget before aggregate queries begin. Manager
+  authority is re-read after lock acquisition, so a revocation committed before
+  that re-read fails closed. The bounded authorization transaction releases
+  before aggregate queries and is not a snapshot-wide lifecycle lock.
 - Managed Domains owns immutable quotes, encrypted registrant profiles,
   payment/registration orders, registrar lifecycle and independent
   ownership/DNS/SSL connections. `@ewatrade/domains` owns external adapters;

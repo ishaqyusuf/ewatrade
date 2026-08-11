@@ -1,6 +1,13 @@
 import { randomUUID } from "node:crypto"
 
 import { afterAll, beforeAll, expect, setDefaultTimeout, test } from "bun:test"
+import {
+  SERVICE_COMMERCE_REPORT_PILOT_CONCURRENT_READS,
+  SERVICE_COMMERCE_REPORT_PILOT_MAX_TARGET_MILLISECONDS,
+  SERVICE_COMMERCE_REPORT_PILOT_P95_TARGET_MILLISECONDS,
+  SERVICE_COMMERCE_REPORT_RATE_LIMIT_MAX_READS,
+  SERVICE_COMMERCE_REPORT_RATE_LIMIT_WINDOW_MILLISECONDS,
+} from "@ewatrade/service-commerce"
 
 import {
   CommerceQuoteSourceType,
@@ -9,6 +16,8 @@ import {
   ServiceBookingRefundPolicy,
   ServiceBookingResourceKind,
   ServiceBookingStatus,
+  ServiceCommerceReportReadKind,
+  ServiceCommerceReportReadOutcome,
   ServiceJobLineStatus,
   ServiceWorkEventType,
 } from "../../../../generated/prisma/enums"
@@ -31,7 +40,7 @@ import {
   disposeServiceCommerceAcceptanceFixture,
 } from "./fixture"
 
-setDefaultTimeout(180_000)
+setDefaultTimeout(240_000)
 
 describeWithServiceCommerceDatabase(
   "Service Commerce reporting and usage on Neon",
@@ -354,6 +363,105 @@ describeWithServiceCommerceDatabase(
           tenantId: fixture.tenantId,
         },
       ])
-    }, 180_000)
+
+      const measuredReports = await Promise.all(
+        Array.from(
+          { length: SERVICE_COMMERCE_REPORT_PILOT_CONCURRENT_READS },
+          async () => {
+            const startedAt = performance.now()
+            const measuredReport = await getServiceCommerceReport(fixture.db, {
+              actorUserId: fixture.actorUserId,
+              end,
+              start,
+              storeId: fixture.storeId,
+              tenantId: fixture.tenantId,
+            })
+            return {
+              durationMilliseconds: performance.now() - startedAt,
+              report: measuredReport,
+            }
+          },
+        ),
+      )
+      const durations = measuredReports
+        .map((result) => result.durationMilliseconds)
+        .sort((left, right) => left - right)
+      const p95Index = Math.max(0, Math.ceil(durations.length * 0.95) - 1)
+      expect(measuredReports).toHaveLength(
+        SERVICE_COMMERCE_REPORT_PILOT_CONCURRENT_READS,
+      )
+      expect(
+        measuredReports.every(
+          (result) => result.report.scope.storeId === fixture.storeId,
+        ),
+      ).toBe(true)
+      expect(durations[p95Index]).toBeLessThanOrEqual(
+        SERVICE_COMMERCE_REPORT_PILOT_P95_TARGET_MILLISECONDS,
+      )
+      expect(durations.at(-1)).toBeLessThanOrEqual(
+        SERVICE_COMMERCE_REPORT_PILOT_MAX_TARGET_MILLISECONDS,
+      )
+
+      const rateWindowStart = new Date(
+        Date.now() - SERVICE_COMMERCE_REPORT_RATE_LIMIT_WINDOW_MILLISECONDS,
+      )
+      const existingReadCount =
+        await fixture.db.serviceCommerceReportReadAuditEvent.count({
+          where: {
+            actorUserId: fixture.actorUserId,
+            effectiveAt: { gte: rateWindowStart },
+            tenantId: fixture.tenantId,
+          },
+        })
+      const seedCount = Math.max(
+        0,
+        SERVICE_COMMERCE_REPORT_RATE_LIMIT_MAX_READS - 1 - existingReadCount,
+      )
+      if (seedCount > 0) {
+        await fixture.db.serviceCommerceReportReadAuditEvent.createMany({
+          data: Array.from({ length: seedCount }, () => ({
+            actorUserId: fixture.actorUserId,
+            kind: ServiceCommerceReportReadKind.REPORT,
+            outcome: ServiceCommerceReportReadOutcome.ALLOWED,
+            purpose: "service_commerce_report_read",
+            reportEnd: end,
+            reportStart: start,
+            storeId: fixture.storeId,
+            tenantId: fixture.tenantId,
+          })),
+        })
+      }
+      const boundaryResults = await Promise.allSettled(
+        Array.from({ length: 2 }, () =>
+          getServiceCommerceReport(fixture.db, {
+            actorUserId: fixture.actorUserId,
+            end,
+            start,
+            storeId: fixture.storeId,
+            tenantId: fixture.tenantId,
+          }),
+        ),
+      )
+      expect(
+        boundaryResults.filter((result) => result.status === "fulfilled"),
+      ).toHaveLength(1)
+      const boundaryDenials = boundaryResults.filter(
+        (result) => result.status === "rejected",
+      )
+      expect(boundaryDenials).toHaveLength(1)
+      expect(String(boundaryDenials[0]?.reason)).toContain(
+        "REPORT_RATE_LIMITED",
+      )
+      expect(
+        await fixture.db.serviceCommerceReportReadAuditEvent.findFirst({
+          orderBy: { effectiveAt: "desc" },
+          select: { denialReason: true, outcome: true },
+          where: {
+            actorUserId: fixture.actorUserId,
+            tenantId: fixture.tenantId,
+          },
+        }),
+      ).toEqual({ denialReason: "RATE_LIMITED", outcome: "DENIED" })
+    }, 240_000)
   },
 )
