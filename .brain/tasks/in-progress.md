@@ -228,8 +228,14 @@
 
 - Reconcile the production Prisma migration baseline before releasing the
   current Catalog option-detail API. Production reports
-  `20260711120000_retail_ops_stock_ledger_foundation` as pending even though its
-  legacy `Product` relation is already absent (`P3018`, PostgreSQL `42P01`).
+  `20260711120000_retail_ops_stock_ledger_foundation` as an unfinished,
+  zero-step row because its legacy `Product` relation is absent (`P3018`,
+  PostgreSQL `42P01`). The authorized read-only 2026-08-11 preflight found only
+  three finished migrations, 42 later unapplied artifacts and several missing
+  `0001_init` prerequisite relations despite that ledger row being marked
+  applied. It also found seven `CommercialOrder` rows, none with
+  `status = COMPLETED`, and no legacy Service Quote graph, so the observed
+  snapshot has no historical backfill candidate.
   Once reconciled through an owner-approved production migration operation,
   release the matching API and verify a phone-authenticated Product save with
   option description and opening stock. The production schema itself was
@@ -280,9 +286,10 @@
   verified at zero. The development performance targets are measured and the
   rate boundary is enforced; remaining
   gates are production threshold ratification, live providers, production
-  reconciliation, and owner-authorized switch/contraction. A read-only
-  development census found no completed Order or legacy sale row to backfill;
-  production history remains separately gated. The source-only release
+  migration-drift reconciliation, and owner-authorized switch/contraction. A
+  read-only development census and the authorized read-only production census
+  found no completed Order or legacy sale row to backfill; the production
+  census made no writes. The source-only release
   preflight now routes API migrations through the interactive production
   fingerprint guard, validates the seven reporting migrations offline and
   emits only redacted live-canary readiness with

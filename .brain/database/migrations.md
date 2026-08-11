@@ -543,6 +543,29 @@ The read-only verified-development census returned zero completed Orders, zero
 completed Orders missing `completedAt`, and zero legacy completed-sale Quote
 lines, so no development backfill mutation was warranted.
 
+An owner-authorized read-only production preflight on 2026-08-11 targeted the
+guarded fingerprint
+`postgresql://ep-spring-mud-an4xc5nl-pooler.c-6.us-east-1.aws.neon.tech/neondb#identity=6f198191`.
+Prisma found 46 migration artifacts: three finished ledger rows, the unfinished
+`20260711120000_retail_ops_stock_ledger_foundation` row with zero applied steps,
+and 42 later unapplied migrations. The unfinished migration records PostgreSQL
+`42P01` because `Product` does not exist. The schema-prerequisite census also
+found `ProductVariant`, `InventoryItem`, `Order`, `OrderItem` and
+`CashierSession` absent even though `0001_init` is marked applied; `Store`
+remains present. This is migration-ledger/schema drift and is not safe to treat
+as an ordinary pending deploy.
+
+The same repeatable-read, `READ ONLY` production census found seven
+`CommercialOrder` rows, zero with `status = COMPLETED`, zero legacy
+`ServiceQuote` rows/versions/lines and therefore zero legacy-only Quote or
+completed-sale backfill candidates. `CommercialOrder.completedAt` and the shared
+`CommerceQuote` schema are not installed. Every transaction was rolled back;
+no migration, schema change, backfill or application-row write occurred. The
+historical completion census needs no mutation for the observed snapshot, but
+the production migration baseline still requires a separately authorized
+reconciliation plan before any migration can run. Rerun the census if the
+production data changes before that operation.
+
 During Prisma schema-engine diagnosis an empty development-Neon shadow database
 named `ewatrade_prisma_shadow` was created and then dropped. It contained no
 application data and is not recoverable; the application development database

@@ -21,7 +21,9 @@ cross-origin Quote-release matrix and authenticated report browser acceptance
 are implemented and verified on the development profile. Final
 production-threshold ratification, live-provider, production and
 owner-authorized switch/contraction gates remain open; development performance
-is measured and the rate boundary is enforced.
+is measured and the rate boundary is enforced. The authorized read-only
+production history census is complete with no backfill candidates, while the
+production migration baseline is confirmed drifted and unsafe to apply.
 
 **Approval:** Original scope and revised Progressive Catalog batch approved on
 2026-08-09; generic Customer Channels/media/Offer Options amendment approved
@@ -150,3 +152,14 @@ revised 17-ticket batch.
   explicitly leaves the report-cohort flag, central route selector, scoped
   all-jobs freeze and unified non-WhatsApp provider kill switch as open control
   gaps rather than claiming an executable traffic switch.
+- The authorized read-only production preflight used the guarded hosted-Neon
+  fingerprint and made no writes. Prisma found three finished migrations, the
+  zero-step failed `20260711120000_retail_ops_stock_ledger_foundation` row and
+  42 later unapplied migrations. The failure is PostgreSQL `42P01` because
+  `Product` is absent; other `0001_init` prerequisites are also absent despite
+  that migration being marked applied. The data census found seven
+  `CommercialOrder` rows, none with `status = COMPLETED`, and zero legacy
+  Service Quotes/versions/lines, so there is no completion timestamp or legacy
+  Quote backfill to perform on the observed snapshot. Production migration
+  remains blocked pending a separately
+  authorized drift-reconciliation plan.

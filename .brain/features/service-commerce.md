@@ -623,6 +623,17 @@ source/unit-verified; no synthetic 10,000-row browser fixture was created. The
 run-owned Tenant, Store, users, sessions,
 report audits and usage rows were removed and verified at zero.
 
+The owner-authorized read-only production preflight found seven
+`CommercialOrder` rows, none with `status = COMPLETED`, and no legacy Service
+Quote graph, so the observed production snapshot has no completion-time or
+legacy Quote backfill candidate. It also
+confirmed that production is not migration-ready: only three migrations are
+finished, the stock-ledger foundation is a zero-step `42P01` failure because
+`Product` is absent, 42 later migrations are unapplied, and multiple relations
+from the applied `0001_init` ledger entry are missing. No write or migration was
+performed. Production rollout remains blocked until a separately approved
+migration-ledger/schema-drift reconciliation is designed and reviewed.
+
 Every aggregate report and drill-down now reauthorizes the active manager and
 validated Store at the repository boundary and appends an immutable safe audit
 before report queries execute. Allowed and denied evidence retains only actor,

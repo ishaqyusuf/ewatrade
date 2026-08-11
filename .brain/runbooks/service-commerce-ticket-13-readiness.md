@@ -56,22 +56,39 @@
   report cohort flag, central compatibility route selector, Tenant/Store
   all-jobs freeze or unified payment/media/OCR/courier kill switch.
 
+## Authorized Read-Only Production Preflight
+
+- Target fingerprint:
+  `postgresql://ep-spring-mud-an4xc5nl-pooler.c-6.us-east-1.aws.neon.tech/neondb#identity=6f198191`.
+- Prisma sees 46 migration artifacts: three finished, the unfinished
+  `20260711120000_retail_ops_stock_ledger_foundation` row with zero applied
+  steps, and 42 later unapplied migrations. The failure is PostgreSQL `42P01`:
+  `Product` does not exist.
+- Although `0001_init` is marked applied, `Product`, `ProductVariant`,
+  `InventoryItem`, `Order`, `OrderItem` and `CashierSession` are absent;
+  `Store` is present. This is migration-history/schema drift, not an ordinary
+  pending deployment.
+- The transactionally read-only census found seven `CommercialOrder` rows,
+  zero with `status = COMPLETED`, zero legacy `ServiceQuote`
+  rows/versions/lines and zero immutable-history backfill candidates.
+  `completedAt` and shared `CommerceQuote` are not installed. No production
+  write occurred.
+
 ## Open Release Gates
 
 1. Ratify production performance, contention and rate-limit thresholds. The
    development performance targets are measured and the rate boundary is
    enforced; this does not approve a
    production capacity or pricing decision.
-2. Reconcile production legacy completed-sale timestamps only where immutable
-   source events prove them; otherwise retain the explicit unknown
-   classification. The development census was empty and required no mutation.
-3. Complete separately authorized live Meta, payment, private-media/safety/OCR
+2. Complete separately authorized live Meta, payment, private-media/safety/OCR
    and courier canaries plus privacy/retention signoff. The offline preflight
    does not close this gate: dedicated payment, production media/safety/OCR and
    courier canary harnesses remain explicitly unsupported, while Meta still
    needs an approved live Connection test window.
-4. Reconcile and apply the production migration baseline under an approved
-   production operation.
+3. Design, review and execute a production migration-ledger/schema-drift
+   reconciliation under a separately approved write operation. Do not run
+   `migrate deploy` while `0001_init` is marked applied but its foundational
+   relations are absent and the stock-ledger migration remains unfinished.
 
 ## Switch Conditions
 
