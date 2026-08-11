@@ -7,3 +7,7 @@ export type CustomerChannelConnection =
   CustomerChannelWorkspace["connections"][number]
 
 export type CustomerChannelStoreOption = { id: string; name: string }
+
+export type CustomerChannelRecommendation = NonNullable<
+  CustomerChannelWorkspace["recommendation"]
+>

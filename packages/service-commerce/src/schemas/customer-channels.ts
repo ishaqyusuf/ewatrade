@@ -45,6 +45,21 @@ export const SERVICE_COMMERCE_ENTRY_POINT_PUBLISH_BLOCKERS = [
   "allowed_channel_missing",
 ] as const
 
+export const SERVICE_COMMERCE_CHANNEL_RECOMMENDATION_REASONS = [
+  "onboarding_whatsapp",
+  "category_conversational_sales",
+  "multi_store_team",
+  "pharmacy_policy_review",
+] as const
+
+export const SERVICE_COMMERCE_CHANNEL_RECOMMENDATION_SETUP_STEPS = [
+  "connect_whatsapp",
+  "assign_attendants",
+  "configure_store_routing",
+  "review_vertical_policy",
+  "publish_entry_point",
+] as const
+
 const serviceCommerceOpaqueIdSchema = z.string().trim().min(1).max(200)
 
 export const serviceCommerceManualWhatsAppConnectionSchema = z
@@ -142,6 +157,41 @@ export const serviceCommerceEntryPointProjectionSchema =
     })
     .strict()
 
+export const serviceCommerceChannelRecommendationInputSchema = z
+  .object({
+    businessProfileKey: z.string().trim().min(1).max(160).nullable(),
+    operatingModel: z
+      .enum(["products", "services", "products_and_services"])
+      .nullable(),
+    orderChannels: z.array(
+      z.enum([
+        "walk_in",
+        "phone_whatsapp",
+        "delivery_pickup",
+        "online",
+        "sales_representatives",
+      ]),
+    ),
+    storeCount: z.number().int().min(1),
+    teamSize: z.enum(["solo", "2_5", "6_10", "11_plus"]).nullable(),
+  })
+  .strict()
+
+export const serviceCommerceChannelRecommendationSchema = z
+  .object({
+    advisoryOnly: z.literal(true),
+    attendantMode: z.enum(["owner_attendant", "team_attendants"]),
+    authorizationEffect: z.literal("none"),
+    connectionMode: z.enum(["store_specific", "central_with_branch_choice"]),
+    policyReviewRequired: z.boolean(),
+    reasons: z.array(z.enum(SERVICE_COMMERCE_CHANNEL_RECOMMENDATION_REASONS)),
+    recommendedChannels: z.array(z.enum(["web", "whatsapp"])),
+    setupSteps: z.array(
+      z.enum(SERVICE_COMMERCE_CHANNEL_RECOMMENDATION_SETUP_STEPS),
+    ),
+  })
+  .strict()
+
 export type ServiceCommerceChannelConnectionLifecycle = z.infer<
   typeof serviceCommerceChannelConnectionLifecycleSchema
 >
@@ -183,4 +233,10 @@ export type ServiceCommerceStoreAttendantAssignmentInput = z.infer<
 >
 export type ServiceCommerceStoreAttendantAssignmentStatus = z.infer<
   typeof serviceCommerceStoreAttendantAssignmentStatusSchema
+>
+export type ServiceCommerceChannelRecommendationInput = z.infer<
+  typeof serviceCommerceChannelRecommendationInputSchema
+>
+export type ServiceCommerceChannelRecommendation = z.infer<
+  typeof serviceCommerceChannelRecommendationSchema
 >

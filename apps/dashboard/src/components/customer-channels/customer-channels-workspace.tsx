@@ -6,6 +6,7 @@ import { Button } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 
+import { ChannelRecommendationCard } from "./channel-recommendation-card"
 import { ChannelsHeader } from "./channels-header"
 import { ConnectionsList } from "./connections-list"
 import type { CustomerChannelStoreOption } from "./types"
@@ -118,6 +119,10 @@ export function CustomerChannelsWorkspace({
           })
         }
       />
+
+      {data.recommendation ? (
+        <ChannelRecommendationCard recommendation={data.recommendation} />
+      ) : null}
 
       <section className="grid gap-4 lg:grid-cols-3">
         <ChannelTaskCard

@@ -211,6 +211,10 @@ Typed tRPC routers are the primary application contract.
   lifecycle, Store attendant assignment/revocation, and stable entry-point
   publish/revoke. Owner/Admin owns provider setup; accepted active Memberships
   are the only assignable Store attendants.
+- The protected `serviceCommerce.channelWorkspace` response includes a nullable
+  advisory onboarding recommendation. It is server-derived from validated
+  Store metadata and active Tenant Store count, and exposes no mutation or
+  authority.
 - Protected `serviceCommerce.quoteReleaseSettings` and
   `updateQuoteReleaseSettings` expose/update the Store's revisioned
   `attendant_can_release | approval_required` policy. The update is

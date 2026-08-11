@@ -64,6 +64,13 @@ export const BUSINESS_TEAM_SIZE_KEYS = [
 ] as const
 export type BusinessTeamSize = (typeof BUSINESS_TEAM_SIZE_KEYS)[number]
 
+export type BusinessOnboardingFacts = {
+  businessProfileKey: string | null
+  operatingModel: BusinessOperatingModel | null
+  orderChannels: BusinessOrderChannel[]
+  teamSize: BusinessTeamSize | null
+}
+
 export const BUSINESS_TEAM_SIZES = [
   { key: "solo", label: "Just me" },
   { key: "2_5", label: "2–5 people" },
@@ -223,8 +230,7 @@ export function rankCatalogSetupHelpersForBusinessProfile<
       )
     }
     return (
-      Number(Boolean(right.recommended)) -
-      Number(Boolean(left.recommended))
+      Number(Boolean(right.recommended)) - Number(Boolean(left.recommended))
     )
   })
 }
@@ -240,4 +246,45 @@ export function readBusinessProfileKeyFromStoreMetadata(metadata: unknown) {
   return typeof profileKey === "string" && isBusinessProfileKey(profileKey)
     ? profileKey
     : null
+}
+
+export function readBusinessOnboardingFactsFromStoreMetadata(
+  metadata: unknown,
+): BusinessOnboardingFacts | null {
+  if (!isRecord(metadata)) return null
+  const retailOps = metadata.retailOps
+  if (!isRecord(retailOps)) return null
+  const onboarding = retailOps.onboarding
+  if (!isRecord(onboarding)) return null
+
+  const businessProfileKey =
+    typeof onboarding.businessProfileKey === "string" &&
+    isBusinessProfileKey(onboarding.businessProfileKey)
+      ? onboarding.businessProfileKey
+      : null
+  const operatingModel = BUSINESS_OPERATING_MODEL_KEYS.includes(
+    onboarding.operatingModel as BusinessOperatingModel,
+  )
+    ? (onboarding.operatingModel as BusinessOperatingModel)
+    : null
+  const orderChannels = Array.isArray(onboarding.orderChannels)
+    ? [
+        ...new Set(
+          onboarding.orderChannels.filter(
+            (channel): channel is BusinessOrderChannel =>
+              typeof channel === "string" &&
+              BUSINESS_ORDER_CHANNEL_KEYS.includes(
+                channel as BusinessOrderChannel,
+              ),
+          ),
+        ),
+      ]
+    : []
+  const teamSize = BUSINESS_TEAM_SIZE_KEYS.includes(
+    onboarding.teamSize as BusinessTeamSize,
+  )
+    ? (onboarding.teamSize as BusinessTeamSize)
+    : null
+
+  return { businessProfileKey, operatingModel, orderChannels, teamSize }
 }

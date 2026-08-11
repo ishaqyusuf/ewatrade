@@ -136,6 +136,10 @@
 - Owner/Admin manages provider connections, Store bindings and entry-point
   lifecycle. Store team assignment accepts only an already accepted active
   Tenant Membership and never creates identity, role or professional authority.
+- Business category, order-channel, team-size and branch-count recommendations
+  are descriptive only. They cannot enable a channel, make a Connection ready,
+  assign an attendant or professional role, satisfy vertical policy, activate
+  a Store profile or publish an entry point.
 - Owner/Admin alone changes the Store quotation-release policy or selected
   approver set. The command accepts Membership ids from the current active
   Tenant team projection; email, phone and client role claims never identify an

@@ -3,7 +3,9 @@ import { createHash, randomBytes } from "node:crypto"
 import {
   type ServiceCommercePublicEntryAction,
   getServiceCommerceEntryPointPublishBlockers,
+  recommendServiceCommerceChannelDefaults,
 } from "@ewatrade/service-commerce"
+import { readBusinessOnboardingFactsFromStoreMetadata } from "@ewatrade/utils"
 
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import { MembershipRole, MembershipStatus } from "../../generated/prisma/enums"
@@ -69,7 +71,7 @@ async function assertStoreManager(
   const [membership, store] = await Promise.all([
     assertTenantManager(db, input),
     db.store.findFirst({
-      select: { id: true, name: true },
+      select: { id: true, metadata: true, name: true },
       where: { id: input.storeId, tenantId: input.tenantId },
     }),
   ])
@@ -120,7 +122,7 @@ export async function getCustomerChannelWorkspace(
   db: PrismaClient,
   input: { actorUserId: string; storeId: string; tenantId: string },
 ) {
-  await assertStoreManager(db, input)
+  const { store } = await assertStoreManager(db, input)
   const [connections, assignments, teamOptions, stores, entryPoint, access] =
     await Promise.all([
       db.whatsAppConnection.findMany({
@@ -181,6 +183,10 @@ export async function getCustomerChannelWorkspace(
       getServiceCommerceWorkspaceAccess(db, input),
     ])
 
+  const onboarding = readBusinessOnboardingFactsFromStoreMetadata(
+    store.metadata,
+  )
+
   return {
     access: access.access,
     connections: connections.map((connection) => ({
@@ -216,6 +222,12 @@ export async function getCustomerChannelWorkspace(
       web: access.readiness.capabilities.web,
       whatsapp: access.readiness.capabilities.whatsapp,
     },
+    recommendation: onboarding
+      ? recommendServiceCommerceChannelDefaults({
+          ...onboarding,
+          storeCount: stores.length,
+        })
+      : null,
     storeId: input.storeId,
     stores,
     team: assignments.map((assignment) => ({

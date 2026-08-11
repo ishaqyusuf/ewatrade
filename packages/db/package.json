@@ -37,6 +37,7 @@
     "@biomejs/biome": "^1.9.4",
     "@ewatrade/tsconfig": "workspace:*",
     "@types/bun": "latest",
+    "@types/pg": "^8.20.0",
     "dotenv": "^17.2.3",
     "prisma": "^7.0.0",
     "typescript": "catalog:"

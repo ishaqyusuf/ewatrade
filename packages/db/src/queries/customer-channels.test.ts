@@ -136,6 +136,16 @@ function createDb(input?: {
         return {
           countryCode: "NG",
           id: "store_1",
+          metadata: {
+            retailOps: {
+              onboarding: {
+                businessProfileKey: "fashion-apparel",
+                operatingModel: "products",
+                orderChannels: ["phone_whatsapp"],
+                teamSize: "6_10",
+              },
+            },
+          },
           name: "Main Store",
           serviceCommerceProfile: {
             bookingEnabled: false,
@@ -163,7 +173,11 @@ function createDb(input?: {
       findMany: async (args: Record<string, unknown>) => {
         calls.push({ args, name: "store.findMany" })
         const where = args.where as { id?: { in?: string[] } }
-        return (where.id?.in ?? []).map((id) => ({ id }))
+        if (where.id?.in) return where.id.in.map((id) => ({ id }))
+        return [
+          { id: "store_1", name: "Main Store" },
+          { id: "store_2", name: "Branch Store" },
+        ]
       },
     },
     whatsAppConnection: {
@@ -236,6 +250,30 @@ describe("customer channels workspace", () => {
       where: { storeId: "store_1", tenantId: "tenant_1" },
     })
     expect(JSON.stringify(result)).not.toContain("secret")
+    expect(result.recommendation).toEqual({
+      advisoryOnly: true,
+      attendantMode: "team_attendants",
+      authorizationEffect: "none",
+      connectionMode: "central_with_branch_choice",
+      policyReviewRequired: false,
+      reasons: [
+        "onboarding_whatsapp",
+        "category_conversational_sales",
+        "multi_store_team",
+      ],
+      recommendedChannels: ["web", "whatsapp"],
+      setupSteps: [
+        "connect_whatsapp",
+        "assign_attendants",
+        "configure_store_routing",
+        "publish_entry_point",
+      ],
+    })
+    expect(JSON.stringify(result.recommendation)).not.toContain("readiness")
+    expect(findCall(db.calls, "store.findFirst").args).toMatchObject({
+      select: { id: true, metadata: true, name: true },
+      where: { id: "store_1", tenantId: "tenant_1" },
+    })
   })
 })
 

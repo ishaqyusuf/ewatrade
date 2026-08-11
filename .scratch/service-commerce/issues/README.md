@@ -19,7 +19,7 @@ production schema/provider operations remain separately authorized.
 Execute one ticket at a time through its blocking edges. Tickets 01, 02, 03,
 11, 03A, 05, 06, 06A, 06B, 08, 07, 09, 10 and 12 are source-complete. Tickets 04
 and 04A have source-complete foundations; their remaining
-recommendation/live-provider release gates stay open. Ticket 13 is in progress:
+live-provider release gates stay open. Ticket 13 is in progress:
 its shared reporting/cost source, bag-seller lifecycle, media matrix and Quote
 release matrix plus authenticated report browser acceptance are verified, while
 production-threshold ratification, live-provider, production and

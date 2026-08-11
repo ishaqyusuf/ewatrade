@@ -53,7 +53,12 @@
   Product/Service scenarios with 15 assertions, and authenticated desktop/
   mobile sheet QA passed. Tickets 04 and 04A now have source-complete Customer
   Channels and generic private-media foundations on the verified development
-  Neon database. Ticket 05 is complete. Its strict shared envelope,
+  Neon database. Ticket 04's remaining onboarding recommendation is now a
+  strict advisory-only Store projection: focused checks pass 28 tests / 130
+  assertions, authenticated 1280x720 and 390x844 Channels QA passed without
+  console errors or page overflow, and the run-owned Tenant/users were removed.
+  Live Meta/provider release acceptance remains open. Ticket 05 is complete.
+  Its strict shared envelope,
   Tenant/Store/attendant dispatcher, channel-locked API,
   `/request/[token]` Product Inquiry page and explicit product-selected generic
   WhatsApp image/document worker are source-complete. A run-owned verified-Neon

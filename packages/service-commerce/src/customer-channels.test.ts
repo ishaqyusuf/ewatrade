@@ -7,6 +7,7 @@ import {
   SERVICE_COMMERCE_PUBLIC_ENTRY_ACTIONS,
   getServiceCommerceEntryPointPublishBlockers,
   projectServiceCommerceEntryPoint,
+  recommendServiceCommerceChannelDefaults,
   serviceCommerceChannelConnectionProjectionSchema,
   serviceCommerceManualWhatsAppConnectionSchema,
   serviceCommerceStoreAttendantAssignmentInputSchema,
@@ -138,5 +139,75 @@ describe("Customer Channels contracts", () => {
         storeIds: ["store-1", "store-1"],
       }).success,
     ).toBe(false)
+  })
+
+  test("recommends WhatsApp and central branch choice from descriptive onboarding only", () => {
+    expect(
+      recommendServiceCommerceChannelDefaults({
+        businessProfileKey: "fashion-apparel",
+        operatingModel: "products",
+        orderChannels: ["phone_whatsapp"],
+        storeCount: 3,
+        teamSize: "6_10",
+      }),
+    ).toEqual({
+      advisoryOnly: true,
+      attendantMode: "team_attendants",
+      authorizationEffect: "none",
+      connectionMode: "central_with_branch_choice",
+      policyReviewRequired: false,
+      reasons: [
+        "onboarding_whatsapp",
+        "category_conversational_sales",
+        "multi_store_team",
+      ],
+      recommendedChannels: ["web", "whatsapp"],
+      setupSteps: [
+        "connect_whatsapp",
+        "assign_attendants",
+        "configure_store_routing",
+        "publish_entry_point",
+      ],
+    })
+  })
+
+  test("keeps Pharmacy recommendations policy-neutral and grants no authority", () => {
+    const recommendation = recommendServiceCommerceChannelDefaults({
+      businessProfileKey: "pharmacy-health-retail",
+      operatingModel: "products",
+      orderChannels: ["phone_whatsapp"],
+      storeCount: 1,
+      teamSize: "solo",
+    })
+
+    expect(recommendation).toMatchObject({
+      advisoryOnly: true,
+      attendantMode: "owner_attendant",
+      authorizationEffect: "none",
+      connectionMode: "store_specific",
+      policyReviewRequired: true,
+      recommendedChannels: ["web", "whatsapp"],
+      setupSteps: [
+        "connect_whatsapp",
+        "assign_attendants",
+        "review_vertical_policy",
+        "publish_entry_point",
+      ],
+    })
+    expect(JSON.stringify(recommendation)).not.toContain("available")
+    expect(JSON.stringify(recommendation)).not.toContain("enabled")
+    expect(JSON.stringify(recommendation)).not.toContain("authorized")
+  })
+
+  test("returns no recommendation without validated onboarding facts", () => {
+    expect(
+      recommendServiceCommerceChannelDefaults({
+        businessProfileKey: null,
+        operatingModel: null,
+        orderChannels: [],
+        storeCount: 1,
+        teamSize: null,
+      }),
+    ).toBeNull()
   })
 })

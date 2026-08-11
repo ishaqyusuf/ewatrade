@@ -282,6 +282,16 @@ billing owner and explicit Store bindings. `Connect WhatsApp` starts the
 focused setup flow; business category may recommend defaults but never grants
 policy, legal or operational authority.
 
+The Store workspace now projects a nullable typed recommendation from validated
+descriptive onboarding metadata. It may suggest web/WhatsApp, a Store-specific
+or central-with-branch-choice Connection, owner/team attendant coverage and a
+bounded setup order. The projection is always advisory, has no authorization
+effect, and never changes profile readiness, Connection state, Store binding,
+Membership assignment, vertical policy or entry-point publication. Invalid or
+retired onboarding values are ignored; no validated facts means no
+recommendation. Pharmacy guidance adds a separate policy-review step but does
+not satisfy that review.
+
 The setup lifecycle is `setup -> configure -> test -> publish`. Publish creates
 a stable Store customer entry page, share link and QR code. The QR resolves an
 EwaTrade `/r/[token]` page and never embeds a mutable WhatsApp number, Tenant id

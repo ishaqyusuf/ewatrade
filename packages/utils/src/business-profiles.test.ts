@@ -1,18 +1,19 @@
 import { describe, expect, test } from "bun:test"
 
-import { findCatalogSetupHelper } from "./catalog-setup-helpers"
-import { listCatalogSetupHelpers } from "./catalog-setup-helpers"
 import {
+  BUSINESS_OPERATING_MODELS,
   BUSINESS_PROFILES,
   BUSINESS_PROFILE_SCHEMA_VERSION,
-  BUSINESS_OPERATING_MODELS,
   findBusinessProfile,
   getRecommendedCatalogSetupHelperKeys,
   isBusinessProfileKey,
   listBusinessProfiles,
   rankCatalogSetupHelpersForBusinessProfile,
+  readBusinessOnboardingFactsFromStoreMetadata,
   readBusinessProfileKeyFromStoreMetadata,
 } from "./business-profiles"
+import { findCatalogSetupHelper } from "./catalog-setup-helpers"
+import { listCatalogSetupHelpers } from "./catalog-setup-helpers"
 
 describe("business profiles", () => {
   test("publishes fifteen neutral, searchable onboarding profiles", () => {
@@ -121,5 +122,45 @@ describe("business profiles", () => {
         },
       }),
     ).toBeNull()
+  })
+
+  test("reads only validated descriptive onboarding facts for recommendations", () => {
+    expect(
+      readBusinessOnboardingFactsFromStoreMetadata({
+        retailOps: {
+          onboarding: {
+            businessProfileKey: "fashion-apparel",
+            operatingModel: "products",
+            orderChannels: ["phone_whatsapp", "walk_in", "phone_whatsapp"],
+            teamSize: "6_10",
+          },
+        },
+      }),
+    ).toEqual({
+      businessProfileKey: "fashion-apparel",
+      operatingModel: "products",
+      orderChannels: ["phone_whatsapp", "walk_in"],
+      teamSize: "6_10",
+    })
+
+    expect(
+      readBusinessOnboardingFactsFromStoreMetadata({
+        retailOps: {
+          onboarding: {
+            businessProfileKey: "retired-profile",
+            operatingModel: "runtime_mode",
+            orderChannels: ["whatsapp_enabled", "phone_whatsapp", 42],
+            teamSize: "enterprise",
+          },
+        },
+      }),
+    ).toEqual({
+      businessProfileKey: null,
+      operatingModel: null,
+      orderChannels: ["phone_whatsapp"],
+      teamSize: null,
+    })
+
+    expect(readBusinessOnboardingFactsFromStoreMetadata(null)).toBeNull()
   })
 })

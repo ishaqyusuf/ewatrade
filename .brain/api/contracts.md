@@ -584,6 +584,13 @@ implements the Progressive Catalog commands below.
 
 ### Implemented Customer Channels contract
 
+- `serviceCommerce.channelWorkspace` returns `recommendation | null` from the
+  selected Store's validated Business Profile, operating model, order-channel
+  and team-size facts plus the current active Tenant Store count. The strict
+  recommendation contains only allowlisted channels, routing/coverage modes,
+  reasons and setup steps with `advisoryOnly: true` and
+  `authorizationEffect: none`. It is a read projection and cannot confer
+  readiness, role, policy approval, binding, activation or publication.
 - A Tenant may own multiple WhatsApp Connections and bind each to explicit
   Stores. The generic API delegates to compatibility persistence; no new caller
   depends on Prescription settings or credentials.

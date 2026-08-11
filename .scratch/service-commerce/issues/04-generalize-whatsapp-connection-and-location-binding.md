@@ -10,7 +10,7 @@ Contract; 02 - Configure Business Capability Profile; 03 - Establish Customer
 Request Interoperability Contract; 11 - Enforce Vertical And Jurisdiction
 Eligibility.
 
-**Status:** source-complete; browser/release acceptance remains open
+**Status:** source-complete; live Meta/provider release acceptance remains open
 
 **Approval:** Original scope and revised dependency order owner-approved on
 2026-08-09; Customer Channels settings/media-descriptor amendment approved on
@@ -41,7 +41,7 @@ Eligibility.
   page plus Copy link/Download QR actions. The QR carries only the opaque entry
   token and resolves current allowed web/WhatsApp choices; it never embeds a
   raw provider number, Tenant/Store id or mutable route.
-- [ ] Let business category and onboarding facts recommend connection defaults
+- [x] Let business category and onboarding facts recommend connection defaults
   without treating category, technical readiness or client state as legal or
   operational authorization.
 - [x] Normalize inbound image/document descriptors as business-neutral channel
@@ -55,3 +55,26 @@ Eligibility.
   owns quotation approver assignment and the commercial release workflow.
 - [ ] Test same-customer isolation, unknown recipient, signature failure, duplicate webhook, revoked credentials, connection replacement and central branch switching.
 - [ ] Recheck current Meta policy/pricing at release and keep pharmacy activation separately fail closed.
+
+## Evidence
+
+- The Store-scoped workspace now reads only validated descriptive onboarding
+  facts and returns a nullable typed recommendation. The projection is fixed as
+  `advisoryOnly: true` and `authorizationEffect: none`; it contains no readiness,
+  activation, role or policy decision and performs no write.
+- The recommendation covers web/WhatsApp starting channels, Store-specific or
+  central-with-branch-choice routing, owner/team attendant coverage and a
+  bounded setup sequence. Pharmacy category guidance adds a separate policy
+  review step without treating technical readiness as regulated approval.
+- Focused utility, Service Commerce, repository and dashboard checks pass 28
+  tests / 130 assertions. Database, API, dashboard, Service Commerce and utils
+  typechecks pass; the direct `pg` drift-inventory dependency now declares its
+  TypeScript types at the owning database package boundary.
+- Authenticated browser acceptance passed at 1280x720 and 390x844 against one
+  run-owned `.env.local` Neon fixture. The advisory copy, Store-specific
+  recommendation and every existing Channels action were visible and keyboard
+  reachable; healthy-state console output was clean and compact layout had no
+  page-level horizontal overflow. Exact cleanup verified the run-owned Tenant
+  and users at zero.
+- Live Meta policy/pricing review and provider release acceptance remain open;
+  this evidence does not authorize a live provider action.
