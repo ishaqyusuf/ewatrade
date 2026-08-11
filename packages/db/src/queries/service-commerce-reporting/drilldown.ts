@@ -7,6 +7,8 @@ import {
 
 import type { PrismaClient } from "../../../generated/prisma/client"
 
+import { authorizeServiceCommerceReportRead } from "./audit"
+
 type DrilldownInput = {
   actorUserId: string
   category: ServiceCommerceReportDrilldownSection
@@ -90,20 +92,18 @@ export async function getServiceCommerceReportDrilldown(
     storeId: rawInput.storeId,
     tenantId: rawInput.tenantId,
   })
-  const membership = await db.membership.findFirst({
-    select: { id: true, role: true },
-    where: {
-      acceptedAt: { not: null },
-      tenantId: input.tenantId,
-      userId: rawInput.actorUserId,
-    },
+  const access = await authorizeServiceCommerceReportRead(db, {
+    actorUserId: rawInput.actorUserId,
+    category: rawInput.category,
+    end: input.end,
+    kind: "drilldown",
+    start: input.start,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
   })
-  if (!membership || !["OWNER", "ADMIN", "MANAGER"].includes(membership.role)) {
-    throw new Error("REPORT_ACCESS_FORBIDDEN")
-  }
 
   const scope = {
-    ...(input.storeId ? { storeId: input.storeId } : {}),
+    ...(access.storeId ? { storeId: access.storeId } : {}),
     tenantId: input.tenantId,
   }
   const occurrence = { gte: input.start, lt: input.end }

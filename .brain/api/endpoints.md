@@ -120,6 +120,10 @@ Typed tRPC routers are the primary application contract.
   actor for the repository access boundary and returns aggregate, redacted
   buckets rather than raw rows or provider operation identifiers. The internal
   Connection id remains an allowlisted aggregate cost-attribution dimension.
+- Both reporting procedures reauthorize the active Owner/Admin/Manager and any
+  requested Store inside the repository, then append one immutable allowed or
+  denied report-read audit before querying report facts. A foreign Store id is
+  never persisted in the denial evidence.
 - Dashboard `/service-commerce/reports` owns typed URL `store`, `from`, `to`
   and `detail` state plus explicit loading, empty, error, retry and truncation
   presentation. It does not widen the server's Store or manager authorization.

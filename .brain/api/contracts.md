@@ -353,7 +353,14 @@
 
 - Inputs use a half-open `[start,end)` UTC occurrence window no longer than 366
   days. Tenant and actor are never client fields; optional Store scope is
-  checked against the authenticated Tenant's Store set before repository work.
+  checked against the authenticated Tenant inside the repository.
+- Every report or allowlisted drill-down read rechecks an active accepted
+  Owner/Admin/Manager membership and appends one immutable audit before report
+  queries run. Audit metadata is limited to actor, Tenant, validated optional
+  Store, fixed server purpose, report kind/section, bounded time window,
+  fixed `SERVICE_COMMERCE_REPORTING` source domain, allowed/denied result and an
+  allowlisted denial reason; it contains no report rows, customer/request/media/
+  provider identifiers or raw errors.
 - Each authoritative source query is capped at 10,000 rows. `mayBeTruncated`
   is true when any source reaches its cap so bounded aggregates are never
   presented as exact without qualification.

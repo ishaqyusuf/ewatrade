@@ -600,13 +600,20 @@ delivery, tax, subscription, platform and revenue dimensions remain separate.
 An unavailable applicable cost is `null` with an unknown count; zero is known
 only when the provider fact explicitly establishes zero.
 
-Verified source evidence includes a 23-test/102-assertion focused reporting
-suite and a 1-test/10-assertion development-Neon reporting lifecycle. The
+Verified source evidence includes a 26-test/112-assertion focused reporting
+suite and a 1-test/11-assertion development-Neon reporting lifecycle. The
 Pharmacy-free bag-seller Neon seam passed 2 tests/16 assertions, and generic
 media passed 30 tests/95 assertions. The report browser surface is implemented
 with typed URL Store/date/drill-down state and explicit loading, error, empty,
 retry and truncation states; authenticated desktop/mobile acceptance for that
 new surface remains open.
+
+Every aggregate report and drill-down now reauthorizes the active manager and
+validated Store at the repository boundary and appends an immutable safe audit
+before report queries execute. Allowed and denied evidence retains only actor,
+Tenant/validated Store, fixed purpose, `SERVICE_COMMERCE_REPORTING` source,
+kind/section, report window, result and allowlisted denial reason; a
+cross-Tenant Store id and report contents are never persisted.
 
 ## Cost And Billing Boundary
 

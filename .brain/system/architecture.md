@@ -73,6 +73,8 @@ Describe the intended technical architecture and responsibility boundaries for t
   uses bounded aggregate-only Tenant/Store queries, explicit historical-unknown
   markers and separated provider costs; it does not create a universal event
   store, copy customer content or infer history from mutable current state.
+  Repository-owned report authorization appends one safe immutable read audit
+  before any aggregate facts are queried or returned.
 - Managed Domains owns immutable quotes, encrypted registrant profiles,
   payment/registration orders, registrar lifecycle and independent
   ownership/DNS/SSL connections. `@ewatrade/domains` owns external adapters;

@@ -10,6 +10,7 @@ import {
 
 import type { PrismaClient } from "../../../generated/prisma/client"
 
+import { authorizeServiceCommerceReportRead } from "./audit"
 import { prescriptionUsageAmountsToServiceCommerce } from "./usage"
 
 const channelNames = {
@@ -158,9 +159,19 @@ function summarizeUsageCostsByDimension(usage: UsageEvent[]) {
 
 export async function getServiceCommerceReport(
   db: PrismaClient,
-  rawInput: ServiceCommerceReportInput,
+  rawInput: ServiceCommerceReportInput & { actorUserId: string },
 ): Promise<ServiceCommerceReportOutput> {
-  const input = serviceCommerceReportInputSchema.parse(rawInput)
+  const { actorUserId, ...reportInput } = rawInput
+  const parsedInput = serviceCommerceReportInputSchema.parse(reportInput)
+  const access = await authorizeServiceCommerceReportRead(db, {
+    actorUserId,
+    end: parsedInput.end,
+    kind: "report",
+    start: parsedInput.start,
+    storeId: parsedInput.storeId,
+    tenantId: parsedInput.tenantId,
+  })
+  const input = { ...parsedInput, storeId: access.storeId }
   const scope = scopeWhere(input)
   const occurrence = { gte: input.start, lt: input.end }
   const [

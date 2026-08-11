@@ -241,6 +241,7 @@ describeWithServiceCommerceDatabase(
       })
 
       const report = await getServiceCommerceReport(fixture.db, {
+        actorUserId: fixture.actorUserId,
         end,
         start,
         storeId: fixture.storeId,
@@ -307,6 +308,52 @@ describeWithServiceCommerceDatabase(
       expect(JSON.stringify(drilldown)).not.toMatch(
         /Synthetic Reporting Customer|customer|objectKey|providerAttemptId/i,
       )
+      const readAudits =
+        await fixture.db.serviceCommerceReportReadAuditEvent.findMany({
+          orderBy: { effectiveAt: "asc" },
+          select: {
+            actorUserId: true,
+            denialReason: true,
+            drilldownSection: true,
+            kind: true,
+            outcome: true,
+            purpose: true,
+            reportEnd: true,
+            reportStart: true,
+            source: true,
+            storeId: true,
+            tenantId: true,
+          },
+          where: { tenantId: fixture.tenantId },
+        })
+      expect(readAudits).toEqual([
+        {
+          actorUserId: fixture.actorUserId,
+          denialReason: null,
+          drilldownSection: null,
+          kind: "REPORT",
+          outcome: "ALLOWED",
+          purpose: "service_commerce_report_read",
+          reportEnd: end,
+          reportStart: start,
+          source: "SERVICE_COMMERCE_REPORTING",
+          storeId: fixture.storeId,
+          tenantId: fixture.tenantId,
+        },
+        {
+          actorUserId: fixture.actorUserId,
+          denialReason: null,
+          drilldownSection: "COSTS",
+          kind: "DRILLDOWN",
+          outcome: "ALLOWED",
+          purpose: "service_commerce_report_drilldown_read",
+          reportEnd: end,
+          reportStart: start,
+          source: "SERVICE_COMMERCE_REPORTING",
+          storeId: fixture.storeId,
+          tenantId: fixture.tenantId,
+        },
+      ])
     }, 180_000)
   },
 )

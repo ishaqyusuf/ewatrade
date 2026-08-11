@@ -9,18 +9,6 @@ import {
   serviceCommerceReportSchema,
 } from "../../../schemas/service-commerce-reporting"
 import { createTRPCRouter, protectedProcedure } from "../../init"
-import { assertServiceManager } from "../service-permissions"
-
-function resolveReportStoreId(
-  stores: Array<{ id: string }>,
-  requestedStoreId?: string,
-) {
-  if (!requestedStoreId) return undefined
-  if (!stores.some((store) => store.id === requestedStoreId)) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "Store not found." })
-  }
-  return requestedStoreId
-}
 
 function mapReportingError(error: unknown): never {
   if (error instanceof TRPCError) throw error
@@ -43,13 +31,9 @@ export const serviceCommerceReportingRouter = createTRPCRouter({
     .input(serviceCommerceReportSchema)
     .query(async ({ ctx, input }) => {
       try {
-        assertServiceManager(ctx.tenantContext.membership.role)
         return await getServiceCommerceReport(ctx.db, {
           ...input,
-          storeId: resolveReportStoreId(
-            ctx.tenantContext.stores,
-            input.storeId,
-          ),
+          actorUserId: ctx.session.user.id,
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
@@ -61,16 +45,12 @@ export const serviceCommerceReportingRouter = createTRPCRouter({
     .input(serviceCommerceReportDrilldownSchema)
     .query(async ({ ctx, input }) => {
       try {
-        assertServiceManager(ctx.tenantContext.membership.role)
         return await getServiceCommerceReportDrilldown(ctx.db, {
           actorUserId: ctx.session.user.id,
           category: input.category,
           end: input.end,
           start: input.start,
-          storeId: resolveReportStoreId(
-            ctx.tenantContext.stores,
-            input.storeId,
-          ),
+          storeId: input.storeId,
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
+  authorizeServiceCommerceReportRead,
   getServiceCommerceReport,
   getServiceCommerceReportDrilldown,
   reconcileServiceCommerceUsageEvent,
@@ -75,6 +76,12 @@ function reportingClient(calls: Array<{ name: string; value: unknown }>) {
         },
       ]),
     },
+    membership: {
+      findFirst: async (value: unknown) => {
+        calls.push({ name: "membership.findFirst", value })
+        return { id: "membership_1", role: "MANAGER" }
+      },
+    },
     prescriptionDeliveryEvent: {
       findMany: findMany("prescriptionDeliveryEvent.findMany"),
     },
@@ -125,6 +132,15 @@ function reportingClient(calls: Array<{ name: string; value: unknown }>) {
           type: "SAFETY_RECORDED",
         },
       ]),
+    },
+    serviceCommerceReportReadAuditEvent: {
+      create: async (value: unknown) => {
+        calls.push({
+          name: "serviceCommerceReportReadAuditEvent.create",
+          value,
+        })
+        return { id: "report_read_audit_1" }
+      },
     },
     serviceCommerceSourceAttachment: {
       findMany: findMany("serviceCommerceSourceAttachment.findMany"),
@@ -178,6 +194,10 @@ function reportingClient(calls: Array<{ name: string; value: unknown }>) {
       findMany: findMany("serviceWorkEvent.findMany"),
     },
     store: {
+      findFirst: async (value: unknown) => {
+        calls.push({ name: "store.findFirst", value })
+        return { id: scope.storeId }
+      },
       findMany: findMany("store.findMany", [
         { id: scope.storeId, name: "Appointment Store" },
       ]),
@@ -212,6 +232,7 @@ describe("Service Commerce reporting repository contract", () => {
     const calls: Array<{ name: string; value: unknown }> = []
 
     const report = await getServiceCommerceReport(reportingClient(calls), {
+      actorUserId: "manager_1",
       ...scope,
       ...window,
     })
@@ -225,6 +246,24 @@ describe("Service Commerce reporting repository contract", () => {
     expect(report.storeBreakdown).toEqual([
       expect.objectContaining({ completions: 1, quotesIssued: 1 }),
     ])
+    expect(calls).toContainEqual({
+      name: "serviceCommerceReportReadAuditEvent.create",
+      value: {
+        data: expect.objectContaining({
+          actorUserId: "manager_1",
+          denialReason: undefined,
+          drilldownSection: undefined,
+          kind: "REPORT",
+          outcome: "ALLOWED",
+          purpose: "service_commerce_report_read",
+          reportEnd: window.end,
+          reportStart: window.start,
+          source: "SERVICE_COMMERCE_REPORTING",
+          storeId: scope.storeId,
+          tenantId: scope.tenantId,
+        }),
+      },
+    })
 
     const byName = Object.fromEntries(
       calls.map((call) => [call.name, call.value]),
@@ -347,6 +386,7 @@ describe("Service Commerce reporting repository contract", () => {
 
   test("uses immutable audit and alert occurrences for aggregate readiness and routing", async () => {
     const report = await getServiceCommerceReport(reportingClient([]), {
+      actorUserId: "manager_1",
       ...window,
       tenantId: scope.tenantId,
     })
@@ -359,6 +399,119 @@ describe("Service Commerce reporting repository contract", () => {
         { count: 1, kind: "routing", outcome: "recovered" },
       ]),
     )
+  })
+
+  test("audits denied report access before any lifecycle query", async () => {
+    const calls: Array<{ name: string; value: unknown }> = []
+    const db = dbClient({
+      membership: {
+        findFirst: async (value: unknown) => {
+          calls.push({ name: "membership.findFirst", value })
+          return { id: "membership_1", role: "CASHIER" }
+        },
+      },
+      serviceCommerceReportReadAuditEvent: {
+        create: async (value: unknown) => {
+          calls.push({
+            name: "serviceCommerceReportReadAuditEvent.create",
+            value,
+          })
+          return { id: "report_read_audit_denied" }
+        },
+      },
+      serviceRequest: {
+        findMany: async () => {
+          throw new Error("report query must not run")
+        },
+      },
+    })
+
+    await expect(
+      getServiceCommerceReport(db, {
+        actorUserId: "cashier_1",
+        ...scope,
+        ...window,
+      }),
+    ).rejects.toThrow("REPORT_ACCESS_FORBIDDEN")
+    expect(calls).toHaveLength(2)
+    expect(calls[1]).toEqual({
+      name: "serviceCommerceReportReadAuditEvent.create",
+      value: {
+        data: expect.objectContaining({
+          actorUserId: "cashier_1",
+          denialReason: "ACCESS_FORBIDDEN",
+          outcome: "DENIED",
+          storeId: undefined,
+          tenantId: scope.tenantId,
+        }),
+      },
+    })
+  })
+
+  test("never persists an unverified cross-Tenant Store id in denied audit evidence", async () => {
+    const audits: unknown[] = []
+    const db = dbClient({
+      membership: {
+        findFirst: async () => ({ id: "membership_1", role: "MANAGER" }),
+      },
+      serviceCommerceReportReadAuditEvent: {
+        create: async (value: unknown) => {
+          audits.push(value)
+          return { id: "report_read_audit_denied" }
+        },
+      },
+      store: { findFirst: async () => null },
+    })
+
+    await expect(
+      authorizeServiceCommerceReportRead(db, {
+        actorUserId: "manager_1",
+        end: window.end,
+        kind: "drilldown",
+        start: window.start,
+        storeId: "foreign_store",
+        tenantId: scope.tenantId,
+      }),
+    ).rejects.toThrow("REPORT_STORE_NOT_FOUND")
+    expect(audits).toEqual([
+      {
+        data: expect.objectContaining({
+          denialReason: "STORE_NOT_FOUND",
+          outcome: "DENIED",
+          storeId: undefined,
+        }),
+      },
+    ])
+    expect(JSON.stringify(audits)).not.toContain("foreign_store")
+  })
+
+  test("fails closed before report queries when immutable audit persistence fails", async () => {
+    let reportQueried = false
+    const db = dbClient({
+      membership: {
+        findFirst: async () => ({ id: "membership_1", role: "MANAGER" }),
+      },
+      serviceCommerceReportReadAuditEvent: {
+        create: async () => {
+          throw new Error("AUDIT_WRITE_UNAVAILABLE")
+        },
+      },
+      serviceRequest: {
+        findMany: async () => {
+          reportQueried = true
+          return []
+        },
+      },
+    })
+
+    await expect(
+      getServiceCommerceReport(db, {
+        actorUserId: "manager_1",
+        tenantId: scope.tenantId,
+        ...window,
+      }),
+    ).rejects.toThrow("AUDIT_WRITE_UNAVAILABLE")
+    expect(reportQueried).toBe(false)
   })
 
   test("writes immutable provider usage with a Tenant-scoped idempotency key", async () => {
@@ -713,6 +866,15 @@ describe("Service Commerce reporting repository contract", () => {
           return { id: "membership_1", role: "ADMIN" }
         },
       },
+      serviceCommerceReportReadAuditEvent: {
+        create: async (value: unknown) => {
+          calls.push({
+            name: "serviceCommerceReportReadAuditEvent.create",
+            value,
+          })
+          return { id: "report_read_audit_1" }
+        },
+      },
       serviceCommerceMediaAuditEvent: {
         findMany: async (value: unknown) => {
           calls.push({ name: "serviceCommerceMediaAuditEvent.findMany", value })
@@ -747,6 +909,12 @@ describe("Service Commerce reporting repository contract", () => {
               status: "SENT",
             },
           ]
+        },
+      },
+      store: {
+        findFirst: async (value: unknown) => {
+          calls.push({ name: "store.findFirst", value })
+          return { id: scope.storeId }
         },
       },
     })
@@ -833,6 +1001,13 @@ describe("Service Commerce reporting repository contract", () => {
       {
         membership: {
           findFirst: async () => ({ id: "membership_1", role: "MANAGER" }),
+        },
+        serviceCommerceReportReadAuditEvent: {
+          create: async () => ({ id: "report_read_audit_1" }),
+        },
+        store: {
+          findFirst: async () => ({ id: scope.storeId }),
+          findMany: async () => [],
         },
       },
       {

@@ -16,10 +16,11 @@ Commerce To Service Commerce; 11 - Enforce Vertical And Jurisdiction
 Eligibility; 12 - Validate Second Vertical Appointment Business.
 
 **Status:** in progress on 2026-08-11. The shared reporting/cost source,
-bag-seller lifecycle, generic-media matrix and cross-origin Quote-release matrix
-are implemented and verified on the development profile. Final browser,
-non-functional threshold, routing-regression, live-provider, production and
-owner-authorized switch/contraction gates remain open.
+immutable report-read audit, bag-seller lifecycle, generic-media matrix and
+cross-origin Quote-release matrix are implemented and verified on the
+development profile. Final browser, non-functional threshold,
+routing-regression, live-provider, production and owner-authorized
+switch/contraction gates remain open.
 
 **Approval:** Original scope and revised Progressive Catalog batch approved on
 2026-08-09; generic Customer Channels/media/Offer Options amendment approved
@@ -53,7 +54,7 @@ revised 17-ticket batch.
   verified-observation conversion facts; never report raw media, object keys,
   customer descriptions or extracted attributes.
 - [x] Add a Midday-style report surface with typed URL Store/date scope, bounded queries, explicit loading/error/empty/retry behavior and role-gated drill-down.
-- [ ] Audit sensitive reads and material lifecycle commands with actor, purpose, Tenant, Store, source, authoritative time and result.
+- [x] Audit sensitive reads and material lifecycle commands with actor, purpose, Tenant, Store, source, authoritative time and result.
 - [x] Prove fresh concurrency, idempotent replay, stale capability rejection, exact totals, reservation/slot exclusivity, failure recovery and atomic run-owned cleanup.
 - [ ] Prove independent and central multi-Store WhatsApp routing, same-customer isolation, cross-Tenant fail-closed behavior, rotation/revocation and provider retry.
 - [ ] Re-run all completed Prescription Commerce compatibility/Neon evidence and Generic Service request-to-order/work/handoff evidence with no regression.
@@ -66,11 +67,14 @@ revised 17-ticket batch.
 
 ## Evidence recorded on 2026-08-11
 
-- The focused reporting contract/repository/API/URL suite passed 23 tests and
-  102 assertions. The verified-Neon reporting seam passed 1 test and 10
+- The focused reporting contract/repository/API/URL suite passed 26 tests and
+  112 assertions. The verified-Neon reporting seam passed 1 test and 11
   assertions with half-open occurrence windows, scoped lifecycle totals,
   explicit known-zero versus unknown cost, immutable usage replay and redacted
-  drill-down.
+  drill-down. Repository authorization now appends safe immutable allowed or
+  denied report-read evidence before report queries; the Neon seam verifies
+  actor, Tenant/Store, fixed purpose/source domain, kind/section, window and
+  result.
 - The Pharmacy-free bag-seller Neon seam passed 2 tests and 16 assertions from
   WhatsApp image intake through safe media, attributed observation, two
   mutually exclusive NGN options, exact selected Order/payment and pickup.
@@ -81,9 +85,10 @@ revised 17-ticket batch.
 - The generic-media focused matrix passed 30 tests and 95 assertions. Live
   Meta/object-storage/safety-provider canaries and production retention signoff
   remain separate gates.
-- Prisma generated four additive migrations and all four are applied to the
-  verified development Neon profile. The repository wrappers `bun db:migrate`
-  and `bun db:push` were also attempted but returned Prisma's generic schema
-  engine error; guarded `migrate deploy` succeeded and the exact limitation is
-  retained in the Brain migration log. No local PostgreSQL or production
+- Prisma generated six additive migrations and all six are reconciled on the
+  verified development Neon profile. The report-read artifact was generated
+  from migration history using an empty run-owned Neon shadow database that
+  was dropped; its source/Store-FK follow-up used and dropped a second empty
+  run-owned shadow. The prior schema pushes were recorded as applied and
+  `migrate status` reports all 45 migrations current. No local PostgreSQL or production
   database was used.

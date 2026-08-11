@@ -5,7 +5,7 @@ import { serviceCommerceReportingRouter } from "./reporting"
 
 const createCaller = createCallerFactory(serviceCommerceReportingRouter)
 
-function reportingDb() {
+function reportingDb(role: string, auditWrites: unknown[]) {
   const model = {
     findFirst: async () => null,
     findFirstOrThrow: async () => ({ currencyCode: "NGN", timezone: "UTC" }),
@@ -14,7 +14,13 @@ function reportingDb() {
   return new Proxy(
     {
       membership: {
-        findFirst: async () => ({ id: "membership_1", role: "MANAGER" }),
+        findFirst: async () => ({ id: "membership_1", role }),
+      },
+      serviceCommerceReportReadAuditEvent: {
+        create: async (value: unknown) => {
+          auditWrites.push(value)
+          return { id: "report_read_audit_1" }
+        },
       },
       store: {
         ...model,
@@ -32,9 +38,9 @@ function reportingDb() {
   )
 }
 
-function caller(role: string) {
+function caller(role: string, auditWrites: unknown[] = []) {
   return createCaller({
-    db: reportingDb(),
+    db: reportingDb(role, auditWrites),
     session: { user: { id: "actor_1" } },
     tenantContext: {
       activeStore: { id: "store_1" },
@@ -52,7 +58,8 @@ const reportWindow = {
 
 describe("Service Commerce reporting router", () => {
   test("derives tenant scope and returns aggregate-only report output", async () => {
-    const result = await caller("OWNER").report(reportWindow)
+    const auditWrites: unknown[] = []
+    const result = await caller("OWNER", auditWrites).report(reportWindow)
 
     expect(result.scope).toEqual({
       ...reportWindow,
@@ -60,6 +67,18 @@ describe("Service Commerce reporting router", () => {
       tenantId: "tenant_server",
     })
     expect(JSON.stringify(result)).not.toContain("actor_1")
+    expect(auditWrites).toEqual([
+      {
+        data: expect.objectContaining({
+          actorUserId: "actor_1",
+          kind: "REPORT",
+          outcome: "ALLOWED",
+          purpose: "service_commerce_report_read",
+          source: "SERVICE_COMMERCE_REPORTING",
+          tenantId: "tenant_server",
+        }),
+      },
+    ])
   })
 
   test("rejects cashier access and cross-tenant Store input", async () => {

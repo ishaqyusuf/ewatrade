@@ -1,3 +1,4 @@
+export * from "./service-commerce-reporting/audit"
 export * from "./service-commerce-reporting/costs"
 export * from "./service-commerce-reporting/drilldown"
 export * from "./service-commerce-reporting/report"

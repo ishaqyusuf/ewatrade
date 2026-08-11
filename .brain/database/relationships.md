@@ -265,11 +265,17 @@ authoritative clinical review and retention extension.
 
 `WhatsAppConnection -> ServiceCommerceUsageEvent?`
 
+`Tenant + Store? + Actor -> ServiceCommerceReportReadAuditEvent`
+
 Lifecycle reporting reads authoritative occurrence fields from the existing
 Request, Quote Version, payment, booking, pickup, delivery and Service work
 graphs; it does not create a universal reporting aggregate or duplicate their
 state. External usage/cost is separate because provider attribution and later
 reconciliation are not owned by those lifecycle aggregates.
+Report-read audit is a separate append-only access fact; nullable Store means a
+Tenant-wide report, while a rejected unverified Store is never linked or
+persisted as scope. A validated Store relation restricts deletion so historical
+scope is not nulled or rewritten.
 
 `CatalogSourceLineLink.resolutionCapturedAt -> immutable resolution provenance`
 

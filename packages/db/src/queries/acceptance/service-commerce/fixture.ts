@@ -43,6 +43,9 @@ async function deleteAcceptanceFixture(
 ) {
   const { tenantId, userIds } = input
   await db.$transaction(async (tx) => {
+    await tx.serviceCommerceReportReadAuditEvent.deleteMany({
+      where: { tenantId },
+    })
     await tx.serviceCommerceUsageEvent.deleteMany({ where: { tenantId } })
     await tx.serviceCommerceCustomerNotificationReceipt.deleteMany({
       where: { tenantId },

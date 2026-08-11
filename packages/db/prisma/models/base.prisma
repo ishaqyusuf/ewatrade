@@ -97,6 +97,7 @@ model Tenant {
   serviceCommerceCustomerNotificationAttempts  ServiceCommerceCustomerNotificationAttempt[]
   serviceCommerceCustomerNotificationReceipts  ServiceCommerceCustomerNotificationReceipt[]
   serviceCommerceUsageEvents                   ServiceCommerceUsageEvent[]
+  serviceCommerceReportReadAuditEvents         ServiceCommerceReportReadAuditEvent[]
   prescriptionCommunicationIntents             PrescriptionCommunicationIntent[]
   prescriptionQuickActions                     PrescriptionQuickAction[]
   prescriptionRetentionPolicies                PrescriptionRetentionPolicy[]

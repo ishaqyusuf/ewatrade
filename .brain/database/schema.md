@@ -322,6 +322,13 @@ persistence boundary. Clients never access the database directly.
   support aggregate attribution. Each cost amount is nullable: null is unknown,
   while zero is a recorded zero. Reconciliation status/source/time support one
   guarded pending-to-reconciled transition without rewriting identity.
+- `ServiceCommerceReportReadAuditEvent` is append-only evidence for aggregate
+  report and drill-down access. It stores actor, Tenant, validated optional
+  Store, fixed purpose/source domain, allowlisted section, half-open report
+  window, authorization result/reason and occurrence time. It deliberately has
+  no report payload, customer/request/media/provider identifiers or raw error.
+  A validated optional Store reference uses restrictive deletion so scoped
+  history cannot be rewritten; Tenant-wide reads retain a null Store.
 - `CatalogSourceLineLink.resolutionCapturedAt` marks when
   `createdAsPrivateDraft` became an authoritative resolution snapshot.
   Pre-marker rows remain null and report as unknown; current mutable Offering

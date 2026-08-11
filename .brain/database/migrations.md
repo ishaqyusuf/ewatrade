@@ -479,7 +479,7 @@ Complete cross-source media/isolation and browser acceptance remain open.
 
 ## Service Commerce Reporting And Historical Truth Migration State
 
-On 2026-08-11 Prisma generated four additive development migrations:
+On 2026-08-11 Prisma generated six additive development migrations:
 
 - `20260811144714_service_commerce_reporting_usage` adds the immutable
   Tenant/Store/source usage and separated-cost ledger.
@@ -489,14 +489,26 @@ On 2026-08-11 Prisma generated four additive development migrations:
   suggested-price/override fields on Quote lines.
 - `20260811172000_reporting_truth_snapshots` adds nullable provenance markers
   and `CommercialOrder.completedAt` for authoritative future occurrences.
+- `20260811200000_service_commerce_report_read_audit` adds the append-only
+  report/drill-down access audit plus fixed kind, section, outcome and denial
+  reason enums.
+- `20260811203000_service_commerce_report_read_source` adds the fixed reporting
+  source domain and changes validated Store audit history from `SET NULL` to
+  restrictive deletion so its scope remains immutable.
 
-All four artifacts were applied to the canonical verified `.env.local` Neon
-development profile using the guarded workspace environment and Prisma migrate
-deploy. The required repository wrappers `bun db:migrate` and `bun db:push`
-were also attempted after the schema changes; both returned Prisma's generic
-schema-engine error against the same verified Neon profile. No local
-PostgreSQL/Docker fallback, reset, data-loss override, production database or
-live provider operation was used.
+All six artifacts are reconciled on the canonical verified `.env.local` Neon
+development profile. For the fifth artifact, the required `bun db:migrate` and
+`bun db:push` workflow was run; the initial sandboxed schema-engine calls did
+not complete, while the approved cache-capable push synchronized the additive
+schema. Prisma then generated the migration from history using the empty
+run-owned Neon shadow database `ewatrade_prisma_audit_shadow`, which was dropped
+immediately. The fixed source/Store-FK follow-up used the same generated-diff
+workflow with the run-owned `ewatrade_prisma_audit_source_shadow` database,
+also dropped immediately. Because the identical schema already existed from
+the push, Prisma marked both generated migrations applied; `prisma migrate
+status` reports all 45 migrations and the database schema up to date. No local PostgreSQL/Docker
+fallback, reset, data-loss override, production database or live provider
+operation was used.
 
 The migrations do not fabricate historical truth. Existing Catalog resolution
 and Quote override rows keep nullable provenance markers and report as unknown.
@@ -512,7 +524,7 @@ application data and is not recoverable; the application development database
 was not deleted or reset.
 
 Verified development evidence after application includes the bag-seller seam
-(2 tests/16 assertions) and reporting seam (1 test/10 assertions), both with
+(2 tests/16 assertions) and reporting seam (1 test/11 assertions), both with
 run-owned cleanup. Production application/reconciliation remains open.
 
 # Hybrid QA cleanup

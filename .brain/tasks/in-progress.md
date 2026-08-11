@@ -261,10 +261,11 @@
   Shared Tenant/Store reporting, separated provider-cost usage/reconciliation,
   bounded redacted drill-down, typed report UI, bag-seller Neon lifecycle,
   generic-media matrix and cross-origin Quote-release matrix are implemented.
-  Reporting focused tests pass 23/102; its verified-Neon seam passes 1/10; the
+  Reporting focused tests pass 26/112; its verified-Neon seam passes 1/11; the
   bag-seller seam passes 2/16; generic-media tests pass 30/95. The additive
-  migrations are applied on verified development Neon. Remaining gates are an
-  immutable report-read audit, deterministic final routing/compatibility rerun,
+  migrations are applied on verified development Neon. Immutable allowed and
+  denied report-read audit is now enforced before repository report queries.
+  Remaining gates are deterministic final routing/compatibility rerun,
   authenticated report desktop/mobile QA, approved non-functional thresholds,
   live providers, production reconciliation, and owner-authorized
   switch/contraction. Started Date: 2026-08-11.

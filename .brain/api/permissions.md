@@ -209,8 +209,9 @@
   Owner/Admin/Manager authority. Tenant is session-derived; an optional Store
   must belong to the active Tenant. The manager role cannot request raw
   lifecycle/media/provider rows because only aggregate allowlisted outputs are
-  exposed. A dedicated immutable report-read audit is still an open Ticket 13
-  gate before release acceptance is complete.
+  exposed. The repository reauthorizes membership and Store scope and records
+  one immutable allowed or denied report-read audit before it queries report
+  facts; audit persistence failure prevents the report response.
 
 - Any active Tenant member may receive the allowlisted profile/readiness
   projection for an authorized Store; this read does not grant operation or

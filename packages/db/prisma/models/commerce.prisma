@@ -88,6 +88,7 @@ model Store {
   serviceCommerceCustomerNotificationAttempts  ServiceCommerceCustomerNotificationAttempt[]
   serviceCommerceCustomerNotificationReceipts  ServiceCommerceCustomerNotificationReceipt[]
   serviceCommerceUsageEvents                   ServiceCommerceUsageEvent[]
+  serviceCommerceReportReadAuditEvents         ServiceCommerceReportReadAuditEvent[]
   prescriptionCommunicationIntents             PrescriptionCommunicationIntent[]
   prescriptionQuickActions                     PrescriptionQuickAction[]
   prescriptionRetentionPolicy                  PrescriptionRetentionPolicy?

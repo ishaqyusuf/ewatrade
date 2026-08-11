@@ -28,6 +28,33 @@ enum ServiceCommerceUsageReconciliationStatus {
   FAILED
 }
 
+enum ServiceCommerceReportReadKind {
+  REPORT
+  DRILLDOWN
+}
+
+enum ServiceCommerceReportReadOutcome {
+  ALLOWED
+  DENIED
+}
+
+enum ServiceCommerceReportReadSource {
+  SERVICE_COMMERCE_REPORTING
+}
+
+enum ServiceCommerceReportDrilldownSection {
+  LIFECYCLE
+  CATALOG
+  RELIABILITY
+  MEDIA
+  COSTS
+}
+
+enum ServiceCommerceReportReadDenialReason {
+  ACCESS_FORBIDDEN
+  STORE_NOT_FOUND
+}
+
 /// Immutable external usage and cost attribution. Core request, Quote,
 /// booking, payment and fulfilment lifecycle facts remain authoritative in
 /// their owning aggregates and are aggregated directly by reporting queries.
@@ -68,4 +95,31 @@ model ServiceCommerceUsageEvent {
   @@index([tenantId, storeId, occurredAt])
   @@index([tenantId, connectionId, occurredAt])
   @@index([tenantId, eventType, occurredAt])
+}
+
+/// Append-only evidence that an authenticated actor attempted to read an
+/// aggregate Service Commerce report. It intentionally stores no report rows,
+/// customer/source identifiers, media references, provider operations or raw
+/// error text.
+model ServiceCommerceReportReadAuditEvent {
+  id               String                                  @id @default(cuid())
+  tenantId         String
+  storeId          String?
+  actorUserId      String
+  kind             ServiceCommerceReportReadKind
+  drilldownSection ServiceCommerceReportDrilldownSection?
+  purpose          String
+  outcome          ServiceCommerceReportReadOutcome
+  source           ServiceCommerceReportReadSource          @default(SERVICE_COMMERCE_REPORTING)
+  denialReason     ServiceCommerceReportReadDenialReason?
+  reportStart      DateTime
+  reportEnd        DateTime
+  effectiveAt      DateTime                                @default(now())
+  createdAt        DateTime                                @default(now())
+  tenant           Tenant                                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store            Store?                                  @relation(fields: [storeId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, storeId, effectiveAt])
+  @@index([actorUserId, effectiveAt])
+  @@index([tenantId, outcome, effectiveAt])
 }
