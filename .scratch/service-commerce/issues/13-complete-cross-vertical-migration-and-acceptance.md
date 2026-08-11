@@ -107,6 +107,15 @@ revised 17-ticket batch.
 - The generic-media focused matrix passed 30 tests and 95 assertions. Live
   Meta/object-storage/safety-provider canaries and production retention signoff
   remain separate gates.
+- The offline `meta_whatsapp` probe against the named production environment
+  remained `BLOCKED` with `executionAuthorized: false`. It reported only the
+  allowlisted missing environment-key names (`META_APP_ID`, `META_APP_SECRET`,
+  `WHATSAPP_WEBHOOK_VERIFY_TOKEN`,
+  `COMMUNICATIONS_CREDENTIAL_ENCRYPTION_KEY`, `REDIS_URL`) and missing
+  production-scope/recipient/template evidence labels; it performed no database,
+  network or provider operation. The separately guarded drift inventory also
+  remains unexecuted because its dedicated read-only URL, authorization and
+  target-fingerprint facts are not provisioned.
 - The final verified-Neon independent/central multi-Store WhatsApp routing
   matrix passed 1 test and 16 assertions, including replay-safe persistence and
   exactly one atomic worker claim under a concurrent duplicate. Its focused

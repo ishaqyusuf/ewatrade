@@ -50,6 +50,11 @@
   non-destructive order; and the redacted live-canary preflight performs no
   database, network or provider operation and always reports
   `executionAuthorized: false`.
+- The current offline `meta_whatsapp` probe is `BLOCKED`: the named production
+  environment does not supply the five required Meta/webhook/encryption/Redis
+  key names, and no production Tenant/Store/Connection, consented test recipient
+  or neutral-template evidence was attested. The command returned only safe
+  reason codes and performed no database, network or provider operation.
 - The compatibility inventory now names the switch-critical
   canonical/legacy/shared reader-writer boundaries, their retained rollback
   paths and contraction disposition. It also records the controls that do not
@@ -88,9 +93,9 @@
    production capacity or pricing decision.
 2. Complete separately authorized live Meta, payment, private-media/safety/OCR
    and courier canaries plus privacy/retention signoff. The offline preflight
-   does not close this gate: dedicated payment, production media/safety/OCR and
-   courier canary harnesses remain explicitly unsupported, while Meta still
-   needs an approved live Connection test window.
+   does not close this gate: Meta is currently blocked on its named environment
+   facts and approved scoped evidence/window; dedicated payment, production
+   media/safety/OCR and courier canary harnesses remain explicitly unsupported.
 3. Design, review and execute a production migration-ledger/schema-drift
    reconciliation under a separately approved write operation. Do not run
    `migrate deploy` while `0001_init` is marked applied but its foundational
