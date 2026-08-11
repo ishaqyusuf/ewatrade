@@ -22,8 +22,8 @@ and 04A have source-complete foundations; their remaining
 recommendation/live-provider release gates stay open. Ticket 13 is in progress:
 its shared reporting/cost source, bag-seller lifecycle, media matrix and Quote
 release matrix are verified, while final browser, non-functional threshold,
-routing-regression, live-provider, production and owner-authorized switch gates
-remain open. Any scope or dependency change should update the spec, ADR/Brain
+live-provider, production and owner-authorized switch gates remain open. Any
+scope or dependency change should update the spec, ADR/Brain
 and affected tickets before implementation.
 
 ## Dependency-Ordered Waves

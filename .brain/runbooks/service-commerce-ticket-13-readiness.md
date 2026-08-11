@@ -22,6 +22,12 @@
 - DB, API, dashboard, jobs, communications and shared-contract TypeScript
   checks pass. Six additive migrations are applied to the verified
   development Neon profile.
+- Final verified-Neon independent/central multi-Store WhatsApp routing: 1 test,
+  13 assertions. Focused routing/rotation/provider retry: 45 tests, 98
+  assertions.
+- Unchanged compatibility reruns: Pharmacy 9 tests/248 assertions; Generic
+  Service request-to-Order, appointment-work and cross-vertical isolation 3
+  tests/75 assertions. All run-owned fixtures were removed.
 
 ## Open Release Gates
 
@@ -30,13 +36,11 @@
    keyboard and responsive states.
 2. Approve numeric performance, contention and rate-limit thresholds, then run
    the corresponding bounded report/provider/security tests.
-3. Run the final independent/central multi-Store WhatsApp routing matrix and
-   the full unchanged Pharmacy/Generic Service compatibility regression.
-4. Reconcile legacy completed-sale timestamps only where immutable source
+3. Reconcile legacy completed-sale timestamps only where immutable source
    events prove them; otherwise retain the explicit unknown classification.
-5. Complete separately authorized live Meta, payment, private-media/safety/OCR
+4. Complete separately authorized live Meta, payment, private-media/safety/OCR
    and courier canaries plus privacy/retention signoff.
-6. Reconcile and apply the production migration baseline under an approved
+5. Reconcile and apply the production migration baseline under an approved
    production operation.
 
 ## Switch Conditions

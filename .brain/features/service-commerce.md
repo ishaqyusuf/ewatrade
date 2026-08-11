@@ -29,9 +29,8 @@ transactional gates while Pharmacy remains the first compatibility adapter.
 Tickets 10 and 12 are source-complete. Ticket 13 is in progress: shared
 reporting, provider-cost attribution, redacted operations, the non-regulated
 bag-seller lifecycle, generic-media coverage and the cross-origin Quote-release
-matrix are implemented. Browser/non-functional thresholds, final routing and
-compatibility reruns, live providers, production rollout and contraction remain
-open gates.
+matrix are implemented. Browser/non-functional thresholds, live providers,
+production rollout and contraction remain open gates.
 Production schema/provider operations remain separately authorized.
 
 Pharmacy Commerce is the first regulated vertical and retains its completed
@@ -711,8 +710,12 @@ passed 1 test/56 assertions and its separate cross-vertical same-phone
 isolation seam passed 1 test/10 assertions; authenticated desktop and 390px
 browser QA also passed. Ticket 13 is in progress with reporting/cost,
 bag-seller, media and Quote-release source seams verified. Final browser,
-non-functional threshold, routing-regression, live-provider, production and
-owner-authorized switch/contraction gates remain open.
+non-functional threshold, live-provider, production and owner-authorized
+switch/contraction gates remain open. Its final verified-Neon routing matrix
+passed 1 test/13 assertions, the unchanged Pharmacy compatibility matrix passed
+9/248, and the unchanged Generic Service request-to-Order, appointment-work and
+cross-vertical isolation matrix passed 3/75. The focused routing/provider-retry
+suite passed 45/98, and every run-owned fixture was removed.
 The generated additive migrations are applied only to the Neon development
 database.
 Live-provider acceptance remains open. Throughout

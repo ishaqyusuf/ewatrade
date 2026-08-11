@@ -516,6 +516,107 @@ describe("WhatsApp communication receipts", () => {
 })
 
 describe("WhatsApp failure controls", () => {
+  test("atomically promotes a ready pending credential while retaining the active route", async () => {
+    const updates: Array<{ data: Record<string, unknown>; where: unknown }> = []
+    const transaction = {
+      whatsAppConnection: {
+        findFirstOrThrow: async () => ({
+          credentialReference: "active-credential",
+          id: "connection-1",
+          pendingCredentialReference: "pending-credential",
+          status: "ACTIVE",
+        }),
+        update: async (input: {
+          data: Record<string, unknown>
+          where: unknown
+        }) => {
+          updates.push(input)
+          return { id: "connection-1" }
+        },
+      },
+      whatsAppConnectionAuditEvent: { create: async () => ({ id: "audit-1" }) },
+      whatsAppStoreBinding: { findMany: async () => [] },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+    } as unknown as PrismaClient
+
+    await recordWhatsAppConnectionTest(db, {
+      businessVerified: true,
+      connectionId: "connection-1",
+      displayNumber: "+2348000000000",
+      numberVerified: true,
+      outboundVerified: true,
+      templateConfiguration: {},
+      templatesReady: true,
+      tenantId: "tenant-1",
+      webhookSubscribed: true,
+    })
+
+    expect(updates).toEqual([
+      expect.objectContaining({
+        data: expect.objectContaining({
+          credentialReference: "pending-credential",
+          pendingCredentialReference: null,
+          status: "ACTIVE",
+        }),
+        where: { id: "connection-1", tenantId: "tenant-1" },
+      }),
+    ])
+  })
+
+  test("keeps the active credential and pending rotation retryable after a failed provider test", async () => {
+    const updates: Array<{ data: Record<string, unknown>; where: unknown }> = []
+    const transaction = {
+      whatsAppConnection: {
+        findFirstOrThrow: async () => ({
+          credentialReference: "active-credential",
+          id: "connection-1",
+          pendingCredentialReference: "pending-credential",
+          status: "ACTIVE",
+        }),
+        update: async (input: {
+          data: Record<string, unknown>
+          where: unknown
+        }) => {
+          updates.push(input)
+          return { id: "connection-1" }
+        },
+      },
+      whatsAppConnectionAuditEvent: { create: async () => ({ id: "audit-1" }) },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+    } as unknown as PrismaClient
+
+    await recordWhatsAppConnectionTest(db, {
+      businessVerified: false,
+      connectionId: "connection-1",
+      displayNumber: "+2348111111111",
+      failureCode: "connection_test_failed",
+      numberVerified: false,
+      outboundVerified: false,
+      templateConfiguration: {},
+      templatesReady: false,
+      tenantId: "tenant-1",
+      webhookSubscribed: false,
+    })
+
+    expect(updates).toEqual([
+      expect.objectContaining({
+        data: expect.objectContaining({
+          credentialReference: undefined,
+          lastTestFailureCode: "connection_test_failed",
+          pendingCredentialReference: undefined,
+          status: "ACTIVE",
+        }),
+        where: { id: "connection-1", tenantId: "tenant-1" },
+      }),
+    ])
+  })
+
   test("activates a technically ready generic Service binding without Pharmacy templates or settings", async () => {
     let bindingActivations = 0
     let pharmacyChannelWrites = 0

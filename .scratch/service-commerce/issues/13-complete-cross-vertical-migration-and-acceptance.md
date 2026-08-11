@@ -18,9 +18,8 @@ Eligibility; 12 - Validate Second Vertical Appointment Business.
 **Status:** in progress on 2026-08-11. The shared reporting/cost source,
 immutable report-read audit, bag-seller lifecycle, generic-media matrix and
 cross-origin Quote-release matrix are implemented and verified on the
-development profile. Final browser, non-functional threshold,
-routing-regression, live-provider, production and owner-authorized
-switch/contraction gates remain open.
+development profile. Final browser, non-functional threshold, live-provider,
+production and owner-authorized switch/contraction gates remain open.
 
 **Approval:** Original scope and revised Progressive Catalog batch approved on
 2026-08-09; generic Customer Channels/media/Offer Options amendment approved
@@ -56,8 +55,8 @@ revised 17-ticket batch.
 - [x] Add a Midday-style report surface with typed URL Store/date scope, bounded queries, explicit loading/error/empty/retry behavior and role-gated drill-down.
 - [x] Audit sensitive reads and material lifecycle commands with actor, purpose, Tenant, Store, source, authoritative time and result.
 - [x] Prove fresh concurrency, idempotent replay, stale capability rejection, exact totals, reservation/slot exclusivity, failure recovery and atomic run-owned cleanup.
-- [ ] Prove independent and central multi-Store WhatsApp routing, same-customer isolation, cross-Tenant fail-closed behavior, rotation/revocation and provider retry.
-- [ ] Re-run all completed Prescription Commerce compatibility/Neon evidence and Generic Service request-to-order/work/handoff evidence with no regression.
+- [x] Prove independent and central multi-Store WhatsApp routing, same-customer isolation, cross-Tenant fail-closed behavior, rotation/revocation and provider retry.
+- [x] Re-run all completed Prescription Commerce compatibility/Neon evidence and Generic Service request-to-order/work/handoff evidence with no regression.
 - [ ] Complete authenticated desktop/mobile and public browser QA for loading, error, empty, forbidden, URL state, global sheets, accessibility, responsive layout and safe retry.
 - [ ] Complete performance, contention, rate-limit, security, privacy, audit, retention and cost-attribution checks at approved thresholds.
 - [x] Reconcile any approved schema/backfill on the verified Neon development profile; local Docker/PostgreSQL remains prohibited.
@@ -85,6 +84,14 @@ revised 17-ticket batch.
 - The generic-media focused matrix passed 30 tests and 95 assertions. Live
   Meta/object-storage/safety-provider canaries and production retention signoff
   remain separate gates.
+- The final verified-Neon independent/central multi-Store WhatsApp routing
+  matrix passed 1 test and 13 assertions. Its focused routing,
+  connection-rotation and provider-retry suites passed 45 tests and 98
+  assertions. The unchanged
+  Pharmacy compatibility matrix passed 9 tests and 248 assertions, while the
+  unchanged Generic Service request-to-Order, appointment-work and
+  cross-vertical isolation matrix passed 3 tests and 75 assertions. All
+  run-owned fixtures were removed.
 - Prisma generated six additive migrations and all six are reconciled on the
   verified development Neon profile. The report-read artifact was generated
   from migration history using an empty run-owned Neon shadow database that
