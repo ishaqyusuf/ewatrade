@@ -268,7 +268,12 @@
   The final verified-Neon routing matrix passes 1/13, its focused
   routing/rotation/provider-retry suite passes 45/98, the unchanged Pharmacy
   compatibility matrix passes 9/248, and the unchanged Generic Service matrix
-  passes 3/75; every run-owned fixture was removed. Remaining gates are
-  authenticated report desktop/mobile QA, approved non-functional thresholds,
+  passes 3/75; every run-owned fixture was removed. Authenticated report
+  acceptance passes at 1280x720 and 390x844 for loaded/empty data,
+  known-zero/unknown costs, aggregate drill-down, report/detail error and
+  recovered retry, safe role denial, typed URL Back/Forward, keyboard access,
+  clean healthy-state consoles and responsive containment; its exact run-owned
+  Tenant, Store, users, sessions, audits and usage rows were removed and
+  verified at zero. Remaining gates are approved non-functional thresholds,
   live providers, production reconciliation, and owner-authorized
   switch/contraction. Started Date: 2026-08-11.

@@ -29,8 +29,9 @@ transactional gates while Pharmacy remains the first compatibility adapter.
 Tickets 10 and 12 are source-complete. Ticket 13 is in progress: shared
 reporting, provider-cost attribution, redacted operations, the non-regulated
 bag-seller lifecycle, generic-media coverage and the cross-origin Quote-release
-matrix are implemented. Browser/non-functional thresholds, live providers,
-production rollout and contraction remain open gates.
+matrix plus authenticated report browser acceptance are implemented.
+Non-functional thresholds, live providers, production rollout and contraction
+remain open gates.
 Production schema/provider operations remain separately authorized.
 
 Pharmacy Commerce is the first regulated vertical and retains its completed
@@ -602,10 +603,15 @@ only when the provider fact explicitly establishes zero.
 Verified source evidence includes a 26-test/112-assertion focused reporting
 suite and a 1-test/11-assertion development-Neon reporting lifecycle. The
 Pharmacy-free bag-seller Neon seam passed 2 tests/16 assertions, and generic
-media passed 30 tests/95 assertions. The report browser surface is implemented
-with typed URL Store/date/drill-down state and explicit loading, error, empty,
-retry and truncation states; authenticated desktop/mobile acceptance for that
-new surface remains open.
+media passed 30 tests/95 assertions. The authenticated report browser surface
+passed 1280x720 and 390x844 acceptance for loaded/empty data, known-zero versus
+unknown costs, aggregate drill-down, report/detail error and recovered retry,
+Cashier safe redirect, typed URL Back/Forward state, keyboard access, clean
+healthy-state consoles and responsive page containment. Loading semantics
+remain source-verified, while truncation presentation remains
+source/unit-verified; no synthetic 10,000-row browser fixture was created. The
+run-owned Tenant, Store, users, sessions,
+report audits and usage rows were removed and verified at zero.
 
 Every aggregate report and drill-down now reauthorizes the active manager and
 validated Store at the repository boundary and appends an immutable safe audit
@@ -709,9 +715,10 @@ and 12 are source-complete. Ticket 12's channel-neutral appointment Neon seam
 passed 1 test/56 assertions and its separate cross-vertical same-phone
 isolation seam passed 1 test/10 assertions; authenticated desktop and 390px
 browser QA also passed. Ticket 13 is in progress with reporting/cost,
-bag-seller, media and Quote-release source seams verified. Final browser,
-non-functional threshold, live-provider, production and owner-authorized
-switch/contraction gates remain open. Its final verified-Neon routing matrix
+bag-seller, media and Quote-release source seams plus authenticated report
+browser acceptance verified. Final non-functional threshold, live-provider,
+production and owner-authorized switch/contraction gates remain open. Its final
+verified-Neon routing matrix
 passed 1 test/13 assertions, the unchanged Pharmacy compatibility matrix passed
 9/248, and the unchanged Generic Service request-to-Order, appointment-work and
 cross-vertical isolation matrix passed 3/75. The focused routing/provider-retry

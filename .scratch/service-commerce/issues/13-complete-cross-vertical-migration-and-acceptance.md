@@ -16,10 +16,11 @@ Commerce To Service Commerce; 11 - Enforce Vertical And Jurisdiction
 Eligibility; 12 - Validate Second Vertical Appointment Business.
 
 **Status:** in progress on 2026-08-11. The shared reporting/cost source,
-immutable report-read audit, bag-seller lifecycle, generic-media matrix and
-cross-origin Quote-release matrix are implemented and verified on the
-development profile. Final browser, non-functional threshold, live-provider,
-production and owner-authorized switch/contraction gates remain open.
+immutable report-read audit, bag-seller lifecycle, generic-media matrix,
+cross-origin Quote-release matrix and authenticated report browser acceptance
+are implemented and verified on the development profile. Final non-functional
+threshold, live-provider, production and owner-authorized switch/contraction
+gates remain open.
 
 **Approval:** Original scope and revised Progressive Catalog batch approved on
 2026-08-09; generic Customer Channels/media/Offer Options amendment approved
@@ -57,7 +58,14 @@ revised 17-ticket batch.
 - [x] Prove fresh concurrency, idempotent replay, stale capability rejection, exact totals, reservation/slot exclusivity, failure recovery and atomic run-owned cleanup.
 - [x] Prove independent and central multi-Store WhatsApp routing, same-customer isolation, cross-Tenant fail-closed behavior, rotation/revocation and provider retry.
 - [x] Re-run all completed Prescription Commerce compatibility/Neon evidence and Generic Service request-to-order/work/handoff evidence with no regression.
-- [ ] Complete authenticated desktop/mobile and public browser QA for loading, error, empty, forbidden, URL state, global sheets, accessibility, responsive layout and safe retry.
+- [x] Complete authenticated desktop and compact-mobile Service Commerce report
+  acceptance for loaded and empty data, report/detail error and safe retry, safe
+  role denial, typed URL detail plus browser Back/Forward state, keyboard access,
+  responsive overflow containment and clean healthy-state console. Loading
+  semantics remain source-verified and truncation presentation remains
+  source/unit-verified rather than synthesized with a 10,000-row browser
+  fixture. Reports are authenticated-only; Tickets 03A and 12 retain the
+  global-sheet and public-booking browser evidence respectively.
 - [ ] Complete performance, contention, rate-limit, security, privacy, audit, retention and cost-attribution checks at approved thresholds.
 - [x] Reconcile any approved schema/backfill on the verified Neon development profile; local Docker/PostgreSQL remains prohibited.
 - [ ] Keep live Meta, payment, media/OCR, courier and production database canaries as explicit separately authorized gates.
@@ -92,6 +100,19 @@ revised 17-ticket batch.
   unchanged Generic Service request-to-Order, appointment-work and
   cross-vertical isolation matrix passed 3 tests and 75 assertions. All
   run-owned fixtures were removed.
+- Authenticated report browser acceptance passed against a run-owned Neon
+  fixture at 1280x720 and 390x844. The Owner saw the Store-scoped loaded report,
+  known-zero delivery and unknown provider costs, plus the two-row aggregate
+  cost drill-down; an unused 2045 window rendered the explicit empty state. A
+  deliberate API outage produced report and detail errors and both retry
+  actions recovered after restart. Cashier direct access redirected safely,
+  typed detail state survived open/close and browser Back/Forward, keyboard
+  controls remained reachable, healthy desktop/mobile reloads had no console
+  errors, and the 390px page had no horizontal overflow while the wide
+  drill-down table scrolled internally. Loading semantics are source-verified
+  and the 10,000-row truncation warning remains source/unit-verified rather
+  than browser-synthesized. The exact Tenant, Store, users, sessions, report
+  audits and usage rows were removed and verified at zero.
 - Prisma generated six additive migrations and all six are reconciled on the
   verified development Neon profile. The report-read artifact was generated
   from migration history using an empty run-owned Neon shadow database that

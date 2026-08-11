@@ -29,6 +29,17 @@ export type ServiceCommerceReportRange = {
   to: Date
 }
 
+/**
+ * Report filters are user navigation, so they intentionally create a browser
+ * history entry.  Callers should keep draft-form synchronization local rather
+ * than writing it through this helper.
+ */
+export function withServiceCommerceReportUserNavigation<T>(
+  setParams: (values: T, options: { history: "push" }) => unknown,
+) {
+  return (values: T) => setParams(values, { history: "push" })
+}
+
 function startOfNextUtcDay(value: Date) {
   return new Date(
     Date.UTC(
@@ -71,17 +82,18 @@ export function resolveServiceCommerceReportRange(
 
 export function useServiceCommerceReportParams() {
   const [params, setParams] = useQueryStates(serviceCommerceReportParams)
+  const setUserParams = withServiceCommerceReportUserNavigation(setParams)
 
   return {
     detail: params.detail,
     from: params.from,
     setDetail: (detail: ServiceCommerceReportDetail | null) =>
-      setParams({ detail }),
+      setUserParams({ detail }),
     setScope: (scope: {
       from: Date
       store: string | null
       to: Date
-    }) => setParams(scope),
+    }) => setUserParams(scope),
     store: params.store,
     to: params.to,
   }

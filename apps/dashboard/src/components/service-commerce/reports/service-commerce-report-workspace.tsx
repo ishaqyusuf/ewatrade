@@ -180,7 +180,10 @@ function ReportDrilldown({
         </output>
       ) : null}
       {drilldown.isLoading ? (
-        <div className="mt-4 h-24 animate-pulse rounded-lg bg-muted" />
+        <output
+          aria-label="Loading report detail"
+          className="mt-4 block h-24 animate-pulse rounded-lg bg-muted"
+        />
       ) : drilldown.isError ? (
         <div className="mt-4 grid gap-3" role="alert">
           <p className="text-sm text-destructive">
@@ -316,7 +319,7 @@ export function ServiceCommerceReportWorkspace({
   }
 
   return (
-    <div className="grid flex-1 gap-6 p-6 lg:p-8">
+    <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] gap-6 p-6 lg:p-8">
       <header className="flex flex-col gap-4 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-sm text-muted-foreground">Service Commerce</p>
@@ -713,7 +716,8 @@ function ReportContent({
 
 export function ServiceCommerceReportSkeleton() {
   return (
-    <div className="grid gap-6" aria-label="Loading Service Commerce report">
+    <div className="grid gap-6">
+      <output className="sr-only">Loading Service Commerce report</output>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
           <div

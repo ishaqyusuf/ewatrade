@@ -28,19 +28,25 @@
 - Unchanged compatibility reruns: Pharmacy 9 tests/248 assertions; Generic
   Service request-to-Order, appointment-work and cross-vertical isolation 3
   tests/75 assertions. All run-owned fixtures were removed.
+- Authenticated report browser acceptance passed at 1280x720 and 390x844
+  against a run-owned Neon fixture: loaded and empty states, known-zero versus
+  unknown costs, aggregate drill-down, report/detail failure and recovered
+  retries, Cashier safe redirect, typed URL Back/Forward behavior, keyboard
+  reachability, clean healthy-state consoles and page-level overflow
+  containment all passed. Loading semantics are source-verified and truncation
+  presentation is source/unit-verified rather than browser-synthesized. The
+  exact Tenant, Store, users, sessions, report audits and usage rows were
+  removed and verified at zero.
 
 ## Open Release Gates
 
-1. Run authenticated desktop and compact-mobile browser QA for the new report
-   route, including forbidden, empty, error/retry, URL navigation, truncation,
-   keyboard and responsive states.
-2. Approve numeric performance, contention and rate-limit thresholds, then run
+1. Approve numeric performance, contention and rate-limit thresholds, then run
    the corresponding bounded report/provider/security tests.
-3. Reconcile legacy completed-sale timestamps only where immutable source
+2. Reconcile legacy completed-sale timestamps only where immutable source
    events prove them; otherwise retain the explicit unknown classification.
-4. Complete separately authorized live Meta, payment, private-media/safety/OCR
+3. Complete separately authorized live Meta, payment, private-media/safety/OCR
    and courier canaries plus privacy/retention signoff.
-5. Reconcile and apply the production migration baseline under an approved
+4. Reconcile and apply the production migration baseline under an approved
    production operation.
 
 ## Switch Conditions

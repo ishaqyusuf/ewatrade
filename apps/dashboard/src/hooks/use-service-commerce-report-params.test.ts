@@ -4,9 +4,31 @@ import {
   getServiceCommerceReportDefaultRange,
   loadServiceCommerceReportParams,
   resolveServiceCommerceReportRange,
+  withServiceCommerceReportUserNavigation,
 } from "./use-service-commerce-report-params"
 
 describe("Service Commerce report URL range", () => {
+  test("pushes user report scope and drilldown navigation without using draft synchronization", () => {
+    const writes: Array<{
+      options: { history: "push" }
+      values: { detail?: string | null; store?: string | null }
+    }> = []
+    const setUserParams = withServiceCommerceReportUserNavigation(
+      (
+        values: { detail?: string | null; store?: string | null },
+        options: { history: "push" },
+      ) => writes.push({ options, values }),
+    )
+
+    setUserParams({ store: "store_1" })
+    setUserParams({ detail: "media" })
+
+    expect(writes).toEqual([
+      { options: { history: "push" }, values: { store: "store_1" } },
+      { options: { history: "push" }, values: { detail: "media" } },
+    ])
+  })
+
   test("defaults to a thirty-day window ending after the current UTC day", () => {
     const range = getServiceCommerceReportDefaultRange(
       new Date("2026-08-11T14:32:00.000Z"),
