@@ -929,6 +929,15 @@ reversible presentation state; authoritative lifecycle state always refetches.
 8. Contract: remove old names/models/exports only under separately approved
    production reconciliation and rollout tickets.
 
+Ticket 12 completed the appointment part of the prove phase on 2026-08-11: the
+channel-neutral Appointment Neon seam passed 1 test/56 assertions, a separate
+Appointment/Pharmacy same-phone isolation seam passed 1 test/10 assertions,
+and authenticated 1280px/390px QA covered the native global sheet, keyboard,
+scroll, responsive layout, explicit public slot selection and safe recovery.
+Ticket 13 still owns the bag-seller/final cross-vertical report, cost,
+non-functional and release evidence; this does not authorize switch or
+contraction.
+
 ### Rollback Conditions
 
 - Prefactor/expand stops when the shared contract suite, current Service path,

@@ -23,6 +23,7 @@ export function DashboardSheet({
 }: DashboardSheetProps) {
   const sheetRef = useRef<HTMLDialogElement>(null)
   const onCloseRef = useRef(onClose)
+  const returnFocusRef = useRef<HTMLElement | null>(null)
   const titleId = useId()
   const descriptionId = useId()
 
@@ -31,10 +32,31 @@ export function DashboardSheet({
   }, [onClose])
 
   useEffect(() => {
+    if (open) return
+
+    const rememberFocusedElement = (event: FocusEvent) => {
+      if (
+        event.target instanceof HTMLElement &&
+        event.target !== document.body &&
+        event.target !== document.documentElement
+      ) {
+        returnFocusRef.current = event.target
+      }
+    }
+    document.addEventListener("focusin", rememberFocusedElement)
+    return () => document.removeEventListener("focusin", rememberFocusedElement)
+  }, [open])
+
+  useEffect(() => {
     if (!open) return
 
     const sheet = sheetRef.current
     if (!sheet) return
+    const previouslyFocused =
+      returnFocusRef.current ??
+      (document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null)
     const previousOverflow = document.body.style.overflow
 
     document.body.style.overflow = "hidden"
@@ -42,6 +64,7 @@ export function DashboardSheet({
     return () => {
       document.body.style.overflow = previousOverflow
       if (sheet.open) sheet.close()
+      if (previouslyFocused?.isConnected) previouslyFocused.focus()
     }
   }, [open])
 
@@ -52,7 +75,7 @@ export function DashboardSheet({
     <dialog
       aria-describedby={description ? descriptionId : undefined}
       aria-labelledby={titleId}
-      className="fixed right-0 top-0 m-0 h-dvh w-full max-w-[520px] border-0 border-l border-border bg-background p-0 shadow-xl backdrop:bg-foreground/20"
+      className="fixed bottom-0 left-auto right-0 top-0 m-0 h-dvh max-h-none w-full max-w-[520px] border-0 border-l border-border bg-background p-0 shadow-xl backdrop:bg-foreground/20"
       onCancel={(event) => {
         event.preventDefault()
         void onCloseRef.current()

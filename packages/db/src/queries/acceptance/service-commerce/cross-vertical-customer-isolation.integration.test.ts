@@ -82,8 +82,7 @@ describeWithServiceCommerceDatabase(
     afterAll(async () => {
       let cleanupError: unknown
       try {
-        if (appointment)
-          await disposeAppointmentAcceptanceFixture(appointment)
+        if (appointment) await disposeAppointmentAcceptanceFixture(appointment)
       } catch (error) {
         cleanupError = error
       }

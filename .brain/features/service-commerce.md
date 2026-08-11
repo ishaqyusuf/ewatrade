@@ -540,9 +540,23 @@ permission merely because a WhatsApp connection is technically ready.
 An appointment-based business is the approved proving case because it adds one
 genuinely new shared capability—booking—while exercising existing Service
 Requests, Quotes, payments and notifications without prescription rules. The
-acceptance must prove that the business can configure services and resources,
+completed source acceptance proves that the business can configure services
+and resources,
 receive web/staff/WhatsApp demand, offer or confirm a slot, collect the allowed
 payment, reschedule/cancel, remind the customer and complete the service.
+
+The channel-neutral `.env.local` Neon appointment seam passed 1 test/56
+assertions without importing Prescription modules, and the separate same-phone
+Appointment/Pharmacy isolation seam passed 1 test/10 assertions. The evidence
+covers progressive private Service capture and graduation without Product
+stock, default and approval-required Quotes, web/staff/WhatsApp booking and
+payment, reminder delivery, completion, cancellation/refund, contention,
+staleness, provider failure, safe projections, queues and authoritative audit
+facts. Both run-owned fixture graphs were removed. Authenticated desktop and
+390px browser QA verified the native-modal settings sheet, keyboard/focus,
+scroll, explicit public slot selection, responsive layout and recovery without
+horizontal overflow or console errors. Shared reporting and provider-cost
+projection remain Ticket 13 responsibilities.
 
 The bag seller is a separate non-regulated media/Commerce proving seam, not a
 replacement second vertical. It validates generic attachment, observation,
@@ -639,8 +653,13 @@ provider Connection and append scoped generic receipt facts. Its focused suite
 passes 116 tests/300 assertions, its
 verified-Neon lifecycle passes 1 test/6 assertions, and desktop/mobile stale
 capability recovery plus current-action execution/completed/secure Quote
-continuation QA passes against a run-owned fixture that was removed. Tickets
-10 and 12 are the next approved source frontiers.
+continuation QA passes against a run-owned fixture that was removed. Tickets 10
+and 12 are source-complete. Ticket 12's channel-neutral appointment Neon seam
+passed 1 test/56 assertions and its separate cross-vertical same-phone
+isolation seam passed 1 test/10 assertions; authenticated desktop and 390px
+browser QA also passed. Ticket 13 is the next approved source frontier for
+shared reporting, cost/operations observability and final cross-vertical
+acceptance.
 The generated additive migrations are applied only to the Neon development
 database.
 Live-provider acceptance remains open. Throughout
