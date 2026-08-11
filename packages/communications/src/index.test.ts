@@ -44,6 +44,27 @@ describe("direct Meta WhatsApp contract", () => {
     expect(
       verifyMetaWebhookSignature({ appSecret: "secret", body, signature }),
     ).toBe(true)
+    expect(
+      verifyMetaWebhookSignature({
+        appSecret: "secret",
+        body: `${body} `,
+        signature,
+      }),
+    ).toBe(false)
+    expect(
+      verifyMetaWebhookSignature({
+        appSecret: "secret",
+        body,
+        signature: "sha256=invalid",
+      }),
+    ).toBe(false)
+    expect(
+      verifyMetaWebhookSignature({
+        appSecret: "secret",
+        body,
+        signature: null,
+      }),
+    ).toBe(false)
     expect(parseMetaWhatsAppEvents(JSON.parse(body))).toEqual([])
   })
 

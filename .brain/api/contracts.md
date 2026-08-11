@@ -285,6 +285,11 @@
   checked against both the Connection Tenant and Store Tenant; any corrupted
   or cross-Tenant active binding rejects the entire recipient route rather than
   selecting a remaining valid branch. Ambiguity and an empty result fail closed.
+- Inbound provider event identity is unique and replay-safe. Recording the same
+  provider event reuses the existing row, while worker claim uses an atomic
+  `RECEIVED -> PROCESSING` compare-and-set. Concurrent duplicate deliveries can
+  therefore produce at most one processing worker; a losing worker returns
+  before Store binding, policy or customer work.
 - Conversation state uses a Store-bounded context key after routing. Meta
   delivery/read/failure receipts bypass intake and update only the scoped
   communication attempt matched by provider message id and Connection. Receipt

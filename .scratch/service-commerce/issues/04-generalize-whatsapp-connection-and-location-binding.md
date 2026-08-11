@@ -50,10 +50,12 @@ Eligibility.
 - [x] Prove that connection replacement preserves the stable entry URL/printed
   QR and that central/multi-Store entry requires an opaque Store link or
   explicit branch choice before customer content is accepted.
-- [ ] Prove per-Store attendant routing, membership suspension/removal and the
+- [x] Prove per-Store attendant routing, membership suspension/removal and the
   same person's independent attendant/Pharmacy role composition. Ticket 06B
   owns quotation approver assignment and the commercial release workflow.
-- [ ] Test same-customer isolation, unknown recipient, signature failure, duplicate webhook, revoked credentials, connection replacement and central branch switching.
+- [x] Test same-customer isolation, unknown recipient, signature failure,
+  duplicate webhook, revoked credentials, connection replacement and central
+  branch switching.
 - [ ] Recheck current Meta policy/pricing at release and keep pharmacy activation separately fail closed.
 
 ## Evidence
@@ -76,5 +78,13 @@ Eligibility.
   reachable; healthy-state console output was clean and compact layout had no
   page-level horizontal overflow. Exact cleanup verified the run-owned Tenant
   and users at zero.
+- Focused routing, signature, Connection rotation and provider-retry checks pass
+  48 tests / 108 assertions. The verified `.env.local` Neon routing matrix
+  passes 1 test / 16 assertions: a duplicate provider event reuses one row and
+  two concurrent workers produce exactly one atomic `RECEIVED -> PROCESSING`
+  claim, alongside independent/central routing, hostile cross-Tenant rejection,
+  branch selection and revocation. Existing Store-team and quote-release proofs
+  reject inactive/removed memberships and keep attendant, pharmacist and
+  commercial-approver capabilities independent.
 - Live Meta policy/pricing review and provider release acceptance remain open;
   this evidence does not authorize a live provider action.

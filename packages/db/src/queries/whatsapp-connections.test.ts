@@ -238,6 +238,27 @@ describe("WhatsApp inbound connection routing", () => {
     })
   })
 
+  test("rejects an unknown recipient before any Store or customer lookup", async () => {
+    const queries: unknown[] = []
+    const db = {
+      whatsAppConnection: {
+        findFirst: async (query: unknown) => {
+          queries.push(query)
+          return null
+        },
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      resolveWhatsAppInboundConnection(db, { phoneNumberId: "unknown-phone" }),
+    ).rejects.toMatchObject({ code: "CONNECTION_NOT_FOUND" })
+    expect(queries).toEqual([
+      expect.objectContaining({
+        where: { phoneNumberId: "unknown-phone", status: "ACTIVE" },
+      }),
+    ])
+  })
+
   test("returns every active same-Tenant branch and requires explicit Store selection", async () => {
     const db = {
       whatsAppConnection: {
@@ -826,6 +847,102 @@ describe("WhatsApp failure controls", () => {
     expect(create).toMatchObject({ routeVertical: "SERVICE" })
   })
 
+  test("reuses one inbound row for a duplicate provider webhook", async () => {
+    const upserts: Array<Record<string, unknown>> = []
+    const transaction = {
+      serviceCommercePolicyAuditEvent: {
+        createMany: async () => ({ count: 1 }),
+      },
+      serviceCommercePolicyDecision: {
+        findMany: async () =>
+          allowedServiceCommercePolicyDecisionRows().filter(
+            (decision) =>
+              decision.channel === "WHATSAPP" &&
+              decision.subject === "INTAKE" &&
+              decision.vertical === "SERVICE",
+          ),
+      },
+      store: { findFirst: async () => ({ countryCode: "NG" }) },
+      whatsAppInboundEvent: {
+        upsert: async (input: Record<string, unknown>) => {
+          upserts.push(input)
+          return { id: "inbound-service-1", status: "RECEIVED" }
+        },
+      },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+    } as unknown as PrismaClient
+    const input = {
+      connectionId: "connection-1",
+      externalCustomerId: "customer-1",
+      messageType: "text",
+      normalizedPayload: { text: "Is this available?" },
+      providerEventId: "provider-event-replayed-1",
+      routeVertical: "service" as const,
+      storeId: "store-1",
+      tenantId: "tenant-1",
+    }
+
+    const first = await recordWhatsAppInboundEvent(db, input)
+    const replay = await recordWhatsAppInboundEvent(db, input)
+
+    expect(replay.id).toBe(first.id)
+    expect(upserts).toHaveLength(2)
+    expect(upserts).toEqual(
+      upserts.map(() =>
+        expect.objectContaining({
+          update: {},
+          where: { providerEventId: "provider-event-replayed-1" },
+        }),
+      ),
+    )
+  })
+
+  test("returns null when another worker already claimed the duplicate event", async () => {
+    let bindingReads = 0
+    const transaction = {
+      whatsAppInboundEvent: {
+        findUnique: async () => ({
+          connection: {
+            credentialReference: "credential-1",
+            phoneNumberId: "phone-1",
+            status: "ACTIVE",
+            tenantId: "tenant-1",
+          },
+          connectionId: "connection-1",
+          externalCustomerId: "customer-1",
+          id: "inbound-1",
+          messageType: "text",
+          normalizedPayload: {},
+          providerEventId: "provider-event-1",
+          requestId: null,
+          routeVertical: "SERVICE",
+          status: "RECEIVED",
+          storeId: "store-1",
+          tenantId: "tenant-1",
+        }),
+        updateMany: async () => ({ count: 0 }),
+      },
+      whatsAppStoreBinding: {
+        findFirst: async () => {
+          bindingReads += 1
+          return { id: "binding-1" }
+        },
+      },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+    } as unknown as PrismaClient
+
+    await expect(
+      claimWhatsAppInboundEvent(db, { inboundEventId: "inbound-1" }),
+    ).resolves.toBeNull()
+    expect(bindingReads).toBe(0)
+  })
+
   test("rechecks policy at inbound job claim and fails before processing", async () => {
     const updates: unknown[] = []
     const transaction = {
@@ -845,7 +962,8 @@ describe("WhatsApp failure controls", () => {
           normalizedPayload: {},
           providerEventId: "provider-event-1",
           requestId: null,
-          status: "PENDING",
+          routeVertical: "PHARMACY",
+          status: "RECEIVED",
           storeId: "store-1",
           tenantId: "tenant-1",
         }),
@@ -853,6 +971,7 @@ describe("WhatsApp failure controls", () => {
           updates.push(input)
           return input
         },
+        updateMany: async () => ({ count: 1 }),
       },
       whatsAppStoreBinding: { findFirst: async () => ({ id: "binding-1" }) },
     }

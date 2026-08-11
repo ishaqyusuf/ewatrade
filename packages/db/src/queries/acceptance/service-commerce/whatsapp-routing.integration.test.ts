@@ -19,6 +19,7 @@ import {
   updateServiceCommerceStoreProfile,
 } from "../../service-commerce-access"
 import {
+  claimWhatsAppInboundEvent,
   recordWhatsAppInboundEvent,
   resolveWhatsAppInboundConnection,
   resolveWhatsAppInboundStore,
@@ -205,6 +206,34 @@ describeWithServiceCommerceDatabase(
       expect(primaryInbound.tenantId).toBe(primary.tenantId)
       expect(hostileInbound.tenantId).toBe(hostile.tenantId)
       expect(primaryInbound.id).not.toBe(hostileInbound.id)
+
+      const primaryReplay = await recordWhatsAppInboundEvent(primary.db, {
+        connectionId: primary.connectionId,
+        externalCustomerId: customer,
+        messageType: "text",
+        normalizedPayload: { intakeKind: "commerce_inquiry" },
+        providerEventId: `routing-independent-primary-${runId}`,
+        routeVertical: "service",
+        storeId: primary.storeId,
+        tenantId: primary.tenantId,
+      })
+      expect(primaryReplay.id).toBe(primaryInbound.id)
+      expect(
+        await primary.db.whatsAppInboundEvent.count({
+          where: {
+            providerEventId: `routing-independent-primary-${runId}`,
+          },
+        }),
+      ).toBe(1)
+      const duplicateClaims = await Promise.all([
+        claimWhatsAppInboundEvent(primary.db, {
+          inboundEventId: primaryInbound.id,
+        }),
+        claimWhatsAppInboundEvent(primary.db, {
+          inboundEventId: primaryInbound.id,
+        }),
+      ])
+      expect(duplicateClaims.filter(Boolean)).toHaveLength(1)
 
       const primaryEntry = await publishCustomerEntryPoint(primary.db, {
         actorUserId: primary.actorUserId,

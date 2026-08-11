@@ -57,6 +57,10 @@
   strict advisory-only Store projection: focused checks pass 28 tests / 130
   assertions, authenticated 1280x720 and 390x844 Channels QA passed without
   console errors or page overflow, and the run-owned Tenant/users were removed.
+  Its final deterministic routing suite passes 48 tests / 108 assertions and a
+  verified-Neon matrix passes 1/16, including replay-safe provider-event storage
+  and one atomic worker claim under a concurrent duplicate. Store-team proofs
+  keep attendant, pharmacist and commercial-approver capabilities independent.
   Live Meta/provider release acceptance remains open. Ticket 05 is complete.
   Its strict shared envelope,
   Tenant/Store/attendant dispatcher, channel-locked API,

@@ -503,6 +503,9 @@ template/service-window enforcement and bounded attempt/receipt facts.
 - Inbound image/document descriptors flow to generic request-media ingestion
   after Connection/Store/policy resolution. Communications does not call a
   Prescription storage command or interpret the attachment.
+- Provider-event replay reuses one inbound row. Processing ownership is an
+  atomic `RECEIVED -> PROCESSING` claim, so concurrent duplicate webhook jobs
+  cannot both enter Store policy, customer or request handling.
 
 ## Pharmacy Vertical
 

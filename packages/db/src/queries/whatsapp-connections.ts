@@ -947,12 +947,19 @@ export async function claimWhatsAppInboundEvent(
     })
     if (
       !event ||
-      event.status === WhatsAppInboundEventStatus.PROCESSED ||
-      event.status === WhatsAppInboundEventStatus.PROCESSING ||
+      event.status !== WhatsAppInboundEventStatus.RECEIVED ||
       event.connection.status !== WhatsAppConnectionStatus.ACTIVE
     ) {
       return null
     }
+    const claimed = await tx.whatsAppInboundEvent.updateMany({
+      data: { status: WhatsAppInboundEventStatus.PROCESSING },
+      where: {
+        id: event.id,
+        status: WhatsAppInboundEventStatus.RECEIVED,
+      },
+    })
+    if (claimed.count !== 1) return null
     const activeBinding = await tx.whatsAppStoreBinding.findFirst({
       where: {
         connectionId: event.connectionId,
@@ -992,10 +999,6 @@ export async function claimWhatsAppInboundEvent(
       })
       return null
     }
-    await tx.whatsAppInboundEvent.update({
-      data: { status: WhatsAppInboundEventStatus.PROCESSING },
-      where: { id: event.id },
-    })
     return {
       connectionId: event.connectionId,
       credentialReference: event.connection.credentialReference,
