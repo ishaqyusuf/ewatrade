@@ -9,6 +9,7 @@ import { serviceCommerceInquiryRouter } from "./inquiries"
 import { serviceCommerceIntakeRouter } from "./intake"
 import { serviceCommerceMediaRouter } from "./media"
 import { serviceCommercePolicyRouter } from "./policy"
+import { serviceCommerceReportingRouter } from "./reporting"
 
 export const serviceCommerceRouter = mergeRouters(
   serviceCommerceAccessRouter,
@@ -21,4 +22,5 @@ export const serviceCommerceRouter = mergeRouters(
   serviceCommerceIntakeRouter,
   serviceCommerceMediaRouter,
   serviceCommercePolicyRouter,
+  serviceCommerceReportingRouter,
 )

@@ -62,4 +62,25 @@ describe("Service Commerce media safety", () => {
     ).rejects.toThrow("scanner unavailable")
     expect(outcomes).toEqual(["retryable"])
   })
+
+  test("keeps a quarantined document private and terminal to normal staff recovery", async () => {
+    const outcomes: string[] = []
+    const result = await runServiceCommerceMediaSafety(payload, {
+      inspect: async () => ({ lifecycle: "quarantined" }),
+      load: async () => ({
+        contentDigest: "c".repeat(64),
+        mediaAssetId: "media_1",
+        mimeType: "application/pdf",
+        storageReference: "private:media_1",
+        verifiedSizeBytes: 5,
+      }),
+      record: async (input) => {
+        outcomes.push(input.outcome)
+        return { lifecycle: input.outcome }
+      },
+    })
+
+    expect(result).toEqual({ lifecycle: "quarantined" })
+    expect(outcomes).toEqual(["quarantined"])
+  })
 })

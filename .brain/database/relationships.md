@@ -259,6 +259,28 @@ and automated safety output never become Catalog, price, stock or Order truth.
 `PrescriptionMedia` may reference a generic asset while remaining the
 authoritative clinical review and retention extension.
 
+## Service Commerce Reporting
+
+`Tenant + Store + Source -> ServiceCommerceUsageEvent`
+
+`WhatsAppConnection -> ServiceCommerceUsageEvent?`
+
+Lifecycle reporting reads authoritative occurrence fields from the existing
+Request, Quote Version, payment, booking, pickup, delivery and Service work
+graphs; it does not create a universal reporting aggregate or duplicate their
+state. External usage/cost is separate because provider attribution and later
+reconciliation are not owned by those lifecycle aggregates.
+
+`CatalogSourceLineLink.resolutionCapturedAt -> immutable resolution provenance`
+
+`CommerceQuoteLine.catalogPriceEvaluationAt -> immutable suggestion/override provenance`
+
+`CommercialOrder.completedAt -> immutable completed-sale price evidence`
+
+Null provenance/completion markers identify pre-migration history whose exact
+fact cannot be proven. Reports and price-suggestion UI surface that uncertainty
+instead of deriving it from current Catalog or Order `updatedAt` state.
+
 ## Service Commerce Booking
 
 `Store -> ServiceBookingStoreSettings`

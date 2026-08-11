@@ -376,6 +376,8 @@ describe("Service Commerce Progressive Catalog repositories", () => {
     )
 
     expect(result.offering.status).toBe("DRAFT")
+    expect(result.link.createdAsPrivateDraft).toBe(true)
+    expect(result.link.resolutionCapturedAt).toBeInstanceOf(Date)
     expect(calls).toEqual([
       "catalogItem.create",
       "catalogProduct.create",
@@ -611,6 +613,7 @@ describe("Service Commerce Progressive Catalog repositories", () => {
 describe("Service Commerce Catalog pricing and availability reads", () => {
   test("keeps Store/Tenant history scoped and selects the current Offering price with matching currency", async () => {
     let quoteWhere: unknown
+    let legacySaleWhere: unknown
     let saleWhere: unknown
     const db = {
       ...policyFakes("progressive_catalog"),
@@ -656,12 +659,18 @@ describe("Service Commerce Catalog pricing and availability reads", () => {
       },
       commercialOrderLine: {
         findMany: async ({ where }: { where: unknown }) => {
+          const completedAt = (where as { order?: { completedAt?: unknown } })
+            .order?.completedAt
+          if (completedAt === null) {
+            legacySaleWhere = where
+            return [{ id: "sale-line-without-completion-time" }]
+          }
           saleWhere = where
           return [
             {
               id: "sale-line-1",
               unitPriceMinor: 850,
-              order: { storeId: "store-1", updatedAt: now },
+              order: { completedAt: now, storeId: "store-1" },
             },
           ]
         },
@@ -708,11 +717,29 @@ describe("Service Commerce Catalog pricing and availability reads", () => {
     expect(result.evidence).not.toContainEqual(
       expect.objectContaining({ evidenceId: "quote-line-unselected" }),
     )
+    expect(result.evidence).not.toContainEqual(
+      expect.objectContaining({
+        evidenceId: "sale-line-without-completion-time",
+      }),
+    )
+    expect(result.legacyCompletedSaleEvidenceUnknownCount).toBe(1)
+    expect(result.legacyCompletedSaleEvidenceMayBeTruncated).toBe(false)
     expect(quoteWhere).toMatchObject({
       quoteVersion: { quote: { storeId: "store-1", tenantId: "tenant-1" } },
     })
     expect(saleWhere).toMatchObject({
-      order: { storeId: "store-1", tenantId: "tenant-1" },
+      order: {
+        completedAt: { not: null },
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      },
+    })
+    expect(legacySaleWhere).toMatchObject({
+      order: {
+        completedAt: null,
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      },
     })
   })
 

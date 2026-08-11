@@ -1117,11 +1117,12 @@ export async function handoffPrescriptionPickup(
       pickupStatus(fulfillment.status),
       "handed_off",
     )
+    const handedOffAt = new Date()
     await tx.prescriptionPickupFulfillment.update({
       data: {
         collectorName: input.collectorName.trim(),
         collectorRelationship: input.collectorRelationship?.trim() || null,
-        handedOffAt: new Date(),
+        handedOffAt,
         handedOffByUserId: input.actorUserId,
         pickupCodeCiphertext: null,
         pickupCodeDigest: null,
@@ -1140,7 +1141,7 @@ export async function handoffPrescriptionPickup(
       },
     })
     await tx.commercialOrder.update({
-      data: { status: OrderStatus.COMPLETED },
+      data: { completedAt: handedOffAt, status: OrderStatus.COMPLETED },
       where: { id: fulfillment.orderId },
     })
     await tx.prescriptionUsageEvent.upsert({
@@ -1763,15 +1764,16 @@ export async function transitionPrescriptionDelivery(
     )
     const mapped = input.status.toUpperCase() as PrescriptionDeliveryStatus
     const type = mapped as unknown as PrescriptionDeliveryEventType
+    const transitionAt = new Date()
     const updated = await tx.prescriptionDeliveryAssignment.update({
       data: {
         collectedAt:
           mapped === PrescriptionDeliveryStatus.COLLECTED
-            ? new Date()
+            ? transitionAt
             : undefined,
         deliveredAt:
           mapped === PrescriptionDeliveryStatus.DELIVERED
-            ? new Date()
+            ? transitionAt
             : undefined,
         failureCode:
           mapped === PrescriptionDeliveryStatus.FAILED
@@ -1799,6 +1801,10 @@ export async function transitionPrescriptionDelivery(
     })
     await tx.commercialOrder.update({
       data: {
+        completedAt:
+          mapped === PrescriptionDeliveryStatus.DELIVERED
+            ? transitionAt
+            : undefined,
         status:
           mapped === PrescriptionDeliveryStatus.DELIVERED
             ? OrderStatus.COMPLETED

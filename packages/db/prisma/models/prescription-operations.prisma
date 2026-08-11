@@ -248,6 +248,7 @@ model WhatsAppConnection {
   bindings                   WhatsAppStoreBinding[]
   inboundEvents              WhatsAppInboundEvent[]
   communicationAttempts      PrescriptionCommunicationAttempt[]
+  serviceCommerceUsageEvents ServiceCommerceUsageEvent[]
 
   @@unique([tenantId, wabaId, phoneNumberId])
   @@index([tenantId, status, updatedAt])

@@ -252,12 +252,19 @@
   passed 9/248, DB/dashboard TypeScript and Biome passed, and
   authenticated desktop plus 390px browser acceptance passed without overflow
   or console errors. No schema/provider/production operation occurred. Ticket
-  Ticket 12 appointment proof is source-complete. Its channel-neutral verified-
+  12 appointment proof is source-complete. Its channel-neutral verified-
   Neon appointment seam passed 1 test/56 assertions, the separate same-phone
   Appointment/Pharmacy isolation seam passed 1 test/10 assertions, and both
   run-owned fixture graphs were removed. Authenticated desktop and 390px QA
   passed native-modal focus, keyboard, scroll, responsive, explicit-slot and
-  recovery checks without overflow or console errors. Ticket 13 is now the
-  source frontier for shared reporting/provider-cost observability and final
-  cross-vertical acceptance; compatibility export contraction remains owner-
-  gated. Started Date: 2026-08-11.
+  recovery checks without overflow or console errors. Ticket 13 is in progress.
+  Shared Tenant/Store reporting, separated provider-cost usage/reconciliation,
+  bounded redacted drill-down, typed report UI, bag-seller Neon lifecycle,
+  generic-media matrix and cross-origin Quote-release matrix are implemented.
+  Reporting focused tests pass 23/102; its verified-Neon seam passes 1/10; the
+  bag-seller seam passes 2/16; generic-media tests pass 30/95. The additive
+  migrations are applied on verified development Neon. Remaining gates are an
+  immutable report-read audit, deterministic final routing/compatibility rerun,
+  authenticated report desktop/mobile QA, approved non-functional thresholds,
+  live providers, production reconciliation, and owner-authorized
+  switch/contraction. Started Date: 2026-08-11.

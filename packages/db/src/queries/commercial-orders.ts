@@ -292,7 +292,10 @@ async function updateOrderStatusAfterProductFulfillment(
 ) {
   const status = await resolveOrderStatusAfterProductFulfillment(tx, orderId)
   await tx.commercialOrder.update({
-    data: { status },
+    data: {
+      completedAt: status === OrderStatus.COMPLETED ? new Date() : undefined,
+      status,
+    },
     where: { id: orderId },
   })
   return status

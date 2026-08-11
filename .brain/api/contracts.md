@@ -349,6 +349,30 @@
   work to retry, and the recurring sweeper covers every pending notification
   type rather than only reminders.
 
+## Service Commerce Reporting Contract
+
+- Inputs use a half-open `[start,end)` UTC occurrence window no longer than 366
+  days. Tenant and actor are never client fields; optional Store scope is
+  checked against the authenticated Tenant's Store set before repository work.
+- Each authoritative source query is capped at 10,000 rows. `mayBeTruncated`
+  is true when any source reaches its cap so bounded aggregates are never
+  presented as exact without qualification.
+- Lifecycle values use source-owned occurrence fields: request receipt, Quote
+  issue/acceptance, payment record, booking confirmation/completion, pickup,
+  delivery and Service work completion. Current mutable `updatedAt` values are
+  not accepted as historical completion or price evidence.
+- Catalog provenance records explicit resolution and price-evaluation markers.
+  Rows predating those markers contribute to `resolutionUnknown` or
+  `quoteOverrideUnknown`; the API does not infer history from a graduated or
+  currently priced Offering.
+- Applicable external costs return a known total/count or `null` plus an
+  unknown count. Meta/BSP delivered-message cost is counted only for the
+  canonical delivered usage fact; read/failed callbacks stay reliability
+  facts. Cost kinds are never merged or estimated.
+- Report and drill-down outputs are aggregate-only strict schemas. Customer
+  names, contacts, request/media/OCR text, object/provider references, bearer
+  capabilities, credentials and provider operation ids are forbidden.
+
 ## Service Commerce Customer Action And Notification Contract
 
 - The exhaustive action vocabulary is `request_quote | view_quote |

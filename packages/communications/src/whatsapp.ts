@@ -35,6 +35,11 @@ export type NormalizedWhatsAppStatusEvent = {
   kind: "status"
   messageId: string
   phoneNumberId: string
+  pricing?: {
+    billable?: boolean
+    messageCategory?: string
+    recipientMarket?: string
+  }
   status: "delivered" | "failed" | "read" | "sent"
   timestamp?: string
 }
@@ -117,6 +122,12 @@ function messageId(payload: Record<string, unknown>) {
     throw new Error("Meta WhatsApp returned no message identity.")
   }
   return String((first as { id: unknown }).id)
+}
+
+function providerFact(value: unknown) {
+  if (typeof value !== "string") return undefined
+  const normalized = value.trim().toLowerCase()
+  return /^[a-z0-9][a-z0-9_.-]{0,79}$/.test(normalized) ? normalized : undefined
 }
 
 export class DirectMetaWhatsAppProvider implements WhatsAppProvider {
@@ -466,6 +477,32 @@ export function parseMetaWhatsAppEvents(value: unknown) {
         }
         const errors = Array.isArray(item.errors) ? item.errors : []
         const firstError = errors[0]
+        const pricing =
+          item.pricing && typeof item.pricing === "object"
+            ? (item.pricing as Record<string, unknown>)
+            : null
+        // Meta status callbacks do not include a monetary amount. Keep only
+        // explicit, non-recipient pricing facts; a phone number is never used
+        // to infer or persist a reporting market.
+        const recipientMarket = pricing
+          ? providerFact(
+              pricing.recipient_market ??
+                pricing.recipientMarket ??
+                pricing.recipient_country ??
+                pricing.recipientCountry ??
+                pricing.market,
+            )
+          : undefined
+        const normalizedPricing = pricing
+          ? {
+              billable:
+                typeof pricing.billable === "boolean"
+                  ? pricing.billable
+                  : undefined,
+              messageCategory: providerFact(pricing.category),
+              recipientMarket,
+            }
+          : undefined
         events.push({
           failureCode:
             firstError && typeof firstError === "object"
@@ -475,6 +512,10 @@ export function parseMetaWhatsAppEvents(value: unknown) {
           kind: "status",
           messageId: String(item.id ?? ""),
           phoneNumberId,
+          ...(normalizedPricing &&
+          Object.values(normalizedPricing).some((value) => value !== undefined)
+            ? { pricing: normalizedPricing }
+            : {}),
           status: statusValue as "delivered" | "failed" | "read" | "sent",
           timestamp: String(item.timestamp ?? "") || undefined,
         })

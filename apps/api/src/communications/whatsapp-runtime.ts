@@ -1,3 +1,5 @@
+import { createHmac } from "node:crypto"
+
 import {
   customerChannelConversationContextId,
   extractCustomerChannelIntakeSelection,
@@ -13,6 +15,7 @@ import {
   ServiceCommercePolicyError,
   WhatsAppConnectionError,
   recordServiceCommerceCustomerNotificationReceipt,
+  recordServiceCommerceUsageEvent,
   recordWhatsAppCommunicationStatus,
   recordWhatsAppInboundEvent,
   recordWhatsAppRoutingAlert,
@@ -29,6 +32,18 @@ function required(name: string) {
   const value = process.env[name]?.trim()
   if (!value) throw new Error(`${name} is required.`)
   return value
+}
+
+function safeUsageDeduplicationKey(input: {
+  connectionId: string
+  providerMessageId: string
+  secret: string
+}) {
+  return createHmac("sha256", input.secret)
+    .update(
+      `meta-whatsapp-delivered-usage:v1:${input.connectionId}:${input.providerMessageId}`,
+    )
+    .digest("hex")
 }
 
 export async function handleWhatsAppWebhookRequest(request: Request) {
@@ -99,6 +114,35 @@ export async function handleWhatsAppWebhookRequest(request: Request) {
             storeId: receiptRoute.storeId,
             tenantId: receiptRoute.tenantId,
           })
+          if (event.status === "delivered") {
+            // Meta sends category/billable metadata but no monetary amount in
+            // a status callback. A non-billable receipt is a known zero; every
+            // other external Meta cost stays explicitly unknown until
+            // reconciled. Read and failed statuses remain reliability receipts
+            // and never create a second usage fact for this provider message.
+            await recordServiceCommerceUsageEvent(prisma, {
+              billingOwnerSnapshot: receiptRoute.billingOwnerSnapshot,
+              connectionId: receiptRoute.connectionId,
+              currencyCode: receiptRoute.currencyCode,
+              deduplicationKey: safeUsageDeduplicationKey({
+                connectionId: receiptRoute.connectionId,
+                providerMessageId: event.messageId,
+                secret: required("META_APP_SECRET"),
+              }),
+              eventType: "message_delivered",
+              messageCategory: event.pricing?.messageCategory ?? null,
+              metaCostMinor: event.pricing?.billable === false ? 0 : null,
+              occurredAt,
+              providerKey: "meta-cloud-api",
+              recipientMarket: event.pricing?.recipientMarket ?? null,
+              reconciliationSource: "meta_whatsapp_status_webhook",
+              reconciliationStatus: "pending",
+              sourceId: receiptRoute.intentId,
+              sourceKind: "customer_channel",
+              storeId: receiptRoute.storeId,
+              tenantId: receiptRoute.tenantId,
+            })
+          }
         }
       } else {
         await recordWhatsAppCommunicationStatus(prisma, {

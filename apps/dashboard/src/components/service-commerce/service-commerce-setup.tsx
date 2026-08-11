@@ -12,6 +12,7 @@ import {
 } from "@ewatrade/service-commerce"
 import { Button } from "@ewatrade/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import { serviceCommerceSetupViewState } from "./service-commerce-setup-state"
 
@@ -191,6 +192,16 @@ export function ServiceCommerceSetup({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          {canManage ? (
+            <Button
+              render={
+                <Link href={`/service-commerce/reports?store=${storeId}`} />
+              }
+              variant="outline"
+            >
+              Reports
+            </Button>
+          ) : null}
           {stores.length > 1 ? (
             <label className="grid gap-1 text-xs text-muted-foreground">
               Store

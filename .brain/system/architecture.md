@@ -68,6 +68,11 @@ Describe the intended technical architecture and responsibility boundaries for t
 - Booking is a first-class capability with resource availability, contention,
   schedule, payment policy, reschedule/cancel and reminder semantics. It is not
   stored as generic metadata or embedded in Prescription Commerce.
+- Shared Service Commerce reporting reads canonical occurrence facts from each
+  owning aggregate and adds only an immutable external usage/cost ledger. It
+  uses bounded aggregate-only Tenant/Store queries, explicit historical-unknown
+  markers and separated provider costs; it does not create a universal event
+  store, copy customer content or infer history from mutable current state.
 - Managed Domains owns immutable quotes, encrypted registrant profiles,
   payment/registration orders, registrar lifecycle and independent
   ownership/DNS/SSL connections. `@ewatrade/domains` owns external adapters;

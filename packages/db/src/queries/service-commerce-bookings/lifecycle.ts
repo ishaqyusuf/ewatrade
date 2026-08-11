@@ -307,7 +307,7 @@ async function synchronizeBookingServiceWork(
     })
     if (incomplete === 0) {
       await tx.commercialOrder.updateMany({
-        data: { status: OrderStatus.COMPLETED },
+        data: { completedAt: effectiveAt, status: OrderStatus.COMPLETED },
         where: {
           id: input.commercialOrderId,
           storeId: input.storeId,

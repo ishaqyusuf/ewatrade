@@ -493,15 +493,20 @@ describe("Commerce Quote invariants", () => {
 
   test("prepares privately and releases the exact Quote Version before source effects", async () => {
     const events: string[] = []
+    let persistedLines: Array<Record<string, unknown>> = []
     const offering = {
       catalogItem: { name: "Consultation" },
+      currencyCode: "NGN",
+      fixedPriceMinor: 7_000,
       id: "offering-1",
       kind: "SERVICE",
       name: "Standard consultation",
       productUnitOffering: null,
+      priceChanges: [],
       serviceOffering: { quantityScale: 2 },
       status: "ACTIVE",
       storeAvailability: [{ isAvailable: true }],
+      updatedAt: new Date("2030-01-01T00:00:00.000Z"),
       variant: { name: "Default", selections: [] },
     }
     const client = {
@@ -522,10 +527,15 @@ describe("Commerce Quote invariants", () => {
         }),
       },
       commerceQuoteLine: {
-        createMany: async () => {
+        createMany: async (input: {
+          data: Array<Record<string, unknown>>
+        }) => {
+          persistedLines = input.data
           events.push("lines:create")
         },
+        findMany: async () => [],
       },
+      commercialOrderLine: { findMany: async () => [] },
       commerceQuoteOption: {
         create: async () => {
           events.push("option:create")
@@ -608,6 +618,14 @@ describe("Commerce Quote invariants", () => {
       "quote:current:version-1",
       "source:quoted",
     ])
+    expect(persistedLines[0]).toMatchObject({
+      catalogPriceOverride: true,
+      catalogPriceSuggestionScope: "offering",
+      catalogPriceSuggestionSource: "current_offering",
+      catalogSuggestedUnitPriceMinor: 7_000,
+      unitPriceMinor: 7_500,
+    })
+    expect(persistedLines[0]?.catalogPriceEvaluationAt).toBeInstanceOf(Date)
   })
 
   test("releases a Prescription Quote with its protected quote-ready effects in one transaction", async () => {
@@ -637,7 +655,11 @@ describe("Commerce Quote invariants", () => {
           storeId: "store-1",
         }),
       },
-      commerceQuoteLine: { createMany: async () => undefined },
+      commerceQuoteLine: {
+        createMany: async () => undefined,
+        findMany: async () => [],
+      },
+      commercialOrderLine: { findMany: async () => [] },
       commerceQuoteOption: {
         create: async () => ({ id: "option-1" }),
       },
@@ -786,7 +808,9 @@ describe("Commerce Quote invariants", () => {
         createMany: async () => {
           events.push("lines:create")
         },
+        findMany: async () => [],
       },
+      commercialOrderLine: { findMany: async () => [] },
       commerceQuoteOption: {
         create: async () => {
           events.push("option:create")

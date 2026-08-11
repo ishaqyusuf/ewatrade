@@ -389,6 +389,7 @@ async function createSourceLink(
     ReturnType<typeof resolveServiceCommerceCatalogSourceLine>
   >,
   commandPayloadHash?: string,
+  createdAsPrivateDraft = false,
 ) {
   const hash =
     commandPayloadHash ??
@@ -442,6 +443,8 @@ async function createSourceLink(
       linkedByUserId: input.actorUserId,
       offeringId: input.offeringId,
       payloadHash: hash,
+      createdAsPrivateDraft,
+      resolutionCapturedAt: new Date(),
       sourceId: input.source.id,
       sourceLineId: input.sourceLineId,
       sourceType: sourceType(input),
@@ -665,6 +668,7 @@ export async function createServiceCommerceCatalogDraft(
         { ...input, offeringId: offering.id },
         sourceLine,
         draftPayloadHash,
+        true,
       )
       return { link, offering }
     }, TRANSACTION_OPTIONS)

@@ -456,12 +456,17 @@ describe("WhatsApp communication receipts", () => {
           return {
             notificationIntentId: "intent-1",
             storeId: "store-1",
+            store: { currencyCode: "NGN", tenantId: "tenant-1" },
             tenantId: "tenant-1",
           }
         },
       },
       whatsAppConnection: {
-        findUnique: async () => ({ id: "connection-1", tenantId: "tenant-1" }),
+        findUnique: async () => ({
+          billingOwner: "BUSINESS",
+          id: "connection-1",
+          tenantId: "tenant-1",
+        }),
       },
     } as unknown as PrismaClient
 
@@ -471,12 +476,42 @@ describe("WhatsApp communication receipts", () => {
         providerMessageId: "wamid.customer-action",
       }),
     ).toEqual({
+      billingOwnerSnapshot: "BUSINESS",
       connectionId: "connection-1",
+      currencyCode: "NGN",
       intentId: "intent-1",
       kind: "service_commerce",
       storeId: "store-1",
       tenantId: "tenant-1",
     })
+  })
+
+  test("rejects a customer receipt whose resolved Store crosses the connection Tenant", async () => {
+    const db = {
+      prescriptionCommunicationAttempt: { findFirst: async () => null },
+      serviceCommerceCustomerNotificationAttempt: {
+        findFirst: async () => ({
+          notificationIntentId: "intent-1",
+          storeId: "store-foreign",
+          store: { currencyCode: "USD", tenantId: "tenant-foreign" },
+          tenantId: "tenant-1",
+        }),
+      },
+      whatsAppConnection: {
+        findUnique: async () => ({
+          billingOwner: null,
+          id: "connection-1",
+          tenantId: "tenant-1",
+        }),
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      resolveWhatsAppStatusConnection(db, {
+        phoneNumberId: "phone-1",
+        providerMessageId: "wamid.customer-action",
+      }),
+    ).rejects.toMatchObject({ code: "CONNECTION_NOT_FOUND" })
   })
 })
 

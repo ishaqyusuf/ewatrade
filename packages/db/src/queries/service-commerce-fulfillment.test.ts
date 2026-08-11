@@ -31,12 +31,13 @@ function fixture(overrides?: {
               sourceType: overrides?.sourceType ?? "SERVICE_REQUEST",
             },
             status: "ACCEPTED",
-            totalMinor: 20_000_00,
+            totalMinor: 0,
           },
           currencyCode: "NGN",
           id: "order-1",
           paymentStatus: overrides?.paymentStatus ?? "PAID",
           status: "CONFIRMED",
+          totalMinor: 20_000_00,
         }
       },
     },
@@ -79,6 +80,7 @@ describe("Service Commerce fulfillment repository", () => {
       fulfilmentType: "pickup",
       paid: true,
       source: context.source,
+      totalMinor: 20_000_00,
     })
     expect(calls).toEqual(["authorize", "order"])
     expect(predicates[0]).toMatchObject({

@@ -314,6 +314,28 @@ persistence boundary. Clients never access the database directly.
   Meta, payment-provider, delivery, tax, and pharmacy-revenue amounts kept in
   separate nullable fields.
 
+## Service Commerce Reporting And Truth Snapshots
+
+- `ServiceCommerceUsageEvent` is an immutable external usage/cost fact scoped
+  by Tenant, Store, source and a Tenant-unique deduplication key. Optional
+  Connection, recipient market, message category and billing-owner snapshots
+  support aggregate attribution. Each cost amount is nullable: null is unknown,
+  while zero is a recorded zero. Reconciliation status/source/time support one
+  guarded pending-to-reconciled transition without rewriting identity.
+- `CatalogSourceLineLink.resolutionCapturedAt` marks when
+  `createdAsPrivateDraft` became an authoritative resolution snapshot.
+  Pre-marker rows remain null and report as unknown; current mutable Offering
+  status is never used to reconstruct them.
+- `CommerceQuoteLine.catalogPriceEvaluationAt` marks when suggestion/effective
+  price facts were captured. Suggested amount/source/scope/effective time and
+  the override boolean remain immutable with the Quote line. Pre-marker lines
+  contribute to an explicit unknown bucket.
+- `CommercialOrder.completedAt` is the immutable completion occurrence for new
+  Product, pickup, delivery, Service-handoff and booking-completion writes. A
+  completed legacy Order without this marker remains retained and is counted as
+  unavailable legacy sale evidence rather than being assigned a mutable
+  `updatedAt` timestamp.
+
 ## Service Commerce Booking
 
 - `ServiceBookingStoreSettings` owns Store timezone, reminder defaults and a

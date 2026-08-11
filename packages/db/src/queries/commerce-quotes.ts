@@ -38,6 +38,7 @@ import {
   resolveCatalogAvailabilityAttestationForQuote,
   resolveCatalogSourceLinkForQuote,
 } from "./service-commerce-catalog"
+import { getServiceCommerceCatalogPriceSuggestionSnapshots } from "./service-commerce-catalog-pricing"
 import {
   ServiceCommercePolicyError,
   assertServiceCommercePolicyAllowedInTransaction,
@@ -1280,6 +1281,18 @@ export async function issueCommerceQuote(
       )
     }
     const byId = new Map(offerings.map((offering) => [offering.id, offering]))
+    const priceSuggestionSnapshots = new Map(
+      (
+        await getServiceCommerceCatalogPriceSuggestionSnapshots(tx, {
+          currencyCode: store.currencyCode,
+          includeTenantHistory: false,
+          offeringIds: mappedOfferingIds,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        })
+      ).map((snapshot) => [snapshot.offeringId, snapshot.suggestion]),
+    )
+    const catalogPriceEvaluatedAt = new Date()
     const resolvedOptions = preparedOptions.map((option) => {
       let subtotalMinor = 0
       const lines = option.lines.map((line) => {
@@ -1362,10 +1375,30 @@ export async function issueCommerceQuote(
           totalMinor = lineTotal(unitPriceMinor, quantity)
           if (payable) subtotalMinor += totalMinor
         }
+        const suggestion = offering
+          ? priceSuggestionSnapshots.get(offering.id)
+          : undefined
+        const suggestedUnitPriceMinor = suggestion?.priceMinor ?? null
 
         return {
           availabilityAttestationId: line.availabilityAttestationId ?? null,
           balanceRevision: line.balanceRevision ?? null,
+          catalogPriceOverride:
+            payable &&
+            unitPriceMinor !== null &&
+            suggestedUnitPriceMinor !== null &&
+            unitPriceMinor !== suggestedUnitPriceMinor,
+          catalogPriceEvaluationAt: offering ? catalogPriceEvaluatedAt : null,
+          catalogPriceSuggestionEffectiveAt: suggestion?.effectiveAt ?? null,
+          catalogPriceSuggestionScope:
+            suggestion?.priceMinor === null
+              ? null
+              : (suggestion?.scope ?? null),
+          catalogPriceSuggestionSource:
+            suggestion?.priceMinor === null
+              ? null
+              : (suggestion?.source ?? null),
+          catalogSuggestedUnitPriceMinor: suggestedUnitPriceMinor,
           catalogItemName:
             offering?.catalogItem.name ??
             line.catalogItemName?.trim() ??

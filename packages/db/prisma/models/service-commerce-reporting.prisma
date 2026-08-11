@@ -1,0 +1,71 @@
+enum ServiceCommerceUsageSourceKind {
+  SERVICE
+  PRESCRIPTION
+  COMMERCE_INQUIRY
+  BOOKING
+  CATALOG
+  MEDIA
+  CUSTOMER_CHANNEL
+  FULFILLMENT
+}
+
+enum ServiceCommerceUsageEventType {
+  MESSAGE_SENT
+  MESSAGE_DELIVERED
+  MESSAGE_READ
+  MESSAGE_FAILED
+  PAYMENT_RECONCILED
+  DELIVERY_RECONCILED
+  NUMBER_FEE_RECONCILED
+  SUBSCRIPTION_CHARGE_RECONCILED
+  PLATFORM_CHARGE_RECONCILED
+  TAX_RECONCILED
+}
+
+enum ServiceCommerceUsageReconciliationStatus {
+  PENDING
+  RECONCILED
+  FAILED
+}
+
+/// Immutable external usage and cost attribution. Core request, Quote,
+/// booking, payment and fulfilment lifecycle facts remain authoritative in
+/// their owning aggregates and are aggregated directly by reporting queries.
+/// A nullable applicable amount means unknown; an explicit zero is known zero.
+model ServiceCommerceUsageEvent {
+  id                      String                                   @id @default(cuid())
+  tenantId                String
+  storeId                 String
+  connectionId            String?
+  sourceKind              ServiceCommerceUsageSourceKind
+  sourceId                String
+  eventType               ServiceCommerceUsageEventType
+  deduplicationKey        String
+  occurredAt              DateTime
+  providerKey             String?
+  billingOwnerSnapshot    String?
+  messageCategory         String?
+  recipientMarket         String?
+  currencyCode            String
+  metaCostMinor           Int?
+  bspCostMinor            Int?
+  numberCostMinor         Int?
+  paymentProviderFeeMinor Int?
+  deliveryCostMinor       Int?
+  taxMinor                Int?
+  platformChargeMinor     Int?
+  subscriptionChargeMinor Int?
+  revenueMinor            Int?
+  reconciliationStatus    ServiceCommerceUsageReconciliationStatus @default(PENDING)
+  reconciliationSource    String?
+  reconciledAt            DateTime?
+  createdAt               DateTime                                 @default(now())
+  tenant                  Tenant                                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                   Store                                    @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  connection              WhatsAppConnection?                      @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, deduplicationKey])
+  @@index([tenantId, storeId, occurredAt])
+  @@index([tenantId, connectionId, occurredAt])
+  @@index([tenantId, eventType, occurredAt])
+}

@@ -664,7 +664,7 @@ export async function resolveWhatsAppStatusConnection(
     }
   }
   const connection = await db.whatsAppConnection.findUnique({
-    select: { id: true, tenantId: true },
+    select: { billingOwner: true, id: true, tenantId: true },
     where: { phoneNumberId: input.phoneNumberId },
   })
   const customerAttempt = connection
@@ -672,6 +672,7 @@ export async function resolveWhatsAppStatusConnection(
         select: {
           notificationIntentId: true,
           storeId: true,
+          store: { select: { currencyCode: true, tenantId: true } },
           tenantId: true,
         },
         where: {
@@ -681,14 +682,21 @@ export async function resolveWhatsAppStatusConnection(
         },
       })
     : null
-  if (!connection || !customerAttempt) {
+  if (
+    !connection ||
+    !customerAttempt ||
+    customerAttempt.tenantId !== connection.tenantId ||
+    customerAttempt.store.tenantId !== connection.tenantId
+  ) {
     throw new WhatsAppConnectionError(
       "CONNECTION_NOT_FOUND",
       "WhatsApp status connection was not found.",
     )
   }
   return {
+    billingOwnerSnapshot: connection.billingOwner ?? "tenant",
     connectionId: connection.id,
+    currencyCode: customerAttempt.store.currencyCode,
     intentId: customerAttempt.notificationIntentId,
     kind: "service_commerce" as const,
     storeId: customerAttempt.storeId,

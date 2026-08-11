@@ -188,6 +188,201 @@ describe("Service Commerce media repositories", () => {
     ).rejects.toMatchObject({ code: "CONFLICT" })
   })
 
+  test("accepts every generic web or staff image/document intake shape with a scoped private reference", async () => {
+    const sourceVersion = createHash("sha256")
+      .update(
+        JSON.stringify({
+          description: "Red bag",
+          position: 1,
+          quantity: "1",
+        }),
+      )
+      .digest("hex")
+    const cases = [
+      {
+        channel: "web" as const,
+        kind: "image" as const,
+        mimeType: "image/jpeg" as const,
+      },
+      {
+        channel: "web" as const,
+        kind: "document" as const,
+        mimeType: "application/pdf" as const,
+      },
+      {
+        channel: "staff" as const,
+        kind: "image" as const,
+        mimeType: "image/png" as const,
+      },
+      {
+        channel: "staff" as const,
+        kind: "document" as const,
+        mimeType: "application/pdf" as const,
+      },
+    ]
+
+    for (const [index, media] of cases.entries()) {
+      const writes: Record<string, unknown>[] = []
+      const client = {
+        $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+          callback(client),
+        commerceInquiryLine: {
+          findFirst: async () => ({
+            createdAt: new Date("2026-08-10T12:00:00.000Z"),
+            description: "Red bag",
+            id: "line_1",
+            inquiry: { status: "RECEIVED" },
+            position: 1,
+            requestedQuantity: 1,
+          }),
+        },
+        serviceCommerceMediaAsset: {
+          create: async ({ data }: { data: Record<string, unknown> }) => {
+            writes.push(data)
+            return asset({ ...data, id: `asset_${index}` })
+          },
+          findFirst: async () => null,
+        },
+        serviceCommerceMediaAuditEvent: {
+          create: async () => ({ id: "audit" }),
+        },
+        serviceCommercePolicyAuditEvent: {
+          createMany: async () => ({ count: 1 }),
+        },
+        serviceCommercePolicyDecision: {
+          findMany: async () => allowedServiceCommercePolicyDecisionRows(),
+        },
+        serviceCommerceSourceAttachment: {
+          count: async () => 0,
+          create: async ({ data }: { data: Record<string, unknown> }) => ({
+            ...data,
+            createdAt: new Date("2026-08-10T12:00:01.000Z"),
+            id: `attachment_${index}`,
+            lifecycle: "ACTIVE",
+          }),
+        },
+        serviceCommerceStoreProfile: {
+          findFirst: async () => ({
+            attachmentsEnabled: true,
+            attachmentsProviderReady: true,
+            staffEnabled: true,
+            status: "ACTIVE",
+            webEnabled: true,
+            whatsappEnabled: false,
+          }),
+        },
+        serviceCommerceStoreTeamAssignment: {
+          findFirst: async () => ({
+            id: "assignment_1",
+            membershipId: "member_1",
+          }),
+        },
+        store: { findFirst: async () => ({ countryCode: "NG" }) },
+        whatsAppStoreBinding: { findFirst: async () => null },
+      }
+
+      const recorded = await recordServiceCommerceMediaIntake(
+        dbClient(client),
+        {
+          ...scope,
+          channel: media.channel,
+          clientMediaId: `generic-media-${index}`,
+          fileName:
+            media.kind === "image" ? `bag-${index}.jpg` : `bag-${index}.pdf`,
+          kind: media.kind,
+          mimeType: media.mimeType,
+          privateMediaProviderReady: true,
+          retentionUntil: new Date("2027-08-10T12:00:00.000Z"),
+          signatureMimeType: media.mimeType,
+          sizeBytes: 24,
+          source: { id: "inquiry_1", kind: "commerce_inquiry" },
+          sourceLineId: "line_1",
+          sourceVersion,
+        },
+      )
+
+      expect(recorded).toMatchObject({ replayed: false })
+      expect(writes[0]).toMatchObject({
+        channelOrigin: media.channel.toUpperCase(),
+        declaredMediaType: media.mimeType,
+        kind: media.kind.toUpperCase(),
+        lifecycle: "PENDING_UPLOAD",
+        retentionClass: "ORDINARY_COMMERCE",
+        storeId: scope.storeId,
+        tenantId: scope.tenantId,
+      })
+    }
+  })
+
+  test("returns the same safe projection for an exact media replay without creating another asset", async () => {
+    const sourceVersion = createHash("sha256")
+      .update(
+        JSON.stringify({
+          description: "Red bag",
+          position: 1,
+          quantity: "1",
+        }),
+      )
+      .digest("hex")
+    const existing = asset({
+      attachments: [
+        {
+          createdAt: new Date("2026-08-10T12:00:01.000Z"),
+          id: "attachment_1",
+          lifecycle: "ACTIVE",
+          mediaAssetId: "asset_1",
+          sourceId: "inquiry_1",
+          sourceKind: "COMMERCE_INQUIRY",
+          sourceLineId: "line_1",
+          sourceVersion,
+        },
+      ],
+      channelOrigin: "WEB",
+      clientMediaId: "client_replay",
+      lifecycle: "PENDING_UPLOAD",
+      provider: null,
+      providerConnectionId: null,
+      providerMediaId: null,
+    })
+    const client = {
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback(client),
+      commerceInquiryLine: {
+        findFirst: async () => ({
+          createdAt: new Date("2026-08-10T12:00:00.000Z"),
+          description: "Red bag",
+          id: "line_1",
+          inquiry: { status: "RECEIVED" },
+          position: 1,
+          requestedQuantity: 1,
+        }),
+      },
+      serviceCommerceMediaAsset: { findFirst: async () => existing },
+    }
+
+    const replay = await recordServiceCommerceMediaIntake(dbClient(client), {
+      ...scope,
+      channel: "web",
+      clientMediaId: "client_replay",
+      fileName: "bag.jpg",
+      kind: "image",
+      mimeType: "image/jpeg",
+      privateMediaProviderReady: true,
+      retentionUntil: new Date("2027-08-10T12:00:00.000Z"),
+      signatureMimeType: "image/jpeg",
+      sizeBytes: 24,
+      source: { id: "inquiry_1", kind: "commerce_inquiry" },
+      sourceLineId: "line_1",
+      sourceVersion,
+    })
+
+    expect(replay).toMatchObject({
+      attachment: { id: "attachment_1" },
+      media: { id: "asset_1", lifecycle: "pending_upload" },
+      replayed: true,
+    })
+  })
+
   test("audits scoped stored, safety, and retry lifecycle transitions", async () => {
     const calls: Array<Record<string, unknown>> = []
     const current = asset()
@@ -246,6 +441,46 @@ describe("Service Commerce media repositories", () => {
     expect(projectSafeServiceCommerceMediaAsset(current)).not.toHaveProperty(
       "objectKey",
     )
+  })
+
+  test("allows a retryable staff upload to be safely re-uploaded without leaking its object reference", async () => {
+    const current = asset({ lifecycle: "RETRYABLE" })
+    const client = {
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback(client),
+      serviceCommerceMediaAsset: {
+        findFirst: async () => current,
+        updateMany: async ({ data }: { data: Record<string, unknown> }) => {
+          Object.assign(current, data)
+          return { count: 1 }
+        },
+      },
+      serviceCommerceMediaAuditEvent: { create: async () => ({ id: "audit" }) },
+    }
+    await scheduleServiceCommerceMediaRetry(dbClient(client), {
+      ...scope,
+      failureCode: "private_store_timeout",
+      mediaAssetId: "asset_1",
+      nextRetryAt: new Date("2026-08-10T12:05:00.000Z"),
+      reason: "retry_staff_upload",
+      retryLifecycle: "pending_upload",
+    })
+    const reuploaded = await recordStoredServiceCommerceMediaAsset(
+      dbClient(client),
+      {
+        ...scope,
+        contentDigest: "b".repeat(64),
+        mediaAssetId: "asset_1",
+        objectKey: "private/reuploaded-object",
+        reason: "retry_staff_upload_stored",
+        verifiedMediaType: "image/jpeg",
+        verifiedSizeBytes: 24,
+      },
+    )
+
+    expect(reuploaded).toMatchObject({ lifecycle: "stored" })
+    expect(reuploaded).not.toHaveProperty("objectKey")
+    expect(current.lifecycle).toBe("STORED")
   })
 
   test("returns a private reference only to an active attendant for a safe attachment and audits it", async () => {

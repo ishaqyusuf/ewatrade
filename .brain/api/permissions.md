@@ -205,6 +205,12 @@
 - Notification dispatch reauthorizes the stored actor, Tenant/Store,
   capability set, template/service window and channel policy before recipient
   decryption/provider use. Provider failure cannot broaden or revive an action.
+- Service Commerce report and drill-down reads require authenticated
+  Owner/Admin/Manager authority. Tenant is session-derived; an optional Store
+  must belong to the active Tenant. The manager role cannot request raw
+  lifecycle/media/provider rows because only aggregate allowlisted outputs are
+  exposed. A dedicated immutable report-read audit is still an open Ticket 13
+  gate before release acceptance is complete.
 
 - Any active Tenant member may receive the allowlisted profile/readiness
   projection for an authorized Store; this read does not grant operation or

@@ -141,6 +141,12 @@ model CommerceQuoteLine {
   offeringName              String
   quantity                  Decimal?                        @db.Decimal(38, 6)
   unitPriceMinor            Int?
+  catalogSuggestedUnitPriceMinor Int?
+  catalogPriceSuggestionSource   String?
+  catalogPriceSuggestionScope    String?
+  catalogPriceSuggestionEffectiveAt DateTime?
+  catalogPriceOverride      Boolean                         @default(false)
+  catalogPriceEvaluationAt  DateTime?
   totalMinor                Int                             @default(0)
   customerNote              String?
   configurationVersionId    String?

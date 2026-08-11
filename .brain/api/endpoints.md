@@ -112,6 +112,17 @@ Typed tRPC routers are the primary application contract.
   `executeCustomerAction` additionally requires a stable operation id and the
   explicit confirmation flag; it never accepts Tenant, Store, source or target
   identifiers.
+- Protected `serviceCommerce.report` returns aggregate lifecycle, Catalog,
+  reliability, media and separated-cost projections for a server-derived
+  Tenant and optional authorized Store over a half-open date window.
+- Protected `serviceCommerce.reportDrilldown` accepts only the allowlisted
+  `lifecycle | catalog | reliability | media | costs` category. It derives the
+  actor for the repository access boundary and returns aggregate, redacted
+  buckets rather than raw rows or provider operation identifiers. The internal
+  Connection id remains an allowlisted aggregate cost-attribution dimension.
+- Dashboard `/service-commerce/reports` owns typed URL `store`, `from`, `to`
+  and `detail` state plus explicit loading, empty, error, retry and truncation
+  presentation. It does not widen the server's Store or manager authorization.
 - Storefront `/action/[token]` renders the current action/recovery. Booking,
   support and Quote pages accept only the same revalidated opaque capability;
   `/commerce-inquiry-quote/[token]` owns Product Inquiry Quote selection and

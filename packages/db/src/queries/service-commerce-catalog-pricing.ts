@@ -16,6 +16,222 @@ import {
 } from "./service-commerce-catalog-source"
 import type { DbClient } from "./types"
 
+type CatalogPriceSuggestionSnapshot = {
+  evidence: ServiceCommerceCatalogPriceEvidence[]
+  legacyCompletedSaleEvidenceMayBeTruncated: boolean
+  legacyCompletedSaleEvidenceUnknownCount: number
+  offeringId: string
+  suggestion: ReturnType<typeof selectCatalogPriceSuggestion>
+}
+
+const LEGACY_COMPLETED_SALE_EVIDENCE_LIMIT = 1_000
+
+/**
+ * Resolves the immutable price evidence visible at Quote preparation time in
+ * bounded reads, regardless of the number of Offerings in the Quote.
+ * Callers must already have authorized the Tenant, Store and source command.
+ */
+export async function getServiceCommerceCatalogPriceSuggestionSnapshots(
+  db: DbClient,
+  input: {
+    currencyCode: string
+    includeTenantHistory: boolean
+    offeringIds: string[]
+    storeId: string
+    tenantId: string
+  },
+): Promise<CatalogPriceSuggestionSnapshot[]> {
+  const offeringIds = [...new Set(input.offeringIds)].slice(0, 100)
+  if (offeringIds.length === 0) return []
+  // These reads may run on an interactive Prisma transaction. Keep them
+  // sequential so the pg adapter never multiplexes queries on one client.
+  const offerings = await db.sellableOffering.findMany({
+    include: { priceChanges: { orderBy: { effectiveAt: "desc" }, take: 1 } },
+    where: {
+      currencyCode: input.currencyCode,
+      id: { in: offeringIds },
+      status: { in: [CatalogRecordStatus.ACTIVE, CatalogRecordStatus.DRAFT] },
+      tenantId: input.tenantId,
+    },
+  })
+  const quoteLines = await db.commerceQuoteLine.findMany({
+    include: {
+      quoteOption: {
+        select: {
+          quoteVersionId: true,
+          selection: { select: { quoteVersionId: true } },
+        },
+      },
+      quoteVersion: {
+        include: {
+          _count: { select: { options: true } },
+          quote: { select: { storeId: true } },
+        },
+      },
+    },
+    orderBy: { quoteVersion: { acceptedAt: "desc" } },
+    take: Math.min(offeringIds.length * 20, 2_000),
+    where: {
+      offeringId: { in: offeringIds },
+      quoteVersion: {
+        acceptedAt: { not: null },
+        currencyCode: input.currencyCode,
+        quote: {
+          storeId: input.includeTenantHistory ? undefined : input.storeId,
+          tenantId: input.tenantId,
+        },
+        status: CommerceQuoteVersionStatus.ACCEPTED,
+      },
+      unitPriceMinor: { not: null },
+    },
+  })
+  const saleLines = await db.commercialOrderLine.findMany({
+    include: { order: { select: { completedAt: true, storeId: true } } },
+    orderBy: { order: { completedAt: "desc" } },
+    take: Math.min(offeringIds.length * 10, 1_000),
+    where: {
+      offeringId: { in: offeringIds },
+      order: {
+        completedAt: { not: null },
+        currencyCode: input.currencyCode,
+        status: OrderStatus.COMPLETED,
+        storeId: input.includeTenantHistory ? undefined : input.storeId,
+        tenantId: input.tenantId,
+      },
+    },
+  })
+  const legacySaleLines = await db.commercialOrderLine.findMany({
+    select: { offeringId: true },
+    take: LEGACY_COMPLETED_SALE_EVIDENCE_LIMIT + 1,
+    where: {
+      offeringId: { in: offeringIds },
+      order: {
+        completedAt: null,
+        currencyCode: input.currencyCode,
+        status: OrderStatus.COMPLETED,
+        storeId: input.includeTenantHistory ? undefined : input.storeId,
+        tenantId: input.tenantId,
+      },
+    },
+  })
+
+  return offerings.map((offering) => {
+    const evidence: ServiceCommerceCatalogPriceEvidence[] = []
+    if (typeof offering.fixedPriceMinor === "number") {
+      evidence.push({
+        currencyCode: offering.currencyCode,
+        effectiveAt:
+          offering.priceChanges[0]?.effectiveAt ?? offering.updatedAt,
+        evidenceId: offering.id,
+        offeringId: offering.id,
+        priceMinor: offering.fixedPriceMinor,
+        scope: "offering",
+        source: "current_offering",
+        storeId: null,
+        tenantId: input.tenantId,
+      })
+    }
+    const quoteLimit = input.includeTenantHistory ? 20 : 10
+    for (const line of quoteLines) {
+      if (
+        line.offeringId !== offering.id ||
+        line.unitPriceMinor === null ||
+        !line.quoteVersion.acceptedAt
+      ) {
+        continue
+      }
+      const optionCount = line.quoteVersion._count.options
+      const payableOption =
+        optionCount === 0
+          ? line.quoteOptionId === null
+          : optionCount === 1
+            ? line.quoteOption?.quoteVersionId === line.quoteVersionId
+            : line.quoteOption?.quoteVersionId === line.quoteVersionId &&
+              line.quoteOption.selection?.quoteVersionId === line.quoteVersionId
+      if (!payableOption) continue
+      const currentStore = line.quoteVersion.quote.storeId === input.storeId
+      evidence.push(
+        currentStore
+          ? {
+              currencyCode: line.quoteVersion.currencyCode,
+              effectiveAt: line.quoteVersion.acceptedAt,
+              evidenceId: line.id,
+              offeringId: offering.id,
+              priceMinor: line.unitPriceMinor,
+              scope: "store",
+              source: "accepted_quote",
+              storeId: input.storeId,
+              tenantId: input.tenantId,
+            }
+          : {
+              authorizedTenantHistory: input.includeTenantHistory,
+              currencyCode: line.quoteVersion.currencyCode,
+              effectiveAt: line.quoteVersion.acceptedAt,
+              evidenceId: line.id,
+              offeringId: offering.id,
+              priceMinor: line.unitPriceMinor,
+              scope: "tenant",
+              source: "accepted_quote",
+              storeId: line.quoteVersion.quote.storeId,
+              tenantId: input.tenantId,
+            },
+      )
+      if (
+        evidence.filter((item) => item.source === "accepted_quote").length >=
+        quoteLimit
+      ) {
+        break
+      }
+    }
+    for (const line of saleLines) {
+      if (line.offeringId !== offering.id || !line.order.completedAt) continue
+      const currentStore = line.order.storeId === input.storeId
+      evidence.push(
+        currentStore
+          ? {
+              currencyCode: input.currencyCode,
+              effectiveAt: line.order.completedAt,
+              evidenceId: line.id,
+              offeringId: offering.id,
+              priceMinor: line.unitPriceMinor,
+              scope: "store",
+              source: "completed_sale",
+              storeId: input.storeId,
+              tenantId: input.tenantId,
+            }
+          : {
+              authorizedTenantHistory: input.includeTenantHistory,
+              currencyCode: input.currencyCode,
+              effectiveAt: line.order.completedAt,
+              evidenceId: line.id,
+              offeringId: offering.id,
+              priceMinor: line.unitPriceMinor,
+              scope: "tenant",
+              source: "completed_sale",
+              storeId: line.order.storeId,
+              tenantId: input.tenantId,
+            },
+      )
+    }
+    return {
+      evidence,
+      legacyCompletedSaleEvidenceMayBeTruncated:
+        legacySaleLines.length > LEGACY_COMPLETED_SALE_EVIDENCE_LIMIT,
+      legacyCompletedSaleEvidenceUnknownCount: legacySaleLines
+        .slice(0, LEGACY_COMPLETED_SALE_EVIDENCE_LIMIT)
+        .filter((line) => line.offeringId === offering.id).length,
+      offeringId: offering.id,
+      suggestion: selectCatalogPriceSuggestion({
+        currencyCode: input.currencyCode,
+        evidence,
+        offeringId: offering.id,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      }),
+    }
+  })
+}
+
 export async function getServiceCommerceCatalogPriceSuggestions(
   db: DbClient,
   input: {
@@ -92,7 +308,7 @@ export async function getServiceCommerceCatalogPriceSuggestions(
     )
   }
 
-  const [quoteLines, saleLines] = await Promise.all([
+  const [quoteLines, saleLines, legacySaleLines] = await Promise.all([
     db.commerceQuoteLine.findMany({
       include: {
         quoteOption: {
@@ -125,12 +341,27 @@ export async function getServiceCommerceCatalogPriceSuggestions(
       },
     }),
     db.commercialOrderLine.findMany({
-      include: { order: { select: { storeId: true, updatedAt: true } } },
-      orderBy: { order: { updatedAt: "desc" } },
+      include: { order: { select: { completedAt: true, storeId: true } } },
+      orderBy: { order: { completedAt: "desc" } },
       take: input.includeTenantHistory ? 20 : 10,
       where: {
         offeringId: offering.id,
         order: {
+          completedAt: { not: null },
+          currencyCode: store.currencyCode,
+          status: OrderStatus.COMPLETED,
+          storeId: input.includeTenantHistory ? undefined : input.storeId,
+          tenantId: input.tenantId,
+        },
+      },
+    }),
+    db.commercialOrderLine.findMany({
+      select: { id: true },
+      take: LEGACY_COMPLETED_SALE_EVIDENCE_LIMIT + 1,
+      where: {
+        offeringId: offering.id,
+        order: {
+          completedAt: null,
           currencyCode: store.currencyCode,
           status: OrderStatus.COMPLETED,
           storeId: input.includeTenantHistory ? undefined : input.storeId,
@@ -200,12 +431,13 @@ export async function getServiceCommerceCatalogPriceSuggestions(
     if (quoteEvidenceCount >= quoteEvidenceLimit) break
   }
   for (const line of saleLines) {
+    if (!line.order.completedAt) continue
     const currentStore = line.order.storeId === input.storeId
     evidence.push(
       currentStore
         ? {
             currencyCode: store.currencyCode,
-            effectiveAt: line.order.updatedAt,
+            effectiveAt: line.order.completedAt,
             evidenceId: line.id,
             offeringId: offering.id,
             priceMinor: line.unitPriceMinor,
@@ -217,7 +449,7 @@ export async function getServiceCommerceCatalogPriceSuggestions(
         : {
             authorizedTenantHistory: input.includeTenantHistory,
             currencyCode: store.currencyCode,
-            effectiveAt: line.order.updatedAt,
+            effectiveAt: line.order.completedAt,
             evidenceId: line.id,
             offeringId: offering.id,
             priceMinor: line.unitPriceMinor,
@@ -231,6 +463,12 @@ export async function getServiceCommerceCatalogPriceSuggestions(
 
   return {
     evidence,
+    legacyCompletedSaleEvidenceMayBeTruncated:
+      legacySaleLines.length > LEGACY_COMPLETED_SALE_EVIDENCE_LIMIT,
+    legacyCompletedSaleEvidenceUnknownCount: Math.min(
+      legacySaleLines.length,
+      LEGACY_COMPLETED_SALE_EVIDENCE_LIMIT,
+    ),
     sourceLine: { ...sourceLine.ref, displayLabel: sourceLine.displayLabel },
     suggestion: selectCatalogPriceSuggestion({
       currencyCode: store.currencyCode,

@@ -230,6 +230,16 @@ describe("generic customer request media contracts", () => {
     expect(() =>
       privateMedia.consumeViewerGrant(expiredGrant.url.split("/").at(-1) ?? ""),
     ).toThrow()
+    const reauthorizedGrant = await privateMedia.createViewerGrant({
+      expiresAt: new Date(now + 60_000),
+      mediaAssetId: asset.id,
+      storageReference: stored.storageReference,
+    })
+    expect(
+      privateMedia.consumeViewerGrant(
+        reauthorizedGrant.url.split("/").at(-1) ?? "",
+      ).bytes,
+    ).toEqual(new Uint8Array([1, 2, 3]))
 
     const safety = createDeterministicPrivateMediaSafetyProvider({
       outcomesByContentDigest: { [asset.contentDigest]: "quarantined" },

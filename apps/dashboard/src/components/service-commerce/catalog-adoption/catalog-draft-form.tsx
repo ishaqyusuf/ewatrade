@@ -325,26 +325,49 @@ function PriceSuggestionState({
       </Button>
     )
   }
+  const hasLegacyCompletedSaleEvidence = Boolean(
+    data &&
+      (data.legacyCompletedSaleEvidenceUnknownCount > 0 ||
+        data.legacyCompletedSaleEvidenceMayBeTruncated),
+  )
   if (
     !data ||
     data.suggestion.priceMinor === null ||
     !data.suggestion.currencyCode
   ) {
     return (
-      <p className="text-sm text-muted-foreground">
-        No attributable Store price is available. Enter the current Quote price
-        manually.
-      </p>
+      <div className="space-y-1 text-sm text-muted-foreground">
+        <p>
+          No attributable Store price is available. Enter the current Quote
+          price manually.
+        </p>
+        {hasLegacyCompletedSaleEvidence ? (
+          <p>
+            Some completed sales predate immutable completion timestamps and are
+            excluded from automatic suggestions. Verify the current price
+            manually.
+          </p>
+        ) : null}
+      </div>
     )
   }
   return (
-    <p className="text-sm text-muted-foreground">
-      Suggested from {data.suggestion.source.replaceAll("_", " ")}:{" "}
-      {data.suggestion.currencyCode}{" "}
-      {(data.suggestion.priceMinor / 100).toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-      })}
-      . This does not change the reusable Catalog price.
-    </p>
+    <div className="space-y-1 text-sm text-muted-foreground">
+      <p>
+        Suggested from {data.suggestion.source.replaceAll("_", " ")}:{" "}
+        {data.suggestion.currencyCode}{" "}
+        {(data.suggestion.priceMinor / 100).toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+        })}
+        . This does not change the reusable Catalog price.
+      </p>
+      {hasLegacyCompletedSaleEvidence ? (
+        <p>
+          Some completed sales predate immutable completion timestamps and are
+          excluded from automatic suggestions. Verify the current price
+          manually.
+        </p>
+      ) : null}
+    </div>
   )
 }

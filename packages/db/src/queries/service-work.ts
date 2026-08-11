@@ -2000,11 +2000,7 @@ export async function listServiceWorkQueuePage(
     db.serviceJob.findMany({
       cursor: input.cursor ? { id: input.cursor } : undefined,
       include: jobGraph,
-      orderBy: [
-        { priority: "desc" },
-        { createdAt: "asc" },
-        { id: "asc" },
-      ],
+      orderBy: [{ priority: "desc" }, { createdAt: "asc" }, { id: "asc" }],
       skip: input.cursor ? 1 : 0,
       take: limit + 1,
       where,
@@ -2216,7 +2212,7 @@ export async function recordServiceHandoff(
       where: { id: job.id },
     })
     await tx.commercialOrder.update({
-      data: { status: OrderStatus.COMPLETED },
+      data: { completedAt: handedOffAt, status: OrderStatus.COMPLETED },
       where: { id: job.commercialOrderId },
     })
     await cancelOutstandingDueReminders(tx, job.id)

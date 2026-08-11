@@ -26,6 +26,8 @@ model CatalogSourceLineLink {
   sourceLineId             String
   sourceVersionFingerprint String
   offeringId               String
+  createdAsPrivateDraft    Boolean                             @default(false)
+  resolutionCapturedAt     DateTime?
   verifiedObservationId    String?                             @unique
   verifiedLabel            String
   clientOperationId        String

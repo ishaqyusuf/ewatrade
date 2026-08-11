@@ -86,6 +86,44 @@ describe("direct Meta WhatsApp contract", () => {
     ])
   })
 
+  test("keeps only explicit safe Meta pricing facts from status receipts", () => {
+    const [event] = parseMetaWhatsAppEvents({
+      entry: [
+        {
+          changes: [
+            {
+              value: {
+                metadata: { phone_number_id: "phone-1" },
+                statuses: [
+                  {
+                    id: "wamid.1",
+                    pricing: {
+                      billable: false,
+                      category: "UTILITY",
+                      recipient_id: "2348000000000",
+                      recipient_market: "NG",
+                    },
+                    status: "delivered",
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(event).toMatchObject({
+      kind: "status",
+      pricing: {
+        billable: false,
+        messageCategory: "utility",
+        recipientMarket: "ng",
+      },
+    })
+    expect(JSON.stringify(event)).not.toContain("2348000000000")
+  })
+
   test("includes connection, customer, and bounded context in Redis keys", () => {
     expect(
       conversationStateKey({

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
+  ServiceCommerceMediaError,
   claimServiceCommerceMediaRetention,
   recordDeletedServiceCommerceMediaAsset,
 } from "./service-commerce-media-assets"
@@ -71,5 +72,40 @@ describe("Service Commerce baseline media retention", () => {
         expect.objectContaining({ storeId: "store_1", tenantId: "tenant_1" }),
       ]),
     )
+
+    const replay = await recordDeletedServiceCommerceMediaAsset(
+      dbClient(client),
+      { ...scope, reason: "baseline_retention_replay" },
+    )
+    expect(replay).toMatchObject({ lifecycle: "deleted" })
+    expect(writes).toHaveLength(2)
+  })
+
+  test("fails closed when an asset cannot be resolved in another Store or Tenant", async () => {
+    for (const scope of [
+      { storeId: "store_other", tenantId: "tenant_1" },
+      { storeId: "store_1", tenantId: "tenant_other" },
+    ]) {
+      const requestedScopes: Array<Record<string, unknown>> = []
+      const client = {
+        $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+          callback(client),
+        serviceCommerceMediaAsset: {
+          findFirst: async ({ where }: { where: Record<string, unknown> }) => {
+            requestedScopes.push(where)
+            return null
+          },
+        },
+      }
+
+      await expect(
+        recordDeletedServiceCommerceMediaAsset(dbClient(client), {
+          mediaAssetId: "media_1",
+          reason: "cross_scope_rejection",
+          ...scope,
+        }),
+      ).rejects.toBeInstanceOf(ServiceCommerceMediaError)
+      expect(requestedScopes).toEqual([{ id: "media_1", ...scope }])
+    }
   })
 })

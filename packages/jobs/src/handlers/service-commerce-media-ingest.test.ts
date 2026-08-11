@@ -156,4 +156,57 @@ describe("Service Commerce media ingest", () => {
       "tenantId",
     ])
   })
+
+  test("accepts a provider PDF through the same private retry-safe ingest path", async () => {
+    const calls: string[] = []
+    await runServiceCommerceMediaIngest(payload, {
+      claim: async () => ({
+        provider: "meta",
+        providerConnectionId: "connection_1",
+        providerMediaId: "provider_document_1",
+      }),
+      enqueueSafety: async () => calls.push("enqueue"),
+      fetchMedia: async () => ({
+        bytes: new TextEncoder().encode("%PDF-1.7 generic customer document"),
+        mediaType: "application/pdf",
+      }),
+      loadConnection: async () => ({
+        credentialReference: "credential_ref",
+        phoneNumberId: "phone_1",
+      }),
+      loadSafety: async () => null,
+      recordStored: async (input) => {
+        calls.push(`stored:${input.verifiedMediaType}`)
+        return { lifecycle: "stored" }
+      },
+      requestSafety: async () => calls.push("safety"),
+      reject: async () => {
+        throw new Error("unexpected rejection")
+      },
+      resolveCredential: () => "secret",
+      scheduleRetry: async () => {
+        throw new Error("unexpected retry")
+      },
+      storage: {
+        createViewerGrant: async () => {
+          throw new Error("not used")
+        },
+        delete: async () => undefined,
+        read: async () => {
+          throw new Error("not used")
+        },
+        store: async (input) => {
+          calls.push(`private:${input.mimeType}`)
+          return { storageReference: "private:media_1" }
+        },
+      },
+    })
+
+    expect(calls).toEqual([
+      "private:application/pdf",
+      "stored:application/pdf",
+      "safety",
+      "enqueue",
+    ])
+  })
 })

@@ -477,6 +477,44 @@ Neon acceptance passed web Product Inquiry replay, staff Generic Service,
 generic WhatsApp Inquiry and exact-Product recovery with 5 assertions.
 Complete cross-source media/isolation and browser acceptance remain open.
 
+## Service Commerce Reporting And Historical Truth Migration State
+
+On 2026-08-11 Prisma generated four additive development migrations:
+
+- `20260811144714_service_commerce_reporting_usage` adds the immutable
+  Tenant/Store/source usage and separated-cost ledger.
+- `20260811161234_catalog_source_resolution_snapshot` adds the initial Catalog
+  draft-resolution snapshot.
+- `20260811161703_commerce_quote_price_suggestion_snapshot` adds immutable
+  suggested-price/override fields on Quote lines.
+- `20260811172000_reporting_truth_snapshots` adds nullable provenance markers
+  and `CommercialOrder.completedAt` for authoritative future occurrences.
+
+All four artifacts were applied to the canonical verified `.env.local` Neon
+development profile using the guarded workspace environment and Prisma migrate
+deploy. The required repository wrappers `bun db:migrate` and `bun db:push`
+were also attempted after the schema changes; both returned Prisma's generic
+schema-engine error against the same verified Neon profile. No local
+PostgreSQL/Docker fallback, reset, data-loss override, production database or
+live provider operation was used.
+
+The migrations do not fabricate historical truth. Existing Catalog resolution
+and Quote override rows keep nullable provenance markers and report as unknown.
+Existing completed Orders without an authoritative completion occurrence keep
+`completedAt = null`; the price-suggestion contract exposes their bounded
+unknown-evidence count and excludes them from automatic chronology. A future
+production reconciliation may fill a marker only where an authoritative
+immutable event proves the time, and remains owner-authorized release work.
+
+During Prisma schema-engine diagnosis an empty development-Neon shadow database
+named `ewatrade_prisma_shadow` was created and then dropped. It contained no
+application data and is not recoverable; the application development database
+was not deleted or reset.
+
+Verified development evidence after application includes the bag-seller seam
+(2 tests/16 assertions) and reporting seam (1 test/10 assertions), both with
+run-owned cleanup. Production application/reconciliation remains open.
+
 # Hybrid QA cleanup
 
 - Adds tenant QA lifecycle fields and global purge-run receipts. Apply the

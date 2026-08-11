@@ -152,6 +152,7 @@ async function loadServiceCommerceFulfillmentOrderInTransaction(
         },
       },
       status: true,
+      totalMinor: true,
     },
     where: {
       id: input.orderId,
@@ -244,7 +245,7 @@ async function loadServiceCommerceFulfillmentOrderInTransaction(
     paid: order.paymentStatus === PaymentStatus.PAID,
     quoteVersionId: version.id,
     source: resolvedSource,
-    totalMinor: version.totalMinor,
+    totalMinor: order.totalMinor,
   }
 }
 

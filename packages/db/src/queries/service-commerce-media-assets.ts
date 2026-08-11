@@ -732,6 +732,12 @@ export async function recordDeletedServiceCommerceMediaAsset(
 ) {
   return db.$transaction(async (tx) => {
     const asset = await getScopedAsset(tx, input)
+    // Object deletion can succeed while the worker crashes before this durable
+    // transition. A replay must therefore be safe and must not try to recreate
+    // private provider references or append a second deletion audit event.
+    if (asset.lifecycle === ServiceCommerceMediaLifecycle.DELETED) {
+      return projectSafeServiceCommerceMediaAsset(asset)
+    }
     assertTransition(asset.lifecycle, ServiceCommerceMediaLifecycle.DELETED)
     const changed = await tx.serviceCommerceMediaAsset.updateMany({
       data: {

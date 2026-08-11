@@ -26,6 +26,12 @@ history. Ticket 06B adds Store-scoped attendant trust or exact-version approval
 with atomic public release and notification effects. Ticket 08 extracts strict
 source-bound pickup/delivery commands, safe operational projections and
 transactional gates while Pharmacy remains the first compatibility adapter.
+Tickets 10 and 12 are source-complete. Ticket 13 is in progress: shared
+reporting, provider-cost attribution, redacted operations, the non-regulated
+bag-seller lifecycle, generic-media coverage and the cross-origin Quote-release
+matrix are implemented. Browser/non-functional thresholds, final routing and
+compatibility reruns, live providers, production rollout and contraction remain
+open gates.
 Production schema/provider operations remain separately authorized.
 
 Pharmacy Commerce is the first regulated vertical and retains its completed
@@ -46,6 +52,8 @@ consultation practice.
 - Approved tickets and execution order: `.scratch/service-commerce/issues/README.md`
 - Midday migration contract: `.scratch/service-commerce/midday-migration-contract.md`
 - Policy release gate: `.brain/runbooks/service-commerce-policy-release.md`
+- Ticket 13 readiness/rollback report:
+  `.brain/runbooks/service-commerce-ticket-13-readiness.md`
 - Existing Service foundation: `.brain/features/generic-service-operations.md`
 - First vertical: `.brain/features/prescription-commerce.md`
 - Midday migration standard: `.scratch/prescription-commerce/midday-migration-contract.md`
@@ -555,13 +563,50 @@ staleness, provider failure, safe projections, queues and authoritative audit
 facts. Both run-owned fixture graphs were removed. Authenticated desktop and
 390px browser QA verified the native-modal settings sheet, keyboard/focus,
 scroll, explicit public slot selection, responsive layout and recovery without
-horizontal overflow or console errors. Shared reporting and provider-cost
-projection remain Ticket 13 responsibilities.
+horizontal overflow or console errors. Ticket 13 now implements shared
+reporting and provider-cost projection; its final acceptance gates remain open.
 
 The bag seller is a separate non-regulated media/Commerce proving seam, not a
 replacement second vertical. It validates generic attachment, observation,
 Progressive Catalog, Offer Option, Quote/payment and fulfilment behavior before
 the appointment vertical validates booking/resource reuse.
+
+## Shared Reporting And Operational Observability
+
+The authenticated Service Commerce report is manager-only and derives Tenant,
+actor and allowed Store scope from the server. It accepts a typed half-open
+`[start,end)` window of at most 366 days, caps each repository source read at
+10,000 rows and returns `mayBeTruncated` whenever a cap is reached. The report
+and its allowlisted lifecycle, Catalog, reliability, media and cost drill-downs
+contain aggregates only; customer text, contact data, media/object references,
+bearer capabilities, credentials and provider operation ids are excluded.
+
+Core Request, Quote, payment, booking, pickup, delivery and Service completion
+metrics use their authoritative occurrence timestamps. Catalog link and Quote
+line snapshots record when draft-vs-existing resolution and
+suggested-vs-entered price evaluation became authoritative. Pre-marker history
+is reported as explicit unknown rather than inferred from current mutable
+Offering state. `CommercialOrder.completedAt` is the immutable completed-sale
+occurrence used by price suggestions; later payment or fulfilment edits do not
+rewrite sale chronology.
+
+`ServiceCommerceUsageEvent` is an immutable, Tenant/Store-scoped external usage
+ledger. Direct Meta creates one canonical delivered-message usage fact per
+provider message; read and failed callbacks remain reliability receipts. A
+compare-and-set reconciliation command can turn one pending, wholly-unknown
+cost fact into provider-verified amounts while exact replay is idempotent and
+identity/payload changes fail closed. Meta, BSP/Twilio, number, payment,
+delivery, tax, subscription, platform and revenue dimensions remain separate.
+An unavailable applicable cost is `null` with an unknown count; zero is known
+only when the provider fact explicitly establishes zero.
+
+Verified source evidence includes a 23-test/102-assertion focused reporting
+suite and a 1-test/10-assertion development-Neon reporting lifecycle. The
+Pharmacy-free bag-seller Neon seam passed 2 tests/16 assertions, and generic
+media passed 30 tests/95 assertions. The report browser surface is implemented
+with typed URL Store/date/drill-down state and explicit loading, error, empty,
+retry and truncation states; authenticated desktop/mobile acceptance for that
+new surface remains open.
 
 ## Cost And Billing Boundary
 
@@ -657,9 +702,10 @@ continuation QA passes against a run-owned fixture that was removed. Tickets 10
 and 12 are source-complete. Ticket 12's channel-neutral appointment Neon seam
 passed 1 test/56 assertions and its separate cross-vertical same-phone
 isolation seam passed 1 test/10 assertions; authenticated desktop and 390px
-browser QA also passed. Ticket 13 is the next approved source frontier for
-shared reporting, cost/operations observability and final cross-vertical
-acceptance.
+browser QA also passed. Ticket 13 is in progress with reporting/cost,
+bag-seller, media and Quote-release source seams verified. Final browser,
+non-functional threshold, routing-regression, live-provider, production and
+owner-authorized switch/contraction gates remain open.
 The generated additive migrations are applied only to the Neon development
 database.
 Live-provider acceptance remains open. Throughout
