@@ -67,7 +67,7 @@ export function PrescriptionWorkspaceGate({
         <header>
           <p className="text-sm text-muted-foreground">{store.name}</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-            Prescription Commerce setup
+            Pharmacy compliance setup
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             Complete the pharmacy policy and professional role checks before
@@ -83,9 +83,9 @@ export function PrescriptionWorkspaceGate({
           </p>
           <Button
             className="mt-5"
-            render={<Link href="/settings/prescriptions" />}
+            render={<Link href="/settings/compliance" />}
           >
-            Continue pharmacy setup
+            Continue compliance setup
           </Button>
         </section>
       </main>

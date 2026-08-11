@@ -12,21 +12,31 @@ import {
 } from "@ewatrade/prescriptions/schemas"
 import { Button } from "@ewatrade/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import Link from "next/link"
 import { useEffect, useState } from "react"
 import { z } from "zod"
-import { PrescriptionOperationsSetup } from "./prescription-operations-setup"
 
 const DAYS = PRESCRIPTION_OPERATING_DAYS
-type SettingsFormValues = PrescriptionStoreSettingsFormValues
+type PrescriptionSettingsFormValues = PrescriptionStoreSettingsFormValues
+type ComplianceSettingsFormValues = Omit<
+  PrescriptionSettingsFormValues,
+  "deliveryEnabled" | "pickupEnabled"
+>
 type RoleFormValues = PrescriptionRoleAssignmentFormValues
 
-const defaultHours: SettingsFormValues["operatingHours"] = DAYS.map((day) => ({
-  closesAt: day === "saturday" || day === "sunday" ? undefined : "18:00",
-  day,
-  isClosed: day === "saturday" || day === "sunday",
-  opensAt: day === "saturday" || day === "sunday" ? undefined : "08:00",
-}))
+const pharmacyComplianceSettingsFormSchema =
+  prescriptionStoreSettingsFormSchema.omit({
+    deliveryEnabled: true,
+    pickupEnabled: true,
+  })
+
+const defaultHours: PrescriptionSettingsFormValues["operatingHours"] = DAYS.map(
+  (day) => ({
+    closesAt: day === "saturday" || day === "sunday" ? undefined : "18:00",
+    day,
+    isClosed: day === "saturday" || day === "sunday",
+    opensAt: day === "saturday" || day === "sunday" ? undefined : "08:00",
+  }),
+)
 
 const fieldClass =
   "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -49,7 +59,7 @@ const READINESS_LABELS: Record<string, string> = {
   verified_pharmacist: "Assign a verified pharmacist",
 }
 
-export function PrescriptionCommerceSetup({
+export function PharmacyComplianceSetup({
   storeId,
   storeName,
 }: {
@@ -62,16 +72,14 @@ export function PrescriptionCommerceSetup({
     trpc.prescriptions.setup.queryOptions({ storeId }, { retry: false }),
   )
   const [message, setMessage] = useState<string | null>(null)
-  const settingsForm = useZodForm<SettingsFormValues>(
-    prescriptionStoreSettingsFormSchema,
+  const settingsForm = useZodForm<ComplianceSettingsFormValues>(
+    pharmacyComplianceSettingsFormSchema,
     {
       defaultValues: {
         consentVersion: "2026-08-08",
         contactPolicy:
           "Contact customers only for prescription clarification and fulfilment updates.",
-        deliveryEnabled: false,
         operatingHours: defaultHours,
-        pickupEnabled: true,
         servicePolicy:
           "Every request requires attendant verification and pharmacist release before quotation.",
       },
@@ -96,9 +104,7 @@ export function PrescriptionCommerceSetup({
     settingsForm.reset({
       consentVersion: settings.consentVersion ?? "2026-08-08",
       contactPolicy: settings.contactPolicy ?? "",
-      deliveryEnabled: settings.deliveryEnabled,
       operatingHours: normalizeHours(settings.operatingHours),
-      pickupEnabled: settings.pickupEnabled,
       servicePolicy: settings.servicePolicy ?? "",
     })
   }, [settingsForm, setupQuery.data?.settings])
@@ -113,7 +119,7 @@ export function PrescriptionCommerceSetup({
       onError: (error) => setMessage(error.message),
       onSuccess: async () => {
         await invalidateSetup()
-        setMessage("Prescription Commerce settings saved.")
+        setMessage("Pharmacy compliance settings saved.")
       },
     }),
   )
@@ -143,8 +149,8 @@ export function PrescriptionCommerceSetup({
         await invalidateSetup()
         setMessage(
           result.settings.status === "active"
-            ? "Prescription Commerce activated."
-            : "Prescription Commerce deactivated.",
+            ? "Pharmacy compliance activated."
+            : "Pharmacy compliance deactivated.",
         )
       },
     }),
@@ -163,7 +169,7 @@ export function PrescriptionCommerceSetup({
     return (
       <div className="grid gap-3 p-6 lg:p-8">
         <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {setupQuery.error?.message ?? "Prescription setup is unavailable."}
+          {setupQuery.error?.message ?? "Pharmacy compliance is unavailable."}
         </p>
         <Button
           className="w-fit"
@@ -185,11 +191,11 @@ export function PrescriptionCommerceSetup({
         <div>
           <p className="text-sm text-muted-foreground">{storeName}</p>
           <h1 className="text-2xl font-semibold tracking-tight">
-            Prescription Commerce
+            Pharmacy compliance
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Configure pharmacy policies and professional roles before accepting
-            prescription requests.
+            Configure pharmacy consent, professional roles, and clinical
+            operating controls before accepting prescription requests.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -242,11 +248,16 @@ export function PrescriptionCommerceSetup({
         <form
           className="grid gap-6 rounded-xl border border-border bg-card p-5"
           onSubmit={settingsForm.handleSubmit((values) =>
-            settingsMutation.mutate({ ...values, storeId }),
+            settingsMutation.mutate({
+              ...values,
+              deliveryEnabled: setup.settings.deliveryEnabled,
+              pickupEnabled: setup.settings.pickupEnabled,
+              storeId,
+            }),
           )}
         >
           <div>
-            <h2 className="font-semibold">Operating policy</h2>
+            <h2 className="font-semibold">Clinical operating policy</h2>
             <p className="text-sm text-muted-foreground">
               These settings are store-specific and do not replace pharmacist
               judgment.
@@ -328,30 +339,6 @@ export function PrescriptionCommerceSetup({
               {...settingsForm.register("consentVersion")}
             />
           </label>
-          <fieldset className="grid gap-2">
-            <legend className="mb-1 text-sm font-medium">
-              Fulfilment modes
-            </legend>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                {...settingsForm.register("pickupEnabled")}
-              />
-              Pickup
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                {...settingsForm.register("deliveryEnabled")}
-              />
-              Delivery
-            </label>
-            {settingsForm.formState.errors.pickupEnabled ? (
-              <p className="text-sm text-destructive">
-                {settingsForm.formState.errors.pickupEnabled.message}
-              </p>
-            ) : null}
-          </fieldset>
           <Button disabled={settingsMutation.isPending} type="submit">
             {settingsMutation.isPending ? "Saving…" : "Save policy"}
           </Button>
@@ -470,23 +457,6 @@ export function PrescriptionCommerceSetup({
           </section>
         </div>
       </div>
-      <section className="grid gap-3 rounded-xl border border-border bg-card p-5">
-        <div>
-          <h2 className="font-semibold">Customer channels</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            WhatsApp connections, Store routing and shareable customer links are
-            configured once for the whole business. Pharmacy setup here remains
-            responsible for professional roles and regulated controls.
-          </p>
-        </div>
-        <Link
-          className="inline-flex h-10 w-fit items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium hover:bg-muted"
-          href={`/settings/channels?storeId=${encodeURIComponent(storeId)}`}
-        >
-          Open Customer channels
-        </Link>
-      </section>
-      <PrescriptionOperationsSetup storeId={storeId} />
     </div>
   )
 }

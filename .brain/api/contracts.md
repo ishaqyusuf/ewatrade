@@ -651,6 +651,20 @@ implements the Progressive Catalog commands below.
   `prescription` resolves the current source-owned Pharmacy capability through
   a server redirect. Generic WhatsApp is advertised only when the generic
   Service route itself is policy-ready.
+- Shared Pharmacy source/action projection consumes a server-owned current
+  release fact and minimum internal contact-delivery facts, not clinical
+  detail. Contact opt-in/email/phone may feed protected notification
+  orchestration but never appear in the customer-safe projection. The current pharmacist review must be
+  `RELEASED`, match the request's current media and transcript revisions, and
+  accompany an allowlisted quote/post-quote source state. Missing or stale
+  release facts produce no shared action. Clinical media, OCR, transcripts and
+  review notes never cross this adapter boundary.
+- Pharmacy compliance update and activation re-read the Tenant/Store-scoped
+  Service Commerce profile inside the repository transaction. An active shared
+  profile owns pickup/delivery outcome readiness and legacy Prescription fields
+  are written only as compatibility mirrors; disabled/suspended shared profiles
+  fail closed. If no shared profile exists, legacy fields remain the reversible
+  expand-contract fallback.
 - The repository re-resolves Store, active attendant, readiness and policy
   before delegating to one explicit `commerce_inquiry | service |
   prescription | exact_product` intent. Source aggregates retain lifecycle and

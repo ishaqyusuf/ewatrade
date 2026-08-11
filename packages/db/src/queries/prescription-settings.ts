@@ -48,6 +48,31 @@ export type PrescriptionStoreReadinessInput = {
   verifiedPharmacistCount: number
 }
 
+type SharedFulfilmentProfile = {
+  deliveryEnabled: boolean
+  pickupEnabled: boolean
+  status: "ACTIVE" | "DISABLED" | "SUSPENDED"
+}
+
+export function resolvePrescriptionFulfilmentCompatibility(input: {
+  sharedProfile: SharedFulfilmentProfile | null
+  legacyDeliveryEnabled: boolean
+  legacyPickupEnabled: boolean
+}) {
+  if (!input.sharedProfile) {
+    return {
+      deliveryEnabled: input.legacyDeliveryEnabled,
+      pickupEnabled: input.legacyPickupEnabled,
+    }
+  }
+
+  const active = input.sharedProfile.status === "ACTIVE"
+  return {
+    deliveryEnabled: active && input.sharedProfile.deliveryEnabled,
+    pickupEnabled: active && input.sharedProfile.pickupEnabled,
+  }
+}
+
 export function evaluatePrescriptionStoreReadiness(
   input: PrescriptionStoreReadinessInput,
 ) {
@@ -234,20 +259,26 @@ function evaluateStoredReadiness(input: {
     pickupEnabled: boolean
     servicePolicy: string | null
   } | null
+  sharedProfile: SharedFulfilmentProfile | null
 }) {
   const activeRoles = input.roles.filter(
     (role) => role.status === PrescriptionStoreRoleStatus.ACTIVE,
   )
+  const fulfilment = resolvePrescriptionFulfilmentCompatibility({
+    legacyDeliveryEnabled: input.settings?.deliveryEnabled ?? false,
+    legacyPickupEnabled: input.settings?.pickupEnabled ?? false,
+    sharedProfile: input.sharedProfile,
+  })
   return evaluatePrescriptionStoreReadiness({
     activeAttendantCount: activeRoles.filter(
       (role) => role.role === PrescriptionStoreRoleType.ATTENDANT,
     ).length,
     contactPolicyConfigured: Boolean(input.settings?.contactPolicy?.trim()),
-    deliveryEnabled: input.settings?.deliveryEnabled ?? false,
+    deliveryEnabled: fulfilment.deliveryEnabled,
     operatingHoursConfigured:
       Array.isArray(input.settings?.operatingHours) &&
       input.settings.operatingHours.length > 0,
-    pickupEnabled: input.settings?.pickupEnabled ?? false,
+    pickupEnabled: fulfilment.pickupEnabled,
     servicePolicyConfigured: Boolean(input.settings?.servicePolicy?.trim()),
     verifiedPharmacistCount: activeRoles.filter(
       (role) =>
@@ -258,41 +289,61 @@ function evaluateStoredReadiness(input: {
   })
 }
 
+async function getCurrentSharedFulfilmentProfile(
+  db: PrismaClient | Prisma.TransactionClient,
+  input: { storeId: string; tenantId: string },
+): Promise<SharedFulfilmentProfile | null> {
+  return db.serviceCommerceStoreProfile.findFirst({
+    select: {
+      deliveryEnabled: true,
+      pickupEnabled: true,
+      status: true,
+    },
+    where: { storeId: input.storeId, tenantId: input.tenantId },
+  })
+}
+
 export async function getPrescriptionStoreSetup(
   db: PrismaClient,
   input: { actorUserId: string; storeId: string; tenantId: string },
 ) {
   const store = await requireStore(db, input)
-  const [settings, roles, memberships, auditEvents] = await Promise.all([
-    db.prescriptionStoreSettings.findUnique({
-      where: { storeId: store.id },
-    }),
-    db.prescriptionStoreRole.findMany({
-      orderBy: [{ role: "asc" }, { createdAt: "asc" }],
-      where: { storeId: store.id, tenantId: input.tenantId },
-    }),
-    db.membership.findMany({
-      include: {
-        user: {
-          select: { displayName: true, email: true, id: true, name: true },
+  const [settings, roles, memberships, auditEvents, sharedProfile] =
+    await Promise.all([
+      db.prescriptionStoreSettings.findUnique({
+        where: { storeId: store.id },
+      }),
+      db.prescriptionStoreRole.findMany({
+        orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+        where: { storeId: store.id, tenantId: input.tenantId },
+      }),
+      db.membership.findMany({
+        include: {
+          user: {
+            select: { displayName: true, email: true, id: true, name: true },
+          },
         },
-      },
-      orderBy: { createdAt: "asc" },
-      where: {
-        status: MembershipStatus.ACTIVE,
-        tenantId: input.tenantId,
-      },
-    }),
-    db.prescriptionStoreAuditEvent.findMany({
-      orderBy: { effectiveAt: "desc" },
-      take: 50,
-      where: { storeId: store.id, tenantId: input.tenantId },
-    }),
-  ])
+        orderBy: { createdAt: "asc" },
+        where: {
+          status: MembershipStatus.ACTIVE,
+          tenantId: input.tenantId,
+        },
+      }),
+      db.prescriptionStoreAuditEvent.findMany({
+        orderBy: { effectiveAt: "desc" },
+        take: 50,
+        where: { storeId: store.id, tenantId: input.tenantId },
+      }),
+      getCurrentSharedFulfilmentProfile(db, input),
+    ])
   const membersById = new Map(
     memberships.map((membership) => [membership.userId, membership]),
   )
-  const readiness = evaluateStoredReadiness({ roles, settings })
+  const readiness = evaluateStoredReadiness({
+    roles,
+    settings,
+    sharedProfile,
+  })
   if (roles.some((role) => role.credentialReference)) {
     await recordPrescriptionSensitiveAccess(db, {
       accessTypes: ["credential"],
@@ -350,7 +401,7 @@ export async function getPrescriptionQueueContext(
   input: { actorUserId: string; storeId: string; tenantId: string },
 ) {
   const store = await requireStore(db, input)
-  const [settings, roles, activeBreakGlass] = await Promise.all([
+  const [settings, roles, activeBreakGlass, sharedProfile] = await Promise.all([
     db.prescriptionStoreSettings.findUnique({ where: { storeId: store.id } }),
     db.prescriptionStoreRole.findMany({
       where: {
@@ -370,6 +421,7 @@ export async function getPrescriptionQueueContext(
         type: "BREAK_GLASS",
       },
     }),
+    getCurrentSharedFulfilmentProfile(db, input),
   ])
   const userIds = [...new Set(roles.map((role) => role.userId))]
   const memberships = await db.membership.findMany({
@@ -403,7 +455,7 @@ export async function getPrescriptionQueueContext(
           .map((role) => mapRole(role.role)),
       }
     }),
-    readiness: evaluateStoredReadiness({ roles, settings }),
+    readiness: evaluateStoredReadiness({ roles, settings, sharedProfile }),
     status: settings?.status.toLowerCase() ?? "disabled",
   }
 }
@@ -431,21 +483,20 @@ export async function updatePrescriptionStoreSettings(
       "At least one operating-hours entry is required.",
     )
   }
-  if (!input.pickupEnabled && !input.deliveryEnabled) {
-    throw new PrescriptionCommerceError(
-      "PRESCRIPTION_SETTINGS_INVALID",
-      "Enable pickup, delivery, or both.",
-    )
-  }
-
   await db.$transaction(async (tx) => {
+    const sharedProfile = await getCurrentSharedFulfilmentProfile(tx, input)
+    const fulfilment = resolvePrescriptionFulfilmentCompatibility({
+      legacyDeliveryEnabled: input.deliveryEnabled,
+      legacyPickupEnabled: input.pickupEnabled,
+      sharedProfile,
+    })
     const settings = await tx.prescriptionStoreSettings.upsert({
       create: {
         consentVersion,
         contactPolicy,
-        deliveryEnabled: input.deliveryEnabled,
+        deliveryEnabled: fulfilment.deliveryEnabled,
         operatingHours: input.operatingHours,
-        pickupEnabled: input.pickupEnabled,
+        pickupEnabled: fulfilment.pickupEnabled,
         servicePolicy,
         storeId: input.storeId,
         tenantId: input.tenantId,
@@ -453,9 +504,9 @@ export async function updatePrescriptionStoreSettings(
       update: {
         consentVersion,
         contactPolicy,
-        deliveryEnabled: input.deliveryEnabled,
+        deliveryEnabled: fulfilment.deliveryEnabled,
         operatingHours: input.operatingHours,
-        pickupEnabled: input.pickupEnabled,
+        pickupEnabled: fulfilment.pickupEnabled,
         servicePolicy,
       },
       where: { storeId: input.storeId },
@@ -465,8 +516,8 @@ export async function updatePrescriptionStoreSettings(
         actorUserId: input.actorUserId,
         payload: {
           consentVersion,
-          deliveryEnabled: input.deliveryEnabled,
-          pickupEnabled: input.pickupEnabled,
+          deliveryEnabled: fulfilment.deliveryEnabled,
+          pickupEnabled: fulfilment.pickupEnabled,
         },
         settingsId: settings.id,
         storeId: input.storeId,
@@ -637,7 +688,17 @@ export async function setPrescriptionStoreActivation(
       const roles = await tx.prescriptionStoreRole.findMany({
         where: { storeId: input.storeId, tenantId: input.tenantId },
       })
-      const readiness = evaluateStoredReadiness({ roles, settings })
+      const sharedProfile = await getCurrentSharedFulfilmentProfile(tx, input)
+      const fulfilment = resolvePrescriptionFulfilmentCompatibility({
+        legacyDeliveryEnabled: settings.deliveryEnabled,
+        legacyPickupEnabled: settings.pickupEnabled,
+        sharedProfile,
+      })
+      const readiness = evaluateStoredReadiness({
+        roles,
+        settings,
+        sharedProfile,
+      })
       if (!readiness.ready) {
         throw new PrescriptionCommerceError(
           "PRESCRIPTION_NOT_READY",
@@ -652,13 +713,13 @@ export async function setPrescriptionStoreActivation(
         { channel: "web" as const, subject: "intake" as const },
         { channel: "web" as const, subject: "quote" as const },
         { channel: "web" as const, subject: "payment" as const },
-        ...(settings.pickupEnabled
+        ...(fulfilment.pickupEnabled
           ? [
               { channel: "staff" as const, subject: "pickup" as const },
               { channel: "web" as const, subject: "pickup" as const },
             ]
           : []),
-        ...(settings.deliveryEnabled
+        ...(fulfilment.deliveryEnabled
           ? [
               { channel: "staff" as const, subject: "delivery" as const },
               { channel: "web" as const, subject: "delivery" as const },

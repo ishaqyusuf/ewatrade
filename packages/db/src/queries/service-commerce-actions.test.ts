@@ -180,6 +180,27 @@ function createActionDb() {
     serviceCommercePolicyDecision: {
       findMany: async () => allowedServiceCommercePolicyDecisionRows(),
     },
+    prescriptionRequest: {
+      findFirst: async (args: unknown) => {
+        calls.push({ args, name: "prescriptionRequest.findFirst" })
+        return {
+          contactOptIn: true,
+          currentMediaRevision: 2,
+          currentTranscriptRevision: 3,
+          customerEmail: null,
+          customerPhone: "+2348000000000",
+          pharmacistReviews: [
+            {
+              decision: "RELEASED",
+              mediaRevision: 2,
+              transcriptRevision: 3,
+            },
+          ],
+          status: "CONVERTED",
+          updatedAt: now,
+        }
+      },
+    },
     serviceRequest: {
       findFirst: async (args: unknown) => {
         calls.push({ args, name: "serviceRequest.findFirst" })
@@ -418,6 +439,33 @@ describe("Service Commerce customer action repository", () => {
         }),
       }),
       name: "serviceRequest.findFirst",
+    })
+  })
+
+  test("keeps a current pharmacist release eligible for post-conversion shared actions", async () => {
+    const fake = createActionDb()
+    const { actions } = await issueServiceCommerceCustomerActions(fake.db, {
+      actorUserId: "user-1",
+      channel: "web",
+      clientBatchId: "batch-prescription-converted",
+      expiresAt,
+      issueCapabilityToken: tokenFor,
+      now,
+      source: { id: "request-1", kind: "prescription" },
+      storeId: "store-1",
+      tenantId: "tenant-1",
+    })
+
+    expect(actions.map((action) => action.action)).toContain("view_quote")
+    expect(fake.calls).toContainEqual({
+      args: expect.objectContaining({
+        where: expect.objectContaining({
+          id: "request-1",
+          storeId: "store-1",
+          tenantId: "tenant-1",
+        }),
+      }),
+      name: "prescriptionRequest.findFirst",
     })
   })
 

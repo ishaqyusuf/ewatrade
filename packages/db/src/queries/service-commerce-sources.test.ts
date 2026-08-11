@@ -15,6 +15,8 @@ import {
 import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service-commerce-policy"
 
 function createProjectionDb(input?: {
+  prescriptionReleased?: boolean
+  prescriptionStatus?: "CONVERTED" | "QUOTED"
   role?: string
   source?: "commerce_inquiry" | "prescription" | "service"
 }) {
@@ -70,10 +72,27 @@ function createProjectionDb(input?: {
         calls.push({ args, name: "prescriptionRequest.findFirst" })
         return input?.source === "prescription"
           ? {
+              contactOptIn: true,
+              currentMediaRevision: 2,
+              currentTranscriptRevision: 3,
+              customerEmail: null,
+              customerPhone: "+2348000000000",
               customerName: "must-not-project",
               media: [{ objectKey: "private-key" }],
-              status: "PHARMACIST_REVIEW",
+              pharmacistReviews: input?.prescriptionReleased
+                ? [
+                    {
+                      decision: "RELEASED",
+                      mediaRevision: 2,
+                      transcriptRevision: 3,
+                    },
+                  ]
+                : [],
+              status: input?.prescriptionReleased
+                ? (input.prescriptionStatus ?? "QUOTED")
+                : "PHARMACIST_REVIEW",
               transcript: "private transcript",
+              updatedAt: new Date("2031-02-03T08:00:00.000Z"),
             }
           : null
       },
@@ -166,12 +185,50 @@ describe("Service Commerce source interoperability", () => {
       },
     )
     expect(projection).toMatchObject({
+      allowedCommands: [],
       source: { kind: "prescription" },
       state: "received",
       summary: "Prescription request",
     })
     expect(JSON.stringify(projection)).not.toContain("private")
     expect(JSON.stringify(projection)).not.toContain("customerName")
+  })
+
+  test("permits shared Prescription actions only after current pharmacist release", async () => {
+    const fake = createProjectionDb({
+      prescriptionReleased: true,
+      source: "prescription",
+    })
+    const projection = await getServiceCommerceCustomerRequestProjection(
+      fake.db,
+      {
+        actorUserId: "user-1",
+        source: { id: "prescription-1", kind: "prescription" },
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      },
+    )
+
+    expect(projection.allowedCommands).toEqual(["pay_now", "talk_to_staff"])
+  })
+
+  test("retains released Prescription action eligibility after conversion", async () => {
+    const fake = createProjectionDb({
+      prescriptionReleased: true,
+      prescriptionStatus: "CONVERTED",
+      source: "prescription",
+    })
+    const projection = await getServiceCommerceCustomerRequestProjection(
+      fake.db,
+      {
+        actorUserId: "user-1",
+        source: { id: "prescription-1", kind: "prescription" },
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      },
+    )
+
+    expect(projection.allowedCommands).toEqual([])
   })
 
   test("fails closed for a stale or cross-scope source", async () => {

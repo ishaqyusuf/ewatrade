@@ -240,3 +240,17 @@
 - Product implementation is integrated. Schema rollout, secure route
   propagation, canary delivery, and first operator-reviewed purge remain
   deployment work.
+- Ticket 10 Pharmacy adaptation is source-complete. Shared Service Commerce
+  source/action projection now consumes only a current, revision-matched
+  pharmacist release fact and never clinical media/OCR/review content. Regulated
+  setup is under `Settings > Compliance`; `/settings/prescriptions` redirects
+  there, while generic Connections/link/QR configuration remains under
+  `Settings > Channels`. Pharmacy readiness now derives fulfilment outcomes
+  from the active scoped Service Commerce profile, retaining legacy fields only
+  as an absent-profile fallback. Focused tests passed 34/71, the broader
+  affected suites passed 116/252, the verified Neon compatibility matrix
+  passed 9/248, DB/dashboard TypeScript and Biome passed, and
+  authenticated desktop plus 390px browser acceptance passed without overflow
+  or console errors. No schema/provider/production operation occurred. Ticket
+  12 appointment proof is the next source frontier; final compatibility export
+  contraction remains Ticket 13/owner-gated. Started Date: 2026-08-11.

@@ -35,7 +35,7 @@ function allowedPolicyDecision(subject: string) {
     channel: "STAFF",
     effectiveAt: past,
     evidenceReference: "fixture-only-evidence",
-    expiresAt: future,
+    expiresAt: new Date("2030-01-01T00:00:00.000Z"),
     id: `policy-${subject}`,
     jurisdictionCode: "NG",
     outcome: "ALLOWED",

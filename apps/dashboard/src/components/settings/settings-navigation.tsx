@@ -9,7 +9,7 @@ const items = [
   { href: "/settings/domains", label: "Domains" },
   { href: "/settings/channels", label: "Channels" },
   { href: "/settings/service-commerce", label: "Service Commerce" },
-  { href: "/settings/prescriptions", label: "Prescriptions" },
+  { href: "/settings/compliance", label: "Compliance" },
   { href: "/settings/billing", label: "Billing" },
 ]
 

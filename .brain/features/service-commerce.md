@@ -493,6 +493,36 @@ switch and contraction gates. Pharmacy continues to retain:
 - inventory-backed payable mapping; and
 - pharmacy-specific pickup preparation and delivery release policy.
 
+The implemented Pharmacy source adapter exposes a current commercial-release
+fact plus the minimum internal contact-delivery facts needed by protected
+notification orchestration. Contact opt-in/email/phone never enter the public
+customer-request projection; clinical media, OCR, transcripts and review notes
+never enter the shared boundary. A Prescription source is eligible for
+shared customer-action projection only when its pharmacist review is
+`RELEASED`, matches the current media and transcript revisions, and the source
+is in an allowlisted quote/post-quote state. Missing, stale or revoked clinical
+facts fail closed without exposing clinical content or professional notes. The
+shared action layer re-evaluates current Store policy
+and readiness; it does not reproduce Pharmacy clinical logic. After Order
+conversion, the same adapter may retain safe post-acceptance actions such as
+viewing the released Quote while the pre-quote request projection remains
+closed.
+
+Pharmacy setup/activation also treats the active, Tenant/Store-scoped Service
+Commerce profile as authoritative for pickup and delivery outcomes. When that
+shared profile exists, legacy Prescription fulfilment booleans are compatibility
+mirrors only; a disabled or suspended profile fails readiness closed. Stores
+without a shared profile retain the prior fields during expand-contract so the
+switch is reversible.
+
+Regulated setup now lives at **Settings > Compliance**. It contains Pharmacy
+consent, professional roles and clinical operating controls only. The former
+`/settings/prescriptions` entry redirects there for compatibility, while
+Connections, Store bindings, entry links and QR configuration remain under
+**Settings > Channels**. This is a UI and adapter switch only: Prescription
+aggregates, public URLs and regulated persistence remain intact until the
+separately approved contraction gate.
+
 A human-verified Prescription line may link or propose a private Catalog draft.
 OCR alone cannot create or publish medicine. Any in-stock or procure-to-order
 availability commitment remains pharmacist-released and policy-gated. The

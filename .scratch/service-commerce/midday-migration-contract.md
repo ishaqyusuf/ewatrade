@@ -334,13 +334,18 @@ also spread across API/DB rather than a focused reusable package.
   resolve the generalized Connection/Binding and dispatch verified facts.
 - `apps/dashboard/src/components/sheets/global-sheets.tsx`: mount the shared
   Service Commerce controller once.
-- Dashboard settings navigation: expose `Channels`; the existing
-  `/settings/prescriptions` route remains a compatibility entry until Ticket 10
-  moves only regulated setup to `/settings/compliance` and redirects the old
-  route. Generic Connection/Binding/entry-link components move immediately.
+- Dashboard settings navigation exposes `Channels`; Ticket 10 moved the
+  remaining regulated Pharmacy setup to `/settings/compliance` and made
+  `/settings/prescriptions` a server redirect. Generic
+  Connection/Binding/entry-link components remain under Customer Channels and
+  are not rendered by the Compliance surface.
 - Existing Services/Prescriptions routes, components, hooks and public pages:
   use compatible shared projections/commands incrementally and retain their
   vertical-specific UI and URLs until switch approval.
+- Pharmacy shared source/actions use one focused adapter that returns only the
+  current released/revision-matched eligibility fact. Shared projection must
+  fail closed before exposing customer actions and must never import clinical
+  media, OCR, transcripts or review notes.
 - Existing Catalog creation, price-history and inventory query modules: expose
   authorized draft-create, explicit price-promotion and graduation seams while
   retaining Catalog ownership and Stock Operation authority.

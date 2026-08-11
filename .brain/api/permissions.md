@@ -149,6 +149,11 @@
   They can read/accept only a transactionally released `ISSUED` Version through
   its opaque token. Provider dispatch rechecks channel policy and cannot grant
   commercial release authority.
+- Pharmacy shared-action eligibility is server-derived only after the current
+  pharmacist review is released and revision-current. Store attendant,
+  quotation approver and pharmacist assignments remain independent: holding
+  one never grants either of the others, and no client may assert a clinical
+  release fact.
 - An active Store attendant may access only their Store's current source-bound
   attachment metadata, request a short-lived viewer grant and record a human
   observation. Every path carries Tenant plus Store predicates and rechecks

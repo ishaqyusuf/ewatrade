@@ -16,6 +16,7 @@ import type {
 import { normalizeCommerceInquiryState } from "./commerce-inquiries"
 import { getServiceCommerceWorkspaceAccess } from "./service-commerce-access"
 import { evaluateServiceCommercePolicyBatchInTransaction } from "./service-commerce-policy"
+import { loadPrescriptionServiceCommerceSourceActionFacts } from "./service-commerce-prescription-source-action-adapter"
 import type { DbClient } from "./types"
 
 export class ServiceCommerceSourceError extends Error {
@@ -32,6 +33,7 @@ type LoadedSource = {
   contactOptIn: boolean
   customerEmail: string | null
   customerPhone: string | null
+  sharedCommerceEligible: boolean
   state: ServiceCommerceRequestState
   summary: string
   updatedAt: Date
@@ -91,6 +93,7 @@ const sourceLoaders = {
           contactOptIn: inquiry.contactOptIn,
           customerEmail: inquiry.customerEmail,
           customerPhone: inquiry.customerPhone,
+          sharedCommerceEligible: true,
           state: normalizeCommerceInquiryState(inquiry.status),
           summary: inquiry.summary,
           updatedAt: inquiry.updatedAt,
@@ -99,25 +102,16 @@ const sourceLoaders = {
       : null
   },
   prescription: async (db, input) => {
-    const request = await db.prescriptionRequest.findFirst({
-      select: {
-        contactOptIn: true,
-        customerEmail: true,
-        customerPhone: true,
-        status: true,
-        updatedAt: true,
-      },
-      where: {
-        id: input.id,
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-      },
-    })
+    const request = await loadPrescriptionServiceCommerceSourceActionFacts(
+      db,
+      input,
+    )
     return request
       ? {
           contactOptIn: request.contactOptIn,
           customerEmail: request.customerEmail,
           customerPhone: request.customerPhone,
+          sharedCommerceEligible: request.releasedForSharedCommerce,
           state: prescriptionStates[request.status],
           summary: "Prescription request",
           updatedAt: request.updatedAt,
@@ -145,6 +139,7 @@ const sourceLoaders = {
           contactOptIn: request.contactOptIn,
           customerEmail: request.customerEmail,
           customerPhone: request.customerPhone,
+          sharedCommerceEligible: true,
           state: serviceStates[request.status],
           summary: "Service request",
           updatedAt: request.updatedAt,
@@ -175,7 +170,9 @@ function availableActions(
   readiness: Awaited<
     ReturnType<typeof getServiceCommerceWorkspaceAccess>
   >["readiness"],
+  sharedCommerceEligible: boolean,
 ) {
+  if (!sharedCommerceEligible) return []
   const actions: ServiceCommerceAction[] = []
   const ready = (capability: keyof typeof readiness.capabilities) =>
     readiness.capabilities[capability].readiness === "available"
@@ -217,10 +214,14 @@ export async function getServiceCommerceCustomerRequestProjection(
 ): Promise<ServiceCommerceCustomerRequestProjection> {
   const context = await resolveServiceCommerceSourceContext(db, input)
   return serviceCommerceCustomerRequestProjectionSchema.parse({
-    allowedCommands: availableActions(context.loaded.state, {
-      ...context.workspace.readiness,
-      capabilities: context.sourceReadiness,
-    }),
+    allowedCommands: availableActions(
+      context.loaded.state,
+      {
+        ...context.workspace.readiness,
+        capabilities: context.sourceReadiness,
+      },
+      context.loaded.sharedCommerceEligible,
+    ),
     capabilities: SERVICE_COMMERCE_CAPABILITIES.map((capability) => ({
       capability,
       readiness: context.sourceReadiness[capability].readiness,

@@ -5,12 +5,49 @@ import {
   assertActivePrescriptionStore,
   assertPrescriptionStoreRole,
   evaluatePrescriptionStoreReadiness,
+  resolvePrescriptionFulfilmentCompatibility,
   setPrescriptionStoreActivation,
+  updatePrescriptionStoreSettings,
   validatePrescriptionRoleAssignment,
 } from "./prescription-settings"
 import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service-commerce-policy"
 
 describe("Prescription Commerce store readiness", () => {
+  test("uses active shared Service Commerce outcomes ahead of legacy Pharmacy flags", () => {
+    expect(
+      resolvePrescriptionFulfilmentCompatibility({
+        legacyDeliveryEnabled: true,
+        legacyPickupEnabled: false,
+        sharedProfile: {
+          deliveryEnabled: false,
+          pickupEnabled: true,
+          status: "ACTIVE",
+        },
+      }),
+    ).toEqual({ deliveryEnabled: false, pickupEnabled: true })
+    expect(
+      resolvePrescriptionFulfilmentCompatibility({
+        legacyDeliveryEnabled: true,
+        legacyPickupEnabled: true,
+        sharedProfile: {
+          deliveryEnabled: true,
+          pickupEnabled: true,
+          status: "SUSPENDED",
+        },
+      }),
+    ).toEqual({ deliveryEnabled: false, pickupEnabled: false })
+  })
+
+  test("preserves legacy fulfilment flags until a shared profile exists", () => {
+    expect(
+      resolvePrescriptionFulfilmentCompatibility({
+        legacyDeliveryEnabled: true,
+        legacyPickupEnabled: false,
+        sharedProfile: null,
+      }),
+    ).toEqual({ deliveryEnabled: true, pickupEnabled: false })
+  })
+
   test("allows activation only when policy, fulfilment, attendant, and verified pharmacist gates pass", () => {
     expect(
       evaluatePrescriptionStoreReadiness({
@@ -77,6 +114,97 @@ describe("Prescription Commerce store readiness", () => {
     ).toEqual({ credentialReference: null, credentialVerifiedAt: null })
   })
 
+  test("saves independent compliance while a disabled shared profile still blocks activation", async () => {
+    let saved: Record<string, unknown> | null = null
+    const storedSettings = {
+      activatedAt: null,
+      consentVersion: "2026-08-11",
+      contactPolicy: "Contact policy",
+      deactivatedAt: null,
+      deliveryEnabled: false,
+      id: "settings-1",
+      operatingHours: [{ day: "monday", isClosed: false }],
+      pickupEnabled: false,
+      servicePolicy: "Service policy",
+      status: "DISABLED",
+      storeId: "store-1",
+      updatedAt: new Date(),
+    }
+    const transaction = {
+      prescriptionIncidentControl: { findFirst: async () => null },
+      prescriptionStoreAuditEvent: { create: async () => ({ id: "audit-1" }) },
+      prescriptionStoreRole: {
+        findMany: async () => [
+          {
+            credentialReference: null,
+            credentialVerifiedAt: null,
+            role: "ATTENDANT",
+            status: "ACTIVE",
+          },
+          {
+            credentialReference: "licence-1",
+            credentialVerifiedAt: new Date(),
+            role: "PHARMACIST",
+            status: "ACTIVE",
+          },
+        ],
+      },
+      prescriptionStoreSettings: {
+        update: async () => storedSettings,
+        upsert: async ({ create }: { create: Record<string, unknown> }) => {
+          saved = create
+          return storedSettings
+        },
+      },
+      serviceCommerceStoreProfile: {
+        findFirst: async () => ({
+          deliveryEnabled: true,
+          pickupEnabled: true,
+          status: "DISABLED",
+        }),
+      },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+      membership: { findMany: async () => [] },
+      prescriptionStoreAuditEvent: { findMany: async () => [] },
+      prescriptionStoreRole: { findMany: async () => [] },
+      prescriptionStoreSettings: { findUnique: async () => storedSettings },
+      serviceCommerceStoreProfile: transaction.serviceCommerceStoreProfile,
+      store: { findFirst: async () => ({ id: "store-1", name: "Store" }) },
+    } as unknown as PrismaClient
+    const input = {
+      actorUserId: "owner-1",
+      consentVersion: "2026-08-11",
+      contactPolicy: "Contact policy",
+      deliveryEnabled: true,
+      operatingHours: [{ day: "monday" as const, isClosed: false }],
+      pickupEnabled: true,
+      servicePolicy: "Service policy",
+      storeId: "store-1",
+      tenantId: "tenant-1",
+    }
+
+    await expect(
+      updatePrescriptionStoreSettings(db, input),
+    ).resolves.toMatchObject({
+      settings: { status: "disabled" },
+    })
+    expect(saved).toMatchObject({
+      deliveryEnabled: false,
+      pickupEnabled: false,
+    })
+    await expect(
+      setPrescriptionStoreActivation(db, {
+        active: true,
+        actorUserId: "owner-1",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      }),
+    ).rejects.toMatchObject({ code: "PRESCRIPTION_NOT_READY" })
+  })
+
   test("requires web channel policy before activation succeeds", async () => {
     const decisions = allowedServiceCommercePolicyDecisionRows().filter(
       (decision) => !(decision.channel === "WEB" && decision.subject === "WEB"),
@@ -85,6 +213,7 @@ describe("Prescription Commerce store readiness", () => {
     const transaction = {
       prescriptionIncidentControl: { findFirst: async () => null },
       prescriptionStoreAuditEvent: { create: async () => ({ id: "audit-1" }) },
+      serviceCommerceStoreProfile: { findFirst: async () => null },
       prescriptionStoreRole: {
         findMany: async () => [
           {
@@ -119,6 +248,74 @@ describe("Prescription Commerce store readiness", () => {
         createMany: async () => ({ count: 1 }),
       },
       serviceCommercePolicyDecision: { findMany: async () => decisions },
+      store: { findFirst: async () => ({ countryCode: "NG" }) },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+      store: { findFirst: async () => ({ id: "store-1", name: "Store" }) },
+    } as unknown as PrismaClient
+
+    await expect(
+      setPrescriptionStoreActivation(db, {
+        active: true,
+        actorUserId: "owner-1",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      }),
+    ).rejects.toMatchObject({ code: "PRESCRIPTION_NOT_READY" })
+    expect(activated).toBe(false)
+  })
+
+  test("derives activation fulfilment policy from the active shared profile", async () => {
+    const decisions = allowedServiceCommercePolicyDecisionRows().filter(
+      (decision) => decision.subject !== "PICKUP",
+    )
+    let activated = false
+    const transaction = {
+      prescriptionIncidentControl: { findFirst: async () => null },
+      prescriptionStoreAuditEvent: { create: async () => ({ id: "audit-1" }) },
+      prescriptionStoreRole: {
+        findMany: async () => [
+          {
+            credentialReference: null,
+            credentialVerifiedAt: null,
+            role: "ATTENDANT",
+            status: "ACTIVE",
+          },
+          {
+            credentialReference: "licence-1",
+            credentialVerifiedAt: new Date(),
+            role: "PHARMACIST",
+            status: "ACTIVE",
+          },
+        ],
+      },
+      prescriptionStoreSettings: {
+        update: async () => {
+          activated = true
+          return { id: "settings-1" }
+        },
+        upsert: async () => ({
+          contactPolicy: "Contact policy",
+          deliveryEnabled: false,
+          id: "settings-1",
+          operatingHours: [{ day: "monday", isClosed: false }],
+          pickupEnabled: false,
+          servicePolicy: "Service policy",
+        }),
+      },
+      serviceCommercePolicyAuditEvent: {
+        createMany: async () => ({ count: 1 }),
+      },
+      serviceCommercePolicyDecision: { findMany: async () => decisions },
+      serviceCommerceStoreProfile: {
+        findFirst: async () => ({
+          deliveryEnabled: false,
+          pickupEnabled: true,
+          status: "ACTIVE",
+        }),
+      },
       store: { findFirst: async () => ({ countryCode: "NG" }) },
     }
     const db = {

@@ -57,10 +57,10 @@ export function PrescriptionHeader({
             Reports
           </Button>
           <Button
-            render={<Link href="/settings/prescriptions" />}
+            render={<Link href="/settings/compliance" />}
             variant="outline"
           >
-            Setup
+            Compliance
           </Button>
           <OpenPrescriptionSheet />
         </div>

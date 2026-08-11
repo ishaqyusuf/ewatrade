@@ -298,6 +298,9 @@ export async function projectCurrentServiceCommerceCustomerActions(
     readiness: readinessFacts,
     state: context.loaded.state,
   })
+  const sourceEligibleCandidates = context.loaded.sharedCommerceEligible
+    ? candidates
+    : []
   const targetFacts = {
     booking: booking ? { id: booking.id, revision: booking.revision } : null,
     bookingConfig: bookingConfig
@@ -318,7 +321,7 @@ export async function projectCurrentServiceCommerceCustomerActions(
     source: context.source,
     sourceVersion: context.loaded.updatedAt,
   }
-  const actions = candidates.flatMap((candidate) => {
+  const actions = sourceEligibleCandidates.flatMap((candidate) => {
     const target = targetForAction(candidate, targetFacts)
     return target ? [{ ...candidate, ...target }] : []
   })
