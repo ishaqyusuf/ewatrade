@@ -82,13 +82,19 @@ describeWithServiceCommerceDatabase(
         tenantId: fixture.tenantId,
       })
       expect(preparingQueue.map((item) => item.id)).toContain(fulfillment.id)
-      const ready = await markPrescriptionPickupReady(fixture.db, {
+      const readyInput = {
         actorUserId: fixture.actorUserId,
         checks: { label_matches: true, pharmacist_released: true },
+        clientOperationId: `${origin}-pickup-ready-${prepared.runId}`,
         fulfillmentId: fulfillment.id,
         storeId: fixture.storeId,
         tenantId: fixture.tenantId,
-      })
+      }
+      const [ready, readyReplay] = await Promise.all([
+        markPrescriptionPickupReady(fixture.db, readyInput),
+        markPrescriptionPickupReady(fixture.db, readyInput),
+      ])
+      expect(readyReplay.pickupCode).toBe(ready.pickupCode)
       const publicReadyStatus = await getPublicPrescriptionRequestStatus(
         fixture.db,
         { statusToken: prepared.statusToken },

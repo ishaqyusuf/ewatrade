@@ -370,7 +370,8 @@ also spread across API/DB rather than a focused reusable package.
   Catalog-adoption controller. Prescription components retain only verified
   line review and pharmacist release inputs.
 - Further split the completed Ticket 01 acceptance directory only as later
-  behavior lands: Ticket 08 separates fixed/manual delivery concerns, and
+  behavior lands: Ticket 08 now separates pickup, fixed-delivery and manual-
+  delivery concerns behind the centralized run-owned fixture, and
   Tickets 10/12/13 add Pharmacy-adaptation and cross-vertical specs. The deleted
   `prescription-commerce.integration.test.ts` monolith must not be recreated;
   all specs continue to use the centralized run-owned atomic teardown boundary.

@@ -113,10 +113,9 @@ contracting legacy Service Quote tables.
   Quote, and payment views plus management audit, inventory reservation,
   pickup queue, reporting, and usage projections were asserted. Each origin
   now races two identical pickup-acceptance commands and proves that both
-  callers resolve to one committed Order. A focused web-origin rerun also races
-  two handoff commands and resolves both to the one completed fulfilment. The
-  pickup matrix passed with 78 assertions and removed its run-owned synthetic
-  Tenant/User fixture in one atomic cleanup.
+  callers resolve to one committed Order. Each origin now also races two
+  preparation commands and two handoff commands and resolves both pairs to the
+  one prepared/completed fulfilment.
   Hosted-Neon latency also proved that the shared Prisma client requires the
   bounded 10-second wait/30-second interactive-transaction policy.
 - Automated Neon delivery acceptance: the same three origins independently
@@ -125,13 +124,18 @@ contracting legacy Service Quote tables.
   inventory reservation, packing, courier assignment, structured failure,
   rescheduling, reassignment, collected/in-transit transitions, proof-backed
   duplicate-safe delivery, neutral communications, privacy-safe queue/address
-  projections, reporting, usage, and terminal queue removal. Every origin also
-  rejects unpaid preparation, unpaid/unpacked assignment, and an actor without
-  a Store role. The current-source three-origin matrix passed with 120
-  assertions. A separate manual-zone route passed with 17 assertions through
+  projections, reporting, usage, and terminal queue removal. Preparation and
+  courier assignment each race two identical first commands and recover one
+  persisted result. Every origin also rejects unpaid preparation,
+  unpaid/unpacked assignment, and an actor without a Store role. A separate
+  manual-zone route passed through
   authorized reasoned-fee approval, immutable Quote revision, stale-token
   rejection, address-safe public output, idempotent acceptance, exact payment,
-  and one inventory reservation. No courier or external provider was called.
+  and one inventory reservation, then preparation, assignment, structured
+  failure, reschedule, reassignment and proof-backed completion. The combined
+  pickup/fixed/manual verified `.env.local` Neon matrix passed **8 tests and
+  242 assertions** and removed its run-owned Tenant/User fixture atomically.
+  No courier or external provider was called.
 - Automated multi-pharmacy routing: focused communications, database, and job
   tests pass for two connection-specific sender credentials and
   `phone_number_id` values, one customer's isolated pharmacy threads, a central

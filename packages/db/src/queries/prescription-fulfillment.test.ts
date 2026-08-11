@@ -54,9 +54,30 @@ function policyTransaction(input: {
         },
       ],
     },
+    prescriptionStoreRole: { findFirst: async () => ({ id: "role-1" }) },
+    prescriptionStoreSettings: {
+      findFirst: async () => ({ id: "settings-1" }),
+    },
     store: {
       findFirst: async () => ({ countryCode: "US" }),
     },
+  }
+}
+
+function acceptedPrescriptionOrder() {
+  return {
+    acceptedCommerceQuoteVersion: {
+      fulfilmentPromise: "Delivery tomorrow",
+      fulfilmentType: "DELIVERY",
+      id: "version-1",
+      quote: { sourceId: "request-1", sourceType: "PRESCRIPTION_REQUEST" },
+      status: "ACCEPTED",
+      totalMinor: 20_000_00,
+    },
+    currencyCode: "NGN",
+    id: "order-1",
+    paymentStatus: "PAID",
+    status: "FULFILLING",
   }
 }
 
@@ -104,6 +125,7 @@ describe("prescription delivery failure handling", () => {
       ...policyTransaction({ channel: "STAFF", subject: "DELIVERY" }),
       $queryRaw: async () => [{ id: "assignment-1" }],
       commercialOrder: {
+        findFirst: async () => acceptedPrescriptionOrder(),
         findUnique: async () => ({ customerPhone: "+2348000000000" }),
         update: async (input: unknown) => {
           orderUpdates.push(input)
@@ -172,6 +194,7 @@ describe("prescription delivery failure handling", () => {
           actorUserId: "user-1",
           assignmentId: "assignment-1",
           idempotencyKey: "delivery-failure-1",
+          payload: { payloadHash: expect.any(String) },
           reason: "customer unavailable",
           type: "FAILED",
         },
@@ -197,6 +220,7 @@ describe("prescription delivery failure handling", () => {
       ...policyTransaction({ channel: "STAFF", subject: "DELIVERY" }),
       $queryRaw: async () => [{ id: "assignment-1" }],
       commercialOrder: {
+        findFirst: async () => acceptedPrescriptionOrder(),
         findUnique: async () => ({ customerPhone: null }),
         update: async (input: unknown) => {
           orderUpdates.push(input)
@@ -260,6 +284,7 @@ describe("prescription delivery failure handling", () => {
       }),
       $queryRaw: async () => [{ id: "assignment-1" }],
       commercialOrder: {
+        findFirst: async () => acceptedPrescriptionOrder(),
         findUnique: async () => ({ customerPhone: "+2348000000000" }),
         update: async () => ({ id: "order-1" }),
       },
@@ -501,5 +526,96 @@ describe("prescription fulfilment policy enforcement", () => {
     ).rejects.toMatchObject({
       code: "POLICY_BLOCKED",
     })
+  })
+})
+
+describe("prescription fulfilment replay payloads", () => {
+  test("rejects a changed delivery transition under the same operation id", async () => {
+    const transaction = {
+      ...policyTransaction({ channel: "STAFF", subject: "DELIVERY" }),
+      $queryRaw: async () => [{ id: "assignment-1" }],
+      commercialOrder: {
+        findFirst: async () => acceptedPrescriptionOrder(),
+      },
+      prescriptionDeliveryAssignment: {
+        findFirst: async (input: { select?: unknown }) =>
+          input.select
+            ? { id: "assignment-1" }
+            : {
+                id: "assignment-1",
+                orderId: "order-1",
+                revision: 2,
+                status: "FAILED",
+              },
+      },
+      prescriptionDeliveryEvent: {
+        findFirst: async () => ({ payload: { payloadHash: "original" } }),
+      },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+      prescriptionStoreRole: { findFirst: async () => ({ id: "role-1" }) },
+      prescriptionStoreSettings: {
+        findFirst: async () => ({ id: "settings-1" }),
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      transitionPrescriptionDelivery(db, {
+        actorUserId: "user-1",
+        assignmentId: "assignment-1",
+        clientOperationId: "transition-1",
+        reason: "A changed reason",
+        status: "rescheduled",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      }),
+    ).rejects.toMatchObject({ code: "FULFILLMENT_CONFLICT" })
+  })
+
+  test("rejects changed pickup handoff facts under the same operation id", async () => {
+    const transaction = {
+      ...policyTransaction({ channel: "STAFF", subject: "PICKUP" }),
+      $queryRaw: async () => [{ id: "pickup-1" }],
+      commercialOrder: {
+        findFirst: async () => acceptedPrescriptionOrder(),
+      },
+      prescriptionPickupEvent: {
+        findFirst: async () => ({ payload: { payloadHash: "original" } }),
+      },
+      prescriptionPickupFulfillment: {
+        findFirst: async (input: { select?: unknown }) =>
+          input.select
+            ? { id: "pickup-1" }
+            : {
+                handedOffAt: new Date(),
+                id: "pickup-1",
+                orderId: "order-1",
+                packedAt: new Date(),
+                status: "HANDED_OFF",
+              },
+      },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+      prescriptionStoreRole: { findFirst: async () => ({ id: "role-1" }) },
+      prescriptionStoreSettings: {
+        findFirst: async () => ({ id: "settings-1" }),
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      handoffPrescriptionPickup(db, {
+        actorUserId: "user-1",
+        clientOperationId: "handoff-1",
+        collectorName: "Different collector",
+        fulfillmentId: "pickup-1",
+        pickupCode: "DIFFERENT",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      }),
+    ).rejects.toMatchObject({ code: "FULFILLMENT_CONFLICT" })
   })
 })

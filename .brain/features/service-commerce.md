@@ -8,7 +8,7 @@ extension. ADR-0031 adds generic Customer Channels, stable entry links/QR
 codes, request media/verified observations and exact selectable Offer Options.
 ADR-0032 adds Store team routing and optional exact-version quotation release
 approval. The owner approved the revised dependency-ordered 17-ticket batch
-through 2026-08-10. Tickets 01, 02, 03, 11, 03A, 05, 06, 06A and 06B are
+through 2026-08-10. Tickets 01, 02, 03, 11, 03A, 05, 06, 06A, 06B and 08 are
 complete. Tickets 04
 and 04A have source-complete foundations. Ticket 05 adds the shared source/API,
 public Product-inquiry and explicit product-selected generic WhatsApp adapters,
@@ -23,8 +23,10 @@ single included commercial line while its clinical alternative attribution
 remains source-owned. Ticket 06A now proves that progressive Product and
 Service records graduate in place without losing source, Quote, Order or price
 history. Ticket 06B adds Store-scoped attendant trust or exact-version approval
-with atomic public release and notification effects. Production schema/provider
-operations remain separately authorized.
+with atomic public release and notification effects. Ticket 08 extracts strict
+source-bound pickup/delivery commands, safe operational projections and
+transactional gates while Pharmacy remains the first compatibility adapter.
+Production schema/provider operations remain separately authorized.
 
 Pharmacy Commerce is the first regulated vertical and retains its completed
 implementation evidence and outstanding production gates. The approved second
@@ -569,7 +571,7 @@ business activation remains separately authorized.
 The owner approved the Progressive Catalog amendment on 2026-08-09 and the
 Customer Channels/media/Offer Options plus Store team/Quote approval amendments
 on 2026-08-10. The exact 17-ticket batch adds Tickets 03A, 04A, 06A and 06B.
-Tickets 01, 02, 03, 11, 03A, 05, 06, 06A and 06B are complete. Tickets 04 and
+Tickets 01, 02, 03, 11, 03A, 05, 06, 06A, 06B and 08 are complete. Tickets 04 and
 04A have their
 source foundations, and Ticket 05 supplies the accepted channel-neutral intake
 adapters and combined origin/source/media/browser evidence. Ticket 06 now has
@@ -577,9 +579,12 @@ focused, post-release verified-Neon and desktop/mobile browser evidence;
 Ticket 06A passed its same-ID progressive-to-managed Neon lifecycle plus
 authenticated desktop/mobile graduation, publication and failure-recovery QA.
 Ticket 06B passes focused checks, a 2-test/17-assertion verified-Neon release
-matrix and authenticated desktop/mobile Customer Channels QA. The generated
-additive migration is applied only to the Neon development database; Ticket 08
-is the next dependency-ready approved source frontier.
+matrix and authenticated desktop/mobile Customer Channels QA. Ticket 08 passes
+focused contract/repository/API checks and an 8-test/242-assertion verified-
+Neon pickup/fixed/manual delivery matrix with concurrent preparation,
+assignment and replay recovery. The generated additive migration is applied
+only to the Neon development database; Ticket 07 is the next dependency-ready
+approved source frontier.
 Live-provider acceptance remains open. Throughout
 execution:
 

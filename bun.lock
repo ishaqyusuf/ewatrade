@@ -400,6 +400,7 @@
       "name": "@ewatrade/prescriptions",
       "version": "1.0.0",
       "dependencies": {
+        "@ewatrade/service-commerce": "workspace:*",
         "zod": "catalog:",
       },
       "devDependencies": {

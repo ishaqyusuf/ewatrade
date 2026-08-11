@@ -6,10 +6,8 @@ import {
   PrescriptionDeliveryStatus,
 } from "../../../../generated/prisma/enums"
 import {
-  approvePrescriptionManualDeliveryFee,
   createPrescriptionDeliveryAssignment,
   listPrescriptionDeliveryQueue,
-  listPrescriptionManualDeliveryReviews,
   markPrescriptionDeliveryReady,
   revisePrescriptionQuoteForDelivery,
   transitionPrescriptionDelivery,
@@ -34,7 +32,7 @@ import {
 setDefaultTimeout(120_000)
 
 describeWithServiceCommerceDatabase(
-  "Service Commerce prescription delivery compatibility",
+  "Service Commerce prescription fixed delivery compatibility",
   () => {
     let fixture: ServiceCommerceAcceptanceFixture
 
@@ -157,25 +155,37 @@ describeWithServiceCommerceDatabase(
           tenantId: fixture.tenantId,
         }),
       ).rejects.toThrow()
-      const ready = await markPrescriptionDeliveryReady(fixture.db, {
+      const readyInput = {
         actorUserId: fixture.actorUserId,
         checks: { label_matches: true, pharmacist_released: true },
+        clientOperationId: `${origin}-delivery-ready-${prepared.runId}`,
         orderId: accepted.orderId,
         storeId: fixture.storeId,
         tenantId: fixture.tenantId,
-      })
+      }
+      const [ready, readyReplay] = await Promise.all([
+        markPrescriptionDeliveryReady(fixture.db, readyInput),
+        markPrescriptionDeliveryReady(fixture.db, readyInput),
+      ])
+      expect(readyReplay.assignment.id).toBe(ready.assignment.id)
       expect(ready.assignment.status).toBe(
         PrescriptionDeliveryStatus.READY_FOR_ASSIGNMENT,
       )
-      const assigned = await createPrescriptionDeliveryAssignment(fixture.db, {
+      const assignmentInput = {
         actorUserId: fixture.actorUserId,
+        clientOperationId: `${origin}-delivery-assignment-${prepared.runId}`,
         courierDisplayName: "Synthetic Courier",
         courierPhoneMasked: "******1111",
         courierReference: `courier-${prepared.runId}`,
         orderId: accepted.orderId,
         storeId: fixture.storeId,
         tenantId: fixture.tenantId,
-      })
+      }
+      const [assigned, assignedReplay] = await Promise.all([
+        createPrescriptionDeliveryAssignment(fixture.db, assignmentInput),
+        createPrescriptionDeliveryAssignment(fixture.db, assignmentInput),
+      ])
+      expect(assignedReplay.id).toBe(assigned.id)
       expect(assigned.status).toBe(PrescriptionDeliveryStatus.ASSIGNED)
 
       const failed = await transitionPrescriptionDelivery(fixture.db, {
@@ -358,104 +368,5 @@ describeWithServiceCommerceDatabase(
         expect(await completeDelivery(origin)).toEqual(expect.any(String))
       }, 360_000)
     }
-
-    test("completes an authorized manual-fee delivery quote through paid acceptance", async () => {
-      const prepared = await prepareReleasedPrescriptionQuote(
-        fixture,
-        "web",
-        "delivery",
-      )
-      const manualSelection = await revisePrescriptionQuoteForDelivery(
-        fixture.db,
-        {
-          acceptanceToken: prepared.quoteToken,
-          address: {
-            addressLine1: "2 Synthetic Manual Review Road",
-            locality: " manual review district ",
-            postalCode: "100002",
-            recipientName: "Synthetic Acceptance Customer",
-            recipientPhone: "+2348111111111",
-            region: "Lagos",
-          },
-        },
-      )
-      expect(manualSelection).toMatchObject({
-        acceptanceToken: null,
-        outcome: "manual_review",
-      })
-      if (manualSelection.outcome !== "manual_review") {
-        throw new Error("Manual delivery review was not created.")
-      }
-      const reviews = await listPrescriptionManualDeliveryReviews(fixture.db, {
-        storeId: fixture.storeId,
-        tenantId: fixture.tenantId,
-      })
-      expect(reviews.map((review) => review.id)).toContain(
-        manualSelection.manualReviewId,
-      )
-      const approved = await approvePrescriptionManualDeliveryFee(fixture.db, {
-        actorUserId: fixture.actorUserId,
-        addressId: manualSelection.manualReviewId,
-        clientDecisionId: `manual-delivery-${prepared.runId}`,
-        feeMinor: 750,
-        reason: "Synthetic courier estimate confirmed",
-        storeId: fixture.storeId,
-        tenantId: fixture.tenantId,
-      })
-      if (!approved.acceptanceToken) {
-        throw new Error("Approved manual delivery token was not issued.")
-      }
-      await expect(
-        getPublicPrescriptionQuote(fixture.db, {
-          acceptanceToken: prepared.quoteToken,
-        }),
-      ).rejects.toThrow("Quote is unavailable")
-      const manualQuote = await getPublicPrescriptionQuote(fixture.db, {
-        acceptanceToken: approved.acceptanceToken,
-      })
-      expect(manualQuote).toMatchObject({
-        fulfilmentFeeMinor: 750,
-        fulfilmentPromise: "Delivery after staff confirmation",
-        fulfilmentType: "delivery",
-        totalMinor: 3_250,
-        version: 2,
-      })
-      expect(JSON.stringify(manualQuote)).not.toMatch(
-        /Manual Review Road|2348111111111|evaluationReason|tenantId/i,
-      )
-      const acceptanceInput = {
-        acceptanceToken: approved.acceptanceToken,
-        clientAcceptanceId: `manual-delivery-acceptance-${prepared.runId}`,
-        partialAcknowledged: false,
-      }
-      const { inventoryAfterAcceptance } = await acceptAndPayPrescriptionQuote(
-        fixture,
-        {
-          accept: () =>
-            acceptPrescriptionDeliveryQuote(fixture.db, acceptanceInput),
-          afterAcceptance: async (acceptedBeforePayment) => {
-            await expect(
-              markPrescriptionDeliveryReady(fixture.db, {
-                actorUserId: fixture.actorUserId,
-                checks: {
-                  label_matches: true,
-                  pharmacist_released: true,
-                },
-                orderId: acceptedBeforePayment.orderId,
-                storeId: fixture.storeId,
-                tenantId: fixture.tenantId,
-              }),
-            ).rejects.toThrow()
-          },
-          origin: "web",
-          quoteToken: approved.acceptanceToken,
-          runId: `manual-${prepared.runId}`,
-          totalMinor: 3_250,
-        },
-      )
-      expect(Number(inventoryAfterAcceptance.reservedQuantity)).toBe(
-        Number(prepared.inventoryBeforeAcceptance.reservedQuantity) + 1,
-      )
-    }, 360_000)
   },
 )

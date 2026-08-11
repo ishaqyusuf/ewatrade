@@ -89,8 +89,13 @@
   matrix passed 2 tests and 17 assertions, authenticated desktop/390px mobile
   Customer Channels configuration passed, and its synthetic Tenant/User was
   removed atomically. The additive migration is applied only to development;
-  Ticket 08 shared pickup/delivery fulfilment is the next dependency-ready
-  approved source frontier.
+  Ticket 08 is complete: strict source-bound pickup/delivery commands, safe
+  operational projections, reusable Quote revision/zone/gate rules, a concrete
+  Pharmacy adapter and row-locked payload-bound replay are source-complete.
+  The canonical `.env.local` Neon matrix passed 8 tests and 242 assertions
+  across pickup, fixed delivery and manual delivery with concurrent prepare/
+  assignment and atomic fixture cleanup. Ticket 07 booking/appointment is the
+  next dependency-ready approved source frontier.
   Live Meta/storage/scanner release gates remain open. The focused
   Customer Channels/media matrix passes 71 tests and 177 assertions; the
   run-owned `.env.local` Neon bag-media seam passes 7 assertions. The full test gate has

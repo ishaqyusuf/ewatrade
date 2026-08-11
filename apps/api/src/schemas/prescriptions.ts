@@ -4,6 +4,7 @@ import {
   prescriptionStaffIntakeFields,
   prescriptionStoreSettingsFields,
 } from "@ewatrade/prescriptions/schemas"
+import { serviceCommercePickupExceptionCodeSchema } from "@ewatrade/service-commerce"
 import { z } from "zod"
 
 const storeIdSchema = z.string().trim().min(1)
@@ -225,13 +226,7 @@ export const prescriptionPickupHandoffSchema = z
 export const prescriptionPickupExceptionSchema = z
   .object({
     clientOperationId: z.string().trim().min(1).max(160),
-    exceptionCode: z.enum([
-      "abandoned",
-      "cancelled",
-      "damaged_item",
-      "incorrect_collector",
-      "missing_item",
-    ]),
+    exceptionCode: serviceCommercePickupExceptionCodeSchema,
     fulfillmentId: z.string().trim().min(1),
     reason: z.string().trim().min(1).max(500),
     status: z.enum(["abandoned", "cancelled", "exception"]),

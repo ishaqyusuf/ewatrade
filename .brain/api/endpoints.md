@@ -265,6 +265,10 @@ authenticated dashboard.
   `submitWhatsAppIntake` expose the channel-neutral intake contract. The public
   Store entry also serves `/request/[token]`; `/r/[token]/whatsapp?intent=product`
   opens the explicit generic Product Inquiry flow.
+- `serviceCommerce.fulfillmentDetail`, `pickupFulfillment`, and
+  `deliveryFulfillment` expose the exact Tenant/Store/Order/source shared
+  fulfilment boundary. Commands currently dispatch only through the explicit
+  Prescription compatibility adapter; unsupported source kinds fail closed.
 - `GET /api/communications/whatsapp/embedded-signup/callback` validates signed
   state, exchanges the Meta code, persists encrypted short-lived discovery,
   and redirects to explicit dashboard number selection.

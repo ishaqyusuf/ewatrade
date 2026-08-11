@@ -1,17 +1,20 @@
 import { createHash, randomBytes } from "node:crypto"
 
 import {
-  assertDeliveryTransition,
-  assertPickupTransition,
+  decryptPrescriptionData,
   encryptPrescriptionData,
-  evaluateDeliveryZone,
   prescriptionDataFingerprint,
 } from "@ewatrade/prescriptions"
+import {
+  type ServiceCommerceDeliveryStatus,
+  type ServiceCommercePickupExceptionCode,
+  type ServiceCommerceSourceRef,
+  assertServiceCommerceDeliveryTransition,
+  assertServiceCommercePickupTransition,
+  evaluateServiceCommerceDeliveryZone,
+} from "@ewatrade/service-commerce"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import {
-  CommerceQuoteAvailabilityOutcome,
-  CommerceQuoteFulfilmentType,
-  type CommerceQuoteLineOutcome,
   CommerceQuoteSourceType,
   CommerceQuoteVersionStatus,
   DeliveryEligibilityStatus,
@@ -29,6 +32,13 @@ import {
   resolveCommerceQuotePayableState,
 } from "./commerce-quotes"
 import { assertAnyPrescriptionStoreRole } from "./prescription-settings"
+import {
+  ServiceCommerceFulfillmentError,
+  assertServiceCommerceFulfillmentAttendantInTransaction,
+  assertServiceCommerceFulfillmentGatesInTransaction,
+  assertServiceCommerceFulfillmentSourceInTransaction,
+  reviseServiceCommerceQuoteForFulfillmentInTransaction,
+} from "./service-commerce-fulfillment"
 import {
   assertServiceCommercePolicyAllowedInTransaction,
   evaluateServiceCommercePolicyInTransaction,
@@ -55,102 +65,149 @@ function token() {
   return randomBytes(32).toString("base64url")
 }
 
-type PrescriptionDeliveryQuoteLine = {
-  availabilityAttestationId: null | string
-  balanceRevision: null | number
-  catalogItemName: string
-  configurationVersionId: null | string
-  customerNote: null | string
-  offeringId: null | string
-  offeringName: string
-  optionSelections: Prisma.JsonValue
-  outcome: CommerceQuoteLineOutcome
-  quantity: null | Prisma.Decimal
-  sourceLineId: null | string
-  totalMinor: number
-  unitPriceMinor: null | number
-  variantName: string
+function canonicalCommandValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalCommandValue)
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [key, canonicalCommandValue(item)]),
+    )
+  }
+  return value
 }
 
-async function persistPrescriptionDeliveryQuoteOption(
+function commandFingerprint(value: Record<string, unknown>) {
+  return digest(JSON.stringify(canonicalCommandValue(value)))
+}
+
+function replayPayloadHash(payload: Prisma.JsonValue | null) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return null
+  }
+  const value = payload as Record<string, Prisma.JsonValue>
+  return typeof value.payloadHash === "string" ? value.payloadHash : null
+}
+
+async function revisePrescriptionDeliveryQuoteInTransaction(
+  tx: Prisma.TransactionClient,
+  input: Parameters<
+    typeof reviseServiceCommerceQuoteForFulfillmentInTransaction
+  >[1],
+) {
+  try {
+    return await reviseServiceCommerceQuoteForFulfillmentInTransaction(
+      tx,
+      input,
+    )
+  } catch (error) {
+    if (error instanceof ServiceCommerceFulfillmentError) {
+      throw new PrescriptionFulfillmentError(
+        "FULFILLMENT_CONFLICT",
+        error.message,
+      )
+    }
+    throw error
+  }
+}
+
+async function assertPrescriptionFulfillmentSourceInTransaction(
   tx: Prisma.TransactionClient,
   input: {
-    availabilityOutcome: CommerceQuoteAvailabilityOutcome
-    clientOptionId: string
-    currencyCode: string
-    customerNote: null | string
-    discountMinor: number
-    fulfilmentFeeMinor: number
-    fulfilmentPromise: null | string
-    lines: PrescriptionDeliveryQuoteLine[]
-    quoteVersionId: string
-    subtotalMinor: number
-    taxMinor: number
-    totalMinor: number
+    actorUserId: string
+    orderId: string
+    source?: ServiceCommerceSourceRef
+    storeId: string
+    tenantId: string
   },
 ) {
-  const option = await tx.commerceQuoteOption.create({
-    data: {
-      availabilityOutcome: input.availabilityOutcome,
-      clientOptionId: input.clientOptionId,
-      currencyCode: input.currencyCode,
-      customerNote: input.customerNote,
-      discountMinor: input.discountMinor,
-      fulfilmentFeeMinor: input.fulfilmentFeeMinor,
-      fulfilmentPromise: input.fulfilmentPromise,
-      fulfilmentType: CommerceQuoteFulfilmentType.DELIVERY,
-      label: "Delivery",
-      position: 0,
-      quoteVersionId: input.quoteVersionId,
-      subtotalMinor: input.subtotalMinor,
-      taxMinor: input.taxMinor,
-      totalMinor: input.totalMinor,
-    },
-  })
-  await tx.commerceQuoteLine.createMany({
-    data: input.lines.map((line) => ({
-      availabilityAttestationId: line.availabilityAttestationId,
-      balanceRevision: line.balanceRevision,
-      catalogItemName: line.catalogItemName,
-      configurationVersionId: line.configurationVersionId,
-      customerNote: line.customerNote,
-      offeringId: line.offeringId,
-      offeringName: line.offeringName,
-      optionSelections: line.optionSelections as Prisma.InputJsonValue,
-      outcome: line.outcome,
-      quantity: line.quantity,
-      quoteOptionId: option.id,
-      quoteVersionId: input.quoteVersionId,
-      sourceLineId: line.sourceLineId,
-      totalMinor: line.totalMinor,
-      unitPriceMinor: line.unitPriceMinor,
-      variantName: line.variantName,
-    })),
-  })
+  try {
+    if (input.source) {
+      await assertServiceCommerceFulfillmentAttendantInTransaction(tx, input)
+    }
+    return await assertServiceCommerceFulfillmentSourceInTransaction(tx, {
+      orderId: input.orderId,
+      expectedSourceKind: "prescription",
+      source: input.source,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
+  } catch (error) {
+    if (error instanceof ServiceCommerceFulfillmentError) {
+      throw new PrescriptionFulfillmentError(
+        "FULFILLMENT_CONFLICT",
+        error.message,
+      )
+    }
+    throw error
+  }
+}
+
+async function assertPrescriptionFulfillmentOperationInTransaction(
+  tx: Prisma.TransactionClient,
+  input: {
+    actorUserId: string
+    eligible: boolean
+    operation: "assign_delivery" | "complete_pickup" | "prepare"
+    orderId: string
+    packed: boolean
+    ready: boolean
+    source?: ServiceCommerceSourceRef
+    storeId: string
+    tenantId: string
+  },
+) {
+  const projection = await assertPrescriptionFulfillmentSourceInTransaction(
+    tx,
+    input,
+  )
+  try {
+    return await assertServiceCommerceFulfillmentGatesInTransaction(tx, {
+      authorize: async (transaction) => {
+        await assertAnyPrescriptionStoreRole(transaction, {
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+          userId: input.actorUserId,
+        })
+        if (input.source) {
+          await assertServiceCommerceFulfillmentAttendantInTransaction(
+            transaction,
+            input,
+          )
+        }
+      },
+      eligible: input.eligible,
+      operation: input.operation,
+      orderId: input.orderId,
+      packed: input.packed,
+      ready: input.ready,
+      source: projection.source,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      verticalReleaseReady: true,
+    })
+  } catch (error) {
+    if (error instanceof ServiceCommerceFulfillmentError) {
+      throw new PrescriptionFulfillmentError(
+        "FULFILLMENT_CONFLICT",
+        error.message,
+      )
+    }
+    throw error
+  }
 }
 
 function pickupStatus(value: PrescriptionPickupStatus) {
-  return value.toLowerCase() as Parameters<typeof assertPickupTransition>[0]
+  return value.toLowerCase() as Parameters<
+    typeof assertServiceCommercePickupTransition
+  >[0]
 }
 
 function deliveryStatus(value: PrescriptionDeliveryStatus) {
-  return value.toLowerCase() as Parameters<typeof assertDeliveryTransition>[0]
-}
-
-function prescriptionQuoteAvailability(value: string) {
-  switch (value) {
-    case CommerceQuoteAvailabilityOutcome.FULL:
-      return CommerceQuoteAvailabilityOutcome.FULL
-    case CommerceQuoteAvailabilityOutcome.PARTIAL:
-      return CommerceQuoteAvailabilityOutcome.PARTIAL
-    case CommerceQuoteAvailabilityOutcome.UNAVAILABLE:
-      return CommerceQuoteAvailabilityOutcome.UNAVAILABLE
-    default:
-      throw new PrescriptionFulfillmentError(
-        "FULFILLMENT_CONFLICT",
-        "Quote availability is invalid.",
-      )
-  }
+  const status = value.toLowerCase()
+  return (
+    status === "returned_to_pharmacy" ? "returned_to_store" : status
+  ) as ServiceCommerceDeliveryStatus
 }
 
 async function assertPrescriptionFulfillmentPolicy(
@@ -346,7 +403,6 @@ export async function revisePrescriptionQuoteForDelivery(
       "Choose one Offer Option before arranging delivery.",
     )
   }
-  const payable = payableState.payable
   const zones = await db.prescriptionDeliveryZone.findMany({
     where: {
       status: "ACTIVE",
@@ -354,8 +410,9 @@ export async function revisePrescriptionQuoteForDelivery(
       tenantId: current.quote.tenantId,
     },
   })
-  const result = evaluateDeliveryZone(
+  const result = evaluateServiceCommerceDeliveryZone(
     zones.map((zone) => ({
+      currencyCode: zone.currencyCode,
       feePolicy: zone.feePolicy.toLowerCase() as "fixed" | "manual",
       fixedFeeMinor: zone.fixedFeeMinor,
       id: zone.id,
@@ -422,6 +479,7 @@ export async function revisePrescriptionQuoteForDelivery(
     )
   }
   const rawToken = token()
+  const clientVersionId = `delivery-${randomBytes(12).toString("hex")}`
   return db.$transaction(async (tx) => {
     await assertServiceCommercePolicyAllowedInTransaction(tx, {
       actorUserId: "public_delivery_address_selection",
@@ -432,52 +490,21 @@ export async function revisePrescriptionQuoteForDelivery(
       tenantId: current.quote.tenantId,
       vertical: "pharmacy",
     })
-    const version = await tx.commerceQuoteVersion.create({
-      data: {
-        acceptanceTokenDigest: digest(rawToken),
-        availabilityOutcome: prescriptionQuoteAvailability(
-          payable.availabilityOutcome,
-        ),
-        clientVersionId: `delivery-${randomBytes(12).toString("hex")}`,
-        createdByUserId: "public_delivery_selection",
-        currencyCode: current.currencyCode,
-        customerNote: payable.customerNote ?? null,
-        discountMinor: payable.discountMinor,
-        expiresAt: current.expiresAt,
-        fulfilmentFeeMinor: result.feeMinor,
-        fulfilmentPromise: result.zone.promiseText,
-        fulfilmentType: CommerceQuoteFulfilmentType.DELIVERY,
-        issuedAt: new Date(),
-        payloadHash: digest(
-          `${current.payloadHash}:${result.zone.id}:${result.feeMinor}`,
-        ),
-        quoteId: current.quoteId,
-        status: CommerceQuoteVersionStatus.ISSUED,
-        subtotalMinor: payable.subtotalMinor,
-        taxMinor: payable.taxMinor,
-        totalMinor:
-          payable.subtotalMinor -
-          payable.discountMinor +
-          payable.taxMinor +
-          result.feeMinor,
-        version: current.version + 1,
-      },
-    })
-    await persistPrescriptionDeliveryQuoteOption(tx, {
-      availabilityOutcome: prescriptionQuoteAvailability(
-        payable.availabilityOutcome,
-      ),
-      clientOptionId: `${version.clientVersionId}:default`,
-      currencyCode: current.currencyCode,
-      customerNote: payable.customerNote ?? null,
-      discountMinor: payable.discountMinor,
+    const { version } = await revisePrescriptionDeliveryQuoteInTransaction(tx, {
+      acceptanceTokenDigest: digest(rawToken),
+      clientVersionId,
+      createdByUserId: "public_delivery_selection",
+      expectedVersionId: current.id,
       fulfilmentFeeMinor: result.feeMinor,
       fulfilmentPromise: result.zone.promiseText,
-      lines: payable.lines,
-      quoteVersionId: version.id,
-      subtotalMinor: payable.subtotalMinor,
-      taxMinor: payable.taxMinor,
-      totalMinor: version.totalMinor,
+      fulfilmentType: "delivery",
+      label: "Delivery",
+      payloadHash: digest(
+        `${current.payloadHash}:${result.zone.id}:${result.feeMinor}`,
+      ),
+      source: { id: current.quote.sourceId, kind: "prescription" },
+      storeId: current.quote.storeId,
+      tenantId: current.quote.tenantId,
     })
     await tx.prescriptionDeliveryAddress.create({
       data: {
@@ -493,18 +520,6 @@ export async function revisePrescriptionQuoteForDelivery(
         tenantId: current.quote.tenantId,
         zoneId: result.zone.id,
       },
-    })
-    await tx.commerceQuoteVersion.update({
-      data: {
-        acceptanceTokenDigest: null,
-        status: CommerceQuoteVersionStatus.SUPERSEDED,
-        supersededAt: new Date(),
-      },
-      where: { id: current.id, status: CommerceQuoteVersionStatus.ISSUED },
-    })
-    await tx.commerceQuote.update({
-      data: { currentVersionId: version.id },
-      where: { id: current.quoteId },
     })
     return {
       acceptanceToken: rawToken,
@@ -577,6 +592,11 @@ export async function approvePrescriptionManualDeliveryFee(
       subject: "delivery",
       tenantId: input.tenantId,
     })
+    await assertAnyPrescriptionStoreRole(tx, {
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      userId: input.actorUserId,
+    })
     const address = await tx.prescriptionDeliveryAddress.findFirst({
       include: {
         quoteVersion: {
@@ -622,6 +642,7 @@ export async function approvePrescriptionManualDeliveryFee(
     if (
       !address ||
       !current ||
+      !address.promiseText ||
       address.eligibilityStatus !== DeliveryEligibilityStatus.MANUAL_REVIEW ||
       current.quote.currentVersionId !== current.id
     ) {
@@ -630,60 +651,21 @@ export async function approvePrescriptionManualDeliveryFee(
         "This manual delivery review is no longer current.",
       )
     }
-    const payableState = resolveCommerceQuotePayableState(current)
-    if (!payableState.payable || payableState.requiresSelection) {
-      throw new PrescriptionFulfillmentError(
-        "FULFILLMENT_CONFLICT",
-        "Choose one Offer Option before approving delivery.",
-      )
-    }
-    const payable = payableState.payable
-    const version = await tx.commerceQuoteVersion.create({
-      data: {
-        acceptanceTokenDigest: digest(rawToken),
-        availabilityOutcome: prescriptionQuoteAvailability(
-          payable.availabilityOutcome,
-        ),
-        clientVersionId: input.clientDecisionId,
-        createdByUserId: input.actorUserId,
-        currencyCode: current.currencyCode,
-        customerNote: payable.customerNote ?? null,
-        discountMinor: payable.discountMinor,
-        expiresAt: current.expiresAt,
-        fulfilmentFeeMinor: input.feeMinor,
-        fulfilmentPromise: address.promiseText,
-        fulfilmentType: CommerceQuoteFulfilmentType.DELIVERY,
-        issuedAt: new Date(),
-        payloadHash: digest(
-          `${current.payloadHash}:${address.zoneId}:${input.feeMinor}:${input.reason.trim()}`,
-        ),
-        quoteId: current.quoteId,
-        status: CommerceQuoteVersionStatus.ISSUED,
-        subtotalMinor: payable.subtotalMinor,
-        taxMinor: payable.taxMinor,
-        totalMinor:
-          payable.subtotalMinor -
-          payable.discountMinor +
-          payable.taxMinor +
-          input.feeMinor,
-        version: current.version + 1,
-      },
-    })
-    await persistPrescriptionDeliveryQuoteOption(tx, {
-      availabilityOutcome: prescriptionQuoteAvailability(
-        payable.availabilityOutcome,
-      ),
-      clientOptionId: `${version.clientVersionId}:default`,
-      currencyCode: current.currencyCode,
-      customerNote: payable.customerNote ?? null,
-      discountMinor: payable.discountMinor,
+    const { version } = await revisePrescriptionDeliveryQuoteInTransaction(tx, {
+      acceptanceTokenDigest: digest(rawToken),
+      clientVersionId: input.clientDecisionId,
+      createdByUserId: input.actorUserId,
+      expectedVersionId: current.id,
       fulfilmentFeeMinor: input.feeMinor,
       fulfilmentPromise: address.promiseText,
-      lines: payable.lines,
-      quoteVersionId: version.id,
-      subtotalMinor: payable.subtotalMinor,
-      taxMinor: payable.taxMinor,
-      totalMinor: version.totalMinor,
+      fulfilmentType: "delivery",
+      label: "Delivery",
+      payloadHash: digest(
+        `${current.payloadHash}:${address.zoneId}:${input.feeMinor}:${input.reason.trim()}`,
+      ),
+      source: { id: current.quote.sourceId, kind: "prescription" },
+      storeId: input.storeId,
+      tenantId: input.tenantId,
     })
     await tx.prescriptionDeliveryAddress.update({
       data: {
@@ -695,18 +677,6 @@ export async function approvePrescriptionManualDeliveryFee(
         quoteVersionId: version.id,
       },
       where: { id: address.id },
-    })
-    await tx.commerceQuoteVersion.update({
-      data: {
-        acceptanceTokenDigest: null,
-        status: CommerceQuoteVersionStatus.SUPERSEDED,
-        supersededAt: new Date(),
-      },
-      where: { id: current.id, status: CommerceQuoteVersionStatus.ISSUED },
-    })
-    await tx.commerceQuote.update({
-      data: { currentVersionId: version.id },
-      where: { id: current.quoteId },
     })
     const request = await tx.prescriptionRequest.findFirst({
       select: { customerPhone: true, id: true },
@@ -807,7 +777,9 @@ export async function markPrescriptionPickupReady(
   input: {
     actorUserId: string
     checks: Record<string, boolean>
+    clientOperationId?: string
     fulfillmentId: string
+    source?: ServiceCommerceSourceRef
     storeId: string
     tenantId: string
   },
@@ -828,6 +800,10 @@ export async function markPrescriptionPickupReady(
   }
   const rawCode = randomBytes(6).toString("base64url").slice(0, 8).toUpperCase()
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60_000)
+  const preparationId =
+    input.clientOperationId ??
+    `legacy-pickup-ready-${randomBytes(12).toString("hex")}`
+  const preparationHash = commandFingerprint({ checks: input.checks })
   return db.$transaction(async (tx) => {
     await assertPrescriptionFulfillmentPolicy(tx, {
       actorUserId: input.actorUserId,
@@ -836,10 +812,37 @@ export async function markPrescriptionPickupReady(
       subject: "pickup",
       tenantId: input.tenantId,
     })
+    await assertAnyPrescriptionStoreRole(tx, {
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      userId: input.actorUserId,
+    })
+    const identity = await tx.prescriptionPickupFulfillment.findFirst({
+      select: { id: true },
+      where: {
+        id: input.fulfillmentId,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    })
+    if (!identity) {
+      throw new PrescriptionFulfillmentError(
+        "FULFILLMENT_NOT_FOUND",
+        "A paid pickup order was not found.",
+      )
+    }
+    await tx.$queryRaw`
+      SELECT "id"
+      FROM "PrescriptionPickupFulfillment"
+      WHERE "id" = ${identity.id}
+        AND "tenantId" = ${input.tenantId}
+        AND "storeId" = ${input.storeId}
+      FOR UPDATE
+    `
     const fulfillment = await tx.prescriptionPickupFulfillment.findFirst({
       include: { order: true },
       where: {
-        id: input.fulfillmentId,
+        id: identity.id,
         storeId: input.storeId,
         tenantId: input.tenantId,
       },
@@ -853,7 +856,54 @@ export async function markPrescriptionPickupReady(
         "A paid pickup order was not found.",
       )
     }
-    assertPickupTransition(pickupStatus(fulfillment.status), "ready")
+    await assertPrescriptionFulfillmentOperationInTransaction(tx, {
+      actorUserId: input.actorUserId,
+      eligible: true,
+      operation: "prepare",
+      orderId: fulfillment.orderId,
+      packed: false,
+      ready: false,
+      source: input.source,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
+    const replay = await tx.prescriptionPickupEvent.findFirst({
+      where: {
+        fulfillmentId: fulfillment.id,
+        idempotencyKey: preparationId,
+      },
+    })
+    if (replay) {
+      if (
+        replayPayloadHash(replay.payload) !== preparationHash ||
+        fulfillment.status !== PrescriptionPickupStatus.READY ||
+        !fulfillment.pickupCodeCiphertext ||
+        !fulfillment.pickupCodeExpiresAt
+      ) {
+        throw new PrescriptionFulfillmentError(
+          "FULFILLMENT_CONFLICT",
+          "This pickup preparation id was already used.",
+        )
+      }
+      const decrypted = decryptPrescriptionData(
+        fulfillment.pickupCodeCiphertext,
+      )
+      if (typeof decrypted.code !== "string") {
+        throw new PrescriptionFulfillmentError(
+          "FULFILLMENT_CONFLICT",
+          "The pickup capability cannot be recovered safely.",
+        )
+      }
+      return {
+        communicationIntentId: null,
+        expiresAt: fulfillment.pickupCodeExpiresAt,
+        pickupCode: decrypted.code,
+      }
+    }
+    assertServiceCommercePickupTransition(
+      pickupStatus(fulfillment.status),
+      "ready",
+    )
     await tx.prescriptionPickupFulfillment.update({
       data: {
         packedAt: new Date(),
@@ -881,6 +931,8 @@ export async function markPrescriptionPickupReady(
         {
           actorUserId: input.actorUserId,
           fulfillmentId: fulfillment.id,
+          idempotencyKey: preparationId,
+          payload: { payloadHash: preparationHash },
           type: PrescriptionPickupEventType.READY,
         },
       ],
@@ -930,10 +982,16 @@ export async function handoffPrescriptionPickup(
     collectorRelationship?: string
     fulfillmentId: string
     pickupCode: string
+    source?: ServiceCommerceSourceRef
     storeId: string
     tenantId: string
   },
 ) {
+  const handoffHash = commandFingerprint({
+    collectorName: input.collectorName.trim(),
+    collectorRelationship: input.collectorRelationship?.trim() ?? null,
+    pickupCodeDigest: digest(input.pickupCode.toUpperCase()),
+  })
   await assertAnyPrescriptionStoreRole(db, {
     storeId: input.storeId,
     tenantId: input.tenantId,
@@ -946,6 +1004,11 @@ export async function handoffPrescriptionPickup(
       storeId: input.storeId,
       subject: "pickup",
       tenantId: input.tenantId,
+    })
+    await assertAnyPrescriptionStoreRole(tx, {
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      userId: input.actorUserId,
     })
     const identity = await tx.prescriptionPickupFulfillment.findFirst({
       select: { id: true },
@@ -982,13 +1045,34 @@ export async function handoffPrescriptionPickup(
         "Pickup was not found.",
       )
     }
+    await assertPrescriptionFulfillmentOperationInTransaction(tx, {
+      actorUserId: input.actorUserId,
+      eligible: true,
+      operation: "complete_pickup",
+      orderId: fulfillment.orderId,
+      packed: Boolean(fulfillment.packedAt),
+      ready:
+        fulfillment.status === PrescriptionPickupStatus.HANDED_OFF ||
+        fulfillment.status === PrescriptionPickupStatus.READY,
+      source: input.source,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
     const replay = await tx.prescriptionPickupEvent.findFirst({
       where: {
         fulfillmentId: fulfillment.id,
         idempotencyKey: input.clientOperationId,
       },
     })
-    if (replay) return { handedOff: fulfillment.status === "HANDED_OFF" }
+    if (replay) {
+      if (replayPayloadHash(replay.payload) !== handoffHash) {
+        throw new PrescriptionFulfillmentError(
+          "FULFILLMENT_CONFLICT",
+          "This pickup handoff id was already used.",
+        )
+      }
+      return { handedOff: fulfillment.status === "HANDED_OFF" }
+    }
     if (
       fulfillment.lockedUntil &&
       fulfillment.lockedUntil.getTime() > Date.now()
@@ -1026,7 +1110,10 @@ export async function handoffPrescriptionPickup(
         "Pickup code is invalid or expired.",
       )
     }
-    assertPickupTransition(pickupStatus(fulfillment.status), "handed_off")
+    assertServiceCommercePickupTransition(
+      pickupStatus(fulfillment.status),
+      "handed_off",
+    )
     await tx.prescriptionPickupFulfillment.update({
       data: {
         collectorName: input.collectorName.trim(),
@@ -1045,6 +1132,7 @@ export async function handoffPrescriptionPickup(
         actorUserId: input.actorUserId,
         fulfillmentId: fulfillment.id,
         idempotencyKey: input.clientOperationId,
+        payload: { payloadHash: handoffHash },
         type: PrescriptionPickupEventType.HANDED_OFF,
       },
     })
@@ -1079,7 +1167,9 @@ export async function markPrescriptionDeliveryReady(
   input: {
     actorUserId: string
     checks: Record<string, boolean>
+    clientOperationId?: string
     orderId: string
+    source?: ServiceCommerceSourceRef
     storeId: string
     tenantId: string
   },
@@ -1098,6 +1188,10 @@ export async function markPrescriptionDeliveryReady(
       "Every required packing check must pass.",
     )
   }
+  const preparationId =
+    input.clientOperationId ??
+    `legacy-delivery-ready-${randomBytes(12).toString("hex")}`
+  const preparationHash = commandFingerprint({ checks: input.checks })
   return db.$transaction(async (tx) => {
     await assertPrescriptionFulfillmentPolicy(tx, {
       actorUserId: input.actorUserId,
@@ -1106,13 +1200,40 @@ export async function markPrescriptionDeliveryReady(
       subject: "delivery",
       tenantId: input.tenantId,
     })
+    await assertAnyPrescriptionStoreRole(tx, {
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      userId: input.actorUserId,
+    })
+    const identity = await tx.commercialOrder.findFirst({
+      select: { id: true },
+      where: {
+        id: input.orderId,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    })
+    if (!identity) {
+      throw new PrescriptionFulfillmentError(
+        "FULFILLMENT_NOT_FOUND",
+        "A paid, delivery-eligible order was not found.",
+      )
+    }
+    await tx.$queryRaw`
+      SELECT "id"
+      FROM "CommercialOrder"
+      WHERE "id" = ${identity.id}
+        AND "tenantId" = ${input.tenantId}
+        AND "storeId" = ${input.storeId}
+      FOR UPDATE
+    `
     const order = await tx.commercialOrder.findFirst({
       include: {
         prescriptionDeliveryAddress: true,
         prescriptionDeliveryAssignment: true,
       },
       where: {
-        id: input.orderId,
+        id: identity.id,
         paymentStatus: PaymentStatus.PAID,
         status: { in: [OrderStatus.CONFIRMED, OrderStatus.FULFILLING] },
         storeId: input.storeId,
@@ -1129,7 +1250,35 @@ export async function markPrescriptionDeliveryReady(
         "A paid, delivery-eligible order is required.",
       )
     }
+    await assertPrescriptionFulfillmentOperationInTransaction(tx, {
+      actorUserId: input.actorUserId,
+      eligible: true,
+      operation: "prepare",
+      orderId: order.id,
+      packed: false,
+      ready: false,
+      source: input.source,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
     if (order.prescriptionDeliveryAssignment) {
+      const replay = await tx.prescriptionDeliveryEvent.findFirst({
+        where: {
+          assignmentId: order.prescriptionDeliveryAssignment.id,
+          idempotencyKey: preparationId,
+        },
+      })
+      if (
+        replay &&
+        replayPayloadHash(replay.payload) === preparationHash &&
+        order.prescriptionDeliveryAssignment.status ===
+          PrescriptionDeliveryStatus.READY_FOR_ASSIGNMENT
+      ) {
+        return {
+          assignment: order.prescriptionDeliveryAssignment,
+          communicationIntentId: null,
+        }
+      }
       throw new PrescriptionFulfillmentError(
         "FULFILLMENT_CONFLICT",
         "This delivery is already prepared.",
@@ -1146,7 +1295,14 @@ export async function markPrescriptionDeliveryReady(
     const assignment = await tx.prescriptionDeliveryAssignment.create({
       data: {
         addressId: order.prescriptionDeliveryAddress.id,
-        events: { create: { actorUserId: input.actorUserId, type: "CREATED" } },
+        events: {
+          create: {
+            actorUserId: input.actorUserId,
+            idempotencyKey: preparationId,
+            payload: { payloadHash: preparationHash },
+            type: "CREATED",
+          },
+        },
         orderId: order.id,
         status: PrescriptionDeliveryStatus.READY_FOR_ASSIGNMENT,
         storeId: order.storeId,
@@ -1197,14 +1353,20 @@ export async function recordPrescriptionPickupException(
   input: {
     actorUserId: string
     clientOperationId: string
-    exceptionCode: string
+    exceptionCode: ServiceCommercePickupExceptionCode
     fulfillmentId: string
     reason: string
+    source?: ServiceCommerceSourceRef
     status: "abandoned" | "cancelled" | "exception"
     storeId: string
     tenantId: string
   },
 ) {
+  const exceptionHash = commandFingerprint({
+    exceptionCode: input.exceptionCode.trim(),
+    reason: input.reason.trim(),
+    status: input.status,
+  })
   await assertAnyPrescriptionStoreRole(db, {
     storeId: input.storeId,
     tenantId: input.tenantId,
@@ -1218,9 +1380,36 @@ export async function recordPrescriptionPickupException(
       subject: "pickup",
       tenantId: input.tenantId,
     })
-    const fulfillment = await tx.prescriptionPickupFulfillment.findFirst({
+    await assertAnyPrescriptionStoreRole(tx, {
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      userId: input.actorUserId,
+    })
+    const identity = await tx.prescriptionPickupFulfillment.findFirst({
+      select: { id: true },
       where: {
         id: input.fulfillmentId,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    })
+    if (!identity) {
+      throw new PrescriptionFulfillmentError(
+        "FULFILLMENT_NOT_FOUND",
+        "Pickup was not found.",
+      )
+    }
+    await tx.$queryRaw`
+      SELECT "id"
+      FROM "PrescriptionPickupFulfillment"
+      WHERE "id" = ${identity.id}
+        AND "tenantId" = ${input.tenantId}
+        AND "storeId" = ${input.storeId}
+      FOR UPDATE
+    `
+    const fulfillment = await tx.prescriptionPickupFulfillment.findFirst({
+      where: {
+        id: identity.id,
         storeId: input.storeId,
         tenantId: input.tenantId,
       },
@@ -1231,14 +1420,36 @@ export async function recordPrescriptionPickupException(
         "Pickup was not found.",
       )
     }
+    await assertPrescriptionFulfillmentOperationInTransaction(tx, {
+      actorUserId: input.actorUserId,
+      eligible: true,
+      operation: "prepare",
+      orderId: fulfillment.orderId,
+      packed: Boolean(fulfillment.packedAt),
+      ready: fulfillment.status === PrescriptionPickupStatus.READY,
+      source: input.source,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
     const replay = await tx.prescriptionPickupEvent.findFirst({
       where: {
         fulfillmentId: fulfillment.id,
         idempotencyKey: input.clientOperationId,
       },
     })
-    if (replay) return fulfillment
-    assertPickupTransition(pickupStatus(fulfillment.status), input.status)
+    if (replay) {
+      if (replayPayloadHash(replay.payload) !== exceptionHash) {
+        throw new PrescriptionFulfillmentError(
+          "FULFILLMENT_CONFLICT",
+          "This pickup exception id was already used.",
+        )
+      }
+      return fulfillment
+    }
+    assertServiceCommercePickupTransition(
+      pickupStatus(fulfillment.status),
+      input.status,
+    )
     const status = input.status.toUpperCase() as PrescriptionPickupStatus
     const updated = await tx.prescriptionPickupFulfillment.update({
       data: {
@@ -1256,6 +1467,7 @@ export async function recordPrescriptionPickupException(
         actorUserId: input.actorUserId,
         fulfillmentId: fulfillment.id,
         idempotencyKey: input.clientOperationId,
+        payload: { payloadHash: exceptionHash },
         reason: input.reason.trim(),
         type:
           status === PrescriptionPickupStatus.ABANDONED
@@ -1279,10 +1491,12 @@ export async function createPrescriptionDeliveryAssignment(
   db: PrismaClient,
   input: {
     actorUserId: string
+    clientOperationId?: string
     courierDisplayName: string
     courierPhoneMasked?: string
     courierReference: string
     orderId: string
+    source?: ServiceCommerceSourceRef
     storeId: string
     tenantId: string
   },
@@ -1292,6 +1506,14 @@ export async function createPrescriptionDeliveryAssignment(
     tenantId: input.tenantId,
     userId: input.actorUserId,
   })
+  const assignmentId =
+    input.clientOperationId ??
+    `legacy-delivery-assignment-${randomBytes(12).toString("hex")}`
+  const assignmentHash = commandFingerprint({
+    courierDisplayName: input.courierDisplayName.trim(),
+    courierPhoneMasked: input.courierPhoneMasked?.trim() ?? null,
+    courierReference: input.courierReference.trim(),
+  })
   return db.$transaction(async (tx) => {
     await assertPrescriptionFulfillmentPolicy(tx, {
       actorUserId: input.actorUserId,
@@ -1300,6 +1522,34 @@ export async function createPrescriptionDeliveryAssignment(
       subject: "delivery",
       tenantId: input.tenantId,
     })
+    await assertAnyPrescriptionStoreRole(tx, {
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      userId: input.actorUserId,
+    })
+    const assignmentIdentity =
+      await tx.prescriptionDeliveryAssignment.findFirst({
+        select: { id: true },
+        where: {
+          orderId: input.orderId,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        },
+      })
+    if (!assignmentIdentity) {
+      throw new PrescriptionFulfillmentError(
+        "FULFILLMENT_CONFLICT",
+        "A prepared delivery assignment is required.",
+      )
+    }
+    await tx.$queryRaw`
+      SELECT "id"
+      FROM "PrescriptionDeliveryAssignment"
+      WHERE "id" = ${assignmentIdentity.id}
+        AND "tenantId" = ${input.tenantId}
+        AND "storeId" = ${input.storeId}
+      FOR UPDATE
+    `
     const order = await tx.commercialOrder.findFirst({
       include: {
         prescriptionDeliveryAddress: true,
@@ -1328,6 +1578,32 @@ export async function createPrescriptionDeliveryAssignment(
         "A paid and delivery-eligible order is required.",
       )
     }
+    await assertPrescriptionFulfillmentOperationInTransaction(tx, {
+      actorUserId: input.actorUserId,
+      eligible: true,
+      operation: "assign_delivery",
+      orderId: order.id,
+      packed: Boolean(order.prescriptionDeliveryAddress.packedAt),
+      ready: true,
+      source: input.source,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
+    const replay = await tx.prescriptionDeliveryEvent.findFirst({
+      where: {
+        assignmentId: order.prescriptionDeliveryAssignment.id,
+        idempotencyKey: assignmentId,
+      },
+    })
+    if (replay) {
+      if (replayPayloadHash(replay.payload) !== assignmentHash) {
+        throw new PrescriptionFulfillmentError(
+          "FULFILLMENT_CONFLICT",
+          "This delivery assignment id was already used.",
+        )
+      }
+      return order.prescriptionDeliveryAssignment
+    }
     const reassigned =
       order.prescriptionDeliveryAssignment.status ===
       PrescriptionDeliveryStatus.ASSIGNED
@@ -1343,6 +1619,8 @@ export async function createPrescriptionDeliveryAssignment(
         events: {
           create: {
             actorUserId: input.actorUserId,
+            idempotencyKey: assignmentId,
+            payload: { payloadHash: assignmentHash },
             type: reassigned
               ? PrescriptionDeliveryEventType.REASSIGNED
               : PrescriptionDeliveryEventType.ASSIGNED,
@@ -1362,6 +1640,7 @@ export async function transitionPrescriptionDelivery(
     clientOperationId: string
     proofReference?: string
     reason?: string
+    source?: ServiceCommerceSourceRef
     status:
       | "cancelled"
       | "collected"
@@ -1374,6 +1653,11 @@ export async function transitionPrescriptionDelivery(
     tenantId: string
   },
 ) {
+  const transitionHash = commandFingerprint({
+    proofReference: input.proofReference?.trim() ?? null,
+    reason: input.reason?.trim() ?? null,
+    status: input.status,
+  })
   await assertAnyPrescriptionStoreRole(db, {
     storeId: input.storeId,
     tenantId: input.tenantId,
@@ -1401,6 +1685,11 @@ export async function transitionPrescriptionDelivery(
       storeId: input.storeId,
       subject: "delivery",
       tenantId: input.tenantId,
+    })
+    await assertAnyPrescriptionStoreRole(tx, {
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      userId: input.actorUserId,
     })
     const identity = await tx.prescriptionDeliveryAssignment.findFirst({
       select: { id: true },
@@ -1437,6 +1726,17 @@ export async function transitionPrescriptionDelivery(
         "Delivery was not found.",
       )
     }
+    await assertPrescriptionFulfillmentOperationInTransaction(tx, {
+      actorUserId: input.actorUserId,
+      eligible: true,
+      operation: "assign_delivery",
+      orderId: assignment.orderId,
+      packed: true,
+      ready: true,
+      source: input.source,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
     const replay = await tx.prescriptionDeliveryEvent.findFirst({
       where: {
         assignmentId: assignment.id,
@@ -1444,9 +1744,20 @@ export async function transitionPrescriptionDelivery(
       },
     })
     if (replay) {
+      if (replayPayloadHash(replay.payload) !== transitionHash) {
+        throw new PrescriptionFulfillmentError(
+          "FULFILLMENT_CONFLICT",
+          "This delivery transition id was already used.",
+        )
+      }
       return { assignment, communicationIntentId: null }
     }
-    assertDeliveryTransition(deliveryStatus(assignment.status), input.status)
+    assertServiceCommerceDeliveryTransition(
+      deliveryStatus(assignment.status),
+      input.status === "returned_to_pharmacy"
+        ? "returned_to_store"
+        : input.status,
+    )
     const mapped = input.status.toUpperCase() as PrescriptionDeliveryStatus
     const type = mapped as unknown as PrescriptionDeliveryEventType
     const updated = await tx.prescriptionDeliveryAssignment.update({
@@ -1478,6 +1789,7 @@ export async function transitionPrescriptionDelivery(
         actorUserId: input.actorUserId,
         assignmentId: assignment.id,
         idempotencyKey: input.clientOperationId,
+        payload: { payloadHash: transitionHash },
         reason: input.reason?.trim(),
         type,
       },

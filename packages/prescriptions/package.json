@@ -20,6 +20,7 @@
     "typescript": "catalog:"
   },
   "dependencies": {
+    "@ewatrade/service-commerce": "workspace:*",
     "zod": "catalog:"
   }
 }

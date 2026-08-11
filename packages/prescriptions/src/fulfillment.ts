@@ -5,6 +5,12 @@ import {
   randomBytes,
 } from "node:crypto"
 
+import {
+  assertServiceCommerceDeliveryTransition,
+  assertServiceCommercePickupTransition,
+  evaluateServiceCommerceDeliveryZone,
+} from "@ewatrade/service-commerce"
+
 export type PickupStatus =
   | "abandoned"
   | "cancelled"
@@ -13,19 +19,8 @@ export type PickupStatus =
   | "preparing"
   | "ready"
 
-const PICKUP_TRANSITIONS: Record<PickupStatus, PickupStatus[]> = {
-  abandoned: [],
-  cancelled: [],
-  exception: ["cancelled", "preparing", "ready"],
-  handed_off: [],
-  preparing: ["cancelled", "exception", "ready"],
-  ready: ["abandoned", "cancelled", "exception", "handed_off"],
-}
-
 export function assertPickupTransition(from: PickupStatus, to: PickupStatus) {
-  if (!PICKUP_TRANSITIONS[from].includes(to)) {
-    throw new Error(`Pickup cannot move from ${from} to ${to}.`)
-  }
+  assertServiceCommercePickupTransition(from, to)
 }
 
 export type DeliveryStatus =
@@ -39,25 +34,14 @@ export type DeliveryStatus =
   | "rescheduled"
   | "returned_to_pharmacy"
 
-const DELIVERY_TRANSITIONS: Record<DeliveryStatus, DeliveryStatus[]> = {
-  assigned: ["cancelled", "collected", "failed", "rescheduled"],
-  cancelled: [],
-  collected: ["failed", "in_transit", "returned_to_pharmacy"],
-  delivered: [],
-  failed: ["cancelled", "rescheduled", "returned_to_pharmacy"],
-  in_transit: ["delivered", "failed", "returned_to_pharmacy"],
-  ready_for_assignment: ["assigned", "cancelled"],
-  rescheduled: ["assigned", "cancelled"],
-  returned_to_pharmacy: ["cancelled", "rescheduled"],
-}
-
 export function assertDeliveryTransition(
   from: DeliveryStatus,
   to: DeliveryStatus,
 ) {
-  if (!DELIVERY_TRANSITIONS[from].includes(to)) {
-    throw new Error(`Delivery cannot move from ${from} to ${to}.`)
-  }
+  assertServiceCommerceDeliveryTransition(
+    from === "returned_to_pharmacy" ? "returned_to_store" : from,
+    to === "returned_to_pharmacy" ? "returned_to_store" : to,
+  )
 }
 
 export type DeliveryZoneRule = {
@@ -70,35 +54,32 @@ export type DeliveryZoneRule = {
   promiseText: string
 }
 
-function normalize(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, " ")
-}
-
 export function evaluateDeliveryZone(
   rules: DeliveryZoneRule[],
   address: { locality: string; postalCode?: string },
 ) {
-  const locality = normalize(address.locality)
-  const postalCode = normalize(address.postalCode ?? "")
-  const matches = rules
-    .filter((rule) =>
-      rule.matchValues.some((raw) => {
-        const value = normalize(raw)
-        return rule.matchType === "locality"
-          ? locality === value
-          : postalCode.startsWith(value)
-      }),
-    )
-    .sort((left, right) => right.priority - left.priority)
-  if (matches.length === 0) return { outcome: "ineligible" as const }
-  if (matches.length > 1 && matches[0]?.priority === matches[1]?.priority) {
-    return { outcome: "ambiguous" as const }
+  const result = evaluateServiceCommerceDeliveryZone(
+    rules.map((rule) => ({ ...rule, currencyCode: "XXX" })),
+    address,
+  )
+  if (result.outcome === "eligible") {
+    return {
+      feeMinor: result.feeMinor,
+      outcome: result.outcome,
+      zone: rules.find((rule) => rule.id === result.zone.id) ?? result.zone,
+    }
   }
-  const zone = matches[0]
-  if (!zone) return { outcome: "ineligible" as const }
-  return zone.feePolicy === "manual"
-    ? { outcome: "manual_review" as const, zone }
-    : { feeMinor: zone.fixedFeeMinor ?? 0, outcome: "eligible" as const, zone }
+  if (result.outcome === "manual_review") {
+    return {
+      outcome: result.outcome,
+      zone: rules.find((rule) => rule.id === result.zone.id) ?? result.zone,
+    }
+  }
+  return result
+}
+
+function normalize(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ")
 }
 
 function encryptionKey() {

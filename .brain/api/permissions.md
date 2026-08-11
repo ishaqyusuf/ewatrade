@@ -220,6 +220,11 @@
 - Public Inquiry Quote read/select/accept commands deliberately collapse
   invalid source, state and token failures to an unavailable response. A
   competing valid choice is a typed conflict and creates no commercial graph.
+- Shared fulfilment detail and command procedures require an authenticated
+  Service Commerce operator plus an active Store attendant assignment. The
+  repository then rechecks exact Tenant/Store/Order/source, paid/eligible/
+  prepared/ready facts and the source adapter's vertical role/policy inside the
+  write transaction. A Tenant role alone cannot grant Pharmacy fulfilment.
 
 ## Offline
 

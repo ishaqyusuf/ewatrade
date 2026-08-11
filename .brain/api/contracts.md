@@ -543,6 +543,35 @@ implements the Progressive Catalog commands below.
   canRelease`. Public and WhatsApp projections expose only released `ISSUED`
   versions; clients never infer authority from role labels.
 
+### Implemented shared fulfilment contract
+
+- Pickup and delivery commands carry exact Tenant, Store, accepted Order and
+  typed source identity. The API derives Tenant and actor identity from the
+  authenticated context; the repository verifies the accepted Quote source
+  before a vertical adapter can execute.
+- The shared projection contains paid/Order/Quote facts plus a discriminated
+  pickup or delivery operational state: current status, revision, preparation
+  time, proof-present boolean, allowlisted recovery code, latest effective time
+  and state-derived next operations. It exposes no address, proof value,
+  courier identity, customer data or private reason. Next operations describe
+  lifecycle shape only; every mutation reauthorizes current attendant,
+  vertical role, policy and operational gates.
+- Fixed-zone and reasoned manual-fee selection create a new immutable current
+  Quote version before payment. The shared repository accepts only a safe
+  non-negative minor-unit fee and one resolved payable Option.
+- Preparation requires paid and eligible; assignment requires prepared and
+  ready; completion/recovery remains an explicit transition. Pharmacy adds its
+  professional release and policy checks without weakening the shared gates.
+- Preparation, pickup exception/handoff, delivery assignment and delivery
+  transitions lock the authoritative Order/fulfilment row before replay/state
+  reads. Every client operation id is bound to canonical payload identity;
+  identical concurrent calls recover the committed result and changed-payload
+  reuse is a conflict.
+- Pharmacy delivery `returned_to_pharmacy` is translated only at its adapter
+  boundary to shared `returned_to_store`. Encrypted addresses and proof values
+  remain vertical-private; notification intents remain policy-gated and
+  allowlisted.
+
 ### Implemented channel-neutral intake contract
 
 - `serviceCommerce.submitPublicIntake`, `submitStaffIntake` and internal

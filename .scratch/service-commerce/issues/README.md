@@ -17,11 +17,10 @@ production schema/provider operations remain separately authorized.
 ## Execution Rule
 
 Execute one ticket at a time through its blocking edges. Tickets 01, 02, 03,
-11, 03A, 05, 06, 06A and 06B are complete. Tickets 04 and 04A have
+11, 03A, 05, 06, 06A, 06B and 08 are complete. Tickets 04 and 04A have
 source-complete foundations; their remaining recommendation/live-provider
-release gates stay open while Ticket 08 is the next dependency-ready source
-frontier. Ticket 07 is also dependency-ready but follows the declared wave
-order. Any scope or dependency change should update the spec, ADR/Brain and
+release gates stay open. Ticket 07 is the next dependency-ready source
+frontier. Any scope or dependency change should update the spec, ADR/Brain and
 affected tickets before implementation.
 
 ## Dependency-Ordered Waves
