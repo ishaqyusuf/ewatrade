@@ -287,5 +287,8 @@
   fingerprint guard, validates the seven reporting migrations offline and
   emits only redacted live-canary readiness with
   `executionAuthorized: false`; it contacts no database/provider and closes no
-  live or production gate. Started Date:
+  live or production gate. The compatibility inventory now distinguishes
+  canonical, legacy-history and deliberate dual-owned boundaries and records
+  missing runtime rollback controls instead of treating deployment rollback as
+  an in-app switch. Started Date:
   2026-08-11.

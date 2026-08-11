@@ -57,6 +57,8 @@ consultation practice.
 - Policy release gate: `.brain/runbooks/service-commerce-policy-release.md`
 - Ticket 13 readiness/rollback report:
   `.brain/runbooks/service-commerce-ticket-13-readiness.md`
+- Compatibility reader/writer and contraction inventory:
+  `.brain/runbooks/service-commerce-compatibility-inventory.md`
 - Live-provider offline preflight:
   `.brain/runbooks/service-commerce-live-canary.md`
 - Existing Service foundation: `.brain/features/generic-service-operations.md`

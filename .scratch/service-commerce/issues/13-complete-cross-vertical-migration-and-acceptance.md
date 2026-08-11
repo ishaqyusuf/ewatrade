@@ -144,3 +144,9 @@ revised 17-ticket batch.
   readiness with `executionAuthorized: false`. Payment, production media,
   safety/OCR, manual courier proof and the live Meta Connection test remain
   separately authorized open gates.
+- The compatibility/contraction inventory records exact generic Service,
+  Pharmacy, Channels, media, fulfilment, action/notification, reporting and
+  booking ownership plus their live readers/writers and rollback paths. It
+  explicitly leaves the report-cohort flag, central route selector, scoped
+  all-jobs freeze and unified non-WhatsApp provider kill switch as open control
+  gaps rather than claiming an executable traffic switch.

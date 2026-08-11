@@ -49,6 +49,12 @@
   non-destructive order; and the redacted live-canary preflight performs no
   database, network or provider operation and always reports
   `executionAuthorized: false`.
+- The compatibility inventory now names the switch-critical
+  canonical/legacy/shared reader-writer boundaries, their retained rollback
+  paths and contraction disposition. It also records the controls that do not
+  exist: there is no
+  report cohort flag, central compatibility route selector, Tenant/Store
+  all-jobs freeze or unified payment/media/OCR/courier kill switch.
 
 ## Open Release Gates
 
@@ -71,7 +77,10 @@
 
 The owner should authorize a production switch only after every open gate has
 recorded evidence, the development/production schema reconciliation is clean,
-and no report or customer action depends on a compatibility-only writer.
+and no report or customer action depends on a compatibility-only writer. Use
+`.brain/runbooks/service-commerce-compatibility-inventory.md` to record the
+selected cohort, current/target artifacts, observed readers/writers and whether
+each rollback is an in-app control or a deployment/provider operation.
 Technical readiness does not authorize Pharmacy WhatsApp policy or provider
 activation.
 
