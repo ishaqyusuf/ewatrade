@@ -8,6 +8,7 @@ import { cn } from "@/utils"
 import {
   Analytics01Icon,
   Archive01Icon,
+  BubbleChatIcon,
   Home01Icon,
   Package01Icon,
   Settings01Icon,
@@ -23,6 +24,7 @@ import { usePathname } from "next/navigation"
 const NAV_ICONS: Record<DashboardNavItem["icon"], any> = {
   analytics: Analytics01Icon,
   customers: UserCircle02Icon,
+  conversations: BubbleChatIcon,
   home: Home01Icon,
   inventory: Archive01Icon,
   products: Package01Icon,

@@ -207,7 +207,12 @@ export async function loadStoreConversationRequestSummaries(
       },
     }),
     db.prescriptionRequest.findMany({
-      select: { createdAt: true, id: true, status: true },
+      select: {
+        createdAt: true,
+        currentMediaRevision: true,
+        id: true,
+        status: true,
+      },
       where: {
         id: { in: prescriptionIds },
         storeId: input.storeId,
@@ -224,6 +229,7 @@ export async function loadStoreConversationRequestSummaries(
       kind: "commerce_inquiry",
       label: "Product request",
       lifecycle: terminalRequestStatuses.has(status) ? "terminal" : "active",
+      revision: source.revision,
       status,
     })
   }
@@ -235,6 +241,7 @@ export async function loadStoreConversationRequestSummaries(
       kind: "service_request",
       label: "Service request",
       lifecycle: terminalRequestStatuses.has(status) ? "terminal" : "active",
+      revision: source.revision,
       status,
     })
   }
@@ -246,6 +253,7 @@ export async function loadStoreConversationRequestSummaries(
       kind: "prescription_request",
       label: "Prescription request",
       lifecycle: terminalRequestStatuses.has(status) ? "terminal" : "active",
+      revision: source.currentMediaRevision,
       status,
     })
   }
@@ -360,7 +368,11 @@ export async function assertStoreConversationAttendant(
   input: { actorUserId: string; storeId: string; tenantId: string },
 ) {
   const membership = await db.membership.findFirst({
-    select: { id: true },
+    select: {
+      id: true,
+      role: true,
+      user: { select: { displayName: true, name: true } },
+    },
     where: {
       acceptedAt: { not: null },
       status: "ACTIVE",

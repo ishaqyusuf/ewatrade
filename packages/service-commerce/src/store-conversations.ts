@@ -7,6 +7,8 @@ import type {
   StoreConversationRequestStatus,
 } from "./schemas/store-conversations"
 
+export const DEFAULT_STORE_CONVERSATION_RESPONSE_SLA_MINUTES = 15
+
 export type StoreConversationMessageProjection = {
   author: {
     kind: StoreConversationAuthorKind
@@ -42,16 +44,60 @@ export type StoreConversationRequestSummaryProjection = {
   kind: StoreConversationRequestKind
   label: string
   lifecycle: "active" | "terminal"
+  revision: number
   status: StoreConversationRequestStatus
 }
 
 export type StoreConversationQueueItemProjection = {
+  assignment: {
+    label: string | null
+    revision: number
+  }
   assignedToCurrentUser: boolean
   conversationId: string
-  lastActivityAt: Date
+  lastCustomerActivityAt: Date
   lastMessageSequence: number
+  requests: Array<
+    Pick<
+      StoreConversationRequestSummaryProjection,
+      "kind" | "label" | "lifecycle" | "status"
+    >
+  >
   requestKinds: StoreConversationRequestKind[]
+  sla: StoreConversationSlaProjection
   state: "new" | "assigned"
+  unreadCustomerMessages: number
+}
+
+export type StoreConversationSlaProjection = {
+  dueAt: Date | null
+  state: "awaiting_response" | "overdue" | "responded"
+}
+
+export function projectStoreConversationSla(input: {
+  lastCustomerMessageAt: Date | null
+  lastStoreReplyAt: Date | null
+  now: Date
+  responseSlaMinutes?: number
+}): StoreConversationSlaProjection {
+  if (
+    !input.lastCustomerMessageAt ||
+    (input.lastStoreReplyAt &&
+      input.lastStoreReplyAt.getTime() >= input.lastCustomerMessageAt.getTime())
+  ) {
+    return { dueAt: null, state: "responded" }
+  }
+  const dueAt = new Date(
+    input.lastCustomerMessageAt.getTime() +
+      (input.responseSlaMinutes ??
+        DEFAULT_STORE_CONVERSATION_RESPONSE_SLA_MINUTES) *
+        60_000,
+  )
+  return {
+    dueAt,
+    state:
+      input.now.getTime() >= dueAt.getTime() ? "overdue" : "awaiting_response",
+  }
 }
 
 export function projectStoreConversationCursor(input: {

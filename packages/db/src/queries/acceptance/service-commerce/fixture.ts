@@ -50,6 +50,9 @@ async function deleteAcceptanceFixture(
       })
     ).map((conversation) => conversation.guestIdentityId)
     await tx.storeConversationAuditEvent.deleteMany({ where: { tenantId } })
+    await tx.storeConversationEscalationEvent.deleteMany({
+      where: { tenantId },
+    })
     await tx.storeConversationAssignmentEvent.deleteMany({
       where: { tenantId },
     })

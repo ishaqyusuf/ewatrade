@@ -38,8 +38,21 @@
   run-owned Tenant/User residue. Desktop/390px browser acceptance proves staged
   choice, exact active-Request selection, current/complete separation, loading
   recovery, keyboard reachability, clean console, invalid-link recovery and no
-  page-level overflow. Ticket 04 is the active implementation frontier. Existing
-  public routes and implemented
+  page-level overflow. Ticket 04 is complete: the content-free URL-owned Store
+  queue, serialized primary claim, audited team reads, exact Request/revision
+  replies, reasoned release/handoff/reassignment, membership-revocation
+  release, bounded escalation job and responsive global sheet are implemented.
+  Focused tests and typechecks pass; verified-Neon acceptance passes 3 tests /
+  42 assertions and verifies exact Tenant/User cleanup at zero. The final
+  starvation-safe escalation query was independently revalidated by the
+  affected Neon case at 1 test / 13 assertions. The established
+  desktop/390px browser baseline proves claim/reply, empty/error/retry,
+  Back/Forward and focus restoration, handoff/removal, operational escalation,
+  a 17-message timeline and overflow containment. The final Midday component
+  extraction is source-, unit-, format- and type-verified; its bounded browser
+  rerun was inconclusive after the task-owned development route stopped
+  responding and is not reported as a pass. Ticket 05 is the active
+  implementation frontier. Existing public routes and implemented
   Service/Prescription behavior remain unchanged, Nigeria Pharmacy WhatsApp
   stays fail closed, and the ticket approval does not itself authorize provider,
   production, traffic-switch, or contraction work.

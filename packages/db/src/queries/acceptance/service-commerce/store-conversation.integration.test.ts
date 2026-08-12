@@ -1,8 +1,12 @@
 import { afterAll, beforeAll, expect, setDefaultTimeout, test } from "bun:test"
 import type { ServiceCommerceProfileSettings } from "@ewatrade/service-commerce"
 
-import { publishCustomerEntryPoint } from "../../customer-channels"
+import {
+  assignCustomerChannelAttendant,
+  publishCustomerEntryPoint,
+} from "../../customer-channels"
 import { submitPublicPrescriptionRequest } from "../../prescription-requests"
+import { updateRetailOpsStaffStatus } from "../../retail-ops-staff"
 import {
   setServiceCommerceStoreProfileActivation,
   updateServiceCommerceStoreProfile,
@@ -17,7 +21,10 @@ import {
   claimStoreConversation,
   getGuestStoreConversationTimeline,
   getStoreConversationStaffTimeline,
+  handoffStoreConversation,
   listStoreConversationQueue,
+  reassignStoreConversation,
+  recordOverdueStoreConversationEscalations,
   replyToStoreConversation,
   selectGuestStoreConversationRequest,
   sendGuestStoreConversationText,
@@ -26,6 +33,7 @@ import { describeWithServiceCommerceDatabase } from "./database"
 import {
   type ServiceCommerceAcceptanceFixture,
   createServiceCommerceAcceptanceFixture,
+  createServiceCommerceAcceptanceMember,
   disposeServiceCommerceAcceptanceFixture,
 } from "./fixture"
 
@@ -177,19 +185,30 @@ describeWithServiceCommerceDatabase(
         storeId: primary.storeId,
         tenantId: primary.tenantId,
       })
-      expect(queue).toEqual([
-        expect.objectContaining({
-          conversationId: opened.conversation.id,
-          requestKinds: ["commerce_inquiry"],
-          state: "new",
-        }),
-      ])
+      expect(queue).toEqual({
+        items: [
+          expect.objectContaining({
+            conversationId: opened.conversation.id,
+            requestKinds: ["commerce_inquiry"],
+            requests: [
+              expect.objectContaining({
+                kind: "commerce_inquiry",
+                lifecycle: "active",
+                status: "received",
+              }),
+            ],
+            state: "new",
+          }),
+        ],
+        nextCursor: null,
+      })
       expect(JSON.stringify(queue)).not.toContain(sendInput.text)
 
       await claimStoreConversation(primary.db, {
         actorUserId: primary.actorUserId,
         clientOperationId: "acceptance-claim-0001",
         conversationId: opened.conversation.id,
+        expectedAssignmentRevision: 0,
         storeId: primary.storeId,
         tenantId: primary.tenantId,
       })
@@ -197,6 +216,8 @@ describeWithServiceCommerceDatabase(
         actorUserId: primary.actorUserId,
         clientOperationId: "acceptance-reply-0001",
         conversationId: opened.conversation.id,
+        expectedAssignmentRevision: 1,
+        expectedLastMessageSequence: 1,
         storeId: primary.storeId,
         tenantId: primary.tenantId,
         text: "We have that bag. I am preparing your quotation.",
@@ -386,6 +407,7 @@ describeWithServiceCommerceDatabase(
         actorUserId: primary.actorUserId,
         clientOperationId: "typed-claim-0001",
         conversationId: opened.conversation.id,
+        expectedAssignmentRevision: 0,
         storeId: primary.storeId,
         tenantId: primary.tenantId,
       })
@@ -394,6 +416,8 @@ describeWithServiceCommerceDatabase(
           actorUserId: primary.actorUserId,
           clientOperationId: "typed-ambiguous-reply-0001",
           conversationId: opened.conversation.id,
+          expectedAssignmentRevision: 1,
+          expectedLastMessageSequence: 3,
           storeId: primary.storeId,
           tenantId: primary.tenantId,
           text: "Your Request is under review.",
@@ -404,9 +428,12 @@ describeWithServiceCommerceDatabase(
           actorUserId: primary.actorUserId,
           clientOperationId: "typed-prescription-reply-0001",
           conversationId: opened.conversation.id,
+          expectedAssignmentRevision: 1,
+          expectedLastMessageSequence: 3,
           request: {
             id: prescription.requestId,
             kind: "prescription_request",
+            revision: 1,
           },
           storeId: primary.storeId,
           tenantId: primary.tenantId,
@@ -481,6 +508,263 @@ describeWithServiceCommerceDatabase(
           sourceKind: "SERVICE_REQUEST",
         }),
       ).rejects.toMatchObject({ code: "NOT_FOUND" })
+    }, 240_000)
+
+    test("serializes primary claim, permits audited team reads, and releases revoked handoffs", async () => {
+      const secondary = await createServiceCommerceAcceptanceMember(primary, {
+        name: "Conversation Handoff Attendant",
+        role: "OPERATOR",
+      })
+      await assignCustomerChannelAttendant(primary.db, {
+        actorUserId: primary.actorUserId,
+        membershipId: secondary.membershipId,
+        reason: "Ticket 04 handoff acceptance",
+        storeId: primary.storeId,
+        tenantId: primary.tenantId,
+      })
+      const primaryMembership = await primary.db.membership.findFirstOrThrow({
+        select: { id: true },
+        where: {
+          tenantId: primary.tenantId,
+          userId: primary.actorUserId,
+        },
+      })
+      const opened = await bootstrapWebStoreConversation(primary.db, {
+        publicToken: primaryEntryToken,
+      })
+      if (!opened.credentialToken) throw new Error("Guest credential missing")
+      const sent = await sendGuestStoreConversationText(primary.db, {
+        clientOperationId: "assignment-message-0001",
+        conversationId: opened.conversation.id,
+        credentialToken: opened.credentialToken,
+        publicToken: primaryEntryToken,
+        text: "Can someone help with a product request?",
+      })
+      await selectGuestStoreConversationRequest(primary.db, {
+        clientOperationId: "assignment-product-select-0001",
+        conversationId: opened.conversation.id,
+        credentialToken: opened.credentialToken,
+        messageId: sent.message.id,
+        publicToken: primaryEntryToken,
+        target: { kind: "new_commerce_inquiry" },
+      })
+      const overdue = await recordOverdueStoreConversationEscalations(
+        primary.db,
+        {
+          limit: 20,
+          now: new Date(Date.now() + 20 * 60_000),
+        },
+      )
+      expect(overdue.openedCount).toBeGreaterThanOrEqual(1)
+
+      const claims = await Promise.allSettled([
+        claimStoreConversation(primary.db, {
+          actorUserId: primary.actorUserId,
+          clientOperationId: "assignment-primary-claim-0001",
+          conversationId: opened.conversation.id,
+          expectedAssignmentRevision: 0,
+          storeId: primary.storeId,
+          tenantId: primary.tenantId,
+        }),
+        claimStoreConversation(primary.db, {
+          actorUserId: secondary.userId,
+          clientOperationId: "assignment-secondary-claim-0001",
+          conversationId: opened.conversation.id,
+          expectedAssignmentRevision: 0,
+          storeId: primary.storeId,
+          tenantId: primary.tenantId,
+        }),
+      ])
+      expect(
+        claims.filter((claim) => claim.status === "fulfilled"),
+      ).toHaveLength(1)
+      expect(
+        claims.filter((claim) => claim.status === "rejected"),
+      ).toHaveLength(1)
+      const assigned = await primary.db.storeConversation.findUniqueOrThrow({
+        select: { assignedMembershipId: true, assignmentRevision: true },
+        where: { id: opened.conversation.id },
+      })
+      const winnerIsPrimary =
+        assigned.assignedMembershipId === primaryMembership.id
+      const winnerUserId = winnerIsPrimary
+        ? primary.actorUserId
+        : secondary.userId
+      const loserUserId = winnerIsPrimary
+        ? secondary.userId
+        : primary.actorUserId
+      const loserMembershipId = winnerIsPrimary
+        ? secondary.membershipId
+        : primaryMembership.id
+      const nonPrimaryTimeline = await getStoreConversationStaffTimeline(
+        primary.db,
+        {
+          actorUserId: loserUserId,
+          conversationId: opened.conversation.id,
+          storeId: primary.storeId,
+          tenantId: primary.tenantId,
+        },
+      )
+      expect(nonPrimaryTimeline).toMatchObject({
+        permissions: { canReply: false },
+      })
+      expect(
+        await primary.db.storeConversationAuditEvent.count({
+          where: {
+            actorMembershipId: loserMembershipId,
+            conversationId: opened.conversation.id,
+            type: "STAFF_TIMELINE_READ",
+          },
+        }),
+      ).toBe(1)
+      await expect(
+        getStoreConversationStaffTimeline(primary.db, {
+          actorUserId: primary.actorUserId,
+          conversationId: opened.conversation.id,
+          storeId: foreign.storeId,
+          tenantId: primary.tenantId,
+        }),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" })
+      expect(
+        await primary.db.prescriptionStoreRole.count({
+          where: { userId: secondary.userId },
+        }),
+      ).toBe(0)
+      expect(
+        await primary.db.serviceCommerceStoreTeamAssignment.count({
+          where: {
+            capability: "QUOTE_APPROVER",
+            membershipId: secondary.membershipId,
+          },
+        }),
+      ).toBe(0)
+
+      const winnerTimeline = await getStoreConversationStaffTimeline(
+        primary.db,
+        {
+          actorUserId: winnerUserId,
+          conversationId: opened.conversation.id,
+          storeId: primary.storeId,
+          tenantId: primary.tenantId,
+        },
+      )
+      const activeRequest = winnerTimeline.requests.find(
+        (request) => request.lifecycle === "active",
+      )
+      if (!activeRequest) throw new Error("Active Request missing")
+      const replies = await Promise.allSettled([
+        replyToStoreConversation(primary.db, {
+          actorUserId: winnerUserId,
+          clientOperationId: "assignment-reply-a-0001",
+          conversationId: opened.conversation.id,
+          expectedAssignmentRevision: assigned.assignmentRevision,
+          expectedLastMessageSequence:
+            winnerTimeline.conversation.lastMessageSequence,
+          request: {
+            id: activeRequest.id,
+            kind: activeRequest.kind,
+            revision: activeRequest.revision,
+          },
+          storeId: primary.storeId,
+          tenantId: primary.tenantId,
+          text: "I can help with this product request.",
+        }),
+        replyToStoreConversation(primary.db, {
+          actorUserId: winnerUserId,
+          clientOperationId: "assignment-reply-b-0001",
+          conversationId: opened.conversation.id,
+          expectedAssignmentRevision: assigned.assignmentRevision,
+          expectedLastMessageSequence:
+            winnerTimeline.conversation.lastMessageSequence,
+          request: {
+            id: activeRequest.id,
+            kind: activeRequest.kind,
+            revision: activeRequest.revision,
+          },
+          storeId: primary.storeId,
+          tenantId: primary.tenantId,
+          text: "A conflicting reply should not be appended.",
+        }),
+      ])
+      expect(
+        replies.filter((reply) => reply.status === "fulfilled"),
+      ).toHaveLength(1)
+      expect(
+        replies.filter((reply) => reply.status === "rejected"),
+      ).toHaveLength(1)
+
+      const handoff = await handoffStoreConversation(primary.db, {
+        actorUserId: winnerUserId,
+        clientOperationId: "assignment-handoff-0001",
+        conversationId: opened.conversation.id,
+        expectedAssignmentRevision: assigned.assignmentRevision,
+        reason: "shift_change",
+        storeId: primary.storeId,
+        tenantId: primary.tenantId,
+        toMembershipId: loserMembershipId,
+      })
+      const reassigned = await reassignStoreConversation(primary.db, {
+        actorUserId: primary.actorUserId,
+        clientOperationId: "assignment-reassign-0001",
+        conversationId: opened.conversation.id,
+        expectedAssignmentRevision: handoff.assignmentRevision,
+        reason: "operational_recovery",
+        storeId: primary.storeId,
+        tenantId: primary.tenantId,
+        toMembershipId: winnerIsPrimary
+          ? primaryMembership.id
+          : secondary.membershipId,
+      })
+      if (winnerIsPrimary) {
+        await handoffStoreConversation(primary.db, {
+          actorUserId: primary.actorUserId,
+          clientOperationId: "assignment-final-handoff-0001",
+          conversationId: opened.conversation.id,
+          expectedAssignmentRevision: reassigned.assignmentRevision,
+          reason: "shift_change",
+          storeId: primary.storeId,
+          tenantId: primary.tenantId,
+          toMembershipId: secondary.membershipId,
+        })
+      }
+      await updateRetailOpsStaffStatus(primary.db, {
+        actorUserId: primary.actorUserId,
+        staffUserId: secondary.userId,
+        status: "suspended",
+        tenantId: primary.tenantId,
+      })
+      expect(
+        await primary.db.storeConversation.findUniqueOrThrow({
+          select: { assignedMembershipId: true },
+          where: { id: opened.conversation.id },
+        }),
+      ).toEqual({ assignedMembershipId: null })
+      expect(
+        await primary.db.storeConversationEscalationEvent.count({
+          where: {
+            conversationId: opened.conversation.id,
+            kind: "MEMBERSHIP_UNAVAILABLE",
+            type: "OPENED",
+          },
+        }),
+      ).toBe(1)
+      const assignmentEvents =
+        await primary.db.storeConversationAssignmentEvent.findMany({
+          orderBy: { occurredAt: "asc" },
+          select: { assignmentRevision: true, reason: true, type: true },
+          where: { conversationId: opened.conversation.id },
+        })
+      expect(assignmentEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            assignmentRevision: 1,
+            reason: "attendant_claimed",
+            type: "CLAIMED",
+          }),
+          expect.objectContaining({ type: "REASSIGNED" }),
+          expect.objectContaining({ type: "MEMBERSHIP_RELEASED" }),
+        ]),
+      )
     }, 240_000)
   },
 )

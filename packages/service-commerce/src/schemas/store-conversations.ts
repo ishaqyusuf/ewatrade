@@ -4,6 +4,15 @@ const opaqueIdSchema = z.string().trim().min(1).max(191)
 const clientOperationIdSchema = z.string().trim().min(8).max(160)
 const conversationTextSchema = z.string().trim().min(1).max(2_000)
 
+export const storeConversationAssignmentReasonSchema = z.enum([
+  "customer_request",
+  "membership_unavailable",
+  "operational_recovery",
+  "shift_change",
+  "specialist_handoff",
+  "workload_balance",
+])
+
 export const storeConversationChannelSchema = z.enum([
   "web",
   "mobile",
@@ -28,6 +37,29 @@ export const storeConversationRequestKindSchema = z.enum([
   "service_request",
   "prescription_request",
 ])
+
+export const storeConversationQueueInputSchema = z
+  .object({
+    assignment: z
+      .enum(["all", "unassigned", "mine", "assigned"])
+      .default("all"),
+    cursor: z.string().trim().min(1).max(512).optional(),
+    pageSize: z.number().int().min(1).max(100).default(25),
+    q: z.string().trim().min(1).max(80).optional(),
+    requestKinds: z
+      .array(storeConversationRequestKindSchema)
+      .max(3)
+      .default([]),
+    sla: z.enum(["all", "awaiting_response", "overdue"]).default("all"),
+    sort: z
+      .tuple([
+        z.enum(["last_customer_activity", "response_due_at"]),
+        z.enum(["asc", "desc"]),
+      ])
+      .default(["last_customer_activity", "desc"]),
+    storeId: opaqueIdSchema,
+  })
+  .strict()
 
 export const storeConversationRequestStatusSchema = z.enum([
   "received",
@@ -101,6 +133,7 @@ export const storeConversationClaimInputSchema = z
   .object({
     clientOperationId: clientOperationIdSchema,
     conversationId: opaqueIdSchema,
+    expectedAssignmentRevision: z.number().int().nonnegative(),
     storeId: opaqueIdSchema,
   })
   .strict()
@@ -109,10 +142,13 @@ export const storeConversationReplyInputSchema = z
   .object({
     clientOperationId: clientOperationIdSchema,
     conversationId: opaqueIdSchema,
+    expectedAssignmentRevision: z.number().int().nonnegative(),
+    expectedLastMessageSequence: z.number().int().nonnegative(),
     request: z
       .object({
         id: opaqueIdSchema,
         kind: storeConversationRequestKindSchema,
+        revision: z.number().int().positive(),
       })
       .strict()
       .optional(),
@@ -121,8 +157,35 @@ export const storeConversationReplyInputSchema = z
   })
   .strict()
 
+const storeConversationAssignmentCommandBaseSchema = z.object({
+  clientOperationId: clientOperationIdSchema,
+  conversationId: opaqueIdSchema,
+  expectedAssignmentRevision: z.number().int().nonnegative(),
+  reason: storeConversationAssignmentReasonSchema,
+  storeId: opaqueIdSchema,
+})
+
+export const storeConversationReleaseInputSchema =
+  storeConversationAssignmentCommandBaseSchema.strict()
+
+export const storeConversationHandoffInputSchema =
+  storeConversationAssignmentCommandBaseSchema
+    .extend({ toMembershipId: opaqueIdSchema })
+    .strict()
+
+export const storeConversationReassignInputSchema =
+  storeConversationAssignmentCommandBaseSchema
+    .extend({ toMembershipId: opaqueIdSchema })
+    .strict()
+
 export type StoreConversationChannel = z.infer<
   typeof storeConversationChannelSchema
+>
+export type StoreConversationAssignmentReason = z.infer<
+  typeof storeConversationAssignmentReasonSchema
+>
+export type StoreConversationQueueInput = z.infer<
+  typeof storeConversationQueueInputSchema
 >
 export type StoreConversationAuthorKind = z.infer<
   typeof storeConversationAuthorKindSchema
@@ -156,4 +219,13 @@ export type StoreConversationClaimInput = z.infer<
 >
 export type StoreConversationReplyInput = z.infer<
   typeof storeConversationReplyInputSchema
+>
+export type StoreConversationReleaseInput = z.infer<
+  typeof storeConversationReleaseInputSchema
+>
+export type StoreConversationHandoffInput = z.infer<
+  typeof storeConversationHandoffInputSchema
+>
+export type StoreConversationReassignInput = z.infer<
+  typeof storeConversationReassignInputSchema
 >

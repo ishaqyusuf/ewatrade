@@ -3,6 +3,7 @@
 import { DomainSheet } from "./domain-sheet"
 import { PrescriptionRequestSheet } from "./prescription-request-sheet"
 import { ServiceCommerceSheet } from "./service-commerce-sheet"
+import { StoreConversationSheet } from "./store-conversation-sheet"
 
 export function GlobalSheets({
   store,
@@ -14,6 +15,7 @@ export function GlobalSheets({
       <DomainSheet store={store} />
       <PrescriptionRequestSheet storeId={store.id} />
       <ServiceCommerceSheet storeId={store.id} />
+      <StoreConversationSheet storeId={store.id} />
     </>
   )
 }

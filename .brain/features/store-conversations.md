@@ -22,6 +22,22 @@ acceptance passes 2 tests / 29 assertions with zero run-owned Tenant/User
 residue, and desktop/390px browser acceptance proves staged choice, exact
 active-Request selection, current/complete separation, loading retry, keyboard
 reachability, invalid-link recovery, clean console and no page-level overflow.
+Ticket 04 is complete: the protected dashboard now has a content-free,
+URL-owned Store queue; one serialized primary attendant; audited claim,
+release, handoff and reassignment; exact Request/revision guarded replies; and
+bounds all five escalation classes. Focused shared, DB, API, job and dashboard
+tests pass, and verified-Neon acceptance passes 3 tests / 42 assertions with
+zero run-owned Tenant/User residue. The final exact-dedupe escalation query was
+then revalidated by the affected Neon case at 1 test / 13 assertions. The
+established desktop/390px browser
+baseline proves claim/reply, Back/Forward and focus restoration,
+empty/error/retry, handoff, immediate membership-removal release, a 17-message
+scrollable timeline and no page-level overflow. The final Midday table/form
+extraction is source-, unit-, format- and type-verified; its bounded browser
+rerun was inconclusive after the task-owned development route stopped
+responding, so it is not counted as new browser evidence. Development
+migration status reports all 50 artifacts applied; no production migration or
+provider action occurred.
 No provider, production traffic-switch, or contraction is authorized by this
 status.
 
@@ -108,8 +124,8 @@ Business shell remains a separate authenticated security context.
 
 ## Implementation Frontier
 
-- Implement Ticket 04's Store queue, assignment and audited-handoff surface now
-  that Tickets 01–03 are complete.
-- Execute Tickets 04–18 only after their recorded blockers are complete.
+- Implement Ticket 05's mobile Customer shell and universal Store-link surface
+  now that Tickets 01–04 are complete.
+- Execute Tickets 05–18 only after their recorded blockers are complete.
 - Keep additive implementation, compatibility acceptance, provider and
   production gates as separately authorized work.

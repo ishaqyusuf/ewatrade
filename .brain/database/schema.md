@@ -283,19 +283,27 @@ persistence boundary. Clients never access the database directly.
   private staged message, not a universal Request. The link does not duplicate
   source lifecycle or sensitive vertical content.
 - `StoreConversationCommandReceipt` binds a conversation/client-operation id to
-  a payload hash and original message/source, making customer send, claim and
-  Store reply replay-safe.
+  a payload hash and original message/source/assignment result, making customer
+  send, claim, release, handoff, reassignment and Store reply replay-safe.
 - `StoreConversationAssignmentEvent` and `StoreConversationAuditEvent` retain
-  append-only assignment/lifecycle evidence. Current Ticket 02 writes only
-  bootstrap, customer message, claim and Store reply facts; later handoff,
-  moderation and retention behavior remains ticketed.
+  append-only actor/time/from/to assignment and lifecycle evidence. Assignment
+  actor is nullable only for system release after current Store-attendant
+  eligibility is revoked.
+- `StoreConversationEscalationEvent` is an append-only, Tenant/Store-scoped
+  operational fact for unclaimed, overdue, abandoned, failed-response and
+  unavailable-membership recovery. Open/resolved lifecycle uses bounded
+  kinds/reasons and never stores customer message content.
+- `StoreConversation` snapshots customer/reply occurrence and `responseDueAt`
+  for deterministic SLA projection while authoritative messages remain the
+  append-only timeline.
 
 Ticket 03 adds `REQUEST_SELECTED`/`REQUEST_LINKED` enum facts and integer
 `revision @default(1)` fields to `CommerceInquiry` and `ServiceRequest`.
 Established lifecycle/Quote commands increment those versions; Prescription
-retains `currentMediaRevision`. The migration ledger reports all 49 artifacts
-applied on verified development Neon, and the run-owned multi-source acceptance
-passes with exact cleanup. No production schema claim is made.
+retains `currentMediaRevision`. Ticket 04 adds the assignment/SLA/escalation
+fields and events without contracting those sources. The migration ledger
+reports all 50 artifacts applied on verified development Neon. No production
+schema claim is made.
 
 ## Removed Prototype Schema
 

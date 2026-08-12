@@ -12,11 +12,20 @@ export {
   selectGuestStoreConversationRequest,
 } from "./store-conversations-requests"
 export {
-  claimStoreConversation,
   getStoreConversationStaffTimeline,
   listStoreConversationQueue,
   replyToStoreConversation,
 } from "./store-conversations-staff"
+export {
+  claimStoreConversation,
+  handoffStoreConversation,
+  listEligibleStoreConversationAttendants,
+  reassignStoreConversation,
+  recordFailedStoreConversationResponse,
+  recordOverdueStoreConversationEscalations,
+  releaseStoreConversation,
+  releaseStoreConversationsForIneligibleMembership,
+} from "./store-conversations-assignments"
 export {
   getStoreEntryServiceRequestForm,
   submitStoreConversationServiceRequest,

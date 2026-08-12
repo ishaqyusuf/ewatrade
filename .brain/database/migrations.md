@@ -619,6 +619,25 @@ acceptance passes 2 tests / 29 assertions with zero run-owned Tenant/User
 residue. No production migration, reset or destructive schema operation was
 performed.
 
+## Store Conversations Ticket 04
+
+Prisma generated the additive
+`20260812190000_store_conversation_queue_assignment` SQL from the verified
+development datasource and current schema. It adds bounded assignment reason,
+escalation and event enums; conversation SLA/reply occurrence fields; replay
+assignment snapshots; nullable system-assignment actors; and the append-only
+`StoreConversationEscalationEvent` relation. It does not rename, drop or
+rewrite existing conversation, Request, Quote, Order or Pharmacy data.
+
+The generated artifact was executed on verified development Neon and resolved
+into the Prisma ledger; `prisma migrate status` reports all 50 migrations
+applied and the schema current. The required `bun db:migrate --local` and
+`bun db:push --local` workflows were also invoked, but their remote schema-
+engine phase failed before reconciliation under the constrained development
+role. No migration SQL was hand-authored, no reset/data-loss override was used,
+and no production database was contacted. Verified-Neon acceptance passes 3
+tests / 42 assertions with run-owned cleanup.
+
 # Hybrid QA cleanup
 
 - Adds tenant QA lifecycle fields and global purge-run receipts. Apply the

@@ -2,11 +2,18 @@ import { describe, expect, test } from "bun:test"
 
 import {
   storeConversationBootstrapInputSchema,
+  storeConversationHandoffInputSchema,
+  storeConversationQueueInputSchema,
+  storeConversationReleaseInputSchema,
+  storeConversationReplyInputSchema,
   storeConversationSelectRequestInputSchema,
   storeConversationSendTextInputSchema,
   storeConversationTimelineInputSchema,
 } from "./schemas/store-conversations"
-import { projectStoreConversationCursor } from "./store-conversations"
+import {
+  projectStoreConversationCursor,
+  projectStoreConversationSla,
+} from "./store-conversations"
 
 describe("Store Conversation contracts", () => {
   test("accepts an opaque Store entry and bounded text command", () => {
@@ -87,5 +94,115 @@ describe("Store Conversation contracts", () => {
         target: { kind: "existing_request", requestId: "source-1" },
       }),
     ).toThrow()
+  })
+
+  test("owns bounded queue filters and deterministic cursor state", () => {
+    expect(
+      storeConversationQueueInputSchema.parse({
+        assignment: "mine",
+        cursor: "cursor_1",
+        requestKinds: ["service_request", "prescription_request"],
+        sla: "overdue",
+        sort: ["response_due_at", "asc"],
+        storeId: "store_1",
+      }),
+    ).toEqual({
+      assignment: "mine",
+      cursor: "cursor_1",
+      pageSize: 25,
+      requestKinds: ["service_request", "prescription_request"],
+      sla: "overdue",
+      sort: ["response_due_at", "asc"],
+      storeId: "store_1",
+    })
+    expect(() =>
+      storeConversationQueueInputSchema.parse({
+        pageSize: 101,
+        storeId: "store_1",
+      }),
+    ).toThrow()
+  })
+
+  test("requires exact conversation, assignment and source revisions to reply", () => {
+    expect(
+      storeConversationReplyInputSchema.parse({
+        clientOperationId: "reply-command-0001",
+        conversationId: "conversation_1",
+        expectedAssignmentRevision: 4,
+        expectedLastMessageSequence: 8,
+        request: {
+          id: "service_1",
+          kind: "service_request",
+          revision: 3,
+        },
+        storeId: "store_1",
+        text: "  We can help with that.  ",
+      }),
+    ).toMatchObject({
+      expectedAssignmentRevision: 4,
+      expectedLastMessageSequence: 8,
+      request: { revision: 3 },
+      text: "We can help with that.",
+    })
+    expect(() =>
+      storeConversationReplyInputSchema.parse({
+        clientOperationId: "reply-command-0002",
+        conversationId: "conversation_1",
+        storeId: "store_1",
+        text: "Missing revision guards",
+      }),
+    ).toThrow()
+  })
+
+  test("uses allowlisted reasons for release and exact-target handoff", () => {
+    expect(
+      storeConversationReleaseInputSchema.parse({
+        clientOperationId: "release-command-1",
+        conversationId: "conversation_1",
+        expectedAssignmentRevision: 2,
+        reason: "shift_change",
+        storeId: "store_1",
+      }).reason,
+    ).toBe("shift_change")
+    expect(
+      storeConversationHandoffInputSchema.parse({
+        clientOperationId: "handoff-command-1",
+        conversationId: "conversation_1",
+        expectedAssignmentRevision: 2,
+        reason: "specialist_handoff",
+        storeId: "store_1",
+        toMembershipId: "membership_2",
+      }).toMembershipId,
+    ).toBe("membership_2")
+    expect(() =>
+      storeConversationReleaseInputSchema.parse({
+        clientOperationId: "release-command-2",
+        conversationId: "conversation_1",
+        expectedAssignmentRevision: 2,
+        reason: "free-form private staffing detail",
+        storeId: "store_1",
+      }),
+    ).toThrow()
+  })
+
+  test("projects response SLA from authoritative customer and Store occurrences", () => {
+    const now = new Date("2026-08-12T10:20:00.000Z")
+    expect(
+      projectStoreConversationSla({
+        lastCustomerMessageAt: new Date("2026-08-12T10:00:00.000Z"),
+        lastStoreReplyAt: null,
+        now,
+      }),
+    ).toEqual({
+      dueAt: new Date("2026-08-12T10:15:00.000Z"),
+      state: "overdue",
+    })
+    expect(
+      projectStoreConversationSla({
+        lastCustomerMessageAt: new Date("2026-08-12T10:00:00.000Z"),
+        lastStoreReplyAt: new Date("2026-08-12T10:05:00.000Z"),
+        now,
+      }),
+    ).toEqual({ dueAt: null, state: "responded" })
   })
 })

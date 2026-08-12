@@ -1,24 +1,30 @@
 import {
   storeConversationClaimInputSchema,
+  storeConversationHandoffInputSchema,
+  storeConversationQueueInputSchema,
+  storeConversationReassignInputSchema,
+  storeConversationReleaseInputSchema,
   storeConversationReplyInputSchema,
   storeConversationTimelineInputSchema,
 } from "@ewatrade/service-commerce"
-import { z } from "zod"
-
-const idSchema = z.string().trim().min(1).max(191)
-
-export const storeConversationQueueInputSchema = z
-  .object({
-    limit: z.number().int().min(1).max(100).default(50),
-    storeId: idSchema,
-  })
-  .strict()
-
 export const storeConversationStaffTimelineInputSchema =
-  storeConversationTimelineInputSchema.extend({ storeId: idSchema }).strict()
+  storeConversationTimelineInputSchema
+    .extend({ storeId: storeConversationQueueInputSchema.shape.storeId })
+    .strict()
 
 export const storeConversationStaffClaimInputSchema =
   storeConversationClaimInputSchema
 
 export const storeConversationStaffReplyInputSchema =
   storeConversationReplyInputSchema
+
+export const storeConversationStaffReleaseInputSchema =
+  storeConversationReleaseInputSchema
+
+export const storeConversationStaffHandoffInputSchema =
+  storeConversationHandoffInputSchema
+
+export const storeConversationStaffReassignInputSchema =
+  storeConversationReassignInputSchema
+
+export { storeConversationQueueInputSchema }

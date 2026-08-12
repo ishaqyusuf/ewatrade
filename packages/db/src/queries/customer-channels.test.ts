@@ -90,7 +90,12 @@ function createDb(input?: {
       },
       findFirst: async (args: Record<string, unknown>) => {
         calls.push({ args, name: "team.findFirst" })
-        return { id: "assignment_1", revision: 1, status: "ACTIVE" }
+        return {
+          id: "assignment_1",
+          membershipId: "membership_1",
+          revision: 1,
+          status: "ACTIVE",
+        }
       },
       updateMany: async (args: Record<string, unknown>) => {
         calls.push({ args, name: "team.updateMany" })
@@ -134,6 +139,12 @@ function createDb(input?: {
       findFirst: async (args: Record<string, unknown>) => {
         calls.push({ args, name: "stockBalanceSource.findFirst" })
         return null
+      },
+    },
+    storeConversation: {
+      findMany: async (args: Record<string, unknown>) => {
+        calls.push({ args, name: "conversation.findMany" })
+        return []
       },
     },
     store: {

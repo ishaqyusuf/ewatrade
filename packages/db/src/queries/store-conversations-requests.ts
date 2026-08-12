@@ -24,6 +24,11 @@ import {
 } from "./store-conversations-core"
 import type { DbClient } from "./types"
 
+const STORE_CONVERSATION_REQUEST_TRANSACTION_OPTIONS = {
+  maxWait: 10_000,
+  timeout: 60_000,
+} as const
+
 const entryRequestKind = {
   [StoreConversationRequestKind.COMMERCE_INQUIRY]: "product_inquiry",
   [StoreConversationRequestKind.PRESCRIPTION_REQUEST]: "prescription",
@@ -279,7 +284,10 @@ export async function attachStoreConversationTypedRequest(
   db: PrismaClient,
   input: Parameters<typeof linkRequestInTransaction>[1],
 ) {
-  return db.$transaction((tx) => linkRequestInTransaction(tx, input))
+  return db.$transaction(
+    (tx) => linkRequestInTransaction(tx, input),
+    STORE_CONVERSATION_REQUEST_TRANSACTION_OPTIONS,
+  )
 }
 
 export async function selectGuestStoreConversationRequest(
@@ -416,5 +424,5 @@ export async function selectGuestStoreConversationRequest(
       sourceId,
       sourceKind,
     })
-  })
+  }, STORE_CONVERSATION_REQUEST_TRANSACTION_OPTIONS)
 }

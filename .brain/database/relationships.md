@@ -273,7 +273,7 @@ authoritative clinical review and retention extension.
 
 `StoreConversation -> StoreConversationCommandReceipt[]`
 
-`StoreConversation + Membership? -> StoreConversationAssignmentEvent[] + StoreConversationAuditEvent[]`
+`StoreConversation + Membership? -> StoreConversationAssignmentEvent[] + StoreConversationAuditEvent[] + StoreConversationEscalationEvent[]`
 
 Guest Identity is device-scoped and may participate in separately isolated
 conversations across Stores/Tenants. The conversation is the immutable scope
@@ -282,9 +282,11 @@ Messages and typed source links are append-only. A message may remain staged
 without a link until deterministic customer selection and owning-source intake
 succeed. One conversation may contain several independent typed sources; there
 is deliberately no universal Request relationship or shared lifecycle. Current
-assignee is a guarded projection of assignment events, while Membership status
-and active Store attendant capability are rechecked before every internal read
-or reply.
+assignee is a guarded projection of assignment events. Any current active Store
+attendant may perform an audited team read; only the exact current primary may
+reply, release or hand off. Membership status and active Store attendant
+capability are rechecked before every read or write, and capability revocation
+releases affected assignments inside the same transaction.
 
 `Tenant + Store? + Actor -> ServiceCommerceReportReadAuditEvent`
 

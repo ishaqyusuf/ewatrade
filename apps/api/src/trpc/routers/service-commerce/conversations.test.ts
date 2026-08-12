@@ -12,7 +12,11 @@ function caller(input?: { attendant?: boolean; stores?: string[] }) {
     assignmentRevision: 0,
     id: "conversation_1",
     lastActivityAt: new Date("2026-08-12T10:00:00.000Z"),
+    lastCustomerMessageAt: new Date("2026-08-12T10:00:00.000Z"),
+    lastCustomerMessageSequence: 1,
     lastMessageSequence: 1,
+    lastStoreReplyAt: null,
+    lastStoreReplySequence: 0,
     lifecycle: "ACTIVE",
     requestLinks: [{ kind: "COMMERCE_INQUIRY" }],
     storeId: "store_1",
@@ -28,6 +32,18 @@ function caller(input?: { attendant?: boolean; stores?: string[] }) {
         return input?.attendant === false ? null : { id: "membership_1" }
       },
     },
+    commerceInquiry: {
+      findMany: async () => [
+        {
+          createdAt: new Date("2026-08-12T10:00:00.000Z"),
+          id: "inquiry_1",
+          revision: 1,
+          status: "RECEIVED",
+        },
+      ],
+    },
+    prescriptionRequest: { findMany: async () => [] },
+    serviceRequest: { findMany: async () => [] },
     storeConversation: {
       findFirst: async (args: unknown) => {
         calls.push({ args, name: "conversation.findFirst" })
@@ -37,14 +53,23 @@ function caller(input?: { attendant?: boolean; stores?: string[] }) {
         calls.push({ args, name: "conversation.findMany" })
         return [conversation]
       },
-      update: async (args: { data: { assignmentRevision: number } }) => {
+      updateMany: async (args: { data: { assignmentRevision: number } }) => {
         conversation.assignedMembershipId = "membership_1"
         conversation.assignmentRevision = args.data.assignmentRevision
-        return conversation
+        return { count: 1 }
       },
     },
     storeConversationAssignmentEvent: {
       create: async () => ({ id: "assignment_event_1" }),
+    },
+    storeConversationRequestLink: {
+      findMany: async () => [
+        {
+          createdAt: new Date("2026-08-12T10:00:00.000Z"),
+          kind: "COMMERCE_INQUIRY",
+          sourceId: "inquiry_1",
+        },
+      ],
     },
     storeConversationAuditEvent: {
       create: async () => ({ id: "audit_1" }),
@@ -75,6 +100,7 @@ describe("Service Commerce conversations router", () => {
     const result = await client.claimStoreConversation({
       clientOperationId: "claim-operation-1",
       conversationId: "conversation_1",
+      expectedAssignmentRevision: 0,
       storeId: "store_1",
     })
 
@@ -112,14 +138,26 @@ describe("Service Commerce conversations router", () => {
     const result = await client.storeConversationQueue({
       storeId: "store_1",
     })
-    expect(result).toEqual([
-      expect.objectContaining({
-        conversationId: "conversation_1",
-        requestKinds: ["commerce_inquiry"],
-        state: "new",
-      }),
-    ])
+    expect(result).toEqual({
+      items: [
+        expect.objectContaining({
+          conversationId: "conversation_1",
+          requests: [
+            {
+              kind: "commerce_inquiry",
+              label: "Product request",
+              lifecycle: "active",
+              status: "received",
+            },
+          ],
+          requestKinds: ["commerce_inquiry"],
+          state: "new",
+        }),
+      ],
+      nextCursor: null,
+    })
     expect(JSON.stringify(result)).not.toContain("message")
+    expect(JSON.stringify(result)).not.toContain("membershipId")
     expect(
       calls.find((call) => call.name === "conversation.findMany")?.args,
     ).toMatchObject({

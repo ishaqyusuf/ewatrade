@@ -76,6 +76,7 @@ model Tenant {
   storeConversationRequestLinks                StoreConversationRequestLink[]
   storeConversationCommandReceipts             StoreConversationCommandReceipt[]
   storeConversationAssignmentEvents            StoreConversationAssignmentEvent[]
+  storeConversationEscalationEvents            StoreConversationEscalationEvent[]
   storeConversationAuditEvents                 StoreConversationAuditEvent[]
   serviceCommerceQuoteReleasePolicies          ServiceCommerceQuoteReleasePolicy[]
   serviceCommerceQuoteReleasePolicyAuditEvents ServiceCommerceQuoteReleasePolicyAuditEvent[]
@@ -309,6 +310,7 @@ model Membership {
   storeConversationAssignmentActions      StoreConversationAssignmentEvent[]       @relation("StoreConversationAssignmentActor")
   storeConversationAssignmentsFrom        StoreConversationAssignmentEvent[]       @relation("StoreConversationAssignmentFrom")
   storeConversationAssignmentsTo          StoreConversationAssignmentEvent[]       @relation("StoreConversationAssignmentTo")
+  storeConversationEscalationActions      StoreConversationEscalationEvent[]       @relation("StoreConversationEscalationActor")
   storeConversationAuditActions           StoreConversationAuditEvent[]            @relation("StoreConversationAuditActor")
 
   @@unique([tenantId, userId])

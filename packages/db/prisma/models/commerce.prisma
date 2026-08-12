@@ -67,6 +67,7 @@ model Store {
   storeConversationRequestLinks                StoreConversationRequestLink[]
   storeConversationCommandReceipts             StoreConversationCommandReceipt[]
   storeConversationAssignmentEvents            StoreConversationAssignmentEvent[]
+  storeConversationEscalationEvents            StoreConversationEscalationEvent[]
   storeConversationAuditEvents                 StoreConversationAuditEvent[]
   serviceCommerceQuoteReleasePolicy            ServiceCommerceQuoteReleasePolicy?
   serviceCommerceQuoteReleasePolicyAuditEvents ServiceCommerceQuoteReleasePolicyAuditEvent[]

@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto"
 
 import {
+  DEFAULT_STORE_CONVERSATION_RESPONSE_SLA_MINUTES,
   type StoreConversationTimelineProjection,
   projectStoreConversationCursor,
   storeConversationSendTextInputSchema,
@@ -418,8 +419,14 @@ export async function sendGuestStoreConversationText(
         data: {
           archivedAt: null,
           lastActivityAt: now,
+          lastCustomerMessageAt: now,
+          lastCustomerMessageSequence: sequence,
           lastMessageSequence: sequence,
           lifecycle: StoreConversationLifecycle.ACTIVE,
+          responseDueAt: new Date(
+            now.getTime() +
+              DEFAULT_STORE_CONVERSATION_RESPONSE_SLA_MINUTES * 60_000,
+          ),
         },
         where: { id: conversation.id },
       }),

@@ -784,11 +784,27 @@ implements the Progressive Catalog commands below.
   reference. Safe Request cards derive type/status/lifecycle/occurrence from the
   current authoritative sources. Credentials, private contacts, clinical media,
   OCR, provider ids, internal audit and raw errors are excluded.
-- Queue items contain conversation id, state, assignment-to-current-user,
-  request kinds, last sequence and last activity time. Message bodies and guest
-  identifiers are deliberately absent.
+- Queue items contain conversation id, state, safe assignment label,
+  assignment-to-current-user, current Request kind/label/status/lifecycle
+  summaries, unread customer count, last customer occurrence and bounded SLA
+  state/due time. Message bodies, Guest identifiers and private staff identity
+  are deliberately absent.
+- Queue filters are URL-owned and allow only Store, assignment, SLA, Request
+  kinds, safe conversation reference and deterministic sort/cursor fields.
+  Cursor pagination is cleared by filter changes but preserved by an explicit
+  next-page action.
+- Claim/release/handoff/reassignment commands bind the client operation to the
+  exact conversation, expected assignment revision, bounded reason and target
+  membership where applicable. Replay returns the original assignment result;
+  changed payload conflicts.
+- Reply binds the exact assignment revision, last message sequence and active
+  typed Request revision. It rechecks source/policy/primary ownership before
+  append, updates response occurrence facts and resolves an open escalation
+  only after the reply succeeds. Current escalation state is resolved from the
+  newest event for each bounded kind, never from a truncated global history.
 - Timeline pagination uses `beforeSequence` and a bounded 1–100 limit. Mutable
-  timestamps are not cursors.
+  timestamps are not cursors; the protected sheet exposes an explicit older-
+  message continuation.
 - Same-origin Storefront mutations compare the public `Host` plus forwarded
   protocol when behind a trusted TLS-terminating proxy; internal request URLs
   cannot make the canonical shared chat host fail its origin check.

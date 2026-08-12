@@ -288,14 +288,24 @@ operations do not use that compatibility namespace.
   their existing vertical forms and server-owned source creation. Only the
   resulting exact source id/revision is linked back to the staged message.
 - Protected `serviceCommerce.storeConversationQueue`,
-  `claimStoreConversation`, `storeConversationTimeline`, and
-  `replyToStoreConversation` expose the Store-attendant half of the first text
-  loop. Tenant, Store and actor scope are derived from the authenticated
-  context.
+  `eligibleStoreConversationAttendants`, `claimStoreConversation`,
+  `storeConversationTimeline`, `replyToStoreConversation`,
+  `releaseStoreConversation`, `handoffStoreConversation`, and
+  `reassignStoreConversation` expose the Store-team queue. Tenant, Store and
+  actor scope are derived from the authenticated context; client input carries
+  only exact Store/conversation/revision/operation facts.
+- The scheduled `store-conversations.escalations` task processes at
+  most 200 not-yet-materialized overdue conversation/message facts per run
+  through an exact dedupe anti-join and locks selected conversations with
+  `SKIP LOCKED`, so prior rows cannot starve later work and a concurrent reply
+  cannot leave a stale escalation open. It writes only bounded escalation facts
+  and performs no provider action.
 
 These endpoints are installed on the verified development database. The
-multi-source QR-to-guest lifecycle passes 2 verified-Neon tests / 29 assertions
-and desktop/compact HTTPS browser acceptance with exact cleanup. Provider and
+combined conversation lifecycle passes 3 verified-Neon tests / 42 assertions
+with exact cleanup. The established desktop/compact browser baseline covers
+the queue interaction and responsive sheet; the final Midday component
+extraction is additionally source-, unit-, format- and type-verified. Provider and
 production release remain separately authorized work.
 
 Public Service Request, Quote and Tracking routes are rendered by the

@@ -12,6 +12,7 @@ import { MembershipRole, MembershipStatus } from "../../generated/prisma/enums"
 import { getServiceCommerceWorkspaceAccess } from "./service-commerce-access"
 import { revalidateCustomerActionCapabilityInTransaction } from "./service-commerce-actions/projection"
 import { evaluateServiceCommercePolicyBatchInTransaction } from "./service-commerce-policy"
+import { releaseStoreConversationsForIneligibleMembership } from "./store-conversations-assignments"
 import type { DbClient } from "./types"
 
 type CustomerChannelsClient = DbClient
@@ -334,7 +335,7 @@ export async function revokeCustomerChannelAttendant(
   },
 ) {
   return db.$transaction(async (tx) => {
-    await assertStoreManager(tx, input)
+    const { membership: actorMembership } = await assertStoreManager(tx, input)
     const assignment = await tx.serviceCommerceStoreTeamAssignment.findFirst({
       select: { id: true, membershipId: true, revision: true, status: true },
       where: {
@@ -378,6 +379,13 @@ export async function revokeCustomerChannelAttendant(
         tenantId: input.tenantId,
         type: "REVOKED",
       },
+    })
+    await releaseStoreConversationsForIneligibleMembership(tx, {
+      actorMembershipId: actorMembership.id,
+      membershipId: assignment.membershipId,
+      now: new Date(),
+      reasonCode: "attendant_revoked",
+      tenantId: input.tenantId,
     })
     return { assignmentId: assignment.id, revision: input.expectedRevision + 1 }
   }, TEAM_ASSIGNMENT_TRANSACTION_OPTIONS)

@@ -10,8 +10,9 @@ import {
   RetailOpsStaffInviteTokenStatus as DurableRetailOpsStaffInviteTokenStatus,
   RetailOpsStaffLifecycleEventType as DurableRetailOpsStaffLifecycleEventType,
 } from "../../generated/prisma/enums"
-import { assertRetailOpsEntitlementAvailable } from "./retail-ops-subscriptions"
 import { assertQaTenantIdentity } from "./qa-maintenance"
+import { assertRetailOpsEntitlementAvailable } from "./retail-ops-subscriptions"
+import { releaseStoreConversationsForIneligibleMembership } from "./store-conversations-assignments"
 
 export type RetailOpsStaffInviteRole = "cashier" | "operator" | "manager"
 export type RetailOpsStaffListRoleFilter =
@@ -1251,29 +1252,40 @@ export async function updateRetailOpsStaffStatus(
   const updatedAt = new Date()
 
   return db.$transaction(async (tx) => {
-    const membership = await tx.membership.findUnique({
-      where: {
-        tenantId_userId: {
-          tenantId: input.tenantId,
-          userId: input.staffUserId,
-        },
-      },
-      select: {
-        acceptedAt: true,
-        id: true,
-        invitedAt: true,
-        role: true,
-        status: true,
-        user: {
-          select: {
-            displayName: true,
-            email: true,
-            id: true,
-            name: true,
+    const [membership, actorMembership] = await Promise.all([
+      tx.membership.findUnique({
+        where: {
+          tenantId_userId: {
+            tenantId: input.tenantId,
+            userId: input.staffUserId,
           },
         },
-      },
-    })
+        select: {
+          acceptedAt: true,
+          id: true,
+          invitedAt: true,
+          role: true,
+          status: true,
+          user: {
+            select: {
+              displayName: true,
+              email: true,
+              id: true,
+              name: true,
+            },
+          },
+        },
+      }),
+      tx.membership.findUnique({
+        select: { id: true },
+        where: {
+          tenantId_userId: {
+            tenantId: input.tenantId,
+            userId: input.actorUserId,
+          },
+        },
+      }),
+    ])
 
     if (
       !membership ||
@@ -1351,6 +1363,15 @@ export async function updateRetailOpsStaffStatus(
       status: updatedMembership.status,
       tenantId: input.tenantId,
     })
+    if (nextStatus === "SUSPENDED") {
+      await releaseStoreConversationsForIneligibleMembership(tx, {
+        actorMembershipId: actorMembership?.id,
+        membershipId: updatedMembership.id,
+        now: updatedAt,
+        reasonCode: "membership_suspended",
+        tenantId: input.tenantId,
+      })
+    }
 
     return {
       acceptedAt: updatedMembership.acceptedAt,

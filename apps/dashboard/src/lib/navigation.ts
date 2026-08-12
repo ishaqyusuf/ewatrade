@@ -11,6 +11,7 @@ import type { WorkspaceFeatureAvailability } from "@ewatrade/db/queries"
 export type DashboardNavIcon =
   | "analytics"
   | "customers"
+  | "conversations"
   | "home"
   | "inventory"
   | "products"
@@ -71,6 +72,14 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     label: "Overview",
     canAccess: canUseDashboard,
     canSee: canUseDashboard,
+  },
+  {
+    description: "Customer requests, response SLA, and team handoff",
+    href: "/conversations",
+    icon: "conversations",
+    label: "Conversations",
+    canAccess: canUseRetailOps,
+    canSee: canUseRetailOps,
   },
   {
     description: "Product and service item setup",

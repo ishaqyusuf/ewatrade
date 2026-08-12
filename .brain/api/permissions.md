@@ -284,16 +284,20 @@
 - A credential for the same guest does not cross a conversation's immutable
   Tenant/Store boundary. Expired, revoked or unknown credentials fail with a
   safe recovery code before message/source writes.
-- Queue access requires an accepted active Membership with an active
-  `ATTENDANT` assignment for the exact Tenant and Store. Message timeline and
-  reply additionally require that Membership to be the conversation's current
-  assignee.
+- Queue and timeline access require an accepted active Membership with an
+  active `ATTENDANT` assignment for the exact Tenant and Store. Every timeline
+  read appends a bounded audit fact; only the current primary may reply,
+  release or hand off.
 - Claim locks the conversation and permits one primary assignee. A foreign,
   removed, suspended, unassigned or stale actor cannot read or reply. Tenant
   role alone is insufficient.
 - A claimed attendant reply requires one exact current Request when several are
   active. Attendant assignment does not confer pharmacist release or Quote
   approval; those commands remain independent and authoritative.
+- Owner/Admin may perform an explicit reasoned reassignment but must select a
+  currently eligible Store attendant. Suspending Membership or revoking its
+  attendant capability releases affected assignments and opens a bounded
+  recovery escalation inside the same transaction.
 - Public cookie mutation routes enforce same-origin requests and a Secure,
   HttpOnly, SameSite cookie. Browser scripts never receive the bearer.
 

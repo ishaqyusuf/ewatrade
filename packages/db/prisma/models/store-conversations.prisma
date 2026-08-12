@@ -54,13 +54,19 @@ enum StoreConversationCommandKind {
   CUSTOMER_TEXT
   REQUEST_SELECTED
   CLAIM
+  RELEASE
+  HANDOFF
+  REASSIGN
+  ESCALATION_RESOLVED
   STORE_REPLY
 }
 
 enum StoreConversationAssignmentEventType {
   CLAIMED
   RELEASED
+  HANDED_OFF
   REASSIGNED
+  MEMBERSHIP_RELEASED
 }
 
 enum StoreConversationAuditEventType {
@@ -68,11 +74,30 @@ enum StoreConversationAuditEventType {
   CUSTOMER_MESSAGE_APPENDED
   REQUEST_LINKED
   CLAIMED
+  RELEASED
+  HANDED_OFF
+  REASSIGNED
   STORE_REPLY_APPENDED
+  STAFF_TIMELINE_READ
+  ESCALATED
+  ESCALATION_RESOLVED
   ARCHIVED
   REACTIVATED
   RESTRICTED
   REINSTATED
+}
+
+enum StoreConversationEscalationKind {
+  UNCLAIMED
+  OVERDUE
+  ABANDONED
+  FAILED_RESPONSE
+  MEMBERSHIP_UNAVAILABLE
+}
+
+enum StoreConversationEscalationEventType {
+  OPENED
+  RESOLVED
 }
 
 /// Opaque device-scoped customer identity. It is not a User or proof of a
@@ -117,6 +142,11 @@ model StoreConversation {
   lifecycle            StoreConversationLifecycle         @default(ACTIVE)
   moderationState      StoreConversationModerationState   @default(OPEN)
   lastMessageSequence  Int                                @default(0)
+  lastCustomerMessageSequence Int                         @default(0)
+  lastCustomerMessageAt DateTime?
+  lastStoreReplySequence Int                              @default(0)
+  lastStoreReplyAt       DateTime?
+  responseDueAt          DateTime?
   assignedMembershipId String?
   assignmentRevision   Int                                @default(0)
   createdAt            DateTime                           @default(now())
@@ -132,10 +162,12 @@ model StoreConversation {
   requestLinks         StoreConversationRequestLink[]
   commandReceipts      StoreConversationCommandReceipt[]
   assignmentEvents     StoreConversationAssignmentEvent[]
+  escalationEvents     StoreConversationEscalationEvent[]
   auditEvents          StoreConversationAuditEvent[]
 
   @@unique([storeId, guestIdentityId])
   @@index([tenantId, storeId, lifecycle, lastActivityAt])
+  @@index([tenantId, storeId, lifecycle, responseDueAt])
   @@index([assignedMembershipId, lifecycle, lastActivityAt])
 }
 
@@ -199,6 +231,8 @@ model StoreConversationCommandReceipt {
   messageId         String?
   sourceKind        StoreConversationRequestKind?
   sourceId          String?
+  assignmentRevision Int?
+  assignmentMembershipId String?
   createdAt         DateTime                      @default(now())
   tenant            Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   store             Store                         @relation(fields: [storeId], references: [id], onDelete: Restrict)
@@ -214,7 +248,8 @@ model StoreConversationAssignmentEvent {
   tenantId           String
   storeId            String
   conversationId     String
-  actorMembershipId  String
+  actorKind          StoreConversationMessageAuthorKind   @default(STORE_ATTENDANT)
+  actorMembershipId  String?
   fromMembershipId   String?
   toMembershipId     String?
   type               StoreConversationAssignmentEventType
@@ -225,12 +260,38 @@ model StoreConversationAssignmentEvent {
   tenant             Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   store              Store                                @relation(fields: [storeId], references: [id], onDelete: Restrict)
   conversation       StoreConversation                    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  actorMembership    Membership                           @relation("StoreConversationAssignmentActor", fields: [actorMembershipId], references: [id], onDelete: Restrict)
+  actorMembership    Membership?                          @relation("StoreConversationAssignmentActor", fields: [actorMembershipId], references: [id], onDelete: Restrict)
   fromMembership     Membership?                          @relation("StoreConversationAssignmentFrom", fields: [fromMembershipId], references: [id], onDelete: Restrict)
   toMembership       Membership?                          @relation("StoreConversationAssignmentTo", fields: [toMembershipId], references: [id], onDelete: Restrict)
 
   @@index([tenantId, storeId, occurredAt])
   @@index([conversationId, assignmentRevision])
+}
+
+/// Append-only operational escalation facts. The latest event for one kind
+/// determines whether that escalation remains open; no customer content is
+/// persisted here.
+model StoreConversationEscalationEvent {
+  id                     String                               @id @default(cuid())
+  tenantId               String
+  storeId                String
+  conversationId         String
+  actorMembershipId      String?
+  kind                   StoreConversationEscalationKind
+  type                   StoreConversationEscalationEventType
+  assignmentRevision     Int
+  conversationSequence   Int
+  reasonCode             String
+  dedupeKey              String                               @unique
+  occurredAt             DateTime                             @default(now())
+  createdAt              DateTime                             @default(now())
+  tenant                 Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                  Store                                @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation           StoreConversation                    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  actorMembership        Membership?                          @relation("StoreConversationEscalationActor", fields: [actorMembershipId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, storeId, occurredAt])
+  @@index([conversationId, kind, occurredAt])
 }
 
 /// Append-only lifecycle/security audit with safe bounded reason codes only.
