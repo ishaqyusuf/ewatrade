@@ -275,6 +275,12 @@
 - Guest access requires the current purpose-bound opaque credential and exact
   conversation/Guest Identity match. Sending additionally requires the current
   published Store Entry token, active web/intake policy and Store readiness.
+- Auto-link and explicit selection intersect current Store Entry Request kinds
+  with linked active source state after the conversation lock. Revoked form or
+  vertical eligibility cannot silently receive a new message.
+- Product and Service source links require their exact current revision;
+  Prescription links require `currentMediaRevision`. Stale, terminal,
+  cross-Tenant or cross-Store sources create no link/receipt.
 - A credential for the same guest does not cross a conversation's immutable
   Tenant/Store boundary. Expired, revoked or unknown credentials fail with a
   safe recovery code before message/source writes.
@@ -285,6 +291,9 @@
 - Claim locks the conversation and permits one primary assignee. A foreign,
   removed, suspended, unassigned or stale actor cannot read or reply. Tenant
   role alone is insufficient.
+- A claimed attendant reply requires one exact current Request when several are
+  active. Attendant assignment does not confer pharmacist release or Quote
+  approval; those commands remain independent and authoritative.
 - Public cookie mutation routes enforce same-origin requests and a Secure,
   HttpOnly, SameSite cookie. Browser scripts never receive the bearer.
 

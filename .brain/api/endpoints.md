@@ -273,19 +273,30 @@ operations do not use that compatibility namespace.
   HttpOnly, SameSite guest cookie. The raw bearer never enters JSON output.
 - `POST /api/store-conversations/messages` accepts one bounded customer text
   command with a client operation id and current opaque Store Entry token. It
-  atomically appends one web message and one typed Commerce Inquiry source.
+  appends one web message; exactly one currently eligible active Request may be
+  attached automatically, while multi-Request/new-intent ambiguity remains
+  staged without a typed source.
+- `POST /api/store-conversations/select-request` accepts one staged customer
+  message plus either an exact current Request choice or
+  `new_commerce_inquiry`. It rechecks guest, Store Entry, eligible Request kind,
+  source scope, lifecycle and revision after the conversation lock.
 - `GET /api/store-conversations/timeline` returns a bounded safe guest timeline
-  using deterministic sequence pagination.
+  using deterministic sequence pagination. It includes source-derived Request
+  cards and current/terminal distinction without private contacts, clinical
+  media/OCR or provider/object facts.
+- `/r/[token]/service` and the compatible Prescription intake continuation keep
+  their existing vertical forms and server-owned source creation. Only the
+  resulting exact source id/revision is linked back to the staged message.
 - Protected `serviceCommerce.storeConversationQueue`,
   `claimStoreConversation`, `storeConversationTimeline`, and
   `replyToStoreConversation` expose the Store-attendant half of the first text
   loop. Tenant, Store and actor scope are derived from the authenticated
   context.
 
-These endpoints are installed on the verified development database and their
-QR-to-guest-to-message-to-claim-to-reply lifecycle passes run-owned Neon and
-desktop/compact HTTPS browser acceptance. Provider and production release
-remain separately authorized work.
+These endpoints are installed on the verified development database. The
+multi-source QR-to-guest lifecycle passes 2 verified-Neon tests / 29 assertions
+and desktop/compact HTTPS browser acceptance with exact cleanup. Provider and
+production release remain separately authorized work.
 
 Public Service Request, Quote and Tracking routes are rendered by the
 storefront. Registration/login and all authenticated dashboard routes remain on

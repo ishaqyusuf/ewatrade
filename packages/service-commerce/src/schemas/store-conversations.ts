@@ -29,6 +29,52 @@ export const storeConversationRequestKindSchema = z.enum([
   "prescription_request",
 ])
 
+export const storeConversationRequestStatusSchema = z.enum([
+  "received",
+  "needs_information",
+  "media_review",
+  "professional_review",
+  "ready_to_quote",
+  "quoted",
+  "converted",
+  "declined",
+  "withdrawn",
+  "expired",
+])
+
+export const storeConversationSelectRequestInputSchema = z
+  .object({
+    clientOperationId: clientOperationIdSchema,
+    conversationId: opaqueIdSchema,
+    messageId: opaqueIdSchema,
+    publicToken: z.string().trim().min(32).max(200),
+    target: z.discriminatedUnion("kind", [
+      z.object({ kind: z.literal("new_commerce_inquiry") }).strict(),
+      z
+        .object({
+          kind: z.literal("existing_request"),
+          requestId: opaqueIdSchema,
+          requestKind: storeConversationRequestKindSchema,
+        })
+        .strict(),
+    ]),
+  })
+  .strict()
+
+export const storeConversationServiceContinuationSchema = z
+  .object({
+    conversationId: opaqueIdSchema,
+    customerEmail: z.string().trim().email().optional(),
+    customerName: z.string().trim().min(1).max(160),
+    customerPhone: z.string().trim().min(3).max(40).optional(),
+    details: z.string().trim().max(2_000).optional(),
+    messageId: opaqueIdSchema,
+    publicToken: z.string().trim().min(32).max(200),
+  })
+  .refine((input) => input.customerEmail || input.customerPhone, {
+    message: "A phone number or email address is required.",
+  })
+
 export const storeConversationBootstrapInputSchema = z
   .object({ publicToken: z.string().trim().min(32).max(200) })
   .strict()
@@ -38,6 +84,7 @@ export const storeConversationSendTextInputSchema = z
     clientOperationId: clientOperationIdSchema,
     conversationId: opaqueIdSchema,
     publicToken: z.string().trim().min(32).max(200),
+    requestIntent: z.enum(["continue_current", "choose_request"]).optional(),
     text: conversationTextSchema,
   })
   .strict()
@@ -62,6 +109,13 @@ export const storeConversationReplyInputSchema = z
   .object({
     clientOperationId: clientOperationIdSchema,
     conversationId: opaqueIdSchema,
+    request: z
+      .object({
+        id: opaqueIdSchema,
+        kind: storeConversationRequestKindSchema,
+      })
+      .strict()
+      .optional(),
     storeId: opaqueIdSchema,
     text: conversationTextSchema,
   })
@@ -78,6 +132,15 @@ export type StoreConversationMessageKind = z.infer<
 >
 export type StoreConversationRequestKind = z.infer<
   typeof storeConversationRequestKindSchema
+>
+export type StoreConversationRequestStatus = z.infer<
+  typeof storeConversationRequestStatusSchema
+>
+export type StoreConversationSelectRequestInput = z.infer<
+  typeof storeConversationSelectRequestInputSchema
+>
+export type StoreConversationServiceContinuation = z.infer<
+  typeof storeConversationServiceContinuationSchema
 >
 export type StoreConversationBootstrapInput = z.infer<
   typeof storeConversationBootstrapInputSchema

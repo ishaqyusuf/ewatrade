@@ -1,35 +1,10 @@
 "use client"
 
-import type { StoreConversationTimelineProjection } from "@ewatrade/service-commerce"
-import { type FormEvent, useCallback, useEffect, useRef, useState } from "react"
-
 import {
-  prependOlderStoreConversationMessages,
-  resolveStoreConversationOperationId,
-} from "./store-conversation-client-state"
-
-type Conversation = StoreConversationTimelineProjection["conversation"]
-type Message = StoreConversationTimelineProjection["messages"][number]
-
-type LoadState =
-  | { kind: "loading" }
-  | { code?: string; kind: "error"; message: string }
-  | {
-      conversation: Conversation
-      kind: "ready"
-      messages: Message[]
-      nextCursor: number | null
-    }
-
-async function parseResponse<T>(response: Response): Promise<T> {
-  const body = (await response.json()) as T & { message?: string }
-  if (!response.ok) {
-    throw Object.assign(new Error(body.message ?? "Request failed."), {
-      code: (body as { code?: string }).code,
-    })
-  }
-  return body
-}
+  StoreConversationRequestChoice,
+  StoreConversationRequestRail,
+} from "./store-conversation-request-ui"
+import { useStoreConversation } from "./use-store-conversation"
 
 export function StoreConversationWeb({
   publicToken,
@@ -38,150 +13,24 @@ export function StoreConversationWeb({
   publicToken: string
   storeName: string
 }) {
-  const [state, setState] = useState<LoadState>({ kind: "loading" })
-  const [draft, setDraft] = useState("")
-  const [sending, setSending] = useState(false)
-  const [sendError, setSendError] = useState<string | null>(null)
-  const [refreshNotice, setRefreshNotice] = useState<string | null>(null)
-  const [loadingOlder, setLoadingOlder] = useState(false)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const operationIdRef = useRef<string | null>(null)
-
-  const loadTimeline = useCallback(async (conversation: Conversation) => {
-    const params = new URLSearchParams({ conversationId: conversation.id })
-    const timeline = await parseResponse<StoreConversationTimelineProjection>(
-      await fetch(`/api/store-conversations/timeline?${params}`, {
-        cache: "no-store",
-      }),
-    )
-    setState({
-      conversation: timeline.conversation,
-      kind: "ready",
-      messages: timeline.messages,
-      nextCursor: timeline.nextCursor,
-    })
-  }, [])
-
-  const loadOlder = useCallback(async () => {
-    if (state.kind !== "ready" || state.nextCursor === null || loadingOlder) {
-      return
-    }
-    setLoadingOlder(true)
-    try {
-      const params = new URLSearchParams({
-        beforeSequence: String(state.nextCursor),
-        conversationId: state.conversation.id,
-      })
-      const timeline = await parseResponse<StoreConversationTimelineProjection>(
-        await fetch(`/api/store-conversations/timeline?${params}`, {
-          cache: "no-store",
-        }),
-      )
-      setState({
-        conversation: timeline.conversation,
-        kind: "ready",
-        messages: prependOlderStoreConversationMessages(
-          state.messages,
-          timeline.messages,
-        ),
-        nextCursor: timeline.nextCursor,
-      })
-    } catch (error) {
-      setSendError(
-        error instanceof Error
-          ? error.message
-          : "Older messages could not be loaded.",
-      )
-    } finally {
-      setLoadingOlder(false)
-    }
-  }, [loadingOlder, state])
-
-  const bootstrap = useCallback(
-    async (resetGuest = false) => {
-      setState({ kind: "loading" })
-      try {
-        const result = await parseResponse<{ conversation: Conversation }>(
-          await fetch("/api/store-conversations/bootstrap", {
-            body: JSON.stringify({ publicToken, resetGuest }),
-            headers: { "content-type": "application/json" },
-            method: "POST",
-          }),
-        )
-        await loadTimeline(result.conversation)
-      } catch (error) {
-        setState({
-          code:
-            error instanceof Error && "code" in error
-              ? String(error.code)
-              : undefined,
-          kind: "error",
-          message:
-            error instanceof Error
-              ? error.message
-              : "The conversation is unavailable.",
-        })
-      }
-    },
-    [loadTimeline, publicToken],
-  )
-
-  useEffect(() => {
-    void bootstrap()
-  }, [bootstrap])
-
-  async function sendMessage(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (state.kind !== "ready" || sending || !draft.trim()) return
-    setSending(true)
-    setSendError(null)
-    setRefreshNotice(null)
-    operationIdRef.current = resolveStoreConversationOperationId(
-      operationIdRef.current,
-      () => crypto.randomUUID(),
-    )
-    try {
-      const accepted = await parseResponse<{ message: Message }>(
-        await fetch("/api/store-conversations/messages", {
-          body: JSON.stringify({
-            clientOperationId: operationIdRef.current,
-            conversationId: state.conversation.id,
-            publicToken,
-            text: draft,
-          }),
-          headers: { "content-type": "application/json" },
-          method: "POST",
-        }),
-      )
-      operationIdRef.current = null
-      setDraft("")
-      setState((current) =>
-        current.kind === "ready" &&
-        !current.messages.some((message) => message.id === accepted.message.id)
-          ? {
-              ...current,
-              messages: [...current.messages, accepted.message],
-            }
-          : current,
-      )
-      try {
-        await loadTimeline(state.conversation)
-      } catch {
-        setRefreshNotice(
-          "Your message was sent. Refresh when you are ready to check for a reply.",
-        )
-      }
-      textareaRef.current?.focus()
-    } catch (error) {
-      setSendError(
-        error instanceof Error
-          ? error.message
-          : "Your message could not be sent.",
-      )
-    } finally {
-      setSending(false)
-    }
-  }
+  const {
+    bootstrap,
+    changeDraft,
+    draft,
+    loadingOlder,
+    loadOlder,
+    loadTimeline,
+    refreshNotice,
+    selectRequest,
+    selectingMessageId,
+    sendError,
+    sending,
+    sendMessage,
+    setStartingNewRequest,
+    startingNewRequest,
+    state,
+    textareaRef,
+  } = useStoreConversation(publicToken)
 
   return (
     <main className="min-h-dvh bg-background text-foreground">
@@ -247,11 +96,12 @@ export function StoreConversationWeb({
                 New conversation
               </p>
               <h1 className="mt-3 text-balance text-3xl font-semibold tracking-tight">
-                What product can the Store help you find?
+                What can the Store help you with?
               </h1>
               <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                Send a description. A Store attendant will review it and reply
-                here. No signup is required.
+                Send a message, then choose whether it belongs to a product,
+                service, prescription, or an ongoing Request. No signup is
+                required.
               </p>
             </div>
           ) : null}
@@ -267,27 +117,52 @@ export function StoreConversationWeb({
             </button>
           ) : null}
 
+          {state.kind === "ready" ? (
+            <StoreConversationRequestRail requests={state.requests} />
+          ) : null}
+
           {state.kind === "ready"
             ? state.messages.map((message) => (
-                <article
-                  className={`grid max-w-[85%] gap-1 rounded-2xl px-4 py-3 text-sm leading-6 ${
-                    message.author.kind === "customer"
-                      ? "ml-auto bg-primary text-primary-foreground"
-                      : "mr-auto border border-border bg-card"
-                  }`}
-                  key={message.id}
-                >
-                  <p>{message.text}</p>
-                  <p
-                    className={`text-[11px] ${
+                <div className="grid gap-2" key={message.id}>
+                  <article
+                    className={`grid max-w-[85%] gap-1 rounded-2xl px-4 py-3 text-sm leading-6 ${
                       message.author.kind === "customer"
-                        ? "text-primary-foreground/75"
-                        : "text-muted-foreground"
+                        ? "ml-auto bg-primary text-primary-foreground"
+                        : "mr-auto border border-border bg-card"
                     }`}
                   >
-                    {message.author.label} · {message.channel}
-                  </p>
-                </article>
+                    {message.request ? (
+                      <p className="text-[11px] font-semibold uppercase tracking-wide opacity-75">
+                        {message.request.kind.replaceAll("_", " ")}
+                      </p>
+                    ) : null}
+                    <p>{message.text}</p>
+                    <p
+                      className={`text-[11px] ${
+                        message.author.kind === "customer"
+                          ? "text-primary-foreground/75"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {message.author.label} · {message.channel}
+                    </p>
+                  </article>
+                  {message.author.kind === "customer" && !message.request ? (
+                    <StoreConversationRequestChoice
+                      conversationId={state.conversation.id}
+                      disabled={selectingMessageId === message.id}
+                      messageId={message.id}
+                      onSelect={(target) =>
+                        void selectRequest(message.id, target)
+                      }
+                      publicToken={publicToken}
+                      requestKinds={state.availableRequestKinds}
+                      requests={state.requests.filter(
+                        (request) => request.lifecycle === "active",
+                      )}
+                    />
+                  ) : null}
+                </div>
               ))
             : null}
         </div>
@@ -310,6 +185,26 @@ export function StoreConversationWeb({
                 {refreshNotice}
               </output>
             ) : null}
+            {state.requests.some(
+              (request) => request.lifecycle === "active",
+            ) ? (
+              <div className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-3 rounded-xl border border-border bg-card px-3 py-2">
+                <p className="text-xs text-muted-foreground">
+                  {startingNewRequest
+                    ? "Your next message will ask you to choose a new Request type."
+                    : "Messages continue the current Request when only one is active."}
+                </p>
+                <button
+                  className="min-h-9 shrink-0 rounded-full border border-border px-3 text-xs font-semibold"
+                  onClick={() => setStartingNewRequest(!startingNewRequest)}
+                  type="button"
+                >
+                  {startingNewRequest
+                    ? "Continue current"
+                    : "Start new Request"}
+                </button>
+              </div>
+            ) : null}
             <div className="mx-auto grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 rounded-[24px] border border-border bg-card p-2 shadow-sm focus-within:ring-2 focus-within:ring-ring">
               <button
                 aria-label="Attachments will be available soon"
@@ -325,13 +220,12 @@ export function StoreConversationWeb({
                 disabled={sending || state.conversation.state === "restricted"}
                 maxLength={2_000}
                 onChange={(event) => {
-                  operationIdRef.current = null
-                  setDraft(event.target.value)
+                  changeDraft(event.target.value)
                 }}
                 placeholder={
                   state.conversation.state === "restricted"
                     ? "This conversation cannot accept messages"
-                    : "Describe the product you need"
+                    : "Message the Store"
                 }
                 ref={textareaRef}
                 rows={1}

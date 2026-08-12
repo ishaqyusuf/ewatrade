@@ -52,6 +52,7 @@ enum StoreConversationRequestKind {
 
 enum StoreConversationCommandKind {
   CUSTOMER_TEXT
+  REQUEST_SELECTED
   CLAIM
   STORE_REPLY
 }
@@ -65,6 +66,7 @@ enum StoreConversationAssignmentEventType {
 enum StoreConversationAuditEventType {
   BOOTSTRAPPED
   CUSTOMER_MESSAGE_APPENDED
+  REQUEST_LINKED
   CLAIMED
   STORE_REPLY_APPENDED
   ARCHIVED

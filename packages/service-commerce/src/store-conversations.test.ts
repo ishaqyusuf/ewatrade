@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 
 import {
   storeConversationBootstrapInputSchema,
+  storeConversationSelectRequestInputSchema,
   storeConversationSendTextInputSchema,
   storeConversationTimelineInputSchema,
 } from "./schemas/store-conversations"
@@ -19,9 +20,13 @@ describe("Store Conversation contracts", () => {
         clientOperationId: "send-text-123",
         conversationId: "conversation_1",
         publicToken: "a".repeat(32),
+        requestIntent: "choose_request",
         text: "  I need a red handbag.  ",
       }),
-    ).toMatchObject({ text: "I need a red handbag." })
+    ).toMatchObject({
+      requestIntent: "choose_request",
+      text: "I need a red handbag.",
+    })
   })
 
   test("rejects empty or oversized customer text", () => {
@@ -61,5 +66,26 @@ describe("Store Conversation contracts", () => {
         messages: [{ sequence: 7 }],
       }),
     ).toBeNull()
+  })
+
+  test("accepts only deterministic new or existing Request choices", () => {
+    expect(
+      storeConversationSelectRequestInputSchema.parse({
+        clientOperationId: "request-choice-0001",
+        conversationId: "conversation-1",
+        messageId: "message-1",
+        publicToken: "a".repeat(32),
+        target: { kind: "new_commerce_inquiry" },
+      }).target,
+    ).toEqual({ kind: "new_commerce_inquiry" })
+    expect(() =>
+      storeConversationSelectRequestInputSchema.parse({
+        clientOperationId: "request-choice-0002",
+        conversationId: "conversation-1",
+        messageId: "message-1",
+        publicToken: "a".repeat(32),
+        target: { kind: "existing_request", requestId: "source-1" },
+      }),
+    ).toThrow()
   })
 })

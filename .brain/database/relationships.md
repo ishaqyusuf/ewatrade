@@ -269,7 +269,7 @@ authoritative clinical review and retention extension.
 
 `Tenant + Store + StoreConversationGuestIdentity -> StoreConversation`
 
-`StoreConversation -> StoreConversationMessage[] -> StoreConversationRequestLink[]`
+`StoreConversation -> StoreConversationMessage[] -> StoreConversationRequestLink? -> (CommerceInquiry | ServiceRequest | PrescriptionRequest)`
 
 `StoreConversation -> StoreConversationCommandReceipt[]`
 
@@ -278,9 +278,13 @@ authoritative clinical review and retention extension.
 Guest Identity is device-scoped and may participate in separately isolated
 conversations across Stores/Tenants. The conversation is the immutable scope
 boundary; a guest credential alone never authorizes another Store's thread.
-Messages and typed source links are append-only. Current assignee is a guarded
-projection of assignment events, while Membership status and active Store
-attendant capability are rechecked before every internal read or reply.
+Messages and typed source links are append-only. A message may remain staged
+without a link until deterministic customer selection and owning-source intake
+succeed. One conversation may contain several independent typed sources; there
+is deliberately no universal Request relationship or shared lifecycle. Current
+assignee is a guarded projection of assignment events, while Membership status
+and active Store attendant capability are rechecked before every internal read
+or reply.
 
 `Tenant + Store? + Actor -> ServiceCommerceReportReadAuditEvent`
 

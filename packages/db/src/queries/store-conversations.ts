@@ -8,8 +8,16 @@ export {
   sendGuestStoreConversationText,
 } from "./store-conversations-guest"
 export {
+  attachStoreConversationTypedRequest,
+  selectGuestStoreConversationRequest,
+} from "./store-conversations-requests"
+export {
   claimStoreConversation,
   getStoreConversationStaffTimeline,
   listStoreConversationQueue,
   replyToStoreConversation,
 } from "./store-conversations-staff"
+export {
+  getStoreEntryServiceRequestForm,
+  submitStoreConversationServiceRequest,
+} from "./store-conversation-service-intake"

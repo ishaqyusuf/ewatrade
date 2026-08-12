@@ -11,8 +11,18 @@ is complete: its additive Guest Identity, Store Conversation, text-message,
 typed Commerce Inquiry, queue, claim, reply, safe timeline, web-cookie and API
 tracer passes 19 focused tests / 46 assertions, direct package typechecks, one
 verified-Neon lifecycle test / 15 assertions including concurrent replay, and desktop/390px HTTPS browser
-acceptance with exact run-owned cleanup. Ticket 03 is the active frontier. No
-provider, production traffic-switch, or contraction is authorized by this
+acceptance with exact run-owned cleanup. Ticket 03 is complete: one continuing
+conversation now presents exact Product, Service and Prescription Request
+boundaries, stages ambiguous messages for deterministic customer choice,
+derives current/terminal status from each owning aggregate, and keeps Service,
+Prescription, Commerce, Quote and policy authority unchanged. Twenty-six
+focused Store Conversation tests pass with 87 assertions; the established
+vertical compatibility matrix passes 51 tests / 145 assertions. Verified-Neon
+acceptance passes 2 tests / 29 assertions with zero run-owned Tenant/User
+residue, and desktop/390px browser acceptance proves staged choice, exact
+active-Request selection, current/complete separation, loading retry, keyboard
+reachability, invalid-link recovery, clean console and no page-level overflow.
+No provider, production traffic-switch, or contraction is authorized by this
 status.
 
 ## Purpose
@@ -33,6 +43,10 @@ Business shell remains a separate authenticated security context.
 - One Store Conversation belongs to exactly one Tenant and Store.
 - A conversation may present multiple typed `PrescriptionRequest`,
   `ServiceRequest`, or Commerce Inquiry sources without replacing them.
+- A message may remain privately staged without a source link. It is committed
+  only to one exact eligible active source, or to a newly created source through
+  that vertical's authoritative intake command. No universal Request aggregate
+  or shared lifecycle is introduced.
 - Quotes, selectable options, payments, booking, pickup, delivery, and other
   customer actions continue through current server-owned capabilities.
 - Store replies are human-led. Deterministic system/action messages are
@@ -94,8 +108,8 @@ Business shell remains a separate authenticated security context.
 
 ## Implementation Frontier
 
-- Implement Ticket 03's multi-Request conversation tracer now that Ticket 02 is
-  complete.
+- Implement Ticket 04's Store queue, assignment and audited-handoff surface now
+  that Tickets 01–03 are complete.
 - Execute Tickets 04–18 only after their recorded blockers are complete.
 - Keep additive implementation, compatibility acceptance, provider and
   production gates as separately authorized work.

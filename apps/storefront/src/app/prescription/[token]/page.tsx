@@ -3,24 +3,39 @@ import { randomUUID } from "node:crypto"
 import { prisma } from "@ewatrade/db"
 import {
   PrescriptionRequestError,
+  StoreConversationError,
+  attachStoreConversationTypedRequest,
   getPublicPrescriptionChannel,
   submitPublicPrescriptionRequest,
 } from "@ewatrade/db/queries"
 import { enqueuePrescriptionMediaSafety } from "@ewatrade/jobs"
 import { storePrescriptionMedia } from "@ewatrade/prescriptions"
 import type { Metadata } from "next"
+import { cookies } from "next/headers"
 import { notFound, redirect } from "next/navigation"
+
+import { STORE_CONVERSATION_GUEST_COOKIE } from "@/lib/store-conversation-cookie"
 
 export const dynamic = "force-dynamic"
 
 type Props = {
   params: Promise<{ token: string }>
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{
+    conversationId?: string
+    entryToken?: string
+    error?: string
+    messageId?: string
+  }>
 }
 
 function value(data: FormData, key: string) {
   const result = data.get(key)
   return typeof result === "string" ? result.trim() : ""
+}
+
+function opaqueId(value: string) {
+  const normalized = value.trim()
+  return normalized.length > 0 && normalized.length <= 191 ? normalized : null
 }
 
 async function loadChannel(token: string) {
@@ -47,6 +62,12 @@ async function submit(data: FormData) {
   }
   const customerPhone = value(data, "customerPhone")
   const customerEmail = value(data, "customerEmail").toLowerCase()
+  const conversationId = opaqueId(value(data, "conversationId"))
+  const messageId = opaqueId(value(data, "messageId"))
+  const entryToken = value(data, "entryToken")
+  const hasConversationContext = Boolean(
+    conversationId && messageId && entryToken.length >= 32,
+  )
   if (!customerPhone && !customerEmail) {
     redirect(`/prescription/${token}?error=contact`)
   }
@@ -65,7 +86,9 @@ async function submit(data: FormData) {
       )
     }
     const result = await submitPublicPrescriptionRequest(prisma, {
-      clientRequestId: `web-${randomUUID()}`,
+      clientRequestId: hasConversationContext
+        ? `store-conversation:${conversationId}:${messageId}`
+        : `web-${randomUUID()}`,
       consentAcceptedAt: new Date(),
       consentVersion: "2026-08-08",
       customerEmail: customerEmail || undefined,
@@ -85,6 +108,28 @@ async function submit(data: FormData) {
     }
     if (result.created) {
       await enqueuePrescriptionMediaSafety(result.requestId)
+    }
+    if (hasConversationContext && conversationId && messageId) {
+      const credentialToken = (await cookies()).get(
+        STORE_CONVERSATION_GUEST_COOKIE,
+      )?.value
+      if (credentialToken) {
+        try {
+          await attachStoreConversationTypedRequest(prisma, {
+            clientOperationId: `attach-prescription:${result.requestId}`,
+            conversationId,
+            credentialToken,
+            expectedSourceRevision: 1,
+            messageId,
+            publicToken: entryToken,
+            sourceId: result.requestId,
+            sourceKind: "PRESCRIPTION_REQUEST",
+          })
+          redirect(`/r/${encodeURIComponent(entryToken)}?request=prescription`)
+        } catch (error) {
+          if (!(error instanceof StoreConversationError)) throw error
+        }
+      }
     }
     redirect(`/prescription-status/${result.statusToken}`)
   } catch (error) {
@@ -178,6 +223,17 @@ export default async function Page({ params, searchParams }: Props) {
           encType="multipart/form-data"
         >
           <input type="hidden" name="token" value={token} />
+          <input
+            type="hidden"
+            name="conversationId"
+            value={query.conversationId ?? ""}
+          />
+          <input
+            type="hidden"
+            name="entryToken"
+            value={query.entryToken ?? ""}
+          />
+          <input type="hidden" name="messageId" value={query.messageId ?? ""} />
           <section className="grid gap-4 border border-border p-5">
             <h2 className="font-semibold">Contact and fulfilment</h2>
             <input

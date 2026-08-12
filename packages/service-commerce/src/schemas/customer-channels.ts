@@ -43,6 +43,7 @@ export const SERVICE_COMMERCE_PUBLIC_ENTRY_ACTIONS = [
 export const SERVICE_COMMERCE_PUBLIC_ENTRY_REQUEST_KINDS = [
   "prescription",
   "product_inquiry",
+  "service",
 ] as const
 
 export const SERVICE_COMMERCE_ENTRY_POINT_PUBLISH_BLOCKERS = [

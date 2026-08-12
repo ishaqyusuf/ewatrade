@@ -677,58 +677,82 @@ export async function resolveCustomerEntryPointContextInTransaction(
       "This customer entry point is unavailable.",
     )
   }
-  const [profile, bindings, attendant, outcomes] = await Promise.all([
-    db.serviceCommerceStoreProfile.findFirst({
-      select: {
-        intakeEnabled: true,
-        status: true,
-        webEnabled: true,
-        whatsappEnabled: true,
-      },
-      where: {
-        storeId: entryPoint.storeId,
-        tenantId: entryPoint.tenantId,
-      },
-    }),
-    db.whatsAppStoreBinding.findMany({
-      select: { connection: { select: { status: true } }, status: true },
-      where: {
-        connection: { tenantId: entryPoint.tenantId },
-        storeId: entryPoint.storeId,
-        tenantId: entryPoint.tenantId,
-      },
-    }),
-    db.serviceCommerceStoreTeamAssignment.findFirst({
-      select: { id: true },
-      where: {
-        capability: "ATTENDANT",
-        membership: {
-          acceptedAt: { not: null },
-          status: "ACTIVE",
+  const serviceRequestFormDelegate = (
+    db as CustomerChannelsClient & {
+      serviceRequestForm?: {
+        findFirst: (args: Record<string, unknown>) => Promise<unknown>
+      }
+    }
+  ).serviceRequestForm
+  const now = new Date()
+  const [profile, bindings, attendant, outcomes, serviceRequestForm] =
+    await Promise.all([
+      db.serviceCommerceStoreProfile.findFirst({
+        select: {
+          intakeEnabled: true,
+          status: true,
+          webEnabled: true,
+          whatsappEnabled: true,
+        },
+        where: {
+          storeId: entryPoint.storeId,
           tenantId: entryPoint.tenantId,
         },
-        status: "ACTIVE",
+      }),
+      db.whatsAppStoreBinding.findMany({
+        select: { connection: { select: { status: true } }, status: true },
+        where: {
+          connection: { tenantId: entryPoint.tenantId },
+          storeId: entryPoint.storeId,
+          tenantId: entryPoint.tenantId,
+        },
+      }),
+      db.serviceCommerceStoreTeamAssignment.findFirst({
+        select: { id: true },
+        where: {
+          capability: "ATTENDANT",
+          membership: {
+            acceptedAt: { not: null },
+            status: "ACTIVE",
+            tenantId: entryPoint.tenantId,
+          },
+          status: "ACTIVE",
+          storeId: entryPoint.storeId,
+          tenantId: entryPoint.tenantId,
+        },
+      }),
+      evaluateServiceCommercePolicyBatchInTransaction(db, {
+        actorUserId: "public_customer_entry",
+        purpose: "customer_entry_point_projection",
+        scopes: [
+          { channel: "web", subject: "web", vertical: "service" },
+          { channel: "web", subject: "intake", vertical: "service" },
+          { channel: "web", subject: "web", vertical: "pharmacy" },
+          { channel: "web", subject: "intake", vertical: "pharmacy" },
+          { channel: "whatsapp", subject: "whatsapp", vertical: "service" },
+          { channel: "whatsapp", subject: "intake", vertical: "service" },
+          { channel: "whatsapp", subject: "whatsapp", vertical: "pharmacy" },
+          { channel: "whatsapp", subject: "intake", vertical: "pharmacy" },
+        ],
         storeId: entryPoint.storeId,
         tenantId: entryPoint.tenantId,
-      },
-    }),
-    evaluateServiceCommercePolicyBatchInTransaction(db, {
-      actorUserId: "public_customer_entry",
-      purpose: "customer_entry_point_projection",
-      scopes: [
-        { channel: "web", subject: "web", vertical: "service" },
-        { channel: "web", subject: "intake", vertical: "service" },
-        { channel: "web", subject: "web", vertical: "pharmacy" },
-        { channel: "web", subject: "intake", vertical: "pharmacy" },
-        { channel: "whatsapp", subject: "whatsapp", vertical: "service" },
-        { channel: "whatsapp", subject: "intake", vertical: "service" },
-        { channel: "whatsapp", subject: "whatsapp", vertical: "pharmacy" },
-        { channel: "whatsapp", subject: "intake", vertical: "pharmacy" },
-      ],
-      storeId: entryPoint.storeId,
-      tenantId: entryPoint.tenantId,
-    }),
-  ])
+      }),
+      serviceRequestFormDelegate
+        ? serviceRequestFormDelegate.findFirst({
+            select: { id: true },
+            where: {
+              AND: [
+                { OR: [{ activeFrom: null }, { activeFrom: { lte: now } }] },
+                { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+              ],
+              offerings: { some: {} },
+              status: "ACTIVE",
+              storeId: entryPoint.storeId,
+              tenantId: entryPoint.tenantId,
+            },
+          })
+        : null,
+    ])
   const profileReady =
     profile?.status === "ACTIVE" && profile.intakeEnabled && Boolean(attendant)
   const actions: ServiceCommercePublicEntryAction[] = []
@@ -759,6 +783,9 @@ export async function resolveCustomerEntryPointContextInTransaction(
   }
   const requestKinds = [
     ...(webVerticals.service ? (["product_inquiry"] as const) : []),
+    ...(webVerticals.service && serviceRequestForm
+      ? (["service"] as const)
+      : []),
     ...(webVerticals.pharmacy ? (["prescription"] as const) : []),
   ]
   return {

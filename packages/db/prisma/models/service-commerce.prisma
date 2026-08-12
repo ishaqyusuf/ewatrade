@@ -225,6 +225,7 @@ model CommerceInquiry {
   clientInquiryId String
   payloadHash     String
   status          CommerceInquiryStatus         @default(RECEIVED)
+  revision        Int                           @default(1)
   vertical        ServiceCommercePolicyVertical @default(SERVICE)
   demandReason    CommerceInquiryDemandReason
   channelOrigin   CommerceInquiryChannelOrigin

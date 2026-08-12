@@ -279,8 +279,9 @@ persistence boundary. Clients never access the database directly.
   sequence and authoritative occurrence time.
 - `StoreConversationRequestLink` associates a message/conversation with one
   typed authoritative Commerce Inquiry, Service Request or Prescription
-  Request. It does not duplicate the source lifecycle or sensitive vertical
-  content.
+  Request plus the accepted source revision. An unlinked customer message is a
+  private staged message, not a universal Request. The link does not duplicate
+  source lifecycle or sensitive vertical content.
 - `StoreConversationCommandReceipt` binds a conversation/client-operation id to
   a payload hash and original message/source, making customer send, claim and
   Store reply replay-safe.
@@ -289,11 +290,12 @@ persistence boundary. Clients never access the database directly.
   bootstrap, customer message, claim and Store reply facts; later handoff,
   moderation and retention behavior remains ticketed.
 
-The models are installed through the generated additive
-`20260812155115_store_conversations_anonymous_text` migration on verified
-development Neon. The migration ledger reports all 47 artifacts applied and
-the run-owned lifecycle acceptance passes with exact cleanup. No production
-schema claim is made.
+Ticket 03 adds `REQUEST_SELECTED`/`REQUEST_LINKED` enum facts and integer
+`revision @default(1)` fields to `CommerceInquiry` and `ServiceRequest`.
+Established lifecycle/Quote commands increment those versions; Prescription
+retains `currentMediaRevision`. The migration ledger reports all 49 artifacts
+applied on verified development Neon, and the run-owned multi-source acceptance
+passes with exact cleanup. No production schema claim is made.
 
 ## Removed Prototype Schema
 

@@ -10,7 +10,6 @@ export function shouldUseStoreConversationTextTracer(input: {
   return (
     input.actions.length === 1 &&
     input.actions[0] === "request_online" &&
-    input.requestKinds.length === 1 &&
-    input.requestKinds[0] === "product_inquiry"
+    input.requestKinds.length > 0
   )
 }

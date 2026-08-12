@@ -342,6 +342,7 @@ model ServiceRequest {
   consentVersion  String?
   contactOptIn    Boolean                            @default(false)
   status          ServiceRequestStatus               @default(SUBMITTED)
+  revision        Int                                @default(1)
   customerName    String
   customerEmail   String?
   customerPhone   String?

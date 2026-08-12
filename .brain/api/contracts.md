@@ -763,16 +763,27 @@ implements the Progressive Catalog commands below.
   creates a 256-bit bearer and persists only its digest with a 180-day expiry.
 - Customer text is trimmed, 1–2,000 characters, and payload-bound to
   `conversationId + publicToken + text` under a conversation-scoped client
-  operation id. Replay returns the original message/source; changed payload is
-  a conflict.
-- The write transaction revalidates current published Entry revision, active
-  web/intake policy, active Store profile and attendant coverage, locks the
-  conversation, creates/reuses the Commerce Inquiry, and appends message,
-  typed source link, receipt and audit together.
+  operation id. Optional `requestIntent` distinguishes default continuation
+  from an explicit new/choice path. Replay returns the original message/source;
+  changed payload is a conflict.
+- The write transaction revalidates the current published Entry, active
+  web/intake policy, active Store profile and attendant coverage, then locks the
+  conversation. Exactly one eligible active source may receive the message;
+  otherwise the message remains staged and has no Request link.
+- Request selection is payload-bound to conversation, message, source kind/id
+  and expected revision. Product choice may create a Commerce Inquiry in place;
+  Service and Prescription continuation use their existing authoritative forms
+  and link only a server-returned source. Stale, terminal, ineligible or foreign
+  sources fail closed.
+- `CommerceInquiry.revision` and `ServiceRequest.revision` are optimistic source
+  versions incremented by lifecycle/Quote transitions. Prescription continues
+  to use `currentMediaRevision`; Store Conversation does not invent a second
+  clinical revision.
 - Guest and staff timelines return only safe message id, sequence, occurrence,
   bounded text, safe sender label, observed channel and optional typed source
-  reference. Credentials, private contacts, provider ids, internal audit and
-  raw errors are excluded.
+  reference. Safe Request cards derive type/status/lifecycle/occurrence from the
+  current authoritative sources. Credentials, private contacts, clinical media,
+  OCR, provider ids, internal audit and raw errors are excluded.
 - Queue items contain conversation id, state, assignment-to-current-user,
   request kinds, last sequence and last activity time. Message bodies and guest
   identifiers are deliberately absent.
@@ -781,6 +792,9 @@ implements the Progressive Catalog commands below.
 - Same-origin Storefront mutations compare the public `Host` plus forwarded
   protocol when behind a trusted TLS-terminating proxy; internal request URLs
   cannot make the canonical shared chat host fail its origin check.
+- Store replies must name the exact active typed Request whenever more than one
+  is active. Conversation-level replies cannot carry Product, Service or
+  Prescription outcome facts without that source reference.
 
 ## Services
 

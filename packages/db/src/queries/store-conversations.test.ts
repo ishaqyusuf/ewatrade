@@ -11,7 +11,10 @@ import {
   bootstrapWebStoreConversation,
   sendGuestStoreConversationText,
 } from "./store-conversations"
-import { projectStoreConversationMessage } from "./store-conversations-core"
+import {
+  loadStoreConversationRequestSummaries,
+  projectStoreConversationMessage,
+} from "./store-conversations-core"
 import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service-commerce-policy"
 
 function dbClient(client: Record<string, unknown>) {
@@ -20,7 +23,7 @@ function dbClient(client: Record<string, unknown>) {
 
 const publicToken = "public-entry-token-that-is-at-least-32-characters"
 
-function publicEntryDependencies() {
+function publicEntryDependencies({ pharmacyAllowed = true } = {}) {
   return {
     customerEntryPoint: {
       findFirst: async (args: { where: { id?: string } }) =>
@@ -38,7 +41,12 @@ function publicEntryDependencies() {
       createMany: async () => ({ count: 8 }),
     },
     serviceCommercePolicyDecision: {
-      findMany: async () => allowedServiceCommercePolicyDecisionRows(),
+      findMany: async () =>
+        allowedServiceCommercePolicyDecisionRows().map((row) =>
+          !pharmacyAllowed && row.vertical === "PHARMACY"
+            ? { ...row, outcome: "DENIED" }
+            : row,
+        ),
     },
     serviceCommerceStoreProfile: {
       findFirst: async () => ({
@@ -57,6 +65,104 @@ function publicEntryDependencies() {
 }
 
 describe("Store Conversation repositories", () => {
+  test("projects only scoped source-owned Request status cards", async () => {
+    const scopes: Array<Record<string, unknown>> = []
+    const client = {
+      commerceInquiry: {
+        findMany: async (args: { where: Record<string, unknown> }) => {
+          scopes.push(args.where)
+          return [
+            {
+              createdAt: new Date("2026-08-12T09:00:00.000Z"),
+              id: "inquiry_1",
+              status: "QUOTED",
+            },
+          ]
+        },
+      },
+      prescriptionRequest: {
+        findMany: async (args: { where: Record<string, unknown> }) => {
+          scopes.push(args.where)
+          return [
+            {
+              createdAt: new Date("2026-08-12T11:00:00.000Z"),
+              id: "prescription_1",
+              status: "PHARMACIST_REVIEW",
+            },
+          ]
+        },
+      },
+      serviceRequest: {
+        findMany: async (args: { where: Record<string, unknown> }) => {
+          scopes.push(args.where)
+          return [
+            {
+              createdAt: new Date("2026-08-12T10:00:00.000Z"),
+              id: "service_1",
+              status: "CONVERTED",
+            },
+          ]
+        },
+      },
+      storeConversationRequestLink: {
+        findMany: async () => [
+          {
+            createdAt: new Date("2026-08-12T09:00:00.000Z"),
+            kind: "COMMERCE_INQUIRY",
+            sourceId: "inquiry_1",
+          },
+          {
+            createdAt: new Date("2026-08-12T10:00:00.000Z"),
+            kind: "SERVICE_REQUEST",
+            sourceId: "service_1",
+          },
+          {
+            createdAt: new Date("2026-08-12T11:00:00.000Z"),
+            kind: "PRESCRIPTION_REQUEST",
+            sourceId: "prescription_1",
+          },
+        ],
+      },
+    }
+    const result = await loadStoreConversationRequestSummaries(
+      dbClient(client),
+      {
+        conversationId: "conversation_1",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      },
+    )
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: "inquiry_1",
+        kind: "commerce_inquiry",
+        lifecycle: "active",
+        status: "quoted",
+      }),
+      expect.objectContaining({
+        id: "service_1",
+        kind: "service_request",
+        lifecycle: "terminal",
+        status: "converted",
+      }),
+      expect.objectContaining({
+        id: "prescription_1",
+        kind: "prescription_request",
+        lifecycle: "active",
+        status: "professional_review",
+      }),
+    ])
+    expect(scopes).toHaveLength(3)
+    for (const scope of scopes) {
+      expect(scope).toMatchObject({
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      })
+    }
+    expect(JSON.stringify(result)).not.toContain("customer")
+    expect(JSON.stringify(result)).not.toContain("media")
+  })
+
   test("projects Store replies under the Store identity, never a staff legal name", () => {
     const projection = projectStoreConversationMessage({
       authorKind: StoreConversationMessageAuthorKind.STORE_ATTENDANT,
@@ -79,7 +185,7 @@ describe("Store Conversation repositories", () => {
     const credentialRows = new Map<string, Record<string, unknown>>()
     let conversation: Record<string, unknown> | null = null
     const client = {
-      ...publicEntryDependencies(),
+      ...publicEntryDependencies({ pharmacyAllowed: false }),
       $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
         callback(client),
       storeConversation: {
@@ -180,12 +286,23 @@ describe("Store Conversation repositories", () => {
       tenantId: "tenant-1",
     }
     const client = {
-      ...publicEntryDependencies(),
+      ...publicEntryDependencies({ pharmacyAllowed: false }),
       $queryRaw: async () => [{ id: conversation.id }],
       $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
         callback(client),
       commerceInquiry: {
-        findFirst: async () => null,
+        findFirst: async (args: { select?: { revision?: boolean } }) =>
+          args.select?.revision ? { revision: 1 } : null,
+        findMany: async () =>
+          requestLinks.length > 0
+            ? [
+                {
+                  createdAt: new Date("2026-08-12T10:00:00.000Z"),
+                  id: "inquiry_1",
+                  status: "RECEIVED",
+                },
+              ]
+            : [],
         upsert: async (args: {
           create: {
             lines: { create: Array<Record<string, unknown>> }
@@ -274,7 +391,15 @@ describe("Store Conversation repositories", () => {
         },
         findFirst: async () =>
           requestLinks[0] ? { ...requestLinks[0], sourceRevision: 1 } : null,
+        findMany: async () =>
+          requestLinks.map((link) => ({
+            createdAt: new Date("2026-08-12T10:00:00.000Z"),
+            kind: link.kind,
+            sourceId: link.sourceId,
+          })),
       },
+      serviceRequest: { findMany: async () => [] },
+      prescriptionRequest: { findMany: async () => [] },
     }
     const input = {
       clientOperationId: "operation-0001",

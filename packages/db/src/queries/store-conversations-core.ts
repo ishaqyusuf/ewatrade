@@ -1,9 +1,15 @@
 import { createHash } from "node:crypto"
 
-import type { StoreConversationMessageProjection } from "@ewatrade/service-commerce"
+import type {
+  StoreConversationMessageProjection,
+  StoreConversationRequestSummaryProjection,
+} from "@ewatrade/service-commerce"
 
 import { Prisma } from "../../generated/prisma/client"
 import {
+  CommerceInquiryStatus,
+  PrescriptionRequestStatus,
+  ServiceRequestStatus,
   StoreConversationGuestCredentialPurpose,
   StoreConversationGuestCredentialStatus,
   StoreConversationGuestIdentityStatus,
@@ -114,6 +120,139 @@ export function projectStoreConversationMessage(message: {
     sequence: message.sequence,
     text: message.body,
   }
+}
+
+const requestStatus = {
+  commerce: {
+    [CommerceInquiryStatus.RECEIVED]: "received",
+    [CommerceInquiryStatus.NEEDS_CLARIFICATION]: "needs_information",
+    [CommerceInquiryStatus.READY_TO_QUOTE]: "ready_to_quote",
+    [CommerceInquiryStatus.QUOTED]: "quoted",
+    [CommerceInquiryStatus.CONVERTED]: "converted",
+    [CommerceInquiryStatus.DECLINED]: "declined",
+    [CommerceInquiryStatus.WITHDRAWN]: "withdrawn",
+    [CommerceInquiryStatus.EXPIRED]: "expired",
+  },
+  prescription: {
+    [PrescriptionRequestStatus.RECEIVED]: "received",
+    [PrescriptionRequestStatus.MEDIA_REVIEW]: "media_review",
+    [PrescriptionRequestStatus.NEEDS_CLEARER_MEDIA]: "media_review",
+    [PrescriptionRequestStatus.TRANSCRIBING]: "media_review",
+    [PrescriptionRequestStatus.ATTENDANT_VERIFICATION]: "professional_review",
+    [PrescriptionRequestStatus.PHARMACIST_REVIEW]: "professional_review",
+    [PrescriptionRequestStatus.NEEDS_CLARIFICATION]: "needs_information",
+    [PrescriptionRequestStatus.READY_TO_QUOTE]: "ready_to_quote",
+    [PrescriptionRequestStatus.QUOTED]: "quoted",
+    [PrescriptionRequestStatus.CONVERTED]: "converted",
+    [PrescriptionRequestStatus.DECLINED]: "declined",
+    [PrescriptionRequestStatus.WITHDRAWN]: "withdrawn",
+    [PrescriptionRequestStatus.EXPIRED]: "expired",
+  },
+  service: {
+    [ServiceRequestStatus.SUBMITTED]: "received",
+    [ServiceRequestStatus.NEEDS_INFORMATION]: "needs_information",
+    [ServiceRequestStatus.QUOTED]: "quoted",
+    [ServiceRequestStatus.DECLINED]: "declined",
+    [ServiceRequestStatus.WITHDRAWN]: "withdrawn",
+    [ServiceRequestStatus.CONVERTED]: "converted",
+  },
+} as const
+
+const terminalRequestStatuses = new Set([
+  "converted",
+  "declined",
+  "withdrawn",
+  "expired",
+])
+
+export async function loadStoreConversationRequestSummaries(
+  db: DbClient,
+  input: { conversationId: string; storeId: string; tenantId: string },
+): Promise<StoreConversationRequestSummaryProjection[]> {
+  const links = await db.storeConversationRequestLink.findMany({
+    distinct: ["kind", "sourceId"],
+    orderBy: { createdAt: "asc" },
+    select: { createdAt: true, kind: true, sourceId: true },
+    take: 200,
+    where: {
+      conversationId: input.conversationId,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    },
+  })
+  const commerceIds = links
+    .filter((link) => link.kind === "COMMERCE_INQUIRY")
+    .map((link) => link.sourceId)
+  const serviceIds = links
+    .filter((link) => link.kind === "SERVICE_REQUEST")
+    .map((link) => link.sourceId)
+  const prescriptionIds = links
+    .filter((link) => link.kind === "PRESCRIPTION_REQUEST")
+    .map((link) => link.sourceId)
+  const [commerce, service, prescription] = await Promise.all([
+    db.commerceInquiry.findMany({
+      select: { createdAt: true, id: true, revision: true, status: true },
+      where: {
+        id: { in: commerceIds },
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    }),
+    db.serviceRequest.findMany({
+      select: { createdAt: true, id: true, revision: true, status: true },
+      where: {
+        id: { in: serviceIds },
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    }),
+    db.prescriptionRequest.findMany({
+      select: { createdAt: true, id: true, status: true },
+      where: {
+        id: { in: prescriptionIds },
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    }),
+  ])
+  const rows = new Map<string, StoreConversationRequestSummaryProjection>()
+  for (const source of commerce) {
+    const status = requestStatus.commerce[source.status]
+    rows.set(`COMMERCE_INQUIRY:${source.id}`, {
+      createdAt: source.createdAt,
+      id: source.id,
+      kind: "commerce_inquiry",
+      label: "Product request",
+      lifecycle: terminalRequestStatuses.has(status) ? "terminal" : "active",
+      status,
+    })
+  }
+  for (const source of service) {
+    const status = requestStatus.service[source.status]
+    rows.set(`SERVICE_REQUEST:${source.id}`, {
+      createdAt: source.createdAt,
+      id: source.id,
+      kind: "service_request",
+      label: "Service request",
+      lifecycle: terminalRequestStatuses.has(status) ? "terminal" : "active",
+      status,
+    })
+  }
+  for (const source of prescription) {
+    const status = requestStatus.prescription[source.status]
+    rows.set(`PRESCRIPTION_REQUEST:${source.id}`, {
+      createdAt: source.createdAt,
+      id: source.id,
+      kind: "prescription_request",
+      label: "Prescription request",
+      lifecycle: terminalRequestStatuses.has(status) ? "terminal" : "active",
+      status,
+    })
+  }
+  return links.flatMap((link) => {
+    const row = rows.get(`${link.kind}:${link.sourceId}`)
+    return row ? [row] : []
+  })
 }
 
 export async function resolveStoreConversationGuestCredential(

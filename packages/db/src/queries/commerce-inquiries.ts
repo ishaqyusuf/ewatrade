@@ -525,7 +525,7 @@ export async function transitionCommerceInquiry(
       to: input.targetStatus,
     })
     const updated = await tx.commerceInquiry.updateMany({
-      data: { status: input.targetStatus },
+      data: { revision: { increment: 1 }, status: input.targetStatus },
       where: {
         id: inquiry.id,
         status: inquiry.status,
@@ -798,6 +798,7 @@ export async function acceptCommerceInquiryQuote(
     const converted = await tx.commerceInquiry.updateMany({
       data: {
         convertedAt: new Date(),
+        revision: { increment: 1 },
         status: CommerceInquiryStatus.CONVERTED,
       },
       where: {

@@ -598,6 +598,27 @@ The development acceptance then passed 1 test / 15 assertions with exact
 run-owned cleanup. No migration SQL was hand-authored, no reset or data-loss
 override was used, and no production database was contacted.
 
+## Store Conversations Ticket 03
+
+Ticket 03 adds two generated additive artifacts. The
+`20260812163000_store_conversations_typed_requests` migration adds
+`REQUEST_SELECTED` to `StoreConversationCommandKind` and `REQUEST_LINKED` to
+`StoreConversationAuditEventType`. The
+`20260812170000_store_conversation_request_revisions` migration adds non-null
+integer revision columns with default `1` to `CommerceInquiry` and
+`ServiceRequest`. No existing Request, Quote, Order, booking, Pharmacy or Store
+Conversation rows are renamed or contracted.
+
+Both artifacts were applied to verified development Neon. `bun db:push --local`
+reported the schema already in sync and `prisma migrate status` reported all 49
+migrations applied. `prisma migrate dev` was also invoked as required, but its
+shadow-schema phase did not complete under the constrained remote development
+role and was bounded/terminated. The generated artifacts, deploy ledger, push
+and status checks provide the reconciled development evidence. Verified-Neon
+acceptance passes 2 tests / 29 assertions with zero run-owned Tenant/User
+residue. No production migration, reset or destructive schema operation was
+performed.
+
 # Hybrid QA cleanup
 
 - Adds tenant QA lifecycle fields and global purge-run receipts. Apply the

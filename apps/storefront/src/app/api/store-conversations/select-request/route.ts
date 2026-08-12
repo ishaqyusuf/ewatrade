@@ -1,16 +1,24 @@
 import { prisma } from "@ewatrade/db"
 import {
   StoreConversationError,
-  getGuestStoreConversationTimeline,
+  selectGuestStoreConversationRequest,
 } from "@ewatrade/db/queries"
+import { storeConversationSelectRequestInputSchema } from "@ewatrade/service-commerce"
 import { type NextRequest, NextResponse } from "next/server"
 
 import {
   STORE_CONVERSATION_GUEST_COOKIE,
   STORE_CONVERSATION_GUEST_COOKIE_OPTIONS,
+  requestIsSameOrigin,
 } from "@/lib/store-conversation-cookie"
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
+  if (!requestIsSameOrigin(request)) {
+    return NextResponse.json(
+      { code: "FORBIDDEN", message: "This request is unavailable." },
+      { status: 403 },
+    )
+  }
   const credentialToken = request.cookies.get(
     STORE_CONVERSATION_GUEST_COOKIE,
   )?.value
@@ -24,21 +32,13 @@ export async function GET(request: NextRequest) {
     )
   }
   try {
-    const conversationId = request.nextUrl.searchParams.get("conversationId")
-    const publicToken = request.nextUrl.searchParams.get("publicToken")
-    const before = request.nextUrl.searchParams.get("beforeSequence")
-    if (!conversationId || !publicToken) {
-      return NextResponse.json(
-        { code: "INVALID_INPUT", message: "Conversation is required." },
-        { status: 400 },
-      )
-    }
+    const input = storeConversationSelectRequestInputSchema.parse(
+      await request.json(),
+    )
     const response = NextResponse.json(
-      await getGuestStoreConversationTimeline(prisma, {
-        beforeSequence: before ? Number(before) : undefined,
-        conversationId,
+      await selectGuestStoreConversationRequest(prisma, {
+        ...input,
         credentialToken,
-        publicToken,
       }),
     )
     response.cookies.set(
@@ -51,17 +51,26 @@ export async function GET(request: NextRequest) {
     if (error instanceof StoreConversationError) {
       return NextResponse.json(
         { code: error.code, message: error.message },
-        { status: error.code === "GUEST_CREDENTIAL_EXPIRED" ? 401 : 404 },
+        {
+          status:
+            error.code === "GUEST_CREDENTIAL_EXPIRED"
+              ? 401
+              : error.code === "FORBIDDEN"
+                ? 403
+                : error.code === "NOT_FOUND"
+                  ? 404
+                  : 409,
+        },
       )
     }
     if (error instanceof Error && error.name === "ZodError") {
       return NextResponse.json(
-        { code: "INVALID_INPUT", message: "The message cursor is invalid." },
+        { code: "INVALID_INPUT", message: "Choose a valid Request." },
         { status: 400 },
       )
     }
     return NextResponse.json(
-      { code: "UNAVAILABLE", message: "Messages could not be loaded." },
+      { code: "UNAVAILABLE", message: "The Request could not be selected." },
       { status: 503 },
     )
   }

@@ -27,8 +27,19 @@
   lifecycle acceptance passes 1 test / 15 assertions with concurrent replay
   and exact cleanup, and desktop/390px HTTPS browser acceptance proves send,
   Store reply, secure
-  reload, recovery, keyboard access and overflow containment. Ticket 03 is the
-  active implementation frontier. Existing public routes and implemented
+  reload, recovery, keyboard access and overflow containment. Ticket 03's
+  multi-Request tracer is complete: current Store Entry configuration exposes
+  only eligible Product/Service/Prescription kinds; ambiguous messages remain
+  staged for deterministic in-chat choice; exact source revision/lifecycle and
+  Store scope are rechecked; status cards remain source-derived; and no
+  universal Request workflow was added. Twenty-six focused tests / 87
+  assertions plus 51 established vertical compatibility tests / 145 assertions
+  pass. Verified-Neon acceptance passes 2 tests / 29 assertions with zero
+  run-owned Tenant/User residue. Desktop/390px browser acceptance proves staged
+  choice, exact active-Request selection, current/complete separation, loading
+  recovery, keyboard reachability, clean console, invalid-link recovery and no
+  page-level overflow. Ticket 04 is the active implementation frontier. Existing
+  public routes and implemented
   Service/Prescription behavior remain unchanged, Nigeria Pharmacy WhatsApp
   stays fail closed, and the ticket approval does not itself authorize provider,
   production, traffic-switch, or contraction work.

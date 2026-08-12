@@ -480,6 +480,9 @@ describe("stable customer entry point", () => {
       serviceCommerceStoreTeamAssignment: {
         findFirst: async () => ({ id: "assignment_1" }),
       },
+      serviceRequestForm: {
+        findFirst: async () => ({ id: "service_form_1" }),
+      },
       whatsAppStoreBinding: {
         findMany: async () => [
           { connection: { status: "ACTIVE" }, status: "ACTIVE" },
@@ -503,7 +506,7 @@ describe("stable customer entry point", () => {
     })
     expect(result).toEqual({
       actions: ["request_online", "chat_on_whatsapp"],
-      requestKinds: ["product_inquiry", "prescription"],
+      requestKinds: ["product_inquiry", "service", "prescription"],
       storeName: "Main Store",
     })
     expect(JSON.stringify(result)).not.toContain("tenant_1")

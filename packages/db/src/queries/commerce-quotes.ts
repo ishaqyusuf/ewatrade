@@ -704,7 +704,10 @@ const quoteSourceHandlers = {
       if (
         (
           await tx.commerceInquiry.updateMany({
-            data: { status: CommerceInquiryStatus.QUOTED },
+            data: {
+              revision: { increment: 1 },
+              status: CommerceInquiryStatus.QUOTED,
+            },
             where: {
               id: input.sourceId,
               status: CommerceInquiryStatus.READY_TO_QUOTE,
@@ -830,7 +833,10 @@ const quoteSourceHandlers = {
     recordIssued: async (tx, input, state) => {
       if (state.alreadyQuoted) return { communicationIntentId: null }
       const updated = await tx.serviceRequest.updateMany({
-        data: { status: ServiceRequestStatus.QUOTED },
+        data: {
+          revision: { increment: 1 },
+          status: ServiceRequestStatus.QUOTED,
+        },
         where: {
           id: input.sourceId,
           status: {

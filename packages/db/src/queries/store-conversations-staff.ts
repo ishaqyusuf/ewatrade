@@ -16,14 +16,17 @@ import {
   StoreConversationMessageChannel,
   StoreConversationMessageKind,
   StoreConversationModerationState,
+  StoreConversationRequestKind,
 } from "../../generated/prisma/enums"
 import {
   StoreConversationError,
   assertStoreConversationAttendant,
+  loadStoreConversationRequestSummaries,
   lockStoreConversation,
   projectStoreConversationMessage,
   storeConversationPayloadHash,
 } from "./store-conversations-core"
+import { resolveCurrentStoreConversationRequestRevision } from "./store-conversations-requests"
 
 export async function claimStoreConversation(
   db: PrismaClient,
@@ -137,6 +140,10 @@ export async function replyToStoreConversation(
     actorUserId: string
     clientOperationId: string
     conversationId: string
+    request?: {
+      id: string
+      kind: "commerce_inquiry" | "prescription_request" | "service_request"
+    }
     storeId: string
     tenantId: string
     text: string
@@ -145,12 +152,14 @@ export async function replyToStoreConversation(
   const parsed = storeConversationReplyInputSchema.parse({
     clientOperationId: input.clientOperationId,
     conversationId: input.conversationId,
+    request: input.request,
     storeId: input.storeId,
     text: input.text,
   })
   const now = new Date()
   const commandHash = storeConversationPayloadHash({
     conversationId: parsed.conversationId,
+    request: parsed.request ?? null,
     text: parsed.text,
   })
   return db.$transaction(async (tx) => {
@@ -197,11 +206,41 @@ export async function replyToStoreConversation(
         replayed: true,
       }
     }
+    const summaries = await loadStoreConversationRequestSummaries(tx, {
+      conversationId: conversation.id,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
+    const active = summaries.filter((request) => request.lifecycle === "active")
+    const selected = parsed.request
+      ? active.find(
+          (request) =>
+            request.id === parsed.request?.id &&
+            request.kind === parsed.request.kind,
+        )
+      : active.length === 1
+        ? active[0]
+        : null
+    if (!selected) {
+      throw new StoreConversationError(
+        "CONFLICT",
+        active.length > 1
+          ? "Choose the exact active Request before replying."
+          : "This conversation has no active Request to reply to.",
+      )
+    }
+    const sourceKinds = {
+      commerce_inquiry: StoreConversationRequestKind.COMMERCE_INQUIRY,
+      prescription_request: StoreConversationRequestKind.PRESCRIPTION_REQUEST,
+      service_request: StoreConversationRequestKind.SERVICE_REQUEST,
+    } as const
     const currentSource = await tx.storeConversationRequestLink.findFirst({
-      orderBy: { createdAt: "asc" },
-      select: { kind: true, sourceId: true, sourceRevision: true },
+      orderBy: { createdAt: "desc" },
+      select: { kind: true, sourceId: true },
       where: {
         conversationId: conversation.id,
+        kind: sourceKinds[selected.kind],
+        sourceId: selected.id,
         storeId: input.storeId,
         tenantId: input.tenantId,
       },
@@ -212,6 +251,13 @@ export async function replyToStoreConversation(
         "This conversation has no active request to reply to.",
       )
     }
+    const currentSourceRevision =
+      await resolveCurrentStoreConversationRequestRevision(tx, {
+        kind: currentSource.kind,
+        sourceId: currentSource.sourceId,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      })
     const sequence = conversation.lastMessageSequence + 1
     const message = await tx.storeConversationMessage.create({
       data: {
@@ -233,7 +279,7 @@ export async function replyToStoreConversation(
         kind: currentSource.kind,
         messageId: message.id,
         sourceId: currentSource.sourceId,
-        sourceRevision: currentSource.sourceRevision,
+        sourceRevision: currentSourceRevision,
         storeId: input.storeId,
         tenantId: input.tenantId,
       },
@@ -358,21 +404,28 @@ export async function getStoreConversationStaffTimeline(
       "Claim this conversation before reading its messages.",
     )
   }
-  const rows = await db.storeConversationMessage.findMany({
-    include: {
-      requestLinks: { select: { kind: true, sourceId: true } },
-    },
-    orderBy: { sequence: "desc" },
-    take: parsed.limit + 1,
-    where: {
+  const [rows, requests] = await Promise.all([
+    db.storeConversationMessage.findMany({
+      include: {
+        requestLinks: { select: { kind: true, sourceId: true } },
+      },
+      orderBy: { sequence: "desc" },
+      take: parsed.limit + 1,
+      where: {
+        conversationId: conversation.id,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+        ...(parsed.beforeSequence
+          ? { sequence: { lt: parsed.beforeSequence } }
+          : {}),
+      },
+    }),
+    loadStoreConversationRequestSummaries(db, {
       conversationId: conversation.id,
       storeId: input.storeId,
       tenantId: input.tenantId,
-      ...(parsed.beforeSequence
-        ? { sequence: { lt: parsed.beforeSequence } }
-        : {}),
-    },
-  })
+    }),
+  ])
   const hasMore = rows.length > parsed.limit
   const selected = rows.slice(0, parsed.limit)
   const nextCursor = projectStoreConversationCursor({
@@ -380,6 +433,7 @@ export async function getStoreConversationStaffTimeline(
     messages: selected,
   })
   return {
+    availableRequestKinds: [],
     conversation: {
       id: conversation.id,
       state:
@@ -393,5 +447,6 @@ export async function getStoreConversationStaffTimeline(
     },
     messages: selected.reverse().map(projectStoreConversationMessage),
     nextCursor,
+    requests,
   }
 }

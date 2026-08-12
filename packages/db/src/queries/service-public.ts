@@ -11,7 +11,6 @@ import {
   CatalogRecordStatus,
   CommerceQuoteSourceType,
   CustomerTrackingStatus,
-  OfferingPricingPolicy,
   PaymentStatus,
   SellableOfferingKind,
   ServiceCommerceIntakeChannelOrigin,
@@ -47,6 +46,10 @@ import {
   assertServiceCommercePolicyAllowedInTransaction,
   evaluateServiceCommercePolicy,
 } from "./service-commerce-policy"
+import {
+  projectPublicServiceRequestForm,
+  publicServiceRequestFormInclude,
+} from "./service-public-projection"
 
 function token() {
   return randomBytes(32).toString("base64url")
@@ -291,21 +294,7 @@ export async function getPublicServiceRequestForm(
 ) {
   const now = new Date()
   const form = await db.serviceRequestForm.findFirst({
-    include: {
-      offerings: {
-        include: {
-          offering: {
-            include: {
-              catalogItem: true,
-              serviceOffering: true,
-              storeAvailability: true,
-              variant: true,
-            },
-          },
-        },
-      },
-      store: { select: { currencyCode: true, name: true } },
-    },
+    include: publicServiceRequestFormInclude,
     where: {
       AND: [
         { OR: [{ activeFrom: null }, { activeFrom: { lte: now } }] },
@@ -336,61 +325,42 @@ export async function getPublicServiceRequestForm(
       "This Service Request Form is unavailable.",
     )
   }
-  return {
-    label: form.label,
-    offerings: form.offerings.flatMap(({ offering }) => {
-      const available = offering.storeAvailability.some(
-        (row) => row.storeId === form.storeId && row.isAvailable,
-      )
-      if (
-        !available ||
-        offering.status !== CatalogRecordStatus.ACTIVE ||
-        !offering.serviceOffering
-      ) {
-        return []
-      }
-      return [
-        {
-          catalogItemName: offering.catalogItem.name,
-          fixedPriceMinor: offering.fixedPriceMinor,
-          guidance: offering.serviceOffering.guidance,
-          id: offering.id,
-          name: offering.name,
-          pricingPolicy:
-            offering.pricingPolicy === OfferingPricingPolicy.FIXED
-              ? ("fixed" as const)
-              : ("quote_required" as const),
-          quantityScale: offering.serviceOffering.quantityScale,
-          variantName: offering.variant.name,
-        },
-      ]
-    }),
-    store: form.store,
-  }
+  return projectPublicServiceRequestForm(form)
 }
+
+type SubmitPublicServiceRequestInput = {
+  actorUserId?: string
+  channelOrigin?: "staff" | "web" | "whatsapp"
+  clientRequestId: string
+  consent?: { contactOptIn: boolean; privacyNoticeVersion: string }
+  customerEmail?: string
+  customerName: string
+  customerPhone?: string
+  details?: string
+  intakeContext?: ServiceCommerceIntakeAuthorizationContext
+  lines: Array<{
+    details?: string
+    offeringId: string
+    quantity: string
+  }>
+  providerEventId?: string
+  requestedAt?: Date
+} & (
+  | {
+      expectedScope?: { storeId: string; tenantId: string }
+      formId?: never
+      formToken: string
+    }
+  | {
+      expectedScope: { storeId: string; tenantId: string }
+      formId: string
+      formToken?: never
+    }
+)
 
 export async function submitPublicServiceRequest(
   db: PrismaClient,
-  input: {
-    actorUserId?: string
-    channelOrigin?: "staff" | "web" | "whatsapp"
-    clientRequestId: string
-    consent?: { contactOptIn: boolean; privacyNoticeVersion: string }
-    customerEmail?: string
-    customerName: string
-    customerPhone?: string
-    details?: string
-    formToken: string
-    intakeContext?: ServiceCommerceIntakeAuthorizationContext
-    lines: Array<{
-      details?: string
-      offeringId: string
-      quantity: string
-    }>
-    expectedScope?: { storeId: string; tenantId: string }
-    providerEventId?: string
-    requestedAt?: Date
-  },
+  input: SubmitPublicServiceRequestInput,
 ) {
   const now = new Date()
   const channelOrigin = input.channelOrigin ?? "web"
@@ -436,7 +406,13 @@ export async function submitPublicServiceRequest(
             { OR: [{ activeFrom: null }, { activeFrom: { lte: now } }] },
             { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
           ],
-          publicTokenDigest: digest(input.formToken),
+          ...(input.formId
+            ? {
+                id: input.formId,
+                storeId: input.expectedScope.storeId,
+                tenantId: input.expectedScope.tenantId,
+              }
+            : { publicTokenDigest: digest(input.formToken ?? "") }),
           status: ServiceRequestFormStatus.ACTIVE,
         },
       })
@@ -561,7 +537,13 @@ export async function submitPublicServiceRequest(
           { clientRequestId: input.clientRequestId },
           ...(providerEventId ? [{ providerEventId }] : []),
         ],
-        requestForm: { publicTokenDigest: digest(input.formToken) },
+        requestForm: input.formId
+          ? {
+              id: input.formId,
+              storeId: input.expectedScope.storeId,
+              tenantId: input.expectedScope.tenantId,
+            }
+          : { publicTokenDigest: digest(input.formToken ?? "") },
         ...(input.expectedScope ?? {}),
       },
     })
@@ -598,6 +580,7 @@ export async function updateServiceRequestDisposition(
   }
   return db.serviceRequest.update({
     data: {
+      revision: { increment: 1 },
       staffResponse: input.response.trim(),
       status:
         input.status === "declined"
@@ -903,6 +886,7 @@ export async function acceptServiceQuote(
       await tx.serviceRequest.update({
         data: {
           convertedAt: new Date(),
+          revision: { increment: 1 },
           status: ServiceRequestStatus.CONVERTED,
         },
         where: { id: request.id },

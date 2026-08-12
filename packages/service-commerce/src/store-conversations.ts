@@ -1,8 +1,10 @@
+import type { ServiceCommercePublicEntryRequestKind } from "./schemas/customer-channels"
 import type {
   StoreConversationAuthorKind,
   StoreConversationChannel,
   StoreConversationMessageKind,
   StoreConversationRequestKind,
+  StoreConversationRequestStatus,
 } from "./schemas/store-conversations"
 
 export type StoreConversationMessageProjection = {
@@ -23,6 +25,7 @@ export type StoreConversationMessageProjection = {
 }
 
 export type StoreConversationTimelineProjection = {
+  availableRequestKinds: ServiceCommercePublicEntryRequestKind[]
   conversation: {
     id: string
     state: "active" | "archived" | "restricted"
@@ -30,6 +33,16 @@ export type StoreConversationTimelineProjection = {
   }
   messages: StoreConversationMessageProjection[]
   nextCursor: number | null
+  requests: StoreConversationRequestSummaryProjection[]
+}
+
+export type StoreConversationRequestSummaryProjection = {
+  createdAt: Date
+  id: string
+  kind: StoreConversationRequestKind
+  label: string
+  lifecycle: "active" | "terminal"
+  status: StoreConversationRequestStatus
 }
 
 export type StoreConversationQueueItemProjection = {

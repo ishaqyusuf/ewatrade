@@ -3,11 +3,17 @@ import { describe, expect, test } from "bun:test"
 import { shouldUseStoreConversationTextTracer } from "./store-conversation-entry-mode"
 
 describe("Store Conversation entry mode", () => {
-  test("uses the text tracer only for a sole web Product Inquiry action", () => {
+  test("uses the conversation for any permitted web Request allowlist", () => {
     expect(
       shouldUseStoreConversationTextTracer({
         actions: ["request_online"],
         requestKinds: ["product_inquiry"],
+      }),
+    ).toBe(true)
+    expect(
+      shouldUseStoreConversationTextTracer({
+        actions: ["request_online"],
+        requestKinds: ["product_inquiry", "service", "prescription"],
       }),
     ).toBe(true)
   })
@@ -21,17 +27,11 @@ describe("Store Conversation entry mode", () => {
     ).toBe(false)
   })
 
-  test("preserves vertical and unavailable compatibility projections", () => {
+  test("preserves unavailable compatibility projections", () => {
     expect(
       shouldUseStoreConversationTextTracer({
         actions: ["request_online"],
-        requestKinds: ["prescription"],
-      }),
-    ).toBe(false)
-    expect(
-      shouldUseStoreConversationTextTracer({
-        actions: [],
-        requestKinds: ["product_inquiry"],
+        requestKinds: [],
       }),
     ).toBe(false)
   })
