@@ -19,6 +19,12 @@ function createDb(input?: {
   activeAttendants?: number
   activeBindings?: Array<{ connection: { status: string }; status: string }>
   configuredBindings?: Array<{ status: string; storeId: string }>
+  existingEntry?: {
+    id: string
+    publicToken: string
+    revision: number
+    status: string
+  } | null
   membershipStatus?: string | null
 }) {
   const calls: Call[] = []
@@ -28,7 +34,7 @@ function createDb(input?: {
     customerEntryPoint: {
       findFirst: async (args: Record<string, unknown>) => {
         calls.push({ args, name: "entry.findFirst" })
-        return null
+        return input?.existingEntry ?? null
       },
       upsert: async (args: Record<string, unknown>) => {
         calls.push({ args, name: "entry.upsert" })
@@ -420,6 +426,29 @@ describe("stable customer entry point", () => {
     ).not.toContain(result.publicToken)
   })
 
+  test("replays publication with the existing opaque capability", async () => {
+    const publicToken = "stable-opaque-public-token-with-enough-entropy"
+    const db = createDb({
+      existingEntry: {
+        id: "entry_1",
+        publicToken,
+        revision: 4,
+        status: "PUBLISHED",
+      },
+    })
+
+    await expect(
+      publishCustomerEntryPoint(db.client, {
+        actorUserId: "manager_1",
+        storeId: "store_1",
+        tenantId: "tenant_1",
+      }),
+    ).resolves.toMatchObject({ publicToken })
+    expect(findCall(db.calls, "entry.upsert").args).toMatchObject({
+      update: { publicToken: undefined },
+    })
+  })
+
   test("public projection is digest-scoped and leaks no Tenant, Store or provider ids", async () => {
     const calls: Call[] = []
     const transaction = {
@@ -479,6 +508,46 @@ describe("stable customer entry point", () => {
     })
     expect(JSON.stringify(result)).not.toContain("tenant_1")
     expect(JSON.stringify(result)).not.toContain("store_1")
+  })
+
+  test("rejects unavailable entry classes before policy, customer, request, media or provider writes", async () => {
+    for (const publicToken of [
+      "unknown-opaque-public-token-with-enough-entropy",
+      "revoked-opaque-public-token-with-enough-entropy",
+      "unpublished-opaque-public-token-with-enough-entropy",
+      "foreign-opaque-public-token-with-enough-entropy",
+    ]) {
+      const calls: string[] = []
+      const transaction = {
+        customerEntryPoint: {
+          findFirst: async () => {
+            calls.push("entry.read")
+            return null
+          },
+        },
+        serviceCommerceCustomerActionCapability: {
+          findFirst: async () => {
+            calls.push("compatibility-capability.read")
+            return null
+          },
+        },
+        serviceCommercePolicyAuditEvent: {
+          createMany: async () => {
+            calls.push("policy.write")
+            return { count: 1 }
+          },
+        },
+      }
+      const db = {
+        $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+          callback(transaction),
+      } as unknown as PrismaClient
+
+      await expect(
+        getPublicCustomerEntryPoint(db, { publicToken }),
+      ).rejects.toMatchObject({ code: "NOT_FOUND" })
+      expect(calls).toEqual(["entry.read", "compatibility-capability.read"])
+    }
   })
 
   test("does not advertise WhatsApp when Store routing has multiple active senders", async () => {

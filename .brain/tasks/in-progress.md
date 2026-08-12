@@ -1,5 +1,30 @@
 # In Progress
 
+- Implement the owner-approved anonymous Store Conversation product pivot after
+  direct `/to-spec` synthesis from
+  [Wayfinder: Anonymous Store Conversations Across Web And Mobile](../../.scratch/wayfinder-store-conversations/map.md).
+  The [consolidated specification](../../.scratch/wayfinder-store-conversations/spec.md)
+  is labelled `ready-for-agent` and defines
+  `chat.ewatrade.com`, device-scoped Guest Identity, optional account linking,
+  typed multi-Request timelines, structured customer actions, private media and
+  voice notes, Store team routing, unread notifications, an isolated mobile
+  Customer shell, and policy-gated WhatsApp bridging. The four approved test
+  seams cover authoritative conversation lifecycle, channel/notification,
+  private media, and cross-platform acceptance. The dependency-ordered
+  [18-ticket implementation batch](../../.scratch/store-conversations/issues/)
+  was owner-approved on 2026-08-12. Ticket 01 now generates canonical
+  shared chat-host links, admits only the exact configured customer-chat host,
+  preserves existing Storefront entry URLs, and keeps the current digest-backed
+  request/WhatsApp compatibility projection. Focused tests and run-owned
+  desktop/390px browser acceptance pass for web, WhatsApp, unavailable,
+  malformed, and revoked states with exact fixture cleanup; Ticket 01 is
+  complete and Ticket 02 is the active implementation frontier. Existing public
+  routes and implemented
+  Service/Prescription behavior remain unchanged, Nigeria Pharmacy WhatsApp
+  stays fail closed, and the ticket approval does not itself authorize provider,
+  production, traffic-switch, or contraction work.
+  Started Date: 2026-08-12.
+
 - Amend and then execute the Service Commerce platform migration batch in
   dependency order. ADR-0029 plus ADR-0030 and
   `.scratch/service-commerce/spec.md` define a horizontal capability layer over

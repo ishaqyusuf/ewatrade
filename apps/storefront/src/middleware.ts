@@ -1,4 +1,8 @@
-import { resolveTenantDomain } from "@ewatrade/utils"
+import {
+  isCustomerChatRequestHost,
+  resolveCustomerChatOrigin,
+  resolveTenantDomain,
+} from "@ewatrade/utils"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
@@ -6,6 +10,11 @@ const PLATFORM_DOMAIN =
   process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com"
 const MARKETING_URL =
   process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com"
+const CUSTOMER_CHAT_ORIGIN = resolveCustomerChatOrigin({
+  chatUrl: process.env.NEXT_PUBLIC_CHAT_URL ?? process.env.CHAT_URL,
+  storefrontUrl:
+    process.env.NEXT_PUBLIC_STOREFRONT_URL ?? process.env.STOREFRONT_URL,
+})
 
 /**
  * Storefront middleware.
@@ -17,6 +26,13 @@ const MARKETING_URL =
  */
 export function middleware(request: NextRequest) {
   const hostname = request.headers.get("host") ?? ""
+
+  if (isCustomerChatRequestHost(hostname, CUSTOMER_CHAT_ORIGIN)) {
+    const response = NextResponse.next()
+    response.headers.set("x-tenant-surface", "customer-chat")
+    return response
+  }
+
   const result = resolveTenantDomain(hostname, {
     platformDomain: PLATFORM_DOMAIN,
   })

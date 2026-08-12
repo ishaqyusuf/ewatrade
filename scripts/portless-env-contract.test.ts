@@ -30,7 +30,9 @@ describe("Portless environment contract", () => {
   test("uses port-free named HTTPS hosts for local web services", () => {
     expect(sampleEnvironment()).toMatchObject({
       API_URL: "https://ewatrade-api.localhost",
+      CHAT_URL: "https://chat.ewatrade-storefront.localhost",
       NEXT_PUBLIC_API_URL: "https://ewatrade-api.localhost",
+      NEXT_PUBLIC_CHAT_URL: "https://chat.ewatrade-storefront.localhost",
       STOREFRONT_URL: "https://ewatrade-storefront.localhost",
       NEXT_PUBLIC_STOREFRONT_URL: "https://ewatrade-storefront.localhost",
       NEXT_PUBLIC_APP_URL: "https://ewatrade.localhost",

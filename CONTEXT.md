@@ -250,6 +250,71 @@ Commercial Order line, including its Product unit or Service policy meaning at
 that time.
 _Avoid_: Current offering, live catalog value
 
+## Customer Conversation Language
+
+**Store Conversation**:
+An ongoing customer-to-business exchange scoped to exactly one Store. A
+business with several Stores has separate Store Conversations unless the
+customer explicitly enters or selects another Store. It may present multiple
+typed Requests over time without combining their independent commercial,
+operational, or regulated lifecycles.
+_Avoid_: Tenant conversation, global customer chat, WhatsApp thread
+
+**Guest Identity**:
+An opaque, device-scoped customer identity that can regain authorized access to
+its Store Conversations without registration. It is not proof of a person and
+does not merge activity across browsers, installations, or devices.
+_Avoid_: Anonymous User, mobile identity, customer account
+
+**Account Invitation**:
+An optional message shown at a meaningful conversation milestone that offers
+signup or signin without blocking the customer's current journey.
+_Avoid_: Authentication gate, mandatory registration
+
+**Action Message**:
+A conversation message presenting one or more currently allowed customer
+actions, such as selecting a Quote option, paying, choosing fulfilment, or
+asking the Store for help. Its presence is not proof that an action remains
+authorized or has occurred.
+_Avoid_: Command result, payment confirmation, permanent button
+
+**Guest Notification Contact**:
+A customer-verified destination and consent used only for permitted unread
+Store Conversation notifications without requiring a Customer Account.
+_Avoid_: Guest Identity, inferred phone number, marketing contact
+
+**Store Entry Link**:
+A stable opaque public link on EwaTrade's shared conversation host that resolves
+one Store and its current customer-facing configuration without exposing
+Tenant, Store, conversation, provider, or customer identifiers.
+_Avoid_: Business subdomain, Store ID link, WhatsApp link
+
+**Conversation Transfer**:
+An explicit, short-lived authorization that lets the EwaTrade app continue a
+web Guest Identity's Store Conversation without requiring account creation or
+placing conversation content in the transfer link.
+_Avoid_: Login, identity merge, permanent bearer link
+
+**Channel Bridge**:
+An explicit customer-confirmed relationship that lets one Store Conversation
+continue across EwaTrade Chat and an eligible external messaging channel. A
+channel redirect, phone-number match, or application open is not itself a
+Channel Bridge.
+_Avoid_: Automatic phone merge, full channel sync, redirect tracking
+
+**Store Conversation Availability**:
+The server-owned determination of whether one Store may accept a new customer
+message, based on its configured service hours, eligible team coverage,
+vertical policy, and manual pause state rather than a staff browser's online
+presence.
+_Avoid_: Online indicator, WhatsApp readiness, business opening status
+
+**Store Conversation Mode**:
+The Store's currently permitted customer-messaging choice of EwaTrade Chat,
+WhatsApp, or Both. The choice does not override channel policy or provider
+readiness and does not delete existing conversation history.
+_Avoid_: Business category, automatic channel authorization, conversation state
+
 ## Service Operations Language
 
 **Service Work Policy**:

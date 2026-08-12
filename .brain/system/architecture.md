@@ -53,6 +53,10 @@ Describe the intended technical architecture and responsibility boundaries for t
   and stable `/r/[token]` entry links/QR codes. Generic request media owns
   private assets, typed source attachments, safety/retry/grants and Human-
   Verified Observations; verticals add interpretation and policy extensions.
+- Newly published Store entry links use the shared `chat.ewatrade.com` origin.
+  The same Storefront application serves that global customer host without
+  deriving a Tenant slug from it, while previously printed Storefront
+  `/r/[token]` links remain compatibility adapters during expansion.
 - Store operational assignments compose attendant and quotation-approver
   capabilities from active Tenant memberships. Commerce owns the Store release
   policy and exact Quote-Version approval; channel transports cannot decide or

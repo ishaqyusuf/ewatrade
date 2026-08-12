@@ -86,6 +86,7 @@ Central index for ewatrade product, architecture, engineering, database, API, de
 - [Offline Order Operations](./features/offline-order-operations.md)
 - [Prescription Commerce](./features/prescription-commerce.md)
 - [Service Commerce](./features/service-commerce.md)
+- [Anonymous Store Conversations](./features/store-conversations.md)
 - [Progressive Catalog And Thin Pharmacy Extension](./decisions/ADR-0030-progressive-catalog-and-thin-pharmacy-extension.md)
 - [Customer Channels, Generic Request Media And Selectable Offers](./decisions/ADR-0031-customer-channels-generic-request-media-and-selectable-offers.md)
 - [Store Team Routing And Quote Release Approval](./decisions/ADR-0032-store-team-routing-and-quote-release-approval.md)

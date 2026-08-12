@@ -243,6 +243,7 @@
         "@ewatrade/jobs": "workspace:*",
         "@ewatrade/payments": "workspace:*",
         "@ewatrade/prescriptions": "workspace:*",
+        "@ewatrade/service-commerce": "workspace:*",
         "@ewatrade/ui": "workspace:*",
         "@ewatrade/utils": "workspace:*",
         "@hugeicons/core-free-icons": "^4.1.1",

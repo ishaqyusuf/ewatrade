@@ -1,6 +1,10 @@
 "use client"
 
 import { Button } from "@ewatrade/ui"
+import {
+  buildCustomerChatEntryUrl,
+  resolveCustomerChatOrigin,
+} from "@ewatrade/utils"
 import { useState } from "react"
 import { QrCodeCard } from "./qr-code-card"
 import type { CustomerChannelWorkspace } from "./types"
@@ -23,10 +27,15 @@ export function EntryPointCard({
   team: CustomerChannelWorkspace["team"]
 }) {
   const [copied, setCopied] = useState(false)
-  const storefront =
-    process.env.NEXT_PUBLIC_STOREFRONT_URL?.replace(/\/$/, "") ?? ""
+  const chatOrigin = resolveCustomerChatOrigin({
+    chatUrl: process.env.NEXT_PUBLIC_CHAT_URL,
+    storefrontUrl: process.env.NEXT_PUBLIC_STOREFRONT_URL,
+  })
   const url = entryPoint?.entryToken
-    ? `${storefront}/r/${entryPoint.entryToken}`
+    ? buildCustomerChatEntryUrl({
+        origin: chatOrigin,
+        publicToken: entryPoint.entryToken,
+      })
     : ""
   const published = entryPoint?.status === "published"
 

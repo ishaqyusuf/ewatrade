@@ -128,6 +128,10 @@
 - Public intake re-resolves the current opaque entry, Store, active attendant,
   enabled channel and policy before accepting content. A public caller cannot
   supply Tenant or Store authority.
+- The shared chat hostname is presentation/routing context only. It never
+  supplies Tenant authority; only the digest-backed published entry capability
+  may resolve the current Store, and rejected entries perform no customer,
+  Request, media or provider write.
 - Staff intake requires an authenticated Tenant membership plus an active
   Store attendant assignment; Pharmacy sources then compose their existing
   Store-role/professional checks. The internal WhatsApp procedure requires the

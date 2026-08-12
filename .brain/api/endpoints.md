@@ -229,7 +229,8 @@ Typed tRPC routers are the primary application contract.
   decision id and reason. Approval is a bounded atomic release command;
   rejection remains a staff decision and never reuses customer decline.
 - Public `serviceCommerce.publicCustomerEntryPoint` resolves only a digest of
-  the opaque `/r/[token]` capability and returns current allowed request/chat
+  the opaque `https://chat.ewatrade.com/r/[token]` capability and returns
+  current allowed request/chat
   actions. It returns no Tenant/Store/provider id or mutable sender number when
   routing is missing or ambiguous.
 - Protected media procedures expose policy-authorized safe attachment metadata,

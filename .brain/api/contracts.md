@@ -607,9 +607,11 @@ implements the Progressive Catalog commands below.
   It grants an operational attendant capability, not a Tenant role or Pharmacy
   licence. Publication requires at least one active attendant.
 - A stable `/r/[token]` entry resolves current channel/policy facts and therefore
-  survives sender rotation. The token/QR contains no Tenant, Store, connection
-  or phone identifier. Multiple active senders suppress WhatsApp rather than
-  guessing a route.
+  survives sender rotation. Newly published links use the shared
+  `chat.ewatrade.com` origin, while already printed Storefront URLs continue
+  through the same compatibility route. The token/QR contains no Tenant, Store,
+  connection or phone identifier. Multiple active senders suppress WhatsApp
+  rather than guessing a route.
 - Inbound events retain the resolved vertical. The runtime queues Pharmacy only
   for Pharmacy and generic Service only for the channel-neutral worker. Generic
   intake requires the explicit Store-scoped `intent:product` selection; absent
