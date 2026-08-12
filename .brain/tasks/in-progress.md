@@ -18,8 +18,17 @@
   request/WhatsApp compatibility projection. Focused tests and run-owned
   desktop/390px browser acceptance pass for web, WhatsApp, unavailable,
   malformed, and revoked states with exact fixture cleanup; Ticket 01 is
-  complete and Ticket 02 is the active implementation frontier. Existing public
-  routes and implemented
+  complete. Ticket 02's additive Guest Identity/conversation/message/source-
+  link/receipt/audit schema, digest-only shared-host cookie, atomic Commerce
+  Inquiry text command, safe guest/staff timelines, content-free Store queue,
+  claim/reply repository and protected API are complete. Nineteen focused tests
+  pass with 46 assertions; DB/API/Storefront TypeScript is green. The generated
+  additive migration is applied to verified development Neon, the run-owned
+  lifecycle acceptance passes 1 test / 15 assertions with concurrent replay
+  and exact cleanup, and desktop/390px HTTPS browser acceptance proves send,
+  Store reply, secure
+  reload, recovery, keyboard access and overflow containment. Ticket 03 is the
+  active implementation frontier. Existing public routes and implemented
   Service/Prescription behavior remain unchanged, Nigeria Pharmacy WhatsApp
   stays fail closed, and the ticket approval does not itself authorize provider,
   production, traffic-switch, or contraction work.

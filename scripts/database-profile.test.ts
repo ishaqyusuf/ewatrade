@@ -12,7 +12,7 @@ describe("database profile", () => {
   test("uses Neon's direct endpoint for Prisma CLI migration operations", () => {
     expect(
       directDatabaseUrlForPrismaCli(
-        "postgresql://owner:secret@ep-development-pooler.eu-west-2.aws.neon.tech/ewatrade?sslmode=require",
+        "postgresql://owner:secret@ep-development-pooler.eu-west-2.aws.neon.tech/ewatrade?sslmode=require&channel_binding=require",
       ),
     ).toBe(
       "postgresql://owner:secret@ep-development.eu-west-2.aws.neon.tech/ewatrade?sslmode=require",

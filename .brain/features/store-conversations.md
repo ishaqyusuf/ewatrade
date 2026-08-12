@@ -7,9 +7,13 @@ owner-approved on 2026-08-12. Ticket 01 is complete: newly published links use
 the shared chat-host contract while existing entry URLs remain compatible, and
 run-owned desktop/compact browser acceptance proves current web, WhatsApp,
 unavailable, invalid, and revoked states without page-level overflow. Ticket 02
-is the implementation frontier. No conversation persistence is complete yet,
-and no provider, production traffic-switch, or contraction is authorized by
-this status.
+is complete: its additive Guest Identity, Store Conversation, text-message,
+typed Commerce Inquiry, queue, claim, reply, safe timeline, web-cookie and API
+tracer passes 19 focused tests / 46 assertions, direct package typechecks, one
+verified-Neon lifecycle test / 15 assertions including concurrent replay, and desktop/390px HTTPS browser
+acceptance with exact run-owned cleanup. Ticket 03 is the active frontier. No
+provider, production traffic-switch, or contraction is authorized by this
+status.
 
 ## Purpose
 
@@ -90,8 +94,8 @@ Business shell remains a separate authenticated security context.
 
 ## Implementation Frontier
 
-- Implement Ticket 02's first anonymous text loop on the stable opaque Store
-  Entry Link and shared `chat.ewatrade.com` host.
-- Execute Tickets 03–18 only after their recorded blockers are complete.
+- Implement Ticket 03's multi-Request conversation tracer now that Ticket 02 is
+  complete.
+- Execute Tickets 04–18 only after their recorded blockers are complete.
 - Keep additive implementation, compatibility acceptance, provider and
   production gates as separately authorized work.

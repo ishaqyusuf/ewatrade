@@ -43,6 +43,34 @@ async function deleteAcceptanceFixture(
 ) {
   const { tenantId, userIds } = input
   await db.$transaction(async (tx) => {
+    const storeConversationGuestIdentityIds = (
+      await tx.storeConversation.findMany({
+        select: { guestIdentityId: true },
+        where: { tenantId },
+      })
+    ).map((conversation) => conversation.guestIdentityId)
+    await tx.storeConversationAuditEvent.deleteMany({ where: { tenantId } })
+    await tx.storeConversationAssignmentEvent.deleteMany({
+      where: { tenantId },
+    })
+    await tx.storeConversationCommandReceipt.deleteMany({
+      where: { tenantId },
+    })
+    await tx.storeConversationRequestLink.deleteMany({ where: { tenantId } })
+    await tx.storeConversationMessage.deleteMany({ where: { tenantId } })
+    await tx.storeConversation.deleteMany({ where: { tenantId } })
+    await tx.storeConversationGuestCredential.deleteMany({
+      where: {
+        guestIdentity: { conversations: { none: {} } },
+        guestIdentityId: { in: storeConversationGuestIdentityIds },
+      },
+    })
+    await tx.storeConversationGuestIdentity.deleteMany({
+      where: {
+        conversations: { none: {} },
+        id: { in: storeConversationGuestIdentityIds },
+      },
+    })
     await tx.serviceCommerceReportReadAuditEvent.deleteMany({
       where: { tenantId },
     })

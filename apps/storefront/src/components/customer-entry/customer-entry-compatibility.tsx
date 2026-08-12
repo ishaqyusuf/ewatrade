@@ -1,7 +1,8 @@
-import type { ServiceCommercePublicEntryAction } from "@ewatrade/service-commerce"
+import type {
+  ServiceCommercePublicEntryAction,
+  ServiceCommercePublicEntryRequestKind,
+} from "@ewatrade/service-commerce"
 import { getNameInitials } from "@ewatrade/utils"
-
-type PublicRequestKind = "prescription" | "product_inquiry"
 
 export function CustomerEntryCompatibility({
   actions,
@@ -11,7 +12,7 @@ export function CustomerEntryCompatibility({
 }: {
   actions: ServiceCommercePublicEntryAction[]
   publicToken: string
-  requestKinds: PublicRequestKind[]
+  requestKinds: ServiceCommercePublicEntryRequestKind[]
   storeName: string
 }) {
   const encodedToken = encodeURIComponent(publicToken)

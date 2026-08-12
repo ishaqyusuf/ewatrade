@@ -1,4 +1,6 @@
 import { CustomerEntryCompatibility } from "@/components/customer-entry/customer-entry-compatibility"
+import { StoreConversationWeb } from "@/components/store-conversations/store-conversation-web"
+import { shouldUseStoreConversationTextTracer } from "@/lib/store-conversation-entry-mode"
 import { prisma } from "@ewatrade/db"
 import {
   CustomerChannelsError,
@@ -36,6 +38,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function CustomerEntryPage({ params }: Props) {
   const { token } = await params
   const entryPoint = await loadEntryPoint(token)
+  const canStartConversation = shouldUseStoreConversationTextTracer(entryPoint)
+
+  if (canStartConversation) {
+    return (
+      <StoreConversationWeb
+        publicToken={token}
+        storeName={entryPoint.storeName}
+      />
+    )
+  }
 
   return (
     <CustomerEntryCompatibility

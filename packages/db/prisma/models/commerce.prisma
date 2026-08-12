@@ -62,6 +62,12 @@ model Store {
   serviceCommerceStoreTeamAuditEvents          ServiceCommerceStoreTeamAuditEvent[]
   customerEntryPoint                           CustomerEntryPoint?
   customerEntryPointAuditEvents                CustomerEntryPointAuditEvent[]
+  storeConversations                           StoreConversation[]
+  storeConversationMessages                    StoreConversationMessage[]
+  storeConversationRequestLinks                StoreConversationRequestLink[]
+  storeConversationCommandReceipts             StoreConversationCommandReceipt[]
+  storeConversationAssignmentEvents            StoreConversationAssignmentEvent[]
+  storeConversationAuditEvents                 StoreConversationAuditEvent[]
   serviceCommerceQuoteReleasePolicy            ServiceCommerceQuoteReleasePolicy?
   serviceCommerceQuoteReleasePolicyAuditEvents ServiceCommerceQuoteReleasePolicyAuditEvent[]
   serviceCommerceQuoteReleaseCommandReceipts   ServiceCommerceQuoteReleaseCommandReceipt[]

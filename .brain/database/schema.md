@@ -266,6 +266,35 @@ persistence boundary. Clients never access the database directly.
 - `TenantHostname` remains the storefront routing projection and is written
   only after a Domain Connection becomes active.
 
+## Store Conversations
+
+- `StoreConversationGuestIdentity` is an opaque device identity, not a User or
+  verified person. Purpose-bound `StoreConversationGuestCredential` rows store
+  only SHA-256 bearer digests, status, expiry and last-use time.
+- `StoreConversation` is immutably Tenant/Store/Guest scoped and uniquely
+  allows one conversation per Store and Guest Identity. It stores lifecycle,
+  moderation, current assignee/revision and the latest append-only sequence.
+- `StoreConversationMessage` is an append-only customer/store/system timeline
+  row with an exact channel, bounded body, deterministic per-conversation
+  sequence and authoritative occurrence time.
+- `StoreConversationRequestLink` associates a message/conversation with one
+  typed authoritative Commerce Inquiry, Service Request or Prescription
+  Request. It does not duplicate the source lifecycle or sensitive vertical
+  content.
+- `StoreConversationCommandReceipt` binds a conversation/client-operation id to
+  a payload hash and original message/source, making customer send, claim and
+  Store reply replay-safe.
+- `StoreConversationAssignmentEvent` and `StoreConversationAuditEvent` retain
+  append-only assignment/lifecycle evidence. Current Ticket 02 writes only
+  bootstrap, customer message, claim and Store reply facts; later handoff,
+  moderation and retention behavior remains ticketed.
+
+The models are installed through the generated additive
+`20260812155115_store_conversations_anonymous_text` migration on verified
+development Neon. The migration ledger reports all 47 artifacts applied and
+the run-owned lifecycle acceptance passes with exact cleanup. No production
+schema claim is made.
+
 ## Removed Prototype Schema
 
 ## Prescription Commerce

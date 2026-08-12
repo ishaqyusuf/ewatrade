@@ -1,0 +1,254 @@
+enum StoreConversationGuestIdentityStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum StoreConversationGuestCredentialPurpose {
+  WEB_DEVICE
+  MOBILE_DEVICE
+}
+
+enum StoreConversationGuestCredentialStatus {
+  ACTIVE
+  ROTATED
+  REVOKED
+  EXPIRED
+}
+
+enum StoreConversationLifecycle {
+  ACTIVE
+  ARCHIVED
+}
+
+enum StoreConversationModerationState {
+  OPEN
+  RESTRICTED
+}
+
+enum StoreConversationMessageAuthorKind {
+  CUSTOMER
+  STORE_ATTENDANT
+  SYSTEM
+}
+
+enum StoreConversationMessageChannel {
+  WEB
+  MOBILE
+  WHATSAPP
+  SYSTEM
+}
+
+enum StoreConversationMessageKind {
+  CUSTOMER_TEXT
+  STORE_TEXT
+  SYSTEM_EVENT
+}
+
+enum StoreConversationRequestKind {
+  COMMERCE_INQUIRY
+  SERVICE_REQUEST
+  PRESCRIPTION_REQUEST
+}
+
+enum StoreConversationCommandKind {
+  CUSTOMER_TEXT
+  CLAIM
+  STORE_REPLY
+}
+
+enum StoreConversationAssignmentEventType {
+  CLAIMED
+  RELEASED
+  REASSIGNED
+}
+
+enum StoreConversationAuditEventType {
+  BOOTSTRAPPED
+  CUSTOMER_MESSAGE_APPENDED
+  CLAIMED
+  STORE_REPLY_APPENDED
+  ARCHIVED
+  REACTIVATED
+  RESTRICTED
+  REINSTATED
+}
+
+/// Opaque device-scoped customer identity. It is not a User or proof of a
+/// person and contains no contact/profile attributes.
+model StoreConversationGuestIdentity {
+  id            String                               @id @default(cuid())
+  status        StoreConversationGuestIdentityStatus @default(ACTIVE)
+  lastSeenAt    DateTime                             @default(now())
+  revokedAt     DateTime?
+  createdAt     DateTime                             @default(now())
+  updatedAt     DateTime                             @updatedAt
+  credentials   StoreConversationGuestCredential[]
+  conversations StoreConversation[]
+
+  @@index([status, lastSeenAt])
+}
+
+/// Purpose-bound bearer credential. Only its SHA-256 digest is persisted.
+model StoreConversationGuestCredential {
+  id              String                                  @id @default(cuid())
+  guestIdentityId String
+  tokenDigest     String                                  @unique
+  purpose         StoreConversationGuestCredentialPurpose
+  status          StoreConversationGuestCredentialStatus  @default(ACTIVE)
+  expiresAt       DateTime
+  lastUsedAt      DateTime                                @default(now())
+  rotatedAt       DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime                                @default(now())
+  updatedAt       DateTime                                @updatedAt
+  guestIdentity   StoreConversationGuestIdentity          @relation(fields: [guestIdentityId], references: [id], onDelete: Cascade)
+
+  @@index([guestIdentityId, status, expiresAt])
+}
+
+/// Customer-facing thread scoped immutably to exactly one Tenant and Store.
+model StoreConversation {
+  id                   String                             @id @default(cuid())
+  tenantId             String
+  storeId              String
+  guestIdentityId      String
+  lifecycle            StoreConversationLifecycle         @default(ACTIVE)
+  moderationState      StoreConversationModerationState   @default(OPEN)
+  lastMessageSequence  Int                                @default(0)
+  assignedMembershipId String?
+  assignmentRevision   Int                                @default(0)
+  createdAt            DateTime                           @default(now())
+  lastActivityAt       DateTime                           @default(now())
+  archivedAt           DateTime?
+  restrictedAt         DateTime?
+  updatedAt            DateTime                           @updatedAt
+  tenant               Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                Store                              @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  guestIdentity        StoreConversationGuestIdentity     @relation(fields: [guestIdentityId], references: [id], onDelete: Restrict)
+  assignedMembership   Membership?                        @relation("StoreConversationCurrentAssignee", fields: [assignedMembershipId], references: [id], onDelete: Restrict)
+  messages             StoreConversationMessage[]
+  requestLinks         StoreConversationRequestLink[]
+  commandReceipts      StoreConversationCommandReceipt[]
+  assignmentEvents     StoreConversationAssignmentEvent[]
+  auditEvents          StoreConversationAuditEvent[]
+
+  @@unique([storeId, guestIdentityId])
+  @@index([tenantId, storeId, lifecycle, lastActivityAt])
+  @@index([assignedMembershipId, lifecycle, lastActivityAt])
+}
+
+/// Append-only public timeline message ordered by transactional sequence.
+model StoreConversationMessage {
+  id                 String                             @id @default(cuid())
+  tenantId           String
+  storeId            String
+  conversationId     String
+  sequence           Int
+  authorKind         StoreConversationMessageAuthorKind
+  authorMembershipId String?
+  channel            StoreConversationMessageChannel
+  kind               StoreConversationMessageKind
+  body               String
+  occurredAt         DateTime                           @default(now())
+  createdAt          DateTime                           @default(now())
+  tenant             Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store              Store                              @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation       StoreConversation                  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  authorMembership   Membership?                        @relation("StoreConversationMessageAuthor", fields: [authorMembershipId], references: [id], onDelete: Restrict)
+  requestLinks       StoreConversationRequestLink[]
+  commandReceipts    StoreConversationCommandReceipt[]
+
+  @@unique([conversationId, sequence])
+  @@index([tenantId, storeId, occurredAt])
+  @@index([conversationId, sequence])
+}
+
+/// Exact typed source association. Source lifecycle authority remains in the
+/// referenced vertical aggregate and is resolved by kind plus source id.
+model StoreConversationRequestLink {
+  id             String                       @id @default(cuid())
+  tenantId       String
+  storeId        String
+  conversationId String
+  messageId      String
+  kind           StoreConversationRequestKind
+  sourceId       String
+  sourceRevision Int                          @default(1)
+  createdAt      DateTime                     @default(now())
+  tenant         Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store          Store                        @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation   StoreConversation            @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message        StoreConversationMessage     @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, kind, sourceId])
+  @@index([tenantId, storeId, kind, sourceId])
+  @@index([messageId])
+}
+
+/// Payload-bound command receipt. Replays return the original message/source.
+model StoreConversationCommandReceipt {
+  id                String                        @id @default(cuid())
+  tenantId          String
+  storeId           String
+  conversationId    String
+  clientOperationId String
+  kind              StoreConversationCommandKind
+  payloadHash       String
+  messageId         String?
+  sourceKind        StoreConversationRequestKind?
+  sourceId          String?
+  createdAt         DateTime                      @default(now())
+  tenant            Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                         @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation      StoreConversation             @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message           StoreConversationMessage?     @relation(fields: [messageId], references: [id], onDelete: Restrict)
+
+  @@unique([conversationId, clientOperationId])
+  @@index([tenantId, storeId, createdAt])
+}
+
+model StoreConversationAssignmentEvent {
+  id                 String                               @id @default(cuid())
+  tenantId           String
+  storeId            String
+  conversationId     String
+  actorMembershipId  String
+  fromMembershipId   String?
+  toMembershipId     String?
+  type               StoreConversationAssignmentEventType
+  assignmentRevision Int
+  reason             String
+  occurredAt         DateTime                             @default(now())
+  createdAt          DateTime                             @default(now())
+  tenant             Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store              Store                                @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation       StoreConversation                    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  actorMembership    Membership                           @relation("StoreConversationAssignmentActor", fields: [actorMembershipId], references: [id], onDelete: Restrict)
+  fromMembership     Membership?                          @relation("StoreConversationAssignmentFrom", fields: [fromMembershipId], references: [id], onDelete: Restrict)
+  toMembership       Membership?                          @relation("StoreConversationAssignmentTo", fields: [toMembershipId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, storeId, occurredAt])
+  @@index([conversationId, assignmentRevision])
+}
+
+/// Append-only lifecycle/security audit with safe bounded reason codes only.
+model StoreConversationAuditEvent {
+  id                   String                             @id @default(cuid())
+  tenantId             String
+  storeId              String
+  conversationId       String
+  actorKind            StoreConversationMessageAuthorKind
+  actorMembershipId    String?
+  type                 StoreConversationAuditEventType
+  conversationSequence Int?
+  reasonCode           String
+  occurredAt           DateTime                           @default(now())
+  createdAt            DateTime                           @default(now())
+  tenant               Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                Store                              @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation         StoreConversation                  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  actorMembership      Membership?                        @relation("StoreConversationAuditActor", fields: [actorMembershipId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, storeId, occurredAt])
+  @@index([conversationId, occurredAt])
+}

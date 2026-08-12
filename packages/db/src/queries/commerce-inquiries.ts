@@ -269,7 +269,7 @@ export type CreateCommerceInquiryInput = {
   vertical: ServiceCommerceVertical
 }
 
-async function createCommerceInquiryWithAuthorization(
+async function createCommerceInquiryInTransaction(
   db: DbClient,
   input: CreateCommerceInquiryInput,
   authorization: "channel" | "operator",
@@ -342,113 +342,122 @@ async function createCommerceInquiryWithAuthorization(
       : {}),
   })
 
-  return db.$transaction(async (tx) => {
-    if (authorization === "operator") {
-      await assertInquiryOperator(tx, input)
-    } else {
-      await assertInquiryChannelReady(tx, input)
-    }
-    await assertServiceCommerceIntakeContextInTransaction(tx, {
-      context: input.intakeContext,
-      storeId: input.storeId,
+  const tx = db
+  if (authorization === "operator") {
+    await assertInquiryOperator(tx, input)
+  } else {
+    await assertInquiryChannelReady(tx, input)
+  }
+  await assertServiceCommerceIntakeContextInTransaction(tx, {
+    context: input.intakeContext,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+    vertical: input.vertical,
+  })
+  await assertServiceCommercePolicyAllowedInTransaction(tx, {
+    actorUserId: input.actorUserId,
+    channel: input.channelOrigin,
+    purpose: "commerce_inquiry_intake",
+    storeId: input.storeId,
+    subject: "intake",
+    tenantId: input.tenantId,
+    vertical: input.vertical,
+  })
+  const providerEventId = input.providerEventId?.trim() || null
+  const existingInquiry = await tx.commerceInquiry.findFirst({
+    include: { lines: { orderBy: { position: "asc" } } },
+    where: {
+      OR: [
+        { clientInquiryId },
+        ...(providerEventId ? [{ providerEventId }] : []),
+      ],
       tenantId: input.tenantId,
-      vertical: input.vertical,
-    })
-    await assertServiceCommercePolicyAllowedInTransaction(tx, {
-      actorUserId: input.actorUserId,
-      channel: input.channelOrigin,
-      purpose: "commerce_inquiry_intake",
-      storeId: input.storeId,
-      subject: "intake",
-      tenantId: input.tenantId,
-      vertical: input.vertical,
-    })
-    const providerEventId = input.providerEventId?.trim() || null
-    const existingInquiry = await tx.commerceInquiry.findFirst({
-      include: { lines: { orderBy: { position: "asc" } } },
-      where: {
-        OR: [
-          { clientInquiryId },
-          ...(providerEventId ? [{ providerEventId }] : []),
-        ],
-        tenantId: input.tenantId,
-      },
-    })
-    const inquiry =
-      existingInquiry ??
-      (await tx.commerceInquiry.upsert({
-        create: {
-          channelOrigin: mapChannelOrigin(input.channelOrigin),
-          clientInquiryId,
-          consentVersion: input.consent?.privacyNoticeVersion,
-          contactOptIn: input.consent?.contactOptIn ?? false,
-          createdByUserId:
-            input.channelOrigin === "staff" ? input.actorUserId : null,
-          customerEmail: input.customerEmail?.trim() || null,
-          customerName,
-          customerPhone: input.customerPhone?.trim() || null,
-          demandReason: mapDemandReason(demand.reason),
-          payloadHash,
-          lines: {
-            create: lines.map((line) => ({
-              ...line,
-              storeId: input.storeId,
-              tenantId: input.tenantId,
-            })),
-          },
-          storeId: input.storeId,
-          summary,
-          tenantId: input.tenantId,
-          providerEventId,
-          vertical: mapVertical(input.vertical),
-        },
-        include: { lines: { orderBy: { position: "asc" } } },
-        update: {},
-        where: {
-          tenantId_clientInquiryId: {
-            clientInquiryId,
+    },
+  })
+  const inquiry =
+    existingInquiry ??
+    (await tx.commerceInquiry.upsert({
+      create: {
+        channelOrigin: mapChannelOrigin(input.channelOrigin),
+        clientInquiryId,
+        consentVersion: input.consent?.privacyNoticeVersion,
+        contactOptIn: input.consent?.contactOptIn ?? false,
+        createdByUserId:
+          input.channelOrigin === "staff" ? input.actorUserId : null,
+        customerEmail: input.customerEmail?.trim() || null,
+        customerName,
+        customerPhone: input.customerPhone?.trim() || null,
+        demandReason: mapDemandReason(demand.reason),
+        payloadHash,
+        lines: {
+          create: lines.map((line) => ({
+            ...line,
+            storeId: input.storeId,
             tenantId: input.tenantId,
-          },
+          })),
         },
-      }))
-    if (
-      inquiry.payloadHash !== payloadHash ||
-      inquiry.storeId !== input.storeId ||
-      inquiry.vertical !== mapVertical(input.vertical)
-    ) {
-      throw new CommerceInquiryError(
-        "CONFLICT",
-        "This Commerce Inquiry identity was already used with different input.",
-      )
-    }
-    const existingAudit = await tx.commerceInquiryAuditEvent.findFirst({
-      select: { id: true },
+        storeId: input.storeId,
+        summary,
+        tenantId: input.tenantId,
+        providerEventId,
+        vertical: mapVertical(input.vertical),
+      },
+      include: { lines: { orderBy: { position: "asc" } } },
+      update: {},
       where: {
+        tenantId_clientInquiryId: {
+          clientInquiryId,
+          tenantId: input.tenantId,
+        },
+      },
+    }))
+  if (
+    inquiry.payloadHash !== payloadHash ||
+    inquiry.storeId !== input.storeId ||
+    inquiry.vertical !== mapVertical(input.vertical)
+  ) {
+    throw new CommerceInquiryError(
+      "CONFLICT",
+      "This Commerce Inquiry identity was already used with different input.",
+    )
+  }
+  const existingAudit = await tx.commerceInquiryAuditEvent.findFirst({
+    select: { id: true },
+    where: {
+      inquiryId: inquiry.id,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      type: CommerceInquiryAuditEventType.CREATED,
+    },
+  })
+  if (!existingAudit) {
+    await tx.commerceInquiryAuditEvent.create({
+      data: {
+        actorUserId: input.actorUserId,
         inquiryId: inquiry.id,
         storeId: input.storeId,
         tenantId: input.tenantId,
+        toStatus: inquiry.status,
         type: CommerceInquiryAuditEventType.CREATED,
       },
     })
-    if (!existingAudit) {
-      await tx.commerceInquiryAuditEvent.create({
-        data: {
-          actorUserId: input.actorUserId,
-          inquiryId: inquiry.id,
-          storeId: input.storeId,
-          tenantId: input.tenantId,
-          toStatus: inquiry.status,
-          type: CommerceInquiryAuditEventType.CREATED,
-        },
-      })
-    }
-    return {
-      id: inquiry.id,
-      lines: inquiry.lines.map((line) => ({ id: line.id })),
-      replayed: Boolean(existingAudit),
-      state: normalizeCommerceInquiryState(inquiry.status),
-    }
-  })
+  }
+  return {
+    id: inquiry.id,
+    lines: inquiry.lines.map((line) => ({ id: line.id })),
+    replayed: Boolean(existingAudit),
+    state: normalizeCommerceInquiryState(inquiry.status),
+  }
+}
+
+function createCommerceInquiryWithAuthorization(
+  db: DbClient,
+  input: CreateCommerceInquiryInput,
+  authorization: "channel" | "operator",
+) {
+  return db.$transaction((tx) =>
+    createCommerceInquiryInTransaction(tx, input, authorization),
+  )
 }
 
 export function createCommerceInquiry(
@@ -463,6 +472,13 @@ export function createChannelCommerceInquiry(
   input: CreateCommerceInquiryInput,
 ) {
   return createCommerceInquiryWithAuthorization(db, input, "channel")
+}
+
+export function createChannelCommerceInquiryInTransaction(
+  db: DbClient,
+  input: CreateCommerceInquiryInput,
+) {
+  return createCommerceInquiryInTransaction(db, input, "channel")
 }
 
 export async function transitionCommerceInquiry(

@@ -44,11 +44,15 @@ export function databaseProfileForEnv(env) {
 
 export function directDatabaseUrlForPrismaCli(databaseUrl) {
   const url = new URL(databaseUrl)
+  // Prisma's Rust schema engine does not support libpq's channel_binding URL
+  // option. Runtime clients keep the original URL; CLI migrations retain TLS
+  // while removing only the unsupported driver-specific option.
+  url.searchParams.delete("channel_binding")
   const hostname = url.hostname.toLowerCase().replace(/\.$/, "")
-  if (!hostname.endsWith(".neon.tech")) return databaseUrl
+  if (!hostname.endsWith(".neon.tech")) return url.toString()
   const labels = hostname.split(".")
   const endpoint = labels[0]
-  if (!endpoint?.endsWith("-pooler")) return databaseUrl
+  if (!endpoint?.endsWith("-pooler")) return url.toString()
   labels[0] = endpoint.slice(0, -"-pooler".length)
   url.hostname = labels.join(".")
   return url.toString()

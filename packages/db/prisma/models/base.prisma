@@ -71,6 +71,12 @@ model Tenant {
   serviceCommerceStoreTeamAuditEvents          ServiceCommerceStoreTeamAuditEvent[]
   customerEntryPoints                          CustomerEntryPoint[]
   customerEntryPointAuditEvents                CustomerEntryPointAuditEvent[]
+  storeConversations                           StoreConversation[]
+  storeConversationMessages                    StoreConversationMessage[]
+  storeConversationRequestLinks                StoreConversationRequestLink[]
+  storeConversationCommandReceipts             StoreConversationCommandReceipt[]
+  storeConversationAssignmentEvents            StoreConversationAssignmentEvent[]
+  storeConversationAuditEvents                 StoreConversationAuditEvent[]
   serviceCommerceQuoteReleasePolicies          ServiceCommerceQuoteReleasePolicy[]
   serviceCommerceQuoteReleasePolicyAuditEvents ServiceCommerceQuoteReleasePolicyAuditEvent[]
   serviceCommerceQuoteReleaseCommandReceipts   ServiceCommerceQuoteReleaseCommandReceipt[]
@@ -298,6 +304,12 @@ model Membership {
   decidedServiceCommerceQuoteApprovals    ServiceCommerceQuoteApproval[]           @relation("QuoteApprovalDecider")
   serviceCommerceQuoteApprovalAuditEvents ServiceCommerceQuoteApprovalAuditEvent[]
   serviceBookingResources                 ServiceBookingResource[]
+  currentStoreConversationAssignments     StoreConversation[]                      @relation("StoreConversationCurrentAssignee")
+  authoredStoreConversationMessages       StoreConversationMessage[]               @relation("StoreConversationMessageAuthor")
+  storeConversationAssignmentActions      StoreConversationAssignmentEvent[]       @relation("StoreConversationAssignmentActor")
+  storeConversationAssignmentsFrom        StoreConversationAssignmentEvent[]       @relation("StoreConversationAssignmentFrom")
+  storeConversationAssignmentsTo          StoreConversationAssignmentEvent[]       @relation("StoreConversationAssignmentTo")
+  storeConversationAuditActions           StoreConversationAuditEvent[]            @relation("StoreConversationAuditActor")
 
   @@unique([tenantId, userId])
   @@index([tenantId, role])

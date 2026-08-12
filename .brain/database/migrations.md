@@ -579,6 +579,25 @@ two callers contend at 29 prior actor/Tenant reads. Production
 application/reconciliation and
 threshold ratification remain open.
 
+## Store Conversations Ticket 02
+
+The Ticket 02 Prisma models are additive and preserve the existing public
+entry, Commerce Inquiry and vertical Request graphs. Prisma generated
+`20260812155115_store_conversations_anonymous_text` from the complete migration
+history against a run-owned empty Neon shadow database; the shadow database was
+then removed. Because a prior guarded push had already installed the exact
+schema before the artifact could be generated, Prisma reconciled that artifact
+as applied rather than replaying the same DDL. `bun db:push --local` reported
+the verified development database in sync and `prisma migrate status` reports
+all 47 migrations applied.
+
+The direct-CLI URL helper now removes the runtime-only `channel_binding` query
+option while retaining verified TLS, allowing Prisma's schema engine to parse
+the guarded Neon connection without weakening application runtime transport.
+The development acceptance then passed 1 test / 15 assertions with exact
+run-owned cleanup. No migration SQL was hand-authored, no reset or data-loss
+override was used, and no production database was contacted.
+
 # Hybrid QA cleanup
 
 - Adds tenant QA lifecycle fields and global purge-run receipts. Apply the

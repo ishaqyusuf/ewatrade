@@ -266,6 +266,27 @@ operations do not use that compatibility namespace.
 
 ## Public Host Ownership
 
+## Store Conversations
+
+- `POST /api/store-conversations/bootstrap` is a same-origin shared-host route
+  that opens/resumes one permitted Store conversation and sets a Secure,
+  HttpOnly, SameSite guest cookie. The raw bearer never enters JSON output.
+- `POST /api/store-conversations/messages` accepts one bounded customer text
+  command with a client operation id and current opaque Store Entry token. It
+  atomically appends one web message and one typed Commerce Inquiry source.
+- `GET /api/store-conversations/timeline` returns a bounded safe guest timeline
+  using deterministic sequence pagination.
+- Protected `serviceCommerce.storeConversationQueue`,
+  `claimStoreConversation`, `storeConversationTimeline`, and
+  `replyToStoreConversation` expose the Store-attendant half of the first text
+  loop. Tenant, Store and actor scope are derived from the authenticated
+  context.
+
+These endpoints are installed on the verified development database and their
+QR-to-guest-to-message-to-claim-to-reply lifecycle passes run-owned Neon and
+desktop/compact HTTPS browser acceptance. Provider and production release
+remain separately authorized work.
+
 Public Service Request, Quote and Tracking routes are rendered by the
 storefront. Registration/login and all authenticated dashboard routes remain on
 the shared application host. A business subdomain never routes to an

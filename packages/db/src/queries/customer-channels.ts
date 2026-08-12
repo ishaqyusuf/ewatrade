@@ -616,12 +616,14 @@ function policyAllows(
   return indexes.every((index) => outcomes[index]?.outcome === "allowed")
 }
 
-async function getPublicCustomerEntryPointInTransaction(
+export async function resolveCustomerEntryPointContextInTransaction(
   db: CustomerChannelsClient,
   input: { publicToken: string },
 ) {
   let entryPoint = await db.customerEntryPoint.findFirst({
     select: {
+      id: true,
+      revision: true,
       store: { select: { name: true } },
       storeId: true,
       tenantId: true,
@@ -654,6 +656,8 @@ async function getPublicCustomerEntryPointInTransaction(
     ) {
       entryPoint = await db.customerEntryPoint.findFirst({
         select: {
+          id: true,
+          revision: true,
           store: { select: { name: true } },
           storeId: true,
           tenantId: true,
@@ -759,8 +763,12 @@ async function getPublicCustomerEntryPointInTransaction(
   ]
   return {
     actions,
+    entryPointId: entryPoint.id,
+    entryPointRevision: entryPoint.revision,
     requestKinds,
+    storeId: entryPoint.storeId,
     storeName: entryPoint.store.name,
+    tenantId: entryPoint.tenantId,
     webVerticals,
   }
 }
@@ -771,7 +779,7 @@ export async function getPublicCustomerEntryPoint(
 ) {
   return db.$transaction(async (tx) => {
     const { actions, requestKinds, storeName } =
-      await getPublicCustomerEntryPointInTransaction(tx, input)
+      await resolveCustomerEntryPointContextInTransaction(tx, input)
     return { actions, requestKinds, storeName }
   })
 }
@@ -781,7 +789,10 @@ export async function resolveCustomerEntryPointPrescriptionRedirect(
   input: { publicToken: string },
 ) {
   return db.$transaction(async (tx) => {
-    const projection = await getPublicCustomerEntryPointInTransaction(tx, input)
+    const projection = await resolveCustomerEntryPointContextInTransaction(
+      tx,
+      input,
+    )
     if (!projection.webVerticals.pharmacy) {
       throw new CustomerChannelsError(
         "NOT_FOUND",
@@ -822,7 +833,10 @@ export async function resolveCustomerEntryPointIntakeContext(
   input: { publicToken: string },
 ) {
   return db.$transaction(async (tx) => {
-    const projection = await getPublicCustomerEntryPointInTransaction(tx, input)
+    const projection = await resolveCustomerEntryPointContextInTransaction(
+      tx,
+      input,
+    )
     if (!projection.actions.includes("request_online")) {
       throw new CustomerChannelsError(
         "NOT_FOUND",
@@ -851,7 +865,10 @@ export async function resolveCustomerEntryPointWhatsAppRedirect(
   input: { publicToken: string },
 ) {
   return db.$transaction(async (tx) => {
-    const projection = await getPublicCustomerEntryPointInTransaction(tx, input)
+    const projection = await resolveCustomerEntryPointContextInTransaction(
+      tx,
+      input,
+    )
     if (!projection.actions.includes("chat_on_whatsapp")) {
       throw new CustomerChannelsError(
         "NOT_FOUND",

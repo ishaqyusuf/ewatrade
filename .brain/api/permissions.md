@@ -270,6 +270,24 @@
   prepared/ready facts and the source adapter's vertical role/policy inside the
   write transaction. A Tenant role alone cannot grant Pharmacy fulfilment.
 
+## Store Conversations
+
+- Guest access requires the current purpose-bound opaque credential and exact
+  conversation/Guest Identity match. Sending additionally requires the current
+  published Store Entry token, active web/intake policy and Store readiness.
+- A credential for the same guest does not cross a conversation's immutable
+  Tenant/Store boundary. Expired, revoked or unknown credentials fail with a
+  safe recovery code before message/source writes.
+- Queue access requires an accepted active Membership with an active
+  `ATTENDANT` assignment for the exact Tenant and Store. Message timeline and
+  reply additionally require that Membership to be the conversation's current
+  assignee.
+- Claim locks the conversation and permits one primary assignee. A foreign,
+  removed, suspended, unassigned or stale actor cannot read or reply. Tenant
+  role alone is insufficient.
+- Public cookie mutation routes enforce same-origin requests and a Secure,
+  HttpOnly, SameSite cookie. Browser scripts never receive the bearer.
+
 ## Offline
 
 - Authenticated commercial/POS roles may read the Tenant offline policy;

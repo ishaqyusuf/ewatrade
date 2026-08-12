@@ -265,6 +265,23 @@ authoritative clinical review and retention extension.
 
 `WhatsAppConnection -> ServiceCommerceUsageEvent?`
 
+`StoreConversationGuestIdentity -> StoreConversationGuestCredential[]`
+
+`Tenant + Store + StoreConversationGuestIdentity -> StoreConversation`
+
+`StoreConversation -> StoreConversationMessage[] -> StoreConversationRequestLink[]`
+
+`StoreConversation -> StoreConversationCommandReceipt[]`
+
+`StoreConversation + Membership? -> StoreConversationAssignmentEvent[] + StoreConversationAuditEvent[]`
+
+Guest Identity is device-scoped and may participate in separately isolated
+conversations across Stores/Tenants. The conversation is the immutable scope
+boundary; a guest credential alone never authorizes another Store's thread.
+Messages and typed source links are append-only. Current assignee is a guarded
+projection of assignment events, while Membership status and active Store
+attendant capability are rechecked before every internal read or reply.
+
 `Tenant + Store? + Actor -> ServiceCommerceReportReadAuditEvent`
 
 Lifecycle reporting reads authoritative occurrence fields from the existing

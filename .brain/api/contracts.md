@@ -756,6 +756,32 @@ implements the Progressive Catalog commands below.
 - Ordinary Commerce has a baseline 365-day retention class. Pharmacy may attach
   a clinical extension and retain Prescription-owned OCR/review/access policy.
 
+## Store Conversations
+
+- Bootstrap accepts only an opaque published Store Entry token. A valid
+  existing server cookie resumes the Guest Identity; otherwise the server
+  creates a 256-bit bearer and persists only its digest with a 180-day expiry.
+- Customer text is trimmed, 1–2,000 characters, and payload-bound to
+  `conversationId + publicToken + text` under a conversation-scoped client
+  operation id. Replay returns the original message/source; changed payload is
+  a conflict.
+- The write transaction revalidates current published Entry revision, active
+  web/intake policy, active Store profile and attendant coverage, locks the
+  conversation, creates/reuses the Commerce Inquiry, and appends message,
+  typed source link, receipt and audit together.
+- Guest and staff timelines return only safe message id, sequence, occurrence,
+  bounded text, safe sender label, observed channel and optional typed source
+  reference. Credentials, private contacts, provider ids, internal audit and
+  raw errors are excluded.
+- Queue items contain conversation id, state, assignment-to-current-user,
+  request kinds, last sequence and last activity time. Message bodies and guest
+  identifiers are deliberately absent.
+- Timeline pagination uses `beforeSequence` and a bounded 1–100 limit. Mutable
+  timestamps are not cursors.
+- Same-origin Storefront mutations compare the public `Host` plus forwarded
+  protocol when behind a trusted TLS-terminating proxy; internal request URLs
+  cannot make the canonical shared chat host fail its origin check.
+
 ## Services
 
 - Service Request is unconfirmed intent and creates no Order/work.

@@ -40,6 +40,11 @@ export const SERVICE_COMMERCE_PUBLIC_ENTRY_ACTIONS = [
   "chat_on_whatsapp",
 ] as const
 
+export const SERVICE_COMMERCE_PUBLIC_ENTRY_REQUEST_KINDS = [
+  "prescription",
+  "product_inquiry",
+] as const
+
 export const SERVICE_COMMERCE_ENTRY_POINT_PUBLISH_BLOCKERS = [
   "active_attendant_missing",
   "allowed_channel_missing",
@@ -139,6 +144,9 @@ export const serviceCommerceEntryPointActionSchema = z.enum(
 export const serviceCommercePublicEntryActionSchema = z.enum(
   SERVICE_COMMERCE_PUBLIC_ENTRY_ACTIONS,
 )
+export const serviceCommercePublicEntryRequestKindSchema = z.enum(
+  SERVICE_COMMERCE_PUBLIC_ENTRY_REQUEST_KINDS,
+)
 export const serviceCommerceEntryPointPublishBlockerSchema = z.enum(
   SERVICE_COMMERCE_ENTRY_POINT_PUBLISH_BLOCKERS,
 )
@@ -215,6 +223,9 @@ export type ServiceCommerceEntryPointAction = z.infer<
 >
 export type ServiceCommercePublicEntryAction = z.infer<
   typeof serviceCommercePublicEntryActionSchema
+>
+export type ServiceCommercePublicEntryRequestKind = z.infer<
+  typeof serviceCommercePublicEntryRequestKindSchema
 >
 export type ServiceCommerceEntryPointChannel = z.infer<
   typeof serviceCommerceEntryPointChannelSchema
