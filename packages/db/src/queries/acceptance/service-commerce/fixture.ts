@@ -42,152 +42,201 @@ async function deleteAcceptanceFixture(
   input: { tenantId: string; userIds: string[] },
 ) {
   const { tenantId, userIds } = input
-  await db.$transaction(async (tx) => {
-    const storeConversationGuestIdentityIds = (
-      await tx.storeConversation.findMany({
-        select: { guestIdentityId: true },
+  await db.$transaction(
+    async (tx) => {
+      const [conversationGuests, accessGuests, transferGuests] =
+        await Promise.all([
+          tx.storeConversation.findMany({
+            select: { guestIdentityId: true },
+            where: { tenantId },
+          }),
+          tx.storeConversationGuestAccess.findMany({
+            select: { guestIdentityId: true },
+            where: { tenantId },
+          }),
+          tx.storeConversationTransfer.findMany({
+            select: {
+              redeemedGuestIdentityId: true,
+              sourceCredential: { select: { guestIdentityId: true } },
+            },
+            where: { tenantId },
+          }),
+        ])
+      const storeConversationGuestIdentityIds = [
+        ...new Set([
+          ...conversationGuests.map((row) => row.guestIdentityId),
+          ...accessGuests.map((row) => row.guestIdentityId),
+          ...transferGuests.map((row) => row.sourceCredential.guestIdentityId),
+          ...transferGuests.flatMap((row) =>
+            row.redeemedGuestIdentityId ? [row.redeemedGuestIdentityId] : [],
+          ),
+        ]),
+      ]
+      await tx.storeConversationTransfer.deleteMany({ where: { tenantId } })
+      await tx.storeConversationGuestAccess.deleteMany({ where: { tenantId } })
+      await tx.storeConversationAuditEvent.deleteMany({ where: { tenantId } })
+      await tx.storeConversationEscalationEvent.deleteMany({
         where: { tenantId },
       })
-    ).map((conversation) => conversation.guestIdentityId)
-    await tx.storeConversationAuditEvent.deleteMany({ where: { tenantId } })
-    await tx.storeConversationEscalationEvent.deleteMany({
-      where: { tenantId },
-    })
-    await tx.storeConversationAssignmentEvent.deleteMany({
-      where: { tenantId },
-    })
-    await tx.storeConversationCommandReceipt.deleteMany({
-      where: { tenantId },
-    })
-    await tx.storeConversationRequestLink.deleteMany({ where: { tenantId } })
-    await tx.storeConversationMessage.deleteMany({ where: { tenantId } })
-    await tx.storeConversation.deleteMany({ where: { tenantId } })
-    await tx.storeConversationGuestCredential.deleteMany({
-      where: {
-        guestIdentity: { conversations: { none: {} } },
-        guestIdentityId: { in: storeConversationGuestIdentityIds },
-      },
-    })
-    await tx.storeConversationGuestIdentity.deleteMany({
-      where: {
-        conversations: { none: {} },
-        id: { in: storeConversationGuestIdentityIds },
-      },
-    })
-    await tx.serviceCommerceReportReadAuditEvent.deleteMany({
-      where: { tenantId },
-    })
-    await tx.serviceCommerceUsageEvent.deleteMany({ where: { tenantId } })
-    await tx.serviceCommerceCustomerNotificationReceipt.deleteMany({
-      where: { tenantId },
-    })
-    await tx.serviceCommerceCustomerNotificationAttempt.deleteMany({
-      where: { tenantId },
-    })
-    await tx.serviceCommerceCustomerActionExecution.deleteMany({
-      where: { tenantId },
-    })
-    await tx.serviceCommerceCustomerActionCapability.deleteMany({
-      where: { tenantId },
-    })
-    await tx.serviceCommerceCustomerNotificationIntent.deleteMany({
-      where: { tenantId },
-    })
-    await tx.serviceBookingNotificationIntent.deleteMany({
-      where: { tenantId },
-    })
-    await tx.serviceBookingEvent.deleteMany({ where: { tenantId } })
-    await tx.serviceBookingHold.deleteMany({ where: { tenantId } })
-    await tx.serviceBookingAccessCapability.deleteMany({ where: { tenantId } })
-    await tx.serviceBooking.deleteMany({ where: { tenantId } })
-    await tx.serviceBookingConfigurationEvent.deleteMany({
-      where: { tenantId },
-    })
-    await tx.serviceBookingAvailabilityException.deleteMany({
-      where: { tenantId },
-    })
-    await tx.serviceBookingAvailabilityRule.deleteMany({ where: { tenantId } })
-    await tx.serviceBookingOfferingResource.deleteMany({
-      where: { offeringConfig: { tenantId } },
-    })
-    await tx.serviceBookingOfferingConfig.deleteMany({ where: { tenantId } })
-    await tx.serviceBookingResource.deleteMany({ where: { tenantId } })
-    await tx.serviceBookingStoreSettings.deleteMany({ where: { tenantId } })
-    await tx.serviceJob.deleteMany({ where: { tenantId } })
-    const paymentIntentIds = (
-      await tx.prescriptionPaymentIntent.findMany({
-        select: { id: true },
+      await tx.storeConversationAssignmentEvent.deleteMany({
         where: { tenantId },
       })
-    ).map((intent) => intent.id)
-    await tx.prescriptionPaymentProviderEvent.deleteMany({
-      where: { paymentIntentId: { in: paymentIntentIds } },
-    })
-    await tx.prescriptionCommunicationIntent.deleteMany({ where: { tenantId } })
-    await tx.serviceCommerceQuoteApprovalAuditEvent.deleteMany({
-      where: { tenantId },
-    })
-    await tx.serviceCommerceQuoteApproval.deleteMany({ where: { tenantId } })
-    await tx.serviceCommerceQuoteReleaseCommandReceipt.deleteMany({
-      where: { tenantId },
-    })
-    await tx.serviceCommerceQuoteReleasePolicyAuditEvent.deleteMany({
-      where: { tenantId },
-    })
-    await tx.serviceCommerceQuoteReleasePolicy.deleteMany({
-      where: { tenantId },
-    })
-    // Policy audit entries reference policy decisions and Stores with restrictive
-    // foreign keys, so remove them before the decisions and tenant-owned Store.
-    await tx.serviceCommercePolicyAuditEvent.deleteMany({ where: { tenantId } })
-    await tx.serviceCommercePolicyDecision.deleteMany({ where: { tenantId } })
-    await tx.serviceCommerceMediaAuditEvent.deleteMany({ where: { tenantId } })
-    await tx.serviceCommerceVerifiedObservation.deleteMany({
-      where: { tenantId },
-    })
-    await tx.serviceCommerceSourceAttachment.deleteMany({ where: { tenantId } })
-    await tx.serviceCommerceMediaAsset.deleteMany({ where: { tenantId } })
-    await tx.customerEntryPointAuditEvent.deleteMany({ where: { tenantId } })
-    await tx.customerEntryPoint.deleteMany({ where: { tenantId } })
-    await tx.serviceCommerceStoreTeamAuditEvent.deleteMany({
-      where: { tenantId },
-    })
-    await tx.serviceCommerceStoreTeamAssignment.deleteMany({
-      where: { tenantId },
-    })
-    await tx.serviceCommerceStoreAuditEvent.deleteMany({ where: { tenantId } })
-    await tx.serviceCommerceStoreProfile.deleteMany({ where: { tenantId } })
-    await tx.commerceInquiryAuditEvent.deleteMany({ where: { tenantId } })
-    await tx.prescriptionPickupFulfillment.deleteMany({ where: { tenantId } })
-    await tx.prescriptionDeliveryAssignment.deleteMany({ where: { tenantId } })
-    await tx.prescriptionDeliveryAddress.deleteMany({ where: { tenantId } })
-    await tx.prescriptionPaymentIntent.deleteMany({ where: { tenantId } })
-    await tx.catalogPricePromotion.deleteMany({ where: { tenantId } })
-    await tx.commerceQuote.deleteMany({ where: { tenantId } })
-    await tx.catalogAvailabilityAttestation.deleteMany({ where: { tenantId } })
-    await tx.catalogVerifiedAlias.deleteMany({ where: { tenantId } })
-    await tx.catalogSourceLineLink.deleteMany({ where: { tenantId } })
-    await tx.commerceInquiry.deleteMany({ where: { tenantId } })
-    await tx.prescriptionRequest.deleteMany({ where: { tenantId } })
-    await tx.serviceRequest.deleteMany({ where: { tenantId } })
-    await tx.serviceRequestForm.deleteMany({ where: { tenantId } })
-    await tx.stockReservation.deleteMany({ where: { tenantId } })
-    await tx.offeringSnapshot.deleteMany({
-      where: { orderLine: { order: { tenantId } } },
-    })
-    await tx.commercialOrder.deleteMany({ where: { tenantId } })
-    await tx.stockMovement.deleteMany({ where: { operation: { tenantId } } })
-    await tx.stockOperation.deleteMany({ where: { tenantId } })
-    await tx.stockBalanceSource.deleteMany({ where: { tenantId } })
-    await tx.prescriptionDeliveryZone.deleteMany({ where: { tenantId } })
-    await tx.catalogPriceChange.deleteMany({ where: { tenantId } })
-    await tx.catalogCommandReceipt.deleteMany({ where: { tenantId } })
-    await tx.catalogItem.deleteMany({ where: { tenantId } })
-    await tx.tenant.delete({ where: { id: tenantId } })
-    await tx.user.deleteMany({
-      where: { id: { in: userIds }, memberships: { none: {} } },
-    })
-  })
+      await tx.storeConversationCommandReceipt.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationRequestLink.deleteMany({ where: { tenantId } })
+      await tx.storeConversationMessage.deleteMany({ where: { tenantId } })
+      await tx.storeConversation.deleteMany({ where: { tenantId } })
+      await tx.storeConversationGuestCredential.deleteMany({
+        where: {
+          guestIdentity: {
+            conversationAccesses: { none: {} },
+            conversations: { none: {} },
+          },
+          guestIdentityId: { in: storeConversationGuestIdentityIds },
+        },
+      })
+      await tx.storeConversationGuestIdentity.deleteMany({
+        where: {
+          conversationAccesses: { none: {} },
+          conversations: { none: {} },
+          id: { in: storeConversationGuestIdentityIds },
+        },
+      })
+      await tx.serviceCommerceReportReadAuditEvent.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceCommerceUsageEvent.deleteMany({ where: { tenantId } })
+      await tx.serviceCommerceCustomerNotificationReceipt.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceCommerceCustomerNotificationAttempt.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceCommerceCustomerActionExecution.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceCommerceCustomerActionCapability.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceCommerceCustomerNotificationIntent.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceBookingNotificationIntent.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceBookingEvent.deleteMany({ where: { tenantId } })
+      await tx.serviceBookingHold.deleteMany({ where: { tenantId } })
+      await tx.serviceBookingAccessCapability.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceBooking.deleteMany({ where: { tenantId } })
+      await tx.serviceBookingConfigurationEvent.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceBookingAvailabilityException.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceBookingAvailabilityRule.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceBookingOfferingResource.deleteMany({
+        where: { offeringConfig: { tenantId } },
+      })
+      await tx.serviceBookingOfferingConfig.deleteMany({ where: { tenantId } })
+      await tx.serviceBookingResource.deleteMany({ where: { tenantId } })
+      await tx.serviceBookingStoreSettings.deleteMany({ where: { tenantId } })
+      await tx.serviceJob.deleteMany({ where: { tenantId } })
+      const paymentIntentIds = (
+        await tx.prescriptionPaymentIntent.findMany({
+          select: { id: true },
+          where: { tenantId },
+        })
+      ).map((intent) => intent.id)
+      await tx.prescriptionPaymentProviderEvent.deleteMany({
+        where: { paymentIntentId: { in: paymentIntentIds } },
+      })
+      await tx.prescriptionCommunicationIntent.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceCommerceQuoteApprovalAuditEvent.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceCommerceQuoteApproval.deleteMany({ where: { tenantId } })
+      await tx.serviceCommerceQuoteReleaseCommandReceipt.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceCommerceQuoteReleasePolicyAuditEvent.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceCommerceQuoteReleasePolicy.deleteMany({
+        where: { tenantId },
+      })
+      // Policy audit entries reference policy decisions and Stores with restrictive
+      // foreign keys, so remove them before the decisions and tenant-owned Store.
+      await tx.serviceCommercePolicyAuditEvent.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceCommercePolicyDecision.deleteMany({ where: { tenantId } })
+      await tx.serviceCommerceMediaAuditEvent.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceCommerceVerifiedObservation.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceCommerceSourceAttachment.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceCommerceMediaAsset.deleteMany({ where: { tenantId } })
+      await tx.customerEntryPointAuditEvent.deleteMany({ where: { tenantId } })
+      await tx.customerEntryPoint.deleteMany({ where: { tenantId } })
+      await tx.serviceCommerceStoreTeamAuditEvent.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceCommerceStoreTeamAssignment.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceCommerceStoreAuditEvent.deleteMany({
+        where: { tenantId },
+      })
+      await tx.serviceCommerceStoreProfile.deleteMany({ where: { tenantId } })
+      await tx.commerceInquiryAuditEvent.deleteMany({ where: { tenantId } })
+      await tx.prescriptionPickupFulfillment.deleteMany({ where: { tenantId } })
+      await tx.prescriptionDeliveryAssignment.deleteMany({
+        where: { tenantId },
+      })
+      await tx.prescriptionDeliveryAddress.deleteMany({ where: { tenantId } })
+      await tx.prescriptionPaymentIntent.deleteMany({ where: { tenantId } })
+      await tx.catalogPricePromotion.deleteMany({ where: { tenantId } })
+      await tx.commerceQuote.deleteMany({ where: { tenantId } })
+      await tx.catalogAvailabilityAttestation.deleteMany({
+        where: { tenantId },
+      })
+      await tx.catalogVerifiedAlias.deleteMany({ where: { tenantId } })
+      await tx.catalogSourceLineLink.deleteMany({ where: { tenantId } })
+      await tx.commerceInquiry.deleteMany({ where: { tenantId } })
+      await tx.prescriptionRequest.deleteMany({ where: { tenantId } })
+      await tx.serviceRequest.deleteMany({ where: { tenantId } })
+      await tx.serviceRequestForm.deleteMany({ where: { tenantId } })
+      await tx.stockReservation.deleteMany({ where: { tenantId } })
+      await tx.offeringSnapshot.deleteMany({
+        where: { orderLine: { order: { tenantId } } },
+      })
+      await tx.commercialOrder.deleteMany({ where: { tenantId } })
+      await tx.stockMovement.deleteMany({ where: { operation: { tenantId } } })
+      await tx.stockOperation.deleteMany({ where: { tenantId } })
+      await tx.stockBalanceSource.deleteMany({ where: { tenantId } })
+      await tx.prescriptionDeliveryZone.deleteMany({ where: { tenantId } })
+      await tx.catalogPriceChange.deleteMany({ where: { tenantId } })
+      await tx.catalogCommandReceipt.deleteMany({ where: { tenantId } })
+      await tx.catalogItem.deleteMany({ where: { tenantId } })
+      await tx.tenant.delete({ where: { id: tenantId } })
+      await tx.user.deleteMany({
+        where: { id: { in: userIds }, memberships: { none: {} } },
+      })
+    },
+    { maxWait: 10_000, timeout: 120_000 },
+  )
 }
 
 export async function createServiceCommerceAcceptanceFixture(): Promise<ServiceCommerceAcceptanceFixture> {

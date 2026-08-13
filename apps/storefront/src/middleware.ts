@@ -30,6 +30,7 @@ export function middleware(request: NextRequest) {
   if (isCustomerChatRequestHost(hostname, CUSTOMER_CHAT_ORIGIN)) {
     const response = NextResponse.next()
     response.headers.set("x-tenant-surface", "customer-chat")
+    response.headers.set("Referrer-Policy", "no-referrer")
     return response
   }
 

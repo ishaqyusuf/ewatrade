@@ -271,6 +271,13 @@ persistence boundary. Clients never access the database directly.
 - `StoreConversationGuestIdentity` is an opaque device identity, not a User or
   verified person. Purpose-bound `StoreConversationGuestCredential` rows store
   only SHA-256 bearer digests, status, expiry and last-use time.
+- `StoreConversationGuestAccess` is the additive participant authorization for
+  a Guest Identity and one exact conversation. It preserves the original owner
+  while allowing an independently revocable mobile participant.
+- `StoreConversationTransfer` is a ten-minute, digest-only web-to-app handoff.
+  It snapshots Tenant/Store/conversation/source credential, payload hash,
+  claimed installation digest and redeemed Guest/credential references. Raw
+  transfer, installation and target credential values are never persisted.
 - `StoreConversation` is immutably Tenant/Store/Guest scoped and uniquely
   allows one conversation per Store and Guest Identity. It stores lifecycle,
   moderation, current assignee/revision and the latest append-only sequence.

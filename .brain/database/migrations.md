@@ -638,6 +638,22 @@ role. No migration SQL was hand-authored, no reset/data-loss override was used,
 and no production database was contacted. Verified-Neon acceptance passes 3
 tests / 42 assertions with run-owned cleanup.
 
+## Store Conversations Ticket 05
+
+Prisma generated the additive
+`20260812210459_store_conversation_mobile_customer_shell` artifact. It adds
+Guest-access origin/status and transfer-status enums, three bounded transfer
+audit values, the optional mobile device-binding digest,
+`StoreConversationGuestAccess`, and `StoreConversationTransfer` with scoped
+indexes and foreign keys. It does not rename, drop or rewrite existing web
+conversation, Request, Quote, Order, Pharmacy or Business-mobile data.
+
+The required root `bun db:migrate --local` workflow generated and applied the
+artifact on verified development Neon; `bun db:push --local` reports the schema
+already in sync and the development ledger contains 51 applied artifacts. No
+migration SQL was hand-authored, no reset/data-loss
+override was used, and no production database or provider was contacted.
+
 # Hybrid QA cleanup
 
 - Adds tenant QA lifecycle fields and global purge-run receipts. Apply the

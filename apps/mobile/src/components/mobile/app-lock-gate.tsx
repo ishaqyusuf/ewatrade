@@ -5,7 +5,9 @@ import { Text } from "@/components/ui/text"
 import { useAppLockContext } from "@/hooks/use-app-lock"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useColorScheme, useColors } from "@/hooks/use-color"
+import { isCustomerShellPath } from "@/lib/app-lock-route"
 import { APP_LOCK_CODE_LENGTH } from "@/lib/app-lock-store"
+import { useSegments } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Modal, View } from "react-native"
@@ -29,8 +31,11 @@ function formatLockedUntil(value?: string | null) {
 export function AppLockGate() {
   const auth = useAuthContext()
   const appLock = useAppLockContext()
+  const segments = useSegments()
   const shouldBlock =
-    auth.isAuthenticated && (!appLock.isHydrated || appLock.isLocked)
+    auth.isAuthenticated &&
+    !isCustomerShellPath(segments) &&
+    (!appLock.isHydrated || appLock.isLocked)
 
   if (!shouldBlock) return null
 

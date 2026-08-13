@@ -15,6 +15,24 @@ enum StoreConversationGuestCredentialStatus {
   EXPIRED
 }
 
+enum StoreConversationGuestAccessOrigin {
+  OWNER
+  MOBILE_BOOTSTRAP
+  TRANSFER
+}
+
+enum StoreConversationGuestAccessStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum StoreConversationTransferStatus {
+  PENDING
+  CLAIMED
+  REDEEMED
+  REVOKED
+}
+
 enum StoreConversationLifecycle {
   ACTIVE
   ARCHIVED
@@ -85,6 +103,9 @@ enum StoreConversationAuditEventType {
   REACTIVATED
   RESTRICTED
   REINSTATED
+  TRANSFER_CREATED
+  TRANSFER_CLAIMED
+  TRANSFER_REDEEMED
 }
 
 enum StoreConversationEscalationKind {
@@ -103,72 +124,139 @@ enum StoreConversationEscalationEventType {
 /// Opaque device-scoped customer identity. It is not a User or proof of a
 /// person and contains no contact/profile attributes.
 model StoreConversationGuestIdentity {
-  id            String                               @id @default(cuid())
-  status        StoreConversationGuestIdentityStatus @default(ACTIVE)
-  lastSeenAt    DateTime                             @default(now())
-  revokedAt     DateTime?
-  createdAt     DateTime                             @default(now())
-  updatedAt     DateTime                             @updatedAt
-  credentials   StoreConversationGuestCredential[]
-  conversations StoreConversation[]
+  id                   String                               @id @default(cuid())
+  status               StoreConversationGuestIdentityStatus @default(ACTIVE)
+  lastSeenAt           DateTime                             @default(now())
+  revokedAt            DateTime?
+  createdAt            DateTime                             @default(now())
+  updatedAt            DateTime                             @updatedAt
+  credentials          StoreConversationGuestCredential[]
+  conversations        StoreConversation[]
+  conversationAccesses StoreConversationGuestAccess[]
+  redeemedTransfers    StoreConversationTransfer[]          @relation("StoreConversationTransferRedeemedGuest")
 
   @@index([status, lastSeenAt])
 }
 
 /// Purpose-bound bearer credential. Only its SHA-256 digest is persisted.
 model StoreConversationGuestCredential {
-  id              String                                  @id @default(cuid())
-  guestIdentityId String
-  tokenDigest     String                                  @unique
-  purpose         StoreConversationGuestCredentialPurpose
-  status          StoreConversationGuestCredentialStatus  @default(ACTIVE)
-  expiresAt       DateTime
-  lastUsedAt      DateTime                                @default(now())
-  rotatedAt       DateTime?
-  revokedAt       DateTime?
-  createdAt       DateTime                                @default(now())
-  updatedAt       DateTime                                @updatedAt
-  guestIdentity   StoreConversationGuestIdentity          @relation(fields: [guestIdentityId], references: [id], onDelete: Cascade)
+  id                  String                                  @id @default(cuid())
+  guestIdentityId     String
+  tokenDigest         String                                  @unique
+  deviceBindingDigest String?
+  purpose             StoreConversationGuestCredentialPurpose
+  status              StoreConversationGuestCredentialStatus  @default(ACTIVE)
+  expiresAt           DateTime
+  lastUsedAt          DateTime                                @default(now())
+  rotatedAt           DateTime?
+  revokedAt           DateTime?
+  createdAt           DateTime                                @default(now())
+  updatedAt           DateTime                                @updatedAt
+  guestIdentity       StoreConversationGuestIdentity          @relation(fields: [guestIdentityId], references: [id], onDelete: Cascade)
+  sourceTransfers     StoreConversationTransfer[]             @relation("StoreConversationTransferSourceCredential")
+  redeemedTransfers   StoreConversationTransfer[]             @relation("StoreConversationTransferRedeemedCredential")
 
   @@index([guestIdentityId, status, expiresAt])
+  @@index([purpose, deviceBindingDigest, status])
 }
 
 /// Customer-facing thread scoped immutably to exactly one Tenant and Store.
 model StoreConversation {
-  id                   String                             @id @default(cuid())
-  tenantId             String
-  storeId              String
-  guestIdentityId      String
-  lifecycle            StoreConversationLifecycle         @default(ACTIVE)
-  moderationState      StoreConversationModerationState   @default(OPEN)
-  lastMessageSequence  Int                                @default(0)
-  lastCustomerMessageSequence Int                         @default(0)
-  lastCustomerMessageAt DateTime?
-  lastStoreReplySequence Int                              @default(0)
-  lastStoreReplyAt       DateTime?
-  responseDueAt          DateTime?
-  assignedMembershipId String?
-  assignmentRevision   Int                                @default(0)
-  createdAt            DateTime                           @default(now())
-  lastActivityAt       DateTime                           @default(now())
-  archivedAt           DateTime?
-  restrictedAt         DateTime?
-  updatedAt            DateTime                           @updatedAt
-  tenant               Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store                Store                              @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  guestIdentity        StoreConversationGuestIdentity     @relation(fields: [guestIdentityId], references: [id], onDelete: Restrict)
-  assignedMembership   Membership?                        @relation("StoreConversationCurrentAssignee", fields: [assignedMembershipId], references: [id], onDelete: Restrict)
-  messages             StoreConversationMessage[]
-  requestLinks         StoreConversationRequestLink[]
-  commandReceipts      StoreConversationCommandReceipt[]
-  assignmentEvents     StoreConversationAssignmentEvent[]
-  escalationEvents     StoreConversationEscalationEvent[]
-  auditEvents          StoreConversationAuditEvent[]
+  id                          String                             @id @default(cuid())
+  tenantId                    String
+  storeId                     String
+  guestIdentityId             String
+  lifecycle                   StoreConversationLifecycle         @default(ACTIVE)
+  moderationState             StoreConversationModerationState   @default(OPEN)
+  lastMessageSequence         Int                                @default(0)
+  lastCustomerMessageSequence Int                                @default(0)
+  lastCustomerMessageAt       DateTime?
+  lastStoreReplySequence      Int                                @default(0)
+  lastStoreReplyAt            DateTime?
+  responseDueAt               DateTime?
+  assignedMembershipId        String?
+  assignmentRevision          Int                                @default(0)
+  createdAt                   DateTime                           @default(now())
+  lastActivityAt              DateTime                           @default(now())
+  archivedAt                  DateTime?
+  restrictedAt                DateTime?
+  updatedAt                   DateTime                           @updatedAt
+  tenant                      Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                       Store                              @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  guestIdentity               StoreConversationGuestIdentity     @relation(fields: [guestIdentityId], references: [id], onDelete: Restrict)
+  assignedMembership          Membership?                        @relation("StoreConversationCurrentAssignee", fields: [assignedMembershipId], references: [id], onDelete: Restrict)
+  messages                    StoreConversationMessage[]
+  requestLinks                StoreConversationRequestLink[]
+  commandReceipts             StoreConversationCommandReceipt[]
+  assignmentEvents            StoreConversationAssignmentEvent[]
+  escalationEvents            StoreConversationEscalationEvent[]
+  auditEvents                 StoreConversationAuditEvent[]
+  guestAccesses               StoreConversationGuestAccess[]
+  transfers                   StoreConversationTransfer[]
 
   @@unique([storeId, guestIdentityId])
   @@index([tenantId, storeId, lifecycle, lastActivityAt])
   @@index([tenantId, storeId, lifecycle, responseDueAt])
   @@index([assignedMembershipId, lifecycle, lastActivityAt])
+}
+
+/// Conversation-scoped authorization for a Guest Identity. The owning guest
+/// remains on StoreConversation while additive grants preserve web access.
+model StoreConversationGuestAccess {
+  id              String                             @id @default(cuid())
+  tenantId        String
+  storeId         String
+  conversationId  String
+  guestIdentityId String
+  origin          StoreConversationGuestAccessOrigin
+  status          StoreConversationGuestAccessStatus @default(ACTIVE)
+  lastOpenedAt    DateTime                           @default(now())
+  revokedAt       DateTime?
+  createdAt       DateTime                           @default(now())
+  updatedAt       DateTime                           @updatedAt
+  tenant          Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store           Store                              @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation    StoreConversation                  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  guestIdentity   StoreConversationGuestIdentity     @relation(fields: [guestIdentityId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, guestIdentityId])
+  @@index([guestIdentityId, status, lastOpenedAt])
+  @@index([tenantId, storeId, status])
+}
+
+/// Digest-only, Store-scoped handoff from a web Guest credential to one
+/// installation-bound mobile Guest credential.
+model StoreConversationTransfer {
+  id                        String                            @id @default(cuid())
+  tenantId                  String
+  storeId                   String
+  conversationId            String
+  sourceCredentialId        String
+  redeemedGuestIdentityId   String?
+  redeemedCredentialId      String?
+  clientOperationId         String
+  payloadHash               String
+  tokenDigest               String                            @unique
+  claimedInstallationDigest String?
+  status                    StoreConversationTransferStatus   @default(PENDING)
+  expiresAt                 DateTime
+  claimedAt                 DateTime?
+  redeemedAt                DateTime?
+  revokedAt                 DateTime?
+  createdAt                 DateTime                          @default(now())
+  updatedAt                 DateTime                          @updatedAt
+  tenant                    Tenant                            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                     Store                             @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation              StoreConversation                 @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sourceCredential          StoreConversationGuestCredential  @relation("StoreConversationTransferSourceCredential", fields: [sourceCredentialId], references: [id], onDelete: Restrict)
+  redeemedGuestIdentity     StoreConversationGuestIdentity?   @relation("StoreConversationTransferRedeemedGuest", fields: [redeemedGuestIdentityId], references: [id], onDelete: Restrict)
+  redeemedCredential        StoreConversationGuestCredential? @relation("StoreConversationTransferRedeemedCredential", fields: [redeemedCredentialId], references: [id], onDelete: Restrict)
+
+  @@unique([sourceCredentialId, clientOperationId])
+  @@index([status, expiresAt])
+  @@index([conversationId, status])
+  @@index([claimedInstallationDigest, status])
+  @@index([tenantId, storeId, status])
 }
 
 /// Append-only public timeline message ordered by transactional sequence.
@@ -221,23 +309,23 @@ model StoreConversationRequestLink {
 
 /// Payload-bound command receipt. Replays return the original message/source.
 model StoreConversationCommandReceipt {
-  id                String                        @id @default(cuid())
-  tenantId          String
-  storeId           String
-  conversationId    String
-  clientOperationId String
-  kind              StoreConversationCommandKind
-  payloadHash       String
-  messageId         String?
-  sourceKind        StoreConversationRequestKind?
-  sourceId          String?
-  assignmentRevision Int?
+  id                     String                        @id @default(cuid())
+  tenantId               String
+  storeId                String
+  conversationId         String
+  clientOperationId      String
+  kind                   StoreConversationCommandKind
+  payloadHash            String
+  messageId              String?
+  sourceKind             StoreConversationRequestKind?
+  sourceId               String?
+  assignmentRevision     Int?
   assignmentMembershipId String?
-  createdAt         DateTime                      @default(now())
-  tenant            Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store             Store                         @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  conversation      StoreConversation             @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  message           StoreConversationMessage?     @relation(fields: [messageId], references: [id], onDelete: Restrict)
+  createdAt              DateTime                      @default(now())
+  tenant                 Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                  Store                         @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation           StoreConversation             @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message                StoreConversationMessage?     @relation(fields: [messageId], references: [id], onDelete: Restrict)
 
   @@unique([conversationId, clientOperationId])
   @@index([tenantId, storeId, createdAt])
@@ -272,23 +360,23 @@ model StoreConversationAssignmentEvent {
 /// determines whether that escalation remains open; no customer content is
 /// persisted here.
 model StoreConversationEscalationEvent {
-  id                     String                               @id @default(cuid())
-  tenantId               String
-  storeId                String
-  conversationId         String
-  actorMembershipId      String?
-  kind                   StoreConversationEscalationKind
-  type                   StoreConversationEscalationEventType
-  assignmentRevision     Int
-  conversationSequence   Int
-  reasonCode             String
-  dedupeKey              String                               @unique
-  occurredAt             DateTime                             @default(now())
-  createdAt              DateTime                             @default(now())
-  tenant                 Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store                  Store                                @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  conversation           StoreConversation                    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  actorMembership        Membership?                          @relation("StoreConversationEscalationActor", fields: [actorMembershipId], references: [id], onDelete: Restrict)
+  id                   String                               @id @default(cuid())
+  tenantId             String
+  storeId              String
+  conversationId       String
+  actorMembershipId    String?
+  kind                 StoreConversationEscalationKind
+  type                 StoreConversationEscalationEventType
+  assignmentRevision   Int
+  conversationSequence Int
+  reasonCode           String
+  dedupeKey            String                               @unique
+  occurredAt           DateTime                             @default(now())
+  createdAt            DateTime                             @default(now())
+  tenant               Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                Store                                @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation         StoreConversation                    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  actorMembership      Membership?                          @relation("StoreConversationEscalationActor", fields: [actorMembershipId], references: [id], onDelete: Restrict)
 
   @@index([tenantId, storeId, occurredAt])
   @@index([conversationId, kind, occurredAt])

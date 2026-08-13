@@ -51,8 +51,22 @@
   a 17-message timeline and overflow containment. The final Midday component
   extraction is source-, unit-, format- and type-verified; its bounded browser
   rerun was inconclusive after the task-owned development route stopped
-  responding and is not reported as a pass. Ticket 05 is the active
-  implementation frontier. Existing public routes and implemented
+  responding and is not reported as a pass. Ticket 05 is complete: one
+  app binary now isolates Customer and Business shells, Customer deep links
+  bypass Business onboarding/app lock, mobile credentials and pending transfer
+  candidates remain in SecureStore, and the Customer-only tRPC/cache boundary
+  supports Store bootstrap, list/detail, text, Request choice and last-context
+  resume. The ten-minute digest-only web-to-app transfer is first-installation
+  claimed and same-installation replayable after response loss while web access
+  remains valid. Focused tests/typechecks, Expo config/prebuild, an Android
+  debug build, six existing Business-mobile guards, and verified-Neon 1 test /
+  21 assertions pass. Pixel API 34 installed-device acceptance proves the exact
+  HTTPS Store Entry opens the isolated Personal route in the warm app, bypasses
+  Business onboarding/app lock, exposes the shell switch and safe retry state,
+  and accepts a repeated warm intent. iOS association is source/prebuild-
+  verified without claiming a separate iOS runtime pass. Ticket 06 is the next
+  dependency-ready implementation
+  frontier. Existing public routes and implemented
   Service/Prescription behavior remain unchanged, Nigeria Pharmacy WhatsApp
   stays fail closed, and the ticket approval does not itself authorize provider,
   production, traffic-switch, or contraction work.

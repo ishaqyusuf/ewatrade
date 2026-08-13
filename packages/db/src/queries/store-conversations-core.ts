@@ -10,6 +10,7 @@ import {
   CommerceInquiryStatus,
   PrescriptionRequestStatus,
   ServiceRequestStatus,
+  StoreConversationGuestAccessStatus,
   StoreConversationGuestCredentialPurpose,
   StoreConversationGuestCredentialStatus,
   StoreConversationGuestIdentityStatus,
@@ -265,13 +266,36 @@ export async function loadStoreConversationRequestSummaries(
 
 export async function resolveStoreConversationGuestCredential(
   db: DbClient,
-  input: { credentialToken: string; now: Date },
+  input: {
+    credentialToken: string
+    installationToken?: string
+    now: Date
+    purpose?: StoreConversationGuestCredentialPurpose
+  },
 ) {
+  const purpose =
+    input.purpose ?? StoreConversationGuestCredentialPurpose.WEB_DEVICE
+  if (
+    purpose === StoreConversationGuestCredentialPurpose.MOBILE_DEVICE &&
+    !input.installationToken
+  ) {
+    throw new StoreConversationError(
+      "GUEST_CREDENTIAL_EXPIRED",
+      "This app installation could not be verified.",
+    )
+  }
   const credential = await db.storeConversationGuestCredential.findFirst({
     include: { guestIdentity: { select: { id: true, status: true } } },
     where: {
       expiresAt: { gt: input.now },
-      purpose: StoreConversationGuestCredentialPurpose.WEB_DEVICE,
+      ...(input.installationToken
+        ? {
+            deviceBindingDigest: digestStoreConversationValue(
+              input.installationToken,
+            ),
+          }
+        : {}),
+      purpose,
       status: StoreConversationGuestCredentialStatus.ACTIVE,
       tokenDigest: digestStoreConversationValue(input.credentialToken),
     },
@@ -335,6 +359,8 @@ export async function loadStoreConversationForGuest(
     conversationId: string
     credentialToken: string
     now: Date
+    installationToken?: string
+    purpose?: StoreConversationGuestCredentialPurpose
     storeId?: string
     tenantId?: string
   },
@@ -343,8 +369,18 @@ export async function loadStoreConversationForGuest(
   const conversation = await db.storeConversation.findFirst({
     include: { store: { select: { name: true } } },
     where: {
-      guestIdentityId: credential.guestIdentityId,
       id: input.conversationId,
+      OR: [
+        { guestIdentityId: credential.guestIdentityId },
+        {
+          guestAccesses: {
+            some: {
+              guestIdentityId: credential.guestIdentityId,
+              status: StoreConversationGuestAccessStatus.ACTIVE,
+            },
+          },
+        },
+      ],
       ...(input.storeId ? { storeId: input.storeId } : {}),
       ...(input.tenantId ? { tenantId: input.tenantId } : {}),
     },

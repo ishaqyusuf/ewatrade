@@ -3,12 +3,15 @@ import { describe, expect, test } from "bun:test"
 import {
   storeConversationBootstrapInputSchema,
   storeConversationHandoffInputSchema,
+  storeConversationMobileListInputSchema,
   storeConversationQueueInputSchema,
   storeConversationReleaseInputSchema,
   storeConversationReplyInputSchema,
   storeConversationSelectRequestInputSchema,
   storeConversationSendTextInputSchema,
   storeConversationTimelineInputSchema,
+  storeConversationTransferClaimInputSchema,
+  storeConversationTransferCreateInputSchema,
 } from "./schemas/store-conversations"
 import {
   projectStoreConversationCursor,
@@ -73,6 +76,30 @@ describe("Store Conversation contracts", () => {
         messages: [{ sequence: 7 }],
       }),
     ).toBeNull()
+  })
+
+  test("bounds mobile list and digest-only transfer capability inputs", () => {
+    expect(storeConversationMobileListInputSchema.parse({})).toEqual({
+      pageSize: 25,
+    })
+    expect(() =>
+      storeConversationMobileListInputSchema.parse({ pageSize: 101 }),
+    ).toThrow()
+    expect(
+      storeConversationTransferCreateInputSchema.parse({
+        clientOperationId: "transfer-create-0001",
+        conversationId: "conversation_1",
+        publicToken: "p".repeat(32),
+        transferToken: "t".repeat(32),
+      }),
+    ).toMatchObject({ transferToken: "t".repeat(32) })
+    expect(() =>
+      storeConversationTransferClaimInputSchema.parse({
+        installationToken: "too-short",
+        publicToken: "p".repeat(32),
+        transferToken: "t".repeat(32),
+      }),
+    ).toThrow()
   })
 
   test("accepts only deterministic new or existing Request choices", () => {

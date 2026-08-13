@@ -1,5 +1,6 @@
 "use client"
 
+import { OpenInAppButton } from "./open-in-app-button"
 import {
   StoreConversationRequestChoice,
   StoreConversationRequestRail,
@@ -43,13 +44,19 @@ export function StoreConversationWeb({
             </p>
           </div>
           {state.kind === "ready" ? (
-            <button
-              className="min-h-11 rounded-full border border-border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              onClick={() => void loadTimeline(state.conversation)}
-              type="button"
-            >
-              Refresh
-            </button>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                className="min-h-11 rounded-full border border-border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={() => void loadTimeline(state.conversation)}
+                type="button"
+              >
+                Refresh
+              </button>
+              <OpenInAppButton
+                conversationId={state.conversation.id}
+                publicToken={publicToken}
+              />
+            </div>
           ) : null}
         </div>
       </header>

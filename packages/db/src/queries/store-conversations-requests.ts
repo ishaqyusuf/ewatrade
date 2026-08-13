@@ -7,6 +7,7 @@ import type { PrismaClient } from "../../generated/prisma/client"
 import {
   StoreConversationAuditEventType,
   StoreConversationCommandKind,
+  type StoreConversationGuestCredentialPurpose,
   StoreConversationMessageAuthorKind,
   StoreConversationRequestKind,
 } from "../../generated/prisma/enums"
@@ -132,22 +133,37 @@ async function linkRequestInTransaction(
     clientOperationId: string
     conversationId: string
     credentialToken: string
+    installationToken?: string
     expectedSourceRevision: number
     messageId: string
     publicToken: string
     sourceId: string
     sourceKind: StoreConversationRequestKind
+    purpose?: StoreConversationGuestCredentialPurpose
+    channelOrigin?: "mobile" | "web"
   },
 ) {
   const now = new Date()
   const credential = await resolveStoreConversationGuestCredential(tx, {
     credentialToken: input.credentialToken,
+    installationToken: input.installationToken,
     now,
+    purpose: input.purpose,
   })
   const conversation = await tx.storeConversation.findFirst({
     where: {
-      guestIdentityId: credential.guestIdentityId,
       id: input.conversationId,
+      OR: [
+        { guestIdentityId: credential.guestIdentityId },
+        {
+          guestAccesses: {
+            some: {
+              guestIdentityId: credential.guestIdentityId,
+              status: "ACTIVE",
+            },
+          },
+        },
+      ],
     },
   })
   if (!conversation) {
@@ -292,7 +308,12 @@ export async function attachStoreConversationTypedRequest(
 
 export async function selectGuestStoreConversationRequest(
   db: PrismaClient,
-  input: StoreConversationSelectRequestInput & { credentialToken: string },
+  input: StoreConversationSelectRequestInput & {
+    credentialToken: string
+    installationToken?: string
+    purpose?: StoreConversationGuestCredentialPurpose
+    channelOrigin?: "mobile" | "web"
+  },
 ) {
   const parsed = storeConversationSelectRequestInputSchema.parse({
     clientOperationId: input.clientOperationId,
@@ -308,7 +329,9 @@ export async function selectGuestStoreConversationRequest(
     const { conversation } = await loadStoreConversationForGuest(tx, {
       conversationId: parsed.conversationId,
       credentialToken: input.credentialToken,
+      installationToken: input.installationToken,
       now: new Date(),
+      purpose: input.purpose,
       storeId: entry.storeId,
       tenantId: entry.tenantId,
     })
@@ -339,7 +362,13 @@ export async function selectGuestStoreConversationRequest(
       }
       const source = await createChannelCommerceInquiryInTransaction(tx, {
         actorUserId: "public_store_conversation",
-        channelOrigin: "web",
+        // The owning Commerce Inquiry aggregate has no mobile origin. Mobile
+        // remains explicit on the conversation message while Request intake
+        // uses the compatible public-web origin.
+        channelOrigin:
+          input.channelOrigin === "mobile"
+            ? "web"
+            : (input.channelOrigin ?? "web"),
         clientInquiryId: `store-conversation:${conversation.id}:${parsed.clientOperationId}`,
         customerName: "Guest customer",
         demand: { kind: "commerce_inquiry", reason: "needs_quote" },
@@ -418,11 +447,14 @@ export async function selectGuestStoreConversationRequest(
       clientOperationId: parsed.clientOperationId,
       conversationId: parsed.conversationId,
       credentialToken: input.credentialToken,
+      installationToken: input.installationToken,
       expectedSourceRevision,
       messageId: parsed.messageId,
       publicToken: parsed.publicToken,
       sourceId,
       sourceKind,
+      purpose: input.purpose,
+      channelOrigin: input.channelOrigin,
     })
   }, STORE_CONVERSATION_REQUEST_TRANSACTION_OPTIONS)
 }

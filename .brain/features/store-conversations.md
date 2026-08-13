@@ -38,6 +38,25 @@ rerun was inconclusive after the task-owned development route stopped
 responding, so it is not counted as new browser evidence. Development
 migration status reports all 50 artifacts applied; no production migration or
 provider action occurred.
+Ticket 05 is complete: the existing app now has an isolated Customer
+shell and Customer-only transport/cache; verified `/r/*` Universal/App Link
+configuration bypasses Business onboarding and app lock; SecureStore owns the
+mobile Guest credential, installation proof and pending transfer while only a
+non-secret shell preference/reinstall marker uses general storage. Customer can
+open a Store, send/reload text, choose an existing/new Product Request, page a
+safe conversation list, resume the last context, and explicitly switch between
+Personal and Business. The web CTA creates an installation-claimed ten-minute
+digest-only transfer; same-installation replay recovers a lost redemption
+response without removing the web participant. Focused shared/DB/API/mobile/
+Storefront tests, direct typechecks, six established Business-mobile QA guards,
+Expo config/prebuild and an Android debug build pass. Verified-Neon acceptance
+passes 1 test / 21 assertions with exact run-owned cleanup. Installed-device
+acceptance on a Pixel API 34 emulator proves the exact HTTPS Store Entry opens
+the Personal route in the warm app, bypasses Business onboarding/app lock,
+exposes Back to Conversations and the Business switch, provides safe retry for
+an invalid Store token, and accepts a repeated warm intent. The same HTTPS URL
+remains the complete no-app web fallback; iOS association is source/prebuild-
+verified rather than claimed as a separate iOS runtime pass.
 No provider, production traffic-switch, or contraction is authorized by this
 status.
 
@@ -124,8 +143,7 @@ Business shell remains a separate authenticated security context.
 
 ## Implementation Frontier
 
-- Implement Ticket 05's mobile Customer shell and universal Store-link surface
-  now that Tickets 01–04 are complete.
-- Execute Tickets 05–18 only after their recorded blockers are complete.
+- Implement Ticket 06's private image/document conversation surface.
+- Execute Tickets 06–18 only after their recorded blockers are complete.
 - Keep additive implementation, compatibility acceptance, provider and
   production gates as separately authorized work.

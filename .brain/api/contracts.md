@@ -811,6 +811,20 @@ implements the Progressive Catalog commands below.
 - Store replies must name the exact active typed Request whenever more than one
   is active. Conversation-level replies cannot carry Product, Service or
   Prescription outcome facts without that source reference.
+- Mobile Customer requests carry the purpose-bound credential and installation
+  proof only in dedicated headers over POST transport. Bootstrap may create a
+  `MOBILE_DEVICE` credential; list, timeline, send and Request selection return
+  its refreshed sliding expiry. The bounded list exposes only Store
+  label/initials, latest safe message, state and current published Store token.
+- Conversation Transfer creation is payload-bound to the source web
+  credential, conversation, Store and caller-generated token digest. Claim is
+  first-installation-only. Redeem requires a separately staged target
+  credential candidate, persists only its digest, adds a scoped Guest access,
+  and supports same-installation/same-target replay after a lost response.
+- Native parsing accepts only the configured Customer Chat host or EwaTrade
+  scheme, one `/r/<opaque-token>` path and an optional exact transfer fragment.
+  Transfer capabilities are removed from crash URLs/breadcrumbs and never
+  stored in AsyncStorage.
 
 ## Services
 

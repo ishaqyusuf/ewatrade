@@ -12,6 +12,8 @@ import type { PrismaClient } from "../../generated/prisma/client"
 import {
   StoreConversationAuditEventType,
   StoreConversationCommandKind,
+  StoreConversationGuestAccessOrigin,
+  StoreConversationGuestAccessStatus,
   StoreConversationGuestCredentialPurpose,
   StoreConversationLifecycle,
   StoreConversationMessageAuthorKind,
@@ -39,9 +41,27 @@ function createGuestCredential() {
   return randomBytes(32).toString("base64url")
 }
 
+type GuestConversationDeviceContext = {
+  accessOrigin: StoreConversationGuestAccessOrigin
+  auditReason: string
+  channel: StoreConversationMessageChannel
+  channelOrigin: "mobile" | "web"
+  installationToken?: string
+  purpose: StoreConversationGuestCredentialPurpose
+}
+
+const WEB_DEVICE_CONTEXT: GuestConversationDeviceContext = {
+  accessOrigin: StoreConversationGuestAccessOrigin.OWNER,
+  auditReason: "guest_web_bootstrap",
+  channel: StoreConversationMessageChannel.WEB,
+  channelOrigin: "web",
+  purpose: StoreConversationGuestCredentialPurpose.WEB_DEVICE,
+}
+
 export async function bootstrapWebStoreConversation(
   db: PrismaClient,
   input: { credentialToken?: string | null; publicToken: string },
+  device: GuestConversationDeviceContext = WEB_DEVICE_CONTEXT,
 ) {
   const now = new Date()
   return db.$transaction(async (tx) => {
@@ -65,7 +85,9 @@ export async function bootstrapWebStoreConversation(
     if (input.credentialToken) {
       credential = await resolveStoreConversationGuestCredential(tx, {
         credentialToken: input.credentialToken,
+        installationToken: device.installationToken,
         now,
+        purpose: device.purpose,
       })
     } else {
       rawCredential = createGuestCredential()
@@ -74,35 +96,83 @@ export async function bootstrapWebStoreConversation(
         data: {
           expiresAt: new Date(now.getTime() + GUEST_CREDENTIAL_LIFETIME_MS),
           guestIdentityId: guest.id,
-          purpose: StoreConversationGuestCredentialPurpose.WEB_DEVICE,
+          deviceBindingDigest: device.installationToken
+            ? digestStoreConversationValue(device.installationToken)
+            : undefined,
+          purpose: device.purpose,
           tokenDigest: digestStoreConversationValue(rawCredential),
         },
         include: { guestIdentity: { select: { id: true, status: true } } },
       })
     }
 
-    const existing = await tx.storeConversation.findFirst({
-      where: {
-        guestIdentityId: credential.guestIdentityId,
-        storeId: entry.storeId,
-        tenantId: entry.tenantId,
-      },
-    })
-    const conversation = await tx.storeConversation.upsert({
-      create: {
-        guestIdentityId: credential.guestIdentityId,
-        storeId: entry.storeId,
-        tenantId: entry.tenantId,
-      },
-      update: {},
-      where: {
-        storeId_guestIdentityId: {
+    const existingAccess =
+      device.purpose === StoreConversationGuestCredentialPurpose.MOBILE_DEVICE
+        ? await tx.storeConversationGuestAccess.findFirst({
+            include: { conversation: true },
+            orderBy: [{ lastOpenedAt: "desc" }, { id: "desc" }],
+            where: {
+              guestIdentityId: credential.guestIdentityId,
+              status: StoreConversationGuestAccessStatus.ACTIVE,
+              conversation: {
+                storeId: entry.storeId,
+                tenantId: entry.tenantId,
+              },
+            },
+          })
+        : null
+    const existingOwner = existingAccess
+      ? null
+      : await tx.storeConversation.findFirst({
+          where: {
+            guestIdentityId: credential.guestIdentityId,
+            storeId: entry.storeId,
+            tenantId: entry.tenantId,
+          },
+        })
+    const conversation =
+      existingAccess?.conversation ??
+      (await tx.storeConversation.upsert({
+        create: {
           guestIdentityId: credential.guestIdentityId,
           storeId: entry.storeId,
+          tenantId: entry.tenantId,
         },
-      },
-    })
-    if (!existing) {
+        update: {},
+        where: {
+          storeId_guestIdentityId: {
+            guestIdentityId: credential.guestIdentityId,
+            storeId: entry.storeId,
+          },
+        },
+      }))
+    if (
+      device.purpose === StoreConversationGuestCredentialPurpose.MOBILE_DEVICE
+    ) {
+      await tx.storeConversationGuestAccess.upsert({
+        create: {
+          conversationId: conversation.id,
+          guestIdentityId: credential.guestIdentityId,
+          lastOpenedAt: now,
+          origin: device.accessOrigin,
+          status: StoreConversationGuestAccessStatus.ACTIVE,
+          storeId: entry.storeId,
+          tenantId: entry.tenantId,
+        },
+        update: {
+          lastOpenedAt: now,
+          revokedAt: null,
+          status: StoreConversationGuestAccessStatus.ACTIVE,
+        },
+        where: {
+          conversationId_guestIdentityId: {
+            conversationId: conversation.id,
+            guestIdentityId: credential.guestIdentityId,
+          },
+        },
+      })
+    }
+    if (!existingAccess && !existingOwner) {
       const priorAudit = await tx.storeConversationAuditEvent.findFirst({
         select: { id: true },
         where: {
@@ -115,7 +185,7 @@ export async function bootstrapWebStoreConversation(
           data: {
             actorKind: StoreConversationMessageAuthorKind.CUSTOMER,
             conversationId: conversation.id,
-            reasonCode: "guest_web_bootstrap",
+            reasonCode: device.auditReason,
             storeId: entry.storeId,
             tenantId: entry.tenantId,
             type: StoreConversationAuditEventType.BOOTSTRAPPED,
@@ -160,6 +230,7 @@ export async function sendGuestStoreConversationText(
     requestIntent?: "choose_request" | "continue_current"
     text: string
   },
+  device: GuestConversationDeviceContext = WEB_DEVICE_CONTEXT,
 ) {
   const parsed = storeConversationSendTextInputSchema.parse({
     clientOperationId: input.clientOperationId,
@@ -188,13 +259,18 @@ export async function sendGuestStoreConversationText(
         "This Store is not accepting web conversations right now.",
       )
     }
-    const { conversation } = await loadStoreConversationForGuest(tx, {
-      conversationId: parsed.conversationId,
-      credentialToken: input.credentialToken,
-      now,
-      storeId: entry.storeId,
-      tenantId: entry.tenantId,
-    })
+    const { conversation, credential } = await loadStoreConversationForGuest(
+      tx,
+      {
+        conversationId: parsed.conversationId,
+        credentialToken: input.credentialToken,
+        installationToken: device.installationToken,
+        now,
+        purpose: device.purpose,
+        storeId: entry.storeId,
+        tenantId: entry.tenantId,
+      },
+    )
     await lockStoreConversation(tx, {
       conversationId: conversation.id,
       storeId: entry.storeId,
@@ -353,7 +429,11 @@ export async function sendGuestStoreConversationText(
     ) {
       const created = await createChannelCommerceInquiryInTransaction(tx, {
         actorUserId: "public_store_conversation",
-        channelOrigin: "web",
+        // Commerce Inquiry still owns the established web/staff/WhatsApp
+        // origin vocabulary. Mobile is a Store Conversation transport, so its
+        // public Request intake remains attributable to the web channel.
+        channelOrigin:
+          device.channelOrigin === "mobile" ? "web" : device.channelOrigin,
         clientInquiryId: `store-conversation:${conversation.id}:${parsed.clientOperationId}`,
         customerName: "Guest customer",
         demand: { kind: "commerce_inquiry", reason: "needs_quote" },
@@ -379,7 +459,7 @@ export async function sendGuestStoreConversationText(
       data: {
         authorKind: StoreConversationMessageAuthorKind.CUSTOMER,
         body: parsed.text,
-        channel: StoreConversationMessageChannel.WEB,
+        channel: device.channel,
         conversationId: conversation.id,
         kind: StoreConversationMessageKind.CUSTOMER_TEXT,
         occurredAt: now,
@@ -441,6 +521,19 @@ export async function sendGuestStoreConversationText(
           type: StoreConversationAuditEventType.CUSTOMER_MESSAGE_APPENDED,
         },
       }),
+      ...(device.purpose ===
+      StoreConversationGuestCredentialPurpose.MOBILE_DEVICE
+        ? [
+            tx.storeConversationGuestAccess.updateMany({
+              data: { lastOpenedAt: now },
+              where: {
+                conversationId: conversation.id,
+                guestIdentityId: credential.guestIdentityId,
+                status: StoreConversationGuestAccessStatus.ACTIVE,
+              },
+            }),
+          ]
+        : []),
     ])
 
     return {
@@ -475,6 +568,7 @@ export async function getGuestStoreConversationTimeline(
     limit?: number
     publicToken: string
   },
+  device: GuestConversationDeviceContext = WEB_DEVICE_CONTEXT,
 ): Promise<StoreConversationTimelineProjection> {
   const parsed = storeConversationTimelineInputSchema.parse({
     beforeSequence: input.beforeSequence,
@@ -486,13 +580,18 @@ export async function getGuestStoreConversationTimeline(
     const entry = await resolveStoreConversationEntry(tx, {
       publicToken: input.publicToken,
     })
-    const { conversation } = await loadStoreConversationForGuest(tx, {
-      conversationId: parsed.conversationId,
-      credentialToken: input.credentialToken,
-      now,
-      storeId: entry.storeId,
-      tenantId: entry.tenantId,
-    })
+    const { conversation, credential } = await loadStoreConversationForGuest(
+      tx,
+      {
+        conversationId: parsed.conversationId,
+        credentialToken: input.credentialToken,
+        installationToken: device.installationToken,
+        now,
+        purpose: device.purpose,
+        storeId: entry.storeId,
+        tenantId: entry.tenantId,
+      },
+    )
     const [rows, requests] = await Promise.all([
       tx.storeConversationMessage.findMany({
         include: {
@@ -514,6 +613,19 @@ export async function getGuestStoreConversationTimeline(
         storeId: conversation.storeId,
         tenantId: conversation.tenantId,
       }),
+      ...(device.purpose ===
+      StoreConversationGuestCredentialPurpose.MOBILE_DEVICE
+        ? [
+            tx.storeConversationGuestAccess.updateMany({
+              data: { lastOpenedAt: now },
+              where: {
+                conversationId: conversation.id,
+                guestIdentityId: credential.guestIdentityId,
+                status: StoreConversationGuestAccessStatus.ACTIVE,
+              },
+            }),
+          ]
+        : []),
     ])
     const hasMore = rows.length > parsed.limit
     const selected = rows.slice(0, parsed.limit)

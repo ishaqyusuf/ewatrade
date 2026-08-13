@@ -300,6 +300,25 @@ operations do not use that compatibility namespace.
   `SKIP LOCKED`, so prior rows cannot starve later work and a concurrent reply
   cannot leave a stale escalation open. It writes only bounded escalation facts
   and performs no provider action.
+- `POST /api/store-conversations/mobile-transfer` is a same-origin web-cookie
+  route. It accepts a stable operation plus caller-generated opaque candidate,
+  persists only its digest, and returns the shared HTTPS Store Universal/App
+  Link whose fragment carries the one-time ten-minute capability. The same URL
+  preserves the full web conversation when no verified app is installed.
+- Public tRPC procedures `mobileBootstrapStoreConversation`,
+  `mobileStoreConversations`, `mobileStoreConversationTimeline`,
+  `mobileSendStoreConversationText`, and
+  `mobileSelectStoreConversationRequest` use a dedicated Customer transport.
+  `claimStoreConversationTransfer` and `redeemStoreConversationTransfer` own
+  the installation-bound two-phase handoff. Tenant, Store, Guest and device
+  authority are server-derived; Business authentication is irrelevant.
+- `/.well-known/apple-app-site-association` and
+  `/.well-known/assetlinks.json` fail closed without configured signing
+  evidence and delegate only `/r/*` on the canonical Customer Chat host.
+  Deployment supplies `EWATRADE_APPLE_APP_SITE_ASSOCIATION_APP_IDS`,
+  `EWATRADE_ANDROID_APP_LINK_PACKAGE_NAMES`, and
+  `EWATRADE_ANDROID_APP_LINK_CERTIFICATE_SHA256`; mobile host configuration is
+  `EXPO_PUBLIC_CUSTOMER_CHAT_HOST` and defaults to `chat.ewatrade.com`.
 
 These endpoints are installed on the verified development database. The
 combined conversation lifecycle passes 3 verified-Neon tests / 42 assertions

@@ -8,6 +8,17 @@ export {
   sendGuestStoreConversationText,
 } from "./store-conversations-guest"
 export {
+  STORE_CONVERSATION_TRANSFER_LIFETIME_MS,
+  bootstrapMobileStoreConversation,
+  claimMobileStoreConversationTransfer,
+  createWebStoreConversationTransfer,
+  getMobileStoreConversationTimeline,
+  listMobileStoreConversations,
+  redeemMobileStoreConversationTransfer,
+  selectMobileStoreConversationRequest,
+  sendMobileStoreConversationText,
+} from "./store-conversations-mobile"
+export {
   attachStoreConversationTypedRequest,
   selectGuestStoreConversationRequest,
 } from "./store-conversations-requests"

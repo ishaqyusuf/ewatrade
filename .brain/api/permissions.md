@@ -300,6 +300,15 @@
   recovery escalation inside the same transaction.
 - Public cookie mutation routes enforce same-origin requests and a Secure,
   HttpOnly, SameSite cookie. Browser scripts never receive the bearer.
+- Mobile Customer access is not Business authentication. Every operation
+  requires an active `MOBILE_DEVICE` credential whose digest and installation
+  binding match, plus exact Store/conversation scope where applicable. A valid
+  Membership or Business bearer grants no Customer thread access, and a
+  Customer credential grants no dashboard authority.
+- A web-to-app transfer never removes the source web participant. Only the
+  first installation may claim it; redemption authorizes one exact mobile
+  Guest access and rejects expired, revoked, foreign-Store/Tenant,
+  wrong-installation and changed-target attempts before conversation writes.
 
 ## Offline
 

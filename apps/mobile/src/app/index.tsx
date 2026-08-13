@@ -1,8 +1,14 @@
 import { AuthHeader, MobileScreen } from "@/components/mobile"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
+import { getCustomerConversationSession } from "@/lib/customer-conversation-store"
+import {
+  type MobileShell,
+  getLastMobileShell,
+} from "@/lib/customer-shell-preference"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { Redirect } from "expo-router"
+import { useEffect, useState } from "react"
 import { View } from "react-native"
 
 function StartupSplash() {
@@ -28,14 +34,38 @@ function StartupSplash() {
 }
 
 export default function StartRoute() {
+  const [lastShell, setLastShell] = useState<MobileShell | null>(null)
   const { isAuthenticated } = useAuthContext()
   const hasCompletedOnboarding = useOnboardingStore(
     (state) => state.hasCompletedOnboarding,
   )
   const hasHydrated = useOnboardingStore((state) => state.hasHydrated)
 
-  if (!hasHydrated) {
+  useEffect(() => {
+    void getLastMobileShell()
+      .then(setLastShell)
+      .catch(() => setLastShell("business"))
+  }, [])
+
+  if (!hasHydrated || !lastShell) {
     return <StartupSplash />
+  }
+
+  if (lastShell === "customer") {
+    const last = getCustomerConversationSession()?.lastConversation
+    return last ? (
+      <Redirect
+        href={{
+          pathname: "/(customer)/conversations/[conversationId]",
+          params: {
+            conversationId: last.conversationId,
+            publicToken: last.publicToken,
+          },
+        }}
+      />
+    ) : (
+      <Redirect href="/(customer)/conversations" />
+    )
   }
 
   if (!hasCompletedOnboarding) {

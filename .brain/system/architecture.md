@@ -112,6 +112,17 @@ Describe the intended technical architecture and responsibility boundaries for t
 
 ## Mobile Interaction Boundary
 
+- The existing EwaTrade binary contains two isolated shells. Verified Store
+  Entry Universal/App Links open the unauthenticated Customer shell before
+  Business onboarding or app-lock routing. Customer conversation credentials
+  and installation binding live only in operating-system secure storage and
+  use a separate tRPC client/cache; Business and Customer credentials never
+  authorize the other shell.
+- A ten-minute, digest-only Conversation Transfer may add a mobile Guest
+  participant while leaving the original web participant usable. Claim binds
+  the first installation and redeem binds a caller-staged target credential, so
+  a lost response is replayable without persisting a recoverable bearer. Links
+  contain only the published Store token and an opaque transfer fragment.
 - The mobile application uses one floating bottom-tab shell with a central
   create action and full-screen modal routes for workflows exceeding roughly
   half a phone screen.

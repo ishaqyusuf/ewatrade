@@ -129,6 +129,47 @@ export const storeConversationTimelineInputSchema = z
   })
   .strict()
 
+export const storeConversationMobileBootstrapInputSchema =
+  storeConversationBootstrapInputSchema
+
+export const storeConversationMobileListInputSchema = z
+  .object({
+    cursor: z.string().trim().min(1).max(512).optional(),
+    pageSize: z.number().int().min(1).max(100).default(25),
+  })
+  .strict()
+
+export const storeConversationMobileTimelineInputSchema =
+  storeConversationTimelineInputSchema
+    .extend({ publicToken: z.string().trim().min(32).max(200) })
+    .strict()
+
+export const storeConversationMobileSendTextInputSchema =
+  storeConversationSendTextInputSchema
+
+const storeConversationTransferDeviceInputSchema = z.object({
+  installationToken: z.string().trim().min(32).max(200),
+  publicToken: z.string().trim().min(32).max(200),
+  transferToken: z.string().trim().min(32).max(200),
+})
+
+export const storeConversationTransferCreateInputSchema = z
+  .object({
+    clientOperationId: clientOperationIdSchema,
+    conversationId: opaqueIdSchema,
+    publicToken: z.string().trim().min(32).max(200),
+    transferToken: z.string().trim().min(32).max(200),
+  })
+  .strict()
+
+export const storeConversationTransferClaimInputSchema =
+  storeConversationTransferDeviceInputSchema.strict()
+
+export const storeConversationTransferRedeemInputSchema =
+  storeConversationTransferDeviceInputSchema
+    .extend({ targetCredentialToken: z.string().trim().min(32).max(200) })
+    .strict()
+
 export const storeConversationClaimInputSchema = z
   .object({
     clientOperationId: clientOperationIdSchema,
@@ -213,6 +254,27 @@ export type StoreConversationSendTextInput = z.infer<
 >
 export type StoreConversationTimelineInput = z.infer<
   typeof storeConversationTimelineInputSchema
+>
+export type StoreConversationMobileBootstrapInput = z.infer<
+  typeof storeConversationMobileBootstrapInputSchema
+>
+export type StoreConversationMobileListInput = z.infer<
+  typeof storeConversationMobileListInputSchema
+>
+export type StoreConversationMobileTimelineInput = z.infer<
+  typeof storeConversationMobileTimelineInputSchema
+>
+export type StoreConversationMobileSendTextInput = z.infer<
+  typeof storeConversationMobileSendTextInputSchema
+>
+export type StoreConversationTransferCreateInput = z.infer<
+  typeof storeConversationTransferCreateInputSchema
+>
+export type StoreConversationTransferClaimInput = z.infer<
+  typeof storeConversationTransferClaimInputSchema
+>
+export type StoreConversationTransferRedeemInput = z.infer<
+  typeof storeConversationTransferRedeemInputSchema
 >
 export type StoreConversationClaimInput = z.infer<
   typeof storeConversationClaimInputSchema

@@ -38,6 +38,29 @@ export type StoreConversationTimelineProjection = {
   requests: StoreConversationRequestSummaryProjection[]
 }
 
+export type StoreConversationMobileListProjection = {
+  credentialExpiresAt: Date
+  items: Array<{
+    conversationId: string
+    lastActivityAt: Date
+    lastMessageSequence: number
+    lastMessage: {
+      author: "customer" | "store" | "system"
+      text: string
+    } | null
+    publicToken: string
+    state: "active" | "archived" | "restricted"
+    storeName: string
+    storeAvatar: { kind: "initials"; label: string }
+  }>
+  nextCursor: string | null
+}
+
+export type StoreConversationTransferProjection = {
+  expiresAt: Date
+  state: "claimed" | "redeemed"
+}
+
 export type StoreConversationRequestSummaryProjection = {
   createdAt: Date
   id: string

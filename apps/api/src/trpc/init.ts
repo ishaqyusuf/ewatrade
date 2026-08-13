@@ -20,6 +20,8 @@ export type TRPCContext = {
   cfRay: string | null
   isInternalRequest: boolean
   forcePrimary: boolean
+  customerConversationCredential?: string | null
+  customerConversationInstallation?: string | null
 }
 
 function getBearerToken(authorization: string | null | undefined) {
@@ -121,6 +123,10 @@ export const createTRPCContext = async (
     cfRay,
     isInternalRequest: safeCompare(internalKey, expectedInternalKey),
     forcePrimary: c.req.header("x-force-primary") === "true",
+    customerConversationCredential:
+      c.req.header("x-store-conversation-credential") ?? null,
+    customerConversationInstallation:
+      c.req.header("x-store-conversation-installation") ?? null,
   }
 }
 

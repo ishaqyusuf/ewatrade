@@ -78,6 +78,8 @@ model Tenant {
   storeConversationAssignmentEvents            StoreConversationAssignmentEvent[]
   storeConversationEscalationEvents            StoreConversationEscalationEvent[]
   storeConversationAuditEvents                 StoreConversationAuditEvent[]
+  storeConversationGuestAccesses               StoreConversationGuestAccess[]
+  storeConversationTransfers                   StoreConversationTransfer[]
   serviceCommerceQuoteReleasePolicies          ServiceCommerceQuoteReleasePolicy[]
   serviceCommerceQuoteReleasePolicyAuditEvents ServiceCommerceQuoteReleasePolicyAuditEvent[]
   serviceCommerceQuoteReleaseCommandReceipts   ServiceCommerceQuoteReleaseCommandReceipt[]

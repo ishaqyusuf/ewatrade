@@ -2,7 +2,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome"
 import { ThemeProvider } from "@react-navigation/native"
 import * as Sentry from "@sentry/react-native"
 import { useFonts } from "expo-font"
-import { Stack } from "expo-router"
+import { Stack, useSegments } from "expo-router"
 import * as SplashScreen from "expo-splash-screen"
 import { useEffect, useMemo, useState } from "react"
 import "react-native-reanimated"
@@ -21,7 +21,12 @@ import { AppLockGate } from "@/components/mobile/app-lock-gate"
 import { ToastProviderWithViewport } from "@/components/ui/toast"
 import { applyThemeOverride, useColorScheme } from "@/hooks/use-color"
 import { canAccessAdminTabs } from "@/lib/admin-navigation"
+import { isCustomerShellPath } from "@/lib/app-lock-route"
 import { shouldShowFloatingThemeToggle } from "@/lib/app-variant"
+import {
+  redactCustomerCapabilitiesFromBreadcrumb,
+  redactCustomerCapabilitiesFromCrashEvent,
+} from "@/lib/customer-crash-redaction"
 import { isInvitedStaffProfile, isSalesRepRole } from "@/lib/mobile-roles"
 import { nativewindThemeVars } from "@/lib/nativewind-theme-vars"
 import { NAV_THEME } from "@/lib/theme"
@@ -55,6 +60,8 @@ export const unstable_settings = {
 const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN
 
 Sentry.init({
+  beforeBreadcrumb: redactCustomerCapabilitiesFromBreadcrumb,
+  beforeSend: redactCustomerCapabilitiesFromCrashEvent,
   dsn: sentryDsn,
   enabled: Boolean(sentryDsn),
   environment:
@@ -135,6 +142,7 @@ const InitialLayout = () => {
           }}
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="(customer)" options={{ headerShown: false }} />
           <Stack.Screen name="onboarding" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="sign-up" options={{ headerShown: false }} />
@@ -277,6 +285,7 @@ const InitialLayout = () => {
 }
 
 function OfflinePolicyReconciler() {
+  const customerShell = isCustomerShellPath(useSegments())
   const { isAuthenticated, profile } = useAuthContext()
   const trpc = useTRPC()
   const queryClient = useQueryClient()
@@ -290,7 +299,8 @@ function OfflinePolicyReconciler() {
   )
   const settings = useQuery(
     trpc.offline.settings.queryOptions(undefined, {
-      enabled: isAuthenticated && Boolean(profile?.businessId),
+      enabled:
+        !customerShell && isAuthenticated && Boolean(profile?.businessId),
       refetchInterval: 30_000,
       refetchIntervalInBackground: false,
       retry: false,
@@ -363,16 +373,18 @@ function OfflinePolicyReconciler() {
   const lastAttemptSignature = useRef("")
 
   useEffect(() => {
+    if (customerShell) return
     setActiveBusiness(profile?.businessId ?? null)
-  }, [profile?.businessId, setActiveBusiness])
+  }, [customerShell, profile?.businessId, setActiveBusiness])
 
   useEffect(() => {
+    if (customerShell) return
     if (!profile?.businessId || !settings.data) return
     setOfflineAccess(profile.businessId, settings.data.enabled)
-  }, [profile?.businessId, setOfflineAccess, settings.data])
+  }, [customerShell, profile?.businessId, setOfflineAccess, settings.data])
 
   useEffect(() => {
-    if (isOfflineMode || !reconciliationSignature) {
+    if (customerShell || isOfflineMode || !reconciliationSignature) {
       lastAttemptSignature.current = ""
       return
     }
@@ -399,6 +411,7 @@ function OfflinePolicyReconciler() {
   }, [
     commandState.deviceId,
     commandsToSync,
+    customerShell,
     isOfflineMode,
     reconciliationSignature,
     register.mutate,

@@ -267,6 +267,10 @@ authoritative clinical review and retention extension.
 
 `StoreConversationGuestIdentity -> StoreConversationGuestCredential[]`
 
+`StoreConversation + StoreConversationGuestIdentity -> StoreConversationGuestAccess`
+
+`StoreConversation + WEB_DEVICE source credential -> StoreConversationTransfer -> MOBILE_DEVICE redeemed credential + Guest access`
+
 `Tenant + Store + StoreConversationGuestIdentity -> StoreConversation`
 
 `StoreConversation -> StoreConversationMessage[] -> StoreConversationRequestLink? -> (CommerceInquiry | ServiceRequest | PrescriptionRequest)`
@@ -278,6 +282,9 @@ authoritative clinical review and retention extension.
 Guest Identity is device-scoped and may participate in separately isolated
 conversations across Stores/Tenants. The conversation is the immutable scope
 boundary; a guest credential alone never authorizes another Store's thread.
+The original owner remains usable after an exact transferred mobile access is
+added. Claim and redeem are Store-scoped, installation-bound and digest-only;
+a Business session never widens this relationship.
 Messages and typed source links are append-only. A message may remain staged
 without a link until deterministic customer selection and owning-source intake
 succeed. One conversation may contain several independent typed sources; there

@@ -15,6 +15,7 @@ import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
+import { setLastMobileShell } from "@/lib/customer-shell-preference"
 import { isSalesRepRole } from "@/lib/mobile-roles"
 import {
   getMobileDashboardFeatureVisibility,
@@ -315,6 +316,24 @@ export function OperationsDashboardSurface({
           isOffline ? undefined : () => router.push("/global-search" as never)
         }
       />
+
+      <Pressable
+        accessibilityHint="Opens your private Store conversations"
+        accessibilityLabel="Switch to Personal"
+        accessibilityRole="button"
+        className="min-h-12 flex-row items-center gap-3 rounded-2xl border border-border bg-card px-4 active:bg-accent"
+        haptic
+        onPress={async () => {
+          await setLastMobileShell("customer")
+          router.push("/(customer)/conversations")
+        }}
+      >
+        <Icon className="size-sm text-primary" name="User" />
+        <Text className="min-w-0 flex-1 font-bold text-foreground">
+          Personal Store conversations
+        </Text>
+        <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
+      </Pressable>
 
       {isOffline ? (
         <StatusBanner
