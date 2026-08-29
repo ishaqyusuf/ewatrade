@@ -133,14 +133,35 @@ Describe the intended technical architecture and responsibility boundaries for t
 ## Observability Boundary
 
 - Each independently deployed application owns a separate Sentry project.
-- `apps/mobile` reports to `cipron-concepts/ewatrade-mobile` and identifies
-  development, preview, and production through the Sentry environment field.
+- `@ewatrade/errors` owns stable classification, public messages, retry and
+  reportability policy, HTTP status, and opaque error references. API and tRPC
+  responses expose only that safe contract plus an opaque request id.
+- `@ewatrade/observability` enables outbound diagnostics only when the code
+  authorization, deployment environment, Node environment, DSN, and release
+  all prove an exact production runtime. Development and preview never
+  transmit diagnostics even when credentials are present.
+- Events are rebuilt from an allowlist containing only runtime, stable error
+  code, bounded operation identifiers, server-minted request identifiers,
+  release/symbolication metadata,
+  sanitized stack frames, and the opaque error reference. Request, user,
+  breadcrumb, context, payload, provider, commerce, customer, message, media,
+  device, and tenant content is never copied into the outbound event.
+- Expected authentication, validation, customer-access, quote, module/role,
+  rate-limit, offline, idempotency, and stock conflicts remain actionable in
+  product UX but are normally non-reportable. Systemic database and provider
+  failures are reportable through safe wrappers.
+- API, dashboard, marketing, storefront, POS, jobs, and mobile initialize at
+  their runtime boundaries. The desktop wrapper inherits dashboard web
+  telemetry and has no second native telemetry runtime.
+- `apps/mobile` retains the `cipron-concepts/ewatrade-mobile` project identity,
+  Expo plugin, Metro integration, native release/symbol upload, root wrapping,
+  and OTA flush behavior under the shared production-only policy.
 - The public DSN may be provided through `EXPO_PUBLIC_SENTRY_DSN`. The private
   `SENTRY_AUTH_TOKEN` is build-time only, must remain outside version control,
   and is used solely for source-map and debug-symbol uploads.
-- Mobile default PII collection, Session Replay, user feedback, and SDK logs
-  remain disabled until an explicit privacy and retention decision enables
-  them.
+- Default PII collection, tracing, breadcrumbs, Session Replay, user feedback,
+  and SDK logs remain disabled. Expanding collection requires a separate
+  privacy, retention, and product decision.
 
 ## Multi-Tenancy
 - Every tenant-owned entity carries a tenant identifier.

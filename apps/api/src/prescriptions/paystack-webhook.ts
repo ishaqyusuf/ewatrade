@@ -6,6 +6,7 @@ import {
 import { enqueuePrescriptionCommunicationDispatch } from "@ewatrade/jobs"
 import { PaystackWebhookAdapter } from "@ewatrade/payments"
 import type { OpenAPIHono } from "@hono/zod-openapi"
+import { getRequestTrace } from "../utils/request-trace"
 
 export function registerPrescriptionPaystackWebhook(app: OpenAPIHono) {
   app.post("/api/prescriptions/webhooks/paystack", async (c) => {
@@ -16,6 +17,10 @@ export function registerPrescriptionPaystackWebhook(app: OpenAPIHono) {
     const body = await c.req.text()
     const adapter = new PaystackWebhookAdapter(secretKey)
     if (!adapter.verify(body, c.req.header("x-paystack-signature") ?? null)) {
+      console.warn("[webhook] invalid signature", {
+        provider: "paystack-prescriptions",
+        requestId: getRequestTrace(c.req).requestId,
+      })
       return c.json({ error: "Invalid payment signature." }, 401)
     }
     const event = adapter.parse(body)

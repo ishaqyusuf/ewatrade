@@ -1,5 +1,8 @@
+import "./instrument"
+
 import { auth } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
+import { toPublicErrorEnvelope } from "@ewatrade/errors"
 import { trpcServer } from "@hono/trpc-server"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { cors } from "hono/cors"
@@ -9,6 +12,7 @@ import { registerBillingProviderEventRoutes } from "./billing/provider-events"
 import { registerWhatsAppEmbeddedSignupRoutes } from "./communications/whatsapp-embedded-signup"
 import { registerWhatsAppWebhookRoutes } from "./communications/whatsapp-webhook"
 import { registerDomainPaystackWebhook } from "./domains/paystack-webhook"
+import { captureApiError } from "./observability/sentry"
 import { registerPrescriptionMediaDeliveryRoutes } from "./prescriptions/media-delivery"
 import { registerPrescriptionPaystackWebhook } from "./prescriptions/paystack-webhook"
 import { registerSelfServiceStoreDetectionRoutes } from "./self-service/store-detection"
@@ -26,6 +30,12 @@ const allowedOrigins =
 const app = new OpenAPIHono()
 
 app.use(secureHeaders({ crossOriginResourcePolicy: "cross-origin" }))
+
+app.use("*", async (c, next) => {
+  const { requestId } = getRequestTrace(c.req)
+  c.header("X-Request-Id", requestId)
+  await next()
+})
 
 app.use(
   "*",
@@ -61,6 +71,7 @@ app.use(
       "Cache-Control",
       "Cross-Origin-Resource-Policy",
       "Server-Timing",
+      "X-Request-Id",
     ],
     credentials: true,
     maxAge: 86400,
@@ -129,29 +140,38 @@ app.use(
     router: appRouter,
     createContext: createTRPCContext,
     endpoint: "/api/trpc",
-    onError: ({ error, path }) => {
+    onError: ({ ctx, error, path }) => {
+      captureApiError(error, {
+        operation: path ? `trpc.${path}` : "trpc.unknown",
+        requestId: ctx?.requestId,
+      })
       console.error("[tRPC]", {
         path,
         code: error.code,
-        message: error.message,
-        cause: error.cause instanceof Error ? error.cause.message : undefined,
-        stack: error.stack,
+        requestId: ctx?.requestId,
       })
     },
   }),
 )
 
 app.onError((err, c) => {
+  const { requestId } = getRequestTrace(c.req)
   if (err instanceof HTTPException) {
-    return err.getResponse()
+    const envelope = toPublicErrorEnvelope(err, requestId)
+    return c.json(envelope, err.status)
   }
 
-  console.error(`[Hono] ${c.req.method} ${c.req.path}`, {
-    message: err.message,
-    stack: err.stack,
+  captureApiError(err, {
+    operation: "http.unhandled",
+    requestId,
+  })
+  console.error("[Hono] unhandled request failure", {
+    method: c.req.method,
+    requestId,
+    status: 500,
   })
 
-  return c.json({ error: "Internal Server Error" }, 500)
+  return c.json(toPublicErrorEnvelope(err, requestId), 500)
 })
 
 const requestedPort = Number(

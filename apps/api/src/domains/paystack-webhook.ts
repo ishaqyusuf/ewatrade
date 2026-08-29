@@ -11,6 +11,7 @@ import {
 import { enqueueDomainRegistration } from "@ewatrade/jobs"
 import type { OpenAPIHono } from "@hono/zod-openapi"
 import { z } from "zod"
+import { getRequestTrace } from "../utils/request-trace"
 
 const paystackEventSchema = z.object({
   data: z.object({
@@ -34,6 +35,10 @@ export function registerDomainPaystackWebhook(app: OpenAPIHono) {
     const signature = c.req.header("x-paystack-signature") ?? null
 
     if (!verifyPaystackSignature({ body, secretKey, signature })) {
+      console.warn("[webhook] invalid signature", {
+        provider: "paystack-domains",
+        requestId: getRequestTrace(c.req).requestId,
+      })
       return c.json({ error: "Invalid Paystack signature." }, 401)
     }
 

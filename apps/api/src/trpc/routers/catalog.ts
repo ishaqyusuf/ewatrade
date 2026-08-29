@@ -8,8 +8,8 @@ import {
   CatalogError,
   archiveCatalogOffering,
   archiveCatalogVariant,
-  createCatalogUnitDefinition,
   createCatalogItem,
+  createCatalogUnitDefinition,
   createProductUnitConfigurationDraft,
   createSimpleCatalogItem,
   getCatalogItem,
@@ -26,12 +26,12 @@ import { TRPCError } from "@trpc/server"
 import {
   catalogArchiveOfferingSchema,
   catalogArchiveVariantSchema,
-  catalogCreateUnitDefinitionSchema,
   catalogCreateItemSchema,
   catalogCreateSimpleItemSchema,
+  catalogCreateUnitDefinitionSchema,
   catalogGetItemSchema,
-  catalogListItemsSchema,
   catalogListItemsPageSchema,
+  catalogListItemsSchema,
   catalogProductUnitConfigurationsSchema,
   catalogPublishUnitConfigurationSchema,
   catalogSetOfferingAvailabilitySchema,
@@ -107,17 +107,29 @@ function catalogTRPCError(error: CatalogError) {
     error.code === "CATALOG_VARIANT_NOT_FOUND" ||
     error.code === "STORE_NOT_FOUND"
   ) {
-    return new TRPCError({ code: "NOT_FOUND", message: error.message })
+    return new TRPCError({
+      cause: error,
+      code: "NOT_FOUND",
+      message: error.message,
+    })
   }
 
   if (
     error.code === "DUPLICATE_CATALOG_KEY" ||
     error.code === "IDEMPOTENCY_MISMATCH"
   ) {
-    return new TRPCError({ code: "CONFLICT", message: error.message })
+    return new TRPCError({
+      cause: error,
+      code: "CONFLICT",
+      message: error.message,
+    })
   }
 
-  return new TRPCError({ code: "BAD_REQUEST", message: error.message })
+  return new TRPCError({
+    cause: error,
+    code: "BAD_REQUEST",
+    message: error.message,
+  })
 }
 
 export const catalogRouter = createTRPCRouter({

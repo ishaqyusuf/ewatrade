@@ -1,7 +1,9 @@
 import { syncEnvVars } from "@trigger.dev/build/extensions/core"
 import { defineConfig } from "@trigger.dev/sdk/v3"
+import { captureTerminalJobError } from "./src/observability/sentry"
 
 const syncedProductionEnvVars = [
+  "APP_ENV",
   "DATABASE_URL",
   "EMAIL_DELIVERY_MODE",
   "EMAIL_FROM",
@@ -14,6 +16,8 @@ const syncedProductionEnvVars = [
   "PRESCRIPTION_DATA_ENCRYPTION_KEY",
   "REDIS_URL",
   "RESEND_API_KEY",
+  "SENTRY_DSN",
+  "SENTRY_RELEASE",
   "SERVICE_SMS_WEBHOOK_TOKEN",
   "SERVICE_SMS_WEBHOOK_URL",
   "SERVICE_WHATSAPP_WEBHOOK_TOKEN",
@@ -42,6 +46,9 @@ export default defineConfig({
   runtime: "node-22",
   logLevel: "log",
   maxDuration: 60,
+  onFailure: async ({ error, task }) => {
+    await captureTerminalJobError(error, task)
+  },
   retries: {
     enabledInDev: false,
     default: {

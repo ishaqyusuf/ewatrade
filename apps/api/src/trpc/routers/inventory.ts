@@ -4,6 +4,7 @@ import {
   canOperatePos,
   normalizeRole,
 } from "@ewatrade/auth/roles"
+import { StockOperationType } from "@ewatrade/db/enums"
 import {
   CatalogError,
   commitCatalogStockReservation,
@@ -11,46 +12,45 @@ import {
   createAndDispatchStockTransfer,
   createInventoryCloseout,
   createStockCount,
-  finalizeStockCount,
-  finalizeInventoryCloseout,
-  getCatalogOfferingAvailability,
-  postSingleBalanceStockOperation,
-  moveInventoryCustody,
-  receiveOrCancelStockTransfer,
-  releaseCatalogStockReservation,
-  reserveCatalogOfferingStock,
-  transformPackagedStock,
   exportInventoryAuditRows,
+  finalizeInventoryCloseout,
+  finalizeStockCount,
+  getCatalogOfferingAvailability,
   getInventoryReconciliationSummary,
   getStockOperationAudit,
   listInventoryBalanceReport,
   listInventoryOperationHistory,
   listStockTransfers,
+  moveInventoryCustody,
+  postSingleBalanceStockOperation,
+  receiveOrCancelStockTransfer,
+  releaseCatalogStockReservation,
+  reserveCatalogOfferingStock,
+  transformPackagedStock,
 } from "@ewatrade/db/queries"
-import { StockOperationType } from "@ewatrade/db/enums"
 import { TRPCError } from "@trpc/server"
 
 import {
+  inventoryAuditExportSchema,
+  inventoryBalanceReportSchema,
   inventoryCommitReservationSchema,
   inventoryCorrectOperationSchema,
   inventoryCreateCloseoutSchema,
   inventoryCreateStockCountSchema,
-  inventoryFinalizeStockCountSchema,
-  inventoryFinalizeCloseoutSchema,
   inventoryDispatchTransferSchema,
-  inventoryMoveCustodySchema,
+  inventoryFinalizeCloseoutSchema,
+  inventoryFinalizeStockCountSchema,
   inventoryListTransfersSchema,
+  inventoryMoveCustodySchema,
   inventoryOfferingAvailabilitySchema,
+  inventoryOperationAuditSchema,
+  inventoryOperationHistorySchema,
+  inventoryReconciliationReportSchema,
   inventoryReleaseReservationSchema,
   inventoryReserveOfferingSchema,
   inventorySingleBalanceOperationSchema,
   inventoryTransformationSchema,
   inventoryTransitionTransferSchema,
-  inventoryAuditExportSchema,
-  inventoryBalanceReportSchema,
-  inventoryOperationAuditSchema,
-  inventoryOperationHistorySchema,
-  inventoryReconciliationReportSchema,
 } from "../../schemas/inventory"
 import { createTRPCRouter, protectedProcedure } from "../init"
 
@@ -107,7 +107,11 @@ function inventoryError(error: CatalogError) {
     error.code === "STOCK_COUNT_NOT_FOUND" ||
     error.code === "STORE_NOT_FOUND"
   ) {
-    return new TRPCError({ code: "NOT_FOUND", message: error.message })
+    return new TRPCError({
+      cause: error,
+      code: "NOT_FOUND",
+      message: error.message,
+    })
   }
   if (
     error.code === "IDEMPOTENCY_MISMATCH" ||
@@ -116,9 +120,17 @@ function inventoryError(error: CatalogError) {
     error.code === "REVISION_CONFLICT" ||
     error.code === "STALE_CONFIGURATION"
   ) {
-    return new TRPCError({ code: "CONFLICT", message: error.message })
+    return new TRPCError({
+      cause: error,
+      code: "CONFLICT",
+      message: error.message,
+    })
   }
-  return new TRPCError({ code: "BAD_REQUEST", message: error.message })
+  return new TRPCError({
+    cause: error,
+    code: "BAD_REQUEST",
+    message: error.message,
+  })
 }
 
 export const inventoryRouter = createTRPCRouter({

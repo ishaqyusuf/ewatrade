@@ -9,11 +9,15 @@ native crash reporting, release artifacts, source maps, and debug symbols.
 ## Runtime Configuration
 
 - `EXPO_PUBLIC_SENTRY_DSN` selects the mobile Sentry project.
-- `EXPO_PUBLIC_SENTRY_ENVIRONMENT` separates development, preview, and
-  production events without creating separate Sentry projects per environment.
+- `EXPO_PUBLIC_SENTRY_ENVIRONMENT` identifies the deployment. The shared
+  policy transmits only when it is exactly `production`, the runtime is a
+  production build, and DSN plus release are present. Development and preview
+  do not transmit diagnostic events.
+- `EXPO_PUBLIC_SENTRY_RELEASE` may provide the exact mobile release; otherwise
+  the native application id/version/build tuple is used.
 - The SDK initializes before the Expo Router root layout mounts and wraps the
   root layout so React errors are captured.
-- Sentry is disabled when the public DSN is absent.
+- Sentry is disabled unless every production transmission gate passes.
 - Automatic and manual EAS Update reloads flush pending Sentry events before
   restarting the JavaScript runtime.
 
@@ -31,9 +35,15 @@ native crash reporting, release artifacts, source maps, and debug symbols.
 ## Privacy Defaults
 
 - `sendDefaultPii` is disabled.
+- Breadcrumbs and tracing are disabled.
 - Session Replay is disabled.
 - User Feedback is disabled.
 - SDK Logs are disabled.
+- Reportable events are reconstructed by `@ewatrade/observability`; original
+  messages, user/request/context objects, and commerce/customer/provider data
+  are not forwarded.
+- Expected network, offline replay, stock, quote, authentication, validation,
+  and access errors remain product-visible and normally non-reportable.
 - These features require a separate privacy, retention, redaction, and product
   decision before they may be enabled.
 
@@ -81,4 +91,10 @@ build `74b14a10-2097-40c6-9f98-2708c36b81c6` completed successfully as
 Android versionCode 7 and uploaded its Sentry artifact. Production still needs
 a token with permission for the mobile Sentry project before a production
 build can upload source maps. A deliberate native Preview event and
-symbolication check remain pending.
+symbolication check remain pending. On 2026-08-29 the mobile initialization and
+TanStack Query seams were moved onto the shared error/observability packages
+without changing the Expo plugin, Metro setup, project identity, native
+artifact upload, root wrapping, or OTA flushing. The configuration guard
+passes. Full mobile UI testing was explicitly deferred; the repository's full
+mobile TypeScript gate still reports unrelated pre-existing Service Commerce
+errors outside the observability files.

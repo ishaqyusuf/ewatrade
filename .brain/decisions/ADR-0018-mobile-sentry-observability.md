@@ -4,6 +4,11 @@
 
 Accepted
 
+Amended by
+[ADR-0035](./ADR-0035-production-error-observability-transmission-policy.md),
+which makes diagnostic transmission production-only and places mobile event
+content under the shared outbound reconstruction policy.
+
 ## Context
 
 Ewatrade has independently deployed Expo, Next.js, API, and jobs runtimes.
@@ -18,8 +23,9 @@ The Expo application owns the separate
 `cipron-concepts/ewatrade-mobile` Sentry project.
 
 The mobile runtime uses `@sentry/react-native`, the Sentry Expo config plugin,
-and Sentry's Metro base configuration. Development, preview, and production
-remain Sentry environments inside the same mobile project.
+and Sentry's Metro base configuration. Only exact production deployments may
+transmit diagnostic events; preview remains useful for build/source-map
+verification without external event transmission.
 
 The public DSN is supplied through `EXPO_PUBLIC_SENTRY_DSN`. The private
 `SENTRY_AUTH_TOKEN` is restricted to local ignored configuration and secret

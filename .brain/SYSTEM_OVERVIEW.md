@@ -60,6 +60,10 @@ High-level summary of the platform, its business domains, and the current implem
 - Local application, Prisma, fixture, and browser-QA work uses the Neon
   development database selected by `.env.local`; EwaTrade does not use a local
   Docker/PostgreSQL fallback.
+- `@ewatrade/errors` owns stable public error codes, retry/reportability, safe
+  envelopes, and opaque references. `@ewatrade/observability` owns the
+  exact-production transmission gate and strict outbound Sentry event
+  reconstruction across API, jobs, web, and mobile runtimes.
 
 ## Existing Domain Docs
 - `.brain/modules/*.md` contains capability-level module notes.
@@ -67,6 +71,10 @@ High-level summary of the platform, its business domains, and the current implem
 - `.brain/workflows/*.md` contains lifecycle flow documentation.
 
 ## Current Gaps
+- Sentry DSNs, releases, upload credentials, and distinct project mappings are
+  not yet provisioned for every independently deployed runtime. No deployed
+  synthetic event or source-map routing proof is claimed. The existing mobile
+  Production upload token also still needs permission for the mobile project.
 - Managed object storage and a trusted media safety pipeline are not selected;
   ADR-0031 and Ticket 04A define the required generic provider boundary, but
   live storage/scanner rollout remains gated. Optional device-retained Service

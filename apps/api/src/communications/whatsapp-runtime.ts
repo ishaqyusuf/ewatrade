@@ -46,7 +46,10 @@ function safeUsageDeduplicationKey(input: {
     .digest("hex")
 }
 
-export async function handleWhatsAppWebhookRequest(request: Request) {
+export async function handleWhatsAppWebhookRequest(
+  request: Request,
+  requestId?: string,
+) {
   if (request.method === "GET") {
     const url = new URL(request.url)
     const challenge = verifyMetaWebhookChallenge({
@@ -68,6 +71,10 @@ export async function handleWhatsAppWebhookRequest(request: Request) {
       signature: request.headers.get("x-hub-signature-256"),
     })
   ) {
+    console.warn("[webhook] invalid signature", {
+      provider: "meta-whatsapp",
+      requestId,
+    })
     return new Response("Unauthorized", { status: 401 })
   }
   let payload: unknown

@@ -23,14 +23,11 @@ import { applyThemeOverride, useColorScheme } from "@/hooks/use-color"
 import { canAccessAdminTabs } from "@/lib/admin-navigation"
 import { isCustomerShellPath } from "@/lib/app-lock-route"
 import { shouldShowFloatingThemeToggle } from "@/lib/app-variant"
-import {
-  redactCustomerCapabilitiesFromBreadcrumb,
-  redactCustomerCapabilitiesFromCrashEvent,
-} from "@/lib/customer-crash-redaction"
 import { isInvitedStaffProfile, isSalesRepRole } from "@/lib/mobile-roles"
 import { nativewindThemeVars } from "@/lib/nativewind-theme-vars"
 import { NAV_THEME } from "@/lib/theme"
 import { getThemeOverride } from "@/lib/theme-preference"
+import { initMobileObservability } from "@/observability/sentry"
 import {
   pendingOfflineCommands,
   useOfflineCommandStore,
@@ -57,19 +54,7 @@ export const unstable_settings = {
   initialRouteName: "index",
 }
 
-const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN
-
-Sentry.init({
-  beforeBreadcrumb: redactCustomerCapabilitiesFromBreadcrumb,
-  beforeSend: redactCustomerCapabilitiesFromCrashEvent,
-  dsn: sentryDsn,
-  enabled: Boolean(sentryDsn),
-  environment:
-    process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT ??
-    (__DEV__ ? "development" : "production"),
-  sendDefaultPii: false,
-  enableLogs: false,
-})
+initMobileObservability()
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync()

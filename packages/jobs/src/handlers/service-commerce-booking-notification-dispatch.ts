@@ -108,8 +108,7 @@ export async function runServiceCommerceBookingNotificationDispatch(
       failureCode: "provider_delivery_failed",
       ...(retryable ? { retryAt: retryAt(attempt) } : {}),
     })
-    if (retryable) throw error
-    return null
+    throw error
   }
 }
 

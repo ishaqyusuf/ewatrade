@@ -20,10 +20,17 @@ Canonical stack reference for current implementation choices.
 - Client notifications: shared React notification provider and viewport package for app toasts
 - Email: shared package-driven email defaults, templates, message helpers, and transports. Resend is the production provider when `RESEND_API_KEY` is present; console delivery remains the no-provider fallback. Root `bun run email:test` sends a smoke email to the first configured `TEST_EMAILS` recipient, falling back to `TEST_EMAIL`.
 - Auth: Better Auth
-- Mobile observability: Sentry React Native SDK in `apps/mobile`, using the
-  `cipron-concepts/ewatrade-mobile` project for JavaScript errors, native
-  crashes, release artifacts, source maps, and debug symbols. Session Replay,
-  user feedback, logs, and default PII collection are disabled.
+- Error contract: `@ewatrade/errors` provides runtime-neutral typed
+  classification, safe public envelopes, retry/reportability, HTTP status, and
+  opaque references.
+- Observability policy: `@ewatrade/observability` provides exact-production
+  activation, safe error construction, strict outbound event reconstruction,
+  and source-map upload gating.
+- Runtime SDKs: `@sentry/bun` for API, `@sentry/node` for Trigger jobs,
+  `@sentry/nextjs` for dashboard/marketing/storefront/POS, and
+  `@sentry/react-native` for mobile. Each deployment maps to its own project;
+  mobile retains `cipron-concepts/ewatrade-mobile`. Tracing, replay, feedback,
+  SDK logs, breadcrumbs, and default PII collection are disabled.
 
 ## Database Stack
 - Schema modeling: Prisma

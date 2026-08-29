@@ -1,5 +1,24 @@
 # Done
 
+- Implemented the shared privacy-first error and observability system for API,
+  Trigger jobs, dashboard, marketing, storefront, POS, and mobile. Added
+  structural error classification, safe public envelopes/references, bounded
+  request ids, Hono/tRPC normalization, terminal-only job capture, Next global
+  recovery/Query seams, mobile shared policy integration, exact-production
+  activation, strict outbound event reconstruction, and fail-closed source-map
+  upload gates. Repaired build verification for the Better Auth dependency
+  lock by proving the frozen runtime graph and adding a compatibility
+  regression test with its Bun test types. Mobile UI testing was deferred by
+  owner direction; deployment credentials and synthetic production smoke tests
+  remain in progress. Completed Date: 2026-08-29. Checks Run: frozen `bun
+  install`; 19 focused tests / 54 assertions; direct errors, observability,
+  auth, API, jobs, dashboard, marketing, storefront, and POS TypeScript;
+  mobile Sentry configuration guard; dashboard, marketing, storefront, and POS
+  production Webpack builds with synthetic build credentials; targeted Biome;
+  and Portless/gstack browser checks for marketing, storefront, POS, and the
+  dashboard authentication redirect with no local Sentry traffic or console
+  errors.
+
 - Completed Service Commerce Ticket 03A with one Progressive Catalog boundary
   for Commerce Inquiry, Service Request and human-verified Prescription source
   lines. Generic request wording remains a fingerprinted source snapshot used

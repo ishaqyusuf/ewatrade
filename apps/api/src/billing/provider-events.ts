@@ -3,6 +3,7 @@ import { processRetailOpsBillingProviderEvent } from "@ewatrade/db/queries"
 import type { OpenAPIHono } from "@hono/zod-openapi"
 import { HTTPException } from "hono/http-exception"
 import { z } from "zod"
+import { getRequestTrace } from "../utils/request-trace"
 import { safeCompare } from "../utils/safe-compare"
 
 const billingProviderSchema = z.enum([
@@ -147,10 +148,13 @@ export function registerBillingProviderEventRoutes(app: OpenAPIHono) {
     )
 
     if (!parsed.success) {
+      console.warn("[provider-event] invalid payload", {
+        provider: "billing",
+        requestId: getRequestTrace(c.req).requestId,
+      })
       return c.json(
         {
           error: "Invalid billing provider event payload.",
-          issues: parsed.error.issues,
         },
         400,
       )

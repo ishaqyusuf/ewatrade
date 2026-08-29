@@ -1,5 +1,15 @@
 # In Progress
 
+- Provision and verify the owner-approved production observability rollout.
+  Source implementation is complete across API, jobs, dashboard, marketing,
+  storefront, POS, and mobile under ADR-0035. Remaining release work is to
+  create/map one Sentry project per independent deployment, configure each
+  DSN/release/upload credential, replace the existing mobile Production token
+  with one authorized for `cipron-concepts/ewatrade-mobile`, and send only
+  synthetic production failures to prove project/environment/release routing
+  and symbolication. No live production event was sent during source
+  verification. Started Date: 2026-08-29.
+
 - Implement the owner-approved anonymous Store Conversation product pivot after
   direct `/to-spec` synthesis from
   [Wayfinder: Anonymous Store Conversations Across Web And Mobile](../../.scratch/wayfinder-store-conversations/map.md).

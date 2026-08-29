@@ -17,6 +17,7 @@ Detailed feature docs for implemented or planned product areas.
 - [Product And Service Catalog Items](./product-service-catalog-items.md)
 - [Business Type Onboarding And Dry Cleaning (historical)](./business-type-onboarding-dry-cleaning.md)
 - [Ewatrade Dispatch Internal App](./ewatrade-dispatch-internal-app.md)
+- [Error And Observability System](./error-observability-system.md)
 - [Mobile Sentry Observability](./mobile-sentry-observability.md)
 - [Mobile Retail Ops MVP](./mobile-retail-ops-mvp-spec.md)
 - [Offline Order Operations](./offline-order-operations.md)

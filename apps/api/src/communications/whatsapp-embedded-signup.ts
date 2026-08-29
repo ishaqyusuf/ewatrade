@@ -5,7 +5,10 @@ import {
 } from "@ewatrade/communications"
 import { prisma } from "@ewatrade/db"
 import { createWhatsAppEmbeddedSignupSession } from "@ewatrade/db/queries"
+import { runProviderOperation } from "@ewatrade/errors"
 import type { OpenAPIHono } from "@hono/zod-openapi"
+import { captureApiError } from "../observability/sentry"
+import { getRequestTrace } from "../utils/request-trace"
 
 function dashboardRedirect(status: string) {
   const dashboard =
@@ -39,15 +42,25 @@ export function registerWhatsAppEmbeddedSignupRoutes(app: OpenAPIHono) {
       if (!apiUrl) return c.redirect(dashboardRedirect("unavailable"), 302)
       const provider = new DirectMetaWhatsAppProvider()
       try {
-        const authorization = await provider.exchangeEmbeddedSignupCode({
-          appId,
-          appSecret,
-          code,
-          redirectUri: `${apiUrl}/api/communications/whatsapp/embedded-signup/callback`,
-        })
-        const numbers = await provider.discover({
-          accessToken: authorization.accessToken,
-        })
+        const authorization = await runProviderOperation(
+          "messaging",
+          "whatsapp.embedded_signup.exchange",
+          () =>
+            provider.exchangeEmbeddedSignupCode({
+              appId,
+              appSecret,
+              code,
+              redirectUri: `${apiUrl}/api/communications/whatsapp/embedded-signup/callback`,
+            }),
+        )
+        const numbers = await runProviderOperation(
+          "messaging",
+          "whatsapp.embedded_signup.discover",
+          () =>
+            provider.discover({
+              accessToken: authorization.accessToken,
+            }),
+        )
         if (!numbers.length)
           return c.redirect(dashboardRedirect("no-number"), 302)
         await createWhatsAppEmbeddedSignupSession(prisma, {
@@ -60,7 +73,11 @@ export function registerWhatsAppEmbeddedSignupRoutes(app: OpenAPIHono) {
           userId: verified.userId,
         })
         return c.redirect(dashboardRedirect("select-number"), 302)
-      } catch {
+      } catch (error) {
+        captureApiError(error, {
+          operation: "whatsapp.embedded_signup.callback",
+          requestId: getRequestTrace(c.req).requestId,
+        })
         return c.redirect(dashboardRedirect("failed"), 302)
       }
     },

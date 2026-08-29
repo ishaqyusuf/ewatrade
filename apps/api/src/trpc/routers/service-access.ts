@@ -15,6 +15,7 @@ import {
   submitPublicServiceRequest,
   updateServiceRequestDisposition,
 } from "@ewatrade/db/queries"
+import { AppError } from "@ewatrade/errors"
 import { TRPCError } from "@trpc/server"
 
 import {
@@ -38,8 +39,9 @@ import {
   resolveServiceStoreId,
 } from "./service-permissions"
 
-function publicFailure() {
+function publicFailure(cause: unknown) {
   return new TRPCError({
+    cause: new AppError({ cause, code: "CUSTOMER_ACCESS_DENIED" }),
     code: "NOT_FOUND",
     message: "This public Service action is unavailable.",
   })
@@ -65,7 +67,7 @@ export const serviceAccessRouter = createTRPCRouter({
       try {
         return await getPublicServiceQuote(ctx.db, input)
       } catch (error) {
-        if (isPublicFailure(error)) throw publicFailure()
+        if (isPublicFailure(error)) throw publicFailure(error)
         throw error
       }
     }),
@@ -76,7 +78,7 @@ export const serviceAccessRouter = createTRPCRouter({
       try {
         return await getPublicServiceRequestForm(ctx.db, input)
       } catch (error) {
-        if (isPublicFailure(error)) throw publicFailure()
+        if (isPublicFailure(error)) throw publicFailure(error)
         throw error
       }
     }),
@@ -90,7 +92,7 @@ export const serviceAccessRouter = createTRPCRouter({
           ...input,
         })
       } catch (error) {
-        if (isPublicFailure(error)) throw publicFailure()
+        if (isPublicFailure(error)) throw publicFailure(error)
         throw error
       }
     }),
@@ -101,7 +103,7 @@ export const serviceAccessRouter = createTRPCRouter({
       try {
         return await selectServiceQuoteOption(ctx.db, input)
       } catch (error) {
-        if (isPublicFailure(error)) throw publicFailure()
+        if (isPublicFailure(error)) throw publicFailure(error)
         throw error
       }
     }),
@@ -196,7 +198,7 @@ export const serviceAccessRouter = createTRPCRouter({
       try {
         return await submitPublicServiceRequest(ctx.db, input)
       } catch (error) {
-        if (isPublicFailure(error)) throw publicFailure()
+        if (isPublicFailure(error)) throw publicFailure(error)
         throw error
       }
     }),
@@ -207,7 +209,7 @@ export const serviceAccessRouter = createTRPCRouter({
       try {
         return await getPublicServiceTracking(ctx.db, input)
       } catch (error) {
-        if (isPublicFailure(error)) throw publicFailure()
+        if (isPublicFailure(error)) throw publicFailure(error)
         throw error
       }
     }),

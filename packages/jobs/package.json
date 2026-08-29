@@ -17,10 +17,13 @@
     "@ewatrade/db": "workspace:*",
     "@ewatrade/domains": "workspace:*",
     "@ewatrade/email": "workspace:*",
+    "@ewatrade/errors": "workspace:*",
     "@ewatrade/notifications": "workspace:*",
+    "@ewatrade/observability": "workspace:*",
     "@ewatrade/prescriptions": "workspace:*",
     "@ewatrade/service-commerce": "workspace:*",
     "@trigger.dev/build": "4.0.1",
+    "@sentry/node": "^10.72.0",
     "@trigger.dev/sdk": "4.0.1"
   },
   "devDependencies": {

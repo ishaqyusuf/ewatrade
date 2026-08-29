@@ -19,6 +19,7 @@ import {
   selectPrescriptionQuoteOption,
   submitPublicPrescriptionRequest,
 } from "@ewatrade/db/queries"
+import { AppError, runProviderOperation } from "@ewatrade/errors"
 import {
   enqueuePrescriptionCommunicationDispatch,
   enqueuePrescriptionMediaSafety,
@@ -42,8 +43,9 @@ import {
 } from "../../schemas/prescriptions"
 import { createTRPCRouter, publicProcedure } from "../init"
 
-function publicFailure() {
+function publicFailure(cause: unknown) {
   return new TRPCError({
+    cause: new AppError({ cause, code: "CUSTOMER_ACCESS_DENIED" }),
     code: "NOT_FOUND",
     message: "This public prescription action is unavailable.",
   })
@@ -59,7 +61,7 @@ async function runPublic<T>(action: () => Promise<T>) {
       error instanceof PrescriptionFulfillmentError ||
       error instanceof ServiceCommercePolicyError
     )
-      throw publicFailure()
+      throw publicFailure(error)
     throw error
   }
 }
@@ -118,7 +120,11 @@ export const prescriptionAccessRouter = createTRPCRouter({
     .input(prescriptionPaymentCheckoutSchema)
     .mutation(({ ctx, input }) =>
       runPublic(async () => {
-        const provider = getConfiguredHostedPaymentProvider()
+        const provider = await runProviderOperation(
+          "payment",
+          "prescriptions.checkout.configure",
+          () => getConfiguredHostedPaymentProvider(),
+        )
         const prepared = await preparePrescriptionHostedCheckout(ctx.db, {
           ...input,
           provider: provider.key,
@@ -137,14 +143,19 @@ export const prescriptionAccessRouter = createTRPCRouter({
         const storefrontUrl =
           process.env.STOREFRONT_URL?.replace(/\/$/, "") ??
           "http://ewatrade-storefront.localhost"
-        const checkout = await provider.createCheckout({
-          amountMinor: prepared.amountMinor,
-          callbackUrl: `${storefrontUrl}/prescription-payment/${prepared.statusToken}`,
-          currencyCode: prepared.currencyCode,
-          customerEmail: prepared.customerEmail,
-          metadata: { paymentIntentId: prepared.intentId },
-          reference: prepared.providerReference,
-        })
+        const checkout = await runProviderOperation(
+          "payment",
+          "prescriptions.checkout.create",
+          () =>
+            provider.createCheckout({
+              amountMinor: prepared.amountMinor,
+              callbackUrl: `${storefrontUrl}/prescription-payment/${prepared.statusToken}`,
+              currencyCode: prepared.currencyCode,
+              customerEmail: prepared.customerEmail,
+              metadata: { paymentIntentId: prepared.intentId },
+              reference: prepared.providerReference,
+            }),
+        )
         if (checkout.providerReference !== prepared.providerReference) {
           throw new Error("Payment provider returned an unexpected reference.")
         }
@@ -169,7 +180,8 @@ export const prescriptionAccessRouter = createTRPCRouter({
   uploadMedia: publicProcedure
     .input(prescriptionMediaUploadSchema)
     .mutation(async ({ ctx, input }) => {
-      if (!input.publicToken || input.storeId) throw publicFailure()
+      if (!input.publicToken || input.storeId)
+        throw publicFailure(new Error("Invalid public prescription access."))
       const publicToken = input.publicToken
       const channel = await runPublic(() =>
         getPublicPrescriptionChannel(ctx.db, {

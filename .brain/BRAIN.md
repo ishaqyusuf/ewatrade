@@ -70,6 +70,12 @@ Central index for ewatrade product, architecture, engineering, database, API, de
   design-partner acceptance remain production prerequisites.
   Its completed source/tickets remain the first-vertical evidence and are not
   replaced by the approved Service Commerce migration batch.
+- Shared typed error and observability packages now govern API, jobs,
+  dashboard, marketing, storefront, POS, and mobile failures. External
+  diagnostics are code-authorized only for exact production deployments with
+  an explicit DSN and release, and outbound events are reconstructed from a
+  commerce-safe allowlist rather than redacted in place. Per-runtime Sentry
+  project credentials and deployed synthetic smoke tests remain release work.
 
 ## Key References
 - [System Overview](./SYSTEM_OVERVIEW.md)
@@ -87,6 +93,7 @@ Central index for ewatrade product, architecture, engineering, database, API, de
 - [Prescription Commerce](./features/prescription-commerce.md)
 - [Service Commerce](./features/service-commerce.md)
 - [Anonymous Store Conversations](./features/store-conversations.md)
+- [Error And Observability System](./features/error-observability-system.md)
 - [Progressive Catalog And Thin Pharmacy Extension](./decisions/ADR-0030-progressive-catalog-and-thin-pharmacy-extension.md)
 - [Customer Channels, Generic Request Media And Selectable Offers](./decisions/ADR-0031-customer-channels-generic-request-media-and-selectable-offers.md)
 - [Store Team Routing And Quote Release Approval](./decisions/ADR-0032-store-team-routing-and-quote-release-approval.md)

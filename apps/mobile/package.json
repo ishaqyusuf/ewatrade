@@ -59,6 +59,8 @@
   },
   "dependencies": {
     "@ewatrade/api": "workspace:*",
+    "@ewatrade/errors": "workspace:*",
+    "@ewatrade/observability": "workspace:*",
     "@ewatrade/utils": "workspace:*",
     "@expo/vector-icons": "^15.0.3",
     "@gorhom/bottom-sheet": "^5.0.5",

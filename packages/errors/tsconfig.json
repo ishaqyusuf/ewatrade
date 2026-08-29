@@ -1,0 +1,7 @@
+{
+  "extends": "@ewatrade/tsconfig/base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src"]
+}

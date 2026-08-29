@@ -99,7 +99,7 @@ describe("Service Commerce booking notification dispatch", () => {
         },
         resolveRecipient: () => "+2348000000000",
       }),
-    ).resolves.toBeNull()
+    ).rejects.toThrow("provider unavailable")
     expect(terminalFailures).toEqual([
       { ...payload, failureCode: "provider_delivery_failed" },
     ])

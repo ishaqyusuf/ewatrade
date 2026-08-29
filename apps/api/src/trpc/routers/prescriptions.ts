@@ -70,6 +70,7 @@ import {
   verifyPrescriptionPrivacyRequest,
   verifyPrescriptionTranscriptionLine,
 } from "@ewatrade/db/queries"
+import { runProviderOperation } from "@ewatrade/errors"
 import {
   enqueuePrescriptionCommunicationDispatch,
   enqueuePrescriptionMediaSafety,
@@ -817,10 +818,16 @@ export const prescriptionsRouter = createTRPCRouter({
         providerReference: refund.paymentIntent.providerReference,
         reason: refund.reason,
       }
-      const providerResult =
+      const providerResult = await runProviderOperation(
+        "payment",
         dispatch.action === "reconcile"
-          ? await provider.reconcileRefund(providerInput)
-          : await provider.refund(providerInput)
+          ? "prescriptions.refund.reconcile"
+          : "prescriptions.refund.create",
+        () =>
+          dispatch.action === "reconcile"
+            ? provider.reconcileRefund(providerInput)
+            : provider.refund(providerInput),
+      )
       if (!providerResult) {
         return resolvePrescriptionRefundReconciliationMiss(ctx.db, {
           refundId: refund.id,

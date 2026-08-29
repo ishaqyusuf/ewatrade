@@ -17,6 +17,7 @@
     "@better-auth/cli": "^1.4.21",
     "@biomejs/biome": "^1.9.4",
     "@ewatrade/tsconfig": "workspace:*",
+    "@types/bun": "latest",
     "@types/node": "^24.6.0",
     "typescript": "catalog:"
   },

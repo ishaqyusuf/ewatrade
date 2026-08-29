@@ -5,8 +5,14 @@ import {
   getCustomerConversationSession,
   getCustomerInstallationToken,
 } from "@/lib/customer-conversation-store"
+import { captureMobileError } from "@/observability/sentry"
 import type { AppRouter } from "@ewatrade/api/trpc/routers/_app"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import {
+  MutationCache,
+  QueryCache,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query"
 import {
   createTRPCClient,
   httpBatchLink,
@@ -37,6 +43,14 @@ export function CustomerConversationAPIProvider({
   const [queryClient] = useState(
     () =>
       new QueryClient({
+        mutationCache: new MutationCache({
+          onError: (error) =>
+            captureMobileError(error, "mobile.customer_mutation"),
+        }),
+        queryCache: new QueryCache({
+          onError: (error) =>
+            captureMobileError(error, "mobile.customer_query"),
+        }),
         defaultOptions: {
           mutations: { gcTime: 0, retry: false },
           queries: { gcTime: 0, retry: false, staleTime: 0 },

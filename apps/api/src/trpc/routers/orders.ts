@@ -81,7 +81,11 @@ function resolveStoreId(
 
 function orderError(error: CatalogError) {
   if (error.code === "ORDER_NOT_FOUND" || error.code === "STORE_NOT_FOUND") {
-    return new TRPCError({ code: "NOT_FOUND", message: error.message })
+    return new TRPCError({
+      cause: error,
+      code: "NOT_FOUND",
+      message: error.message,
+    })
   }
   if (
     error.code === "IDEMPOTENCY_MISMATCH" ||
@@ -90,9 +94,17 @@ function orderError(error: CatalogError) {
     error.code === "REVISION_CONFLICT" ||
     error.code === "STALE_CONFIGURATION"
   ) {
-    return new TRPCError({ code: "CONFLICT", message: error.message })
+    return new TRPCError({
+      cause: error,
+      code: "CONFLICT",
+      message: error.message,
+    })
   }
-  return new TRPCError({ code: "BAD_REQUEST", message: error.message })
+  return new TRPCError({
+    cause: error,
+    code: "BAD_REQUEST",
+    message: error.message,
+  })
 }
 
 export const ordersRouter = createTRPCRouter({

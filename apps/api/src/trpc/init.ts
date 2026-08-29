@@ -2,6 +2,7 @@ import { type Session, auth, parseCookieHeader } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
 import type { TenantContext } from "@ewatrade/db/queries"
 import { getActiveTenantForUser } from "@ewatrade/db/queries"
+import { toPublicError } from "@ewatrade/errors"
 import { TRPCError, initTRPC } from "@trpc/server"
 import type { Context } from "hono"
 import superjson from "superjson"
@@ -132,6 +133,21 @@ export const createTRPCContext = async (
 
 const t = initTRPC.context<TRPCContext>().create({
   transformer: superjson,
+  errorFormatter({ shape, error, ctx }) {
+    const appError = {
+      ...toPublicError(error),
+      requestId: ctx?.requestId,
+    }
+    return {
+      ...shape,
+      message: appError.message,
+      data: {
+        ...shape.data,
+        appError,
+        stack: undefined,
+      },
+    }
+  },
 })
 
 export const createTRPCRouter = t.router

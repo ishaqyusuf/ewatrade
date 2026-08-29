@@ -1,10 +1,12 @@
-import { Toast } from "@/components/ui/toast";
+import { Toast } from "@/components/ui/toast"
+import { captureMobileError } from "@/observability/sentry"
 import {
-  QueryClient,
   MutationCache,
+  QueryCache,
+  QueryClient,
   defaultShouldDehydrateQuery,
-} from "@tanstack/react-query";
-import superjson from "superjson";
+} from "@tanstack/react-query"
+import superjson from "superjson"
 
 export function makeQueryClient() {
   return new QueryClient({
@@ -24,28 +26,32 @@ export function makeQueryClient() {
     },
     mutationCache: new MutationCache({
       onMutate: async (variables, mutation) => {
-        if (!mutation?.meta?.toastTitle?.show) return;
+        if (!mutation?.meta?.toastTitle?.show) return
 
-        const title = mutation?.meta?.toastTitle?.loading || "Processing...";
+        const title = mutation?.meta?.toastTitle?.loading || "Processing..."
 
         Toast.show(title, {
           type: "info",
-        });
+        })
       },
       onSuccess: async (data, variables, _context, mutation) => {
-        const title = mutation?.meta?.toastTitle?.success || "Success ...";
-        if (!mutation?.meta?.toastTitle?.show) return;
+        const title = mutation?.meta?.toastTitle?.success || "Success ..."
+        if (!mutation?.meta?.toastTitle?.show) return
         Toast.show(title, {
           type: "success",
-        });
+        })
       },
       onError: async (data, variables, _context, mutation) => {
-        const title = mutation?.meta?.toastTitle?.loading || "Error ...";
-        if (!mutation?.meta?.toastTitle?.show) return;
+        captureMobileError(data, "mobile.mutation")
+        const title = mutation?.meta?.toastTitle?.loading || "Error ..."
+        if (!mutation?.meta?.toastTitle?.show) return
         Toast.show(title, {
           type: "error",
-        });
+        })
       },
     }),
-  });
+    queryCache: new QueryCache({
+      onError: (error) => captureMobileError(error, "mobile.query"),
+    }),
+  })
 }

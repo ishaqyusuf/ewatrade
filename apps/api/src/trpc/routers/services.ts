@@ -48,8 +48,8 @@ import {
   serviceJobReworkSchema,
   serviceSettingsGetSchema,
   serviceSettingsUpdateSchema,
-  serviceWorkQueueSchema,
   serviceWorkQueuePageSchema,
+  serviceWorkQueueSchema,
 } from "../../schemas/services"
 import { createTRPCRouter, protectedProcedure } from "../init"
 import {
@@ -63,7 +63,11 @@ function serviceError(error: CatalogError) {
     error.code === "SERVICE_JOB_NOT_FOUND" ||
     error.code === "SERVICE_INTAKE_NOT_FOUND"
   ) {
-    return new TRPCError({ code: "NOT_FOUND", message: error.message })
+    return new TRPCError({
+      cause: error,
+      code: "NOT_FOUND",
+      message: error.message,
+    })
   }
   if (
     error.code === "REVISION_CONFLICT" ||
@@ -72,9 +76,17 @@ function serviceError(error: CatalogError) {
     error.code === "SERVICE_ALLOCATION_CONFLICT" ||
     error.code === "SERVICE_WORK_NOT_AUTHORIZED"
   ) {
-    return new TRPCError({ code: "CONFLICT", message: error.message })
+    return new TRPCError({
+      cause: error,
+      code: "CONFLICT",
+      message: error.message,
+    })
   }
-  return new TRPCError({ code: "BAD_REQUEST", message: error.message })
+  return new TRPCError({
+    cause: error,
+    code: "BAD_REQUEST",
+    message: error.message,
+  })
 }
 
 async function run<T>(action: () => Promise<T>) {

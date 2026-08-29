@@ -28,6 +28,7 @@ import {
   normalizeDomainName,
   providerNameForDomain,
 } from "@ewatrade/domains"
+import { runProviderOperation } from "@ewatrade/errors"
 import { enqueueDomainConnectionVerification } from "@ewatrade/jobs"
 import { TRPCError } from "@trpc/server"
 
@@ -149,8 +150,10 @@ export const domainsRouter = createTRPCRouter({
       const parsed = normalizeDomainName(input.domain)
       const providerName = providerNameForDomain(parsed.normalizedDomain)
       const provider = createDomainProvider(providerName)
-      const availability = await provider.checkAvailability(
-        parsed.normalizedDomain,
+      const availability = await runProviderOperation(
+        "registrar",
+        "domains.availability.check",
+        () => provider.checkAvailability(parsed.normalizedDomain),
       )
 
       if (!availability.available) {
@@ -244,18 +247,23 @@ export const domainsRouter = createTRPCRouter({
       const paystack = new PaystackClient({
         secretKey: requireEnv("PAYSTACK_SECRET_KEY"),
       })
-      const checkout = await paystack.initializeTransaction({
-        amountMinor: order.amountMinor,
-        callbackUrl: callbackUrl(input.surface, order.id),
-        currencyCode: order.currencyCode,
-        email: registrant.email,
-        metadata: {
-          domain: order.normalizedDomain,
-          domainOrderId: order.id,
-          tenantId,
-        },
-        reference: order.paymentReference,
-      })
+      const checkout = await runProviderOperation(
+        "payment",
+        "domains.checkout.initialize",
+        () =>
+          paystack.initializeTransaction({
+            amountMinor: order.amountMinor,
+            callbackUrl: callbackUrl(input.surface, order.id),
+            currencyCode: order.currencyCode,
+            email: registrant.email,
+            metadata: {
+              domain: order.normalizedDomain,
+              domainOrderId: order.id,
+              tenantId,
+            },
+            reference: order.paymentReference,
+          }),
+      )
 
       return attachDomainCheckout(ctx.db, {
         checkoutUrl: checkout.authorizationUrl,

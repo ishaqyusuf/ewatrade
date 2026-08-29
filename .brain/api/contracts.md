@@ -904,3 +904,24 @@ implements the Progressive Catalog commands below.
 - Purge start requires a current signed preview and exact `PURGE ALL QA DATA`
   confirmation. Empty or provider-blocked previews are rejected.
 - Status responses and retained receipts expose aggregate counts only.
+
+## Error And Diagnostic Contract
+
+- Hono assigns one server-minted opaque request id per raw Request, reuses it
+  across tRPC and fallback handlers, returns it as `X-Request-Id`, and exposes
+  that header through CORS. Inbound correlation values are never reused because
+  they may themselves contain customer, order, payment, or bearer identifiers.
+- REST failures return `{ error: { code, message, referenceId, retryable },
+  requestId }`. The public message comes from `@ewatrade/errors`; stack traces,
+  raw exception messages, validation issues, provider bodies, and request
+  payloads are excluded.
+- tRPC `data.appError` exposes the same code, message, reference, retryability,
+  and request id. The framework error code remains available for client routing
+  but the server stack is removed from serialized responses.
+- Expected authentication, validation, not-found/access, quote, role/module,
+  rate-limit, idempotency, offline, and stock conflicts are not sent to Sentry.
+- Reportable failures are converted to a safe diagnostic error and transmitted
+  only through the exact-production policy in `@ewatrade/observability`.
+- Webhook signature failures log only provider plus request id and return a safe
+  response. Signatures, bodies, headers, customer data, and provider responses
+  are neither logged nor attached to diagnostic events.
