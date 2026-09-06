@@ -46,5 +46,49 @@ fulfilment mutation.
 - [Tablet review verification](./review-tablet.png)
 - [Desktop review verification](./review-desktop.png)
 
-Status: awaiting explicit owner approval. No production Order-detail visual
-implementation is authorized yet.
+## Owner decision
+
+Option A, **Dispatch Docket**, was explicitly approved on 6 September 2026.
+The frozen decision is recorded in [approved.json](./approved.json), with its
+production behavior and visual acceptance criteria in
+[implementation-contract.md](./implementation-contract.md).
+
+## Native implementation evidence
+
+- [Light, 100%](../../screenshots/entry-12-order-detail/implementation/second-pass-light.png)
+- [Dark, 100%](../../screenshots/entry-12-order-detail/implementation/populated-dark.png)
+- [Scrolled Light status bar](../../screenshots/entry-12-order-detail/implementation/scrolled-light.png)
+- [Scrolled Dark status bar](../../screenshots/entry-12-order-detail/implementation/scrolled-dark.png)
+- [Paid](../../screenshots/entry-12-order-detail/implementation/paid-light.png)
+- [Offline](../../screenshots/entry-12-order-detail/implementation/offline-light.png)
+- [Scheduled delivery](../../screenshots/entry-12-order-detail/implementation/scheduled-light.png)
+- [Light, 200%](../../screenshots/entry-12-order-detail/implementation/populated-light-200-percent.png)
+- [Scrolled Light, 200%](../../screenshots/entry-12-order-detail/implementation/scrolled-light-200-percent.png)
+
+## Implementation checklist
+
+- [x] Freeze the owner-approved direction and behavior contract.
+- [x] Add focused presentation-model coverage.
+- [x] Implement the Dispatch Docket production composition.
+- [x] Preserve query, navigation, payment, fulfilment, and state behavior.
+- [x] Implement masthead-following status-bar behavior.
+- [x] Expand the inert native QA surface across required states.
+- [x] Capture Light/Dark, scroll, state, and 100%/200% native evidence.
+- [ ] Run final source, formatting, bundle, and independent review gates.
+- [ ] Commit the scoped implementation and synchronize Brain/program records.
+
+Status: approved and in implementation.
+
+<!-- implement-with-progress:start -->
+
+## Implementation Progress
+
+- Status: In Progress
+- Ticket Position: 11/38
+- Completion: 78%
+- Current Checklist: 8/9 — Run final source, formatting, bundle, and independent review gates
+- Blockers: None
+- Brain Task: [Task](../../../../.brain/tasks/2026-09-06-order-detail-design-review.md)
+- Last Updated: 2026-09-06T20:49:00+01:00
+
+<!-- implement-with-progress:end -->

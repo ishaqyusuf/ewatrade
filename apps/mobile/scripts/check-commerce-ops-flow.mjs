@@ -67,7 +67,7 @@ const contracts = [
       "trpc.orders.recordPayment",
       "trpc.orders.fulfillProductLine",
       "Payment cannot exceed the balance due",
-      "CommercialOrderOverviewContent",
+      "OrderDetailDispatchDocket",
     ],
   },
   {
@@ -76,6 +76,16 @@ const contracts = [
       "CommercialOrderOverviewContent",
       "Managed in Service jobs",
       "commercial-order-overview-screen",
+    ],
+  },
+  {
+    file: "components/mobile/order-detail-dispatch-docket.tsx",
+    markers: [
+      "OrderDetailDispatchDocket",
+      "order-detail-docket-masthead",
+      "Dispatch lines",
+      "Next movement",
+      "OrderDetailDispatchDocketPrimaryAction",
     ],
   },
   {

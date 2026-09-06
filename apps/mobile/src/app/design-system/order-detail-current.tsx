@@ -2,14 +2,26 @@ import { OrderDetailCurrentQaScreen } from "@/components/mobile/order-detail-cur
 import { Redirect, useLocalSearchParams } from "expo-router"
 
 export default function OrderDetailCurrentQaRoute() {
-  const { theme } = useLocalSearchParams<{ theme?: string }>()
+  const { state, theme } = useLocalSearchParams<{
+    state?: string
+    theme?: string
+  }>()
   if (
     !__DEV__ ||
-    (theme !== undefined && theme !== "light" && theme !== "dark")
+    (theme !== undefined && theme !== "light" && theme !== "dark") ||
+    (state !== undefined &&
+      !["offline", "paid", "populated", "scheduled"].includes(state))
   ) {
     return <Redirect href="/design-system" />
   }
   return (
-    <OrderDetailCurrentQaScreen theme={theme === "dark" ? "dark" : "light"} />
+    <OrderDetailCurrentQaScreen
+      state={
+        state === "offline" || state === "paid" || state === "scheduled"
+          ? state
+          : "populated"
+      }
+      theme={theme === "dark" ? "dark" : "light"}
+    />
   )
 }

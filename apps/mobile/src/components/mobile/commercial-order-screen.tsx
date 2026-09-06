@@ -1,13 +1,13 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import {
-  CommercialOrderOverviewContent,
-  CommercialOrderOverviewHeader,
-  CommercialOrderOverviewPrimaryAction,
-} from "@/components/mobile/commerce/commercial-order-overview"
+import { CommercialOrderOverviewHeader } from "@/components/mobile/commerce/commercial-order-overview"
 import { buildCommercialOrderActivity } from "@/components/mobile/commerce/commercial-order-overview-model"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
+import {
+  OrderDetailDispatchDocket,
+  OrderDetailDispatchDocketPrimaryAction,
+} from "@/components/mobile/order-detail-dispatch-docket"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { MobileScreen } from "@/components/mobile/screen"
 import { StatusBanner } from "@/components/mobile/status-banner"
@@ -16,6 +16,9 @@ import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useAuthContext } from "@/hooks/use-auth"
+import { useColorScheme } from "@/hooks/use-color"
+import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
@@ -27,7 +30,9 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { useRouter } from "expo-router"
+import { StatusBar } from "expo-status-bar"
 import { useMemo, useState } from "react"
+import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
 
 type PaymentMethod = RouterInputs["orders"]["recordPayment"]["method"]
 
@@ -41,6 +46,9 @@ const PAYMENT_METHODS: Array<[PaymentMethod, string]> = [
 
 export function CommercialOrderScreen({ orderId }: { orderId: string }) {
   const router = useRouter()
+  const { profile } = useAuthContext()
+  const { colorScheme } = useColorScheme()
+  const marketDay = useMarketDayPalette()
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const paymentModal = useModal()
@@ -50,6 +58,8 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
   const [notice, setNotice] = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash")
   const [paymentReference, setPaymentReference] = useState("")
+  const [mastheadHeight, setMastheadHeight] = useState(116)
+  const [mastheadVisible, setMastheadVisible] = useState(true)
   const orderQuery = useQuery(
     trpc.orders.get.queryOptions(
       { orderId },
@@ -231,17 +241,33 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
   }
 
   const hasBalanceDue = order.balanceDueMinor > 0
+  const safeAreaColor = mastheadVisible ? marketDay.marigold : marketDay.canvas
+
+  function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+    const nextVisible = event.nativeEvent.contentOffset.y < mastheadHeight - 8
+    setMastheadVisible((current) =>
+      current === nextVisible ? current : nextVisible,
+    )
+  }
 
   return (
-    <View className="flex-1 bg-background">
+    <View style={{ backgroundColor: marketDay.canvas, flex: 1 }}>
+      <StatusBar
+        backgroundColor={safeAreaColor}
+        style={mastheadVisible || colorScheme === "light" ? "dark" : "light"}
+      />
       <MobileScreen
-        contentClassName={hasBalanceDue ? "gap-7 pb-32" : "gap-7 pb-12"}
+        backgroundColor={marketDay.canvas}
+        contentClassName={hasBalanceDue ? "pb-32" : "pb-12"}
         keyboardBottomOffset={140}
+        onScroll={handleScroll}
         refreshControl={<QueryRefreshControl />}
+        safeAreaColor={safeAreaColor}
         scroll
       >
-        <CommercialOrderOverviewContent
+        <OrderDetailDispatchDocket
           activity={activity}
+          businessName={profile?.businessName ?? "Business"}
           error={error}
           fulfillingOrderLineId={
             fulfilmentMutation.isPending
@@ -254,15 +280,17 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
           onBack={goBack}
           onFulfillAll={fulfilAllProducts}
           onFulfillLine={fulfilProductLine}
+          onMastheadHeightChange={setMastheadHeight}
           onOpenCustomer={openCustomer}
           order={order}
         />
       </MobileScreen>
 
       {hasBalanceDue ? (
-        <CommercialOrderOverviewPrimaryAction
+        <OrderDetailDispatchDocketPrimaryAction
           disabled={isOffline}
           onPress={openPaymentForm}
+          order={order}
         />
       ) : null}
 

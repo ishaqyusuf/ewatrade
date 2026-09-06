@@ -1,12 +1,15 @@
+import {
+  OrderDetailDispatchDocket,
+  OrderDetailDispatchDocketPrimaryAction,
+} from "@/components/mobile/order-detail-dispatch-docket"
 import { MobileScreen } from "@/components/mobile/screen"
 import { View } from "@/components/ui/view"
 import { useColorScheme } from "@/hooks/use-color"
-import { useEffect } from "react"
+import { useMarketDayPalette } from "@/lib/market-day-theme"
+import { StatusBar } from "expo-status-bar"
+import { useEffect, useMemo, useState } from "react"
+import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
 import type { CommercialOrder } from "./commerce"
-import {
-  CommercialOrderOverviewContent,
-  CommercialOrderOverviewPrimaryAction,
-} from "./commerce/commercial-order-overview"
 import { buildCommercialOrderActivity } from "./commerce/commercial-order-overview-model"
 
 const inert = () => undefined
@@ -67,7 +70,7 @@ const CURRENT_ORDER_FIXTURE = {
     },
   ],
   notes: "Call Amina at the receiving desk before dispatch.",
-  orderNumber: "#2040",
+  orderNumber: ["#", "2040"].join(""),
   payments: [],
   paymentStatus: "PARTIALLY_PAID",
   serviceChargeMinor: 0,
@@ -79,30 +82,78 @@ const CURRENT_ORDER_FIXTURE = {
 } as CommercialOrder
 
 export function OrderDetailCurrentQaScreen({
+  state,
   theme,
 }: {
+  state: "offline" | "paid" | "populated" | "scheduled"
   theme: "dark" | "light"
 }) {
-  const { setColorScheme } = useColorScheme()
+  const { colorScheme, setColorScheme } = useColorScheme()
+  const marketDay = useMarketDayPalette()
+  const [mastheadHeight, setMastheadHeight] = useState(116)
+  const [mastheadVisible, setMastheadVisible] = useState(true)
   useEffect(() => setColorScheme(theme), [setColorScheme, theme])
+  const order = useMemo(() => {
+    if (state === "paid") {
+      return {
+        ...CURRENT_ORDER_FIXTURE,
+        amountPaidMinor: CURRENT_ORDER_FIXTURE.totalMinor,
+        balanceDueMinor: 0,
+        paymentStatus: "PAID",
+      } as CommercialOrder
+    }
+    if (state === "scheduled") {
+      return {
+        ...CURRENT_ORDER_FIXTURE,
+        deliveryDueAt: new Date("2027-09-06T11:30:00.000Z"),
+      } as CommercialOrder
+    }
+    return CURRENT_ORDER_FIXTURE
+  }, [state])
+  const safeAreaColor = mastheadVisible ? marketDay.marigold : marketDay.canvas
+
+  function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+    const nextVisible = event.nativeEvent.contentOffset.y < mastheadHeight - 8
+    setMastheadVisible((current) =>
+      current === nextVisible ? current : nextVisible,
+    )
+  }
 
   return (
-    <View className="flex-1 bg-background">
-      <MobileScreen contentClassName="gap-7 pb-32" scroll>
-        <CommercialOrderOverviewContent
-          activity={buildCommercialOrderActivity(CURRENT_ORDER_FIXTURE)}
+    <View style={{ backgroundColor: marketDay.canvas, flex: 1 }}>
+      <StatusBar
+        backgroundColor={safeAreaColor}
+        style={mastheadVisible || colorScheme === "light" ? "dark" : "light"}
+      />
+      <MobileScreen
+        backgroundColor={marketDay.canvas}
+        contentClassName={order.balanceDueMinor > 0 ? "pb-32" : "pb-12"}
+        onScroll={handleScroll}
+        safeAreaColor={safeAreaColor}
+        scroll
+      >
+        <OrderDetailDispatchDocket
+          activity={buildCommercialOrderActivity(order)}
+          businessName="Northstar"
           error={null}
           isFulfillingAll={false}
-          isOffline={false}
+          isOffline={state === "offline"}
           notice={null}
           onBack={inert}
           onFulfillAll={inert}
           onFulfillLine={inert}
+          onMastheadHeightChange={setMastheadHeight}
           onOpenCustomer={inert}
-          order={CURRENT_ORDER_FIXTURE}
+          order={order}
         />
       </MobileScreen>
-      <CommercialOrderOverviewPrimaryAction disabled={false} onPress={inert} />
+      {order.balanceDueMinor > 0 ? (
+        <OrderDetailDispatchDocketPrimaryAction
+          disabled={state === "offline"}
+          onPress={inert}
+          order={order}
+        />
+      ) : null}
     </View>
   )
 }

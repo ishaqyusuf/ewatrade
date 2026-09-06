@@ -1,0 +1,9 @@
+{
+  "approvedAt": "2026-09-06T19:52:00+01:00",
+  "approvedOption": "a",
+  "direction": "Dispatch Docket",
+  "productionRoute": "/order/[orderId]",
+  "status": "approved",
+  "themeCoverage": ["light", "dark"],
+  "source": "explicit-owner-approval"
+}
