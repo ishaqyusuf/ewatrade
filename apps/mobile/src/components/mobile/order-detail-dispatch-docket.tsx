@@ -1,8 +1,12 @@
-import { ActionButton } from "@/components/mobile/action-button"
+import {
+  ActionButton,
+  MarketDayActionButton,
+} from "@/components/mobile/action-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { useColorScheme } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { DISPLAY_TEXT_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
@@ -65,15 +69,13 @@ export function OrderDetailDispatchDocket({
   const largeTextLayout = useLargeTextLayout()
   const summary = getCommercialOrderOverviewSummary(order)
   const [fulfillmentClock, setFulfillmentClock] = useState(Date.now())
-  const deliveryDueTime = order.deliveryDueAt
-    ? new Date(order.deliveryDueAt).getTime()
-    : null
-  const fulfillmentScheduledForFuture =
-    deliveryDueTime !== null && deliveryDueTime > fulfillmentClock
   const presentation = getOrderDetailDispatchDocketPresentation(
     order,
     fulfillmentClock,
   )
+  const deliveryDueTime = presentation.fulfillmentUnlockAtMs
+  const fulfillmentScheduledForFuture =
+    presentation.fulfillmentScheduledForFuture
 
   useEffect(() => {
     const currentTime = Math.max(fulfillmentClock, Date.now())
@@ -174,7 +176,7 @@ export function OrderDetailDispatchDocket({
         >
           <SummaryFact label="Balance due" value={presentation.balanceLabel} />
           <SummaryFact
-            label={presentation.lineLabel}
+            label={`${presentation.lineLabel} · ${presentation.fulfillmentLabel}`}
             value={presentation.itemLabel}
           />
         </View>
@@ -224,7 +226,10 @@ export function OrderDetailDispatchDocket({
           {order.lines.map((line) => (
             <DocketLine
               disabled={
-                isOffline || fulfillmentScheduledForFuture || isFulfillingAll
+                isOffline ||
+                fulfillmentScheduledForFuture ||
+                isFulfillingAll ||
+                Boolean(fulfillingOrderLineId)
               }
               isFulfilling={fulfillingOrderLineId === line.id}
               key={line.id}
@@ -235,7 +240,10 @@ export function OrderDetailDispatchDocket({
           ))}
         </DocketSection>
 
-        <DocketSection accessory="01 / 03" title="Next movement">
+        <DocketSection
+          accessory={presentation.movementProgressLabel}
+          title="Next movement"
+        >
           <View
             style={[styles.nextMovement, largeTextLayout ? styles.stack : null]}
           >
@@ -260,6 +268,7 @@ export function OrderDetailDispatchDocket({
                 disabled={
                   isOffline ||
                   fulfillmentScheduledForFuture ||
+                  isFulfillingAll ||
                   Boolean(fulfillingOrderLineId)
                 }
                 haptic
@@ -268,7 +277,9 @@ export function OrderDetailDispatchDocket({
                   styles.movementButton,
                   {
                     backgroundColor:
-                      isOffline || fulfillmentScheduledForFuture
+                      isOffline ||
+                      fulfillmentScheduledForFuture ||
+                      isFulfillingAll
                         ? marketDay.line
                         : pressed
                           ? marketDay.paprikaPressed
@@ -423,22 +434,28 @@ export function OrderDetailDispatchDocketPrimaryAction({
         },
       ]}
     >
-      <ActionButton
-        className="min-h-[58px] rounded-none bg-transparent active:bg-transparent"
-        disabled={disabled}
-        disabledForegroundColor={marketDay.mutedInk}
-        foregroundColor={marketDay.onPaprika}
-        icon="CreditCard"
-        onPress={onPress}
+      <View
         style={{
-          backgroundColor: disabled ? marketDay.line : marketDay.paprika,
+          backgroundColor: disabled ? marketDay.line : marketDay.paprikaStrong,
         }}
-        testID="order-record-payment-action"
       >
-        {largeTextLayout
-          ? "Record payment"
-          : `Record ${formatOrderDetailMoney(order.balanceDueMinor, order.currencyCode)} payment`}
-      </ActionButton>
+        <ActionButton
+          className="min-h-[58px] rounded-none bg-transparent active:bg-transparent"
+          contentClassName="translate-y-0"
+          disabled={disabled}
+          disabledForegroundColor={marketDay.mutedInk}
+          foregroundColor={marketDay.onPalm}
+          icon="CreditCard"
+          iconSize={14}
+          labelStyle={styles.primaryActionLabel}
+          onPress={onPress}
+          testID="order-record-payment-action"
+        >
+          {largeTextLayout
+            ? "Record payment"
+            : `Record ${formatOrderDetailMoney(order.balanceDueMinor, order.currencyCode)} payment`}
+        </ActionButton>
+      </View>
     </View>
   )
 }
@@ -604,6 +621,7 @@ function DocketLine({
   onFulfill: () => void
   order: CommercialOrder
 }) {
+  const { colorScheme } = useColorScheme()
   const marketDay = useMarketDayPalette()
   const largeTextLayout = useLargeTextLayout()
   const canFulfill = canFulfillCommercialOrderLine(line)
@@ -636,7 +654,17 @@ function DocketLine({
             ? "Product · fulfilled"
             : `Product · ${commerceStatusLabel(line.reservation?.status ?? "not reserved")}`}
       </Text>
-      {canFulfill ? (
+      {canFulfill && colorScheme === "light" ? (
+        <MarketDayActionButton
+          disabled={disabled}
+          isLoading={isFulfilling}
+          loadingLabel="Recording fulfilment"
+          onPress={onFulfill}
+          tone="palm"
+        >
+          {largeTextLayout ? "Fulfil line" : "Fulfil product line"}
+        </MarketDayActionButton>
+      ) : canFulfill ? (
         <ActionButton
           disabled={disabled}
           isLoading={isFulfilling}
@@ -644,7 +672,7 @@ function DocketLine({
           onPress={onFulfill}
           variant="outline"
         >
-          Fulfil product line
+          {largeTextLayout ? "Fulfil line" : "Fulfil product line"}
         </ActionButton>
       ) : null}
     </View>
@@ -849,6 +877,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 0,
     zIndex: 20,
+  },
+  primaryActionLabel: {
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.1,
+    lineHeight: 16,
   },
   rowDetail: { fontSize: 12, lineHeight: 18 },
   rowTitle: { fontSize: 14, fontWeight: "800", lineHeight: 20 },

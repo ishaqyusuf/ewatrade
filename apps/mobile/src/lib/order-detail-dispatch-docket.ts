@@ -7,8 +7,12 @@ import { formatMinorMoney } from "@ewatrade/utils"
 
 export type OrderDetailDispatchDocketPresentation = {
   balanceLabel: string
+  fulfillmentLabel: string
+  fulfillmentScheduledForFuture: boolean
+  fulfillmentUnlockAtMs: number | null
   itemLabel: string
   lineLabel: string
+  movementProgressLabel: string
   nextMovement: {
     detail: string
     label: string
@@ -31,13 +35,15 @@ export function getOrderDetailDispatchDocketPresentation(
   now = Date.now(),
 ): OrderDetailDispatchDocketPresentation {
   const summary = getCommercialOrderOverviewSummary(order)
-  const deliveryDueTime = order.deliveryDueAt
+  const parsedDeliveryDueTime = order.deliveryDueAt
     ? new Date(order.deliveryDueAt).getTime()
     : null
+  const fulfillmentUnlockAtMs =
+    parsedDeliveryDueTime !== null && Number.isFinite(parsedDeliveryDueTime)
+      ? parsedDeliveryDueTime
+      : null
   const deliveryIsScheduled =
-    deliveryDueTime !== null && Number.isFinite(deliveryDueTime)
-      ? deliveryDueTime > now
-      : false
+    fulfillmentUnlockAtMs !== null && fulfillmentUnlockAtMs > now
 
   let nextMovement = {
     detail: "No further order action is waiting.",
@@ -74,12 +80,34 @@ export function getOrderDetailDispatchDocketPresentation(
       order.balanceDueMinor,
       order.currencyCode,
     ),
+    fulfillmentLabel:
+      summary.productLineCount === 0
+        ? summary.serviceLineCount > 0
+          ? "Service order"
+          : "No product lines"
+        : summary.fulfilledProductLineCount === summary.productLineCount
+          ? "Fulfilled"
+          : deliveryIsScheduled
+            ? "Scheduled"
+            : summary.fulfillableProductLineCount === 1
+              ? "Ready to fulfil"
+              : summary.fulfillableProductLineCount > 1
+                ? `${summary.fulfillableProductLineCount} ready`
+                : `${summary.fulfilledProductLineCount}/${summary.productLineCount} fulfilled`,
+    fulfillmentScheduledForFuture: deliveryIsScheduled,
+    fulfillmentUnlockAtMs,
     itemLabel: `${summary.itemCount.toLocaleString()} ${
       summary.itemCount === 1 ? "item" : "items"
     }`,
     lineLabel: `${summary.lineCount.toLocaleString()} ${
       summary.lineCount === 1 ? "order line" : "order lines"
     }`,
+    movementProgressLabel:
+      summary.productLineCount > 0
+        ? `${summary.fulfilledProductLineCount} / ${summary.productLineCount} fulfilled`
+        : summary.serviceLineCount > 0
+          ? `${summary.serviceLineCount} ${summary.serviceLineCount === 1 ? "service" : "services"}`
+          : "Complete",
     nextMovement,
     paymentLabel:
       order.paymentStatus === "PARTIALLY_PAID"

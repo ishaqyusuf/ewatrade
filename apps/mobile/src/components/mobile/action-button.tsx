@@ -1,14 +1,27 @@
 import { Button, type ButtonProps } from "@/components/ui/button"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { useColors } from "@/hooks/use-color"
+import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { cn } from "@/lib/utils"
 import type { ReactNode } from "react"
-import { ActivityIndicator, Text as NativeText } from "react-native"
+import {
+  ActivityIndicator,
+  type StyleProp,
+  Text as NativeText,
+  StyleSheet,
+  type TextStyle,
+  View,
+} from "react-native"
 
-type ActionButtonProps = ButtonProps & {
+export type ActionButtonProps = ButtonProps & {
   children: ReactNode
+  contentClassName?: string
+  disabledForegroundColor?: string
+  foregroundColor?: string
   icon?: IconKeys
+  iconSize?: number
   isLoading?: boolean
+  labelStyle?: StyleProp<TextStyle>
   loadingLabel?: string
   trailingIcon?: IconKeys
 }
@@ -16,9 +29,14 @@ type ActionButtonProps = ButtonProps & {
 export function ActionButton({
   children,
   className,
+  contentClassName,
   disabled,
+  disabledForegroundColor,
+  foregroundColor: foregroundColorOverride,
   icon,
+  iconSize = 16,
   isLoading,
+  labelStyle,
   loadingLabel,
   trailingIcon,
   variant,
@@ -39,16 +57,17 @@ export function ActionButton({
     variant === "link" && "text-primary",
   )
   const foregroundColor = isDisabled
-    ? colors.mutedForeground
-    : isDefaultVariant
-      ? colors.primaryForeground
-      : isOutlineVariant || variant === "ghost"
-        ? colors.foreground
-        : variant === "destructive"
-          ? colors.destructive
-          : variant === "secondary"
-            ? colors.secondaryForeground
-            : colors.primary
+    ? (disabledForegroundColor ?? colors.mutedForeground)
+    : (foregroundColorOverride ??
+      (isDefaultVariant
+        ? colors.primaryForeground
+        : isOutlineVariant || variant === "ghost"
+          ? colors.foreground
+          : variant === "destructive"
+            ? colors.destructive
+            : variant === "secondary"
+              ? colors.secondaryForeground
+              : colors.primary))
   const iconClassName = cn("size-sm", foregroundClassName)
 
   return (
@@ -59,7 +78,7 @@ export function ActionButton({
         disabled: isDisabled,
       }}
       className={cn(
-        "min-h-[50px] w-full rounded-xl px-[18px]",
+        "min-h-[50px] w-full rounded-xl px-[18px] py-0",
         isDefaultVariant &&
           (isDisabled
             ? "bg-muted active:bg-muted"
@@ -74,28 +93,127 @@ export function ActionButton({
       variant={variant ?? "default"}
       {...props}
     >
-      {isLoading ? (
-        <ActivityIndicator
-          color={isDisabled ? colors.mutedForeground : colors.successForeground}
-          size="small"
-        />
-      ) : icon ? (
-        <Icon className={iconClassName} name={icon} />
-      ) : null}
-      <NativeText
-        numberOfLines={1}
-        style={{
-          color: foregroundColor,
-          fontSize: 14,
-          fontWeight: "700",
-          lineHeight: 20,
-        }}
+      <View
+        className={cn(
+          "-translate-y-[2px] flex-row items-center justify-center gap-2",
+          contentClassName,
+        )}
       >
-        {isLoading && loadingLabel ? loadingLabel : children}
-      </NativeText>
-      {!isLoading && trailingIcon ? (
-        <Icon className={iconClassName} name={trailingIcon} />
-      ) : null}
+        {isLoading ? (
+          <ActivityIndicator color={foregroundColor} size="small" />
+        ) : icon ? (
+          <Icon
+            className={iconClassName}
+            color={
+              foregroundColorOverride || disabledForegroundColor
+                ? foregroundColor
+                : undefined
+            }
+            name={icon}
+            size={iconSize}
+          />
+        ) : null}
+        <NativeText
+          numberOfLines={1}
+          style={[
+            {
+              color: foregroundColor,
+              fontSize: 14,
+              fontWeight: "700",
+              includeFontPadding: false,
+              lineHeight: 20,
+              textAlignVertical: "center",
+            },
+            labelStyle,
+          ]}
+        >
+          {isLoading && loadingLabel ? loadingLabel : children}
+        </NativeText>
+        {!isLoading && trailingIcon ? (
+          <Icon
+            className={iconClassName}
+            color={
+              foregroundColorOverride || disabledForegroundColor
+                ? foregroundColor
+                : undefined
+            }
+            name={trailingIcon}
+            size={iconSize}
+          />
+        ) : null}
+      </View>
     </Button>
   )
 }
+
+type MarketDayActionButtonProps = Omit<
+  ActionButtonProps,
+  "disabledForegroundColor" | "foregroundColor"
+> & {
+  tone?: "marigold" | "palm" | "paprika"
+}
+
+export function MarketDayActionButton({
+  children,
+  className,
+  disabled,
+  isLoading,
+  tone = "paprika",
+  ...props
+}: MarketDayActionButtonProps) {
+  const marketDay = useMarketDayPalette()
+  const isUnavailable = !!disabled || !!isLoading
+  const tonePalette = {
+    marigold: {
+      backgroundColor: marketDay.marigold,
+      foregroundColor: marketDay.onMarigold,
+    },
+    palm: {
+      backgroundColor: marketDay.palm,
+      foregroundColor: marketDay.onPalm,
+    },
+    paprika: {
+      backgroundColor: marketDay.paprika,
+      foregroundColor: marketDay.onPaprika,
+    },
+  } as const
+  const activePalette = tonePalette[tone]
+  const foregroundColor = isUnavailable
+    ? marketDay.mutedInk
+    : activePalette.foregroundColor
+
+  return (
+    <View
+      style={[
+        styles.marketDaySurface,
+        {
+          backgroundColor: isUnavailable
+            ? marketDay.line
+            : activePalette.backgroundColor,
+        },
+      ]}
+    >
+      <ActionButton
+        {...props}
+        className={cn(
+          "min-h-[54px] bg-transparent active:bg-transparent",
+          className,
+        )}
+        disabled={disabled}
+        disabledForegroundColor={foregroundColor}
+        foregroundColor={foregroundColor}
+        isLoading={isLoading}
+      >
+        {children}
+      </ActionButton>
+    </View>
+  )
+}
+
+const styles = StyleSheet.create({
+  marketDaySurface: {
+    borderRadius: 14,
+    overflow: "hidden",
+    width: "100%",
+  },
+})

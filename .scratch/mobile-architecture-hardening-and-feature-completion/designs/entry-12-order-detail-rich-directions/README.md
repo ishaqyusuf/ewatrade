@@ -55,15 +55,19 @@ production behavior and visual acceptance criteria in
 
 ## Native implementation evidence
 
-- [Light, 100%](../../screenshots/entry-12-order-detail/implementation/second-pass-light.png)
-- [Dark, 100%](../../screenshots/entry-12-order-detail/implementation/populated-dark.png)
+- [Light, 100%, corrected actions](../../screenshots/entry-12-order-detail/implementation/button-final-light.png)
+- [Dark, 100%, corrected actions](../../screenshots/entry-12-order-detail/implementation/button-final-dark.png)
 - [Scrolled Light status bar](../../screenshots/entry-12-order-detail/implementation/scrolled-light.png)
 - [Scrolled Dark status bar](../../screenshots/entry-12-order-detail/implementation/scrolled-dark.png)
 - [Paid](../../screenshots/entry-12-order-detail/implementation/paid-light.png)
 - [Offline](../../screenshots/entry-12-order-detail/implementation/offline-light.png)
 - [Scheduled delivery](../../screenshots/entry-12-order-detail/implementation/scheduled-light.png)
-- [Light, 200%](../../screenshots/entry-12-order-detail/implementation/populated-light-200-percent.png)
-- [Scrolled Light, 200%](../../screenshots/entry-12-order-detail/implementation/scrolled-light-200-percent.png)
+- [Light, 200%, corrected action](../../screenshots/entry-12-order-detail/implementation/button-final-light-200-percent.png)
+- [Scrolled Light, 200%, corrected line action](../../screenshots/entry-12-order-detail/implementation/button-final-light-200-percent-scrolled.png)
+
+The prior [Light correction baseline](../../screenshots/entry-12-order-detail/implementation/second-pass-light.png)
+is retained as before evidence. It shows the low-contrast Light fulfil action and
+the oversized, dark Record payment content that triggered this correction pass.
 
 ## Implementation checklist
 
@@ -74,6 +78,10 @@ production behavior and visual acceptance criteria in
 - [x] Implement masthead-following status-bar behavior.
 - [x] Expand the inert native QA surface across required states.
 - [x] Capture Light/Dark, scroll, state, and 100%/200% native evidence.
+- [ ] Verify and commit the Record payment and Fulfil line button corrections.
+- [ ] Archive the current Record payment sheet and immediate Fulfil line behavior.
+- [ ] Prepare five paired Light/Dark action-sheet directions and pause for owner approval.
+- [ ] Implement the owner-approved payment and fulfilment action surfaces.
 - [ ] Run final source, formatting, bundle, and independent review gates.
 - [ ] Commit the scoped implementation and synchronize Brain/program records.
 
@@ -85,8 +93,8 @@ Status: approved and in implementation.
 
 - Status: In Progress
 - Ticket Position: 11/38
-- Completion: 78%
-- Current Checklist: 8/9 — Run final source, formatting, bundle, and independent review gates
+- Completion: 54%
+- Current Checklist: 8/13 — Verify and commit the Record payment and Fulfil line button corrections
 - Blockers: None
 - Brain Task: [Task](../../../../.brain/tasks/2026-09-06-order-detail-design-review.md)
 - Last Updated: 2026-09-06T20:49:00+01:00

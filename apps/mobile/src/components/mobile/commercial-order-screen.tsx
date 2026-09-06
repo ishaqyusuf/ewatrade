@@ -187,7 +187,12 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
   }
 
   function fulfilProductLine(orderLineId: string) {
-    if (isOffline || fulfilAllMutation.isPending) return
+    if (
+      isOffline ||
+      fulfilmentMutation.isPending ||
+      fulfilAllMutation.isPending
+    )
+      return
     fulfilmentMutation.mutate({
       clientOperationId: `fulfilment-${Crypto.randomUUID()}`,
       orderLineId,
@@ -196,7 +201,13 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
   }
 
   function fulfilAllProducts() {
-    if (!order || isOffline || fulfilmentMutation.isPending) return
+    if (
+      !order ||
+      isOffline ||
+      fulfilmentMutation.isPending ||
+      fulfilAllMutation.isPending
+    )
+      return
     fulfilAllMutation.mutate({
       clientOperationId: `fulfilment-all-${Crypto.randomUUID()}`,
       orderId: order.id,

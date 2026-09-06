@@ -61,8 +61,11 @@ describe("order detail dispatch docket", () => {
 
     expect(presentation).toMatchObject({
       balanceLabel: "₦77,500",
+      fulfillmentLabel: "Ready to fulfil",
+      fulfillmentScheduledForFuture: false,
       itemLabel: "5 items",
       lineLabel: "1 order line",
+      movementProgressLabel: "0 / 1 fulfilled",
       paymentLabel: "Part paid",
       statusLabel: "Confirmed",
       totalLabel: "₦126,000",
@@ -105,6 +108,16 @@ describe("order detail dispatch docket", () => {
     ).toMatchObject({
       label: "Wait for scheduled delivery",
       stepLabel: "Scheduled",
+    })
+    expect(
+      getOrderDetailDispatchDocketPresentation(
+        order,
+        new Date("2026-09-06T10:00:00.000Z").getTime(),
+      ),
+    ).toMatchObject({
+      fulfillmentLabel: "Scheduled",
+      fulfillmentScheduledForFuture: true,
+      fulfillmentUnlockAtMs: new Date("2027-01-01T10:00:00.000Z").getTime(),
     })
   })
 })
