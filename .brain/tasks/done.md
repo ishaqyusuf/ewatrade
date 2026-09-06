@@ -3,6 +3,9 @@
 ### [Mobile development connection hardening](./2026-09-06-mobile-development-connection-hardening.md)
 - Status: Done
 
+### [EWA-ENTRY-008 App Lock, Market Day redesign](./2026-09-04-app-lock-market-day-directions.md)
+- Status: Done
+
 - Implemented the shared privacy-first error and observability system for API,
   Trigger jobs, dashboard, marketing, storefront, POS, and mobile. Added
   structural error classification, safe public envelopes/references, bounded
