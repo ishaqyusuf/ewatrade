@@ -78,3 +78,17 @@ Option B header-color inheritance defect; it was fixed before this review gate.
 
 Status: awaiting explicit owner selection. No Orders production code has been
 changed by this design batch.
+
+<!-- implement-with-progress:start -->
+
+## Implementation Progress
+
+- Status: In Progress
+- Ticket Position: 10/38
+- Completion: 67%
+- Current Checklist: 7/9 — Receive explicit owner approval or replacement-direction feedback
+- Blockers: None — planned owner decision gate
+- Brain Task: [Task](../../../../.brain/tasks/2026-09-06-orders-list-design-review.md)
+- Last Updated: 2026-09-06T13:12:00+01:00
+
+<!-- implement-with-progress:end -->

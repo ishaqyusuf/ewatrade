@@ -1,32 +1,17 @@
-# Orders list design review
+# Task: EWA-BIZ-003 Orders list design review
 
-Status: Awaiting owner approval
+## Status
 
-## Scope
+In Progress
 
-Prepare the `EWA-BIZ-003` Orders list owner-review batch before production work.
-The batch covers the populated operational list while preserving the existing
-first-order gate, data truth, offline/provisional semantics, filters, search,
-pagination, refresh, navigation, and create-sale rules.
+## Canonical Ticket
 
-## Completed
+[Orders list review package](../../.scratch/mobile-architecture-hardening-and-feature-completion/designs/entry-11-orders-list-rich-directions/README.md)
 
-- Archived current Android Light and Dark baselines in the canonical journey
-  screenshot directory.
-- Resolved `AdminOrdersScreen` ownership, query behavior, states, actions, and
-  navigation targets.
-- Produced five distinct 390 × 844 directions in Light and Dark.
-- Added previous/next chevrons, theme switching, deep links, and responsive
-  review layouts.
-- Rendered and checked all ten phone states plus mobile, tablet, and desktop
-  review pages.
-- Recorded the recommendation and evidence index in the canonical scratch.
+## Created Date
 
-## Approval gate
+2026-09-06
 
-Option A, `Dispatch Ledger`, is recommended. Implementation remains blocked
-until the owner explicitly selects a direction or requests another design round.
+## Last Updated
 
-## Canonical artifact
-
-`.scratch/mobile-architecture-hardening-and-feature-completion/designs/entry-11-orders-list-rich-directions/comparison.html`
+2026-09-06

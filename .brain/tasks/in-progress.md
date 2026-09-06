@@ -1,5 +1,9 @@
 # In Progress
 
+### [EWA-BIZ-003 Orders list design review](./2026-09-06-orders-list-design-review.md)
+
+- Status: In Progress
+
 - Provision and verify the owner-approved production observability rollout.
   Source implementation is complete across API, jobs, dashboard, marketing,
   storefront, POS, and mobile under ADR-0035. Remaining release work is to
