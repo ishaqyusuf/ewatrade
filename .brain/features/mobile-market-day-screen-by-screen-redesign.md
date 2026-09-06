@@ -140,6 +140,11 @@ color-forward redesign program.
   loading, error, disabled, empty, populated, offline, pending-sync, measured
   status-bar transition, dock, accessibility-tree, source, formatting, Android
   export, and independent review gates pass.
+- Orders list is at the owner-review gate. The canonical batch archives the
+  current native Light/Dark first-order surface and five populated operational
+  directions with chevron and theme controls. Option A, `Dispatch Ledger`, is
+  the recommendation, but no production work is authorized until the owner
+  explicitly selects a direction.
 
 ## Boundaries
 

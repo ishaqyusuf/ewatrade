@@ -1,0 +1,9 @@
+{
+  "screen": "EWA-BIZ-003 Orders list",
+  "route": "/(admin-tabs)/orders",
+  "recommended_option": "A",
+  "recommended_name": "Dispatch Ledger",
+  "reason": "It best extends the approved Market Day ledger language while making fulfilment pressure, customer, amount, status, and next action readable in one scan.",
+  "approval_status": "pending_owner_selection",
+  "implementation_authorized": false
+}

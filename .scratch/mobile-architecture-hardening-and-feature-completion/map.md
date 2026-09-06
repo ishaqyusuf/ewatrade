@@ -116,6 +116,8 @@ review batch until the owner explicitly chooses an option.
 
 ## Frontier
 
-1. Capture the current native Orders list before source changes.
-2. Produce five Light/Dark Orders list directions with chevron navigation.
-3. Recommend one direction and pause for explicit owner approval.
+1. Owner reviews the archived current Orders screen and five Light/Dark rich
+   directions in `designs/entry-11-orders-list-rich-directions/comparison.html`.
+2. Owner explicitly selects one direction or requests a replacement batch.
+3. Only after approval, freeze the Orders implementation contract and begin
+   production work.
