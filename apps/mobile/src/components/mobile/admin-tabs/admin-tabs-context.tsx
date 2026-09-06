@@ -1,10 +1,10 @@
 import type { MobileWorkspaceFeatureAvailability } from "@/lib/workspace-feature-availability"
 import { useFocusEffect } from "expo-router"
 import {
-  createContext,
   type Dispatch,
   type ReactNode,
   type SetStateAction,
+  createContext,
   useCallback,
   useContext,
   useRef,
@@ -13,6 +13,7 @@ import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
 
 type AdminTabsContextValue = {
   availability: MobileWorkspaceFeatureAvailability
+  availabilityResolved: boolean
   isDockHidden: boolean
   isOffline: boolean
   openCreate: () => void

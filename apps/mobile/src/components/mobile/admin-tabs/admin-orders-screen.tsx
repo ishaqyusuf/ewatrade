@@ -1,37 +1,52 @@
 import {
-  CommerceFilterChip,
-  CommerceMetricTile,
-  CommerceOrderRow,
-  CommercePageHeader,
+  CommerceFirstOrderGate,
   CommercePendingOrderRow,
   type CommercialOrder,
-  commerceOrderItemCount,
   commercialOrderHref,
 } from "@/components/mobile/commerce"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
+import {
+  type OrderDispatchFilter,
+  OrdersDispatchFilterRow,
+  OrdersDispatchLedgerMasthead,
+  OrdersDispatchLedgerRow,
+  OrdersDispatchLedgerSummary,
+  OrdersDispatchSection,
+} from "@/components/mobile/orders-dispatch-ledger"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { Icon } from "@/components/ui/icon"
-import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useAuthContext } from "@/hooks/use-auth"
+import { useColorScheme } from "@/hooks/use-color"
 import {
   LIST_PAGE_SIZE,
   shouldFetchNextListPage,
   shouldShowListSearch,
 } from "@/lib/list-pagination"
+import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { useTRPC } from "@/trpc/client"
-import { formatMinorMoney } from "@ewatrade/utils"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
-import { useDeferredValue, useEffect, useMemo, useState } from "react"
-import { FlatList } from "react-native"
+import { StatusBar } from "expo-status-bar"
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
+import {
+  FlatList,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useAdminDockScroll, useAdminTabs } from "./admin-tabs-context"
 
-type OrderFilter = "all" | "cancelled" | "completed" | "open"
+type OrderFilter = OrderDispatchFilter
 type DateFilter = "all" | "today" | "7_days" | "30_days"
 
 const OPEN_STATUSES = [
@@ -61,33 +76,16 @@ function statusesForOrderFilter(filter: OrderFilter) {
   return undefined
 }
 
-function dateFilterLabel(filter: DateFilter) {
-  if (filter === "today") return "Today"
-  if (filter === "7_days") return "7 days"
-  if (filter === "30_days") return "30 days"
-  return "All time"
-}
-
-function formatQuantity(value: number) {
-  return value.toLocaleString(undefined, { maximumFractionDigits: 6 })
-}
-
-function currencyMetric(
-  orders: CommercialOrder[],
-  getValue: (orders: CommercialOrder[]) => number,
-) {
-  if (orders.length === 0) return "—"
-  const currencies = new Set(orders.map((order) => order.currencyCode))
-  if (currencies.size !== 1) return "Mixed currencies"
-  return formatMinorMoney(getValue(orders), orders[0]?.currencyCode ?? "NGN")
-}
-
 export function AdminOrdersScreen() {
+  const auth = useAuthContext()
+  const { colorScheme } = useColorScheme()
   const insets = useSafeAreaInsets()
+  const marketDay = useMarketDayPalette()
   const router = useRouter()
   const trpc = useTRPC()
   const {
     availability,
+    availabilityResolved,
     isDockHidden,
     isOffline,
     openCreate,
@@ -96,7 +94,9 @@ export function AdminOrdersScreen() {
   const handleDockScroll = useAdminDockScroll()
   const [dateFilter, setDateFilter] = useState<DateFilter>("30_days")
   const [filter, setFilter] = useState<OrderFilter>("all")
+  const [mastheadHeight, setMastheadHeight] = useState(0)
   const [query, setQuery] = useState("")
+  const [showCanvasStatusBar, setShowCanvasStatusBar] = useState(false)
   const deferredQuery = useDeferredValue(query)
   useEffect(() => {
     if (isOffline && query) setQuery("")
@@ -136,168 +136,213 @@ export function AdminOrdersScreen() {
         .includes(normalizedQuery),
     )
   }, [filter, isOffline, provisionalOrders, query])
-  const itemCount = visibleOrders.reduce(
-    (total, order) => total + commerceOrderItemCount(order),
-    0,
-  )
-  const averageValue = currencyMetric(visibleOrders, (metricOrders) =>
-    Math.round(
-      metricOrders.reduce((total, order) => total + order.totalMinor, 0) /
-        metricOrders.length,
-    ),
-  )
-  const totalValue = currencyMetric(visibleOrders, (metricOrders) =>
-    metricOrders.reduce((total, order) => total + order.totalMinor, 0),
-  )
   const totalCount = orders.data?.pages[0]?.totalCount ?? 0
   const showSearch = shouldShowListSearch(
     Math.max(totalCount, loadedOrders.length) + provisionalOrders.length,
   )
+  const showFirstOrderGate =
+    !isOffline &&
+    availabilityResolved &&
+    orders.isSuccess &&
+    loadedOrders.length === 0 &&
+    totalCount === 0 &&
+    !availability.hasOrders &&
+    provisionalOrders.length === 0
+  const resetFilters = () => {
+    setDateFilter("all")
+    setFilter("all")
+    setQuery("")
+  }
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      handleDockScroll(event)
+      const scrollY = Math.max(0, event.nativeEvent.contentOffset.y)
+      const shouldUseCanvas =
+        mastheadHeight > 0 && scrollY + 0.5 >= mastheadHeight - insets.top
+      setShowCanvasStatusBar((current) =>
+        current === shouldUseCanvas ? current : shouldUseCanvas,
+      )
+    },
+    [handleDockScroll, insets.top, mastheadHeight],
+  )
+  const statusBarColor = showCanvasStatusBar
+    ? marketDay.canvas
+    : marketDay.marigold
+  const statusBarStyle = showCanvasStatusBar
+    ? colorScheme === "dark"
+      ? "light"
+      : "dark"
+    : "dark"
 
   return (
-    <View className="flex-1 bg-background" testID="admin-orders-screen">
+    <View
+      style={{ backgroundColor: marketDay.canvas, flex: 1 }}
+      testID="admin-orders-screen"
+    >
+      <StatusBar
+        animated
+        backgroundColor={statusBarColor}
+        style={statusBarStyle}
+      />
+      <View
+        pointerEvents="none"
+        style={{
+          backgroundColor: statusBarColor,
+          height: insets.top,
+          left: 0,
+          position: "absolute",
+          right: 0,
+          top: 0,
+          zIndex: 100,
+        }}
+        testID="orders-status-bar-background"
+      />
       <FlatList
         contentContainerStyle={{
           flexGrow: 1,
           paddingBottom: Math.max(insets.bottom + 116, 152),
-          paddingHorizontal: 8,
-          paddingTop: insets.top + 20,
         }}
         data={visibleOrders}
         keyExtractor={(order) => order.id}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
-          visibleProvisionalOrders.length === 0 ? (
-            <EmptyState
-              actionLabel="Open create options"
-              actionProps={{ onPress: openCreate }}
-              className="mt-5"
-              icon="ReceiptText"
-              message={
-                orders.isPending && !isOffline
-                  ? "Loading Commercial Orders."
-                  : query || filter !== "all" || dateFilter !== "all"
-                    ? "Try another date, search, or status filter."
-                    : "New Product and Service Orders will appear here."
-              }
-              title={
-                orders.isPending && !isOffline
-                  ? "Loading orders"
-                  : query || filter !== "all" || dateFilter !== "all"
-                    ? "No matching orders"
-                    : "No orders yet"
-              }
-            />
+          visibleProvisionalOrders.length === 0 &&
+          !showFirstOrderGate &&
+          !orders.isError ? (
+            <OrdersDispatchSection>
+              <EmptyState
+                actionLabel={
+                  (orders.isPending && !isOffline) || isOffline
+                    ? undefined
+                    : "Clear filters"
+                }
+                actionProps={{ onPress: resetFilters, variant: "outline" }}
+                className="mt-3"
+                icon="ReceiptText"
+                message={
+                  orders.isPending && !isOffline
+                    ? "Loading Commercial Orders."
+                    : isOffline
+                      ? "Reconnect to refresh Orders from your workspace."
+                      : query || filter !== "all" || dateFilter !== "all"
+                        ? "Try another date, search, or status filter."
+                        : "New Product and Service Orders will appear here."
+                }
+                title={
+                  orders.isPending && !isOffline
+                    ? "Loading orders"
+                    : isOffline
+                      ? "No cached orders"
+                      : query || filter !== "all" || dateFilter !== "all"
+                        ? "No matching orders"
+                        : "No orders yet"
+                }
+              />
+            </OrdersDispatchSection>
           ) : null
         }
         ListHeaderComponent={
-          <View className="gap-5 px-4 pb-4">
-            <CommercePageHeader
-              action={
-                <Pressable
-                  accessibilityLabel="Open customers"
-                  accessibilityRole="button"
-                  className="size-11 items-center justify-center rounded-full bg-card active:bg-accent"
-                  haptic
-                  onPress={() => router.push("/customer-book-modal")}
-                >
-                  <Icon className="size-base text-foreground" name="Users" />
-                </Pressable>
-              }
-              subtitle="Review payment and fulfilment across every order."
-              title="Orders"
+          <View className="gap-5 pb-4">
+            <OrdersDispatchLedgerMasthead
+              businessName={auth.profile?.businessName ?? "Your business"}
+              onCustomersPress={() => router.push("/customer-book-modal")}
+              onLayout={(event) => {
+                const height = event.nativeEvent.layout.height
+                setMastheadHeight((current) =>
+                  current === height ? current : height,
+                )
+              }}
             />
-            {provisionalOrders.length > 0 ? (
-              <StatusBanner
-                icon="Wind"
-                message={`${provisionalOrders.length} queued ${provisionalOrders.length === 1 ? "Order is" : "Orders are"} shown below and will reconcile after sync.`}
-                title="Orders pending sync"
-                tone="warning"
+            {!showFirstOrderGate ? (
+              <OrdersDispatchLedgerSummary
+                dateFilter={dateFilter}
+                orders={visibleOrders}
               />
             ) : null}
-            {isOffline ? (
-              <StatusBanner
-                icon="Wind"
-                message="Showing cached Orders and device work. Payment and fulfilment actions require a connection."
-                title="Offline mode"
-                tone="warning"
-              />
-            ) : null}
-            {orders.isError ? (
-              <StatusBanner
-                actionLabel="Try again"
-                icon="AlertCircle"
-                message={orders.error.message}
-                onActionPress={() => void orders.refetch()}
-                tone="destructive"
-              />
-            ) : null}
-            {showSearch && !isOffline ? (
-              <FormField
-                autoCapitalize="none"
-                label="Search"
-                leadingIcon="Search"
-                onChangeText={setQuery}
-                placeholder="Search order, customer, or item"
-                value={query}
-              />
-            ) : null}
-            <View className="flex-row flex-wrap gap-2">
-              {(["today", "7_days", "30_days", "all"] as const).map((value) => (
-                <CommerceFilterChip
-                  active={dateFilter === value}
-                  key={value}
-                  label={dateFilterLabel(value)}
-                  onPress={() => setDateFilter(value)}
+            <OrdersDispatchSection>
+              {provisionalOrders.length > 0 ? (
+                <StatusBanner
+                  icon="Wind"
+                  message={`${provisionalOrders.length} queued ${provisionalOrders.length === 1 ? "Order is" : "Orders are"} shown below and will reconcile after sync.`}
+                  title="Orders pending sync"
+                  tone="warning"
+                />
+              ) : null}
+              {isOffline ? (
+                <StatusBanner
+                  icon="Wind"
+                  message="Showing cached Orders and device work. Payment and fulfilment actions require a connection."
+                  title="Offline mode"
+                  tone="warning"
+                />
+              ) : null}
+              {orders.isError ? (
+                <StatusBanner
+                  actionLabel="Try again"
+                  icon="AlertCircle"
+                  message={orders.error.message}
+                  onActionPress={() => void orders.refetch()}
+                  tone="destructive"
+                />
+              ) : null}
+              {showFirstOrderGate ? (
+                <CommerceFirstOrderGate
+                  catalogReady={availability.hasActiveSellableItems}
+                  onPrimaryPress={() => {
+                    if (availability.hasActiveSellableItems) {
+                      router.push("/create-sale-modal")
+                    } else {
+                      router.push("/first-product-setup-modal")
+                    }
+                  }}
+                />
+              ) : (
+                <>
+                  <OrdersDispatchFilterRow
+                    active={dateFilter}
+                    labels={{
+                      "30_days": "30 days",
+                      "7_days": "7 days",
+                      all: "All time",
+                      today: "Today",
+                    }}
+                    onChange={setDateFilter}
+                    values={["today", "7_days", "30_days", "all"]}
+                  />
+                  <OrdersDispatchFilterRow
+                    active={filter}
+                    labels={{
+                      all: `All ${totalCount}`,
+                      cancelled: "Cancelled",
+                      completed: "Done",
+                      open: "Open",
+                    }}
+                    onChange={setFilter}
+                    values={["all", "open", "completed", "cancelled"]}
+                  />
+                  {showSearch && !isOffline ? (
+                    <FormField
+                      autoCapitalize="none"
+                      label="Search"
+                      leadingIcon="Search"
+                      onChangeText={setQuery}
+                      placeholder="Search order, customer, or item"
+                      value={query}
+                    />
+                  ) : null}
+                </>
+              )}
+              {visibleProvisionalOrders.map((order) => (
+                <CommercePendingOrderRow
+                  key={order.clientCommandId}
+                  order={order}
                 />
               ))}
-            </View>
-            <View className="flex-row gap-3">
-              <CommerceMetricTile
-                icon="ReceiptText"
-                label="Loaded orders"
-                value={String(visibleOrders.length)}
-              />
-              <CommerceMetricTile
-                icon="ListChecks"
-                label="Loaded items"
-                value={formatQuantity(itemCount)}
-              />
-            </View>
-            <View className="flex-row gap-3">
-              <CommerceMetricTile
-                icon="Calculator"
-                label="Average value"
-                value={averageValue}
-              />
-              <CommerceMetricTile
-                icon="Wallet"
-                label="Loaded value"
-                value={totalValue}
-              />
-            </View>
-            <View className="flex-row flex-wrap gap-2">
-              {(["all", "open", "completed", "cancelled"] as const).map(
-                (value) => (
-                  <CommerceFilterChip
-                    active={filter === value}
-                    key={value}
-                    label={value.charAt(0).toUpperCase() + value.slice(1)}
-                    onPress={() => setFilter(value)}
-                  />
-                ),
-              )}
-            </View>
-            {visibleProvisionalOrders.map((order) => (
-              <CommercePendingOrderRow
-                key={order.clientCommandId}
-                order={order}
-              />
-            ))}
+            </OrdersDispatchSection>
           </View>
         }
-        onScroll={handleDockScroll}
+        onScroll={handleScroll}
         onEndReached={() => {
           if (
             shouldFetchNextListPage({
@@ -317,29 +362,33 @@ export function AdminOrdersScreen() {
             </Text>
           ) : null
         }
-        renderItem={({ item }) => (
-          <CommerceOrderRow
-            className="px-4"
-            onPress={() => router.push(commercialOrderHref(item.id))}
-            order={item}
-          />
+        renderItem={({ index, item }) => (
+          <OrdersDispatchSection>
+            <OrdersDispatchLedgerRow
+              index={index}
+              onPress={() => router.push(commercialOrderHref(item.id))}
+              order={item}
+            />
+          </OrdersDispatchSection>
         )}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       />
-      <ListCreateFab
-        accessibilityLabel="Add order"
-        dockHidden={isDockHidden}
-        onPress={() => {
-          if (availability.hasActiveSellableItems) {
-            router.push("/create-sale-modal")
-          } else {
-            openCreate()
-          }
-        }}
-        sitsAboveDock
-        testID="orders-add-fab"
-      />
+      {isDockHidden && !showFirstOrderGate ? (
+        <ListCreateFab
+          accessibilityLabel="Add order"
+          dockHidden
+          onPress={() => {
+            if (availability.hasActiveSellableItems) {
+              router.push("/create-sale-modal")
+            } else {
+              openCreate()
+            }
+          }}
+          sitsAboveDock
+          testID="orders-add-fab"
+        />
+      ) : null}
     </View>
   )
 }

@@ -69,6 +69,7 @@ export default function AdminTabsLayout() {
   const contextValue = useMemo(
     () => ({
       availability,
+      availabilityResolved: availabilityQuery.isSuccess,
       isDockHidden,
       isOffline,
       openCreate: createModal.present,
@@ -82,6 +83,7 @@ export default function AdminTabsLayout() {
     }),
     [
       availability,
+      availabilityQuery.isSuccess,
       commands,
       createModal.present,
       isDockHidden,

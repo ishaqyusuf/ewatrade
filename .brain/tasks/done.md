@@ -1,5 +1,19 @@
 # Done
 
+### [EWA-BIZ-003 Orders list, Dispatch Ledger redesign](./2026-09-06-orders-list-design-review.md)
+
+- Status: Done
+- Implemented owner-approved Option A, `Dispatch Ledger`, on the production
+  Orders route. The screen preserves pagination, filters, search, refresh,
+  customer-book access, catalog-aware Create routing, first-order, empty,
+  loading, error, offline and provisional behavior while adding the Market Day
+  masthead, truthful loaded summary, numbered operational rows and
+  background-following status bar. Completed Date: 2026-09-06. Checks Run:
+  focused presentation and QA-route tests; commerce, pagination, app-shell,
+  large-text, keyboard, theme and NativeWind guards; scoped Biome; Android
+  export; native Light/Dark, first-order, offline/pending, scroll and 200% text
+  evidence; independent design-contract and engineering-standards review.
+
 ### [EWA-ENTRY-002 Onboarding current-state audit](./2026-09-06-onboarding-current-state-audit.md)
 - Status: Done
 

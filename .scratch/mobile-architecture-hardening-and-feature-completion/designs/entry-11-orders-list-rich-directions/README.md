@@ -27,9 +27,9 @@ and populated states.
 - [x] Render one comparison page with previous/next chevrons and theme switching.
 - [x] Verify mobile, tablet, and desktop review layouts.
 - [x] Rank the directions and recommend the strongest fit.
-- [ ] Receive explicit owner approval or replacement-direction feedback.
-- [ ] Freeze the implementation contract.
-- [ ] Implement and verify production behavior.
+- [x] Receive explicit owner approval or replacement-direction feedback.
+- [x] Freeze the implementation contract.
+- [x] Implement and verify production behavior.
 
 ## Evidence index
 
@@ -76,19 +76,55 @@ Option B header-color inheritance defect; it was fixed before this review gate.
 5. **C, Receipt Stack**. The boldest transaction identity, but long customer and
    item names need the most production restraint.
 
-Status: awaiting explicit owner selection. No Orders production code has been
-changed by this design batch.
+## Owner decision
+
+Option A, **Dispatch Ledger**, was explicitly approved on 6 September 2026.
+The frozen decision is recorded in [approved.json](./approved.json), with the
+production behavior and visual acceptance criteria in
+[implementation-contract.md](./implementation-contract.md).
+
+Status: approved, implemented, and verified in production.
+
+## Production implementation evidence
+
+- [First populated Light checkpoint](./implementation/checkpoint-03-populated-light.png)
+- [Corrected populated Light](./implementation/populated-light.png)
+- [Light after masthead scroll](./implementation/checkpoint-04-scrolled-light.png)
+- [Populated Dark](./implementation/populated-dark-review.png)
+- [Dark controls and fulfilment labels after scroll](./implementation/populated-dark-review-scrolled.png)
+- [First-order Light](./implementation/first-order-light.png)
+- [Offline and pending-sync Dark](./implementation/offline-dark.png)
+- [Populated Light at 200% text](./implementation/populated-light-200-percent.png)
+- [Scrollable order rows at 200% text](./implementation/populated-light-200-percent-scrolled.png)
+
+The first populated checkpoint exposed clipped `.00` currency precision in the
+three-column summary. The final presentation uses the same accurate minor-unit
+value with compact whole-currency display, matching the approved ledger and
+remaining readable in both themes. Native scroll evidence confirms marigold in
+the status bar while the masthead is visible and canvas color after it clears.
+The refreshed Dark pair explicitly verifies readable selected-filter labels and
+the `PACK NEXT`, `IN FULFILMENT`, and `READY` action tags.
+At 200% text, summary columns and order identity/amount pairs reflow rather than
+clip; the full order list remains reachable and the dock hides on downward
+scroll.
+
+Focused presentation/QA-route tests, commerce, pagination, app-shell,
+large-text, keyboard, theme, NativeWind, scoped Biome, and Android export checks
+pass. The repository-wide admin-tabs archive check still reports pre-existing
+unarchived evidence across older screen packages; it does not report an Orders
+runtime or source failure. The full dirty-workspace TypeScript graph exhausted
+8 GB, while the Android export compiled all 9,771 modules successfully.
 
 <!-- implement-with-progress:start -->
 
 ## Implementation Progress
 
-- Status: In Progress
+- Status: Complete
 - Ticket Position: 10/38
-- Completion: 67%
-- Current Checklist: 7/9 — Receive explicit owner approval or replacement-direction feedback
-- Blockers: None — planned owner decision gate
+- Completion: 100%
+- Current Checklist: 9/9 — Implement and verify production behavior complete
+- Blockers: None
 - Brain Task: [Task](../../../../.brain/tasks/2026-09-06-orders-list-design-review.md)
-- Last Updated: 2026-09-06T13:12:00+01:00
+- Last Updated: 2026-09-06T19:30:00+01:00
 
 <!-- implement-with-progress:end -->

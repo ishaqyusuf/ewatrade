@@ -1,8 +1,9 @@
 # In Progress
 
-### [EWA-BIZ-003 Orders list design review](./2026-09-06-orders-list-design-review.md)
+### [Mobile Market Day screen-by-screen redesign](../features/mobile-market-day-screen-by-screen-redesign.md)
 
-- Status: In Progress
+- Status: In Progress — next gate is `EWA-BIZ-004` Order detail design review
+- Headline implementation progress: 10/38 screens (26.3%).
 
 - Provision and verify the owner-approved production observability rollout.
   Source implementation is complete across API, jobs, dashboard, marketing,

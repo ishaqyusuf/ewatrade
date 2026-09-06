@@ -9,8 +9,8 @@ Fresh EAS Preview v6 cold-launch QA verifies the native splash gate and rich
 handoff in Light and Dark. Staff Onboarding Option A, `Market Nameplate`, also
 passes its full native acceptance matrix. App Lock Option E, `Quiet Seal`, is
 implemented and has completed native visual and accessibility validation, so
-nine of 38 active screen packages are fully implemented and re-verified
-(23.7%). Business Home Option A, `Market Ledger`, is implemented and passes its
+ten of 38 active screen packages are fully implemented and re-verified
+(26.3%). Business Home Option A, `Market Ledger`, is implemented and passes its
 native state, theme, 100%/200% text, status-bar, navigation, source, bundle and
 two-axis review gates. Sales rep Home now implements owner-approved Option A,
 `Shift Ledger`, and passes its truthful-data, state, theme, 100%/200%, scroll,
@@ -149,11 +149,16 @@ color-forward redesign program.
   replaced screen-local alpha-string composition with named semantic Market
   Day translucency tokens; focused presentation, theme, formatting, and export
   checks remain green with no visual contract change.
-- Orders list is at the owner-review gate. The canonical batch archives the
-  current native Light/Dark first-order surface and five populated operational
-  directions with chevron and theme controls. Option A, `Dispatch Ledger`, is
-  the recommendation, but no production work is authorized until the owner
-  explicitly selects a direction.
+- Orders list implements owner-approved Option A, `Dispatch Ledger`. It retains
+  pagination, refresh, date/status/search controls, customer-book and
+  catalog-aware Create routing, first-order, loading, error, empty, offline and
+  pending-sync behavior while replacing the generic list with a marigold
+  order-desk masthead, truthful loaded summary and numbered dispatch rows.
+  Provisional work remains excluded from server-loaded totals. The masthead
+  color reaches through the status bar and switches to the content canvas only
+  after scrolling away. Native Light/Dark, first-order, offline/pending,
+  100%/200%, scroll, focused test, source-guard and Android export evidence
+  passes. The next owner-review package is Order detail (`EWA-BIZ-004`).
 
 ## Boundaries
 

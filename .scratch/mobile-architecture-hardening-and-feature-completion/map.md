@@ -6,15 +6,15 @@ Approved and started on 2026-09-01.
 
 - Historical screen packages: 39
 - Active screen packages: 38 (the obsolete Customer History Login is superseded)
-- Fully complete and re-verified: 9 of 38 (23.7%)
-- Design-selected: 9 of 38 (23.7%)
-- Implemented to the approved visual contract: 9 of 38 (23.7%)
+- Fully complete and re-verified: 10 of 38 (26.3%)
+- Design-selected: 10 of 38 (26.3%)
+- Implemented to the approved visual contract: 10 of 38 (26.3%)
 - In implementation: 0 of 38 (0%)
 - In native QA: 0 of 38 (0%)
 - Correction required: 0 of 38 (0%)
 - Awaiting owner design approval: 0 of 38 (0%)
 - Baseline captured, directions pending: 0 of 38 (0%)
-- Queued: 29 of 38 (76.3%)
+- Queued: 28 of 38 (73.7%)
 
 `EWA-ENTRY-001` Startup Splash, `EWA-ENTRY-002` Onboarding, `EWA-ENTRY-003`
 Login, `EWA-ENTRY-004` Sign Up, and `EWA-ENTRY-005` Verify Email / OTP are
@@ -55,6 +55,13 @@ permissions, offline projections and navigation while adding the paprika hero,
 responsive ledger, background-following status bar and independently scrolling
 dock. Native Light/Dark, 100%/200%, setup, operational, loading, offline,
 pending-sync and attendant evidence pass.
+
+`EWA-BIZ-003` Orders list implements owner-approved Option A, `Dispatch
+Ledger`. Its marigold masthead, truthful loaded summary, numbered order rows,
+dynamic status-bar surface and responsive ledger preserve the existing query,
+filter, pagination, offline/provisional, first-order and navigation contract.
+Native Light/Dark, 100%/200%, populated, first-order, offline/pending and scroll
+evidence plus focused source and Android export checks pass.
 
 ## Objective
 
@@ -116,8 +123,7 @@ review batch until the owner explicitly chooses an option.
 
 ## Frontier
 
-1. Owner reviews the archived current Orders screen and five Light/Dark rich
-   directions in `designs/entry-11-orders-list-rich-directions/comparison.html`.
-2. Owner explicitly selects one direction or requests a replacement batch.
-3. Only after approval, freeze the Orders implementation contract and begin
-   production work.
+1. Capture the current Order detail production surface and its required states.
+2. Generate five Light/Dark Order detail directions in one chevron-controlled
+   review board.
+3. Recommend the strongest direction and pause for explicit owner approval.
