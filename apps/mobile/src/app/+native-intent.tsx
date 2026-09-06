@@ -1,4 +1,5 @@
 import { resolveBusinessHomeMarketLedgerQaPath } from "@/lib/business-home-market-ledger-qa"
+import { resolveSalesRepShiftLedgerQaPath } from "@/lib/sales-rep-shift-ledger-qa"
 import {
   initializeCustomerConversationStore,
   setPendingCustomerTransfer,
@@ -16,6 +17,12 @@ export async function redirectSystemPath({
     __DEV__,
   )
   if (businessHomeMarketLedgerQaPath) return businessHomeMarketLedgerQaPath
+
+  const salesRepShiftLedgerQaPath = resolveSalesRepShiftLedgerQaPath(
+    path,
+    __DEV__,
+  )
+  if (salesRepShiftLedgerQaPath) return salesRepShiftLedgerQaPath
 
   const resolved = resolveCustomerDeepLink(path)
   if (resolved.pendingTransfer) {

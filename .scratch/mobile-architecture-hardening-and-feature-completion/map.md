@@ -6,15 +6,15 @@ Approved and started on 2026-09-01.
 
 - Historical screen packages: 39
 - Active screen packages: 38 (the obsolete Customer History Login is superseded)
-- Fully complete and re-verified: 8 of 38 (21.1%)
-- Design-selected: 8 of 38 (21.1%)
-- Implemented to the approved visual contract: 8 of 38 (21.1%)
+- Fully complete and re-verified: 9 of 38 (23.7%)
+- Design-selected: 9 of 38 (23.7%)
+- Implemented to the approved visual contract: 9 of 38 (23.7%)
 - In implementation: 0 of 38 (0%)
 - In native QA: 0 of 38 (0%)
 - Correction required: 0 of 38 (0%)
 - Awaiting owner design approval: 0 of 38 (0%)
 - Baseline captured, directions pending: 0 of 38 (0%)
-- Queued: 30 of 38 (78.9%)
+- Queued: 29 of 38 (76.3%)
 
 `EWA-ENTRY-001` Startup Splash, `EWA-ENTRY-002` Onboarding, `EWA-ENTRY-003`
 Login, `EWA-ENTRY-004` Sign Up, and `EWA-ENTRY-005` Verify Email / OTP are
@@ -116,8 +116,6 @@ review batch until the owner explicitly chooses an option.
 
 ## Frontier
 
-1. Capture the current Sales rep Home native baseline.
-2. Generate five genuinely different Light/Dark Design HTML directions with
-   chevron navigation.
-3. Rank the directions, recommend the strongest option and pause for owner
-   approval before implementation.
+1. Capture the current native Orders list before source changes.
+2. Produce five Light/Dark Orders list directions with chevron navigation.
+3. Recommend one direction and pause for explicit owner approval.

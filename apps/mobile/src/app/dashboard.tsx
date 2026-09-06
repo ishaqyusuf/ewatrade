@@ -13,6 +13,12 @@ import {
   BusinessHomeMarketLedgerSectionHeader,
   BusinessHomeMarketLedgerSetup,
 } from "@/components/mobile/business-home-market-ledger"
+import {
+  SalesRepShiftLedgerEmptySales,
+  SalesRepShiftLedgerHero,
+  SalesRepShiftLedgerOverview,
+  SalesRepShiftLedgerSection,
+} from "@/components/mobile/sales-rep-shift-ledger"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
@@ -23,6 +29,7 @@ import { hasStoredCustomerShellAccess } from "@/lib/customer-conversation-store"
 import { setLastMobileShell } from "@/lib/customer-shell-preference"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { isSalesRepRole } from "@/lib/mobile-roles"
+import { getSalesRepShiftLedgerPresentation } from "@/lib/sales-rep-shift-ledger"
 import {
   getMobileDashboardFeatureVisibility,
   getMobileDashboardNavigation,
@@ -138,6 +145,18 @@ export function OperationsDashboardSurface({
   })
   const isOfflineAvailabilityUnknown =
     isOffline && !hasResolvedFeatureAvailability
+  const salesRepPresentation = getSalesRepShiftLedgerPresentation({
+    hasSellableCatalogItem,
+    isOffline,
+    pendingCommandCount,
+    workspaceState: isOfflineAvailabilityUnknown
+      ? "offline-unknown"
+      : isFeatureAvailabilityPending
+        ? "loading"
+        : isFeatureAvailabilityUnavailable
+          ? "unavailable"
+          : "available",
+  })
   const navItems = [
     {
       icon: "home" as const,
@@ -248,74 +267,40 @@ export function OperationsDashboardSurface({
               onPress: () => router.push("/sync-status-modal" as never),
               tone: "neutral",
             }
-  const homeActions: HomeAction[] = isAttendant
-    ? [
-        {
-          disabled: !hasSellableCatalogItem,
-          icon: "PlusCircle",
-          label: hasSellableCatalogItem
-            ? "Create a new order"
-            : "Add a sellable item to create orders",
-          onPress: () => router.push("/create-sale-modal" as never),
-          tone: "success",
-        },
-        {
-          icon: "ClipboardCheck",
-          label: "Complete daily closeout",
-          onPress: () => router.push("/closeout-modal" as never),
-          tone: "primary",
-        },
-        ...(featureAvailability.hasCustomers
-          ? [
-              {
-                icon: "User" as const,
-                label: "Open customer book",
-                onPress: () => router.push("/customer-book-modal" as never),
-                tone: "neutral" as const,
-              },
-            ]
-          : []),
-        {
-          icon: "RefreshCw",
-          label: "Review sync status",
-          onPress: () => router.push("/sync-status-modal" as never),
-          tone: "warning",
-        },
-      ]
-    : [
-        {
-          disabled: isOffline,
-          icon: "FolderPlus",
-          label: "Add a product",
-          onPress: () =>
-            router.push("/first-product-setup-modal?kind=product" as never),
-          tone: "success",
-        },
-        {
-          disabled: isOffline,
-          icon: "Wrench",
-          label: "Add a service",
-          onPress: () =>
-            router.push("/first-product-setup-modal?kind=service" as never),
-          tone: "warning",
-        },
-        {
-          disabled: !hasSellableCatalogItem,
-          icon: "PlusCircle",
-          label: hasSellableCatalogItem
-            ? "Create a new order"
-            : "Add a sellable item to create orders",
-          onPress: () => router.push("/create-sale-modal" as never),
-          tone: "primary",
-        },
-        {
-          icon: "ReceiptText",
-          label: "View all orders",
-          onPress: () => router.push("/orders" as never),
-          tone: "neutral",
-        },
-        operationalAction,
-      ]
+  const homeActions: HomeAction[] = [
+    {
+      disabled: isOffline,
+      icon: "FolderPlus",
+      label: "Add a product",
+      onPress: () =>
+        router.push("/first-product-setup-modal?kind=product" as never),
+      tone: "success",
+    },
+    {
+      disabled: isOffline,
+      icon: "Wrench",
+      label: "Add a service",
+      onPress: () =>
+        router.push("/first-product-setup-modal?kind=service" as never),
+      tone: "warning",
+    },
+    {
+      disabled: !hasSellableCatalogItem,
+      icon: "PlusCircle",
+      label: hasSellableCatalogItem
+        ? "Create a new order"
+        : "Add a sellable item to create orders",
+      onPress: () => router.push("/create-sale-modal" as never),
+      tone: "primary",
+    },
+    {
+      icon: "ReceiptText",
+      label: "View all orders",
+      onPress: () => router.push("/orders" as never),
+      tone: "neutral",
+    },
+    operationalAction,
+  ]
 
   return (
     <MobileAppShell
@@ -336,16 +321,42 @@ export function OperationsDashboardSurface({
         paddingTop: 16,
       }}
       hero={
-        <BusinessHomeMarketLedgerHero
-          businessName={profile?.businessName ?? "Business"}
-          greetingName={firstName}
-          hasNotification={isOffline || pendingCommandCount > 0}
-          onBusinessPress={() => router.push("/business-switch-modal" as never)}
-          onNotificationPress={() => router.push("/sync-status-modal" as never)}
-          onSearchPress={
-            isOffline ? undefined : () => router.push("/global-search" as never)
-          }
-        />
+        isAttendant ? (
+          <SalesRepShiftLedgerHero
+            businessName={profile?.businessName ?? "Business"}
+            cue={salesRepPresentation.heroCue}
+            greetingName={firstName}
+            hasNotification={isOffline || pendingCommandCount > 0}
+            onBusinessPress={() =>
+              router.push("/business-switch-modal" as never)
+            }
+            onNotificationPress={() =>
+              router.push("/sync-status-modal" as never)
+            }
+            onSearchPress={
+              isOffline
+                ? undefined
+                : () => router.push("/global-search" as never)
+            }
+          />
+        ) : (
+          <BusinessHomeMarketLedgerHero
+            businessName={profile?.businessName ?? "Business"}
+            greetingName={firstName}
+            hasNotification={isOffline || pendingCommandCount > 0}
+            onBusinessPress={() =>
+              router.push("/business-switch-modal" as never)
+            }
+            onNotificationPress={() =>
+              router.push("/sync-status-modal" as never)
+            }
+            onSearchPress={
+              isOffline
+                ? undefined
+                : () => router.push("/global-search" as never)
+            }
+          />
+        )
       }
       heroStatusBarStyle="dark"
       keyboardBottomOffset={12}
@@ -357,7 +368,7 @@ export function OperationsDashboardSurface({
       scrolledStatusBarStyle={colorScheme === "dark" ? "light" : "dark"}
       showHeader={false}
       showBottomTabs={!embeddedInAdminTabs}
-      statusBarColor={marketDay.paprika}
+      statusBarColor={isAttendant ? marketDay.marigold : marketDay.paprika}
       statusBarFollowsHero
       title="Today"
     >
@@ -385,6 +396,20 @@ export function OperationsDashboardSurface({
           message="Refresh to load your latest Store setup and catalog state."
           title="Store overview unavailable"
           tone="warning"
+        />
+      ) : isAttendant ? (
+        <SalesRepShiftLedgerOverview
+          {...salesRepPresentation}
+          onCloseoutPress={() => router.push("/closeout-modal" as never)}
+          onCustomerBookPress={
+            featureAvailability.hasCustomers
+              ? () => router.push("/customer-book-modal" as never)
+              : undefined
+          }
+          onStartSalePress={() => router.push("/create-sale-modal" as never)}
+          onSyncPress={() => router.push("/sync-status-modal" as never)}
+          recentOrderCount={String(orderRows.length)}
+          recentOrderValue={formatMinorMoney(orderValue, currency)}
         />
       ) : showStoreSetup ? (
         <BusinessHomeMarketLedgerSetup
@@ -483,65 +508,111 @@ export function OperationsDashboardSurface({
         </Pressable>
       ) : null}
 
-      <View>
-        <BusinessHomeMarketLedgerSectionHeader
-          actionLabel={isAttendant ? undefined : "See all"}
-          onActionPress={
-            isAttendant ? undefined : () => router.push("/orders" as never)
-          }
-          title="Recent orders"
-        />
-        {orders.isLoading ? (
-          <StatusBanner icon="Loader2" message="Loading recent orders." />
-        ) : orderRows.length === 0 && provisional.commercialOrders > 0 ? (
-          <StatusBanner
-            icon="Wind"
-            message="Your queued orders will appear here after sync."
-            title="Orders pending sync"
-            tone="warning"
+      {isAttendant ? (
+        <SalesRepShiftLedgerSection title="Recent sales">
+          {orders.isLoading ? (
+            <StatusBanner icon="Loader2" message="Loading recent sales." />
+          ) : orderRows.length === 0 && provisional.commercialOrders > 0 ? (
+            <StatusBanner
+              icon="Wind"
+              message="Your queued sales will appear here after sync."
+              title="Sales pending sync"
+              tone="warning"
+            />
+          ) : orderRows.length === 0 ? (
+            <SalesRepShiftLedgerEmptySales message="New sales will appear here as soon as they are created." />
+          ) : (
+            orderRows
+              .slice(0, 4)
+              .map((order) => (
+                <DashboardRecentOrderRow
+                  amount={formatMinorMoney(
+                    order.totalMinor,
+                    order.currencyCode,
+                  )}
+                  customer={
+                    order.customerName ||
+                    order.customerPhone ||
+                    "Walk-in customer"
+                  }
+                  detail={`${order.orderNumber} · ${order.lines
+                    .map(
+                      (line) =>
+                        `${line.quantity} × ${line.snapshot?.catalogItemName ?? "Item"}`,
+                    )
+                    .join(", ")}`}
+                  key={order.id}
+                  onPress={() =>
+                    router.push(
+                      `/order/${encodeURIComponent(order.id)}` as never,
+                    )
+                  }
+                  status={formatStatusLabel(order.status)}
+                  tone={getOrderStatusTone(order.status)}
+                />
+              ))
+          )}
+        </SalesRepShiftLedgerSection>
+      ) : (
+        <View>
+          <BusinessHomeMarketLedgerSectionHeader
+            actionLabel="See all"
+            onActionPress={() => router.push("/orders" as never)}
+            title="Recent orders"
           />
-        ) : orderRows.length === 0 ? (
-          <BusinessHomeMarketLedgerEmptyOrders
-            actionDisabled={!hasSellableCatalogItem}
-            actionLabel={isAttendant ? undefined : "Create first order"}
-            message={
-              featureVisibility.showGettingStarted
-                ? "Add an item, then create your first order. It will appear here."
-                : "New orders will appear here as soon as they are created."
-            }
-            onActionPress={
-              isAttendant
-                ? undefined
-                : () => router.push("/create-sale-modal" as never)
-            }
-          />
-        ) : (
-          orderRows
-            .slice(0, 4)
-            .map((order) => (
-              <DashboardRecentOrderRow
-                amount={formatMinorMoney(order.totalMinor, order.currencyCode)}
-                customer={
-                  order.customerName ||
-                  order.customerPhone ||
-                  "Walk-in customer"
-                }
-                detail={`${order.orderNumber} · ${order.lines
-                  .map(
-                    (line) =>
-                      `${line.quantity} × ${line.snapshot?.catalogItemName ?? "Item"}`,
-                  )
-                  .join(", ")}`}
-                key={order.id}
-                onPress={() =>
-                  router.push(`/order/${encodeURIComponent(order.id)}` as never)
-                }
-                status={formatStatusLabel(order.status)}
-                tone={getOrderStatusTone(order.status)}
-              />
-            ))
-        )}
-      </View>
+          {orders.isLoading ? (
+            <StatusBanner icon="Loader2" message="Loading recent orders." />
+          ) : orderRows.length === 0 && provisional.commercialOrders > 0 ? (
+            <StatusBanner
+              icon="Wind"
+              message="Your queued orders will appear here after sync."
+              title="Orders pending sync"
+              tone="warning"
+            />
+          ) : orderRows.length === 0 ? (
+            <BusinessHomeMarketLedgerEmptyOrders
+              actionDisabled={!hasSellableCatalogItem}
+              actionLabel="Create first order"
+              message={
+                featureVisibility.showGettingStarted
+                  ? "Add an item, then create your first order. It will appear here."
+                  : "New orders will appear here as soon as they are created."
+              }
+              onActionPress={() => router.push("/create-sale-modal" as never)}
+            />
+          ) : (
+            orderRows
+              .slice(0, 4)
+              .map((order) => (
+                <DashboardRecentOrderRow
+                  amount={formatMinorMoney(
+                    order.totalMinor,
+                    order.currencyCode,
+                  )}
+                  customer={
+                    order.customerName ||
+                    order.customerPhone ||
+                    "Walk-in customer"
+                  }
+                  detail={`${order.orderNumber} · ${order.lines
+                    .map(
+                      (line) =>
+                        `${line.quantity} × ${line.snapshot?.catalogItemName ?? "Item"}`,
+                    )
+                    .join(", ")}`}
+                  key={order.id}
+                  onPress={() =>
+                    router.push(
+                      `/order/${encodeURIComponent(order.id)}` as never,
+                    )
+                  }
+                  status={formatStatusLabel(order.status)}
+                  tone={getOrderStatusTone(order.status)}
+                />
+              ))
+          )}
+        </View>
+      )}
 
       {!isAttendant && !embeddedInAdminTabs ? (
         <CreateActionSheet actions={createActions} modal={createModal} />

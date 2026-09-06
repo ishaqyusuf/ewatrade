@@ -4,10 +4,10 @@
 
 | Measure                                                   | Complete |     Total | Percent |
 | --------------------------------------------------------- | -------: | --------: | ------: |
-| Fully designed, implemented, and native-QA verified       |        8 | 38 active |   21.1% |
-| Approved design direction                                 |        8 | 38 active |   21.1% |
-| Production implementation matching the approved direction |        8 | 38 active |   21.1% |
-| Current native baseline captured                          |        8 | 38 active |   21.1% |
+| Fully designed, implemented, and native-QA verified       |        9 | 38 active |   23.7% |
+| Approved design direction                                 |        9 | 38 active |   23.7% |
+| Production implementation matching the approved direction |        9 | 38 active |   23.7% |
+| Current native baseline captured                          |        9 | 38 active |   23.7% |
 | Awaiting owner design approval                            |        0 | 38 active |      0% |
 
 ## Stage Definitions
@@ -36,7 +36,7 @@
 | EWA-ENTRY-007 | Staff onboarding              | `/staff-onboarding`                          | Complete · approved A — Market Nameplate implemented and native-QA verified across themes, text scales, keyboards, and inert states         | None                                                                                                                      |
 | EWA-ENTRY-008 | App lock                      | `/app-lock-modal`                            | Complete · owner-approved E — Quiet Seal implemented and native-QA verified across Light/Dark, 100%/200%, scroll and state checks            | None                                                                                                                      |
 | EWA-BIZ-001   | Business Home                 | `/dashboard`, `/(admin-tabs)/admin-home`     | Complete · owner-approved A — Market Ledger implemented and native-QA verified across roles, states, themes, text scales and scrolling      | None                                                                                                                      |
-| EWA-BIZ-002   | Sales rep Home                | `/sales-rep-home`                            | Queued                                                                                                                                     | Native baseline                                                                                                           |
+| EWA-BIZ-002   | Sales rep Home                | `/sales-rep-home`                            | Complete · owner-approved A — Shift Ledger implemented and native-QA verified across states, themes, 100%/200%, scrolling and accessibility | None                                                                                                                      |
 | EWA-BIZ-003   | Orders list                   | `/(admin-tabs)/orders`                       | Queued                                                                                                                                     | Native baseline                                                                                                           |
 | EWA-BIZ-004   | Order detail                  | `/order/[orderId]`                           | Queued                                                                                                                                     | Native baseline                                                                                                           |
 | EWA-BIZ-005   | Catalog list                  | `/(admin-tabs)/catalog`                      | Queued                                                                                                                                     | Native baseline                                                                                                           |

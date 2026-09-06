@@ -9,10 +9,12 @@ Fresh EAS Preview v6 cold-launch QA verifies the native splash gate and rich
 handoff in Light and Dark. Staff Onboarding Option A, `Market Nameplate`, also
 passes its full native acceptance matrix. App Lock Option E, `Quiet Seal`, is
 implemented and has completed native visual and accessibility validation, so
-eight of 38 active screen packages are fully implemented and re-verified
-(21.1%). Business Home Option A, `Market Ledger`, is implemented and passes its
+nine of 38 active screen packages are fully implemented and re-verified
+(23.7%). Business Home Option A, `Market Ledger`, is implemented and passes its
 native state, theme, 100%/200% text, status-bar, navigation, source, bundle and
-two-axis review gates. Sales rep Home is the next design frontier.
+two-axis review gates. Sales rep Home now implements owner-approved Option A,
+`Shift Ledger`, and passes its truthful-data, state, theme, 100%/200%, scroll,
+accessibility, source, bundle, and two-axis review gates.
 
 ## Purpose
 
@@ -129,6 +131,15 @@ color-forward redesign program.
   downward scroll; and full-scale financial values reflow without shrinking.
   Light/Dark, owner/attendant, loading, empty, populated, offline, pending-sync,
   100%/200% text, source, Android export and independent reviews pass.
+- Sales Rep Home preserves the existing attendant route, permissions, queries,
+  sellability gate, customer book, closeout, sync, Work, order details, personal
+  conversations, and offline policy while giving attendants the approved Shift
+  Ledger hierarchy. It reports only loaded recent orders and their real loaded
+  value, keeps queued work in provisional/sync messaging, and never invents a
+  shift time or unauthorized stock quantity. Native Light/Dark, 100%/200%,
+  loading, error, disabled, empty, populated, offline, pending-sync, measured
+  status-bar transition, dock, accessibility-tree, source, formatting, Android
+  export, and independent review gates pass.
 
 ## Boundaries
 

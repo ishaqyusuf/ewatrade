@@ -2,6 +2,7 @@ import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { cn } from "@/lib/utils"
 import { useBusinessStore } from "@/store/businessStore"
 import { formatMinorMoney } from "@ewatrade/utils"
@@ -246,6 +247,8 @@ export function DashboardRecentOrderRow({
   status,
   tone,
 }: DashboardRecentOrderRowProps) {
+  const largeTextLayout = useLargeTextLayout()
+
   return (
     <Pressable
       accessibilityRole={onPress ? "button" : undefined}
@@ -254,19 +257,30 @@ export function DashboardRecentOrderRow({
       haptic={Boolean(onPress)}
       onPress={onPress}
     >
-      <View className="size-10 items-center justify-center rounded-full bg-muted">
+      <View className="size-10 shrink-0 items-center justify-center rounded-full bg-muted">
         <Icon className="size-sm text-foreground" name="ReceiptText" />
       </View>
       <View className="min-w-0 flex-1 gap-1">
-        <Text className="font-extrabold text-foreground" numberOfLines={1}>
+        <Text
+          className="font-extrabold text-foreground"
+          numberOfLines={largeTextLayout ? undefined : 1}
+        >
           {customer}
         </Text>
-        <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+        {largeTextLayout ? (
+          <Text className="font-extrabold text-foreground">{amount}</Text>
+        ) : null}
+        <Text
+          className="text-xs text-muted-foreground"
+          numberOfLines={largeTextLayout ? undefined : 1}
+        >
           {detail}
         </Text>
         <StatusBadge className="mt-1 self-start" label={status} tone={tone} />
       </View>
-      <Text className="pt-0.5 font-extrabold text-foreground">{amount}</Text>
+      {largeTextLayout ? null : (
+        <Text className="pt-0.5 font-extrabold text-foreground">{amount}</Text>
+      )}
     </Pressable>
   )
 }

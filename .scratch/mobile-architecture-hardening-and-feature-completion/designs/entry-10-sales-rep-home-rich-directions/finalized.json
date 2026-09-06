@@ -1,0 +1,30 @@
+{
+  "source_mockup": "comparison.html?option=a&theme=light",
+  "source_plan": ".brain/features/mobile-market-day-screen-by-screen-redesign.md",
+  "mode": "approved-mockup",
+  "html_file": "/Users/M1PRO/Documents/code/ewatrade/.scratch/mobile-architecture-hardening-and-feature-completion/designs/entry-10-sales-rep-home-rich-directions/comparison.html",
+  "pretext_tier": "shift ledger and operational list",
+  "framework": "vanilla",
+  "iterations": 2,
+  "date": "2026-09-06",
+  "screen": "EWA-BIZ-002 Sales Rep Home",
+  "branch": "main",
+  "selected_direction": "A — Shift Ledger",
+  "status": "implemented-and-native-qa-verified",
+  "qa_completed_at": "2026-09-06",
+  "evidence": {
+    "light": "../../screenshots/entry-10-sales-rep-home/final/light-100-populated.png",
+    "dark": "../../screenshots/entry-10-sales-rep-home/final/dark-100-populated.png",
+    "large_text_light": "../../screenshots/entry-10-sales-rep-home/final/light-200-populated.png",
+    "large_text_dark": "../../screenshots/entry-10-sales-rep-home/final/dark-200-populated.png",
+    "large_text_lower": "../../screenshots/entry-10-sales-rep-home/final/light-200-bottom.png",
+    "status_canvas": "../../screenshots/entry-10-sales-rep-home/states/light-scrolled-status-canvas.png",
+    "status_marigold_restored": "../../screenshots/entry-10-sales-rep-home/states/light-returned-top-status-marigold.png",
+    "disabled": "../../screenshots/entry-10-sales-rep-home/states/disabled-light.png",
+    "offline": "../../screenshots/entry-10-sales-rep-home/states/offline-dark.png",
+    "pending_sync": "../../screenshots/entry-10-sales-rep-home/states/pending-sync-light.png",
+    "empty": "../../screenshots/entry-10-sales-rep-home/states/empty-light.png",
+    "loading": "../../screenshots/entry-10-sales-rep-home/states/loading-dark.png",
+    "error": "../../screenshots/entry-10-sales-rep-home/states/error-light.png"
+  }
+}
