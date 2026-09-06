@@ -72,9 +72,12 @@ the oversized, dark Record payment content that triggered this correction pass.
 ## Companion action surfaces
 
 The Order detail batch now includes the directly opened tasks, not only the
-parent page. Review the five paired **Record payment** and **Fulfil line**
-directions in the [Order actions companion package](../entry-12-order-actions-rich-directions/README.md).
-Production work on those two child surfaces is paused for explicit owner choice.
+parent page. Review the five **Record payment**, **Fulfil line**, **Fulfil all
+ready**, and **Customer record** directions in the
+[Order actions companion package](../entry-12-order-actions-rich-directions/README.md).
+Production work on these child surfaces is paused for explicit owner choice.
+The selected-customer state is included here because Order detail opens it
+directly; the complete Customer directory remains its own later screen batch.
 
 ## Implementation checklist
 
@@ -86,9 +89,9 @@ Production work on those two child surfaces is paused for explicit owner choice.
 - [x] Expand the inert native QA surface across required states.
 - [x] Capture Light/Dark, scroll, state, and 100%/200% native evidence.
 - [x] Verify and commit the Record payment and Fulfil line button corrections.
-- [x] Archive the current Record payment sheet and immediate Fulfil line behavior.
-- [x] Prepare five paired Light/Dark action-sheet directions and pause for owner approval.
-- [ ] Implement the owner-approved payment and fulfilment action surfaces.
+- [x] Archive current payment, immediate fulfilment, and Customer record behavior.
+- [x] Prepare five four-state Light/Dark companion directions and pause for owner approval.
+- [ ] Implement the owner-approved Order companion surfaces.
 - [ ] Run final source, formatting, bundle, and independent review gates.
 - [ ] Commit the scoped implementation and synchronize Brain/program records.
 
@@ -101,9 +104,9 @@ Status: parent implemented; companion action batch awaiting owner approval.
 - Status: In Progress
 - Ticket Position: 11/38
 - Completion: 77%
-- Current Checklist: 11/13 — Implement the owner-approved payment and fulfilment action surfaces
-- Blockers: Awaiting explicit owner approval of the companion action-sheet direction
+- Current Checklist: 11/13 — Implement the owner-approved Order companion surfaces
+- Blockers: Awaiting explicit owner approval of the four-state companion direction
 - Brain Task: [Task](../../../../.brain/tasks/2026-09-06-order-detail-design-review.md)
-- Last Updated: 2026-09-06T22:08:04+01:00
+- Last Updated: 2026-09-06T22:24:00+01:00
 
 <!-- implement-with-progress:end -->

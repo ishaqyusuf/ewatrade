@@ -172,12 +172,14 @@ color-forward redesign program.
   guards pass; the full mobile TypeScript graph exhausted Node's heap and is
   recorded as an environment limitation for this pass.
 - Order detail remains open at a companion owner-review gate. Its Record
-  payment sheet and Fulfil line action are now treated as part of the same
-  interaction batch. The current payment form and immediate no-confirmation
-  fulfil behavior are source-audited, and five paired Light/Dark directions are
-  available with Payment/Fulfil state switching. Option A, `Action Docket`, is
-  recommended; production child-surface work remains paused for explicit owner
-  approval.
+  payment sheet, per-line and all-ready fulfil actions, and directly opened
+  Customer overview are treated as one interaction batch. The current payment
+  form, immediate no-confirmation fulfil behavior, and generic Customer modal
+  are source-audited. Five Light/Dark directions are available with four-state
+  Payment/Fulfil line/Fulfil all/Customer switching. Option A, `Action Docket`,
+  is recommended; production child-surface work remains paused for explicit
+  owner approval. This order-linked Customer state does not replace the later
+  full Customer book batch.
 
 ## Boundaries
 

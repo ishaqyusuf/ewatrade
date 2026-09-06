@@ -128,9 +128,10 @@ review batch until the owner explicitly chooses an option.
 
 ## Frontier
 
-1. Owner reviews the five paired Record payment and Fulfil line directions in
+1. Owner reviews the five four-state Payment, Fulfil line, Fulfil all, and
+   Customer directions in
    `designs/entry-12-order-actions-rich-directions/comparison.html`.
 2. Owner explicitly selects one companion direction or requests a replacement
    batch.
-3. Only after that approval, implement both directly opened action surfaces,
+3. Only after that approval, implement every directly opened companion surface,
    complete native QA, and close `EWA-BIZ-004` before advancing to Catalog.

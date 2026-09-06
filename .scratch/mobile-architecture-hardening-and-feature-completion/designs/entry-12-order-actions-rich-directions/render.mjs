@@ -14,7 +14,7 @@ const names = [
 ]
 const browser = await chromium.launch({ headless: true })
 
-const current = await browser.newPage({ viewport: { width: 1040, height: 1040 } })
+const current = await browser.newPage({ viewport: { width: 1440, height: 1040 } })
 await current.goto(pathToFileURL(path.join(directory, "current-state.html")).href, {
   waitUntil: "domcontentloaded",
 })
@@ -23,7 +23,7 @@ await current.close()
 
 for (const theme of ["light", "dark"]) {
   for (const [key] of names) {
-    for (const state of ["payment", "fulfil"]) {
+    for (const state of ["payment", "fulfil", "fulfil-all", "customer"]) {
       const page = await browser.newPage({ viewport: { width: 1440, height: 1024 } })
       const url = new URL(sourceUrl)
       url.searchParams.set("option", key.toLowerCase())
@@ -35,13 +35,15 @@ for (const theme of ["light", "dark"]) {
         return {
           activeOption: phone.querySelectorAll(".sheet.active-option").length,
           activeState: phone.querySelectorAll(".sheet.active-option .sheet-state.active").length,
+          customerSurface: phone.querySelectorAll(".customer-shell.active").length,
           height: rect.height,
           width: rect.width,
         }
       })
       if (
-        metrics.activeOption !== 1 ||
-        metrics.activeState !== 1 ||
+        metrics.activeOption !== (state === "customer" ? 0 : 1) ||
+        metrics.activeState !== (state === "customer" ? 0 : 1) ||
+        metrics.customerSurface !== (state === "customer" ? 1 : 0) ||
         metrics.width !== 390 ||
         metrics.height !== 844
       ) {
@@ -59,7 +61,7 @@ for (const theme of ["light", "dark"]) {
 }
 
 for (const theme of ["light", "dark"]) {
-  for (const state of ["payment", "fulfil"]) {
+  for (const state of ["payment", "fulfil", "fulfil-all", "customer"]) {
     const page = await browser.newPage({ viewport: { width: 2140, height: 1020 } })
     const cards = names
       .map(([key, name]) => {
@@ -71,7 +73,8 @@ for (const theme of ["light", "dark"]) {
       })
       .join("")
     const dark = theme === "dark"
-    await page.setContent(`<!doctype html><style>*{box-sizing:border-box}body{margin:0;padding:32px;background:${dark ? "#04130f" : "#0b3d32"};font-family:Inter,system-ui;color:#fff3cf}header{display:flex;justify-content:space-between;align-items:end;margin-bottom:20px}h1{margin:0;font-size:34px}p{margin:0;color:#ffdc8a;font-size:11px;font-weight:900;letter-spacing:1.4px;text-transform:uppercase}main{display:flex;gap:18px}figure{margin:0;width:390px;background:#fff3cf}img{display:block;width:390px;height:844px}figcaption{display:flex;height:48px;align-items:center;justify-content:space-between;padding:0 14px;color:${dark ? "#fff3cf" : "#12382d"};background:${dark ? "#12342a" : "#fff3cf"}}figcaption b{color:#ed5637;font-size:10px}figcaption span{font-size:12px;font-weight:850}</style><header><div><p>Market Day · Order detail companion batch</p><h1>${state === "payment" ? "Record payment" : "Fulfil line"}, five ${theme} directions</h1></div><p>A is recommended · switch both actions in the live board</p></header><main>${cards}</main>`)
+    const stateTitle = state === "payment" ? "Record payment" : state === "fulfil" ? "Fulfil line" : state === "fulfil-all" ? "Fulfil all ready" : "Customer record"
+    await page.setContent(`<!doctype html><style>*{box-sizing:border-box}body{margin:0;padding:32px;background:${dark ? "#04130f" : "#0b3d32"};font-family:Inter,system-ui;color:#fff3cf}header{display:flex;justify-content:space-between;align-items:end;margin-bottom:20px}h1{margin:0;font-size:34px}p{margin:0;color:#ffdc8a;font-size:11px;font-weight:900;letter-spacing:1.4px;text-transform:uppercase}main{display:flex;gap:18px}figure{margin:0;width:390px;background:#fff3cf}img{display:block;width:390px;height:844px}figcaption{display:flex;height:48px;align-items:center;justify-content:space-between;padding:0 14px;color:${dark ? "#fff3cf" : "#12382d"};background:${dark ? "#12342a" : "#fff3cf"}}figcaption b{color:#ed5637;font-size:10px}figcaption span{font-size:12px;font-weight:850}</style><header><div><p>Market Day · Order detail companion batch</p><h1>${stateTitle}, five ${theme} directions</h1></div><p>A is recommended · inspect every direct surface in the live board</p></header><main>${cards}</main>`)
     await page.screenshot({
       path: path.join(directory, `all-options-${state}-${theme}.png`),
       fullPage: true,
@@ -95,6 +98,14 @@ if ((await board.textContent("#current-name")) !== "Counter Receipt") {
 await board.click("#fulfil-state")
 if ((await board.locator(".sheet.active-option .sheet-state.active").getAttribute("data-state")) !== "fulfil") {
   throw new Error("Fulfil-state control did not activate")
+}
+await board.click("#fulfil-all-state")
+if ((await board.getAttribute(".phone", "data-state")) !== "fulfil-all") {
+  throw new Error("Fulfil-all control did not activate")
+}
+await board.click("#customer-state")
+if ((await board.locator(".customer-shell.active").count()) !== 1) {
+  throw new Error("Customer control did not activate")
 }
 await board.click("#theme-toggle")
 if ((await board.getAttribute("html", "data-theme")) !== "dark") {
