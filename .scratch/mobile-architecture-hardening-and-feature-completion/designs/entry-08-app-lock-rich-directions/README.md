@@ -60,12 +60,14 @@ Screenshot PNGs under `.scratch/` remain local project evidence under the reposi
 - [x] Implement the selected direction with shared semantic mobile primitives.
 - [x] Verify setup, confirm, manage, unlock, biometric, error, lockout and reset states.
 - [x] Verify Light/Dark, 100%/200% text, touch targets, status bar and device-safe layout.
-- [ ] Run focused source checks, Android export, visual review, code review and close documentation.
+- [x] Run focused source checks, Android export, visual review, code review and close documentation.
 
 ## Validation Evidence
 
-- Nine focused App Lock tests pass across layout, presentation, hydration and
-  route-boundary behavior; the App Lock source-contract check also passes.
+- Nine focused App Lock tests / 14 expectations pass across layout,
+  presentation, hydration and route-boundary behavior; the App Lock
+  source-contract, NativeWind-style, large-text and design-system checks also
+  pass.
 - Android Expo export succeeds across the current 9,755-module bundle.
 - Native Android evidence covers Light and Dark at 100% text plus top and
   scrolled views at 200% text. The status bar follows the paprika cap and the
@@ -75,16 +77,36 @@ Screenshot PNGs under `.scratch/` remain local project evidence under the reposi
   work. It reports no App Lock files; the focused App Lock checks, formatting
   gate and Android export remain green.
 
+## Final review
+
+The independent standards and specification passes found four material gaps
+in the first implementation: choice labels and the device note capped system
+text too aggressively, 200% keypad targets stayed at their compact height, the
+scroll container relied on implicit bottom-safe-area behavior, and asynchronous
+PIN/fingerprint verification did not expose a truthful pending state. The
+final implementation removes those gaps: essential copy scales to 200%, large
+text uses 68-point keypad rows, the scroll body includes the live bottom inset,
+and every disabled async control publishes its accessibility state while the
+screen names the active check.
+
+The review also removed an obsolete customer-history route assertion. Two
+intentional implementation boundaries remain documented rather than treated as
+defects: the approved security gate uses its shared Quiet Seal screen shell
+instead of the generic workflow-modal composition, and its exact angled cap,
+seal and keypad geometry stays in one isolated `StyleSheet`. The development-
+only preview entry remains because it is the reproducible native screenshot and
+state-review seam; production builds keep that tooling unavailable.
+
 <!-- implement-with-progress:start -->
 
 ## Implementation Progress
 
-- Status: In Progress
+- Status: Done
 - Ticket Position: 8/38
-- Completion: 89%
-- Current Checklist: 9/9 — Run final review and close documentation
+- Completion: 100%
+- Current Checklist: 9/9 — Complete; advance to Business Home baseline
 - Blockers: None
 - Brain Task: [Task](../../../../.brain/tasks/2026-09-04-app-lock-market-day-directions.md)
-- Last Updated: 2026-09-06T08:20:30+01:00
+- Last Updated: 2026-09-06T08:39:48+01:00
 
 <!-- implement-with-progress:end -->

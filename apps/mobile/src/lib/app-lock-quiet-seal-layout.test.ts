@@ -11,6 +11,7 @@ describe("App Lock Quiet Seal layout contract", () => {
       keypadWidth: 254,
       keyWidth: 62,
       keyHeight: 52,
+      largeTextKeyHeight: 68,
       keyColumnGap: 34,
       keyRowGap: 8,
     })
@@ -18,7 +19,7 @@ describe("App Lock Quiet Seal layout contract", () => {
 
   test("keeps the approved top-control and display-type scale", () => {
     expect(APP_LOCK_QUIET_SEAL_LAYOUT).toMatchObject({
-      choiceLabelFontScaleCap: 1,
+      choiceLabelFontScaleCap: 2,
       closeButtonSize: 42,
       sealSize: 115,
       titleFontSize: 33,

@@ -50,6 +50,13 @@ export default function AppLockModalRoute() {
     () => resolveAppLockQuietSealPresentation(mode, auth.profile?.businessName),
     [auth.profile?.businessName, mode],
   )
+  const entryMessage = isSubmitting
+    ? mode === "confirm"
+      ? "Saving app lock."
+      : mode === "verify-change" || mode === "verify-disable"
+        ? "Checking your current PIN."
+        : "Preparing confirmation."
+    : message
 
   useEffect(() => {
     if (!appLock.isHydrated) return
@@ -211,7 +218,7 @@ export default function AppLockModalRoute() {
               variant="quiet-seal"
             />
 
-            <EntryMessage message={message} />
+            <EntryMessage message={entryMessage} />
           </View>
 
           <AppLockQuietSealDeviceNote />
@@ -353,6 +360,8 @@ function ManageRow({
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
       disabled={disabled}
       haptic
       onPress={onPress}

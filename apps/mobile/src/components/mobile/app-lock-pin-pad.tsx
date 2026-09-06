@@ -1,6 +1,7 @@
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { APP_LOCK_QUIET_SEAL_LAYOUT } from "@/lib/app-lock-quiet-seal-layout"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { cn } from "@/lib/utils"
@@ -33,6 +34,8 @@ export function AppLockPinPad({
   value,
   variant = "default",
 }: AppLockPinPadProps) {
+  const largeTextLayout = useLargeTextLayout()
+
   if (variant === "quiet-seal") {
     return (
       <View style={quietSealStyles.container}>
@@ -46,6 +49,7 @@ export function AppLockPinPad({
                   disabled={disabled}
                   key={digit}
                   label={digit}
+                  largeTextLayout={largeTextLayout}
                   onPress={() => onDigitPress(digit)}
                 />
               ))}
@@ -58,6 +62,7 @@ export function AppLockPinPad({
                 accessibilityLabel="Use fingerprint"
                 disabled={disabled}
                 icon="FingerPrintScan"
+                largeTextLayout={largeTextLayout}
                 onPress={onBiometricPress}
               />
             ) : (
@@ -67,6 +72,7 @@ export function AppLockPinPad({
             <QuietSealPinKey
               disabled={disabled}
               label="0"
+              largeTextLayout={largeTextLayout}
               onPress={() => onDigitPress("0")}
             />
 
@@ -74,6 +80,7 @@ export function AppLockPinPad({
               accessibilityLabel="Delete last digit"
               disabled={disabled}
               icon="Delete"
+              largeTextLayout={largeTextLayout}
               onPress={onDeletePress}
               tone="action"
             />
@@ -179,10 +186,12 @@ function QuietSealPinCodeCells({
 function QuietSealPinKey({
   disabled,
   label,
+  largeTextLayout,
   onPress,
 }: {
   disabled: boolean
   label: string
+  largeTextLayout: boolean
   onPress: () => void
 }) {
   const marketDay = useMarketDayPalette()
@@ -190,11 +199,14 @@ function QuietSealPinKey({
   return (
     <Pressable
       accessibilityLabel={`Enter digit ${label}`}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
       disabled={disabled}
       haptic
       onPress={onPress}
       style={({ pressed }) => [
         quietSealStyles.key,
+        largeTextLayout ? quietSealStyles.keyLargeText : null,
         {
           backgroundColor: pressed ? marketDay.softBand : marketDay.canvas,
           borderBottomColor: marketDay.line,
@@ -203,7 +215,7 @@ function QuietSealPinKey({
       ]}
     >
       <Text
-        maxFontSizeMultiplier={1.4}
+        maxFontSizeMultiplier={2}
         style={[quietSealStyles.keyText, { color: marketDay.ink }]}
       >
         {label}
@@ -216,12 +228,14 @@ function QuietSealIconKey({
   accessibilityLabel,
   disabled,
   icon,
+  largeTextLayout,
   onPress,
   tone = "default",
 }: {
   accessibilityLabel: string
   disabled: boolean
   icon: "Delete" | "FingerPrintScan"
+  largeTextLayout: boolean
   onPress: () => void
   tone?: "action" | "default"
 }) {
@@ -231,11 +245,14 @@ function QuietSealIconKey({
   return (
     <Pressable
       accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
       disabled={disabled}
       haptic
       onPress={onPress}
       style={({ pressed }) => [
         quietSealStyles.key,
+        largeTextLayout ? quietSealStyles.keyLargeText : null,
         {
           backgroundColor: pressed ? marketDay.softBand : marketDay.canvas,
           borderBottomColor:
@@ -245,7 +262,12 @@ function QuietSealIconKey({
       ]}
     >
       {icon === "Delete" ? (
-        <Text style={[quietSealStyles.backspaceGlyph, { color }]}>⌫</Text>
+        <Text
+          maxFontSizeMultiplier={2}
+          style={[quietSealStyles.backspaceGlyph, { color }]}
+        >
+          ⌫
+        </Text>
       ) : (
         <Icon color={color} name={icon} size={21} />
       )}
@@ -300,6 +322,8 @@ function PinKey({
   return (
     <Pressable
       accessibilityLabel={`Enter digit ${label}`}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
       className={cn(
         "h-12 w-12 items-center justify-center rounded-full active:bg-accent",
         disabled && "opacity-40",
@@ -330,6 +354,8 @@ function PinIconKey({
   return (
     <Pressable
       accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
       className={cn(
         "h-12 w-12 items-center justify-center rounded-full active:bg-accent",
         disabled && "opacity-40",
@@ -387,6 +413,9 @@ const quietSealStyles = StyleSheet.create({
     height: APP_LOCK_QUIET_SEAL_LAYOUT.keyHeight,
     justifyContent: "center",
     width: APP_LOCK_QUIET_SEAL_LAYOUT.keyWidth,
+  },
+  keyLargeText: {
+    height: APP_LOCK_QUIET_SEAL_LAYOUT.largeTextKeyHeight,
   },
   keyText: {
     fontSize: 22,

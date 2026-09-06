@@ -59,6 +59,8 @@ const checks = [
       "App lock storage is unavailable",
       "showBiometric={canUseBiometrics}",
       "Forgot code? Sign out and reset app lock",
+      "Checking your lock code.",
+      "Checking fingerprint.",
       'variant="quiet-seal"',
     ],
   },
@@ -72,6 +74,8 @@ const checks = [
       '"quiet-seal"',
       "backspaceGlyph",
       "blankKey",
+      "accessibilityState={{ disabled }}",
+      "largeTextKeyHeight",
       "QuietSealPinKey",
     ],
   },
@@ -80,8 +84,9 @@ const checks = [
     markers: [
       "APP_LOCK_QUIET_SEAL_LAYOUT",
       "keypadWidth: 254",
+      "largeTextKeyHeight: 68",
       "pinRailWidth: 218",
-      "choiceLabelFontScaleCap: 1",
+      "choiceLabelFontScaleCap: 2",
     ],
   },
   {
@@ -92,6 +97,7 @@ const checks = [
       "marketDay.paprika",
       "Stored only on this phone",
       "contentInsetAdjustmentBehavior",
+      "paddingBottom: insets.bottom",
     ],
   },
   {

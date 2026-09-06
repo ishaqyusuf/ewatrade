@@ -15,6 +15,7 @@ import {
   View,
   type ViewStyle,
 } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 type AppLockQuietSealScreenProps = {
   children: ReactNode
@@ -37,6 +38,7 @@ export function AppLockQuietSealScreen({
 }: AppLockQuietSealScreenProps) {
   const largeTextLayout = useLargeTextLayout()
   const marketDay = useMarketDayPalette()
+  const insets = useSafeAreaInsets()
 
   return (
     <SafeArea style={{ backgroundColor: marketDay.paprika }}>
@@ -45,7 +47,10 @@ export function AppLockQuietSealScreen({
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { backgroundColor: marketDay.canvas },
+          {
+            backgroundColor: marketDay.canvas,
+            paddingBottom: insets.bottom,
+          },
         ]}
         contentInsetAdjustmentBehavior="never"
         keyboardShouldPersistTaps="handled"
@@ -71,6 +76,7 @@ export function AppLockQuietSealScreen({
             {onClose ? (
               <Pressable
                 accessibilityLabel="Close app lock settings"
+                accessibilityRole="button"
                 haptic
                 hitSlop={6}
                 onPress={onClose}
@@ -187,7 +193,7 @@ export function AppLockQuietSealLengthChoice() {
         maxFontSizeMultiplier={
           APP_LOCK_QUIET_SEAL_LAYOUT.choiceLabelFontScaleCap
         }
-        numberOfLines={1}
+        numberOfLines={2}
         style={[styles.choiceMuted, { color: marketDay.mutedInk }]}
       >
         4 digit unavailable
@@ -201,7 +207,7 @@ export function AppLockQuietSealLengthChoice() {
         maxFontSizeMultiplier={
           APP_LOCK_QUIET_SEAL_LAYOUT.choiceLabelFontScaleCap
         }
-        numberOfLines={1}
+        numberOfLines={2}
         style={[styles.choiceSelected, { color: marketDay.ink }]}
       >
         6 digit selected
@@ -221,7 +227,7 @@ export function AppLockQuietSealDeviceNote({
     <View style={styles.deviceNote}>
       <Icon color={marketDay.accentInk} name="ShieldCheck" size={15} />
       <Text
-        maxFontSizeMultiplier={1.4}
+        maxFontSizeMultiplier={2}
         style={[styles.deviceNoteText, { color: marketDay.mutedInk }]}
       >
         {children}
@@ -275,19 +281,24 @@ const styles = StyleSheet.create({
     minHeight: 30,
     maxWidth: "100%",
     paddingHorizontal: 10,
+    width: "100%",
   },
   choiceMuted: {
+    flex: 1,
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 0.5,
     lineHeight: 14,
+    textAlign: "center",
     textTransform: "uppercase",
   },
   choiceSelected: {
+    flex: 1,
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 0.5,
     lineHeight: 14,
+    textAlign: "center",
     textTransform: "uppercase",
   },
   closeButton: {
@@ -313,6 +324,7 @@ const styles = StyleSheet.create({
     minHeight: 24,
   },
   deviceNoteText: {
+    flexShrink: 1,
     fontSize: 10,
     fontWeight: "600",
     lineHeight: 16,

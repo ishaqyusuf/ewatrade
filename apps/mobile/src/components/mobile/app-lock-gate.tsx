@@ -71,6 +71,7 @@ function AppLockUnlockScreen({
   const [biometricPromptAttempted, setBiometricPromptAttempted] =
     useState(false)
   const [code, setCode] = useState("")
+  const [isSubmittingBiometrics, setIsSubmittingBiometrics] = useState(false)
   const [isSubmittingCode, setIsSubmittingCode] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [lockedUntil, setLockedUntil] = useState<string | null>(null)
@@ -86,6 +87,8 @@ function AppLockUnlockScreen({
     lockedUntil !== null && new Date(lockedUntil).getTime() > Date.now()
   const helperMessage = useMemo(() => {
     if (isLoading) return "Checking your app lock."
+    if (isSubmittingBiometrics) return "Checking fingerprint."
+    if (isSubmittingCode) return "Checking your lock code."
     if (hasHydrationError) {
       return "App lock storage is unavailable. Sign out and reset app lock to continue."
     }
@@ -101,6 +104,8 @@ function AppLockUnlockScreen({
     hasBiometricsEnabled,
     hasHydrationError,
     isLoading,
+    isSubmittingBiometrics,
+    isSubmittingCode,
     isTemporarilyLocked,
     lockedUntil,
     message,
@@ -156,13 +161,20 @@ function AppLockUnlockScreen({
   }, [code, isSubmittingCode, isTemporarilyLocked, unlockWithCode])
 
   const runBiometricUnlock = useCallback(async () => {
-    if (!canUseBiometrics) return
+    if (!canUseBiometrics || isSubmittingBiometrics) return
 
-    const result = await unlockWithBiometrics()
-    if (!result.ok && result.error) {
-      setMessage(result.error)
+    setIsSubmittingBiometrics(true)
+    try {
+      const result = await unlockWithBiometrics()
+      if (!result.ok && result.error) {
+        setMessage(result.error)
+      }
+    } catch {
+      setMessage("Fingerprint unlock could not be completed.")
+    } finally {
+      setIsSubmittingBiometrics(false)
     }
-  }, [canUseBiometrics, unlockWithBiometrics])
+  }, [canUseBiometrics, isSubmittingBiometrics, unlockWithBiometrics])
 
   useEffect(() => {
     if (code.length === APP_LOCK_CODE_LENGTH) {
@@ -225,6 +237,7 @@ function AppLockUnlockScreen({
           disabled={
             isLoading ||
             hasHydrationError ||
+            isSubmittingBiometrics ||
             isSubmittingCode ||
             isTemporarilyLocked
           }
