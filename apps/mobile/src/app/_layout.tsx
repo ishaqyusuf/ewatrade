@@ -420,7 +420,7 @@ function RootLayoutNav() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <KeyboardProvider>
         <VariableContextProvider value={themeVariables}>
-          <View className="flex-1 bg-background">
+          <View className="flex-1 bg-background" testID="ewatrade-react-root">
             <ThemeProvider value={navigationTheme}>
               <AuthProvider value={auth}>
                 <AppLockProvider>

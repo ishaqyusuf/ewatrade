@@ -47,6 +47,7 @@
     "jobs:deploy": "bun --filter @ewatrade/jobs deploy",
     "lint": "turbo lint",
     "mobile:android:connect": "node apps/mobile/scripts/prepare-android-dev.mjs",
+    "mobile:android:open": "node apps/mobile/scripts/open-android-app-url.mjs",
     "typecheck": "turbo typecheck",
     "format": "biome format --write .",
     "db:start": "bun ../local-infra-kit/bin/dev-services.ts --profile ewatrade"

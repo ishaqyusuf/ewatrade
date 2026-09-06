@@ -53,6 +53,22 @@ scheme. This avoids both the disconnected Expo launcher state and the duplicate
 Fabric surface race observed when reattaching an already-running client. Use
 `--no-launch` when only transport and capability diagnostics are required.
 
+To open a development-only QA screen, wait until the React Native project is
+visibly mounted, then send its app-specific URL through the separate native
+launcher:
+
+```bash
+bun run mobile:android:open --device emulator-5556 --url 'ewatrade-dev://business-home-market-ledger?state=attendant&theme=light'
+```
+
+Do not append `/--/route` to the Metro URL embedded in
+`exp+ewatrade://expo-development-client`. That syntax belongs to Expo Go and
+makes Metro handle the path as a web/static document request; the Android
+development client can then surface a misleading `SocketTimeoutException`.
+The native launcher requires one explicit online device, verifies that the
+EwaTrade project is already resumed, preserves URL query separators through
+ADB's remote shell, and rejects development-client or `/--/` URLs.
+
 Treat its states independently:
 
 - `API cannot be reached`: no healthy listener exists on `3095`.
