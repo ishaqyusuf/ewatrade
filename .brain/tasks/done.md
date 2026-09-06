@@ -1,5 +1,8 @@
 # Done
 
+### [EWA-ENTRY-002 Onboarding current-state audit](./2026-09-06-onboarding-current-state-audit.md)
+- Status: Done
+
 ### [Mobile development connection hardening](./2026-09-06-mobile-development-connection-hardening.md)
 - Status: Done
 

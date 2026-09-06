@@ -5,6 +5,7 @@ import {
   setPendingCustomerTransfer,
 } from "@/lib/customer-conversation-store"
 import { resolveCustomerDeepLink } from "@/lib/customer-deep-link"
+import { resolveOnboardingMarketDayQaPath } from "@/lib/onboarding-market-day-qa"
 
 export async function redirectSystemPath({
   path,
@@ -23,6 +24,12 @@ export async function redirectSystemPath({
     __DEV__,
   )
   if (salesRepShiftLedgerQaPath) return salesRepShiftLedgerQaPath
+
+  const onboardingMarketDayQaPath = resolveOnboardingMarketDayQaPath(
+    path,
+    __DEV__,
+  )
+  if (onboardingMarketDayQaPath) return onboardingMarketDayQaPath
 
   const resolved = resolveCustomerDeepLink(path)
   if (resolved.pendingTransfer) {

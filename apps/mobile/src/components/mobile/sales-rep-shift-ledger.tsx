@@ -72,7 +72,7 @@ export function SalesRepShiftLedgerHero({
         <View
           style={[
             styles.heroActions,
-            { borderColor: `${marketDay.onMarigold}55` },
+            { borderColor: marketDay.onMarigoldHairline },
           ]}
         >
           <HeroAction
@@ -117,7 +117,7 @@ export function SalesRepShiftLedgerHero({
             styles.heroCue,
             largeTextLayout ? styles.heroCueLargeText : null,
             {
-              borderColor: `${marketDay.onMarigold}88`,
+              borderColor: marketDay.onMarigoldDivider,
               color: marketDay.onMarigold,
             },
           ]}
@@ -156,9 +156,9 @@ function HeroAction({
         styles.heroAction,
         {
           backgroundColor: pressed
-            ? `${marketDay.onMarigold}16`
+            ? marketDay.onMarigoldPressed
             : "transparent",
-          borderColor: `${marketDay.onMarigold}55`,
+          borderColor: marketDay.onMarigoldHairline,
           opacity: disabled ? 0.42 : 1,
         },
       ]}
@@ -308,7 +308,7 @@ export function SalesRepShiftLedgerOverview({
             styles.ticketMark,
             {
               borderColor: marketDay.paprika,
-              backgroundColor: `${marketDay.paprika}0D`,
+              backgroundColor: marketDay.paprikaWash,
             },
           ]}
         >
@@ -555,7 +555,7 @@ export function SalesRepShiftLedgerEmptySales({
           styles.emptyMark,
           {
             borderColor: marketDay.paprika,
-            backgroundColor: `${marketDay.paprika}0D`,
+            backgroundColor: marketDay.paprikaWash,
           },
         ]}
       >

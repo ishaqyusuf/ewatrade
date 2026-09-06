@@ -101,3 +101,8 @@ assertion, focused tests and source guards, scoped formatting, Android export,
 and independent spec plus engineering-standards reviews. Review exposed and
 resolved large-text clipping, dark accent contrast, unknown-readiness copy, and
 loaded-versus-queued order-count semantics before completion.
+
+A 2026-09-06 post-completion theme guard replaced five screen-local alpha
+suffixes with named semantic Market Day divider, hairline, pressed, and
+paprika-wash tokens. The rendered values are equivalent; focused presentation,
+theme, formatting, and Android export checks remain green.

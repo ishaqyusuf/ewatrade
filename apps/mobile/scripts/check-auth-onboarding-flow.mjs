@@ -7,6 +7,9 @@ const FILES = {
   googleHook: join(MOBILE_DIR, "src/hooks/use-mobile-google-auth.ts"),
   layout: join(MOBILE_DIR, "src/app/_layout.tsx"),
   login: join(MOBILE_DIR, "src/app/login.tsx"),
+  nativeIntent: join(MOBILE_DIR, "src/app/+native-intent.tsx"),
+  onboarding: join(MOBILE_DIR, "src/app/onboarding.tsx"),
+  onboardingQa: join(MOBILE_DIR, "src/lib/onboarding-market-day-qa.ts"),
   signup: join(MOBILE_DIR, "src/app/sign-up.tsx"),
   staffOnboarding: join(MOBILE_DIR, "src/app/staff-onboarding.tsx"),
   verifyEmail: join(MOBILE_DIR, "src/app/verify-email.tsx"),
@@ -45,6 +48,35 @@ const CONTRACTS = [
     ],
     reason:
       "login must keep Google sign-in, email-code login, and an obvious sign-up path",
+  },
+  {
+    file: FILES.onboarding,
+    markers: [
+      "ONBOARDING_STEPS",
+      "Set up your business",
+      "Build your catalog",
+      "Run daily work",
+      "completeOnboarding(true)",
+      'router.replace("/login")',
+    ],
+    reason:
+      "the approved three-step Market Day onboarding and persisted Login handoff must remain intact",
+  },
+  {
+    file: FILES.onboardingQa,
+    markers: [
+      'DEVELOPMENT_SCHEME = "ewatrade-dev:"',
+      'ONBOARDING_QA_HOST = "onboarding-market-day"',
+      'return "/onboarding"',
+    ],
+    reason:
+      "the exact development-only QA route must keep current native onboarding evidence reproducible",
+  },
+  {
+    file: FILES.nativeIntent,
+    markers: ["resolveOnboardingMarketDayQaPath", "onboardingMarketDayQaPath"],
+    reason:
+      "native intent handling must preserve the development-only onboarding QA route",
   },
   {
     file: FILES.signup,

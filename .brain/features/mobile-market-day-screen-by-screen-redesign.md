@@ -70,7 +70,13 @@ color-forward redesign program.
   guards. The development theme control is now hidden from `/onboarding` after
   an older QA capture exposed action overlap. Because this was the original
   combined Login + Onboarding batch, its missing separate native pre-design
-  Onboarding frame is recorded as a non-repeatable historical exception.
+  Onboarding frame is recorded as a non-repeatable historical exception. A
+  2026-09-06 current-state audit also reconciles the screen with ADR-0041:
+  unauthenticated cold launch intentionally opens common Login, while the
+  retained Onboarding presentation is reproducible through an exact
+  development-only app URL. Fresh unobstructed Light/Dark, all-step, and Light
+  200% top/scrolled Android evidence passes without restoring the retired
+  startup identity gate.
 - `ẸwáTrade` is the canonical user-facing brand spelling (`Ẹ wá`, “come”);
   domains, package ids, URL schemes, and code identifiers remain ASCII-safe.
 - Startup Splash Refresh-rich Option A, `Market Pulse`, remains owner-approved.
@@ -139,7 +145,10 @@ color-forward redesign program.
   shift time or unauthorized stock quantity. Native Light/Dark, 100%/200%,
   loading, error, disabled, empty, populated, offline, pending-sync, measured
   status-bar transition, dock, accessibility-tree, source, formatting, Android
-  export, and independent review gates pass.
+  export, and independent review gates pass. A follow-up theme guard also
+  replaced screen-local alpha-string composition with named semantic Market
+  Day translucency tokens; focused presentation, theme, formatting, and export
+  checks remain green with no visual contract change.
 - Orders list is at the owner-review gate. The canonical batch archives the
   current native Light/Dark first-order surface and five populated operational
   directions with chevron and theme controls. Option A, `Dispatch Ledger`, is

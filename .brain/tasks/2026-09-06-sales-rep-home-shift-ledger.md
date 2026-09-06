@@ -59,6 +59,10 @@ Complete
   export gates pass.
 - Independent spec and engineering-standards second passes report no remaining
   findings after truthfulness, dark-contrast, and 200%-text corrections.
+- A post-completion `qa:theme-colors` rerun found five screen-local alpha
+  suffixes. They now use named semantic Market Day divider, hairline, pressed,
+  and paprika-wash tokens; the theme guard, focused tests, formatting, and
+  Android export remain green with equivalent rendered values.
 - Full mobile TypeScript remains inconclusive because the existing repository
   process exhausts its 4 GiB heap without diagnostics; the focused compile-adjacent
   source, test, formatting, runtime, and Android export gates are green.
