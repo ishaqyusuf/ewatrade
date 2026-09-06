@@ -49,6 +49,30 @@ export function expectedReverseMappings({ apiPort, metroPort }) {
   return [`tcp:${apiPort} tcp:${apiPort}`, `tcp:${metroPort} tcp:${metroPort}`]
 }
 
+export function buildExpoDevClientUrl({ metroPort, scheme }) {
+  const metroUrl = `http://127.0.0.1:${metroPort}`
+  return `${scheme}://expo-development-client/?url=${encodeURIComponent(metroUrl)}`
+}
+
+export function buildExpoDevClientLaunchCommands({
+  devClientUrl,
+  packageName,
+}) {
+  return [
+    ["shell", "am", "force-stop", packageName],
+    [
+      "shell",
+      "am",
+      "start",
+      "-a",
+      "android.intent.action.VIEW",
+      "-d",
+      devClientUrl,
+      packageName,
+    ],
+  ]
+}
+
 export function parseReverseList(output) {
   const mappings = output
     .split("\n")
@@ -103,7 +127,10 @@ function parseArguments(argv) {
       process.env.EXPO_PORT || String(DEFAULT_METRO_PORT),
       "EXPO_PORT",
     ),
+    launch: true,
+    packageName: process.env.ANDROID_PACKAGE_NAME?.trim() || "com.ewatrade.dev",
     requireQa: false,
+    scheme: process.env.EXPO_DEV_CLIENT_SCHEME?.trim() || "exp+ewatrade",
   }
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -122,6 +149,12 @@ function parseArguments(argv) {
       )
     } else if (argument === "--require-qa") {
       options.requireQa = true
+    } else if (argument === "--no-launch") {
+      options.launch = false
+    } else if (argument === "--package") {
+      options.packageName = requiredValue(argv, ++index, argument)
+    } else if (argument === "--scheme") {
+      options.scheme = requiredValue(argv, ++index, argument)
     } else if (argument === "--help" || argument === "-h") {
       options.help = true
     } else {
@@ -189,7 +222,7 @@ async function main() {
     const options = parseArguments(process.argv.slice(2))
     if (options.help) {
       console.log(
-        "Usage: bun run mobile:android:connect --device <serial> [--api-port 3095] [--metro-port 3096] [--require-qa]",
+        "Usage: bun run mobile:android:connect --device <serial> [--api-port 3095] [--metro-port 3096] [--require-qa] [--no-launch] [--package com.ewatrade.dev] [--scheme exp+ewatrade]",
       )
       return
     }
@@ -285,11 +318,30 @@ async function main() {
       return
     }
 
+    const devClientUrl = buildExpoDevClientUrl({
+      metroPort: options.metroPort,
+      scheme: options.scheme,
+    })
+    if (options.launch) {
+      const commands = buildExpoDevClientLaunchCommands({
+        devClientUrl,
+        packageName: options.packageName,
+      })
+      for (const command of commands) {
+        runAdb(adbPath, ["-s", selected.serial, ...command])
+      }
+    }
+
     console.log("Android development connection is ready.")
     console.log(`Selected device: ${selected.serial}`)
     console.log(`Verified reverse mappings: ${mappings.join(", ")}`)
     console.log(`Verified Metro: ${metroUrl}`)
     console.log(`Verified API health: ${apiHealthUrl}`)
+    console.log(
+      options.launch
+        ? `Opened verified Metro in ${options.packageName}: ${devClientUrl}`
+        : `Verified development-client URL (not opened): ${devClientUrl}`,
+    )
     if (capabilityState === "qa_not_configured") {
       console.log(
         "QA profile selection is not configured for this environment. Android, Metro, and the API are connected; add the runbook's QA server configuration and data before expecting the QA Access Profile list.",

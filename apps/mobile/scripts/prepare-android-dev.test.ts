@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import {
+  buildExpoDevClientLaunchCommands,
+  buildExpoDevClientUrl,
   classifyQaCapabilityProbe,
   expectedReverseMappings,
   parseAdbDevicesOutput,
@@ -37,6 +39,39 @@ emulator-5556 device product:sdk_gphone64 model:Pixel_3a_API_34 device:emu
         "emulator-5556 tcp:3095 tcp:3095\nemulator-5556 tcp:3096 tcp:3096\n",
       ),
     ).toEqual(new Set(["tcp:3095 tcp:3095", "tcp:3096 tcp:3096"]))
+  })
+
+  test("builds the verified local Metro development-client URL", () => {
+    expect(
+      buildExpoDevClientUrl({
+        metroPort: 3096,
+        scheme: "exp+ewatrade",
+      }),
+    ).toBe(
+      "exp+ewatrade://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A3096",
+    )
+  })
+
+  test("restarts the selected development client before attaching Metro", () => {
+    expect(
+      buildExpoDevClientLaunchCommands({
+        devClientUrl:
+          "exp+ewatrade://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A3096",
+        packageName: "com.ewatrade.dev",
+      }),
+    ).toEqual([
+      ["shell", "am", "force-stop", "com.ewatrade.dev"],
+      [
+        "shell",
+        "am",
+        "start",
+        "-a",
+        "android.intent.action.VIEW",
+        "-d",
+        "exp+ewatrade://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A3096",
+        "com.ewatrade.dev",
+      ],
+    ])
   })
 
   test("separates an unreachable API from a stale API process", () => {

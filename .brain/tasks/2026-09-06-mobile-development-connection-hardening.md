@@ -43,6 +43,8 @@ the stale/mismatched API condition.
 - Install and verify reverse mappings for API `3095` and Metro `3096`.
 - Probe Metro, API health, and the QA capability contract with actionable,
   distinct diagnostics.
+- Restart only the selected development client and attach it directly to the
+  verified Metro URL after the probes pass.
 - Verify the fix on the isolated EwaTrade emulator without touching devices
   owned by other work.
 - Document the runbook and durable failure classification.
@@ -67,10 +69,12 @@ the stale/mismatched API condition.
 - A missing/stale `qaAccess.capability` route is not reported as a generic
   development-server outage.
 - The app reaches the local development API on the isolated Android emulator.
+- Re-running the command does not leave the selected app in the Expo launcher
+  or race an existing Fabric surface during Metro attachment.
 
 ## Validation Evidence
 
-- `bun test apps/mobile/scripts/prepare-android-dev.test.ts`: 6 tests / 11
+- `bun test apps/mobile/scripts/prepare-android-dev.test.ts`: 8 tests / 13
   expectations passed.
 - `bun --cwd apps/mobile qa:android-ready-fixtures`: passed.
 - `bun run mobile:android:connect --device emulator-5556`: API health, Metro,
@@ -83,3 +87,6 @@ the stale/mismatched API condition.
   `upgrade_required` and `environment_not_allowed` states remain distinct from
   missing QA configuration. No unresolved focused findings remain.
 - Focused implementation commit: `62c18178`.
+- The follow-up attachment hardening force-stops only the selected package,
+  opens the encoded local Metro development-client URL, and was verified on
+  `emulator-5556` while leaving `emulator-5554` untouched.
