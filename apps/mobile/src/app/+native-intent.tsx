@@ -6,6 +6,7 @@ import {
 } from "@/lib/customer-conversation-store"
 import { resolveCustomerDeepLink } from "@/lib/customer-deep-link"
 import { resolveOnboardingMarketDayQaPath } from "@/lib/onboarding-market-day-qa"
+import { resolveOrderDetailCurrentQaPath } from "@/lib/order-detail-current-qa"
 import { resolveOrdersDispatchLedgerQaPath } from "@/lib/orders-dispatch-ledger-qa"
 
 export async function redirectSystemPath({
@@ -31,6 +32,9 @@ export async function redirectSystemPath({
     __DEV__,
   )
   if (onboardingMarketDayQaPath) return onboardingMarketDayQaPath
+
+  const orderDetailCurrentQaPath = resolveOrderDetailCurrentQaPath(path, __DEV__)
+  if (orderDetailCurrentQaPath) return orderDetailCurrentQaPath
 
   const ordersDispatchLedgerQaPath = resolveOrdersDispatchLedgerQaPath(
     path,

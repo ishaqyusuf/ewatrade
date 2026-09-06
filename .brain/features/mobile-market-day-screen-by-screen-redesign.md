@@ -159,6 +159,12 @@ color-forward redesign program.
   after scrolling away. Native Light/Dark, first-order, offline/pending,
   100%/200%, scroll, focused test, source-guard and Android export evidence
   passes. The next owner-review package is Order detail (`EWA-BIZ-004`).
+- Order detail is at the owner-review gate. Its actual production components
+  are archived in native Light/Dark through an inert development-only fixture,
+  and five responsive Light/Dark directions are available in a
+  chevron-controlled comparison board. Option A, `Dispatch Docket`, is the
+  recommendation; no production visual implementation is authorized until the
+  owner explicitly selects an option.
 
 ## Boundaries
 

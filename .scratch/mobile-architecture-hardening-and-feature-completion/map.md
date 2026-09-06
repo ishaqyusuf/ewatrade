@@ -12,9 +12,9 @@ Approved and started on 2026-09-01.
 - In implementation: 0 of 38 (0%)
 - In native QA: 0 of 38 (0%)
 - Correction required: 0 of 38 (0%)
-- Awaiting owner design approval: 0 of 38 (0%)
+- Awaiting owner design approval: 1 of 38 (2.6%)
 - Baseline captured, directions pending: 0 of 38 (0%)
-- Queued: 28 of 38 (73.7%)
+- Queued: 27 of 38 (71.1%)
 
 `EWA-ENTRY-001` Startup Splash, `EWA-ENTRY-002` Onboarding, `EWA-ENTRY-003`
 Login, `EWA-ENTRY-004` Sign Up, and `EWA-ENTRY-005` Verify Email / OTP are
@@ -123,7 +123,8 @@ review batch until the owner explicitly chooses an option.
 
 ## Frontier
 
-1. Capture the current Order detail production surface and its required states.
-2. Generate five Light/Dark Order detail directions in one chevron-controlled
-   review board.
-3. Recommend the strongest direction and pause for explicit owner approval.
+1. Owner reviews the current native Order detail baseline and five Light/Dark
+   directions in `designs/entry-12-order-detail-rich-directions/comparison.html`.
+2. Owner explicitly selects one direction or requests a replacement batch.
+3. Only after approval, freeze the Order detail implementation contract and
+   begin production work.
