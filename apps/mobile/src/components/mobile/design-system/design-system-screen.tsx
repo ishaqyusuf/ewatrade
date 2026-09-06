@@ -1,7 +1,9 @@
+import { ActionButton } from "@/components/mobile/action-button"
 import { AuthHeader } from "@/components/mobile/auth-header"
 import { MobileScreen } from "@/components/mobile/screen"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { getAppVariant } from "@/lib/app-variant"
+import { useRouter } from "expo-router"
 import { ReferenceDecisionsSection } from "./reference-decisions/reference-decisions-section"
 
 function isDesignSystemEnabled() {
@@ -27,6 +29,8 @@ function ProductionGuardNotice() {
 }
 
 export function DesignSystemScreen() {
+  const router = useRouter()
+
   if (!isDesignSystemEnabled()) {
     return (
       <MobileScreen contentClassName="gap-4" keyboardBottomOffset={132} scroll>
@@ -50,6 +54,30 @@ export function DesignSystemScreen() {
         title="Mobile Design System"
       />
       <ProductionGuardNotice />
+      <ActionButton
+        icon="WandSparkles"
+        onPress={() => router.push("/design-system/startup-splash")}
+        trailingIcon="ChevronRight"
+        variant="outline"
+      >
+        Preview startup splash
+      </ActionButton>
+      <ActionButton
+        icon="ShieldCheck"
+        onPress={() => router.push("/design-system/staff-onboarding")}
+        trailingIcon="ChevronRight"
+        variant="outline"
+      >
+        Preview staff onboarding
+      </ActionButton>
+      <ActionButton
+        icon="SecurityPassword"
+        onPress={() => router.push("/design-system/app-lock")}
+        trailingIcon="ChevronRight"
+        variant="outline"
+      >
+        Preview app lock
+      </ActionButton>
       <ReferenceDecisionsSection />
     </MobileScreen>
   )

@@ -1,7 +1,7 @@
-import { readFileSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { readFileSync } from "node:fs"
+import { join, relative, resolve } from "node:path"
 
-const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname);
+const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname)
 
 const checks = [
   {
@@ -13,7 +13,7 @@ const checks = [
     markers: [
       "expo-local-authentication",
       "faceIDPermission",
-      "unlock your EwaTrade workspace",
+      "unlock your ẸwáTrade workspace",
     ],
   },
   {
@@ -45,7 +45,7 @@ const checks = [
       "hydrationError",
       "AppState.addEventListener",
       "LocalAuthentication.authenticateAsync",
-      'promptMessage: "Unlock EwaTrade"',
+      'promptMessage: "Unlock ẸwáTrade"',
       "unlockWithBiometrics",
       "resetAfterSignOut",
     ],
@@ -53,11 +53,13 @@ const checks = [
   {
     file: "src/components/mobile/app-lock-gate.tsx",
     markers: [
-      "Enter your PIN code",
+      "AppLockQuietSealScreen",
+      "resolveAppLockQuietSealPresentation",
       "AppLockPinPad",
       "App lock storage is unavailable",
       "showBiometric={canUseBiometrics}",
       "Forgot code? Sign out and reset app lock",
+      'variant="quiet-seal"',
     ],
   },
   {
@@ -67,17 +69,60 @@ const checks = [
       "FingerPrintScan",
       'accessibilityLabel="Use fingerprint"',
       "Delete last digit",
+      '"quiet-seal"',
+      "backspaceGlyph",
+      "blankKey",
+      "QuietSealPinKey",
+    ],
+  },
+  {
+    file: "src/lib/app-lock-quiet-seal-layout.ts",
+    markers: [
+      "APP_LOCK_QUIET_SEAL_LAYOUT",
+      "keypadWidth: 254",
+      "pinRailWidth: 218",
+      "choiceLabelFontScaleCap: 1",
+    ],
+  },
+  {
+    file: "src/components/mobile/app-lock-quiet-seal.tsx",
+    markers: [
+      "AppLockQuietSealScreen",
+      "useMarketDayPalette",
+      "marketDay.paprika",
+      "Stored only on this phone",
+      "contentInsetAdjustmentBehavior",
     ],
   },
   {
     file: "src/app/app-lock-modal.tsx",
     markers: [
-      "Create PIN code",
-      "Confirm PIN code",
+      "resolveAppLockQuietSealPresentation",
+      "AppLockQuietSealScreen",
       "Fingerprint unlock",
+      'mode === "confirm"',
+      'mode === "verify-change"',
+      'mode === "verify-disable"',
+      "PIN codes did not match",
+      "Too many wrong attempts",
+      "clearLock",
       "Turn off app lock",
-      "PinLengthSegment",
+      'variant="quiet-seal"',
     ],
+  },
+  {
+    file: "src/app/design-system/app-lock.tsx",
+    markers: [
+      "AppLockPreviewRoute",
+      "AppLockQuietSealScreen",
+      "shouldShowInternalDesignSystemEntry",
+      'variant="quiet-seal"',
+      'useState("")',
+    ],
+  },
+  {
+    file: "src/components/mobile/design-system/design-system-screen.tsx",
+    markers: ['router.push("/design-system/app-lock")'],
   },
   {
     file: "src/app/_layout.tsx",
@@ -87,30 +132,30 @@ const checks = [
     file: "src/lib/admin-navigation.ts",
     markers: ['label: "App lock"', 'href: "/app-lock-modal"'],
   },
-];
+]
 
-const failures = [];
+const failures = []
 
 for (const check of checks) {
-  const filePath = join(MOBILE_DIR, check.file);
-  const source = readFileSync(filePath, "utf8");
+  const filePath = join(MOBILE_DIR, check.file)
+  const source = readFileSync(filePath, "utf8")
 
   for (const marker of check.markers) {
-    if (source.includes(marker)) continue;
+    if (source.includes(marker)) continue
 
     failures.push({
       file: relative(MOBILE_DIR, filePath),
       marker,
-    });
+    })
   }
 }
 
 if (failures.length > 0) {
-  console.error("Mobile app lock flow check failed.");
+  console.error("Mobile app lock flow check failed.")
   for (const failure of failures) {
-    console.error(`- ${failure.file} is missing marker: ${failure.marker}`);
+    console.error(`- ${failure.file} is missing marker: ${failure.marker}`)
   }
-  process.exit(1);
+  process.exit(1)
 }
 
-console.log("Mobile app lock flow check passed.");
+console.log("Mobile app lock flow check passed.")

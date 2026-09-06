@@ -1,23 +1,27 @@
 import { AppLockPinPad } from "@/components/mobile/app-lock-pin-pad"
-import { SafeArea } from "@/components/safe-area"
+import {
+  AppLockQuietSealDeviceNote,
+  AppLockQuietSealLengthChoice,
+  AppLockQuietSealScreen,
+} from "@/components/mobile/app-lock-quiet-seal"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Switch } from "@/components/ui/switch"
 import { Text } from "@/components/ui/text"
 import { useAppLockContext } from "@/hooks/use-app-lock"
 import { useAuthContext } from "@/hooks/use-auth"
-import { useColorScheme, useColors } from "@/hooks/use-color"
+import { resolveAppLockQuietSealPresentation } from "@/lib/app-lock-quiet-seal-presentation"
 import { APP_LOCK_CODE_LENGTH } from "@/lib/app-lock-store"
+import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { useRouter } from "expo-router"
-import { StatusBar } from "expo-status-bar"
 import {
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
   useState,
-  type ReactNode,
 } from "react"
-import { View } from "react-native"
+import { StyleSheet, View } from "react-native"
 
 type AppLockSetupMode =
   | "create"
@@ -34,8 +38,6 @@ export default function AppLockModalRoute() {
   const router = useRouter()
   const auth = useAuthContext()
   const appLock = useAppLockContext()
-  const colors = useColors()
-  const { colorScheme } = useColorScheme()
   const [mode, setMode] = useState<AppLockSetupMode>(
     appLock.isConfigured ? "manage" : "create",
   )
@@ -44,22 +46,10 @@ export default function AppLockModalRoute() {
   const [message, setMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const isManageMode = mode === "manage"
-  const title = useMemo(() => {
-    if (mode === "manage") return "App lock"
-    if (mode === "confirm") return "Confirm PIN code"
-    if (mode === "verify-change") return "Enter current PIN"
-    if (mode === "verify-disable") return "Enter current PIN"
-    return "Create PIN code"
-  }, [mode])
-  const subtitle = useMemo(() => {
-    if (mode === "manage") {
-      return "Protect this device after login with a local PIN and optional fingerprint unlock."
-    }
-    if (mode === "confirm") return "Enter it again to finish setup."
-    if (mode === "verify-change") return "Confirm the current PIN before changing it."
-    if (mode === "verify-disable") return "Confirm the current PIN before turning app lock off."
-    return "Create a PIN code that will be used every time you open the app."
-  }, [mode])
+  const presentation = useMemo(
+    () => resolveAppLockQuietSealPresentation(mode, auth.profile?.businessName),
+    [auth.profile?.businessName, mode],
+  )
 
   useEffect(() => {
     if (!appLock.isHydrated) return
@@ -71,13 +61,10 @@ export default function AppLockModalRoute() {
     setMessage(null)
   }, [])
 
-  const appendDigit = useCallback(
-    (digit: string) => {
-      setCode((currentCode) => normalizeLockCode(`${currentCode}${digit}`))
-      setMessage(null)
-    },
-    [],
-  )
+  const appendDigit = useCallback((digit: string) => {
+    setCode((currentCode) => normalizeLockCode(`${currentCode}${digit}`))
+    setMessage(null)
+  }, [])
 
   const removeLastDigit = useCallback(() => {
     setCode((currentCode) => currentCode.slice(0, -1))
@@ -111,7 +98,9 @@ export default function AppLockModalRoute() {
       }
 
       await appLock.setBiometricsEnabled(enabled)
-      setMessage(enabled ? "Fingerprint unlock enabled." : "Fingerprint unlock off.")
+      setMessage(
+        enabled ? "Fingerprint unlock enabled." : "Fingerprint unlock off.",
+      )
     },
     [appLock],
   )
@@ -192,98 +181,48 @@ export default function AppLockModalRoute() {
   }, [router])
 
   return (
-    <SafeArea style={{ backgroundColor: colors.background }}>
-      <StatusBar
-        backgroundColor={colors.background}
-        style={colorScheme === "dark" ? "light" : "dark"}
-      />
-      <View className="flex-1 bg-background px-6 pb-5 pt-4">
-        <View className="flex-row items-center justify-between">
-          <View className="h-10 w-10" />
-          <Text className="text-center text-[13px] font-medium text-muted-foreground">
-            PIN code
-          </Text>
-          <Pressable
-            accessibilityLabel="Close app lock settings"
-            className="h-10 w-10 items-center justify-center rounded-full bg-muted active:bg-accent"
-            haptic
-            onPress={close}
-            transition
-          >
-            <Icon className="size-sm text-muted-foreground" name="X" />
-          </Pressable>
-        </View>
+    <AppLockQuietSealScreen
+      contentStyle={isManageMode ? styles.manageScreen : styles.entryScreen}
+      eyebrow={presentation.eyebrow}
+      onClose={close}
+      subtitle={presentation.subtitle}
+      testID="app-lock-quiet-seal-settings"
+      title={presentation.title}
+    >
+      {isManageMode ? (
+        <AppLockManagePanel
+          appLock={appLock}
+          message={message}
+          onChangePin={startChange}
+          onCreatePin={startCreate}
+          onDisable={startDisable}
+          onToggleBiometrics={toggleBiometrics}
+        />
+      ) : (
+        <>
+          <View style={styles.entryFlow}>
+            <AppLockQuietSealLengthChoice />
+            <AppLockPinPad
+              codeLength={APP_LOCK_CODE_LENGTH}
+              disabled={isSubmitting}
+              onDeletePress={removeLastDigit}
+              onDigitPress={appendDigit}
+              value={code}
+              variant="quiet-seal"
+            />
 
-        {isManageMode ? (
-          <AppLockManagePanel
-            appLock={appLock}
-            businessName={auth.profile?.businessName}
-            message={message}
-            onChangePin={startChange}
-            onCreatePin={startCreate}
-            onDisable={startDisable}
-            onToggleBiometrics={toggleBiometrics}
-          />
-        ) : (
-          <View className="flex-1 justify-between py-7">
-            <View className="items-center gap-7">
-              <PinLengthSegment />
-              <View className="items-center gap-2">
-                <Text className="text-center text-[19px] font-semibold leading-6 text-foreground">
-                  {title}
-                </Text>
-                <Text className="max-w-[260px] text-center text-[12px] leading-4 text-muted-foreground">
-                  {subtitle}
-                </Text>
-              </View>
-            </View>
-
-            <View className="items-center gap-5">
-              <AppLockPinPad
-                codeLength={APP_LOCK_CODE_LENGTH}
-                disabled={isSubmitting}
-                onDeletePress={removeLastDigit}
-                onDigitPress={appendDigit}
-                value={code}
-              />
-
-              <Text
-                className={
-                  message
-                    ? "min-h-5 text-center text-[12px] font-medium leading-5 text-destructive"
-                    : "min-h-5 text-center text-[12px] leading-5 text-muted-foreground"
-                }
-              >
-                {message ?? " "}
-              </Text>
-            </View>
+            <EntryMessage message={message} />
           </View>
-        )}
-      </View>
-    </SafeArea>
-  )
-}
 
-function PinLengthSegment() {
-  return (
-    <View className="w-full max-w-[250px] flex-row rounded-full bg-muted p-1">
-      <View className="h-8 flex-1 items-center justify-center rounded-full opacity-50">
-        <Text className="text-[12px] font-medium text-muted-foreground">
-          4 digit code
-        </Text>
-      </View>
-      <View className="h-8 flex-1 items-center justify-center rounded-full bg-card">
-        <Text className="text-[12px] font-semibold text-foreground">
-          6 digit code
-        </Text>
-      </View>
-    </View>
+          <AppLockQuietSealDeviceNote />
+        </>
+      )}
+    </AppLockQuietSealScreen>
   )
 }
 
 function AppLockManagePanel({
   appLock,
-  businessName,
   message,
   onChangePin,
   onCreatePin,
@@ -291,13 +230,13 @@ function AppLockManagePanel({
   onToggleBiometrics,
 }: {
   appLock: ReturnType<typeof useAppLockContext>
-  businessName?: string
   message: string | null
   onChangePin: () => void
   onCreatePin: () => void
   onDisable: () => void
   onToggleBiometrics: (enabled: boolean) => void
 }) {
+  const marketDay = useMarketDayPalette()
   const hasLock = appLock.isConfigured
   const biometricsEnabled = !!appLock.config?.biometricsEnabled
   const biometricDetail = appLock.biometricsStatus.isAvailable
@@ -306,64 +245,51 @@ function AppLockManagePanel({
       "Fingerprint unlock is not available on this device.")
 
   return (
-    <View className="flex-1 justify-between py-7">
-      <View className="gap-7">
-        <View className="items-center gap-3">
-          <View className="h-16 w-16 items-center justify-center rounded-full bg-muted">
-            <Icon className="size-xl text-foreground" name="Lock" />
-          </View>
-          <View className="items-center gap-2">
-            <Text className="text-center text-[20px] font-semibold leading-7 text-foreground">
-              Protect {businessName ?? "your business"}
-            </Text>
-            <Text className="max-w-[280px] text-center text-[12px] leading-5 text-muted-foreground">
-              App lock is local to this phone and appears after login whenever
-              you reopen EwaTrade.
-            </Text>
-          </View>
-        </View>
-
-        <View className="gap-3">
-          <ManageRow
-            detail={
-              hasLock
-                ? "Change the 6 digit PIN used to unlock this app."
-                : "Create a 6 digit PIN before turning on fingerprint unlock."
-            }
-            icon="SecurityPassword"
-            onPress={hasLock ? onChangePin : onCreatePin}
-            title={hasLock ? "Change PIN code" : "Create PIN code"}
-          />
-          <ManageRow
-            detail={biometricDetail}
-            disabled={!hasLock || !appLock.biometricsStatus.isAvailable}
-            icon="FingerPrintScan"
-            title="Fingerprint unlock"
-            trailing={
-              <Switch
-                checked={hasLock && biometricsEnabled}
-                disabled={!hasLock || !appLock.biometricsStatus.isAvailable}
-                onCheckedChange={(checked) => onToggleBiometrics(checked)}
-              />
-            }
-          />
-          {hasLock ? (
-            <ManageRow
-              detail="Turn off PIN and fingerprint unlock on this phone."
-              icon="XCircle"
-              onPress={onDisable}
-              title="Turn off app lock"
-              tone="danger"
+    <View style={styles.managePanel}>
+      <View style={[styles.manageRows, { borderTopColor: marketDay.line }]}>
+        <ManageRow
+          detail={
+            hasLock
+              ? "Change the 6 digit PIN used to unlock this app."
+              : "Create a 6 digit PIN before turning on fingerprint unlock."
+          }
+          icon="SecurityPassword"
+          onPress={hasLock ? onChangePin : onCreatePin}
+          title={hasLock ? "Change PIN code" : "Create PIN code"}
+        />
+        <ManageRow
+          detail={biometricDetail}
+          disabled={!hasLock || !appLock.biometricsStatus.isAvailable}
+          icon="FingerPrintScan"
+          title="Fingerprint unlock"
+          trailing={
+            <Switch
+              checked={hasLock && biometricsEnabled}
+              disabled={!hasLock || !appLock.biometricsStatus.isAvailable}
+              onCheckedChange={(checked) => onToggleBiometrics(checked)}
             />
-          ) : null}
-        </View>
-
-        {message ? (
-          <Text className="text-center text-[12px] font-medium leading-5 text-muted-foreground">
-            {message}
-          </Text>
+          }
+        />
+        {hasLock ? (
+          <ManageRow
+            detail="Turn off PIN and fingerprint unlock on this phone."
+            icon="XCircle"
+            onPress={onDisable}
+            title="Turn off app lock"
+            tone="danger"
+          />
         ) : null}
       </View>
+
+      {message ? (
+        <Text style={[styles.manageMessage, { color: marketDay.mutedInk }]}>
+          {message}
+        </Text>
+      ) : null}
+
+      <AppLockQuietSealDeviceNote>
+        PIN and fingerprint settings stay on this phone
+      </AppLockQuietSealDeviceNote>
     </View>
   )
 }
@@ -385,35 +311,26 @@ function ManageRow({
   tone?: "danger" | "default"
   trailing?: ReactNode
 }) {
+  const marketDay = useMarketDayPalette()
+  const actionColor = tone === "danger" ? marketDay.paprika : marketDay.ink
   const content = (
     <>
-      <View className="h-10 w-10 items-center justify-center rounded-full bg-muted">
-        <Icon
-          className={
-            tone === "danger"
-              ? "size-base text-destructive"
-              : "size-base text-muted-foreground"
-          }
-          name={icon}
-        />
+      <View
+        style={[styles.manageIcon, { backgroundColor: marketDay.softBand }]}
+      >
+        <Icon color={actionColor} name={icon} size={21} />
       </View>
-      <View className="min-w-0 flex-1 gap-1">
-        <Text
-          className={
-            tone === "danger"
-              ? "text-[14px] font-semibold text-destructive"
-              : "text-[14px] font-semibold text-foreground"
-          }
-        >
+      <View style={styles.manageCopy}>
+        <Text style={[styles.manageTitle, { color: actionColor }]}>
           {title}
         </Text>
-        <Text className="text-[12px] leading-4 text-muted-foreground">
+        <Text style={[styles.manageDetail, { color: marketDay.mutedInk }]}>
           {detail}
         </Text>
       </View>
       {trailing ??
         (onPress ? (
-          <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
+          <Icon color={marketDay.mutedInk} name="ChevronRight" size={17} />
         ) : null)}
     </>
   )
@@ -421,11 +338,13 @@ function ManageRow({
   if (!onPress) {
     return (
       <View
-        className={
-          disabled
-            ? "min-h-[76px] flex-row items-center gap-3 rounded-2xl bg-card px-4 opacity-60"
-            : "min-h-[76px] flex-row items-center gap-3 rounded-2xl bg-card px-4"
-        }
+        style={[
+          styles.manageRow,
+          {
+            borderBottomColor: marketDay.line,
+            opacity: disabled ? 0.5 : 1,
+          },
+        ]}
       >
         {content}
       </View>
@@ -434,17 +353,100 @@ function ManageRow({
 
   return (
     <Pressable
-      className={
-        disabled
-          ? "min-h-[76px] flex-row items-center gap-3 rounded-2xl bg-card px-4 opacity-60"
-          : "min-h-[76px] flex-row items-center gap-3 rounded-2xl bg-card px-4 active:bg-accent"
-      }
       disabled={disabled}
       haptic
       onPress={onPress}
+      style={({ pressed }) => [
+        styles.manageRow,
+        {
+          backgroundColor: pressed ? marketDay.softBand : marketDay.canvas,
+          borderBottomColor: marketDay.line,
+          opacity: disabled ? 0.5 : 1,
+        },
+      ]}
       transition
     >
       {content}
     </Pressable>
   )
 }
+
+function EntryMessage({ message }: { message: string | null }) {
+  const marketDay = useMarketDayPalette()
+
+  return (
+    <Text
+      style={[
+        styles.entryMessage,
+        { color: message ? marketDay.paprika : marketDay.mutedInk },
+      ]}
+    >
+      {message ?? " "}
+    </Text>
+  )
+}
+
+const styles = StyleSheet.create({
+  entryFlow: {
+    alignItems: "center",
+    gap: 22,
+    width: "100%",
+  },
+  entryMessage: {
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 18,
+    minHeight: 20,
+    textAlign: "center",
+  },
+  entryScreen: {
+    justifyContent: "space-between",
+  },
+  manageCopy: {
+    flex: 1,
+    gap: 3,
+    minWidth: 0,
+  },
+  manageDetail: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  manageIcon: {
+    alignItems: "center",
+    borderRadius: 999,
+    height: 42,
+    justifyContent: "center",
+    width: 42,
+  },
+  manageMessage: {
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 18,
+    textAlign: "center",
+  },
+  managePanel: {
+    flexGrow: 1,
+    gap: 24,
+    justifyContent: "space-between",
+  },
+  manageRow: {
+    alignItems: "center",
+    borderBottomWidth: 1,
+    flexDirection: "row",
+    gap: 12,
+    minHeight: 82,
+    paddingHorizontal: 4,
+    paddingVertical: 12,
+  },
+  manageRows: {
+    borderTopWidth: 1,
+  },
+  manageScreen: {
+    gap: 26,
+  },
+  manageTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    lineHeight: 19,
+  },
+})

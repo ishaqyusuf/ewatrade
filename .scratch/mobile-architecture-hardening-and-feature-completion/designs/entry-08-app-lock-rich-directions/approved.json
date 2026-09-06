@@ -1,0 +1,10 @@
+{
+  "screen": "EWA-ENTRY-008 App Lock",
+  "approved_option": "E",
+  "approved_direction": "Quiet Seal",
+  "approved_image_light": "option-e.png",
+  "approved_image_dark": "option-e-dark.png",
+  "approved_at": "2026-09-04",
+  "owner_feedback": "Use Option E and proceed. The earlier Option B reference was corrected explicitly.",
+  "implementation_authorized": true
+}

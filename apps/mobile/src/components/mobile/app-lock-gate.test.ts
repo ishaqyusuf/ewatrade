@@ -6,6 +6,7 @@ describe("mobile app lock route boundary", () => {
   test("keeps customer Store links and the customer shell outside Business lock", () => {
     expect(isCustomerShellPath(["r", "store-token"])).toBe(true)
     expect(isCustomerShellPath(["(customer)", "conversations"])).toBe(true)
+    expect(isCustomerShellPath(["customer-account-login"])).toBe(false)
   })
 
   test("continues protecting Business routes", () => {

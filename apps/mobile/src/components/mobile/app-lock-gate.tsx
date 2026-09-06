@@ -1,16 +1,19 @@
 import { AppLockPinPad } from "@/components/mobile/app-lock-pin-pad"
-import { SafeArea } from "@/components/safe-area"
+import {
+  AppLockQuietSealDeviceNote,
+  AppLockQuietSealScreen,
+} from "@/components/mobile/app-lock-quiet-seal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAppLockContext } from "@/hooks/use-app-lock"
 import { useAuthContext } from "@/hooks/use-auth"
-import { useColorScheme, useColors } from "@/hooks/use-color"
+import { resolveAppLockQuietSealPresentation } from "@/lib/app-lock-quiet-seal-presentation"
 import { isCustomerShellPath } from "@/lib/app-lock-route"
 import { APP_LOCK_CODE_LENGTH } from "@/lib/app-lock-store"
+import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { useSegments } from "expo-router"
-import { StatusBar } from "expo-status-bar"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Modal, View } from "react-native"
+import { Modal, StyleSheet, View } from "react-native"
 
 function normalizeLockCode(value: string) {
   return value.replace(/\D/g, "").slice(0, APP_LOCK_CODE_LENGTH)
@@ -57,8 +60,7 @@ function AppLockUnlockScreen({
   isLoading: boolean
 }) {
   const auth = useAuthContext()
-  const colors = useColors()
-  const { colorScheme } = useColorScheme()
+  const marketDay = useMarketDayPalette()
   const {
     biometricsStatus,
     config,
@@ -72,6 +74,11 @@ function AppLockUnlockScreen({
   const [isSubmittingCode, setIsSubmittingCode] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [lockedUntil, setLockedUntil] = useState<string | null>(null)
+  const presentation = useMemo(
+    () =>
+      resolveAppLockQuietSealPresentation("unlock", auth.profile?.businessName),
+    [auth.profile?.businessName],
+  )
   const hasBiometricsEnabled = !!config?.biometricsEnabled
   const canUseBiometrics =
     hasBiometricsEnabled && biometricsStatus.isAvailable && !isLoading
@@ -205,60 +212,100 @@ function AppLockUnlockScreen({
   }, [auth, resetAfterSignOut])
 
   return (
-    <SafeArea style={{ backgroundColor: colors.background }}>
-      <StatusBar
-        backgroundColor={colors.background}
-        style={colorScheme === "dark" ? "light" : "dark"}
-      />
+    <AppLockQuietSealScreen
+      contentStyle={styles.unlockScreen}
+      eyebrow={presentation.eyebrow}
+      subtitle={presentation.subtitle}
+      testID="app-lock-quiet-seal-unlock"
+      title={presentation.title}
+    >
+      <View style={styles.unlockFlow}>
+        <AppLockPinPad
+          codeLength={APP_LOCK_CODE_LENGTH}
+          disabled={
+            isLoading ||
+            hasHydrationError ||
+            isSubmittingCode ||
+            isTemporarilyLocked
+          }
+          onBiometricPress={runBiometricUnlock}
+          onDeletePress={removeLastDigit}
+          onDigitPress={appendDigit}
+          showBiometric={canUseBiometrics}
+          value={code}
+          variant="quiet-seal"
+        />
 
-      <View className="flex-1 justify-between bg-background px-8 pb-5 pt-8">
-        <View className="items-center gap-3">
-          <Text className="text-center text-[18px] font-semibold leading-6 text-foreground">
-            Enter your PIN code
-          </Text>
-          <Text className="max-w-[240px] text-center text-[12px] leading-4 text-muted-foreground">
-            To continue into {auth.profile?.businessName ?? "the app"}
-          </Text>
-        </View>
+        <Text
+          style={[
+            styles.helperMessage,
+            {
+              color:
+                message || isTemporarilyLocked
+                  ? marketDay.paprika
+                  : marketDay.mutedInk,
+            },
+          ]}
+        >
+          {helperMessage}
+        </Text>
 
-        <View className="items-center gap-6">
-          <AppLockPinPad
-            codeLength={APP_LOCK_CODE_LENGTH}
-            disabled={
-              isLoading ||
-              hasHydrationError ||
-              isSubmittingCode ||
-              isTemporarilyLocked
-            }
-            onBiometricPress={runBiometricUnlock}
-            onDeletePress={removeLastDigit}
-            onDigitPress={appendDigit}
-            showBiometric={canUseBiometrics}
-            value={code}
-          />
-
+        <Pressable
+          accessibilityRole="button"
+          haptic
+          onPress={handleForgotCode}
+          style={({ pressed }) => [
+            styles.forgotButton,
+            {
+              backgroundColor: pressed ? marketDay.softBand : marketDay.canvas,
+              borderBottomColor: marketDay.line,
+            },
+          ]}
+          transition
+        >
           <Text
-            className={
-              message || isTemporarilyLocked
-                ? "min-h-5 text-center text-[12px] font-medium leading-5 text-destructive"
-                : "min-h-5 text-center text-[12px] leading-5 text-muted-foreground"
-            }
+            style={[styles.forgotButtonText, { color: marketDay.mutedInk }]}
           >
-            {helperMessage}
+            Forgot code? Sign out and reset app lock
           </Text>
-
-          <Pressable
-            className="min-h-10 items-center justify-center px-4"
-            haptic
-            onPress={handleForgotCode}
-            transition
-          >
-            <Text className="text-center text-xs font-semibold text-muted-foreground">
-              Forgot code? Sign out and reset app lock
-            </Text>
-          </Pressable>
-        </View>
+        </Pressable>
       </View>
-    </SafeArea>
+
+      <AppLockQuietSealDeviceNote>
+        Your PIN never leaves this phone
+      </AppLockQuietSealDeviceNote>
+    </AppLockQuietSealScreen>
   )
 }
+
+const styles = StyleSheet.create({
+  forgotButton: {
+    alignItems: "center",
+    borderBottomWidth: 1,
+    justifyContent: "center",
+    minHeight: 48,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  forgotButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 18,
+    textAlign: "center",
+  },
+  helperMessage: {
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 18,
+    minHeight: 36,
+    textAlign: "center",
+  },
+  unlockFlow: {
+    alignItems: "center",
+    gap: 20,
+    width: "100%",
+  },
+  unlockScreen: {
+    justifyContent: "space-between",
+  },
+})

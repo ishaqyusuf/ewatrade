@@ -248,7 +248,7 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
       disableDeviceFallback: true,
       fallbackLabel: "Use lock code",
       promptDescription: "Confirm it is you to open your business workspace.",
-      promptMessage: "Unlock EwaTrade",
+      promptMessage: "Unlock ẸwáTrade",
       promptSubtitle: "App lock",
       requireConfirmation: false,
     })
