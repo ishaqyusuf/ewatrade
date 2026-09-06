@@ -79,6 +79,10 @@ screen works in its required states.
    Options must differ in hierarchy, composition, and visual story, not only
    color. The comparison page must expose a top-right selector that switches
    among all options without leaving the page.
+   Include every directly opened task surface in the same batch, such as a
+   confirmation sheet, action modal, picker, or focused child workflow. Give
+   multi-state child surfaces an in-page state switch so the owner can review
+   the complete interaction without leaving the option selector.
 4. Rank the directions and recommend the strongest fit for ẸwáTrade, but do not
    select or implement it yet.
 5. Pause for owner review. The owner may approve an option, reject the batch,
@@ -114,17 +118,19 @@ evidence gallery and links back to the corresponding screen package.
 ## Completion Rule
 
 A screen counts toward the headline percentage only when all applicable gates
-are complete: baseline, five directions, selection, implementation, native QA,
-functional checks, visual review, and documentation. Partial screens retain
-their exact stage and do not inflate completion.
+are complete: parent and directly opened task-surface baselines, five
+directions, selection, implementation, native QA, functional checks, visual
+review, and documentation. Partial screens retain their exact stage and do not
+inflate completion.
 
 No future recommendation is treated as approval. The workflow pauses at the
 review batch until the owner explicitly chooses an option.
 
 ## Frontier
 
-1. Owner reviews the current native Order detail baseline and five Light/Dark
-   directions in `designs/entry-12-order-detail-rich-directions/comparison.html`.
-2. Owner explicitly selects one direction or requests a replacement batch.
-3. Only after approval, freeze the Order detail implementation contract and
-   begin production work.
+1. Owner reviews the five paired Record payment and Fulfil line directions in
+   `designs/entry-12-order-actions-rich-directions/comparison.html`.
+2. Owner explicitly selects one companion direction or requests a replacement
+   batch.
+3. Only after that approval, implement both directly opened action surfaces,
+   complete native QA, and close `EWA-BIZ-004` before advancing to Catalog.

@@ -41,6 +41,11 @@ color-forward redesign program.
 - Each five-option batch ships with a top-right in-page selector. Codex may rank
   and recommend options, but must pause before implementation until the owner
   explicitly approves one or asks for replacement directions.
+- Each batch includes the directly opened task surfaces that are necessary to
+  complete the screen's job, including action sheets, confirmation modals,
+  pickers, and focused child workflows. Multi-state surfaces use an in-page
+  state switch alongside the option selector so the owner reviews the parent
+  and its consequences as one complete interaction.
 - Screen behavior, permissions, data meaning, offline policy, and server-owned
   rules remain unchanged unless a separately documented product defect is
   discovered.
@@ -159,12 +164,20 @@ color-forward redesign program.
   after scrolling away. Native Light/Dark, first-order, offline/pending,
   100%/200%, scroll, focused test, source-guard and Android export evidence
   passes. The next owner-review package is Order detail (`EWA-BIZ-004`).
-- Order detail is at the owner-review gate. Its actual production components
-  are archived in native Light/Dark through an inert development-only fixture,
-  and five responsive Light/Dark directions are available in a
-  chevron-controlled comparison board. Option A, `Dispatch Docket`, is the
-  recommendation; no production visual implementation is authorized until the
-  owner explicitly selects an option.
+- Order detail parent Option A, `Dispatch Docket`, is implemented. A correction
+  pass now centers the complete Record payment content group, gives the Light
+  fulfil action deliberate palm/cream contrast while retaining the Dark
+  outline, prevents fulfil mutations from re-entering while pending, and shows
+  truthful fulfilment state and movement progress. Focused tests and source
+  guards pass; the full mobile TypeScript graph exhausted Node's heap and is
+  recorded as an environment limitation for this pass.
+- Order detail remains open at a companion owner-review gate. Its Record
+  payment sheet and Fulfil line action are now treated as part of the same
+  interaction batch. The current payment form and immediate no-confirmation
+  fulfil behavior are source-audited, and five paired Light/Dark directions are
+  available with Payment/Fulfil state switching. Option A, `Action Docket`, is
+  recommended; production child-surface work remains paused for explicit owner
+  approval.
 
 ## Boundaries
 

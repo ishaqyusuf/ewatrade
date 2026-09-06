@@ -4,11 +4,11 @@
 
 | Measure                                                   | Complete |     Total | Percent |
 | --------------------------------------------------------- | -------: | --------: | ------: |
-| Fully designed, implemented, and native-QA verified       |        9 | 38 active |   23.7% |
-| Approved design direction                                 |        9 | 38 active |   23.7% |
-| Production implementation matching the approved direction |        9 | 38 active |   23.7% |
-| Current native baseline captured                          |        9 | 38 active |   23.7% |
-| Awaiting owner design approval                            |        0 | 38 active |      0% |
+| Fully designed, implemented, and native-QA verified       |       10 | 38 active |   26.3% |
+| Approved complete interaction batch                      |       10 | 38 active |   26.3% |
+| Production implementation matching the approved batch    |       10 | 38 active |   26.3% |
+| Current native baseline captured                          |       11 | 38 active |   28.9% |
+| Awaiting owner design approval                            |        1 | 38 active |    2.6% |
 
 ## Stage Definitions
 
@@ -38,7 +38,7 @@
 | EWA-BIZ-001   | Business Home                 | `/dashboard`, `/(admin-tabs)/admin-home`     | Complete · owner-approved A — Market Ledger implemented and native-QA verified across roles, states, themes, text scales and scrolling      | None                                                                                                                      |
 | EWA-BIZ-002   | Sales rep Home                | `/sales-rep-home`                            | Complete · owner-approved A — Shift Ledger implemented and native-QA verified across states, themes, 100%/200%, scrolling and accessibility | None                                                                                                                      |
 | EWA-BIZ-003   | Orders list                   | `/(admin-tabs)/orders`                       | Complete · owner-approved A — Dispatch Ledger implemented and native-QA verified across states, themes, 100%/200% text and scrolling        | None                                                                                                                      |
-| EWA-BIZ-004   | Order detail                  | `/order/[orderId]`                           | Design review · current native Light/Dark baseline and five rich directions documented; owner selection pending                           | Explicit owner option approval                                                                                            |
+| EWA-BIZ-004   | Order detail                  | `/order/[orderId]`                           | Companion design review · parent Option A implemented and corrected; five paired Record payment / Fulfil line directions are ready       | Explicit owner companion-option approval                                                                                  |
 | EWA-BIZ-005   | Catalog list                  | `/(admin-tabs)/catalog`                      | Queued                                                                                                                                     | Native baseline                                                                                                           |
 | EWA-BIZ-006   | Catalog item detail           | `/catalog-item/[catalogItemId]`              | Queued                                                                                                                                     | Native baseline                                                                                                           |
 | EWA-BIZ-007   | More / settings index         | `/(admin-tabs)/more`                         | Queued                                                                                                                                     | Native baseline                                                                                                           |

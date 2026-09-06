@@ -1,8 +1,13 @@
 # In Progress
 
+### [EWA-BIZ-004 Order detail design review](2026-09-06-order-detail-design-review.md)
+
+- Status: In Progress
+
 ### [Mobile Market Day screen-by-screen redesign](../features/mobile-market-day-screen-by-screen-redesign.md)
 
-- Status: In Progress — next gate is `EWA-BIZ-004` Order detail design review
+- Status: In Progress — next gate is owner approval of the `EWA-BIZ-004`
+  Record payment / Fulfil line companion batch
 - Headline implementation progress: 10/38 screens (26.3%).
 
 - Provision and verify the owner-approved production observability rollout.

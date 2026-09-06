@@ -69,6 +69,13 @@ The prior [Light correction baseline](../../screenshots/entry-12-order-detail/im
 is retained as before evidence. It shows the low-contrast Light fulfil action and
 the oversized, dark Record payment content that triggered this correction pass.
 
+## Companion action surfaces
+
+The Order detail batch now includes the directly opened tasks, not only the
+parent page. Review the five paired **Record payment** and **Fulfil line**
+directions in the [Order actions companion package](../entry-12-order-actions-rich-directions/README.md).
+Production work on those two child surfaces is paused for explicit owner choice.
+
 ## Implementation checklist
 
 - [x] Freeze the owner-approved direction and behavior contract.
@@ -78,14 +85,14 @@ the oversized, dark Record payment content that triggered this correction pass.
 - [x] Implement masthead-following status-bar behavior.
 - [x] Expand the inert native QA surface across required states.
 - [x] Capture Light/Dark, scroll, state, and 100%/200% native evidence.
-- [ ] Verify and commit the Record payment and Fulfil line button corrections.
-- [ ] Archive the current Record payment sheet and immediate Fulfil line behavior.
-- [ ] Prepare five paired Light/Dark action-sheet directions and pause for owner approval.
+- [x] Verify and commit the Record payment and Fulfil line button corrections.
+- [x] Archive the current Record payment sheet and immediate Fulfil line behavior.
+- [x] Prepare five paired Light/Dark action-sheet directions and pause for owner approval.
 - [ ] Implement the owner-approved payment and fulfilment action surfaces.
 - [ ] Run final source, formatting, bundle, and independent review gates.
 - [ ] Commit the scoped implementation and synchronize Brain/program records.
 
-Status: approved and in implementation.
+Status: parent implemented; companion action batch awaiting owner approval.
 
 <!-- implement-with-progress:start -->
 
@@ -93,10 +100,10 @@ Status: approved and in implementation.
 
 - Status: In Progress
 - Ticket Position: 11/38
-- Completion: 54%
-- Current Checklist: 8/13 — Verify and commit the Record payment and Fulfil line button corrections
-- Blockers: None
+- Completion: 77%
+- Current Checklist: 11/13 — Implement the owner-approved payment and fulfilment action surfaces
+- Blockers: Awaiting explicit owner approval of the companion action-sheet direction
 - Brain Task: [Task](../../../../.brain/tasks/2026-09-06-order-detail-design-review.md)
-- Last Updated: 2026-09-06T20:49:00+01:00
+- Last Updated: 2026-09-06T22:08:04+01:00
 
 <!-- implement-with-progress:end -->
