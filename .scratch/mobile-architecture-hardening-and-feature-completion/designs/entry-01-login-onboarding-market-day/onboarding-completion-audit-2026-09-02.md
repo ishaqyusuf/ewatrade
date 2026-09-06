@@ -90,9 +90,8 @@ before every archived frame and is not presented as Onboarding evidence.
 
 ### Validation and review
 
-- Onboarding resolver: 2 tests / 10 expectations.
-- Combined Onboarding and Shift Ledger focused suite: 8 tests / 21
-  expectations before the final exact-URL assertions were added.
+- Combined Onboarding and Shift Ledger focused suite: 8 tests / 26
+  expectations, including 10 exact Onboarding QA URL assertions.
 - Auth redesign, auth/onboarding, app launch, app shell, large-text, keyboard,
   theme-color, NativeWind style/theme, and dashboard guards pass.
 - Scoped Biome and `git diff --check` pass.
