@@ -1,26 +1,33 @@
 import {
   DashboardActionRow,
-  DashboardHomeHeader,
-  DashboardOverviewMetric,
   DashboardRecentOrderRow,
-  DashboardRevenueCard,
-  EmptyState,
   MobileAppShell,
   QueryRefreshControl,
   SecondaryOperationalRow,
   StatusBanner,
 } from "@/components/mobile"
+import {
+  BusinessHomeMarketLedgerEmptyOrders,
+  BusinessHomeMarketLedgerHero,
+  BusinessHomeMarketLedgerOverview,
+  BusinessHomeMarketLedgerSectionHeader,
+  BusinessHomeMarketLedgerSetup,
+} from "@/components/mobile/business-home-market-ledger"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useColorScheme } from "@/hooks/use-color"
+import { hasStoredCustomerShellAccess } from "@/lib/customer-conversation-store"
 import { setLastMobileShell } from "@/lib/customer-shell-preference"
+import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { isSalesRepRole } from "@/lib/mobile-roles"
 import {
   getMobileDashboardFeatureVisibility,
   getMobileDashboardNavigation,
   mergeMobileWorkspaceFeatureAvailability,
+  shouldShowMobileStoreSetup,
 } from "@/lib/workspace-feature-availability"
 import {
   activeBusinessOfflineCommands,
@@ -31,7 +38,8 @@ import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
-import { Redirect, useRouter } from "expo-router"
+import { Redirect, useFocusEffect, useRouter } from "expo-router"
+import { useCallback, useState } from "react"
 import { View } from "react-native"
 
 export function OperationsDashboardSurface({
@@ -44,7 +52,16 @@ export function OperationsDashboardSurface({
   const router = useRouter()
   const createModal = useModal()
   const trpc = useTRPC()
+  const marketDay = useMarketDayPalette()
+  const { colorScheme } = useColorScheme()
   const { profile } = useAuthContext()
+  const [showPersonalConversations, setShowPersonalConversations] =
+    useState(false)
+  useFocusEffect(
+    useCallback(() => {
+      setShowPersonalConversations(hasStoredCustomerShellAccess())
+    }, []),
+  )
   const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
   const allCommands = useOfflineCommandStore((state) => state.commands)
   const commands = activeBusinessOfflineCommands(
@@ -106,6 +123,21 @@ export function OperationsDashboardSurface({
     ["approval", "blocked", "pending", "review"].includes(command.localStatus),
   ).length
   const firstName = profile?.name.trim().split(/\s+/)[0] || "there"
+  const hasResolvedFeatureAvailability =
+    featureAvailabilityQuery.data !== undefined
+  const isFeatureAvailabilityPending =
+    !isOffline && featureAvailabilityQuery.isPending
+  const isFeatureAvailabilityUnavailable =
+    !isOffline &&
+    featureAvailabilityQuery.isError &&
+    !hasResolvedFeatureAvailability
+  const showStoreSetup = shouldShowMobileStoreSetup({
+    availabilityResolved: hasResolvedFeatureAvailability,
+    isAttendant,
+    showGettingStarted: featureVisibility.showGettingStarted,
+  })
+  const isOfflineAvailabilityUnknown =
+    isOffline && !hasResolvedFeatureAvailability
   const navItems = [
     {
       icon: "home" as const,
@@ -287,6 +319,7 @@ export function OperationsDashboardSurface({
 
   return (
     <MobileAppShell
+      backgroundColor={marketDay.canvas}
       businessName={profile?.businessName ?? "Business"}
       centralAction={{
         disabled: isAttendant && !hasSellableCatalogItem,
@@ -296,45 +329,38 @@ export function OperationsDashboardSurface({
           ? () => router.push("/create-sale-modal" as never)
           : createModal.present,
       }}
+      contentStyle={{
+        backgroundColor: marketDay.canvas,
+        gap: 18,
+        paddingHorizontal: 20,
+        paddingTop: 16,
+      }}
+      hero={
+        <BusinessHomeMarketLedgerHero
+          businessName={profile?.businessName ?? "Business"}
+          greetingName={firstName}
+          hasNotification={isOffline || pendingCommandCount > 0}
+          onBusinessPress={() => router.push("/business-switch-modal" as never)}
+          onNotificationPress={() => router.push("/sync-status-modal" as never)}
+          onSearchPress={
+            isOffline ? undefined : () => router.push("/global-search" as never)
+          }
+        />
+      }
+      heroStatusBarStyle="dark"
+      keyboardBottomOffset={12}
       navItems={navItems}
       onBottomTabVisibilityChange={onBottomTabVisibilityChange}
       refreshControl={<QueryRefreshControl />}
       role={isAttendant ? "attendant" : "owner"}
+      scrolledStatusBarColor={marketDay.canvas}
+      scrolledStatusBarStyle={colorScheme === "dark" ? "light" : "dark"}
       showHeader={false}
       showBottomTabs={!embeddedInAdminTabs}
+      statusBarColor={marketDay.paprika}
+      statusBarFollowsHero
       title="Today"
     >
-      <DashboardHomeHeader
-        businessName={profile?.businessName ?? "Business"}
-        greetingName={firstName}
-        hasNotification={isOffline || pendingCommandCount > 0}
-        onNotificationPress={() => router.push("/sync-status-modal" as never)}
-        onProfilePress={
-          embeddedInAdminTabs ? () => router.push("/more" as never) : undefined
-        }
-        onSearchPress={
-          isOffline ? undefined : () => router.push("/global-search" as never)
-        }
-      />
-
-      <Pressable
-        accessibilityHint="Opens your private Store conversations"
-        accessibilityLabel="Switch to Personal"
-        accessibilityRole="button"
-        className="min-h-12 flex-row items-center gap-3 rounded-2xl border border-border bg-card px-4 active:bg-accent"
-        haptic
-        onPress={async () => {
-          await setLastMobileShell("customer")
-          router.push("/(customer)/conversations")
-        }}
-      >
-        <Icon className="size-sm text-primary" name="User" />
-        <Text className="min-w-0 flex-1 font-bold text-foreground">
-          Personal Store conversations
-        </Text>
-        <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
-      </Pressable>
-
       {isOffline ? (
         <StatusBanner
           icon="Wind"
@@ -344,10 +370,42 @@ export function OperationsDashboardSurface({
         />
       ) : null}
 
-      <View className="gap-3">
-        <View className="flex-row gap-3">
-          <DashboardOverviewMetric
-            detail={
+      {isOfflineAvailabilityUnknown ? (
+        <StatusBanner
+          icon="WifiOff"
+          message="Reconnect to confirm your latest catalog and Store setup."
+          title="Store overview unavailable offline"
+          tone="warning"
+        />
+      ) : isFeatureAvailabilityPending ? (
+        <StatusBanner icon="Loader2" message="Loading Store overview." />
+      ) : isFeatureAvailabilityUnavailable ? (
+        <StatusBanner
+          icon="TriangleAlert"
+          message="Refresh to load your latest Store setup and catalog state."
+          title="Store overview unavailable"
+          tone="warning"
+        />
+      ) : showStoreSetup ? (
+        <BusinessHomeMarketLedgerSetup
+          catalogReady={hasSellableCatalogItem}
+          itemValue={hasSellableCatalogItem ? "Ready" : "0"}
+          onAddItemPress={() =>
+            router.push("/first-product-setup-modal" as never)
+          }
+          onCreateOrderPress={() => router.push("/create-sale-modal" as never)}
+          onInviteStaffPress={() => router.push("/staff-invite-modal" as never)}
+          orderValue={String(recentOrderCount)}
+          revenueValue={formatMinorMoney(orderValue, currency)}
+          syncLabel={
+            isOffline ? `${pendingCommandCount} waiting to sync` : "Synced now"
+          }
+          syncTone={isOffline ? "attention" : "ready"}
+        />
+      ) : (
+        <>
+          <BusinessHomeMarketLedgerOverview
+            primaryDetail={
               hasProduct
                 ? "Current inventory ledger"
                 : featureAvailability.hasServiceItems ||
@@ -355,8 +413,7 @@ export function OperationsDashboardSurface({
                   ? "Work currently in queue"
                   : "Ready for your first item"
             }
-            icon={hasProduct ? "Warehouse" : "Wrench"}
-            label={
+            primaryLabel={
               hasProduct
                 ? "Stock balances"
                 : featureAvailability.hasServiceItems ||
@@ -364,7 +421,7 @@ export function OperationsDashboardSurface({
                   ? "Active work"
                   : "Catalog"
             }
-            value={String(
+            primaryValue={String(
               hasProduct
                 ? balanceCount
                 : featureAvailability.hasServiceItems ||
@@ -372,52 +429,68 @@ export function OperationsDashboardSurface({
                   ? activeWorkCount
                   : 0,
             )}
-          />
-          <DashboardOverviewMetric
-            detail={
+            recentOrderDetail={
               provisional.commercialOrders > 0
                 ? `${provisional.commercialOrders} waiting to sync`
                 : "Latest orders loaded"
             }
-            icon="ReceiptText"
-            label="Recent orders"
-            tone="accent"
-            value={String(recentOrderCount)}
+            recentOrderValue={String(recentOrderCount)}
+            revenueDetail={
+              orderRows.length === 0
+                ? "No synced order value yet"
+                : `Across the latest ${orderRows.length} ${orderRows.length === 1 ? "order" : "orders"}`
+            }
+            revenueValue={formatMinorMoney(orderValue, currency)}
+            syncLabel={
+              isOffline
+                ? `${pendingCommandCount} waiting to sync`
+                : "Synced now"
+            }
+            syncTone={isOffline ? "attention" : "ready"}
           />
-        </View>
-        <DashboardRevenueCard
-          detail={
-            orderRows.length === 0
-              ? "No synced order value yet"
-              : `Across the latest ${orderRows.length} ${orderRows.length === 1 ? "order" : "orders"}`
-          }
-          label="Recent revenue"
-          value={formatMinorMoney(orderValue, currency)}
-        />
-      </View>
 
-      <View className="border-t border-border/70">
-        {homeActions.map((action) => (
-          <DashboardActionRow key={action.label} {...action} />
-        ))}
-      </View>
+          <View>
+            <BusinessHomeMarketLedgerSectionHeader title="Today’s work" />
+            {homeActions.map((action) => (
+              <DashboardActionRow key={action.label} {...action} />
+            ))}
+          </View>
+        </>
+      )}
+
+      {showPersonalConversations ? (
+        <Pressable
+          accessibilityHint="Opens your private Store conversations"
+          accessibilityLabel="Switch to Personal conversations"
+          accessibilityRole="button"
+          className="min-h-12 flex-row items-center gap-3 border-y border-border/70 py-3 active:bg-accent"
+          haptic
+          onPress={async () => {
+            await setLastMobileShell("customer")
+            router.push("/(customer)/conversations")
+          }}
+        >
+          <Icon className="size-sm text-primary" name="User" />
+          <View className="min-w-0 flex-1">
+            <Text className="font-bold text-foreground">
+              Personal conversations
+            </Text>
+            <Text className="text-xs text-muted-foreground">
+              Switch from Business to your private Store inbox
+            </Text>
+          </View>
+          <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
+        </Pressable>
+      ) : null}
 
       <View>
-        <View className="flex-row items-center justify-between">
-          <Text className="text-xl font-extrabold tracking-tight text-foreground">
-            Recent orders
-          </Text>
-          {!isAttendant ? (
-            <Pressable
-              accessibilityRole="button"
-              className="min-h-11 justify-center px-2"
-              haptic
-              onPress={() => router.push("/orders" as never)}
-            >
-              <Text className="text-sm font-bold text-primary">See all</Text>
-            </Pressable>
-          ) : null}
-        </View>
+        <BusinessHomeMarketLedgerSectionHeader
+          actionLabel={isAttendant ? undefined : "See all"}
+          onActionPress={
+            isAttendant ? undefined : () => router.push("/orders" as never)
+          }
+          title="Recent orders"
+        />
         {orders.isLoading ? (
           <StatusBanner icon="Loader2" message="Loading recent orders." />
         ) : orderRows.length === 0 && provisional.commercialOrders > 0 ? (
@@ -428,24 +501,19 @@ export function OperationsDashboardSurface({
             tone="warning"
           />
         ) : orderRows.length === 0 ? (
-          <EmptyState
+          <BusinessHomeMarketLedgerEmptyOrders
+            actionDisabled={!hasSellableCatalogItem}
             actionLabel={isAttendant ? undefined : "Create first order"}
-            actionProps={
-              isAttendant
-                ? undefined
-                : {
-                    disabled: !hasSellableCatalogItem,
-                    onPress: () => router.push("/create-sale-modal" as never),
-                  }
-            }
-            className="mt-2"
-            icon="ReceiptText"
             message={
               featureVisibility.showGettingStarted
                 ? "Add an item, then create your first order. It will appear here."
                 : "New orders will appear here as soon as they are created."
             }
-            title="No orders yet"
+            onActionPress={
+              isAttendant
+                ? undefined
+                : () => router.push("/create-sale-modal" as never)
+            }
           />
         ) : (
           orderRows

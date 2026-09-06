@@ -9,8 +9,10 @@ Fresh EAS Preview v6 cold-launch QA verifies the native splash gate and rich
 handoff in Light and Dark. Staff Onboarding Option A, `Market Nameplate`, also
 passes its full native acceptance matrix. App Lock Option E, `Quiet Seal`, is
 implemented and has completed native visual and accessibility validation, so
-seven of 38 active screen packages are fully implemented and re-verified
-(18.4%).
+eight of 38 active screen packages are fully implemented and re-verified
+(21.1%). Business Home Option A, `Market Ledger`, is implemented and passes its
+native state, theme, 100%/200% text, status-bar, navigation, source, bundle and
+two-axis review gates. Sales rep Home is the next design frontier.
 
 ## Purpose
 
@@ -111,6 +113,22 @@ color-forward redesign program.
   lockout, biometric and recovery states. Native Light/Dark 100% and 200%
   evidence, focused tests, formatting, source-contract validation and Android
   export pass while preserving the existing device-local security contract.
+- Business Home preserves the shared `/dashboard` and
+  `/(admin-tabs)/admin-home` production surface, owner/attendant visibility,
+  Store setup versus operational branches, global search, sync, Business
+  switching, central Create, snapshot, recent orders, and persistent navigation.
+  Its untouched production-component fixture is archived in Light and Dark.
+  Five genuinely different 390 × 844 directions are available through one
+  chevron-controlled, theme-switching review board. The owner approved Option
+  A, `Market Ledger`, on 2026-09-06 for its direct owner scan and its ability to
+  grow from setup into daily operations. Production now uses that ledger from
+  first-Store setup through populated operations while preserving real data,
+  permissions, offline projections, navigation and recent-order behavior. The
+  paprika hero reaches through the status bar; the status bar follows the
+  measured background after the hero clears; the dock hides on ordinary
+  downward scroll; and full-scale financial values reflow without shrinking.
+  Light/Dark, owner/attendant, loading, empty, populated, offline, pending-sync,
+  100%/200% text, source, Android export and independent reviews pass.
 
 ## Boundaries
 

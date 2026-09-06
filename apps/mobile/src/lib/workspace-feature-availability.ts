@@ -71,6 +71,16 @@ export function getMobileDashboardFeatureVisibility(
   }
 }
 
+export function shouldShowMobileStoreSetup(input: {
+  availabilityResolved: boolean
+  isAttendant: boolean
+  showGettingStarted: boolean
+}) {
+  return (
+    input.availabilityResolved && input.showGettingStarted && !input.isAttendant
+  )
+}
+
 export function getMobileDashboardNavigation(
   isAttendant: boolean,
 ): MobileDashboardNavigation {

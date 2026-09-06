@@ -2,7 +2,9 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColors } from "@/hooks/use-color"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS } from "@/lib/design-foundation"
+import { DISPLAY_TEXT_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
 import { cn } from "@/lib/utils"
 import { Text as RNText, View as RNView } from "react-native"
 import type {
@@ -34,6 +36,7 @@ export function MobileBottomTabItem({
   variant,
 }: MobileBottomTabItemProps) {
   const colors = useColors()
+  const largeTextLayout = useLargeTextLayout()
   const shouldShowLabel = showLabel || (showLabelOnActive && isActive)
   const isHorizontal = labelStack === "horizontal"
   const isReference = variant === "reference"
@@ -57,6 +60,7 @@ export function MobileBottomTabItem({
       className={cn(
         "min-h-11 min-w-11 items-center justify-center rounded-full active:opacity-85",
         isOperationalNavigation && "w-full",
+        largeTextLayout && !isAction && "min-h-14",
       )}
       disabled={tab.disabled}
       haptic={haptic && !tab.disabled}
@@ -81,6 +85,7 @@ export function MobileBottomTabItem({
             height: 44,
             justifyContent: "center",
             overflow: "visible",
+            opacity: tab.disabled ? 0.45 : 1,
             position: "relative",
             width: 44,
           }}
@@ -89,7 +94,8 @@ export function MobileBottomTabItem({
           <RNView
             style={{
               alignItems: "center",
-              backgroundColor: MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS.centerSurface,
+              backgroundColor:
+                MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS.centerSurface,
               borderColor: MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS.centerAccent,
               borderRadius: 26,
               borderWidth: 2,
@@ -118,7 +124,7 @@ export function MobileBottomTabItem({
             alignItems: "center",
             gap: 4,
             justifyContent: "center",
-            minHeight: 44,
+            minHeight: largeTextLayout ? 60 : 44,
             minWidth: 44,
             opacity: tab.disabled ? 0.45 : 1,
           }}
@@ -134,10 +140,10 @@ export function MobileBottomTabItem({
             name={tab.icon}
           />
           <RNText
-            adjustsFontSizeToFit
-            allowFontScaling={false}
-            minimumFontScale={0.9}
-            numberOfLines={1}
+            adjustsFontSizeToFit={!largeTextLayout}
+            maxFontSizeMultiplier={DISPLAY_TEXT_FONT_SCALE_CAP}
+            minimumFontScale={largeTextLayout ? undefined : 0.9}
+            numberOfLines={largeTextLayout ? 2 : 1}
             style={{
               color: isActive
                 ? MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS.activeForeground
@@ -146,6 +152,7 @@ export function MobileBottomTabItem({
               fontWeight: "600",
               lineHeight: 12,
               textAlign: "center",
+              textAlignVertical: "center",
               width: "100%",
             }}
           >
@@ -189,7 +196,8 @@ export function MobileBottomTabItem({
                     ? "text-[11px] font-bold text-foreground"
                     : "text-[11px] font-bold text-muted-foreground"
               }
-              numberOfLines={1}
+              maxFontSizeMultiplier={DISPLAY_TEXT_FONT_SCALE_CAP}
+              numberOfLines={largeTextLayout ? 2 : 1}
             >
               {tab.label}
             </Text>

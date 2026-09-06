@@ -47,6 +47,10 @@ export function getCustomerConversationSession() {
   }
 }
 
+export function hasStoredCustomerShellAccess() {
+  return getCustomerConversationSession() !== null
+}
+
 export function setCustomerConversationSession(
   session: CustomerConversationSession,
 ) {

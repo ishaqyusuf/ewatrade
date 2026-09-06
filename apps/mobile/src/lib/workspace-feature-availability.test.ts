@@ -4,6 +4,7 @@ import {
   getMobileDashboardFeatureVisibility,
   getMobileDashboardNavigation,
   mergeMobileWorkspaceFeatureAvailability,
+  shouldShowMobileStoreSetup,
   switchMobileBusinessSession,
 } from "./workspace-feature-availability"
 
@@ -88,6 +89,23 @@ describe("mobile workspace feature availability", () => {
       showGettingStarted: false,
       showOrderHistory: true,
     })
+  })
+
+  test("does not infer first-time setup from unresolved offline availability", () => {
+    expect(
+      shouldShowMobileStoreSetup({
+        availabilityResolved: false,
+        isAttendant: false,
+        showGettingStarted: true,
+      }),
+    ).toBe(false)
+    expect(
+      shouldShowMobileStoreSetup({
+        availabilityResolved: true,
+        isAttendant: false,
+        showGettingStarted: true,
+      }),
+    ).toBe(true)
   })
 
   test("keeps role-appropriate bottom tabs independent of feature presence", () => {
