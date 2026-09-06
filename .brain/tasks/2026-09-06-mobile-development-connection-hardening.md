@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress
+Done
 
 ## Priority
 
@@ -32,7 +32,7 @@ the stale/mismatched API condition.
 
 ## Implementation Progress
 
-- Completion: 88%
+- Completion: 100%
 - Current Checklist: 8/8 — Review, document, and commit the focused fix
 - Blockers: None
 
@@ -58,7 +58,7 @@ the stale/mismatched API condition.
 - [x] Run focused source and fixture checks.
 - [x] Verify a fresh API/Metro session on the isolated emulator and archive
   screenshot evidence.
-- [ ] Review the diff, update Brain documentation, and commit the focused fix.
+- [x] Review the diff, update Brain documentation, and commit the focused fix.
 
 ## Acceptance
 
@@ -82,3 +82,4 @@ the stale/mismatched API condition.
 - Staged-diff review found and corrected one classification gap so server
   `upgrade_required` and `environment_not_allowed` states remain distinct from
   missing QA configuration. No unresolved focused findings remain.
+- Focused implementation commit: `62c18178`.
