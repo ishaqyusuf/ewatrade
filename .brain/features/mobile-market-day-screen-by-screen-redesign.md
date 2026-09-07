@@ -175,9 +175,11 @@ color-forward redesign program.
   payment sheet, per-line and all-ready fulfil actions, and directly opened
   Customer overview are treated as one interaction batch. The current payment
   form, immediate no-confirmation fulfil behavior, and generic Customer modal
-  are source-audited. Five Light/Dark directions are available with four-state
-  Payment/Fulfil line/Fulfil all/Customer switching. Option A, `Action Docket`,
-  is recommended; production child-surface work remains paused for explicit
+  are source-audited. Six Light/Dark directions are available with four-state
+  Payment/Fulfil line/Fulfil all/Customer switching. On 2026-09-07, owner
+  feedback requested a minimalist direction using the familiar bottom-sheet
+  pattern. Option F, `Quiet Sheet`, now provides that restrained replacement
+  and is recommended. Production child-surface work remains paused for explicit
   owner approval. This order-linked Customer state does not replace the later
   full Customer book batch.
 

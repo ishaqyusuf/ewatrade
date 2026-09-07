@@ -20,7 +20,7 @@ ready**, and the **Customer record** opened from the approved Dispatch Docket.
   against `CommercialOrderScreen`, the Orders router, and the commercial Order
   query implementation.
 
-## Five four-state directions
+## Six four-state directions
 
 Every option includes Payment, per-line fulfilment, all-ready fulfilment, and
 Customer record states, plus matched Light and Dark themes. Use the four-state
@@ -37,14 +37,20 @@ toggle to inspect the complete direct-surface family.
    compact sheet, with less explanation for first-time staff.
 5. **E, Final Handoff**. The clearest consequence review and best mistake
    prevention, but deliberately slower than the other directions.
+6. **F, Quiet Sheet**, minimalist recommendation added after owner feedback.
+   Keeps the familiar rounded bottom sheet, removes the receipt/ticket styling,
+   uses neutral paper and soft rules, and reserves palm green for the single
+   primary action. The Customer state keeps its existing full-screen workflow
+   modal shape in the same quiet language.
 
 ## Recommendation
 
-Choose **Option A, Action Docket**. It is the closest visual and behavioral fit
-with the owner-approved Order page, preserves fast payment entry, and adds the
-missing safety boundary before stock is committed. This is a recommendation,
-not approval. Production action-sheet work remains paused until the owner
-explicitly chooses an option or asks for another batch.
+Choose **Option F, Quiet Sheet** based on the owner's request for a minimalist
+bottom sheet like the existing production surface. It preserves familiar
+interaction geometry, removes decorative metaphors, and still adds the missing
+safety boundary before stock is committed. This is a recommendation, not
+approval. Production work remains paused until the owner explicitly approves
+Option F or chooses another direction.
 
 ## Evidence
 
@@ -59,6 +65,8 @@ explicitly chooses an option or asks for another batch.
 - [All Fulfil-all options, Dark](./all-options-fulfil-all-dark.png)
 - [All Customer record options, Light](./all-options-customer-light.png)
 - [All Customer record options, Dark](./all-options-customer-dark.png)
+- [Option F complete interaction, Light](./minimalist-option-f-light.png)
+- [Option F complete interaction, Dark](./minimalist-option-f-dark.png)
 - [Option A Payment, Light](./option-a-payment.png) /
   [Dark](./option-a-payment-dark.png)
 - [Option A Fulfil line, Light](./option-a-fulfil.png) /
@@ -67,6 +75,14 @@ explicitly chooses an option or asks for another batch.
   [Dark](./option-a-fulfil-all-dark.png)
 - [Option A Customer record, Light](./option-a-customer.png) /
   [Dark](./option-a-customer-dark.png)
+- [Option F Payment, Light](./option-f-payment.png) /
+  [Dark](./option-f-payment-dark.png)
+- [Option F Fulfil line, Light](./option-f-fulfil.png) /
+  [Dark](./option-f-fulfil-dark.png)
+- [Option F Fulfil all, Light](./option-f-fulfil-all.png) /
+  [Dark](./option-f-fulfil-all-dark.png)
+- [Option F Customer record, Light](./option-f-customer.png) /
+  [Dark](./option-f-customer-dark.png)
 - [Mobile board verification](./review-mobile.png)
 - [Tablet board verification](./review-tablet.png)
 - [Desktop board verification](./review-desktop.png)

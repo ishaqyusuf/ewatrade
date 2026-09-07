@@ -72,7 +72,7 @@ the oversized, dark Record payment content that triggered this correction pass.
 ## Companion action surfaces
 
 The Order detail batch now includes the directly opened tasks, not only the
-parent page. Review the five **Record payment**, **Fulfil line**, **Fulfil all
+parent page. Review the six **Record payment**, **Fulfil line**, **Fulfil all
 ready**, and **Customer record** directions in the
 [Order actions companion package](../entry-12-order-actions-rich-directions/README.md).
 Production work on these child surfaces is paused for explicit owner choice.
@@ -90,7 +90,7 @@ directly; the complete Customer directory remains its own later screen batch.
 - [x] Capture Light/Dark, scroll, state, and 100%/200% native evidence.
 - [x] Verify and commit the Record payment and Fulfil line button corrections.
 - [x] Archive current payment, immediate fulfilment, and Customer record behavior.
-- [x] Prepare five four-state Light/Dark companion directions and pause for owner approval.
+- [x] Prepare six four-state Light/Dark companion directions, including the requested minimalist Option F, and pause for owner approval.
 - [ ] Implement the owner-approved Order companion surfaces.
 - [ ] Run final source, formatting, bundle, and independent review gates.
 - [ ] Commit the scoped implementation and synchronize Brain/program records.
@@ -107,6 +107,6 @@ Status: parent implemented; companion action batch awaiting owner approval.
 - Current Checklist: 11/13 — Implement the owner-approved Order companion surfaces
 - Blockers: Awaiting explicit owner approval of the four-state companion direction
 - Brain Task: [Task](../../../../.brain/tasks/2026-09-06-order-detail-design-review.md)
-- Last Updated: 2026-09-06T22:24:00+01:00
+- Last Updated: 2026-09-07T00:18:00+01:00
 
 <!-- implement-with-progress:end -->

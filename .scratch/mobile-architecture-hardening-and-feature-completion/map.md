@@ -128,7 +128,7 @@ review batch until the owner explicitly chooses an option.
 
 ## Frontier
 
-1. Owner reviews the five four-state Payment, Fulfil line, Fulfil all, and
+1. Owner reviews the six four-state Payment, Fulfil line, Fulfil all, and
    Customer directions in
    `designs/entry-12-order-actions-rich-directions/comparison.html`.
 2. Owner explicitly selects one companion direction or requests a replacement

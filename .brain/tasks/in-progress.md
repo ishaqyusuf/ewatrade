@@ -7,7 +7,8 @@
 ### [Mobile Market Day screen-by-screen redesign](../features/mobile-market-day-screen-by-screen-redesign.md)
 
 - Status: In Progress — next gate is owner approval of the `EWA-BIZ-004`
-  Payment / Fulfil line / Fulfil all / Customer companion batch
+  six-direction Payment / Fulfil line / Fulfil all / Customer companion batch;
+  minimalist Option F (`Quiet Sheet`) is recommended
 - Headline implementation progress: 10/38 screens (26.3%).
 
 - Provision and verify the owner-approved production observability rollout.
