@@ -23,6 +23,14 @@ describe("current Order detail QA route", () => {
     ).toBe("/design-system/order-detail-current?theme=light&state=offline")
     expect(
       resolveOrderDetailCurrentQaPath(
+        "ewatrade-dev://order-detail-current?theme=dark&action=fulfil-line",
+        true,
+      ),
+    ).toBe(
+      "/design-system/order-detail-current?theme=dark&state=populated&action=fulfil-line",
+    )
+    expect(
+      resolveOrderDetailCurrentQaPath(
         "ewatrade-dev://order-detail-current?theme=dark",
         false,
       ),
@@ -42,6 +50,12 @@ describe("current Order detail QA route", () => {
     expect(
       resolveOrderDetailCurrentQaPath(
         "ewatrade-dev://order-detail-current?state=unknown",
+        true,
+      ),
+    ).toBeNull()
+    expect(
+      resolveOrderDetailCurrentQaPath(
+        "ewatrade-dev://order-detail-current?action=unknown",
         true,
       ),
     ).toBeNull()

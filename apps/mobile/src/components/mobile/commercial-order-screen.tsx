@@ -2,8 +2,11 @@ import { ActionButton } from "@/components/mobile/action-button"
 import { CommercialOrderOverviewHeader } from "@/components/mobile/commerce/commercial-order-overview"
 import { buildCommercialOrderActivity } from "@/components/mobile/commerce/commercial-order-overview-model"
 import { EmptyState } from "@/components/mobile/empty-state"
-import { FormField } from "@/components/mobile/form-field"
-import { MoneyField } from "@/components/mobile/money-field"
+import {
+  OrderFulfilmentConfirmationSheet,
+  type OrderPaymentMethod,
+  OrderPaymentSheet,
+} from "@/components/mobile/order-action-sheet"
 import {
   OrderDetailDispatchDocket,
   OrderDetailDispatchDocketPrimaryAction,
@@ -11,38 +14,21 @@ import {
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { MobileScreen } from "@/components/mobile/screen"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
-import { Modal, useModal } from "@/components/ui/modal"
-import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
+import { useModal } from "@/components/ui/modal"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useColorScheme } from "@/hooks/use-color"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
+import { getOrderFulfilmentConfirmation } from "@/lib/order-action-sheet-model"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
-import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
-import {
-  formatMinorMoney,
-  majorToMinor,
-  minorToMajorInput,
-} from "@ewatrade/utils"
+import { formatMinorMoney, majorToMinor, minorToMajorInput } from "@ewatrade/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { useRouter } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { useMemo, useState } from "react"
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
-
-type PaymentMethod = RouterInputs["orders"]["recordPayment"]["method"]
-
-const PAYMENT_METHODS: Array<[PaymentMethod, string]> = [
-  ["cash", "Cash"],
-  ["bank_transfer", "Transfer"],
-  ["pos", "POS"],
-  ["card", "Card"],
-  ["other", "Other"],
-]
 
 export function CommercialOrderScreen({ orderId }: { orderId: string }) {
   const router = useRouter()
@@ -52,14 +38,19 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const paymentModal = useModal()
+  const fulfilLineModal = useModal()
+  const fulfilAllModal = useModal()
   const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
   const [amountPaid, setAmountPaid] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash")
+  const [paymentMethod, setPaymentMethod] = useState<OrderPaymentMethod>("cash")
   const [paymentReference, setPaymentReference] = useState("")
   const [mastheadHeight, setMastheadHeight] = useState(116)
   const [mastheadVisible, setMastheadVisible] = useState(true)
+  const [selectedFulfilmentLineId, setSelectedFulfilmentLineId] = useState<
+    string | null
+  >(null)
   const orderQuery = useQuery(
     trpc.orders.get.queryOptions(
       { orderId },
@@ -114,6 +105,8 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
       onSuccess: async () => {
         setError(null)
         setNotice("Product fulfilment recorded.")
+        fulfilLineModal.dismiss()
+        setSelectedFulfilmentLineId(null)
         await refreshOrderQueries()
       },
     }),
@@ -131,6 +124,7 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
             ? "1 Product line fulfilled."
             : `${result.fulfilledLineCount} Product lines fulfilled.`,
         )
+        fulfilAllModal.dismiss()
         await refreshOrderQueries()
       },
     }),
@@ -138,6 +132,21 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
 
   const activity = useMemo(
     () => (order ? buildCommercialOrderActivity(order) : []),
+    [order],
+  )
+  const fulfilLinePresentation = useMemo(
+    () =>
+      order && selectedFulfilmentLineId
+        ? getOrderFulfilmentConfirmation(order, {
+            kind: "line",
+            orderLineId: selectedFulfilmentLineId,
+          })
+        : null,
+    [order, selectedFulfilmentLineId],
+  )
+  const fulfilAllPresentation = useMemo(
+    () =>
+      order ? getOrderFulfilmentConfirmation(order, { kind: "all" }) : null,
     [order],
   )
 
@@ -157,6 +166,8 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
   function openPaymentForm() {
     if (!order || order.balanceDueMinor <= 0) return
     setAmountPaid(minorToMajorInput(order.balanceDueMinor))
+    setPaymentMethod("cash")
+    setPaymentReference("")
     setError(null)
     paymentModal.present()
   }
@@ -186,8 +197,24 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
     setTimeout(paymentModal.dismiss, 120)
   }
 
-  function fulfilProductLine(orderLineId: string) {
+  function openFulfilProductLine(orderLineId: string) {
     if (
+      !order ||
+      isOffline ||
+      fulfilmentMutation.isPending ||
+      fulfilAllMutation.isPending
+    )
+      return
+    if (!getOrderFulfilmentConfirmation(order, { kind: "line", orderLineId }))
+      return
+    setError(null)
+    setSelectedFulfilmentLineId(orderLineId)
+    fulfilLineModal.present()
+  }
+
+  function confirmFulfilProductLine() {
+    if (
+      !selectedFulfilmentLineId ||
       isOffline ||
       fulfilmentMutation.isPending ||
       fulfilAllMutation.isPending
@@ -195,12 +222,25 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
       return
     fulfilmentMutation.mutate({
       clientOperationId: `fulfilment-${Crypto.randomUUID()}`,
-      orderLineId,
+      orderLineId: selectedFulfilmentLineId,
       schemaVersion: 1,
     })
   }
 
-  function fulfilAllProducts() {
+  function openFulfilAllProducts() {
+    if (
+      !order ||
+      isOffline ||
+      fulfilmentMutation.isPending ||
+      fulfilAllMutation.isPending
+    )
+      return
+    if (!getOrderFulfilmentConfirmation(order, { kind: "all" })) return
+    setError(null)
+    fulfilAllModal.present()
+  }
+
+  function confirmFulfilAllProducts() {
     if (
       !order ||
       isOffline ||
@@ -289,8 +329,8 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
           isOffline={isOffline}
           notice={notice}
           onBack={goBack}
-          onFulfillAll={fulfilAllProducts}
-          onFulfillLine={fulfilProductLine}
+          onFulfillAll={openFulfilAllProducts}
+          onFulfillLine={openFulfilProductLine}
           onMastheadHeightChange={setMastheadHeight}
           onOpenCustomer={openCustomer}
           order={order}
@@ -305,104 +345,50 @@ export function CommercialOrderScreen({ orderId }: { orderId: string }) {
         />
       ) : null}
 
-      <Modal
-        enableDynamicSizing
-        maxDynamicContentSize={640}
+      <OrderPaymentSheet
+        amountPaid={amountPaid}
+        balanceLabel={formatMinorMoney(
+          order.balanceDueMinor,
+          order.currencyCode,
+        )}
+        currencyCode={order.currencyCode}
+        error={error}
+        isLoading={paymentMutation.isPending}
+        isOffline={isOffline}
+        onAmountPaidChange={setAmountPaid}
+        onCancel={cancelPayment}
+        onConfirm={recordPayment}
+        onPaymentMethodChange={setPaymentMethod}
+        onReferenceChange={setPaymentReference}
+        paymentMethod={paymentMethod}
+        reference={paymentReference}
         ref={paymentModal.ref}
-        snapPoints={["72%"]}
-        title="Record payment"
-      >
-        <BottomSheetKeyboardAwareScrollView
-          bottomOffset={280}
-          contentContainerStyle={{ paddingBottom: 220 }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View className="gap-5 px-5 pb-8">
-            <View className="gap-1">
-              <Text
-                className="text-lg font-extrabold text-foreground"
-                selectable
-              >
-                Balance due
-              </Text>
-              <Text
-                className="text-2xl font-extrabold tabular-nums text-foreground"
-                selectable
-              >
-                {formatMinorMoney(order.balanceDueMinor, order.currencyCode)}
-              </Text>
-            </View>
-            {error ? (
-              <StatusBanner
-                icon="AlertCircle"
-                message={error}
-                title="Payment was not recorded"
-                tone="destructive"
-              />
-            ) : null}
-            <MoneyField
-              currencyCode={order.currencyCode}
-              label="Amount received"
-              onChangeValue={setAmountPaid}
-              value={amountPaid}
-            />
-            <View className="gap-2">
-              <Text className="text-sm font-bold text-foreground">
-                Payment method
-              </Text>
-              <View className="flex-row flex-wrap gap-2">
-                {PAYMENT_METHODS.map(([value, label]) => (
-                  <Pressable
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: paymentMethod === value }}
-                    className={
-                      paymentMethod === value
-                        ? "min-h-11 items-center justify-center rounded-xl bg-foreground px-4"
-                        : "min-h-11 items-center justify-center rounded-xl border border-border bg-card px-4"
-                    }
-                    haptic
-                    key={value}
-                    onPress={() => setPaymentMethod(value)}
-                  >
-                    <Text
-                      className={
-                        paymentMethod === value
-                          ? "text-sm font-bold text-background"
-                          : "text-sm font-bold text-foreground"
-                      }
-                    >
-                      {label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-            <FormField
-              label="Payment reference"
-              onChangeText={setPaymentReference}
-              placeholder="Optional"
-              value={paymentReference}
-            />
-            <View className="flex-row gap-3">
-              <ActionButton
-                className="flex-1"
-                onPress={cancelPayment}
-                variant="outline"
-              >
-                Cancel
-              </ActionButton>
-              <ActionButton
-                className="flex-1"
-                isLoading={paymentMutation.isPending}
-                loadingLabel="Saving"
-                onPress={recordPayment}
-              >
-                Save payment
-              </ActionButton>
-            </View>
-          </View>
-        </BottomSheetKeyboardAwareScrollView>
-      </Modal>
+      />
+
+      <OrderFulfilmentConfirmationSheet
+        error={error}
+        isLoading={fulfilmentMutation.isPending}
+        onCancel={() => {
+          setError(null)
+          fulfilLineModal.dismiss()
+          setSelectedFulfilmentLineId(null)
+        }}
+        onConfirm={confirmFulfilProductLine}
+        presentation={fulfilLinePresentation}
+        ref={fulfilLineModal.ref}
+      />
+
+      <OrderFulfilmentConfirmationSheet
+        error={error}
+        isLoading={fulfilAllMutation.isPending}
+        onCancel={() => {
+          setError(null)
+          fulfilAllModal.dismiss()
+        }}
+        onConfirm={confirmFulfilAllProducts}
+        presentation={fulfilAllPresentation}
+        ref={fulfilAllModal.ref}
+      />
     </View>
   )
 }

@@ -39,6 +39,7 @@ import { Platform, StyleSheet, View, useWindowDimensions } from "react-native"
 import { Path, Svg } from "react-native-svg"
 
 import { useColors } from "@/hooks/use-color"
+import { COMPACT_CONTROL_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
 import { Pressable } from "./pressable"
 import { Text } from "./text"
 
@@ -278,13 +279,24 @@ const getDetachedProps = (
  */
 
 const ModalHeader = React.memo(({ title, dismiss }: ModalHeaderProps) => {
+  const colors = useColors()
+
   return (
     <>
       {title && (
         <View className="flex-row bg-card px-2 py-4">
           <View className="size-6" />
           <View className="flex-1">
-            <Text className="text-center text-[16px] font-bold text-primary">
+            <Text
+              maxFontSizeMultiplier={COMPACT_CONTROL_FONT_SCALE_CAP}
+              style={{
+                color: colors.primary,
+                fontSize: 16,
+                fontWeight: "700",
+                lineHeight: 26,
+                textAlign: "center",
+              }}
+            >
               {title}
             </Text>
           </View>

@@ -1,13 +1,15 @@
 import { Button, type ButtonProps } from "@/components/ui/button"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { useColors } from "@/hooks/use-color"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
+import { COMPACT_CONTROL_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
 import { cn } from "@/lib/utils"
 import type { ReactNode } from "react"
 import {
   ActivityIndicator,
-  type StyleProp,
   Text as NativeText,
+  type StyleProp,
   StyleSheet,
   type TextStyle,
   View,
@@ -43,6 +45,7 @@ export function ActionButton({
   ...props
 }: ActionButtonProps) {
   const colors = useColors()
+  const largeTextLayout = useLargeTextLayout()
   const isDisabled = !!disabled || !!isLoading
   const isDefaultVariant = !variant || variant === "default"
   const isOutlineVariant = variant === "outline"
@@ -78,7 +81,9 @@ export function ActionButton({
         disabled: isDisabled,
       }}
       className={cn(
-        "min-h-[50px] w-full rounded-xl px-[18px] py-0",
+        largeTextLayout
+          ? "h-auto min-h-[64px] w-full rounded-xl px-[18px] py-0"
+          : "h-auto min-h-[50px] w-full rounded-xl px-[18px] py-0",
         isDefaultVariant &&
           (isDisabled
             ? "bg-muted active:bg-muted"
@@ -95,7 +100,9 @@ export function ActionButton({
     >
       <View
         className={cn(
-          "-translate-y-[2px] flex-row items-center justify-center gap-2",
+          largeTextLayout
+            ? "flex-row items-center justify-center gap-2"
+            : "-translate-y-[2px] flex-row items-center justify-center gap-2",
           contentClassName,
         )}
       >
@@ -114,6 +121,7 @@ export function ActionButton({
           />
         ) : null}
         <NativeText
+          maxFontSizeMultiplier={COMPACT_CONTROL_FONT_SCALE_CAP}
           numberOfLines={1}
           style={[
             {
@@ -121,7 +129,7 @@ export function ActionButton({
               fontSize: 14,
               fontWeight: "700",
               includeFontPadding: false,
-              lineHeight: 20,
+              lineHeight: largeTextLayout ? 28 : 20,
               textAlignVertical: "center",
             },
             labelStyle,
@@ -162,6 +170,7 @@ export function MarketDayActionButton({
   ...props
 }: MarketDayActionButtonProps) {
   const marketDay = useMarketDayPalette()
+  const largeTextLayout = useLargeTextLayout()
   const isUnavailable = !!disabled || !!isLoading
   const tonePalette = {
     marigold: {
@@ -196,7 +205,9 @@ export function MarketDayActionButton({
       <ActionButton
         {...props}
         className={cn(
-          "min-h-[54px] bg-transparent active:bg-transparent",
+          largeTextLayout
+            ? "min-h-[64px] bg-transparent active:bg-transparent"
+            : "min-h-[54px] bg-transparent active:bg-transparent",
           className,
         )}
         disabled={disabled}

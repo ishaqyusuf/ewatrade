@@ -294,11 +294,15 @@ export function CustomerBookContent({
   }, [customers, filter, isOffline, search])
 
   if (selectedCustomer) {
+    const returnToOrder = () => router.back()
     return (
       <CustomerOverviewContent
         customer={selectedCustomer}
         historyComplete={historyComplete}
-        onBack={() => setSelectedCustomerId(null)}
+        onBack={
+          initialOrderId ? returnToOrder : () => setSelectedCustomerId(null)
+        }
+        onClose={initialOrderId ? returnToOrder : undefined}
         onCreateOrder={() =>
           router.push({
             params: {
@@ -311,6 +315,7 @@ export function CustomerBookContent({
           })
         }
         onOpenOrder={(orderId) => router.push(commercialOrderHref(orderId))}
+        orderLinked={Boolean(initialOrderId)}
       />
     )
   }

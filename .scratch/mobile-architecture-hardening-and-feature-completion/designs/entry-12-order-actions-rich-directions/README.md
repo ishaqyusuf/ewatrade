@@ -45,12 +45,10 @@ toggle to inspect the complete direct-surface family.
 
 ## Recommendation
 
-Choose **Option F, Quiet Sheet** based on the owner's request for a minimalist
-bottom sheet like the existing production surface. It preserves familiar
-interaction geometry, removes decorative metaphors, and still adds the missing
-safety boundary before stock is committed. This is a recommendation, not
-approval. Production work remains paused until the owner explicitly approves
-Option F or chooses another direction.
+The owner approved **Option F, Quiet Sheet**, on 7 September 2026. It preserves
+familiar interaction geometry, removes decorative metaphors, and adds the
+missing safety boundary before stock is committed. The frozen choice is
+recorded in [approved.json](./approved.json).
 
 ## Evidence
 
@@ -89,4 +87,39 @@ Option F or chooses another direction.
 
 ## Owner decision
 
-Awaiting explicit owner approval.
+Option F, **Quiet Sheet**, was explicitly approved on 7 September 2026.
+
+## Native implementation evidence
+
+- [Payment, Light](../../screenshots/entry-12-order-detail/implementation/quiet-sheet/payment-light.png) /
+  [Dark](../../screenshots/entry-12-order-detail/implementation/quiet-sheet/payment-dark.png)
+- [Payment reference with keyboard, Light](../../screenshots/entry-12-order-detail/implementation/quiet-sheet/payment-reference-keyboard-light.png)
+- [Payment, Light at 200% text](../../screenshots/entry-12-order-detail/implementation/quiet-sheet/payment-light-200pct.png)
+- [Fulfil line, Light](../../screenshots/entry-12-order-detail/implementation/quiet-sheet/fulfil-line-light.png) /
+  [Dark](../../screenshots/entry-12-order-detail/implementation/quiet-sheet/fulfil-line-dark.png)
+- [Fulfil line, Light at 200% text](../../screenshots/entry-12-order-detail/implementation/quiet-sheet/fulfil-line-light-200pct.png)
+- [Fulfil all ready, Light](../../screenshots/entry-12-order-detail/implementation/quiet-sheet/fulfil-all-light.png) /
+  [Dark](../../screenshots/entry-12-order-detail/implementation/quiet-sheet/fulfil-all-dark.png)
+- [Order-linked Customer record, Light](../../screenshots/entry-12-order-detail/implementation/quiet-sheet/customer-light.png) /
+  [Dark](../../screenshots/entry-12-order-detail/implementation/quiet-sheet/customer-dark.png)
+
+The native implementation keeps money and stock mutations behind explicit
+confirmation, keeps the sheet footer visible independently of its scrollable
+body, and uses a 24 px keyboard clearance instead of a page-level jump. Shared
+action controls now use explicit minimum heights, compact text scaling, and a
+single centered label/icon row at both 100% and 200% text. The order-linked
+Customer record uses the approved four-tab hierarchy without changing the full
+Customer directory workflow.
+
+## Verification
+
+- Focused Order-action, Order-detail, docket, commercial overview, and large-
+  text presentation tests pass.
+- Commerce, NativeWind, keyboard, large-text, and theme source guards pass.
+- Scoped Biome passes across all touched production and QA files.
+- Android production export succeeds with 9,778 modules and a 19.6 MB Hermes
+  bundle.
+- The full mobile TypeScript graph was not used as a release gate because it
+  exhausted the available Node heap without producing a diagnostic; focused
+  tests, source guards, formatter, runtime inspection, and the Android export
+  provide the scoped verification for this batch.

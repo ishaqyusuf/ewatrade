@@ -14,6 +14,7 @@ export default function CustomerBookModalRoute() {
     <WorkflowModalScreen
       allowSalesRep
       closeLabel="Close customer book"
+      hideHeader={Boolean(customerOrderId)}
       title="Customers"
     >
       <CustomerBookContent

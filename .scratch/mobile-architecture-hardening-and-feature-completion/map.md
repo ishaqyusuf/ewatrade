@@ -128,10 +128,6 @@ review batch until the owner explicitly chooses an option.
 
 ## Frontier
 
-1. Owner reviews the six four-state Payment, Fulfil line, Fulfil all, and
-   Customer directions in
-   `designs/entry-12-order-actions-rich-directions/comparison.html`.
-2. Owner explicitly selects one companion direction or requests a replacement
-   batch.
-3. Only after that approval, implement every directly opened companion surface,
-   complete native QA, and close `EWA-BIZ-004` before advancing to Catalog.
+1. Prepare the five-direction Catalog list (`EWA-BIZ-005`) owner-review batch.
+2. Include every directly opened Catalog-list task surface in the same batch.
+3. Pause at the comparison board until the owner explicitly selects a direction.

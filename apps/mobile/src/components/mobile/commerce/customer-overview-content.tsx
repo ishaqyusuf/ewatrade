@@ -1,7 +1,11 @@
-import { ActionButton } from "@/components/mobile/action-button"
+import {
+  ActionButton,
+  MarketDayActionButton,
+} from "@/components/mobile/action-button"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBadge } from "@/components/mobile/status-badge"
+import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -62,14 +66,18 @@ export function CustomerOverviewContent({
   customer,
   historyComplete = true,
   onBack,
+  onClose,
   onCreateOrder,
   onOpenOrder,
+  orderLinked = false,
 }: {
   customer: CommerceCustomer
   historyComplete?: boolean
   onBack: () => void
+  onClose?: () => void
   onCreateOrder: () => void
   onOpenOrder: (orderId: string) => void
+  orderLinked?: boolean
 }) {
   const orderCount = customerOrderCount(customer)
   const isPendingOnly =
@@ -80,16 +88,43 @@ export function CustomerOverviewContent({
     activeTab === "information" || activeTab === "orders"
       ? null
       : EMPTY_TAB_CONTENT[activeTab]
+  const visibleTabs = orderLinked
+    ? CUSTOMER_OVERVIEW_TABS.filter(
+        (tab) =>
+          tab.key === "information" ||
+          tab.key === "orders" ||
+          tab.key === "wishlist" ||
+          tab.key === "reviews",
+      )
+    : CUSTOMER_OVERVIEW_TABS
 
   return (
     <ScrollView
       className="flex-1"
-      contentContainerClassName="gap-6 px-4 pb-12"
+      contentContainerClassName={
+        orderLinked ? "gap-5 px-4 pb-12" : "gap-6 px-4 pb-12"
+      }
       refreshControl={<QueryRefreshControl />}
       showsVerticalScrollIndicator={false}
       testID="customer-overview-screen"
     >
-      <CommercePageHeader onBack={onBack} title="Customer overview" />
+      <CommercePageHeader
+        action={
+          orderLinked && onClose ? (
+            <Pressable
+              accessibilityLabel="Close customer overview"
+              accessibilityRole="button"
+              className="size-11 items-center justify-center rounded-full bg-card active:bg-accent"
+              haptic
+              onPress={onClose}
+            >
+              <Icon className="size-base text-foreground" name="X" />
+            </Pressable>
+          ) : null
+        }
+        onBack={onBack}
+        title="Customer overview"
+      />
 
       <View className="flex-row items-center gap-4">
         <View className="size-16 items-center justify-center rounded-full bg-primary">
@@ -134,9 +169,19 @@ export function CustomerOverviewContent({
         />
       </View>
 
-      <ActionButton icon="PlusCircle" onPress={onCreateOrder}>
-        Create order for customer
-      </ActionButton>
+      {orderLinked ? (
+        <MarketDayActionButton
+          icon="PlusCircle"
+          onPress={onCreateOrder}
+          tone="palm"
+        >
+          Create order for customer
+        </MarketDayActionButton>
+      ) : (
+        <ActionButton icon="PlusCircle" onPress={onCreateOrder}>
+          Create order for customer
+        </ActionButton>
+      )}
 
       {!historyComplete ? (
         <Text className="text-xs font-semibold text-muted-foreground">
@@ -150,7 +195,7 @@ export function CustomerOverviewContent({
         showsHorizontalScrollIndicator={false}
         testID="customer-overview-tabs"
       >
-        {CUSTOMER_OVERVIEW_TABS.map((tab) => {
+        {visibleTabs.map((tab) => {
           const selected = activeTab === tab.key
           return (
             <Pressable

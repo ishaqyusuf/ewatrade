@@ -1,15 +1,27 @@
 import {
+  OrderFulfilmentConfirmationSheet,
+  type OrderPaymentMethod,
+  OrderPaymentSheet,
+} from "@/components/mobile/order-action-sheet"
+import {
   OrderDetailDispatchDocket,
   OrderDetailDispatchDocketPrimaryAction,
 } from "@/components/mobile/order-detail-dispatch-docket"
 import { MobileScreen } from "@/components/mobile/screen"
+import { useModal } from "@/components/ui/modal"
 import { View } from "@/components/ui/view"
 import { useColorScheme } from "@/hooks/use-color"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
+import { getOrderFulfilmentConfirmation } from "@/lib/order-action-sheet-model"
+import { formatMinorMoney, minorToMajorInput } from "@ewatrade/utils"
 import { StatusBar } from "expo-status-bar"
 import { useEffect, useMemo, useState } from "react"
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
-import type { CommercialOrder } from "./commerce"
+import {
+  type CommerceCustomer,
+  type CommercialOrder,
+  CustomerOverviewContent,
+} from "./commerce"
 import { buildCommercialOrderActivity } from "./commerce/commercial-order-overview-model"
 
 const inert = () => undefined
@@ -82,16 +94,28 @@ const CURRENT_ORDER_FIXTURE = {
 } as CommercialOrder
 
 export function OrderDetailCurrentQaScreen({
+  action = null,
   state,
   theme,
 }: {
+  action?: "customer" | "fulfil-all" | "fulfil-line" | "payment" | null
   state: "offline" | "paid" | "populated" | "scheduled"
   theme: "dark" | "light"
 }) {
   const { colorScheme, setColorScheme } = useColorScheme()
   const marketDay = useMarketDayPalette()
+  const paymentModal = useModal()
+  const fulfilLineModal = useModal()
+  const fulfilAllModal = useModal()
   const [mastheadHeight, setMastheadHeight] = useState(116)
   const [mastheadVisible, setMastheadVisible] = useState(true)
+  const [activeAction, setActiveAction] = useState(action)
+  const [selectedLineId, setSelectedLineId] = useState("line-rice")
+  const [amountPaid, setAmountPaid] = useState(
+    minorToMajorInput(CURRENT_ORDER_FIXTURE.balanceDueMinor),
+  )
+  const [paymentMethod, setPaymentMethod] = useState<OrderPaymentMethod>("cash")
+  const [paymentReference, setPaymentReference] = useState("")
   useEffect(() => setColorScheme(theme), [setColorScheme, theme])
   const order = useMemo(() => {
     if (state === "paid") {
@@ -110,12 +134,71 @@ export function OrderDetailCurrentQaScreen({
     }
     return CURRENT_ORDER_FIXTURE
   }, [state])
+  const linePresentation = useMemo(
+    () =>
+      getOrderFulfilmentConfirmation(order, {
+        kind: "line",
+        orderLineId: selectedLineId,
+      }),
+    [order, selectedLineId],
+  )
+  const allPresentation = useMemo(
+    () => getOrderFulfilmentConfirmation(order, { kind: "all" }),
+    [order],
+  )
   const safeAreaColor = mastheadVisible ? marketDay.marigold : marketDay.canvas
+
+  useEffect(() => {
+    setActiveAction(action)
+    if (!action || action === "customer") return
+    const timer = setTimeout(() => {
+      if (action === "payment") paymentModal.present()
+      if (action === "fulfil-line") fulfilLineModal.present()
+      if (action === "fulfil-all") fulfilAllModal.present()
+    }, 180)
+    return () => clearTimeout(timer)
+  }, [
+    action,
+    fulfilAllModal.present,
+    fulfilLineModal.present,
+    paymentModal.present,
+  ])
 
   function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
     const nextVisible = event.nativeEvent.contentOffset.y < mastheadHeight - 8
     setMastheadVisible((current) =>
       current === nextVisible ? current : nextVisible,
+    )
+  }
+
+  if (activeAction === "customer") {
+    const customer = {
+      currencyTotals: [
+        {
+          currencyCode: order.currencyCode,
+          totalMinor: order.totalMinor,
+        },
+      ],
+      email: order.customerEmail ?? null,
+      id: "customer-emeka",
+      initials: "ES",
+      name: order.customerName ?? "Customer",
+      orders: [order],
+      pendingOrders: [],
+      phone: order.customerPhone ?? null,
+    } satisfies CommerceCustomer
+
+    return (
+      <View className="flex-1 bg-background pt-4">
+        <CustomerOverviewContent
+          customer={customer}
+          onBack={() => setActiveAction(null)}
+          onClose={() => setActiveAction(null)}
+          onCreateOrder={inert}
+          onOpenOrder={inert}
+          orderLinked
+        />
+      </View>
     )
   }
 
@@ -140,20 +223,65 @@ export function OrderDetailCurrentQaScreen({
           isOffline={state === "offline"}
           notice={null}
           onBack={inert}
-          onFulfillAll={inert}
-          onFulfillLine={inert}
+          onFulfillAll={() => {
+            setActiveAction("fulfil-all")
+            fulfilAllModal.present()
+          }}
+          onFulfillLine={(orderLineId) => {
+            setSelectedLineId(orderLineId)
+            setActiveAction("fulfil-line")
+            fulfilLineModal.present()
+          }}
           onMastheadHeightChange={setMastheadHeight}
-          onOpenCustomer={inert}
+          onOpenCustomer={() => setActiveAction("customer")}
           order={order}
         />
       </MobileScreen>
       {order.balanceDueMinor > 0 ? (
         <OrderDetailDispatchDocketPrimaryAction
           disabled={state === "offline"}
-          onPress={inert}
+          onPress={() => {
+            setActiveAction("payment")
+            paymentModal.present()
+          }}
           order={order}
         />
       ) : null}
+      <OrderPaymentSheet
+        amountPaid={amountPaid}
+        balanceLabel={formatMinorMoney(
+          order.balanceDueMinor,
+          order.currencyCode,
+        )}
+        currencyCode={order.currencyCode}
+        error={null}
+        isLoading={false}
+        isOffline={state === "offline"}
+        onAmountPaidChange={setAmountPaid}
+        onCancel={paymentModal.dismiss}
+        onConfirm={inert}
+        onPaymentMethodChange={setPaymentMethod}
+        onReferenceChange={setPaymentReference}
+        paymentMethod={paymentMethod}
+        reference={paymentReference}
+        ref={paymentModal.ref}
+      />
+      <OrderFulfilmentConfirmationSheet
+        error={null}
+        isLoading={false}
+        onCancel={fulfilLineModal.dismiss}
+        onConfirm={inert}
+        presentation={linePresentation}
+        ref={fulfilLineModal.ref}
+      />
+      <OrderFulfilmentConfirmationSheet
+        error={null}
+        isLoading={false}
+        onCancel={fulfilAllModal.dismiss}
+        onConfirm={inert}
+        presentation={allPresentation}
+        ref={fulfilAllModal.ref}
+      />
     </View>
   )
 }

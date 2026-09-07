@@ -20,6 +20,7 @@ type WorkflowModalScreenProps = {
     | "/dashboard"
     | "/sales-rep-home"
   closeLabel: string
+  hideHeader?: boolean
   keyboardBottomOffset?: number
   title: string
 }
@@ -29,6 +30,7 @@ export function WorkflowModalScreen({
   children,
   closeHref = "/dashboard",
   closeLabel,
+  hideHeader = false,
   keyboardBottomOffset = 140,
   title,
 }: WorkflowModalScreenProps) {
@@ -77,22 +79,24 @@ export function WorkflowModalScreen({
         keyboardBottomOffset={keyboardBottomOffset}
         scroll={false}
       >
-        <View className="mb-4 flex-row items-center justify-between gap-3 px-4">
-          <View className="min-w-0 flex-1">
-            <Text className="text-2xl font-extrabold text-foreground">
-              {title}
-            </Text>
+        {hideHeader ? null : (
+          <View className="mb-4 flex-row items-center justify-between gap-3 px-4">
+            <View className="min-w-0 flex-1">
+              <Text className="text-2xl font-extrabold text-foreground">
+                {title}
+              </Text>
+            </View>
+            <Pressable
+              accessibilityLabel={closeLabel}
+              className="h-11 w-11 items-center justify-center rounded-full bg-muted active:bg-accent"
+              haptic
+              onPress={() => router.replace(closeHref)}
+              transition
+            >
+              <Icon className="size-sm text-foreground" name="X" />
+            </Pressable>
           </View>
-          <Pressable
-            accessibilityLabel={closeLabel}
-            className="h-11 w-11 items-center justify-center rounded-full bg-muted active:bg-accent"
-            haptic
-            onPress={() => router.replace(closeHref)}
-            transition
-          >
-            <Icon className="size-sm text-foreground" name="X" />
-          </Pressable>
-        </View>
+        )}
         <View className="min-h-0 flex-1">{children}</View>
       </MobileScreen>
     </View>

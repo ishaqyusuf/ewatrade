@@ -6,7 +6,6 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
-import { useColorScheme } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { DISPLAY_TEXT_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
@@ -16,7 +15,7 @@ import {
 } from "@/lib/order-detail-dispatch-docket"
 import type { ReactNode } from "react"
 import { useEffect, useState } from "react"
-import { StyleSheet, Text as NativeText, View } from "react-native"
+import { Text as NativeText, StyleSheet, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import {
   type CommercialOrder,
@@ -621,7 +620,6 @@ function DocketLine({
   onFulfill: () => void
   order: CommercialOrder
 }) {
-  const { colorScheme } = useColorScheme()
   const marketDay = useMarketDayPalette()
   const largeTextLayout = useLargeTextLayout()
   const canFulfill = canFulfillCommercialOrderLine(line)
@@ -654,7 +652,7 @@ function DocketLine({
             ? "Product · fulfilled"
             : `Product · ${commerceStatusLabel(line.reservation?.status ?? "not reserved")}`}
       </Text>
-      {canFulfill && colorScheme === "light" ? (
+      {canFulfill ? (
         <MarketDayActionButton
           disabled={disabled}
           isLoading={isFulfilling}
@@ -664,16 +662,6 @@ function DocketLine({
         >
           {largeTextLayout ? "Fulfil line" : "Fulfil product line"}
         </MarketDayActionButton>
-      ) : canFulfill ? (
-        <ActionButton
-          disabled={disabled}
-          isLoading={isFulfilling}
-          loadingLabel="Recording fulfilment"
-          onPress={onFulfill}
-          variant="outline"
-        >
-          {largeTextLayout ? "Fulfil line" : "Fulfil product line"}
-        </ActionButton>
       ) : null}
     </View>
   )

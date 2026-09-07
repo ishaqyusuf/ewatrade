@@ -1,5 +1,18 @@
 # Done
 
+### [EWA-BIZ-004 Order detail, Dispatch Docket and Quiet Sheet](./2026-09-06-order-detail-design-review.md)
+
+- Status: Done
+- Implemented the owner-approved parent Option A, `Dispatch Docket`, and the
+  companion Option F, `Quiet Sheet`, across Record payment, Fulfil line, Fulfil
+  all ready, and order-linked Customer record. Money and stock mutations now
+  remain behind explicit confirmation; fixed action footers, compact text
+  scaling, shared vertical centering, and 24 px keyboard clearance preserve the
+  actions at 100% and 200% text. Completed Date: 2026-09-07. Checks Run:
+  focused presentation tests; commerce, NativeWind, keyboard, large-text, and
+  theme guards; scoped Biome; Android export; native Light/Dark, keyboard, and
+  200% evidence; independent correctness and maintainability review.
+
 ### [EWA-BIZ-003 Orders list, Dispatch Ledger redesign](./2026-09-06-orders-list-design-review.md)
 
 - Status: Done

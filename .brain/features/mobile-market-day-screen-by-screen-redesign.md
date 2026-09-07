@@ -171,17 +171,20 @@ color-forward redesign program.
   truthful fulfilment state and movement progress. Focused tests and source
   guards pass; the full mobile TypeScript graph exhausted Node's heap and is
   recorded as an environment limitation for this pass.
-- Order detail remains open at a companion owner-review gate. Its Record
+- Order detail is complete after a companion owner-review gate. Its Record
   payment sheet, per-line and all-ready fulfil actions, and directly opened
   Customer overview are treated as one interaction batch. The current payment
   form, immediate no-confirmation fulfil behavior, and generic Customer modal
   are source-audited. Six Light/Dark directions are available with four-state
   Payment/Fulfil line/Fulfil all/Customer switching. On 2026-09-07, owner
   feedback requested a minimalist direction using the familiar bottom-sheet
-  pattern. Option F, `Quiet Sheet`, now provides that restrained replacement
-  and is recommended. Production child-surface work remains paused for explicit
-  owner approval. This order-linked Customer state does not replace the later
-  full Customer book batch.
+  pattern. Option F, `Quiet Sheet`, provides that restrained replacement and
+  was explicitly approved on 2026-09-07. Production implementation and native
+  acceptance are complete across all four child surfaces, including explicit
+  stock confirmation, keyboard-safe payment entry, fixed action footers,
+  Light/Dark coverage, and 100%/200% text evidence. This order-linked Customer
+  state does not replace the later full Customer book batch. Catalog list
+  (`EWA-BIZ-005`) is next.
 
 ## Boundaries
 

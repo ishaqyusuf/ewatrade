@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress
+Complete
 
 ## Canonical Ticket
 
@@ -14,15 +14,16 @@ In Progress
 
 ## Last Updated
 
-2026-09-06
+2026-09-07
 
 ## Current Gate
 
 The approved parent Order detail is implemented and corrected. The companion
 review now covers every surface opened directly from the Order page: Record
 payment, Fulfil line, Fulfil all ready, and the order-linked Customer overview.
-Six Light/Dark directions are ready. Option F (`Quiet Sheet`) was added on
-2026-09-07 after the owner requested a minimalist direction based on the
-existing rounded bottom sheet, and it is now recommended. Production companion
-work remains paused for explicit owner approval. The full Customer book
-directory remains a separate later batch.
+Six Light/Dark directions are archived. The owner approved Option F (`Quiet
+Sheet`) on 2026-09-07 after requesting a minimalist direction based on the
+existing rounded bottom sheet. Production implementation and native acceptance
+are complete across Payment, Fulfil line, Fulfil all, and the order-linked
+Customer overview. The full Customer book directory remains a separate later
+batch. Catalog list (`EWA-BIZ-005`) is the next owner-review package.

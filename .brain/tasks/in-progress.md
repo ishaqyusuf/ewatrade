@@ -1,15 +1,10 @@
 # In Progress
 
-### [EWA-BIZ-004 Order detail design review](2026-09-06-order-detail-design-review.md)
-
-- Status: In Progress
-
 ### [Mobile Market Day screen-by-screen redesign](../features/mobile-market-day-screen-by-screen-redesign.md)
 
-- Status: In Progress — next gate is owner approval of the `EWA-BIZ-004`
-  six-direction Payment / Fulfil line / Fulfil all / Customer companion batch;
-  minimalist Option F (`Quiet Sheet`) is recommended
-- Headline implementation progress: 10/38 screens (26.3%).
+- Status: In Progress — `EWA-BIZ-004` is complete; Catalog list
+  (`EWA-BIZ-005`) is the next owner-review batch
+- Headline implementation progress: 11/38 screens (28.9%).
 
 - Provision and verify the owner-approved production observability rollout.
   Source implementation is complete across API, jobs, dashboard, marketing,

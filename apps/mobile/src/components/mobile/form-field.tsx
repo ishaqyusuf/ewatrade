@@ -3,6 +3,8 @@ import { Input } from "@/components/ui/input-2"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColors } from "@/hooks/use-color"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { COMPACT_CONTROL_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
 import { cn } from "@/lib/utils"
 import type { ComponentProps } from "react"
 import { useState } from "react"
@@ -41,6 +43,7 @@ export function FormField({
   const isAuthVariant = variant === "auth"
   const isSearchVariant = variant === "search"
   const colors = useColors()
+  const largeTextLayout = useLargeTextLayout()
   const [isFocused, setIsFocused] = useState(false)
   const activeBorderColor = error
     ? colors.destructive
@@ -66,7 +69,8 @@ export function FormField({
         ? "text-primary"
         : "text-muted-foreground",
   )
-  const shouldShowLabel = !isAuthVariant && !isSearchVariant
+  const shouldShowLabel =
+    !isSearchVariant && (!isAuthVariant || largeTextLayout)
   const isMultiline = !!inputProps.multiline
 
   return (
@@ -77,16 +81,23 @@ export function FormField({
       )}
     >
       {shouldShowLabel ? (
-        <View className="min-h-5 flex-row items-center justify-between gap-3">
+        <View
+          className={cn(
+            "flex-row items-center justify-between gap-3",
+            largeTextLayout ? "min-h-8" : "min-h-5",
+          )}
+        >
           <Text
             className={cn(
               "min-w-0 flex-1 text-xs font-bold uppercase tracking-[1.4px]",
+              largeTextLayout ? "leading-7" : "leading-[18px]",
               error
                 ? "text-destructive"
                 : isFocused
                   ? "text-primary"
                   : "text-muted-foreground",
             )}
+            maxFontSizeMultiplier={COMPACT_CONTROL_FONT_SCALE_CAP}
           >
             {label}
           </Text>
@@ -114,9 +125,9 @@ export function FormField({
           borderWidth: isSearchVariant ? 0 : isFocused || error ? 1.5 : 1,
           flexDirection: "row",
           gap: 10,
-          minHeight: isMultiline ? 92 : 50,
+          minHeight: isMultiline ? 92 : largeTextLayout ? 64 : 50,
           paddingHorizontal: 14,
-          paddingVertical: isMultiline ? 10 : 0,
+          paddingVertical: isMultiline ? 10 : largeTextLayout ? 6 : 0,
         }}
       >
         {leadingIcon ? (
@@ -137,6 +148,11 @@ export function FormField({
           expand
           unstyled
           {...sharedInputProps}
+          numberOfLines={isMultiline ? inputProps.numberOfLines : 1}
+          style={[
+            inputProps.style,
+            !isMultiline && largeTextLayout ? { height: 64 } : undefined,
+          ]}
         />
         {trailingIcon ? (
           <Icon className={iconClassName} name={trailingIcon} />
