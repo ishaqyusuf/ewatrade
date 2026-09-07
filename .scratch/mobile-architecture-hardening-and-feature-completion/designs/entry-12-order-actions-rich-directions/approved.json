@@ -1,0 +1,8 @@
+{
+  "ticket": "EWA-BIZ-004",
+  "option": "F",
+  "name": "Quiet Sheet",
+  "approvedAt": "2026-09-07",
+  "states": ["payment", "fulfil-line", "fulfil-all", "customer"],
+  "ownerFeedback": "Approved the minimalist bottom-sheet direction based on the existing sheet pattern."
+}
