@@ -185,6 +185,10 @@ color-forward redesign program.
   Light/Dark coverage, and 100%/200% text evidence. This order-linked Customer
   state does not replace the later full Customer book batch. Catalog list
   (`EWA-BIZ-005`) is next.
+- Catalog list (`EWA-BIZ-005`) now has five Light/Dark owner-review directions
+  with previous/next navigation and populated, first-item, and Add-item states.
+  Option A, `Market Stockbook`, is recommended. No production implementation is
+  authorized until the owner explicitly selects a direction.
 
 ## Boundaries
 

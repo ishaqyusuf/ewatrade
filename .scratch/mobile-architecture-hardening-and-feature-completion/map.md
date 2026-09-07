@@ -128,6 +128,6 @@ review batch until the owner explicitly chooses an option.
 
 ## Frontier
 
-1. Prepare the five-direction Catalog list (`EWA-BIZ-005`) owner-review batch.
-2. Include every directly opened Catalog-list task surface in the same batch.
-3. Pause at the comparison board until the owner explicitly selects a direction.
+1. Review the five Catalog list (`EWA-BIZ-005`) Light/Dark directions.
+2. Inspect populated, first-item, and Add-item states for the preferred option.
+3. Pause until the owner explicitly selects a direction or requests replacements.

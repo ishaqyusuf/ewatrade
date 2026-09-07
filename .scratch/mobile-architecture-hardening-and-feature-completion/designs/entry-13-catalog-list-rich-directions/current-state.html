@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ẸwáTrade Catalog, current source-audited state</title>
+  <style>
+    :root{--bg:#fff;--card:#fff;--ink:#171a19;--muted:#68716d;--line:#d9dfdc;--soft:#f1f4f2;--green:#086c5c;--nav:#fff;font-family:Inter,system-ui,sans-serif}html[data-theme="dark"]{--bg:#0d100f;--card:#171b19;--ink:#f5f7f6;--muted:#a8b0ac;--line:#303734;--soft:#202522;--green:#32d1bd;--nav:#171b19}*{box-sizing:border-box}body{display:grid;min-height:100vh;margin:0;place-items:center;color:var(--ink);background:#cfd5d1}.phone{position:relative;width:390px;height:844px;overflow:hidden;background:var(--bg);box-shadow:0 24px 60px #19342a35}.status{display:flex;height:44px;align-items:center;justify-content:space-between;padding:0 20px;font-size:13px;font-weight:800}.content{padding:22px 16px 120px}.head{display:grid;grid-template-columns:44px 1fr;gap:13px;align-items:center}.head-icon{display:grid;width:44px;height:44px;place-items:center;border-radius:13px;color:#fff;background:var(--green);font-size:19px}.head h1{margin:0;font-size:22px}.head p{margin:4px 0 0;color:var(--muted);font-size:11px}.filters{display:flex;gap:8px;margin:21px 0 15px}.chip{display:grid;min-height:34px;place-items:center;padding:0 15px;border:0;border-radius:99px;color:var(--ink);background:var(--soft);font-size:10px;font-weight:800}.chip.active{color:#fff;background:#086c5c}.search{display:flex;height:50px;align-items:center;gap:10px;padding:0 14px;border:1px solid var(--line);border-radius:12px;color:var(--muted);font-size:11px}.row{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;min-height:82px;border-bottom:1px solid var(--line)}.row-icon{display:grid;width:40px;height:40px;place-items:center;border-radius:12px;color:var(--green);background:var(--soft);font-size:17px}.row h2{margin:0;font-size:13px}.row p{margin:5px 0 0;color:var(--muted);font-size:9px}.badge{padding:5px 8px;border-radius:99px;color:#fff;background:#238b65;font-size:7px;font-weight:800}.badge.service{color:var(--green);background:var(--soft)}.fab{position:absolute;right:22px;bottom:105px;display:grid;width:54px;height:54px;place-items:center;border:0;border-radius:50%;color:#fff;background:#086c5c;font-size:28px;box-shadow:0 10px 22px #086c5c45}.nav{position:absolute;right:12px;bottom:18px;left:12px;display:grid;grid-template-columns:repeat(5,1fr);height:72px;padding:7px;border:1px solid var(--line);border-radius:30px;background:var(--nav);box-shadow:0 10px 25px #0002}.nav span{display:grid;place-items:center;color:var(--muted);font-size:8px}.nav span::first-line{font-size:16px}.nav .active{color:var(--green);font-weight:800}.home{position:absolute;bottom:7px;left:50%;width:105px;height:4px;border-radius:99px;background:var(--ink);opacity:.55;transform:translateX(-50%)}
+  </style>
+</head>
+<body>
+  <main class="phone" aria-label="Current Catalog list reconstruction">
+    <div class="status"><span>9:41</span><span>● ◒ ▮</span></div>
+    <section class="content">
+      <header class="head"><span class="head-icon">□</span><div><h1>Catalog items</h1><p>Products track stock. Services stay outside inventory.</p></div></header>
+      <div class="filters"><button class="chip active">All</button><button class="chip">Products</button><button class="chip">Services</button></div>
+      <div class="search">⌕ <span>Search name, type, or unit</span></div>
+      <article class="row"><span class="row-icon">□</span><div><h2>Ofada rice</h2><p>32 bags available · ₦25,200</p></div><b class="badge">Product</b></article>
+      <article class="row"><span class="row-icon">◇</span><div><h2>Market delivery</h2><p>₦5,000 · No inventory</p></div><b class="badge service">Service</b></article>
+      <article class="row"><span class="row-icon">□</span><div><h2>Fresh palm oil</h2><p>18 kegs available · ₦16,500</p></div><b class="badge">Product</b></article>
+    </section>
+    <button class="fab" aria-label="Add catalog item">+</button>
+    <nav class="nav"><span>⌂<br>Home</span><span>▤<br>Orders</span><span>＋<br>Create</span><span class="active">□<br>Catalog</span><span>•••<br>More</span></nav><i class="home"></i>
+  </main>
+</body>
+</html>

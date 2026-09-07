@@ -2,8 +2,8 @@
 
 ### [Mobile Market Day screen-by-screen redesign](../features/mobile-market-day-screen-by-screen-redesign.md)
 
-- Status: In Progress — `EWA-BIZ-004` is complete; Catalog list
-  (`EWA-BIZ-005`) is the next owner-review batch
+- Status: In Progress — Catalog list (`EWA-BIZ-005`) is at owner review with
+  five Light/Dark directions; Option A, `Market Stockbook`, is recommended
 - Headline implementation progress: 11/38 screens (28.9%).
 
 - Provision and verify the owner-approved production observability rollout.
