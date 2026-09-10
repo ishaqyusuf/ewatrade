@@ -1,3 +1,4 @@
+import { EventsProvider } from "@ewatrade/events/client"
 import type { Metadata } from "next"
 import "@ewatrade/ui/globals.css"
 import { cn } from "@/utils"
@@ -35,7 +36,7 @@ export default function RootLayout({
       className={cn("font-sans", geist.variable, fraunces.variable)}
     >
       <body>
-        <Providers>{children}</Providers>
+        <Providers><EventsProvider>{children}</EventsProvider></Providers>
       </body>
     </html>
   )
