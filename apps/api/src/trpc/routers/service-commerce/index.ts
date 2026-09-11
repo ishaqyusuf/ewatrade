@@ -6,6 +6,7 @@ import { serviceCommerceCatalogRouter } from "./catalog"
 import { serviceCommerceChannelsRouter } from "./channels"
 import { serviceCommerceConversationsRouter } from "./conversations"
 import { serviceCommerceCustomerConversationsRouter } from "./customer-conversations"
+import { serviceCommerceCustomerNotificationsRouter } from "./customer-notifications"
 import { serviceCommerceFulfillmentRouter } from "./fulfillment"
 import { serviceCommerceInquiryRouter } from "./inquiries"
 import { serviceCommerceIntakeRouter } from "./intake"
@@ -21,6 +22,7 @@ export const serviceCommerceRouter = mergeRouters(
   serviceCommerceChannelsRouter,
   serviceCommerceConversationsRouter,
   serviceCommerceCustomerConversationsRouter,
+  serviceCommerceCustomerNotificationsRouter,
   serviceCommerceFulfillmentRouter,
   serviceCommerceInquiryRouter,
   serviceCommerceIntakeRouter,

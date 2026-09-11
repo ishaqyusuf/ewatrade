@@ -56,6 +56,7 @@ describe("prescription communication dispatch", () => {
     await runPrescriptionCommunicationDispatch(
       { intentId: "intent-1" },
       {
+        assertProviderAllowed: async () => undefined,
         authorize: async () => true,
         claim: async () => ({
           attemptId: "attempt-1",
@@ -131,6 +132,7 @@ describe("prescription communication dispatch", () => {
       await runPrescriptionCommunicationDispatch(
         { intentId },
         {
+          assertProviderAllowed: async () => undefined,
           authorize: async () => true,
           claim: async () => ({
             attemptId: `attempt-${intentId.slice(-1)}`,
@@ -187,6 +189,7 @@ describe("prescription communication dispatch", () => {
       runPrescriptionCommunicationDispatch(
         { intentId: "intent-1" },
         {
+          assertProviderAllowed: async () => undefined,
           authorize: async () => true,
           claim: async () => ({
             attemptId: "attempt-1",
@@ -230,6 +233,7 @@ describe("prescription communication dispatch", () => {
       runPrescriptionCommunicationDispatch(
         { intentId: "intent-1" },
         {
+          assertProviderAllowed: async () => undefined,
           authorize: async () => false,
           claim: async () => ({
             attemptId: "attempt-1",

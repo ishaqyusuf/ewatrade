@@ -33,11 +33,15 @@ import type {
   BottomSheetBackgroundProps,
   BottomSheetModalProps,
 } from "@gorhom/bottom-sheet"
-import { BottomSheetBackdrop, BottomSheetModal } from "@gorhom/bottom-sheet"
+import { BottomSheetModal } from "@gorhom/bottom-sheet"
 import * as React from "react"
 import { Platform, StyleSheet, View, useWindowDimensions } from "react-native"
 import { Path, Svg } from "react-native-svg"
 
+import {
+  APP_BOTTOM_SHEET_ELEVATION,
+  AppBottomSheetBackdrop,
+} from "@/components/app/bottom-sheet-backdrop"
 import { useColors } from "@/hooks/use-color"
 import { COMPACT_CONTROL_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
 import { Pressable } from "./pressable"
@@ -208,13 +212,7 @@ Modal.displayName = "Modal"
  */
 
 export const renderBackdrop = (props: BottomSheetBackdropProps) => (
-  <BottomSheetBackdrop
-    {...props}
-    appearsOnIndex={0}
-    disappearsOnIndex={-1}
-    opacity={0.38}
-    pressBehavior="close"
-  />
+  <AppBottomSheetBackdrop {...props} />
 )
 
 /**
@@ -243,13 +241,13 @@ const getDetachedProps = (
       bottomInset: bottomInset ?? getFloatingBottomInset(),
       containerStyle: [
         {
-          elevation: 2000,
+          elevation: APP_BOTTOM_SHEET_ELEVATION,
           marginHorizontal: FLOATING_SHEET_SIDE_INSET,
           shadowColor,
           shadowOffset: { width: 0, height: 16 },
           shadowOpacity: 0.18,
           shadowRadius: 28,
-          zIndex: 2000,
+          zIndex: APP_BOTTOM_SHEET_ELEVATION,
         },
         containerStyle,
       ],
@@ -308,6 +306,8 @@ const ModalHeader = React.memo(({ title, dismiss }: ModalHeaderProps) => {
 })
 ModalHeader.displayName = "ModalHeader"
 const CloseButton = ({ close }: { close: () => void }) => {
+  const colors = useColors()
+
   return (
     <Pressable
       onPress={close}
@@ -320,10 +320,9 @@ const CloseButton = ({ close }: { close: () => void }) => {
       transition
     >
       <Svg
-        className="fill-gray-500 dark:fill-gray-400"
         width={24}
         height={24}
-        fill="none"
+        fill={colors.mutedForeground}
         viewBox="0 0 24 24"
       >
         <Path d="M18.707 6.707a1 1 0 0 0-1.414-1.414L12 10.586 6.707 5.293a1 1 0 0 0-1.414 1.414L10.586 12l-5.293 5.293a1 1 0 1 0 1.414 1.414L12 13.414l5.293 5.293a1 1 0 0 0 1.414-1.414L13.414 12l5.293-5.293Z" />

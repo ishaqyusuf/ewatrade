@@ -38,6 +38,7 @@ describe("WhatsApp connection test job", () => {
     const result = await runWhatsAppConnectionTest(
       { connectionId: "connection-1", tenantId: "tenant-1" },
       {
+        assertProviderAllowed: async () => undefined,
         load: async () => connection,
         provider: createProvider(async (input) => {
           providerInputs.push(input)
@@ -83,6 +84,7 @@ describe("WhatsApp connection test job", () => {
       runWhatsAppConnectionTest(
         { connectionId: "connection-1", tenantId: "tenant-1" },
         {
+          assertProviderAllowed: async () => undefined,
           load: async () => ({
             ...connection,
             pendingCredentialReference: null,

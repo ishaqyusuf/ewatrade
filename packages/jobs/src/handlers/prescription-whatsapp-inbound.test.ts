@@ -37,6 +37,7 @@ describe("WhatsApp prescription intake job", () => {
     const result = await runPrescriptionWhatsAppInbound(
       { inboundEventId: "inbound-1" },
       {
+        assertProviderAllowed: async () => undefined,
         claim: async () => ({
           connectionId: "connection-1",
           credentialReference: "unused-for-text",
@@ -79,6 +80,7 @@ describe("WhatsApp prescription intake job", () => {
     const result = await runPrescriptionWhatsAppInbound(
       { inboundEventId: "inbound-2" },
       {
+        assertProviderAllowed: async () => undefined,
         claim: async () => ({
           connectionId: "connection-1",
           credentialReference: "unused-for-text",
@@ -136,6 +138,7 @@ describe("WhatsApp prescription intake job", () => {
       runPrescriptionWhatsAppInbound(
         { inboundEventId: "inbound-3" },
         {
+          assertProviderAllowed: async () => undefined,
           claim: async () => ({
             connectionId: "connection-1",
             credentialReference:
@@ -178,6 +181,7 @@ describe("WhatsApp prescription intake job", () => {
     const result = await runPrescriptionWhatsAppInbound(
       { inboundEventId: "inbound-4" },
       {
+        assertProviderAllowed: async () => undefined,
         claim: async () => ({
           connectionId: "connection-1",
           credentialReference: "unused-for-action",

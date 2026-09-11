@@ -121,6 +121,7 @@ describeWithServiceCommerceDatabase(
         actorUserId: fixture.actorUserId,
         channel: "staff" as const,
         clientMediaId: `bag-image-${runId}`,
+        contentDigest: "a".repeat(64),
         fileName: "customer-bag.jpg",
         kind: "image" as const,
         mimeType: "image/jpeg" as const,

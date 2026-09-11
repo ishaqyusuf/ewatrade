@@ -7,12 +7,22 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "dev": "email dev -p 3003",
     "lint": "biome check .",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@react-email/components": "1.0.10",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-email": "5.2.10"
+  },
   "devDependencies": {
+    "@react-email/preview-server": "5.2.10",
     "@ewatrade/tsconfig": "workspace:*",
     "@types/node": "^24.6.0",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
     "typescript": "catalog:"
   }
 }

@@ -1,6 +1,12 @@
 import Constants from "expo-constants"
 
-const INTERNAL_TOOL_VARIANTS = new Set(["dev", "development", "preview"])
+const INTERNAL_TOOL_VARIANTS = new Set([
+  "local",
+  "dev",
+  "development",
+  "preview",
+])
+const DEVELOPMENT_APP_VARIANTS = new Set(["local", "dev", "development"])
 
 export function getAppVariant() {
   return (
@@ -13,8 +19,12 @@ export function getAppVariant() {
     .toLowerCase()
 }
 
+export function isDevelopmentAppVariant() {
+  return DEVELOPMENT_APP_VARIANTS.has(getAppVariant())
+}
+
 export function shouldShowFloatingThemeToggle() {
-  return new Set(["dev", "development"]).has(getAppVariant())
+  return INTERNAL_TOOL_VARIANTS.has(getAppVariant())
 }
 
 export function shouldShowInternalDesignSystemEntry() {

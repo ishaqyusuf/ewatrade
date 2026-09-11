@@ -32,13 +32,27 @@ function dependencies(
   calls: string[],
 ): ServiceCommerceWhatsAppInboundDependencies {
   return {
+    bindBridgeRequest: async () => {
+      calls.push("bind-bridge-request")
+      return { message: {}, replayed: false } as never
+    },
+    bindDirectSession: async () => {
+      calls.push("bind-direct-session")
+      return {
+        conversationId: "conversation_1",
+        directSessionId: "direct_1",
+        replayed: false,
+      }
+    },
     claim: async () => claim(normalizedPayload),
     complete: async (input) => {
       calls.push(`complete:${input.failureCode ?? "ok"}`)
     },
+    digestProviderEvent: () => "d".repeat(64),
     enqueueMedia: async () => {
       calls.push("enqueue-media")
     },
+    protectRecipient: () => "recipient_ciphertext",
     recordMedia: async () => {
       calls.push("record-media")
       return {
@@ -94,7 +108,11 @@ describe("Service Commerce WhatsApp inbound", () => {
       source: { id: "inquiry_1", kind: "commerce_inquiry" },
       status: "accepted",
     })
-    expect(calls).toEqual(["record-media", "enqueue-media", "complete:ok"])
+    expect(calls).toEqual([
+      "record-media",
+      "enqueue-media",
+      "bind-direct-session",
+    ])
   })
 
   test("records a customer PDF as a private document before ingestion", async () => {
@@ -133,7 +151,11 @@ describe("Service Commerce WhatsApp inbound", () => {
       kind: "document",
       mimeType: "application/pdf",
     })
-    expect(calls).toEqual(["record-media", "enqueue-media", "complete:ok"])
+    expect(calls).toEqual([
+      "record-media",
+      "enqueue-media",
+      "bind-direct-session",
+    ])
   })
 
   test("releases transient failures for durable retry", async () => {
@@ -152,5 +174,43 @@ describe("Service Commerce WhatsApp inbound", () => {
       ),
     ).rejects.toThrow("temporary Neon failure")
     expect(calls).toEqual(["retry"])
+  })
+
+  test("binds a newly dispatched typed Inquiry back to the exact durable bridge", async () => {
+    const calls: string[] = []
+    let bridgeInput: Record<string, unknown> | null = null
+    const injected = dependencies(
+      {
+        bridgeExternalCustomerIdDigest: "e".repeat(64),
+        bridgeId: "bridge_1",
+        intakeKind: "commerce_inquiry",
+        text: "I need a red bag",
+      },
+      calls,
+    )
+    injected.bindBridgeRequest = async (input) => {
+      bridgeInput = input
+      calls.push("bind-bridge-request")
+      return { message: {}, replayed: false } as never
+    }
+
+    await expect(
+      runServiceCommerceWhatsAppInbound(
+        { inboundEventId: "event_1" },
+        injected,
+      ),
+    ).resolves.toMatchObject({ status: "accepted" })
+    expect(bridgeInput).toMatchObject({
+      bridgeId: "bridge_1",
+      connectionId: "connection_1",
+      externalCustomerIdDigest: "e".repeat(64),
+      providerEventDigest: "d".repeat(64),
+      sourceId: "inquiry_1",
+      sourceKind: "COMMERCE_INQUIRY",
+      storeId: "store_1",
+      tenantId: "tenant_1",
+      text: "I need a red bag",
+    })
+    expect(calls).toEqual(["bind-bridge-request", "complete:ok"])
   })
 })

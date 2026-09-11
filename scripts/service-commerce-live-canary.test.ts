@@ -40,7 +40,7 @@ describe("Service Commerce live-canary CLI", () => {
       status: "BLOCKED",
     })
     expect(result.missingEnvironmentKeys).toEqual(
-      expect.arrayContaining(["DATABASE_PROFILE_VERIFIED", "DATABASE_URL"]),
+      expect.arrayContaining(["DATABASE_PROFILE_VERIFIED", "EWATRADE_DATABASE_URL"]),
     )
   })
 })

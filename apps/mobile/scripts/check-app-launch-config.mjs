@@ -7,8 +7,8 @@ const APP_CONFIG_FILE = join(MOBILE_DIR, "app.config.ts")
 const ICON_DIR = join(MOBILE_DIR, "assets/icons")
 
 const REQUIRED_MARKERS = [
-  'name: "Ewatrade"',
-  'name: "Ewatrade Dev"',
+  'name: "ẸwáTrade"',
+  'name: "ẸwáTrade Dev"',
   'scheme: "ewatrade"',
   'scheme: "ewatrade-dev"',
   'iosBundleIdentifier: "com.ewatrade.app"',
@@ -20,7 +20,7 @@ const REQUIRED_MARKERS = [
   "variantConfig.icons.splashDark",
   "splashBackgroundColor",
   "splashDarkBackgroundColor",
-  "imageWidth: 200",
+  "imageWidth: 170",
   'resizeMode: "contain"',
   'userInterfaceStyle: "automatic"',
 ]
@@ -34,6 +34,8 @@ const REQUIRED_PNGS = [
   { file: "ios-dark.png", height: 1024, width: 1024 },
   { file: "ios-light.png", height: 1024, width: 1024 },
   { file: "loading-icon.png", height: 1024, width: 1024 },
+  { file: "market-day-splash-lockup.png", height: 1280, width: 2560 },
+  { file: "market-pulse-splash-mark.png", height: 1024, width: 1024 },
   { file: "splash-logo.png", height: 640, width: 640 },
 ]
 
@@ -76,7 +78,7 @@ for (const png of REQUIRED_PNGS) {
 
 if (missingMarkers.length > 0 || imageFailures.length > 0) {
   console.error(
-    "App launch config check failed. Restore the Ewatrade launch names, schemes, splash plugin, dark/light splash assets, and launcher icon dimensions.",
+    "App launch config check failed. Restore the ẸwáTrade launch names, schemes, splash plugin, dark/light splash assets, and launcher icon dimensions.",
   )
 
   for (const marker of missingMarkers) {

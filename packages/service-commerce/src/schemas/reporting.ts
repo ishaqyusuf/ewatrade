@@ -218,6 +218,121 @@ export const serviceCommerceMediaReportSchema = z
   .strict()
 
 /**
+ * Content-free Store Conversation service-quality counts. Every value is an
+ * aggregate occurrence inside the report's existing half-open Store window;
+ * customer content, contact data, credentials and provider identifiers are
+ * deliberately impossible to represent in this contract.
+ */
+export const serviceCommerceStoreConversationReportSchema = z
+  .object({
+    availability: z
+      .object({
+        coverageBlockObservations: countSchema,
+        paused: countSchema,
+        policyBlockObservations: countSchema,
+        providerBlockObservations: countSchema,
+        resumed: countSchema,
+        scheduleUpdates: countSchema,
+        scheduledClosureObservations: countSchema.nullable(),
+      })
+      .strict(),
+    channels: z
+      .object({
+        bridgeConfirmed: countSchema,
+        bridgeInitiated: countSchema,
+        desiredBothCurrent: countSchema,
+        desiredChatCurrent: countSchema,
+        desiredWhatsAppCurrent: countSchema,
+        directContinued: countSchema,
+        directStartedNew: countSchema,
+        mobileMessages: countSchema,
+        modeChanges: countSchema,
+        providerHistoryUnknown: countSchema.nullable(),
+        webMessages: countSchema,
+        whatsAppMessages: countSchema,
+      })
+      .strict(),
+    costVisibility: z
+      .object({
+        knownObservations: countSchema,
+        unknownObservations: countSchema,
+      })
+      .strict(),
+    lifecycle: z
+      .object({
+        archived: countSchema,
+        conversationsStarted: countSchema,
+        currentSnapshot: z
+          .object({
+            active: countSchema,
+            archived: countSchema,
+            restricted: countSchema,
+          })
+          .strict(),
+        customerMessages: countSchema,
+        firstResponse: z
+          .object({
+            averageSeconds: z.number().nonnegative().nullable(),
+            knownCount: countSchema,
+            unknownCount: countSchema,
+          })
+          .strict(),
+        reactivated: countSchema,
+        requestKinds: z
+          .object({
+            prescription: countSchema,
+            product: countSchema,
+            service: countSchema,
+          })
+          .strict(),
+        storeReplies: countSchema,
+        unreadWait: z
+          .object({
+            averageSeconds: z.number().nonnegative().nullable(),
+            knownCount: countSchema,
+            unknownCount: countSchema,
+          })
+          .strict(),
+      })
+      .strict(),
+    notifications: z
+      .object({
+        cancelled: countSchema,
+        cancelledByRead: countSchema,
+        coalesced: countSchema,
+        delivered: countSchema,
+        failed: countSchema,
+        scheduled: countSchema,
+        sent: countSchema,
+        suppressed: countSchema,
+        unavailable: countSchema,
+      })
+      .strict(),
+    providerReliability: z
+      .object({
+        attempts: countSchema,
+        failed: countSchema,
+        outcomeUnknown: countSchema,
+        retries: countSchema,
+        sent: countSchema,
+      })
+      .strict(),
+    team: z
+      .object({
+        claimed: countSchema,
+        escalationsOpened: countSchema,
+        escalationsResolved: countSchema,
+        handedOff: countSchema,
+        overdueCurrent: countSchema,
+        reassigned: countSchema,
+        released: countSchema,
+        unclaimedCurrent: countSchema,
+      })
+      .strict(),
+  })
+  .strict()
+
+/**
  * Unknown provider amounts are explicit nulls. A recorded zero remains known
  * and is therefore distinguishable from an unavailable provider amount.
  */
@@ -349,6 +464,7 @@ export const serviceCommerceReportOutputSchema = z
         })
         .strict(),
     ),
+    storeConversations: serviceCommerceStoreConversationReportSchema,
     timezone: z.string().trim().min(1).max(100),
     usageCostsByDimension: z.array(serviceCommerceUsageCostDimensionSchema),
   })
@@ -377,6 +493,9 @@ export type ServiceCommerceRedactedObservability = z.infer<
 >
 export type ServiceCommerceReliabilityReport = z.infer<
   typeof serviceCommerceReliabilityReportSchema
+>
+export type ServiceCommerceStoreConversationReport = z.infer<
+  typeof serviceCommerceStoreConversationReportSchema
 >
 export type ServiceCommerceUsageCostDimension = z.infer<
   typeof serviceCommerceUsageCostDimensionSchema

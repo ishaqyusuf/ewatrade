@@ -41,6 +41,7 @@ type UseMobileGoogleAuthInput = {
   orderChannels?: BusinessOrderChannel[]
   otherBusinessDescription?: string
   phone?: string
+  redirectHref?: string
   teamSize?: BusinessTeamSize
   onError: (message: string) => void
 }
@@ -116,6 +117,7 @@ export function useMobileGoogleAuth({
   orderChannels,
   otherBusinessDescription,
   phone,
+  redirectHref,
   teamSize,
   onError,
 }: UseMobileGoogleAuthInput) {
@@ -142,21 +144,25 @@ export function useMobileGoogleAuth({
       },
       onSuccess(session) {
         completeOnboarding(true)
-        auth.applyAuthenticatedSession({
-          expiresAt: session.expiresAt.toISOString(),
-          profile: {
-            businessId: session.profile.businessId ?? undefined,
-            businessName: session.profile.businessName ?? undefined,
-            businessSlug: session.tenant?.slug ?? undefined,
-            currencyCode: session.profile.currencyCode,
-            email: session.profile.email,
-            id: session.profile.id,
-            name: session.profile.name,
-            role: session.profile.role ?? undefined,
-            status: session.profile.status ?? undefined,
+        auth.applyAuthenticatedSession(
+          {
+            accessProfile: session.accessProfile,
+            expiresAt: session.expiresAt.toISOString(),
+            profile: {
+              businessId: session.profile.businessId ?? undefined,
+              businessName: session.profile.businessName ?? undefined,
+              businessSlug: session.tenant?.slug ?? undefined,
+              currencyCode: session.profile.currencyCode,
+              email: session.profile.email,
+              id: session.profile.id,
+              name: session.profile.name,
+              role: session.profile.role ?? undefined,
+              status: session.profile.status ?? undefined,
+            },
+            token: session.token,
           },
-          token: session.token,
-        })
+          redirectHref ?? "/",
+        )
       },
     }),
   )

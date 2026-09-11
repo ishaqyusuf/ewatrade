@@ -1,6 +1,6 @@
 import { describe } from "bun:test"
 
-const databaseUrl = process.env.DATABASE_URL
+const databaseUrl = process.env.EWATRADE_DATABASE_URL
 const databaseIntegrationEnabled =
   process.env.RUN_DATABASE_INTEGRATION_TESTS === "1"
 

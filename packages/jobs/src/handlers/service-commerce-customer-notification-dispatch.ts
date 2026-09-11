@@ -12,6 +12,7 @@ import {
   completeServiceCommerceCustomerNotificationIntent,
   failServiceCommerceCustomerNotificationIntent,
 } from "@ewatrade/db/queries"
+import { assertQaJobProviderAllowed } from "../qa-provider-guard"
 
 export type ServiceCommerceCustomerNotificationDispatchPayload = {
   actorUserId: string
@@ -25,6 +26,7 @@ type Claim = NonNullable<
 >
 
 type Dependencies = {
+  assertProviderAllowed(input: { tenantId: string }): Promise<unknown>
   authorize(
     input: ServiceCommerceCustomerNotificationDispatchPayload & {
       attemptId: string
@@ -65,6 +67,8 @@ function storefrontUrl() {
 
 function defaultDependencies(): Dependencies {
   return {
+    assertProviderAllowed: ({ tenantId }) =>
+      assertQaJobProviderAllowed({ operation: "whatsapp", tenantId }),
     authorize: (input) =>
       authorizeServiceCommerceCustomerNotificationAttempt(prisma, input),
     claim: (input) =>
@@ -98,6 +102,7 @@ export async function runServiceCommerceCustomerNotificationDispatch(
     })
     return null
   }
+  await dependencies.assertProviderAllowed({ tenantId: payload.tenantId })
   try {
     const actions = claim.actions.map((action) => {
       const token = issueServiceCommerceCustomerActionToken({

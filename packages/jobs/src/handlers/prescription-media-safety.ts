@@ -7,6 +7,7 @@ import {
   type PrescriptionMediaSafetyProvider,
   createDeterministicMediaSafetyProvider,
 } from "@ewatrade/prescriptions"
+import { assertQaJobProviderAllowed } from "../qa-provider-guard"
 
 export type PrescriptionMediaSafetyPayload = { requestId: string }
 
@@ -18,6 +19,10 @@ type PendingMedia = {
 }
 
 type Dependencies = {
+  assertProviderAllowed(input: {
+    adapter: "live" | "test"
+    tenantId: string
+  }): Promise<unknown>
   list(input: PrescriptionMediaSafetyPayload): Promise<PendingMedia[]>
   provider: PrescriptionMediaSafetyProvider
   record(input: {
@@ -45,6 +50,12 @@ function configuredProvider() {
 
 function defaultDependencies(): Dependencies {
   return {
+    assertProviderAllowed: ({ adapter, tenantId }) =>
+      assertQaJobProviderAllowed({
+        adapter,
+        operation: "media_analysis",
+        tenantId,
+      }),
     list: (input) => listPendingPrescriptionMediaForSafety(prisma, input),
     provider: configuredProvider(),
     record: (input) => recordPrescriptionMediaSafety(prisma, input),
@@ -57,6 +68,11 @@ export async function runPrescriptionMediaSafety(
 ) {
   const media = await dependencies.list(payload)
   for (const item of media) {
+    await dependencies.assertProviderAllowed({
+      adapter:
+        dependencies.provider.key === "deterministic-fake" ? "test" : "live",
+      tenantId: item.tenantId,
+    })
     const result = await dependencies.provider.scan({
       mediaId: item.id,
       objectKey: item.objectKey,

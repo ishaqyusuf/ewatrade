@@ -22,7 +22,7 @@ describe("retail ops reports CSV export", () => {
       syncDeviceFilter: "current device",
     })
 
-    expect(csv).toContain("Ewatrade Retail Ops report")
+    expect(csv).toContain("ẸwáTrade Retail Ops report")
     expect(csv).toContain("Generated at,2026-07-12T12:30:00.000Z")
     expect(csv).toContain("Report source,Online")
     expect(csv).toContain("Business,business_123")

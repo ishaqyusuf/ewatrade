@@ -1,9 +1,9 @@
 "use client"
 
-import { DevFormFillButton } from "@/components/dev/dev-form-fill-button"
-import { useDevFormFill } from "@/hooks/use-dev-form-fill"
+import { QaQuickFillButton } from "@/components/qa/qa-quick-fill-button"
+import { useQaFormFill } from "@/hooks/use-qa-form-fill"
 import { useZodForm } from "@/hooks/use-zod-form"
-import { workspaceFill } from "@/lib/dev-fill-definitions"
+import { workspaceFill } from "@/lib/qa-fill-definitions"
 import { type WorkspaceValues, workspaceSchema } from "@/lib/signup-schemas"
 import { Button } from "@ewatrade/ui"
 import { buildInternalTenantHostname } from "@ewatrade/utils"
@@ -124,7 +124,10 @@ export function StepWorkspace({ defaultValues, onNext }: StepWorkspaceProps) {
     mode: "onChange",
   })
 
-  const { fill } = useDevFormFill(workspaceFill, form)
+  const { canUndo, fill, isAvailable, qaDomain, undo } = useQaFormFill(
+    workspaceFill,
+    form,
+  )
   const subdomain = form.watch("subdomain") ?? ""
   const [slugStatus, setSlugStatus] = useState<SlugAvailability>("idle")
 
@@ -272,7 +275,13 @@ export function StepWorkspace({ defaultValues, onNext }: StepWorkspaceProps) {
         </div>
       </form>
 
-      <DevFormFillButton onFill={fill} label="Fill step 1" />
+      <QaQuickFillButton
+        canUndo={canUndo}
+        onFill={fill}
+        onUndo={undo}
+        qaDomain={qaDomain}
+        visible={isAvailable}
+      />
     </div>
   )
 }

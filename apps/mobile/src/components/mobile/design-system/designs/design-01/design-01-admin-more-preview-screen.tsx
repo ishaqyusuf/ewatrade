@@ -60,7 +60,7 @@ export function Design01AdminMorePreviewScreen() {
           <View className="min-w-0 flex-1">
             <Text className="text-lg font-bold text-foreground">My Store</Text>
             <Text className="mt-0.5 text-sm text-muted-foreground">
-              EwaTrade Store · Owner
+              ẸwáTrade Store · Owner
             </Text>
           </View>
           <Icon className="size-sm text-muted-foreground" name="ChevronRight" />

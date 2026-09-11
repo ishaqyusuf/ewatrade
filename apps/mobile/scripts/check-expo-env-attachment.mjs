@@ -29,6 +29,8 @@ const ENVIRONMENTS = [
       "EXPO_PUBLIC_API_PORT",
       "EXPO_PUBLIC_WEB_URL",
       "EXPO_PUBLIC_WEB_PORT",
+      "EXPO_PUBLIC_CHAT_URL",
+      "EXPO_PUBLIC_CHAT_PORT",
       "EXPO_PUBLIC_GOOGLE_CLIENT_ID",
       "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID",
       "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID",
@@ -47,6 +49,8 @@ const ENVIRONMENTS = [
       "EXPO_PUBLIC_API_PORT",
       "EXPO_PUBLIC_WEB_URL",
       "EXPO_PUBLIC_WEB_PORT",
+      "EXPO_PUBLIC_CHAT_URL",
+      "EXPO_PUBLIC_CHAT_PORT",
       "EXPO_PORT",
     ],
   },
@@ -60,6 +64,7 @@ const ENVIRONMENTS = [
       "EXPO_PUBLIC_BASE_URL",
       "EXPO_PUBLIC_API_URL",
       "EXPO_PUBLIC_WEB_URL",
+      "EXPO_PUBLIC_CHAT_URL",
       "EXPO_PUBLIC_GOOGLE_CLIENT_ID",
       "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID",
       "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID",
@@ -75,6 +80,7 @@ const ENVIRONMENTS = [
       "EXPO_PUBLIC_BASE_URL",
       "EXPO_PUBLIC_API_URL",
       "EXPO_PUBLIC_WEB_URL",
+      "EXPO_PUBLIC_CHAT_URL",
     ],
   },
 ]
@@ -104,10 +110,13 @@ function checkAppConfig() {
   const content = readRequiredFile(APP_CONFIG)
   if (!content) return
 
-  requireMarker(
+  requireOneOfMarkers(
     content,
-    `const PROJECT_ID = "${EXPECTED_PROJECT_ID}"`,
-    "app.config.ts must keep the Expo project id mapped to the published EwaTrade project.",
+    [
+      `const PROJECT_ID = "${EXPECTED_PROJECT_ID}"`,
+      `id: "${EXPECTED_PROJECT_ID}"`,
+    ],
+    "app.config.ts must keep the Expo project id mapped to the published ẸwáTrade project.",
   )
   requireMarker(
     content,
@@ -122,7 +131,7 @@ function checkAppConfig() {
   requireMarker(
     content,
     "url: `https://u.expo.dev/${PROJECT_ID}`",
-    "app.config.ts must keep expo-updates pointed at the EwaTrade project id.",
+    "app.config.ts must keep expo-updates pointed at the ẸwáTrade project id.",
   )
 }
 
@@ -342,6 +351,12 @@ function stripQuotes(value) {
 
 function requireMarker(content, marker, message) {
   if (!content.includes(marker)) {
+    failures.push(message)
+  }
+}
+
+function requireOneOfMarkers(content, markers, message) {
+  if (!markers.some((marker) => content.includes(marker))) {
     failures.push(message)
   }
 }

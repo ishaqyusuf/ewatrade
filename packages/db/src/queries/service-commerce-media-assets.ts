@@ -50,6 +50,7 @@ const originToDb = {
 >
 
 const kindToDb = {
+  audio: ServiceCommerceMediaKindEnum.AUDIO,
   document: ServiceCommerceMediaKindEnum.DOCUMENT,
   image: ServiceCommerceMediaKindEnum.IMAGE,
 } satisfies Record<ServiceCommerceMediaKind, ServiceCommerceMediaKindEnum>
@@ -293,6 +294,7 @@ export function projectSafeServiceCommerceMediaAsset(asset: {
   lifecycle: string
   originalFileName: string
   verifiedMediaType: string | null
+  verifiedDurationMs?: number | null
   verifiedSizeBytes: number | null
 }) {
   return {
@@ -302,6 +304,7 @@ export function projectSafeServiceCommerceMediaAsset(asset: {
     kind: asset.kind.toLowerCase(),
     lifecycle: asset.lifecycle.toLowerCase(),
     mimeType: asset.verifiedMediaType ?? asset.declaredMediaType,
+    durationMs: asset.verifiedDurationMs ?? null,
     byteSize: asset.verifiedSizeBytes,
   }
 }
@@ -322,6 +325,15 @@ export async function recordStoredServiceCommerceMediaAsset(
 ) {
   return db.$transaction(async (tx) => {
     const asset = await getScopedAsset(tx, input)
+    if (
+      asset.contentDigest &&
+      asset.contentDigest !== input.contentDigest.trim().toLowerCase()
+    ) {
+      throw new ServiceCommerceMediaError(
+        "IDEMPOTENCY_MISMATCH",
+        "Stored media content does not match its intake identity.",
+      )
+    }
     assertTransition(asset.lifecycle, ServiceCommerceMediaLifecycle.STORED)
     assertVerifiedMediaContent({
       byteSize: input.verifiedSizeBytes,
@@ -330,7 +342,7 @@ export async function recordStoredServiceCommerceMediaAsset(
     })
     const changed = await tx.serviceCommerceMediaAsset.updateMany({
       data: {
-        contentDigest: input.contentDigest,
+        contentDigest: input.contentDigest.trim().toLowerCase(),
         lastFailureCode: null,
         lifecycle: ServiceCommerceMediaLifecycle.STORED,
         nextRetryAt: null,
@@ -377,6 +389,20 @@ export async function requestServiceCommerceMediaSafety(
 ) {
   return db.$transaction(async (tx) => {
     const asset = await getScopedAsset(tx, input)
+    if (
+      asset.lifecycle === ServiceCommerceMediaLifecycle.RETRYABLE &&
+      (!asset.objectKey?.trim() ||
+        !asset.contentDigest?.trim() ||
+        !asset.verifiedMediaType?.trim() ||
+        !asset.verifiedSizeBytes ||
+        asset.verifiedSizeBytes < 1 ||
+        (asset.nextRetryAt && asset.nextRetryAt > new Date()))
+    ) {
+      throw new ServiceCommerceMediaError(
+        "NOT_READY",
+        "Retryable media requires complete due storage facts before safety review.",
+      )
+    }
     assertTransition(
       asset.lifecycle,
       ServiceCommerceMediaLifecycle.SAFETY_PENDING,

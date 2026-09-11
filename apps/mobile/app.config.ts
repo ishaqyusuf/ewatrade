@@ -1,6 +1,16 @@
 import type { ExpoConfig } from "expo/config"
 
-export const UPDATE_VERSION = "2026.07.25.06"
+const designRelease = require("./src/lib/mobile-design/release-config.json") as {
+  defaultDesign: string
+  screens: Record<string, string>
+}
+
+const { withGoogleSignInModularHeaders } =
+  require("./plugins/with-google-signin-modular-headers.cjs") as {
+    withGoogleSignInModularHeaders: (config: ExpoConfig) => ExpoConfig
+  }
+
+export const UPDATE_VERSION = "2026.09.11"
 
 const PROJECT = {
   default: {
@@ -23,6 +33,13 @@ const appVariant =
 const normalizedAppVariant = (appVariant ?? "production").toLowerCase()
 const isDevelopmentBuild =
   normalizedAppVariant === "development" || normalizedAppVariant === "dev"
+const isPreviewBuild = normalizedAppVariant === "preview"
+const nativeSplashDesign = designRelease.screens["startup-splash"] ?? designRelease.defaultDesign
+const nativeSplashImage = nativeSplashDesign === "market-day"
+  ? "./assets/icons/market-pulse-splash-mark.png"
+  : isDevelopmentBuild || isPreviewBuild
+    ? "./assets/icons/dev-splash-logo.png"
+    : "./assets/icons/splash-logo.png"
 const autoUpdateOnForeground =
   process.env.EXPO_PUBLIC_AUTO_UPDATE_ON_FOREGROUND !== "false"
 const autoUpdateForegroundCooldownMs = Number(
@@ -48,39 +65,45 @@ const googleSignInPlugin: NonNullable<ExpoConfig["plugins"]> =
 
 const variantConfig = isDevelopmentBuild
   ? {
-      name: "Ewatrade Dev",
+      name: "ẸwáTrade Dev",
       scheme: "ewatrade-dev",
       iosBundleIdentifier: "com.ewatrade.dev",
       androidPackage: "com.ewatrade.dev",
       iconBackgroundColor: "#FEE2E2",
-      splashBackgroundColor: "#FFF5F5",
-      splashDarkBackgroundColor: "#2A0505",
       icons: {
         app: "./assets/icons/dev-loading-icon.png",
         adaptive: "./assets/icons/dev-adaptive-icon.png",
         iosDark: "./assets/icons/dev-ios-dark.png",
         iosLight: "./assets/icons/dev-ios-light.png",
-        splashLight: "./assets/icons/dev-splash-logo.png",
-        splashDark: "./assets/icons/dev-splash-logo.png",
       },
     }
-  : {
-      name: "Ewatrade",
-      scheme: "ewatrade",
-      iosBundleIdentifier: "com.ewatrade.app",
-      androidPackage: "com.ewatrade.app",
-      iconBackgroundColor: "#E6F4FE",
-      splashBackgroundColor: "#ffffff",
-      splashDarkBackgroundColor: "#000000",
-      icons: {
-        app: "./assets/icons/loading-icon.png",
-        adaptive: "./assets/icons/adaptive-icon.png",
-        iosDark: "./assets/icons/ios-dark.png",
-        iosLight: "./assets/icons/ios-light.png",
-        splashLight: "./assets/icons/splash-logo.png",
-        splashDark: "./assets/icons/splash-logo.png",
-      },
-    }
+  : isPreviewBuild
+    ? {
+        name: "ẸwáTrade Preview",
+        scheme: "ewatrade-preview",
+        iosBundleIdentifier: "com.ewatrade.preview",
+        androidPackage: "com.ewatrade.preview",
+        iconBackgroundColor: "#FEF3C7",
+        icons: {
+          app: "./assets/icons/dev-loading-icon.png",
+          adaptive: "./assets/icons/dev-adaptive-icon.png",
+          iosDark: "./assets/icons/dev-ios-dark.png",
+          iosLight: "./assets/icons/dev-ios-light.png",
+        },
+      }
+    : {
+        name: "ẸwáTrade",
+        scheme: "ewatrade",
+        iosBundleIdentifier: "com.ewatrade.app",
+        androidPackage: "com.ewatrade.app",
+        iconBackgroundColor: "#E6F4FE",
+        icons: {
+          app: "./assets/icons/loading-icon.png",
+          adaptive: "./assets/icons/adaptive-icon.png",
+          iosDark: "./assets/icons/ios-dark.png",
+          iosLight: "./assets/icons/ios-light.png",
+        },
+      }
 
 const config: ExpoConfig = {
   name: variantConfig.name,
@@ -149,6 +172,14 @@ const config: ExpoConfig = {
     ],
     "expo-router",
     "expo-font",
+    "expo-asset",
+    [
+      "expo-audio",
+      {
+        microphonePermission:
+          "Allow $(PRODUCT_NAME) to record a private voice note for the Store conversation you choose.",
+      },
+    ],
     "expo-secure-store",
     "expo-web-browser",
     "@react-native-community/datetimepicker",
@@ -156,7 +187,7 @@ const config: ExpoConfig = {
       "expo-local-authentication",
       {
         faceIDPermission:
-          "Allow $(PRODUCT_NAME) to use Face ID to unlock your EwaTrade workspace.",
+          "Allow $(PRODUCT_NAME) to use Face ID to unlock your ẸwáTrade workspace.",
       },
     ],
     [
@@ -180,18 +211,19 @@ const config: ExpoConfig = {
     [
       "expo-splash-screen",
       {
-        image: variantConfig.icons.splashLight,
-        imageWidth: 200,
+        image: nativeSplashImage,
+        imageWidth: 170,
         resizeMode: "contain",
-        backgroundColor: variantConfig.splashBackgroundColor,
+        backgroundColor: nativeSplashDesign === "market-day" ? "#17684F" : "#ffffff",
         dark: {
-          backgroundColor: variantConfig.splashDarkBackgroundColor,
-          image: variantConfig.icons.splashDark,
+          image: nativeSplashImage,
+          backgroundColor: nativeSplashDesign === "market-day" ? "#17684F" : "#000000",
         },
       },
     ],
   ],
   experiments: {
+    autolinkingModuleResolution: true,
     typedRoutes: true,
     reactCompiler: true,
   },
@@ -219,7 +251,7 @@ const config: ExpoConfig = {
   },
 }
 
-export default config
+export default withGoogleSignInModularHeaders(config)
 
 function getPrimaryGoogleClientId(value?: string) {
   return (

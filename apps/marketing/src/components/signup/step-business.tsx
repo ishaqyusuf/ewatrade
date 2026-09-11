@@ -1,9 +1,9 @@
 "use client"
 
-import { DevFormFillButton } from "@/components/dev/dev-form-fill-button"
-import { useDevFormFill } from "@/hooks/use-dev-form-fill"
+import { QaQuickFillButton } from "@/components/qa/qa-quick-fill-button"
+import { useQaFormFill } from "@/hooks/use-qa-form-fill"
 import { useZodForm } from "@/hooks/use-zod-form"
-import { businessFill } from "@/lib/dev-fill-definitions"
+import { businessFill } from "@/lib/qa-fill-definitions"
 import {
   type BusinessValues,
   COUNTRIES,
@@ -60,7 +60,10 @@ export function StepBusiness({
     return listBusinessProfiles({ query: profileQuery })
   }, [profileQuery, selectedProfile])
 
-  const { fill } = useDevFormFill(businessFill, form)
+  const { canUndo, fill, isAvailable, qaDomain, undo } = useQaFormFill(
+    businessFill,
+    form,
+  )
 
   return (
     <div>
@@ -105,16 +108,12 @@ export function StepBusiness({
               type="search"
               value={profileQuery}
             />
-            <div
-              aria-label="Business categories"
-              className="max-h-52 overflow-y-auto rounded-lg border border-border/70"
-              role="listbox"
-            >
+            <div className="max-h-52 overflow-y-auto rounded-lg border border-border/70">
               {visibleProfiles.map((profile) => {
                 const selected = profile.key === selectedProfileKey
                 return (
                   <button
-                    aria-selected={selected}
+                    aria-pressed={selected}
                     className={`block w-full border-b border-border/60 px-3 py-2.5 text-left last:border-b-0 ${selected ? "bg-primary/10" : "hover:bg-muted/60"}`}
                     key={profile.key}
                     onClick={() => {
@@ -133,7 +132,6 @@ export function StepBusiness({
                         { shouldValidate: true },
                       )
                     }}
-                    role="option"
                     type="button"
                   >
                     <span className="block font-medium">{profile.title}</span>
@@ -149,10 +147,7 @@ export function StepBusiness({
                 </p>
               ) : null}
             </div>
-            <input
-              {...form.register("businessProfileKey")}
-              type="hidden"
-            />
+            <input {...form.register("businessProfileKey")} type="hidden" />
             {form.formState.errors.businessProfileKey && (
               <p className="text-xs text-destructive">
                 {form.formState.errors.businessProfileKey.message}
@@ -376,7 +371,13 @@ export function StepBusiness({
         </div>
       </form>
 
-      <DevFormFillButton onFill={fill} label="Fill step 2" />
+      <QaQuickFillButton
+        canUndo={canUndo}
+        onFill={fill}
+        onUndo={undo}
+        qaDomain={qaDomain}
+        visible={isAvailable}
+      />
     </div>
   )
 }

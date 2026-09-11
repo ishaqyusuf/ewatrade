@@ -21,6 +21,7 @@ export async function serviceNotificationDispatchHandler(
       channel: intent.channel,
       intentId: intent.id,
       message: intent.message,
+      tenantDataClassification: intent.tenantDataClassification,
       to: intent.customerPhone,
     })
     await recordServiceDeliveryAttempt(prisma, {

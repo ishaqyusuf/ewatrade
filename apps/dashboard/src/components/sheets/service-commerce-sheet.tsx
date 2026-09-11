@@ -61,6 +61,40 @@ export function ServiceCommerceSheet({ storeId }: { storeId: string }) {
         }),
       )
     }
+    if (mode === "availability") {
+      invalidations.push(
+        queryClient.invalidateQueries({
+          exact: true,
+          queryKey:
+            trpc.serviceCommerce.storeConversationAvailabilitySettings.queryKey(
+              { storeId: resolvedStoreId },
+            ),
+        }),
+        queryClient.invalidateQueries({
+          exact: true,
+          queryKey: trpc.serviceCommerce.channelWorkspace.queryKey({
+            storeId: resolvedStoreId,
+          }),
+        }),
+      )
+    }
+    if (mode === "conversation_mode") {
+      invalidations.push(
+        queryClient.invalidateQueries({
+          exact: true,
+          queryKey:
+            trpc.serviceCommerce.storeConversationChannelModeSettings.queryKey({
+              storeId: resolvedStoreId,
+            }),
+        }),
+        queryClient.invalidateQueries({
+          exact: true,
+          queryKey: trpc.serviceCommerce.channelWorkspace.queryKey({
+            storeId: resolvedStoreId,
+          }),
+        }),
+      )
+    }
     if (mode === "quote_approval") {
       invalidations.push(
         queryClient.invalidateQueries({

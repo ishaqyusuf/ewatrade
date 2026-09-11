@@ -10,6 +10,8 @@
   },
   "exports": {
     "./internal-api": "./src/internal-api.ts",
+    "./store-conversation-attachment-viewer": "./src/service-commerce/conversation-attachment-viewer.ts",
+    "./store-conversation-attachments": "./src/service-commerce/conversation-attachments.ts",
     "./trpc/routers/_app": "./src/trpc/routers/_app.ts"
   },
   "dependencies": {
@@ -30,6 +32,7 @@
     "@sentry/bun": "^10.72.0",
     "@trpc/server": "^11.16.0",
     "hono": "^4.12.10",
+    "music-metadata": "^11.14.0",
     "superjson": "^2.2.6",
     "zod": "catalog:"
   },

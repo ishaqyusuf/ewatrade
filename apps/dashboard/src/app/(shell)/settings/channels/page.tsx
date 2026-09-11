@@ -42,6 +42,11 @@ export default async function CustomerChannelsPage({ searchParams }: Props) {
   if (role === "OWNER" || role === "ADMIN") {
     prefetches.push(
       prefetch(
+        trpc.serviceCommerce.storeConversationAvailabilitySettings.queryOptions(
+          { storeId: store.id },
+        ),
+      ),
+      prefetch(
         trpc.serviceCommerce.quoteReleaseSettings.queryOptions({
           storeId: store.id,
         }),

@@ -1,6 +1,8 @@
 "use client"
 
 import { DashboardTable } from "@/components/dashboard/dashboard-table"
+import { createMessageFixture } from "@/components/qa/fixture-recipes"
+import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import { useTRPC } from "@/trpc/client"
 import { Button } from "@ewatrade/ui"
@@ -9,7 +11,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { createServiceWorkColumns } from "./columns"
 import { ServiceWorkEmptyState } from "./empty-states"
 
@@ -53,6 +55,7 @@ export function ServiceWorkDataTable({
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
   const [channel, setChannel] = useState<"sms" | "whatsapp">("whatsapp")
   const [message, setMessage] = useState("")
+  const qaMessageSnapshot = useRef<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const selectedJobs = rows.filter((job) => selectedKeys.has(job.id))
   const refresh = async () => {
@@ -188,6 +191,20 @@ export function ServiceWorkDataTable({
               Send update
             </Button>
           </div>
+          <QaDashboardQuickFill
+            canUndo={qaMessageSnapshot.current !== null}
+            formId="dashboard.service.message"
+            isDirty={Boolean(message)}
+            onFill={(context) => {
+              qaMessageSnapshot.current = message
+              setMessage(createMessageFixture(context).message)
+            }}
+            onUndo={() => {
+              if (qaMessageSnapshot.current === null) return
+              setMessage(qaMessageSnapshot.current)
+              qaMessageSnapshot.current = null
+            }}
+          />
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
         </div>
       ) : null}

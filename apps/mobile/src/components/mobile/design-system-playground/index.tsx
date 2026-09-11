@@ -1,5 +1,7 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { MobileAppShell } from "@/components/mobile/app-shell"
 import { AuthHeader } from "@/components/mobile/auth-header"
+import { MobileBottomTabs } from "@/components/mobile/bottom-tabs"
 import {
   DashboardMetricCard,
   DashboardPanel,
@@ -15,17 +17,18 @@ import {
   InventorySegmentOption,
   InventoryUnitOption,
 } from "@/components/mobile/inventory-product-card"
-import { MobileAppShell } from "@/components/mobile/app-shell"
-import { MobileBottomTabs } from "@/components/mobile/bottom-tabs"
-import { MobileScreen } from "@/components/mobile/screen"
 import { OtpInput } from "@/components/mobile/otp-input"
 import { QuantityStepper } from "@/components/mobile/quantity-stepper"
-import { ReportMetricTile, ReportSection } from "@/components/mobile/report-flow"
+import {
+  ReportMetricTile,
+  ReportSection,
+} from "@/components/mobile/report-flow"
 import {
   SaleSegmentOption,
   SaleSelectableRow,
   SaleTotalSummary,
 } from "@/components/mobile/sale-flow"
+import { MobileScreen } from "@/components/mobile/screen"
 import {
   SecondaryOperationalRow,
   SecondarySheetHeader,
@@ -71,30 +74,30 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Switch } from "@/components/ui/switch"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { useColorScheme } from "@/hooks/use-color"
 import { getAppVariant } from "@/lib/app-variant"
 import { setThemeOverride } from "@/lib/theme-preference"
 import { cn } from "@/lib/utils"
 import { useRouter } from "expo-router"
-import { useMemo, useState, type ReactNode } from "react"
-import { Image, ScrollView, type ImageSourcePropType } from "react-native"
+import { type ReactNode, useMemo, useState } from "react"
+import { Image, type ImageSourcePropType, ScrollView } from "react-native"
 import { MobileAnalyticsBarChart } from "./analytics-bar-chart"
 import {
   DESIGN_SYSTEM_CATALOG_SECTIONS,
   DESIGN_SYSTEM_PATTERNS,
+  type DesignSystemPattern,
+  type DesignSystemPatternId,
   PLAYGROUND_CHART_DATA,
   PLAYGROUND_METRICS,
   PLAYGROUND_SAMPLE_TOTALS,
   PLAYGROUND_STATUS_EXAMPLES,
-  type DesignSystemPattern,
-  type DesignSystemPatternId,
 } from "./data"
 
 const tokenExamples = [
@@ -264,9 +267,7 @@ function isDesignSystemPlaygroundEnabled() {
   return __DEV__ || getAppVariant() !== "production"
 }
 
-function patternForSection(
-  sectionId: string,
-): DesignSystemPatternId {
+function patternForSection(sectionId: string): DesignSystemPatternId {
   if (sectionId === "analytics" || sectionId === "headers") {
     return sectionId
   }
@@ -387,11 +388,15 @@ function BrandAndReferenceFoundation() {
         title="Image-Led Foundation"
       >
         <ReferenceImageRail onReferencePress={openReference} />
-        <EwaTradeReferenceHero onReferencePress={() => openReference("home-shell")} />
+        <EwaTradeReferenceHero
+          onReferencePress={() => openReference("home-shell")}
+        />
         <ReferenceOperationalSystem
           onReferencePress={() => openReference("operational-list")}
         />
-        <ReferenceCommerceDetail onReferencePress={() => openReference("commerce")} />
+        <ReferenceCommerceDetail
+          onReferencePress={() => openReference("commerce")}
+        />
       </Section>
 
       <Section
@@ -498,11 +503,7 @@ function ReferencePreviewModal({
   reference: DesignReferencePreview
 }) {
   return (
-    <Modal
-      ref={modal.ref}
-      snapPoints={["92%"]}
-      title={reference.label}
-    >
+    <Modal ref={modal.ref} snapPoints={["92%"]} title={reference.label}>
       <BottomSheetKeyboardAwareScrollView
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -547,7 +548,7 @@ function ReferencePreviewModal({
             </Text>
             <View className="rounded-[24px] bg-primary/10 p-4">
               <Text className="text-sm font-bold leading-5 text-primary">
-                Adopted into EwaTrade: {reference.adoption}
+                Adopted into ẸwáTrade: {reference.adoption}
               </Text>
             </View>
           </View>
@@ -578,7 +579,7 @@ function EwaTradeReferenceHero({
         <View className="flex-row items-center justify-between gap-4">
           <View className="min-w-0 flex-1 gap-1">
             <Text className="text-xs font-bold uppercase tracking-[1px] text-primary-foreground/70">
-              EwaTrade base
+              ẸwáTrade base
             </Text>
             <Text className="text-2xl font-extrabold leading-8 text-primary-foreground">
               Rabi Feed Store
@@ -586,7 +587,7 @@ function EwaTradeReferenceHero({
           </View>
           <View className="size-12 items-center justify-center rounded-full bg-primary-foreground/15">
             <Image
-              accessibilityLabel="EwaTrade splash logo"
+              accessibilityLabel="ẸwáTrade splash logo"
               className="size-8"
               resizeMode="contain"
               source={brandAssetExamples[0].source}
@@ -751,7 +752,10 @@ function ReferenceOperationalSystem({
           </Text>
         </View>
         <View className="size-11 items-center justify-center rounded-full bg-foreground">
-          <Icon className="size-base text-background" name="SlidersHorizontal" />
+          <Icon
+            className="size-base text-background"
+            name="SlidersHorizontal"
+          />
         </View>
       </View>
 
@@ -957,7 +961,9 @@ function ReferenceCommerceDetail({
       <View className="gap-2">
         <View className="flex-row items-start justify-between gap-3">
           <View className="min-w-0 flex-1 gap-1">
-            <Text className="text-sm text-muted-foreground">Product detail</Text>
+            <Text className="text-sm text-muted-foreground">
+              Product detail
+            </Text>
             <Text className="text-2xl font-extrabold text-foreground">
               Premium feed bundle
             </Text>
@@ -1000,9 +1006,7 @@ function ReferenceCommerceDetail({
         </View>
         <View className="min-h-12 flex-row items-center gap-2 rounded-full bg-primary-foreground px-5">
           <Icon className="size-sm text-primary" name="Share" />
-          <Text className="font-extrabold text-primary">
-            Share link
-          </Text>
+          <Text className="font-extrabold text-primary">Share link</Text>
         </View>
       </View>
     </Pressable>
@@ -1109,8 +1113,8 @@ function ModalAndSheetExamples() {
             <AlertDialogHeader>
               <AlertDialogTitle>Approve this visual system?</AlertDialogTitle>
               <AlertDialogDescription>
-                This neutral confirmation shows the standard modal spacing,
-                text hierarchy, and two-action footer.
+                This neutral confirmation shows the standard modal spacing, text
+                hierarchy, and two-action footer.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -1163,7 +1167,11 @@ function ModalAndSheetExamples() {
         </View>
       </View>
 
-      <Modal ref={formSheet.ref} snapPoints={["78%"]} title="Keyboard-aware sheet">
+      <Modal
+        ref={formSheet.ref}
+        snapPoints={["78%"]}
+        title="Keyboard-aware sheet"
+      >
         <BottomSheetKeyboardAwareScrollView
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -1227,12 +1235,7 @@ function TokensAndTypography() {
         <View className="flex-row flex-wrap gap-3">
           {tokenExamples.map((token) => (
             <View className="w-[47%] gap-2" key={token.label}>
-              <View
-                className={cn(
-                  "h-14 rounded-2xl",
-                  token.className,
-                )}
-              />
+              <View className={cn("h-14 rounded-2xl", token.className)} />
               <Text className="text-xs font-bold uppercase tracking-[1px] text-muted-foreground">
                 {token.label}
               </Text>
@@ -1311,7 +1314,11 @@ function HeaderActionsAndForms() {
             Disabled action
           </ActionButton>
           <View className="flex-row gap-3">
-            <ShareLinkActionButton icon="Share" label="Share" onPress={() => {}} />
+            <ShareLinkActionButton
+              icon="Share"
+              label="Share"
+              onPress={() => {}}
+            />
             <ShareLinkActionButton
               destructive
               icon="Trash"
@@ -1478,9 +1485,8 @@ function NavigationAndFooters() {
               Operational-detail dock
             </Text>
             <Text className="text-sm leading-5 text-muted-foreground">
-              Production preview derived from
-              reference-operational-detail.jpg. Design 01 keeps its separate
-              home-shell tab treatment.
+              Production preview derived from reference-operational-detail.jpg.
+              Design 01 keeps its separate home-shell tab treatment.
             </Text>
           </View>
           <View
@@ -1563,7 +1569,9 @@ function NavigationAndFooters() {
           <Text className="font-extrabold text-foreground">
             Sticky bottom action
           </Text>
-          <ActionButton icon="CheckCircle2">Approve selected style</ActionButton>
+          <ActionButton icon="CheckCircle2">
+            Approve selected style
+          </ActionButton>
         </View>
         <View className="flex-row gap-3">
           <ActionButton className="flex-1" icon="ArrowLeft" variant="outline">
@@ -1859,11 +1867,7 @@ export function DesignSystemPlaygroundScreen() {
   }
 
   return (
-    <MobileScreen
-      contentClassName="gap-2"
-      keyboardBottomOffset={132}
-      scroll
-    >
+    <MobileScreen contentClassName="gap-2" keyboardBottomOffset={132} scroll>
       <View className="gap-4" testID="design-system-playground">
         <AuthHeader
           badge="Internal"

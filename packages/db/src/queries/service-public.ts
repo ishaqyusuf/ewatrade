@@ -788,7 +788,10 @@ export async function acceptServiceQuote(
 ) {
   try {
     return await db.$transaction(async (tx) => {
-      const context = await getCommerceQuoteAcceptanceContext(tx, input)
+      const context = await getCommerceQuoteAcceptanceContext(tx, {
+        ...input,
+        allowedCustomerActions: ["view_quote"],
+      })
       const { payable, version } = context
       if (
         version.quote.sourceType !== CommerceQuoteSourceType.SERVICE_REQUEST
@@ -1455,6 +1458,11 @@ export async function getServiceNotificationIntentForDelivery(
     },
   })
   if (claimed.count !== 1) return null
+  const tenant = await db.tenant.findUnique({
+    select: { dataClassification: true },
+    where: { id: intent.tenantId },
+  })
+  if (!tenant) return null
   return {
     channel:
       intent.channel === ServiceNotificationChannel.WHATSAPP
@@ -1463,6 +1471,7 @@ export async function getServiceNotificationIntentForDelivery(
     customerPhone: intent.customerPhone,
     id: intent.id,
     message: intent.renderedMessage,
+    tenantDataClassification: tenant.dataClassification,
     tenantId: intent.tenantId,
   }
 }

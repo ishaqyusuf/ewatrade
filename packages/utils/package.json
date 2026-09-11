@@ -12,7 +12,12 @@
     "./business-profiles": "./src/business-profiles.ts",
     "./dayjs": "./src/dayjs.ts",
     "./exact-decimal": "./src/exact-decimal.ts",
-    "./insurance-documents": "./src/insurance-documents.ts"
+    "./insurance-documents": "./src/insurance-documents.ts",
+    "./qa-accelerator": "./src/qa-accelerator.ts",
+    "./qa-fixtures": "./src/qa-fixtures.ts",
+    "./qa-network-source": "./src/qa-network-source.ts",
+    "./qa-provider-policy": "./src/qa-provider-policy.ts",
+    "./qa-quick-fill": "./src/qa-quick-fill.ts"
   },
   "sideEffects": false,
   "scripts": {

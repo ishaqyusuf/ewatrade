@@ -2,6 +2,8 @@ import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColorScheme, useColors } from "@/hooks/use-color"
+import { cn } from "@/lib/utils"
+import { VariableContextProvider } from "nativewind"
 import { StatusBar } from "expo-status-bar"
 import {
   type ReactElement,
@@ -40,6 +42,7 @@ type MobileAppShellProps = {
   businessName: string
   centralAction: MobileAppShellNavItem
   children: ReactNode
+  contentClassName?: string
   contentStyle?: StyleProp<ViewStyle>
   headerAction?: ReactNode
   hero?: ReactNode
@@ -66,6 +69,7 @@ export function MobileAppShell({
   businessName,
   centralAction,
   children,
+  contentClassName,
   contentStyle,
   headerAction,
   hero,
@@ -223,52 +227,67 @@ export function MobileAppShell({
           </RNView>
         ) : null}
 
-        <RNView
-          style={[
-            {
-              gap: 24,
-              minHeight: !hero || statusBarFollowsHero ? "100%" : undefined,
-              paddingHorizontal: 24,
-              paddingTop: hero ? 24 : insets.top + 24,
-            },
-            contentStyle,
-          ]}
+        <VariableContextProvider
+          value={{ "--shell-content-top": hero ? 24 : insets.top + 24 }}
         >
-          {showHeader ? (
-            <View className="flex-row items-center justify-between">
-              <View className="min-w-0 flex-1 gap-1 pr-4">
-                <Text className="text-3xl font-bold text-foreground">
-                  {title}
-                </Text>
-                <Pressable
-                  accessibilityRole="button"
-                  className="flex-row items-center gap-2 self-start active:opacity-80"
-                  disabled={!onBusinessPress}
-                  haptic
-                  onPress={onBusinessPress}
-                  transition
-                >
-                  <Text
-                    className="text-base text-muted-foreground"
-                    numberOfLines={1}
-                  >
-                    {businessName}
+          <RNView
+            {...(contentClassName
+              ? {
+                  className: cn(
+                    "gap-6 px-6 pt-[var(--shell-content-top)]",
+                    (!hero || statusBarFollowsHero) && "min-h-full",
+                    contentClassName,
+                  ),
+                }
+              : {
+                  style: [
+                    {
+                      gap: 24,
+                      minHeight:
+                        !hero || statusBarFollowsHero ? "100%" : undefined,
+                      paddingHorizontal: 24,
+                      paddingTop: hero ? 24 : insets.top + 24,
+                    },
+                    contentStyle,
+                  ],
+                })}
+          >
+            {showHeader ? (
+              <View className="flex-row items-center justify-between">
+                <View className="min-w-0 flex-1 gap-1 pr-4">
+                  <Text className="text-3xl font-bold text-foreground">
+                    {title}
                   </Text>
-                  {onBusinessPress ? (
-                    <Icon
-                      className="size-sm text-muted-foreground"
-                      name="ChevronDown"
-                    />
-                  ) : null}
-                </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    className="flex-row items-center gap-2 self-start active:opacity-80"
+                    disabled={!onBusinessPress}
+                    haptic
+                    onPress={onBusinessPress}
+                    transition
+                  >
+                    <Text
+                      className="text-base text-muted-foreground"
+                      numberOfLines={1}
+                    >
+                      {businessName}
+                    </Text>
+                    {onBusinessPress ? (
+                      <Icon
+                        className="size-sm text-muted-foreground"
+                        name="ChevronDown"
+                      />
+                    ) : null}
+                  </Pressable>
+                </View>
+                {headerAction}
               </View>
-              {headerAction}
-            </View>
-          ) : null}
+            ) : null}
 
-          {syncBanner}
-          {children}
-        </RNView>
+            {syncBanner}
+            {children}
+          </RNView>
+        </VariableContextProvider>
       </KeyboardAwareScrollView>
 
       {showBottomTabs ? (

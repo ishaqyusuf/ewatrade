@@ -59,7 +59,8 @@ export default async function Page({
   const { token } = await params
   const query = await searchParams
   const quote = await load(token)
-  const canAccept = quote.customerAction === null
+  const canAccept =
+    quote.customerAction === null || quote.customerAction === "view_quote"
   const canSelect =
     quote.customerAction === null ||
     quote.customerAction === "choose_quote_option"

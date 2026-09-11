@@ -76,8 +76,10 @@ function matchingAsset(
   asset: {
     channelOrigin: string
     clientMediaId: string
+    contentDigest: string | null
     declaredMediaType: string
     declaredSizeBytes: number | null
+    verifiedDurationMs: number | null
     kind: string
     originalFileName: string
     provider: string | null
@@ -87,6 +89,7 @@ function matchingAsset(
   input: {
     channel: ServiceCommerceChannelOrigin
     clientMediaId: string
+    contentDigest?: string
     fileName: string
     kind: ServiceCommerceMediaKind
     mimeType: ServiceCommerceMediaMimeType
@@ -94,13 +97,17 @@ function matchingAsset(
     providerConnectionId?: string
     providerMediaId?: string
     sizeBytes: number
+    verifiedDurationMs?: number
   },
 ) {
   return (
     asset.channelOrigin === originToDb[input.channel] &&
     asset.clientMediaId === input.clientMediaId &&
+    (input.channel === "whatsapp" ||
+      asset.contentDigest === input.contentDigest) &&
     asset.declaredMediaType === input.mimeType &&
     asset.declaredSizeBytes === input.sizeBytes &&
+    asset.verifiedDurationMs === (input.verifiedDurationMs ?? null) &&
     asset.kind === kindToDb[input.kind] &&
     asset.originalFileName === input.fileName &&
     asset.provider === (input.provider?.trim() || null) &&
@@ -116,6 +123,7 @@ export async function recordServiceCommerceMediaIntake(
     actorUserId: string
     channel: ServiceCommerceChannelOrigin
     clientMediaId: string
+    contentDigest?: string
     fileName: string
     kind: ServiceCommerceMediaKind
     mimeType: ServiceCommerceMediaMimeType
@@ -126,6 +134,7 @@ export async function recordServiceCommerceMediaIntake(
     retentionUntil: Date
     signatureMimeType: ServiceCommerceMediaMimeType | null
     sizeBytes: number
+    verifiedDurationMs?: number
     source: ServiceCommerceSourceRef
     sourceLineId: string
     sourceVersion: string
@@ -134,6 +143,15 @@ export async function recordServiceCommerceMediaIntake(
   },
 ) {
   return db.$transaction(async (tx) => {
+    if (
+      input.channel !== "whatsapp" &&
+      !/^[a-f0-9]{64}$/.test(input.contentDigest ?? "")
+    ) {
+      throw new ServiceCommerceMediaError(
+        "INTAKE_BLOCKED",
+        "A server-verified content digest is required for uploaded media.",
+      )
+    }
     if (input.channel === "staff") {
       await assertActiveServiceCommerceAttendant(tx, input)
     }
@@ -240,9 +258,11 @@ export async function recordServiceCommerceMediaIntake(
       data: {
         channelOrigin: originToDb[input.channel],
         clientMediaId: input.clientMediaId.trim(),
+        contentDigest: input.contentDigest ?? null,
         createdByUserId: input.channel === "staff" ? input.actorUserId : null,
         declaredMediaType: input.mimeType,
         declaredSizeBytes: input.sizeBytes,
+        verifiedDurationMs: input.verifiedDurationMs ?? null,
         kind: kindToDb[input.kind],
         lifecycle,
         originalFileName: input.fileName.trim(),
@@ -323,94 +343,107 @@ export async function getAuthorizedServiceCommerceMediaView(
     tenantId: string
   },
 ) {
-  return db.$transaction(async (tx) => {
-    const now = new Date()
-    if (
-      input.expiresAt <= now ||
-      input.expiresAt.getTime() > now.getTime() + 5 * 60_000
-    ) {
-      throw new ServiceCommerceMediaError(
-        "NOT_READY",
-        "Media view authorization must expire within five minutes.",
-      )
-    }
-    await assertActiveServiceCommerceAttendant(tx, input)
-    const attachment = await tx.serviceCommerceSourceAttachment.findFirst({
-      include: { mediaAsset: true },
-      where: {
-        id: input.attachmentId,
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-      },
-    })
-    if (!attachment) {
-      throw new ServiceCommerceMediaError(
-        "NOT_FOUND",
-        "Media attachment not found.",
-      )
-    }
-    if (!attachment.sourceLineId) {
-      throw new ServiceCommerceMediaError(
-        "NOT_READY",
-        "A current source line is required for media viewing.",
-      )
-    }
-    const source = await resolveCurrentServiceCommerceMediaSource(tx, {
-      actorUserId: input.actorUserId,
-      source: {
-        id: attachment.sourceId,
-        kind: toSourceKind(attachment.sourceKind),
-      },
-      sourceLineId: attachment.sourceLineId,
-      sourceVersion: attachment.sourceVersion,
+  return db.$transaction((tx) =>
+    getAuthorizedServiceCommerceMediaViewInTransaction(tx, input),
+  )
+}
+
+export async function getAuthorizedServiceCommerceMediaViewInTransaction(
+  tx: DbClient,
+  input: {
+    actorUserId: string
+    attachmentId: string
+    expiresAt: Date
+    reason: string
+    storeId: string
+    tenantId: string
+  },
+) {
+  const now = new Date()
+  if (
+    input.expiresAt <= now ||
+    input.expiresAt.getTime() > now.getTime() + 5 * 60_000
+  ) {
+    throw new ServiceCommerceMediaError(
+      "NOT_READY",
+      "Media view authorization must expire within five minutes.",
+    )
+  }
+  await assertActiveServiceCommerceAttendant(tx, input)
+  const attachment = await tx.serviceCommerceSourceAttachment.findFirst({
+    include: { mediaAsset: true },
+    where: {
+      id: input.attachmentId,
       storeId: input.storeId,
       tenantId: input.tenantId,
-    })
-    await validateServiceCommerceMediaIntakeReadiness(tx, {
-      actorUserId: input.actorUserId,
-      attachmentCount: 1,
-      byteSize: attachment.mediaAsset.verifiedSizeBytes ?? 0,
-      channel:
-        attachment.mediaAsset.channelOrigin.toLowerCase() as ServiceCommerceChannelOrigin,
-      kind: attachment.mediaAsset.kind.toLowerCase() as ServiceCommerceMediaKind,
-      mimeType: (attachment.mediaAsset.verifiedMediaType ??
-        attachment.mediaAsset
-          .declaredMediaType) as ServiceCommerceMediaMimeType,
-      privateMediaProviderReady: true,
-      signatureMimeType: attachment.mediaAsset
-        .verifiedMediaType as ServiceCommerceMediaMimeType | null,
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-      vertical: source.vertical,
-    })
-    const state = getServiceCommerceMediaViewerGrantState({
-      accessAuthorized: true,
-      assetLifecycle: attachment.mediaAsset.lifecycle.toLowerCase() as "safe",
-      attachmentLifecycle: attachment.lifecycle.toLowerCase() as "active",
-      expiresAt: input.expiresAt,
-    })
-    if (state !== "available" || !attachment.mediaAsset.objectKey) {
-      throw new ServiceCommerceMediaError(
-        "FORBIDDEN",
-        "A safe active media attachment is required for viewing.",
-      )
-    }
-    await auditMedia(tx, {
-      actorUserId: input.actorUserId,
-      attachmentId: attachment.id,
-      lifecycle: ServiceCommerceMediaLifecycle.SAFE,
-      mediaAssetId: attachment.mediaAssetId,
-      reason: input.reason,
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-      type: ServiceCommerceMediaAuditEventType.VIEW_AUTHORIZED,
-    })
-    return {
-      expiresAt: input.expiresAt,
-      mediaAssetId: attachment.mediaAssetId,
-      storageReference: attachment.mediaAsset.objectKey,
-    }
+    },
   })
+  if (!attachment) {
+    throw new ServiceCommerceMediaError(
+      "NOT_FOUND",
+      "Media attachment not found.",
+    )
+  }
+  if (!attachment.sourceLineId) {
+    throw new ServiceCommerceMediaError(
+      "NOT_READY",
+      "A current source line is required for media viewing.",
+    )
+  }
+  const source = await resolveCurrentServiceCommerceMediaSource(tx, {
+    actorUserId: input.actorUserId,
+    source: {
+      id: attachment.sourceId,
+      kind: toSourceKind(attachment.sourceKind),
+    },
+    sourceLineId: attachment.sourceLineId,
+    sourceVersion: attachment.sourceVersion,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+  })
+  await validateServiceCommerceMediaIntakeReadiness(tx, {
+    actorUserId: input.actorUserId,
+    attachmentCount: 1,
+    byteSize: attachment.mediaAsset.verifiedSizeBytes ?? 0,
+    channel:
+      attachment.mediaAsset.channelOrigin.toLowerCase() as ServiceCommerceChannelOrigin,
+    kind: attachment.mediaAsset.kind.toLowerCase() as ServiceCommerceMediaKind,
+    mimeType: (attachment.mediaAsset.verifiedMediaType ??
+      attachment.mediaAsset.declaredMediaType) as ServiceCommerceMediaMimeType,
+    privateMediaProviderReady: true,
+    signatureMimeType: attachment.mediaAsset
+      .verifiedMediaType as ServiceCommerceMediaMimeType | null,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+    vertical: source.vertical,
+  })
+  const state = getServiceCommerceMediaViewerGrantState({
+    accessAuthorized: true,
+    assetLifecycle: attachment.mediaAsset.lifecycle.toLowerCase() as "safe",
+    attachmentLifecycle: attachment.lifecycle.toLowerCase() as "active",
+    expiresAt: input.expiresAt,
+  })
+  if (state !== "available" || !attachment.mediaAsset.objectKey) {
+    throw new ServiceCommerceMediaError(
+      "FORBIDDEN",
+      "A safe active media attachment is required for viewing.",
+    )
+  }
+  await auditMedia(tx, {
+    actorUserId: input.actorUserId,
+    attachmentId: attachment.id,
+    lifecycle: ServiceCommerceMediaLifecycle.SAFE,
+    mediaAssetId: attachment.mediaAssetId,
+    reason: input.reason,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+    type: ServiceCommerceMediaAuditEventType.VIEW_AUTHORIZED,
+  })
+  return {
+    expiresAt: input.expiresAt,
+    mediaAssetId: attachment.mediaAssetId,
+    storageReference: attachment.mediaAsset.objectKey,
+  }
 }
 
 export async function getScopedServiceCommerceMediaAttachment(

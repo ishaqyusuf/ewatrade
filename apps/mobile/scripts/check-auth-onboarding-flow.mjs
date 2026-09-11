@@ -11,7 +11,12 @@ const FILES = {
   onboarding: join(MOBILE_DIR, "src/app/onboarding.tsx"),
   onboardingQa: join(MOBILE_DIR, "src/lib/onboarding-market-day-qa.ts"),
   signup: join(MOBILE_DIR, "src/app/sign-up.tsx"),
+  splashGate: join(MOBILE_DIR, "src/components/mobile/startup-splash-gate.tsx"),
   staffOnboarding: join(MOBILE_DIR, "src/app/staff-onboarding.tsx"),
+  staffOnboardingSurface: join(
+    MOBILE_DIR,
+    "src/components/mobile/staff-onboarding-market-nameplate.tsx",
+  ),
   verifyEmail: join(MOBILE_DIR, "src/app/verify-email.tsx"),
 }
 
@@ -20,7 +25,7 @@ const CONTRACTS = [
     file: FILES.layout,
     markers: [
       "SplashScreen.preventAutoHideAsync",
-      "SplashScreen.hideAsync",
+      "StartupSplashGate",
       "KeyboardProvider",
       '<Stack.Screen name="login"',
       '<Stack.Screen name="sign-up"',
@@ -29,6 +34,17 @@ const CONTRACTS = [
     ],
     reason:
       "app launch must preserve splash handling, keyboard provider, and auth/onboarding routes",
+  },
+  {
+    file: FILES.splashGate,
+    markers: [
+      "STARTUP_SPLASH_MINIMUM_MS = 1400",
+      "SplashScreen.hideAsync",
+      "onLayout={handleSplashLayout}",
+      "StartupSplash",
+    ],
+    reason:
+      "the native launch gate must hand off to a globally mounted rich React splash after layout",
   },
   {
     file: FILES.login,
@@ -97,9 +113,13 @@ const CONTRACTS = [
       'placeholder="Enter your full name"',
       'placeholder="Enter your email address"',
       'type SignUpStep = "businessType" | "profile" | "business" | "account"',
-      "Choose your business type",
-      "How your business works",
+      "What kind of business do you run?",
+      "How does your business work?",
       "Choose a different business type",
+      "SignUpMarketHeader",
+      "SignUpMarketStall",
+      "canopyScrolledAway",
+      "marketDay.canvas",
       "selectBusinessType",
       "onPress={() => selectBusinessType(profile)}",
       '{step === "profile" ? (',
@@ -149,13 +169,20 @@ const CONTRACTS = [
       "resolveStaffInviteToken",
       "completeStaffOnboarding",
       "Sign in to accept invite",
-      "Finish staff setup",
+      "StaffOnboardingMarketNameplate",
+    ],
+    reason: "staff onboarding must stay invite-based",
+  },
+  {
+    file: FILES.staffOnboardingSurface,
+    markers: [
+      "Welcome to the counter.",
       'placeholder="Enter your full name"',
       'placeholder="Enter your display name"',
       "Start selling",
     ],
     reason:
-      "staff onboarding must stay invite-based and collect only minimal profile details",
+      "staff onboarding must collect only minimal profile details through the selected surface",
   },
 ]
 const FORBIDDEN = [

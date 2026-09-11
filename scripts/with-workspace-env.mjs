@@ -23,26 +23,26 @@ function assertProdDatabaseUrl(env) {
     return
   }
 
-  if (!env.DATABASE_URL) {
+  if (!env.EWATRADE_DATABASE_URL) {
     console.error(
-      "The production profile requires DATABASE_URL in .env.production or an explicit command env assignment.",
+      "The production profile requires EWATRADE_DATABASE_URL in .env.production or an explicit command env assignment.",
     )
     process.exit(1)
   }
 
   let databaseUrl
   try {
-    databaseUrl = new URL(env.DATABASE_URL)
+    databaseUrl = new URL(env.EWATRADE_DATABASE_URL)
   } catch {
     console.error(
-      "The production profile requires DATABASE_URL to be a valid database URL.",
+      "The production profile requires EWATRADE_DATABASE_URL to be a valid database URL.",
     )
     process.exit(1)
   }
 
   if (["localhost", "127.0.0.1", "::1"].includes(databaseUrl.hostname)) {
     console.error(
-      "The production profile refused to use a localhost DATABASE_URL. Put the production database URL in .env.production.",
+      "The production profile refused to use a localhost EWATRADE_DATABASE_URL. Put the production database URL in .env.production.",
     )
     process.exit(1)
   }

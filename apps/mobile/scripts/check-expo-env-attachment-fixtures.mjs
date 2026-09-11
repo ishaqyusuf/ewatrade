@@ -14,6 +14,8 @@ const DEVELOPMENT_KEYS = [
   "EXPO_PUBLIC_API_PORT",
   "EXPO_PUBLIC_WEB_URL",
   "EXPO_PUBLIC_WEB_PORT",
+  "EXPO_PUBLIC_CHAT_URL",
+  "EXPO_PUBLIC_CHAT_PORT",
   "EXPO_PUBLIC_GOOGLE_CLIENT_ID",
   "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID",
   "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID",
@@ -26,9 +28,12 @@ const DEVELOPMENT_KEYS = [
 ]
 const PRODUCTION_KEYS = DEVELOPMENT_KEYS.filter(
   (key) =>
-    !["EXPO_PUBLIC_API_PORT", "EXPO_PUBLIC_WEB_PORT", "EXPO_PORT"].includes(
-      key,
-    ),
+    ![
+      "EXPO_PUBLIC_API_PORT",
+      "EXPO_PUBLIC_WEB_PORT",
+      "EXPO_PUBLIC_CHAT_PORT",
+      "EXPO_PORT",
+    ].includes(key),
 )
 
 runScenario({
@@ -64,7 +69,7 @@ runScenario({
     )
   },
   shouldInclude: [
-    "app.config.ts must keep the Expo project id mapped to the published EwaTrade project.",
+    "app.config.ts must keep the Expo project id mapped to the published ẸwáTrade project.",
   ],
 })
 
@@ -208,6 +213,7 @@ function envValues(environment, includePorts) {
     EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: "ios.apps.googleusercontent.com",
     EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: "web.apps.googleusercontent.com",
     EXPO_PUBLIC_WEB_URL: "https://ewatrade.test",
+    EXPO_PUBLIC_CHAT_URL: "https://chat.ewatrade.test",
     GOOGLE_ANDROID_CLIENT_ID: "android.apps.googleusercontent.com",
     GOOGLE_CLIENT_ID: "web.apps.googleusercontent.com",
     GOOGLE_IOS_CLIENT_ID: "ios.apps.googleusercontent.com",
@@ -218,6 +224,7 @@ function envValues(environment, includePorts) {
     values.EXPO_PORT = "3096"
     values.EXPO_PUBLIC_API_PORT = "3095"
     values.EXPO_PUBLIC_WEB_PORT = "3092"
+    values.EXPO_PUBLIC_CHAT_PORT = "3091"
   }
 
   return values

@@ -1,9 +1,15 @@
 "use client"
 
 import { DashboardSheet } from "@/components/dashboard/dashboard-sheet"
+import { createMessageFixture } from "@/components/qa/fixture-recipes"
+import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
+import { ConversationAttachment } from "@/components/store-conversations/conversation-attachment"
 import { StoreConversationHeader } from "@/components/store-conversations/conversation-header"
+import { ConversationModerationForm } from "@/components/store-conversations/conversation-moderation-form"
 import {
+  type StoreConversationAssignmentFormValues,
   StoreConversationFormProvider,
+  type StoreConversationReplyFormValues,
   newStoreConversationCommandId,
   useStoreConversationForms,
 } from "@/components/store-conversations/form-context"
@@ -12,10 +18,15 @@ import {
   useStoreConversationParams,
 } from "@/hooks/use-store-conversation-params"
 import { useTRPC } from "@/trpc/client"
-import type { StoreConversationMessageProjection } from "@ewatrade/service-commerce"
+import {
+  type StoreConversationMessageProjection,
+  storeConversationWhatsAppObservedStatusLabel,
+} from "@ewatrade/service-commerce"
 import { Button } from "@ewatrade/ui"
+import { mergeStoreConversationSequence } from "@ewatrade/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { useStoreConversationRealtime } from "../store-conversations/use-store-conversation-realtime"
 
 export function StoreConversationSheet({ storeId }: { storeId: string }) {
   return (
@@ -62,12 +73,23 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
   const [claimOperationId, setClaimOperationId] = useState(() =>
     newStoreConversationCommandId("claim"),
   )
+  const [hydrated, setHydrated] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [olderMessages, setOlderMessages] = useState<
     StoreConversationMessageProjection[]
   >([])
+  const [realtimeMessages, setRealtimeMessages] = useState<
+    StoreConversationMessageProjection[]
+  >([])
   const [olderCursor, setOlderCursor] = useState<number | null | undefined>()
   const [loadingOlder, setLoadingOlder] = useState(false)
+  const replyQuickFillSnapshot =
+    useRef<StoreConversationReplyFormValues | null>(null)
+  const assignmentQuickFillSnapshot =
+    useRef<StoreConversationAssignmentFormValues | null>(null)
+  const [canUndoReplyQuickFill, setCanUndoReplyQuickFill] = useState(false)
+  const [canUndoAssignmentQuickFill, setCanUndoAssignmentQuickFill] =
+    useState(false)
   const previouslyOpen = useRef(open)
   const previousConversationId = useRef(conversationId)
   const previousBaseSequence = useRef<number | null>(null)
@@ -76,6 +98,8 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
     timeline.data?.conversation.lastMessageSequence ?? ""
   }`
 
+  useEffect(() => setHydrated(true), [])
+
   useEffect(() => {
     if (previouslyOpen.current && !open) {
       resetReply()
@@ -83,8 +107,13 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
       setClaimOperationId(newStoreConversationCommandId("claim"))
       setNotice(null)
       setOlderMessages([])
+      setRealtimeMessages([])
       setOlderCursor(undefined)
       setLoadingOlder(false)
+      replyQuickFillSnapshot.current = null
+      assignmentQuickFillSnapshot.current = null
+      setCanUndoReplyQuickFill(false)
+      setCanUndoAssignmentQuickFill(false)
     }
     previouslyOpen.current = open
   }, [open, resetAssignment, resetReply])
@@ -92,8 +121,13 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
   useEffect(() => {
     if (previousConversationId.current !== conversationId) {
       setOlderMessages([])
+      setRealtimeMessages([])
       setOlderCursor(undefined)
       setLoadingOlder(false)
+      replyQuickFillSnapshot.current = null
+      assignmentQuickFillSnapshot.current = null
+      setCanUndoReplyQuickFill(false)
+      setCanUndoAssignmentQuickFill(false)
     }
     previousConversationId.current = conversationId
   }, [conversationId])
@@ -105,6 +139,7 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
       sequence !== previousBaseSequence.current
     ) {
       setOlderMessages([])
+      setRealtimeMessages([])
       setOlderCursor(undefined)
       setLoadingOlder(false)
     }
@@ -154,6 +189,8 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
     trpc.serviceCommerce.replyToStoreConversation.mutationOptions({
       onError,
       onSuccess: async () => {
+        replyQuickFillSnapshot.current = null
+        setCanUndoReplyQuickFill(false)
         resetReply()
         setNotice("Reply sent.")
         await refresh()
@@ -164,6 +201,8 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
     trpc.serviceCommerce.handoffStoreConversation.mutationOptions({
       onError,
       onSuccess: async () => {
+        assignmentQuickFillSnapshot.current = null
+        setCanUndoAssignmentQuickFill(false)
         resetAssignment()
         setNotice("Conversation handed off.")
         await refresh()
@@ -174,6 +213,8 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
     trpc.serviceCommerce.reassignStoreConversation.mutationOptions({
       onError,
       onSuccess: async () => {
+        assignmentQuickFillSnapshot.current = null
+        setCanUndoAssignmentQuickFill(false)
         resetAssignment()
         setNotice("Conversation reassigned.")
         await refresh()
@@ -184,6 +225,8 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
     trpc.serviceCommerce.releaseStoreConversation.mutationOptions({
       onError,
       onSuccess: async () => {
+        assignmentQuickFillSnapshot.current = null
+        setCanUndoAssignmentQuickFill(false)
         resetAssignment()
         setNotice("Conversation returned to the queue.")
         await refresh()
@@ -197,6 +240,14 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
         (request) => request.lifecycle === "active",
       ) ?? [],
     [timeline.data?.requests],
+  )
+  const eligibleAttendants = useMemo(
+    () =>
+      attendants.data?.filter(
+        (attendant) =>
+          attendant.membershipId !== timeline.data?.assignment.membershipId,
+      ) ?? [],
+    [attendants.data, timeline.data?.assignment.membershipId],
   )
   useEffect(() => {
     if (activeRequests.length === 1 && !replyForm.getValues("request")) {
@@ -226,11 +277,34 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
     reassign.isPending ||
     release.isPending
   const assignmentAction = assignmentForm.watch("action")
+  const visibleMessages = useMemo(
+    () =>
+      mergeStoreConversationSequence(
+        [...olderMessages, ...(timeline.data?.messages ?? [])],
+        realtimeMessages,
+      ),
+    [olderMessages, realtimeMessages, timeline.data?.messages],
+  )
+  useStoreConversationRealtime({
+    conversationId: conversationId ?? null,
+    enabled: open && Boolean(timeline.data),
+    messages: visibleMessages,
+    onMessages: (messages) =>
+      setRealtimeMessages((current) =>
+        mergeStoreConversationSequence(current, messages),
+      ),
+    onNotice: setNotice,
+    storeId: resolvedStoreId,
+  })
 
   const close = async () => {
     await refresh()
     resetReply()
     resetAssignment()
+    replyQuickFillSnapshot.current = null
+    assignmentQuickFillSnapshot.current = null
+    setCanUndoReplyQuickFill(false)
+    setCanUndoAssignmentQuickFill(false)
     setClaimOperationId(newStoreConversationCommandId("claim"))
     setNotice(null)
     await params.setSelection(null)
@@ -273,10 +347,10 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
       open={open}
       title="Conversation"
     >
-      {timeline.isLoading ? (
+      {!hydrated || timeline.isLoading ? (
         <div className="h-80 animate-pulse rounded-lg bg-muted" />
       ) : null}
-      {timeline.isError ? (
+      {hydrated && timeline.isError ? (
         <div
           className="rounded-lg border border-destructive/30 p-4"
           role="alert"
@@ -294,7 +368,7 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
           </Button>
         </div>
       ) : null}
-      {timeline.data ? (
+      {hydrated && timeline.data ? (
         <div className="grid gap-5">
           <StoreConversationHeader
             assignmentLabel={timeline.data.assignment.label}
@@ -316,7 +390,7 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
                 {loadingOlder ? "Loading…" : "Load older messages"}
               </Button>
             ) : null}
-            {[...olderMessages, ...timeline.data.messages].map((message) => (
+            {visibleMessages.map((message) => (
               <article
                 className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm ${
                   message.author.kind === "customer"
@@ -325,12 +399,52 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
                 }`}
                 key={message.id}
               >
-                <p className="text-xs font-medium opacity-70">
-                  {message.author.label}
-                </p>
-                <p className="mt-1 whitespace-pre-wrap break-words">
-                  {message.text}
-                </p>
+                {message.attachments.length === 0 ? (
+                  <>
+                    <p className="text-xs font-medium opacity-70">
+                      {message.author.label} · {message.channel}
+                      {message.whatsAppObservation
+                        ? ` · ${storeConversationWhatsAppObservedStatusLabel(
+                            message.whatsAppObservation.status,
+                          )}`
+                        : ""}
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap break-words">
+                      {message.text}
+                    </p>
+                  </>
+                ) : null}
+                {message.attachments.map((attachment) => (
+                  <ConversationAttachment
+                    attachment={attachment}
+                    conversationId={timeline.data.conversation.id}
+                    key={attachment.id}
+                    onPrepareRecovery={
+                      attachment.recovery
+                        ? () => {
+                            replyForm.setValue(
+                              "text",
+                              attachment.recovery === "contact_store"
+                                ? "We need to review this attachment with you. Please reply so we can help."
+                                : "Please upload a new copy of this attachment in the same Request.",
+                            )
+                            const request = activeRequests.find(
+                              (candidate) =>
+                                candidate.id === message.request?.id &&
+                                candidate.kind === message.request?.kind,
+                            )
+                            if (request) {
+                              replyForm.setValue(
+                                "request",
+                                `${request.kind}:${request.id}:${request.revision}`,
+                              )
+                            }
+                          }
+                        : undefined
+                    }
+                    storeId={resolvedStoreId}
+                  />
+                ))}
               </article>
             ))}
           </section>
@@ -378,6 +492,34 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
                 })
               })}
             >
+              <QaDashboardQuickFill
+                canUndo={canUndoReplyQuickFill}
+                formId="dashboard.store-conversation.reply"
+                isDirty={replyForm.formState.isDirty}
+                onFill={(context) => {
+                  const request = activeRequests[0]
+                  if (!request) {
+                    setNotice(
+                      "An active Request is required before filling a reply draft.",
+                    )
+                    return
+                  }
+                  replyQuickFillSnapshot.current = replyForm.getValues()
+                  replyForm.reset({
+                    clientOperationId: newStoreConversationCommandId("reply"),
+                    request: `${request.kind}:${request.id}:${request.revision}`,
+                    text: createMessageFixture(context).message,
+                  })
+                  setCanUndoReplyQuickFill(true)
+                  setNotice(null)
+                }}
+                onUndo={() => {
+                  if (!replyQuickFillSnapshot.current) return
+                  replyForm.reset(replyQuickFillSnapshot.current)
+                  replyQuickFillSnapshot.current = null
+                  setCanUndoReplyQuickFill(false)
+                }}
+              />
               <label className="grid gap-1 text-sm font-medium">
                 Request
                 <select
@@ -439,6 +581,45 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
               })}
             >
               <h3 className="font-medium">Assignment</h3>
+              <QaDashboardQuickFill
+                canUndo={canUndoAssignmentQuickFill}
+                formId="dashboard.store-conversation.assignment"
+                isDirty={assignmentForm.formState.isDirty}
+                onFill={() => {
+                  const target = eligibleAttendants[0]
+                  const canRelease = timeline.data.permissions.canRelease
+                  const canReassign = timeline.data.permissions.canReassign
+                  if (!target && !canRelease) {
+                    setNotice(
+                      "An eligible attendant is required before filling this assignment draft.",
+                    )
+                    return
+                  }
+                  assignmentQuickFillSnapshot.current =
+                    assignmentForm.getValues()
+                  assignmentForm.reset({
+                    action: target
+                      ? canReassign && !canRelease
+                        ? "reassign"
+                        : "handoff"
+                      : "release",
+                    clientOperationId:
+                      newStoreConversationCommandId("assignment"),
+                    reason: target
+                      ? "workload_balance"
+                      : "operational_recovery",
+                    targetMembershipId: target?.membershipId ?? "",
+                  })
+                  setCanUndoAssignmentQuickFill(true)
+                  setNotice(null)
+                }}
+                onUndo={() => {
+                  if (!assignmentQuickFillSnapshot.current) return
+                  assignmentForm.reset(assignmentQuickFillSnapshot.current)
+                  assignmentQuickFillSnapshot.current = null
+                  setCanUndoAssignmentQuickFill(false)
+                }}
+              />
               <label className="grid gap-1 text-sm font-medium">
                 Action
                 <select
@@ -464,20 +645,14 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
                     {...assignmentForm.register("targetMembershipId")}
                   >
                     <option value="">Choose an active attendant</option>
-                    {attendants.data
-                      ?.filter(
-                        (attendant) =>
-                          attendant.membershipId !==
-                          timeline.data.assignment.membershipId,
-                      )
-                      .map((attendant) => (
-                        <option
-                          key={attendant.membershipId}
-                          value={attendant.membershipId}
-                        >
-                          {attendant.label}
-                        </option>
-                      ))}
+                    {eligibleAttendants.map((attendant) => (
+                      <option
+                        key={attendant.membershipId}
+                        value={attendant.membershipId}
+                      >
+                        {attendant.label}
+                      </option>
+                    ))}
                   </select>
                   {assignmentForm.formState.errors.targetMembershipId ? (
                     <span className="text-xs text-destructive">
@@ -511,6 +686,16 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
                 Apply assignment change
               </Button>
             </form>
+          ) : null}
+
+          {timeline.data.permissions.canModerate ? (
+            <ConversationModerationForm
+              conversationId={timeline.data.conversation.id}
+              moderation={timeline.data.conversation.moderation}
+              onChanged={refresh}
+              onMessage={setNotice}
+              storeId={resolvedStoreId}
+            />
           ) : null}
 
           {notice ? (

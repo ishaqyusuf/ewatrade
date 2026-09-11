@@ -29,8 +29,14 @@ export const serviceCommerceMediaUploadIntentSchema = sourceAttachmentSchema
   .extend({
     clientMediaId: idSchema,
     fileName: z.string().trim().min(1).max(255),
-    kind: serviceCommerceMediaKindSchema,
-    mimeType: serviceCommerceMediaMimeTypeSchema,
+    kind: serviceCommerceMediaKindSchema.exclude(["audio"]),
+    mimeType: serviceCommerceMediaMimeTypeSchema.exclude([
+      "audio/mp4",
+      "audio/mpeg",
+      "audio/ogg",
+      "audio/wav",
+      "audio/webm",
+    ]),
     sizeBytes: z.number().int().positive().max(10_000_000),
     storeId: storeIdSchema,
   })

@@ -1,11 +1,18 @@
 import { type Session, auth, parseCookieHeader } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
 import type { TenantContext } from "@ewatrade/db/queries"
-import { getActiveTenantForUser } from "@ewatrade/db/queries"
+import {
+  getActiveTenantForUser,
+  validateQaDerivedSession,
+} from "@ewatrade/db/queries"
 import { toPublicError } from "@ewatrade/errors"
+import { getTrustedQaNetworkSource } from "@ewatrade/utils/qa-network-source"
+import { evaluateQaProviderPolicy } from "@ewatrade/utils/qa-provider-policy"
 import { TRPCError, initTRPC } from "@trpc/server"
 import type { Context } from "hono"
 import superjson from "superjson"
+import { qaLiveEffectForProcedure } from "../utils/qa-provider-operation"
+import { isQaDerivedSessionAllowed } from "../utils/qa-session-access"
 import { getRequestTrace } from "../utils/request-trace"
 import { safeCompare } from "../utils/safe-compare"
 
@@ -23,6 +30,15 @@ export type TRPCContext = {
   forcePrimary: boolean
   customerConversationCredential?: string | null
   customerConversationInstallation?: string | null
+  origin: string | null
+  clientIp: string | null
+  userAgent: string | null
+  activeStoreId: string | null
+  qaSessionScope: {
+    membershipId: string
+    storeId: string
+    tenantId: string
+  } | null
 }
 
 function getBearerToken(authorization: string | null | undefined) {
@@ -105,7 +121,14 @@ export const createTRPCContext = async (
   const cookieSession = await auth.api.getSession({
     headers: c.req.raw.headers,
   })
-  const session = cookieSession ?? (await getSessionFromBearer(bearerToken))
+  const candidateSession =
+    cookieSession ?? (await getSessionFromBearer(bearerToken))
+  const qaSessionValidation = candidateSession
+    ? candidateSession.session.token.startsWith("qas_")
+      ? await validateQaDerivedSession(prisma, candidateSession.session.id)
+      : { active: true, scope: null }
+    : { active: false, scope: null }
+  const session = qaSessionValidation.active ? candidateSession : null
   const internalKey = c.req.header("x-internal-key")
   const expectedInternalKey = process.env.INTERNAL_API_KEY
   const requestCookies = parseCookieHeader(c.req.header("cookie"))
@@ -128,6 +151,17 @@ export const createTRPCContext = async (
       c.req.header("x-store-conversation-credential") ?? null,
     customerConversationInstallation:
       c.req.header("x-store-conversation-installation") ?? null,
+    origin: c.req.header("origin") ?? null,
+    clientIp: getTrustedQaNetworkSource({
+      env: process.env,
+      getHeader: (name) => c.req.header(name),
+    }),
+    userAgent: c.req.header("user-agent") ?? null,
+    activeStoreId:
+      c.req.header("x-store-id") ??
+      requestCookies.get("ewatrade.active_store_id") ??
+      null,
+    qaSessionScope: qaSessionValidation.scope,
   }
 }
 
@@ -188,6 +222,28 @@ const requireAuthMiddleware = t.middleware(async (opts) => {
   })
 })
 
+const requireGlobalAuthMiddleware = t.middleware(async (opts) => {
+  const { session } = opts.ctx
+  if (!session) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "You must be signed in to continue.",
+    })
+  }
+  if (
+    !isQaDerivedSessionAllowed(
+      "authenticated_global",
+      Boolean(opts.ctx.qaSessionScope),
+    )
+  ) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "This QA session is limited to its selected business and Store.",
+    })
+  }
+  return opts.next({ ctx: { ...opts.ctx, session } })
+})
+
 const withTenantPermissionMiddleware = t.middleware(async (opts) => {
   const { session } = opts.ctx
 
@@ -201,6 +257,7 @@ const withTenantPermissionMiddleware = t.middleware(async (opts) => {
   const tenantContext =
     opts.ctx.tenantContext ??
     (await getActiveTenantForUser(opts.ctx.db, {
+      storeId: opts.ctx.qaSessionScope?.storeId ?? opts.ctx.activeStoreId,
       userId: session.user.id,
       tenantSlug: opts.ctx.tenantSlug,
     }))
@@ -209,6 +266,18 @@ const withTenantPermissionMiddleware = t.middleware(async (opts) => {
     throw new TRPCError({
       code: "NOT_FOUND",
       message: "Tenant not found",
+    })
+  }
+
+  if (
+    opts.ctx.qaSessionScope &&
+    (tenantContext.tenant.id !== opts.ctx.qaSessionScope.tenantId ||
+      tenantContext.membership.id !== opts.ctx.qaSessionScope.membershipId ||
+      tenantContext.activeStore?.id !== opts.ctx.qaSessionScope.storeId)
+  ) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "This QA session is scoped to another business or Store.",
     })
   }
 
@@ -229,6 +298,40 @@ const withTenantPermissionMiddleware = t.middleware(async (opts) => {
   })
 })
 
+const enforceQaProviderBoundary = t.middleware(async (opts) => {
+  const tenant = opts.ctx.tenantContext?.tenant
+  const operation = qaLiveEffectForProcedure(opts.path)
+  if (!tenant || tenant.dataClassification !== "QA" || !operation) {
+    return opts.next()
+  }
+
+  const decision = evaluateQaProviderPolicy({
+    adapter: "live",
+    operation,
+    tenantDataClassification: "QA",
+  })
+  if (decision.allowed) return opts.next()
+
+  const qaSession = opts.ctx.session
+    ? await opts.ctx.db.session.findUnique({
+        select: { qaAuthorizationId: true },
+        where: { id: opts.ctx.session.session.id },
+      })
+    : null
+  await opts.ctx.db.qaAccessAuditEvent.create({
+    data: {
+      authorizationId: qaSession?.qaAuthorizationId,
+      eventType: "provider_operation_blocked",
+      metadata: { operation, procedure: opts.path },
+      outcome: decision.code,
+    },
+  })
+  throw new TRPCError({
+    code: "PRECONDITION_FAILED",
+    message: decision.message,
+  })
+})
+
 const requireInternalMiddleware = t.middleware(async (opts) => {
   if (!opts.ctx.isInternalRequest) {
     throw new TRPCError({
@@ -244,7 +347,9 @@ export const publicProcedure = t.procedure
   .use(withTimingMiddleware)
   .use(withPrimaryDbMiddleware)
 
-export const authenticatedProcedure = publicProcedure.use(requireAuthMiddleware)
+export const authenticatedProcedure = publicProcedure.use(
+  requireGlobalAuthMiddleware,
+)
 
 export const platformAdminProcedure = authenticatedProcedure.use(
   async (opts) => {
@@ -259,14 +364,15 @@ export const platformAdminProcedure = authenticatedProcedure.use(
   },
 )
 
-export const protectedProcedure = authenticatedProcedure.use(
-  withTenantPermissionMiddleware,
-)
+export const protectedProcedure = publicProcedure
+  .use(requireAuthMiddleware)
+  .use(withTenantPermissionMiddleware)
+  .use(enforceQaProviderBoundary)
 
 export const internalProcedure = publicProcedure.use(requireInternalMiddleware)
 
-export const protectedOrInternalProcedure = publicProcedure.use(
-  async (opts) => {
+export const protectedOrInternalProcedure = publicProcedure
+  .use(async (opts) => {
     if (opts.ctx.isInternalRequest) {
       return opts.next()
     }
@@ -283,6 +389,7 @@ export const protectedOrInternalProcedure = publicProcedure.use(
     const tenantContext =
       opts.ctx.tenantContext ??
       (await getActiveTenantForUser(opts.ctx.db, {
+        storeId: opts.ctx.qaSessionScope?.storeId ?? opts.ctx.activeStoreId,
         userId: session.user.id,
         tenantSlug: opts.ctx.tenantSlug,
       }))
@@ -294,6 +401,18 @@ export const protectedOrInternalProcedure = publicProcedure.use(
       })
     }
 
+    if (
+      opts.ctx.qaSessionScope &&
+      (tenantContext.tenant.id !== opts.ctx.qaSessionScope.tenantId ||
+        tenantContext.membership.id !== opts.ctx.qaSessionScope.membershipId ||
+        tenantContext.activeStore?.id !== opts.ctx.qaSessionScope.storeId)
+    ) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "This QA session is scoped to another business or Store.",
+      })
+    }
+
     return opts.next({
       ctx: {
         ...opts.ctx,
@@ -302,5 +421,5 @@ export const protectedOrInternalProcedure = publicProcedure.use(
         tenantId: tenantContext.tenant.id,
       },
     })
-  },
-)
+  })
+  .use(enforceQaProviderBoundary)

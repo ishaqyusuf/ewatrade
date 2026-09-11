@@ -72,15 +72,54 @@ import {
   serviceNotificationDispatchHandler,
 } from "./handlers/service-notification-dispatch"
 import {
+  type StoreConversationNotificationDispatchPayload,
+  storeConversationNotificationDispatchHandler,
+} from "./handlers/store-conversation-notification-dispatch"
+import {
+  type StoreConversationNotificationVerificationPayload,
+  storeConversationNotificationVerificationHandler,
+} from "./handlers/store-conversation-notification-verification"
+import {
+  type StoreConversationPrivacyRequestPayload,
+  storeConversationPrivacyRequestHandler,
+} from "./handlers/store-conversation-privacy-request"
+import {
+  type StoreConversationWhatsAppBridgePromptPayload,
+  storeConversationWhatsAppBridgePromptHandler,
+} from "./handlers/store-conversation-whatsapp-bridge-prompt"
+import {
+  type StoreConversationWhatsAppCandidatePromptPayload,
+  storeConversationWhatsAppCandidatePromptHandler,
+} from "./handlers/store-conversation-whatsapp-candidate-prompt"
+import {
+  type StoreConversationWhatsAppOutboundPayload,
+  storeConversationWhatsAppOutboundHandler,
+} from "./handlers/store-conversation-whatsapp-outbound"
+import {
+  type StoreConversationWhatsAppRecoveryPayload,
+  storeConversationWhatsAppRecoveryHandler,
+} from "./handlers/store-conversation-whatsapp-recovery"
+import {
   type WhatsAppConnectionTestPayload,
   whatsappConnectionTestHandler,
 } from "./handlers/whatsapp-connection-test"
-import { triggerJob } from "./trigger"
+import { triggerJob, triggerJobAt } from "./trigger"
 
 export const jobIds = {
   qaPurge: "platform.qa.purge",
   notificationDispatch: "notifications.dispatch",
   serviceNotificationDispatch: "services.notification.dispatch",
+  storeConversationNotificationDispatch:
+    "store-conversation.notification-dispatch",
+  storeConversationNotificationVerification:
+    "store-conversation.notification-verification",
+  storeConversationPrivacyRequest: "store-conversation.privacy-request",
+  storeConversationWhatsAppBridgePrompt:
+    "store-conversation.whatsapp-bridge-prompt",
+  storeConversationWhatsAppCandidatePrompt:
+    "store-conversation.whatsapp-candidate-prompt",
+  storeConversationWhatsAppOutbound: "store-conversation.whatsapp-outbound",
+  storeConversationWhatsAppRecovery: "store-conversation.whatsapp-recovery",
   serviceCommerceMediaIngest: "service-commerce.media-ingest",
   serviceCommerceBookingNotificationDispatch:
     "service-commerce.booking-notification-dispatch",
@@ -181,6 +220,74 @@ export async function enqueueServiceNotificationIntent(intentId: string) {
   )
 }
 
+export async function enqueueStoreConversationNotificationDispatch(
+  input: StoreConversationNotificationDispatchPayload,
+  runAt = new Date(),
+) {
+  await triggerJobAt(
+    jobIds.storeConversationNotificationDispatch,
+    storeConversationNotificationDispatchHandler,
+    input,
+    runAt,
+    { maxAttempts: 1 },
+  )
+}
+
+export async function enqueueStoreConversationNotificationVerification(
+  input: StoreConversationNotificationVerificationPayload,
+) {
+  await triggerJob(
+    jobIds.storeConversationNotificationVerification,
+    storeConversationNotificationVerificationHandler,
+    input,
+    { maxAttempts: 1 },
+  )
+}
+
+export async function enqueueStoreConversationWhatsAppBridgePrompt(
+  input: StoreConversationWhatsAppBridgePromptPayload,
+) {
+  await triggerJob(
+    jobIds.storeConversationWhatsAppBridgePrompt,
+    storeConversationWhatsAppBridgePromptHandler,
+    input,
+    { maxAttempts: 1 },
+  )
+}
+
+export async function enqueueStoreConversationWhatsAppCandidatePrompt(
+  input: StoreConversationWhatsAppCandidatePromptPayload,
+) {
+  await triggerJob(
+    jobIds.storeConversationWhatsAppCandidatePrompt,
+    storeConversationWhatsAppCandidatePromptHandler,
+    input,
+    { maxAttempts: 1 },
+  )
+}
+
+export async function enqueueStoreConversationWhatsAppOutbound(
+  input: StoreConversationWhatsAppOutboundPayload,
+) {
+  await triggerJob(
+    jobIds.storeConversationWhatsAppOutbound,
+    storeConversationWhatsAppOutboundHandler,
+    input,
+    { maxAttempts: 1 },
+  )
+}
+
+export async function enqueueStoreConversationWhatsAppRecovery(
+  input: StoreConversationWhatsAppRecoveryPayload,
+) {
+  await triggerJob(
+    jobIds.storeConversationWhatsAppRecovery,
+    storeConversationWhatsAppRecoveryHandler,
+    input,
+    { maxAttempts: 1 },
+  )
+}
+
 export async function enqueueServiceCommerceMediaIngest(
   input: ServiceCommerceMediaIngestPayload,
 ) {
@@ -243,6 +350,18 @@ export async function enqueueServiceCommerceMediaRetention(
     jobIds.serviceCommerceMediaRetention,
     serviceCommerceMediaRetentionHandler,
     input,
+    { maxAttempts: 4 },
+  )
+}
+
+export async function enqueueStoreConversationPrivacyRequest(
+  privacyRequestId: string,
+) {
+  const payload: StoreConversationPrivacyRequestPayload = { privacyRequestId }
+  await triggerJob(
+    jobIds.storeConversationPrivacyRequest,
+    storeConversationPrivacyRequestHandler,
+    payload,
     { maxAttempts: 4 },
   )
 }
@@ -350,9 +469,18 @@ export async function enqueueDomainConnectionVerification(
 }
 
 export { runInBackground, runWithRetry } from "./queue"
-export { isTriggerConfigured, triggerJob } from "./trigger"
+export { isTriggerConfigured, triggerJob, triggerJobAt } from "./trigger"
 export { notificationDispatchHandler }
 export { serviceNotificationDispatchHandler }
+export {
+  storeConversationNotificationDispatchHandler,
+  storeConversationNotificationVerificationHandler,
+  storeConversationPrivacyRequestHandler,
+  storeConversationWhatsAppBridgePromptHandler,
+  storeConversationWhatsAppCandidatePromptHandler,
+  storeConversationWhatsAppOutboundHandler,
+  storeConversationWhatsAppRecoveryHandler,
+}
 export {
   serviceCommerceBookingNotificationDispatchHandler,
   serviceCommerceBookingRemindersHandler,
@@ -374,6 +502,10 @@ export { commercialOrderRemindersHandler }
 export { qaPurgeHandler } from "./handlers/qa-purge"
 export { customerMessagingProviderStatus }
 export type { NotificationDispatchPayload, ServiceNotificationDispatchPayload }
+export type {
+  StoreConversationNotificationDispatchPayload,
+  StoreConversationNotificationVerificationPayload,
+}
 export type {
   ServiceCommerceBookingNotificationDispatchPayload,
   ServiceCommerceBookingRemindersPayload,

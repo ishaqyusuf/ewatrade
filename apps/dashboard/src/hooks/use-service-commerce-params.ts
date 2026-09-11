@@ -12,10 +12,12 @@ export const SERVICE_COMMERCE_SHEET_MODES = [
   "booking",
   "fulfillment",
   "connection",
+  "conversation_mode",
   "team",
   "quote_policy",
   "quote_approval",
   "entry_point",
+  "availability",
   "setup",
   "success",
 ] as const
@@ -85,9 +87,23 @@ export const SERVICE_COMMERCE_SHEET_RESET_PARAMS = {
   successKind: null,
 } as const
 
+/**
+ * Store selection and sheet state are navigable workspace state. User actions
+ * therefore create history entries so Back and Forward restore the previous
+ * workspace instead of leaving the page.
+ */
+export function withServiceCommerceUserNavigation<T>(
+  setParams: (values: T, options: { history: "push" }) => unknown,
+) {
+  return (values: T) => setParams(values, { history: "push" })
+}
+
 export function useServiceCommerceParams() {
   const [params, setParams] = useQueryStates(serviceCommerceParams)
-  return { ...params, setParams }
+  return {
+    ...params,
+    setParams: withServiceCommerceUserNavigation(setParams),
+  }
 }
 
 export const loadServiceCommerceParams = createLoader(serviceCommerceParams)

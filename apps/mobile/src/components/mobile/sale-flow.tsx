@@ -62,7 +62,9 @@ export function SaleSelectableRow({
   )
 }
 
-type SaleSegmentOptionProps = {
+export type SaleSegmentOptionProps = {
+  className?: string
+  disabled?: boolean
   icon?: IconKeys
   label: string
   onPress: () => void
@@ -70,6 +72,8 @@ type SaleSegmentOptionProps = {
 }
 
 export function SaleSegmentOption({
+  className,
+  disabled = false,
   icon = "CheckCircle2",
   label,
   onPress,
@@ -77,11 +81,15 @@ export function SaleSegmentOption({
 }: SaleSegmentOptionProps) {
   return (
     <Pressable
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected, disabled }}
+      disabled={disabled}
       className={cn(
-        "min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-full border px-3",
+        "min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-full border px-3 py-2",
         selected
           ? "border-primary bg-primary"
           : "border-border bg-background active:bg-accent",
+        className,
       )}
       haptic
       onPress={onPress}
@@ -96,7 +104,7 @@ export function SaleSegmentOption({
       />
       <Text
         className={cn(
-          "text-sm font-extrabold",
+          "shrink text-center text-sm font-extrabold [-rn-line-height:20] [-rn-include-font-padding:false] [-rn-text-align-vertical:center]",
           selected ? "text-primary-foreground" : "text-foreground",
         )}
       >
@@ -129,7 +137,7 @@ export function SaleTotalSummary({
           </Text>
         ) : null}
       </View>
-      <Text className="text-4xl font-extrabold leading-[44px] text-foreground">
+      <Text className="text-4xl font-extrabold [-rn-line-height:44] text-foreground">
         {value}
       </Text>
     </View>

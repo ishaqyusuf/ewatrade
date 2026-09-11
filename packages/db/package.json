@@ -14,6 +14,10 @@
   "scripts": {
     "build": "bun run db:generate && tsc --noEmit",
     "seed:catalog-units": "bun scripts/seed-catalog-unit-definitions.ts",
+    "qa:issue-tester-credential": "bun scripts/issue-qa-tester-credential.ts",
+    "qa:revoke-tester-credential": "bun scripts/revoke-qa-tester-credential.ts",
+    "qa:browser-acceptance-fixture": "bun scripts/qa-access-browser-acceptance-fixture.ts",
+    "test:qa-access:integration": "bun test src/queries/acceptance/qa-access/lifecycle.integration.test.ts",
     "backfill:service-quotes": "bun scripts/backfill-service-quotes-to-commerce.ts",
     "db:push": "prisma db push",
     "lint": "biome check .",

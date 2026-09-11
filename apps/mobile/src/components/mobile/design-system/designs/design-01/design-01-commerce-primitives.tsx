@@ -176,11 +176,14 @@ export function Design01FilterChip({
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       className={cn(
-        "min-h-11 justify-center rounded-xl px-4",
-        active ? "bg-foreground" : "border border-border bg-card",
+        "min-h-11 min-w-24 items-center justify-center rounded-xl px-6",
+        active
+          ? "bg-foreground"
+          : "border border-border bg-card active:bg-accent",
       )}
       haptic
       onPress={onPress}
+      transition
     >
       <Text
         className={cn(

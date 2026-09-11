@@ -20,6 +20,7 @@ const requiredSemanticTokens = [
   "input",
   "muted",
   "muted-foreground",
+  "overlay",
   "popover",
   "popover-foreground",
   "primary",

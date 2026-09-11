@@ -1,5 +1,5 @@
-import { AdminMoreScreen } from "@/components/mobile/admin-tabs/admin-more-screen"
+import { MoreScreen } from "@/components/mobile/more/more-screen"
 
 export default function AdminMoreRoute() {
-  return <AdminMoreScreen />
+  return <MoreScreen />
 }

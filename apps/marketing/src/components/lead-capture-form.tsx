@@ -1,5 +1,8 @@
 "use client"
 
+import { QaQuickFillButton } from "@/components/qa/qa-quick-fill-button"
+import { useOptionalQaWebAccelerator } from "@/components/qa/qa-web-accelerator"
+import { createLeadDraft } from "@/lib/qa-lead-fill"
 import { startTransition, useRef, useState } from "react"
 
 import {
@@ -18,6 +21,24 @@ type LeadCaptureFormProps = {
 
 type SubmissionState = "idle" | "submitting" | "success" | "error"
 
+type LeadDraft = {
+  companyName: string
+  email: string
+  fullName: string
+  message: string
+  phone: string
+  roleTitle: string
+}
+
+const emptyDraft: LeadDraft = {
+  companyName: "",
+  email: "",
+  fullName: "",
+  message: "",
+  phone: "",
+  roleTitle: "",
+}
+
 const endpointByType = {
   "early-access": "/api/early-access",
   waitlist: "/api/waitlist",
@@ -35,7 +56,31 @@ export function LeadCaptureForm({
   const formRef = useRef<HTMLFormElement>(null)
   const [state, setState] = useState<SubmissionState>("idle")
   const [message, setMessage] = useState("")
+  const [draft, setDraft] = useState<LeadDraft>(emptyDraft)
+  const [undoDraft, setUndoDraft] = useState<LeadDraft | null>(null)
+  const qa = useOptionalQaWebAccelerator()
   const { notify } = useNotifications()
+
+  function setField(field: keyof LeadDraft, value: string) {
+    setDraft((current) => ({ ...current, [field]: value }))
+  }
+
+  function quickFill() {
+    if (!qa?.authorization) return
+    if (
+      Object.values(draft).some(Boolean) &&
+      !window.confirm("Replace your current draft with QA fixture values?")
+    ) {
+      return
+    }
+    setUndoDraft(draft)
+    setDraft(
+      createLeadDraft({
+        domain: qa.authorization.qaDomain,
+        testerIdentity: qa.authorization.testerIdentity,
+      }),
+    )
+  }
 
   async function handleSubmit(formData: FormData) {
     setState("submitting")
@@ -91,6 +136,7 @@ export function LeadCaptureForm({
       setState("success")
       setMessage(nextMessage)
       formRef.current?.reset()
+      setDraft(emptyDraft)
       notify({
         ...createMarketingLeadSubmittedNotification({
           type: type === "early-access" ? "EARLY_ACCESS" : "WAITLIST",
@@ -133,8 +179,10 @@ export function LeadCaptureForm({
             <input
               required
               name="fullName"
+              onChange={(event) => setField("fullName", event.target.value)}
               placeholder="Ada Nwosu"
               className={baseInputClasses}
+              value={draft.fullName}
             />
           </label>
 
@@ -144,8 +192,10 @@ export function LeadCaptureForm({
               required
               type="email"
               name="email"
+              onChange={(event) => setField("email", event.target.value)}
               placeholder="ada@merchant.com"
               className={baseInputClasses}
+              value={draft.email}
             />
           </label>
         </div>
@@ -157,8 +207,12 @@ export function LeadCaptureForm({
                 <span>Company name</span>
                 <input
                   name="companyName"
+                  onChange={(event) =>
+                    setField("companyName", event.target.value)
+                  }
                   placeholder="Nile Market"
                   className={baseInputClasses}
+                  value={draft.companyName}
                 />
               </label>
 
@@ -166,8 +220,12 @@ export function LeadCaptureForm({
                 <span>Role</span>
                 <input
                   name="roleTitle"
+                  onChange={(event) =>
+                    setField("roleTitle", event.target.value)
+                  }
                   placeholder="Founder, Operations Lead, Merchant Owner"
                   className={baseInputClasses}
+                  value={draft.roleTitle}
                 />
               </label>
             </div>
@@ -176,8 +234,10 @@ export function LeadCaptureForm({
               <span>Phone number</span>
               <input
                 name="phone"
+                onChange={(event) => setField("phone", event.target.value)}
                 placeholder="+234..."
                 className={baseInputClasses}
+                value={draft.phone}
               />
             </label>
 
@@ -185,9 +245,11 @@ export function LeadCaptureForm({
               <span>What are you hoping to launch or improve?</span>
               <textarea
                 name="message"
+                onChange={(event) => setField("message", event.target.value)}
                 rows={4}
                 placeholder="Tell us about your storefront, fulfillment, or POS needs."
                 className={`${baseInputClasses} resize-y`}
+                value={draft.message}
               />
             </label>
           </>
@@ -210,6 +272,17 @@ export function LeadCaptureForm({
           </p>
         </div>
       </form>
+      <QaQuickFillButton
+        canUndo={Boolean(undoDraft)}
+        onFill={quickFill}
+        onUndo={() => {
+          if (!undoDraft) return
+          setDraft(undoDraft)
+          setUndoDraft(null)
+        }}
+        qaDomain={qa?.authorization?.qaDomain}
+        visible={qa?.status === "authorized"}
+      />
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import * as SecureStore from "expo-secure-store"
+import type { MobileAccessProfile } from "./mobile-entry-routing"
 
 export const SESSION_KEY = "ewatrade_mobile_session"
 
@@ -10,11 +11,14 @@ export type MobileProfile = {
   businessName?: string
   businessSlug?: string
   currencyCode?: string
+  storeId?: string
+  storeName?: string
   role?: string
   status?: string
 }
 
 export type MobileSession = {
+  accessProfile?: MobileAccessProfile
   expiresAt?: string
   token: string
   profile: MobileProfile

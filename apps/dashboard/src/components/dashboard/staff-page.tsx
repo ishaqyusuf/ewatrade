@@ -2,6 +2,8 @@
 
 import { DashboardSheet } from "@/components/dashboard/dashboard-sheet"
 import { DashboardTable } from "@/components/dashboard/dashboard-table"
+import { createStaffFixture } from "@/components/qa/fixture-recipes"
+import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
 import { useStaffParams } from "@/hooks/use-staff-params"
 import {
   type StaffInviteRole,
@@ -31,7 +33,7 @@ import type {
   ReactNode,
   SelectHTMLAttributes,
 } from "react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 type StaffResponse = {
   staff: StaffMemberRow[]
@@ -142,6 +144,8 @@ export function StaffPage({
   )
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const quickFillSnapshot = useRef<InviteForm | null>(null)
+  const [canUndoQuickFill, setCanUndoQuickFill] = useState(false)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -527,6 +531,27 @@ export function StaffPage({
         description="Cashier, operator, or manager access"
       >
         <form className="grid gap-4" onSubmit={submitInvite}>
+          <QaDashboardQuickFill
+            canUndo={canUndoQuickFill}
+            formId="dashboard.staff.invite"
+            isDirty={Boolean(inviteForm.email || inviteForm.name)}
+            onFill={(context, sequence) => {
+              quickFillSnapshot.current = inviteForm
+              const fixture = createStaffFixture(context, sequence)
+              setInviteForm({
+                email: fixture.email,
+                name: fixture.name,
+                role: "cashier",
+              })
+              setCanUndoQuickFill(true)
+            }}
+            onUndo={() => {
+              if (!quickFillSnapshot.current) return
+              setInviteForm(quickFillSnapshot.current)
+              quickFillSnapshot.current = null
+              setCanUndoQuickFill(false)
+            }}
+          />
           <Field label="Email">
             <TextInput
               type="email"

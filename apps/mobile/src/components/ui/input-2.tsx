@@ -2,6 +2,7 @@ import { useColors } from "@/hooks/use-color"
 import { cn } from "@/lib/utils"
 import { BottomSheetTextInput } from "@gorhom/bottom-sheet"
 import type { ComponentType } from "react"
+import { VariableContextProvider } from "nativewind"
 import {
   Platform,
   TextInput,
@@ -14,6 +15,7 @@ type InputProps = TextInputProps &
   React.RefAttributes<TextInput> & {
     className?: string
     expand?: boolean
+    foregroundColor?: string
     inputTextAlign?: "auto" | "center" | "left" | "right"
     placeholderClassName?: string
     unstyled?: boolean
@@ -26,6 +28,7 @@ const NativeBottomSheetTextInput =
 function Input({
   className,
   expand,
+  foregroundColor,
   inputTextAlign,
   placeholderClassName,
   style,
@@ -38,7 +41,7 @@ function Input({
     ? { flexBasis: 0, flexGrow: 1, flexShrink: 1 }
     : { width: "100%" }
   const embeddedInputStyle: TextStyle = {
-    color: colors.foreground,
+    color: foregroundColor ?? colors.foreground,
     fontSize: 16,
     lineHeight: 20,
     minWidth: 0,
@@ -71,7 +74,7 @@ function Input({
                     : colors.border,
                   borderRadius: 12,
                   borderWidth: 1,
-                  color: colors.foreground,
+                  color: foregroundColor ?? colors.foreground,
                   flexDirection: "row",
                   fontSize: 16,
                   height: 48,
@@ -94,6 +97,45 @@ function Input({
   }
 
   if (unstyled) {
+    // NativeWind owns this path unless the caller explicitly supplies native
+    // geometry. Bottom-sheet inputs above remain a style-only native boundary.
+    if (!style) {
+      const field = (
+        <NativeTextInput
+          className={cn(
+            "min-w-0 bg-transparent border-0 px-0 py-0 text-base text-foreground [-rn-line-height:20]",
+            expand ? "basis-0 grow shrink" : "w-full",
+            props.multiline
+              ? "min-h-[72px] [-rn-text-align-vertical:top]"
+              : "h-12",
+            props.editable === false && "opacity-50",
+            inputTextAlign === "center"
+              ? "text-center"
+              : inputTextAlign === "right"
+                ? "text-right"
+                : inputTextAlign === "auto"
+                  ? "[-rn-text-align:auto]"
+                  : "text-left",
+            className,
+            foregroundColor && "text-[color:var(--embedded-input-ink)]",
+          )}
+          placeholderTextColor={
+            props.placeholderTextColor ?? colors.mutedForeground
+          }
+          selectionColor={props.selectionColor ?? colors.primary}
+          {...props}
+        />
+      )
+      return foregroundColor ? (
+        <VariableContextProvider
+          value={{ "--embedded-input-ink": foregroundColor }}
+        >
+          {field}
+        </VariableContextProvider>
+      ) : (
+        field
+      )
+    }
     return (
       <NativeTextInput
         placeholderTextColor={

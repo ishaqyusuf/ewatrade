@@ -135,7 +135,7 @@ export async function claimServiceCommerceCustomerNotificationIntent(
         "The customer service window expired before notification delivery.",
       )
     }
-    const currentCapabilities = []
+    const currentCapabilities: typeof intent.actionCapabilities = []
     for (const capability of intent.actionCapabilities) {
       if (
         await revalidateCustomerActionCapabilityInTransaction(tx, capability)

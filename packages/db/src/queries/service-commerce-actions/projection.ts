@@ -169,38 +169,38 @@ export async function projectCurrentServiceCommerceCustomerActions(
 }> {
   const context = await resolveServiceCommerceSourceContext(db, input)
   const quoteSourceType = quoteSourceTypes[context.source.kind]
-  const [quote, booking, bookingConfig, entryPoint] = await Promise.all([
-    db.commerceQuote.findFirst({
-      include: {
-        currentVersion: {
-          include: {
-            acceptedOrder: true,
-            optionSelection: true,
-            options: { orderBy: { position: "asc" } },
-          },
+  const quote = await db.commerceQuote.findFirst({
+    include: {
+      currentVersion: {
+        include: {
+          acceptedOrder: true,
+          optionSelection: true,
+          options: { orderBy: { position: "asc" } },
         },
       },
-      where: {
-        sourceId: context.source.id,
-        sourceType: quoteSourceType,
-        storeId: input.storeId,
-        tenantId: input.tenantId,
+    },
+    where: {
+      sourceId: context.source.id,
+      sourceType: quoteSourceType,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    },
+  })
+  const booking = await db.serviceBooking.findFirst({
+    orderBy: { updatedAt: "desc" },
+    where: {
+      sourceId: context.source.id,
+      sourceType: quoteSourceType,
+      status: {
+        notIn: ["CANCELLED", "COMPLETED", "NO_SHOW"],
       },
-    }),
-    db.serviceBooking.findFirst({
-      orderBy: { updatedAt: "desc" },
-      where: {
-        sourceId: context.source.id,
-        sourceType: quoteSourceType,
-        status: {
-          notIn: ["CANCELLED", "COMPLETED", "NO_SHOW"],
-        },
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-      },
-    }),
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    },
+  })
+  const bookingConfig =
     context.source.kind === "service"
-      ? db.serviceBookingOfferingConfig.findFirst({
+      ? await db.serviceBookingOfferingConfig.findFirst({
           orderBy: { updatedAt: "desc" },
           where: {
             offering: {
@@ -213,15 +213,14 @@ export async function projectCurrentServiceCommerceCustomerActions(
             tenantId: input.tenantId,
           },
         })
-      : Promise.resolve(null),
-    db.customerEntryPoint.findFirst({
-      where: {
-        status: CustomerEntryPointStatus.PUBLISHED,
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-      },
-    }),
-  ])
+      : null
+  const entryPoint = await db.customerEntryPoint.findFirst({
+    where: {
+      status: CustomerEntryPointStatus.PUBLISHED,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    },
+  })
 
   const version = quote?.currentVersion
   const released =
@@ -266,6 +265,9 @@ export async function projectCurrentServiceCommerceCustomerActions(
       readiness(value.readiness),
     ]),
   )
+  if (bookingConfig && readinessFacts.booking === "setup_required") {
+    readinessFacts.booking = "available"
+  }
   const quoteFacts = version
     ? {
         currencyCode: version.currencyCode,

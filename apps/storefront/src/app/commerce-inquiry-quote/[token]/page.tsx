@@ -52,7 +52,8 @@ export default async function CommerceInquiryQuotePage({
   const quote = await trpc.serviceCommerce.inquiryQuote
     .query({ acceptanceToken: token })
     .catch(() => notFound())
-  const canAccept = quote.customerAction === null
+  const canAccept =
+    quote.customerAction === null || quote.customerAction === "view_quote"
   const canSelect =
     quote.customerAction === null ||
     quote.customerAction === "choose_quote_option"

@@ -1,5 +1,6 @@
 import {
   createMobileOwnerOtp,
+  getMobileAccessProfile,
   verifyMobileGoogleIdentity,
   verifyMobileOwnerOtp,
 } from "@ewatrade/db/queries"
@@ -8,6 +9,7 @@ import {
   createEmailMessage,
   createTestRoutedEmailMessages,
   dispatchEmailMessages,
+  renderMobileOwnerOtpTemplate,
 } from "@ewatrade/email"
 import {
   BUSINESS_OPERATING_MODEL_KEYS,
@@ -20,7 +22,11 @@ import {
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { verifyGoogleIdToken } from "../../auth/mobile-google"
-import { createTRPCRouter, publicProcedure } from "../init"
+import {
+  authenticatedProcedure,
+  createTRPCRouter,
+  publicProcedure,
+} from "../init"
 
 const emailSchema = z.string().trim().toLowerCase().pipe(z.email())
 
@@ -162,10 +168,6 @@ function renderOtpEmail(input: {
   expiresAt: Date
   mode: "login" | "sign_up"
 }) {
-  const action =
-    input.mode === "login"
-      ? "sign in to your Ewatrade account"
-      : "verify your Ewatrade account"
   const expiresAt = input.expiresAt.toLocaleTimeString("en", {
     hour: "2-digit",
     minute: "2-digit",
@@ -173,9 +175,12 @@ function renderOtpEmail(input: {
   })
 
   return {
-    html: `<p>Use this code to ${action}:</p><p style="font-size:28px;font-weight:700;letter-spacing:6px">${input.code}</p><p>This code expires at ${expiresAt}.</p>`,
-    subject: "Your Ewatrade verification code",
-    text: `Use this code to ${action}: ${input.code}\n\nThis code expires at ${expiresAt}.`,
+    ...renderMobileOwnerOtpTemplate({
+      code: input.code,
+      expiresAtLabel: expiresAt,
+      mode: input.mode,
+    }),
+    subject: "Your EwaTrade verification code",
   }
 }
 
@@ -211,6 +216,10 @@ export function shouldDispatchMobileOwnerOtpEmail(
 }
 
 export const authRouter = createTRPCRouter({
+  getMobileAccessProfile: authenticatedProcedure.query(async ({ ctx }) =>
+    getMobileAccessProfile(ctx.db, { userId: ctx.session.user.id }),
+  ),
+
   requestMobileOwnerOtp: publicProcedure
     .input(requestMobileOwnerOtpSchema)
     .mutation(async ({ ctx, input }) => {

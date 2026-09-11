@@ -60,11 +60,11 @@ export function directDatabaseUrlForPrismaCli(databaseUrl) {
 
 export function applyDatabaseProfile(env, productionDatabaseUrl) {
   const profile = databaseProfileForEnv(env)
-  const databaseUrl = env.DATABASE_URL?.trim()
+  const databaseUrl = env.EWATRADE_DATABASE_URL?.trim()
 
   if (!databaseUrl) {
     throw new Error(
-      `Missing DATABASE_URL for ${profile}. Set it in the selected environment file.`,
+      `Missing EWATRADE_DATABASE_URL for ${profile}. Set it in the selected environment file.`,
     )
   }
 
@@ -83,7 +83,7 @@ export function applyDatabaseProfile(env, productionDatabaseUrl) {
 
     if (!productionUrl) {
       throw new Error(
-        `The production DATABASE_URL is required to verify the ${profile} database target.`,
+        `The production EWATRADE_DATABASE_URL is required to verify the ${profile} database target.`,
       )
     }
 
@@ -96,7 +96,8 @@ export function applyDatabaseProfile(env, productionDatabaseUrl) {
     }
   }
 
-  env.DATABASE_URL = databaseUrl
+  env.DATABASE_URL = undefined
+  env.EWATRADE_DATABASE_URL = databaseUrl
   env.DEV_PROFILE = profile === "prod" ? (env.DEV_PROFILE ?? "prod") : profile
 
   return env
@@ -106,14 +107,14 @@ export function loadProductionDatabaseUrl(repoRoot) {
   const productionEnv = readEnvironmentFile(
     path.join(repoRoot, ".env.production"),
   )
-  return productionEnv.DATABASE_URL?.trim()
+  return productionEnv.EWATRADE_DATABASE_URL?.trim()
 }
 
 function assertValidDatabaseUrl(value, profile) {
   try {
     new URL(value)
   } catch {
-    throw new Error(`Invalid DATABASE_URL for ${profile}.`)
+    throw new Error(`Invalid EWATRADE_DATABASE_URL for ${profile}.`)
   }
 }
 
@@ -122,7 +123,7 @@ function assertNeonDevelopmentDatabaseUrl(value) {
 
   if (!hostname.endsWith(".neon.tech")) {
     throw new Error(
-      "local mode requires the Neon development DATABASE_URL from .env.local; Docker and loopback PostgreSQL are not allowed.",
+      "local mode requires the Neon development EWATRADE_DATABASE_URL from .env.local; Docker and loopback PostgreSQL are not allowed.",
     )
   }
 }

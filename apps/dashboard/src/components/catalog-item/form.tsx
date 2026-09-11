@@ -1,5 +1,7 @@
 "use client"
 
+import { createCatalogFixture } from "@/components/qa/fixture-recipes"
+import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import { useTRPC } from "@/trpc/client"
 import { cn } from "@/utils"
@@ -146,6 +148,8 @@ export function CatalogItemForm({
   } = useCatalogItemForm()
   const clientOperationId = useRef(createClientOperationId())
   const [error, setError] = useState<string | null>(null)
+  const quickFillSnapshot = useRef<typeof form | null>(null)
+  const [canUndoQuickFill, setCanUndoQuickFill] = useState(false)
   const [helperPickerOpen, setHelperPickerOpen] = useState(false)
   const [selectedHelperKey, setSelectedHelperKey] = useState<string | null>(
     null,
@@ -814,6 +818,33 @@ export function CatalogItemForm({
       </button>
 
       <div className="grid gap-4">
+        <QaDashboardQuickFill
+          canUndo={canUndoQuickFill}
+          formId="dashboard.catalog.item"
+          isDirty={Boolean(form.name || form.price || form.description)}
+          onFill={(context, sequence) => {
+            quickFillSnapshot.current = form
+            const fixture = createCatalogFixture(context, sequence)
+            setForm((current) => ({
+              ...current,
+              description: fixture.description,
+              kind: current.kind ?? "product",
+              name: fixture.name,
+              openingStockQuantity: current.kind === "service" ? "" : "12",
+              price: fixture.price,
+              unitName: current.kind === "service" ? "" : fixture.unit,
+            }))
+            setShowDescription(true)
+            if (form.kind !== "service") setShowOpeningStock(true)
+            setCanUndoQuickFill(true)
+          }}
+          onUndo={() => {
+            if (!quickFillSnapshot.current) return
+            setForm(quickFillSnapshot.current)
+            quickFillSnapshot.current = null
+            setCanUndoQuickFill(false)
+          }}
+        />
         <Button
           type="button"
           className="w-full justify-center"

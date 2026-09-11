@@ -12,6 +12,10 @@ import { useInfiniteQuery } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
 import { useDeferredValue, useMemo, useState } from "react"
 import { FlatList } from "react-native"
+import {
+  PAYMENTS_RECEIVED_COPY,
+  buildPaymentsReceivedPresentation,
+} from "./payments-received-presentation"
 
 function formatPaymentDate(value: Date | string) {
   return new Intl.DateTimeFormat(undefined, {
@@ -53,6 +57,14 @@ export function PaymentsReceivedScreen() {
     [payments.data?.pages],
   )
   const totalCount = payments.data?.pages[0]?.totalCount ?? 0
+  const currencyTotals = payments.data?.pages[0]?.currencyTotals ?? []
+  const presentation = buildPaymentsReceivedPresentation({
+    currencyTotals,
+    defaultCurrencyCode: payments.data?.pages[0]?.defaultCurrencyCode ?? "NGN",
+    isPending: payments.isPending,
+    query,
+    totalCount,
+  })
 
   return (
     <View className="flex-1">
@@ -63,24 +75,15 @@ export function PaymentsReceivedScreen() {
         keyboardShouldPersistTaps="handled"
         keyExtractor={(item) => item.id}
         ListEmptyComponent={
-          <EmptyState
-            className="flex-1 justify-center"
-            icon="CreditCard"
-            message={
-              payments.isPending
-                ? "Loading received payments."
-                : query
-                  ? "Try an order number, customer, reference, or receiver."
-                  : "Payments recorded against orders will appear here."
-            }
-            title={
-              payments.isPending
-                ? "Loading payments"
-                : query
-                  ? "No matching payments"
-                  : "No payments received"
-            }
-          />
+          payments.isError ? null : (
+            <EmptyState
+              className="min-h-80 flex-1 justify-center border-b border-border px-0"
+              icon="CreditCard"
+              message={presentation.emptyMessage}
+              title={presentation.emptyTitle}
+              variant="flat"
+            />
+          )
         }
         ListFooterComponent={
           payments.isFetchingNextPage ? (
@@ -90,20 +93,55 @@ export function PaymentsReceivedScreen() {
           ) : null
         }
         ListHeaderComponent={
-          <View className="gap-4 pb-3">
+          <View className="gap-5 pb-3">
             <Text className="text-sm leading-5 text-muted-foreground">
-              {totalCount} {totalCount === 1 ? "payment" : "payments"} received
-              across this workspace.
+              {PAYMENTS_RECEIVED_COPY.purpose}
             </Text>
             {payments.isError ? (
               <StatusBanner
                 actionLabel="Try again"
                 icon="AlertCircle"
-                message={payments.error.message}
+                message={PAYMENTS_RECEIVED_COPY.error}
                 onActionPress={() => void payments.refetch()}
+                title="Payments unavailable"
                 tone="destructive"
               />
-            ) : null}
+            ) : payments.isPending ? null : (
+              <View className="gap-2">
+                <Text className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">
+                  Workspace total
+                </Text>
+                <View className="flex-row border-y border-border">
+                  <View className="min-w-0 flex-[1.45] py-4 pr-4">
+                    <Text className="text-xs text-muted-foreground">
+                      Amount received
+                    </Text>
+                    <Text
+                      className="mt-1 text-3xl font-extrabold tracking-tight text-foreground"
+                      numberOfLines={1}
+                    >
+                      {presentation.amountLabel}
+                    </Text>
+                    {presentation.currencyAmountRows.map((amount) => (
+                      <Text
+                        className="mt-1 text-xs text-muted-foreground"
+                        key={amount}
+                      >
+                        {amount}
+                      </Text>
+                    ))}
+                  </View>
+                  <View className="min-w-0 flex-1 border-l border-border py-4 pl-4">
+                    <Text className="text-xs text-muted-foreground">
+                      Payments
+                    </Text>
+                    <Text className="mt-1 text-2xl font-extrabold text-foreground">
+                      {totalCount}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
         }
         onEndReached={() => {
@@ -160,11 +198,26 @@ export function PaymentsReceivedScreen() {
         )}
       />
 
+      {!payments.isPending && !payments.isError && totalCount === 0 ? (
+        <View className="mx-4 mb-6 flex-row gap-3 py-3">
+          <Icon className="size-sm text-primary" name="Info" />
+          <View className="min-w-0 flex-1 gap-1">
+            <Text className="text-sm font-extrabold text-foreground">
+              {PAYMENTS_RECEIVED_COPY.trailTitle}
+            </Text>
+            <Text className="text-xs leading-5 text-muted-foreground">
+              {PAYMENTS_RECEIVED_COPY.trailDetail}
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
       <BottomSearchFooter
         accessibilityLabel="Search received payments"
         alwaysShowSearch
         onChangeText={setQuery}
         placeholder="Search payments..."
+        searchVisible={presentation.showSearch}
         totalCount={totalCount}
         value={query}
       />

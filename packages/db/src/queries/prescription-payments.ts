@@ -88,6 +88,10 @@ export async function preparePrescriptionHostedCheckout(
         "A customer email is required for hosted checkout.",
       )
     }
+    const tenant = await tx.tenant.findUniqueOrThrow({
+      select: { dataClassification: true },
+      where: { id: order.tenantId },
+    })
     await assertServiceCommercePolicyAllowedInTransaction(tx, {
       actorUserId: "public_prescription_checkout",
       channel: "web",
@@ -132,6 +136,7 @@ export async function preparePrescriptionHostedCheckout(
         providerReference: existing.providerReference,
         replay: true,
         statusToken: input.statusToken,
+        tenantDataClassification: tenant.dataClassification,
       }
     }
     const intent = await tx.prescriptionPaymentIntent.create({
@@ -155,6 +160,7 @@ export async function preparePrescriptionHostedCheckout(
       providerReference,
       replay: false,
       statusToken: input.statusToken,
+      tenantDataClassification: tenant.dataClassification,
     }
   })
 }
@@ -182,6 +188,89 @@ export async function attachPrescriptionHostedCheckout(
       },
     },
   })
+}
+
+export async function claimPrescriptionHostedCheckoutInitialization(
+  db: PrismaClient,
+  input: { intentId: string; providerReference: string },
+) {
+  const claimed = await db.prescriptionPaymentIntent.updateMany({
+    data: { status: HostedPaymentStatus.PENDING },
+    where: {
+      checkoutUrl: null,
+      id: input.intentId,
+      providerReference: input.providerReference,
+      status: HostedPaymentStatus.CREATED,
+    },
+  })
+  if (claimed.count === 1) return { kind: "claimed" as const }
+
+  const current = await db.prescriptionPaymentIntent.findFirst({
+    select: { checkoutUrl: true, status: true },
+    where: {
+      id: input.intentId,
+      providerReference: input.providerReference,
+    },
+  })
+  if (current?.checkoutUrl) {
+    return { checkoutUrl: current.checkoutUrl, kind: "ready" as const }
+  }
+  if (current?.status === HostedPaymentStatus.PENDING) {
+    return { kind: "initializing" as const }
+  }
+  throw new PrescriptionPaymentError(
+    "PAYMENT_CONFLICT",
+    "This hosted checkout cannot be initialized in its current state.",
+  )
+}
+
+export async function releasePrescriptionHostedCheckoutInitializationClaim(
+  db: PrismaClient,
+  input: { intentId: string; providerReference: string },
+) {
+  const released = await db.prescriptionPaymentIntent.updateMany({
+    data: { status: HostedPaymentStatus.CREATED },
+    where: {
+      checkoutUrl: null,
+      id: input.intentId,
+      providerReference: input.providerReference,
+      status: HostedPaymentStatus.PENDING,
+    },
+  })
+  return { released: released.count === 1 }
+}
+
+export function createPrescriptionHostedCheckoutRepository(db: PrismaClient) {
+  return {
+    attachCheckout: (
+      input: Parameters<typeof attachPrescriptionHostedCheckout>[1],
+    ) => attachPrescriptionHostedCheckout(db, input),
+    claimCheckout: (
+      input: Parameters<
+        typeof claimPrescriptionHostedCheckoutInitialization
+      >[1],
+    ) => claimPrescriptionHostedCheckoutInitialization(db, input),
+    prepareCheckout: (
+      input: Parameters<typeof preparePrescriptionHostedCheckout>[1],
+    ) => preparePrescriptionHostedCheckout(db, input),
+    recordProviderBlocked: (input: {
+      intentId: string
+      operation: "payment"
+      outcome: string
+    }) =>
+      db.qaAccessAuditEvent.create({
+        data: {
+          eventType: "provider_operation_blocked",
+          metadata: { intentId: input.intentId, operation: input.operation },
+          outcome: input.outcome,
+        },
+      }),
+    releaseCheckoutClaim: (
+      input: Parameters<
+        typeof releasePrescriptionHostedCheckoutInitializationClaim
+      >[1],
+    ) => releasePrescriptionHostedCheckoutInitializationClaim(db, input),
+  }
 }
 
 export async function getPublicPrescriptionPaymentStatus(

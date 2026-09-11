@@ -1,9 +1,9 @@
 "use client"
 
-import { DevFormFillButton } from "@/components/dev/dev-form-fill-button"
-import { useDevFormFill } from "@/hooks/use-dev-form-fill"
+import { QaQuickFillButton } from "@/components/qa/qa-quick-fill-button"
+import { useQaFormFill } from "@/hooks/use-qa-form-fill"
 import { useZodForm } from "@/hooks/use-zod-form"
-import { ownerFill } from "@/lib/dev-fill-definitions"
+import { ownerFill } from "@/lib/qa-fill-definitions"
 import { type OwnerValues, ownerSchema } from "@/lib/signup-schemas"
 import { Button } from "@ewatrade/ui"
 import { ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons"
@@ -91,7 +91,10 @@ export function StepOwner({
     },
   })
 
-  const { fill } = useDevFormFill(ownerFill, form)
+  const { canUndo, fill, isAvailable, qaDomain, undo } = useQaFormFill(
+    ownerFill,
+    form,
+  )
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const password = form.watch("password") ?? ""
@@ -261,7 +264,13 @@ export function StepOwner({
         </div>
       </form>
 
-      <DevFormFillButton onFill={fill} label="Fill step 3" />
+      <QaQuickFillButton
+        canUndo={canUndo}
+        onFill={fill}
+        onUndo={undo}
+        qaDomain={qaDomain}
+        visible={isAvailable}
+      />
     </div>
   )
 }

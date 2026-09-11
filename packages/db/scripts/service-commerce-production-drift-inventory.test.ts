@@ -9,7 +9,7 @@ import {
 const environment = {
   APP_ENV: "production",
   DATABASE_PROFILE_VERIFIED: "1",
-  DATABASE_URL:
+  EWATRADE_DATABASE_URL:
     "postgresql://app-writer:application-password@database.example.com:5432/ewatrade",
   DEV_PROFILE: "prod",
   PRODUCTION_READONLY_DATABASE_URL:
@@ -130,7 +130,7 @@ describe("Service Commerce production drift inventory CLI", () => {
     const serialized = JSON.stringify(result)
     expect(serialized).not.toContain("never-return-this-password")
     expect(serialized).not.toContain("application-password")
-    expect(serialized).not.toContain("DATABASE_URL")
+    expect(serialized).not.toContain("EWATRADE_DATABASE_URL")
   })
 
   test("closes the read-only connection and exposes no raw database error", async () => {

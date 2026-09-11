@@ -46,8 +46,25 @@ export class CustomerMessagingService {
     channel: CustomerMessageChannel
     intentId: string
     message: string
+    tenantDataClassification: "LIVE" | "QA"
     to: string
   }): Promise<CustomerMessageDeliveryResult> {
+    const testAdapter =
+      input.tenantDataClassification === "QA" &&
+      process.env.QA_MESSAGING_TEST_ADAPTER_ENABLED === "true"
+    assertQaProviderAllowed({
+      adapter: testAdapter ? "test" : "live",
+      operation: input.channel,
+      tenantDataClassification: input.tenantDataClassification,
+    })
+    if (testAdapter) {
+      return {
+        providerAttemptId: `qa-test:${input.intentId}`,
+        providerKey: `qa_${input.channel}_test_adapter`,
+        status: "sent",
+      }
+    }
+
     const config = providerConfig(input.channel)
     if (!config.url) {
       throw new Error(
@@ -79,3 +96,4 @@ export class CustomerMessagingService {
     }
   }
 }
+import { assertQaProviderAllowed } from "@ewatrade/utils/qa-provider-policy"

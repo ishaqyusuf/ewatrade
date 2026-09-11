@@ -45,8 +45,10 @@ export async function listInventoryBalanceReport(
     custodyReferenceId: balance.custodyReferenceId || null,
     custodyType: balance.custodyType,
     configurationVersionId: balance.inventoryUnit.configurationVersionId,
+    inventoryUnitFactor: balance.inventoryUnit.factor.toString(),
     inventoryUnitId: balance.inventoryUnitId,
     inventoryUnitName: balance.inventoryUnit.name,
+    inventoryUnitTransactionScale: balance.inventoryUnit.transactionScale,
     kind: balance.kind,
     onHandQuantity: balance.onHandQuantity.toString(),
     productId: balance.productId,
@@ -180,8 +182,7 @@ export async function getStockOperationAudit(
       barcode: null,
       configurationVersionId: movement.configurationVersionId,
       currencyCodeSnapshot: movement.currencyCodeSnapshot,
-      custodyReferenceId:
-        movement.balanceSource.custodyReferenceId || null,
+      custodyReferenceId: movement.balanceSource.custodyReferenceId || null,
       custodyType: movement.balanceSource.custodyType,
       enteredInventoryUnitId: movement.enteredInventoryUnitId,
       enteredInventoryUnitName: movement.enteredInventoryUnit.name,
@@ -254,48 +255,45 @@ export async function getInventoryReconciliationSummary(
   input: { storeId?: string; tenantId: string },
 ) {
   const storeWhere = { storeId: input.storeId, tenantId: input.tenantId }
-  const [
-    reservations,
-    transfers,
-    closeouts,
-    returns,
-    offline,
-    provisional,
-  ] = await Promise.all([
-    db.stockReservation.groupBy({
-      _count: true,
-      by: ["status"],
-      where: storeWhere,
-    }),
-    db.stockTransfer.groupBy({
-      _count: true,
-      by: ["status"],
-      where: {
-        tenantId: input.tenantId,
-        OR: input.storeId
-          ? [{ sourceStoreId: input.storeId }, { targetStoreId: input.storeId }]
-          : undefined,
-      },
-    }),
-    db.inventoryCloseout.groupBy({
-      _count: true,
-      by: ["status"],
-      where: storeWhere,
-    }),
-    db.productReturn.groupBy({
-      _count: true,
-      by: ["disposition"],
-      where: storeWhere,
-    }),
-    db.offlineCommand.groupBy({
-      _count: true,
-      by: ["status"],
-      where: storeWhere,
-    }),
-    db.offlineCommand.count({
-      where: { ...storeWhere, status: OfflineCommandStatus.PENDING },
-    }),
-  ])
+  const [reservations, transfers, closeouts, returns, offline, provisional] =
+    await Promise.all([
+      db.stockReservation.groupBy({
+        _count: true,
+        by: ["status"],
+        where: storeWhere,
+      }),
+      db.stockTransfer.groupBy({
+        _count: true,
+        by: ["status"],
+        where: {
+          tenantId: input.tenantId,
+          OR: input.storeId
+            ? [
+                { sourceStoreId: input.storeId },
+                { targetStoreId: input.storeId },
+              ]
+            : undefined,
+        },
+      }),
+      db.inventoryCloseout.groupBy({
+        _count: true,
+        by: ["status"],
+        where: storeWhere,
+      }),
+      db.productReturn.groupBy({
+        _count: true,
+        by: ["disposition"],
+        where: storeWhere,
+      }),
+      db.offlineCommand.groupBy({
+        _count: true,
+        by: ["status"],
+        where: storeWhere,
+      }),
+      db.offlineCommand.count({
+        where: { ...storeWhere, status: OfflineCommandStatus.PENDING },
+      }),
+    ])
   return {
     closeouts,
     offline,
@@ -342,8 +340,7 @@ export async function exportInventoryAuditRows(
     signedCanonicalEffect: movement.signedCanonicalEffect.toString(),
     source: movement.operation.source,
     storeName: movement.balanceSource.store.name,
-    totalCostMinorSnapshot:
-      movement.totalCostMinorSnapshot?.toString() ?? null,
+    totalCostMinorSnapshot: movement.totalCostMinorSnapshot?.toString() ?? null,
     unitCostMinorSnapshot: movement.unitCostMinorSnapshot,
     unitFactorSnapshot: movement.unitFactorSnapshot.toString(),
     variantName: movement.balanceSource.variant.name,

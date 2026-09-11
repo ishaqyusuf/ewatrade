@@ -28,6 +28,16 @@ const customerSelect = {
   updatedAt: true,
 } satisfies Prisma.CustomerSelect
 
+export async function getCustomerById(
+  db: PrismaClient,
+  input: { customerId: string; tenantId: string },
+) {
+  return db.customer.findFirst({
+    where: { id: input.customerId, tenantId: input.tenantId },
+    select: customerSelect,
+  })
+}
+
 export async function createCustomer(
   db: PrismaClient,
   input: {

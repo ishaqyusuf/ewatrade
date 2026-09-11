@@ -1,5 +1,5 @@
-import { AdminOrdersScreen } from "@/components/mobile/admin-tabs/admin-orders-screen"
+import { OrdersScreen } from "@/components/mobile/orders/orders-screen"
 
 export default function AdminOrdersRoute() {
-  return <AdminOrdersScreen />
+  return <OrdersScreen />
 }

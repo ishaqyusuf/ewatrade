@@ -1,7 +1,8 @@
 import {
+  CatalogSetupWorkflowChrome,
   SimpleCatalogItemScreen,
-  WorkflowModalScreen,
-} from "@/components/mobile"
+} from "@/components/mobile/catalog-setup/catalog-setup-screen"
+import { WorkflowModalScreen } from "@/components/mobile/workflow-modal-screen"
 import { showOperationSuccess } from "@/lib/operation-success-navigation"
 import { useLocalSearchParams, useNavigation } from "expo-router"
 
@@ -15,6 +16,7 @@ export default function FirstProductSetupModalRoute() {
 
   return (
     <WorkflowModalScreen
+      chrome={CatalogSetupWorkflowChrome}
       closeLabel="Close item setup"
       title={
         initialKind === "product"

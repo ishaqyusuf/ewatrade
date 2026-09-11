@@ -1,5 +1,6 @@
 import {
   projectStoreConversationCursor,
+  projectStoreConversationModeration,
   projectStoreConversationSla,
   storeConversationQueueInputSchema,
   storeConversationReplyInputSchema,
@@ -17,9 +18,18 @@ import {
   StoreConversationMessageChannel,
   StoreConversationMessageKind,
   StoreConversationModerationState,
+  StoreConversationNotificationIntentStatus,
   StoreConversationRequestKind,
 } from "../../generated/prisma/enums"
 import { resolveServiceCommerceSourceContext } from "./service-commerce-sources"
+import {
+  projectStoreConversationActionMessageRow,
+  storeConversationActionMessageInclude,
+} from "./store-conversation-actions"
+import { projectStoreConversationMessageAttachments } from "./store-conversation-attachments"
+import { scheduleUnreadStoreConversationNotificationInTransaction } from "./store-conversation-notifications/intents"
+import { runStoreConversationSensitiveRead } from "./store-conversation-sensitive-reads"
+import { prepareStoreConversationWhatsAppOutboundAttemptInTransaction } from "./store-conversation-whatsapp-outbound-repository"
 import {
   StoreConversationError,
   assertStoreConversationAttendant,
@@ -127,9 +137,64 @@ export async function replyToStoreConversation(
           "This reply command was already used with different input.",
         )
       }
+      const notificationIntent =
+        await tx.storeConversationNotificationIntent.findFirst({
+          orderBy: [{ nextAttemptAt: "desc" }, { id: "desc" }],
+          select: {
+            id: true,
+            nextAttemptAt: true,
+            scheduledFor: true,
+            storeId: true,
+            tenantId: true,
+          },
+          where: {
+            status: {
+              in: [
+                StoreConversationNotificationIntentStatus.PENDING,
+                StoreConversationNotificationIntentStatus.FAILED,
+              ],
+            },
+            storeId: input.storeId,
+            targetMessageId: receipt.message.id,
+            tenantId: input.tenantId,
+          },
+        })
+      const whatsAppAttempt =
+        await tx.storeConversationWhatsAppOutboundAttempt.findUnique({
+          select: {
+            id: true,
+            nextAttemptAt: true,
+            status: true,
+            storeId: true,
+            tenantId: true,
+          },
+          where: { messageId: receipt.message.id },
+        })
       return {
         message: projectStoreConversationMessage(receipt.message),
+        notificationDispatch: notificationIntent
+          ? {
+              intentId: notificationIntent.id,
+              runAt:
+                notificationIntent.nextAttemptAt ??
+                notificationIntent.scheduledFor,
+              storeId: notificationIntent.storeId,
+              tenantId: notificationIntent.tenantId,
+            }
+          : null,
         replayed: true,
+        whatsAppDispatch:
+          whatsAppAttempt &&
+          (whatsAppAttempt.status === "PENDING" ||
+            (whatsAppAttempt.status === "FAILED" &&
+              (!whatsAppAttempt.nextAttemptAt ||
+                whatsAppAttempt.nextAttemptAt <= now)))
+            ? {
+                attemptId: whatsAppAttempt.id,
+                storeId: whatsAppAttempt.storeId,
+                tenantId: whatsAppAttempt.tenantId,
+              }
+            : null,
       }
     }
     if (
@@ -259,6 +324,13 @@ export async function replyToStoreConversation(
         tenantId: input.tenantId,
       },
     })
+    const whatsAppDispatch =
+      await prepareStoreConversationWhatsAppOutboundAttemptInTransaction(tx, {
+        conversationId: conversation.id,
+        messageId: message.id,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      })
     const [updated] = await Promise.all([
       tx.storeConversation.updateMany({
         data: {
@@ -311,6 +383,15 @@ export async function replyToStoreConversation(
         "This conversation changed. Refresh before replying.",
       )
     }
+    const notificationIntent =
+      await scheduleUnreadStoreConversationNotificationInTransaction(tx, {
+        conversationId: conversation.id,
+        messageId: message.id,
+        messageSequence: sequence,
+        now,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      })
     const currentEscalations = await loadCurrentStoreConversationEscalations(
       tx,
       {
@@ -359,7 +440,18 @@ export async function replyToStoreConversation(
           { kind: currentSource.kind, sourceId: currentSource.sourceId },
         ],
       }),
+      notificationDispatch: notificationIntent
+        ? {
+            intentId: notificationIntent.id,
+            runAt:
+              notificationIntent.nextAttemptAt ??
+              notificationIntent.scheduledFor,
+            storeId: notificationIntent.storeId,
+            tenantId: notificationIntent.tenantId,
+          }
+        : null,
       replayed: false,
+      whatsAppDispatch,
     }
   })
 }
@@ -466,13 +558,39 @@ export async function listStoreConversationQueue(
   } as const
   const hasMore = conversations.length > parsed.pageSize
   const rows = conversations.slice(0, parsed.pageSize)
+  const staffWatermarks = await db.storeConversationStaffWatermark.findMany({
+    select: { conversationId: true, readThroughSequence: true },
+    where: {
+      conversationId: { in: rows.map((conversation) => conversation.id) },
+      membershipId: membership.id,
+    },
+  })
+  const readThroughByConversation = new Map(
+    staffWatermarks.map((watermark) => [
+      watermark.conversationId,
+      watermark.readThroughSequence,
+    ]),
+  )
   const items = await Promise.all(
     rows.map(async (conversation) => {
-      const requests = await loadStoreConversationRequestSummaries(db, {
-        conversationId: conversation.id,
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-      })
+      const [requests, unreadCustomerMessages] = await Promise.all([
+        loadStoreConversationRequestSummaries(db, {
+          conversationId: conversation.id,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        }),
+        db.storeConversationMessage.count({
+          where: {
+            authorKind: StoreConversationMessageAuthorKind.CUSTOMER,
+            conversationId: conversation.id,
+            sequence: {
+              gt: readThroughByConversation.get(conversation.id) ?? 0,
+            },
+            storeId: input.storeId,
+            tenantId: input.tenantId,
+          },
+        }),
+      ])
       return {
         assignment: {
           label: conversation.assignedMembership
@@ -486,7 +604,8 @@ export async function listStoreConversationQueue(
         lastCustomerActivityAt:
           conversation.lastCustomerMessageAt ?? conversation.lastActivityAt,
         lastMessageSequence: conversation.lastMessageSequence,
-        requests: requests.map(({ kind, label, lifecycle, status }) => ({
+        requests: requests.map(({ id, kind, label, lifecycle, status }) => ({
+          id,
           kind,
           label,
           lifecycle,
@@ -505,11 +624,7 @@ export async function listStoreConversationQueue(
         state: conversation.assignedMembershipId
           ? ("assigned" as const)
           : ("new" as const),
-        unreadCustomerMessages:
-          conversation.lastCustomerMessageSequence >
-          conversation.lastStoreReplySequence
-            ? 1
-            : 0,
+        unreadCustomerMessages,
       }
     }),
   )
@@ -535,119 +650,173 @@ export async function getStoreConversationStaffTimeline(
     conversationId: input.conversationId,
     limit: input.limit,
   })
-  const membership = await assertStoreConversationAttendant(db, input)
-  const conversation = await db.storeConversation.findFirst({
-    include: {
-      assignedMembership: {
-        select: {
-          id: true,
-          user: { select: { displayName: true, name: true } },
+  return runStoreConversationSensitiveRead(
+    db,
+    {
+      actorUserId: input.actorUserId,
+      conversationId: parsed.conversationId,
+      kind: "timeline",
+      purpose: "conversation_support",
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    },
+    async ({ membership }, tx) => {
+      const conversation = await tx.storeConversation.findFirst({
+        include: {
+          assignedMembership: {
+            select: {
+              id: true,
+              user: { select: { displayName: true, name: true } },
+            },
+          },
+          store: { select: { name: true } },
         },
-      },
-      store: { select: { name: true } },
+        where: {
+          id: parsed.conversationId,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        },
+      })
+      if (!conversation) {
+        throw new StoreConversationError("NOT_FOUND", "Conversation not found.")
+      }
+      const [rows, requests, escalations] = await Promise.all([
+        tx.storeConversationMessage.findMany({
+          include: {
+            accountInvitation: { select: { id: true, status: true } },
+            actionMessage: {
+              include: storeConversationActionMessageInclude,
+            },
+            attachments: {
+              include: {
+                prescriptionMedia: {
+                  select: { mediaType: true, status: true },
+                },
+                sourceAttachment: {
+                  include: {
+                    mediaAsset: {
+                      select: {
+                        kind: true,
+                        lifecycle: true,
+                        verifiedDurationMs: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            requestLinks: { select: { kind: true, sourceId: true } },
+            whatsAppObservation: {
+              select: {
+                provenance: true,
+                status: true,
+                statusOccurredAt: true,
+              },
+            },
+          },
+          orderBy: { sequence: "desc" },
+          take: parsed.limit + 1,
+          where: {
+            conversationId: conversation.id,
+            storeId: input.storeId,
+            tenantId: input.tenantId,
+            ...(parsed.beforeSequence
+              ? { sequence: { lt: parsed.beforeSequence } }
+              : {}),
+          },
+        }),
+        loadStoreConversationRequestSummaries(tx, {
+          conversationId: conversation.id,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        }),
+        loadCurrentStoreConversationEscalations(tx, {
+          conversationId: conversation.id,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        }),
+      ])
+      const hasMore = rows.length > parsed.limit
+      const selected = rows.slice(0, parsed.limit)
+      const nextCursor = projectStoreConversationCursor({
+        hasMore,
+        messages: selected,
+      })
+      await tx.storeConversationAuditEvent.create({
+        data: {
+          actorKind: StoreConversationMessageAuthorKind.STORE_ATTENDANT,
+          actorMembershipId: membership.id,
+          conversationId: conversation.id,
+          conversationSequence: conversation.lastMessageSequence,
+          reasonCode: "staff_timeline_read",
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+          type: StoreConversationAuditEventType.STAFF_TIMELINE_READ,
+        },
+      })
+      return {
+        assignment: {
+          assignedToCurrentUser:
+            conversation.assignedMembershipId === membership.id,
+          label: conversation.assignedMembership
+            ? conversation.assignedMembership.user.displayName ||
+              conversation.assignedMembership.user.name ||
+              "Team member"
+            : null,
+          membershipId: conversation.assignedMembershipId,
+          revision: conversation.assignmentRevision,
+        },
+        availableRequestKinds: [],
+        conversation: {
+          id: conversation.id,
+          lastMessageSequence: conversation.lastMessageSequence,
+          moderation: projectStoreConversationModeration(conversation),
+          state:
+            conversation.moderationState ===
+            StoreConversationModerationState.RESTRICTED
+              ? "restricted"
+              : conversation.lifecycle === StoreConversationLifecycle.ARCHIVED
+                ? "archived"
+                : "active",
+          storeName: conversation.store.name,
+        },
+        messages: selected.reverse().map((message) =>
+          projectStoreConversationMessage({
+            ...message,
+            actionMessage: message.actionMessage
+              ? projectStoreConversationActionMessageRow(message.actionMessage)
+              : undefined,
+            attachments: projectStoreConversationMessageAttachments(message),
+          }),
+        ),
+        nextCursor,
+        permissions: {
+          canClaim: conversation.assignedMembershipId === null,
+          canModerate: ["OWNER", "ADMIN", "MANAGER"].includes(membership.role),
+          canReassign:
+            conversation.assignedMembershipId !== null &&
+            ["OWNER", "ADMIN"].includes(membership.role),
+          canReply:
+            conversation.moderationState ===
+              StoreConversationModerationState.OPEN &&
+            conversation.assignedMembershipId === membership.id,
+          canRelease: conversation.assignedMembershipId === membership.id,
+        },
+        requests,
+        sla: projectStoreConversationSla({
+          lastCustomerMessageAt: conversation.lastCustomerMessageAt,
+          lastStoreReplyAt: conversation.lastStoreReplyAt,
+          now: new Date(),
+        }),
+        escalations: escalations.map((event) => ({
+          id: event.id,
+          kind: event.kind.toLowerCase(),
+          occurredAt: event.occurredAt,
+          reasonCode: event.reasonCode,
+          state:
+            event.type === "OPENED" ? ("open" as const) : ("resolved" as const),
+        })),
+      }
     },
-    where: {
-      id: parsed.conversationId,
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-    },
-  })
-  if (!conversation) {
-    throw new StoreConversationError("NOT_FOUND", "Conversation not found.")
-  }
-  const [rows, requests, escalations] = await Promise.all([
-    db.storeConversationMessage.findMany({
-      include: {
-        requestLinks: { select: { kind: true, sourceId: true } },
-      },
-      orderBy: { sequence: "desc" },
-      take: parsed.limit + 1,
-      where: {
-        conversationId: conversation.id,
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-        ...(parsed.beforeSequence
-          ? { sequence: { lt: parsed.beforeSequence } }
-          : {}),
-      },
-    }),
-    loadStoreConversationRequestSummaries(db, {
-      conversationId: conversation.id,
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-    }),
-    loadCurrentStoreConversationEscalations(db, {
-      conversationId: conversation.id,
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-    }),
-  ])
-  const hasMore = rows.length > parsed.limit
-  const selected = rows.slice(0, parsed.limit)
-  const nextCursor = projectStoreConversationCursor({
-    hasMore,
-    messages: selected,
-  })
-  await db.storeConversationAuditEvent.create({
-    data: {
-      actorKind: StoreConversationMessageAuthorKind.STORE_ATTENDANT,
-      actorMembershipId: membership.id,
-      conversationId: conversation.id,
-      conversationSequence: conversation.lastMessageSequence,
-      reasonCode: "staff_timeline_read",
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-      type: StoreConversationAuditEventType.STAFF_TIMELINE_READ,
-    },
-  })
-  return {
-    assignment: {
-      assignedToCurrentUser:
-        conversation.assignedMembershipId === membership.id,
-      label: conversation.assignedMembership
-        ? conversation.assignedMembership.user.displayName ||
-          conversation.assignedMembership.user.name ||
-          "Team member"
-        : null,
-      membershipId: conversation.assignedMembershipId,
-      revision: conversation.assignmentRevision,
-    },
-    availableRequestKinds: [],
-    conversation: {
-      id: conversation.id,
-      lastMessageSequence: conversation.lastMessageSequence,
-      state:
-        conversation.moderationState ===
-        StoreConversationModerationState.RESTRICTED
-          ? "restricted"
-          : conversation.lifecycle === StoreConversationLifecycle.ARCHIVED
-            ? "archived"
-            : "active",
-      storeName: conversation.store.name,
-    },
-    messages: selected.reverse().map(projectStoreConversationMessage),
-    nextCursor,
-    permissions: {
-      canClaim: conversation.assignedMembershipId === null,
-      canReassign:
-        conversation.assignedMembershipId !== null &&
-        ["OWNER", "ADMIN"].includes(membership.role),
-      canReply: conversation.assignedMembershipId === membership.id,
-      canRelease: conversation.assignedMembershipId === membership.id,
-    },
-    requests,
-    sla: projectStoreConversationSla({
-      lastCustomerMessageAt: conversation.lastCustomerMessageAt,
-      lastStoreReplyAt: conversation.lastStoreReplyAt,
-      now: new Date(),
-    }),
-    escalations: escalations.map((event) => ({
-      id: event.id,
-      kind: event.kind.toLowerCase(),
-      occurredAt: event.occurredAt,
-      reasonCode: event.reasonCode,
-      state:
-        event.type === "OPENED" ? ("open" as const) : ("resolved" as const),
-    })),
-  }
+  )
 }

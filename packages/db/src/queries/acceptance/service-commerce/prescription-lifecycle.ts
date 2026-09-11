@@ -80,7 +80,18 @@ export async function prepareReleasedPrescriptionQuote(
   fixture: ServiceCommerceAcceptanceFixture,
   origin: IntakeOrigin,
   fulfillmentPreference: "delivery" | "pickup",
-  options?: { isAlternative?: boolean },
+  options?: {
+    beforePharmacistRelease?: (input: {
+      currentMediaRevision: number
+      requestId: string
+      transcriptionLineId: string
+    }) => Promise<void>
+    beforeIssueQuote?: (input: {
+      currentMediaRevision: number
+      requestId: string
+    }) => Promise<void>
+    isAlternative?: boolean
+  },
 ) {
   const runId = randomUUID()
   const intake = await submitPrescription(
@@ -172,6 +183,11 @@ export async function prepareReleasedPrescriptionQuote(
     storeId: fixture.storeId,
     tenantId: fixture.tenantId,
   })
+  await options?.beforePharmacistRelease?.({
+    currentMediaRevision: request.currentMediaRevision,
+    requestId: request.id,
+    transcriptionLineId: line.id,
+  })
   await recordPrescriptionPharmacistReview(fixture.db, {
     actorUserId: fixture.actorUserId,
     decision: "released",
@@ -198,6 +214,10 @@ export async function prepareReleasedPrescriptionQuote(
       tenantId: fixture.tenantId,
     },
   )
+  await options?.beforeIssueQuote?.({
+    currentMediaRevision: request.currentMediaRevision,
+    requestId: request.id,
+  })
   const quote = await issuePrescriptionQuote(fixture.db, {
     actorUserId: fixture.actorUserId,
     availabilityOutcome: "full",

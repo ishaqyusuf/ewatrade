@@ -2,7 +2,7 @@ import {
   useAdminDockScroll,
   useAdminTabs,
 } from "@/components/mobile/admin-tabs"
-import { CatalogItemsContent } from "@/components/mobile/catalog-items-sheet"
+import { CatalogItemsContent } from "@/components/mobile/catalog/catalog-screen"
 import { View } from "@/components/ui/view"
 import { useRouter } from "expo-router"
 
@@ -16,6 +16,12 @@ export default function AdminCatalogRoute() {
       <CatalogItemsContent
         dockHidden={isDockHidden}
         onAddItem={() => router.push("/first-product-setup-modal")}
+        onAddProduct={() =>
+          router.push("/first-product-setup-modal?kind=product")
+        }
+        onAddService={() =>
+          router.push("/first-product-setup-modal?kind=service")
+        }
         onScroll={handleDockScroll}
         presentation="tab"
       />

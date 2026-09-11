@@ -14,6 +14,7 @@ import {
   claimPrescriptionCommunicationIntent,
   completePrescriptionCommunicationAttempt,
 } from "@ewatrade/db/queries"
+import { assertQaJobProviderAllowed } from "../qa-provider-guard"
 
 export type PrescriptionCommunicationDispatchPayload = { intentId: string }
 
@@ -22,6 +23,7 @@ type Claim = NonNullable<
 >
 
 type Dependencies = {
+  assertProviderAllowed(input: { tenantId: string }): Promise<unknown>
   authorize(input: {
     attemptId: string
     intentId: string
@@ -59,6 +61,8 @@ const neutralCopy: Record<string, string> = {
 
 function defaultDependencies(): Dependencies {
   return {
+    assertProviderAllowed: ({ tenantId }) =>
+      assertQaJobProviderAllowed({ operation: "whatsapp", tenantId }),
     authorize: (input) =>
       authorizePrescriptionCommunicationAttempt(prisma, input),
     claim: (input) => claimPrescriptionCommunicationIntent(prisma, input),
@@ -97,6 +101,7 @@ export async function runPrescriptionCommunicationDispatch(
     })
     return null
   }
+  await dependencies.assertProviderAllowed({ tenantId: claim.tenantId })
   const intentPayload = record(claim.payload)
   const state = await dependencies.state.get({
     connectionId: claim.connectionId,

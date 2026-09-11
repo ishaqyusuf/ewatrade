@@ -267,10 +267,21 @@ export async function claimServiceCommerceBookingNotificationIntent(
           "Booking notification was claimed concurrently.",
         )
       }
+      const tenant = await tx.tenant.findUnique({
+        select: { dataClassification: true },
+        where: { id: input.tenantId },
+      })
+      if (!tenant) {
+        throw new ServiceCommerceBookingError(
+          "BOOKING_NOT_FOUND",
+          "Booking notification is unavailable.",
+        )
+      }
       return {
         channel: intent.channel.toLowerCase(),
         intentId: intent.id,
         recipientCiphertext: intent.recipientCiphertext,
+        tenantDataClassification: tenant.dataClassification,
         type: intent.type.toLowerCase(),
       }
     }, BOOKING_TRANSACTION_OPTIONS)

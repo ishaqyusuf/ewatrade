@@ -1,4 +1,5 @@
 import type {
+  ServiceCommerceAction,
   ServiceCommerceChannelOrigin,
   ServiceCommerceCustomerActionExecutionResult,
   ServiceCommerceCustomerActionPreview,
@@ -39,6 +40,7 @@ import {
 } from "./shared"
 
 const MAX_ACTION_CAPABILITY_LIFETIME_MS = 7 * 86_400_000
+const MAX_ACTION_CAPABILITY_GENERATIONS = 20
 
 export type IssueServiceCommerceCustomerActionToken = (input: {
   clientCapabilityId: string
@@ -88,6 +90,7 @@ async function issueCapabilitiesInTransaction(
   tx: CustomerActionTransaction,
   input: {
     actorUserId: string
+    allowedActions?: readonly ServiceCommerceAction[]
     channel: ServiceCommerceChannelOrigin
     clientBatchId: string
     expiresAt: Date
@@ -103,7 +106,12 @@ async function issueCapabilitiesInTransaction(
     tx,
     input,
   )
-  if (projected.actions.length === 0) {
+  const actions = input.allowedActions
+    ? projected.actions.filter((action) =>
+        input.allowedActions?.includes(action.action),
+      )
+    : projected.actions
+  if (actions.length === 0) {
     throw new ServiceCommerceCustomerActionError(
       "ACTION_BLOCKED",
       "No current customer action is available for this request.",
@@ -177,13 +185,16 @@ async function issueCapabilitiesInTransaction(
   }
 
   const results: ServiceCommerceCustomerActionProjection[] = []
-  for (const candidate of projected.actions) {
-    const clientCapabilityId = `${input.clientBatchId}:${candidate.action}:${candidate.targetKey ?? candidate.targetOptionId ?? candidate.targetId}`
-    const capabilityToken = input.issueCapabilityToken({
-      clientCapabilityId,
-      storeId: input.storeId,
-      tenantId: input.tenantId,
+  for (const candidate of actions) {
+    const capabilityIdentity = customerActionPayloadHash({
+      action: candidate.action,
+      sourceVersion: projected.sourceVersion,
+      targetId: candidate.targetId,
+      targetOptionId: candidate.targetOptionId ?? null,
+      targetType: candidate.targetType,
+      targetVersion: candidate.targetVersion,
     })
+    const baseClientCapabilityId = `${input.clientBatchId}:${candidate.action}:${capabilityIdentity}`
     const payloadHash = customerActionPayloadHash({
       action: candidate,
       channel: input.channel,
@@ -191,10 +202,27 @@ async function issueCapabilitiesInTransaction(
       source: input.source,
       sourceVersion: projected.sourceVersion,
     })
-    const replay = await tx.serviceCommerceCustomerActionCapability.findFirst({
-      where: { clientCapabilityId, tenantId: input.tenantId },
-    })
-    if (replay) {
+    let capabilityToken = ""
+    let clientCapabilityId = ""
+    let replay: ServiceCommerceCustomerActionCapabilityRecord = null
+    for (
+      let generation = 0;
+      generation < MAX_ACTION_CAPABILITY_GENERATIONS;
+      generation += 1
+    ) {
+      clientCapabilityId =
+        generation === 0
+          ? baseClientCapabilityId
+          : `${baseClientCapabilityId}:renewal:${generation}`
+      capabilityToken = input.issueCapabilityToken({
+        clientCapabilityId,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      })
+      replay = await tx.serviceCommerceCustomerActionCapability.findFirst({
+        where: { clientCapabilityId, tenantId: input.tenantId },
+      })
+      if (!replay) break
       if (
         replay.payloadHash !== payloadHash ||
         replay.tokenDigest !== customerActionTokenDigest(capabilityToken) ||
@@ -205,7 +233,22 @@ async function issueCapabilitiesInTransaction(
           "Customer action identity was reused with different input.",
         )
       }
-    } else {
+      if (
+        replay.status === ServiceCommerceCustomerActionCapabilityStatus.ACTIVE
+      ) {
+        break
+      }
+    }
+    if (
+      replay &&
+      replay.status !== ServiceCommerceCustomerActionCapabilityStatus.ACTIVE
+    ) {
+      throw new ServiceCommerceCustomerActionError(
+        "ACTION_BLOCKED",
+        "A fresh customer action could not be issued safely.",
+      )
+    }
+    if (!replay) {
       await tx.serviceCommerceCustomerActionCapability.create({
         data: {
           action: customerActionTypes[candidate.action],
@@ -252,10 +295,21 @@ async function issueCapabilitiesInTransaction(
   }
 }
 
+export async function issueServiceCommerceCustomerActionsInTransaction(
+  tx: CustomerActionTransaction,
+  input: Parameters<typeof issueCapabilitiesInTransaction>[1] & {
+    now?: Date
+  },
+) {
+  assertExpiry(input.now ?? new Date(), input.expiresAt)
+  return issueCapabilitiesInTransaction(tx, input)
+}
+
 export async function issueServiceCommerceCustomerActions(
   db: PrismaClient,
   input: {
     actorUserId: string
+    allowedActions?: readonly ServiceCommerceAction[]
     channel: ServiceCommerceChannelOrigin
     clientBatchId: string
     expiresAt: Date
@@ -268,9 +322,8 @@ export async function issueServiceCommerceCustomerActions(
     tenantId: string
   },
 ) {
-  assertExpiry(input.now ?? new Date(), input.expiresAt)
   const issue = (tx: CustomerActionTransaction) =>
-    issueCapabilitiesInTransaction(tx, input)
+    issueServiceCommerceCustomerActionsInTransaction(tx, input)
   try {
     return await db.$transaction(issue, CUSTOMER_ACTION_TRANSACTION_OPTIONS)
   } catch (error) {
@@ -325,8 +378,8 @@ export async function getPublicServiceCommerceCustomerAction(
       if (
         !capability ||
         capability.expiresAt <= now ||
-        capability.status ===
-          ServiceCommerceCustomerActionCapabilityStatus.REVOKED ||
+        capability.status !==
+          ServiceCommerceCustomerActionCapabilityStatus.ACTIVE ||
         !current
       ) {
         return serviceCommerceCustomerActionPreviewSchema.parse({
@@ -355,8 +408,8 @@ export async function getPublicServiceCommerceCustomerAction(
   }
 }
 
-export async function executeServiceCommerceCustomerAction(
-  db: PrismaClient,
+export async function executeServiceCommerceCustomerActionInTransaction(
+  tx: CustomerActionTransaction,
   input: {
     capabilityToken: string
     clientOperationId: string
@@ -369,135 +422,142 @@ export async function executeServiceCommerceCustomerAction(
     confirmed: input.confirmed,
     operation: input.clientOperationId,
   })
-  const execute = async (tx: CustomerActionTransaction) => {
-    const capability =
-      await tx.serviceCommerceCustomerActionCapability.findFirst({
-        where: {
-          tokenDigest: customerActionTokenDigest(input.capabilityToken),
-        },
-      })
-    if (!capability) {
-      throw new ServiceCommerceCustomerActionError(
-        "ACTION_NOT_FOUND",
-        "Customer action is unavailable.",
-      )
-    }
-    await tx.$queryRaw(Prisma.sql`
+  const capability = await tx.serviceCommerceCustomerActionCapability.findFirst(
+    {
+      where: {
+        tokenDigest: customerActionTokenDigest(input.capabilityToken),
+      },
+    },
+  )
+  if (!capability) {
+    throw new ServiceCommerceCustomerActionError(
+      "ACTION_NOT_FOUND",
+      "Customer action is unavailable.",
+    )
+  }
+  await tx.$queryRaw(Prisma.sql`
       SELECT "id"
       FROM "ServiceCommerceCustomerActionCapability"
       WHERE "id" = ${capability.id}
       FOR UPDATE
-    `)
-    const replay = await tx.serviceCommerceCustomerActionExecution.findFirst({
-      where: {
-        capabilityId: capability.id,
-        clientOperationId: input.clientOperationId,
-      },
-    })
-    if (replay) {
-      if (replay.payloadHash !== payloadHash) {
-        throw new ServiceCommerceCustomerActionError(
-          "ACTION_IDEMPOTENCY_MISMATCH",
-          "Customer action command identity was reused with different input.",
-        )
-      }
-      return serviceCommerceCustomerActionExecutionResultSchema.parse({
-        kind: replay.resultKind,
-        replayed: true,
-        sourceKind: customerActionSourceValues[capability.sourceKind],
-      })
-    }
-    if (
-      capability.status ===
-        ServiceCommerceCustomerActionCapabilityStatus.REVOKED ||
-      capability.expiresAt <= now
-    ) {
+  `)
+  const replay = await tx.serviceCommerceCustomerActionExecution.findFirst({
+    where: {
+      capabilityId: capability.id,
+      clientOperationId: input.clientOperationId,
+    },
+  })
+  if (replay) {
+    if (replay.payloadHash !== payloadHash) {
       throw new ServiceCommerceCustomerActionError(
-        "ACTION_EXPIRED",
-        "Customer action expired. Request a fresh link from the business.",
+        "ACTION_IDEMPOTENCY_MISMATCH",
+        "Customer action command identity was reused with different input.",
       )
     }
-    if (
-      capability.status ===
-      ServiceCommerceCustomerActionCapabilityStatus.CONSUMED
-    ) {
-      throw new ServiceCommerceCustomerActionError(
-        "ACTION_CONFLICT",
-        "Customer action was already used. Request a fresh link from the business.",
-      )
-    }
-    const current = await revalidateCustomerActionCapabilityInTransaction(
-      tx,
-      capability,
-    )
-    if (!current) {
-      throw new ServiceCommerceCustomerActionError(
-        "ACTION_CONFLICT",
-        "Customer action is stale. Request a fresh link from the business.",
-      )
-    }
-    if (capability.confirmationRequired && !input.confirmed) {
-      throw new ServiceCommerceCustomerActionError(
-        "ACTION_BLOCKED",
-        "This customer action requires explicit confirmation.",
-      )
-    }
-
-    const action = customerActionValues[capability.action]
-    if (action === "choose_quote_option") {
-      if (
-        capability.targetType !==
-          ServiceCommerceCustomerActionTargetType.QUOTE_OPTION ||
-        !capability.targetOptionId
-      ) {
-        throw new ServiceCommerceCustomerActionError(
-          "ACTION_CONFLICT",
-          "Quote option action is invalid.",
-        )
-      }
-      await selectCommerceQuoteOptionInTransaction(tx, {
-        acceptanceToken: input.capabilityToken,
-        clientSelectionId: input.clientOperationId,
-        optionId: capability.targetOptionId,
-      })
-    }
-
-    const kind = executionKind(action)
-    await tx.serviceCommerceCustomerActionExecution.create({
-      data: {
-        capabilityId: capability.id,
-        clientOperationId: input.clientOperationId,
-        outcome: ServiceCommerceCustomerActionExecutionOutcome.COMPLETED,
-        payloadHash,
-        resultKind: kind,
-        storeId: capability.storeId,
-        tenantId: capability.tenantId,
-      },
-    })
-    await tx.serviceCommerceCustomerActionCapability.updateMany({
-      data: {
-        consumedAt: capability.consumedAt ?? now,
-        status: ServiceCommerceCustomerActionCapabilityStatus.CONSUMED,
-      },
-      where: {
-        id: capability.id,
-        status: {
-          in: [
-            ServiceCommerceCustomerActionCapabilityStatus.ACTIVE,
-            ServiceCommerceCustomerActionCapabilityStatus.CONSUMED,
-          ],
-        },
-        storeId: capability.storeId,
-        tenantId: capability.tenantId,
-      },
-    })
     return serviceCommerceCustomerActionExecutionResultSchema.parse({
-      kind,
-      replayed: false,
+      kind: replay.resultKind,
+      replayed: true,
       sourceKind: customerActionSourceValues[capability.sourceKind],
     })
   }
+  if (
+    capability.status ===
+      ServiceCommerceCustomerActionCapabilityStatus.REVOKED ||
+    capability.expiresAt <= now
+  ) {
+    throw new ServiceCommerceCustomerActionError(
+      "ACTION_EXPIRED",
+      "Customer action expired. Request a fresh link from the business.",
+    )
+  }
+  if (
+    capability.status === ServiceCommerceCustomerActionCapabilityStatus.CONSUMED
+  ) {
+    throw new ServiceCommerceCustomerActionError(
+      "ACTION_CONFLICT",
+      "Customer action was already used. Request a fresh link from the business.",
+    )
+  }
+  const current = await revalidateCustomerActionCapabilityInTransaction(
+    tx,
+    capability,
+  )
+  if (!current) {
+    throw new ServiceCommerceCustomerActionError(
+      "ACTION_CONFLICT",
+      "Customer action is stale. Request a fresh link from the business.",
+    )
+  }
+  if (capability.confirmationRequired && !input.confirmed) {
+    throw new ServiceCommerceCustomerActionError(
+      "ACTION_BLOCKED",
+      "This customer action requires explicit confirmation.",
+    )
+  }
 
+  const action = customerActionValues[capability.action]
+  if (action === "choose_quote_option") {
+    if (
+      capability.targetType !==
+        ServiceCommerceCustomerActionTargetType.QUOTE_OPTION ||
+      !capability.targetOptionId
+    ) {
+      throw new ServiceCommerceCustomerActionError(
+        "ACTION_CONFLICT",
+        "Quote option action is invalid.",
+      )
+    }
+    await selectCommerceQuoteOptionInTransaction(tx, {
+      acceptanceToken: input.capabilityToken,
+      clientSelectionId: input.clientOperationId,
+      optionId: capability.targetOptionId,
+    })
+  }
+
+  const kind = executionKind(action)
+  await tx.serviceCommerceCustomerActionExecution.create({
+    data: {
+      capabilityId: capability.id,
+      clientOperationId: input.clientOperationId,
+      outcome: ServiceCommerceCustomerActionExecutionOutcome.COMPLETED,
+      payloadHash,
+      resultKind: kind,
+      storeId: capability.storeId,
+      tenantId: capability.tenantId,
+    },
+  })
+  await tx.serviceCommerceCustomerActionCapability.updateMany({
+    data: {
+      consumedAt: capability.consumedAt ?? now,
+      status: ServiceCommerceCustomerActionCapabilityStatus.CONSUMED,
+    },
+    where: {
+      id: capability.id,
+      status: {
+        in: [
+          ServiceCommerceCustomerActionCapabilityStatus.ACTIVE,
+          ServiceCommerceCustomerActionCapabilityStatus.CONSUMED,
+        ],
+      },
+      storeId: capability.storeId,
+      tenantId: capability.tenantId,
+    },
+  })
+  return serviceCommerceCustomerActionExecutionResultSchema.parse({
+    kind,
+    replayed: false,
+    sourceKind: customerActionSourceValues[capability.sourceKind],
+  })
+}
+
+export async function executeServiceCommerceCustomerAction(
+  db: PrismaClient,
+  input: Parameters<
+    typeof executeServiceCommerceCustomerActionInTransaction
+  >[1],
+): Promise<ServiceCommerceCustomerActionExecutionResult> {
+  const execute = (tx: CustomerActionTransaction) =>
+    executeServiceCommerceCustomerActionInTransaction(tx, input)
   try {
     return await db.$transaction(execute, CUSTOMER_ACTION_TRANSACTION_OPTIONS)
   } catch (error) {

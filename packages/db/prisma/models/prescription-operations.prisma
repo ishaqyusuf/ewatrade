@@ -220,35 +220,45 @@ model PrescriptionDeliveryEvent {
 }
 
 model WhatsAppConnection {
-  id                         String                             @id @default(cuid())
-  tenantId                   String
-  wabaId                     String
-  phoneNumberId              String                             @unique
-  displayNumber              String
-  businessDisplayName        String?
-  billingOwner               String?
-  testRecipient              String?
-  credentialReference        String
-  pendingCredentialReference String?
-  status                     WhatsAppConnectionStatus           @default(DRAFT)
-  businessVerified           Boolean                            @default(false)
-  numberVerified             Boolean                            @default(false)
-  webhookSubscribed          Boolean                            @default(false)
-  outboundVerified           Boolean                            @default(false)
-  templatesReady             Boolean                            @default(false)
-  templateConfiguration      Json?
-  lastTestedAt               DateTime?
-  lastTestFailureCode        String?
-  createdByUserId            String
-  suspendedAt                DateTime?
-  revokedAt                  DateTime?
-  createdAt                  DateTime                           @default(now())
-  updatedAt                  DateTime                           @updatedAt
-  tenant                     Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  bindings                   WhatsAppStoreBinding[]
-  inboundEvents              WhatsAppInboundEvent[]
-  communicationAttempts      PrescriptionCommunicationAttempt[]
-  serviceCommerceUsageEvents ServiceCommerceUsageEvent[]
+  id                                             String                                          @id @default(cuid())
+  tenantId                                       String
+  wabaId                                         String
+  phoneNumberId                                  String                                          @unique
+  displayNumber                                  String
+  businessDisplayName                            String?
+  billingOwner                                   String?
+  testRecipient                                  String?
+  credentialReference                            String
+  pendingCredentialReference                     String?
+  status                                         WhatsAppConnectionStatus                        @default(DRAFT)
+  businessVerified                               Boolean                                         @default(false)
+  numberVerified                                 Boolean                                         @default(false)
+  webhookSubscribed                              Boolean                                         @default(false)
+  outboundVerified                               Boolean                                         @default(false)
+  templatesReady                                 Boolean                                         @default(false)
+  templateConfiguration                          Json?
+  lastTestedAt                                   DateTime?
+  lastTestFailureCode                            String?
+  createdByUserId                                String
+  suspendedAt                                    DateTime?
+  revokedAt                                      DateTime?
+  createdAt                                      DateTime                                        @default(now())
+  updatedAt                                      DateTime                                        @updatedAt
+  tenant                                         Tenant                                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bindings                                       WhatsAppStoreBinding[]
+  inboundEvents                                  WhatsAppInboundEvent[]
+  communicationAttempts                          PrescriptionCommunicationAttempt[]
+  serviceCommerceUsageEvents                     ServiceCommerceUsageEvent[]
+  storeConversationWhatsAppBridgeCapabilities    StoreConversationWhatsAppBridgeCapability[]
+  storeConversationWhatsAppBridges               StoreConversationWhatsAppBridge[]
+  storeConversationWhatsAppBridgeAttempts        StoreConversationWhatsAppBridgeAttempt[]
+  storeConversationWhatsAppCandidates            StoreConversationWhatsAppCandidate[]
+  storeConversationWhatsAppCandidateAttempts     StoreConversationWhatsAppCandidateAttempt[]
+  storeConversationWhatsAppCandidateSuppressions StoreConversationWhatsAppCandidateSuppression[]
+  storeConversationWhatsAppRecoveryAttempts      StoreConversationWhatsAppRecoveryAttempt[]
+  storeConversationWhatsAppDirectSessions        StoreConversationWhatsAppDirectSession[]
+  storeConversationWhatsAppObservations          StoreConversationWhatsAppObservation[]
+  storeConversationWhatsAppOutboundAttempts      StoreConversationWhatsAppOutboundAttempt[]
 
   @@unique([tenantId, wabaId, phoneNumberId])
   @@index([tenantId, status, updatedAt])
@@ -275,23 +285,26 @@ model WhatsAppStoreBinding {
 }
 
 model WhatsAppInboundEvent {
-  id                 String                        @id @default(cuid())
-  tenantId           String
-  storeId            String
-  connectionId       String
-  providerEventId    String                        @unique
-  externalCustomerId String
-  messageType        String
-  routeVertical      ServiceCommercePolicyVertical @default(PHARMACY)
-  normalizedPayload  Json
-  status             WhatsAppInboundEventStatus    @default(RECEIVED)
-  requestId          String?
-  receivedAt         DateTime                      @default(now())
-  processedAt        DateTime?
-  failureCode        String?
-  tenant             Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store              Store                         @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  connection         WhatsAppConnection            @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  id                               String                                    @id @default(cuid())
+  tenantId                         String
+  storeId                          String
+  connectionId                     String
+  providerEventId                  String                                    @unique
+  externalCustomerId               String
+  messageType                      String
+  routeVertical                    ServiceCommercePolicyVertical             @default(PHARMACY)
+  normalizedPayload                Json
+  status                           WhatsAppInboundEventStatus                @default(RECEIVED)
+  requestId                        String?
+  receivedAt                       DateTime                                  @default(now())
+  processedAt                      DateTime?
+  failureCode                      String?
+  tenant                           Tenant                                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                            Store                                     @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  connection                       WhatsAppConnection                        @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  storeConversationCandidate       StoreConversationWhatsAppCandidate?
+  storeConversationObservation     StoreConversationWhatsAppObservation?
+  storeConversationRecoveryAttempt StoreConversationWhatsAppRecoveryAttempt?
 
   @@index([tenantId, storeId, receivedAt])
   @@index([connectionId, externalCustomerId, receivedAt])

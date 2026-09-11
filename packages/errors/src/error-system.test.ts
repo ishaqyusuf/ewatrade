@@ -43,6 +43,13 @@ describe("EwaTrade error contract", () => {
         }),
       ).code,
     ).toBe("STOCK_CONFLICT")
+    expect(
+      classifyError(
+        Object.assign(new Error("checkout detail"), {
+          code: "PROVIDER_UNAVAILABLE",
+        }),
+      ).code,
+    ).toBe("PAYMENT_PROVIDER_FAILED")
   })
 
   test("wraps providers without exposing provider bodies publicly", () => {

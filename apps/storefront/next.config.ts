@@ -1,16 +1,23 @@
 import { shouldUploadSourceMaps } from "@ewatrade/observability"
 import { withSentryConfig } from "@sentry/nextjs"
 import type { NextConfig } from "next"
+import { resolveStorefrontApiOrigin } from "./src/lib/api-origin"
+import { resolveStorefrontAllowedDevOrigins } from "./src/lib/dev-origins"
 
 function getApiOrigin() {
-  return (
-    process.env.NEXT_PUBLIC_API_URL ??
-    process.env.API_URL ??
-    "http://localhost:3095"
-  ).replace(/\/$/, "")
+  return resolveStorefrontApiOrigin({
+    apiUrl: process.env.API_URL,
+    publicApiUrl: process.env.NEXT_PUBLIC_API_URL,
+  })
 }
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins:
+    process.env.NODE_ENV === "production"
+      ? undefined
+      : resolveStorefrontAllowedDevOrigins(
+          process.env.STOREFRONT_ALLOWED_DEV_ORIGINS,
+        ),
   reactStrictMode: true,
   async rewrites() {
     return [
@@ -21,6 +28,7 @@ const nextConfig: NextConfig = {
     ]
   },
   transpilePackages: [
+    "@ewatrade/events",
     "@ewatrade/api",
     "@ewatrade/db",
     "@ewatrade/email",

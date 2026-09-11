@@ -1,5 +1,7 @@
 "use client"
 
+import { createOrderFixture } from "@/components/qa/fixture-recipes"
+import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
 import { useOrderParams } from "@/hooks/use-order-params"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
@@ -11,7 +13,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 
 type CatalogItem = RouterOutputs["catalog"]["listItems"][number]
 type StoreSummary = { currencyCode: string; id: string; name: string }
@@ -88,8 +90,17 @@ export function OrderForm({ store }: { store: StoreSummary }) {
   const [quantities, setQuantities] = useState<Record<string, string>>({})
   const [customerName, setCustomerName] = useState("")
   const [customerPhone, setCustomerPhone] = useState("")
+  const [customerEmail, setCustomerEmail] = useState("")
   const [showCustomer, setShowCustomer] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const quickFillSnapshot = useRef<{
+    customerEmail: string
+    customerName: string
+    customerPhone: string
+    quantities: Record<string, string>
+    showCustomer: boolean
+  } | null>(null)
+  const [canUndoQuickFill, setCanUndoQuickFill] = useState(false)
   const offerings = useMemo(
     () => availableOfferings(items, store.id),
     [items, store.id],
@@ -156,6 +167,7 @@ export function OrderForm({ store }: { store: StoreSummary }) {
       clientOrderId: crypto.randomUUID(),
       customerName: customerName.trim() || undefined,
       customerPhone: customerPhone.trim() || undefined,
+      customerEmail: customerEmail.trim() || undefined,
       lines,
       schemaVersion: 1,
       storeId: store.id,
@@ -172,6 +184,50 @@ export function OrderForm({ store }: { store: StoreSummary }) {
           {error}
         </p>
       ) : null}
+      <QaDashboardQuickFill
+        canUndo={canUndoQuickFill}
+        formId="dashboard.order.create"
+        isDirty={
+          Boolean(customerEmail || customerName || customerPhone) ||
+          Object.keys(quantities).length > 0
+        }
+        onFill={(context, sequence) => {
+          const offering = offerings.find(
+            (candidate) => !candidate.disabledReason,
+          )
+          if (!offering) {
+            setError(
+              "Add an eligible Product or Service before filling this draft.",
+            )
+            return
+          }
+          quickFillSnapshot.current = {
+            customerEmail,
+            customerName,
+            customerPhone,
+            quantities,
+            showCustomer,
+          }
+          const fixture = createOrderFixture(context, sequence)
+          setQuantities({ [offering.id]: "1" })
+          setCustomerEmail(fixture.customerEmail)
+          setCustomerName(fixture.customerName)
+          setCustomerPhone(fixture.customerPhone)
+          setShowCustomer(true)
+          setCanUndoQuickFill(true)
+          setError(null)
+        }}
+        onUndo={() => {
+          if (!quickFillSnapshot.current) return
+          setCustomerEmail(quickFillSnapshot.current.customerEmail)
+          setCustomerName(quickFillSnapshot.current.customerName)
+          setCustomerPhone(quickFillSnapshot.current.customerPhone)
+          setQuantities(quickFillSnapshot.current.quantities)
+          setShowCustomer(quickFillSnapshot.current.showCustomer)
+          quickFillSnapshot.current = null
+          setCanUndoQuickFill(false)
+        }}
+      />
       <div className="grid gap-2">
         {offerings.map((offering) => (
           <label
@@ -218,13 +274,22 @@ export function OrderForm({ store }: { store: StoreSummary }) {
         {showCustomer ? "Hide customer details" : "Add customer details"}
       </button>
       {showCustomer ? (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
           <label className="grid gap-1.5 text-sm">
             <span className="font-medium">Customer name</span>
             <input
               className={inputClass}
               value={customerName}
               onChange={(event) => setCustomerName(event.target.value)}
+            />
+          </label>
+          <label className="grid gap-1.5 text-sm">
+            <span className="font-medium">Email</span>
+            <input
+              className={inputClass}
+              onChange={(event) => setCustomerEmail(event.target.value)}
+              type="email"
+              value={customerEmail}
             />
           </label>
           <label className="grid gap-1.5 text-sm">

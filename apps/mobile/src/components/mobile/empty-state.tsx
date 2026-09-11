@@ -13,6 +13,7 @@ type EmptyStateProps = {
   icon?: IconKeys
   message: string
   title: string
+  variant?: "card" | "flat"
 }
 
 export function EmptyState({
@@ -23,13 +24,15 @@ export function EmptyState({
   icon = "Info",
   message,
   title,
+  variant = "card",
 }: EmptyStateProps) {
   const { className: actionClassName, ...buttonProps } = actionProps ?? {}
 
   return (
     <View
       className={cn(
-        "items-center gap-4 rounded-2xl bg-card p-6",
+        "items-center gap-4 p-6",
+        variant === "card" && "rounded-2xl bg-card",
         className,
       )}
     >

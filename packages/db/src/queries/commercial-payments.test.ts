@@ -1,10 +1,62 @@
 import { describe, expect, test } from "bun:test"
 
-import { PaymentStatus } from "../../generated/prisma/enums"
+import {
+  CommercialPaymentType,
+  PaymentStatus,
+} from "../../generated/prisma/enums"
 import {
   effectiveCommercialAmountPaid,
+  listCommercialOrderPaymentsPage,
   summarizeCommercialPayment,
 } from "./commercial-payments"
+import type { DbClient } from "./types"
+
+describe("listCommercialOrderPaymentsPage", () => {
+  test("groups complete received totals by immutable Order currency in one read", async () => {
+    const totalCalls: unknown[] = []
+    const db = {
+      $queryRaw: async (input: unknown) => {
+        totalCalls.push(input)
+        return [
+          {
+            currencyCode: "NGN",
+            totalAmountMinor: 100_000n,
+            totalCount: 2n,
+          },
+          {
+            currencyCode: "USD",
+            totalAmountMinor: 25_000n,
+            totalCount: 1n,
+          },
+        ]
+      },
+      commercialOrderPayment: {
+        findMany: async () => [],
+      },
+    } as unknown as DbClient
+
+    await expect(
+      listCommercialOrderPaymentsPage(db, {
+        defaultCurrencyCode: "NGN",
+        tenantId: "tenant_123",
+      }),
+    ).resolves.toMatchObject({
+      currencyTotals: [
+        { currencyCode: "NGN", totalAmountMinor: 100_000 },
+        { currencyCode: "USD", totalAmountMinor: 25_000 },
+      ],
+      items: [],
+      totalCount: 3,
+    })
+    expect(totalCalls).toHaveLength(1)
+    const query = totalCalls[0] as { strings: string[]; values: unknown[] }
+    expect(query.values).toEqual(["tenant_123", CommercialPaymentType.PAYMENT])
+    expect(query.strings.join("?")).toContain(
+      'JOIN "CommercialOrder" AS orders',
+    )
+    expect(query.strings.join("?")).toContain('GROUP BY orders."currencyCode"')
+  })
+})
 
 describe("summarizeCommercialPayment", () => {
   test("keeps a deposit separate from the outstanding balance", () => {

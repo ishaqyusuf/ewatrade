@@ -786,6 +786,211 @@ export async function submitServiceCommercePrescriptionRequest(
   })
 }
 
+export async function appendStoreConversationPrescriptionMedia(
+  db: PrismaClient,
+  input: {
+    actorUserId: string
+    expectedMediaRevision: number
+    intakeContext: ServiceCommerceIntakeAuthorizationContext
+    media: PrescriptionMediaManifestInput
+    requestId: string
+    storeId: string
+    tenantId: string
+  },
+) {
+  return db.$transaction((tx) =>
+    appendStoreConversationPrescriptionMediaInTransaction(tx, input),
+  )
+}
+
+export async function appendStoreConversationPrescriptionMediaInTransaction(
+  tx: Prisma.TransactionClient,
+  input: {
+    actorUserId: string
+    expectedMediaRevision: number
+    intakeContext: ServiceCommerceIntakeAuthorizationContext
+    media: PrescriptionMediaManifestInput
+    requestId: string
+    storeId: string
+    tenantId: string
+  },
+) {
+  const page = normalizePrescriptionMediaManifest([
+    { ...input.media, pageNumber: 1 },
+  ])[0]
+  if (!page) {
+    throw new PrescriptionRequestError(
+      "MEDIA_CONFLICT",
+      "A private Prescription attachment is required.",
+    )
+  }
+  await assertServiceCommerceIntakeContextInTransaction(tx, {
+    context: input.intakeContext,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+    vertical: "pharmacy",
+  })
+  await assertActivePrescriptionStore(tx, input)
+  await assertServiceCommercePolicyAllowedInTransaction(tx, {
+    actorUserId: input.actorUserId,
+    channel: "web",
+    purpose: "prescription_conversation_media_append",
+    storeId: input.storeId,
+    subject: "attachments",
+    tenantId: input.tenantId,
+    vertical: "pharmacy",
+  })
+  await tx.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`
+        SELECT "id"
+        FROM "PrescriptionRequest"
+        WHERE "id" = ${input.requestId}
+          AND "tenantId" = ${input.tenantId}
+          AND "storeId" = ${input.storeId}
+        FOR UPDATE
+      `,
+  )
+  const request = await tx.prescriptionRequest.findFirst({
+    select: { currentMediaRevision: true, id: true, status: true },
+    where: {
+      id: input.requestId,
+      status: {
+        in: [
+          PrescriptionRequestStatus.RECEIVED,
+          PrescriptionRequestStatus.MEDIA_REVIEW,
+        ],
+      },
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    },
+  })
+  if (!request) {
+    throw new PrescriptionRequestError(
+      "REQUEST_CONFLICT",
+      "This Prescription Request is no longer accepting additional media.",
+    )
+  }
+  const existing = await tx.prescriptionMedia.findFirst({
+    select: {
+      clientMediaId: true,
+      id: true,
+      mediaType: true,
+      originalFileName: true,
+      requestId: true,
+      revision: true,
+      sha256: true,
+      sizeBytes: true,
+      storeId: true,
+    },
+    where: {
+      clientMediaId: page.clientMediaId,
+      tenantId: input.tenantId,
+    },
+  })
+  if (existing) {
+    if (
+      existing.requestId !== request.id ||
+      existing.revision !== input.expectedMediaRevision + 1 ||
+      request.currentMediaRevision !== existing.revision ||
+      existing.storeId !== input.storeId ||
+      existing.mediaType !== page.mediaType ||
+      existing.originalFileName !== page.originalFileName ||
+      existing.sha256 !== page.sha256 ||
+      existing.sizeBytes !== page.sizeBytes
+    ) {
+      throw new PrescriptionRequestError(
+        "IDEMPOTENCY_MISMATCH",
+        "This clinical media identity was already used with different content.",
+      )
+    }
+    return {
+      mediaId: existing.id,
+      replayed: true as const,
+      requestId: request.id,
+      revision: existing.revision,
+    }
+  }
+  if (request.currentMediaRevision !== input.expectedMediaRevision) {
+    throw new PrescriptionRequestError(
+      "REQUEST_CONFLICT",
+      "This Prescription Request changed. Refresh and try again.",
+    )
+  }
+  const nextRevision = input.expectedMediaRevision + 1
+  const media = await tx.prescriptionMedia.create({
+    data: {
+      accessEvents: {
+        create: {
+          action: PrescriptionMediaAccessAction.UPLOADED,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        },
+      },
+      clientMediaId: page.clientMediaId,
+      mediaType: page.mediaType,
+      objectKey: page.objectKey,
+      originalFileName: page.originalFileName,
+      pageNumber: 1,
+      requestId: request.id,
+      revision: nextRevision,
+      sha256: page.sha256,
+      sizeBytes: page.sizeBytes,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    },
+  })
+  const updated = await tx.prescriptionRequest.updateMany({
+    data: {
+      currentMediaRevision: nextRevision,
+      currentTranscriptRevision: null,
+      status: PrescriptionRequestStatus.MEDIA_REVIEW,
+    },
+    where: {
+      currentMediaRevision: input.expectedMediaRevision,
+      id: request.id,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    },
+  })
+  if (updated.count !== 1) {
+    throw new PrescriptionRequestError(
+      "REQUEST_CONFLICT",
+      "This Prescription Request changed. Refresh and try again.",
+    )
+  }
+  await Promise.all([
+    tx.prescriptionTranscription.updateMany({
+      data: {
+        status: PrescriptionTranscriptionStatus.SUPERSEDED,
+        supersededAt: new Date(),
+      },
+      where: {
+        requestId: request.id,
+        status: { not: PrescriptionTranscriptionStatus.SUPERSEDED },
+      },
+    }),
+    tx.prescriptionRequestAuditEvent.create({
+      data: {
+        actorUserId: null,
+        payload: json({
+          channel: "store_conversation",
+          mediaRevision: nextRevision,
+        }),
+        requestId: request.id,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+        type: PrescriptionRequestAuditEventType.MEDIA_REVISION_CREATED,
+      },
+    }),
+  ])
+  return {
+    mediaId: media.id,
+    replayed: false as const,
+    requestId: request.id,
+    revision: nextRevision,
+  }
+}
+
 export async function submitWhatsAppPrescriptionRequest(
   db: PrismaClient,
   input: Omit<
@@ -1333,7 +1538,7 @@ export async function listPendingPrescriptionMediaForSafety(
 }
 
 export async function recordPrescriptionMediaAccess(
-  db: PrismaClient,
+  db: PrismaClient | Prisma.TransactionClient,
   input: {
     actorUserId: string
     mediaId: string
@@ -1833,6 +2038,7 @@ export async function claimPrescriptionTranscriptionJob(
       mediaRevision: transcription.mediaRevision,
       objectKeys: media.map((page) => page.objectKey),
       requestId: transcription.requestId,
+      tenantId: transcription.request.tenantId,
       transcriptionId: transcription.id,
     }
   })
@@ -2564,241 +2770,247 @@ async function acceptPrescriptionQuoteForFulfilment(
   expectedFulfilment: "delivery" | "pickup",
 ) {
   try {
-    return await db.$transaction(async (tx) => {
-      const context = await getCommerceQuoteAcceptanceContext(tx, {
-        ...input,
-        allowedCustomerActions: [
-          expectedFulfilment === "delivery" ? "delivery" : "pick_up",
-        ],
-      })
-      const { payable, version } = context
-      if (
-        version.quote.sourceType !==
-        CommerceQuoteSourceType.PRESCRIPTION_REQUEST
-      ) {
-        throw new CommerceQuoteError(
-          "QUOTE_CONFLICT",
-          "This Quote is not a prescription Quote.",
-        )
-      }
-      await assertServiceCommercePolicyAllowedInTransaction(tx, {
-        actorUserId: "public_prescription_quote_acceptance",
-        channel: "web",
-        purpose: "prescription_quote_acceptance",
-        storeId: version.quote.storeId,
-        subject: "quote",
-        tenantId: version.quote.tenantId,
-        vertical: "pharmacy",
-      })
-      await assertServiceCommercePolicyAllowedInTransaction(tx, {
-        actorUserId: "public_prescription_quote_acceptance",
-        channel: "web",
-        purpose: `prescription_${expectedFulfilment}_acceptance`,
-        storeId: version.quote.storeId,
-        subject: expectedFulfilment,
-        tenantId: version.quote.tenantId,
-        vertical: "pharmacy",
-      })
-      if (context.replayOrderId) {
-        const order = await tx.commercialOrder.findFirstOrThrow({
-          select: { customerPhone: true, storeId: true, tenantId: true },
+    return await db.$transaction(
+      async (tx) => {
+        const context = await getCommerceQuoteAcceptanceContext(tx, {
+          ...input,
+          allowedCustomerActions: [
+            expectedFulfilment === "delivery" ? "delivery" : "pick_up",
+          ],
+        })
+        const { payable, version } = context
+        if (
+          version.quote.sourceType !==
+          CommerceQuoteSourceType.PRESCRIPTION_REQUEST
+        ) {
+          throw new CommerceQuoteError(
+            "QUOTE_CONFLICT",
+            "This Quote is not a prescription Quote.",
+          )
+        }
+        await assertServiceCommercePolicyAllowedInTransaction(tx, {
+          actorUserId: "public_prescription_quote_acceptance",
+          channel: "web",
+          purpose: "prescription_quote_acceptance",
+          storeId: version.quote.storeId,
+          subject: "quote",
+          tenantId: version.quote.tenantId,
+          vertical: "pharmacy",
+        })
+        await assertServiceCommercePolicyAllowedInTransaction(tx, {
+          actorUserId: "public_prescription_quote_acceptance",
+          channel: "web",
+          purpose: `prescription_${expectedFulfilment}_acceptance`,
+          storeId: version.quote.storeId,
+          subject: expectedFulfilment,
+          tenantId: version.quote.tenantId,
+          vertical: "pharmacy",
+        })
+        if (context.replayOrderId) {
+          const order = await tx.commercialOrder.findFirstOrThrow({
+            select: { customerPhone: true, storeId: true, tenantId: true },
+            where: {
+              id: context.replayOrderId,
+              storeId: context.version.quote.storeId,
+              tenantId: context.version.quote.tenantId,
+            },
+          })
+          return {
+            notification: order.customerPhone
+              ? {
+                  customerPhone: order.customerPhone,
+                  storeId: order.storeId,
+                  tenantId: order.tenantId,
+                }
+              : null,
+            orderId: context.replayOrderId,
+            versionId: context.version.id,
+          }
+        }
+        if (!payable) {
+          throw new CommerceQuoteError(
+            "QUOTE_CONFLICT",
+            "Choose one Offer Option before accepting this Quote.",
+          )
+        }
+        try {
+          const fulfilmentType = payable.fulfilmentType.toLowerCase() as
+            | "delivery"
+            | "pickup"
+            | "unspecified"
+          if (fulfilmentType !== expectedFulfilment) {
+            throw new Error(
+              `This Quote is not a prescription ${expectedFulfilment} Quote.`,
+            )
+          }
+          if (
+            payable.availabilityOutcome ===
+              CommerceQuoteAvailabilityOutcome.PARTIAL &&
+            !input.partialAcknowledged
+          ) {
+            throw new Error(
+              "Partial availability must be acknowledged before acceptance.",
+            )
+          }
+        } catch (error) {
+          throw new CommerceQuoteError(
+            "QUOTE_CONFLICT",
+            error instanceof Error
+              ? error.message
+              : "Quote cannot be accepted.",
+          )
+        }
+        const request = await tx.prescriptionRequest.findFirst({
           where: {
-            id: context.replayOrderId,
-            storeId: context.version.quote.storeId,
-            tenantId: context.version.quote.tenantId,
+            id: version.quote.sourceId,
+            status: PrescriptionRequestStatus.QUOTED,
+            storeId: version.quote.storeId,
+            tenantId: version.quote.tenantId,
+          },
+        })
+        if (!request) {
+          throw new CommerceQuoteError(
+            "QUOTE_SOURCE_NOT_FOUND",
+            "Prescription Request source not found.",
+          )
+        }
+        const payableLines = payable.lines
+        if (
+          payableLines.some(
+            (line) =>
+              !line.offeringId ||
+              !line.quantity ||
+              line.unitPriceMinor === null ||
+              (line.availabilityAttestation?.type !==
+                CatalogAvailabilityAttestationType.MANUAL_PROCURE_TO_ORDER &&
+                (!line.configurationVersionId ||
+                  line.balanceRevision === null)),
+          )
+        ) {
+          throw new CommerceQuoteError(
+            "QUOTE_CONFLICT",
+            "Accepted prescription Quote contains an incomplete inventory snapshot.",
+          )
+        }
+        const order = await createCommercialOrderInTransaction(tx, {
+          actorUserId: "public_prescription_quote_acceptance",
+          clientOrderId: `${input.clientAcceptanceId}:order`,
+          customerEmail: request.customerEmail ?? undefined,
+          customerName: request.customerName ?? undefined,
+          customerPhone: request.customerPhone ?? undefined,
+          createTrackedServiceWork: false,
+          discountMinor: payable.discountMinor,
+          lines: payableLines.map((line) => {
+            if (
+              !line.offeringId ||
+              !line.quantity ||
+              line.unitPriceMinor === null ||
+              (line.availabilityAttestation?.type !==
+                CatalogAvailabilityAttestationType.MANUAL_PROCURE_TO_ORDER &&
+                (!line.configurationVersionId || line.balanceRevision === null))
+            ) {
+              throw new CommerceQuoteError(
+                "QUOTE_CONFLICT",
+                "Accepted prescription Quote contains an incomplete inventory snapshot.",
+              )
+            }
+            return {
+              expectedBalanceRevision: line.balanceRevision ?? undefined,
+              expectedConfigurationVersionId:
+                line.configurationVersionId ?? undefined,
+              offeringId: line.offeringId,
+              progressiveAvailabilityAttestationId:
+                line.availabilityAttestation?.type ===
+                CatalogAvailabilityAttestationType.MANUAL_PROCURE_TO_ORDER
+                  ? (line.availabilityAttestationId ?? undefined)
+                  : undefined,
+              quantity: line.quantity.toString(),
+              trustedUnitPriceMinor: line.unitPriceMinor,
+            }
+          }),
+          schemaVersion: 1,
+          serviceChargeMinor: payable.fulfilmentFeeMinor,
+          storeId: version.quote.storeId,
+          taxMinor: payable.taxMinor,
+          tenantId: version.quote.tenantId,
+        })
+        await recordCommerceQuoteAcceptance(tx, {
+          clientAcceptanceId: input.clientAcceptanceId,
+          orderId: order.id,
+          versionId: version.id,
+        })
+        if (expectedFulfilment === "pickup") {
+          await tx.prescriptionPickupFulfillment.create({
+            data: {
+              orderId: order.id,
+              storeId: request.storeId,
+              tenantId: request.tenantId,
+              events: { create: { type: "CREATED" } },
+            },
+          })
+        } else {
+          const address = await tx.prescriptionDeliveryAddress.findUnique({
+            where: { quoteVersionId: version.id },
+          })
+          if (!address || address.eligibilityStatus !== "ELIGIBLE") {
+            throw new CommerceQuoteError(
+              "QUOTE_CONFLICT",
+              "A current eligible delivery address is required.",
+            )
+          }
+          await tx.prescriptionDeliveryAddress.update({
+            data: { orderId: order.id },
+            where: { id: address.id },
+          })
+        }
+        await tx.prescriptionRequest.update({
+          data: {
+            convertedAt: new Date(),
+            status: PrescriptionRequestStatus.CONVERTED,
+          },
+          where: { id: request.id },
+        })
+        await tx.prescriptionRequestAuditEvent.create({
+          data: {
+            actorUserId: "public_prescription_quote_acceptance",
+            fromStatus: PrescriptionRequestStatus.QUOTED,
+            payload: json({ orderId: order.id }),
+            requestId: request.id,
+            storeId: request.storeId,
+            tenantId: request.tenantId,
+            toStatus: PrescriptionRequestStatus.CONVERTED,
+            type: PrescriptionRequestAuditEventType.CONVERTED,
+          },
+        })
+        await tx.prescriptionUsageEvent.create({
+          data: {
+            amounts: json({
+              pharmacyRevenueMinor: order.totalMinor,
+              taxMinor: order.taxMinor,
+            }),
+            deduplicationKey: `order-created:${order.id}`,
+            eventType: "ORDER_CREATED",
+            occurredAt: new Date(),
+            sourceId: order.id,
+            sourceType: "order",
+            storeId: request.storeId,
+            tenantId: request.tenantId,
           },
         })
         return {
-          notification: order.customerPhone
+          notification: request.customerPhone
             ? {
-                customerPhone: order.customerPhone,
-                storeId: order.storeId,
-                tenantId: order.tenantId,
+                customerPhone: request.customerPhone,
+                storeId: request.storeId,
+                tenantId: request.tenantId,
               }
             : null,
-          orderId: context.replayOrderId,
-          versionId: context.version.id,
+          orderId: order.id,
+          versionId: version.id,
         }
-      }
-      if (!payable) {
-        throw new CommerceQuoteError(
-          "QUOTE_CONFLICT",
-          "Choose one Offer Option before accepting this Quote.",
-        )
-      }
-      try {
-        const fulfilmentType = payable.fulfilmentType.toLowerCase() as
-          | "delivery"
-          | "pickup"
-          | "unspecified"
-        if (fulfilmentType !== expectedFulfilment) {
-          throw new Error(
-            `This Quote is not a prescription ${expectedFulfilment} Quote.`,
-          )
-        }
-        if (
-          payable.availabilityOutcome ===
-            CommerceQuoteAvailabilityOutcome.PARTIAL &&
-          !input.partialAcknowledged
-        ) {
-          throw new Error(
-            "Partial availability must be acknowledged before acceptance.",
-          )
-        }
-      } catch (error) {
-        throw new CommerceQuoteError(
-          "QUOTE_CONFLICT",
-          error instanceof Error ? error.message : "Quote cannot be accepted.",
-        )
-      }
-      const request = await tx.prescriptionRequest.findFirst({
-        where: {
-          id: version.quote.sourceId,
-          status: PrescriptionRequestStatus.QUOTED,
-          storeId: version.quote.storeId,
-          tenantId: version.quote.tenantId,
-        },
-      })
-      if (!request) {
-        throw new CommerceQuoteError(
-          "QUOTE_SOURCE_NOT_FOUND",
-          "Prescription Request source not found.",
-        )
-      }
-      const payableLines = payable.lines
-      if (
-        payableLines.some(
-          (line) =>
-            !line.offeringId ||
-            !line.quantity ||
-            line.unitPriceMinor === null ||
-            (line.availabilityAttestation?.type !==
-              CatalogAvailabilityAttestationType.MANUAL_PROCURE_TO_ORDER &&
-              (!line.configurationVersionId || line.balanceRevision === null)),
-        )
-      ) {
-        throw new CommerceQuoteError(
-          "QUOTE_CONFLICT",
-          "Accepted prescription Quote contains an incomplete inventory snapshot.",
-        )
-      }
-      const order = await createCommercialOrderInTransaction(tx, {
-        actorUserId: "public_prescription_quote_acceptance",
-        clientOrderId: `${input.clientAcceptanceId}:order`,
-        customerEmail: request.customerEmail ?? undefined,
-        customerName: request.customerName ?? undefined,
-        customerPhone: request.customerPhone ?? undefined,
-        createTrackedServiceWork: false,
-        discountMinor: payable.discountMinor,
-        lines: payableLines.map((line) => {
-          if (
-            !line.offeringId ||
-            !line.quantity ||
-            line.unitPriceMinor === null ||
-            (line.availabilityAttestation?.type !==
-              CatalogAvailabilityAttestationType.MANUAL_PROCURE_TO_ORDER &&
-              (!line.configurationVersionId || line.balanceRevision === null))
-          ) {
-            throw new CommerceQuoteError(
-              "QUOTE_CONFLICT",
-              "Accepted prescription Quote contains an incomplete inventory snapshot.",
-            )
-          }
-          return {
-            expectedBalanceRevision: line.balanceRevision ?? undefined,
-            expectedConfigurationVersionId:
-              line.configurationVersionId ?? undefined,
-            offeringId: line.offeringId,
-            progressiveAvailabilityAttestationId:
-              line.availabilityAttestation?.type ===
-              CatalogAvailabilityAttestationType.MANUAL_PROCURE_TO_ORDER
-                ? (line.availabilityAttestationId ?? undefined)
-                : undefined,
-            quantity: line.quantity.toString(),
-            trustedUnitPriceMinor: line.unitPriceMinor,
-          }
-        }),
-        schemaVersion: 1,
-        serviceChargeMinor: payable.fulfilmentFeeMinor,
-        storeId: version.quote.storeId,
-        taxMinor: payable.taxMinor,
-        tenantId: version.quote.tenantId,
-      })
-      await recordCommerceQuoteAcceptance(tx, {
-        clientAcceptanceId: input.clientAcceptanceId,
-        orderId: order.id,
-        versionId: version.id,
-      })
-      if (expectedFulfilment === "pickup") {
-        await tx.prescriptionPickupFulfillment.create({
-          data: {
-            orderId: order.id,
-            storeId: request.storeId,
-            tenantId: request.tenantId,
-            events: { create: { type: "CREATED" } },
-          },
-        })
-      } else {
-        const address = await tx.prescriptionDeliveryAddress.findUnique({
-          where: { quoteVersionId: version.id },
-        })
-        if (!address || address.eligibilityStatus !== "ELIGIBLE") {
-          throw new CommerceQuoteError(
-            "QUOTE_CONFLICT",
-            "A current eligible delivery address is required.",
-          )
-        }
-        await tx.prescriptionDeliveryAddress.update({
-          data: { orderId: order.id },
-          where: { id: address.id },
-        })
-      }
-      await tx.prescriptionRequest.update({
-        data: {
-          convertedAt: new Date(),
-          status: PrescriptionRequestStatus.CONVERTED,
-        },
-        where: { id: request.id },
-      })
-      await tx.prescriptionRequestAuditEvent.create({
-        data: {
-          actorUserId: "public_prescription_quote_acceptance",
-          fromStatus: PrescriptionRequestStatus.QUOTED,
-          payload: json({ orderId: order.id }),
-          requestId: request.id,
-          storeId: request.storeId,
-          tenantId: request.tenantId,
-          toStatus: PrescriptionRequestStatus.CONVERTED,
-          type: PrescriptionRequestAuditEventType.CONVERTED,
-        },
-      })
-      await tx.prescriptionUsageEvent.create({
-        data: {
-          amounts: json({
-            pharmacyRevenueMinor: order.totalMinor,
-            taxMinor: order.taxMinor,
-          }),
-          deduplicationKey: `order-created:${order.id}`,
-          eventType: "ORDER_CREATED",
-          occurredAt: new Date(),
-          sourceId: order.id,
-          sourceType: "order",
-          storeId: request.storeId,
-          tenantId: request.tenantId,
-        },
-      })
-      return {
-        notification: request.customerPhone
-          ? {
-              customerPhone: request.customerPhone,
-              storeId: request.storeId,
-              tenantId: request.tenantId,
-            }
-          : null,
-        orderId: order.id,
-        versionId: version.id,
-      }
-    })
+      },
+      { maxWait: 10_000, timeout: 30_000 },
+    )
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

@@ -9,6 +9,7 @@ import {
   type ServiceCommercePrivateMediaSafetyLifecycle,
   getConfiguredPrivateMediaSafetyProvider,
 } from "@ewatrade/service-commerce"
+import { assertQaJobProviderAllowed } from "../qa-provider-guard"
 
 export type ServiceCommerceMediaSafetyPayload = {
   mediaAssetId: string
@@ -25,6 +26,10 @@ type SafetyRecord = {
 }
 
 type Dependencies = {
+  assertProviderAllowed(input: {
+    adapter: "live" | "test"
+    tenantId: string
+  }): Promise<unknown>
   inspect(
     input: PrivateMediaSafetyProviderInput,
   ): Promise<{ lifecycle: ServiceCommercePrivateMediaSafetyLifecycle }>
@@ -40,6 +45,12 @@ type Dependencies = {
 function defaultDependencies(): Dependencies {
   const provider = getConfiguredPrivateMediaSafetyProvider()
   return {
+    assertProviderAllowed: ({ adapter, tenantId }) =>
+      assertQaJobProviderAllowed({
+        adapter,
+        operation: "media_analysis",
+        tenantId,
+      }),
     inspect: (input) => provider.inspect(input),
     load: (input) => getServiceCommerceMediaForSafety(prisma, input),
     record: (input) =>
@@ -78,6 +89,12 @@ export async function runServiceCommerceMediaSafety(
   if (!media) {
     throw new Error("Service Commerce media is not ready for safety review.")
   }
+  await dependencies.assertProviderAllowed({
+    // The currently configured non-production implementation is registered and
+    // deterministic; production fails closed until it supplies an adapter type.
+    adapter: "test",
+    tenantId: payload.tenantId,
+  })
   const input = assertSafetyInput(media)
   let result: { lifecycle: ServiceCommercePrivateMediaSafetyLifecycle }
   try {

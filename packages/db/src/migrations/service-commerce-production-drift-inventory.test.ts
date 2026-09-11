@@ -17,7 +17,7 @@ const expectedMigrationNames = [
 const productionEnvironment = {
   APP_ENV: "production",
   DATABASE_PROFILE_VERIFIED: "1",
-  DATABASE_URL:
+  EWATRADE_DATABASE_URL:
     "postgresql://app-writer:application-password@readonly.example.com:5432/ewatrade",
   DEV_PROFILE: "prod",
   PRODUCTION_READONLY_DATABASE_URL:
@@ -221,7 +221,7 @@ describe("Service Commerce production drift inventory environment", () => {
           "postgresql://readonly.example.com:5432/ewatrade#identity=wrong",
       },
       { ...productionEnvironment, PRODUCTION_READONLY_DATABASE_URL: undefined },
-      { ...productionEnvironment, DATABASE_URL: undefined },
+      { ...productionEnvironment, EWATRADE_DATABASE_URL: undefined },
     ]) {
       expect(() =>
         assertServiceCommerceProductionDriftInventoryEnvironment(environment),
@@ -248,7 +248,7 @@ describe("Service Commerce production drift inventory environment", () => {
       expect(() =>
         assertServiceCommerceProductionDriftInventoryEnvironment({
           ...productionEnvironment,
-          DATABASE_URL: applicationUrl.href,
+          EWATRADE_DATABASE_URL: applicationUrl.href,
           PRODUCTION_READONLY_DATABASE_URL: readonlyUrl,
         }),
       ).toThrow("PRODUCTION_DATABASE_URL_LOCAL")

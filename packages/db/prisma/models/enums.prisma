@@ -747,6 +747,7 @@ enum WhatsAppBindingStatus {
 
 enum WhatsAppInboundEventStatus {
   RECEIVED
+  AWAITING_CUSTOMER_CHOICE
   PROCESSING
   PROCESSED
   FAILED

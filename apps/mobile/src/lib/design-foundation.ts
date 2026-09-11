@@ -20,7 +20,7 @@ export const MOBILE_DESIGN_FOUNDATION = {
     destructive: "Dangerous actions and destructive confirmation states.",
     foreground: "Primary readable text and high-emphasis icons.",
     muted: "Secondary surfaces and disabled or supporting metadata.",
-    primary: "Primary EwaTrade action and brand emphasis.",
+    primary: "Primary ẸwáTrade action and brand emphasis.",
     success: "Online, synced, complete, and positive operational states.",
     warn: "Money, warning, pending, and attention states.",
   },

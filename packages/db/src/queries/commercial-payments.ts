@@ -1,4 +1,4 @@
-import type { Prisma, PrismaClient } from "../../generated/prisma/client"
+import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
   CommercialPaymentMethod,
   CommercialPaymentType,
@@ -300,6 +300,7 @@ export async function listCommercialOrderPaymentsPage(
   db: PrismaClient,
   input: {
     cursor?: string
+    defaultCurrencyCode: string
     limit?: number
     query?: string
     tenantId: string
@@ -369,7 +370,7 @@ export async function listCommercialOrderPaymentsPage(
         ],
       }
     : baseWhere
-  const [records, totalCount] = await Promise.all([
+  const [records, currencyTotalRows] = await Promise.all([
     db.commercialOrderPayment.findMany({
       cursor: input.cursor ? { id: input.cursor } : undefined,
       orderBy: [{ recordedAt: "desc" }, { id: "desc" }],
@@ -393,7 +394,26 @@ export async function listCommercialOrderPaymentsPage(
       take: limit + 1,
       where,
     }),
-    db.commercialOrderPayment.count({ where: baseWhere }),
+    db.$queryRaw<
+      Array<{
+        currencyCode: string
+        totalAmountMinor: bigint
+        totalCount: bigint
+      }>
+    >(Prisma.sql`
+      SELECT
+        orders."currencyCode" AS "currencyCode",
+        COALESCE(SUM(payments."amountMinor"), 0)::bigint AS "totalAmountMinor",
+        COUNT(*)::bigint AS "totalCount"
+      FROM "CommercialOrderPayment" AS payments
+      JOIN "CommercialOrder" AS orders
+        ON orders."id" = payments."orderId"
+        AND orders."tenantId" = payments."tenantId"
+      WHERE payments."tenantId" = ${input.tenantId}
+        AND payments."type" = ${CommercialPaymentType.PAYMENT}
+      GROUP BY orders."currencyCode"
+      ORDER BY orders."currencyCode" ASC
+    `),
   ])
   const hasNextPage = records.length > limit
   const pageRecords = hasNextPage ? records.slice(0, limit) : records
@@ -401,8 +421,17 @@ export async function listCommercialOrderPaymentsPage(
     tenantId: input.tenantId,
     userIds: pageRecords.map((payment) => payment.recordedByUserId),
   })
+  const totalCount = currencyTotalRows.reduce(
+    (count, total) => count + Number(total.totalCount),
+    0,
+  )
 
   return {
+    currencyTotals: currencyTotalRows.map((total) => ({
+      currencyCode: total.currencyCode,
+      totalAmountMinor: Number(total.totalAmountMinor),
+    })),
+    defaultCurrencyCode: input.defaultCurrencyCode,
     items: pageRecords.map((payment) => ({
       ...payment,
       recordedBy: actors.get(payment.recordedByUserId) ?? null,

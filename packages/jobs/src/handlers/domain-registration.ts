@@ -13,6 +13,7 @@ import {
   createDomainProvider,
   decryptRegistrant,
 } from "@ewatrade/domains"
+import { assertQaJobProviderAllowed } from "../qa-provider-guard"
 
 export type DomainRegistrationPayload = { orderId: string }
 
@@ -39,6 +40,25 @@ export async function domainRegistrationHandler(
   const claim = await startDomainRegistrationAttempt(prisma, input)
 
   if (!claim.attempt || claim.attempt.status !== "RUNNING") {
+    return
+  }
+
+  try {
+    await assertQaJobProviderAllowed({
+      operation: "domain_registration",
+      tenantId: claim.order.tenantId,
+    })
+  } catch (error) {
+    await failDomainRegistrationAttempt(prisma, {
+      attemptId: claim.attempt.id,
+      errorCode: "QA_LIVE_EFFECT_BLOCKED",
+      errorMessage:
+        error instanceof Error
+          ? error.message
+          : "QA provider operation blocked",
+      isUncertain: false,
+      orderId: claim.order.id,
+    })
     return
   }
 

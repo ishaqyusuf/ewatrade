@@ -17,6 +17,7 @@ import {
 } from "@ewatrade/db/queries"
 import { storePrescriptionMedia } from "@ewatrade/prescriptions"
 
+import { assertQaJobProviderAllowed } from "../qa-provider-guard"
 import { triggerJob } from "../trigger"
 import { prescriptionCommunicationDispatchHandler } from "./prescription-communication-dispatch"
 import { prescriptionMediaSafetyHandler } from "./prescription-media-safety"
@@ -25,7 +26,18 @@ export type PrescriptionWhatsAppInboundPayload = { inboundEventId: string }
 
 type Claim = NonNullable<Awaited<ReturnType<typeof claimWhatsAppInboundEvent>>>
 
+type PrescriptionWhatsAppMedia = {
+  clientMediaId: string
+  mediaType: string
+  objectKey: string
+  originalFileName: string
+  pageNumber: number
+  sha256: string
+  sizeBytes: number
+}
+
 type Dependencies = {
+  assertProviderAllowed(input: { tenantId: string }): Promise<unknown>
   claim(input: PrescriptionWhatsAppInboundPayload): Promise<Claim | null>
   complete(input: {
     failureCode?: string
@@ -34,15 +46,7 @@ type Dependencies = {
   }): Promise<unknown>
   continueRequest(input: {
     manualIntakeText?: string
-    media: Array<{
-      clientMediaId: string
-      mediaType: string
-      objectKey: string
-      originalFileName: string
-      pageNumber: number
-      sha256: string
-      sizeBytes: number
-    }>
+    media: PrescriptionWhatsAppMedia[]
     providerEventId: string
     requestId: string
     storeId: string
@@ -76,15 +80,7 @@ type Dependencies = {
     customerPhone: string
     fulfilmentPreference: "unspecified"
     manualIntakeText?: string
-    media: Array<{
-      clientMediaId: string
-      mediaType: string
-      objectKey: string
-      originalFileName: string
-      pageNumber: number
-      sha256: string
-      sizeBytes: number
-    }>
+    media: PrescriptionWhatsAppMedia[]
     providerEventId: string
     sourceContext: Record<string, unknown>
     storeId: string
@@ -98,6 +94,8 @@ type Dependencies = {
 
 function defaultDependencies(): Dependencies {
   return {
+    assertProviderAllowed: ({ tenantId }) =>
+      assertQaJobProviderAllowed({ operation: "media_analysis", tenantId }),
     claim: (input) => claimWhatsAppInboundEvent(prisma, input),
     complete: (input) => markWhatsAppInboundEventProcessed(prisma, input),
     continueRequest: (input) =>
@@ -179,8 +177,9 @@ export async function runPrescriptionWhatsAppInbound(
         entityType: action.entityType,
       }
     }
-    const media = []
+    const media: PrescriptionWhatsAppMedia[] = []
     if (mediaId) {
+      await dependencies.assertProviderAllowed({ tenantId: claim.tenantId })
       const fetched = await dependencies.provider.fetchMedia({
         accessToken: resolveCommunicationsCredential(claim.credentialReference),
         mediaId,

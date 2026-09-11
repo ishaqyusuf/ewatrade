@@ -925,6 +925,22 @@ export async function listCommercialOrders(
   return attachOrderActors(db, input.tenantId, orders.map(serializeOrder))
 }
 
+export async function getCommercialOrderReportSummary(
+  db: PrismaClient,
+  input: { tenantId: string },
+) {
+  const summary = await db.commercialOrder.aggregate({
+    _count: { _all: true },
+    _sum: { totalMinor: true },
+    where: { tenantId: input.tenantId },
+  })
+
+  return {
+    orderCount: summary._count._all,
+    orderValueMinor: summary._sum.totalMinor ?? 0,
+  }
+}
+
 export async function countCommercialOrderCustomers(
   db: PrismaClient,
   input: { storeId?: string; tenantId: string },

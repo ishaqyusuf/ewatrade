@@ -72,8 +72,140 @@ async function deleteAcceptanceFixture(
           ),
         ]),
       ]
+      await tx.storeConversationNotificationAuditEvent.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationNotificationReceipt.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationNotificationAttempt.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationNotificationIntent.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationNotificationCommand.deleteMany({
+        where: {
+          OR: [
+            { accountUserId: { in: userIds } },
+            { conversation: { tenantId } },
+            {
+              guestCredential: {
+                guestIdentityId: { in: storeConversationGuestIdentityIds },
+              },
+            },
+          ],
+        },
+      })
+      await tx.storeConversationPushEndpoint.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationGuestNotificationVerification.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationGuestNotificationContact.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationAccountNotificationPreference.deleteMany({
+        where: { accountUserId: { in: userIds } },
+      })
+      await tx.storeConversationWhatsAppObservationEvent.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationWhatsAppOutboundAttempt.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationWhatsAppObservation.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationWhatsAppCandidateSuppression.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationWhatsAppCandidateAttempt.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationWhatsAppCandidateActionCapability.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationWhatsAppCandidate.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationWhatsAppRecoveryAttempt.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationWhatsAppDirectSession.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationWhatsAppBridgeAuditEvent.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationWhatsAppBridgeAttempt.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationWhatsAppBridgeChoiceCapability.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationWhatsAppBridge.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationWhatsAppBridgeCapability.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationChannelConfigurationAuditEvent.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationChannelConfigurationCommand.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationChannelConfiguration.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationModerationAuditEvent.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationModerationCommand.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationSensitiveReadAuditEvent.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationPrivacyRequestOutcome.deleteMany({
+        where: { privacyRequest: { tenantId } },
+      })
+      await tx.storeConversationPrivacyRequestClassification.deleteMany({
+        where: { privacyRequest: { tenantId } },
+      })
+      await tx.storeConversationPrivacyRequest.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationAccountAuditEvent.deleteMany({
+        where: {
+          OR: [{ tenantId }, { actorAccountUserId: { in: userIds } }],
+        },
+      })
+      await tx.storeConversationAccountDeviceCommand.deleteMany({
+        where: { accountUserId: { in: userIds } },
+      })
+      await tx.storeConversationAccountLinkCommand.deleteMany({
+        where: { accountUserId: { in: userIds } },
+      })
+      await tx.storeConversationAccountAccess.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationAccountWatermark.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationAccountInvitation.deleteMany({
+        where: { tenantId },
+      })
       await tx.storeConversationTransfer.deleteMany({ where: { tenantId } })
       await tx.storeConversationGuestAccess.deleteMany({ where: { tenantId } })
+      await tx.storeConversationCustomerWatermark.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationStaffWatermark.deleteMany({
+        where: { tenantId },
+      })
       await tx.storeConversationAuditEvent.deleteMany({ where: { tenantId } })
       await tx.storeConversationEscalationEvent.deleteMany({
         where: { tenantId },
@@ -84,9 +216,20 @@ async function deleteAcceptanceFixture(
       await tx.storeConversationCommandReceipt.deleteMany({
         where: { tenantId },
       })
+      await tx.storeConversationMessageAttachment.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationActionMessage.deleteMany({
+        where: { tenantId },
+      })
       await tx.storeConversationRequestLink.deleteMany({ where: { tenantId } })
       await tx.storeConversationMessage.deleteMany({ where: { tenantId } })
       await tx.storeConversation.deleteMany({ where: { tenantId } })
+      await tx.storeConversationGuestCredentialRotation.deleteMany({
+        where: {
+          guestIdentityId: { in: storeConversationGuestIdentityIds },
+        },
+      })
       await tx.storeConversationGuestCredential.deleteMany({
         where: {
           guestIdentity: {
@@ -188,6 +331,12 @@ async function deleteAcceptanceFixture(
         where: { tenantId },
       })
       await tx.serviceCommerceMediaAsset.deleteMany({ where: { tenantId } })
+      await tx.storeConversationAvailabilityAuditEvent.deleteMany({
+        where: { tenantId },
+      })
+      await tx.storeConversationAvailabilityConfiguration.deleteMany({
+        where: { tenantId },
+      })
       await tx.customerEntryPointAuditEvent.deleteMany({ where: { tenantId } })
       await tx.customerEntryPoint.deleteMany({ where: { tenantId } })
       await tx.serviceCommerceStoreTeamAuditEvent.deleteMany({
@@ -240,8 +389,8 @@ async function deleteAcceptanceFixture(
 }
 
 export async function createServiceCommerceAcceptanceFixture(): Promise<ServiceCommerceAcceptanceFixture> {
-  if (!process.env.DATABASE_URL) {
-    throw new Error("DATABASE_URL is required for database integration tests.")
+  if (!process.env.EWATRADE_DATABASE_URL) {
+    throw new Error("EWATRADE_DATABASE_URL is required for database integration tests.")
   }
   const db = (await import("../../../client")).prisma
   const fixtureStartedAt = new Date(Date.now() - 60_000)

@@ -41,7 +41,7 @@ export type ServiceCommerceLiveCanaryPreflight = {
 const COMMON_ENVIRONMENT_KEYS = [
   "APP_ENV",
   "DATABASE_PROFILE_VERIFIED",
-  "DATABASE_URL",
+  "EWATRADE_DATABASE_URL",
 ] as const
 
 const ENVIRONMENT_KEYS_BY_KIND: Record<
@@ -160,7 +160,7 @@ function hasVerifiedDatabaseProfile(
 function hasHostedDatabaseUrl(
   environment: Readonly<Record<string, string | undefined>>,
 ) {
-  const value = environment.DATABASE_URL?.trim()
+  const value = environment.EWATRADE_DATABASE_URL?.trim()
   if (!value) return false
   try {
     const url = new URL(value)

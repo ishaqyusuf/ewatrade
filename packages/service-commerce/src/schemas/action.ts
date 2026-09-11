@@ -88,6 +88,7 @@ export const serviceCommerceCustomerActionPreviewSchema = z.discriminatedUnion(
 
 export const serviceCommerceCustomerActionExecutionResultSchema = z
   .object({
+    checkoutUrl: z.string().url().max(2048).optional(),
     kind: serviceCommerceCustomerActionResultKindSchema,
     replayed: z.boolean(),
     sourceKind: serviceCommerceSourceKindSchema,

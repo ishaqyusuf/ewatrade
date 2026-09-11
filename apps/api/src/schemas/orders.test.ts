@@ -5,6 +5,7 @@ import {
   commercialOrderFulfillProductsSchema,
   commercialOrderListPageSchema,
   commercialOrderPaymentSchema,
+  commercialOrderPaymentsListPageSchema,
   commercialOrderReminderSettingsUpdateSchema,
 } from "./orders"
 
@@ -27,6 +28,15 @@ describe("commercial Order list schema", () => {
 })
 
 describe("commercial Order payment schema", () => {
+  test("accepts the infinite-query pagination direction", () => {
+    expect(
+      commercialOrderPaymentsListPageSchema.parse({
+        direction: "forward",
+        limit: 20,
+      }),
+    ).toMatchObject({ direction: "forward", limit: 20 })
+  })
+
   test("accepts a deposit payment with an external reference", () => {
     const result = commercialOrderPaymentSchema.parse({
       amountMinor: 25_000,

@@ -5,15 +5,9 @@ import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { COMPACT_CONTROL_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
 import { cn } from "@/lib/utils"
+import { VariableContextProvider } from "nativewind"
 import type { ReactNode } from "react"
-import {
-  ActivityIndicator,
-  Text as NativeText,
-  type StyleProp,
-  StyleSheet,
-  type TextStyle,
-  View,
-} from "react-native"
+import { ActivityIndicator, Text as NativeText, View } from "react-native"
 
 export type ActionButtonProps = ButtonProps & {
   children: ReactNode
@@ -23,7 +17,7 @@ export type ActionButtonProps = ButtonProps & {
   icon?: IconKeys
   iconSize?: number
   isLoading?: boolean
-  labelStyle?: StyleProp<TextStyle>
+  labelClassName?: string
   loadingLabel?: string
   trailingIcon?: IconKeys
 }
@@ -38,7 +32,7 @@ export function ActionButton({
   icon,
   iconSize = 16,
   isLoading,
-  labelStyle,
+  labelClassName,
   loadingLabel,
   trailingIcon,
   variant,
@@ -74,83 +68,79 @@ export function ActionButton({
   const iconClassName = cn("size-sm", foregroundClassName)
 
   return (
-    <Button
-      accessibilityState={{
-        ...props.accessibilityState,
-        busy: !!isLoading,
-        disabled: isDisabled,
-      }}
-      className={cn(
-        largeTextLayout
-          ? "h-auto min-h-[64px] w-full rounded-xl px-[18px] py-0"
-          : "h-auto min-h-[50px] w-full rounded-xl px-[18px] py-0",
-        isDefaultVariant &&
-          (isDisabled
-            ? "bg-muted active:bg-muted"
-            : "bg-primary active:bg-primary/90"),
-        isOutlineVariant && "bg-muted/60 active:bg-accent",
-        variant === "destructive" &&
-          "bg-destructive/10 active:bg-destructive/20",
-        className,
-      )}
-      disabled={isDisabled}
-      size="lg"
-      variant={variant ?? "default"}
-      {...props}
-    >
-      <View
+    <VariableContextProvider value={{ "--action-foreground": foregroundColor }}>
+      <Button
+        accessibilityState={{
+          ...props.accessibilityState,
+          busy: !!isLoading,
+          disabled: isDisabled,
+        }}
         className={cn(
           largeTextLayout
-            ? "flex-row items-center justify-center gap-2"
-            : "-translate-y-[2px] flex-row items-center justify-center gap-2",
-          contentClassName,
+            ? "h-auto min-h-[64px] w-full rounded-xl px-[18px] py-0"
+            : "h-auto min-h-[50px] w-full rounded-xl px-[18px] py-0",
+          isDefaultVariant &&
+            (isDisabled
+              ? "bg-muted active:bg-muted"
+              : "bg-primary active:bg-primary/90"),
+          isOutlineVariant && "bg-muted/60 active:bg-accent",
+          variant === "destructive" &&
+            "bg-destructive/10 active:bg-destructive/20",
+          className,
         )}
+        disabled={isDisabled}
+        size="lg"
+        variant={variant ?? "default"}
+        {...props}
       >
-        {isLoading ? (
-          <ActivityIndicator color={foregroundColor} size="small" />
-        ) : icon ? (
-          <Icon
-            className={iconClassName}
-            color={
-              foregroundColorOverride || disabledForegroundColor
-                ? foregroundColor
-                : undefined
-            }
-            name={icon}
-            size={iconSize}
-          />
-        ) : null}
-        <NativeText
-          maxFontSizeMultiplier={COMPACT_CONTROL_FONT_SCALE_CAP}
-          numberOfLines={1}
-          style={[
-            {
-              color: foregroundColor,
-              fontSize: 14,
-              fontWeight: "700",
-              includeFontPadding: false,
-              lineHeight: largeTextLayout ? 28 : 20,
-              textAlignVertical: "center",
-            },
-            labelStyle,
-          ]}
+        <View
+          className={cn(
+            largeTextLayout
+              ? "flex-row items-center justify-center gap-2"
+              : "-translate-y-[2px] flex-row items-center justify-center gap-2",
+            contentClassName,
+          )}
         >
-          {isLoading && loadingLabel ? loadingLabel : children}
-        </NativeText>
-        {!isLoading && trailingIcon ? (
-          <Icon
-            className={iconClassName}
-            color={
-              foregroundColorOverride || disabledForegroundColor
-                ? foregroundColor
-                : undefined
-            }
-            name={trailingIcon}
-            size={iconSize}
-          />
-        ) : null}
-      </View>
-    </Button>
+          {isLoading ? (
+            <ActivityIndicator color={foregroundColor} size="small" />
+          ) : icon ? (
+            <Icon
+              className={iconClassName}
+              color={
+                foregroundColorOverride || disabledForegroundColor
+                  ? foregroundColor
+                  : undefined
+              }
+              name={icon}
+              size={iconSize}
+            />
+          ) : null}
+          <NativeText
+            maxFontSizeMultiplier={COMPACT_CONTROL_FONT_SCALE_CAP}
+            numberOfLines={1}
+            className={cn(
+              "text-[14px] font-bold text-[color:var(--action-foreground)] [-rn-include-font-padding:false] [-rn-text-align-vertical:center]",
+              largeTextLayout ? "[-rn-line-height:28]" : "[-rn-line-height:20]",
+              labelClassName,
+            )}
+          >
+            {isLoading && loadingLabel ? loadingLabel : children}
+          </NativeText>
+          {!isLoading && trailingIcon ? (
+            <Icon
+              className={iconClassName}
+              color={
+                foregroundColorOverride || disabledForegroundColor
+                  ? foregroundColor
+                  : undefined
+              }
+              name={trailingIcon}
+              size={iconSize}
+            />
+          ) : null}
+        </View>
+      </Button>
+    </VariableContextProvider>
   )
 }
 
@@ -193,14 +183,16 @@ export function MarketDayActionButton({
 
   return (
     <View
-      style={[
-        styles.marketDaySurface,
-        {
-          backgroundColor: isUnavailable
-            ? marketDay.line
-            : activePalette.backgroundColor,
-        },
-      ]}
+      className={cn(
+        "w-full overflow-hidden rounded-[14px]",
+        isUnavailable
+          ? "bg-market-line"
+          : tone === "marigold"
+            ? "bg-market-marigold"
+            : tone === "palm"
+              ? "bg-market-palm"
+              : "bg-market-paprika",
+      )}
     >
       <ActionButton
         {...props}
@@ -220,11 +212,3 @@ export function MarketDayActionButton({
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  marketDaySurface: {
-    borderRadius: 14,
-    overflow: "hidden",
-    width: "100%",
-  },
-})

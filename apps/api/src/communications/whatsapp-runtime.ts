@@ -13,9 +13,11 @@ import {
 import { prisma } from "@ewatrade/db"
 import {
   ServiceCommercePolicyError,
+  StoreConversationWhatsAppDiscoveryError,
   WhatsAppConnectionError,
   recordServiceCommerceCustomerNotificationReceipt,
   recordServiceCommerceUsageEvent,
+  recordStoreConversationWhatsAppObservationStatus,
   recordWhatsAppCommunicationStatus,
   recordWhatsAppInboundEvent,
   recordWhatsAppRoutingAlert,
@@ -27,6 +29,13 @@ import {
   enqueuePrescriptionWhatsAppInbound,
   enqueueServiceCommerceWhatsAppInbound,
 } from "@ewatrade/jobs"
+import { storeConversationWhatsAppBridgeTokenDigest } from "@ewatrade/service-commerce/server"
+
+import { processStoreConversationWhatsAppBridgeInbound } from "./store-conversation-whatsapp-bridge-runtime"
+import {
+  discoverStoreConversationWhatsAppInboundCandidate,
+  processStoreConversationWhatsAppCandidateAction,
+} from "./store-conversation-whatsapp-discovery-runtime"
 
 function required(name: string) {
   const value = process.env[name]?.trim()
@@ -86,6 +95,41 @@ export async function handleWhatsAppWebhookRequest(
   const state = getConfiguredConversationStateStore()
   for (const event of parseMetaWhatsAppEvents(payload)) {
     if (event.kind === "status") {
+      const timestampSeconds = Number(event.timestamp)
+      const occurredAt = Number.isFinite(timestampSeconds)
+        ? new Date(timestampSeconds * 1_000)
+        : new Date()
+      try {
+        const observedRoute = await resolveWhatsAppInboundConnection(prisma, {
+          phoneNumberId: event.phoneNumberId,
+        })
+        await recordStoreConversationWhatsAppObservationStatus(prisma, {
+          connectionId: observedRoute.connectionId,
+          eventDigest: storeConversationWhatsAppBridgeTokenDigest(
+            `outbound-status:${event.messageId}:${event.status}:${occurredAt.toISOString()}`,
+          ),
+          failureCode: event.failureCode,
+          occurredAt,
+          providerMessageDigest: storeConversationWhatsAppBridgeTokenDigest(
+            `outbound-provider:${event.messageId}`,
+          ),
+          status: event.status,
+        })
+        continue
+      } catch (error) {
+        if (
+          error instanceof StoreConversationWhatsAppDiscoveryError &&
+          error.code !== "NOT_FOUND"
+        ) {
+          continue
+        }
+        if (
+          !(error instanceof StoreConversationWhatsAppDiscoveryError) &&
+          !(error instanceof WhatsAppConnectionError)
+        ) {
+          throw error
+        }
+      }
       let receiptRoute: Awaited<
         ReturnType<typeof resolveWhatsAppStatusConnection>
       >
@@ -103,10 +147,6 @@ export async function handleWhatsAppWebhookRequest(
         })
         continue
       }
-      const timestampSeconds = Number(event.timestamp)
-      const occurredAt = Number.isFinite(timestampSeconds)
-        ? new Date(timestampSeconds * 1_000)
-        : new Date()
       if (receiptRoute.kind === "service_commerce") {
         if (
           event.status === "delivered" ||
@@ -177,14 +217,28 @@ export async function handleWhatsAppWebhookRequest(
       })
       continue
     }
+    const bridgeResult = await processStoreConversationWhatsAppBridgeInbound({
+      event,
+      route,
+      state,
+    })
+    if (bridgeResult.handled) continue
+    const bridgeRoute = bridgeResult.bridgeRoute
+    const externalCustomerIdDigest = storeConversationWhatsAppBridgeTokenDigest(
+      event.externalCustomerId,
+    )
     const channelToken = extractWhatsAppChannelContext(event.text) ?? undefined
-    const routingSelection =
-      channelToken || event.quickActionId || !route.requiresStoreSelection
+    const rememberedRoutingSelection =
+      channelToken || event.quickActionId
         ? null
         : await state.getRoutingSelection({
             connectionId: route.connectionId,
             externalCustomerId: event.externalCustomerId,
           })
+    const routingSelection =
+      channelToken || event.quickActionId || !route.requiresStoreSelection
+        ? null
+        : rememberedRoutingSelection
     let binding: Awaited<ReturnType<typeof resolveWhatsAppInboundStore>>
     try {
       binding = await resolveWhatsAppInboundStore(prisma, {
@@ -212,14 +266,39 @@ export async function handleWhatsAppWebhookRequest(
       })
       continue
     }
+    if (
+      binding.routeVertical !== "pharmacy" &&
+      binding.routeVertical !== "service"
+    ) {
+      await recordWhatsAppRoutingAlert(prisma, {
+        code: "inactive_or_unknown_connection",
+        connectionId: route.connectionId,
+        phoneNumberId: route.phoneNumberId,
+        providerEventId: event.messageId,
+        tenantId: route.tenantId,
+      })
+      continue
+    }
+    const routeVertical = binding.routeVertical
     await state.setRoutingSelection({
       connectionId: route.connectionId,
       externalCustomerId: event.externalCustomerId,
       storeId: binding.storeId,
       tenantId: binding.tenantId,
     })
+    const candidateAction =
+      await processStoreConversationWhatsAppCandidateAction({
+        event,
+        route: {
+          connectionId: route.connectionId,
+          routeVertical,
+          storeId: binding.storeId,
+          tenantId: binding.tenantId,
+        },
+      })
+    if (candidateAction.handled) continue
     const contextId =
-      binding.routeVertical === "pharmacy"
+      routeVertical === "pharmacy"
         ? prescriptionConversationContextId(binding.storeId)
         : customerChannelConversationContextId(binding.storeId)
     const existingState = await state.get({
@@ -227,10 +306,17 @@ export async function handleWhatsAppWebhookRequest(
       contextId,
       externalCustomerId: event.externalCustomerId,
     })
+    const selectedIntakeKind =
+      routeVertical === "service"
+        ? bridgeRoute?.choice === "start_new_request"
+          ? "commerce_inquiry"
+          : (extractCustomerChannelIntakeSelection(
+              event.quickActionId ?? event.text,
+            ) ?? existingState?.intakeKind)
+        : undefined
     const intakeKind =
-      binding.routeVertical === "service"
-        ? (extractCustomerChannelIntakeSelection(event.text) ??
-          existingState?.intakeKind)
+      routeVertical === "service"
+        ? (selectedIntakeKind ?? "commerce_inquiry")
         : undefined
     await state.set({
       connectionId: route.connectionId,
@@ -241,6 +327,7 @@ export async function handleWhatsAppWebhookRequest(
         intakeKind,
         lastSeenAt: new Date().toISOString(),
         requestId:
+          bridgeRoute?.choice !== "start_new_request" &&
           existingState?.storeId === binding.storeId
             ? existingState.requestId
             : undefined,
@@ -255,6 +342,14 @@ export async function handleWhatsAppWebhookRequest(
         externalCustomerId: event.externalCustomerId,
         messageType: event.type,
         normalizedPayload: {
+          bridgeId:
+            bridgeRoute?.choice === "start_new_request"
+              ? bridgeRoute.bridgeId
+              : undefined,
+          bridgeExternalCustomerIdDigest:
+            bridgeRoute?.choice === "start_new_request"
+              ? externalCustomerIdDigest
+              : undefined,
           mediaId: event.media?.id,
           mediaType: event.media?.mediaType,
           intakeKind,
@@ -269,7 +364,7 @@ export async function handleWhatsAppWebhookRequest(
             : undefined,
         storeId: binding.storeId,
         tenantId: binding.tenantId,
-        routeVertical: binding.routeVertical,
+        routeVertical,
       })
     } catch (error) {
       if (!(error instanceof ServiceCommercePolicyError)) throw error
@@ -282,7 +377,22 @@ export async function handleWhatsAppWebhookRequest(
       })
       continue
     }
-    if (binding.routeVertical === "pharmacy") {
+    if (!existingState?.requestId && !selectedIntakeKind && !bridgeRoute) {
+      const discovery = await discoverStoreConversationWhatsAppInboundCandidate(
+        {
+          event,
+          inboundEventId: inbound.id,
+          route: {
+            connectionId: route.connectionId,
+            routeVertical,
+            storeId: binding.storeId,
+            tenantId: binding.tenantId,
+          },
+        },
+      )
+      if (discovery.held) continue
+    }
+    if (routeVertical === "pharmacy") {
       await enqueuePrescriptionWhatsAppInbound(inbound.id)
     } else {
       await enqueueServiceCommerceWhatsAppInbound(inbound.id)

@@ -138,32 +138,33 @@ model PrescriptionRequest {
 }
 
 model PrescriptionMedia {
-  id               String                         @id @default(cuid())
-  tenantId         String
-  storeId          String
-  requestId        String
-  clientMediaId    String
-  revision         Int
-  pageNumber       Int
-  objectKey        String
-  originalFileName String
-  mediaType        String
-  sizeBytes        Int
-  sha256           String
-  status           PrescriptionMediaStatus        @default(PENDING)
-  safetyMetadata   Json?
-  uploadedAt       DateTime                       @default(now())
-  reviewedAt       DateTime?
-  reviewedByUserId String?
-  deletedAt        DateTime?
-  createdAt        DateTime                       @default(now())
-  updatedAt        DateTime                       @updatedAt
-  tenant           Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store            Store                          @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  request          PrescriptionRequest            @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  mediaAssetId     String?                        @unique
-  mediaAsset       ServiceCommerceMediaAsset?     @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull)
-  accessEvents     PrescriptionMediaAccessEvent[]
+  id                      String                               @id @default(cuid())
+  tenantId                String
+  storeId                 String
+  requestId               String
+  clientMediaId           String
+  revision                Int
+  pageNumber              Int
+  objectKey               String
+  originalFileName        String
+  mediaType               String
+  sizeBytes               Int
+  sha256                  String
+  status                  PrescriptionMediaStatus              @default(PENDING)
+  safetyMetadata          Json?
+  uploadedAt              DateTime                             @default(now())
+  reviewedAt              DateTime?
+  reviewedByUserId        String?
+  deletedAt               DateTime?
+  createdAt               DateTime                             @default(now())
+  updatedAt               DateTime                             @updatedAt
+  tenant                  Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                   Store                                @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  request                 PrescriptionRequest                  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  mediaAssetId            String?                              @unique
+  mediaAsset              ServiceCommerceMediaAsset?           @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull)
+  accessEvents            PrescriptionMediaAccessEvent[]
+  conversationAttachments StoreConversationMessageAttachment[]
 
   @@unique([tenantId, clientMediaId])
   @@unique([requestId, revision, pageNumber])

@@ -130,6 +130,31 @@ function providerFact(value: unknown) {
   return /^[a-z0-9][a-z0-9_.-]{0,79}$/.test(normalized) ? normalized : undefined
 }
 
+export type WhatsAppProviderSendOutcome = "DEFINITE_FAILURE" | "OUTCOME_UNKNOWN"
+
+export class WhatsAppProviderSendError extends Error {
+  constructor(
+    readonly code: "PROVIDER_REJECTED" | "PROVIDER_RESULT_INVALID",
+    readonly outcome: WhatsAppProviderSendOutcome,
+  ) {
+    super(
+      outcome === "DEFINITE_FAILURE"
+        ? "WhatsApp rejected the outbound message."
+        : "The WhatsApp send outcome is unknown.",
+    )
+    this.name = "WhatsAppProviderSendError"
+  }
+}
+
+function classifyWhatsAppSendStatus(
+  status: number,
+): WhatsAppProviderSendOutcome {
+  if (status >= 400 && status < 500 && ![408, 409, 425, 429].includes(status)) {
+    return "DEFINITE_FAILURE"
+  }
+  return "OUTCOME_UNKNOWN"
+}
+
 export class DirectMetaWhatsAppProvider implements WhatsAppProvider {
   readonly key = "meta-cloud-api"
   readonly #fetch: typeof fetch
@@ -154,7 +179,24 @@ export class DirectMetaWhatsAppProvider implements WhatsAppProvider {
         method: "POST",
       },
     )
-    return { messageId: messageId(await json(response)) }
+    const payload = (await response.json().catch(() => ({}))) as Record<
+      string,
+      unknown
+    >
+    if (!response.ok) {
+      throw new WhatsAppProviderSendError(
+        "PROVIDER_REJECTED",
+        classifyWhatsAppSendStatus(response.status),
+      )
+    }
+    try {
+      return { messageId: messageId(payload) }
+    } catch {
+      throw new WhatsAppProviderSendError(
+        "PROVIDER_RESULT_INVALID",
+        "OUTCOME_UNKNOWN",
+      )
+    }
   }
 
   sendText(input: WhatsAppCredentials & { body: string; to: string }) {
@@ -796,6 +838,22 @@ export function resolveCommunicationsRecipient(reference: string) {
   const value = resolveCommunicationsCredential(reference).trim()
   if (!value || value.length > 320) {
     throw new Error("Communications recipient reference is invalid.")
+  }
+  return value
+}
+
+export function protectCommunicationsEndpoint(value: string) {
+  const normalized = value.trim()
+  if (!normalized || normalized.length > 4_096) {
+    throw new Error("A bounded Communications endpoint is required.")
+  }
+  return protectCommunicationsCredential(normalized)
+}
+
+export function resolveCommunicationsEndpoint(reference: string) {
+  const value = resolveCommunicationsCredential(reference).trim()
+  if (!value || value.length > 4_096) {
+    throw new Error("Communications endpoint reference is invalid.")
   }
   return value
 }

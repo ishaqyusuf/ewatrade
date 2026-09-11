@@ -10,9 +10,11 @@
   "ui": "tui",
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build"
+      ],
       "env": [
-        "DATABASE_URL",
+        "EWATRADE_DATABASE_URL",
         "BETTER_AUTH_SECRET",
         "BETTER_AUTH_URL",
         "API_URL",
@@ -21,9 +23,12 @@
         "NEXT_PUBLIC_STOREFRONT_URL",
         "CHAT_URL",
         "NEXT_PUBLIC_CHAT_URL",
+        "STOREFRONT_ALLOWED_DEV_ORIGINS",
         "NEXT_PUBLIC_APP_URL",
         "MOBILE_APP_URL",
         "NEXT_PUBLIC_MARKETING_URL",
+        "EWATRADE_MARKETING_EXPERIENCE",
+        "EWATARADE_MARKETING_EXPERIENCE_PREVIEW_TOKEN",
         "NEXT_PUBLIC_DASHBOARD_URL",
         "NEXT_PUBLIC_PLATFORM_DOMAIN",
         "PLATFORM_DOMAIN",
@@ -40,6 +45,9 @@
         "TRIGGER_PROJECT_ID",
         "TRIGGER_PROFILE",
         "TRIGGER_SECRET_KEY",
+        "STORE_CONVERSATION_ATTACHMENT_CAPABILITY_SECRET",
+        "STORE_CONVERSATION_WHATSAPP_BRIDGE_SECRET",
+        "STORE_CONVERSATION_NOTIFICATION_VERIFICATION_SECRET",
         "GOOGLE_CLIENT_ID",
         "GOOGLE_WEB_CLIENT_ID",
         "GOOGLE_ANDROID_CLIENT_ID",
@@ -47,7 +55,9 @@
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID",
-        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID"
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID",
+        "EXPO_PUBLIC_CHAT_URL",
+        "EXPO_PUBLIC_CHAT_PORT"
       ],
       "outputs": [
         ".next/**",
@@ -58,32 +68,44 @@
         "build/**",
         "next-env.d.ts"
       ],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*"
+      ]
     },
     "dev": {
       "cache": false,
       "persistent": true,
-      "inputs": ["$TURBO_DEFAULT$", ".env*"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*"
+      ]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": [
+        "^lint"
+      ]
     },
     "typecheck": {
-      "dependsOn": ["^typecheck"]
+      "dependsOn": [
+        "^typecheck"
+      ]
     },
     "clean": {
       "cache": false
     },
     "db:generate": {
       "cache": false,
-      "outputs": ["generated/**"]
+      "outputs": [
+        "generated/**"
+      ]
     }
   },
   "globalEnv": [
     "APP_ENV",
     "NEXT_PUBLIC_APP_ENV",
     "COMPOSE_FILE",
-    "DATABASE_URL",
+    "EWATRADE_DATABASE_URL",
     "DB_SERVICE",
     "DB_WAIT_ATTEMPTS",
     "DB_WAIT_SECONDS",
@@ -111,9 +133,12 @@
     "NEXT_PUBLIC_STOREFRONT_URL",
     "CHAT_URL",
     "NEXT_PUBLIC_CHAT_URL",
+    "STOREFRONT_ALLOWED_DEV_ORIGINS",
     "NEXT_PUBLIC_APP_URL",
     "MOBILE_APP_URL",
     "NEXT_PUBLIC_MARKETING_URL",
+    "EWATRADE_MARKETING_EXPERIENCE",
+    "EWATARADE_MARKETING_EXPERIENCE_PREVIEW_TOKEN",
     "NEXT_PUBLIC_DASHBOARD_URL",
     "NEXT_PUBLIC_PLATFORM_DOMAIN",
     "PLATFORM_DOMAIN",
@@ -130,6 +155,9 @@
     "TRIGGER_PROJECT_ID",
     "TRIGGER_PROFILE",
     "TRIGGER_SECRET_KEY",
+    "STORE_CONVERSATION_ATTACHMENT_CAPABILITY_SECRET",
+    "STORE_CONVERSATION_WHATSAPP_BRIDGE_SECRET",
+    "STORE_CONVERSATION_NOTIFICATION_VERIFICATION_SECRET",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_WEB_CLIENT_ID",
     "GOOGLE_ANDROID_CLIENT_ID",
@@ -137,6 +165,16 @@
     "EXPO_PUBLIC_GOOGLE_CLIENT_ID",
     "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID",
     "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID",
-    "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID"
+    "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID",
+    "EXPO_PUBLIC_CHAT_URL",
+    "EXPO_PUBLIC_CHAT_PORT",
+    "NEXT_PUBLIC_LOGLY_ENABLED",
+    "NEXT_PUBLIC_LOGLY_PROJECT",
+    "LOGLY_COLLECTOR_URL",
+    "LOGLY_PROJECT_KEY",
+    "LOGLY_MOBILE_PROJECT",
+    "LOGLY_MOBILE_PROJECT_KEY",
+    "EXPO_PUBLIC_LOGLY_ENABLED",
+    "EXPO_PUBLIC_LOGLY_ENDPOINT"
   ]
 }

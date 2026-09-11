@@ -12,6 +12,7 @@
   "dependencies": {
     "@ewatrade/api": "workspace:*",
     "@ewatrade/auth": "workspace:*",
+    "@ewatrade/communications": "workspace:*",
     "@ewatrade/db": "workspace:*",
     "@ewatrade/errors": "workspace:*",
     "@ewatrade/jobs": "workspace:*",
@@ -29,7 +30,8 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "server-only": "^0.0.1",
-    "superjson": "^2.2.6"
+    "superjson": "^2.2.6",
+    "@ewatrade/events": "workspace:*"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",

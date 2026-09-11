@@ -9,6 +9,14 @@ const customerSheetSource = readFileSync(
   join(MOBILE_DIR, "src/components/mobile/create-sale-customer-sheet.tsx"),
   "utf8",
 )
+const customerBookSource = readFileSync(
+  join(MOBILE_DIR, "src/components/mobile/customer-book-sheet.tsx"),
+  "utf8",
+)
+const modalSource = readFileSync(
+  join(MOBILE_DIR, "src/components/ui/modal.tsx"),
+  "utf8",
+)
 const checkoutModelSource = readFileSync(
   join(MOBILE_DIR, "src/components/mobile/sale-checkout-model.ts"),
   "utf8",
@@ -28,12 +36,36 @@ const offlineOrderSource = readFileSync(
 const completeSource = [
   source,
   customerSheetSource,
+  customerBookSource,
+  modalSource,
   checkoutModelSource,
   pickerSource,
   pickerModelSource,
   offlineOrderSource,
 ].join("\n")
 const contracts = [
+  {
+    markers: [
+      "getCreateCustomerSheetMaxHeight(height)",
+      "CREATE_CUSTOMER_SHEET_SNAP_POINTS",
+      'keyboardBehavior="extend"',
+      "isCreateCustomerSaveDisabled",
+      "hasCreateCustomerDraft",
+      "enablePanDownToClose={!hasDraft}",
+      "<AppBottomSheetBackdrop",
+      "dismissible={!hasDraft}",
+      "Optional contact",
+      'leadingIcon="User"',
+      'leadingIcon="Phone"',
+      'leadingIcon="Mail"',
+      "CUSTOMER_SHEET_PRESENT_DELAY_MS",
+      "createCustomerModal.present,",
+      "customerModal.present,",
+      "fill={colors.mutedForeground}",
+    ],
+    reason:
+      "the compact customer form must distinguish required and optional details, cap its sheet, disable invalid saves, and avoid trigger touch-through",
+  },
   {
     markers: [
       'type CatalogItem = RouterOutputs["catalog"]["listItems"][number]',
@@ -193,6 +225,30 @@ if (source.includes("contentContainerClassName=")) {
   failures.push(
     "checkout spacing must use a NativeWind-interoped inner View instead of an unsupported KeyboardAwareScrollView contentContainerClassName",
   )
+}
+
+for (const marker of [
+  'snapPoints={["72%"]}',
+  "maxDynamicContentSize={620}",
+  "paddingBottom: 220",
+  "Customer details",
+]) {
+  if (customerSheetSource.includes(marker)) {
+    failures.push(
+      `customer sheet still contains oversized legacy marker ${marker}`,
+    )
+  }
+}
+
+for (const marker of [
+  "createCustomerModal.present()",
+  "customerModal.present()",
+]) {
+  if (completeSource.includes(marker)) {
+    failures.push(
+      `customer sheet launch must be deferred instead of calling ${marker}`,
+    )
+  }
 }
 
 if (failures.length > 0) {

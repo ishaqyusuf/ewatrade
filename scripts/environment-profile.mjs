@@ -45,9 +45,10 @@ export function loadRootEnvironment(repoRoot, envSeed = process.env) {
       ...baseEnv,
       ...profileEnv,
       APP_ENV: profile,
-      DATABASE_URL:
-        profileEnv.DATABASE_URL ??
-        (profileExists ? undefined : envSeed.DATABASE_URL),
+      DATABASE_URL: undefined,
+      EWATRADE_DATABASE_URL:
+        profileEnv.EWATRADE_DATABASE_URL ??
+        (profileExists ? undefined : envSeed.EWATRADE_DATABASE_URL),
       DEV_PROFILE: profile,
     },
     profile,

@@ -755,7 +755,21 @@ export async function listPendingServiceCommerceQuoteApprovals(
       },
     })
     const now = new Date()
-    const visible = []
+    const visible: Array<{
+      canApprove: boolean
+      canReject: boolean
+      currencyCode: string
+      expiresAt: Date | null
+      id: string
+      policyRevision: number
+      quoteId: string
+      quoteVersionId: string
+      requestedAt: Date
+      sourceId: string
+      sourceKind: "commerce_inquiry" | "prescription" | "service"
+      totalMinor: number
+      version: number
+    }> = []
     for (const approval of approvals) {
       const hasDistinctActiveApprover =
         runtime.policy.mode === "approval_required" &&

@@ -10,6 +10,7 @@ describe("prescription media-safety job", () => {
     await runPrescriptionMediaSafety(
       { requestId: "request-1" },
       {
+        assertProviderAllowed: async () => undefined,
         list: async () => [
           {
             id: "media-1",

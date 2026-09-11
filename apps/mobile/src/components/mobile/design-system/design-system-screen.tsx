@@ -55,6 +55,14 @@ export function DesignSystemScreen() {
       />
       <ProductionGuardNotice />
       <ActionButton
+        icon="SlidersHorizontal"
+        onPress={() => router.push("/design-system/appearance")}
+        trailingIcon="ChevronRight"
+        variant="outline"
+      >
+        Switch design appearance
+      </ActionButton>
+      <ActionButton
         icon="WandSparkles"
         onPress={() => router.push("/design-system/startup-splash")}
         trailingIcon="ChevronRight"

@@ -1,5 +1,10 @@
 "use client"
 
+import {
+  createInventoryConversionFixture,
+  createInventoryFixture,
+} from "@/components/qa/fixture-recipes"
+import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
 import { useInventoryParams } from "@/hooks/use-inventory-params"
 import { useTRPC } from "@/trpc/client"
 import { Button } from "@ewatrade/ui"
@@ -9,7 +14,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
-import { useState } from "react"
+import { useRef, useState } from "react"
 
 type StoreSummary = { currencyCode: string; id: string; name: string }
 
@@ -47,6 +52,15 @@ export function InventoryOperationForm({
   const [targetCustodyReferenceId, setTargetCustodyReferenceId] = useState("")
   const [targetStoreId, setTargetStoreId] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const qaSnapshot = useRef<{
+    quantity: string
+    reason: string
+    sourceId: string
+    targetCustodyReferenceId: string
+    targetId: string
+    targetQuantity: string
+    targetStoreId: string
+  } | null>(null)
   const selected = rows.find((row) => row.balanceSourceId === sourceId)
   const target = rows.find((row) => row.balanceSourceId === targetId)
 
@@ -226,6 +240,88 @@ export function InventoryOperationForm({
           {error}
         </p>
       ) : null}
+      <QaDashboardQuickFill
+        canUndo={Boolean(qaSnapshot.current)}
+        formId="dashboard.inventory.operation"
+        isDirty={Boolean(
+          sourceId ||
+            quantity ||
+            reason ||
+            targetId ||
+            targetQuantity ||
+            targetCustodyReferenceId ||
+            targetStoreId,
+        )}
+        onFill={(context) => {
+          const conversion = createInventoryConversionFixture(rows)
+          const firstSource =
+            operation === "transformation"
+              ? rows.find(
+                  (row) =>
+                    row.balanceSourceId === conversion?.sourceBalanceSourceId,
+                )
+              : rows[0]
+          if (!firstSource) {
+            setError(
+              "Create an eligible Product and Inventory Unit before filling this draft.",
+            )
+            return
+          }
+          const packagedTarget = rows.find(
+            (row) => row.balanceSourceId === conversion?.targetBalanceSourceId,
+          )
+          const assignee = assigneesQuery.data?.[0]
+          const targetStore = storesQuery.data?.find(
+            (candidate) => candidate.id !== store.id,
+          )
+          if (operation === "transformation" && !conversion) {
+            setError(
+              "Add a compatible packaged stock balance before filling a transformation draft.",
+            )
+            return
+          }
+          if (operation === "custody" && !assignee) {
+            setError("Add an active team member before filling custody.")
+            return
+          }
+          if (operation === "transfer" && !targetStore) {
+            setError(
+              "Add another active Store before filling a transfer draft.",
+            )
+            return
+          }
+          qaSnapshot.current = {
+            quantity,
+            reason,
+            sourceId,
+            targetCustodyReferenceId,
+            targetId,
+            targetQuantity,
+            targetStoreId,
+          }
+          const fixture = createInventoryFixture(context)
+          setSourceId(firstSource.balanceSourceId)
+          setQuantity(conversion?.sourceQuantity ?? fixture.quantity)
+          setReason(fixture.reason)
+          setTargetId(packagedTarget?.balanceSourceId ?? "")
+          setTargetQuantity(conversion?.targetQuantity ?? "")
+          setTargetCustodyReferenceId(assignee?.id ?? "")
+          setTargetStoreId(targetStore?.id ?? "")
+          setError(null)
+        }}
+        onUndo={() => {
+          const snapshot = qaSnapshot.current
+          if (!snapshot) return
+          setQuantity(snapshot.quantity)
+          setReason(snapshot.reason)
+          setSourceId(snapshot.sourceId)
+          setTargetCustodyReferenceId(snapshot.targetCustodyReferenceId)
+          setTargetId(snapshot.targetId)
+          setTargetQuantity(snapshot.targetQuantity)
+          setTargetStoreId(snapshot.targetStoreId)
+          qaSnapshot.current = null
+        }}
+      />
       <label className="grid gap-1.5 text-sm">
         <span className="font-medium">Balance source</span>
         <select

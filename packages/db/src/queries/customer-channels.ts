@@ -11,7 +11,7 @@ import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import { MembershipRole, MembershipStatus } from "../../generated/prisma/enums"
 import { getServiceCommerceWorkspaceAccess } from "./service-commerce-access"
 import { revalidateCustomerActionCapabilityInTransaction } from "./service-commerce-actions/projection"
-import { evaluateServiceCommercePolicyBatchInTransaction } from "./service-commerce-policy"
+import { resolveStoreConversationChannelProjectionInTransaction } from "./store-conversation-channel-projection"
 import { releaseStoreConversationsForIneligibleMembership } from "./store-conversations-assignments"
 import type { DbClient } from "./types"
 
@@ -124,65 +124,73 @@ export async function getCustomerChannelWorkspace(
   input: { actorUserId: string; storeId: string; tenantId: string },
 ) {
   const { store } = await assertStoreManager(db, input)
-  const [connections, assignments, teamOptions, stores, entryPoint, access] =
-    await Promise.all([
-      db.whatsAppConnection.findMany({
-        include: {
-          bindings: {
-            include: { store: { select: { id: true, name: true } } },
-            orderBy: { createdAt: "asc" },
-          },
+  const [
+    connections,
+    assignments,
+    teamOptions,
+    stores,
+    entryPoint,
+    access,
+    conversationChannels,
+  ] = await Promise.all([
+    db.whatsAppConnection.findMany({
+      include: {
+        bindings: {
+          include: { store: { select: { id: true, name: true } } },
+          orderBy: { createdAt: "asc" },
         },
-        orderBy: { updatedAt: "desc" },
-        where: { tenantId: input.tenantId },
-      }),
-      db.serviceCommerceStoreTeamAssignment.findMany({
-        include: {
-          membership: {
-            select: {
-              status: true,
-              user: {
-                select: { displayName: true, id: true, name: true },
-              },
+      },
+      orderBy: { updatedAt: "desc" },
+      where: { tenantId: input.tenantId },
+    }),
+    db.serviceCommerceStoreTeamAssignment.findMany({
+      include: {
+        membership: {
+          select: {
+            status: true,
+            user: {
+              select: { displayName: true, id: true, name: true },
             },
           },
         },
-        orderBy: { createdAt: "asc" },
-        where: {
-          capability: "ATTENDANT",
-          storeId: input.storeId,
-          tenantId: input.tenantId,
-        },
-      }),
-      db.membership.findMany({
-        orderBy: { createdAt: "asc" },
-        select: {
-          id: true,
-          role: true,
-          user: { select: { displayName: true, id: true, name: true } },
-        },
-        where: {
-          acceptedAt: { not: null },
-          status: MembershipStatus.ACTIVE,
-          tenantId: input.tenantId,
-        },
-      }),
-      db.store.findMany({
-        orderBy: { name: "asc" },
-        select: { id: true, name: true },
-        where: { status: "ACTIVE", tenantId: input.tenantId },
-      }),
-      db.customerEntryPoint.findFirst({
-        select: {
-          id: true,
-          publicToken: true,
-          revision: true,
-          status: true,
-        },
-        where: { storeId: input.storeId, tenantId: input.tenantId },
-      }),
-      getServiceCommerceWorkspaceAccess(db, input),
-    ])
+      },
+      orderBy: { createdAt: "asc" },
+      where: {
+        capability: "ATTENDANT",
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    }),
+    db.membership.findMany({
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        role: true,
+        user: { select: { displayName: true, id: true, name: true } },
+      },
+      where: {
+        acceptedAt: { not: null },
+        status: MembershipStatus.ACTIVE,
+        tenantId: input.tenantId,
+      },
+    }),
+    db.store.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+      where: { status: "ACTIVE", tenantId: input.tenantId },
+    }),
+    db.customerEntryPoint.findFirst({
+      select: {
+        id: true,
+        publicToken: true,
+        revision: true,
+        status: true,
+      },
+      where: { storeId: input.storeId, tenantId: input.tenantId },
+    }),
+    getServiceCommerceWorkspaceAccess(db, input),
+    resolveStoreConversationChannelProjectionInTransaction(db, input),
+  ])
 
   const onboarding = readBusinessOnboardingFactsFromStoreMetadata(
     store.metadata,
@@ -190,6 +198,7 @@ export async function getCustomerChannelWorkspace(
 
   return {
     access: access.access,
+    channelMode: conversationChannels?.channelMode ?? null,
     connections: connections.map((connection) => ({
       billingOwner: connection.billingOwner,
       businessDisplayName: connection.businessDisplayName,
@@ -486,22 +495,24 @@ export async function publishCustomerEntryPoint(
 ) {
   return db.$transaction(async (tx) => {
     await assertStoreManager(tx, input)
-    const [attendantCount, access, existing] = await Promise.all([
-      tx.serviceCommerceStoreTeamAssignment.count({
-        where: {
-          capability: "ATTENDANT",
-          membership: { status: MembershipStatus.ACTIVE },
-          status: "ACTIVE",
-          storeId: input.storeId,
-          tenantId: input.tenantId,
-        },
-      }),
-      getServiceCommerceWorkspaceAccess(tx, input),
-      tx.customerEntryPoint.findFirst({
-        select: { id: true, publicToken: true, revision: true, status: true },
-        where: { storeId: input.storeId, tenantId: input.tenantId },
-      }),
-    ])
+    const [attendantCount, access, existing, conversationChannels] =
+      await Promise.all([
+        tx.serviceCommerceStoreTeamAssignment.count({
+          where: {
+            capability: "ATTENDANT",
+            membership: { status: MembershipStatus.ACTIVE },
+            status: "ACTIVE",
+            storeId: input.storeId,
+            tenantId: input.tenantId,
+          },
+        }),
+        getServiceCommerceWorkspaceAccess(tx, input),
+        tx.customerEntryPoint.findFirst({
+          select: { id: true, publicToken: true, revision: true, status: true },
+          where: { storeId: input.storeId, tenantId: input.tenantId },
+        }),
+        resolveStoreConversationChannelProjectionInTransaction(tx, input),
+      ])
     const channels = (["web", "whatsapp"] as const).map((channel) => ({
       channel,
       readiness: access.readiness.capabilities[channel].readiness,
@@ -517,6 +528,15 @@ export async function publishCustomerEntryPoint(
       throw new CustomerChannelsError(
         "PUBLISH_BLOCKED",
         `Customer entry point is not ready: ${blockers.join(", ")}.`,
+      )
+    }
+    if (
+      !conversationChannels ||
+      conversationChannels.channelMode.effectiveMode === "unavailable"
+    ) {
+      throw new CustomerChannelsError(
+        "PUBLISH_BLOCKED",
+        "Customer entry point is not ready for the selected conversation mode.",
       )
     }
     const nextToken =
@@ -566,7 +586,7 @@ export async function publishCustomerEntryPoint(
       revision: entryPoint.revision,
       status: "published" as const,
     }
-  })
+  }, TEAM_ASSIGNMENT_TRANSACTION_OPTIONS)
 }
 
 export async function revokeCustomerEntryPoint(
@@ -617,31 +637,31 @@ export async function revokeCustomerEntryPoint(
   })
 }
 
-function policyAllows(
-  outcomes: Array<{ outcome: string }>,
-  indexes: readonly [number, number],
-) {
-  return indexes.every((index) => outcomes[index]?.outcome === "allowed")
-}
-
 export async function resolveCustomerEntryPointContextInTransaction(
   db: CustomerChannelsClient,
-  input: { publicToken: string },
+  input: { publicToken: string } | { storeId: string; tenantId: string },
 ) {
+  const publicToken = "publicToken" in input ? input.publicToken : null
+  const entryScope =
+    "publicToken" in input
+      ? { publicTokenDigest: digest(input.publicToken) }
+      : { storeId: input.storeId, tenantId: input.tenantId }
   let entryPoint = await db.customerEntryPoint.findFirst({
     select: {
       id: true,
       revision: true,
-      store: { select: { name: true } },
+      store: {
+        select: { name: true },
+      },
       storeId: true,
       tenantId: true,
     },
     where: {
-      publicTokenDigest: digest(input.publicToken),
+      ...entryScope,
       status: "PUBLISHED",
     },
   })
-  if (!entryPoint) {
+  if (!entryPoint && publicToken) {
     const actionDelegate = (
       db as CustomerChannelsClient & {
         serviceCommerceCustomerActionCapability?: CustomerChannelsClient["serviceCommerceCustomerActionCapability"]
@@ -654,7 +674,7 @@ export async function resolveCustomerEntryPointContextInTransaction(
             expiresAt: { gt: new Date() },
             status: { in: ["ACTIVE", "CONSUMED"] },
             targetType: "CUSTOMER_ENTRY_POINT",
-            tokenDigest: digest(input.publicToken),
+            tokenDigest: digest(publicToken),
           },
         })
       : null
@@ -666,7 +686,9 @@ export async function resolveCustomerEntryPointContextInTransaction(
         select: {
           id: true,
           revision: true,
-          store: { select: { name: true } },
+          store: {
+            select: { name: true },
+          },
           storeId: true,
           tenantId: true,
         },
@@ -685,119 +707,38 @@ export async function resolveCustomerEntryPointContextInTransaction(
       "This customer entry point is unavailable.",
     )
   }
-  const serviceRequestFormDelegate = (
-    db as CustomerChannelsClient & {
-      serviceRequestForm?: {
-        findFirst: (args: Record<string, unknown>) => Promise<unknown>
-      }
-    }
-  ).serviceRequestForm
   const now = new Date()
-  const [profile, bindings, attendant, outcomes, serviceRequestForm] =
-    await Promise.all([
-      db.serviceCommerceStoreProfile.findFirst({
-        select: {
-          intakeEnabled: true,
-          status: true,
-          webEnabled: true,
-          whatsappEnabled: true,
-        },
-        where: {
-          storeId: entryPoint.storeId,
-          tenantId: entryPoint.tenantId,
-        },
-      }),
-      db.whatsAppStoreBinding.findMany({
-        select: { connection: { select: { status: true } }, status: true },
-        where: {
-          connection: { tenantId: entryPoint.tenantId },
-          storeId: entryPoint.storeId,
-          tenantId: entryPoint.tenantId,
-        },
-      }),
-      db.serviceCommerceStoreTeamAssignment.findFirst({
-        select: { id: true },
-        where: {
-          capability: "ATTENDANT",
-          membership: {
-            acceptedAt: { not: null },
-            status: "ACTIVE",
-            tenantId: entryPoint.tenantId,
-          },
-          status: "ACTIVE",
-          storeId: entryPoint.storeId,
-          tenantId: entryPoint.tenantId,
-        },
-      }),
-      evaluateServiceCommercePolicyBatchInTransaction(db, {
-        actorUserId: "public_customer_entry",
-        purpose: "customer_entry_point_projection",
-        scopes: [
-          { channel: "web", subject: "web", vertical: "service" },
-          { channel: "web", subject: "intake", vertical: "service" },
-          { channel: "web", subject: "web", vertical: "pharmacy" },
-          { channel: "web", subject: "intake", vertical: "pharmacy" },
-          { channel: "whatsapp", subject: "whatsapp", vertical: "service" },
-          { channel: "whatsapp", subject: "intake", vertical: "service" },
-          { channel: "whatsapp", subject: "whatsapp", vertical: "pharmacy" },
-          { channel: "whatsapp", subject: "intake", vertical: "pharmacy" },
-        ],
-        storeId: entryPoint.storeId,
-        tenantId: entryPoint.tenantId,
-      }),
-      serviceRequestFormDelegate
-        ? serviceRequestFormDelegate.findFirst({
-            select: { id: true },
-            where: {
-              AND: [
-                { OR: [{ activeFrom: null }, { activeFrom: { lte: now } }] },
-                { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
-              ],
-              offerings: { some: {} },
-              status: "ACTIVE",
-              storeId: entryPoint.storeId,
-              tenantId: entryPoint.tenantId,
-            },
-          })
-        : null,
-    ])
-  const profileReady =
-    profile?.status === "ACTIVE" && profile.intakeEnabled && Boolean(attendant)
-  const actions: ServiceCommercePublicEntryAction[] = []
-  const webVerticals = {
-    pharmacy:
-      Boolean(profileReady && profile?.webEnabled) &&
-      policyAllows(outcomes, [2, 3]),
-    service:
-      Boolean(profileReady && profile?.webEnabled) &&
-      policyAllows(outcomes, [0, 1]),
+  const channelProjection =
+    await resolveStoreConversationChannelProjectionInTransaction(db, {
+      now,
+      storeId: entryPoint.storeId,
+      tenantId: entryPoint.tenantId,
+    })
+  if (!channelProjection) {
+    throw new CustomerChannelsError(
+      "NOT_FOUND",
+      "This customer entry point is unavailable.",
+    )
   }
-  const webAllowed = webVerticals.service || webVerticals.pharmacy
-  if (webAllowed) {
+  const actions: ServiceCommercePublicEntryAction[] = []
+  if (channelProjection.channelMode.composerEnabled) {
     actions.push("request_online")
   }
-  const activeWhatsAppBindings = bindings.filter(
-    (binding) =>
-      binding.status === "ACTIVE" && binding.connection.status === "ACTIVE",
-  )
-  const whatsappAllowed = policyAllows(outcomes, [4, 5])
-  if (
-    profileReady &&
-    profile.whatsappEnabled &&
-    activeWhatsAppBindings.length === 1 &&
-    whatsappAllowed
-  ) {
+  if (channelProjection.channelMode.whatsappAction) {
     actions.push("chat_on_whatsapp")
   }
+  const webVerticals = channelProjection.webVerticals
   const requestKinds = [
     ...(webVerticals.service ? (["product_inquiry"] as const) : []),
-    ...(webVerticals.service && serviceRequestForm
+    ...(webVerticals.service && channelProjection.serviceRequestFormAvailable
       ? (["service"] as const)
       : []),
     ...(webVerticals.pharmacy ? (["prescription"] as const) : []),
   ]
   return {
     actions,
+    availability: channelProjection.availability,
+    channelMode: channelProjection.channelMode,
     entryPointId: entryPoint.id,
     entryPointRevision: entryPoint.revision,
     requestKinds,
@@ -813,10 +754,25 @@ export async function getPublicCustomerEntryPoint(
   input: { publicToken: string },
 ) {
   return db.$transaction(async (tx) => {
-    const { actions, requestKinds, storeName } =
+    const { actions, availability, channelMode, requestKinds, storeName } =
       await resolveCustomerEntryPointContextInTransaction(tx, input)
-    return { actions, requestKinds, storeName }
+    return { actions, availability, channelMode, requestKinds, storeName }
   })
+}
+
+export async function getStoreConversationChannelModeSettings(
+  db: PrismaClient,
+  input: { actorUserId: string; storeId: string; tenantId: string },
+) {
+  return db.$transaction(async (tx) => {
+    await assertStoreManager(tx, input)
+    const projection =
+      await resolveStoreConversationChannelProjectionInTransaction(tx, input)
+    if (!projection) {
+      throw new CustomerChannelsError("NOT_FOUND", "Store not found.")
+    }
+    return projection.channelMode
+  }, TEAM_ASSIGNMENT_TRANSACTION_OPTIONS)
 }
 
 export async function resolveCustomerEntryPointPrescriptionRedirect(
@@ -904,7 +860,7 @@ export async function resolveCustomerEntryPointWhatsAppRedirect(
       tx,
       input,
     )
-    if (!projection.actions.includes("chat_on_whatsapp")) {
+    if (!projection.channelMode.whatsappAction) {
       throw new CustomerChannelsError(
         "NOT_FOUND",
         "WhatsApp is unavailable for this customer entry point.",
@@ -925,7 +881,18 @@ export async function resolveCustomerEntryPointWhatsAppRedirect(
     }
     const bindings = await tx.whatsAppStoreBinding.findMany({
       select: {
-        connection: { select: { displayNumber: true, status: true } },
+        connection: {
+          select: {
+            businessVerified: true,
+            displayNumber: true,
+            numberVerified: true,
+            outboundVerified: true,
+            status: true,
+            templatesReady: true,
+            tenantId: true,
+            webhookSubscribed: true,
+          },
+        },
         status: true,
       },
       where: {
@@ -941,9 +908,25 @@ export async function resolveCustomerEntryPointWhatsAppRedirect(
         "WhatsApp routing is unavailable for this customer entry point.",
       )
     }
+    const connection = bindings[0]?.connection
+    if (
+      !connection ||
+      connection.tenantId !== entryPoint.tenantId ||
+      connection.status !== "ACTIVE" ||
+      !connection.businessVerified ||
+      !connection.numberVerified ||
+      !connection.webhookSubscribed ||
+      !connection.outboundVerified ||
+      !connection.templatesReady
+    ) {
+      throw new CustomerChannelsError(
+        "NOT_FOUND",
+        "WhatsApp is unavailable for this customer entry point.",
+      )
+    }
     return {
       contextToken: input.publicToken,
-      displayNumber: bindings[0]?.connection.displayNumber ?? "",
+      displayNumber: connection.displayNumber,
     }
   })
 }

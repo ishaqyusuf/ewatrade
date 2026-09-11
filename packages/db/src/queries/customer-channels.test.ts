@@ -15,9 +15,89 @@ import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service
 
 type Call = { args: Record<string, unknown>; name: string }
 
+function readyActiveBinding(
+  overrides: Partial<{
+    connection: {
+      businessVerified: boolean
+      displayNumber: string
+      numberVerified: boolean
+      outboundVerified: boolean
+      status: string
+      templatesReady: boolean
+      tenantId: string
+      webhookSubscribed: boolean
+    }
+    status: string
+    tenantId: string
+  }> = {},
+) {
+  return {
+    connection: {
+      businessVerified: true,
+      displayNumber: "+2348000000000",
+      numberVerified: true,
+      outboundVerified: true,
+      status: "ACTIVE",
+      templatesReady: true,
+      tenantId: "tenant_1",
+      webhookSubscribed: true,
+      ...overrides.connection,
+    },
+    status: overrides.status ?? "ACTIVE",
+    tenantId: overrides.tenantId ?? "tenant_1",
+  }
+}
+
+function channelProjectionStore(input?: {
+  activeAttendants?: number
+  activeBindings?: Array<ReturnType<typeof readyActiveBinding>>
+  desiredMode?: "BOTH" | "EWATRADE_CHAT" | "WHATSAPP"
+  pharmacyConfigured?: boolean
+  serviceRequestFormAvailable?: boolean
+}) {
+  return {
+    countryCode: "NG",
+    prescriptionChannel: input?.pharmacyConfigured
+      ? { status: "ACTIVE", webEnabled: true }
+      : null,
+    prescriptionRoles: input?.pharmacyConfigured
+      ? [
+          {
+            credentialReference: "credential-ref",
+            credentialVerifiedAt: new Date("2026-08-01T00:00:00.000Z"),
+            role: "PHARMACIST",
+            status: "ACTIVE",
+          },
+        ]
+      : [],
+    prescriptionSettings: input?.pharmacyConfigured
+      ? { status: "ACTIVE" }
+      : null,
+    serviceCommercePolicyDecisions:
+      allowedServiceCommercePolicyDecisionRows(),
+    serviceCommerceProfile: {
+      intakeEnabled: true,
+      status: "ACTIVE",
+      webEnabled: true,
+      whatsappEnabled: true,
+    },
+    serviceCommerceStoreTeamAssignments:
+      input?.activeAttendants === 0 ? [] : [{ id: "assignment_1" }],
+    serviceRequestForms: input?.serviceRequestFormAvailable
+      ? [{ id: "service_form_1" }]
+      : [],
+    storeConversationAvailabilityConfiguration: null,
+    storeConversationChannelConfiguration: input?.desiredMode
+      ? { desiredMode: input.desiredMode, revision: 1 }
+      : null,
+    tenant: { timezone: "Africa/Lagos" },
+    whatsappStoreBindings: input?.activeBindings ?? [readyActiveBinding()],
+  }
+}
+
 function createDb(input?: {
   activeAttendants?: number
-  activeBindings?: Array<{ connection: { status: string }; status: string }>
+  activeBindings?: Array<ReturnType<typeof readyActiveBinding>>
   configuredBindings?: Array<{ status: string; storeId: string }>
   existingEntry?: {
     id: string
@@ -151,7 +231,6 @@ function createDb(input?: {
       findFirst: async (args: Record<string, unknown>) => {
         calls.push({ args, name: "store.findFirst" })
         return {
-          countryCode: "NG",
           id: "store_1",
           metadata: {
             retailOps: {
@@ -164,6 +243,10 @@ function createDb(input?: {
             },
           },
           name: "Main Store",
+          ...channelProjectionStore({
+            activeAttendants: input?.activeAttendants,
+            activeBindings: input?.activeBindings,
+          }),
           serviceCommerceProfile: {
             bookingEnabled: false,
             catalogAdoptionMode: "PROGRESSIVE",
@@ -220,11 +303,7 @@ function createDb(input?: {
         calls.push({ args, name: "binding.findMany" })
         const select = args.select as Record<string, unknown> | undefined
         if (select?.storeId) return input?.configuredBindings ?? []
-        return (
-          input?.activeBindings ?? [
-            { connection: { status: "ACTIVE" }, status: "ACTIVE" },
-          ]
-        )
+        return input?.activeBindings ?? [readyActiveBinding()]
       },
       upsert: async (args: Record<string, unknown>) => {
         calls.push({ args, name: "binding.upsert" })
@@ -495,11 +574,15 @@ describe("stable customer entry point", () => {
         findFirst: async () => ({ id: "service_form_1" }),
       },
       whatsAppStoreBinding: {
-        findMany: async () => [
-          { connection: { status: "ACTIVE" }, status: "ACTIVE" },
-        ],
+        findMany: async () => [readyActiveBinding()],
       },
-      store: { findFirst: async () => ({ countryCode: "NG" }) },
+      store: {
+        findFirst: async () =>
+          channelProjectionStore({
+            desiredMode: "BOTH",
+            serviceRequestFormAvailable: true,
+          }),
+      },
     }
     const db = {
       $transaction: async (callback: (tx: typeof transaction) => unknown) =>
@@ -517,7 +600,25 @@ describe("stable customer entry point", () => {
     })
     expect(result).toEqual({
       actions: ["request_online", "chat_on_whatsapp"],
-      requestKinds: ["product_inquiry", "service", "prescription"],
+      availability: {
+        available: true,
+        customerMessage: null,
+        reason: null,
+        recovery: [],
+        reopensAt: null,
+        state: "available",
+      },
+      channelMode: {
+        chat: { available: true, blockers: [] },
+        composerEnabled: true,
+        desiredMode: "both",
+        effectiveMode: "both",
+        historyReadable: true,
+        revision: 1,
+        whatsapp: { available: true, blockers: [] },
+        whatsappAction: "reach_store_faster_on_whatsapp",
+      },
+      requestKinds: ["product_inquiry", "service"],
       storeName: "Main Store",
     })
     expect(JSON.stringify(result)).not.toContain("tenant_1")
@@ -590,12 +691,15 @@ describe("stable customer entry point", () => {
       serviceCommerceStoreTeamAssignment: {
         findFirst: async () => ({ id: "assignment_1" }),
       },
-      store: { findFirst: async () => ({ countryCode: "NG" }) },
+      store: {
+        findFirst: async () =>
+          channelProjectionStore({
+            activeBindings: [readyActiveBinding(), readyActiveBinding()],
+            desiredMode: "BOTH",
+          }),
+      },
       whatsAppStoreBinding: {
-        findMany: async () => [
-          { connection: { status: "ACTIVE" }, status: "ACTIVE" },
-          { connection: { status: "ACTIVE" }, status: "ACTIVE" },
-        ],
+        findMany: async () => [readyActiveBinding(), readyActiveBinding()],
       },
     }
     const db = {
@@ -609,7 +713,28 @@ describe("stable customer entry point", () => {
       }),
     ).resolves.toEqual({
       actions: ["request_online"],
-      requestKinds: ["product_inquiry", "prescription"],
+      availability: {
+        available: true,
+        customerMessage: null,
+        reason: null,
+        recovery: [],
+        reopensAt: null,
+        state: "available",
+      },
+      channelMode: {
+        chat: { available: true, blockers: [] },
+        composerEnabled: true,
+        desiredMode: "both",
+        effectiveMode: "ewatrade_chat",
+        historyReadable: true,
+        revision: 1,
+        whatsapp: {
+          available: false,
+          blockers: ["whatsapp_routing_unavailable"],
+        },
+        whatsappAction: null,
+      },
+      requestKinds: ["product_inquiry"],
       storeName: "Main Store",
     })
   })
@@ -641,22 +766,11 @@ describe("stable customer entry point", () => {
       serviceCommerceStoreTeamAssignment: {
         findFirst: async () => ({ id: "assignment_1" }),
       },
-      store: { findFirst: async () => ({ countryCode: "NG" }) },
+      store: {
+        findFirst: async () => channelProjectionStore({ desiredMode: "BOTH" }),
+      },
       whatsAppStoreBinding: {
-        findMany: async (args: Record<string, unknown>) => {
-          const select = args.select as Record<string, unknown> | undefined
-          return select?.connection
-            ? [
-                {
-                  connection: {
-                    displayNumber: "+2348000000000",
-                    status: "ACTIVE",
-                  },
-                  status: "ACTIVE",
-                },
-              ]
-            : []
-        },
+        findMany: async () => [readyActiveBinding()],
       },
     }
     const db = {

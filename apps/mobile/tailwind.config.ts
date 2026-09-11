@@ -17,6 +17,7 @@ export default {
       colors: {
         border: "var(--border)",
         input: "var(--input)",
+        overlay: "var(--overlay)",
         ring: "var(--ring)",
         background: "var(--background)",
         foreground: "var(--foreground)",

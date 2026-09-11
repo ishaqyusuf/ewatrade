@@ -1,4 +1,5 @@
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { useAuthContext } from "@/hooks/use-auth"
 import {
   isCustomerCredentialError,
   mergeCustomerConversationPages,
@@ -11,12 +12,19 @@ import {
 import { useCustomerTRPC } from "@/trpc/customer-client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query"
-import { useRouter } from "expo-router"
+import { useLocalSearchParams, useRouter } from "expo-router"
 import { useEffect, useMemo } from "react"
 import { ActivityIndicator, FlatList, RefreshControl, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { CustomerAccountSecurityControl } from "./customer-account-security-control"
 import { CustomerConversationListEmpty } from "./customer-conversation-list-empty"
+import { isCustomerConversationListUnavailableQaState } from "./customer-conversation-list-empty-presentation"
 import { CustomerConversationListItem } from "./customer-conversation-list-item"
+import { resolveCustomerConversationListQaItems } from "./customer-conversation-list-qa-state"
+import {
+  canFetchCustomerConversationListNextPage,
+  mergeCustomerConversationAccessItems,
+} from "./customer-conversation-list-state"
 import { CustomerShellHeader } from "./customer-shell-header"
 
 type ConversationItem =
@@ -25,43 +33,140 @@ type ConversationItem =
 export function CustomerConversationListScreen() {
   const insets = useSafeAreaInsets()
   const router = useRouter()
+  const { accessProfile, isAuthenticated } = useAuthContext()
+  const { qaState } = useLocalSearchParams<{ qaState?: string | string[] }>()
   const trpc = useCustomerTRPC()
   const queryClient = useQueryClient()
   const hasCredential = Boolean(getCustomerConversationSession())
-  const query = useInfiniteQuery(
+  const hasLinkedCustomerHistory = Boolean(
+    isAuthenticated && accessProfile?.hasCustomerHistory,
+  )
+  const qaUnavailable = isCustomerConversationListUnavailableQaState({
+    development: __DEV__,
+    qaState,
+  })
+  const qaItems = useMemo(
+    () =>
+      resolveCustomerConversationListQaItems({
+        development: __DEV__,
+        qaState,
+      }),
+    [qaState],
+  )
+  const qaPopulated = qaItems !== null
+  const qaIsolated = qaUnavailable || qaPopulated
+  const guestQuery = useInfiniteQuery(
     trpc.serviceCommerce.mobileStoreConversations.infiniteQueryOptions(
       { pageSize: 25 },
       {
-        enabled: hasCredential,
+        enabled: hasCredential && !qaIsolated,
         getNextPageParam: (lastPage) => lastPage.nextCursor,
         retry: false,
       },
     ),
   )
-  const conversations = useMemo(
+  const accountQuery = useInfiniteQuery(
+    trpc.serviceCommerce.accountStoreConversations.infiniteQueryOptions(
+      { pageSize: 25 },
+      {
+        enabled: hasLinkedCustomerHistory && !qaIsolated,
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        retry: false,
+      },
+    ),
+  )
+  const credentialRejected = isCustomerCredentialError(guestQuery.error)
+  const accountConversations = useMemo(
     () =>
-      query.data?.pages.reduce(
+      accountQuery.data?.pages.reduce(
         (items, page) => mergeCustomerConversationPages(items, page.items),
         [] as ConversationItem[],
       ) ?? [],
-    [query.data?.pages],
+    [accountQuery.data?.pages],
   )
-  const credentialRejected = isCustomerCredentialError(query.error)
+  const guestConversations = useMemo(
+    () =>
+      guestQuery.data?.pages.reduce(
+        (items, page) => mergeCustomerConversationPages(items, page.items),
+        [] as ConversationItem[],
+      ) ?? [],
+    [guestQuery.data?.pages],
+  )
+  const conversations = useMemo(() => {
+    if (qaItems) {
+      return qaItems.map((item) => ({
+        ...item,
+        access: "guest" as const,
+      }))
+    }
+    return mergeCustomerConversationAccessItems({
+      accountItems: accountConversations,
+      credentialRejected,
+      guestItems: guestConversations,
+      qaUnavailable,
+    })
+  }, [
+    accountConversations,
+    credentialRejected,
+    guestConversations,
+    qaItems,
+    qaUnavailable,
+  ])
+  const loading =
+    conversations.length === 0 &&
+    ((hasCredential && guestQuery.isLoading) ||
+      (hasLinkedCustomerHistory && accountQuery.isLoading))
+  const failed =
+    qaUnavailable ||
+    (conversations.length === 0 &&
+      ((hasCredential && guestQuery.isError) ||
+        (hasLinkedCustomerHistory && accountQuery.isError)))
+  const refreshing = guestQuery.isRefetching || accountQuery.isRefetching
+  const fetchingNext =
+    guestQuery.isFetchingNextPage || accountQuery.isFetchingNextPage
+
+  const refresh = () => {
+    if (qaIsolated) return Promise.resolve([])
+    return Promise.all([
+      ...(hasCredential ? [guestQuery.refetch()] : []),
+      ...(hasLinkedCustomerHistory ? [accountQuery.refetch()] : []),
+    ])
+  }
 
   useEffect(() => {
-    const expiry = query.data?.pages.at(-1)?.credentialExpiresAt
+    if (qaIsolated) return
+    const expiry = guestQuery.data?.pages.at(-1)?.credentialExpiresAt
     if (expiry) updateCustomerConversationExpiry(expiry)
-  }, [query.data?.pages])
+  }, [guestQuery.data?.pages, qaIsolated])
 
   useEffect(() => {
-    if (!isCustomerCredentialError(query.error)) return
+    if (qaIsolated) return
+    if (!isCustomerCredentialError(guestQuery.error)) return
     clearCustomerConversationSession()
-    queryClient.clear()
-  }, [query.error, queryClient])
+    queryClient.removeQueries({
+      queryKey: trpc.serviceCommerce.mobileStoreConversations.queryKey(),
+    })
+  }, [guestQuery.error, qaIsolated, queryClient, trpc])
+
+  useEffect(() => {
+    if (qaIsolated) return
+    if (!isCustomerCredentialError(accountQuery.error)) return
+
+    queryClient.removeQueries({
+      queryKey: trpc.serviceCommerce.accountStoreConversations.queryKey(),
+    })
+    if (!hasCredential) router.replace("/")
+  }, [accountQuery.error, hasCredential, qaIsolated, queryClient, router, trpc])
 
   return (
     <View className="flex-1 bg-background">
-      <CustomerShellHeader />
+      <CustomerShellHeader
+        accountControl={
+          hasLinkedCustomerHistory ? (
+            <CustomerAccountSecurityControl />
+          ) : undefined
+        }
+      />
       <FlatList
         contentContainerStyle={{
           flexGrow: conversations.length === 0 ? 1 : undefined,
@@ -72,25 +177,27 @@ export function CustomerConversationListScreen() {
         ListEmptyComponent={
           <CustomerConversationListEmpty
             credentialRejected={credentialRejected}
-            error={query.isError}
-            loading={query.isLoading}
-            onRetry={() => void query.refetch()}
+            error={failed}
+            loading={loading}
+            onRetry={() => void refresh()}
+            retrying={refreshing}
           />
         }
         ListHeaderComponent={
-          query.isError && conversations.length > 0 ? (
+          (guestQuery.isError || accountQuery.isError) &&
+          conversations.length > 0 ? (
             <View className="p-4">
               <StatusBanner
                 actionLabel="Retry"
                 message="Showing saved results. New activity could not be loaded."
-                onActionPress={() => void query.refetch()}
+                onActionPress={() => void refresh()}
                 tone="warning"
               />
             </View>
           ) : null
         }
         ListFooterComponent={
-          query.isFetchingNextPage ? (
+          fetchingNext ? (
             <ActivityIndicator
               accessibilityLabel="Loading more conversations"
               className="my-5"
@@ -98,33 +205,50 @@ export function CustomerConversationListScreen() {
           ) : null
         }
         onEndReached={() => {
-          if (query.hasNextPage && !query.isFetchingNextPage) {
-            void query.fetchNextPage()
-          }
+          if (
+            canFetchCustomerConversationListNextPage({
+              hasNextPage: guestQuery.hasNextPage,
+              isFetchingNextPage: guestQuery.isFetchingNextPage,
+              qaIsolated,
+            })
+          )
+            void guestQuery.fetchNextPage()
+          if (
+            canFetchCustomerConversationListNextPage({
+              hasNextPage: accountQuery.hasNextPage,
+              isFetchingNextPage: accountQuery.isFetchingNextPage,
+              qaIsolated,
+            })
+          )
+            void accountQuery.fetchNextPage()
         }}
         onEndReachedThreshold={0.35}
         refreshControl={
           <RefreshControl
-            onRefresh={() => void query.refetch()}
-            refreshing={query.isRefetching && !query.isFetchingNextPage}
+            enabled={!qaIsolated}
+            onRefresh={() => void refresh()}
+            refreshing={refreshing && !fetchingNext}
           />
         }
         renderItem={({ item }) => (
           <CustomerConversationListItem
             lastActivityAt={item.lastActivityAt}
             lastMessage={item.lastMessage}
-            onPress={() =>
+            onPress={() => {
+              if (qaPopulated) return
               router.push({
                 pathname: "/(customer)/conversations/[conversationId]",
                 params: {
                   conversationId: item.conversationId,
+                  access: item.access,
                   publicToken: item.publicToken,
                 },
               })
-            }
+            }}
             state={item.state}
             storeAvatar={item.storeAvatar}
             storeName={item.storeName}
+            unreadStoreMessages={item.unreadStoreMessages}
           />
         )}
       />

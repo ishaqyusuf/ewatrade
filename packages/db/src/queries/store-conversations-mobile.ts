@@ -1,6 +1,7 @@
 import {
   type StoreConversationMobileListProjection,
   type StoreConversationSelectRequestInput,
+  projectStoreConversationModeration,
   storeConversationMobileListInputSchema,
   storeConversationMobileSendTextInputSchema,
   storeConversationMobileTimelineInputSchema,
@@ -24,6 +25,7 @@ import {
   StoreConversationModerationState,
   StoreConversationTransferStatus,
 } from "../../generated/prisma/enums"
+import type { StoreConversationActionMaterializationDependencies } from "./store-conversation-actions"
 import {
   GUEST_CREDENTIAL_LIFETIME_MS,
   StoreConversationError,
@@ -39,6 +41,10 @@ import {
   getGuestStoreConversationTimeline,
   sendGuestStoreConversationText,
 } from "./store-conversations-guest"
+import {
+  acknowledgeGuestStoreConversationProgress,
+  getGuestStoreConversationMessagesAfter,
+} from "./store-conversations-realtime"
 import { selectGuestStoreConversationRequest } from "./store-conversations-requests"
 import type { DbClient } from "./types"
 
@@ -47,7 +53,7 @@ export const STORE_CONVERSATION_TRANSFER_LIFETIME_MS = 10 * 60 * 1_000
 const MOBILE_TRANSACTION_OPTIONS = {
   isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
   maxWait: 10_000,
-  timeout: 60_000,
+  timeout: 30_000,
 } as const
 
 const mobileDeviceContext = (installationToken: string) => ({
@@ -275,12 +281,51 @@ export async function listMobileStoreConversations(
       },
     })
     const selected = rows.slice(0, parsed.pageSize)
+    const watermarks = await tx.storeConversationCustomerWatermark.findMany({
+      select: { conversationId: true, readThroughSequence: true },
+      where: {
+        conversationId: { in: selected.map((row) => row.conversation.id) },
+        credentialId: credential.id,
+      },
+    })
+    const readThroughByConversation = new Map<string, number>(
+      watermarks.map(
+        (watermark) =>
+          [watermark.conversationId, watermark.readThroughSequence] as const,
+      ),
+    )
+    const unreadStoreMessages = new Map<string, number>(
+      await Promise.all(
+        selected.map(
+          async (access) =>
+            [
+              access.conversation.id,
+              await tx.storeConversationMessage.count({
+                where: {
+                  authorKind:
+                    StoreConversationMessageAuthorKind.STORE_ATTENDANT,
+                  conversationId: access.conversation.id,
+                  sequence: {
+                    gt:
+                      readThroughByConversation.get(access.conversation.id) ??
+                      0,
+                  },
+                  storeId: access.conversation.storeId,
+                  tenantId: access.conversation.tenantId,
+                },
+              }),
+            ] as const,
+        ),
+      ),
+    )
     const credentialExpiresAt = await touchStoreConversationGuestCredential(
       tx,
       {
         credentialId: credential.id,
+        credentialStatus: credential.status,
         guestIdentityId: credential.guestIdentityId,
         now,
+        overlapExpiresAt: credential.overlapExpiresAt,
       },
     )
     const last = selected.at(-1)
@@ -294,6 +339,8 @@ export async function listMobileStoreConversations(
                 conversationId: access.conversation.id,
                 lastActivityAt: access.conversation.lastActivityAt,
                 lastMessageSequence: access.conversation.lastMessageSequence,
+                unreadStoreMessages:
+                  unreadStoreMessages.get(access.conversation.id) ?? 0,
                 lastMessage: access.conversation.messages[0]
                   ? {
                       author: projectListMessageAuthor(
@@ -334,6 +381,7 @@ export async function getMobileStoreConversationTimeline(
     limit?: number
     publicToken: string
   },
+  actionDependencies?: StoreConversationActionMaterializationDependencies,
 ) {
   const parsed = storeConversationMobileTimelineInputSchema.parse({
     beforeSequence: input.beforeSequence,
@@ -345,6 +393,7 @@ export async function getMobileStoreConversationTimeline(
     db,
     { ...parsed, credentialToken: input.credentialToken },
     mobileDeviceContext(input.installationToken),
+    actionDependencies,
   )
   const credential = await resolveStoreConversationGuestCredential(db, {
     credentialToken: input.credentialToken,
@@ -353,6 +402,60 @@ export async function getMobileStoreConversationTimeline(
     purpose: StoreConversationGuestCredentialPurpose.MOBILE_DEVICE,
   })
   return { ...timeline, credentialExpiresAt: credential.expiresAt }
+}
+
+export async function getMobileStoreConversationMessagesAfter(
+  db: PrismaClient,
+  input: {
+    actionMessageIds?: string[]
+    afterSequence?: number
+    conversationId: string
+    credentialToken: string
+    installationToken: string
+    limit?: number
+    publicToken: string
+  },
+  actionDependencies?: StoreConversationActionMaterializationDependencies,
+) {
+  const result = await getGuestStoreConversationMessagesAfter(
+    db,
+    input,
+    mobileDeviceContext(input.installationToken),
+    actionDependencies,
+  )
+  const credential = await resolveStoreConversationGuestCredential(db, {
+    credentialToken: input.credentialToken,
+    installationToken: input.installationToken,
+    now: new Date(),
+    purpose: StoreConversationGuestCredentialPurpose.MOBILE_DEVICE,
+  })
+  return { ...result, credentialExpiresAt: credential.expiresAt }
+}
+
+export async function acknowledgeMobileStoreConversationProgress(
+  db: PrismaClient,
+  input: {
+    clientOperationId: string
+    conversationId: string
+    credentialToken: string
+    deliveredThroughSequence: number
+    installationToken: string
+    publicToken: string
+    readThroughSequence: number
+  },
+) {
+  const result = await acknowledgeGuestStoreConversationProgress(
+    db,
+    input,
+    mobileDeviceContext(input.installationToken),
+  )
+  const credential = await resolveStoreConversationGuestCredential(db, {
+    credentialToken: input.credentialToken,
+    installationToken: input.installationToken,
+    now: new Date(),
+    purpose: StoreConversationGuestCredentialPurpose.MOBILE_DEVICE,
+  })
+  return { ...result, credentialExpiresAt: credential.expiresAt }
 }
 
 export async function sendMobileStoreConversationText(
@@ -679,8 +782,10 @@ export async function redeemMobileStoreConversationTransfer(
         tx,
         {
           credentialId: credential.id,
+          credentialStatus: credential.status,
           guestIdentityId: credential.guestIdentityId,
           now,
+          overlapExpiresAt: credential.overlapExpiresAt,
         },
       )
       const conversation = await tx.storeConversation.findFirst({
@@ -699,6 +804,7 @@ export async function redeemMobileStoreConversationTransfer(
       return {
         conversation: {
           id: conversation.id,
+          moderation: projectStoreConversationModeration(conversation),
           state: projectConversationState(conversation),
           storeName: entry.storeName,
         },
@@ -754,8 +860,10 @@ export async function redeemMobileStoreConversationTransfer(
       tx,
       {
         credentialId: credential.id,
+        credentialStatus: credential.status,
         guestIdentityId: credential.guestIdentityId,
         now,
+        overlapExpiresAt: credential.overlapExpiresAt,
       },
     )
     const conversation = await tx.storeConversation.findFirst({
@@ -774,6 +882,7 @@ export async function redeemMobileStoreConversationTransfer(
     return {
       conversation: {
         id: conversation.id,
+        moderation: projectStoreConversationModeration(conversation),
         state: projectConversationState(conversation),
         storeName: entry.storeName,
       },

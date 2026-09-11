@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto"
 import { prisma } from "@ewatrade/db"
 import { normalizeHostname, stripPort } from "@ewatrade/utils"
 import { compare } from "bcryptjs"
@@ -81,6 +82,72 @@ function getCookieDomain(platformDomain = getPlatformDomain()) {
   }
 
   return hostname.startsWith(".") ? hostname : `.${hostname}`
+}
+
+export function getAuthCookieDomain() {
+  return getCookieDomain()
+}
+
+function getAuthCookieNames() {
+  const secure = getDefaultBaseUrl().startsWith("https://")
+  const prefix = secure ? "__Secure-" : ""
+  return {
+    sessionData: `${prefix}better-auth.session_data`,
+    sessionToken: `${prefix}better-auth.session_token`,
+  }
+}
+
+function serializeCookie(
+  name: string,
+  value: string,
+  input: { expires?: Date; maxAge: number },
+) {
+  const cookieDomain = getCookieDomain()
+  const secure = name.startsWith("__Secure-")
+  return [
+    `${name}=${value}`,
+    `Max-Age=${Math.max(0, Math.floor(input.maxAge))}`,
+    cookieDomain ? `Domain=${cookieDomain}` : null,
+    "Path=/",
+    input.expires ? `Expires=${input.expires.toUTCString()}` : null,
+    "HttpOnly",
+    secure ? "Secure" : null,
+    "SameSite=Lax",
+  ]
+    .filter(Boolean)
+    .join("; ")
+}
+
+function signCookieValue(value: string, secret: string) {
+  const signature = createHmac("sha256", secret).update(value).digest("base64")
+  return encodeURIComponent(`${value}.${signature}`)
+}
+
+export function createBetterAuthSessionCookieHeaders(input: {
+  expiresAt: Date
+  token: string
+}) {
+  const names = getAuthCookieNames()
+  const maxAge = Math.max(
+    0,
+    Math.floor((input.expiresAt.getTime() - Date.now()) / 1000),
+  )
+  return [
+    serializeCookie(
+      names.sessionToken,
+      signCookieValue(input.token, getAuthSecret()),
+      { expires: input.expiresAt, maxAge },
+    ),
+    serializeCookie(names.sessionData, "", { maxAge: 0 }),
+  ]
+}
+
+export function clearBetterAuthSessionCookieHeaders() {
+  const names = getAuthCookieNames()
+  return [
+    serializeCookie(names.sessionToken, "", { maxAge: 0 }),
+    serializeCookie(names.sessionData, "", { maxAge: 0 }),
+  ]
 }
 
 function toOrigin(value: string | null | undefined) {

@@ -7,7 +7,7 @@ type CanPreviewMarketingExperienceOptions = {
 }
 
 export function canPreviewMarketingExperience({
-  configuredToken = process.env.MARKETING_EXPERIENCE_PREVIEW_TOKEN,
+  configuredToken = process.env.EWATARADE_MARKETING_EXPERIENCE_PREVIEW_TOKEN,
   nodeEnvironment = process.env.NODE_ENV,
   providedToken,
 }: CanPreviewMarketingExperienceOptions): boolean {

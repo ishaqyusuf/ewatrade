@@ -1,5 +1,10 @@
 import { createHmac, timingSafeEqual } from "node:crypto"
 
+import { HostedCheckoutProviderError } from "./hosted-checkout-errors"
+
+export * from "./hosted-checkout-errors"
+export * from "./prescription-checkout-handoff"
+
 export type HostedCheckoutInput = {
   amountMinor: number
   callbackUrl: string
@@ -60,34 +65,61 @@ export class PaystackHostedPaymentProvider implements HostedPaymentProvider {
   }
 
   async createCheckout(input: HostedCheckoutInput) {
-    const response = await this.#fetch(
-      "https://api.paystack.co/transaction/initialize",
-      {
-        body: JSON.stringify({
-          amount: input.amountMinor,
-          callback_url: input.callbackUrl,
-          currency: input.currencyCode,
-          email: input.customerEmail,
-          metadata: input.metadata,
-          reference: input.reference,
-        }),
-        headers: {
-          Authorization: `Bearer ${this.#secretKey}`,
-          "Content-Type": "application/json",
+    let response: Response
+    try {
+      response = await this.#fetch(
+        "https://api.paystack.co/transaction/initialize",
+        {
+          body: JSON.stringify({
+            amount: input.amountMinor,
+            callback_url: input.callbackUrl,
+            currency: input.currencyCode,
+            email: input.customerEmail,
+            metadata: input.metadata,
+            reference: input.reference,
+          }),
+          headers: {
+            Authorization: `Bearer ${this.#secretKey}`,
+            "Content-Type": "application/json",
+          },
+          method: "POST",
         },
-        method: "POST",
-      },
-    )
+      )
+    } catch {
+      throw new HostedCheckoutProviderError(
+        "OUTCOME_UNKNOWN",
+        "The payment provider outcome is unknown.",
+      )
+    }
     const payload = (await response.json().catch(() => ({}))) as {
+      code?: string
       data?: { authorization_url?: string; reference?: string }
       message?: string
       status?: boolean
     }
-    if (!response.ok || !payload.status || !payload.data?.authorization_url) {
-      throw new Error(
-        payload.message ?? `Payment checkout failed (${response.status}).`,
+    const normalizedFailure = `${payload.code ?? ""} ${payload.message ?? ""}`
+      .trim()
+      .toLowerCase()
+    const ambiguousResponse =
+      response.status >= 500 ||
+      [408, 409, 425, 429].includes(response.status) ||
+      normalizedFailure.includes("duplicate")
+    if ((!response.ok || payload.status === false) && !ambiguousResponse) {
+      throw new HostedCheckoutProviderError(
+        "DEFINITE_FAILURE",
+        "The payment provider rejected checkout initialization.",
       )
     }
+    if (ambiguousResponse)
+      throw new HostedCheckoutProviderError(
+        "OUTCOME_UNKNOWN",
+        "The payment provider outcome is unknown.",
+      )
+    if (!payload.status || !payload.data?.authorization_url)
+      throw new HostedCheckoutProviderError(
+        "OUTCOME_UNKNOWN",
+        "The payment provider outcome is unknown.",
+      )
     return {
       checkoutUrl: payload.data.authorization_url,
       providerReference: payload.data.reference ?? input.reference,

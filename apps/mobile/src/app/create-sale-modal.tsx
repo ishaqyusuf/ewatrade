@@ -1,4 +1,6 @@
-import { CreateSaleContent, WorkflowModalScreen } from "@/components/mobile"
+import { WorkflowModalScreen } from "@/components/mobile"
+import { CreateSaleContent } from "@/components/mobile/create-sale/create-sale-screen"
+import { CreateSaleWorkflowChrome } from "@/components/mobile/create-sale/create-sale-workflow-chrome"
 import { useAuthContext } from "@/hooks/use-auth"
 import { showOperationSuccess } from "@/lib/operation-success-navigation"
 import { useLocalSearchParams, useNavigation } from "expo-router"
@@ -18,6 +20,7 @@ export default function CreateSaleModalRoute() {
 
   return (
     <WorkflowModalScreen
+      chrome={CreateSaleWorkflowChrome}
       allowSalesRep
       closeLabel="Close create sale"
       title={itemKind === "service" ? "New service order" : "Create sale"}

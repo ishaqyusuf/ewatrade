@@ -6,6 +6,7 @@ import { CustomerMessagingService } from "./customer-messaging-service"
 const originalUrl = process.env.SERVICE_SMS_WEBHOOK_URL
 const originalToken = process.env.SERVICE_SMS_WEBHOOK_TOKEN
 const originalFetch = globalThis.fetch
+const originalQaAdapter = process.env.QA_MESSAGING_TEST_ADAPTER_ENABLED
 
 afterEach(() => {
   if (originalUrl) process.env.SERVICE_SMS_WEBHOOK_URL = originalUrl
@@ -13,6 +14,11 @@ afterEach(() => {
   if (originalToken) process.env.SERVICE_SMS_WEBHOOK_TOKEN = originalToken
   else Reflect.deleteProperty(process.env, "SERVICE_SMS_WEBHOOK_TOKEN")
   globalThis.fetch = originalFetch
+  if (originalQaAdapter) {
+    process.env.QA_MESSAGING_TEST_ADAPTER_ENABLED = originalQaAdapter
+  } else {
+    Reflect.deleteProperty(process.env, "QA_MESSAGING_TEST_ADAPTER_ENABLED")
+  }
 })
 
 describe("CustomerMessagingService", () => {
@@ -32,6 +38,7 @@ describe("CustomerMessagingService", () => {
       channel: "sms",
       intentId: "intent-1",
       message: "Your order is ready.",
+      tenantDataClassification: "LIVE",
       to: "+2348000000000",
     })
 
@@ -64,9 +71,46 @@ describe("CustomerMessagingService", () => {
       channel: "sms",
       intentId: "intent-2",
       message: "Your order is ready.",
+      tenantDataClassification: "LIVE",
       to: "+2348000000000",
     })
 
     expect(headers.has("authorization")).toBe(false)
+  })
+
+  test("blocks QA live messaging before fetch", async () => {
+    process.env.SERVICE_SMS_WEBHOOK_URL = "https://provider.test/sms"
+    let calls = 0
+    globalThis.fetch = mock(async () => {
+      calls += 1
+      return new Response("{}", { status: 200 })
+    }) as typeof fetch
+
+    await expect(
+      new CustomerMessagingService().send({
+        channel: "sms",
+        intentId: "intent-qa-blocked",
+        message: "QA message",
+        tenantDataClassification: "QA",
+        to: "+15550102000",
+      }),
+    ).rejects.toThrow("unavailable for QA data")
+    expect(calls).toBe(0)
+  })
+
+  test("returns an unmistakable receipt from the QA test adapter", async () => {
+    process.env.QA_MESSAGING_TEST_ADAPTER_ENABLED = "true"
+    const result = await new CustomerMessagingService().send({
+      channel: "whatsapp",
+      intentId: "intent-qa-adapter",
+      message: "QA message",
+      tenantDataClassification: "QA",
+      to: "+15550102000",
+    })
+    expect(result).toEqual({
+      providerAttemptId: "qa-test:intent-qa-adapter",
+      providerKey: "qa_whatsapp_test_adapter",
+      status: "sent",
+    })
   })
 })

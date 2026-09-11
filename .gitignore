@@ -15,7 +15,10 @@ packages/db/generated
 .local-db-sync/
 /.design/*
 !/.design/reference-*.png
+/.designs/
 packages/jobs/.trigger/
 /.brain/
 /.scratch/
+/.design/
 /output/
+/outputs/

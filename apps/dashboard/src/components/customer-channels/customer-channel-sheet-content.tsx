@@ -10,9 +10,11 @@ import type {
 } from "@ewatrade/service-commerce"
 import { Button } from "@ewatrade/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useRef, useState } from "react"
+import { useRef, useState, useSyncExternalStore } from "react"
 
 import { ConnectionForm } from "./connection-form"
+import { ConversationAvailabilityForm } from "./conversation-availability-form"
+import { ConversationModeForm } from "./conversation-mode-form"
 import { EmbeddedSignupSelection } from "./embedded-signup-selection"
 import { EntryPointCard } from "./entry-point-card"
 import { QuoteApprovalForm } from "./quote-approval-form"
@@ -20,12 +22,16 @@ import { QuoteReleasePolicyForm } from "./quote-release-policy-form"
 import { StoreBindingForm } from "./store-binding-form"
 import { TeamRoutingForm } from "./team-routing-form"
 
+const subscribeToHydration = () => () => undefined
+
 export function CustomerChannelSheetContent({
   mode,
   registerFormReset,
   storeId,
 }: {
   mode:
+    | "availability"
+    | "conversation_mode"
     | "connection"
     | "entry_point"
     | "quote_approval"
@@ -38,6 +44,11 @@ export function CustomerChannelSheetContent({
   const queryClient = useQueryClient()
   const params = useServiceCommerceParams()
   const channelParams = useCustomerChannelParams()
+  const hydrated = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
+  )
   const [message, setMessage] = useState<string | null>(null)
   const policyOperationId = useRef(crypto.randomUUID())
   const approvalDecisionId = useRef(crypto.randomUUID())
@@ -67,6 +78,20 @@ export function CustomerChannelSheetContent({
   const releaseSettings = useQuery({
     ...trpc.serviceCommerce.quoteReleaseSettings.queryOptions({ storeId }),
     enabled: mode === "quote_policy",
+    retry: false,
+  })
+  const availabilitySettings = useQuery({
+    ...trpc.serviceCommerce.storeConversationAvailabilitySettings.queryOptions({
+      storeId,
+    }),
+    enabled: mode === "availability",
+    retry: false,
+  })
+  const conversationModeSettings = useQuery({
+    ...trpc.serviceCommerce.storeConversationChannelModeSettings.queryOptions({
+      storeId,
+    }),
+    enabled: mode === "conversation_mode",
     retry: false,
   })
   const approvalDetail = useQuery({
@@ -237,7 +262,10 @@ export function CustomerChannelSheetContent({
   )
 
   if (
+    !hydrated ||
     workspace.isLoading ||
+    (mode === "availability" && availabilitySettings.isLoading) ||
+    (mode === "conversation_mode" && conversationModeSettings.isLoading) ||
     (mode === "connection" && embedded.isLoading) ||
     (mode === "quote_policy" && releaseSettings.isLoading) ||
     (mode === "quote_approval" && approvalDetail.isLoading)
@@ -246,6 +274,8 @@ export function CustomerChannelSheetContent({
   }
   const error =
     workspace.error ??
+    (mode === "availability" ? availabilitySettings.error : null) ??
+    (mode === "conversation_mode" ? conversationModeSettings.error : null) ??
     (mode === "connection" ? embedded.error : null) ??
     (mode === "quote_policy" ? releaseSettings.error : null) ??
     (mode === "quote_approval" ? approvalDetail.error : null)
@@ -263,6 +293,12 @@ export function CustomerChannelSheetContent({
           onClick={() =>
             void Promise.all([
               workspace.refetch(),
+              mode === "availability"
+                ? availabilitySettings.refetch()
+                : Promise.resolve(),
+              mode === "conversation_mode"
+                ? conversationModeSettings.refetch()
+                : Promise.resolve(),
               mode === "connection" ? embedded.refetch() : Promise.resolve(),
               mode === "quote_policy"
                 ? releaseSettings.refetch()
@@ -310,6 +346,24 @@ export function CustomerChannelSheetContent({
         <output className="rounded-lg bg-muted px-4 py-3 text-sm">
           {message}
         </output>
+      ) : null}
+
+      {mode === "availability" && availabilitySettings.data ? (
+        <ConversationAvailabilityForm
+          onMessage={setMessage}
+          registerReset={registerFormReset}
+          settings={availabilitySettings.data}
+          storeId={storeId}
+        />
+      ) : null}
+
+      {mode === "conversation_mode" && conversationModeSettings.data ? (
+        <ConversationModeForm
+          onMessage={setMessage}
+          registerReset={registerFormReset}
+          settings={conversationModeSettings.data}
+          storeId={storeId}
+        />
       ) : null}
 
       {mode === "connection" && channelParams.whatsapp === "select-number" ? (
@@ -492,6 +546,8 @@ function SetupProgress({
   active,
 }: {
   active:
+    | "availability"
+    | "conversation_mode"
     | "connection"
     | "entry_point"
     | "quote_approval"
@@ -499,6 +555,8 @@ function SetupProgress({
     | "team"
 }) {
   const steps = [
+    { active: active === "availability", label: "Availability" },
+    { active: active === "conversation_mode", label: "Channel mode" },
     { active: active === "connection", label: "Setup & configure" },
     { active: active === "connection", label: "Test" },
     {
@@ -513,7 +571,7 @@ function SetupProgress({
   return (
     <ol
       aria-label="Customer channel setup progress"
-      className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4"
+      className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 lg:grid-cols-6"
     >
       {steps.map((step, index) => (
         <li

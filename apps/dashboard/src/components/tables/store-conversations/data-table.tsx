@@ -12,8 +12,8 @@ import {
 } from "./columns"
 
 function requestSummary(item: StoreConversationQueueItem) {
-  return item.requests.map((request) => (
-    <span className="block" key={`${request.kind}:${request.status}`}>
+  return item.requests.map((request, index) => (
+    <span className="block" key={`${request.id}:${index}`}>
       {formatStoreConversationRequestKind(request.kind)} ·{" "}
       {formatStoreConversationStatus(request.status)}
       {request.lifecycle === "terminal" ? " (closed)" : ""}
@@ -24,9 +24,11 @@ function requestSummary(item: StoreConversationQueueItem) {
 export function StoreConversationDataTable({
   items,
   onOpen,
+  timeZone,
 }: {
   items: StoreConversationQueueItem[]
   onOpen: (conversationId: string) => void
+  timeZone: string
 }) {
   return (
     <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-background">
@@ -61,7 +63,10 @@ export function StoreConversationDataTable({
                 <td className="px-4 py-4">
                   <p className="font-medium">{item.conversationId}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {formatStoreConversationDate(item.lastCustomerActivityAt)}
+                    {formatStoreConversationDate(
+                      item.lastCustomerActivityAt,
+                      timeZone,
+                    )}
                   </p>
                 </td>
                 <td className="px-4 py-4 text-muted-foreground">
@@ -111,7 +116,10 @@ export function StoreConversationDataTable({
               <div className="min-w-0">
                 <p className="truncate font-medium">{item.conversationId}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {formatStoreConversationDate(item.lastCustomerActivityAt)}
+                  {formatStoreConversationDate(
+                    item.lastCustomerActivityAt,
+                    timeZone,
+                  )}
                 </p>
               </div>
               <Badge

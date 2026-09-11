@@ -106,6 +106,8 @@ export function switchMobileBusinessSession(
       businessId: business.id,
       businessName: business.name,
       businessSlug: business.slug,
+      storeId: undefined,
+      storeName: undefined,
       currencyCode: business.currency,
       role: business.role,
     },

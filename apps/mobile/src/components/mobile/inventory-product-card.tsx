@@ -5,7 +5,11 @@ import { Text } from "@/components/ui/text"
 import type { MobileDesignStatusTone } from "@/lib/design-foundation"
 import { cn } from "@/lib/utils"
 import type { ReactNode } from "react"
-import { View } from "react-native"
+import {
+  View,
+  type AccessibilityRole,
+  type AccessibilityState,
+} from "react-native"
 
 type InventoryProductCardContentProps = {
   icon: IconKeys
@@ -19,6 +23,9 @@ type InventoryProductCardContentProps = {
 }
 
 export type InventoryProductCardProps = InventoryProductCardContentProps & {
+  accessibilityLabel?: string
+  accessibilityRole?: AccessibilityRole
+  accessibilityState?: AccessibilityState
   className?: string
   disabled?: boolean
   onPress?: () => void
@@ -96,6 +103,9 @@ function InventoryProductCardContent({
 }
 
 export function InventoryProductCard({
+  accessibilityLabel,
+  accessibilityRole,
+  accessibilityState,
   className,
   disabled = false,
   icon,
@@ -133,6 +143,9 @@ export function InventoryProductCard({
 
   return (
     <Pressable
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole={accessibilityRole}
+      accessibilityState={accessibilityState}
       className={cn(containerClassName, "active:bg-accent")}
       disabled={disabled}
       haptic

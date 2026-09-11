@@ -582,6 +582,7 @@ describe("Commerce Quote invariants", () => {
           { id: "request-line-1", offeringId: "offering-1" },
         ],
       },
+      storeConversationRequestLink: { findMany: async () => [] },
       store: {
         findFirst: async () => ({ currencyCode: "NGN", id: "store-1" }),
       },
@@ -723,6 +724,7 @@ describe("Commerce Quote invariants", () => {
       },
       serviceCommerceQuoteReleasePolicy: { findFirst: async () => null },
       serviceCommerceStoreTeamAssignment: { findMany: async () => [] },
+      storeConversationRequestLink: { findMany: async () => [] },
       store: {
         findFirst: async () => ({
           countryCode: "NG",
@@ -916,6 +918,7 @@ describe("Commerce Quote invariants", () => {
 
   test("revalidates and atomically releases one pending approval without creator self-approval", async () => {
     const events: string[] = []
+    let actionMessages = 0
     const approval = {
       decidedByMembershipId: null,
       decisionClientId: null,
@@ -972,7 +975,29 @@ describe("Commerce Quote invariants", () => {
     const client = {
       $transaction: async (callback: (tx: PrismaClient) => Promise<unknown>) =>
         callback(client as unknown as PrismaClient),
+      $queryRaw: async () => [{ id: "conversation-1" }],
       commerceQuoteVersion: {
+        findFirst: async () => ({
+          ...approval.quoteVersion,
+          options: [
+            {
+              currencyCode: "NGN",
+              id: "option-1",
+              label: "Standard service",
+              position: 0,
+              totalMinor: 7_500,
+            },
+          ],
+          quote: {
+            currentVersionId: "version-1",
+            sourceId: "request-1",
+            sourceType: "SERVICE_REQUEST",
+            storeId: "store-1",
+            tenantId: "tenant-1",
+          },
+          status: "ISSUED",
+          version: 1,
+        }),
         updateMany: async () => {
           events.push("version:issued")
           return { count: 1 }
@@ -1025,11 +1050,40 @@ describe("Commerce Quote invariants", () => {
         ],
       },
       serviceRequest: {
-        findFirst: async () => ({ status: "SUBMITTED" }),
+        findFirst: async () => ({ revision: 2, status: "SUBMITTED" }),
         updateMany: async () => {
           events.push("source:quoted")
           return { count: 1 }
         },
+      },
+      storeConversation: {
+        findFirst: async () => ({
+          id: "conversation-1",
+          lastMessageSequence: 4,
+        }),
+        updateMany: async () => {
+          events.push("conversation:advanced")
+          return { count: 1 }
+        },
+      },
+      storeConversationActionMessage: {
+        create: async () => {
+          actionMessages += 1
+          events.push("conversation:action")
+        },
+        findUnique: async () => null,
+      },
+      storeConversationMessage: {
+        create: async () => {
+          events.push("conversation:message")
+          return { id: "message-quote-1" }
+        },
+      },
+      storeConversationRequestLink: {
+        create: async () => {
+          events.push("conversation:source-link")
+        },
+        findMany: async () => [{ conversationId: "conversation-1" }],
       },
       store: {
         findFirst: async () => ({ countryCode: "NG", id: "store-1" }),
@@ -1053,10 +1107,15 @@ describe("Commerce Quote invariants", () => {
       versionId: "version-1",
     })
     expect(result.token).toBeString()
+    expect(actionMessages).toBe(1)
     expect(events).toEqual([
       "approval:approved",
       "version:issued",
       "source:quoted",
+      "conversation:advanced",
+      "conversation:message",
+      "conversation:source-link",
+      "conversation:action",
       "approval:audit:approved",
     ])
   })
@@ -1211,6 +1270,7 @@ describe("Commerce Quote invariants", () => {
           },
         ],
       },
+      storeConversationRequestLink: { findMany: async () => [] },
       store: {
         findFirst: async () => ({ countryCode: "NG", id: "store-1" }),
       },

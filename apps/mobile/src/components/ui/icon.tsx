@@ -1,37 +1,37 @@
-import { cn } from "@/lib/utils";
-import { HugeiconsIcon, type HugeiconsProps } from "@hugeicons/react-native";
-import * as HugeIcons from "@hugeicons/core-free-icons";
-import { useColorScheme } from "@/hooks/use-color";
-import { camel } from "@ewatrade/utils";
-import { THEME } from "@/lib/theme";
-import { View } from "react-native";
-import type { ComponentType } from "react";
+import { useColorScheme } from "@/hooks/use-color"
+import { THEME } from "@/lib/theme"
+import { cn } from "@/lib/utils"
+import { camel } from "@ewatrade/utils"
+import * as HugeIcons from "@hugeicons/core-free-icons"
+import { HugeiconsIcon, type HugeiconsProps } from "@hugeicons/react-native"
+import type { ComponentType } from "react"
+import { View } from "react-native"
 
-export type LucideProps = Omit<HugeiconsProps, "icon" | "altIcon" | "showAlt">;
-type IconThemeOverride = keyof typeof THEME | "";
+export type LucideProps = Omit<HugeiconsProps, "icon" | "altIcon" | "showAlt">
+type IconThemeOverride = keyof typeof THEME | ""
 export type IconProps = LucideProps & {
-  as?: ComponentType<any>;
-  inverted?: boolean;
-  name?: IconKeys;
-  theme?: IconThemeOverride;
-};
-type LucideIcon = ComponentType<LucideProps>;
-type HugeIconName = keyof typeof HugeIcons;
+  as?: ComponentType<LucideProps>
+  inverted?: boolean
+  name?: IconKeys
+  theme?: IconThemeOverride
+}
+type LucideIcon = ComponentType<LucideProps>
+type HugeIconName = keyof typeof HugeIcons
 
 function hugeIcon(name: HugeIconName): LucideIcon {
-  const icon = HugeIcons[name] as any;
+  const icon = HugeIcons[name] as HugeiconsProps["icon"] | undefined
 
   return function HugeIconComponent({
     strokeWidth = 1.8,
     size = 24,
     ...props
   }: LucideProps) {
-    const resolvedIcon = icon ?? (HugeIcons.X as any);
+    const resolvedIcon = icon ?? (HugeIcons.X as HugeiconsProps["icon"])
 
     if (__DEV__ && !icon) {
       console.warn(
         `[Icon] Missing Hugeicon export for "${name}", falling back to X.`,
-      );
+      )
     }
 
     return (
@@ -41,108 +41,113 @@ function hugeIcon(name: HugeIconName): LucideIcon {
         strokeWidth={strokeWidth}
         {...props}
       />
-    );
-  };
+    )
+  }
 }
 
-const Activity = hugeIcon("Activity");
-const AlertCircle = hugeIcon("AlertCircle");
-const AppWindow = hugeIcon("ComputerIcon");
-const ArrowLeft = hugeIcon("ArrowLeft");
-const ArrowRight = hugeIcon("ArrowRight");
-const BarChart2 = hugeIcon("Analytics01Icon");
-const BarChart3 = hugeIcon("AnalyticsUpIcon");
-const Bell = hugeIcon("Notification03Icon");
-const Briefcase = hugeIcon("Briefcase");
-const Building = hugeIcon("Building");
-const Building2 = hugeIcon("Building02Icon");
-const Calendar = hugeIcon("Calendar");
-const CalendarCheck = hugeIcon("CalendarCheckIn01Icon");
-const Camera = hugeIcon("Camera");
-const Calculator = hugeIcon("CalculatorIcon");
-const ChartNoAxesColumn = hugeIcon("Analytics01Icon");
-const Check = hugeIcon("Check");
-const CheckCircle2 = hugeIcon("CheckmarkCircle01Icon");
-const CheckSquare = hugeIcon("CheckmarkSquare01Icon");
-const ChevronDown = hugeIcon("ArrowDown01Icon");
-const ChevronLeft = hugeIcon("ArrowLeft01Icon");
-const ChevronRight = hugeIcon("ArrowRight01Icon");
-const CircleCheck = hugeIcon("CircleCheck");
-const CircleDollarSign = hugeIcon("DollarCircleIcon");
-const ClipboardCheck = hugeIcon("ClipboardCheck");
-const ClipboardList = hugeIcon("ClipboardList");
-const Clock = hugeIcon("Clock");
-const CreditCard = hugeIcon("CreditCard");
-const Delete = hugeIcon("Delete");
-const DoorOpen = hugeIcon("Door01Icon");
-const Download = hugeIcon("Download01Icon");
-const Eye = hugeIcon("EyeIcon");
-const EyeOff = hugeIcon("ViewOffIcon");
-const Fence = hugeIcon("FenceIcon");
-const FilePenLine = hugeIcon("FileEditIcon");
-const FileText = hugeIcon("File02Icon");
-const FolderPlus = hugeIcon("FolderAddIcon");
-const FingerPrint = hugeIcon("FingerPrintIcon");
-const FingerPrintScan = hugeIcon("FingerPrintScanIcon");
-const Gavel = hugeIcon("JudgeIcon");
-const Globe = hugeIcon("Globe");
-const GripHorizontal = hugeIcon("DragDropHorizontalIcon");
-const HardHat = hugeIcon("ConstructionIcon");
-const Hash = hugeIcon("Hash");
-const HelpCircle = hugeIcon("HelpCircleIcon");
-const Hourglass = hugeIcon("Hourglass");
-const House = hugeIcon("House");
-const Info = hugeIcon("Info");
-const LayoutDashboard = hugeIcon("LayoutDashboard");
-const LayoutGrid = hugeIcon("LayoutGrid");
-const List = hugeIcon("List");
-const ListChecks = hugeIcon("CheckListIcon");
-const ListX = hugeIcon("ListViewIcon");
-const Loader2 = hugeIcon("Loading03Icon");
-const LocateIcon = hugeIcon("Location01Icon");
-const Lock = hugeIcon("Lock");
-const LogOut = hugeIcon("Logout01Icon");
-const Mail = hugeIcon("Mail");
-const MapPin = hugeIcon("MapPin");
-const Minus = hugeIcon("Minus");
-const MoreHorizontal = hugeIcon("MoreHorizontal");
-const Pencil = hugeIcon("Pencil");
-const Phone = hugeIcon("Phone");
-const PieChart = hugeIcon("PieChart");
-const Pin = hugeIcon("Pin");
-const Plus = hugeIcon("Plus");
-const PlusCircle = hugeIcon("PlusSignCircleIcon");
-const Receipt = hugeIcon("Receipt");
-const ReceiptText = hugeIcon("ReceiptTextIcon");
-const RefreshCw = hugeIcon("RefreshIcon");
-const Search = hugeIcon("Search");
-const Settings = hugeIcon("Settings");
-const Share = hugeIcon("Share");
-const Square = hugeIcon("SquareIcon");
-const ShieldCheck = hugeIcon("SecurityCheckIcon");
-const SecurityPassword = hugeIcon("SecurityPasswordIcon");
-const SlidersHorizontal = hugeIcon("FilterHorizontalIcon");
-const StickyNote = hugeIcon("StickyNote");
-const Trash = hugeIcon("Trash");
-const TrendingDown = hugeIcon("AnalyticsDownIcon");
-const TrendingUp = hugeIcon("AnalyticsUpIcon");
-const TriangleAlert = hugeIcon("AlertTriangle");
-const Truck = hugeIcon("Truck");
-const User = hugeIcon("User");
-const UserCog = hugeIcon("UserCog");
-const UserPlus = hugeIcon("UserPlus");
-const Users = hugeIcon("Users");
-const UserX = hugeIcon("UserX");
-const Warehouse = hugeIcon("Warehouse");
-const Wallet = hugeIcon("Wallet");
-const Wind = hugeIcon("Wind");
-const Wrench = hugeIcon("Wrench");
-const X = hugeIcon("X");
-const XCircle = hugeIcon("XCircle");
-const Zap = hugeIcon("Zap");
-const Route = hugeIcon("RouteIcon");
-const RotateCw = hugeIcon("RotateClockwiseIcon");
-const Ban = hugeIcon("CancelSquareIcon");
+const Activity = hugeIcon("Activity")
+const AlertCircle = hugeIcon("AlertCircle")
+const AppWindow = hugeIcon("ComputerIcon")
+const ArrowLeft = hugeIcon("ArrowLeft")
+const ArrowRight = hugeIcon("ArrowRight")
+const BarChart2 = hugeIcon("Analytics01Icon")
+const BarChart3 = hugeIcon("AnalyticsUpIcon")
+const Bell = hugeIcon("Notification03Icon")
+const Briefcase = hugeIcon("Briefcase")
+const Building = hugeIcon("Building")
+const Building2 = hugeIcon("Building02Icon")
+const Calendar = hugeIcon("Calendar")
+const CalendarCheck = hugeIcon("CalendarCheckIn01Icon")
+const Camera = hugeIcon("Camera")
+const Calculator = hugeIcon("CalculatorIcon")
+const ChartNoAxesColumn = hugeIcon("Analytics01Icon")
+const Check = hugeIcon("Check")
+const CheckCircle2 = hugeIcon("CheckmarkCircle01Icon")
+const CheckSquare = hugeIcon("CheckmarkSquare01Icon")
+const ChevronDown = hugeIcon("ArrowDown01Icon")
+const ChevronLeft = hugeIcon("ArrowLeft01Icon")
+const ChevronRight = hugeIcon("ArrowRight01Icon")
+const CircleCheck = hugeIcon("CircleCheck")
+const CircleDollarSign = hugeIcon("DollarCircleIcon")
+const ClipboardCheck = hugeIcon("ClipboardCheck")
+const ClipboardList = hugeIcon("ClipboardList")
+const Clock = hugeIcon("Clock")
+const CreditCard = hugeIcon("CreditCard")
+const Delete = hugeIcon("Delete")
+const DoorOpen = hugeIcon("Door01Icon")
+const Download = hugeIcon("Download01Icon")
+const Eye = hugeIcon("EyeIcon")
+const EyeOff = hugeIcon("ViewOffIcon")
+const Fence = hugeIcon("FenceIcon")
+const FilePenLine = hugeIcon("FileEditIcon")
+const FileText = hugeIcon("File02Icon")
+const FolderPlus = hugeIcon("FolderAddIcon")
+const FingerPrint = hugeIcon("FingerPrintIcon")
+const FingerPrintScan = hugeIcon("FingerPrintScanIcon")
+const Gavel = hugeIcon("JudgeIcon")
+const Globe = hugeIcon("Globe")
+const GripHorizontal = hugeIcon("DragDropHorizontalIcon")
+const HardHat = hugeIcon("ConstructionIcon")
+const Hash = hugeIcon("Hash")
+const HelpCircle = hugeIcon("HelpCircleIcon")
+const Hourglass = hugeIcon("Hourglass")
+const House = hugeIcon("House")
+const Info = hugeIcon("Info")
+const LayoutDashboard = hugeIcon("LayoutDashboard")
+const LayoutGrid = hugeIcon("LayoutGrid")
+const Link = hugeIcon("Link01Icon")
+const List = hugeIcon("List")
+const ListChecks = hugeIcon("CheckListIcon")
+const ListX = hugeIcon("ListViewIcon")
+const Loader2 = hugeIcon("Loading03Icon")
+const LocateIcon = hugeIcon("Location01Icon")
+const Lock = hugeIcon("Lock")
+const LogOut = hugeIcon("Logout01Icon")
+const Mail = hugeIcon("Mail")
+const MapPin = hugeIcon("MapPin")
+const MessageCircle = hugeIcon("Message01Icon")
+const Minus = hugeIcon("Minus")
+const MoreHorizontal = hugeIcon("MoreHorizontal")
+const Undo2 = hugeIcon("Undo02Icon")
+const WandSparkles = hugeIcon("MagicWand01Icon")
+const Pencil = hugeIcon("Pencil")
+const Phone = hugeIcon("Phone")
+const PieChart = hugeIcon("PieChart")
+const Pin = hugeIcon("Pin")
+const Plus = hugeIcon("Plus")
+const PlusCircle = hugeIcon("PlusSignCircleIcon")
+const Receipt = hugeIcon("Receipt")
+const ReceiptText = hugeIcon("ReceiptTextIcon")
+const RefreshCw = hugeIcon("RefreshIcon")
+const Search = hugeIcon("Search")
+const Settings = hugeIcon("Settings")
+const Share = hugeIcon("Share")
+const Square = hugeIcon("SquareIcon")
+const ShieldCheck = hugeIcon("SecurityCheckIcon")
+const SecurityPassword = hugeIcon("SecurityPasswordIcon")
+const SlidersHorizontal = hugeIcon("FilterHorizontalIcon")
+const StickyNote = hugeIcon("StickyNote")
+const Trash = hugeIcon("Trash")
+const TrendingDown = hugeIcon("AnalyticsDownIcon")
+const TrendingUp = hugeIcon("AnalyticsUpIcon")
+const TriangleAlert = hugeIcon("AlertTriangle")
+const Truck = hugeIcon("Truck")
+const User = hugeIcon("User")
+const UserCog = hugeIcon("UserCog")
+const UserPlus = hugeIcon("UserPlus")
+const Users = hugeIcon("Users")
+const UserX = hugeIcon("UserX")
+const Warehouse = hugeIcon("Warehouse")
+const Wallet = hugeIcon("Wallet")
+const Wind = hugeIcon("Wind")
+const WifiOff = hugeIcon("WifiOff01Icon")
+const Wrench = hugeIcon("Wrench")
+const X = hugeIcon("X")
+const XCircle = hugeIcon("XCircle")
+const Zap = hugeIcon("Zap")
+const Route = hugeIcon("RouteIcon")
+const RotateCw = hugeIcon("RotateClockwiseIcon")
+const Ban = hugeIcon("CancelSquareIcon")
 // type T = IconProps['strokeWidth']
 const iconSizes = {
   xs: 12,
@@ -152,7 +157,7 @@ const iconSizes = {
   lg: 28,
   xl: 32,
   "2xl": 40,
-};
+}
 // type T = IconProps['strokeWidth']
 function IconImpl({
   as: IconComponent,
@@ -161,74 +166,74 @@ function IconImpl({
   theme,
   ...props
 }: IconProps) {
-  const { colorScheme } = useColorScheme();
+  const { colorScheme } = useColorScheme()
   const themeOverride =
-    theme === "dark" || theme === "light" ? theme : undefined;
+    theme === "dark" || theme === "light" ? theme : undefined
   const iconColorScheme = themeOverride
     ? themeOverride
     : inverted
       ? colorScheme === "dark"
         ? "light"
         : "dark"
-      : colorScheme;
-  const className = typeof props.className === "string" ? props.className : "";
+      : colorScheme
+  const className = typeof props.className === "string" ? props.className : ""
   const textClass = className
     .split(" ")
     ?.reverse()
-    ?.find((a) => a?.startsWith("text-"));
-  const textToken = textClass?.slice(5);
-  const [colorToken, opacityToken] = (textToken || "").split("/");
-  let color: string | undefined;
+    ?.find((a) => a?.startsWith("text-"))
+  const textToken = textClass?.slice(5)
+  const [colorToken, opacityToken] = (textToken || "").split("/")
+  let color: string | undefined
   try {
-    color = colorToken ? camel(colorToken.split("-").join(" ")) : undefined;
+    color = colorToken ? camel(colorToken.split("-").join(" ")) : undefined
   } catch {
-    color = undefined;
+    color = undefined
   }
-  const parsedOpacity = opacityToken ? Number(opacityToken) : undefined;
+  const parsedOpacity = opacityToken ? Number(opacityToken) : undefined
   const opacity =
     parsedOpacity === undefined || Number.isNaN(parsedOpacity)
       ? undefined
       : parsedOpacity > 1
         ? parsedOpacity / 100
-        : parsedOpacity;
+        : parsedOpacity
 
   const themedColor =
     color && iconColorScheme === "dark"
       ? THEME.dark[color]
       : color
         ? THEME.light[color]
-        : undefined;
-  const resolvedColor = props.color || themedColor || color;
+        : undefined
+  const resolvedColor = props.color || themedColor || color
   const styleFromClass = {
     color: resolvedColor,
     ...(opacity !== undefined ? { opacity } : {}),
-  };
-  props.color = resolvedColor;
-  props.style = props.style
-    ? ([props.style, styleFromClass] as any)
-    : (styleFromClass as any);
-
-  let sizestr = className
-    .split(" ")
-    ?.find((a) => a.startsWith("size-"))
-    ?.split("-")?.[1]!;
-  if (sizestr?.startsWith("[")) {
-    sizestr = sizestr.replace(/[\[\]px]/g, "");
   }
-  sizestr = iconSizes[sizestr] || sizestr || iconSizes?.base;
+  props.color = resolvedColor
+  props.style = props.style ? [props.style, styleFromClass] : styleFromClass
 
-  props.size = +sizestr || props.size;
-  if (!IconComponent) IconComponent = appIcons[name!] || appIcons.X;
+  let sizestr =
+    className
+      .split(" ")
+      ?.find((a) => a.startsWith("size-"))
+      ?.split("-")?.[1] ?? ""
+  if (sizestr?.startsWith("[")) {
+    sizestr = sizestr.replace(/[\[\]px]/g, "")
+  }
+  sizestr = iconSizes[sizestr] || sizestr || iconSizes?.base
+
+  props.size = +sizestr || props.size
+  if (!IconComponent)
+    IconComponent = (name ? appIcons[name] : null) ?? appIcons.X
   const otherClasses = className
     .split(" ")
-    .filter((a) => ["size-", "text-"].every((b) => !a?.startsWith(b)));
+    .filter((a) => ["size-", "text-"].every((b) => !a?.startsWith(b)))
   if (otherClasses?.length)
     return (
       <View className={cn(otherClasses.join(" "))}>
         <IconComponent {...props} />
       </View>
-    );
-  return <IconComponent {...props} />;
+    )
+  return <IconComponent {...props} />
 }
 
 function IconRoot({
@@ -245,7 +250,7 @@ function IconRoot({
       size={size}
       {...props}
     />
-  );
+  )
 }
 // function camel(str?: string) {
 //   if (!str) return str;
@@ -312,6 +317,7 @@ const appIcons = {
   jobs: Briefcase,
   LayoutDashboard,
   LayoutGrid,
+  Link,
   List,
   ListChecks,
   ListX,
@@ -321,6 +327,7 @@ const appIcons = {
   LogOut,
   Mail,
   MapPin,
+  MessageCircle,
   Minus,
   more: MoreHorizontal,
 
@@ -348,6 +355,7 @@ const appIcons = {
   TrendingUp,
   TrendingDown,
   TriangleAlert,
+  Undo2,
   UserCog,
   UserPlus,
   Users,
@@ -355,13 +363,15 @@ const appIcons = {
   UserX,
   Warehouse,
   Wallet,
+  WandSparkles,
   Wind,
+  WifiOff,
   Wrench,
   X,
   XCircle,
   Zap,
   ChartNoAxesColumn,
   Truck,
-};
-export type IconKeys = keyof typeof appIcons;
-export const Icon = Object.assign(IconRoot, appIcons);
+}
+export type IconKeys = keyof typeof appIcons
+export const Icon = Object.assign(IconRoot, appIcons)

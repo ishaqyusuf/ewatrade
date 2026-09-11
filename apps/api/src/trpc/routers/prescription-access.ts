@@ -6,25 +6,28 @@ import {
   ServiceCommercePolicyError,
   acceptPrescriptionDeliveryQuote,
   acceptPrescriptionPickupQuote,
-  attachPrescriptionHostedCheckout,
   createPrescriptionCommunicationIntent,
+  createPrescriptionHostedCheckoutRepository,
   createPrescriptionQuickAction,
   getPublicPrescriptionChannel,
   getPublicPrescriptionPaymentStatus,
   getPublicPrescriptionQuote,
   getPublicPrescriptionRequestStatus,
-  preparePrescriptionHostedCheckout,
   replacePrescriptionMedia,
   revisePrescriptionQuoteForDelivery,
   selectPrescriptionQuoteOption,
   submitPublicPrescriptionRequest,
 } from "@ewatrade/db/queries"
-import { AppError, runProviderOperation } from "@ewatrade/errors"
+import { AppError } from "@ewatrade/errors"
 import {
   enqueuePrescriptionCommunicationDispatch,
   enqueuePrescriptionMediaSafety,
 } from "@ewatrade/jobs"
-import { getConfiguredHostedPaymentProvider } from "@ewatrade/payments"
+import {
+  PrescriptionCheckoutHandoffError,
+  createPrescriptionHostedCheckoutHandoff,
+  getConfiguredHostedPaymentProvider,
+} from "@ewatrade/payments"
 import { TRPCError } from "@trpc/server"
 
 import { storePrescriptionMediaUpload } from "../../domains/prescription-media"
@@ -55,6 +58,13 @@ async function runPublic<T>(action: () => Promise<T>) {
   try {
     return await action()
   } catch (error) {
+    if (error instanceof PrescriptionCheckoutHandoffError) {
+      throw new TRPCError({
+        cause: error,
+        code: "CONFLICT",
+        message: error.message,
+      })
+    }
     if (
       error instanceof PrescriptionRequestError ||
       error instanceof PrescriptionPaymentError ||
@@ -119,57 +129,12 @@ export const prescriptionAccessRouter = createTRPCRouter({
   createCheckout: publicProcedure
     .input(prescriptionPaymentCheckoutSchema)
     .mutation(({ ctx, input }) =>
-      runPublic(async () => {
-        const provider = await runProviderOperation(
-          "payment",
-          "prescriptions.checkout.configure",
-          () => getConfiguredHostedPaymentProvider(),
-        )
-        const prepared = await preparePrescriptionHostedCheckout(ctx.db, {
-          ...input,
-          provider: provider.key,
-        })
-        if (prepared.replay) {
-          const previous = await ctx.db.prescriptionPaymentIntent.findUnique({
-            where: { id: prepared.intentId },
-          })
-          if (previous?.checkoutUrl) {
-            return {
-              checkoutUrl: previous.checkoutUrl,
-              statusToken: prepared.statusToken,
-            }
-          }
-        }
-        const storefrontUrl =
-          process.env.STOREFRONT_URL?.replace(/\/$/, "") ??
-          "http://ewatrade-storefront.localhost"
-        const checkout = await runProviderOperation(
-          "payment",
-          "prescriptions.checkout.create",
-          () =>
-            provider.createCheckout({
-              amountMinor: prepared.amountMinor,
-              callbackUrl: `${storefrontUrl}/prescription-payment/${prepared.statusToken}`,
-              currencyCode: prepared.currencyCode,
-              customerEmail: prepared.customerEmail,
-              metadata: { paymentIntentId: prepared.intentId },
-              reference: prepared.providerReference,
-            }),
-        )
-        if (checkout.providerReference !== prepared.providerReference) {
-          throw new Error("Payment provider returned an unexpected reference.")
-        }
-        await attachPrescriptionHostedCheckout(ctx.db, {
-          checkoutUrl: checkout.checkoutUrl,
-          expiresAt: checkout.expiresAt,
-          intentId: prepared.intentId,
-          providerReference: prepared.providerReference,
-        })
-        return {
-          checkoutUrl: checkout.checkoutUrl,
-          statusToken: prepared.statusToken,
-        }
-      }),
+      runPublic(() =>
+        createPrescriptionHostedCheckoutHandoff(input, {
+          ...createPrescriptionHostedCheckoutRepository(ctx.db),
+          provider: getConfiguredHostedPaymentProvider(),
+        }),
+      ),
     ),
 
   paymentStatus: publicProcedure

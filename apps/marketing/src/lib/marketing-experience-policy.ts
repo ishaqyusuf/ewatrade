@@ -5,7 +5,7 @@ import {
 
 export const marketingExperienceProductionReadiness = {
   "legacy-v1": true,
-  "operator-v2": false,
+  "operator-v2": true,
 } satisfies Record<MarketingExperienceId, boolean>
 
 type ResolveMarketingExperienceOptions = {

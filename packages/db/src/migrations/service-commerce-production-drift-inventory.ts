@@ -210,7 +210,7 @@ export function assertServiceCommerceProductionDriftInventoryEnvironment(
     inventoryError("PRODUCTION_DRIFT_INVENTORY_NOT_AUTHORIZED")
   }
 
-  const applicationUrl = parseHostedPostgresUrl(environment.DATABASE_URL)
+  const applicationUrl = parseHostedPostgresUrl(environment.EWATRADE_DATABASE_URL)
   const readonlyUrl = parseHostedPostgresUrl(
     environment.PRODUCTION_READONLY_DATABASE_URL,
     { requireStrictTls: true },

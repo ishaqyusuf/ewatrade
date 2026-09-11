@@ -159,6 +159,10 @@ function toFact(
   }
 }
 
+type ServiceCommercePolicyDecisionForEvaluation = Parameters<
+  typeof toFact
+>[0] & { id: string }
+
 function safeDecision(decision: {
   channel: ServiceCommercePolicyChannel
   effectiveAt: Date
@@ -244,25 +248,33 @@ export async function evaluateServiceCommercePolicyBatchInTransaction(
   tx: PolicyTx,
   input: {
     actorUserId: string
+    preloaded?: {
+      countryCode: string | null
+      decisions: ServiceCommercePolicyDecisionForEvaluation[]
+    }
     purpose: string
     scopes: Array<Pick<EvaluatePolicyInput, "channel" | "subject" | "vertical">>
     storeId: string
     tenantId: string
   },
 ): Promise<ServiceCommercePolicyEvaluation[]> {
-  const store = await tx.store.findFirst({
-    select: { countryCode: true },
-    where: { id: input.storeId, tenantId: input.tenantId },
-  })
+  const store = input.preloaded
+    ? { countryCode: input.preloaded.countryCode }
+    : await tx.store.findFirst({
+        select: { countryCode: true },
+        where: { id: input.storeId, tenantId: input.tenantId },
+      })
   if (!store) {
     throw new ServiceCommercePolicyError("NOT_FOUND", "Store not found.")
   }
-  const decisions = await tx.serviceCommercePolicyDecision.findMany({
-    where: {
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-    },
-  })
+  const decisions =
+    input.preloaded?.decisions ??
+    (await tx.serviceCommercePolicyDecision.findMany({
+      where: {
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    }))
   const jurisdictionCode = store.countryCode?.trim().toUpperCase() || "UNKNOWN"
   const evaluated = input.scopes.map((scope) => {
     const scopedDecisions = decisions.filter(

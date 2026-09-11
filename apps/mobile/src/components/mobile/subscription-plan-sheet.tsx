@@ -1,9 +1,4 @@
-import { ActionButton } from "@/components/mobile/action-button"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
-import {
-  SecondaryOperationalRow,
-  SecondarySheetHeader,
-} from "@/components/mobile/secondary-operations"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
@@ -20,18 +15,22 @@ import {
   type RetailOpsSubscription,
   getBusinessSubscription,
   getPlan,
-  getUsageLimitState,
   useSubscriptionStore,
 } from "@/store/subscriptionStore"
 import { useTRPC } from "@/trpc/client"
 import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { forwardRef, useMemo, useState } from "react"
+import { forwardRef, useState } from "react"
 import { Linking, View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import {
+  SUBSCRIPTION_SCREEN_COPY,
+  getSubscriptionPlanPresentation,
+  getSubscriptionStatusTone,
+  getSubscriptionUsagePresentation,
+} from "./subscription-plan-presentation"
 
 type SubscriptionPlanSheetProps = {
-  onComplete?: () => void
   usage: {
     businesses: number
     products: number
@@ -100,7 +99,7 @@ function toOptionalDate(value: string | null | undefined) {
   return value ?? undefined
 }
 
-function UsageRow({
+function UsageTile({
   label,
   limit,
   used,
@@ -109,67 +108,61 @@ function UsageRow({
   limit: number
   used: number
 }) {
-  const limitState = getUsageLimitState(used, limit)
+  const presentation = getSubscriptionUsagePresentation(used, limit)
 
   return (
-    <SecondaryOperationalRow
-      detail={`${used} of ${limit} used`}
-      title={label}
-      trailing={
-        <StatusBadge
-          label={limitState.label}
-          tone={limitState.isAtLimit ? "destructive" : "muted"}
-        />
-      }
-    />
-  )
-}
-
-function PlanLimitRow({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
-  return (
-    <View className="flex-row items-center justify-between gap-4 border-t border-border py-3">
-      <Text className="min-w-0 flex-1 text-sm font-semibold text-foreground">
+    <View className="min-h-20 justify-center gap-1 py-3">
+      <Text className="text-xl font-extrabold tracking-tight text-foreground">
+        {presentation.valueLabel}
+      </Text>
+      <Text className="text-xs font-semibold text-muted-foreground">
         {label}
       </Text>
-      <Text className="text-right text-sm font-bold text-muted-foreground">
-        {value}
-      </Text>
+      {presentation.statusLabel ? (
+        <Text className="text-[10px] font-extrabold uppercase tracking-wide text-destructive">
+          {presentation.statusLabel}
+        </Text>
+      ) : null}
     </View>
   )
 }
 
 function PlanCard({
-  actionLabel,
-  current,
-  disabled,
+  canRequestCheckout,
+  currentPlanId,
+  isCheckoutPending,
   onSelect,
   plan,
 }: {
-  actionLabel: string
-  current: boolean
-  disabled: boolean
+  canRequestCheckout: boolean
+  currentPlanId: RetailOpsPlanId
+  isCheckoutPending: boolean
   onSelect: () => void
   plan: RetailOpsPlan
 }) {
+  const presentation = getSubscriptionPlanPresentation({
+    canRequestCheckout,
+    currentPlanId,
+    isCheckoutPending,
+    plan,
+  })
+
   return (
     <Pressable
-      accessibilityLabel={`${plan.name} plan, ${plan.priceLabel}`}
-      accessibilityRole="button"
-      accessibilityState={{ disabled, selected: current }}
+      accessibilityLabel={`${plan.name} plan, ${presentation.badgeLabel}`}
+      accessibilityRole={presentation.canSelect ? "button" : undefined}
+      accessibilityState={{
+        disabled: !presentation.canSelect,
+        selected: presentation.current,
+      }}
       className={cn(
-        "will-change-animation gap-4 border-t border-border py-5 active:bg-accent",
-        current && "bg-primary/5",
-        disabled && !current && "opacity-60",
+        "will-change-animation gap-2 border-b border-border py-4 active:bg-accent",
+        presentation.current && "bg-primary/5",
+        !presentation.current && !canRequestCheckout && "opacity-60",
       )}
-      disabled={disabled}
+      disabled={!presentation.canSelect}
       haptic
-      onPress={onSelect}
+      onPress={presentation.canSelect ? onSelect : undefined}
       transition
     >
       <View className="flex-row items-start justify-between gap-3">
@@ -182,25 +175,30 @@ function PlanCard({
           </Text>
         </View>
         <StatusBadge
-          label={current ? "Current" : plan.priceLabel}
-          tone={current ? "primary" : "muted"}
+          label={presentation.badgeLabel}
+          tone={presentation.current ? "primary" : "muted"}
         />
       </View>
       <Text className="text-xs font-semibold text-muted-foreground">
         {plan.supportLabel}
       </Text>
-      <View>
-        <PlanLimitRow
-          label="Businesses"
-          value={`Up to ${plan.limits.businesses}`}
-        />
-        <PlanLimitRow
-          label="Catalog items"
-          value={`Up to ${plan.limits.products}`}
-        />
-        <PlanLimitRow label="Staff" value={`Up to ${plan.limits.staff}`} />
-      </View>
-      <Text className="text-xs font-extrabold text-primary">{actionLabel}</Text>
+      <Text className="text-xs leading-5 text-muted-foreground">
+        {plan.limits.businesses}{" "}
+        {plan.limits.businesses === 1 ? "business" : "businesses"} ·{" "}
+        {plan.limits.products} catalog items · {plan.limits.staff} staff
+      </Text>
+      <Text className="text-xs leading-5 text-muted-foreground">
+        {plan.limits.offlineDevices}{" "}
+        {plan.limits.offlineDevices === 1
+          ? "offline device"
+          : "offline devices"}{" "}
+        · {plan.limits.reportsHistoryDays}-day reports
+      </Text>
+      {presentation.actionLabel ? (
+        <Text className="text-xs font-extrabold text-primary">
+          {presentation.actionLabel} ›
+        </Text>
+      ) : null}
     </Pressable>
   )
 }
@@ -217,7 +215,6 @@ function CheckoutIntentNotice({ intent }: { intent: CheckoutIntent }) {
 }
 
 export function SubscriptionPlanContent({
-  onComplete,
   presentation = "sheet",
   usage,
 }: SubscriptionPlanContentProps) {
@@ -264,6 +261,7 @@ export function SubscriptionPlanContent({
   const plans = shouldUseProductionSnapshot
     ? productionSnapshot.plans
     : RETAIL_OPS_PLANS
+  const comparisonPlans = plans.filter((plan) => plan.id !== currentPlan.id)
   const usageSnapshot = shouldUseProductionSnapshot
     ? productionSnapshot.usage
     : usage
@@ -323,43 +321,25 @@ export function SubscriptionPlanContent({
       },
     )
   }
-  const planActionLabels = useMemo(() => {
-    const labels: Record<string, string> = {}
-
-    for (const plan of plans) {
-      if (plan.id === currentPlan.id) {
-        labels[plan.id] = "Current plan"
-        continue
-      }
-
-      if (isCheckoutPending) {
-        labels[plan.id] = "Preparing"
-        continue
-      }
-
-      labels[plan.id] = shouldUseProductionSnapshot
-        ? "Request upgrade"
-        : "Online required"
-    }
-
-    return labels
-  }, [currentPlan.id, isCheckoutPending, plans, shouldUseProductionSnapshot])
-
   const contentClassName =
     presentation === "screen" ? "gap-5 px-4 pb-6" : "gap-5 px-5 pb-6"
 
   const content = (
     <View className={contentClassName}>
-      <SecondarySheetHeader
-        description="See what your plan includes and compare options for your business."
-        icon="CreditCard"
-        title="Business plan"
-      />
+      <Text className="text-sm leading-5 text-muted-foreground">
+        {SUBSCRIPTION_SCREEN_COPY.description}
+      </Text>
 
       {shouldShowSourceNotice ? (
         <StatusBanner
+          actionLabel={subscriptionQuery.isError ? "Try again" : undefined}
           icon="Clock"
           message={sourceDetail}
+          onActionPress={
+            subscriptionQuery.isError
+              ? () => void subscriptionQuery.refetch()
+              : undefined
+          }
           title={sourceLabel}
           tone="warning"
         />
@@ -389,72 +369,104 @@ export function SubscriptionPlanContent({
         />
       ) : null}
 
-      <View className="gap-3">
-        <View className="flex-row items-start justify-between gap-3">
-          <View className="flex-1 gap-1">
-            <Text className="font-extrabold text-foreground">
-              {currentPlan.name}
-            </Text>
-            <Text className="text-sm text-muted-foreground">
-              {subscription.status === "trialing"
-                ? `Trial ends ${formatDate(subscription.trialEndsAt)}`
-                : `Renews ${formatDate(subscription.currentPeriodEndsAt)}`}
-            </Text>
-          </View>
-          <StatusBadge
-            label={subscriptionStatusLabel(subscription.status)}
-            tone={subscription.status === "past_due" ? "warning" : "success"}
-          />
+      <View className="flex-row items-center gap-3 border-y border-border py-4">
+        <View className="min-w-0 flex-1 gap-1">
+          <Text className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">
+            Current plan
+          </Text>
+          <Text className="text-xl font-extrabold tracking-tight text-foreground">
+            {currentPlan.name}
+          </Text>
+          <Text className="text-xs leading-5 text-muted-foreground">
+            {subscription.status === "trialing"
+              ? `Trial ends ${formatDate(subscription.trialEndsAt)}`
+              : `Renews ${formatDate(subscription.currentPeriodEndsAt)}`}{" "}
+            · {currentPlan.supportLabel}
+          </Text>
         </View>
-        <UsageRow
-          label="Businesses"
-          limit={currentPlan.limits.businesses}
-          used={usageSnapshot.businesses}
-        />
-        <UsageRow
-          label="Catalog items"
-          limit={currentPlan.limits.products}
-          used={usageSnapshot.products}
-        />
-        <UsageRow
-          label="Staff"
-          limit={currentPlan.limits.staff}
-          used={usageSnapshot.staff}
-        />
-        {offlineDeviceUsage === null ? null : (
-          <UsageRow
-            label="Offline devices"
-            limit={currentPlan.limits.offlineDevices}
-            used={offlineDeviceUsage}
-          />
-        )}
-        <PlanLimitRow
-          label="Report history"
-          value={`${reportHistoryLimit} days`}
+        <StatusBadge
+          label={subscriptionStatusLabel(subscription.status)}
+          tone={getSubscriptionStatusTone(subscription.status)}
         />
       </View>
 
-      <View className="gap-3">
-        <Text className="text-base font-bold text-foreground">Tiers</Text>
-        {plans.map((plan) => (
-          <PlanCard
-            actionLabel={planActionLabels[plan.id] ?? "Select"}
-            current={plan.id === subscription.planId}
-            disabled={
-              plan.id === currentPlan.id ||
-              isCheckoutPending ||
-              !shouldUseProductionSnapshot
-            }
-            key={plan.id}
-            onSelect={() => selectPlan(plan)}
-            plan={plan}
-          />
-        ))}
+      <View className="gap-2">
+        <View className="flex-row items-end justify-between gap-3">
+          <Text className="text-base font-bold text-foreground">Usage</Text>
+          <Text className="text-xs text-muted-foreground">
+            {currentPlan.name} limits
+          </Text>
+        </View>
+        <View className="border-y border-border">
+          <View className="flex-row">
+            <View className="min-w-0 flex-1 border-r border-border pr-4">
+              <UsageTile
+                label="Businesses"
+                limit={currentPlan.limits.businesses}
+                used={usageSnapshot.businesses}
+              />
+            </View>
+            <View className="min-w-0 flex-1 pl-4">
+              <UsageTile
+                label="Catalog items"
+                limit={currentPlan.limits.products}
+                used={usageSnapshot.products}
+              />
+            </View>
+          </View>
+          <View className="h-px bg-border" />
+          <View className="flex-row">
+            <View className="min-w-0 flex-1 border-r border-border pr-4">
+              <UsageTile
+                label="Staff"
+                limit={currentPlan.limits.staff}
+                used={usageSnapshot.staff}
+              />
+            </View>
+            <View className="min-w-0 flex-1 pl-4">
+              {offlineDeviceUsage === null ? (
+                <View className="min-h-20 justify-center gap-1 py-3">
+                  <Text className="text-xl font-extrabold tracking-tight text-foreground">
+                    {reportHistoryLimit} days
+                  </Text>
+                  <Text className="text-xs font-semibold text-muted-foreground">
+                    Report history
+                  </Text>
+                </View>
+              ) : (
+                <UsageTile
+                  label="Offline devices"
+                  limit={currentPlan.limits.offlineDevices}
+                  used={offlineDeviceUsage}
+                />
+              )}
+            </View>
+          </View>
+        </View>
       </View>
 
-      <ActionButton onPress={onComplete} variant="outline">
-        Done
-      </ActionButton>
+      <View className="gap-2">
+        <View className="flex-row items-end justify-between gap-3">
+          <Text className="text-base font-bold text-foreground">
+            Compare plans
+          </Text>
+          <Text className="text-xs text-muted-foreground">
+            {reportHistoryLimit}-day reports now
+          </Text>
+        </View>
+        <View className="border-t border-border">
+          {comparisonPlans.map((plan) => (
+            <PlanCard
+              canRequestCheckout={canRequestCheckout}
+              currentPlanId={currentPlan.id}
+              isCheckoutPending={isCheckoutPending}
+              key={plan.id}
+              onSelect={() => selectPlan(plan)}
+              plan={plan}
+            />
+          ))}
+        </View>
+      </View>
     </View>
   )
 
@@ -495,7 +507,7 @@ export const SubscriptionPlanSheet = forwardRef<
       enableDynamicSizing
       ref={ref}
       snapPoints={["90%"]}
-      title="Subscription"
+      title={SUBSCRIPTION_SCREEN_COPY.title}
     >
       <SubscriptionPlanContent {...props} presentation="sheet" />
     </Modal>

@@ -1,4 +1,8 @@
-import { ServiceJobsContent, WorkflowModalScreen } from "@/components/mobile"
+import { WorkflowModalScreen } from "@/components/mobile/workflow-modal-screen"
+import {
+  ServiceJobsContent,
+  ServiceJobsChrome,
+} from "@/components/mobile/service-jobs/service-jobs-screen"
 import { useAuthContext } from "@/hooks/use-auth"
 import { isSalesRepRole } from "@/lib/mobile-roles"
 import { useRouter } from "expo-router"
@@ -12,6 +16,7 @@ export default function ServiceJobsModalRoute() {
 
   return (
     <WorkflowModalScreen
+      chrome={ServiceJobsChrome}
       allowSalesRep
       closeHref={closeHref}
       closeLabel="Close service jobs"

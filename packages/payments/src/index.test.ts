@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { createHmac } from "node:crypto"
 
 import {
+  HostedCheckoutProviderError,
   PaystackHostedPaymentProvider,
   PaystackWebhookAdapter,
   createDeterministicHostedPaymentProvider,
@@ -19,6 +20,83 @@ describe("hosted payment provider contract", () => {
         reference: "payment-1",
       })
     expect(checkout.checkoutUrl).toContain("payment-1")
+  })
+
+  test("classifies an explicit checkout rejection as a definite failure", async () => {
+    const provider = new PaystackHostedPaymentProvider({
+      fetch: (async () =>
+        new Response(JSON.stringify({ status: false }), {
+          status: 400,
+        })) as unknown as typeof fetch,
+      secretKey: "test-secret",
+    })
+
+    await expect(
+      provider.createCheckout({
+        amountMinor: 4200,
+        callbackUrl: "https://store.example/return",
+        currencyCode: "NGN",
+        customerEmail: "customer@example.test",
+        metadata: { orderId: "order-1" },
+        reference: "payment-1",
+      }),
+    ).rejects.toEqual(
+      new HostedCheckoutProviderError(
+        "DEFINITE_FAILURE",
+        "The payment provider rejected checkout initialization.",
+      ),
+    )
+  })
+
+  test("classifies a transport failure as an unknown checkout outcome", async () => {
+    const provider = new PaystackHostedPaymentProvider({
+      fetch: (async () => {
+        throw new TypeError("socket closed after dispatch")
+      }) as unknown as typeof fetch,
+      secretKey: "test-secret",
+    })
+
+    await expect(
+      provider.createCheckout({
+        amountMinor: 4200,
+        callbackUrl: "https://store.example/return",
+        currencyCode: "NGN",
+        customerEmail: "customer@example.test",
+        metadata: { orderId: "order-1" },
+        reference: "payment-1",
+      }),
+    ).rejects.toEqual(
+      new HostedCheckoutProviderError(
+        "OUTCOME_UNKNOWN",
+        "The payment provider outcome is unknown.",
+      ),
+    )
+  })
+
+  test("keeps a server failure outcome unknown", async () => {
+    const provider = new PaystackHostedPaymentProvider({
+      fetch: (async () =>
+        new Response(JSON.stringify({ status: false }), {
+          status: 503,
+        })) as unknown as typeof fetch,
+      secretKey: "test-secret",
+    })
+
+    await expect(
+      provider.createCheckout({
+        amountMinor: 4200,
+        callbackUrl: "https://store.example/return",
+        currencyCode: "NGN",
+        customerEmail: "customer@example.test",
+        metadata: { orderId: "order-1" },
+        reference: "payment-1",
+      }),
+    ).rejects.toEqual(
+      new HostedCheckoutProviderError(
+        "OUTCOME_UNKNOWN",
+        "The payment provider outcome is unknown.",
+      ),
+    )
   })
 
   test("verifies and normalizes signed callbacks", () => {

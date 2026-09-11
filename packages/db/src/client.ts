@@ -7,10 +7,12 @@ declare global {
   var __ewatradePrisma__: PrismaClient | undefined
 }
 
-const databaseUrl = process.env.DATABASE_URL
+const databaseUrl = process.env.EWATRADE_DATABASE_URL
 
 if (!databaseUrl) {
-  throw new Error("DATABASE_URL must be set before creating the Prisma client.")
+  throw new Error(
+    "EWATRADE_DATABASE_URL must be set before creating the Prisma client.",
+  )
 }
 
 export const prisma =

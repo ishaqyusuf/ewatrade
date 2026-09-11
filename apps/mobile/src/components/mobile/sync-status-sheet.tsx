@@ -3,6 +3,9 @@ import { EmptyState } from "@/components/mobile/empty-state"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { SyncReliabilityToggle } from "@/components/mobile/sync-flow"
+import { Icon } from "@/components/ui/icon"
+import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
 import {
@@ -23,6 +26,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import Constants from "expo-constants"
 import { useEffect } from "react"
 import { Platform, ScrollView, View } from "react-native"
+import {
+  SYNC_STATUS_COPY,
+  buildSyncStatusPresentation,
+  canChangeOfflinePolicy,
+  canReplayOfflineCommands,
+  resolveReviewCount,
+} from "./sync-status-presentation"
 
 type SyncStatusContentProps = {
   onComplete?: () => void
@@ -51,7 +61,10 @@ export function SyncStatusContent({
   )
   const setOfflineMode = useOperationalModeStore((mode) => mode.setOfflineMode)
   const settings = useQuery(
-    trpc.offline.settings.queryOptions(undefined, { retry: false }),
+    trpc.offline.settings.queryOptions(undefined, {
+      retry: false,
+      staleTime: 30_000,
+    }),
   )
   const updateSettings = useMutation(
     trpc.offline.updateSettings.mutationOptions({
@@ -69,6 +82,7 @@ export function SyncStatusContent({
       {
         enabled: canManageReviews && !isOfflineMode,
         retry: false,
+        staleTime: 30_000,
       },
     ),
   )
@@ -137,6 +151,42 @@ export function SyncStatusContent({
   const normalizedRole = normalizeMobileRole(profile?.role)
   const canManageSettings =
     normalizedRole === "OWNER" || normalizedRole === "ADMIN"
+  const policyEnabled = settings.data?.enabled ?? offlineAllowed
+  const operationPending =
+    replay.isPending ||
+    register.isPending ||
+    review.isPending ||
+    updateSettings.isPending
+  const canChangePolicy = canChangeOfflinePolicy({
+    canManageSettings,
+    hasSettings: !!settings.data && !settings.isError,
+    isOfflineMode,
+    updatePending: operationPending,
+  })
+  const reviewCount = resolveReviewCount({
+    canManageReviews,
+    localCount: staged.length + reviewing.length,
+    serverCount: conflicts.data?.length,
+  })
+  const syncCount = offlineAllowed
+    ? pending.length + staged.length + reviewing.length
+    : staged.length + reviewing.length
+  const canReplay = canReplayOfflineCommands({
+    isOfflineMode,
+    offlineAllowed,
+    operationPending,
+    pendingCount: pending.length,
+    reviewCount: reviewing.length,
+    stagedCount: staged.length,
+  })
+  const presentation = buildSyncStatusPresentation({
+    appliedCount: applied.length,
+    isOfflineMode,
+    offlineAllowed,
+    pendingCount: pending.length,
+    reviewCount,
+    syncCount,
+  })
 
   useEffect(() => {
     if (!profile?.businessId || !settings.data) return
@@ -144,8 +194,7 @@ export function SyncStatusContent({
   }, [profile?.businessId, setOfflineAccess, settings.data])
 
   const replayNow = () => {
-    if (pending.length === 0 && staged.length === 0 && reviewing.length === 0)
-      return
+    if (!canReplay) return
     if (!offlineAllowed) {
       replay.mutate({
         commands: pendingOfflineCommands(state, profile?.businessId).filter(
@@ -178,35 +227,25 @@ export function SyncStatusContent({
     <ScrollView
       className="flex-1"
       contentContainerStyle={{
-        gap: 20,
+        gap: 0,
         paddingBottom: 48,
         paddingHorizontal: 20,
       }}
       refreshControl={<QueryRefreshControl />}
     >
       <StatusBanner
-        icon={!offlineAllowed ? "Lock" : isOfflineMode ? "Wind" : "CircleCheck"}
-        message={
-          !offlineAllowed
-            ? "The business owner has disabled offline work. Staff must reconnect before creating Orders or collecting payments."
-            : isOfflineMode
-              ? "New supported operations are queued on this device until you reconnect."
-              : "Offline work is limited to creating Orders, collecting payment, and saving a customer during checkout."
-        }
-        title={
-          !offlineAllowed
-            ? "Offline work disabled"
-            : isOfflineMode
-              ? "Offline work enabled"
-              : "Online work enabled"
-        }
-        tone={!offlineAllowed || isOfflineMode ? "warning" : "success"}
+        className="mt-1 rounded-none"
+        icon={presentation.tone === "success" ? "CircleCheck" : "Lock"}
+        message={presentation.statusMessage}
+        title={presentation.statusTitle}
+        tone={presentation.tone}
       />
       {settings.isError ? (
         <StatusBanner
           actionLabel="Try again"
+          className="mt-3"
           icon="AlertCircle"
-          message="Reconnect to confirm whether this business currently allows offline work."
+          message={SYNC_STATUS_COPY.policyLoadError}
           onActionPress={() => void settings.refetch()}
           title="Offline policy unavailable"
           tone="warning"
@@ -214,96 +253,138 @@ export function SyncStatusContent({
       ) : null}
       {replay.error || register.error ? (
         <StatusBanner
+          className="mt-3"
           icon="AlertCircle"
-          message={(replay.error ?? register.error)?.message ?? "Sync failed."}
+          message={SYNC_STATUS_COPY.syncError}
           title="Sync needs attention"
           tone="destructive"
         />
       ) : null}
+      {updateSettings.error ? (
+        <StatusBanner
+          className="mt-3"
+          icon="AlertCircle"
+          message={SYNC_STATUS_COPY.policySaveError}
+          title="Policy was not saved"
+          tone="destructive"
+        />
+      ) : null}
+      {review.error ? (
+        <StatusBanner
+          className="mt-3"
+          icon="AlertCircle"
+          message={SYNC_STATUS_COPY.reviewError}
+          title="Review was not updated"
+          tone="destructive"
+        />
+      ) : null}
 
-      <View className="flex-row border-y border-border py-4">
+      <View className="mt-4 flex-row border-y border-border py-4">
         <Summary label="Pending" value={pending.length} />
         <Divider />
-        <Summary label="Review" value={conflicts.data?.length ?? 0} />
+        <Summary label="Review" value={reviewCount} />
         <Divider />
         <Summary label="Applied" value={applied.length} />
       </View>
 
       {canManageSettings ? (
-        <View className="gap-3">
-          <ActionButton
-            disabled={isOfflineMode || updateSettings.isPending}
-            isLoading={updateSettings.isPending}
-            loadingLabel="Saving offline policy"
-            onPress={() =>
-              updateSettings.mutate({
-                approvalRequired: settings.data?.approvalRequired ?? false,
-                enabled: !offlineAllowed,
-              })
-            }
-            variant="outline"
-          >
-            {offlineAllowed
-              ? "Disable offline work for staff"
-              : "Enable offline work for staff"}
-          </ActionButton>
-          <ActionButton
-            disabled={
-              isOfflineMode || !offlineAllowed || updateSettings.isPending
-            }
-            isLoading={updateSettings.isPending}
-            loadingLabel="Saving approval policy"
-            onPress={() =>
-              updateSettings.mutate({
-                approvalRequired: !settings.data?.approvalRequired,
-                enabled: offlineAllowed,
-              })
-            }
-            variant="outline"
-          >
-            Approve staff offline records:{" "}
-            {settings.data?.approvalRequired ? "On" : "Off"}
-          </ActionButton>
+        <View>
+          <SectionLabel>Business policy</SectionLabel>
+          <View className="border-t border-border">
+            <SyncReliabilityToggle
+              active={policyEnabled}
+              className="rounded-none border-b border-border bg-transparent px-0"
+              description="Orders and checkout only."
+              disabled={!canChangePolicy}
+              label="Allow staff to work offline"
+              onPress={() => {
+                if (!canChangePolicy || !settings.data) return
+                updateSettings.mutate({
+                  approvalRequired: settings.data.approvalRequired,
+                  enabled: !settings.data.enabled,
+                })
+              }}
+              testID="offline-policy-enabled-toggle"
+            />
+            <SyncReliabilityToggle
+              active={settings.data?.approvalRequired ?? false}
+              className="rounded-none border-b border-border bg-transparent px-0"
+              description="Review staff Orders before they are applied."
+              disabled={!canChangePolicy || !policyEnabled}
+              label="Require staff record approval"
+              onPress={() => {
+                if (!canChangePolicy || !policyEnabled || !settings.data) return
+                updateSettings.mutate({
+                  approvalRequired: !settings.data.approvalRequired,
+                  enabled: settings.data.enabled,
+                })
+              }}
+              testID="offline-policy-approval-toggle"
+            />
+          </View>
         </View>
       ) : null}
-      <ActionButton
-        disabled={!offlineAllowed}
-        onPress={() => {
-          if (offlineAllowed && profile?.businessId) {
-            setOfflineMode(profile.businessId, !isOfflineMode)
+
+      <SectionLabel>This device</SectionLabel>
+      <View className="min-h-20 flex-row items-center gap-3 border-y border-border py-3">
+        <View className="size-10 items-center justify-center rounded-full bg-muted">
+          <Icon
+            className="size-sm text-primary"
+            name={isOfflineMode ? "Wind" : "Zap"}
+          />
+        </View>
+        <View className="min-w-0 flex-1 gap-1">
+          <Text className="font-extrabold text-foreground">
+            {isOfflineMode ? "Offline work" : "Online work"}
+          </Text>
+          <Text className="text-xs text-muted-foreground">
+            {isOfflineMode
+              ? "Supported changes wait on this device."
+              : "Changes apply immediately."}
+          </Text>
+        </View>
+        <Pressable
+          accessibilityLabel={
+            isOfflineMode ? "Return to online work" : "Switch to offline work"
           }
-        }}
-        variant="outline"
-      >
-        {!offlineAllowed
-          ? "Offline work is disabled"
-          : isOfflineMode
-            ? "Return to online work"
-            : "Switch to offline work"}
-      </ActionButton>
+          accessibilityRole="button"
+          className="min-h-11 justify-center px-2"
+          disabled={!offlineAllowed || operationPending}
+          haptic={offlineAllowed && !operationPending}
+          onPress={() => {
+            if (offlineAllowed && profile?.businessId && !operationPending) {
+              setOfflineMode(profile.businessId, !isOfflineMode)
+            }
+          }}
+        >
+          <Text className="text-xs font-extrabold text-primary">
+            {!offlineAllowed
+              ? "Unavailable"
+              : isOfflineMode
+                ? "Go online"
+                : "Go offline"}
+          </Text>
+        </Pressable>
+      </View>
       <ActionButton
-        disabled={
-          isOfflineMode ||
-          (pending.length === 0 &&
-            staged.length === 0 &&
-            reviewing.length === 0)
-        }
-        isLoading={replay.isPending || register.isPending}
+        className="mt-3"
+        disabled={!canReplay}
+        isLoading={operationPending}
         loadingLabel="Syncing"
         onPress={replayNow}
       >
-        Sync pending commands
+        {presentation.syncLabel}
       </ActionButton>
 
-      <View className="gap-3">
-        <Text className="text-lg font-extrabold text-foreground">
-          Local queue
-        </Text>
+      <View>
+        <SectionLabel>Activity</SectionLabel>
         {commands.length === 0 ? (
           <EmptyState
+            className="border-y border-border px-0 py-4"
             icon="Wind"
-            message="Offline actions for this business will appear here with provisional status."
-            title="Queue is clear"
+            message={presentation.activityMessage}
+            title={presentation.activityTitle}
+            variant="flat"
           />
         ) : (
           <View className="border-y border-border">
@@ -335,7 +416,7 @@ export function SyncStatusContent({
                   </View>
                   {command.conflictMessage ? (
                     <Text className="text-xs text-destructive">
-                      {command.conflictMessage}
+                      {SYNC_STATUS_COPY.localConflict}
                     </Text>
                   ) : null}
                 </View>
@@ -345,79 +426,84 @@ export function SyncStatusContent({
       </View>
 
       {canManageReviews ? (
-        <View className="gap-3">
-          <Text className="text-lg font-extrabold text-foreground">
-            Offline records
-          </Text>
-          <View className="border-y border-border">
-            {(conflicts.data ?? []).map((conflict, index, rows) => (
-              <View
-                className={`gap-3 py-4 ${
-                  index < rows.length - 1 ? "border-b border-border" : ""
-                }`}
-                key={conflict.id}
-              >
-                <Text className="font-bold text-foreground">
-                  {conflict.type.replaceAll("_", " ")}
-                </Text>
-                {conflict.actor ? (
-                  <Text className="text-xs font-semibold text-muted-foreground">
-                    Staff:{" "}
-                    {conflict.actor.displayName ||
-                      conflict.actor.name ||
-                      conflict.actor.email}
+        (conflicts.data?.length ?? 0) > 0 ? (
+          <View>
+            <SectionLabel>Conflict review</SectionLabel>
+            <View className="border-y border-border">
+              {(conflicts.data ?? []).map((conflict, index, rows) => (
+                <View
+                  className={`gap-3 py-4 ${
+                    index < rows.length - 1 ? "border-b border-border" : ""
+                  }`}
+                  key={conflict.id}
+                >
+                  <Text className="font-bold text-foreground">
+                    {conflict.type.replaceAll("_", " ")}
                   </Text>
-                ) : null}
-                <Text className="text-sm text-muted-foreground">
-                  {conflict.reviewKind === "approval"
-                    ? "This staff record is staged and has not changed business records yet."
-                    : (conflict.conflictMessage ??
-                      "Authoritative state changed.")}
-                </Text>
-                <Text className="text-xs text-muted-foreground">
-                  {conflict.dependentCommands.length} dependent command
-                  {conflict.dependentCommands.length === 1 ? "" : "s"}
-                </Text>
-                <View className="flex-row gap-2">
-                  <ActionButton
-                    className="flex-1"
-                    onPress={() => {
-                      review.mutate({
-                        commandId: conflict.id,
-                        decision:
-                          conflict.reviewKind === "approval"
-                            ? "approve"
-                            : "retry",
-                      })
-                      if (conflict.reviewKind !== "approval") {
-                        state.retryCommand(conflict.clientCommandId)
-                      }
-                    }}
-                    variant="outline"
-                  >
-                    {conflict.reviewKind === "approval" ? "Approve" : "Retry"}
-                  </ActionButton>
-                  <ActionButton
-                    className="flex-1"
-                    onPress={() => {
-                      review.mutate({
-                        commandId: conflict.id,
-                        decision:
-                          conflict.reviewKind === "approval"
-                            ? "reject"
-                            : "discard",
-                      })
-                      state.discardCommand(conflict.clientCommandId)
-                    }}
-                    variant="destructive"
-                  >
-                    {conflict.reviewKind === "approval" ? "Reject" : "Discard"}
-                  </ActionButton>
+                  {conflict.actor ? (
+                    <Text className="text-xs font-semibold text-muted-foreground">
+                      Staff:{" "}
+                      {conflict.actor.displayName ||
+                        conflict.actor.name ||
+                        conflict.actor.email}
+                    </Text>
+                  ) : null}
+                  <Text className="text-sm text-muted-foreground">
+                    {conflict.reviewKind === "approval"
+                      ? "This staff record is staged and has not changed business records yet."
+                      : SYNC_STATUS_COPY.serverConflict}
+                  </Text>
+                  <Text className="text-xs text-muted-foreground">
+                    {conflict.dependentCommands.length} dependent command
+                    {conflict.dependentCommands.length === 1 ? "" : "s"}
+                  </Text>
+                  <View className="flex-row gap-2">
+                    <ActionButton
+                      className="flex-1"
+                      disabled={operationPending}
+                      onPress={() => {
+                        if (operationPending) return
+                        review.mutate({
+                          commandId: conflict.id,
+                          decision:
+                            conflict.reviewKind === "approval"
+                              ? "approve"
+                              : "retry",
+                        })
+                      }}
+                      variant="outline"
+                    >
+                      {conflict.reviewKind === "approval" ? "Approve" : "Retry"}
+                    </ActionButton>
+                    <ActionButton
+                      className="flex-1"
+                      disabled={operationPending}
+                      onPress={() => {
+                        if (operationPending) return
+                        review.mutate({
+                          commandId: conflict.id,
+                          decision:
+                            conflict.reviewKind === "approval"
+                              ? "reject"
+                              : "discard",
+                        })
+                      }}
+                      variant="destructive"
+                    >
+                      {conflict.reviewKind === "approval"
+                        ? "Reject"
+                        : "Discard"}
+                    </ActionButton>
+                  </View>
                 </View>
-              </View>
-            ))}
+              ))}
+            </View>
+            <Text className="mt-3 text-xs leading-5 text-muted-foreground">
+              Server data is authoritative. Review each record before retrying
+              or discarding it.
+            </Text>
           </View>
-        </View>
+        ) : null
       ) : null}
 
       {onComplete ? (
@@ -431,6 +517,14 @@ export function SyncStatusContent({
 
 function Divider() {
   return <View className="h-10 w-px bg-border" />
+}
+
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <Text className="mb-2 mt-5 text-[10px] font-extrabold uppercase tracking-[1.4px] text-muted-foreground">
+      {children}
+    </Text>
+  )
 }
 
 function Summary({ label, value }: { label: string; value: number }) {

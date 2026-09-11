@@ -56,8 +56,8 @@ const attachment = {
 }
 
 describe("generic customer request media contracts", () => {
-  test("limits the first generic media release to images and PDFs", () => {
-    expect(SERVICE_COMMERCE_MEDIA_KINDS).toEqual(["image", "document"])
+  test("limits generic media to verified images, PDFs, and voice notes", () => {
+    expect(SERVICE_COMMERCE_MEDIA_KINDS).toEqual(["image", "document", "audio"])
     expect(SERVICE_COMMERCE_MEDIA_MIME_TYPES).toEqual([
       "image/jpeg",
       "image/png",
@@ -65,6 +65,11 @@ describe("generic customer request media contracts", () => {
       "image/heic",
       "image/heif",
       "application/pdf",
+      "audio/mp4",
+      "audio/mpeg",
+      "audio/ogg",
+      "audio/wav",
+      "audio/webm",
     ])
     expect(SERVICE_COMMERCE_MEDIA_MAX_ATTACHMENT_BYTES).toBe(10_000_000)
     expect(SERVICE_COMMERCE_MEDIA_MAX_ATTACHMENTS_PER_INTAKE).toBe(12)
@@ -156,6 +161,9 @@ describe("generic customer request media contracts", () => {
     expect(canTransitionServiceCommerceMediaAsset("deleted", "safe")).toBe(
       false,
     )
+    expect(
+      canTransitionServiceCommerceMediaAsset("retryable", "safety_pending"),
+    ).toBe(true)
     expect(
       canTransitionServiceCommerceSourceAttachment("active", "replaced"),
     ).toBe(true)

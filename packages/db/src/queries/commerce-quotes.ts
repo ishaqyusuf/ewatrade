@@ -27,6 +27,7 @@ import {
   ServiceCommerceQuoteApprovalAuditEventType,
   ServiceCommerceQuoteApprovalStatus,
   ServiceRequestStatus,
+  StoreConversationRequestKind,
 } from "../../generated/prisma/enums"
 import { getCatalogOfferingAvailability } from "./catalog-inventory"
 import { revalidateCustomerActionCapabilityInTransaction } from "./service-commerce-actions/projection"
@@ -48,6 +49,7 @@ import {
   resolveQuoteReleaseRuntimeFacts,
   supersedeServiceCommerceQuoteApprovalInTransaction,
 } from "./service-commerce-quote-release"
+import { appendReleasedQuoteActionMessagesInTransaction } from "./store-conversation-actions"
 import { materializePrescriptionQuoteReadyEffectsInTransaction } from "./whatsapp-connections"
 
 const COMMERCE_QUOTE_READ_CUSTOMER_ACTIONS = [
@@ -221,6 +223,20 @@ function mapSourceType(sourceType: CommerceQuoteSourceType) {
     service_request: CommerceQuoteSourceTypeEnum.SERVICE_REQUEST,
   } satisfies Record<CommerceQuoteSourceType, CommerceQuoteSourceTypeEnum>
   return sourceTypes[sourceType]
+}
+
+function storeConversationRequestKindFromPersistence(
+  sourceType: CommerceQuoteSourceTypeEnum,
+) {
+  const sourceKinds = {
+    [CommerceQuoteSourceTypeEnum.COMMERCE_INQUIRY]:
+      StoreConversationRequestKind.COMMERCE_INQUIRY,
+    [CommerceQuoteSourceTypeEnum.PRESCRIPTION_REQUEST]:
+      StoreConversationRequestKind.PRESCRIPTION_REQUEST,
+    [CommerceQuoteSourceTypeEnum.SERVICE_REQUEST]:
+      StoreConversationRequestKind.SERVICE_REQUEST,
+  } satisfies Record<CommerceQuoteSourceTypeEnum, StoreConversationRequestKind>
+  return sourceKinds[sourceType]
 }
 
 function mapLineOutcome(outcome: CommerceQuoteLineOutcomeInput) {
@@ -488,7 +504,7 @@ export function normalizeIssueCommerceQuoteOptions(
     | "options"
     | "taxMinor"
   >,
-) {
+): Array<IssueCommerceQuoteOptionInput & { position: number }> {
   if (input.options) {
     if (
       input.lines ||
@@ -1201,6 +1217,20 @@ export async function issueCommerceQuote(
               versionId: previousVersion.id,
             })
           : { communicationIntentId: null }
+      if (previousVersion.status === CommerceQuoteVersionStatusEnum.ISSUED) {
+        await appendReleasedQuoteActionMessagesInTransaction(tx, {
+          actorUserId: input.actorUserId,
+          quoteVersionId: previousVersion.id,
+          source: {
+            id: source.sourceId,
+            kind: storeConversationRequestKindFromPersistence(
+              mapSourceType(source.sourceType),
+            ),
+          },
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        })
+      }
       if (sourceHandler.recoverIssuanceToken) {
         await tx.commerceQuoteReplayAccessToken.upsert({
           create: {
@@ -1241,7 +1271,9 @@ export async function issueCommerceQuote(
       )
     }
 
-    const preparedOptions = []
+    const preparedOptions: Array<
+      IssueCommerceQuoteOptionInput & { position: number }
+    > = []
     for (const option of quoteOptions) {
       const lines = await sourceHandler.prepareLines(tx, {
         ...sourceInput,
@@ -1377,8 +1409,9 @@ export async function issueCommerceQuote(
             allowZero: false,
             maxScale,
           })
-          unitPriceMinor = line.unitPriceMinor
-          totalMinor = lineTotal(unitPriceMinor, quantity)
+          const resolvedUnitPriceMinor = line.unitPriceMinor
+          unitPriceMinor = resolvedUnitPriceMinor
+          totalMinor = lineTotal(resolvedUnitPriceMinor, quantity)
           if (payable) subtotalMinor += totalMinor
         }
         const suggestion = offering
@@ -1679,6 +1712,18 @@ export async function issueCommerceQuote(
       sourceInput,
       sourceState,
       versionId: version.id,
+    })
+    await appendReleasedQuoteActionMessagesInTransaction(tx, {
+      actorUserId: input.actorUserId,
+      quoteVersionId: version.id,
+      source: {
+        id: source.sourceId,
+        kind: storeConversationRequestKindFromPersistence(
+          mapSourceType(source.sourceType),
+        ),
+      },
+      storeId: input.storeId,
+      tenantId: input.tenantId,
     })
 
     return {
@@ -2156,6 +2201,23 @@ export async function approveCommerceQuoteVersion(
                 versionId: concurrent.quoteVersionId,
               })
             : { communicationIntentId: null }
+        if (
+          concurrent.quoteVersion.status ===
+          CommerceQuoteVersionStatusEnum.ISSUED
+        ) {
+          await appendReleasedQuoteActionMessagesInTransaction(tx, {
+            actorUserId: input.actorUserId,
+            quoteVersionId: concurrent.quoteVersionId,
+            source: {
+              id: concurrent.sourceId,
+              kind: storeConversationRequestKindFromPersistence(
+                concurrent.sourceType,
+              ),
+            },
+            storeId: input.storeId,
+            tenantId: input.tenantId,
+          })
+        }
         return {
           approvalId: concurrent.id,
           communicationIntentId: releaseEffects.communicationIntentId,
@@ -2200,6 +2262,16 @@ export async function approveCommerceQuoteVersion(
       },
       sourceState,
     )
+    await appendReleasedQuoteActionMessagesInTransaction(tx, {
+      actorUserId: input.actorUserId,
+      quoteVersionId: approval.quoteVersionId,
+      source: {
+        id: approval.sourceId,
+        kind: storeConversationRequestKindFromPersistence(approval.sourceType),
+      },
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
     await tx.serviceCommerceQuoteApprovalAuditEvent.create({
       data: {
         actorMembershipId: runtime.actor.membershipId,

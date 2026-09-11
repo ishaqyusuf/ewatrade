@@ -34,6 +34,7 @@ export const THEME = {
 
     border: "rgb(203, 215, 209)",
     input: "rgb(225, 233, 229)",
+    overlay: "rgba(0, 0, 0, 0.48)",
     ring: "rgb(20, 184, 166)",
 
     radius: "0.65rem",
@@ -78,6 +79,7 @@ export const THEME = {
 
     border: "rgb(46, 46, 46)",
     input: "rgb(56, 56, 56)",
+    overlay: "rgba(0, 0, 0, 0.68)",
     ring: "rgb(45, 212, 191)",
 
     radius: "0.65rem",

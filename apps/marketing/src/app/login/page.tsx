@@ -1,5 +1,6 @@
 "use client"
 
+import { QaWebAccountChooser } from "@/components/qa/qa-web-accelerator"
 import { Button } from "@ewatrade/ui"
 import { ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -57,6 +58,9 @@ function LoginPageContent() {
   return (
     <main className="flex min-h-[calc(100vh-8rem)] items-center justify-center px-4 py-16">
       <div className="w-full max-w-md">
+        <div className="mb-4 flex justify-end">
+          <QaWebAccountChooser />
+        </div>
         {/* Heading */}
         <div className="mb-8 text-center">
           <h1

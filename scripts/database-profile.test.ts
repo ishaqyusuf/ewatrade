@@ -24,54 +24,56 @@ describe("database profile", () => {
     ).toBe("postgresql://owner:secret@development.example.com/ewatrade")
   })
 
-  test("uses the Neon development DATABASE_URL without generating aliases", () => {
+  test("uses the Neon development EWATRADE_DATABASE_URL without generating aliases", () => {
     const env = applyDatabaseProfile(
       {
-        DATABASE_URL:
+        DATABASE_URL: "postgresql://legacy.example.com/ewatrade",
+        EWATRADE_DATABASE_URL:
           "postgresql://owner:secret@ep-development.eu-west-2.aws.neon.tech/ewatrade",
       },
       "postgresql://production:secret@production.example.com/ewatrade",
     )
 
-    expect(env.DATABASE_URL).toBe(
+    expect(env.EWATRADE_DATABASE_URL).toBe(
       "postgresql://owner:secret@ep-development.eu-west-2.aws.neon.tech/ewatrade",
     )
+    expect(env.DATABASE_URL).toBeUndefined()
     expect(env.DEV_PROFILE).toBe("local")
     expect(env.LOCAL_DATABASE_URL).toBeUndefined()
     expect(env.POSTGRES_URL).toBeUndefined()
   })
 
-  test("requires DATABASE_URL", () => {
+  test("requires EWATRADE_DATABASE_URL", () => {
     expect(() =>
       applyDatabaseProfile(
         {},
         "postgresql://production:secret@production.example.com/ewatrade",
       ),
-    ).toThrow("Missing DATABASE_URL")
+    ).toThrow("Missing EWATRADE_DATABASE_URL")
   })
 
   test("rejects Docker or loopback PostgreSQL in local mode", () => {
     expect(() =>
       applyDatabaseProfile(
         {
-          DATABASE_URL:
+          EWATRADE_DATABASE_URL:
             "postgresql://postgres:postgres@127.0.0.1:55436/ewatrade",
         },
         "postgresql://production:secret@production.example.com/ewatrade",
       ),
-    ).toThrow("local mode requires the Neon development DATABASE_URL")
+    ).toThrow("local mode requires the Neon development EWATRADE_DATABASE_URL")
   })
 
   test("allows a hosted Neon URL in local mode when it is not production", () => {
     const env = applyDatabaseProfile(
       {
-        DATABASE_URL:
+        EWATRADE_DATABASE_URL:
           "postgresql://owner:secret@ep-development.eu-west-2.aws.neon.tech/ewatrade",
       },
       "postgresql://production.example.com/ewatrade",
     )
 
-    expect(env.DATABASE_URL).toBe(
+    expect(env.EWATRADE_DATABASE_URL).toBe(
       "postgresql://owner:secret@ep-development.eu-west-2.aws.neon.tech/ewatrade",
     )
     expect(env.DEV_PROFILE).toBe("local")
@@ -81,12 +83,12 @@ describe("database profile", () => {
     const env = applyDatabaseProfile(
       {
         DEV_PROFILE: "dev",
-        DATABASE_URL: "postgresql://development.example.com/ewatrade",
+        EWATRADE_DATABASE_URL: "postgresql://development.example.com/ewatrade",
       },
       "postgresql://production.example.com/ewatrade",
     )
 
-    expect(env.DATABASE_URL).toBe(
+    expect(env.EWATRADE_DATABASE_URL).toBe(
       "postgresql://development.example.com/ewatrade",
     )
     expect(env.DEV_PROFILE).toBe("dev")
@@ -96,7 +98,7 @@ describe("database profile", () => {
     expect(() =>
       applyDatabaseProfile(
         {
-          DATABASE_URL: "postgresql://production.example.com/ewatrade",
+          EWATRADE_DATABASE_URL: "postgresql://production.example.com/ewatrade",
           DEV_PROFILE: "dev",
           NODE_ENV: "production",
         },
@@ -121,7 +123,7 @@ describe("database profile", () => {
         applyDatabaseProfile(
           {
             APP_ENV: "preview",
-            DATABASE_URL: `postgresql://postgres:postgres@${host}:55436/ewatrade`,
+            EWATRADE_DATABASE_URL: `postgresql://postgres:postgres@${host}:55436/ewatrade`,
           },
           "postgresql://production.example.com/ewatrade",
         ),
@@ -133,7 +135,7 @@ describe("database profile", () => {
     expect(() =>
       applyDatabaseProfile(
         {
-          DATABASE_URL:
+          EWATRADE_DATABASE_URL:
             "postgresql://development:new-secret@production.example.com./%65watrade?sslmode=require",
           DEV_PROFILE: "dev",
         },
@@ -145,21 +147,21 @@ describe("database profile", () => {
   test("allows a distinct Supabase project on the same pooler endpoint", () => {
     const env = applyDatabaseProfile(
       {
-        DATABASE_URL:
+        EWATRADE_DATABASE_URL:
           "postgresql://postgres.devref:dev-secret@aws-0-eu.pooler.supabase.com/postgres",
         DEV_PROFILE: "dev",
       },
       "postgresql://postgres.prodref:prod-secret@aws-0-eu.pooler.supabase.com/postgres",
     )
 
-    expect(env.DATABASE_URL).toContain("postgres.devref")
+    expect(env.EWATRADE_DATABASE_URL).toContain("postgres.devref")
   })
 
   test("rejects one Supabase project across roles, hosts, and pooler modes", () => {
     expect(() =>
       applyDatabaseProfile(
         {
-          DATABASE_URL:
+          EWATRADE_DATABASE_URL:
             "postgresql://migration_user.prod%72ef:dev-secret@aws-0-eu.pooler.supabase.com:6543/postgres",
           DEV_PROFILE: "dev",
         },
@@ -172,7 +174,7 @@ describe("database profile", () => {
     expect(() =>
       applyDatabaseProfile(
         {
-          DATABASE_URL:
+          EWATRADE_DATABASE_URL:
             "postgresql://owner:dev-secret@ep-example-pooler.eu-west-2.aws.neon.tech/app",
         },
         "postgresql://owner:prod-secret@ep-example.eu-west-2.aws.neon.tech/app",
@@ -184,11 +186,11 @@ describe("database profile", () => {
     const root = mkdtempSync(path.join(tmpdir(), "ewatrade-production-env-"))
     writeFileSync(
       path.join(root, ".env.production"),
-      "DATABASE_URL=postgresql://production-base.example.com/app\n",
+      "EWATRADE_DATABASE_URL=postgresql://production-base.example.com/app\n",
     )
     writeFileSync(
       path.join(root, ".env.production.local"),
-      "DATABASE_URL=postgresql://production-override.example.com/app\n",
+      "EWATRADE_DATABASE_URL=postgresql://production-override.example.com/app\n",
     )
 
     expect(loadProductionDatabaseUrl(root)).toContain(
@@ -199,9 +201,9 @@ describe("database profile", () => {
   test("fails closed when production cannot be identified", () => {
     expect(() =>
       applyDatabaseProfile({
-        DATABASE_URL:
+        EWATRADE_DATABASE_URL:
           "postgresql://owner:secret@ep-development.eu-west-2.aws.neon.tech/ewatrade",
       }),
-    ).toThrow("production DATABASE_URL is required")
+    ).toThrow("production EWATRADE_DATABASE_URL is required")
   })
 })

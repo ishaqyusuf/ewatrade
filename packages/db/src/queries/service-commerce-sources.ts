@@ -30,6 +30,7 @@ export class ServiceCommerceSourceError extends Error {
 }
 
 type LoadedSource = {
+  activeVerticalCommerce: boolean
   contactOptIn: boolean
   customerEmail: string | null
   customerPhone: string | null
@@ -90,6 +91,7 @@ const sourceLoaders = {
     })
     return inquiry
       ? {
+          activeVerticalCommerce: true,
           contactOptIn: inquiry.contactOptIn,
           customerEmail: inquiry.customerEmail,
           customerPhone: inquiry.customerPhone,
@@ -108,6 +110,7 @@ const sourceLoaders = {
     )
     return request
       ? {
+          activeVerticalCommerce: request.commerceActive,
           contactOptIn: request.contactOptIn,
           customerEmail: request.customerEmail,
           customerPhone: request.customerPhone,
@@ -136,6 +139,7 @@ const sourceLoaders = {
     })
     return request
       ? {
+          activeVerticalCommerce: true,
           contactOptIn: request.contactOptIn,
           customerEmail: request.customerEmail,
           customerPhone: request.customerPhone,
@@ -289,12 +293,22 @@ export async function resolveServiceCommerceSourceContext(
   })
   const sourceReadiness = Object.fromEntries(
     SERVICE_COMMERCE_CAPABILITIES.map((capability, index) => {
-      const readiness = workspace.readiness.capabilities[capability].readiness
+      const workspaceCapability = workspace.readiness.capabilities[capability]
+      const verticalFulfilmentReady =
+        source.kind === "prescription" &&
+        loaded.activeVerticalCommerce &&
+        (capability === "pickup" || capability === "delivery") &&
+        workspaceCapability.readiness === "setup_required"
+      const readiness = verticalFulfilmentReady
+        ? "available"
+        : workspaceCapability.readiness
       return [
         capability,
         readiness === "available" && policy[index]?.outcome !== "allowed"
           ? { capability, readiness: "restricted" as const }
-          : workspace.readiness.capabilities[capability],
+          : verticalFulfilmentReady
+            ? { blockers: [], readiness: "available" as const, recovery: null }
+            : workspaceCapability,
       ]
     }),
   ) as typeof workspace.readiness.capabilities

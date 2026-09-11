@@ -17,7 +17,9 @@ function loadEnv() {
   applyDatabaseProfile(loadedEnv, productionDatabaseUrl)
 
   for (const [key, value] of Object.entries(loadedEnv)) {
-    if (value !== undefined) {
+    if (value === undefined) {
+      delete process.env[key]
+    } else {
       process.env[key] = value
     }
   }
@@ -27,7 +29,7 @@ loadEnv()
 
 export default defineConfig({
   datasource: {
-    url: directDatabaseUrlForPrismaCli(env("DATABASE_URL")),
+    url: directDatabaseUrlForPrismaCli(env("EWATRADE_DATABASE_URL")),
   },
   migrations: {
     path: "prisma/migrations",

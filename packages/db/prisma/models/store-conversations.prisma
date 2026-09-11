@@ -33,6 +33,38 @@ enum StoreConversationTransferStatus {
   REVOKED
 }
 
+enum StoreConversationAccountInvitationMilestone {
+  FIRST_RELEASED_QUOTE
+}
+
+enum StoreConversationAccountInvitationStatus {
+  OFFERED
+  DISMISSED
+  LINKED
+}
+
+enum StoreConversationAccountAccessStatus {
+  ACTIVE
+}
+
+enum StoreConversationAccountAuditType {
+  INVITATION_DISMISSED
+  ACCOUNT_LINKED
+  ACCOUNT_LINK_DENIED
+  DEVICE_REVOKED
+  DEVICE_REVOCATION_DENIED
+}
+
+enum StoreConversationAccountAuditPurpose {
+  ACCOUNT_ADOPTION
+  DEVICE_SECURITY
+}
+
+enum StoreConversationAccountAuditOutcome {
+  ALLOWED
+  DENIED
+}
+
 enum StoreConversationLifecycle {
   ACTIVE
   ARCHIVED
@@ -41,6 +73,109 @@ enum StoreConversationLifecycle {
 enum StoreConversationModerationState {
   OPEN
   RESTRICTED
+}
+
+enum StoreConversationModerationAction {
+  RESTRICT
+  REINSTATE
+}
+
+enum StoreConversationModerationReason {
+  SPAM_OR_ABUSE
+  SECURITY_REVIEW
+  POLICY_REVIEW
+  OPERATOR_REVIEW
+  APPEAL_APPROVED
+  REVIEW_COMPLETE
+}
+
+enum StoreConversationModerationAuditOutcome {
+  ALLOWED
+  DENIED
+}
+
+enum StoreConversationSensitiveReadKind {
+  TIMELINE
+  ATTACHMENT
+}
+
+enum StoreConversationSensitiveReadPurpose {
+  CONVERSATION_SUPPORT
+  CUSTOMER_REQUEST_ATTACHMENT_REVIEW
+}
+
+enum StoreConversationSensitiveReadOutcome {
+  ALLOWED
+  DENIED
+}
+
+enum StoreConversationSecurityScopeKind {
+  PRINCIPAL
+  DEVICE
+  STORE_ENTRY
+  STORE
+  NETWORK
+}
+
+enum StoreConversationSecurityPurpose {
+  MESSAGE
+  MEDIA
+  VOICE
+  ACTION
+  BRIDGE
+  VERIFICATION
+}
+
+enum StoreConversationSecurityDecision {
+  ALLOW
+  CHALLENGE
+  DENY
+}
+
+enum StoreConversationSecurityChallengeStatus {
+  ISSUED
+  APPROVED
+  CONSUMED
+  EXPIRED
+  REVOKED
+}
+
+enum StoreConversationRetentionClass {
+  GUEST_CREDENTIAL
+  VERIFIED_CONTACT
+  PRESENTATION_MESSAGE
+  PROVIDER_ATTEMPT
+  SECURITY_EVIDENCE
+}
+
+enum StoreConversationPrivacyPrincipalKind {
+  ACCOUNT
+  GUEST
+}
+
+enum StoreConversationPrivacyRequestStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum StoreConversationPrivacyClassification {
+  GUEST_CREDENTIAL
+  VERIFIED_CONTACT
+  PRESENTATION_MESSAGE
+  GENERIC_MEDIA
+  PROVIDER_ATTEMPT
+  SECURITY_EVIDENCE
+  COMMERCIAL_RECORD
+  CLINICAL_RECORD
+  IMMUTABLE_AUDIT
+}
+
+enum StoreConversationPrivacyOutcomeStatus {
+  REMOVED
+  RETAINED_REQUIRED
+  UNAVAILABLE
 }
 
 enum StoreConversationMessageAuthorKind {
@@ -57,7 +192,10 @@ enum StoreConversationMessageChannel {
 }
 
 enum StoreConversationMessageKind {
+  ACCOUNT_INVITATION
+  ACTION_MESSAGE
   CUSTOMER_TEXT
+  CUSTOMER_ATTACHMENT
   STORE_TEXT
   SYSTEM_EVENT
 }
@@ -69,7 +207,11 @@ enum StoreConversationRequestKind {
 }
 
 enum StoreConversationCommandKind {
+  ACCOUNT_INVITATION_DISMISSED
+  ACCOUNT_CONVERSATIONS_LINKED
+  ACCOUNT_DEVICE_REVOKED
   CUSTOMER_TEXT
+  CUSTOMER_ATTACHMENT
   REQUEST_SELECTED
   CLAIM
   RELEASE
@@ -77,6 +219,8 @@ enum StoreConversationCommandKind {
   REASSIGN
   ESCALATION_RESOLVED
   STORE_REPLY
+  CUSTOMER_PROGRESS_ACKNOWLEDGED
+  STAFF_READ_ACKNOWLEDGED
 }
 
 enum StoreConversationAssignmentEventType {
@@ -90,6 +234,7 @@ enum StoreConversationAssignmentEventType {
 enum StoreConversationAuditEventType {
   BOOTSTRAPPED
   CUSTOMER_MESSAGE_APPENDED
+  CUSTOMER_ATTACHMENT_APPENDED
   REQUEST_LINKED
   CLAIMED
   RELEASED
@@ -121,83 +266,913 @@ enum StoreConversationEscalationEventType {
   RESOLVED
 }
 
+enum StoreConversationAvailabilityAuditEventType {
+  SCHEDULE_UPDATED
+  PAUSED
+  RESUMED
+}
+
+enum StoreConversationDesiredMode {
+  EWATRADE_CHAT
+  WHATSAPP
+  BOTH
+}
+
+enum StoreConversationChannelConfigurationAuditEventType {
+  UPDATED
+}
+
+enum StoreConversationWhatsAppBridgeCapabilityStatus {
+  PENDING
+  CONSUMED
+  REVOKED
+  EXPIRED
+}
+
+enum StoreConversationWhatsAppBridgeIntent {
+  CONTINUE_OR_NEW
+}
+
+enum StoreConversationWhatsAppBridgeStatus {
+  AWAITING_CHOICE
+  AWAITING_REQUEST_KIND
+  ACTIVE
+  REVOKED
+}
+
+enum StoreConversationWhatsAppBridgeChoice {
+  CONTINUE_CURRENT_REQUEST
+  START_NEW_REQUEST
+}
+
+enum StoreConversationWhatsAppBridgeChoiceCapabilityStatus {
+  ACTIVE
+  CONSUMED
+  REVOKED
+  EXPIRED
+}
+
+enum StoreConversationWhatsAppBridgeAttemptStatus {
+  PENDING
+  CLAIMED
+  SENT
+  FAILED
+  OUTCOME_UNKNOWN
+  CANCELLED
+}
+
+enum StoreConversationWhatsAppBridgeAuditType {
+  NAVIGATION_ISSUED
+  LINKED
+  CHOICE_SELECTED
+  REVOKED
+  DENIED
+}
+
+enum StoreConversationWhatsAppBridgeAuditOutcome {
+  ALLOWED
+  DENIED
+}
+
+enum StoreConversationWhatsAppBridgePrincipalKind {
+  GUEST_IDENTITY
+  ACCOUNT
+  SYSTEM
+}
+
+enum StoreConversationWhatsAppCandidateEvidenceKind {
+  GUEST_VERIFIED_CONTACT
+  ACCOUNT_VERIFIED_PHONE
+}
+
+enum StoreConversationWhatsAppCandidateStatus {
+  PENDING
+  CONTINUED
+  STARTED_NEW
+  REJECTED
+  EXPIRED
+}
+
+enum StoreConversationWhatsAppCandidateAction {
+  CONTINUE
+  START_NEW
+  NOT_MINE
+}
+
+enum StoreConversationWhatsAppCandidateActionCapabilityStatus {
+  ACTIVE
+  CONSUMED
+  REVOKED
+  EXPIRED
+}
+
+enum StoreConversationWhatsAppCandidateAttemptStatus {
+  PENDING
+  CLAIMED
+  SENT
+  FAILED
+  OUTCOME_UNKNOWN
+  CANCELLED
+}
+
+enum StoreConversationWhatsAppDirectSessionStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum StoreConversationWhatsAppObservationDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum StoreConversationWhatsAppObservationProvenance {
+  CLOUD_API_INBOUND
+  CLOUD_API_OUTBOUND
+  BUSINESS_APP_ECHO
+  BUSINESS_APP_HISTORY
+}
+
+enum StoreConversationWhatsAppObservationStatus {
+  RECEIVED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  DELETED
+  UNSUPPORTED
+}
+
+enum StoreConversationWhatsAppOutboundAttemptStatus {
+  PENDING
+  CLAIMED
+  SENT
+  FAILED
+  OUTCOME_UNKNOWN
+  CANCELLED
+}
+
+enum StoreConversationWhatsAppRecoveryKind {
+  AMBIGUOUS_CANDIDATE
+}
+
+enum StoreConversationWhatsAppRecoveryAttemptStatus {
+  PENDING
+  CLAIMED
+  SENT
+  FAILED
+  OUTCOME_UNKNOWN
+  CANCELLED
+}
+
+enum StoreConversationCustomerWording {
+  TEMPORARILY_UNAVAILABLE
+  OUTSIDE_SERVICE_HOURS
+}
+
+enum StoreConversationNotificationContactChannel {
+  EMAIL
+  WHATSAPP
+}
+
+enum StoreConversationNotificationContactStatus {
+  PENDING
+  VERIFIED
+  REVOKED
+}
+
+enum StoreConversationNotificationVerificationStatus {
+  PENDING
+  CLAIMED
+  SENT
+  FAILED
+  OUTCOME_UNKNOWN
+  CONSUMED
+  EXPIRED
+  REVOKED
+}
+
+enum StoreConversationNotificationVerificationPurpose {
+  CUSTOMER_NOTIFICATION_CONTACT
+}
+
+enum StoreConversationNotificationChannel {
+  PUSH
+  EMAIL
+  WHATSAPP
+}
+
+enum StoreConversationPushEndpointKind {
+  NATIVE_EXPO
+  WEB_PUSH
+}
+
+enum StoreConversationPushEndpointStatus {
+  ACTIVE
+  INVALIDATED
+  REVOKED
+}
+
+enum StoreConversationNotificationKind {
+  UNREAD_RESPONSE
+  STORE_REOPENED
+}
+
+enum StoreConversationNotificationPrincipalKind {
+  GUEST_IDENTITY
+  ACCOUNT
+}
+
+enum StoreConversationNotificationIntentStatus {
+  WAITING
+  PENDING
+  CLAIMED
+  SENT
+  DELIVERED
+  FAILED
+  CANCELLED
+  OUTCOME_UNKNOWN
+}
+
+enum StoreConversationNotificationAttemptStatus {
+  CLAIMED
+  SENT
+  FAILED
+  OUTCOME_UNKNOWN
+}
+
+enum StoreConversationNotificationReceiptStatus {
+  DELIVERED
+  FAILED
+}
+
+enum StoreConversationNotificationCommandKind {
+  CONTACT_VERIFICATION_REQUESTED
+  CONTACT_VERIFIED
+  CONTACT_REVOKED
+  PREFERENCE_UPDATED
+  PUSH_REGISTERED
+  PUSH_REVOKED
+  REOPENING_SUBSCRIBED
+  ACCOUNT_PROGRESS_ACKNOWLEDGED
+}
+
+enum StoreConversationNotificationAuditType {
+  CONTACT_VERIFICATION_REQUESTED
+  CONTACT_VERIFIED
+  CONTACT_REVOKED
+  PREFERENCE_UPDATED
+  PUSH_REGISTERED
+  PUSH_REVOKED
+  REOPENING_SUBSCRIBED
+  REOPENING_RELEASED
+  INTENT_SCHEDULED
+  INTENT_COALESCED
+  INTENT_CLAIMED
+  INTENT_CANCELLED
+  ATTEMPT_COMPLETED
+  ATTEMPT_FAILED
+}
+
 /// Opaque device-scoped customer identity. It is not a User or proof of a
 /// person and contains no contact/profile attributes.
 model StoreConversationGuestIdentity {
-  id                   String                               @id @default(cuid())
-  status               StoreConversationGuestIdentityStatus @default(ACTIVE)
-  lastSeenAt           DateTime                             @default(now())
-  revokedAt            DateTime?
-  createdAt            DateTime                             @default(now())
-  updatedAt            DateTime                             @updatedAt
-  credentials          StoreConversationGuestCredential[]
-  conversations        StoreConversation[]
-  conversationAccesses StoreConversationGuestAccess[]
-  redeemedTransfers    StoreConversationTransfer[]          @relation("StoreConversationTransferRedeemedGuest")
+  id                         String                                           @id @default(cuid())
+  status                     StoreConversationGuestIdentityStatus             @default(ACTIVE)
+  lastSeenAt                 DateTime                                         @default(now())
+  revokedAt                  DateTime?
+  createdAt                  DateTime                                         @default(now())
+  updatedAt                  DateTime                                         @updatedAt
+  credentials                StoreConversationGuestCredential[]
+  credentialRotations        StoreConversationGuestCredentialRotation[]
+  conversations              StoreConversation[]
+  conversationAccesses       StoreConversationGuestAccess[]
+  redeemedTransfers          StoreConversationTransfer[]                      @relation("StoreConversationTransferRedeemedGuest")
+  accountAccesses            StoreConversationAccountAccess[]
+  accountLinkCommands        StoreConversationAccountLinkCommand[]
+  accountAuditEvents         StoreConversationAccountAuditEvent[]
+  notificationContacts       StoreConversationGuestNotificationContact[]
+  notificationVerifications  StoreConversationGuestNotificationVerification[]
+  notificationIntents        StoreConversationNotificationIntent[]
+  notificationAudits         StoreConversationNotificationAuditEvent[]
+  whatsAppBridgeCapabilities StoreConversationWhatsAppBridgeCapability[]      @relation("StoreConversationWhatsAppBridgeCapabilityGuest")
+  whatsAppBridges            StoreConversationWhatsAppBridge[]                @relation("StoreConversationWhatsAppBridgeGuest")
+  whatsAppBridgeAudits       StoreConversationWhatsAppBridgeAuditEvent[]      @relation("StoreConversationWhatsAppBridgeAuditGuest")
+  privacyRequests            StoreConversationPrivacyRequest[]
 
   @@index([status, lastSeenAt])
 }
 
 /// Purpose-bound bearer credential. Only its SHA-256 digest is persisted.
 model StoreConversationGuestCredential {
-  id                  String                                  @id @default(cuid())
-  guestIdentityId     String
-  tokenDigest         String                                  @unique
-  deviceBindingDigest String?
-  purpose             StoreConversationGuestCredentialPurpose
-  status              StoreConversationGuestCredentialStatus  @default(ACTIVE)
-  expiresAt           DateTime
-  lastUsedAt          DateTime                                @default(now())
-  rotatedAt           DateTime?
-  revokedAt           DateTime?
-  createdAt           DateTime                                @default(now())
-  updatedAt           DateTime                                @updatedAt
-  guestIdentity       StoreConversationGuestIdentity          @relation(fields: [guestIdentityId], references: [id], onDelete: Cascade)
-  sourceTransfers     StoreConversationTransfer[]             @relation("StoreConversationTransferSourceCredential")
-  redeemedTransfers   StoreConversationTransfer[]             @relation("StoreConversationTransferRedeemedCredential")
+  id                     String                                     @id @default(cuid())
+  guestIdentityId        String
+  tokenDigest            String                                     @unique
+  deviceBindingDigest    String?
+  purpose                StoreConversationGuestCredentialPurpose
+  retentionClass         StoreConversationRetentionClass            @default(GUEST_CREDENTIAL)
+  status                 StoreConversationGuestCredentialStatus     @default(ACTIVE)
+  expiresAt              DateTime
+  lastUsedAt             DateTime                                   @default(now())
+  rotatedAt              DateTime?
+  overlapExpiresAt       DateTime?
+  rotatedToCredentialId  String?                                    @unique
+  revokedAt              DateTime?
+  createdAt              DateTime                                   @default(now())
+  updatedAt              DateTime                                   @updatedAt
+  guestIdentity          StoreConversationGuestIdentity             @relation(fields: [guestIdentityId], references: [id], onDelete: Cascade)
+  rotatedToCredential    StoreConversationGuestCredential?          @relation("StoreConversationGuestCredentialSuccessor", fields: [rotatedToCredentialId], references: [id], onDelete: SetNull)
+  rotatedFromCredential  StoreConversationGuestCredential?          @relation("StoreConversationGuestCredentialSuccessor")
+  sourceRotations        StoreConversationGuestCredentialRotation[] @relation("StoreConversationGuestCredentialRotationSource")
+  targetRotations        StoreConversationGuestCredentialRotation[] @relation("StoreConversationGuestCredentialRotationTarget")
+  sourceTransfers        StoreConversationTransfer[]                @relation("StoreConversationTransferSourceCredential")
+  redeemedTransfers      StoreConversationTransfer[]                @relation("StoreConversationTransferRedeemedCredential")
+  conversationWatermarks StoreConversationCustomerWatermark[]
+  accountAuditEvents     StoreConversationAccountAuditEvent[]
+  accountDeviceCommands  StoreConversationAccountDeviceCommand[]
+  notificationCommands   StoreConversationNotificationCommand[]
+  pushEndpoints          StoreConversationPushEndpoint[]
 
   @@index([guestIdentityId, status, expiresAt])
   @@index([purpose, deviceBindingDigest, status])
 }
 
+/// Payload-bound proof of one device credential rotation. Raw bearer material
+/// is never persisted; the caller must stage the target token for replay.
+model StoreConversationGuestCredentialRotation {
+  id                 String                                  @id @default(cuid())
+  guestIdentityId    String
+  sourceCredentialId String
+  targetCredentialId String                                  @unique
+  clientOperationId  String
+  payloadHash        String
+  purpose            StoreConversationGuestCredentialPurpose
+  overlapExpiresAt   DateTime
+  createdAt          DateTime                                @default(now())
+  guestIdentity      StoreConversationGuestIdentity          @relation(fields: [guestIdentityId], references: [id], onDelete: Cascade)
+  sourceCredential   StoreConversationGuestCredential        @relation("StoreConversationGuestCredentialRotationSource", fields: [sourceCredentialId], references: [id], onDelete: Restrict)
+  targetCredential   StoreConversationGuestCredential        @relation("StoreConversationGuestCredentialRotationTarget", fields: [targetCredentialId], references: [id], onDelete: Restrict)
+
+  @@unique([guestIdentityId, clientOperationId])
+  @@index([sourceCredentialId, createdAt])
+  @@index([guestIdentityId, createdAt])
+}
+
 /// Customer-facing thread scoped immutably to exactly one Tenant and Store.
 model StoreConversation {
-  id                          String                             @id @default(cuid())
-  tenantId                    String
-  storeId                     String
-  guestIdentityId             String
-  lifecycle                   StoreConversationLifecycle         @default(ACTIVE)
-  moderationState             StoreConversationModerationState   @default(OPEN)
-  lastMessageSequence         Int                                @default(0)
-  lastCustomerMessageSequence Int                                @default(0)
-  lastCustomerMessageAt       DateTime?
-  lastStoreReplySequence      Int                                @default(0)
-  lastStoreReplyAt            DateTime?
-  responseDueAt               DateTime?
-  assignedMembershipId        String?
-  assignmentRevision          Int                                @default(0)
-  createdAt                   DateTime                           @default(now())
-  lastActivityAt              DateTime                           @default(now())
-  archivedAt                  DateTime?
-  restrictedAt                DateTime?
-  updatedAt                   DateTime                           @updatedAt
-  tenant                      Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store                       Store                              @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  guestIdentity               StoreConversationGuestIdentity     @relation(fields: [guestIdentityId], references: [id], onDelete: Restrict)
-  assignedMembership          Membership?                        @relation("StoreConversationCurrentAssignee", fields: [assignedMembershipId], references: [id], onDelete: Restrict)
-  messages                    StoreConversationMessage[]
-  requestLinks                StoreConversationRequestLink[]
-  commandReceipts             StoreConversationCommandReceipt[]
-  assignmentEvents            StoreConversationAssignmentEvent[]
-  escalationEvents            StoreConversationEscalationEvent[]
-  auditEvents                 StoreConversationAuditEvent[]
-  guestAccesses               StoreConversationGuestAccess[]
-  transfers                   StoreConversationTransfer[]
+  id                            String                                           @id @default(cuid())
+  tenantId                      String
+  storeId                       String
+  guestIdentityId               String
+  lifecycle                     StoreConversationLifecycle                       @default(ACTIVE)
+  moderationState               StoreConversationModerationState                 @default(OPEN)
+  moderationRevision            Int                                              @default(0)
+  moderationReason              StoreConversationModerationReason?
+  lastMessageSequence           Int                                              @default(0)
+  lastCustomerMessageSequence   Int                                              @default(0)
+  lastCustomerMessageAt         DateTime?
+  lastStoreReplySequence        Int                                              @default(0)
+  lastStoreReplyAt              DateTime?
+  responseDueAt                 DateTime?
+  assignedMembershipId          String?
+  assignmentRevision            Int                                              @default(0)
+  createdAt                     DateTime                                         @default(now())
+  lastActivityAt                DateTime                                         @default(now())
+  archivedAt                    DateTime?
+  restrictedAt                  DateTime?
+  updatedAt                     DateTime                                         @updatedAt
+  tenant                        Tenant                                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                         Store                                            @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  guestIdentity                 StoreConversationGuestIdentity                   @relation(fields: [guestIdentityId], references: [id], onDelete: Restrict)
+  assignedMembership            Membership?                                      @relation("StoreConversationCurrentAssignee", fields: [assignedMembershipId], references: [id], onDelete: Restrict)
+  messages                      StoreConversationMessage[]
+  actionMessages                StoreConversationActionMessage[]
+  messageAttachments            StoreConversationMessageAttachment[]
+  requestLinks                  StoreConversationRequestLink[]
+  commandReceipts               StoreConversationCommandReceipt[]
+  assignmentEvents              StoreConversationAssignmentEvent[]
+  escalationEvents              StoreConversationEscalationEvent[]
+  auditEvents                   StoreConversationAuditEvent[]
+  moderationCommands            StoreConversationModerationCommand[]
+  moderationAuditEvents         StoreConversationModerationAuditEvent[]
+  sensitiveReadAuditEvents      StoreConversationSensitiveReadAuditEvent[]
+  privacyRequests               StoreConversationPrivacyRequest[]
+  guestAccesses                 StoreConversationGuestAccess[]
+  transfers                     StoreConversationTransfer[]
+  customerWatermarks            StoreConversationCustomerWatermark[]
+  staffWatermarks               StoreConversationStaffWatermark[]
+  accountInvitations            StoreConversationAccountInvitation[]
+  accountAccess                 StoreConversationAccountAccess?
+  accountAuditEvents            StoreConversationAccountAuditEvent[]
+  accountWatermarks             StoreConversationAccountWatermark[]
+  notificationCommands          StoreConversationNotificationCommand[]
+  notificationIntents           StoreConversationNotificationIntent[]
+  notificationVerifications     StoreConversationGuestNotificationVerification[]
+  notificationPushEndpoints     StoreConversationPushEndpoint[]
+  notificationAudits            StoreConversationNotificationAuditEvent[]
+  whatsAppBridgeCapabilities    StoreConversationWhatsAppBridgeCapability[]
+  whatsAppBridges               StoreConversationWhatsAppBridge[]
+  whatsAppBridgeAudits          StoreConversationWhatsAppBridgeAuditEvent[]
+  whatsAppCandidates            StoreConversationWhatsAppCandidate[]
+  whatsAppCandidateSuppressions StoreConversationWhatsAppCandidateSuppression[]
+  whatsAppDirectSessions        StoreConversationWhatsAppDirectSession[]
+  whatsAppObservations          StoreConversationWhatsAppObservation[]
+  whatsAppOutboundAttempts      StoreConversationWhatsAppOutboundAttempt[]
 
   @@unique([storeId, guestIdentityId])
   @@index([tenantId, storeId, lifecycle, lastActivityAt])
   @@index([tenantId, storeId, lifecycle, responseDueAt])
   @@index([assignedMembershipId, lifecycle, lastActivityAt])
+}
+
+/// Payload-bound successful moderation mutation. Existing Request and message
+/// history are never rewritten by this operational submission gate.
+model StoreConversationModerationCommand {
+  id                String                            @id @default(cuid())
+  tenantId          String
+  storeId           String
+  conversationId    String
+  actorUserId       String
+  actorMembershipId String
+  clientOperationId String
+  payloadHash       String
+  action            StoreConversationModerationAction
+  reason            StoreConversationModerationReason
+  operatorNote      String?
+  expectedRevision  Int
+  resultingRevision Int
+  resultingState    StoreConversationModerationState
+  restrictedAt      DateTime?
+  createdAt         DateTime                          @default(now())
+  tenant            Tenant                            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  store             Store                             @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation      StoreConversation                 @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  actorUser         User                              @relation("StoreConversationModerationCommandActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  actorMembership   Membership                        @relation("StoreConversationModerationCommandMembership", fields: [actorMembershipId], references: [id], onDelete: Restrict)
+
+  @@unique([conversationId, clientOperationId])
+  @@index([tenantId, storeId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
+/// Content-free authorization and mutation audit. Unvalidated Store or
+/// conversation scope is deliberately omitted on denied attempts.
+model StoreConversationModerationAuditEvent {
+  id                String                                  @id @default(cuid())
+  tenantId          String
+  storeId           String?
+  conversationId    String?
+  actorUserId       String
+  actorMembershipId String?
+  clientOperationId String
+  payloadHash       String
+  action            StoreConversationModerationAction
+  reason            StoreConversationModerationReason
+  outcome           StoreConversationModerationAuditOutcome
+  expectedRevision  Int
+  resultingRevision Int?
+  reasonCode        String
+  occurredAt        DateTime                                @default(now())
+  createdAt         DateTime                                @default(now())
+  tenant            Tenant                                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  store             Store?                                  @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation      StoreConversation?                      @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  actorUser         User                                    @relation("StoreConversationModerationAuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  actorMembership   Membership?                             @relation("StoreConversationModerationAuditMembership", fields: [actorMembershipId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, storeId, occurredAt])
+  @@index([conversationId, occurredAt])
+  @@index([actorUserId, occurredAt])
+}
+
+/// Append-only, content-free evidence that one personally authorized operator
+/// attempted to read a Store Conversation timeline or private attachment.
+/// Attachment identifiers are represented only by a one-way digest.
+model StoreConversationSensitiveReadAuditEvent {
+  id                     String                                @id @default(cuid())
+  tenantId               String
+  storeId                String?
+  conversationId         String?
+  actorUserId            String
+  actorMembershipId      String?
+  kind                   StoreConversationSensitiveReadKind
+  purpose                StoreConversationSensitiveReadPurpose
+  outcome                StoreConversationSensitiveReadOutcome
+  subjectReferenceDigest String?
+  reasonCode             String
+  occurredAt             DateTime                              @default(now())
+  createdAt              DateTime                              @default(now())
+  tenant                 Tenant                                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  store                  Store?                                @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation           StoreConversation?                    @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  actorUser              User                                  @relation("StoreConversationSensitiveReadAuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  actorMembership        Membership?                           @relation("StoreConversationSensitiveReadAuditMembership", fields: [actorMembershipId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, storeId, occurredAt])
+  @@index([conversationId, occurredAt])
+  @@index([actorUserId, occurredAt])
+}
+
+/// Fixed half-open-window counter over one purpose-keyed, digest-only scope.
+/// Raw guest/device/network/Entry values are intentionally absent.
+model StoreConversationSecurityWindow {
+  id            String                             @id @default(cuid())
+  scopeKind     StoreConversationSecurityScopeKind
+  scopeDigest   String
+  purpose       StoreConversationSecurityPurpose
+  windowStartAt DateTime
+  expiresAt     DateTime
+  count         Int                                @default(0)
+  weightedCost  Int                                @default(0)
+  createdAt     DateTime                           @default(now())
+  updatedAt     DateTime                           @updatedAt
+
+  @@unique([scopeKind, scopeDigest, purpose, windowStartAt])
+  @@index([purpose, expiresAt])
+}
+
+/// Immutable, redacted outcome of one bounded security decision. All caller
+/// and resource scope values are irreversible digests; content and provider
+/// facts are never persisted here.
+model StoreConversationSecurityEvent {
+  id                      String                              @id @default(cuid())
+  operationDigest         String                              @unique
+  purpose                 StoreConversationSecurityPurpose
+  retentionClass          StoreConversationRetentionClass     @default(SECURITY_EVIDENCE)
+  decision                StoreConversationSecurityDecision
+  reasonCode              String
+  principalScopeDigest    String
+  deviceScopeDigest       String?
+  storeEntryScopeDigest   String?
+  storeScopeDigest        String
+  tenantScopeDigest       String
+  conversationScopeDigest String?
+  networkScopeDigest      String?
+  actionCost              Int
+  occurredAt              DateTime                            @default(now())
+  expiresAt               DateTime
+  challenge               StoreConversationSecurityChallenge?
+
+  @@index([principalScopeDigest, purpose, occurredAt])
+  @@index([storeScopeDigest, purpose, occurredAt])
+  @@index([expiresAt])
+}
+
+/// Short-lived one-time challenge capability. Only the proof digest is stored;
+/// the raw caller-staged capability is returned once and never logged.
+model StoreConversationSecurityChallenge {
+  id                   String                                   @id @default(cuid())
+  securityEventId      String                                   @unique
+  proofDigest          String                                   @unique
+  principalScopeDigest String
+  purpose              StoreConversationSecurityPurpose
+  status               StoreConversationSecurityChallengeStatus @default(ISSUED)
+  expiresAt            DateTime
+  approvedAt           DateTime?
+  consumedAt           DateTime?
+  revokedAt            DateTime?
+  createdAt            DateTime                                 @default(now())
+  updatedAt            DateTime                                 @updatedAt
+  securityEvent        StoreConversationSecurityEvent           @relation(fields: [securityEventId], references: [id], onDelete: Restrict)
+  privacyRequest       StoreConversationPrivacyRequest?
+
+  @@index([principalScopeDigest, purpose, status, expiresAt])
+  @@index([status, expiresAt])
+}
+
+/// Proven, exact-conversation customer privacy request. Requested classes and
+/// outcomes are allowlisted rows; job claims carry only this row id.
+model StoreConversationPrivacyRequest {
+  id               String                                          @id @default(cuid())
+  tenantId         String
+  storeId          String
+  conversationId   String
+  principalKind    StoreConversationPrivacyPrincipalKind
+  accountUserId    String?
+  guestIdentityId  String?
+  proofChallengeId String?                                         @unique
+  operationDigest  String                                          @unique
+  payloadHash      String
+  status           StoreConversationPrivacyRequestStatus           @default(PENDING)
+  attemptCount     Int                                             @default(0)
+  claimToken       String?
+  claimedAt        DateTime?
+  claimExpiresAt   DateTime?
+  nextAttemptAt    DateTime?
+  completedAt      DateTime?
+  failureCode      String?
+  createdAt        DateTime                                        @default(now())
+  updatedAt        DateTime                                        @updatedAt
+  tenant           Tenant                                          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  store            Store                                           @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation     StoreConversation                               @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  accountUser      User?                                           @relation("StoreConversationPrivacyRequestAccount", fields: [accountUserId], references: [id], onDelete: Restrict)
+  guestIdentity    StoreConversationGuestIdentity?                 @relation(fields: [guestIdentityId], references: [id], onDelete: Restrict)
+  proofChallenge   StoreConversationSecurityChallenge?             @relation(fields: [proofChallengeId], references: [id], onDelete: Restrict)
+  classifications  StoreConversationPrivacyRequestClassification[]
+  outcomes         StoreConversationPrivacyRequestOutcome[]
+
+  @@index([tenantId, storeId, status, nextAttemptAt])
+  @@index([conversationId, createdAt])
+  @@index([accountUserId, createdAt])
+  @@index([guestIdentityId, createdAt])
+}
+
+model StoreConversationPrivacyRequestClassification {
+  id               String                                 @id @default(cuid())
+  privacyRequestId String
+  classification   StoreConversationPrivacyClassification
+  createdAt        DateTime                               @default(now())
+  privacyRequest   StoreConversationPrivacyRequest        @relation(fields: [privacyRequestId], references: [id], onDelete: Restrict)
+
+  @@unique([privacyRequestId, classification])
+  @@index([classification, createdAt])
+}
+
+/// Immutable truthful per-class result. No content, contacts, provider ids,
+/// object references or clinical facts are stored.
+model StoreConversationPrivacyRequestOutcome {
+  id               String                                 @id @default(cuid())
+  privacyRequestId String
+  classification   StoreConversationPrivacyClassification
+  status           StoreConversationPrivacyOutcomeStatus
+  reasonCode       String
+  occurredAt       DateTime                               @default(now())
+  createdAt        DateTime                               @default(now())
+  privacyRequest   StoreConversationPrivacyRequest        @relation(fields: [privacyRequestId], references: [id], onDelete: Restrict)
+
+  @@unique([privacyRequestId, classification])
+  @@index([classification, status, occurredAt])
+}
+
+/// Optional account-adoption presentation appended beside the first released
+/// Quote. Authentication and account access remain separate authorities.
+model StoreConversationAccountInvitation {
+  id             String                                      @id @default(cuid())
+  tenantId       String
+  storeId        String
+  conversationId String
+  messageId      String                                      @unique
+  quoteVersionId String
+  milestone      StoreConversationAccountInvitationMilestone
+  status         StoreConversationAccountInvitationStatus    @default(OFFERED)
+  dismissedAt    DateTime?
+  linkedAt       DateTime?
+  createdAt      DateTime                                    @default(now())
+  updatedAt      DateTime                                    @updatedAt
+  tenant         Tenant                                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store          Store                                       @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation   StoreConversation                           @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message        StoreConversationMessage                    @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  quoteVersion   CommerceQuoteVersion                        @relation(fields: [quoteVersionId], references: [id], onDelete: Restrict)
+  auditEvents    StoreConversationAccountAuditEvent[]
+
+  @@unique([conversationId, milestone])
+  @@index([tenantId, storeId, createdAt])
+  @@index([quoteVersionId])
+}
+
+/// Explicit Customer Account participant. The proving Guest Identity remains
+/// authorized until its individual credential is revoked.
+model StoreConversationAccountAccess {
+  id                                  String                                      @id @default(cuid())
+  tenantId                            String
+  storeId                             String
+  conversationId                      String                                      @unique
+  accountUserId                       String
+  linkedGuestIdentityId               String
+  status                              StoreConversationAccountAccessStatus        @default(ACTIVE)
+  linkedAt                            DateTime                                    @default(now())
+  lastOpenedAt                        DateTime                                    @default(now())
+  createdAt                           DateTime                                    @default(now())
+  updatedAt                           DateTime                                    @updatedAt
+  tenant                              Tenant                                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                               Store                                       @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation                        StoreConversation                           @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  accountUser                         User                                        @relation(fields: [accountUserId], references: [id], onDelete: Restrict)
+  linkedGuestIdentity                 StoreConversationGuestIdentity              @relation(fields: [linkedGuestIdentityId], references: [id], onDelete: Restrict)
+  whatsAppBridgeCapabilities          StoreConversationWhatsAppBridgeCapability[] @relation("StoreConversationWhatsAppBridgeCapabilityAccountAccess")
+  whatsAppBridges                     StoreConversationWhatsAppBridge[]           @relation("StoreConversationWhatsAppBridgeAccountAccess")
+  storeConversationWhatsAppCandidates StoreConversationWhatsAppCandidate[]
+
+  @@unique([storeId, accountUserId])
+  @@index([accountUserId, status, lastOpenedAt])
+  @@index([linkedGuestIdentityId, status])
+  @@index([tenantId, storeId, status])
+}
+
+/// Payload-bound completion receipt for one explicit multi-conversation link.
+model StoreConversationAccountLinkCommand {
+  id                      String                         @id @default(cuid())
+  accountUserId           String
+  guestIdentityId         String
+  clientOperationId       String
+  payloadHash             String
+  linkedConversationCount Int
+  createdAt               DateTime                       @default(now())
+  accountUser             User                           @relation(fields: [accountUserId], references: [id], onDelete: Restrict)
+  guestIdentity           StoreConversationGuestIdentity @relation(fields: [guestIdentityId], references: [id], onDelete: Restrict)
+
+  @@unique([accountUserId, clientOperationId])
+  @@index([guestIdentityId, createdAt])
+}
+
+/// Payload-bound completion receipt for revoking one exact linked guest
+/// credential from an authenticated Customer Account.
+model StoreConversationAccountDeviceCommand {
+  id                String                           @id @default(cuid())
+  accountUserId     String
+  credentialId      String
+  clientOperationId String
+  payloadHash       String
+  createdAt         DateTime                         @default(now())
+  accountUser       User                             @relation(fields: [accountUserId], references: [id], onDelete: Restrict)
+  credential        StoreConversationGuestCredential @relation(fields: [credentialId], references: [id], onDelete: Restrict)
+
+  @@unique([accountUserId, clientOperationId])
+  @@index([credentialId, createdAt])
+}
+
+/// Content-free immutable security audit for account adoption and linked guest
+/// device revocation. Nullable scope is used only for fail-closed denials that
+/// cannot safely validate a caller-supplied conversation/Store.
+model StoreConversationAccountAuditEvent {
+  id                 String                               @id @default(cuid())
+  tenantId           String?
+  storeId            String?
+  conversationId     String?
+  invitationId       String?
+  actorAccountUserId String
+  guestIdentityId    String?
+  credentialId       String?
+  type               StoreConversationAccountAuditType
+  purpose            StoreConversationAccountAuditPurpose
+  outcome            StoreConversationAccountAuditOutcome
+  clientOperationId  String
+  payloadHash        String?
+  reasonCode         String
+  occurredAt         DateTime                             @default(now())
+  createdAt          DateTime                             @default(now())
+  tenant             Tenant?                              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  store              Store?                               @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation       StoreConversation?                   @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  invitation         StoreConversationAccountInvitation?  @relation(fields: [invitationId], references: [id], onDelete: Restrict)
+  actorAccount       User                                 @relation(fields: [actorAccountUserId], references: [id], onDelete: Restrict)
+  guestIdentity      StoreConversationGuestIdentity?      @relation(fields: [guestIdentityId], references: [id], onDelete: Restrict)
+  credential         StoreConversationGuestCredential?    @relation(fields: [credentialId], references: [id], onDelete: Restrict)
+
+  @@index([actorAccountUserId, occurredAt])
+  @@index([tenantId, storeId, occurredAt])
+  @@index([conversationId, occurredAt])
+  @@index([guestIdentityId, occurredAt])
+  @@index([credentialId, occurredAt])
+}
+
+/// Immutable conversation presentation tracer for one released Quote Version.
+/// Quote/action/payment authority remains in the referenced shared aggregates;
+/// only bounded customer-safe display facts are snapshotted here.
+model StoreConversationActionMessage {
+  id              String                       @id @default(cuid())
+  tenantId        String
+  storeId         String
+  conversationId  String
+  messageId       String                       @unique
+  sourceKind      StoreConversationRequestKind
+  sourceId        String
+  quoteVersionId  String
+  createdByUserId String
+  payloadHash     String
+  quoteSnapshot   Json
+  occurredAt      DateTime                     @default(now())
+  createdAt       DateTime                     @default(now())
+  tenant          Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store           Store                        @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation    StoreConversation            @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message         StoreConversationMessage     @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  quoteVersion    CommerceQuoteVersion         @relation(fields: [quoteVersionId], references: [id], onDelete: Restrict)
+
+  @@unique([conversationId, quoteVersionId])
+  @@index([tenantId, storeId, occurredAt])
+  @@index([sourceKind, sourceId])
+  @@index([quoteVersionId])
+}
+
+/// Monotonic EwaTrade delivery/read cursor for one exact guest credential.
+/// Provider delivery/read remains a separate channel-specific fact.
+model StoreConversationCustomerWatermark {
+  id                       String                           @id @default(cuid())
+  tenantId                 String
+  storeId                  String
+  conversationId           String
+  credentialId             String
+  deliveredThroughSequence Int                              @default(0)
+  readThroughSequence      Int                              @default(0)
+  deliveredAt              DateTime?
+  readAt                   DateTime?
+  createdAt                DateTime                         @default(now())
+  updatedAt                DateTime                         @updatedAt
+  tenant                   Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                    Store                            @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation             StoreConversation                @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  credential               StoreConversationGuestCredential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, credentialId])
+  @@index([tenantId, storeId, conversationId])
+}
+
+/// Monotonic staff read cursor for one exact active Tenant Membership.
+model StoreConversationStaffWatermark {
+  id                  String            @id @default(cuid())
+  tenantId            String
+  storeId             String
+  conversationId      String
+  membershipId        String
+  readThroughSequence Int               @default(0)
+  readAt              DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  tenant              Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store               Store             @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation        StoreConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  membership          Membership        @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, membershipId])
+  @@index([tenantId, storeId, conversationId])
+}
+
+/// Monotonic EwaTrade delivery/read cursor for one exact Customer Account
+/// participant. Guest credential and provider watermarks remain independent.
+model StoreConversationAccountWatermark {
+  id                       String            @id @default(cuid())
+  tenantId                 String
+  storeId                  String
+  conversationId           String
+  accountUserId            String
+  deliveredThroughSequence Int               @default(0)
+  readThroughSequence      Int               @default(0)
+  deliveredAt              DateTime?
+  readAt                   DateTime?
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+  tenant                   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                    Store             @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation             StoreConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  accountUser              User              @relation(fields: [accountUserId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, accountUserId])
+  @@index([accountUserId, readThroughSequence])
+  @@index([tenantId, storeId, conversationId])
+}
+
+/// Customer Channels-owned Store service hours and manual Chat pause. Missing
+/// rows resolve through the additive 24/7, unpaused compatibility default.
+model StoreConversationAvailabilityConfiguration {
+  id                             String                                    @id @default(cuid())
+  tenantId                       String
+  storeId                        String                                    @unique
+  timezone                       String
+  weeklyHours                    Json
+  manualPaused                   Boolean                                   @default(false)
+  customerWording                StoreConversationCustomerWording          @default(TEMPORARILY_UNAVAILABLE)
+  unreadNotificationGraceSeconds Int                                       @default(45)
+  pauseReason                    String?
+  pausedAt                       DateTime?
+  pausedByUserId                 String?
+  resumedAt                      DateTime?
+  resumedByUserId                String?
+  revision                       Int                                       @default(1)
+  createdAt                      DateTime                                  @default(now())
+  updatedAt                      DateTime                                  @updatedAt
+  tenant                         Tenant                                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                          Store                                     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  auditEvents                    StoreConversationAvailabilityAuditEvent[]
+
+  @@index([tenantId, manualPaused, updatedAt])
+}
+
+/// Append-only, payload-bound availability configuration evidence. Its
+/// snapshot is bounded configuration only and never customer or provider data.
+model StoreConversationAvailabilityAuditEvent {
+  id                    String                                      @id @default(cuid())
+  tenantId              String
+  storeId               String
+  configurationId       String
+  actorUserId           String
+  type                  StoreConversationAvailabilityAuditEventType
+  configurationRevision Int
+  clientOperationId     String
+  payloadHash           String
+  reason                String
+  configurationSnapshot Json
+  occurredAt            DateTime                                    @default(now())
+  createdAt             DateTime                                    @default(now())
+  tenant                Tenant                                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                 Store                                       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  configuration         StoreConversationAvailabilityConfiguration  @relation(fields: [configurationId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, clientOperationId])
+  @@index([tenantId, storeId, occurredAt])
+  @@index([configurationId, configurationRevision])
+  @@index([actorUserId, occurredAt])
 }
 
 /// Conversation-scoped authorization for a Guest Identity. The owning guest
@@ -261,28 +1236,62 @@ model StoreConversationTransfer {
 
 /// Append-only public timeline message ordered by transactional sequence.
 model StoreConversationMessage {
-  id                 String                             @id @default(cuid())
-  tenantId           String
-  storeId            String
-  conversationId     String
-  sequence           Int
-  authorKind         StoreConversationMessageAuthorKind
-  authorMembershipId String?
-  channel            StoreConversationMessageChannel
-  kind               StoreConversationMessageKind
-  body               String
-  occurredAt         DateTime                           @default(now())
-  createdAt          DateTime                           @default(now())
-  tenant             Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store              Store                              @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  conversation       StoreConversation                  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  authorMembership   Membership?                        @relation("StoreConversationMessageAuthor", fields: [authorMembershipId], references: [id], onDelete: Restrict)
-  requestLinks       StoreConversationRequestLink[]
-  commandReceipts    StoreConversationCommandReceipt[]
+  id                      String                                    @id @default(cuid())
+  tenantId                String
+  storeId                 String
+  conversationId          String
+  sequence                Int
+  authorKind              StoreConversationMessageAuthorKind
+  authorMembershipId      String?
+  channel                 StoreConversationMessageChannel
+  kind                    StoreConversationMessageKind
+  retentionClass          StoreConversationRetentionClass           @default(PRESENTATION_MESSAGE)
+  body                    String
+  presentationRedactedAt  DateTime?
+  occurredAt              DateTime                                  @default(now())
+  createdAt               DateTime                                  @default(now())
+  tenant                  Tenant                                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                   Store                                     @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation            StoreConversation                         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  authorMembership        Membership?                               @relation("StoreConversationMessageAuthor", fields: [authorMembershipId], references: [id], onDelete: Restrict)
+  requestLinks            StoreConversationRequestLink[]
+  attachments             StoreConversationMessageAttachment[]
+  commandReceipts         StoreConversationCommandReceipt[]
+  actionMessage           StoreConversationActionMessage?
+  accountInvitation       StoreConversationAccountInvitation?
+  notificationIntents     StoreConversationNotificationIntent[]
+  whatsAppBridge          StoreConversationWhatsAppBridge?
+  whatsAppObservation     StoreConversationWhatsAppObservation?
+  whatsAppOutboundAttempt StoreConversationWhatsAppOutboundAttempt?
 
   @@unique([conversationId, sequence])
   @@index([tenantId, storeId, occurredAt])
   @@index([conversationId, sequence])
+}
+
+/// Conversation-scoped presentation link to one existing private-media owner.
+/// Exactly one of sourceAttachmentId or prescriptionMediaId is populated by
+/// repository commands; raw object/provider/safety content is never copied.
+model StoreConversationMessageAttachment {
+  id                  String                           @id @default(cuid())
+  tenantId            String
+  storeId             String
+  conversationId      String
+  messageId           String
+  position            Int                              @default(1)
+  sourceAttachmentId  String?                          @unique
+  prescriptionMediaId String?                          @unique
+  createdAt           DateTime                         @default(now())
+  tenant              Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store               Store                            @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation        StoreConversation                @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message             StoreConversationMessage         @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  sourceAttachment    ServiceCommerceSourceAttachment? @relation(fields: [sourceAttachmentId], references: [id], onDelete: Restrict)
+  prescriptionMedia   PrescriptionMedia?               @relation(fields: [prescriptionMediaId], references: [id], onDelete: Restrict)
+
+  @@unique([messageId, position])
+  @@index([tenantId, storeId, conversationId, createdAt])
+  @@index([conversationId, messageId])
 }
 
 /// Exact typed source association. Source lifecycle authority remains in the
@@ -402,4 +1411,775 @@ model StoreConversationAuditEvent {
 
   @@index([tenantId, storeId, occurredAt])
   @@index([conversationId, occurredAt])
+}
+
+/// Store-owned desired channel mode. Provider, policy, availability and team
+/// facts remain independent authorities used to derive the effective mode.
+model StoreConversationChannelConfiguration {
+  id              String                                            @id @default(cuid())
+  tenantId        String
+  storeId         String                                            @unique
+  desiredMode     StoreConversationDesiredMode                      @default(EWATRADE_CHAT)
+  revision        Int                                               @default(1)
+  reason          String
+  updatedByUserId String
+  createdAt       DateTime                                          @default(now())
+  updatedAt       DateTime                                          @updatedAt
+  tenant          Tenant                                            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store           Store                                             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  updatedByUser   User                                              @relation("StoreConversationChannelConfigUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: Restrict)
+  commands        StoreConversationChannelConfigurationCommand[]
+  auditEvents     StoreConversationChannelConfigurationAuditEvent[]
+
+  @@index([tenantId, desiredMode, updatedAt])
+}
+
+/// Payload-bound replay receipt for one exact desired-mode change.
+model StoreConversationChannelConfigurationCommand {
+  id                String                                @id @default(cuid())
+  tenantId          String
+  storeId           String
+  configurationId   String
+  clientOperationId String
+  payloadHash       String
+  desiredMode       StoreConversationDesiredMode
+  revision          Int
+  createdAt         DateTime                              @default(now())
+  tenant            Tenant                                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                                 @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  configuration     StoreConversationChannelConfiguration @relation(fields: [configurationId], references: [id], onDelete: Restrict)
+
+  @@unique([configurationId, clientOperationId])
+  @@index([tenantId, storeId, createdAt])
+}
+
+/// Immutable content-free desired-mode configuration evidence.
+model StoreConversationChannelConfigurationAuditEvent {
+  id              String                                              @id @default(cuid())
+  tenantId        String
+  storeId         String
+  configurationId String
+  actorUserId     String
+  type            StoreConversationChannelConfigurationAuditEventType @default(UPDATED)
+  fromMode        StoreConversationDesiredMode?
+  toMode          StoreConversationDesiredMode
+  revision        Int
+  reason          String
+  occurredAt      DateTime                                            @default(now())
+  createdAt       DateTime                                            @default(now())
+  tenant          Tenant                                              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store           Store                                               @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  configuration   StoreConversationChannelConfiguration               @relation(fields: [configurationId], references: [id], onDelete: Restrict)
+  actorUser       User                                                @relation("StoreConversationChannelConfigAuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, storeId, occurredAt])
+  @@index([configurationId, occurredAt])
+  @@index([actorUserId, occurredAt])
+}
+
+/// One short-lived explicit Customer request to continue an exact Store
+/// Conversation in WhatsApp. Only a keyed token digest and safe scope facts
+/// persist; the raw code and navigation URL never do.
+model StoreConversationWhatsAppBridgeCapability {
+  id                String                                          @id @default(cuid())
+  tenantId          String
+  storeId           String
+  conversationId    String
+  connectionId      String
+  guestIdentityId   String?
+  accountAccessId   String?
+  clientOperationId String
+  payloadHash       String
+  tokenDigest       String                                          @unique
+  intent            StoreConversationWhatsAppBridgeIntent           @default(CONTINUE_OR_NEW)
+  sourceKind        StoreConversationRequestKind?
+  sourceId          String?
+  sourceRevision    Int?
+  status            StoreConversationWhatsAppBridgeCapabilityStatus @default(PENDING)
+  expiresAt         DateTime
+  issuedAt          DateTime                                        @default(now())
+  consumedAt        DateTime?
+  revokedAt         DateTime?
+  createdAt         DateTime                                        @default(now())
+  updatedAt         DateTime                                        @updatedAt
+  tenant            Tenant                                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                                           @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation      StoreConversation                               @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  connection        WhatsAppConnection                              @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+  guestIdentity     StoreConversationGuestIdentity?                 @relation("StoreConversationWhatsAppBridgeCapabilityGuest", fields: [guestIdentityId], references: [id], onDelete: Restrict)
+  accountAccess     StoreConversationAccountAccess?                 @relation("StoreConversationWhatsAppBridgeCapabilityAccountAccess", fields: [accountAccessId], references: [id], onDelete: Restrict)
+  provingBridge     StoreConversationWhatsAppBridge?                @relation("StoreConversationWhatsAppBridgeProof")
+  auditEvents       StoreConversationWhatsAppBridgeAuditEvent[]
+
+  @@unique([conversationId, clientOperationId])
+  @@index([tenantId, storeId, status, expiresAt])
+  @@index([connectionId, status, expiresAt])
+  @@index([guestIdentityId, status, expiresAt])
+  @@index([accountAccessId, status, expiresAt])
+}
+
+/// Current exact Store-scoped Channel Bridge. Provider identity is encrypted
+/// for outbound use and separately keyed/digested for exact route matching.
+model StoreConversationWhatsAppBridge {
+  id                           String                                            @id @default(cuid())
+  tenantId                     String
+  storeId                      String
+  conversationId               String
+  connectionId                 String
+  capabilityId                 String?                                           @unique
+  candidateId                  String?                                           @unique
+  guestIdentityId              String?
+  accountAccessId              String?
+  externalCustomerIdCiphertext String
+  externalCustomerIdDigest     String
+  status                       StoreConversationWhatsAppBridgeStatus             @default(AWAITING_CHOICE)
+  choice                       StoreConversationWhatsAppBridgeChoice?
+  sourceKind                   StoreConversationRequestKind?
+  sourceId                     String?
+  sourceRevision               Int?
+  revision                     Int                                               @default(1)
+  linkedMessageId              String                                            @unique
+  linkedAt                     DateTime                                          @default(now())
+  choiceAt                     DateTime?
+  revokedAt                    DateTime?
+  createdAt                    DateTime                                          @default(now())
+  updatedAt                    DateTime                                          @updatedAt
+  tenant                       Tenant                                            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                        Store                                             @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation                 StoreConversation                                 @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  connection                   WhatsAppConnection                                @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+  capability                   StoreConversationWhatsAppBridgeCapability?        @relation("StoreConversationWhatsAppBridgeProof", fields: [capabilityId], references: [id], onDelete: Restrict)
+  candidate                    StoreConversationWhatsAppCandidate?               @relation("StoreConversationWhatsAppCandidateBridgeProof", fields: [candidateId], references: [id], onDelete: Restrict)
+  guestIdentity                StoreConversationGuestIdentity?                   @relation("StoreConversationWhatsAppBridgeGuest", fields: [guestIdentityId], references: [id], onDelete: Restrict)
+  accountAccess                StoreConversationAccountAccess?                   @relation("StoreConversationWhatsAppBridgeAccountAccess", fields: [accountAccessId], references: [id], onDelete: Restrict)
+  linkedMessage                StoreConversationMessage                          @relation(fields: [linkedMessageId], references: [id], onDelete: Restrict)
+  choiceCapabilities           StoreConversationWhatsAppBridgeChoiceCapability[]
+  deliveryAttempts             StoreConversationWhatsAppBridgeAttempt[]
+  auditEvents                  StoreConversationWhatsAppBridgeAuditEvent[]
+  observations                 StoreConversationWhatsAppObservation[]
+  outboundAttempts             StoreConversationWhatsAppOutboundAttempt[]
+
+  @@unique([storeId, connectionId, externalCustomerIdDigest])
+  @@index([tenantId, storeId, status, updatedAt])
+  @@index([conversationId, status, updatedAt])
+  @@index([connectionId, status, updatedAt])
+}
+
+/// Digest-only one-time explicit choice presented after a verified bridge.
+model StoreConversationWhatsAppBridgeChoiceCapability {
+  id             String                                                @id @default(cuid())
+  tenantId       String
+  storeId        String
+  bridgeId       String
+  bridgeRevision Int
+  choice         StoreConversationWhatsAppBridgeChoice
+  tokenDigest    String                                                @unique
+  status         StoreConversationWhatsAppBridgeChoiceCapabilityStatus @default(ACTIVE)
+  expiresAt      DateTime
+  consumedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime                                              @default(now())
+  updatedAt      DateTime                                              @updatedAt
+  tenant         Tenant                                                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store          Store                                                 @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  bridge         StoreConversationWhatsAppBridge                       @relation(fields: [bridgeId], references: [id], onDelete: Cascade)
+
+  @@unique([bridgeId, bridgeRevision, choice])
+  @@index([tenantId, storeId, status, expiresAt])
+  @@index([bridgeId, status, expiresAt])
+}
+
+/// Identifier-only outbound prompt attempt. Provider references are digested;
+/// a timeout remains OUTCOME_UNKNOWN and cannot be silently retried.
+model StoreConversationWhatsAppBridgeAttempt {
+  id                      String                                       @id @default(cuid())
+  tenantId                String
+  storeId                 String
+  bridgeId                String
+  connectionId            String
+  bridgeRevision          Int
+  status                  StoreConversationWhatsAppBridgeAttemptStatus @default(PENDING)
+  attemptCount            Int                                          @default(0)
+  claimToken              String?
+  claimedAt               DateTime?
+  claimExpiresAt          DateTime?
+  providerReferenceDigest String?
+  failureCode             String?
+  nextAttemptAt           DateTime?
+  sentAt                  DateTime?
+  createdAt               DateTime                                     @default(now())
+  updatedAt               DateTime                                     @updatedAt
+  tenant                  Tenant                                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                   Store                                        @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  bridge                  StoreConversationWhatsAppBridge              @relation(fields: [bridgeId], references: [id], onDelete: Cascade)
+  connection              WhatsAppConnection                           @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+
+  @@unique([bridgeId, bridgeRevision])
+  @@index([tenantId, storeId, status, nextAttemptAt])
+  @@index([connectionId, status, nextAttemptAt])
+}
+
+/// Immutable content-free bridge evidence. It stores neither the raw bridge
+/// code, provider recipient, message content nor provider operation id.
+model StoreConversationWhatsAppBridgeAuditEvent {
+  id              String                                       @id @default(cuid())
+  tenantId        String
+  storeId         String
+  conversationId  String
+  capabilityId    String?
+  bridgeId        String?
+  principalKind   StoreConversationWhatsAppBridgePrincipalKind
+  guestIdentityId String?
+  accountUserId   String?
+  type            StoreConversationWhatsAppBridgeAuditType
+  outcome         StoreConversationWhatsAppBridgeAuditOutcome
+  reasonCode      String
+  occurredAt      DateTime                                     @default(now())
+  createdAt       DateTime                                     @default(now())
+  tenant          Tenant                                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store           Store                                        @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation    StoreConversation                            @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  capability      StoreConversationWhatsAppBridgeCapability?   @relation(fields: [capabilityId], references: [id], onDelete: Restrict)
+  bridge          StoreConversationWhatsAppBridge?             @relation(fields: [bridgeId], references: [id], onDelete: Restrict)
+  guestIdentity   StoreConversationGuestIdentity?              @relation("StoreConversationWhatsAppBridgeAuditGuest", fields: [guestIdentityId], references: [id], onDelete: Restrict)
+  accountUser     User?                                        @relation("StoreConversationWhatsAppBridgeAuditAccount", fields: [accountUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, storeId, occurredAt])
+  @@index([conversationId, occurredAt])
+  @@index([bridgeId, occurredAt])
+  @@index([accountUserId, occurredAt])
+}
+
+/// Notification-only Guest contact. Destination ciphertext and its keyed
+/// digest are private and never become account-link or marketing authority.
+model StoreConversationGuestNotificationContact {
+  id                    String                                           @id @default(cuid())
+  tenantId              String
+  storeId               String
+  guestIdentityId       String
+  channel               StoreConversationNotificationContactChannel
+  retentionClass        StoreConversationRetentionClass                  @default(VERIFIED_CONTACT)
+  destinationCiphertext String
+  destinationDigest     String
+  maskedDestination     String
+  status                StoreConversationNotificationContactStatus       @default(PENDING)
+  consentedAt           DateTime
+  verifiedAt            DateTime?
+  revokedAt             DateTime?
+  createdAt             DateTime                                         @default(now())
+  updatedAt             DateTime                                         @updatedAt
+  tenant                Tenant                                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                 Store                                            @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  guestIdentity         StoreConversationGuestIdentity                   @relation(fields: [guestIdentityId], references: [id], onDelete: Cascade)
+  verifications         StoreConversationGuestNotificationVerification[]
+  selectedByIntents     StoreConversationNotificationIntent[]
+  whatsAppCandidates    StoreConversationWhatsAppCandidate[]             @relation("StoreConversationWhatsAppCandidateGuestContact")
+
+  @@unique([storeId, guestIdentityId, channel, destinationDigest])
+  @@index([tenantId, storeId, guestIdentityId, channel, status])
+}
+
+/// One neutral, recent-conversation possibility discovered only after exact
+/// Store routing. Evidence references are private and never provider-facing.
+model StoreConversationWhatsAppCandidate {
+  id                            String                                               @id @default(cuid())
+  tenantId                      String
+  storeId                       String
+  conversationId                String
+  connectionId                  String
+  inboundEventId                String                                               @unique
+  inboundProviderEventDigest    String
+  externalCustomerIdDigest      String
+  notificationDestinationDigest String
+  evidenceKind                  StoreConversationWhatsAppCandidateEvidenceKind
+  notificationContactId         String?
+  accountUserId                 String?
+  accountAccessId               String?
+  sourceKind                    StoreConversationRequestKind
+  sourceId                      String
+  sourceRevision                Int
+  status                        StoreConversationWhatsAppCandidateStatus             @default(PENDING)
+  revision                      Int                                                  @default(1)
+  expiresAt                     DateTime
+  selectedAt                    DateTime?
+  rejectedAt                    DateTime?
+  createdAt                     DateTime                                             @default(now())
+  updatedAt                     DateTime                                             @updatedAt
+  tenant                        Tenant                                               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                         Store                                                @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation                  StoreConversation                                    @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  connection                    WhatsAppConnection                                   @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+  inboundEvent                  WhatsAppInboundEvent                                 @relation(fields: [inboundEventId], references: [id], onDelete: Restrict)
+  notificationContact           StoreConversationGuestNotificationContact?           @relation("StoreConversationWhatsAppCandidateGuestContact", fields: [notificationContactId], references: [id], onDelete: Restrict)
+  accountUser                   User?                                                @relation("StoreConversationWhatsAppCandidateAccount", fields: [accountUserId], references: [id], onDelete: Restrict)
+  accountAccess                 StoreConversationAccountAccess?                      @relation(fields: [accountAccessId], references: [id], onDelete: Restrict)
+  actionCapabilities            StoreConversationWhatsAppCandidateActionCapability[]
+  promptAttempt                 StoreConversationWhatsAppCandidateAttempt?
+  suppressions                  StoreConversationWhatsAppCandidateSuppression[]
+  provingBridge                 StoreConversationWhatsAppBridge?                     @relation("StoreConversationWhatsAppCandidateBridgeProof")
+
+  @@index([tenantId, storeId, status, expiresAt])
+  @@index([connectionId, externalCustomerIdDigest, status, expiresAt])
+  @@index([storeId, notificationDestinationDigest, status, expiresAt])
+  @@index([conversationId, status, createdAt])
+  @@index([notificationContactId, status, expiresAt])
+  @@index([accountAccessId, status, expiresAt])
+}
+
+/// Digest-only, revision-bound explicit candidate choice.
+model StoreConversationWhatsAppCandidateActionCapability {
+  id                String                                                   @id @default(cuid())
+  tenantId          String
+  storeId           String
+  candidateId       String
+  candidateRevision Int
+  action            StoreConversationWhatsAppCandidateAction
+  tokenDigest       String                                                   @unique
+  status            StoreConversationWhatsAppCandidateActionCapabilityStatus @default(ACTIVE)
+  expiresAt         DateTime
+  consumedAt        DateTime?
+  revokedAt         DateTime?
+  createdAt         DateTime                                                 @default(now())
+  updatedAt         DateTime                                                 @updatedAt
+  tenant            Tenant                                                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                                                    @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  candidate         StoreConversationWhatsAppCandidate                       @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, candidateRevision, action])
+  @@index([tenantId, storeId, status, expiresAt])
+  @@index([candidateId, status, expiresAt])
+}
+
+/// Identifier-only candidate prompt outbox. Provider references stay digested.
+model StoreConversationWhatsAppCandidateAttempt {
+  id                      String                                          @id @default(cuid())
+  tenantId                String
+  storeId                 String
+  candidateId             String                                          @unique
+  candidateRevision       Int
+  connectionId            String
+  status                  StoreConversationWhatsAppCandidateAttemptStatus @default(PENDING)
+  attemptCount            Int                                             @default(0)
+  claimToken              String?
+  claimedAt               DateTime?
+  claimExpiresAt          DateTime?
+  providerReferenceDigest String?
+  failureCode             String?
+  nextAttemptAt           DateTime?
+  sentAt                  DateTime?
+  createdAt               DateTime                                        @default(now())
+  updatedAt               DateTime                                        @updatedAt
+  tenant                  Tenant                                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                   Store                                           @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  candidate               StoreConversationWhatsAppCandidate              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  connection              WhatsAppConnection                              @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+
+  @@unique([candidateId, candidateRevision])
+  @@index([tenantId, storeId, status, nextAttemptAt])
+  @@index([connectionId, status, nextAttemptAt])
+}
+
+/// Store-scoped negative-identity evidence. It suppresses rediscovery without
+/// deleting or exposing the prior conversation.
+model StoreConversationWhatsAppCandidateSuppression {
+  id                       String                             @id @default(cuid())
+  tenantId                 String
+  storeId                  String
+  connectionId             String
+  conversationId           String
+  candidateId              String
+  externalCustomerIdDigest String
+  reasonCode               String
+  rejectionCount           Int                                @default(1)
+  expiresAt                DateTime
+  lastRejectedAt           DateTime                           @default(now())
+  createdAt                DateTime                           @default(now())
+  updatedAt                DateTime                           @updatedAt
+  tenant                   Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                    Store                              @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  connection               WhatsAppConnection                 @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+  conversation             StoreConversation                  @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  candidate                StoreConversationWhatsAppCandidate @relation(fields: [candidateId], references: [id], onDelete: Restrict)
+
+  @@unique([storeId, connectionId, externalCustomerIdDigest, conversationId])
+  @@index([tenantId, storeId, expiresAt])
+  @@index([connectionId, externalCustomerIdDigest, expiresAt])
+}
+
+/// Identifier-only recovery outbox for an inbound message that cannot be
+/// safely attached or started automatically. It exposes only the current
+/// published Store Entry after exact routing/policy revalidation.
+model StoreConversationWhatsAppRecoveryAttempt {
+  id                      String                                         @id @default(cuid())
+  tenantId                String
+  storeId                 String
+  connectionId            String
+  inboundEventId          String                                         @unique
+  kind                    StoreConversationWhatsAppRecoveryKind
+  status                  StoreConversationWhatsAppRecoveryAttemptStatus @default(PENDING)
+  attemptCount            Int                                            @default(0)
+  claimToken              String?
+  claimedAt               DateTime?
+  claimExpiresAt          DateTime?
+  providerReferenceDigest String?
+  failureCode             String?
+  nextAttemptAt           DateTime?
+  sentAt                  DateTime?
+  createdAt               DateTime                                       @default(now())
+  updatedAt               DateTime                                       @updatedAt
+  tenant                  Tenant                                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                   Store                                          @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  connection              WhatsAppConnection                             @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+  inboundEvent            WhatsAppInboundEvent                           @relation(fields: [inboundEventId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, storeId, status, nextAttemptAt])
+  @@index([connectionId, status, nextAttemptAt])
+}
+
+/// Direct Cloud API route for a WhatsApp conversation created without a
+/// cross-channel continuation. Recipient data is encrypted and keyed/digested.
+model StoreConversationWhatsAppDirectSession {
+  id                           String                                       @id @default(cuid())
+  tenantId                     String
+  storeId                      String
+  conversationId               String
+  connectionId                 String
+  externalCustomerIdCiphertext String
+  externalCustomerIdDigest     String
+  sourceKind                   StoreConversationRequestKind
+  sourceId                     String
+  sourceRevision               Int
+  status                       StoreConversationWhatsAppDirectSessionStatus @default(ACTIVE)
+  revision                     Int                                          @default(1)
+  linkedAt                     DateTime                                     @default(now())
+  revokedAt                    DateTime?
+  createdAt                    DateTime                                     @default(now())
+  updatedAt                    DateTime                                     @updatedAt
+  tenant                       Tenant                                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                        Store                                        @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation                 StoreConversation                            @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  connection                   WhatsAppConnection                           @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+  observations                 StoreConversationWhatsAppObservation[]
+  outboundAttempts             StoreConversationWhatsAppOutboundAttempt[]
+
+  @@unique([storeId, connectionId, externalCustomerIdDigest])
+  @@index([tenantId, storeId, status, updatedAt])
+  @@index([conversationId, status, updatedAt])
+}
+
+/// One provider message EwaTrade actually observed. Provider identity remains
+/// keyed/digested and provider read never mutates EwaTrade watermarks.
+model StoreConversationWhatsAppObservation {
+  id                    String                                         @id @default(cuid())
+  tenantId              String
+  storeId               String
+  conversationId        String
+  connectionId          String
+  inboundEventId        String?                                        @unique
+  messageId             String?                                        @unique
+  bridgeId              String?
+  directSessionId       String?
+  providerMessageDigest String                                         @unique
+  direction             StoreConversationWhatsAppObservationDirection
+  provenance            StoreConversationWhatsAppObservationProvenance
+  status                StoreConversationWhatsAppObservationStatus
+  statusOccurredAt      DateTime
+  failureCode           String?
+  createdAt             DateTime                                       @default(now())
+  updatedAt             DateTime                                       @updatedAt
+  tenant                Tenant                                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                 Store                                          @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation          StoreConversation                              @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  connection            WhatsAppConnection                             @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+  inboundEvent          WhatsAppInboundEvent?                          @relation(fields: [inboundEventId], references: [id], onDelete: Restrict)
+  message               StoreConversationMessage?                      @relation(fields: [messageId], references: [id], onDelete: Restrict)
+  bridge                StoreConversationWhatsAppBridge?               @relation(fields: [bridgeId], references: [id], onDelete: Restrict)
+  directSession         StoreConversationWhatsAppDirectSession?        @relation(fields: [directSessionId], references: [id], onDelete: Restrict)
+  events                StoreConversationWhatsAppObservationEvent[]
+
+  @@index([tenantId, storeId, statusOccurredAt])
+  @@index([conversationId, statusOccurredAt])
+  @@index([connectionId, statusOccurredAt])
+}
+
+/// Immutable occurrence-time provider status evidence. Raw callback payloads
+/// and provider identifiers are intentionally absent.
+model StoreConversationWhatsAppObservationEvent {
+  id            String                                     @id @default(cuid())
+  tenantId      String
+  storeId       String
+  observationId String
+  eventDigest   String                                     @unique
+  status        StoreConversationWhatsAppObservationStatus
+  failureCode   String?
+  occurredAt    DateTime
+  createdAt     DateTime                                   @default(now())
+  tenant        Tenant                                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store         Store                                      @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  observation   StoreConversationWhatsAppObservation       @relation(fields: [observationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, storeId, occurredAt])
+  @@index([observationId, occurredAt])
+}
+
+/// Identifier-only outbound claim. One message may initialize one provider
+/// send; ambiguous outcomes stay claimed and require reconciliation.
+model StoreConversationWhatsAppOutboundAttempt {
+  id                      String                                         @id @default(cuid())
+  tenantId                String
+  storeId                 String
+  conversationId          String
+  messageId               String                                         @unique
+  connectionId            String
+  bridgeId                String?
+  directSessionId         String?
+  status                  StoreConversationWhatsAppOutboundAttemptStatus @default(PENDING)
+  retentionClass          StoreConversationRetentionClass                @default(PROVIDER_ATTEMPT)
+  attemptCount            Int                                            @default(0)
+  claimToken              String?
+  claimedAt               DateTime?
+  claimExpiresAt          DateTime?
+  providerReferenceDigest String?
+  failureCode             String?
+  nextAttemptAt           DateTime?
+  sentAt                  DateTime?
+  createdAt               DateTime                                       @default(now())
+  updatedAt               DateTime                                       @updatedAt
+  tenant                  Tenant                                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                   Store                                          @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation            StoreConversation                              @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  message                 StoreConversationMessage                       @relation(fields: [messageId], references: [id], onDelete: Restrict)
+  connection              WhatsAppConnection                             @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+  bridge                  StoreConversationWhatsAppBridge?               @relation(fields: [bridgeId], references: [id], onDelete: Restrict)
+  directSession           StoreConversationWhatsAppDirectSession?        @relation(fields: [directSessionId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, storeId, status, nextAttemptAt])
+  @@index([connectionId, status, nextAttemptAt])
+  @@index([conversationId, status, createdAt])
+}
+
+/// Expiring single-use verification challenge. Only a digest of the
+/// server-derived code is persisted; the queued job carries this row id only.
+model StoreConversationGuestNotificationVerification {
+  id                String                                           @id
+  tenantId          String
+  storeId           String
+  conversationId    String
+  guestIdentityId   String
+  contactId         String
+  clientOperationId String
+  purpose           StoreConversationNotificationVerificationPurpose @default(CUSTOMER_NOTIFICATION_CONTACT)
+  tokenDigest       String                                           @unique
+  status            StoreConversationNotificationVerificationStatus  @default(PENDING)
+  attemptCount      Int                                              @default(0)
+  maxAttempts       Int                                              @default(5)
+  sendAttemptCount  Int                                              @default(0)
+  maxSendAttempts   Int                                              @default(3)
+  expiresAt         DateTime
+  requestedAt       DateTime                                         @default(now())
+  claimedAt         DateTime?
+  claimExpiresAt    DateTime?
+  nextAttemptAt     DateTime?
+  lastFailureCode   String?
+  sentAt            DateTime?
+  consumedAt        DateTime?
+  createdAt         DateTime                                         @default(now())
+  updatedAt         DateTime                                         @updatedAt
+  tenant            Tenant                                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                                            @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation      StoreConversation                                @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  guestIdentity     StoreConversationGuestIdentity                   @relation(fields: [guestIdentityId], references: [id], onDelete: Cascade)
+  contact           StoreConversationGuestNotificationContact        @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([guestIdentityId, clientOperationId])
+  @@index([tenantId, storeId, status, nextAttemptAt, expiresAt])
+  @@index([guestIdentityId, requestedAt])
+}
+
+/// Customer Account preferences are separate from Business/member and
+/// marketing settings. orderedChannels contains only the strict shared enum.
+model StoreConversationAccountNotificationPreference {
+  id               String   @id @default(cuid())
+  accountUserId    String   @unique
+  unreadEnabled    Boolean  @default(false)
+  reopeningEnabled Boolean  @default(false)
+  orderedChannels  Json
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  accountUser      User     @relation(fields: [accountUserId], references: [id], onDelete: Cascade)
+
+  @@index([accountUserId, updatedAt])
+}
+
+/// Encrypted provider endpoint bound to one exact conversation and either a
+/// Guest credential or Customer Account. Repositories enforce exclusive owner.
+model StoreConversationPushEndpoint {
+  id                 String                                @id @default(cuid())
+  tenantId           String
+  storeId            String
+  conversationId     String
+  guestCredentialId  String?
+  accountUserId      String?
+  kind               StoreConversationPushEndpointKind
+  endpointCiphertext String
+  endpointDigest     String
+  status             StoreConversationPushEndpointStatus   @default(ACTIVE)
+  lastSeenAt         DateTime                              @default(now())
+  invalidatedAt      DateTime?
+  revokedAt          DateTime?
+  createdAt          DateTime                              @default(now())
+  updatedAt          DateTime                              @updatedAt
+  tenant             Tenant                                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store              Store                                 @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation       StoreConversation                     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  guestCredential    StoreConversationGuestCredential?     @relation(fields: [guestCredentialId], references: [id], onDelete: Cascade)
+  accountUser        User?                                 @relation(fields: [accountUserId], references: [id], onDelete: Cascade)
+  selectedByIntents  StoreConversationNotificationIntent[]
+
+  @@unique([conversationId, endpointDigest])
+  @@index([tenantId, storeId, conversationId, status])
+  @@index([guestCredentialId, status])
+  @@index([accountUserId, status])
+}
+
+/// Payload-bound replay receipt for notification preference/contact/endpoint
+/// commands. resultId is an opaque internal row id, never a provider value.
+model StoreConversationNotificationCommand {
+  id                String                                   @id @default(cuid())
+  conversationId    String?
+  guestCredentialId String?
+  accountUserId     String?
+  principalKey      String
+  clientOperationId String
+  kind              StoreConversationNotificationCommandKind
+  payloadHash       String
+  resultId          String?
+  createdAt         DateTime                                 @default(now())
+  conversation      StoreConversation?                       @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  guestCredential   StoreConversationGuestCredential?        @relation(fields: [guestCredentialId], references: [id], onDelete: Cascade)
+  accountUser       User?                                    @relation(fields: [accountUserId], references: [id], onDelete: Cascade)
+
+  @@unique([principalKey, clientOperationId])
+  @@index([conversationId, createdAt])
+  @@index([accountUserId, createdAt])
+  @@index([guestCredentialId, createdAt])
+}
+
+/// Provider-neutral unread/reopening outbox. It stores exact principal/scope,
+/// safe lifecycle facts and selected private-owner references, never content.
+model StoreConversationNotificationIntent {
+  id                                String                                     @id @default(cuid())
+  tenantId                          String
+  storeId                           String
+  conversationId                    String
+  kind                              StoreConversationNotificationKind
+  principalKind                     StoreConversationNotificationPrincipalKind
+  guestIdentityId                   String?
+  accountUserId                     String?
+  deduplicationKey                  String                                     @unique
+  coalescingKey                     String
+  targetMessageId                   String?
+  targetMessageSequence             Int?
+  availabilityConfigurationRevision Int?
+  subscribedAt                      DateTime?
+  scheduledFor                      DateTime
+  status                            StoreConversationNotificationIntentStatus  @default(PENDING)
+  selectedChannel                   StoreConversationNotificationChannel?
+  selectedContactId                 String?
+  selectedPushEndpointId            String?
+  attemptCount                      Int                                        @default(0)
+  maxAttempts                       Int                                        @default(3)
+  claimedAt                         DateTime?
+  claimExpiresAt                    DateTime?
+  nextAttemptAt                     DateTime?
+  sentAt                            DateTime?
+  deliveredAt                       DateTime?
+  lastFailureCode                   String?
+  cancelledAt                       DateTime?
+  createdAt                         DateTime                                   @default(now())
+  updatedAt                         DateTime                                   @updatedAt
+  tenant                            Tenant                                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                             Store                                      @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation                      StoreConversation                          @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  guestIdentity                     StoreConversationGuestIdentity?            @relation(fields: [guestIdentityId], references: [id], onDelete: Cascade)
+  accountUser                       User?                                      @relation(fields: [accountUserId], references: [id], onDelete: Cascade)
+  targetMessage                     StoreConversationMessage?                  @relation(fields: [targetMessageId], references: [id], onDelete: Restrict)
+  selectedContact                   StoreConversationGuestNotificationContact? @relation(fields: [selectedContactId], references: [id], onDelete: Restrict)
+  selectedPushEndpoint              StoreConversationPushEndpoint?             @relation(fields: [selectedPushEndpointId], references: [id], onDelete: Restrict)
+  attempts                          StoreConversationNotificationAttempt[]
+  receipts                          StoreConversationNotificationReceipt[]
+  auditEvents                       StoreConversationNotificationAuditEvent[]
+
+  @@index([status, scheduledFor, nextAttemptAt])
+  @@index([tenantId, storeId, conversationId, kind, status])
+  @@index([coalescingKey, status])
+  @@index([guestIdentityId, status])
+  @@index([accountUserId, status])
+}
+
+model StoreConversationNotificationAttempt {
+  id                      String                                     @id @default(cuid())
+  tenantId                String
+  storeId                 String
+  notificationIntentId    String
+  attemptNumber           Int
+  status                  StoreConversationNotificationAttemptStatus @default(CLAIMED)
+  channel                 StoreConversationNotificationChannel
+  providerKey             String?
+  providerOperationDigest String?
+  failureCode             String?
+  startedAt               DateTime                                   @default(now())
+  completedAt             DateTime?
+  createdAt               DateTime                                   @default(now())
+  tenant                  Tenant                                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                   Store                                      @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  notificationIntent      StoreConversationNotificationIntent        @relation(fields: [notificationIntentId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationIntentId, attemptNumber])
+  @@index([tenantId, storeId, startedAt])
+  @@index([providerKey, providerOperationDigest])
+}
+
+model StoreConversationNotificationReceipt {
+  id                    String                                     @id @default(cuid())
+  tenantId              String
+  storeId               String
+  notificationIntentId  String
+  providerKey           String
+  providerReceiptDigest String
+  status                StoreConversationNotificationReceiptStatus
+  occurredAt            DateTime
+  createdAt             DateTime                                   @default(now())
+  tenant                Tenant                                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                 Store                                      @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  notificationIntent    StoreConversationNotificationIntent        @relation(fields: [notificationIntentId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, providerKey, providerReceiptDigest])
+  @@index([notificationIntentId, occurredAt])
+}
+
+/// Content-free immutable authorization/lifecycle evidence. reasonCode is
+/// allowlisted by repository commands and never contains provider/contact text.
+model StoreConversationNotificationAuditEvent {
+  id                   String                                 @id @default(cuid())
+  tenantId             String
+  storeId              String
+  conversationId       String
+  notificationIntentId String?
+  actorAccountUserId   String?
+  actorGuestIdentityId String?
+  type                 StoreConversationNotificationAuditType
+  reasonCode           String
+  occurredAt           DateTime                               @default(now())
+  createdAt            DateTime                               @default(now())
+  tenant               Tenant                                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                Store                                  @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  conversation         StoreConversation                      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  notificationIntent   StoreConversationNotificationIntent?   @relation(fields: [notificationIntentId], references: [id], onDelete: Restrict)
+  actorAccountUser     User?                                  @relation(fields: [actorAccountUserId], references: [id], onDelete: Restrict)
+  actorGuestIdentity   StoreConversationGuestIdentity?        @relation(fields: [actorGuestIdentityId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, storeId, occurredAt])
+  @@index([conversationId, occurredAt])
+  @@index([notificationIntentId, occurredAt])
 }

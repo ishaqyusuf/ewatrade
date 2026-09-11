@@ -7,6 +7,7 @@ import {
   createTestRoutedEmailMessages,
   dispatchEmailMessages,
   getTestEmailRouting,
+  renderWorkspaceWelcomeTemplate,
 } from "@ewatrade/email"
 import {
   buildInternalTenantHostname,
@@ -33,92 +34,13 @@ function getEmailReplyToAddress() {
 
 function buildWelcomeEmailHtml(params: {
   firstName: string
-  email: string
-  deliveryEmail: string
   businessName: string
   dashboardHostname: string
   dashboardUrl: string
   posHostname: string
   storefrontHostname: string
 }) {
-  const {
-    firstName,
-    email,
-    deliveryEmail,
-    businessName,
-    dashboardHostname,
-    dashboardUrl,
-    posHostname,
-    storefrontHostname,
-  } = params
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome to ewatrade</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f9f7f4; margin: 0; padding: 40px 16px; color: #1a1a1a; }
-    .card { max-width: 560px; margin: 0 auto; background: #fff; border-radius: 20px; border: 1px solid #e5e7eb; padding: 40px; box-shadow: 0 8px 32px rgba(0,0,0,0.06); }
-    .logo { font-size: 20px; font-weight: 700; color: #1a1a1a; margin-bottom: 32px; }
-    h1 { font-size: 26px; font-weight: 700; margin: 0 0 12px; line-height: 1.2; }
-    p { color: #555; line-height: 1.6; margin: 0 0 16px; }
-    .badge { display: inline-block; background: #eef2ff; color: #4f46e5; border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 600; margin-bottom: 24px; }
-    .domain-list { background: #f9f9fb; border-radius: 12px; padding: 16px; margin: 20px 0; }
-    .domain-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #eee; }
-    .domain-row:last-child { border-bottom: none; }
-    .domain-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #888; width: 80px; }
-    .domain-value { font-family: monospace; font-size: 13px; color: #1a1a1a; }
-    .cta { display: inline-block; background: #4f46e5; color: #fff; text-decoration: none; padding: 14px 28px; border-radius: 999px; font-weight: 600; font-size: 14px; margin: 24px 0; }
-    .footer { margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #aaa; }
-    .dev-banner { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; font-size: 12px; color: #92400e; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    ${IS_DEV ? `<div class="dev-banner"><strong>DEV MODE</strong> - Signup email for <strong>${email}</strong>. Delivery target: <strong>${deliveryEmail}</strong></div>` : ""}
-
-    <div class="logo">ewatrade</div>
-
-    <span class="badge">Welcome aboard</span>
-
-    <h1>Your workspace is ready, ${firstName}.</h1>
-
-    <p>
-      <strong>${businessName}</strong> has been created on ewatrade. You can now access your
-      merchant workspace, set up your storefront, and start taking orders.
-    </p>
-
-    <div class="domain-list">
-      <div class="domain-row">
-        <span class="domain-label">Storefront</span>
-        <span class="domain-value">${storefrontHostname}</span>
-      </div>
-      <div class="domain-row">
-        <span class="domain-label">POS</span>
-        <span class="domain-value">${posHostname}</span>
-      </div>
-      <div class="domain-row">
-        <span class="domain-label">Dashboard</span>
-        <span class="domain-value">${dashboardHostname}</span>
-      </div>
-    </div>
-
-    <p>To activate your account, verify your email address:</p>
-
-    <a href="${dashboardUrl}" class="cta">Go to your dashboard →</a>
-
-    <p style="font-size: 13px; color: #999;">
-      If you did not create this account, you can safely ignore this email.
-    </p>
-
-    <div class="footer">
-      &copy; ${new Date().getFullYear()} ewatrade · Multi-tenant commerce for African merchants
-    </div>
-  </div>
-</body>
-</html>`
+  return renderWorkspaceWelcomeTemplate(params).html
 }
 
 function buildWelcomeEmailText(params: {
@@ -129,26 +51,7 @@ function buildWelcomeEmailText(params: {
   posHostname: string
   storefrontHostname: string
 }) {
-  const {
-    firstName,
-    businessName,
-    dashboardHostname,
-    dashboardUrl,
-    posHostname,
-    storefrontHostname,
-  } = params
-
-  return [
-    `Your workspace is ready, ${firstName}.`,
-    "",
-    `${businessName} has been created on ewatrade.`,
-    "",
-    `Storefront: ${storefrontHostname}`,
-    `POS: ${posHostname}`,
-    `Dashboard: ${dashboardHostname}`,
-    "",
-    `Open your dashboard: ${dashboardUrl}`,
-  ].join("\n")
+  return renderWorkspaceWelcomeTemplate(params).text
 }
 
 // ─── Signup route ─────────────────────────────────────────────────────────────
@@ -502,11 +405,8 @@ export async function POST(request: NextRequest) {
   }
 
   // ── 7. Build email HTML ──────────────────────────────────────────────────
-  const signupEmailRecipients = signupEmailRouting.recipients.join(", ")
   const emailHtml = buildWelcomeEmailHtml({
     firstName,
-    email: email.toLowerCase(),
-    deliveryEmail: signupEmailRecipients,
     businessName,
     dashboardHostname,
     dashboardUrl,

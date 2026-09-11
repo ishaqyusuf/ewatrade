@@ -11,6 +11,7 @@ import {
   type PrescriptionOcrProvider,
   createDeterministicOcrProvider,
 } from "@ewatrade/prescriptions"
+import { assertQaJobProviderAllowed } from "../qa-provider-guard"
 
 export type PrescriptionTranscriptionPayload = { transcriptionId: string }
 
@@ -18,10 +19,15 @@ type ClaimedTranscription = {
   mediaRevision: number
   objectKeys: string[]
   requestId: string
+  tenantId: string
   transcriptionId: string
 }
 
 type Dependencies = {
+  assertProviderAllowed(input: {
+    adapter: "live" | "test"
+    tenantId: string
+  }): Promise<unknown>
   claim(
     input: PrescriptionTranscriptionPayload,
   ): Promise<ClaimedTranscription | null>
@@ -54,6 +60,12 @@ function configuredProvider() {
 
 function defaultDependencies(): Dependencies {
   return {
+    assertProviderAllowed: ({ adapter, tenantId }) =>
+      assertQaJobProviderAllowed({
+        adapter,
+        operation: "media_analysis",
+        tenantId,
+      }),
     claim: (input) => claimPrescriptionTranscriptionJob(prisma, input),
     complete: (input) => completePrescriptionTranscription(prisma, input),
     provider: configuredProvider(),
@@ -69,6 +81,11 @@ export async function runPrescriptionTranscription(
 ) {
   const claim = await dependencies.claim(payload)
   if (!claim) return
+  await dependencies.assertProviderAllowed({
+    adapter:
+      dependencies.provider.key === "deterministic-fake" ? "test" : "live",
+    tenantId: claim.tenantId,
+  })
 
   let result: OcrResult
   try {

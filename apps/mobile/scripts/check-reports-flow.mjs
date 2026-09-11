@@ -10,20 +10,35 @@ const contracts = [
       "includeCompatibleTotals: true",
       "trpc.inventory.reconciliationReport",
       "trpc.serviceReporting.summary",
-      "trpc.orders.list",
+      "trpc.orders.reportSummary",
+      "buildReportsPresentation",
+      "Store snapshot",
       "Order value",
-      "Balance sources",
-      "Provisional",
-      "Service work",
-      "WIP",
-      "Ready",
-      "Blocked",
-      "Overdue",
-      "Compatible canonical totals are informational",
-      "Exports use exact strings and posted snapshots.",
+      "Operations",
+      "Reports incomplete",
+      "reportQueries.some",
+      "retryFailedReports",
+      "refreshReports",
     ],
     reason:
       "mobile reports must project commercial, inventory, reconciliation, and Service truth without treating compatible totals as availability",
+  },
+  {
+    file: "apps/mobile/src/components/mobile/reports-presentation.ts",
+    markers: [
+      "No activity yet",
+      "Inventory",
+      "Pending records",
+      "Service work",
+      "WIP",
+      "ready",
+      "blocked",
+      "overdue",
+      "Compatible totals do not become available stock automatically",
+      "Exports keep exact posted values.",
+    ],
+    reason:
+      "mobile reports must keep every existing source explicit in the approved compact presentation",
   },
   {
     file: "apps/api/src/trpc/routers/inventory.ts",
@@ -56,12 +71,12 @@ const contracts = [
   {
     file: "apps/api/src/trpc/routers/orders.ts",
     markers: [
-      "list: protectedProcedure",
-      "get: protectedProcedure",
-      "listCommercialOrders",
+      "reportSummary: protectedProcedure",
+      "getCommercialOrderReportSummary",
       "assertCanOperateOrders",
     ],
-    reason: "commercial reporting sources must remain tenant- and role-scoped",
+    reason:
+      "commercial reporting must use one complete tenant-scoped aggregate instead of a capped Order page",
   },
 ]
 

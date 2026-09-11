@@ -1,6 +1,7 @@
 enum ServiceCommerceMediaKind {
   IMAGE
   DOCUMENT
+  AUDIO
 }
 
 enum ServiceCommerceMediaChannelOrigin {
@@ -75,6 +76,7 @@ model ServiceCommerceMediaAsset {
   verifiedMediaType    String?
   declaredSizeBytes    Int?
   verifiedSizeBytes    Int?
+  verifiedDurationMs   Int?
   contentDigest        String?
   objectKey            String?
   lifecycle            ServiceCommerceMediaLifecycle      @default(PENDING_UPLOAD)
@@ -110,28 +112,29 @@ model ServiceCommerceMediaAsset {
 /// Typed polymorphic link to an existing authoritative source aggregate.
 /// Source ids remain private; adapters validate the matching source/version.
 model ServiceCommerceSourceAttachment {
-  id                     String                                   @id @default(cuid())
-  tenantId               String
-  storeId                String
-  mediaAssetId           String
-  sourceKind             CommerceQuoteSourceType
-  sourceId               String
-  sourceVersion          String
-  sourceLineId           String?
-  lifecycle              ServiceCommerceSourceAttachmentLifecycle @default(ACTIVE)
-  revision               Int                                      @default(1)
-  attachedByUserId       String?
-  replacedAt             DateTime?
-  replacedByMediaAssetId String?
-  removedAt              DateTime?
-  removedByUserId        String?
-  createdAt              DateTime                                 @default(now())
-  updatedAt              DateTime                                 @updatedAt
-  tenant                 Tenant                                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store                  Store                                    @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  mediaAsset             ServiceCommerceMediaAsset                @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
-  observations           ServiceCommerceVerifiedObservation[]
-  auditEvents            ServiceCommerceMediaAuditEvent[]
+  id                      String                                   @id @default(cuid())
+  tenantId                String
+  storeId                 String
+  mediaAssetId            String
+  sourceKind              CommerceQuoteSourceType
+  sourceId                String
+  sourceVersion           String
+  sourceLineId            String?
+  lifecycle               ServiceCommerceSourceAttachmentLifecycle @default(ACTIVE)
+  revision                Int                                      @default(1)
+  attachedByUserId        String?
+  replacedAt              DateTime?
+  replacedByMediaAssetId  String?
+  removedAt               DateTime?
+  removedByUserId         String?
+  createdAt               DateTime                                 @default(now())
+  updatedAt               DateTime                                 @updatedAt
+  tenant                  Tenant                                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                   Store                                    @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  mediaAsset              ServiceCommerceMediaAsset                @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
+  observations            ServiceCommerceVerifiedObservation[]
+  auditEvents             ServiceCommerceMediaAuditEvent[]
+  conversationAttachments StoreConversationMessageAttachment[]
 
   @@unique([tenantId, sourceKind, sourceId, sourceVersion, mediaAssetId])
   @@index([tenantId, storeId, sourceKind, sourceId, lifecycle])

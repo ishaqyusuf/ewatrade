@@ -1,10 +1,11 @@
+import { readBusinessProfileKeyFromStoreMetadata } from "@ewatrade/utils"
 import type {
   MembershipRole,
+  QaDataClassification,
   StoreStatus,
   TenantMode,
   TenantType,
 } from "../../generated/prisma/client"
-import { readBusinessProfileKeyFromStoreMetadata } from "@ewatrade/utils"
 import type { DbClient } from "./types"
 
 export type TenantStore = {
@@ -29,6 +30,7 @@ export type TenantContext = {
     type: TenantType
     enabledModes: TenantMode[]
     currencyCode: string
+    dataClassification: QaDataClassification
     timezone: string
     qaPurgeStartedAt: Date | null
   }
@@ -38,9 +40,14 @@ export type TenantContext = {
 
 export async function getActiveTenantForUser(
   db: DbClient,
-  input: { userId: string; tenantSlug?: string | null },
+  input: {
+    storeId?: string | null
+    userId: string
+    tenantSlug?: string | null
+  },
 ): Promise<TenantContext | null> {
   const tenantSlug = input.tenantSlug?.trim() || undefined
+  const storeId = input.storeId?.trim() || undefined
 
   const membership = await db.membership.findFirst({
     where: {
@@ -61,6 +68,7 @@ export async function getActiveTenantForUser(
           type: true,
           enabledModes: true,
           currencyCode: true,
+          dataClassification: true,
           timezone: true,
           qaPurgeStartedAt: true,
           stores: {
@@ -91,7 +99,14 @@ export async function getActiveTenantForUser(
     status: store.status,
   }))
   const activeStore =
-    stores.find((store) => store.status === "ACTIVE") ?? stores[0] ?? null
+    (storeId
+      ? stores.find(
+          (store) => store.id === storeId && store.status === "ACTIVE",
+        )
+      : null) ??
+    stores.find((store) => store.status === "ACTIVE") ??
+    stores[0] ??
+    null
 
   return {
     membership: {
@@ -106,6 +121,7 @@ export async function getActiveTenantForUser(
       type: membership.tenant.type,
       enabledModes: membership.tenant.enabledModes,
       currencyCode: membership.tenant.currencyCode,
+      dataClassification: membership.tenant.dataClassification,
       timezone: membership.tenant.timezone,
       qaPurgeStartedAt: membership.tenant.qaPurgeStartedAt,
     },

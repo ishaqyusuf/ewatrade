@@ -1,5 +1,9 @@
+import { protectCommunicationsRecipient } from "@ewatrade/communications"
 import { prisma } from "@ewatrade/db/client"
+import { StoreConversationRequestKind } from "@ewatrade/db/enums"
 import {
+  bindStoreConversationWhatsAppBridgeNewRequest,
+  bindStoreConversationWhatsAppDirectSession,
   claimWhatsAppInboundEvent,
   getCommerceInquiryIntakeAttachmentTarget,
   markWhatsAppInboundEventProcessed,
@@ -11,6 +15,7 @@ import {
   SERVICE_COMMERCE_MEDIA_BASELINE_RETENTION_DAYS,
   serviceCommerceMediaMimeTypeSchema,
 } from "@ewatrade/service-commerce"
+import { storeConversationWhatsAppBridgeTokenDigest } from "@ewatrade/service-commerce/server"
 
 import { triggerJob } from "../trigger"
 import { serviceCommerceMediaIngestHandler } from "./service-commerce-media-ingest"
@@ -22,17 +27,29 @@ export type ServiceCommerceWhatsAppInboundPayload = {
 type Claim = NonNullable<Awaited<ReturnType<typeof claimWhatsAppInboundEvent>>>
 
 export type ServiceCommerceWhatsAppInboundDependencies = {
+  bindBridgeRequest(
+    input: Parameters<typeof bindStoreConversationWhatsAppBridgeNewRequest>[1],
+  ): Promise<
+    Awaited<ReturnType<typeof bindStoreConversationWhatsAppBridgeNewRequest>>
+  >
+  bindDirectSession(
+    input: Parameters<typeof bindStoreConversationWhatsAppDirectSession>[1],
+  ): Promise<
+    Awaited<ReturnType<typeof bindStoreConversationWhatsAppDirectSession>>
+  >
   claim(input: ServiceCommerceWhatsAppInboundPayload): Promise<Claim | null>
   complete(input: {
     failureCode?: string
     inboundEventId: string
     requestId?: string
   }): Promise<unknown>
+  digestProviderEvent(value: string): string
   enqueueMedia(input: {
     mediaAssetId: string
     storeId: string
     tenantId: string
   }): Promise<unknown>
+  protectRecipient(value: string): string
   recordMedia(
     input: Parameters<typeof recordServiceCommerceMediaIntake>[1],
   ): Promise<Awaited<ReturnType<typeof recordServiceCommerceMediaIntake>>>
@@ -54,8 +71,13 @@ export type ServiceCommerceWhatsAppInboundDependencies = {
 
 function dependencies(): ServiceCommerceWhatsAppInboundDependencies {
   return {
+    bindBridgeRequest: (input) =>
+      bindStoreConversationWhatsAppBridgeNewRequest(prisma, input),
+    bindDirectSession: (input) =>
+      bindStoreConversationWhatsAppDirectSession(prisma, input),
     claim: (input) => claimWhatsAppInboundEvent(prisma, input),
     complete: (input) => markWhatsAppInboundEventProcessed(prisma, input),
+    digestProviderEvent: storeConversationWhatsAppBridgeTokenDigest,
     enqueueMedia: (input) =>
       triggerJob(
         "service-commerce.media-ingest",
@@ -63,6 +85,7 @@ function dependencies(): ServiceCommerceWhatsAppInboundDependencies {
         input,
         { maxAttempts: 4 },
       ),
+    protectRecipient: protectCommunicationsRecipient,
     recordMedia: (input) => recordServiceCommerceMediaIntake(prisma, input),
     retry: (input) => releaseWhatsAppInboundEventForRetry(prisma, input),
     resolveAttachmentTarget: (input) =>
@@ -175,6 +198,36 @@ export async function runServiceCommerceWhatsAppInbound(
       return result
     }
 
+    const bridgeId = String(normalized.bridgeId ?? "").trim()
+    const bridgeExternalCustomerIdDigest = String(
+      normalized.bridgeExternalCustomerIdDigest ?? "",
+    ).trim()
+    if (bridgeId) {
+      if (
+        result.source.kind !== "commerce_inquiry" ||
+        !/^[a-f0-9]{64}$/.test(bridgeExternalCustomerIdDigest)
+      ) {
+        await injected.complete({
+          failureCode: "bridge_request_mismatch",
+          inboundEventId: claim.inboundEventId,
+        })
+        return { status: "source_selection_required" as const }
+      }
+      await injected.bindBridgeRequest({
+        bridgeId,
+        connectionId: claim.connectionId,
+        externalCustomerIdDigest: bridgeExternalCustomerIdDigest,
+        providerEventDigest: injected.digestProviderEvent(
+          claim.providerEventId,
+        ),
+        sourceId: result.source.id,
+        sourceKind: StoreConversationRequestKind.COMMERCE_INQUIRY,
+        storeId: claim.storeId,
+        tenantId: claim.tenantId,
+        text: summary,
+      })
+    }
+
     if (mediaId && mediaType?.success) {
       const actorUserId = `whatsapp_inbound_${claim.inboundEventId}`
       const target = await injected.resolveAttachmentTarget({
@@ -210,10 +263,31 @@ export async function runServiceCommerceWhatsAppInbound(
         tenantId: claim.tenantId,
       })
     }
-    await injected.complete({
-      inboundEventId: claim.inboundEventId,
-      requestId: result.source.id,
-    })
+    if (!bridgeId) {
+      const providerDigest = injected.digestProviderEvent(claim.providerEventId)
+      await injected.bindDirectSession({
+        connectionId: claim.connectionId,
+        externalCustomerIdCiphertext: injected.protectRecipient(
+          claim.externalCustomerId,
+        ),
+        externalCustomerIdDigest: injected.digestProviderEvent(
+          claim.externalCustomerId,
+        ),
+        inboundEventId: claim.inboundEventId,
+        providerEventDigest: providerDigest,
+        providerMessageDigest: providerDigest,
+        sourceId: result.source.id,
+        sourceKind: StoreConversationRequestKind.COMMERCE_INQUIRY,
+        storeId: claim.storeId,
+        tenantId: claim.tenantId,
+        text: summary,
+      })
+    } else {
+      await injected.complete({
+        inboundEventId: claim.inboundEventId,
+        requestId: result.source.id,
+      })
+    }
     return result
   } catch (error) {
     await injected.retry({

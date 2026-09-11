@@ -1,21 +1,36 @@
 import {
   StoreConversationError,
+  acknowledgeStoreConversationStaffRead,
   claimStoreConversation,
+  getStoreConversationStaffMessagesAfter,
   getStoreConversationStaffTimeline,
   handoffStoreConversation,
   listEligibleStoreConversationAttendants,
   listStoreConversationQueue,
+  moderateStoreConversation,
   reassignStoreConversation,
   recordFailedStoreConversationResponse,
   releaseStoreConversation,
   replyToStoreConversation,
 } from "@ewatrade/db/queries"
+import {
+  enqueueStoreConversationNotificationDispatch,
+  enqueueStoreConversationWhatsAppOutbound,
+} from "@ewatrade/jobs"
 import { TRPCError } from "@trpc/server"
+import {
+  StoreConversationAttachmentViewerUnavailableError,
+  issueStoreConversationAttachmentViewerGrant,
+} from "../../../service-commerce/conversation-attachment-viewer"
 
 import {
   storeConversationQueueInputSchema,
+  storeConversationStaffAttachmentViewerGrantInputSchema,
   storeConversationStaffClaimInputSchema,
   storeConversationStaffHandoffInputSchema,
+  storeConversationStaffMessagesAfterInputSchema,
+  storeConversationStaffModerationInputSchema,
+  storeConversationStaffReadAcknowledgementInputSchema,
   storeConversationStaffReassignInputSchema,
   storeConversationStaffReleaseInputSchema,
   storeConversationStaffReplyInputSchema,
@@ -58,6 +73,52 @@ function mapStoreConversationError(error: unknown): never {
 }
 
 export const serviceCommerceConversationsRouter = createTRPCRouter({
+  acknowledgeStoreConversationStaffRead: protectedProcedure
+    .input(storeConversationStaffReadAcknowledgementInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await acknowledgeStoreConversationStaffRead(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          storeId: storeId(ctx, input.storeId),
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        mapStoreConversationError(error)
+      }
+    }),
+
+  requestStoreConversationAttachmentViewerGrant: protectedProcedure
+    .input(storeConversationStaffAttachmentViewerGrantInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await issueStoreConversationAttachmentViewerGrant(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          conversationId: input.conversationId,
+          messageAttachmentId: input.messageAttachmentId,
+          reason: input.reason,
+          storeId: storeId(ctx, input.storeId),
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof StoreConversationError) {
+          mapStoreConversationError(error)
+        }
+        if (
+          error instanceof StoreConversationAttachmentViewerUnavailableError
+        ) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: error.message,
+          })
+        }
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "This attachment view is currently unavailable.",
+        })
+      }
+    }),
+
   eligibleStoreConversationAttendants: protectedProcedure
     .input(storeConversationQueueInputSchema.pick({ storeId: true }))
     .query(async ({ ctx, input }) => {
@@ -92,12 +153,28 @@ export const serviceCommerceConversationsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const resolvedStoreId = storeId(ctx, input.storeId)
       try {
-        return await replyToStoreConversation(ctx.db, {
+        const result = await replyToStoreConversation(ctx.db, {
           ...input,
           actorUserId: ctx.session.user.id,
           storeId: resolvedStoreId,
           tenantId: ctx.tenantContext.tenant.id,
         })
+        if (result.notificationDispatch) {
+          await enqueueStoreConversationNotificationDispatch(
+            {
+              intentId: result.notificationDispatch.intentId,
+              storeId: result.notificationDispatch.storeId,
+              tenantId: result.notificationDispatch.tenantId,
+            },
+            result.notificationDispatch.runAt,
+          )
+        }
+        if (result.whatsAppDispatch) {
+          await enqueueStoreConversationWhatsAppOutbound(
+            result.whatsAppDispatch,
+          )
+        }
+        return { message: result.message, replayed: result.replayed }
       } catch (error) {
         if (
           error instanceof StoreConversationError &&
@@ -148,6 +225,21 @@ export const serviceCommerceConversationsRouter = createTRPCRouter({
       }
     }),
 
+  moderateStoreConversation: protectedProcedure
+    .input(storeConversationStaffModerationInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await moderateStoreConversation(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          storeId: storeId(ctx, input.storeId),
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        mapStoreConversationError(error)
+      }
+    }),
+
   releaseStoreConversation: protectedProcedure
     .input(storeConversationStaffReleaseInputSchema)
     .mutation(async ({ ctx, input }) => {
@@ -168,6 +260,21 @@ export const serviceCommerceConversationsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         return await listStoreConversationQueue(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          storeId: storeId(ctx, input.storeId),
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        mapStoreConversationError(error)
+      }
+    }),
+
+  storeConversationMessagesAfter: protectedProcedure
+    .input(storeConversationStaffMessagesAfterInputSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await getStoreConversationStaffMessagesAfter(ctx.db, {
           ...input,
           actorUserId: ctx.session.user.id,
           storeId: storeId(ctx, input.storeId),

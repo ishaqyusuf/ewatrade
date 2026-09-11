@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test"
 import {
   SERVICE_COMMERCE_ACTION_REGISTRY,
   projectServiceCommerceCustomerActions,
+  resolveServiceCommerceCustomerActionHandoffPath,
 } from "./actions"
 
 const available = {
@@ -17,6 +18,51 @@ const available = {
 } as const
 
 describe("Service Commerce customer actions", () => {
+  test("routes only to established public systems of action", () => {
+    const capabilityToken = "opaque/action token"
+    expect(
+      resolveServiceCommerceCustomerActionHandoffPath({
+        capabilityToken,
+        result: {
+          kind: "booking",
+          replayed: false,
+          sourceKind: "service",
+        },
+      }),
+    ).toBe("/booking/opaque%2Faction%20token")
+    expect(
+      resolveServiceCommerceCustomerActionHandoffPath({
+        capabilityToken,
+        result: {
+          checkoutUrl: "https://checkout.paystack.com/qa-session",
+          kind: "checkout",
+          replayed: false,
+          sourceKind: "prescription",
+        },
+      }),
+    ).toBe("https://checkout.paystack.com/qa-session")
+    expect(
+      resolveServiceCommerceCustomerActionHandoffPath({
+        capabilityToken,
+        result: {
+          kind: "checkout",
+          replayed: false,
+          sourceKind: "service",
+        },
+      }),
+    ).toBeNull()
+    expect(
+      resolveServiceCommerceCustomerActionHandoffPath({
+        capabilityToken,
+        result: {
+          kind: "quote_option_selected",
+          replayed: false,
+          sourceKind: "commerce_inquiry",
+        },
+      }),
+    ).toBeNull()
+  })
+
   test("keeps one exhaustive registry for every action kind", () => {
     expect(Object.keys(SERVICE_COMMERCE_ACTION_REGISTRY).sort()).toEqual([
       "book",

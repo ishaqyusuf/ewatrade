@@ -35,6 +35,7 @@ function asset(overrides: Record<string, unknown> = {}) {
     channelOrigin: "WEB",
     declaredMediaType: "image/jpeg",
     declaredSizeBytes: 24,
+    contentDigest: "a".repeat(64),
     id: "asset_1",
     kind: "IMAGE",
     lifecycle: "PENDING_UPLOAD",
@@ -45,6 +46,7 @@ function asset(overrides: Record<string, unknown> = {}) {
     storeId: scope.storeId,
     tenantId: scope.tenantId,
     verifiedMediaType: null,
+    verifiedDurationMs: null,
     verifiedSizeBytes: null,
     ...overrides,
   }
@@ -120,6 +122,7 @@ describe("Service Commerce media repositories", () => {
       ...scope,
       channel: "web",
       clientMediaId: "client_1",
+      contentDigest: "a".repeat(64),
       fileName: "bag.jpg",
       kind: "image",
       mimeType: "image/jpeg",
@@ -174,6 +177,7 @@ describe("Service Commerce media repositories", () => {
         ...scope,
         channel: "web",
         clientMediaId: "client_1",
+        contentDigest: "a".repeat(64),
         fileName: "changed.jpg",
         kind: "image",
         mimeType: "image/jpeg",
@@ -287,6 +291,7 @@ describe("Service Commerce media repositories", () => {
           ...scope,
           channel: media.channel,
           clientMediaId: `generic-media-${index}`,
+          contentDigest: "a".repeat(64),
           fileName:
             media.kind === "image" ? `bag-${index}.jpg` : `bag-${index}.pdf`,
           kind: media.kind,
@@ -315,6 +320,7 @@ describe("Service Commerce media repositories", () => {
   })
 
   test("returns the same safe projection for an exact media replay without creating another asset", async () => {
+    const lookupWhere: unknown[] = []
     const sourceVersion = createHash("sha256")
       .update(
         JSON.stringify({
@@ -357,13 +363,19 @@ describe("Service Commerce media repositories", () => {
           requestedQuantity: 1,
         }),
       },
-      serviceCommerceMediaAsset: { findFirst: async () => existing },
+      serviceCommerceMediaAsset: {
+        findFirst: async ({ where }: { where: unknown }) => {
+          lookupWhere.push(where)
+          return existing
+        },
+      },
     }
 
     const replay = await recordServiceCommerceMediaIntake(dbClient(client), {
       ...scope,
       channel: "web",
       clientMediaId: "client_replay",
+      contentDigest: "a".repeat(64),
       fileName: "bag.jpg",
       kind: "image",
       mimeType: "image/jpeg",
@@ -381,6 +393,30 @@ describe("Service Commerce media repositories", () => {
       media: { id: "asset_1", lifecycle: "pending_upload" },
       replayed: true,
     })
+    expect(lookupWhere[0]).toEqual({
+      channelOrigin: "WEB",
+      clientMediaId: "client_replay",
+      tenantId: scope.tenantId,
+    })
+
+    await expect(
+      recordServiceCommerceMediaIntake(dbClient(client), {
+        ...scope,
+        channel: "web",
+        clientMediaId: "client_replay",
+        contentDigest: "b".repeat(64),
+        fileName: "bag.jpg",
+        kind: "image",
+        mimeType: "image/jpeg",
+        privateMediaProviderReady: true,
+        retentionUntil: new Date("2027-08-10T12:00:00.000Z"),
+        signatureMimeType: "image/jpeg",
+        sizeBytes: 24,
+        source: { id: "inquiry_1", kind: "commerce_inquiry" },
+        sourceLineId: "line_1",
+        sourceVersion,
+      }),
+    ).rejects.toMatchObject({ code: "IDEMPOTENCY_MISMATCH" })
   })
 
   test("audits scoped stored, safety, and retry lifecycle transitions", async () => {
@@ -443,6 +479,34 @@ describe("Service Commerce media repositories", () => {
     )
   })
 
+  test("does not route incomplete or future-due retryable media to safety", async () => {
+    const current = asset({
+      contentDigest: null,
+      lifecycle: "RETRYABLE",
+      nextRetryAt: new Date(Date.now() + 60_000),
+      objectKey: null,
+      verifiedMediaType: null,
+      verifiedSizeBytes: null,
+    })
+    const client = {
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback(client),
+      serviceCommerceMediaAsset: {
+        findFirst: async () => current,
+        updateMany: async () => {
+          throw new Error("must not update")
+        },
+      },
+    }
+    await expect(
+      requestServiceCommerceMediaSafety(dbClient(client), {
+        ...scope,
+        mediaAssetId: "asset_1",
+        reason: "unsafe retry bypass",
+      }),
+    ).rejects.toMatchObject({ code: "NOT_READY" })
+  })
+
   test("allows a retryable staff upload to be safely re-uploaded without leaking its object reference", async () => {
     const current = asset({ lifecycle: "RETRYABLE" })
     const client = {
@@ -469,7 +533,7 @@ describe("Service Commerce media repositories", () => {
       dbClient(client),
       {
         ...scope,
-        contentDigest: "b".repeat(64),
+        contentDigest: "a".repeat(64),
         mediaAssetId: "asset_1",
         objectKey: "private/reuploaded-object",
         reason: "retry_staff_upload_stored",

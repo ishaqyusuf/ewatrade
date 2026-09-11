@@ -106,6 +106,7 @@ describe("Mobile Store Conversation repositories", () => {
           return { id: "access_1" }
         },
       },
+      storeConversationMessage: { count: async () => 0 },
       storeConversationGuestCredential: {
         findFirst: async () => activeMobileCredential(),
         update: async () => ({ id: "mobile_credential" }),
@@ -135,6 +136,7 @@ describe("Mobile Store Conversation repositories", () => {
         id: `conversation_${id}`,
         lastActivityAt,
         lastMessageSequence: 2,
+        lastStoreReplySequence: 2,
         lifecycle: "ACTIVE",
         messages: [{ authorKind: "STORE_ATTENDANT", body: text }],
         moderationState: "OPEN",
@@ -167,6 +169,12 @@ describe("Mobile Store Conversation repositories", () => {
       storeConversationGuestIdentity: {
         update: async () => ({ id: "mobile_guest" }),
       },
+      storeConversationCustomerWatermark: {
+        findMany: async () => [
+          { conversationId: "conversation_access_2", readThroughSequence: 2 },
+        ],
+      },
+      storeConversationMessage: { count: async () => 0 },
     }
 
     const result = await listMobileStoreConversations(dbClient(client), {
@@ -182,6 +190,7 @@ describe("Mobile Store Conversation repositories", () => {
     expect(result.items).toEqual([
       expect.objectContaining({
         lastMessage: { author: "store", text: "Your quotation is ready" },
+        unreadStoreMessages: 0,
         storeAvatar: { kind: "initials", label: "AB" },
       }),
     ])

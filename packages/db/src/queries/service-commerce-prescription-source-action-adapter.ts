@@ -1,4 +1,5 @@
 import {
+  PrescriptionCommerceStoreStatus,
   PrescriptionPharmacistDecision,
   PrescriptionRequestStatus,
 } from "../../generated/prisma/enums"
@@ -21,6 +22,7 @@ type PrescriptionSourceActionRecord = {
 }
 
 export type PrescriptionServiceCommerceSourceActionFacts = {
+  commerceActive: boolean
   contactOptIn: boolean
   customerEmail: string | null
   customerPhone: string | null
@@ -86,8 +88,13 @@ export async function loadPrescriptionServiceCommerceSourceActionFacts(
     },
   })
   if (!request) return null
+  const settings = await db.prescriptionStoreSettings.findFirst({
+    select: { status: true },
+    where: { storeId: input.storeId, tenantId: input.tenantId },
+  })
 
   return {
+    commerceActive: settings?.status === PrescriptionCommerceStoreStatus.ACTIVE,
     contactOptIn: request.contactOptIn,
     customerEmail: request.customerEmail,
     customerPhone: request.customerPhone,

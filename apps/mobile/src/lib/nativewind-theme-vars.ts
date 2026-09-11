@@ -1,4 +1,6 @@
 import { THEME } from "@/lib/theme"
+import { MARKET_DAY_PALETTES } from "@/lib/market-day-theme"
+import { StyleSheet } from "react-native"
 
 type ColorScheme = "dark" | "light"
 type ThemeVariables = Record<`--${string}`, string>
@@ -252,9 +254,43 @@ const TAILWIND_COLOR_VARIABLES = {
 
 export function nativewindThemeVars(colorScheme: ColorScheme) {
   const colors = colorScheme === "dark" ? THEME.dark : THEME.light
+  const market = MARKET_DAY_PALETTES[colorScheme]
 
   return {
     ...TAILWIND_COLOR_VARIABLES,
+    "--market-canvas": market.canvas,
+    "--market-palm": market.palm,
+    "--market-on-palm": market.onPalm,
+    "--market-marigold": market.marigold,
+    "--market-on-marigold": market.onMarigold,
+    "--market-paprika": market.paprika,
+    "--market-paprika-pressed": market.paprikaPressed,
+    "--market-paprika-strong": market.paprikaStrong,
+    "--market-docket-paper": market.docketPaper,
+    "--market-docket-rule": market.docketRule,
+    "--market-sky": market.sky,
+    "--market-ink": market.ink,
+    "--market-muted-ink": market.mutedInk,
+    "--market-canopy-accent": market.canopyAccent,
+    "--market-line": market.line,
+    "--market-field": market.field,
+    "--market-soft-band": market.softBand,
+    "--market-accent-ink": market.accentInk,
+    "--market-on-paprika": market.onPaprika,
+    "--market-on-palm-muted": market.onPalmMuted,
+    "--market-pulse-line": market.pulseLine,
+    "--market-pulse-line-soft": market.pulseLineSoft,
+    "--market-pulse-core": market.pulseCore,
+    "--market-pulse-shadow": market.pulseShadow,
+    "--market-progress-track": market.progressTrack,
+    "--native-hairline": `${StyleSheet.hairlineWidth}px`,
+    "--market-hero-pressed": market.heroPressed,
+    "--market-hero-action-pressed": market.heroActionPressed,
+    "--market-hero-hairline": market.heroHairline,
+    "--market-on-marigold-divider": market.onMarigoldDivider,
+    "--market-on-marigold-hairline": market.onMarigoldHairline,
+    "--market-on-marigold-pressed": market.onMarigoldPressed,
+    "--market-paprika-wash": market.paprikaWash,
     "--accent": colors.accent,
     "--accent-foreground": colors.accentForeground,
     "--background": colors.background,
@@ -267,6 +303,7 @@ export function nativewindThemeVars(colorScheme: ColorScheme) {
     "--input": colors.input,
     "--muted": colors.muted,
     "--muted-foreground": colors.mutedForeground,
+    "--overlay": colors.overlay,
     "--popover": colors.popover,
     "--popover-foreground": colors.popoverForeground,
     "--primary": colors.primary,

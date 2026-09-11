@@ -8,7 +8,7 @@ export default function SyncStatusModalRoute() {
     <WorkflowModalScreen
       allowSalesRep
       closeLabel="Close sync status"
-      title="Sync status"
+      title="Sync & offline"
     >
       <SyncStatusContent
         onComplete={() => router.replace("/dashboard")}

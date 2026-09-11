@@ -1,15 +1,19 @@
-import { SubscriptionPlanContent, WorkflowModalScreen } from "@/components/mobile"
+import {
+  SubscriptionPlanContent,
+  WorkflowModalScreen,
+} from "@/components/mobile"
+import { SUBSCRIPTION_SCREEN_COPY } from "@/components/mobile/subscription-plan-presentation"
 import { useBusinessStore } from "@/store/businessStore"
-import { useRouter } from "expo-router"
 
 export default function SubscriptionModalRoute() {
-  const router = useRouter()
   const businesses = useBusinessStore((state) => state.businesses)
 
   return (
-    <WorkflowModalScreen closeLabel="Close subscription" title="Subscription">
+    <WorkflowModalScreen
+      closeLabel="Close plan and billing"
+      title={SUBSCRIPTION_SCREEN_COPY.title}
+    >
       <SubscriptionPlanContent
-        onComplete={() => router.replace("/dashboard")}
         presentation="screen"
         usage={{
           businesses: businesses.length,

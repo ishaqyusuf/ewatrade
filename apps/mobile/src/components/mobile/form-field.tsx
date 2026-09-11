@@ -4,6 +4,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { COMPACT_CONTROL_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
 import { cn } from "@/lib/utils"
 import type { ComponentProps } from "react"
@@ -21,7 +22,7 @@ type FormFieldProps = Omit<ComponentProps<typeof Input>, "className"> & {
   leadingText?: string
   onActionPress?: () => void
   trailingIcon?: IconKeys
-  variant?: "auth" | "filled" | "line" | "search"
+  variant?: "auth" | "filled" | "line" | "market" | "market-search" | "search"
 }
 
 export function FormField({
@@ -41,8 +42,11 @@ export function FormField({
   ...inputProps
 }: FormFieldProps) {
   const isAuthVariant = variant === "auth"
-  const isSearchVariant = variant === "search"
+  const isMarketSearchVariant = variant === "market-search"
+  const isMarketVariant = variant === "market"
+  const isSearchVariant = variant === "search" || isMarketSearchVariant
   const colors = useColors()
+  const marketDay = useMarketDayPalette()
   const largeTextLayout = useLargeTextLayout()
   const [isFocused, setIsFocused] = useState(false)
   const activeBorderColor = error
@@ -65,13 +69,24 @@ export function FormField({
     "size-sm",
     error
       ? "text-destructive"
-      : isFocused && !isSearchVariant
-        ? "text-primary"
-        : "text-muted-foreground",
+      : isMarketVariant
+        ? isFocused
+          ? "text-market-accent-ink"
+          : "text-market-muted-ink"
+        : isFocused && !isSearchVariant
+          ? "text-primary"
+          : "text-muted-foreground",
   )
   const shouldShowLabel =
     !isSearchVariant && (!isAuthVariant || largeTextLayout)
   const isMultiline = !!inputProps.multiline
+  const embeddedStyle =
+    inputProps.style || (!isMultiline && largeTextLayout)
+      ? [
+          inputProps.style,
+          !isMultiline && largeTextLayout ? { height: 64 } : undefined,
+        ]
+      : undefined
 
   return (
     <View
@@ -93,9 +108,13 @@ export function FormField({
               largeTextLayout ? "leading-7" : "leading-[18px]",
               error
                 ? "text-destructive"
-                : isFocused
-                  ? "text-primary"
-                  : "text-muted-foreground",
+                : isMarketVariant
+                  ? isFocused
+                    ? "text-market-accent-ink"
+                    : "text-market-muted-ink"
+                  : isFocused
+                    ? "text-primary"
+                    : "text-muted-foreground",
             )}
             maxFontSizeMultiplier={COMPACT_CONTROL_FONT_SCALE_CAP}
           >
@@ -109,7 +128,13 @@ export function FormField({
               haptic
               onPress={onActionPress}
             >
-              <Text className="text-xs font-bold text-primary">
+              <Text
+                className={
+                  isMarketVariant
+                    ? "text-xs font-bold text-market-accent-ink"
+                    : "text-xs font-bold text-primary"
+                }
+              >
                 {actionLabel}
               </Text>
             </Pressable>
@@ -119,10 +144,32 @@ export function FormField({
       <View
         style={{
           alignItems: isMultiline ? "flex-start" : "center",
-          backgroundColor: isSearchVariant ? colors.muted : colors.card,
-          borderColor: activeBorderColor,
-          borderRadius: 12,
-          borderWidth: isSearchVariant ? 0 : isFocused || error ? 1.5 : 1,
+          backgroundColor:
+            isMarketSearchVariant || isMarketVariant
+              ? marketDay.field
+              : isSearchVariant
+                ? colors.muted
+                : colors.card,
+          borderColor: isMarketVariant
+            ? error
+              ? colors.destructive
+              : isFocused
+                ? marketDay.accentInk
+                : marketDay.line
+            : isMarketSearchVariant
+              ? marketDay.ink
+              : activeBorderColor,
+          borderRadius: isMarketSearchVariant || isMarketVariant ? 16 : 12,
+          borderWidth: isMarketSearchVariant
+            ? 2
+            : isSearchVariant
+              ? 0
+              : isFocused || error
+                ? 1.5
+                : 1,
+          boxShadow: isMarketSearchVariant
+            ? `5px 5px 0 ${marketDay.marigold}`
+            : undefined,
           flexDirection: "row",
           gap: 10,
           minHeight: isMultiline ? 92 : largeTextLayout ? 64 : 50,
@@ -139,20 +186,33 @@ export function FormField({
         ) : null}
         <Input
           accessibilityLabel={inputProps.accessibilityLabel ?? label}
-          className={cn(
-            isMultiline
-              ? "min-h-[72px] flex-1 border-0 bg-transparent px-0 py-0"
-              : "h-[48px] flex-1 border-0 bg-transparent px-0",
-            inputClassName,
-          )}
+          {...(embeddedStyle
+            ? {}
+            : {
+                className: cn(
+                  isMultiline
+                    ? "min-h-[72px] flex-1 border-0 bg-transparent px-0 py-0"
+                    : "h-[48px] flex-1 border-0 bg-transparent px-0",
+                  inputClassName,
+                  isMarketVariant && "text-market-ink",
+                ),
+              })}
           expand
           unstyled
           {...sharedInputProps}
+          foregroundColor={
+            isMarketVariant ? marketDay.ink : inputProps.foregroundColor
+          }
+          placeholderTextColor={
+            inputProps.placeholderTextColor ??
+            (isMarketVariant ? marketDay.mutedInk : colors.mutedForeground)
+          }
+          selectionColor={
+            inputProps.selectionColor ??
+            (isMarketVariant ? marketDay.accentInk : colors.primary)
+          }
           numberOfLines={isMultiline ? inputProps.numberOfLines : 1}
-          style={[
-            inputProps.style,
-            !isMultiline && largeTextLayout ? { height: 64 } : undefined,
-          ]}
+          {...(embeddedStyle ? { style: embeddedStyle } : {})}
         />
         {trailingIcon ? (
           <Icon className={iconClassName} name={trailingIcon} />
@@ -161,7 +221,15 @@ export function FormField({
       {error ? (
         <Text className="text-xs font-medium text-destructive">{error}</Text>
       ) : helper ? (
-        <Text className="text-xs text-muted-foreground">{helper}</Text>
+        <Text
+          className={
+            isMarketVariant
+              ? "text-xs text-market-muted-ink"
+              : "text-xs text-muted-foreground"
+          }
+        >
+          {helper}
+        </Text>
       ) : null}
     </View>
   )

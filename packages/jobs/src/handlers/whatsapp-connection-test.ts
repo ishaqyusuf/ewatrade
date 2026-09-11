@@ -8,6 +8,7 @@ import {
   getWhatsAppConnectionForBackend,
   recordWhatsAppConnectionTest,
 } from "@ewatrade/db/queries"
+import { assertQaJobProviderAllowed } from "../qa-provider-guard"
 
 export type WhatsAppConnectionTestPayload = {
   connectionId: string
@@ -15,6 +16,7 @@ export type WhatsAppConnectionTestPayload = {
 }
 
 type Dependencies = {
+  assertProviderAllowed(input: { tenantId: string }): Promise<unknown>
   load(input: WhatsAppConnectionTestPayload): Promise<{
     credentialReference: string
     displayNumber: string
@@ -41,6 +43,8 @@ type Dependencies = {
 
 function defaultDependencies(): Dependencies {
   return {
+    assertProviderAllowed: ({ tenantId }) =>
+      assertQaJobProviderAllowed({ operation: "whatsapp", tenantId }),
     load: (input) => getWhatsAppConnectionForBackend(prisma, input),
     provider: new DirectMetaWhatsAppProvider(),
     record: (input) => recordWhatsAppConnectionTest(prisma, input),
@@ -53,6 +57,7 @@ export async function runWhatsAppConnectionTest(
   dependencies: Dependencies = defaultDependencies(),
 ) {
   const connection = await dependencies.load(payload)
+  await dependencies.assertProviderAllowed({ tenantId: payload.tenantId })
   try {
     const result = await dependencies.provider.testConnection({
       accessToken: dependencies.resolveCredential(

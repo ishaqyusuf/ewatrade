@@ -98,18 +98,18 @@ model ServiceCommerceStoreTeamAuditEvent {
 /// Revisioned Store commerce policy. Existing Stores without a record resolve
 /// through the typed attendant-release compatibility default during expand.
 model ServiceCommerceQuoteReleasePolicy {
-  id                            String                           @id @default(cuid())
+  id                            String                                        @id @default(cuid())
   tenantId                      String
-  storeId                       String                           @unique
-  mode                          ServiceCommerceQuoteReleaseMode @default(ATTENDANT_CAN_RELEASE)
-  selectedApproverMembershipIds String[]                         @default([])
-  revision                      Int                              @default(1)
+  storeId                       String                                        @unique
+  mode                          ServiceCommerceQuoteReleaseMode               @default(ATTENDANT_CAN_RELEASE)
+  selectedApproverMembershipIds String[]                                      @default([])
+  revision                      Int                                           @default(1)
   updatedByUserId               String
   reason                        String
-  createdAt                     DateTime                         @default(now())
-  updatedAt                     DateTime                         @updatedAt
-  tenant                        Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store                         Store                            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  createdAt                     DateTime                                      @default(now())
+  updatedAt                     DateTime                                      @updatedAt
+  tenant                        Tenant                                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                         Store                                         @relation(fields: [storeId], references: [id], onDelete: Cascade)
   auditEvents                   ServiceCommerceQuoteReleasePolicyAuditEvent[]
   commandReceipts               ServiceCommerceQuoteReleaseCommandReceipt[]
 
@@ -135,19 +135,19 @@ model ServiceCommerceQuoteReleaseCommandReceipt {
 }
 
 model ServiceCommerceQuoteReleasePolicyAuditEvent {
-  id                            String                           @id @default(cuid())
+  id                            String                            @id @default(cuid())
   tenantId                      String
   storeId                       String
   policyId                      String
   actorUserId                   String
   fromMode                      ServiceCommerceQuoteReleaseMode?
   toMode                        ServiceCommerceQuoteReleaseMode
-  selectedApproverMembershipIds String[]                         @default([])
+  selectedApproverMembershipIds String[]                          @default([])
   policyRevision                Int
   reason                        String
-  createdAt                     DateTime                         @default(now())
-  tenant                        Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store                         Store                            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  createdAt                     DateTime                          @default(now())
+  tenant                        Tenant                            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                         Store                             @relation(fields: [storeId], references: [id], onDelete: Cascade)
   policy                        ServiceCommerceQuoteReleasePolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, storeId, createdAt])
@@ -158,31 +158,31 @@ model ServiceCommerceQuoteReleasePolicyAuditEvent {
 /// One exact-version commercial release decision. It never replaces a
 /// vertical professional/clinical decision or a customer decline.
 model ServiceCommerceQuoteApproval {
-  id                    String                                    @id @default(cuid())
+  id                    String                                   @id @default(cuid())
   tenantId              String
   storeId               String
   quoteId               String
-  quoteVersionId        String                                    @unique
+  quoteVersionId        String                                   @unique
   sourceType            CommerceQuoteSourceType
   sourceId              String
-  status                ServiceCommerceQuoteApprovalStatus        @default(PENDING)
+  status                ServiceCommerceQuoteApprovalStatus       @default(PENDING)
   requesterMembershipId String
   decidedByMembershipId String?
   decisionClientId      String?
   decisionPayloadHash   String?
   policyRevision        Int
   reason                String?
-  requestedAt           DateTime                                  @default(now())
+  requestedAt           DateTime                                 @default(now())
   decidedAt             DateTime?
   supersededAt          DateTime?
-  createdAt             DateTime                                  @default(now())
-  updatedAt             DateTime                                  @updatedAt
-  tenant                Tenant                                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store                 Store                                     @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  quote                 CommerceQuote                             @relation(fields: [quoteId], references: [id], onDelete: Cascade)
-  quoteVersion          CommerceQuoteVersion                      @relation(fields: [quoteVersionId], references: [id], onDelete: Cascade)
-  requesterMembership   Membership                                @relation("QuoteApprovalRequester", fields: [requesterMembershipId], references: [id], onDelete: Restrict)
-  decidedByMembership   Membership?                               @relation("QuoteApprovalDecider", fields: [decidedByMembershipId], references: [id], onDelete: Restrict)
+  createdAt             DateTime                                 @default(now())
+  updatedAt             DateTime                                 @updatedAt
+  tenant                Tenant                                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                 Store                                    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  quote                 CommerceQuote                            @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quoteVersion          CommerceQuoteVersion                     @relation(fields: [quoteVersionId], references: [id], onDelete: Cascade)
+  requesterMembership   Membership                               @relation("QuoteApprovalRequester", fields: [requesterMembershipId], references: [id], onDelete: Restrict)
+  decidedByMembership   Membership?                              @relation("QuoteApprovalDecider", fields: [decidedByMembershipId], references: [id], onDelete: Restrict)
   auditEvents           ServiceCommerceQuoteApprovalAuditEvent[]
 
   @@unique([tenantId, storeId, quoteVersionId])
@@ -193,7 +193,7 @@ model ServiceCommerceQuoteApproval {
 }
 
 model ServiceCommerceQuoteApprovalAuditEvent {
-  id                String                                       @id @default(cuid())
+  id                String                                     @id @default(cuid())
   tenantId          String
   storeId           String
   approvalId        String
@@ -202,11 +202,11 @@ model ServiceCommerceQuoteApprovalAuditEvent {
   approvalStatus    ServiceCommerceQuoteApprovalStatus
   policyRevision    Int
   reason            String?
-  createdAt         DateTime                                     @default(now())
-  tenant            Tenant                                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store             Store                                        @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  approval          ServiceCommerceQuoteApproval                  @relation(fields: [approvalId], references: [id], onDelete: Cascade)
-  actorMembership   Membership                                    @relation(fields: [actorMembershipId], references: [id], onDelete: Restrict)
+  createdAt         DateTime                                   @default(now())
+  tenant            Tenant                                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                                      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  approval          ServiceCommerceQuoteApproval               @relation(fields: [approvalId], references: [id], onDelete: Cascade)
+  actorMembership   Membership                                 @relation(fields: [actorMembershipId], references: [id], onDelete: Restrict)
 
   @@index([tenantId, storeId, createdAt])
   @@index([approvalId, createdAt])

@@ -31,7 +31,7 @@ const contracts = [
       "Retry",
       "Discard",
       "dependentCommands",
-      "Local queue",
+      "Activity",
       "Conflict review",
       "Server data is authoritative.",
     ],

@@ -3,16 +3,90 @@ import { describe, expect, test } from "bun:test"
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
   attachPrescriptionRefundProviderResult,
+  claimPrescriptionHostedCheckoutInitialization,
   claimPrescriptionRefundProviderDispatch,
   createPrescriptionRefund,
   getPublicPrescriptionPaymentStatus,
   preparePrescriptionHostedCheckout,
   processPrescriptionPaymentProviderEvent,
+  releasePrescriptionHostedCheckoutInitializationClaim,
   resolvePrescriptionRefundReconciliationMiss,
 } from "./prescription-payments"
 import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service-commerce-policy"
 
 describe("prescription payment provider failures", () => {
+  test("atomically claims one hosted-checkout initializer", async () => {
+    let status = "CREATED"
+    let checkoutUrl: string | null = null
+    const db = {
+      prescriptionPaymentIntent: {
+        findFirst: async () => ({ checkoutUrl, status }),
+        updateMany: async (input: {
+          data: { status: string }
+          where: { status: string }
+        }) => {
+          if (status !== input.where.status || checkoutUrl) return { count: 0 }
+          status = input.data.status
+          return { count: 1 }
+        },
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      claimPrescriptionHostedCheckoutInitialization(db, {
+        intentId: "intent-1",
+        providerReference: "rxpay_1",
+      }),
+    ).resolves.toEqual({ kind: "claimed" })
+    await expect(
+      claimPrescriptionHostedCheckoutInitialization(db, {
+        intentId: "intent-1",
+        providerReference: "rxpay_1",
+      }),
+    ).resolves.toEqual({ kind: "initializing" })
+
+    checkoutUrl = "https://checkout.paystack.com/session-1"
+    await expect(
+      claimPrescriptionHostedCheckoutInitialization(db, {
+        intentId: "intent-1",
+        providerReference: "rxpay_1",
+      }),
+    ).resolves.toEqual({
+      checkoutUrl: "https://checkout.paystack.com/session-1",
+      kind: "ready",
+    })
+  })
+
+  test("releases only an unattached pending checkout after a definite provider rejection", async () => {
+    const updates: unknown[] = []
+    const db = {
+      prescriptionPaymentIntent: {
+        updateMany: async (input: unknown) => {
+          updates.push(input)
+          return { count: 1 }
+        },
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      releasePrescriptionHostedCheckoutInitializationClaim(db, {
+        intentId: "intent-1",
+        providerReference: "rxpay_1",
+      }),
+    ).resolves.toEqual({ released: true })
+    expect(updates).toEqual([
+      {
+        data: { status: "CREATED" },
+        where: {
+          checkoutUrl: null,
+          id: "intent-1",
+          providerReference: "rxpay_1",
+          status: "PENDING",
+        },
+      },
+    ])
+  })
+
   test("blocks checkout intent creation when Pharmacy payment policy is unavailable", async () => {
     let intentCreated = false
     const transaction = {

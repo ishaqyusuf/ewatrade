@@ -68,6 +68,76 @@ function reportingClient(calls: Array<{ name: string; value: unknown }>) {
   }
 
   return reportAccessClient({
+    $queryRaw: async (value: unknown) => {
+      const sql =
+        typeof value === "object" && value !== null && "sql" in value
+          ? String((value as { sql: unknown }).sql)
+          : ""
+      if (!sql.includes("StoreConversationAuditEvent")) {
+        return [{ id: "membership_1" }]
+      }
+      calls.push({ name: "storeConversation.aggregate", value })
+      return [
+        {
+          availabilityCoverageBlocks: 1n,
+          availabilityPaused: 1n,
+          availabilityPolicyBlocks: 2n,
+          availabilityProviderBlocks: 1n,
+          availabilityResumed: 1n,
+          availabilityScheduleUpdates: 1n,
+          channelBridgeConfirmed: 1n,
+          channelBridgeInitiated: 2n,
+          channelDesiredBothCurrent: 1n,
+          channelDesiredChatCurrent: 0n,
+          channelDesiredWhatsAppCurrent: 0n,
+          channelDirectContinued: 1n,
+          channelDirectStartedNew: 1n,
+          channelMobileMessages: 2n,
+          channelModeChanges: 1n,
+          channelWebMessages: 3n,
+          channelWhatsAppMessages: 1n,
+          lifecycleArchived: 1n,
+          lifecycleActiveCurrent: 2n,
+          lifecycleArchivedCurrent: 1n,
+          lifecycleConversationsStarted: 2n,
+          lifecycleCustomerMessages: 4n,
+          lifecycleFirstResponseAverageSeconds: 75,
+          lifecycleFirstResponseKnown: 1n,
+          lifecycleFirstResponseUnknown: 1n,
+          lifecyclePrescriptionRequests: 1n,
+          lifecycleProductRequests: 2n,
+          lifecycleReactivated: 1n,
+          lifecycleRestrictedCurrent: 1n,
+          lifecycleServiceRequests: 1n,
+          lifecycleStoreReplies: 3n,
+          lifecycleUnreadAverageSeconds: 45,
+          lifecycleUnreadKnown: 3n,
+          lifecycleUnreadUnknown: 1n,
+          notificationCancelled: 1n,
+          notificationCancelledByRead: 1n,
+          notificationCoalesced: 2n,
+          notificationDelivered: 2n,
+          notificationFailed: 1n,
+          notificationScheduled: 4n,
+          notificationSent: 3n,
+          notificationSuppressed: 1n,
+          notificationUnavailable: 1n,
+          providerAttempts: 5n,
+          providerFailed: 1n,
+          providerOutcomeUnknown: 1n,
+          providerRetries: 2n,
+          providerSent: 3n,
+          teamClaimed: 2n,
+          teamEscalationsOpened: 1n,
+          teamEscalationsResolved: 1n,
+          teamHandedOff: 1n,
+          teamOverdueCurrent: 1n,
+          teamReassigned: 1n,
+          teamReleased: 1n,
+          teamUnclaimedCurrent: 2n,
+        },
+      ]
+    },
     catalogAvailabilityAttestation: {
       findMany: findMany("catalogAvailabilityAttestation.findMany"),
     },
@@ -281,6 +351,22 @@ describe("Service Commerce reporting repository contract", () => {
     expect(report.storeBreakdown).toEqual([
       expect.objectContaining({ completions: 1, quotesIssued: 1 }),
     ])
+    expect(report.storeConversations).toMatchObject({
+      channels: { mobileMessages: 2, webMessages: 3, whatsAppMessages: 1 },
+      costVisibility: { knownObservations: 1, unknownObservations: 2 },
+      lifecycle: { conversationsStarted: 2, customerMessages: 4 },
+      notifications: { cancelledByRead: 1, coalesced: 2, suppressed: 1 },
+      providerReliability: { attempts: 5, retries: 2 },
+      team: {
+        claimed: 2,
+        escalationsOpened: 1,
+        overdueCurrent: 1,
+        unclaimedCurrent: 2,
+      },
+    })
+    expect(
+      calls.filter((call) => call.name === "storeConversation.aggregate"),
+    ).toHaveLength(1)
     expect(calls).toContainEqual({
       name: "serviceCommerceReportReadAuditEvent.create",
       value: {

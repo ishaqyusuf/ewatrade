@@ -11,6 +11,7 @@ import {
 import type { PrismaClient } from "../../../generated/prisma/client"
 
 import { authorizeServiceCommerceReportRead } from "./audit"
+import { getStoreConversationReportAggregates } from "./store-conversations"
 import { prescriptionUsageAmountsToServiceCommerce } from "./usage"
 
 const channelNames = {
@@ -203,6 +204,7 @@ export async function getServiceCommerceReport(
     profileAuditEvents,
     connectionAuditEvents,
     routingAlerts,
+    storeConversationAggregates,
   ] = await Promise.all([
     db.tenant.findFirstOrThrow({
       select: { currencyCode: true, timezone: true },
@@ -490,6 +492,7 @@ export async function getServiceCommerceReport(
           },
           take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
         }),
+    getStoreConversationReportAggregates(db, input),
   ])
 
   if (input.storeId && !stores.some((store) => store.id === input.storeId)) {
@@ -515,6 +518,9 @@ export async function getServiceCommerceReport(
     ...prescriptionUsageAmountsToServiceCommerce(event),
     currencyCode: tenant.currencyCode,
   }))
+  const costs = summarizeContractCosts(
+    costObservations([...genericUsage, ...legacyUsage]),
+  )
   const retries = notificationAttempts.filter(
     (attempt) => attempt.attemptNumber > 1,
   ).length
@@ -595,9 +601,7 @@ export async function getServiceCommerceReport(
       ).length,
       reusablePricePromotions: pricePromotions.length,
     },
-    costs: summarizeContractCosts(
-      costObservations([...genericUsage, ...legacyUsage]),
-    ),
+    costs,
     currencyCode: tenant.currencyCode,
     lifecycle: {
       bookingsCompleted: bookings.filter(
@@ -779,6 +783,19 @@ export async function getServiceCommerceReport(
         inquiries.filter((inquiry) => inquiry.storeId === store.id).length,
       storeId: store.id,
     })),
+    storeConversations: {
+      ...storeConversationAggregates,
+      costVisibility: {
+        knownObservations: costs.reduce(
+          (total, cost) => total + cost.knownCount,
+          0,
+        ),
+        unknownObservations: costs.reduce(
+          (total, cost) => total + cost.unknownCount,
+          0,
+        ),
+      },
+    },
     timezone: tenant.timezone ?? "UTC",
     usageCostsByDimension: summarizeUsageCostsByDimension(genericUsage),
   })

@@ -3,6 +3,11 @@ import {
   serviceCommerceManualWhatsAppConnectionSchema,
   serviceCommerceQuoteReleaseModeSchema,
   serviceCommerceStoreBindingConfigurationSchema,
+  storeConversationAvailabilityScheduleCommandSchema,
+  storeConversationAvailabilitySettingsInputSchema,
+  storeConversationChannelModeSettingsInputSchema,
+  storeConversationChannelModeUpdateInputSchema,
+  storeConversationManualPauseCommandSchema,
 } from "@ewatrade/service-commerce"
 import { z } from "zod"
 
@@ -13,6 +18,21 @@ const stableClientIdSchema = z.string().trim().min(8).max(160)
 export const customerChannelWorkspaceSchema = z
   .object({ storeId: storeIdSchema.optional() })
   .strict()
+
+export const customerChannelAvailabilitySettingsSchema =
+  storeConversationAvailabilitySettingsInputSchema
+
+export const customerChannelAvailabilityScheduleUpdateSchema =
+  storeConversationAvailabilityScheduleCommandSchema
+
+export const customerChannelModeSettingsSchema =
+  storeConversationChannelModeSettingsInputSchema
+
+export const customerChannelModeUpdateSchema =
+  storeConversationChannelModeUpdateInputSchema
+
+export const customerChannelManualPauseSchema =
+  storeConversationManualPauseCommandSchema
 
 export const customerChannelManualConnectionSchema =
   serviceCommerceManualWhatsAppConnectionSchema

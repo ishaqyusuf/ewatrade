@@ -1,18 +1,18 @@
 model CommerceQuote {
-  id               String                  @id @default(cuid())
+  id               String                         @id @default(cuid())
   tenantId         String
   storeId          String
   sourceType       CommerceQuoteSourceType
   sourceId         String
   clientQuoteId    String
-  currentVersionId String?                 @unique
+  currentVersionId String?                        @unique
   createdByUserId  String
-  createdAt        DateTime                @default(now())
-  updatedAt        DateTime                @updatedAt
-  tenant           Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store            Store                   @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  currentVersion   CommerceQuoteVersion?   @relation("CommerceQuoteCurrentVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
-  versions         CommerceQuoteVersion[]  @relation("CommerceQuoteVersions")
+  createdAt        DateTime                       @default(now())
+  updatedAt        DateTime                       @updatedAt
+  tenant           Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store            Store                          @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  currentVersion   CommerceQuoteVersion?          @relation("CommerceQuoteCurrentVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  versions         CommerceQuoteVersion[]         @relation("CommerceQuoteVersions")
   approvals        ServiceCommerceQuoteApproval[]
 
   @@unique([tenantId, clientQuoteId])
@@ -22,44 +22,46 @@ model CommerceQuote {
 }
 
 model CommerceQuoteVersion {
-  id                          String                           @id @default(cuid())
-  quoteId                     String
-  clientVersionId             String
-  payloadHash                 String
-  version                     Int
-  status                      CommerceQuoteVersionStatus       @default(DRAFT)
-  availabilityOutcome         CommerceQuoteAvailabilityOutcome
-  fulfilmentType              CommerceQuoteFulfilmentType      @default(UNSPECIFIED)
-  currencyCode                String
-  subtotalMinor               Int
-  discountMinor               Int                              @default(0)
-  taxMinor                    Int                              @default(0)
-  fulfilmentFeeMinor          Int                              @default(0)
-  totalMinor                  Int
-  customerNote                String?
-  fulfilmentPromise           String?
-  acceptanceTokenDigest       String?                          @unique
-  expiresAt                   DateTime?
-  issuedAt                    DateTime?
-  acceptedAt                  DateTime?
-  declinedAt                  DateTime?
-  supersededAt                DateTime?
-  revokedAt                   DateTime?
-  acceptedOrderId             String?                          @unique
-  acceptanceClientId          String?
-  createdByUserId             String
-  createdAt                   DateTime                         @default(now())
-  quote                       CommerceQuote                    @relation("CommerceQuoteVersions", fields: [quoteId], references: [id], onDelete: Cascade)
-  currentForQuote             CommerceQuote?                   @relation("CommerceQuoteCurrentVersion")
-  acceptedOrder               CommercialOrder?                 @relation(fields: [acceptedOrderId], references: [id], onDelete: Restrict)
-  lines                       CommerceQuoteLine[]
-  options                     CommerceQuoteOption[]
-  optionSelection             CommerceQuoteOptionSelection?
-  replayAccessToken           CommerceQuoteReplayAccessToken?
-  prescriptionDeliveryAddress PrescriptionDeliveryAddress?
-  catalogPricePromotions      CatalogPricePromotion[]
-  quoteApproval               ServiceCommerceQuoteApproval?
-  serviceBookings             ServiceBooking[]
+  id                                  String                               @id @default(cuid())
+  quoteId                             String
+  clientVersionId                     String
+  payloadHash                         String
+  version                             Int
+  status                              CommerceQuoteVersionStatus           @default(DRAFT)
+  availabilityOutcome                 CommerceQuoteAvailabilityOutcome
+  fulfilmentType                      CommerceQuoteFulfilmentType          @default(UNSPECIFIED)
+  currencyCode                        String
+  subtotalMinor                       Int
+  discountMinor                       Int                                  @default(0)
+  taxMinor                            Int                                  @default(0)
+  fulfilmentFeeMinor                  Int                                  @default(0)
+  totalMinor                          Int
+  customerNote                        String?
+  fulfilmentPromise                   String?
+  acceptanceTokenDigest               String?                              @unique
+  expiresAt                           DateTime?
+  issuedAt                            DateTime?
+  acceptedAt                          DateTime?
+  declinedAt                          DateTime?
+  supersededAt                        DateTime?
+  revokedAt                           DateTime?
+  acceptedOrderId                     String?                              @unique
+  acceptanceClientId                  String?
+  createdByUserId                     String
+  createdAt                           DateTime                             @default(now())
+  quote                               CommerceQuote                        @relation("CommerceQuoteVersions", fields: [quoteId], references: [id], onDelete: Cascade)
+  currentForQuote                     CommerceQuote?                       @relation("CommerceQuoteCurrentVersion")
+  acceptedOrder                       CommercialOrder?                     @relation(fields: [acceptedOrderId], references: [id], onDelete: Restrict)
+  lines                               CommerceQuoteLine[]
+  options                             CommerceQuoteOption[]
+  optionSelection                     CommerceQuoteOptionSelection?
+  replayAccessToken                   CommerceQuoteReplayAccessToken?
+  prescriptionDeliveryAddress         PrescriptionDeliveryAddress?
+  catalogPricePromotions              CatalogPricePromotion[]
+  quoteApproval                       ServiceCommerceQuoteApproval?
+  serviceBookings                     ServiceBooking[]
+  storeConversationActionMessages     StoreConversationActionMessage[]
+  storeConversationAccountInvitations StoreConversationAccountInvitation[]
 
   @@unique([quoteId, version])
   @@unique([quoteId, clientVersionId])
@@ -129,34 +131,34 @@ model CommerceQuoteReplayAccessToken {
 }
 
 model CommerceQuoteLine {
-  id                        String                          @id @default(cuid())
-  quoteVersionId            String
-  quoteOptionId             String?
-  sourceLineId              String?
-  offeringId                String?
-  outcome                   CommerceQuoteLineOutcome        @default(INCLUDED)
-  catalogItemName           String
-  variantName               String
-  optionSelections          Json
-  offeringName              String
-  quantity                  Decimal?                        @db.Decimal(38, 6)
-  unitPriceMinor            Int?
-  catalogSuggestedUnitPriceMinor Int?
-  catalogPriceSuggestionSource   String?
-  catalogPriceSuggestionScope    String?
+  id                                String                          @id @default(cuid())
+  quoteVersionId                    String
+  quoteOptionId                     String?
+  sourceLineId                      String?
+  offeringId                        String?
+  outcome                           CommerceQuoteLineOutcome        @default(INCLUDED)
+  catalogItemName                   String
+  variantName                       String
+  optionSelections                  Json
+  offeringName                      String
+  quantity                          Decimal?                        @db.Decimal(38, 6)
+  unitPriceMinor                    Int?
+  catalogSuggestedUnitPriceMinor    Int?
+  catalogPriceSuggestionSource      String?
+  catalogPriceSuggestionScope       String?
   catalogPriceSuggestionEffectiveAt DateTime?
-  catalogPriceOverride      Boolean                         @default(false)
-  catalogPriceEvaluationAt  DateTime?
-  totalMinor                Int                             @default(0)
-  customerNote              String?
-  configurationVersionId    String?
-  balanceRevision           Int?
-  availabilityAttestationId String?
-  createdAt                 DateTime                        @default(now())
-  quoteVersion              CommerceQuoteVersion            @relation(fields: [quoteVersionId], references: [id], onDelete: Cascade)
-  quoteOption               CommerceQuoteOption?            @relation(fields: [quoteOptionId], references: [id], onDelete: Cascade)
-  offering                  SellableOffering?               @relation(fields: [offeringId], references: [id], onDelete: Restrict)
-  availabilityAttestation   CatalogAvailabilityAttestation? @relation(fields: [availabilityAttestationId], references: [id], onDelete: Restrict)
+  catalogPriceOverride              Boolean                         @default(false)
+  catalogPriceEvaluationAt          DateTime?
+  totalMinor                        Int                             @default(0)
+  customerNote                      String?
+  configurationVersionId            String?
+  balanceRevision                   Int?
+  availabilityAttestationId         String?
+  createdAt                         DateTime                        @default(now())
+  quoteVersion                      CommerceQuoteVersion            @relation(fields: [quoteVersionId], references: [id], onDelete: Cascade)
+  quoteOption                       CommerceQuoteOption?            @relation(fields: [quoteOptionId], references: [id], onDelete: Cascade)
+  offering                          SellableOffering?               @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  availabilityAttestation           CatalogAvailabilityAttestation? @relation(fields: [availabilityAttestationId], references: [id], onDelete: Restrict)
 
   @@index([quoteVersionId])
   @@index([quoteOptionId])

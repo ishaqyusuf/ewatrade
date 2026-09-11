@@ -22,9 +22,11 @@ describe("Service Commerce sheet controllers", () => {
           ([mode]) =>
             ![
               "attachment_review",
+              "availability",
               "booking",
               "catalog_draft",
               "connection",
+              "conversation_mode",
               "entry_point",
               "inventory_graduation",
               "media",
@@ -36,7 +38,9 @@ describe("Service Commerce sheet controllers", () => {
         .every(([, controller]) => !controller.implemented),
     ).toBe(true)
     for (const mode of [
+      "availability",
       "connection",
+      "conversation_mode",
       "entry_point",
       "quote_policy",
       "team",

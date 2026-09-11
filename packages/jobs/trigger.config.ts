@@ -4,7 +4,7 @@ import { captureTerminalJobError } from "./src/observability/sentry"
 
 const syncedProductionEnvVars = [
   "APP_ENV",
-  "DATABASE_URL",
+  "EWATRADE_DATABASE_URL",
   "EMAIL_DELIVERY_MODE",
   "EMAIL_FROM",
   "EMAIL_REPLY_TO",
@@ -14,6 +14,7 @@ const syncedProductionEnvVars = [
   "META_APP_SECRET",
   "PAYSTACK_SECRET_KEY",
   "PRESCRIPTION_DATA_ENCRYPTION_KEY",
+  "QA_MESSAGING_TEST_ADAPTER_ENABLED",
   "REDIS_URL",
   "RESEND_API_KEY",
   "SENTRY_DSN",

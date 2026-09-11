@@ -97,6 +97,12 @@ function createProjectionDb(input?: {
           : null
       },
     },
+    prescriptionStoreSettings: {
+      findFirst: async (args: unknown) => {
+        calls.push({ args, name: "prescriptionStoreSettings.findFirst" })
+        return { status: "ACTIVE" }
+      },
+    },
     serviceRequest: {
       findFirst: async (args: unknown) => {
         calls.push({ args, name: "serviceRequest.findFirst" })

@@ -59,6 +59,8 @@ describe("shared database command contract", () => {
     expect(deploySource).toContain(
       'run("bun", ["run", "db:migrate", "--prod"], { env })',
     )
+    expect(deploySource).toContain("delete env.DATABASE_URL")
+    expect(deploySource).toContain('"EWATRADE_DATABASE_URL"')
     expect(deploySource).not.toContain("db:migrate:deploy")
   })
 })

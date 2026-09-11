@@ -20,7 +20,7 @@ const configuredMetaEnvironment = Object.fromEntries(
 Object.assign(configuredMetaEnvironment, {
   APP_ENV: "production",
   DATABASE_PROFILE_VERIFIED: "true",
-  DATABASE_URL: "postgresql://user:password@database.example.com:5432/ewatrade",
+  EWATRADE_DATABASE_URL: "postgresql://user:password@database.example.com:5432/ewatrade",
 })
 
 const metaEvidence = {
@@ -91,7 +91,7 @@ describe("Service Commerce live-canary offline preflight", () => {
       ],
       missingEnvironmentKeys: [
         "DATABASE_PROFILE_VERIFIED",
-        "DATABASE_URL",
+        "EWATRADE_DATABASE_URL",
         "TRIGGER_PROJECT_ID",
         "TRIGGER_SECRET_KEY",
         "META_APP_ID",
@@ -122,7 +122,7 @@ describe("Service Commerce live-canary offline preflight", () => {
         environment: {
           APP_ENV: "production",
           DATABASE_PROFILE_VERIFIED: "1",
-          DATABASE_URL: "postgresql://database.example.com/ewatrade",
+          EWATRADE_DATABASE_URL: "postgresql://database.example.com/ewatrade",
           PAYSTACK_SECRET_KEY: "configured",
           PRESCRIPTION_DATA_ENCRYPTION_KEY: "configured",
           PRESCRIPTION_MEDIA_SAFETY_PROVIDER: "configured",
@@ -170,7 +170,7 @@ describe("Service Commerce live-canary offline preflight", () => {
         APP_ENV: "development",
         COMMUNICATIONS_CREDENTIAL_ENCRYPTION_KEY: "",
         DATABASE_PROFILE_VERIFIED: "0",
-        DATABASE_URL: "postgresql://user:password@localhost:5432/ewatrade",
+        EWATRADE_DATABASE_URL: "postgresql://user:password@localhost:5432/ewatrade",
         META_APP_ID: "configured",
         META_APP_SECRET: secret,
         REDIS_URL: "configured",
@@ -227,7 +227,7 @@ describe("Service Commerce live-canary offline preflight", () => {
       const result = evaluateServiceCommerceLiveCanaryPreflight({
         environment: {
           ...configuredMetaEnvironment,
-          DATABASE_URL: databaseUrl,
+          EWATRADE_DATABASE_URL: databaseUrl,
         },
         evidence: metaEvidence,
         kind: "meta_whatsapp",

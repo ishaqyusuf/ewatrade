@@ -173,27 +173,25 @@ async function resolveServiceCommerceReadinessFacts(
   configuration: ServiceCommerceProfileConfiguration,
   profile: PersistedProfile | null,
 ): Promise<ServiceCommerceReadinessFacts> {
-  const [trackedInventory, whatsappBindings] = await Promise.all([
-    db.stockBalanceSource.findFirst({
-      select: { id: true },
-      where: { storeId: input.storeId, tenantId: input.tenantId },
-    }),
-    configuration.capabilities.whatsapp
-      ? db.whatsAppStoreBinding.findMany({
-          orderBy: { updatedAt: "desc" },
-          select: {
-            connection: { select: { status: true } },
-            id: true,
-            status: true,
-          },
-          where: {
-            connection: { tenantId: input.tenantId },
-            storeId: input.storeId,
-            tenantId: input.tenantId,
-          },
-        })
-      : Promise.resolve([]),
-  ])
+  const trackedInventory = await db.stockBalanceSource.findFirst({
+    select: { id: true },
+    where: { storeId: input.storeId, tenantId: input.tenantId },
+  })
+  const whatsappBindings = configuration.capabilities.whatsapp
+    ? await db.whatsAppStoreBinding.findMany({
+        orderBy: { updatedAt: "desc" },
+        select: {
+          connection: { select: { status: true } },
+          id: true,
+          status: true,
+        },
+        where: {
+          connection: { tenantId: input.tenantId },
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        },
+      })
+    : []
   const setupRequired: ServiceCommerceCapability[] = []
   const providerUnavailable: ServiceCommerceCapability[] = []
   if (
@@ -322,26 +320,24 @@ async function resolveActorStore(
   db: DbClient,
   input: { actorUserId: string; storeId: string; tenantId: string },
 ) {
-  const [membership, store] = await Promise.all([
-    db.membership.findFirst({
-      select: { role: true },
-      where: {
-        status: MembershipStatus.ACTIVE,
-        tenantId: input.tenantId,
-        userId: input.actorUserId,
-      },
-    }),
-    db.store.findFirst({
-      include: { serviceCommerceProfile: true },
-      where: { id: input.storeId, tenantId: input.tenantId },
-    }),
-  ])
+  const membership = await db.membership.findFirst({
+    select: { role: true },
+    where: {
+      status: MembershipStatus.ACTIVE,
+      tenantId: input.tenantId,
+      userId: input.actorUserId,
+    },
+  })
   if (!membership) {
     throw new ServiceCommerceAccessError(
       "FORBIDDEN",
       "Service Commerce access is unavailable.",
     )
   }
+  const store = await db.store.findFirst({
+    include: { serviceCommerceProfile: true },
+    where: { id: input.storeId, tenantId: input.tenantId },
+  })
   if (!store) {
     throw new ServiceCommerceAccessError("NOT_FOUND", "Store not found.")
   }

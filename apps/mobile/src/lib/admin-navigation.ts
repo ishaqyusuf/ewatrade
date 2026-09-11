@@ -45,9 +45,13 @@ export type AdminMoreItem = {
 }
 
 export type AdminMoreSection = {
-  id: "store-workspace" | "offline" | "account-settings"
+  id: "store-tools" | "storefront-plan" | "offline" | "account-settings"
   items: AdminMoreItem[]
-  title: "Store & workspace" | "Offline" | "Account settings"
+  title:
+    | "Store tools"
+    | "Storefront & plan"
+    | "Offline & sync"
+    | "Account settings"
 }
 
 export function canAccessAdminTabs(role: string | undefined) {
@@ -168,6 +172,7 @@ export function buildAdminMoreSections({
     })
   }
 
+  const storefrontItems: AdminMoreItem[] = []
   if (role === "OWNER" || role === "ADMIN") {
     storeItems.push({
       action: {
@@ -178,7 +183,7 @@ export function buildAdminMoreSections({
       id: "order-reminders",
       label: "Order reminders",
     })
-    storeItems.push({
+    storefrontItems.push({
       action: {
         href: "/domain-management-modal" as LinkProps["href"],
         kind: "route",
@@ -187,7 +192,7 @@ export function buildAdminMoreSections({
       id: "website-domain",
       label: "Website & domain",
     })
-    storeItems.push({
+    storefrontItems.push({
       action: { href: "/subscription-modal", kind: "route" },
       icon: "CreditCard",
       id: "plan-billing",
@@ -195,12 +200,23 @@ export function buildAdminMoreSections({
     })
   }
 
-  return [
+  const sections: AdminMoreSection[] = [
     {
-      id: "store-workspace",
+      id: "store-tools",
       items: storeItems,
-      title: "Store & workspace",
+      title: "Store tools",
     },
+  ]
+
+  if (storefrontItems.length > 0) {
+    sections.push({
+      id: "storefront-plan",
+      items: storefrontItems,
+      title: "Storefront & plan",
+    })
+  }
+
+  sections.push(
     {
       id: "offline",
       items: [
@@ -211,7 +227,7 @@ export function buildAdminMoreSections({
           label: "Sync & offline settings",
         },
       ],
-      title: "Offline",
+      title: "Offline & sync",
     },
     {
       id: "account-settings",
@@ -243,5 +259,7 @@ export function buildAdminMoreSections({
       ],
       title: "Account settings",
     },
-  ]
+  )
+
+  return sections
 }

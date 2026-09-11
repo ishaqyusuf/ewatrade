@@ -18,9 +18,11 @@ import { useQuery } from "@tanstack/react-query"
 export function ConversationWorkspace({
   activeStoreId,
   stores,
+  timeZone,
 }: {
   activeStoreId: string
   stores: Array<{ id: string; name: string }>
+  timeZone: string
 }) {
   const trpc = useTRPC()
   const params = useStoreConversationParams()
@@ -28,6 +30,8 @@ export function ConversationWorkspace({
   const queue = useQuery(
     trpc.serviceCommerce.storeConversationQueue.queryOptions(input, {
       retry: false,
+      refetchInterval: 5_000,
+      refetchIntervalInBackground: false,
     }),
   )
 
@@ -62,6 +66,7 @@ export function ConversationWorkspace({
         <StoreConversationDataTable
           items={queue.data.items}
           onOpen={(conversationId) => void params.setSelection(conversationId)}
+          timeZone={timeZone}
         />
       ) : null}
       {queue.data?.nextCursor ? (

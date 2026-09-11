@@ -1,3 +1,4 @@
+import { isQaAcceleratorClientMode } from "@ewatrade/utils/qa-accelerator"
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server"
 import { createTRPCRouter } from "../init"
 import { authRouter } from "./auth"
@@ -9,6 +10,7 @@ import { offlineRouter } from "./offline"
 import { ordersRouter } from "./orders"
 import { prescriptionAccessRouter } from "./prescription-access"
 import { prescriptionsRouter } from "./prescriptions"
+import { qaAccessRouter } from "./qa-access"
 import { qaMaintenanceRouter } from "./qa-maintenance"
 import { retailOpsRouter } from "./retail-ops"
 import { searchRouter } from "./search"
@@ -18,6 +20,11 @@ import { serviceCommunicationsRouter } from "./service-communications"
 import { serviceReportingRouter } from "./service-reporting"
 import { servicesRouter } from "./services"
 import { tenantRouter } from "./tenant"
+
+const qaAccessRegistration: { qaAccess: typeof qaAccessRouter } =
+  isQaAcceleratorClientMode(process.env.APP_ENV ?? process.env.NODE_ENV)
+    ? { qaAccess: qaAccessRouter }
+    : ({} as { qaAccess: typeof qaAccessRouter })
 
 export const appRouter = createTRPCRouter({
   auth: authRouter,
@@ -30,6 +37,7 @@ export const appRouter = createTRPCRouter({
   prescriptionAccess: prescriptionAccessRouter,
   offline: offlineRouter,
   qaMaintenance: qaMaintenanceRouter,
+  ...qaAccessRegistration,
   serviceAccess: serviceAccessRouter,
   serviceCommerce: serviceCommerceRouter,
   serviceCommunications: serviceCommunicationsRouter,

@@ -63,6 +63,7 @@ describe("Service Commerce customer notification dispatch", () => {
     const result = await runServiceCommerceCustomerNotificationDispatch(
       payload,
       {
+        assertProviderAllowed: async () => undefined,
         authorize: async (input) => {
           calls.push(["authorize", input])
           return true
@@ -120,6 +121,7 @@ describe("Service Commerce customer notification dispatch", () => {
     const failures: unknown[] = []
     await expect(
       runServiceCommerceCustomerNotificationDispatch(payload, {
+        assertProviderAllowed: async () => undefined,
         authorize: async () => true,
         claim: async () => ({ ...claim, attemptNumber: 3 }),
         complete: async () => undefined,
@@ -141,6 +143,7 @@ describe("Service Commerce customer notification dispatch", () => {
 
     await expect(
       runServiceCommerceCustomerNotificationDispatch(payload, {
+        assertProviderAllowed: async () => undefined,
         authorize: async () => true,
         claim: async () => null,
         complete: async () => undefined,
@@ -162,6 +165,7 @@ describe("Service Commerce customer notification dispatch", () => {
     const failures: unknown[] = []
     await expect(
       runServiceCommerceCustomerNotificationDispatch(payload, {
+        assertProviderAllowed: async () => undefined,
         authorize: async () => false,
         claim: async () => claim,
         complete: async () => undefined,

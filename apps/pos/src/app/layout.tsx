@@ -1,3 +1,4 @@
+import { EventsProvider } from "@ewatrade/events/client"
 import type { Metadata } from "next"
 import "@ewatrade/ui/globals.css"
 import { Geist } from "next/font/google"
@@ -18,7 +19,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={cn("font-sans", geist.variable)}>
-      <body>{children}</body>
+      <body><EventsProvider>{children}</EventsProvider></body>
     </html>
   )
 }

@@ -8,7 +8,7 @@ const envFile = ".env.production"
 process.chdir(rootDir)
 
 const defaultEnvKeys = [
-  "DATABASE_URL",
+  "EWATRADE_DATABASE_URL",
   "BETTER_AUTH_SECRET",
   "AUTH_SECRET",
   "BETTER_AUTH_URL",
@@ -34,6 +34,10 @@ const defaultEnvKeys = [
   "TEST_EMAIL",
   "TRIGGER_SECRET_KEY",
   "NEXT_PUBLIC_SIGNUP_ENABLED",
+  "QA_ACCELERATOR_ENABLED",
+  "QA_ACCELERATOR_SECRET",
+  "QA_ACCELERATOR_ALLOWED_ORIGINS",
+  "QA_MESSAGING_TEST_ADAPTER_ENABLED",
   "DEBUG_PERF",
 ]
 
@@ -43,7 +47,7 @@ function usage() {
 Deploys @ewatrade/api to Vercel using one-time config from ${envFile}.
 
 Required in ${envFile}:
-  DATABASE_URL
+  EWATRADE_DATABASE_URL
   BETTER_AUTH_SECRET or AUTH_SECRET
 
 Optional deployment config in ${envFile}:
@@ -54,7 +58,7 @@ Optional deployment config in ${envFile}:
   VERCEL_API_SKIP_MIGRATIONS=false
   VERCEL_API_HEALTH_URL=https://ewatrade.com
   VERCEL_API_FORCE=false
-  VERCEL_API_ENV_KEYS=DATABASE_URL,BETTER_AUTH_SECRET,...
+  VERCEL_API_ENV_KEYS=EWATRADE_DATABASE_URL,BETTER_AUTH_SECRET,...
 `)
 }
 
@@ -149,6 +153,7 @@ if (!existsSync(envFile)) {
 
 const fileEnv = parseEnvFile(envFile)
 const env = { ...process.env, ...fileEnv }
+delete env.DATABASE_URL
 const project = env.VERCEL_API_PROJECT?.trim() || "ewatrade-api"
 const scope = env.VERCEL_SCOPE?.trim() || ""
 const target = env.VERCEL_API_TARGET?.trim() || "production"
@@ -161,16 +166,16 @@ const envKeys = (env.VERCEL_API_ENV_KEYS?.split(",") ?? defaultEnvKeys)
   .map((key) => key.trim())
   .filter(Boolean)
 
-requireValue(env, "DATABASE_URL")
+requireValue(env, "EWATRADE_DATABASE_URL")
 
 if (!env.BETTER_AUTH_SECRET?.trim() && !env.AUTH_SECRET?.trim()) {
   console.error(`Set BETTER_AUTH_SECRET or AUTH_SECRET in ${envFile}.`)
   process.exit(1)
 }
 
-if (/localhost|127\.0\.0\.1/.test(env.DATABASE_URL)) {
+if (/localhost|127\.0\.0\.1/.test(env.EWATRADE_DATABASE_URL)) {
   console.error(
-    `DATABASE_URL in ${envFile} must be a hosted production database.`,
+    `EWATRADE_DATABASE_URL in ${envFile} must be a hosted production database.`,
   )
   process.exit(1)
 }
@@ -223,7 +228,7 @@ for (const key of envKeys) {
   // Vercel may evaluate server entrypoints during build/bundling. These keep
   // top-level production env checks from failing before the runtime exists.
   if (
-    key === "DATABASE_URL" ||
+    key === "EWATRADE_DATABASE_URL" ||
     key === "BETTER_AUTH_SECRET" ||
     key === "AUTH_SECRET"
   ) {

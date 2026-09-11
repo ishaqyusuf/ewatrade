@@ -19,7 +19,8 @@
     "@sentry/nextjs": "^10.72.0",
     "next": "catalog:",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "@ewatrade/events": "workspace:*"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",

@@ -271,6 +271,17 @@ const requiredFiles = [
       "Design01OrderRow",
       "ReferenceFabs",
     ],
+    scopedMarkers: [
+      {
+        end: "export function Design01MetricTile",
+        markers: [
+          "min-h-11 min-w-24 items-center justify-center rounded-xl px-6",
+          "active:bg-accent",
+          "transition",
+        ],
+        start: "export function Design01FilterChip",
+      },
+    ],
   },
   {
     file: "src/components/mobile/design-system/designs/design-01/design-01-orders-screen.tsx",
@@ -509,6 +520,22 @@ for (const check of requiredFiles) {
     failures.push(
       `${relative(REPO_DIR, filePath)} is missing marker: ${marker}`,
     );
+  }
+
+  for (const scope of check.scopedMarkers ?? []) {
+    const startIndex = contents.indexOf(scope.start);
+    const endIndex = contents.indexOf(scope.end, startIndex + scope.start.length);
+    const scopedContents =
+      startIndex >= 0 && endIndex > startIndex
+        ? contents.slice(startIndex, endIndex)
+        : "";
+
+    for (const marker of scope.markers) {
+      if (scopedContents.includes(marker)) continue;
+      failures.push(
+        `${relative(REPO_DIR, filePath)} is missing scoped marker in ${scope.start}: ${marker}`,
+      );
+    }
   }
 
   for (const marker of check.forbiddenMarkers ?? []) {

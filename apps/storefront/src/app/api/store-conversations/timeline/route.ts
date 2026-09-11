@@ -1,6 +1,8 @@
+import { issueServiceCommerceCustomerActionToken } from "@ewatrade/communications"
 import { prisma } from "@ewatrade/db"
 import {
   StoreConversationError,
+  getAccountStoreConversationTimeline,
   getGuestStoreConversationTimeline,
 } from "@ewatrade/db/queries"
 import { type NextRequest, NextResponse } from "next/server"
@@ -9,12 +11,14 @@ import {
   STORE_CONVERSATION_GUEST_COOKIE,
   STORE_CONVERSATION_GUEST_COOKIE_OPTIONS,
 } from "@/lib/store-conversation-cookie"
+import { requireStorefrontCustomerAccount } from "@/lib/store-conversation-account-session"
 
 export async function GET(request: NextRequest) {
+  const accountAccess = request.nextUrl.searchParams.get("access") === "account"
   const credentialToken = request.cookies.get(
     STORE_CONVERSATION_GUEST_COOKIE,
   )?.value
-  if (!credentialToken) {
+  if (!accountAccess && !credentialToken) {
     return NextResponse.json(
       {
         code: "GUEST_CREDENTIAL_EXPIRED",
@@ -33,19 +37,37 @@ export async function GET(request: NextRequest) {
         { status: 400 },
       )
     }
+    const timelineInput = {
+      beforeSequence: before ? Number(before) : undefined,
+      conversationId,
+      publicToken,
+    }
     const response = NextResponse.json(
-      await getGuestStoreConversationTimeline(prisma, {
-        beforeSequence: before ? Number(before) : undefined,
-        conversationId,
+      accountAccess
+        ? await getAccountStoreConversationTimeline(
+            prisma,
+            {
+              ...timelineInput,
+              accountUserId: (
+                await requireStorefrontCustomerAccount(request.headers)
+              ).user.id,
+            },
+            { issueCapabilityToken: issueServiceCommerceCustomerActionToken },
+          )
+        : await getGuestStoreConversationTimeline(
+            prisma,
+            { ...timelineInput, credentialToken: credentialToken as string },
+            undefined,
+            { issueCapabilityToken: issueServiceCommerceCustomerActionToken },
+          ),
+    )
+    if (!accountAccess && credentialToken) {
+      response.cookies.set(
+        STORE_CONVERSATION_GUEST_COOKIE,
         credentialToken,
-        publicToken,
-      }),
-    )
-    response.cookies.set(
-      STORE_CONVERSATION_GUEST_COOKIE,
-      credentialToken,
-      STORE_CONVERSATION_GUEST_COOKIE_OPTIONS,
-    )
+        STORE_CONVERSATION_GUEST_COOKIE_OPTIONS,
+      )
+    }
     return response
   } catch (error) {
     if (error instanceof StoreConversationError) {

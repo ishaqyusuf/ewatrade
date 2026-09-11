@@ -11,6 +11,7 @@ import {
   fulfillCommercialOrderProducts,
   getCommercialOrder,
   getCommercialOrderReminderSettings,
+  getCommercialOrderReportSummary,
   listCommercialOrderPaymentsPage,
   listCommercialOrders,
   listCommercialOrdersPage,
@@ -113,6 +114,17 @@ export const ordersRouter = createTRPCRouter({
     return countCommercialOrderCustomers(ctx.db, {
       tenantId: ctx.tenantContext.tenant.id,
     })
+  }),
+
+  reportSummary: protectedProcedure.query(async ({ ctx }) => {
+    assertCanOperateOrders(ctx.tenantContext.membership.role)
+    const summary = await getCommercialOrderReportSummary(ctx.db, {
+      tenantId: ctx.tenantContext.tenant.id,
+    })
+    return {
+      ...summary,
+      currencyCode: ctx.tenantContext.tenant.currencyCode,
+    }
   }),
 
   create: protectedProcedure
@@ -228,6 +240,7 @@ export const ordersRouter = createTRPCRouter({
       assertCanOperateOrders(ctx.tenantContext.membership.role)
       return listCommercialOrderPaymentsPage(ctx.db, {
         ...input,
+        defaultCurrencyCode: ctx.tenantContext.tenant.currencyCode,
         tenantId: ctx.tenantContext.tenant.id,
       })
     }),

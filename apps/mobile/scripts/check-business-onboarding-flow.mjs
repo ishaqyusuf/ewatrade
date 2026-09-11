@@ -9,6 +9,14 @@ const checks = [
     markers: ['name="new-business-onboarding-modal"'],
   },
   {
+    file: "app/business-switch-modal.tsx",
+    markers: [
+      "BUSINESS_SWITCH_COPY",
+      'closeLabel="Close workspaces"',
+      "title={BUSINESS_SWITCH_COPY.title}",
+    ],
+  },
+  {
     file: "app/new-business-onboarding-modal.tsx",
     markers: [
       "NewBusinessOnboardingScreen",
@@ -19,11 +27,24 @@ const checks = [
   {
     file: "components/mobile/business-switch-sheet.tsx",
     markers: [
+      "BUSINESS_SWITCH_COPY",
+      "getBusinessSwitchRowPresentation",
       "ListCreateFab",
       'accessibilityLabel="Add a new business"',
       'testID="business-add-fab"',
       'router.push("/new-business-onboarding-modal"',
+      "presentation.canActivate ? onPress : undefined",
+      "onComplete?.()",
+      "onActionPress={() => void productionBusinessesQuery.refetch()}",
     ],
+    forbiddenMarkers: [
+      "Current workspace",
+      ">\n        Done\n      </ActionButton>",
+    ],
+  },
+  {
+    file: "components/mobile/floating-theme-toggle.tsx",
+    markers: ['pathname.startsWith("/business-switch-modal")'],
   },
   {
     file: "components/mobile/new-business-onboarding-screen.tsx",
@@ -56,6 +77,13 @@ for (const check of checks) {
   for (const marker of check.markers) {
     if (source.includes(marker)) continue
     failures.push(`${relative(MOBILE_DIR, filePath)} missing ${marker}`)
+  }
+
+  for (const marker of check.forbiddenMarkers ?? []) {
+    if (!source.includes(marker)) continue
+    failures.push(
+      `${relative(MOBILE_DIR, filePath)} must not include ${marker}`,
+    )
   }
 }
 

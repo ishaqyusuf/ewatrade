@@ -282,6 +282,7 @@ function providerCode(error: unknown): ErrorCode | undefined {
     return "MESSAGING_PROVIDER_FAILED"
   if (/storage|object_store|s3|upload/.test(provider))
     return "STORAGE_PROVIDER_FAILED"
+  if (code === "PROVIDER_UNAVAILABLE") return "PAYMENT_PROVIDER_FAILED"
   return undefined
 }
 

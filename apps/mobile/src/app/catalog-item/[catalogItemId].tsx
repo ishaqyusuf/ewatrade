@@ -1,4 +1,4 @@
-import { CatalogItemScreen } from "@/components/mobile/catalog-item-screen"
+import { CatalogItemScreen } from "@/components/mobile/catalog-item/catalog-item-screen"
 import { useLocalSearchParams } from "expo-router"
 
 export default function CatalogItemRoute() {

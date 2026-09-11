@@ -9,10 +9,11 @@ export function formatStoreConversationRequestKind(kind: string) {
   return "Prescription"
 }
 
-export function formatStoreConversationDate(value: Date) {
+export function formatStoreConversationDate(value: Date, timeZone: string) {
   return new Intl.DateTimeFormat("en-NG", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone,
   }).format(value)
 }
 

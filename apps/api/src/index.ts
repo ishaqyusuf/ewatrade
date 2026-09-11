@@ -16,6 +16,7 @@ import { captureApiError } from "./observability/sentry"
 import { registerPrescriptionMediaDeliveryRoutes } from "./prescriptions/media-delivery"
 import { registerPrescriptionPaystackWebhook } from "./prescriptions/paystack-webhook"
 import { registerSelfServiceStoreDetectionRoutes } from "./self-service/store-detection"
+import { registerStoreConversationAttachmentRoutes } from "./service-commerce/conversation-attachments-routes"
 import { registerServiceCommerceMediaDeliveryRoutes } from "./service-commerce/media-delivery"
 import { registerServiceCommerceMediaUploadRoutes } from "./service-commerce/media-upload"
 import { createTRPCContext } from "./trpc/init"
@@ -62,6 +63,8 @@ app.use(
       "x-force-primary",
       "x-internal-key",
       "x-request-id",
+      "x-store-conversation-credential",
+      "x-store-conversation-installation",
       "x-tenant-slug",
       "x-trpc-source",
     ],
@@ -128,6 +131,7 @@ registerSelfServiceStoreDetectionRoutes(app)
 registerPrescriptionMediaDeliveryRoutes(app)
 registerServiceCommerceMediaDeliveryRoutes(app)
 registerServiceCommerceMediaUploadRoutes(app)
+registerStoreConversationAttachmentRoutes(app)
 registerPrescriptionPaystackWebhook(app)
 registerWhatsAppWebhookRoutes(app)
 registerWhatsAppEmbeddedSignupRoutes(app)

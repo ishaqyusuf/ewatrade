@@ -6,12 +6,22 @@ import { useColorScheme, useColors } from "@/hooks/use-color"
 import { isInvitedStaffProfile, isSalesRepRole } from "@/lib/mobile-roles"
 import { Redirect, useRouter } from "expo-router"
 import { StatusBar } from "expo-status-bar"
-import type { ReactNode } from "react"
+import type { ComponentType, ReactNode } from "react"
 import { View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { MobileScreen } from "./screen"
 
+export type WorkflowModalChromeProps = {
+  children: ReactNode
+  closeLabel: string
+  hideHeader: boolean
+  keyboardBottomOffset: number
+  title: string
+  onClose: () => void
+}
+
 type WorkflowModalScreenProps = {
+  chrome?: ComponentType<WorkflowModalChromeProps>
   allowSalesRep?: boolean
   children: ReactNode
   closeHref?:
@@ -27,6 +37,7 @@ type WorkflowModalScreenProps = {
 
 export function WorkflowModalScreen({
   allowSalesRep = false,
+  chrome: Chrome = DefaultWorkflowModalChrome,
   children,
   closeHref = "/dashboard",
   closeLabel,
@@ -35,9 +46,6 @@ export function WorkflowModalScreen({
   title,
 }: WorkflowModalScreenProps) {
   const router = useRouter()
-  const colors = useColors()
-  const { colorScheme } = useColorScheme()
-  const insets = useSafeAreaInsets()
   const { isAuthenticated, profile } = useAuthContext()
   const isSalesRep = isSalesRepRole(profile?.role)
 
@@ -49,6 +57,30 @@ export function WorkflowModalScreen({
     return <Redirect href="/dashboard" />
   }
 
+  return (
+    <Chrome
+      closeLabel={closeLabel}
+      hideHeader={hideHeader}
+      keyboardBottomOffset={keyboardBottomOffset}
+      title={title}
+      onClose={() => router.replace(closeHref)}
+    >
+      {children}
+    </Chrome>
+  )
+}
+
+function DefaultWorkflowModalChrome({
+  children,
+  closeLabel,
+  hideHeader,
+  keyboardBottomOffset,
+  title,
+  onClose,
+}: WorkflowModalChromeProps) {
+  const colors = useColors()
+  const { colorScheme } = useColorScheme()
+  const insets = useSafeAreaInsets()
   return (
     <View
       style={{
@@ -90,7 +122,7 @@ export function WorkflowModalScreen({
               accessibilityLabel={closeLabel}
               className="h-11 w-11 items-center justify-center rounded-full bg-muted active:bg-accent"
               haptic
-              onPress={() => router.replace(closeHref)}
+              onPress={onClose}
               transition
             >
               <Icon className="size-sm text-foreground" name="X" />

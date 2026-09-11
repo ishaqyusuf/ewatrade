@@ -22,6 +22,13 @@ const unavailable = (title: string): ControllerDefinition => ({
 })
 
 export const SERVICE_COMMERCE_CONTROLLERS = {
+  availability: {
+    description:
+      "Configure when this Store accepts new Chat messages and pause or resume customer intake.",
+    implemented: true,
+    requiredIds: [],
+    title: "Chat availability",
+  },
   attachment_review: {
     description:
       "Review a safety-permitted attachment and record attributable customer-request meaning.",
@@ -49,6 +56,13 @@ export const SERVICE_COMMERCE_CONTROLLERS = {
     implemented: true,
     requiredIds: [],
     title: "Customer channel",
+  },
+  conversation_mode: {
+    description:
+      "Choose EwaTrade Chat, WhatsApp, or Both while keeping customer-visible readiness server-derived.",
+    implemented: true,
+    requiredIds: [],
+    title: "Customer conversation mode",
   },
   entry_point: {
     description:

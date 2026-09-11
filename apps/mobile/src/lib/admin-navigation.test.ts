@@ -85,6 +85,7 @@ describe("admin mobile navigation", () => {
       "team",
       "customers",
       "service-work",
+      "order-reminders",
       "website-domain",
       "plan-billing",
       "sync-offline",
@@ -96,6 +97,12 @@ describe("admin mobile navigation", () => {
     expect(ownerItems.find((item) => item.id === "inventory")?.disabled).toBe(
       false,
     )
+    expect(ownerSections.map((section) => section.id)).toEqual([
+      "store-tools",
+      "storefront-plan",
+      "offline",
+      "account-settings",
+    ])
 
     const managerItems = buildAdminMoreSections({
       availability,

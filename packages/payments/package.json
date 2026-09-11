@@ -11,6 +11,9 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@ewatrade/utils": "workspace:*"
+  },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",
     "@types/bun": "latest",

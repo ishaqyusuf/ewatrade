@@ -180,6 +180,25 @@ describe("Store Conversation repositories", () => {
     expect(JSON.stringify(projection)).not.toContain("Ada")
   })
 
+  test("projects a privacy tombstone without leaking the retained presentation body", () => {
+    const projection = projectStoreConversationMessage({
+      authorKind: StoreConversationMessageAuthorKind.CUSTOMER,
+      body: "private presentation text",
+      channel: StoreConversationMessageChannel.WEB,
+      id: "message_private_1",
+      kind: StoreConversationMessageKind.CUSTOMER_TEXT,
+      occurredAt: new Date("2026-08-12T10:00:00.000Z"),
+      presentationRedactedAt: new Date("2026-08-23T10:00:00.000Z"),
+      sequence: 3,
+    })
+    expect(projection.text).toBe(
+      "Message removed following a customer privacy request.",
+    )
+    expect(JSON.stringify(projection)).not.toContain(
+      "private presentation text",
+    )
+  })
+
   test("stores only a guest credential digest and resumes one Store conversation", async () => {
     const writes: Array<{ name: string; value: Record<string, unknown> }> = []
     const credentialRows = new Map<string, Record<string, unknown>>()

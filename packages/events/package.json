@@ -1,0 +1,30 @@
+{
+  "name": "@ewatrade/events",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./client": "./src/client.tsx",
+    "./route": "./src/route.ts",
+    "./policy": "./src/policy.ts",
+    "./native": "./src/native.ts"
+  },
+  "scripts": {
+    "test": "bun test src",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ishaqyusuf/logly-core": "^0.2.0",
+    "@ishaqyusuf/logly-next": "^0.2.0"
+  },
+  "devDependencies": {
+    "@ewatrade/tsconfig": "workspace:*",
+    "@types/bun": "^1.3.14",
+    "@types/node": "^25.1.0",
+    "@types/react": "^19.2.10",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "react": ">=19"
+  }
+}

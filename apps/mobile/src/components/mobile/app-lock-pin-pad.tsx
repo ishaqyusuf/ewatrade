@@ -2,10 +2,8 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
-import { APP_LOCK_QUIET_SEAL_LAYOUT } from "@/lib/app-lock-quiet-seal-layout"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { cn } from "@/lib/utils"
-import { StyleSheet, View } from "react-native"
+import { View } from "@/components/ui/view"
 
 const PIN_KEYPAD_ROWS = [
   ["1", "2", "3"],
@@ -38,12 +36,12 @@ export function AppLockPinPad({
 
   if (variant === "quiet-seal") {
     return (
-      <View style={quietSealStyles.container}>
+      <View className="w-full items-center gap-[25px]">
         <QuietSealPinCodeCells codeLength={codeLength} value={value} />
 
-        <View style={quietSealStyles.keypad}>
+        <View className="w-full max-w-[254px] gap-2">
           {PIN_KEYPAD_ROWS.map((row) => (
-            <View style={quietSealStyles.row} key={row.join("-")}>
+            <View className="flex-row justify-between" key={row.join("-")}>
               {row.map((digit) => (
                 <QuietSealPinKey
                   disabled={disabled}
@@ -56,7 +54,7 @@ export function AppLockPinPad({
             </View>
           ))}
 
-          <View style={quietSealStyles.row}>
+          <View className="flex-row justify-between">
             {showBiometric && onBiometricPress ? (
               <QuietSealIconKey
                 accessibilityLabel="Use fingerprint"
@@ -66,7 +64,11 @@ export function AppLockPinPad({
                 onPress={onBiometricPress}
               />
             ) : (
-              <View style={quietSealStyles.blankKey} />
+              <View
+                className={
+                  largeTextLayout ? "h-[68px] w-[62px]" : "h-[52px] w-[62px]"
+                }
+              />
             )}
 
             <QuietSealPinKey
@@ -145,10 +147,8 @@ function QuietSealPinCodeCells({
   codeLength: number
   value: string
 }) {
-  const marketDay = useMarketDayPalette()
-
   return (
-    <View style={quietSealStyles.cells}>
+    <View className="w-full max-w-[218px] flex-row items-center justify-center gap-2.5">
       {Array.from({ length: codeLength }, (_, index) => {
         const isFilled = index < value.length
         const isActive = index === value.length && value.length < codeLength
@@ -158,23 +158,14 @@ function QuietSealPinCodeCells({
             accessibilityLabel={`PIN digit ${index + 1}${isFilled ? ", filled" : ", empty"}`}
             accessible
             key={`app-lock-quiet-seal-pin-${index + 1}`}
-            style={[
-              quietSealStyles.cell,
-              {
-                backgroundColor: isFilled
-                  ? marketDay.marigold
-                  : marketDay.canvas,
-                borderColor: isActive ? marketDay.paprika : marketDay.line,
-              },
-            ]}
+            className={cn(
+              "size-7 items-center justify-center rounded-full border-2",
+              isFilled ? "bg-market-marigold" : "bg-market-canvas",
+              isActive ? "border-market-paprika" : "border-market-line",
+            )}
           >
             {isFilled ? (
-              <View
-                style={[
-                  quietSealStyles.cellCore,
-                  { backgroundColor: marketDay.palm },
-                ]}
-              />
+              <View className="size-2 rounded-full bg-market-palm" />
             ) : null}
           </View>
         )
@@ -194,8 +185,6 @@ function QuietSealPinKey({
   largeTextLayout: boolean
   onPress: () => void
 }) {
-  const marketDay = useMarketDayPalette()
-
   return (
     <Pressable
       accessibilityLabel={`Enter digit ${label}`}
@@ -204,19 +193,15 @@ function QuietSealPinKey({
       disabled={disabled}
       haptic
       onPress={onPress}
-      style={({ pressed }) => [
-        quietSealStyles.key,
-        largeTextLayout ? quietSealStyles.keyLargeText : null,
-        {
-          backgroundColor: pressed ? marketDay.softBand : marketDay.canvas,
-          borderBottomColor: marketDay.line,
-          opacity: disabled ? 0.4 : 1,
-        },
-      ]}
+      className={cn(
+        "w-[62px] items-center justify-center border-b-2 border-market-line bg-market-canvas active:bg-market-soft-band",
+        largeTextLayout ? "h-[68px]" : "h-[52px]",
+        disabled && "opacity-40",
+      )}
     >
       <Text
         maxFontSizeMultiplier={2}
-        style={[quietSealStyles.keyText, { color: marketDay.ink }]}
+        className="text-center text-[22px] font-extrabold [-rn-line-height:28] text-market-ink"
       >
         {label}
       </Text>
@@ -239,8 +224,8 @@ function QuietSealIconKey({
   onPress: () => void
   tone?: "action" | "default"
 }) {
-  const marketDay = useMarketDayPalette()
-  const color = tone === "action" ? marketDay.paprika : marketDay.ink
+  const toneClassName =
+    tone === "action" ? "text-market-paprika" : "text-market-ink"
 
   return (
     <Pressable
@@ -250,26 +235,25 @@ function QuietSealIconKey({
       disabled={disabled}
       haptic
       onPress={onPress}
-      style={({ pressed }) => [
-        quietSealStyles.key,
-        largeTextLayout ? quietSealStyles.keyLargeText : null,
-        {
-          backgroundColor: pressed ? marketDay.softBand : marketDay.canvas,
-          borderBottomColor:
-            tone === "action" ? marketDay.paprika : marketDay.line,
-          opacity: disabled ? 0.4 : 1,
-        },
-      ]}
+      className={cn(
+        "w-[62px] items-center justify-center border-b-2 bg-market-canvas active:bg-market-soft-band",
+        largeTextLayout ? "h-[68px]" : "h-[52px]",
+        tone === "action" ? "border-market-paprika" : "border-market-line",
+        disabled && "opacity-40",
+      )}
     >
       {icon === "Delete" ? (
         <Text
           maxFontSizeMultiplier={2}
-          style={[quietSealStyles.backspaceGlyph, { color }]}
+          className={cn(
+            "text-center text-[23px] font-extrabold [-rn-line-height:28]",
+            toneClassName,
+          )}
         >
           ⌫
         </Text>
       ) : (
-        <Icon color={color} name={icon} size={21} />
+        <Icon className={cn("size-[21px]", toneClassName)} name={icon} />
       )}
     </Pressable>
   )
@@ -299,7 +283,7 @@ function PinCodeCells({
             key={`app-lock-pin-cell-${index + 1}`}
           >
             {isFilled ? (
-              <Text className="text-[20px] font-extrabold leading-6 text-foreground">
+              <Text className="text-[20px] font-extrabold [-rn-line-height:24] text-foreground">
                 *
               </Text>
             ) : null}
@@ -333,7 +317,7 @@ function PinKey({
       onPress={onPress}
       transition
     >
-      <Text className="text-[20px] font-medium leading-6 text-foreground">
+      <Text className="text-[20px] font-medium [-rn-line-height:24] text-foreground">
         {label}
       </Text>
     </Pressable>
@@ -369,67 +353,3 @@ function PinIconKey({
     </Pressable>
   )
 }
-
-const quietSealStyles = StyleSheet.create({
-  backspaceGlyph: {
-    fontSize: 23,
-    fontWeight: "800",
-    lineHeight: 28,
-    textAlign: "center",
-  },
-  blankKey: {
-    height: APP_LOCK_QUIET_SEAL_LAYOUT.keyHeight,
-    width: APP_LOCK_QUIET_SEAL_LAYOUT.keyWidth,
-  },
-  cell: {
-    alignItems: "center",
-    borderRadius: 999,
-    borderWidth: 2,
-    height: APP_LOCK_QUIET_SEAL_LAYOUT.pinCellSize,
-    justifyContent: "center",
-    width: APP_LOCK_QUIET_SEAL_LAYOUT.pinCellSize,
-  },
-  cellCore: {
-    borderRadius: 999,
-    height: 8,
-    width: 8,
-  },
-  cells: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: APP_LOCK_QUIET_SEAL_LAYOUT.pinCellGap,
-    justifyContent: "center",
-    maxWidth: APP_LOCK_QUIET_SEAL_LAYOUT.pinRailWidth,
-    width: "100%",
-  },
-  container: {
-    alignItems: "center",
-    gap: 25,
-    width: "100%",
-  },
-  key: {
-    alignItems: "center",
-    borderBottomWidth: 2,
-    height: APP_LOCK_QUIET_SEAL_LAYOUT.keyHeight,
-    justifyContent: "center",
-    width: APP_LOCK_QUIET_SEAL_LAYOUT.keyWidth,
-  },
-  keyLargeText: {
-    height: APP_LOCK_QUIET_SEAL_LAYOUT.largeTextKeyHeight,
-  },
-  keyText: {
-    fontSize: 22,
-    fontWeight: "800",
-    lineHeight: 28,
-    textAlign: "center",
-  },
-  keypad: {
-    gap: APP_LOCK_QUIET_SEAL_LAYOUT.keyRowGap,
-    maxWidth: APP_LOCK_QUIET_SEAL_LAYOUT.keypadWidth,
-    width: "100%",
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-})

@@ -21,7 +21,7 @@ import {
   getCommercialOrder,
 } from "./commercial-orders"
 
-const databaseUrl = process.env.DATABASE_URL
+const databaseUrl = process.env.EWATRADE_DATABASE_URL
 const describeWithDatabase =
   databaseUrl && process.env.RUN_DATABASE_INTEGRATION_TESTS === "1"
     ? describe
@@ -29,7 +29,7 @@ const describeWithDatabase =
 
 function getDatabaseUrl() {
   if (!databaseUrl) {
-    throw new Error("DATABASE_URL is required for database integration tests.")
+    throw new Error("EWATRADE_DATABASE_URL is required for database integration tests.")
   }
 
   return databaseUrl

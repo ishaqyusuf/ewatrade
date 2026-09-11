@@ -11,10 +11,12 @@ describe("prescription transcription job", () => {
       { transcriptionId: "transcription-1" },
       1,
       {
+        assertProviderAllowed: async () => undefined,
         claim: async () => ({
           mediaRevision: 2,
           objectKeys: ["private/page-1"],
           requestId: "request-1",
+          tenantId: "tenant-1",
           transcriptionId: "transcription-1",
         }),
         complete: async (input) => {
@@ -40,10 +42,12 @@ describe("prescription transcription job", () => {
         { transcriptionId: "transcription-1" },
         1,
         {
+          assertProviderAllowed: async () => undefined,
           claim: async () => ({
             mediaRevision: 1,
             objectKeys: ["private/page-1"],
             requestId: "request-1",
+            tenantId: "tenant-1",
             transcriptionId: "transcription-1",
           }),
           complete: async () => undefined,

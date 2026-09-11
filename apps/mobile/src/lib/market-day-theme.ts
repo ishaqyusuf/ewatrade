@@ -1,6 +1,6 @@
 import { useColorScheme } from "@/hooks/use-color"
 
-const MARKET_DAY_PALETTES = {
+export const MARKET_DAY_PALETTES = {
   dark: {
     accentInk: "#FFCA56",
     canvas: "#091C19",

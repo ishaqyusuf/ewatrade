@@ -78,6 +78,17 @@ function caller(input?: { attendant?: boolean; stores?: string[] }) {
       create: async () => ({ id: "receipt_1" }),
       findFirst: async () => null,
     },
+    storeConversationStaffWatermark: {
+      findMany: async () => [],
+      findUnique: async () => null,
+      upsert: async (args: {
+        create: { readThroughSequence: number }
+      }) => ({ readThroughSequence: args.create.readThroughSequence }),
+    },
+    storeConversationMessage: {
+      count: async () => 1,
+      findMany: async () => [],
+    },
   }
   return {
     calls,
@@ -144,6 +155,7 @@ describe("Service Commerce conversations router", () => {
           conversationId: "conversation_1",
           requests: [
             {
+              id: "inquiry_1",
               kind: "commerce_inquiry",
               label: "Product request",
               lifecycle: "active",
@@ -165,6 +177,44 @@ describe("Service Commerce conversations router", () => {
         lastMessageSequence: { gt: 0 },
         requestLinks: { some: {} },
       },
+    })
+  })
+
+  test("derives staff read actor and Store scope from the protected context", async () => {
+    const { calls, client } = caller()
+    const result = await client.acknowledgeStoreConversationStaffRead({
+      clientOperationId: "staff-read-acknowledge-0001",
+      conversationId: "conversation_1",
+      readThroughSequence: 1,
+      storeId: "store_1",
+    })
+
+    expect(result).toEqual({ readThroughSequence: 1, replayed: false })
+    expect(
+      calls.find((call) => call.name === "membership.findFirst")?.args,
+    ).toMatchObject({
+      where: { tenantId: "tenant_1", userId: "attendant_user_1" },
+    })
+  })
+
+  test("derives staff cursor scope from the protected context", async () => {
+    const { calls, client } = caller()
+    const result = await client.storeConversationMessagesAfter({
+      afterSequence: 1,
+      conversationId: "conversation_1",
+      storeId: "store_1",
+    })
+
+    expect(result).toEqual({
+      actionMessageUpdates: [],
+      lastMessageSequence: 1,
+      messages: [],
+      nextCursor: null,
+    })
+    expect(
+      calls.find((call) => call.name === "membership.findFirst")?.args,
+    ).toMatchObject({
+      where: { tenantId: "tenant_1", userId: "attendant_user_1" },
     })
   })
 })

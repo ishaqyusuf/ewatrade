@@ -691,7 +691,10 @@ export async function acceptCommerceInquiryQuote(
   input: { acceptanceToken: string; clientAcceptanceId: string },
 ) {
   return db.$transaction(async (tx) => {
-    const context = await getCommerceQuoteAcceptanceContext(tx, input)
+    const context = await getCommerceQuoteAcceptanceContext(tx, {
+      ...input,
+      allowedCustomerActions: ["view_quote"],
+    })
     const { payable, version } = context
     if (version.quote.sourceType !== CommerceQuoteSourceType.COMMERCE_INQUIRY) {
       throw new CommerceQuoteError(

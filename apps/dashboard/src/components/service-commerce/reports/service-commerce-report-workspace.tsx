@@ -54,6 +54,12 @@ function humanize(value: string) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
+function numericReportValues(value: unknown): number[] {
+  if (typeof value === "number") return [value]
+  if (!value || typeof value !== "object") return []
+  return Object.values(value).flatMap(numericReportValues)
+}
+
 function hasReportActivity(report: ServiceCommerceReportOutput) {
   return [
     ...Object.values(report.lifecycle).filter(
@@ -64,6 +70,7 @@ function hasReportActivity(report: ServiceCommerceReportOutput) {
     ...Object.values(report.reliability),
     ...report.observability.map((entry) => entry.count),
     ...report.costs.flatMap((cost) => [cost.knownCount, cost.unknownCount]),
+    ...numericReportValues(report.storeConversations),
   ].some((value) => value > 0)
 }
 
@@ -111,7 +118,7 @@ function ReportSection({
 function CountList({
   entries,
 }: {
-  entries: Array<{ label: string; value: number }>
+  entries: Array<{ label: string; value: number | string }>
 }) {
   return (
     <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -458,8 +465,15 @@ function ReportContent({
   onOpenDetail: (detail: ServiceCommerceReportDetail) => void
   report: ServiceCommerceReportOutput
 }) {
-  const { catalog, costs, lifecycle, media, observability, reliability } =
-    report
+  const {
+    catalog,
+    costs,
+    lifecycle,
+    media,
+    observability,
+    reliability,
+    storeConversations,
+  } = report
 
   return (
     <div className="grid gap-6">
@@ -515,6 +529,193 @@ function ReportContent({
           />
         </div>
       </ReportSection>
+
+      <section className="rounded-xl border border-border bg-card p-5">
+        <h2 className="font-semibold">Store Conversation service quality</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Content-free operational counts for the selected Store and occurrence
+          window. Customer messages, contacts, credentials and provider
+          identifiers are never included.
+        </p>
+        <div className="mt-4 grid gap-5">
+          <div>
+            <h3 className="mb-2 text-sm font-medium">Lifecycle and team</h3>
+            <CountList
+              entries={[
+                {
+                  label: "Conversations started",
+                  value: storeConversations.lifecycle.conversationsStarted,
+                },
+                {
+                  label: "Customer messages",
+                  value: storeConversations.lifecycle.customerMessages,
+                },
+                {
+                  label: "Store replies",
+                  value: storeConversations.lifecycle.storeReplies,
+                },
+                {
+                  label: "First response average",
+                  value:
+                    storeConversations.lifecycle.firstResponse
+                      .averageSeconds === null
+                      ? "Unknown"
+                      : `${Math.round(storeConversations.lifecycle.firstResponse.averageSeconds)}s`,
+                },
+                { label: "Claims", value: storeConversations.team.claimed },
+                {
+                  label: "Unclaimed now",
+                  value: storeConversations.team.unclaimedCurrent,
+                },
+                {
+                  label: "Overdue now",
+                  value: storeConversations.team.overdueCurrent,
+                },
+                {
+                  label: "Escalations opened",
+                  value: storeConversations.team.escalationsOpened,
+                },
+                {
+                  label: "Escalations resolved",
+                  value: storeConversations.team.escalationsResolved,
+                },
+              ]}
+            />
+          </div>
+          <div>
+            <h3 className="mb-2 text-sm font-medium">
+              Availability and channels
+            </h3>
+            <CountList
+              entries={[
+                {
+                  label: "Paused",
+                  value: storeConversations.availability.paused,
+                },
+                {
+                  label: "Resumed",
+                  value: storeConversations.availability.resumed,
+                },
+                {
+                  label: "Schedule updates",
+                  value: storeConversations.availability.scheduleUpdates,
+                },
+                {
+                  label: "Coverage blocks",
+                  value:
+                    storeConversations.availability.coverageBlockObservations,
+                },
+                {
+                  label: "Policy blocks",
+                  value:
+                    storeConversations.availability.policyBlockObservations,
+                },
+                {
+                  label: "Provider blocks",
+                  value:
+                    storeConversations.availability.providerBlockObservations,
+                },
+                {
+                  label: "Web messages",
+                  value: storeConversations.channels.webMessages,
+                },
+                {
+                  label: "Mobile messages",
+                  value: storeConversations.channels.mobileMessages,
+                },
+                {
+                  label: "WhatsApp messages",
+                  value: storeConversations.channels.whatsAppMessages,
+                },
+                {
+                  label: "Bridge initiated / confirmed",
+                  value: `${storeConversations.channels.bridgeInitiated} / ${storeConversations.channels.bridgeConfirmed}`,
+                },
+              ]}
+            />
+          </div>
+          <div>
+            <h3 className="mb-2 text-sm font-medium">
+              Notifications and provider delivery
+            </h3>
+            <CountList
+              entries={[
+                {
+                  label: "Notifications scheduled",
+                  value: storeConversations.notifications.scheduled,
+                },
+                {
+                  label: "Notifications delivered",
+                  value: storeConversations.notifications.delivered,
+                },
+                {
+                  label: "Coalesced / cancelled by read",
+                  value: `${storeConversations.notifications.coalesced} / ${storeConversations.notifications.cancelledByRead}`,
+                },
+                {
+                  label: "Suppressed / unavailable",
+                  value: `${storeConversations.notifications.suppressed} / ${storeConversations.notifications.unavailable}`,
+                },
+                {
+                  label: "Provider attempts",
+                  value: storeConversations.providerReliability.attempts,
+                },
+                {
+                  label: "Provider failures",
+                  value: storeConversations.providerReliability.failed,
+                },
+                {
+                  label: "Provider outcome unknown",
+                  value: storeConversations.providerReliability.outcomeUnknown,
+                },
+                {
+                  label: "Cost observations known / unknown",
+                  value: `${storeConversations.costVisibility.knownObservations} / ${storeConversations.costVisibility.unknownObservations}`,
+                },
+              ]}
+            />
+          </div>
+          <div>
+            <h3 className="mb-2 text-sm font-medium">
+              Request and current outcome snapshots
+            </h3>
+            <CountList
+              entries={[
+                {
+                  label: "Product requests",
+                  value: storeConversations.lifecycle.requestKinds.product,
+                },
+                {
+                  label: "Service requests",
+                  value: storeConversations.lifecycle.requestKinds.service,
+                },
+                {
+                  label: "Prescription requests",
+                  value: storeConversations.lifecycle.requestKinds.prescription,
+                },
+                {
+                  label: "Active now",
+                  value: storeConversations.lifecycle.currentSnapshot.active,
+                },
+                {
+                  label: "Archived now",
+                  value: storeConversations.lifecycle.currentSnapshot.archived,
+                },
+                {
+                  label: "Restricted now",
+                  value:
+                    storeConversations.lifecycle.currentSnapshot.restricted,
+                },
+              ]}
+            />
+            <p className="mt-3 text-xs text-muted-foreground">
+              Scheduled closure and arbitrary WhatsApp history remain unknown
+              because those historical observations are not persisted. They are
+              not reported as zero.
+            </p>
+          </div>
+        </div>
+      </section>
 
       <ReportSection
         detail="catalog"

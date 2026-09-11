@@ -9,7 +9,7 @@ import { APP_LOCK_CODE_LENGTH } from "@/lib/app-lock-store"
 import { shouldShowInternalDesignSystemEntry } from "@/lib/app-variant"
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router"
 import { useMemo, useState } from "react"
-import { StyleSheet, View } from "react-native"
+import { View } from "@/components/ui/view"
 
 type PreviewState = "confirm" | "create" | "unlock"
 
@@ -36,14 +36,14 @@ export default function AppLockPreviewRoute() {
 
   return (
     <AppLockQuietSealScreen
-      contentStyle={styles.content}
+      contentClassName="justify-between"
       eyebrow={presentation.eyebrow}
       onClose={previewState === "unlock" ? undefined : router.back}
       subtitle={presentation.subtitle}
       testID={`app-lock-quiet-seal-${previewState}-preview`}
       title={presentation.title}
     >
-      <View style={styles.flow}>
+      <View className="w-full items-center gap-[22px]">
         {previewState === "unlock" ? null : <AppLockQuietSealLengthChoice />}
         <AppLockPinPad
           codeLength={APP_LOCK_CODE_LENGTH}
@@ -68,14 +68,3 @@ export default function AppLockPreviewRoute() {
     </AppLockQuietSealScreen>
   )
 }
-
-const styles = StyleSheet.create({
-  content: {
-    justifyContent: "space-between",
-  },
-  flow: {
-    alignItems: "center",
-    gap: 22,
-    width: "100%",
-  },
-})

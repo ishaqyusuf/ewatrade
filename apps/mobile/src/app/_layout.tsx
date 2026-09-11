@@ -1,3 +1,4 @@
+import { AnalyticsRuntime } from "@/runtime/analytics-runtime"
 import FontAwesome from "@expo/vector-icons/FontAwesome"
 import { ThemeProvider } from "@react-navigation/native"
 import * as Sentry from "@sentry/react-native"
@@ -18,8 +19,11 @@ import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { AppAutoUpdateModal } from "@/components/app-auto-update-modal"
 import { FloatingThemeToggle } from "@/components/mobile"
 import { AppLockGate } from "@/components/mobile/app-lock-gate"
+import { QaAuthorizationSheet } from "@/components/mobile/qa-authorization-sheet"
+import { StartupSplashGate } from "@/components/mobile/startup-splash-gate"
 import { ToastProviderWithViewport } from "@/components/ui/toast"
 import { applyThemeOverride, useColorScheme } from "@/hooks/use-color"
+import { QaAcceleratorProvider } from "@/hooks/use-qa-accelerator"
 import { canAccessAdminTabs } from "@/lib/admin-navigation"
 import { isCustomerShellPath } from "@/lib/app-lock-route"
 import { shouldShowFloatingThemeToggle } from "@/lib/app-variant"
@@ -27,6 +31,7 @@ import { isInvitedStaffProfile, isSalesRepRole } from "@/lib/mobile-roles"
 import { nativewindThemeVars } from "@/lib/nativewind-theme-vars"
 import { NAV_THEME } from "@/lib/theme"
 import { getThemeOverride } from "@/lib/theme-preference"
+import { hydrateMobileDesign } from "@/store/mobile-design-store"
 import { initMobileObservability } from "@/observability/sentry"
 import {
   pendingOfflineCommands,
@@ -73,9 +78,12 @@ function RootLayout() {
 
   useEffect(() => {
     let mounted = true
-    void getThemeOverride()
-      .then(applyThemeOverride)
-      .catch(() => applyThemeOverride("system"))
+    void Promise.all([
+      getThemeOverride()
+        .then(applyThemeOverride)
+        .catch(() => applyThemeOverride("system")),
+      hydrateMobileDesign(),
+    ])
       .finally(() => {
         if (mounted) setThemeReady(true)
       })
@@ -83,12 +91,6 @@ function RootLayout() {
       mounted = false
     }
   }, [])
-
-  useEffect(() => {
-    if (loaded && themeReady) {
-      SplashScreen.hideAsync()
-    }
-  }, [loaded, themeReady])
 
   if (!loaded || !themeReady) {
     return null
@@ -110,161 +112,156 @@ const InitialLayout = () => {
 
   return (
     <>
-      <TRPCReactProvider>
-        <OfflinePolicyReconciler />
-        <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+      <OfflinePolicyReconciler />
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
 
-        <Stack
-          screenOptions={{
-            headerShadowVisible: false,
-            headerStyle: {
-              backgroundColor: navigationTheme.colors.background,
-            },
-            headerTintColor: navigationTheme.colors.text,
-            headerTitleStyle: {
-              color: navigationTheme.colors.text,
-            },
-          }}
+      <Stack
+        screenOptions={{
+          headerShadowVisible: false,
+          headerStyle: {
+            backgroundColor: navigationTheme.colors.background,
+          },
+          headerTintColor: navigationTheme.colors.text,
+          headerTitleStyle: {
+            color: navigationTheme.colors.text,
+          },
+        }}
+      >
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="(customer)" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="sign-up" options={{ headerShown: false }} />
+        <Stack.Screen name="verify-email" options={{ headerShown: false }} />
+        <Stack.Screen name="design-system" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="design-system-pattern"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="staff-onboarding"
+          options={{ headerShown: false }}
+        />
+        <Stack.Protected
+          guard={isAuthenticated && !isInvitedStaff && canAccessAdmin}
         >
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="(customer)" options={{ headerShown: false }} />
-          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-          <Stack.Screen name="login" options={{ headerShown: false }} />
-          <Stack.Screen name="sign-up" options={{ headerShown: false }} />
-          <Stack.Screen name="verify-email" options={{ headerShown: false }} />
+          <Stack.Screen name="(admin-tabs)" options={{ headerShown: false }} />
           <Stack.Screen
-            name="qa-session/[payload]"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen name="design-system" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="design-system-pattern"
+            name="catalog-item/[catalogItemId]"
             options={{ headerShown: false }}
           />
           <Stack.Screen
-            name="staff-onboarding"
+            name="business-switch-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="new-business-onboarding-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="catalog-items-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="first-product-setup-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="reports-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="payments-received-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="stock-intake-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="staff-invite-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="unit-conversion-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+        </Stack.Protected>
+        <Stack.Protected guard={isAuthenticated}>
+          <Stack.Screen name="no-access" options={{ headerShown: false }} />
+        </Stack.Protected>
+        <Stack.Protected
+          guard={isAuthenticated && !isInvitedStaff && canManageTenant}
+        >
+          <Stack.Screen
+            name="subscription-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="domain-management-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="order-reminder-settings-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+        </Stack.Protected>
+        <Stack.Protected
+          guard={isAuthenticated && !isInvitedStaff && isSalesRep}
+        >
+          <Stack.Screen
+            name="sales-rep-home"
             options={{ headerShown: false }}
           />
-          <Stack.Protected
-            guard={isAuthenticated && !isInvitedStaff && canAccessAdmin}
-          >
-            <Stack.Screen
-              name="(admin-tabs)"
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="catalog-item/[catalogItemId]"
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="business-switch-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-            <Stack.Screen
-              name="new-business-onboarding-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-            <Stack.Screen
-              name="catalog-items-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-            <Stack.Screen
-              name="first-product-setup-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-            <Stack.Screen
-              name="reports-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-            <Stack.Screen
-              name="payments-received-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-            <Stack.Screen
-              name="stock-intake-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-            <Stack.Screen
-              name="staff-invite-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-            <Stack.Screen
-              name="unit-conversion-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-          </Stack.Protected>
-          <Stack.Protected
-            guard={isAuthenticated && !isInvitedStaff && canManageTenant}
-          >
-            <Stack.Screen
-              name="subscription-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-            <Stack.Screen
-              name="domain-management-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-            <Stack.Screen
-              name="order-reminder-settings-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-          </Stack.Protected>
-          <Stack.Protected
-            guard={isAuthenticated && !isInvitedStaff && isSalesRep}
-          >
-            <Stack.Screen
-              name="sales-rep-home"
-              options={{ headerShown: false }}
-            />
-          </Stack.Protected>
-          <Stack.Protected guard={isAuthenticated && !isInvitedStaff}>
-            <Stack.Screen
-              name="app-lock-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-            <Stack.Screen name="updates" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="create-sale-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-            <Stack.Screen
-              name="global-search"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-            <Stack.Screen
-              name="operation-success"
-              options={{
-                fullScreenGestureEnabled: true,
-                gestureEnabled: true,
-                headerShown: false,
-              }}
-            />
-            <Stack.Screen
-              name="service-jobs-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-            <Stack.Screen
-              name="customer-book-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-            <Stack.Screen
-              name="order/[orderId]"
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="closeout-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-            <Stack.Screen
-              name="sync-status-modal"
-              options={{ headerShown: false, presentation: "modal" }}
-            />
-            <Stack.Screen name="dashboard" options={{ headerShown: false }} />
-          </Stack.Protected>
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <Toast />
-      </TRPCReactProvider>
+        </Stack.Protected>
+        <Stack.Protected guard={isAuthenticated && !isInvitedStaff}>
+          <Stack.Screen
+            name="app-lock-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen name="updates" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="create-sale-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="global-search"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="operation-success"
+            options={{
+              fullScreenGestureEnabled: true,
+              gestureEnabled: true,
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="service-jobs-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="customer-book-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="order/[orderId]"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="closeout-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="sync-status-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen name="dashboard" options={{ headerShown: false }} />
+        </Stack.Protected>
+        <Stack.Screen name="+not-found" />
+      </Stack>
+      <QaAuthorizationSheet />
+      <Toast />
     </>
   )
 }
@@ -408,6 +405,8 @@ function OfflinePolicyReconciler() {
 }
 function RootLayoutNav() {
   const { colorScheme } = useColorScheme()
+  const [hasPresentedStartupSplash, setHasPresentedStartupSplash] =
+    useState(false)
   const auth = useCreateAuthContext()
   const navigationTheme =
     colorScheme === "dark" ? NAV_THEME.dark : NAV_THEME.light
@@ -423,19 +422,34 @@ function RootLayoutNav() {
           <View className="flex-1 bg-background" testID="ewatrade-react-root">
             <ThemeProvider value={navigationTheme}>
               <AuthProvider value={auth}>
-                <AppLockProvider>
-                  <ToastProviderWithViewport>
-                    <BottomSheetModalProvider>
-                      <FlashMessage position="top" />
-                      <InitialLayout />
-                      <AppLockGate />
-                      <AppAutoUpdateModal />
-                      {shouldShowFloatingThemeToggle() ? (
-                        <FloatingThemeToggle />
-                      ) : null}
-                    </BottomSheetModalProvider>
-                  </ToastProviderWithViewport>
-                </AppLockProvider>
+                <AnalyticsRuntime />
+                <TRPCReactProvider>
+                  <QaAcceleratorProvider>
+                    <AppLockProvider>
+                      <ToastProviderWithViewport>
+                        <BottomSheetModalProvider>
+                          {hasPresentedStartupSplash ? (
+                            <>
+                              <FlashMessage position="top" />
+                              <InitialLayout />
+                              <AppLockGate />
+                              <AppAutoUpdateModal />
+                              {shouldShowFloatingThemeToggle() ? (
+                                <FloatingThemeToggle />
+                              ) : null}
+                            </>
+                          ) : (
+                            <StartupSplashGate
+                              onComplete={() =>
+                                setHasPresentedStartupSplash(true)
+                              }
+                            />
+                          )}
+                        </BottomSheetModalProvider>
+                      </ToastProviderWithViewport>
+                    </AppLockProvider>
+                  </QaAcceleratorProvider>
+                </TRPCReactProvider>
               </AuthProvider>
             </ThemeProvider>
           </View>

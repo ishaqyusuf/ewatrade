@@ -96,6 +96,7 @@ export async function runServiceCommerceBookingNotificationDispatch(
       channel: claim.channel,
       intentId: claim.intentId,
       message: neutralMessage(claim.type),
+      tenantDataClassification: claim.tenantDataClassification,
       // Recipient ciphertext is decrypted only after the scoped claim succeeds.
       to: dependencies.resolveRecipient(claim.recipientCiphertext),
     })

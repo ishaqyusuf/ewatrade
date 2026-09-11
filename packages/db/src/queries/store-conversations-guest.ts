@@ -4,6 +4,7 @@ import {
   DEFAULT_STORE_CONVERSATION_RESPONSE_SLA_MINUTES,
   type StoreConversationTimelineProjection,
   projectStoreConversationCursor,
+  projectStoreConversationModeration,
   storeConversationSendTextInputSchema,
   storeConversationTimelineInputSchema,
 } from "@ewatrade/service-commerce"
@@ -23,9 +24,19 @@ import {
   StoreConversationRequestKind,
 } from "../../generated/prisma/enums"
 import { createChannelCommerceInquiryInTransaction } from "./commerce-inquiries"
+import { loadStoreConversationForAccount } from "./store-conversation-accounts"
+import { runStoreConversationActionTransaction } from "./store-conversation-action-transaction"
+import {
+  type StoreConversationActionMaterializationDependencies,
+  materializeGuestStoreConversationActionMessagesInTransaction,
+  storeConversationActionMessageInclude,
+} from "./store-conversation-actions"
+import { projectStoreConversationMessageAttachments } from "./store-conversation-attachments"
 import {
   GUEST_CREDENTIAL_LIFETIME_MS,
   StoreConversationError,
+  assertStoreConversationAvailable,
+  assertStoreConversationComposerEnabled,
   digestStoreConversationValue,
   loadStoreConversationForGuest,
   loadStoreConversationRequestSummaries,
@@ -50,6 +61,19 @@ type GuestConversationDeviceContext = {
   purpose: StoreConversationGuestCredentialPurpose
 }
 
+type CustomerConversationPrincipal =
+  | {
+      accountUserId: string
+      channel: StoreConversationMessageChannel
+      channelOrigin: "mobile" | "web"
+      kind: "account"
+    }
+  | {
+      credentialToken: string
+      device: GuestConversationDeviceContext
+      kind: "guest"
+    }
+
 const WEB_DEVICE_CONTEXT: GuestConversationDeviceContext = {
   accessOrigin: StoreConversationGuestAccessOrigin.OWNER,
   auditReason: "guest_web_bootstrap",
@@ -68,16 +92,6 @@ export async function bootstrapWebStoreConversation(
     const entry = await resolveStoreConversationEntry(tx, {
       publicToken: input.publicToken,
     })
-    if (
-      !entry.actions.includes("request_online") ||
-      entry.requestKinds.length === 0
-    ) {
-      throw new StoreConversationError(
-        "NOT_READY",
-        "This Store is not accepting web conversations right now.",
-      )
-    }
-
     let rawCredential: string | null = null
     let credential: Awaited<
       ReturnType<typeof resolveStoreConversationGuestCredential>
@@ -197,14 +211,17 @@ export async function bootstrapWebStoreConversation(
       tx,
       {
         credentialId: credential.id,
+        credentialStatus: credential.status,
         guestIdentityId: credential.guestIdentityId,
         now,
+        overlapExpiresAt: credential.overlapExpiresAt,
       },
     )
 
     return {
       conversation: {
         id: conversation.id,
+        moderation: projectStoreConversationModeration(conversation),
         state:
           conversation.moderationState ===
           StoreConversationModerationState.RESTRICTED
@@ -214,23 +231,24 @@ export async function bootstrapWebStoreConversation(
               : ("active" as const),
         storeName: entry.storeName,
       },
+      availability: entry.availability,
+      channelMode: entry.channelMode,
       credentialExpiresAt,
       credentialToken: rawCredential,
     }
   })
 }
 
-export async function sendGuestStoreConversationText(
+async function sendStoreConversationTextForCustomer(
   db: PrismaClient,
   input: {
     clientOperationId: string
     conversationId: string
-    credentialToken: string
     publicToken: string
     requestIntent?: "choose_request" | "continue_current"
     text: string
   },
-  device: GuestConversationDeviceContext = WEB_DEVICE_CONTEXT,
+  principal: CustomerConversationPrincipal,
 ) {
   const parsed = storeConversationSendTextInputSchema.parse({
     clientOperationId: input.clientOperationId,
@@ -250,27 +268,43 @@ export async function sendGuestStoreConversationText(
     const entry = await resolveStoreConversationEntry(tx, {
       publicToken: parsed.publicToken,
     })
-    if (
-      !entry.actions.includes("request_online") ||
-      entry.requestKinds.length === 0
-    ) {
+    const guestCustomer =
+      principal.kind === "guest"
+        ? await loadStoreConversationForGuest(tx, {
+            conversationId: parsed.conversationId,
+            credentialToken: principal.credentialToken,
+            installationToken: principal.device.installationToken,
+            now,
+            purpose: principal.device.purpose,
+            storeId: entry.storeId,
+            tenantId: entry.tenantId,
+          })
+        : null
+    const accountCustomer =
+      principal.kind === "account"
+        ? await loadStoreConversationForAccount(tx, {
+            accountUserId: principal.accountUserId,
+            conversationId: parsed.conversationId,
+            now,
+            storeId: entry.storeId,
+            tenantId: entry.tenantId,
+          })
+        : null
+    const conversation = (guestCustomer ?? accountCustomer)?.conversation
+    if (!conversation) {
       throw new StoreConversationError(
-        "NOT_READY",
-        "This Store is not accepting web conversations right now.",
+        "NOT_FOUND",
+        "This Store conversation is unavailable.",
       )
     }
-    const { conversation, credential } = await loadStoreConversationForGuest(
-      tx,
-      {
-        conversationId: parsed.conversationId,
-        credentialToken: input.credentialToken,
-        installationToken: device.installationToken,
-        now,
-        purpose: device.purpose,
-        storeId: entry.storeId,
-        tenantId: entry.tenantId,
-      },
-    )
+    assertStoreConversationAvailable(entry.availability)
+    assertStoreConversationComposerEnabled(entry.channelMode)
+    if (entry.requestKinds.length === 0) {
+      throw new StoreConversationError(
+        "NOT_READY",
+        "This Store is not accepting new chat messages right now.",
+      )
+    }
     await lockStoreConversation(tx, {
       conversationId: conversation.id,
       storeId: entry.storeId,
@@ -432,8 +466,7 @@ export async function sendGuestStoreConversationText(
         // Commerce Inquiry still owns the established web/staff/WhatsApp
         // origin vocabulary. Mobile is a Store Conversation transport, so its
         // public Request intake remains attributable to the web channel.
-        channelOrigin:
-          device.channelOrigin === "mobile" ? "web" : device.channelOrigin,
+        channelOrigin: "web",
         clientInquiryId: `store-conversation:${conversation.id}:${parsed.clientOperationId}`,
         customerName: "Guest customer",
         demand: { kind: "commerce_inquiry", reason: "needs_quote" },
@@ -459,7 +492,10 @@ export async function sendGuestStoreConversationText(
       data: {
         authorKind: StoreConversationMessageAuthorKind.CUSTOMER,
         body: parsed.text,
-        channel: device.channel,
+        channel:
+          principal.kind === "guest"
+            ? principal.device.channel
+            : principal.channel,
         conversationId: conversation.id,
         kind: StoreConversationMessageKind.CUSTOMER_TEXT,
         occurredAt: now,
@@ -521,14 +557,15 @@ export async function sendGuestStoreConversationText(
           type: StoreConversationAuditEventType.CUSTOMER_MESSAGE_APPENDED,
         },
       }),
-      ...(device.purpose ===
-      StoreConversationGuestCredentialPurpose.MOBILE_DEVICE
+      ...(principal.kind === "guest" &&
+      principal.device.purpose ===
+        StoreConversationGuestCredentialPurpose.MOBILE_DEVICE
         ? [
             tx.storeConversationGuestAccess.updateMany({
               data: { lastOpenedAt: now },
               where: {
                 conversationId: conversation.id,
-                guestIdentityId: credential.guestIdentityId,
+                guestIdentityId: guestCustomer?.credential.guestIdentityId,
                 status: StoreConversationGuestAccessStatus.ACTIVE,
               },
             }),
@@ -559,16 +596,60 @@ export async function sendGuestStoreConversationText(
   })
 }
 
-export async function getGuestStoreConversationTimeline(
+export function sendGuestStoreConversationText(
+  db: PrismaClient,
+  input: {
+    clientOperationId: string
+    conversationId: string
+    credentialToken: string
+    publicToken: string
+    requestIntent?: "choose_request" | "continue_current"
+    text: string
+  },
+  device: GuestConversationDeviceContext = WEB_DEVICE_CONTEXT,
+) {
+  const { credentialToken, ...messageInput } = input
+  return sendStoreConversationTextForCustomer(db, messageInput, {
+    credentialToken,
+    device,
+    kind: "guest",
+  })
+}
+
+export function sendAccountStoreConversationText(
+  db: PrismaClient,
+  input: {
+    accountUserId: string
+    channel: "mobile" | "web"
+    clientOperationId: string
+    conversationId: string
+    publicToken: string
+    requestIntent?: "choose_request" | "continue_current"
+    text: string
+  },
+) {
+  const { accountUserId, channel, ...messageInput } = input
+  return sendStoreConversationTextForCustomer(db, messageInput, {
+    accountUserId,
+    channel:
+      channel === "mobile"
+        ? StoreConversationMessageChannel.MOBILE
+        : StoreConversationMessageChannel.WEB,
+    channelOrigin: channel,
+    kind: "account",
+  })
+}
+
+async function getStoreConversationTimelineForCustomer(
   db: PrismaClient,
   input: {
     beforeSequence?: number
     conversationId: string
-    credentialToken: string
     limit?: number
     publicToken: string
   },
-  device: GuestConversationDeviceContext = WEB_DEVICE_CONTEXT,
+  principal: CustomerConversationPrincipal,
+  actionDependencies?: StoreConversationActionMaterializationDependencies,
 ): Promise<StoreConversationTimelineProjection> {
   const parsed = storeConversationTimelineInputSchema.parse({
     beforeSequence: input.beforeSequence,
@@ -576,26 +657,72 @@ export async function getGuestStoreConversationTimeline(
     limit: input.limit,
   })
   const now = new Date()
-  return db.$transaction(async (tx) => {
+  return runStoreConversationActionTransaction(db, async (tx) => {
     const entry = await resolveStoreConversationEntry(tx, {
       publicToken: input.publicToken,
     })
-    const { conversation, credential } = await loadStoreConversationForGuest(
-      tx,
-      {
-        conversationId: parsed.conversationId,
-        credentialToken: input.credentialToken,
-        installationToken: device.installationToken,
-        now,
-        purpose: device.purpose,
-        storeId: entry.storeId,
-        tenantId: entry.tenantId,
-      },
-    )
+    const guestCustomer =
+      principal.kind === "guest"
+        ? await loadStoreConversationForGuest(tx, {
+            conversationId: parsed.conversationId,
+            credentialToken: principal.credentialToken,
+            installationToken: principal.device.installationToken,
+            now,
+            purpose: principal.device.purpose,
+            storeId: entry.storeId,
+            tenantId: entry.tenantId,
+          })
+        : null
+    const accountCustomer =
+      principal.kind === "account"
+        ? await loadStoreConversationForAccount(tx, {
+            accountUserId: principal.accountUserId,
+            conversationId: parsed.conversationId,
+            now,
+            storeId: entry.storeId,
+            tenantId: entry.tenantId,
+          })
+        : null
+    const conversation = (guestCustomer ?? accountCustomer)?.conversation
+    if (!conversation) {
+      throw new StoreConversationError(
+        "NOT_FOUND",
+        "This Store conversation is unavailable.",
+      )
+    }
     const [rows, requests] = await Promise.all([
       tx.storeConversationMessage.findMany({
         include: {
+          accountInvitation: { select: { id: true, status: true } },
+          actionMessage: {
+            include: storeConversationActionMessageInclude,
+          },
+          attachments: {
+            include: {
+              prescriptionMedia: {
+                select: { mediaType: true, status: true },
+              },
+              sourceAttachment: {
+                include: {
+                  mediaAsset: {
+                    select: {
+                      kind: true,
+                      lifecycle: true,
+                      verifiedDurationMs: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
           requestLinks: { select: { kind: true, sourceId: true } },
+          whatsAppObservation: {
+            select: {
+              provenance: true,
+              status: true,
+              statusOccurredAt: true,
+            },
+          },
         },
         orderBy: { sequence: "desc" },
         take: parsed.limit + 1,
@@ -613,14 +740,15 @@ export async function getGuestStoreConversationTimeline(
         storeId: conversation.storeId,
         tenantId: conversation.tenantId,
       }),
-      ...(device.purpose ===
-      StoreConversationGuestCredentialPurpose.MOBILE_DEVICE
+      ...(principal.kind === "guest" &&
+      principal.device.purpose ===
+        StoreConversationGuestCredentialPurpose.MOBILE_DEVICE
         ? [
             tx.storeConversationGuestAccess.updateMany({
               data: { lastOpenedAt: now },
               where: {
                 conversationId: conversation.id,
-                guestIdentityId: credential.guestIdentityId,
+                guestIdentityId: guestCustomer?.credential.guestIdentityId,
                 status: StoreConversationGuestAccessStatus.ACTIVE,
               },
             }),
@@ -633,10 +761,25 @@ export async function getGuestStoreConversationTimeline(
       hasMore,
       messages: selected,
     })
+    const actionMessages =
+      await materializeGuestStoreConversationActionMessagesInTransaction(
+        tx,
+        {
+          available: entry.availability.available,
+          now,
+          rows: selected.flatMap((message) =>
+            message.actionMessage ? [message.actionMessage] : [],
+          ),
+        },
+        actionDependencies,
+      )
     return {
+      availability: entry.availability,
       availableRequestKinds: entry.requestKinds,
+      channelMode: entry.channelMode,
       conversation: {
         id: conversation.id,
+        moderation: projectStoreConversationModeration(conversation),
         state:
           conversation.moderationState ===
           StoreConversationModerationState.RESTRICTED
@@ -646,9 +789,63 @@ export async function getGuestStoreConversationTimeline(
               : "active",
         storeName: conversation.store.name,
       },
-      messages: selected.reverse().map(projectStoreConversationMessage),
+      messages: selected.reverse().map((message) =>
+        projectStoreConversationMessage({
+          ...message,
+          actionMessage: message.actionMessage
+            ? actionMessages.get(message.id)
+            : undefined,
+          attachments: projectStoreConversationMessageAttachments(message),
+        }),
+      ),
       nextCursor,
       requests,
     }
   })
+}
+
+export function getGuestStoreConversationTimeline(
+  db: PrismaClient,
+  input: {
+    beforeSequence?: number
+    conversationId: string
+    credentialToken: string
+    limit?: number
+    publicToken: string
+  },
+  device: GuestConversationDeviceContext = WEB_DEVICE_CONTEXT,
+  actionDependencies?: StoreConversationActionMaterializationDependencies,
+) {
+  const { credentialToken, ...timelineInput } = input
+  return getStoreConversationTimelineForCustomer(
+    db,
+    timelineInput,
+    { credentialToken, device, kind: "guest" },
+    actionDependencies,
+  )
+}
+
+export function getAccountStoreConversationTimeline(
+  db: PrismaClient,
+  input: {
+    accountUserId: string
+    beforeSequence?: number
+    conversationId: string
+    limit?: number
+    publicToken: string
+  },
+  actionDependencies?: StoreConversationActionMaterializationDependencies,
+) {
+  const { accountUserId, ...timelineInput } = input
+  return getStoreConversationTimelineForCustomer(
+    db,
+    timelineInput,
+    {
+      accountUserId,
+      channel: StoreConversationMessageChannel.WEB,
+      channelOrigin: "web",
+      kind: "account",
+    },
+    actionDependencies,
+  )
 }

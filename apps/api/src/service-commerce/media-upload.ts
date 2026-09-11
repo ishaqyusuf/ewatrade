@@ -81,10 +81,12 @@ export async function storeStaffServiceCommerceMediaUpload(
   dependencies: UploadDependencies = uploadDependencies(),
 ) {
   const signatureMimeType = detectServiceCommerceMediaMimeType(input.bytes)
+  const contentDigest = createHash("sha256").update(input.bytes).digest("hex")
   const recorded = await dependencies.record({
     actorUserId: input.actorUserId,
     channel: "staff",
     clientMediaId: input.clientMediaId,
+    contentDigest,
     fileName: input.fileName,
     kind: input.kind,
     mimeType: input.mimeType,
@@ -112,7 +114,7 @@ export async function storeStaffServiceCommerceMediaUpload(
   })
   await dependencies.recordStored({
     actorUserId: input.actorUserId,
-    contentDigest: createHash("sha256").update(input.bytes).digest("hex"),
+    contentDigest,
     mediaAssetId: recorded.media.id,
     objectKey: stored.storageReference,
     reason: "staff_media_upload_stored",

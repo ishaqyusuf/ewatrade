@@ -236,6 +236,7 @@ const MEDIA_ASSET_TRANSITIONS: Record<
   retryable: [
     "pending_retrieval",
     "pending_upload",
+    "safety_pending",
     "rejected",
     "retention_hold",
     "deleted",
@@ -267,9 +268,9 @@ function mediaKindMatchesMimeType(
   kind: ServiceCommerceMediaKind,
   mimeType: ServiceCommerceMediaMimeType,
 ): boolean {
-  return kind === "image"
-    ? mimeType.startsWith("image/")
-    : mimeType === "application/pdf"
+  if (kind === "image") return mimeType.startsWith("image/")
+  if (kind === "audio") return mimeType.startsWith("audio/")
+  return mimeType === "application/pdf"
 }
 
 function matches(bytes: Uint8Array, signature: number[], offset = 0) {
@@ -301,6 +302,20 @@ export function detectServiceCommerceMediaMimeType(
     if (["heif", "heim", "heis", "mif1", "msf1"].includes(brand)) {
       return "image/heif"
     }
+    if (["m4a ", "m4b ", "isom", "mp41", "mp42"].includes(brand)) {
+      return "audio/mp4"
+    }
+  }
+  if (matches(bytes, [0x1a, 0x45, 0xdf, 0xa3])) return "audio/webm"
+  if (ascii(bytes, 0, 4) === "OggS") return "audio/ogg"
+  if (ascii(bytes, 0, 4) === "RIFF" && ascii(bytes, 8, 12) === "WAVE") {
+    return "audio/wav"
+  }
+  if (
+    ascii(bytes, 0, 3) === "ID3" ||
+    (bytes[0] === 0xff && (bytes[1] ?? 0) >= 0xe0)
+  ) {
+    return "audio/mpeg"
   }
   return null
 }

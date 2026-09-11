@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@ewatrade/email": "workspace:*",
+    "@ewatrade/utils": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

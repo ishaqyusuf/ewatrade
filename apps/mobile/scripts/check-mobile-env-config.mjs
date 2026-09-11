@@ -15,6 +15,8 @@ const ROOT_EXAMPLE_KEYS = [
   "NEXT_PUBLIC_API_URL",
   "STOREFRONT_URL",
   "NEXT_PUBLIC_STOREFRONT_URL",
+  "CHAT_URL",
+  "NEXT_PUBLIC_CHAT_URL",
   "NEXT_PUBLIC_APP_URL",
   "MOBILE_APP_URL",
   "NEXT_PUBLIC_MARKETING_URL",
@@ -30,6 +32,10 @@ const ROOT_EXAMPLE_KEYS = [
   "TEST_EMAILS",
   "TEST_EMAIL",
   "EMAIL_QA_DOMAIN_ROUTES",
+  "QA_ACCELERATOR_ENABLED",
+  "QA_ACCELERATOR_SECRET",
+  "QA_ACCELERATOR_ALLOWED_ORIGINS",
+  "QA_MESSAGING_TEST_ADAPTER_ENABLED",
 ]
 const MOBILE_EXAMPLE_KEYS = [
   "APP_VARIANT",
@@ -39,6 +45,8 @@ const MOBILE_EXAMPLE_KEYS = [
   "EXPO_PUBLIC_API_PORT",
   "EXPO_PUBLIC_WEB_URL",
   "EXPO_PUBLIC_WEB_PORT",
+  "EXPO_PUBLIC_CHAT_URL",
+  "EXPO_PUBLIC_CHAT_PORT",
   "EXPO_PUBLIC_GOOGLE_CLIENT_ID",
   "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID",
   "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID",
@@ -67,6 +75,7 @@ const EXPECTED = [
       MOBILE_APP_URL: equals("http://localhost:3096"),
       PLATFORM_DOMAIN: equals("localhost:3092"),
       STOREFRONT_URL: equals("http://ewatrade-storefront.localhost"),
+      CHAT_URL: equals("https://chat.ewatrade-storefront.localhost"),
       MARKETING_INBOX_EMAILS: nonLocalEmailLike,
       NEXT_PUBLIC_API_URL: equals("http://localhost:3095"),
       NEXT_PUBLIC_APP_URL: equals("http://localhost:3092"),
@@ -75,6 +84,9 @@ const EXPECTED = [
       NEXT_PUBLIC_MARKETING_URL: equals("http://localhost:3092"),
       NEXT_PUBLIC_STOREFRONT_URL: equals(
         "http://ewatrade-storefront.localhost",
+      ),
+      NEXT_PUBLIC_CHAT_URL: equals(
+        "https://chat.ewatrade-storefront.localhost",
       ),
     },
     file: ROOT_LOCAL_ENV,
@@ -98,6 +110,7 @@ const EXPECTED = [
       MOBILE_APP_URL: equals("https://ewatrade.com/download"),
       PLATFORM_DOMAIN: equals("ewatrade.com"),
       STOREFRONT_URL: equals("https://ewatrade.com"),
+      CHAT_URL: equals("https://chat.ewatrade.com"),
       MARKETING_INBOX_EMAILS: productionEmail,
       NEXT_PUBLIC_API_URL: equals("https://ewatrade.com"),
       NEXT_PUBLIC_APP_URL: equals("https://ewatrade.com"),
@@ -106,6 +119,7 @@ const EXPECTED = [
       NEXT_PUBLIC_MARKETING_URL: equals("https://ewatrade.com"),
       NEXT_PUBLIC_SIGNUP_ENABLED: equals("true"),
       NEXT_PUBLIC_STOREFRONT_URL: equals("https://ewatrade.com"),
+      NEXT_PUBLIC_CHAT_URL: equals("https://chat.ewatrade.com"),
     },
     file: ROOT_PRODUCTION_ENV,
     label: "root production env",
@@ -121,6 +135,8 @@ const EXPECTED = [
       EXPO_PUBLIC_BASE_URL: equals("http://localhost:3092"),
       EXPO_PUBLIC_WEB_PORT: equals("3092"),
       EXPO_PUBLIC_WEB_URL: equals("http://localhost:3092"),
+      EXPO_PUBLIC_CHAT_PORT: equals("3091"),
+      EXPO_PUBLIC_CHAT_URL: equals("http://localhost:3091"),
     },
     file: MOBILE_LOCAL_ENV,
     label: "mobile local env",
@@ -132,6 +148,7 @@ const EXPECTED = [
       EXPO_PUBLIC_APP_VARIANT: equals("production"),
       EXPO_PUBLIC_BASE_URL: equals("https://ewatrade.com"),
       EXPO_PUBLIC_WEB_URL: equals("https://ewatrade.com"),
+      EXPO_PUBLIC_CHAT_URL: equals("https://chat.ewatrade.com"),
     },
     file: MOBILE_PRODUCTION_ENV,
     label: "mobile production env",
@@ -177,7 +194,7 @@ checkBannedMarkers([
 
 if (failures.length > 0) {
   console.error(
-    "Mobile env config check failed. Keep local, production, and Expo env values explicit and Ewatrade-specific.",
+    "Mobile env config check failed. Keep local, production, and Expo env values explicit and ẸwáTrade-specific.",
   )
 
   for (const failure of failures) {

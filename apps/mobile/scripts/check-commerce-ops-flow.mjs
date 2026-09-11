@@ -32,7 +32,10 @@ const contracts = [
       "orderLinked={Boolean(initialOrderId)}",
       "CommerceCustomerRow",
       "commercialOrderHref",
-      'paddingHorizontal: 8',
+      "getCustomerBookPresentation",
+      "Add first customer",
+      'variant="flat"',
+      "paddingHorizontal: 8",
       'className="px-2"',
     ],
   },
@@ -120,6 +123,29 @@ const contracts = [
   },
 ]
 
+const scopedContracts = [
+  {
+    classTokens: [
+      "min-h-11",
+      "min-w-20",
+      "items-center",
+      "justify-center",
+      "rounded-xl",
+      "px-5",
+      "active:bg-accent",
+    ],
+    endMarker: "export function CommerceMetricTile",
+    file: "components/mobile/commerce/commerce-primitives.tsx",
+    markers: [
+      "export function CommerceFilterChip",
+      "accessibilityState={{ selected: active }}",
+      "\n      transition\n",
+    ],
+    name: "CommerceFilterChip",
+    startMarker: "export function CommerceFilterChip",
+  },
+]
+
 const forbiddenProductionMarkers = [
   "DESIGN_01_ORDERS",
   "DESIGN_01_CUSTOMERS",
@@ -142,6 +168,29 @@ for (const contract of contracts) {
     if (source.includes(marker)) {
       failures.push(
         `${relative(MOBILE_DIR, filePath)} must not depend on preview marker: ${marker}`,
+      )
+    }
+  }
+}
+
+for (const contract of scopedContracts) {
+  const filePath = join(SOURCE_DIR, contract.file)
+  const source = readFileSync(filePath, "utf8")
+  const start = source.indexOf(contract.startMarker)
+  const end = source.indexOf(contract.endMarker, start + 1)
+  const scope = start === -1 || end === -1 ? "" : source.slice(start, end)
+
+  for (const marker of contract.markers) {
+    if (!scope.includes(marker)) {
+      failures.push(
+        `${relative(MOBILE_DIR, filePath)} ${contract.name} is missing marker: ${marker}`,
+      )
+    }
+  }
+  for (const classToken of contract.classTokens ?? []) {
+    if (!scope.match(new RegExp(`(?:^|[\\s\"])${classToken}(?=\\s|\")`))) {
+      failures.push(
+        `${relative(MOBILE_DIR, filePath)} ${contract.name} is missing class token: ${classToken}`,
       )
     }
   }

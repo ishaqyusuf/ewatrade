@@ -45,7 +45,9 @@ type SyncReliabilityStatProps = {
 
 type SyncReliabilityToggleProps = {
   active: boolean
+  className?: string
   description: string
+  disabled?: boolean
   label: string
   onPress: () => void
   testID?: string
@@ -156,15 +158,25 @@ export function SyncReliabilityStat({
 
 export function SyncReliabilityToggle({
   active,
+  className,
   description,
+  disabled = false,
   label,
   onPress,
   testID,
 }: SyncReliabilityToggleProps) {
   return (
     <Pressable
-      className="flex-row items-center justify-between gap-3 rounded-2xl bg-card p-4 active:bg-accent"
-      haptic
+      accessibilityLabel={label}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: active, disabled }}
+      className={cn(
+        "min-h-20 flex-row items-center justify-between gap-3 rounded-2xl bg-card p-4 active:bg-accent",
+        disabled && "opacity-60",
+        className,
+      )}
+      disabled={disabled}
+      haptic={!disabled}
       onPress={onPress}
       testID={testID}
       transition

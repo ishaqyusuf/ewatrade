@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import {
   createMobileOwnerOtp,
+  getMobileAccessProfile,
   shouldUseFixedMobileOwnerOtp,
   verifyMobileGoogleIdentity,
   verifyMobileOwnerOtp,
@@ -72,14 +73,21 @@ type MembershipRow = {
   userId: string
 }
 
+type StoreConversationAccountAccessRow = {
+  accountUserId: string
+  status: string
+}
+
 function createMockMobileAuthDb(input?: {
   accounts?: AccountRow[]
+  accountAccesses?: StoreConversationAccountAccessRow[]
   memberships?: MembershipRow[]
   stores?: StoreRow[]
   tenants?: TenantRow[]
   users?: UserRow[]
 }) {
   const accounts = [...(input?.accounts ?? [])]
+  const accountAccesses = [...(input?.accountAccesses ?? [])]
   const stores = [...(input?.stores ?? [])]
   const tenants = [...(input?.tenants ?? [])]
   const verifications: VerificationRow[] = []
@@ -158,9 +166,20 @@ function createMockMobileAuthDb(input?: {
           userId: data.userId,
         })
       },
-      findFirst: async ({ where }: { where: { userId: string } }) =>
-        memberships.find((membership) => membership.userId === where.userId) ??
-        null,
+      findFirst: async ({
+        where,
+      }: {
+        where: {
+          OR?: Array<{ status: string }>
+          status?: string
+          userId: string
+        }
+      }) =>
+        memberships.find(
+          (membership) =>
+            membership.userId === where.userId &&
+            (where.status === undefined || membership.status === where.status),
+        ) ?? null,
     },
     offlineDevice: {
       findMany: async () => [],
@@ -187,6 +206,14 @@ function createMockMobileAuthDb(input?: {
           token: data.token,
         }
       },
+    },
+    storeConversationAccountAccess: {
+      findFirst: async ({ where }: { where: { accountUserId: string } }) =>
+        accountAccesses.find(
+          (access) =>
+            access.accountUserId === where.accountUserId &&
+            access.status === "ACTIVE",
+        ) ?? null,
     },
     store: {
       count: async ({ where }: { where: { tenantId: string } }) =>
@@ -399,6 +426,7 @@ function createMockMobileAuthDb(input?: {
 
   return {
     accounts,
+    accountAccesses,
     client: db as unknown as DbClient,
     memberships,
     sessions,
@@ -430,6 +458,54 @@ describe("mobile auth queries", () => {
         NODE_ENV: "production",
       }),
     ).toBe(false)
+  })
+
+  test("resolves customer history only from active explicit account links", async () => {
+    const db = createMockMobileAuthDb({
+      accountAccesses: [
+        { accountUserId: "user_customer", status: "ACTIVE" },
+        { accountUserId: "user_revoked", status: "REVOKED" },
+      ],
+    })
+
+    await expect(
+      getMobileAccessProfile(db.client, { userId: "user_customer" }),
+    ).resolves.toMatchObject({
+      hasBusinessAccess: false,
+      hasCustomerHistory: true,
+    })
+
+    await expect(
+      getMobileAccessProfile(db.client, { userId: "user_revoked" }),
+    ).resolves.toMatchObject({
+      hasBusinessAccess: false,
+      hasCustomerHistory: false,
+    })
+  })
+
+  test("does not treat an invited Business membership as active access", async () => {
+    const db = createMockMobileAuthDb({
+      memberships: [
+        {
+          role: "OPERATOR",
+          status: "INVITED",
+          tenant: {
+            id: "tenant_invited",
+            name: "Future Market",
+            slug: "future-market",
+            stores: [],
+          },
+          userId: "user_invited",
+        },
+      ],
+    })
+
+    await expect(
+      getMobileAccessProfile(db.client, { userId: "user_invited" }),
+    ).resolves.toEqual({
+      hasBusinessAccess: false,
+      hasCustomerHistory: false,
+    })
   })
 
   test("creates another isolated owner business for an existing account", async () => {
@@ -517,7 +593,7 @@ describe("mobile auth queries", () => {
     expect(otp.code).toBe("123456")
     expect(db.verifications).toHaveLength(1)
     expect(db.verifications[0]?.identifier).toBe(
-      "mobile-owner-auth:sign_up:owner@example.com",
+      "mobile-auth:sign_up:owner@example.com",
     )
     expect(db.verifications[0]?.value).not.toContain(otp.code)
 
@@ -531,20 +607,19 @@ describe("mobile auth queries", () => {
     expect(payload.codeHash).not.toBe(otp.code)
   })
 
-  test("does not create a login OTP when no account exists for the email", async () => {
+  test("creates a common login OTP before account access is known", async () => {
     const db = createMockMobileAuthDb()
 
-    await expect(
-      createMobileOwnerOtp(db.client, {
-        email: "missing-owner@example.com",
-        mode: "login",
-      }),
-    ).rejects.toThrow("No owner account exists for this email yet.")
+    const otp = await createMobileOwnerOtp(db.client, {
+      email: "missing-owner@example.com",
+      mode: "login",
+    })
 
-    expect(db.verifications).toHaveLength(0)
+    expect(otp.email).toBe("missing-owner@example.com")
+    expect(db.verifications).toHaveLength(1)
   })
 
-  test("creates a login OTP only after the account has business access", async () => {
+  test("creates a common login OTP for a User with Business access", async () => {
     const user = {
       email: "owner@example.com",
       id: "user_owner",
@@ -582,11 +657,11 @@ describe("mobile auth queries", () => {
     expect(otp.code).toMatch(/^\d{6}$/)
     expect(db.verifications).toHaveLength(1)
     expect(db.verifications[0]?.identifier).toBe(
-      "mobile-owner-auth:login:owner@example.com",
+      "mobile-auth:login:owner@example.com",
     )
   })
 
-  test("does not create a login OTP when the account has no active business", async () => {
+  test("creates a common login OTP for an existing User without Business access", async () => {
     const db = createMockMobileAuthDb({
       users: [
         {
@@ -597,14 +672,13 @@ describe("mobile auth queries", () => {
       ],
     })
 
-    await expect(
-      createMobileOwnerOtp(db.client, {
-        email: "owner@example.com",
-        mode: "login",
-      }),
-    ).rejects.toThrow("No active business is available for this account.")
+    const otp = await createMobileOwnerOtp(db.client, {
+      email: "owner@example.com",
+      mode: "login",
+    })
 
-    expect(db.verifications).toHaveLength(0)
+    expect(otp.email).toBe("owner@example.com")
+    expect(db.verifications).toHaveLength(1)
   })
 
   test("rejects an incorrect OTP without consuming the pending verification", async () => {
@@ -709,6 +783,40 @@ describe("mobile auth queries", () => {
       storeId: "store_123",
       storeName: "Main Market Store",
     })
+  })
+
+  test("verifies a customer-linked User into the common session without inventing Business access", async () => {
+    const user = {
+      email: "customer@example.com",
+      id: "user_customer",
+      name: "Customer Name",
+    }
+    const db = createMockMobileAuthDb({
+      accountAccesses: [{ accountUserId: user.id, status: "ACTIVE" }],
+      users: [user],
+    })
+    const otp = await createMobileOwnerOtp(db.client, {
+      email: user.email,
+      mode: "login",
+    })
+
+    const session = await verifyMobileOwnerOtp(db.client, {
+      code: otp.code,
+      email: user.email,
+      mode: "login",
+    })
+
+    expect(session.accessProfile).toEqual({
+      hasBusinessAccess: false,
+      hasCustomerHistory: true,
+    })
+    expect(session.profile).toMatchObject({
+      businessId: null,
+      id: user.id,
+      role: "NONE",
+      status: "NONE",
+    })
+    expect(session.tenant).toBeNull()
   })
 
   test("verifies new owner OTP signup by creating the first business and store", async () => {
@@ -834,20 +942,22 @@ describe("mobile auth queries", () => {
     ])
   })
 
-  test("rejects Google login when no linked or email-matching owner exists", async () => {
+  test("creates a common Google identity without Business access", async () => {
     const db = createMockMobileAuthDb()
 
-    await expect(
-      verifyMobileGoogleIdentity(db.client, {
-        email: "new-owner@example.com",
-        mode: "login",
-        name: "New Owner",
-        providerAccountId: "google-new-owner",
-      }),
-    ).rejects.toThrow("No owner account exists for this Google account yet.")
+    const session = await verifyMobileGoogleIdentity(db.client, {
+      email: "new-owner@example.com",
+      mode: "login",
+      name: "New Owner",
+      providerAccountId: "google-new-owner",
+    })
 
-    expect(db.accounts).toHaveLength(0)
-    expect(db.sessions).toHaveLength(0)
+    expect(session.accessProfile).toEqual({
+      hasBusinessAccess: false,
+      hasCustomerHistory: false,
+    })
+    expect(db.accounts).toHaveLength(1)
+    expect(db.sessions).toHaveLength(1)
   })
 
   test("links an existing owner email to Google and returns the active business session context", async () => {

@@ -31,4 +31,6 @@ export {
 } from "./components/breadcrumb"
 export { Button, buttonVariants } from "./components/button"
 export { CurrencyInput } from "./components/currency-input"
+export { Input } from "./components/input"
+export { Select } from "./components/select"
 export { cn } from "./lib/utils"

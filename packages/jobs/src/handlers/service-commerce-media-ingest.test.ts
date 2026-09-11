@@ -12,6 +12,7 @@ describe("Service Commerce media ingest", () => {
   test("retrieves, privately stores and schedules safety using identifier-only work", async () => {
     const calls: string[] = []
     const result = await runServiceCommerceMediaIngest(payload, {
+      assertProviderAllowed: async () => undefined,
       claim: async () => ({
         provider: "meta",
         providerConnectionId: "connection_1",
@@ -64,6 +65,7 @@ describe("Service Commerce media ingest", () => {
   test("rejects a fetched file whose signature does not match its provider type", async () => {
     const rejected: string[] = []
     const result = await runServiceCommerceMediaIngest(payload, {
+      assertProviderAllowed: async () => undefined,
       claim: async () => ({
         provider: "meta",
         providerConnectionId: "connection_1",
@@ -113,6 +115,7 @@ describe("Service Commerce media ingest", () => {
     const retries: string[] = []
     await expect(
       runServiceCommerceMediaIngest(payload, {
+        assertProviderAllowed: async () => undefined,
         claim: async () => ({
           provider: "meta",
           providerConnectionId: "connection_1",
@@ -160,6 +163,7 @@ describe("Service Commerce media ingest", () => {
   test("accepts a provider PDF through the same private retry-safe ingest path", async () => {
     const calls: string[] = []
     await runServiceCommerceMediaIngest(payload, {
+      assertProviderAllowed: async () => undefined,
       claim: async () => ({
         provider: "meta",
         providerConnectionId: "connection_1",

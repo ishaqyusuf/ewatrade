@@ -103,7 +103,7 @@ model ServiceCommerceUsageEvent {
 /// customer/source identifiers, media references, provider operations or raw
 /// error text.
 model ServiceCommerceReportReadAuditEvent {
-  id               String                                  @id @default(cuid())
+  id               String                                 @id @default(cuid())
   tenantId         String
   storeId          String?
   actorUserId      String
@@ -111,14 +111,14 @@ model ServiceCommerceReportReadAuditEvent {
   drilldownSection ServiceCommerceReportDrilldownSection?
   purpose          String
   outcome          ServiceCommerceReportReadOutcome
-  source           ServiceCommerceReportReadSource          @default(SERVICE_COMMERCE_REPORTING)
+  source           ServiceCommerceReportReadSource        @default(SERVICE_COMMERCE_REPORTING)
   denialReason     ServiceCommerceReportReadDenialReason?
   reportStart      DateTime
   reportEnd        DateTime
-  effectiveAt      DateTime                                @default(now())
-  createdAt        DateTime                                @default(now())
-  tenant           Tenant                                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store            Store?                                  @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  effectiveAt      DateTime                               @default(now())
+  createdAt        DateTime                               @default(now())
+  tenant           Tenant                                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store            Store?                                 @relation(fields: [storeId], references: [id], onDelete: Restrict)
 
   @@index([tenantId, storeId, effectiveAt])
   @@index([actorUserId, effectiveAt])

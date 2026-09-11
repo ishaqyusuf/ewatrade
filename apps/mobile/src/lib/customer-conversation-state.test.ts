@@ -5,6 +5,7 @@ import {
   isCustomerCredentialError,
   isDefinitiveCustomerTransferError,
   mergeCustomerConversationPages,
+  resolveCustomerConversationRetryTarget,
   resolveCustomerOperation,
 } from "./customer-conversation-state"
 
@@ -58,5 +59,20 @@ describe("customer conversation state", () => {
       completePendingCustomerTransfer(pending, () => "candidate-two"),
     ).toBe(pending)
     expect(pending.targetCredentialToken).toBe("candidate-one")
+  })
+
+  test("retries the failed timeline after Store-link bootstrap succeeds", () => {
+    expect(
+      resolveCustomerConversationRetryTarget({
+        conversationId: "conversation_1",
+        timelineFailed: true,
+      }),
+    ).toBe("timeline")
+    expect(
+      resolveCustomerConversationRetryTarget({
+        conversationId: null,
+        timelineFailed: true,
+      }),
+    ).toBe("bootstrap")
   })
 })

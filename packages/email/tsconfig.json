@@ -1,5 +1,11 @@
 {
   "extends": "../../packages/tsconfig/base.json",
-  "include": ["defaults.ts", "src/**/*.ts", "templates/**/*.ts"],
+  "include": [
+    "components/**/*.{ts,tsx}",
+    "defaults.ts",
+    "emails/**/*.{ts,tsx}",
+    "src/**/*.{ts,tsx}",
+    "templates/**/*.{ts,tsx}"
+  ],
   "exclude": ["node_modules"]
 }

@@ -45,7 +45,7 @@ export function CustomerConversationRouteState({
         icon="RefreshCw"
         message={
           credentialRejected
-            ? "Scan the Store QR code or open its Store link to start again."
+            ? "This device's guest access cannot be recovered by phone or email. Sign in for conversations already linked to your account, or scan the Store QR code to start a new request."
             : (message ?? "Check your connection and try again.")
         }
         onActionPress={credentialRejected ? undefined : onRetry}

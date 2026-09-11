@@ -29,7 +29,7 @@ function formatCsvRow(values: string[]) {
 
 export function buildRetailOpsReportCsv(input: RetailOpsReportCsvInput) {
   const rows = [
-    ["Ewatrade Retail Ops report"],
+    ["ẸwáTrade Retail Ops report"],
     ["Generated at", input.generatedAt.toISOString()],
     ["Report source", input.source],
     ["Business", input.businessId ?? "current business"],

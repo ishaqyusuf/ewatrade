@@ -55,6 +55,9 @@ async function getTrpcHeaders() {
   if (session?.profile.businessSlug) {
     headers.set("x-tenant-slug", session.profile.businessSlug)
   }
+  if (session?.profile.storeId) {
+    headers.set("x-store-id", session.profile.storeId)
+  }
   headers.set("x-trpc-source", "mobile")
   return Object.fromEntries(headers)
 }

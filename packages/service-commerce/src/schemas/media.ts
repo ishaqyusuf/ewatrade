@@ -7,7 +7,11 @@ import {
 
 const serviceCommerceMediaIdSchema = z.string().trim().min(1).max(191)
 
-export const SERVICE_COMMERCE_MEDIA_KINDS = ["image", "document"] as const
+export const SERVICE_COMMERCE_MEDIA_KINDS = [
+  "image",
+  "document",
+  "audio",
+] as const
 
 export const SERVICE_COMMERCE_MEDIA_MIME_TYPES = [
   "image/jpeg",
@@ -16,6 +20,11 @@ export const SERVICE_COMMERCE_MEDIA_MIME_TYPES = [
   "image/heic",
   "image/heif",
   "application/pdf",
+  "audio/mp4",
+  "audio/mpeg",
+  "audio/ogg",
+  "audio/wav",
+  "audio/webm",
 ] as const
 
 export const SERVICE_COMMERCE_MEDIA_MAX_ATTACHMENT_BYTES = 10_000_000

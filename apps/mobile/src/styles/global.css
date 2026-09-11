@@ -7,6 +7,40 @@
 @config "../../tailwind.config.ts";
 
 @theme inline {
+  --font-market-display: serif;
+  --font-market-mono: monospace;
+  --color-market-hero-pressed: var(--market-hero-pressed);
+  --color-market-hero-action-pressed: var(--market-hero-action-pressed);
+  --color-market-hero-hairline: var(--market-hero-hairline);
+  --color-market-on-marigold-divider: var(--market-on-marigold-divider);
+  --color-market-on-marigold-hairline: var(--market-on-marigold-hairline);
+  --color-market-on-marigold-pressed: var(--market-on-marigold-pressed);
+  --color-market-paprika-wash: var(--market-paprika-wash);
+  --color-market-canvas: var(--market-canvas);
+  --color-market-palm: var(--market-palm);
+  --color-market-on-palm: var(--market-on-palm);
+  --color-market-marigold: var(--market-marigold);
+  --color-market-on-marigold: var(--market-on-marigold);
+  --color-market-paprika: var(--market-paprika);
+  --color-market-paprika-pressed: var(--market-paprika-pressed);
+  --color-market-paprika-strong: var(--market-paprika-strong);
+  --color-market-docket-paper: var(--market-docket-paper);
+  --color-market-docket-rule: var(--market-docket-rule);
+  --color-market-sky: var(--market-sky);
+  --color-market-ink: var(--market-ink);
+  --color-market-muted-ink: var(--market-muted-ink);
+  --color-market-canopy-accent: var(--market-canopy-accent);
+  --color-market-line: var(--market-line);
+  --color-market-field: var(--market-field);
+  --color-market-soft-band: var(--market-soft-band);
+  --color-market-accent-ink: var(--market-accent-ink);
+  --color-market-on-paprika: var(--market-on-paprika);
+  --color-market-on-palm-muted: var(--market-on-palm-muted);
+  --color-market-pulse-line: var(--market-pulse-line);
+  --color-market-pulse-line-soft: var(--market-pulse-line-soft);
+  --color-market-pulse-core: var(--market-pulse-core);
+  --color-market-pulse-shadow: var(--market-pulse-shadow);
+  --color-market-progress-track: var(--market-progress-track);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -23,6 +57,7 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-overlay: var(--overlay);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
@@ -68,6 +103,7 @@
 
     --border: rgb(203, 215, 209);
     --input: rgb(225, 233, 229);
+    --overlay: rgba(0, 0, 0, 0.48);
     --ring: rgb(20, 184, 166);
 
     --chart-1: rgb(13, 94, 82);
@@ -113,6 +149,7 @@
 
       --border: rgb(46, 46, 46);
       --input: rgb(56, 56, 56);
+      --overlay: rgba(0, 0, 0, 0.68);
       --ring: rgb(45, 212, 191);
 
       --chart-1: rgb(45, 212, 191);

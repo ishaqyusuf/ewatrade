@@ -55,6 +55,15 @@ export function isCustomerCredentialError(error: unknown) {
   )
 }
 
+export function resolveCustomerConversationRetryTarget(input: {
+  conversationId: string | null
+  timelineFailed: boolean
+}) {
+  return input.conversationId && input.timelineFailed
+    ? ("timeline" as const)
+    : ("bootstrap" as const)
+}
+
 export function completePendingCustomerTransfer(
   pending: PendingCustomerTransferState,
   createCredential: () => string,

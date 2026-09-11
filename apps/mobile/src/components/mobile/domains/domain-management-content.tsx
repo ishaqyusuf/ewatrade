@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { EmptyState } from "@/components/mobile/empty-state"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Input } from "@/components/ui/input-2"
@@ -15,19 +16,17 @@ import { useRef, useState } from "react"
 import { RefreshControl } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import {
+  DOMAIN_MANAGEMENT_COPY,
+  type DomainManagementStep,
+  resolveDomainBusinessId,
+  shouldLoadDomainList,
+  shouldLoadDomainOrder,
+  shouldLoadRegistrantProfile,
+} from "./domain-management-presentation"
+import {
   DomainOwnerForm,
   type MobileDomainRegistrant,
 } from "./domain-owner-form"
-
-type Step =
-  | "list"
-  | "search"
-  | "owner"
-  | "review"
-  | "details"
-  | "connect"
-  | "verify"
-  | "progress"
 
 function formatMoney(amountMinor: number, currencyCode: string) {
   return new Intl.NumberFormat("en-NG", {
@@ -45,7 +44,13 @@ export function DomainManagementContent({
   const queryClient = useQueryClient()
   const auth = useAuthContext()
   const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
-  const [step, setStep] = useState<Step>(initialOrderId ? "progress" : "list")
+  const domainBusinessId = resolveDomainBusinessId(
+    activeBusinessId,
+    auth.profile?.businessId,
+  )
+  const [step, setStep] = useState<DomainManagementStep>(
+    initialOrderId ? "progress" : "list",
+  )
   const [domain, setDomain] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [quote, setQuote] = useState<{
@@ -69,13 +74,24 @@ export function DomainManagementContent({
   const checkoutKey = useRef(
     `mobile-domain-${Date.now()}-${Math.random().toString(36).slice(2)}`,
   )
-  const domains = useQuery(trpc.domains.list.queryOptions({}, { retry: false }))
+  const domains = useQuery(
+    trpc.domains.list.queryOptions(
+      {},
+      {
+        enabled: shouldLoadDomainList(domainBusinessId),
+        retry: false,
+      },
+    ),
+  )
   const profile = useQuery(
-    trpc.domains.registrantProfile.queryOptions(undefined, { retry: false }),
+    trpc.domains.registrantProfile.queryOptions(undefined, {
+      enabled: shouldLoadRegistrantProfile(domainBusinessId, step),
+      retry: false,
+    }),
   )
   const order = useQuery({
     ...trpc.domains.order.queryOptions({ orderId: orderId ?? "" }),
-    enabled: step === "progress" && Boolean(orderId),
+    enabled: shouldLoadDomainOrder(domainBusinessId, step, orderId),
     refetchInterval: (query) => {
       const current = query.state.data
       if (
@@ -171,7 +187,7 @@ export function DomainManagementContent({
     setStep("list")
   }
 
-  if (!activeBusinessId) {
+  if (!domainBusinessId) {
     return (
       <View className="flex-1 items-center justify-center px-6">
         <StatusBanner
@@ -187,7 +203,14 @@ export function DomainManagementContent({
   return (
     <KeyboardAwareScrollView
       bottomOffset={140}
-      contentContainerClassName="gap-5 px-5 pb-32"
+      className="flex-1"
+      contentContainerStyle={{
+        gap: 20,
+        paddingBottom: 128,
+        paddingHorizontal: 20,
+      }}
+      disableScrollOnKeyboardHide
+      keyboardDismissMode="interactive"
       keyboardShouldPersistTaps="handled"
       refreshControl={
         step === "list" ? (
@@ -214,35 +237,53 @@ export function DomainManagementContent({
         <>
           <View className="gap-1">
             <Text className="text-sm leading-5 text-muted-foreground">
-              Buy a Nigerian .com.ng, a global .com, or connect one you already
-              own. Registration, DNS, and SSL are handled from here.
+              {DOMAIN_MANAGEMENT_COPY.purpose}
             </Text>
           </View>
-          <View className="flex-row gap-3">
-            <ActionButton
-              className="flex-1"
-              icon="Globe"
-              onPress={() => setStep("search")}
-            >
-              Buy domain
-            </ActionButton>
-            <ActionButton
-              className="flex-1"
-              onPress={() => setStep("connect")}
-              variant="outline"
-            >
-              Connect
-            </ActionButton>
-          </View>
-          <View className="mt-2">
-            <Text className="mb-2 text-lg font-extrabold text-foreground">
-              Your domains
+
+          <View className="gap-2">
+            <Text className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">
+              Storefront address
             </Text>
-            {domains.data?.length ? (
+            <View className="flex-row items-center gap-4 border-y border-border py-4">
+              <View className="min-w-0 flex-1 gap-1">
+                <Text className="text-lg font-extrabold text-foreground">
+                  {DOMAIN_MANAGEMENT_COPY.includedAddressTitle}
+                </Text>
+                <Text className="text-sm leading-5 text-muted-foreground">
+                  {DOMAIN_MANAGEMENT_COPY.includedAddressMessage}
+                </Text>
+              </View>
+              <StatusBadge label="Included" tone="primary" />
+            </View>
+          </View>
+
+          <View className="gap-2">
+            <Text className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">
+              Custom domain
+            </Text>
+
+            {domains.isPending ? (
+              <StatusBanner
+                icon="Globe"
+                message="Checking the domains connected to this Storefront."
+                title="Loading domains"
+                tone="muted"
+              />
+            ) : domains.isError ? (
+              <StatusBanner
+                actionLabel="Try again"
+                icon="Globe"
+                message="We could not load your domains. Your Storefront is unchanged."
+                onActionPress={() => void domains.refetch()}
+                title="Domains unavailable"
+                tone="destructive"
+              />
+            ) : domains.data?.length ? (
               domains.data.map((item) => (
                 <Pressable
                   accessibilityRole="button"
-                  className="flex-row items-center gap-3 border-t border-border py-4"
+                  className="min-h-16 flex-row items-center gap-3 border-t border-border px-1 py-4"
                   haptic
                   key={item.id}
                   onPress={() => {
@@ -268,13 +309,42 @@ export function DomainManagementContent({
                 </Pressable>
               ))
             ) : (
-              <View className="border-t border-border py-8">
-                <Text className="text-sm text-muted-foreground">
-                  No custom domain yet. Your free EwaTrade storefront address
-                  remains available.
-                </Text>
-              </View>
+              <EmptyState
+                className="border-y border-border px-0 py-6"
+                icon="Globe"
+                message={DOMAIN_MANAGEMENT_COPY.emptyMessage}
+                title={DOMAIN_MANAGEMENT_COPY.emptyTitle}
+                variant="flat"
+              >
+                <View className="w-full gap-3">
+                  <ActionButton icon="Globe" onPress={() => setStep("search")}>
+                    {DOMAIN_MANAGEMENT_COPY.findAction}
+                  </ActionButton>
+                  <ActionButton
+                    onPress={() => setStep("connect")}
+                    trailingIcon="ArrowRight"
+                    variant="outline"
+                  >
+                    {DOMAIN_MANAGEMENT_COPY.connectAction}
+                  </ActionButton>
+                </View>
+              </EmptyState>
             )}
+
+            {domains.data?.length ? (
+              <View className="gap-3 pt-3">
+                <ActionButton icon="Globe" onPress={() => setStep("search")}>
+                  {DOMAIN_MANAGEMENT_COPY.findAction}
+                </ActionButton>
+                <ActionButton
+                  onPress={() => setStep("connect")}
+                  trailingIcon="ArrowRight"
+                  variant="outline"
+                >
+                  {DOMAIN_MANAGEMENT_COPY.connectAction}
+                </ActionButton>
+              </View>
+            ) : null}
           </View>
         </>
       ) : null}
@@ -373,7 +443,7 @@ export function DomainManagementContent({
               setError(null)
               availability.mutate({
                 domain,
-                storeId: activeBusinessId,
+                storeId: domainBusinessId,
               })
             }}
           >
@@ -411,7 +481,7 @@ export function DomainManagementContent({
             </Text>
           </View>
           <Text className="text-sm leading-5 text-muted-foreground">
-            By paying, you authorize EwaTrade to register this domain using the
+            By paying, you authorize ẸwáTrade to register this domain using the
             saved legal owner details. Setup continues even if you close the
             app.
           </Text>
@@ -446,6 +516,8 @@ export function DomainManagementContent({
           </Pressable>
           <Pressable
             accessibilityRole="link"
+            className="min-h-11 self-start justify-center rounded-xl px-3 active:bg-muted/60"
+            haptic
             onPress={() =>
               Linking.openURL(
                 quote.provider === "GO54"
@@ -453,6 +525,7 @@ export function DomainManagementContent({
                   : "https://www.openprovider.com/company/policies",
               )
             }
+            transition
           >
             <Text className="font-semibold text-primary">
               View registrar policies
@@ -509,7 +582,7 @@ export function DomainManagementContent({
             onPress={() =>
               connect.mutate({
                 domain,
-                storeId: activeBusinessId,
+                storeId: domainBusinessId,
               })
             }
           >

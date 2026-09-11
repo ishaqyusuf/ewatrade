@@ -8,6 +8,8 @@ import {
   CommerceQuoteError,
   CustomerChannelsError,
   ServiceCommerceQuoteReleaseError,
+  StoreConversationAvailabilityError,
+  StoreConversationChannelModeError,
   approveCommerceQuoteVersion,
   assignCustomerChannelAttendant,
   completeCustomerChannelEmbeddedSignup,
@@ -16,6 +18,8 @@ import {
   getCustomerChannelWorkspace,
   getPublicCustomerEntryPoint,
   getServiceCommerceQuoteReleaseSettings,
+  getStoreConversationAvailabilitySettings,
+  getStoreConversationChannelModeSettings,
   listPendingServiceCommerceQuoteApprovals,
   publishCustomerEntryPoint,
   rejectCommerceQuoteVersion,
@@ -24,7 +28,10 @@ import {
   saveCustomerChannelStoreBindings,
   saveCustomerWhatsAppConnectionCandidate,
   setCustomerChannelConnectionLifecycle,
+  setStoreConversationManualPause,
   updateServiceCommerceQuoteReleaseSettings,
+  updateStoreConversationAvailabilitySchedule,
+  updateStoreConversationChannelMode,
 } from "@ewatrade/db/queries"
 import {
   enqueuePrescriptionCommunicationDispatch,
@@ -35,6 +42,8 @@ import { TRPCError } from "@trpc/server"
 import {
   customerChannelAttendantAssignSchema,
   customerChannelAttendantRevokeSchema,
+  customerChannelAvailabilityScheduleUpdateSchema,
+  customerChannelAvailabilitySettingsSchema,
   customerChannelConnectionLifecycleSchema,
   customerChannelConnectionSchema,
   customerChannelEmbeddedSignupSelectionSchema,
@@ -42,6 +51,9 @@ import {
   customerChannelEntryPointPublishSchema,
   customerChannelEntryPointRevokeSchema,
   customerChannelManualConnectionSchema,
+  customerChannelManualPauseSchema,
+  customerChannelModeSettingsSchema,
+  customerChannelModeUpdateSchema,
   customerChannelPendingQuoteApprovalsSchema,
   customerChannelPublicEntryPointSchema,
   customerChannelQuoteApprovalDecisionSchema,
@@ -70,6 +82,38 @@ function assertCustomerChannelsManager(role: string) {
 
 function mapCustomerChannelsError(error: unknown): never {
   if (error instanceof CustomerChannelsError) {
+    throw new TRPCError({
+      code:
+        error.code === "FORBIDDEN"
+          ? "FORBIDDEN"
+          : error.code === "NOT_FOUND"
+            ? "NOT_FOUND"
+            : "CONFLICT",
+      message: error.message,
+    })
+  }
+  throw error
+}
+
+function mapStoreConversationAvailabilityError(error: unknown): never {
+  if (error instanceof StoreConversationAvailabilityError) {
+    throw new TRPCError({
+      code:
+        error.code === "FORBIDDEN"
+          ? "FORBIDDEN"
+          : error.code === "NOT_FOUND"
+            ? "NOT_FOUND"
+            : error.code === "NOT_READY"
+              ? "PRECONDITION_FAILED"
+              : "CONFLICT",
+      message: error.message,
+    })
+  }
+  throw error
+}
+
+function mapStoreConversationChannelModeError(error: unknown): never {
+  if (error instanceof StoreConversationChannelModeError) {
     throw new TRPCError({
       code:
         error.code === "FORBIDDEN"
@@ -214,6 +258,34 @@ export const serviceCommerceChannelsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         return await getCustomerChannelWorkspace(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          storeId: storeId(ctx, input.storeId),
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        mapCustomerChannelsError(error)
+      }
+    }),
+
+  storeConversationAvailabilitySettings: protectedProcedure
+    .input(customerChannelAvailabilitySettingsSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await getStoreConversationAvailabilitySettings(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          storeId: storeId(ctx, input.storeId),
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        mapStoreConversationAvailabilityError(error)
+      }
+    }),
+
+  storeConversationChannelModeSettings: protectedProcedure
+    .input(customerChannelModeSettingsSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await getStoreConversationChannelModeSettings(ctx.db, {
           actorUserId: ctx.session.user.id,
           storeId: storeId(ctx, input.storeId),
           tenantId: ctx.tenantContext.tenant.id,
@@ -421,6 +493,51 @@ export const serviceCommerceChannelsRouter = createTRPCRouter({
         status: input.status,
         tenantId: ctx.tenantContext.tenant.id,
       })
+    }),
+
+  setStoreConversationManualPause: protectedProcedure
+    .input(customerChannelManualPauseSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await setStoreConversationManualPause(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          storeId: storeId(ctx, input.storeId),
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        mapStoreConversationAvailabilityError(error)
+      }
+    }),
+
+  updateStoreConversationAvailabilitySchedule: protectedProcedure
+    .input(customerChannelAvailabilityScheduleUpdateSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await updateStoreConversationAvailabilitySchedule(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          storeId: storeId(ctx, input.storeId),
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        mapStoreConversationAvailabilityError(error)
+      }
+    }),
+
+  updateStoreConversationChannelMode: protectedProcedure
+    .input(customerChannelModeUpdateSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await updateStoreConversationChannelMode(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          storeId: storeId(ctx, input.storeId),
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        mapStoreConversationChannelModeError(error)
+      }
     }),
 
   updateQuoteReleaseSettings: protectedProcedure

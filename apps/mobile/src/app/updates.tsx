@@ -1,3 +1,3 @@
-import UpdatesScreen from "@/screens/updates-screen"
+import UpdatesScreen from "@/components/mobile/updates/updates-screen"
 
 export default UpdatesScreen

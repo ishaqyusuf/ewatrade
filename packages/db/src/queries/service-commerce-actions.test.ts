@@ -19,7 +19,10 @@ function tokenFor(input: { clientCapabilityId: string }) {
   return `action-token:${input.clientCapabilityId}`
 }
 
-function createActionDb() {
+function createActionDb(input?: {
+  bookingConfigured?: boolean
+  prescriptionCommerceStatus?: string
+}) {
   const calls: Array<{ args: unknown; name: string }> = []
   const capabilities: Array<
     Record<string, unknown> & {
@@ -39,7 +42,7 @@ function createActionDb() {
   > = []
   let sourceStatus = "QUOTED"
   const profile = {
-    bookingEnabled: false,
+    bookingEnabled: input?.bookingConfigured ?? false,
     catalogAdoptionMode: "PROGRESSIVE",
     deliveryEnabled: false,
     id: "profile-1",
@@ -101,7 +104,12 @@ function createActionDb() {
       },
     },
     serviceBooking: { findFirst: async () => null },
-    serviceBookingOfferingConfig: { findFirst: async () => null },
+    serviceBookingOfferingConfig: {
+      findFirst: async () =>
+        input?.bookingConfigured
+          ? { id: "booking-config-1", revision: 3 }
+          : null,
+    },
     serviceCommerceCustomerActionCapability: {
       create: async ({ data }: { data: Record<string, unknown> }) => {
         const row = {
@@ -198,6 +206,16 @@ function createActionDb() {
           ],
           status: "CONVERTED",
           updatedAt: now,
+        }
+      },
+    },
+    prescriptionStoreSettings: {
+      findFirst: async (args: unknown) => {
+        calls.push({ args, name: "prescriptionStoreSettings.findFirst" })
+        return {
+          deliveryEnabled: false,
+          pickupEnabled: true,
+          status: input?.prescriptionCommerceStatus ?? "ACTIVE",
         }
       },
     },
@@ -456,7 +474,11 @@ describe("Service Commerce customer action repository", () => {
       tenantId: "tenant-1",
     })
 
-    expect(actions.map((action) => action.action)).toContain("view_quote")
+    expect(actions.map((action) => action.action)).toEqual([
+      "view_quote",
+      "pick_up",
+      "talk_to_staff",
+    ])
     expect(fake.calls).toContainEqual({
       args: expect.objectContaining({
         where: expect.objectContaining({
@@ -467,6 +489,44 @@ describe("Service Commerce customer action repository", () => {
       }),
       name: "prescriptionRequest.findFirst",
     })
+  })
+
+  test("keeps Pharmacy fulfilment unavailable when its vertical is inactive", async () => {
+    const fake = createActionDb({ prescriptionCommerceStatus: "SUSPENDED" })
+    const { actions } = await issueServiceCommerceCustomerActions(fake.db, {
+      actorUserId: "user-1",
+      channel: "web",
+      clientBatchId: "batch-prescription-suspended",
+      expiresAt,
+      issueCapabilityToken: tokenFor,
+      now,
+      source: { id: "request-1", kind: "prescription" },
+      storeId: "store-1",
+      tenantId: "tenant-1",
+    })
+
+    expect(actions.map((action) => action.action)).toEqual([
+      "view_quote",
+      "talk_to_staff",
+    ])
+  })
+
+  test("projects booking when the exact Service Offering configuration is active", async () => {
+    const fake = createActionDb({ bookingConfigured: true })
+    const { actions } = await issueServiceCommerceCustomerActions(fake.db, {
+      actorUserId: "user-1",
+      allowedActions: ["book"],
+      channel: "web",
+      clientBatchId: "batch-service-booking",
+      expiresAt,
+      issueCapabilityToken: tokenFor,
+      now,
+      source: { id: "request-1", kind: "service" },
+      storeId: "store-1",
+      tenantId: "tenant-1",
+    })
+
+    expect(actions.map((action) => action.action)).toEqual(["book"])
   })
 
   test("previews and consumes an action with payload-bound replay", async () => {
@@ -531,6 +591,89 @@ describe("Service Commerce customer action repository", () => {
         now,
       }),
     ).rejects.toMatchObject({ code: "ACTION_CONFLICT" })
+  })
+
+  test("rotates a consumed capability when its action remains current", async () => {
+    const fake = createActionDb()
+    const input = {
+      actorUserId: "user-1",
+      channel: "web" as const,
+      clientBatchId: "batch-consumed-recovery",
+      expiresAt,
+      issueCapabilityToken: tokenFor,
+      now,
+      source: { id: "request-1", kind: "service" as const },
+      storeId: "store-1",
+      tenantId: "tenant-1",
+    }
+    const first = await issueServiceCommerceCustomerActions(fake.db, input)
+    const original = first.actions.find(
+      (action) => action.action === "view_quote",
+    )
+    if (!original) throw new Error("expected view Quote action")
+
+    await executeServiceCommerceCustomerAction(fake.db, {
+      capabilityToken: original.capabilityToken,
+      clientOperationId: "operation-view-quote",
+      confirmed: false,
+      now,
+    })
+    await expect(
+      getPublicServiceCommerceCustomerAction(fake.db, {
+        capabilityToken: original.capabilityToken,
+        now,
+      }),
+    ).resolves.toMatchObject({ available: false })
+
+    const refreshed = await issueServiceCommerceCustomerActions(fake.db, input)
+    const replacement = refreshed.actions.find(
+      (action) => action.action === "view_quote",
+    )
+    if (!replacement) throw new Error("expected refreshed view Quote action")
+
+    expect(replacement.capabilityToken).not.toBe(original.capabilityToken)
+    await expect(
+      getPublicServiceCommerceCustomerAction(fake.db, {
+        capabilityToken: replacement.capabilityToken,
+        now,
+      }),
+    ).resolves.toMatchObject({ action: "view_quote", available: true })
+  })
+
+  test("rotates a revoked capability only after current action revalidation", async () => {
+    const fake = createActionDb()
+    const input = {
+      actorUserId: "user-1",
+      allowedActions: ["talk_to_staff"] as const,
+      channel: "web" as const,
+      clientBatchId: "batch-revoked-recovery",
+      expiresAt,
+      issueCapabilityToken: tokenFor,
+      now,
+      source: { id: "request-1", kind: "service" as const },
+      storeId: "store-1",
+      tenantId: "tenant-1",
+    }
+    const first = await issueServiceCommerceCustomerActions(fake.db, input)
+    const original = first.actions[0]
+    if (!original) throw new Error("expected support action")
+    const stored = fake.capabilities.find(
+      (capability) => capability.status === "ACTIVE",
+    )
+    if (!stored) throw new Error("expected stored capability")
+    stored.status = "REVOKED"
+
+    const refreshed = await issueServiceCommerceCustomerActions(fake.db, input)
+    const replacement = refreshed.actions[0]
+    if (!replacement) throw new Error("expected replacement support action")
+
+    expect(replacement.capabilityToken).not.toBe(original.capabilityToken)
+    await expect(
+      getPublicServiceCommerceCustomerAction(fake.db, {
+        capabilityToken: original.capabilityToken,
+        now,
+      }),
+    ).resolves.toMatchObject({ available: false })
   })
 
   test("fails a stale source action closed with safe recovery", async () => {

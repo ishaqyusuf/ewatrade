@@ -34,20 +34,41 @@ export function DashboardHomeHeader({
   onProfilePress,
   onSearchPress,
 }: DashboardHomeHeaderProps) {
+  const largeTextLayout = useLargeTextLayout()
+
+  if (largeTextLayout) {
+    return (
+      <View className="gap-2">
+        <View className="flex-row items-start gap-3">
+          <ProfileButton
+            greetingName={greetingName}
+            onProfilePress={onProfilePress}
+          />
+          <Text
+            className="min-w-0 flex-1 pt-1 text-xl font-extrabold tracking-tight text-foreground"
+            numberOfLines={2}
+          >
+            Hello, {greetingName} 👋
+          </Text>
+          <HeaderActionButtons
+            hasNotification={hasNotification}
+            onNotificationPress={onNotificationPress}
+            onSearchPress={onSearchPress}
+          />
+        </View>
+        <Text className="ml-14 text-xs text-muted-foreground" numberOfLines={2}>
+          {businessName}
+        </Text>
+      </View>
+    )
+  }
+
   return (
     <View className="flex-row items-center gap-3">
-      <Pressable
-        accessibilityLabel={`${greetingName} profile`}
-        accessibilityRole="button"
-        className="size-11 items-center justify-center rounded-full bg-foreground active:opacity-85"
-        disabled={!onProfilePress}
-        haptic={Boolean(onProfilePress)}
-        onPress={onProfilePress}
-      >
-        <Text className="text-sm font-extrabold text-background">
-          {initials(greetingName)}
-        </Text>
-      </Pressable>
+      <ProfileButton
+        greetingName={greetingName}
+        onProfilePress={onProfilePress}
+      />
       <View className="min-w-0 flex-1">
         <Text
           className="text-xl font-extrabold tracking-tight text-foreground"
@@ -62,6 +83,45 @@ export function DashboardHomeHeader({
           {businessName}
         </Text>
       </View>
+      <HeaderActionButtons
+        hasNotification={hasNotification}
+        onNotificationPress={onNotificationPress}
+        onSearchPress={onSearchPress}
+      />
+    </View>
+  )
+}
+
+function ProfileButton({
+  greetingName,
+  onProfilePress,
+}: Pick<DashboardHomeHeaderProps, "greetingName" | "onProfilePress">) {
+  return (
+    <Pressable
+      accessibilityLabel={`${greetingName} profile`}
+      accessibilityRole="button"
+      className="size-11 items-center justify-center rounded-full bg-foreground active:opacity-85"
+      disabled={!onProfilePress}
+      haptic={Boolean(onProfilePress)}
+      onPress={onProfilePress}
+    >
+      <Text className="text-sm font-extrabold text-background">
+        {initials(greetingName)}
+      </Text>
+    </Pressable>
+  )
+}
+
+function HeaderActionButtons({
+  hasNotification = false,
+  onNotificationPress,
+  onSearchPress,
+}: Pick<
+  DashboardHomeHeaderProps,
+  "hasNotification" | "onNotificationPress" | "onSearchPress"
+>) {
+  return (
+    <View className="flex-row gap-3">
       <Pressable
         accessibilityLabel={
           hasNotification
@@ -226,6 +286,240 @@ export function DashboardActionRow({
         {label}
       </Text>
       <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
+    </Pressable>
+  )
+}
+
+type DashboardStoreSetupProps = {
+  catalogReady: boolean
+  onAddItemPress: () => void
+  onCreateOrderPress: () => void
+  onInviteStaffPress: () => void
+}
+
+export function DashboardStoreSetup({
+  catalogReady,
+  onAddItemPress,
+  onCreateOrderPress,
+  onInviteStaffPress,
+}: DashboardStoreSetupProps) {
+  const largeTextLayout = useLargeTextLayout()
+
+  return (
+    <View className="gap-4">
+      <View className="gap-2">
+        <View
+          className={cn(
+            largeTextLayout
+              ? "gap-1"
+              : "flex-row items-center justify-between gap-3",
+          )}
+        >
+          <Text className="text-xl font-extrabold tracking-tight text-foreground">
+            Set up your Store
+          </Text>
+          <Text
+            className="text-xs font-bold text-primary"
+            numberOfLines={largeTextLayout ? 2 : 1}
+          >
+            {catalogReady ? "Order next" : "Catalog next"}
+          </Text>
+        </View>
+        <Text className="text-sm leading-5 text-muted-foreground">
+          {catalogReady
+            ? "Your catalog is ready. Take one order to turn on your trading overview."
+            : "Add one Product or Service to unlock orders, stock, and revenue."}
+        </Text>
+        <View className="h-1.5 overflow-hidden rounded-full bg-muted">
+          <View
+            className={cn(
+              "h-full rounded-full bg-primary",
+              catalogReady ? "w-2/3" : "w-1/4",
+            )}
+          />
+        </View>
+      </View>
+
+      <View className="border-y border-border/70">
+        <DashboardSetupStep
+          current={!catalogReady}
+          detail={
+            catalogReady
+              ? "Your Store has something ready to sell."
+              : "Name it, price it, and save it."
+          }
+          icon={catalogReady ? "CheckCircle2" : "FolderPlus"}
+          label={catalogReady ? "Catalog is ready" : "Add a Product or Service"}
+          onPress={catalogReady ? undefined : onAddItemPress}
+          step="01"
+        />
+        <DashboardSetupStep
+          current={catalogReady}
+          detail={
+            catalogReady
+              ? "Create a sale and your overview will come alive."
+              : "Available as soon as your first item is ready."
+          }
+          disabled={!catalogReady}
+          icon={catalogReady ? "ReceiptText" : "Lock"}
+          label="Take your first order"
+          onPress={catalogReady ? onCreateOrderPress : undefined}
+          step="02"
+        />
+        <DashboardSetupStep
+          detail="Optional when you run the Store alone."
+          icon="UserPlus"
+          label="Invite your team"
+          onPress={onInviteStaffPress}
+          step="03"
+        />
+      </View>
+    </View>
+  )
+}
+
+type DashboardStoreSnapshotProps = {
+  itemValue: string
+  orderValue: string
+  revenueValue: string
+}
+
+export function DashboardStoreSnapshot({
+  itemValue,
+  orderValue,
+  revenueValue,
+}: DashboardStoreSnapshotProps) {
+  const largeTextLayout = useLargeTextLayout()
+  const facts = [
+    { label: "Orders", value: orderValue },
+    { label: "Revenue", value: revenueValue },
+    { label: "Items", value: itemValue },
+  ]
+
+  return (
+    <View className="gap-3">
+      <View
+        className={cn(
+          largeTextLayout
+            ? "gap-1"
+            : "flex-row items-center justify-between gap-3",
+        )}
+      >
+        <Text className="text-lg font-extrabold tracking-tight text-foreground">
+          Store snapshot
+        </Text>
+        <View className="flex-row items-center gap-1.5">
+          <View className="size-2 rounded-full bg-success" />
+          <Text className="text-xs text-muted-foreground">Synced now</Text>
+        </View>
+      </View>
+      <View
+        className={cn(
+          "border-y border-border/70",
+          largeTextLayout ? "py-1" : "flex-row py-4",
+        )}
+      >
+        {facts.map((fact, index) => (
+          <View
+            className={cn(
+              largeTextLayout
+                ? "min-h-14 flex-row items-center justify-between gap-4 py-2"
+                : "min-w-0 flex-1 px-3",
+              !largeTextLayout && index > 0 && "border-l border-border/70",
+              !largeTextLayout && index === 0 && "pl-0",
+              largeTextLayout && index > 0 && "border-t border-border/70",
+            )}
+            key={fact.label}
+          >
+            {largeTextLayout ? (
+              <>
+                <Text className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  {fact.label}
+                </Text>
+                <Text
+                  className="min-w-0 flex-1 text-right text-xl font-extrabold tracking-tight text-foreground"
+                  numberOfLines={2}
+                >
+                  {fact.value}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text
+                  className="text-xl font-extrabold tracking-tight text-foreground"
+                  numberOfLines={1}
+                >
+                  {fact.value}
+                </Text>
+                <Text className="mt-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  {fact.label}
+                </Text>
+              </>
+            )}
+          </View>
+        ))}
+      </View>
+    </View>
+  )
+}
+
+type DashboardSetupStepProps = {
+  current?: boolean
+  detail: string
+  disabled?: boolean
+  icon: IconKeys
+  label: string
+  onPress?: () => void
+  step: string
+}
+
+function DashboardSetupStep({
+  current = false,
+  detail,
+  disabled = false,
+  icon,
+  label,
+  onPress,
+  step,
+}: DashboardSetupStepProps) {
+  return (
+    <Pressable
+      accessibilityHint={detail}
+      accessibilityRole={onPress ? "button" : undefined}
+      accessibilityState={{ disabled }}
+      className={cn(
+        "min-h-20 flex-row items-center gap-3 border-b border-border/70 px-3 py-3 active:bg-accent",
+        current && "bg-accent/60",
+        disabled && "opacity-55",
+      )}
+      disabled={!onPress || disabled}
+      haptic={Boolean(onPress) && !disabled}
+      onPress={onPress}
+    >
+      <Text className="w-7 text-xs font-extrabold text-primary">{step}</Text>
+      <View
+        className={cn(
+          "size-10 items-center justify-center rounded-full",
+          current ? "bg-primary" : "bg-muted",
+        )}
+      >
+        <Icon
+          className={cn(
+            "size-sm",
+            current ? "text-primary-foreground" : "text-foreground",
+          )}
+          name={icon}
+        />
+      </View>
+      <View className="min-w-0 flex-1 gap-1">
+        <Text className="font-extrabold text-foreground">{label}</Text>
+        <Text className="text-xs leading-4 text-muted-foreground">
+          {detail}
+        </Text>
+      </View>
+      {onPress && !disabled ? (
+        <Icon className="size-sm text-primary" name="ChevronRight" />
+      ) : null}
     </Pressable>
   )
 }

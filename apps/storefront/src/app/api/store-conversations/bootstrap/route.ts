@@ -2,8 +2,13 @@ import { prisma } from "@ewatrade/db"
 import {
   StoreConversationError,
   bootstrapWebStoreConversation,
+  resumeStoreConversationForAccount,
+  rotateStoreConversationGuestCredential,
 } from "@ewatrade/db/queries"
-import { storeConversationBootstrapInputSchema } from "@ewatrade/service-commerce"
+import {
+  isStoreConversationGuestCredentialRotationDue,
+  storeConversationBootstrapInputSchema,
+} from "@ewatrade/service-commerce"
 import { type NextRequest, NextResponse } from "next/server"
 
 import {
@@ -11,6 +16,17 @@ import {
   STORE_CONVERSATION_GUEST_COOKIE_OPTIONS,
   requestIsSameOrigin,
 } from "@/lib/store-conversation-cookie"
+import { getStorefrontCustomerAccount } from "@/lib/store-conversation-account-session"
+import {
+  STORE_CONVERSATION_GUEST_ISSUED_AT_COOKIE,
+  STORE_CONVERSATION_GUEST_ISSUED_AT_COOKIE_OPTIONS,
+  STORE_CONVERSATION_GUEST_ROTATION_COOKIE,
+  STORE_CONVERSATION_GUEST_ROTATION_COOKIE_OPTIONS,
+  createStagedStoreConversationGuestRotation,
+  parseStagedStoreConversationGuestRotation,
+  parseStoreConversationGuestIssuedAt,
+  serializeStagedStoreConversationGuestRotation,
+} from "@/lib/store-conversation-credential-rotation-cookie"
 
 export async function POST(request: NextRequest) {
   if (!requestIsSameOrigin(request)) {
@@ -33,6 +49,26 @@ export async function POST(request: NextRequest) {
       throw Object.assign(new Error("Invalid input"), { name: "ZodError" })
     }
     const resetGuest = body.resetGuest === true
+    const account = await getStorefrontCustomerAccount(request.headers)
+    if (account) {
+      try {
+        const resumed = await resumeStoreConversationForAccount(prisma, {
+          accountUserId: account.user.id,
+          publicToken: input.publicToken,
+        })
+        return NextResponse.json({
+          access: "account",
+          conversation: resumed.conversation,
+        })
+      } catch (error) {
+        if (
+          !(error instanceof StoreConversationError) ||
+          error.code !== "NOT_FOUND"
+        ) {
+          throw error
+        }
+      }
+    }
     const currentCredential = resetGuest
       ? null
       : request.cookies.get(STORE_CONVERSATION_GUEST_COOKIE)?.value
@@ -40,8 +76,44 @@ export async function POST(request: NextRequest) {
       credentialToken: currentCredential,
       publicToken: input.publicToken,
     })
-    const response = NextResponse.json({ conversation: result.conversation })
-    const responseCredential = result.credentialToken ?? currentCredential
+    const now = new Date()
+    let responseCredential = result.credentialToken ?? currentCredential
+    let credentialIssuedAt = parseStoreConversationGuestIssuedAt(
+      request.cookies.get(STORE_CONVERSATION_GUEST_ISSUED_AT_COOKIE)?.value,
+    )
+    let stagedRotation = parseStagedStoreConversationGuestRotation(
+      request.cookies.get(STORE_CONVERSATION_GUEST_ROTATION_COOKIE)?.value,
+    )
+    let rotationPrepared = false
+    if (currentCredential && !result.credentialToken && stagedRotation) {
+      const rotated = await rotateStoreConversationGuestCredential(prisma, {
+        ...stagedRotation,
+        credentialToken: currentCredential,
+        now,
+        purpose: "WEB_DEVICE",
+      })
+      responseCredential = rotated.credentialToken
+      credentialIssuedAt = now
+      stagedRotation = null
+    } else if (
+      currentCredential &&
+      !result.credentialToken &&
+      isStoreConversationGuestCredentialRotationDue({
+        issuedAt: credentialIssuedAt,
+        now,
+      })
+    ) {
+      stagedRotation = createStagedStoreConversationGuestRotation()
+      rotationPrepared = true
+    } else if (result.credentialToken) {
+      credentialIssuedAt = now
+      stagedRotation = null
+    }
+    const response = NextResponse.json({
+      access: "guest",
+      conversation: result.conversation,
+      rotationPrepared,
+    })
     if (responseCredential) {
       response.cookies.set(
         STORE_CONVERSATION_GUEST_COOKIE,
@@ -52,6 +124,22 @@ export async function POST(request: NextRequest) {
         },
       )
     }
+    if (credentialIssuedAt) {
+      response.cookies.set(
+        STORE_CONVERSATION_GUEST_ISSUED_AT_COOKIE,
+        credentialIssuedAt.toISOString(),
+        STORE_CONVERSATION_GUEST_ISSUED_AT_COOKIE_OPTIONS,
+      )
+    }
+    if (stagedRotation) {
+      response.cookies.set(
+        STORE_CONVERSATION_GUEST_ROTATION_COOKIE,
+        serializeStagedStoreConversationGuestRotation(stagedRotation),
+        STORE_CONVERSATION_GUEST_ROTATION_COOKIE_OPTIONS,
+      )
+    } else {
+      response.cookies.delete(STORE_CONVERSATION_GUEST_ROTATION_COOKIE)
+    }
     return response
   } catch (error) {
     if (error instanceof StoreConversationError) {
@@ -61,7 +149,7 @@ export async function POST(request: NextRequest) {
           status:
             error.code === "GUEST_CREDENTIAL_EXPIRED"
               ? 401
-              : error.code === "NOT_READY"
+              : error.code === "NOT_READY" || error.code === "STORE_UNAVAILABLE"
                 ? 409
                 : 404,
         },

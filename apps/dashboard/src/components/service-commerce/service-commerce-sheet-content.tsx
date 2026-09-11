@@ -41,7 +41,9 @@ export function ServiceCommerceSheetContent({
     )
   }
   if (
+    mode === "availability" ||
     mode === "connection" ||
+    mode === "conversation_mode" ||
     mode === "team" ||
     mode === "entry_point" ||
     mode === "quote_policy" ||

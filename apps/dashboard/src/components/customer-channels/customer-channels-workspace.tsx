@@ -40,6 +40,13 @@ export function CustomerChannelsWorkspace({
     enabled: Boolean(workspace.data?.access.canManage),
     retry: false,
   })
+  const availability = useQuery({
+    ...trpc.serviceCommerce.storeConversationAvailabilitySettings.queryOptions({
+      storeId: selectedStoreId,
+    }),
+    enabled: Boolean(workspace.data?.access.canManage),
+    retry: false,
+  })
   const approvals = useQuery(
     trpc.serviceCommerce.pendingQuoteApprovals.queryOptions(
       { storeId: selectedStoreId },
@@ -49,15 +56,21 @@ export function CustomerChannelsWorkspace({
 
   if (
     workspace.isLoading ||
+    (workspace.data?.access.canManage && availability.isLoading) ||
     (workspace.data?.access.canManage && releaseSettings.isLoading) ||
     approvals.isLoading
   ) {
     return <CustomerChannelsSkeleton />
   }
-  const error = workspace.error ?? releaseSettings.error ?? approvals.error
+  const error =
+    workspace.error ??
+    availability.error ??
+    releaseSettings.error ??
+    approvals.error
   if (
     error ||
     !workspace.data ||
+    (workspace.data.access.canManage && !availability.data) ||
     (workspace.data.access.canManage && !releaseSettings.data) ||
     !approvals.data
   ) {
@@ -74,6 +87,7 @@ export function CustomerChannelsWorkspace({
           onClick={() =>
             void Promise.all([
               workspace.refetch(),
+              availability.refetch(),
               releaseSettings.refetch(),
               approvals.refetch(),
             ])
@@ -124,7 +138,37 @@ export function CustomerChannelsWorkspace({
         <ChannelRecommendationCard recommendation={data.recommendation} />
       ) : null}
 
-      <section className="grid gap-4 lg:grid-cols-3">
+      <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+        {data.access.canManage && data.channelMode ? (
+          <ChannelTaskCard
+            action="Choose channel mode"
+            description={`Desired: ${channelModeLabel(data.channelMode.desiredMode)}. Effective now: ${channelModeLabel(data.channelMode.effectiveMode)}. Readiness is rechecked before customer actions are shown.`}
+            onOpen={() =>
+              void params.setParams({
+                serviceCommerceSheet: "conversation_mode",
+                storeId: selectedStoreId,
+              })
+            }
+            title="Customer conversation mode"
+          />
+        ) : null}
+        {data.access.canManage && availability.data ? (
+          <ChannelTaskCard
+            action="Set availability"
+            description={
+              availability.data.manualPaused
+                ? "New customer Chat messages are paused. Existing history and permitted staff replies remain available."
+                : `Chat follows ${availability.data.timezone} service hours and current eligible team coverage.`
+            }
+            onOpen={() =>
+              void params.setParams({
+                serviceCommerceSheet: "availability",
+                storeId: selectedStoreId,
+              })
+            }
+            title="Chat availability"
+          />
+        ) : null}
         <ChannelTaskCard
           action="Assign attendants"
           description={`${data.team.filter((member) => member.status === "active").length} active attendants. Route accepted team memberships without granting professional credentials.`}
@@ -242,6 +286,13 @@ function formatMoney(amount: number, currencyCode: string) {
     currency: currencyCode,
     style: "currency",
   }).format(amount / 100)
+}
+
+function channelModeLabel(value: string) {
+  if (value === "ewatrade_chat") return "EwaTrade Chat"
+  if (value === "whatsapp") return "WhatsApp"
+  if (value === "both") return "Both"
+  return "Unavailable"
 }
 
 function ChannelTaskCard({

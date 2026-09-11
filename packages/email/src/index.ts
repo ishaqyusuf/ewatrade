@@ -88,6 +88,10 @@ export * from "../templates/marketing-waitlist-admin"
 export * from "../templates/marketing-waitlist-confirmation"
 export * from "../templates/retail-ops-staff-invite"
 export * from "../templates/commercial-order-fulfillment-reminder"
+export * from "../templates/mobile-owner-otp"
+export * from "../templates/store-conversation-notification"
+export * from "../templates/store-notification-verification"
+export * from "../templates/workspace-welcome"
 export * from "./qa-email-routing"
 
 export function createEmailMessage(message: EmailMessage) {

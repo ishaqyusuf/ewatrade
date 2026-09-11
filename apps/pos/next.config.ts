@@ -5,6 +5,7 @@ import type { NextConfig } from "next"
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: [
+    "@ewatrade/events",
     "@ewatrade/errors",
     "@ewatrade/observability",
     "@ewatrade/ui",

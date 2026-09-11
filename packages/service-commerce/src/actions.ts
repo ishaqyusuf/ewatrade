@@ -1,6 +1,7 @@
 import type {
   ServiceCommerceAction,
   ServiceCommerceCustomerActionCandidate,
+  ServiceCommerceCustomerActionExecutionResult,
   ServiceCommerceReadinessState,
   ServiceCommerceRequestState,
 } from "./schemas"
@@ -184,4 +185,34 @@ export function projectServiceCommerceCustomerActions(
   if (channelAvailable) actions.push(candidate("talk_to_staff"))
 
   return actions
+}
+
+/**
+ * Resolves only existing public systems of action. The capability remains the
+ * authority at the destination; this path is navigation, never proof that the
+ * underlying action or payment completed.
+ */
+export function resolveServiceCommerceCustomerActionHandoffPath(input: {
+  capabilityToken: string
+  result: ServiceCommerceCustomerActionExecutionResult
+}): string | null {
+  const token = encodeURIComponent(input.capabilityToken)
+  if (input.result.kind === "booking") return `/booking/${token}`
+  if (input.result.kind === "checkout") {
+    return input.result.checkoutUrl ?? null
+  }
+  if (
+    input.result.kind === "quote_option_selected" ||
+    input.result.kind === "request_recorded" ||
+    input.result.kind === "support"
+  ) {
+    return null
+  }
+  if (input.result.sourceKind === "prescription") {
+    return `/prescription-quote/${token}`
+  }
+  if (input.result.sourceKind === "commerce_inquiry") {
+    return `/commerce-inquiry-quote/${token}`
+  }
+  return `/service-quote/${token}`
 }

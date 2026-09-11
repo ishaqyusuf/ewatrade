@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test"
 import { resolveMarketingExperience } from "./marketing-experience-policy"
 
 describe("marketing experience production policy", () => {
-  test("allows a draft experience outside production", () => {
+  test("keeps the selected experience outside production", () => {
     expect(
       resolveMarketingExperience({
         requestedExperience: "operator-v2",
@@ -12,13 +12,13 @@ describe("marketing experience production policy", () => {
     ).toBe("operator-v2")
   })
 
-  test("falls back to the ready experience in production", () => {
+  test("keeps operator-v2 after it is approved for preview deployment", () => {
     expect(
       resolveMarketingExperience({
         requestedExperience: "operator-v2",
         nodeEnvironment: "production",
       }),
-    ).toBe("legacy-v1")
+    ).toBe("operator-v2")
   })
 
   test("keeps a production-ready experience in production", () => {

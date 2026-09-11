@@ -32,7 +32,7 @@ Minimal monorepo scaffold for ewatrade.
 - `bun run db:sync --from-local --to-preview`
 - `bun run build`
 
-Development starters run `dev:prepare` first. That kills stale app processes on the fixed dev ports and applies deployed Prisma migrations to the configured `DATABASE_URL` before Turbo launches app processes.
+Development starters run `dev:prepare` first. That kills stale app processes on the fixed dev ports and applies deployed Prisma migrations to the configured `EWATRADE_DATABASE_URL` before Turbo launches app processes.
 
 The root environment contract has one base file and four explicit profile files:
 
@@ -42,12 +42,12 @@ The root environment contract has one base file and four explicit profile files:
 - `.env.preview` is selected by `--preview`.
 - `.env.production` is selected by `--prod`.
 
-Each command loads `.env` followed by exactly one profile file. Every profile file owns its local-tooling `DATABASE_URL`; database commands do not inherit that value from `.env` or another profile. Platform-injected process values remain available when no local profile file is present.
+Each command loads `.env` followed by exactly one profile file. Every profile file owns its local-tooling `EWATRADE_DATABASE_URL`; database commands do not inherit that value from `.env` or another profile. Platform-injected process values remain available when no local profile file is present. The generic `DATABASE_URL` key is rejected and never used as a fallback.
 
-Configure `DATABASE_URL` before running database or app commands:
+Configure `EWATRADE_DATABASE_URL` before running database or app commands:
 
 ```bash
-DATABASE_URL=postgresql://USER:PASSWORD@HOST/neondb?sslmode=require
+EWATRADE_DATABASE_URL=postgresql://USER:PASSWORD@HOST/neondb?sslmode=require
 ```
 
 ## Portless

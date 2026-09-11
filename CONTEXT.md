@@ -3,6 +3,37 @@
 EwaTrade models the commercial and inventory language shared by merchants,
 stores, sales surfaces, and stock operations.
 
+## QA Tooling Language
+
+**QA Domain**:
+A configured reserved `.test` namespace that identifies one tester's routed
+email namespace and eligible QA-classified business data. It is an identifier,
+not an authentication secret.
+_Avoid_: QA password, tester account
+
+**QA Tester Credential**:
+A server-validated, scoped, expiring authorization—such as an access code or
+signed invitation—that permits a tester to use internal QA tooling for one QA
+Domain.
+_Avoid_: QA Domain, shared account password
+
+**QA Access Profile**:
+One selectable QA testing context combining a User identity, Membership role,
+QA-classified business, and relevant Store context. Selecting it may create a
+short-lived QA session after server reauthorization.
+_Avoid_: Stored login, business password
+
+**QA Form Coverage**:
+The required declaration for an in-scope mobile or website form that identifies
+either its Quick Fill Recipe or its explicit safety/unsupported exclusion.
+_Avoid_: Best-effort autofill
+
+**Quick Fill Recipe**:
+A form-owned generator that supplies unique, schema-valid synthetic values
+through the form's normal state and validation contract, using the active QA
+Domain for every generated email.
+_Avoid_: Global input injection, hard-coded form bypass
+
 ## Catalog And Inventory Language
 
 **Catalog Item**:

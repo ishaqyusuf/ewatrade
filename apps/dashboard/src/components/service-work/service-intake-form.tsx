@@ -1,6 +1,11 @@
 "use client"
 
 import {
+  createCustomerFixture,
+  createServiceFixture,
+} from "@/components/qa/fixture-recipes"
+import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
+import {
   flattenServiceOfferings,
   formatMoney,
 } from "@/components/service-work/service-utils"
@@ -14,7 +19,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 
 type StoreSummary = { currencyCode: string; id: string; name: string }
 type IntakeLine = { offeringId: string; quantity: string }
@@ -59,6 +64,7 @@ export function ServiceIntakeForm({
   const [lines, setLines] = useState<IntakeLine[]>([])
   const [customerName, setCustomerName] = useState("")
   const [customerPhone, setCustomerPhone] = useState("")
+  const [customerEmail, setCustomerEmail] = useState("")
   const [requestedAt, setRequestedAt] = useState("")
   const [dueAt, setDueAt] = useState("")
   const [instructions, setInstructions] = useState("")
@@ -76,6 +82,15 @@ export function ServiceIntakeForm({
   const [assigneeId, setAssigneeId] = useState("")
   const [showDetails, setShowDetails] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const quickFillSnapshot = useRef<{
+    customerEmail: string
+    customerName: string
+    customerPhone: string
+    dueAt: string
+    instructions: string
+    lines: IntakeLine[]
+  } | null>(null)
+  const [canUndoQuickFill, setCanUndoQuickFill] = useState(false)
   const intakeMutation = useMutation(
     trpc.services.createAndConfirmIntake.mutationOptions({
       onError: (failure) => setError(failure.message),
@@ -129,6 +144,7 @@ export function ServiceIntakeForm({
       conditionNote: conditionNote.trim() || undefined,
       customerName: customerName.trim() || undefined,
       customerPhone: customerPhone.trim() || undefined,
+      customerEmail: customerEmail.trim() || undefined,
       dueCommitmentAt: dueAt ? new Date(dueAt) : undefined,
       instructions: instructions.trim() || undefined,
       initialPaymentMethod:
@@ -158,6 +174,60 @@ export function ServiceIntakeForm({
           {error}
         </p>
       ) : null}
+      <QaDashboardQuickFill
+        canUndo={canUndoQuickFill}
+        formId="dashboard.service.intake"
+        isDirty={
+          lines.length > 0 ||
+          Boolean(
+            customerEmail ||
+              customerName ||
+              customerPhone ||
+              dueAt ||
+              instructions,
+          )
+        }
+        onFill={(context, sequence) => {
+          const offering = offerings[0]
+          if (!offering) {
+            setError(
+              "Add an eligible fixed-price Service before filling this draft.",
+            )
+            return
+          }
+          quickFillSnapshot.current = {
+            customerEmail,
+            customerName,
+            customerPhone,
+            dueAt,
+            instructions,
+            lines,
+          }
+          const service = createServiceFixture(context, sequence)
+          const customer = createCustomerFixture(context, sequence)
+          setLines([{ offeringId: offering.id, quantity: "1" }])
+          setCustomerEmail(customer.email)
+          setCustomerName(service.customerName)
+          setCustomerPhone(service.customerPhone)
+          setDueAt(service.dueAt.toISOString().slice(0, 16))
+          setInstructions(service.description)
+          setNotificationChannel("")
+          setShowDetails(true)
+          setCanUndoQuickFill(true)
+          setError(null)
+        }}
+        onUndo={() => {
+          if (!quickFillSnapshot.current) return
+          setCustomerEmail(quickFillSnapshot.current.customerEmail)
+          setCustomerName(quickFillSnapshot.current.customerName)
+          setCustomerPhone(quickFillSnapshot.current.customerPhone)
+          setDueAt(quickFillSnapshot.current.dueAt)
+          setInstructions(quickFillSnapshot.current.instructions)
+          setLines(quickFillSnapshot.current.lines)
+          quickFillSnapshot.current = null
+          setCanUndoQuickFill(false)
+        }}
+      />
       <div className="grid gap-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium">Items</h3>
@@ -238,7 +308,7 @@ export function ServiceIntakeForm({
           </p>
         ) : null}
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-3">
         <label className="grid gap-1.5 text-sm">
           <span className="font-medium">
             Customer name{" "}
@@ -248,6 +318,18 @@ export function ServiceIntakeForm({
             className={fieldClass}
             value={customerName}
             onChange={(event) => setCustomerName(event.target.value)}
+          />
+        </label>
+        <label className="grid gap-1.5 text-sm">
+          <span className="font-medium">
+            Email{" "}
+            <span className="font-normal text-muted-foreground">Optional</span>
+          </span>
+          <input
+            className={fieldClass}
+            onChange={(event) => setCustomerEmail(event.target.value)}
+            type="email"
+            value={customerEmail}
           />
         </label>
         <label className="grid gap-1.5 text-sm">

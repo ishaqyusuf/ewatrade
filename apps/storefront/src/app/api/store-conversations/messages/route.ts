@@ -1,6 +1,7 @@
 import { prisma } from "@ewatrade/db"
 import {
   StoreConversationError,
+  sendAccountStoreConversationText,
   sendGuestStoreConversationText,
 } from "@ewatrade/db/queries"
 import { storeConversationSendTextInputSchema } from "@ewatrade/service-commerce"
@@ -11,6 +12,7 @@ import {
   STORE_CONVERSATION_GUEST_COOKIE_OPTIONS,
   requestIsSameOrigin,
 } from "@/lib/store-conversation-cookie"
+import { requireStorefrontCustomerAccount } from "@/lib/store-conversation-account-session"
 
 export async function POST(request: NextRequest) {
   if (!requestIsSameOrigin(request)) {
@@ -19,10 +21,15 @@ export async function POST(request: NextRequest) {
       { status: 403 },
     )
   }
+  const body = (await request.json().catch(() => null)) as Record<
+    string,
+    unknown
+  > | null
+  const accountAccess = body?.access === "account"
   const credentialToken = request.cookies.get(
     STORE_CONVERSATION_GUEST_COOKIE,
   )?.value
-  if (!credentialToken) {
+  if (!accountAccess && !credentialToken) {
     return NextResponse.json(
       {
         code: "GUEST_CREDENTIAL_EXPIRED",
@@ -32,20 +39,29 @@ export async function POST(request: NextRequest) {
     )
   }
   try {
-    const input = storeConversationSendTextInputSchema.parse(
-      await request.json(),
-    )
+    const { access: _access, ...messageBody } = body ?? {}
+    const input = storeConversationSendTextInputSchema.parse(messageBody)
     const response = NextResponse.json(
-      await sendGuestStoreConversationText(prisma, {
-        ...input,
+      accountAccess
+        ? await sendAccountStoreConversationText(prisma, {
+            ...input,
+            accountUserId: (
+              await requireStorefrontCustomerAccount(request.headers)
+            ).user.id,
+            channel: "web",
+          })
+        : await sendGuestStoreConversationText(prisma, {
+            ...input,
+            credentialToken: credentialToken as string,
+          }),
+    )
+    if (!accountAccess && credentialToken) {
+      response.cookies.set(
+        STORE_CONVERSATION_GUEST_COOKIE,
         credentialToken,
-      }),
-    )
-    response.cookies.set(
-      STORE_CONVERSATION_GUEST_COOKIE,
-      credentialToken,
-      STORE_CONVERSATION_GUEST_COOKIE_OPTIONS,
-    )
+        STORE_CONVERSATION_GUEST_COOKIE_OPTIONS,
+      )
+    }
     return response
   } catch (error) {
     if (error instanceof StoreConversationError) {
@@ -59,7 +75,9 @@ export async function POST(request: NextRequest) {
                 ? 403
                 : error.code === "NOT_FOUND"
                   ? 404
-                  : 409,
+                  : error.code === "STORE_UNAVAILABLE"
+                    ? 412
+                    : 409,
         },
       )
     }

@@ -12,6 +12,7 @@ describe("Service Commerce media safety", () => {
   test("records the provider outcome from private server-owned metadata", async () => {
     const outcomes: string[] = []
     const result = await runServiceCommerceMediaSafety(payload, {
+      assertProviderAllowed: async () => undefined,
       inspect: async () => ({ lifecycle: "safe" }),
       load: async () => ({
         contentDigest: "a".repeat(64),
@@ -33,6 +34,7 @@ describe("Service Commerce media safety", () => {
   test("fails closed when the private object is not ready for inspection", async () => {
     await expect(
       runServiceCommerceMediaSafety(payload, {
+        assertProviderAllowed: async () => undefined,
         inspect: async () => ({ lifecycle: "safe" }),
         load: async () => null,
         record: async () => ({ lifecycle: "unexpected" }),
@@ -44,6 +46,7 @@ describe("Service Commerce media safety", () => {
     const outcomes: string[] = []
     await expect(
       runServiceCommerceMediaSafety(payload, {
+        assertProviderAllowed: async () => undefined,
         inspect: async () => {
           throw new Error("scanner unavailable")
         },
@@ -66,6 +69,7 @@ describe("Service Commerce media safety", () => {
   test("keeps a quarantined document private and terminal to normal staff recovery", async () => {
     const outcomes: string[] = []
     const result = await runServiceCommerceMediaSafety(payload, {
+      assertProviderAllowed: async () => undefined,
       inspect: async () => ({ lifecycle: "quarantined" }),
       load: async () => ({
         contentDigest: "c".repeat(64),

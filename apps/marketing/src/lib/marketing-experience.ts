@@ -11,7 +11,7 @@ export function isMarketingExperienceId(
 }
 
 export function getRequestedMarketingExperience(
-  value = process.env.MARKETING_EXPERIENCE,
+  value = process.env.EWATRADE_MARKETING_EXPERIENCE,
 ): MarketingExperienceId {
   return isMarketingExperienceId(value) ? value : defaultMarketingExperience
 }

@@ -1,0 +1,9 @@
+<svg width="960" height="480" viewBox="0 0 960 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(380 20) rotate(-3 100 100)">
+    <rect width="200" height="200" rx="58" fill="#FFBD3E"/>
+    <path d="M66 82H134L126 60H74L66 82Z" stroke="#17372D" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M76 82V137M124 82V137M58 142H142M86 101H114V137H86V101Z" stroke="#17372D" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="480" y="315" text-anchor="middle" fill="#FFF9ED" font-family="Arial Black, Arial, sans-serif" font-size="112" font-weight="900" letter-spacing="-5">ẸwáTrade</text>
+  <text x="480" y="382" text-anchor="middle" fill="#FFE09A" font-family="Arial, sans-serif" font-size="30" font-weight="900" letter-spacing="8">MARKET DAY, EVERY DAY</text>
+</svg>

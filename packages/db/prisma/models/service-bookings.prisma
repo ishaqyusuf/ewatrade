@@ -108,59 +108,59 @@ enum ServiceBookingRefundPolicy {
 }
 
 model ServiceBookingStoreSettings {
-  id                    String   @id @default(cuid())
-  tenantId              String
-  storeId               String   @unique
-  timezone              String
-  defaultSlotInterval   Int      @default(15)
-  defaultHoldMinutes    Int      @default(10)
-  reminderLeadMinutes   Int      @default(1440)
-  updatedByUserId       String
-  revision              Int      @default(0)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store                 Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  id                  String   @id @default(cuid())
+  tenantId            String
+  storeId             String   @unique
+  timezone            String
+  defaultSlotInterval Int      @default(15)
+  defaultHoldMinutes  Int      @default(10)
+  reminderLeadMinutes Int      @default(1440)
+  updatedByUserId     String
+  revision            Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store               Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, updatedAt])
 }
 
 model ServiceBookingOfferingConfig {
-  id                           String                           @id @default(cuid())
-  tenantId                     String
-  storeId                      String
-  offeringId                   String
-  status                       ServiceBookingRecordStatus       @default(ACTIVE)
-  durationMinutes              Int
-  holdDurationMinutes          Int                              @default(10)
-  leadTimeMinutes              Int                              @default(0)
-  bookingHorizonMinutes        Int                              @default(43200)
-  capacity                     Int                              @default(1)
-  paymentRequirement           ServiceBookingPaymentRequirement @default(NONE)
-  depositAmountMinor           Int?
-  cancellationWindowMinutes    Int                              @default(0)
-  refundPolicy                 ServiceBookingRefundPolicy       @default(NONE)
-  paymentPolicyRevision        Int                              @default(0)
-  cancellationPolicyRevision   Int                              @default(0)
-  updatedByUserId              String
-  revision                     Int                              @default(0)
-  createdAt                    DateTime                         @default(now())
-  updatedAt                    DateTime                         @updatedAt
-  tenant                       Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store                        Store                            @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  offering                     SellableOffering                 @relation(fields: [offeringId], references: [id], onDelete: Cascade)
-  resources                    ServiceBookingOfferingResource[]
-  holds                        ServiceBookingHold[]
-  bookings                     ServiceBooking[]
-  accessCapabilities           ServiceBookingAccessCapability[]
-  configurationEvents          ServiceBookingConfigurationEvent[]
+  id                         String                             @id @default(cuid())
+  tenantId                   String
+  storeId                    String
+  offeringId                 String
+  status                     ServiceBookingRecordStatus         @default(ACTIVE)
+  durationMinutes            Int
+  holdDurationMinutes        Int                                @default(10)
+  leadTimeMinutes            Int                                @default(0)
+  bookingHorizonMinutes      Int                                @default(43200)
+  capacity                   Int                                @default(1)
+  paymentRequirement         ServiceBookingPaymentRequirement   @default(NONE)
+  depositAmountMinor         Int?
+  cancellationWindowMinutes  Int                                @default(0)
+  refundPolicy               ServiceBookingRefundPolicy         @default(NONE)
+  paymentPolicyRevision      Int                                @default(0)
+  cancellationPolicyRevision Int                                @default(0)
+  updatedByUserId            String
+  revision                   Int                                @default(0)
+  createdAt                  DateTime                           @default(now())
+  updatedAt                  DateTime                           @updatedAt
+  tenant                     Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                      Store                              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  offering                   SellableOffering                   @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  resources                  ServiceBookingOfferingResource[]
+  holds                      ServiceBookingHold[]
+  bookings                   ServiceBooking[]
+  accessCapabilities         ServiceBookingAccessCapability[]
+  configurationEvents        ServiceBookingConfigurationEvent[]
 
   @@unique([storeId, offeringId])
   @@index([tenantId, storeId, status])
 }
 
 model ServiceBookingResource {
-  id               String                     @id @default(cuid())
+  id               String                                @id @default(cuid())
   tenantId         String
   storeId          String
   membershipId     String?
@@ -168,15 +168,15 @@ model ServiceBookingResource {
   payloadHash      String
   name             String
   kind             ServiceBookingResourceKind
-  status           ServiceBookingRecordStatus @default(ACTIVE)
-  capacity         Int                        @default(1)
+  status           ServiceBookingRecordStatus            @default(ACTIVE)
+  capacity         Int                                   @default(1)
   updatedByUserId  String
-  revision         Int                        @default(0)
-  createdAt        DateTime                   @default(now())
-  updatedAt        DateTime                   @updatedAt
-  tenant           Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store            Store                      @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  membership       Membership?                @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+  revision         Int                                   @default(0)
+  createdAt        DateTime                              @default(now())
+  updatedAt        DateTime                              @updatedAt
+  tenant           Tenant                                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store            Store                                 @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  membership       Membership?                           @relation(fields: [membershipId], references: [id], onDelete: SetNull)
   offeringConfigs  ServiceBookingOfferingResource[]
   availability     ServiceBookingAvailabilityRule[]
   exceptions       ServiceBookingAvailabilityException[]
@@ -203,7 +203,7 @@ model ServiceBookingOfferingResource {
 }
 
 model ServiceBookingAvailabilityRule {
-  id                String                 @id @default(cuid())
+  id                String                     @id @default(cuid())
   tenantId          String
   storeId           String
   resourceId        String
@@ -212,93 +212,93 @@ model ServiceBookingAvailabilityRule {
   startMinute       Int
   endMinute         Int
   capacity          Int?
-  effectiveFromDate DateTime?              @db.Date
-  effectiveToDate   DateTime?              @db.Date
+  effectiveFromDate DateTime?                  @db.Date
+  effectiveToDate   DateTime?                  @db.Date
   status            ServiceBookingRecordStatus @default(ACTIVE)
   updatedByUserId   String
-  revision          Int                    @default(0)
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
-  tenant            Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store             Store                  @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  resource          ServiceBookingResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  revision          Int                        @default(0)
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  tenant            Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  resource          ServiceBookingResource     @relation(fields: [resourceId], references: [id], onDelete: Cascade)
 
   @@unique([resourceId, clientRuleId, dayOfWeek, revision])
   @@index([tenantId, storeId, resourceId, dayOfWeek, status])
 }
 
 model ServiceBookingAvailabilityException {
-  id              String                                  @id @default(cuid())
-  tenantId        String
-  storeId         String
-  resourceId      String
+  id                String                                  @id @default(cuid())
+  tenantId          String
+  storeId           String
+  resourceId        String
   clientExceptionId String
-  startAt         DateTime
-  endAt           DateTime
-  kind            ServiceBookingAvailabilityExceptionKind
-  capacity        Int?
-  reasonCode      String?
-  status          ServiceBookingRecordStatus              @default(ACTIVE)
-  updatedByUserId String
-  revision        Int                                     @default(0)
-  createdAt       DateTime                                @default(now())
-  updatedAt       DateTime                                @updatedAt
-  tenant          Tenant                                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store           Store                                   @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  resource        ServiceBookingResource                  @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  startAt           DateTime
+  endAt             DateTime
+  kind              ServiceBookingAvailabilityExceptionKind
+  capacity          Int?
+  reasonCode        String?
+  status            ServiceBookingRecordStatus              @default(ACTIVE)
+  updatedByUserId   String
+  revision          Int                                     @default(0)
+  createdAt         DateTime                                @default(now())
+  updatedAt         DateTime                                @updatedAt
+  tenant            Tenant                                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                                   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  resource          ServiceBookingResource                  @relation(fields: [resourceId], references: [id], onDelete: Cascade)
 
   @@unique([resourceId, clientExceptionId, revision])
   @@index([tenantId, storeId, resourceId, startAt, endAt, status])
 }
 
 model ServiceBookingConfigurationEvent {
-  id                  String                               @id @default(cuid())
-  tenantId            String
-  storeId             String
-  offeringConfigId    String
-  clientOperationId   String
-  payloadHash         String
-  type                 ServiceBookingConfigurationEventType
-  previousRevision    Int?
-  nextRevision        Int
-  actorUserId         String
-  createdAt           DateTime                             @default(now())
-  tenant              Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store               Store                                @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  offeringConfig      ServiceBookingOfferingConfig         @relation(fields: [offeringConfigId], references: [id], onDelete: Cascade)
+  id                String                               @id @default(cuid())
+  tenantId          String
+  storeId           String
+  offeringConfigId  String
+  clientOperationId String
+  payloadHash       String
+  type              ServiceBookingConfigurationEventType
+  previousRevision  Int?
+  nextRevision      Int
+  actorUserId       String
+  createdAt         DateTime                             @default(now())
+  tenant            Tenant                               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                                @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  offeringConfig    ServiceBookingOfferingConfig         @relation(fields: [offeringConfigId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, clientOperationId])
   @@index([tenantId, storeId, offeringConfigId, createdAt])
 }
 
 model ServiceBookingHold {
-  id                 String                   @id @default(cuid())
-  tenantId           String
-  storeId            String
-  offeringConfigId   String
-  resourceId         String
-  sourceType         CommerceQuoteSourceType
-  sourceId           String
-  clientHoldId       String
-  payloadHash        String
-  accessCapabilityId String                   @unique
+  id                    String                         @id @default(cuid())
+  tenantId              String
+  storeId               String
+  offeringConfigId      String
+  resourceId            String
+  sourceType            CommerceQuoteSourceType
+  sourceId              String
+  clientHoldId          String
+  payloadHash           String
+  accessCapabilityId    String                         @unique
   bookingPolicyRevision Int
-  status             ServiceBookingHoldStatus @default(HELD)
-  capacity           Int                      @default(1)
-  startAt            DateTime
-  endAt              DateTime
-  expiresAt          DateTime
-  createdByUserId    String?
-  confirmedAt        DateTime?
-  releasedAt         DateTime?
-  createdAt          DateTime                 @default(now())
-  updatedAt          DateTime                 @updatedAt
-  tenant             Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store              Store                    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  offeringConfig     ServiceBookingOfferingConfig @relation(fields: [offeringConfigId], references: [id], onDelete: Restrict)
-  resource           ServiceBookingResource   @relation(fields: [resourceId], references: [id], onDelete: Restrict)
-  accessCapability   ServiceBookingAccessCapability @relation(fields: [accessCapabilityId], references: [id], onDelete: Restrict)
-  booking            ServiceBooking?
+  status                ServiceBookingHoldStatus       @default(HELD)
+  capacity              Int                            @default(1)
+  startAt               DateTime
+  endAt                 DateTime
+  expiresAt             DateTime
+  createdByUserId       String?
+  confirmedAt           DateTime?
+  releasedAt            DateTime?
+  createdAt             DateTime                       @default(now())
+  updatedAt             DateTime                       @updatedAt
+  tenant                Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                 Store                          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  offeringConfig        ServiceBookingOfferingConfig   @relation(fields: [offeringConfigId], references: [id], onDelete: Restrict)
+  resource              ServiceBookingResource         @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+  accessCapability      ServiceBookingAccessCapability @relation(fields: [accessCapabilityId], references: [id], onDelete: Restrict)
+  booking               ServiceBooking?
 
   @@unique([tenantId, clientHoldId])
   @@index([tenantId, storeId, resourceId, startAt, endAt, status])
@@ -306,61 +306,61 @@ model ServiceBookingHold {
 }
 
 model ServiceBooking {
-  id                         String                           @id @default(cuid())
-  tenantId                   String
-  storeId                    String
-  offeringConfigId           String
-  resourceId                 String
-  holdId                     String?                          @unique
-  sourceType                 CommerceQuoteSourceType
-  sourceId                   String
-  quoteVersionId             String?
-  commercialOrderId          String?
-  serviceJobId               String?                          @unique
-  clientBookingId            String
-  payloadHash                String
-  status                     ServiceBookingStatus             @default(SCHEDULED)
-  paymentStatus              ServiceBookingPaymentStatus      @default(NOT_REQUIRED)
-  startAt                    DateTime
-  endAt                      DateTime
-  capacity                   Int                              @default(1)
-  timezoneSnapshot           String
-  paymentRequirementSnapshot ServiceBookingPaymentRequirement
-  depositAmountMinorSnapshot Int?
-  cancellationWindowSnapshot Int
-  refundPolicySnapshot       ServiceBookingRefundPolicy
-  offeringPolicyRevisionSnapshot Int
-  paymentPolicyRevisionSnapshot Int
+  id                                 String                             @id @default(cuid())
+  tenantId                           String
+  storeId                            String
+  offeringConfigId                   String
+  resourceId                         String
+  holdId                             String?                            @unique
+  sourceType                         CommerceQuoteSourceType
+  sourceId                           String
+  quoteVersionId                     String?
+  commercialOrderId                  String?
+  serviceJobId                       String?                            @unique
+  clientBookingId                    String
+  payloadHash                        String
+  status                             ServiceBookingStatus               @default(SCHEDULED)
+  paymentStatus                      ServiceBookingPaymentStatus        @default(NOT_REQUIRED)
+  startAt                            DateTime
+  endAt                              DateTime
+  capacity                           Int                                @default(1)
+  timezoneSnapshot                   String
+  paymentRequirementSnapshot         ServiceBookingPaymentRequirement
+  depositAmountMinorSnapshot         Int?
+  cancellationWindowSnapshot         Int
+  refundPolicySnapshot               ServiceBookingRefundPolicy
+  offeringPolicyRevisionSnapshot     Int
+  paymentPolicyRevisionSnapshot      Int
   cancellationPolicyRevisionSnapshot Int
-  payableAmountMinorSnapshot Int
-  requiredPaymentMinorSnapshot Int
-  currencyCodeSnapshot       String
-  customerName               String?
-  customerContactCiphertext  String?
-  notificationChannelSnapshot ServiceNotificationChannel?
-  notificationPolicyChannelSnapshot ServiceCommercePolicyChannel?
-  reminderLeadMinutesSnapshot Int
-  revision                   Int                              @default(0)
-  confirmedAt                DateTime?
-  arrivedAt                  DateTime?
-  serviceStartedAt           DateTime?
-  completedAt                DateTime?
-  cancelledAt                DateTime?
-  noShowAt                   DateTime?
-  createdByUserId            String?
-  createdAt                  DateTime                         @default(now())
-  updatedAt                  DateTime                         @updatedAt
-  tenant                     Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store                      Store                            @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  offeringConfig             ServiceBookingOfferingConfig     @relation(fields: [offeringConfigId], references: [id], onDelete: Restrict)
-  resource                   ServiceBookingResource           @relation(fields: [resourceId], references: [id], onDelete: Restrict)
-  hold                       ServiceBookingHold?              @relation(fields: [holdId], references: [id], onDelete: SetNull)
-  quoteVersion               CommerceQuoteVersion?            @relation(fields: [quoteVersionId], references: [id], onDelete: SetNull)
-  commercialOrder            CommercialOrder?                 @relation(fields: [commercialOrderId], references: [id], onDelete: SetNull)
-  serviceJob                 ServiceJob?                      @relation(fields: [serviceJobId], references: [id], onDelete: SetNull)
-  events                     ServiceBookingEvent[]
-  accessCapabilities         ServiceBookingAccessCapability[]
-  notificationIntents        ServiceBookingNotificationIntent[]
+  payableAmountMinorSnapshot         Int
+  requiredPaymentMinorSnapshot       Int
+  currencyCodeSnapshot               String
+  customerName                       String?
+  customerContactCiphertext          String?
+  notificationChannelSnapshot        ServiceNotificationChannel?
+  notificationPolicyChannelSnapshot  ServiceCommercePolicyChannel?
+  reminderLeadMinutesSnapshot        Int
+  revision                           Int                                @default(0)
+  confirmedAt                        DateTime?
+  arrivedAt                          DateTime?
+  serviceStartedAt                   DateTime?
+  completedAt                        DateTime?
+  cancelledAt                        DateTime?
+  noShowAt                           DateTime?
+  createdByUserId                    String?
+  createdAt                          DateTime                           @default(now())
+  updatedAt                          DateTime                           @updatedAt
+  tenant                             Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                              Store                              @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  offeringConfig                     ServiceBookingOfferingConfig       @relation(fields: [offeringConfigId], references: [id], onDelete: Restrict)
+  resource                           ServiceBookingResource             @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+  hold                               ServiceBookingHold?                @relation(fields: [holdId], references: [id], onDelete: SetNull)
+  quoteVersion                       CommerceQuoteVersion?              @relation(fields: [quoteVersionId], references: [id], onDelete: SetNull)
+  commercialOrder                    CommercialOrder?                   @relation(fields: [commercialOrderId], references: [id], onDelete: SetNull)
+  serviceJob                         ServiceJob?                        @relation(fields: [serviceJobId], references: [id], onDelete: SetNull)
+  events                             ServiceBookingEvent[]
+  accessCapabilities                 ServiceBookingAccessCapability[]
+  notificationIntents                ServiceBookingNotificationIntent[]
 
   @@unique([tenantId, clientBookingId])
   @@index([tenantId, storeId, status, startAt])
@@ -371,71 +371,71 @@ model ServiceBooking {
 }
 
 model ServiceBookingAccessCapability {
-  id                  String                     @id @default(cuid())
-  tenantId            String
-  storeId             String
-  offeringConfigId    String
-  sourceType          CommerceQuoteSourceType
-  sourceId            String
-  bookingId           String?
-  clientOperationId   String
-  payloadHash         String
-  tokenDigest         String                     @unique
-  purpose             ServiceBookingAccessPurpose
-  status              ServiceBookingAccessStatus @default(ACTIVE)
-  stateRevision       Int
-  expiresAt           DateTime
-  rotatedFromId       String?
-  revokedAt           DateTime?
-  lastAccessedAt      DateTime?
-  accessCount         Int                        @default(0)
-  createdAt           DateTime                   @default(now())
-  updatedAt           DateTime                   @updatedAt
-  tenant              Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store               Store                      @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  offeringConfig      ServiceBookingOfferingConfig @relation(fields: [offeringConfigId], references: [id], onDelete: Cascade)
-  booking             ServiceBooking?            @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  hold                ServiceBookingHold?
-  rotatedFrom         ServiceBookingAccessCapability? @relation("ServiceBookingAccessRotation", fields: [rotatedFromId], references: [id], onDelete: Restrict)
-  rotations           ServiceBookingAccessCapability[] @relation("ServiceBookingAccessRotation")
+  id                String                           @id @default(cuid())
+  tenantId          String
+  storeId           String
+  offeringConfigId  String
+  sourceType        CommerceQuoteSourceType
+  sourceId          String
+  bookingId         String?
+  clientOperationId String
+  payloadHash       String
+  tokenDigest       String                           @unique
+  purpose           ServiceBookingAccessPurpose
+  status            ServiceBookingAccessStatus       @default(ACTIVE)
+  stateRevision     Int
+  expiresAt         DateTime
+  rotatedFromId     String?
+  revokedAt         DateTime?
+  lastAccessedAt    DateTime?
+  accessCount       Int                              @default(0)
+  createdAt         DateTime                         @default(now())
+  updatedAt         DateTime                         @updatedAt
+  tenant            Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store             Store                            @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  offeringConfig    ServiceBookingOfferingConfig     @relation(fields: [offeringConfigId], references: [id], onDelete: Cascade)
+  booking           ServiceBooking?                  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  hold              ServiceBookingHold?
+  rotatedFrom       ServiceBookingAccessCapability?  @relation("ServiceBookingAccessRotation", fields: [rotatedFromId], references: [id], onDelete: Restrict)
+  rotations         ServiceBookingAccessCapability[] @relation("ServiceBookingAccessRotation")
 
-  @@index([bookingId, status, expiresAt])
   @@unique([tenantId, clientOperationId])
+  @@index([bookingId, status, expiresAt])
   @@index([sourceType, sourceId, purpose, status])
   @@index([tenantId, storeId, status, expiresAt])
 }
 
 model ServiceBookingEvent {
-  id                 String                  @id @default(cuid())
-  tenantId           String
-  storeId            String
-  bookingId          String
-  clientOperationId  String?
-  payloadHash        String?
-  type               ServiceBookingEventType
-  fromStatus         ServiceBookingStatus?
-  toStatus           ServiceBookingStatus?
-  actorUserId        String?
-  reasonCode         String?
-  previousStartAt    DateTime?
-  previousEndAt      DateTime?
-  nextStartAt        DateTime?
-  nextEndAt          DateTime?
-  previousResourceId String?
-  nextResourceId     String?
-  capacitySnapshot  Int?
-  offeringPolicyRevisionSnapshot Int?
-  paymentPolicyRevisionSnapshot Int?
+  id                                 String                       @id @default(cuid())
+  tenantId                           String
+  storeId                            String
+  bookingId                          String
+  clientOperationId                  String?
+  payloadHash                        String?
+  type                               ServiceBookingEventType
+  fromStatus                         ServiceBookingStatus?
+  toStatus                           ServiceBookingStatus?
+  actorUserId                        String?
+  reasonCode                         String?
+  previousStartAt                    DateTime?
+  previousEndAt                      DateTime?
+  nextStartAt                        DateTime?
+  nextEndAt                          DateTime?
+  previousResourceId                 String?
+  nextResourceId                     String?
+  capacitySnapshot                   Int?
+  offeringPolicyRevisionSnapshot     Int?
+  paymentPolicyRevisionSnapshot      Int?
   cancellationPolicyRevisionSnapshot Int?
-  refundOutcome      ServiceBookingRefundOutcome?
-  refundAmountMinor  Int?
-  commercialPaymentId String?
-  effectiveAt        DateTime                @default(now())
-  createdAt          DateTime                @default(now())
-  tenant             Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store              Store                   @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  booking            ServiceBooking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  commercialPayment  CommercialOrderPayment? @relation(fields: [commercialPaymentId], references: [id], onDelete: SetNull)
+  refundOutcome                      ServiceBookingRefundOutcome?
+  refundAmountMinor                  Int?
+  commercialPaymentId                String?
+  effectiveAt                        DateTime                     @default(now())
+  createdAt                          DateTime                     @default(now())
+  tenant                             Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                              Store                        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  booking                            ServiceBooking               @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  commercialPayment                  CommercialOrderPayment?      @relation(fields: [commercialPaymentId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, clientOperationId])
   @@index([bookingId, effectiveAt])
@@ -449,22 +449,22 @@ model ServiceBookingNotificationIntent {
   storeId             String
   bookingId           String
   deduplicationKey    String
-  type                 ServiceBookingNotificationType
-  channel              ServiceNotificationChannel
-  policyChannel        ServiceCommercePolicyChannel
+  type                ServiceBookingNotificationType
+  channel             ServiceNotificationChannel
+  policyChannel       ServiceCommercePolicyChannel
   recipientCiphertext String
   authorizationUserId String
-  status               ServiceBookingNotificationStatus @default(PENDING)
-  scheduledFor         DateTime
-  attemptCount         Int                              @default(0)
-  claimedAt            DateTime?
-  sentAt               DateTime?
-  failureCode          String?
-  createdAt            DateTime                         @default(now())
-  updatedAt            DateTime                         @updatedAt
-  tenant               Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store                Store                            @relation(fields: [storeId], references: [id], onDelete: Restrict)
-  booking              ServiceBooking                  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  status              ServiceBookingNotificationStatus @default(PENDING)
+  scheduledFor        DateTime
+  attemptCount        Int                              @default(0)
+  claimedAt           DateTime?
+  sentAt              DateTime?
+  failureCode         String?
+  createdAt           DateTime                         @default(now())
+  updatedAt           DateTime                         @updatedAt
+  tenant              Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store               Store                            @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  booking             ServiceBooking                   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, deduplicationKey])
   @@index([tenantId, storeId, status, scheduledFor])

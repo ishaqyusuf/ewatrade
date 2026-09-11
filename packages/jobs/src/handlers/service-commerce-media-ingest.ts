@@ -21,6 +21,7 @@ import {
   serviceCommerceMediaMimeTypeSchema,
 } from "@ewatrade/service-commerce"
 
+import { assertQaJobProviderAllowed } from "../qa-provider-guard"
 import { triggerJob } from "../trigger"
 import { serviceCommerceMediaSafetyHandler } from "./service-commerce-media-safety"
 
@@ -31,6 +32,7 @@ export type ServiceCommerceMediaIngestPayload = {
 }
 
 type Dependencies = {
+  assertProviderAllowed(input: { tenantId: string }): Promise<unknown>
   claim(input: ServiceCommerceMediaIngestPayload): Promise<{
     provider: string | null
     providerConnectionId: string | null
@@ -81,9 +83,32 @@ type Dependencies = {
   storage: PrivateMediaProvider
 }
 
+type ProviderImageOrDocumentMime =
+  | "application/pdf"
+  | "image/heic"
+  | "image/heif"
+  | "image/jpeg"
+  | "image/png"
+  | "image/webp"
+
+function isProviderImageOrDocumentMime(
+  mimeType: string,
+): mimeType is ProviderImageOrDocumentMime {
+  return [
+    "application/pdf",
+    "image/heic",
+    "image/heif",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+  ].includes(mimeType)
+}
+
 function defaultDependencies(): Dependencies {
   const provider = new DirectMetaWhatsAppProvider()
   return {
+    assertProviderAllowed: ({ tenantId }) =>
+      assertQaJobProviderAllowed({ operation: "media_analysis", tenantId }),
     claim: (input) => claimServiceCommerceMediaRetrieval(prisma, input),
     enqueueSafety: (input) =>
       triggerJob(
@@ -140,6 +165,7 @@ export async function runServiceCommerceMediaIngest(
       reason: "provider_reference_invalid",
     })
   }
+  await dependencies.assertProviderAllowed({ tenantId: payload.tenantId })
 
   let result: unknown
   try {
@@ -161,6 +187,7 @@ export async function runServiceCommerceMediaIngest(
     if (
       !declared.success ||
       !signature ||
+      !isProviderImageOrDocumentMime(signature) ||
       signature !== declared.data ||
       fetched.bytes.byteLength > SERVICE_COMMERCE_MEDIA_MAX_ATTACHMENT_BYTES
     ) {

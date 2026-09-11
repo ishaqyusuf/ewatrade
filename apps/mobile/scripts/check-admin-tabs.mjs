@@ -1,8 +1,8 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { extname, join, relative, resolve } from "node:path";
+import { existsSync, readFileSync, readdirSync } from "node:fs"
+import { extname, join, relative, resolve } from "node:path"
 
-const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname);
-const REPO_DIR = resolve(MOBILE_DIR, "../..");
+const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname)
+const REPO_DIR = resolve(MOBILE_DIR, "../..")
 
 const contracts = [
   {
@@ -32,8 +32,10 @@ const contracts = [
   {
     file: "src/components/mobile/bottom-tab-item.tsx",
     markers: [
-      "allowFontScaling={false}",
-      "adjustsFontSizeToFit",
+      "DISPLAY_TEXT_FONT_SCALE_CAP",
+      "useLargeTextLayout",
+      "adjustsFontSizeToFit={!largeTextLayout}",
+      "numberOfLines={largeTextLayout ? 2 : 1}",
       "isOperationalNavigation",
       'textAlign: "center"',
       'width: "100%"',
@@ -57,18 +59,65 @@ const contracts = [
     markers: ['presentation?: "modal" | "tab"', 'presentation === "tab"'],
   },
   {
+    file: "src/components/mobile/admin-tabs/admin-create-action-sheet.tsx",
+    markers: [
+      "Quick create",
+      "What are you adding?",
+      "buildAdminCreateActions",
+      'largeTextLayout ? ["92%"] : [actions.length > 5 ? "64%" : "56%"]',
+      "BottomSheetScrollView",
+      '"-mx-2 min-h-16 flex-row gap-3 border-t border-border px-3 py-3"',
+      'largeTextLayout ? "items-start" : "items-center"',
+      "StatusBadge",
+    ],
+  },
+  {
+    file: "src/lib/admin-create-actions.ts",
+    markers: [
+      'label: "Product"',
+      'label: "Service"',
+      "statusLabel: availability.hasActiveSellableItems",
+      "statusLabel: availability.hasProductItems",
+    ],
+  },
+  {
     file: "src/components/mobile/admin-tabs/admin-more-screen.tsx",
     markers: [
-      "Menu",
-      "My Store",
+      "More",
+      "Manage your store and account.",
+      "Current business",
+      "StatusBadge",
       "buildAdminMoreSections",
+      "buildAppThemeOptions",
       "syncAlertCount",
-      'title="App theme"',
-      '(["system", "light", "dark"] as const)',
-      "setThemeOverride(value)",
+      'accessibilityLabel="App theme"',
+      "themeOptions.map",
+      "commitAppThemeSelection",
+      "persist: setThemeOverride",
+      "themeSavePending",
       'accessibilityRole="radio"',
       "unsynced",
       "useResetAdminDock",
+    ],
+  },
+  {
+    file: "src/components/mobile/app-theme-presentation.ts",
+    markers: [
+      "buildAppThemeOptions",
+      'label: "System"',
+      'label: "Light"',
+      'label: "Dark"',
+      "Follow device setting · currently",
+    ],
+  },
+  {
+    file: "src/components/mobile/app-theme-selection.ts",
+    markers: [
+      "commitAppThemeSelection",
+      'return "unchanged"',
+      "await persist(next)",
+      "apply(current)",
+      'return "failed"',
     ],
   },
   {
@@ -97,50 +146,48 @@ const contracts = [
       "DESIGN_01_ROUTES.moreImage",
     ],
   },
-];
+]
 
-const failures = [];
+const failures = []
 
 for (const contract of contracts) {
-  const path = join(MOBILE_DIR, contract.file);
+  const path = join(MOBILE_DIR, contract.file)
   if (!existsSync(path)) {
-    failures.push(`${contract.file} is missing`);
-    continue;
+    failures.push(`${contract.file} is missing`)
+    continue
   }
-  if (contract.markers.length === 0) continue;
-  const source = readFileSync(path, "utf8");
+  if (contract.markers.length === 0) continue
+  const source = readFileSync(path, "utf8")
   for (const marker of contract.markers) {
     if (!source.includes(marker)) {
-      failures.push(`${contract.file} is missing marker: ${marker}`);
+      failures.push(`${contract.file} is missing marker: ${marker}`)
     }
   }
 }
 
-const gitignore = readFileSync(join(REPO_DIR, ".gitignore"), "utf8");
+const gitignore = readFileSync(join(REPO_DIR, ".gitignore"), "utf8")
 if (!gitignore.split("\n").includes("/.designs/")) {
-  failures.push(".gitignore must ignore the root /.designs/ archive");
+  failures.push(".gitignore must ignore the root /.designs/ archive")
 }
 
-const rasterExtensions = new Set([".jpeg", ".jpg", ".png", ".webp"]);
+const rasterExtensions = new Set([".jpeg", ".jpg", ".png", ".webp"])
 function findRasterFiles(directory) {
-  if (!existsSync(directory)) return [];
+  if (!existsSync(directory)) return []
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(directory, entry.name);
-    if (entry.isDirectory()) return findRasterFiles(path);
-    return rasterExtensions.has(extname(entry.name).toLowerCase())
-      ? [path]
-      : [];
-  });
+    const path = join(directory, entry.name)
+    if (entry.isDirectory()) return findRasterFiles(path)
+    return rasterExtensions.has(extname(entry.name).toLowerCase()) ? [path] : []
+  })
 }
 
 for (const path of findRasterFiles(join(REPO_DIR, ".scratch"))) {
-  failures.push(`${relative(REPO_DIR, path)} must be archived under .designs/`);
+  failures.push(`${relative(REPO_DIR, path)} must be archived under .designs/`)
 }
 
 if (failures.length > 0) {
-  console.error("Admin tabs contract check failed.");
-  for (const failure of failures) console.error(`- ${failure}`);
-  process.exit(1);
+  console.error("Admin tabs contract check failed.")
+  for (const failure of failures) console.error(`- ${failure}`)
+  process.exit(1)
 }
 
-console.log("Admin tabs contract check passed.");
+console.log("Admin tabs contract check passed.")

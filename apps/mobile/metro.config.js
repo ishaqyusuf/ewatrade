@@ -1,20 +1,26 @@
-const { withNativewind } = require("nativewind/metro");
-const { resolve, sep } = require("node:path");
-const { getSentryExpoConfig } = require("@sentry/react-native/metro");
+const { withNativewind } = require("nativewind/metro")
+const { resolve, sep } = require("node:path")
+const { getSentryExpoConfig } = require("@sentry/react-native/metro")
+const {
+  createProductionQaAliases,
+  isInternalQaBuild,
+} = require("./qa-build-aliases.cjs")
 
 /** @type {import('expo/metro-config').MetroConfig} */
-const config = getSentryExpoConfig(__dirname);
+const config = getSentryExpoConfig(__dirname)
 // config.resolver.unstable_enablePackageExports = true;
 
 const nativewindConfig = withNativewind(config, {
   input: "./src/styles/global.css",
-});
-const designRoot = resolve(__dirname, "../../.design");
+})
+const designRoot = resolve(__dirname, "../../.design")
+const internalQaBuild = isInternalQaBuild()
+const productionQaAliases = createProductionQaAliases(__dirname)
 
 nativewindConfig.watchFolders = Array.from(
   new Set([...(nativewindConfig.watchFolders ?? []), designRoot]),
-);
-const nativewindResolveRequest = nativewindConfig.resolver.resolveRequest;
+)
+const nativewindResolveRequest = nativewindConfig.resolver.resolveRequest
 const singletonPackages = [
   "@expo/vector-icons",
   "expo",
@@ -27,55 +33,60 @@ const singletonPackages = [
   "react-native-safe-area-context",
   "react-native-css",
   "react-native-css-interop",
-];
+]
 
 function normalizePath(filePath) {
-  return filePath.split(sep).join("/");
+  return filePath.split(sep).join("/")
 }
 
 function isNodeModulesOrigin(originModulePath) {
-  if (!originModulePath) return false;
+  if (!originModulePath) return false
 
-  return normalizePath(originModulePath).includes("/node_modules/");
+  return normalizePath(originModulePath).includes("/node_modules/")
 }
 
 function isReactNativeOrigin(originModulePath) {
-  if (!originModulePath) return false;
+  if (!originModulePath) return false
 
-  return normalizePath(originModulePath).includes(
-    "/node_modules/react-native/",
-  );
+  return normalizePath(originModulePath).includes("/node_modules/react-native/")
 }
 
 function getSingletonPackage(moduleName) {
   return singletonPackages.find(
     (packageName) =>
       moduleName === packageName || moduleName.startsWith(`${packageName}/`),
-  );
+  )
 }
 
 function resolveAppSingleton(moduleName) {
-  return require.resolve(moduleName, { paths: [__dirname] });
+  return require.resolve(moduleName, { paths: [__dirname] })
 }
 
 nativewindConfig.resolver.resolveRequest = (context, moduleName, platform) => {
-  const originModulePath = context.originModulePath;
-  const singletonPackage = getSingletonPackage(moduleName);
+  const originModulePath = context.originModulePath
+  const singletonPackage = getSingletonPackage(moduleName)
   const shouldUseAppSingleton =
-    singletonPackage && isNodeModulesOrigin(originModulePath);
+    singletonPackage && isNodeModulesOrigin(originModulePath)
+
+  if (!internalQaBuild) {
+    const productionAlias = productionQaAliases.get(moduleName)
+    if (productionAlias) {
+      return { type: "sourceFile", filePath: productionAlias }
+    }
+  }
 
   if (shouldUseAppSingleton) {
     return {
       type: "sourceFile",
       filePath: resolveAppSingleton(moduleName),
-    };
+    }
   }
 
   if (isReactNativeOrigin(originModulePath)) {
-    return context.resolveRequest(context, moduleName, platform);
+    return context.resolveRequest(context, moduleName, platform)
   }
 
-  return nativewindResolveRequest(context, moduleName, platform);
-};
+  return nativewindResolveRequest(context, moduleName, platform)
+}
 
-module.exports = nativewindConfig;
+module.exports = nativewindConfig

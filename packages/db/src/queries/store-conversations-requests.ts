@@ -14,6 +14,7 @@ import {
 import { createChannelCommerceInquiryInTransaction } from "./commerce-inquiries"
 import {
   StoreConversationError,
+  assertStoreConversationComposerEnabled,
   loadStoreConversationForGuest,
   loadStoreConversationRequestSummaries,
   lockStoreConversation,
@@ -27,7 +28,7 @@ import type { DbClient } from "./types"
 
 const STORE_CONVERSATION_REQUEST_TRANSACTION_OPTIONS = {
   maxWait: 10_000,
-  timeout: 60_000,
+  timeout: 30_000,
 } as const
 
 const entryRequestKind = {
@@ -186,6 +187,7 @@ async function linkRequestInTransaction(
   ) {
     throw new StoreConversationError("NOT_FOUND", "Store link unavailable.")
   }
+  assertStoreConversationComposerEnabled(entry.channelMode)
   if (!entry.requestKinds.includes(entryRequestKind[input.sourceKind])) {
     throw new StoreConversationError(
       "NOT_READY",
@@ -194,8 +196,10 @@ async function linkRequestInTransaction(
   }
   await touchStoreConversationGuestCredential(tx, {
     credentialId: credential.id,
+    credentialStatus: credential.status,
     guestIdentityId: credential.guestIdentityId,
     now,
+    overlapExpiresAt: credential.overlapExpiresAt,
   })
   const payloadHash = storeConversationPayloadHash({
     conversationId: conversation.id,
@@ -335,6 +339,7 @@ export async function selectGuestStoreConversationRequest(
       storeId: entry.storeId,
       tenantId: entry.tenantId,
     })
+    assertStoreConversationComposerEnabled(entry.channelMode)
     const message = await tx.storeConversationMessage.findFirst({
       select: { body: true },
       where: {

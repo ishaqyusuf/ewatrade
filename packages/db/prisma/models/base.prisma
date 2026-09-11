@@ -1,151 +1,189 @@
 model Tenant {
-  id                                           String                                        @id @default(cuid())
-  slug                                         String                                        @unique
-  name                                         String
-  type                                         TenantType
-  enabledModes                                 TenantMode[]
-  isActive                                     Boolean                                       @default(true)
-  dataClassification                           QaDataClassification                          @default(LIVE)
-  qaSourceDomain                               String?
-  qaMarkedAt                                   DateTime?
-  qaPurgeStartedAt                             DateTime?
-  timezone                                     String                                        @default("Africa/Lagos")
-  countryCode                                  String?
-  currencyCode                                 String                                        @default("NGN")
-  metadata                                     Json?
-  lastCommercialOrderSequence                  Int                                           @default(0)
-  createdAt                                    DateTime                                      @default(now())
-  updatedAt                                    DateTime                                      @updatedAt
-  users                                        Membership[]
-  stores                                       Store[]
-  sites                                        Site[]
-  hostnames                                    TenantHostname[]
-  conversations                                Conversation[]
-  automations                                  AutomationEvent[]
-  subscription                                 TenantSubscription?
-  billingCheckoutSessions                      BillingCheckoutSession[]
-  billingInvoices                              BillingInvoice[]
-  billingProviderEvents                        BillingProviderEvent[]
-  retailOpsStaffProfiles                       RetailOpsStaffProfile[]
-  retailOpsStaffInviteTokens                   RetailOpsStaffInviteToken[]
-  retailOpsStaffLifecycleEvents                RetailOpsStaffLifecycleEvent[]
-  offlineDevices                               OfflineDevice[]
-  offlineDeviceRevocations                     OfflineDeviceRevocation[]
-  serviceIntakes                               ServiceIntake[]
-  serviceJobs                                  ServiceJob[]
-  serviceWorkEvents                            ServiceWorkEvent[]
-  serviceEvidence                              ServiceEvidence[]
-  serviceRequestForms                          ServiceRequestForm[]
-  serviceRequests                              ServiceRequest[]
-  serviceQuotes                                ServiceQuote[]
-  customerTrackingAccess                       CustomerTrackingAccess[]
-  serviceNotificationIntents                   ServiceNotificationIntent[]
-  serviceStoreSettings                         ServiceStoreSettings[]
-  serviceCommerceStoreProfiles                 ServiceCommerceStoreProfile[]
-  serviceCommerceStoreAuditEvents              ServiceCommerceStoreAuditEvent[]
-  serviceCommercePolicyDecisions               ServiceCommercePolicyDecision[]
-  serviceCommercePolicyAuditEvents             ServiceCommercePolicyAuditEvent[]
-  commerceInquiries                            CommerceInquiry[]
-  commerceInquiryLines                         CommerceInquiryLine[]
-  commerceInquiryAuditEvents                   CommerceInquiryAuditEvent[]
-  commerceQuoteReplayAccessTokens              CommerceQuoteReplayAccessToken[]
-  prescriptionStoreSettings                    PrescriptionStoreSettings[]
-  prescriptionStoreRoles                       PrescriptionStoreRole[]
-  prescriptionStoreAuditEvents                 PrescriptionStoreAuditEvent[]
-  prescriptionChannels                         PrescriptionChannel[]
-  prescriptionRequests                         PrescriptionRequest[]
-  prescriptionMedia                            PrescriptionMedia[]
-  prescriptionMediaAccessEvents                PrescriptionMediaAccessEvent[]
-  prescriptionRequestAuditEvents               PrescriptionRequestAuditEvent[]
-  prescriptionPaymentIntents                   PrescriptionPaymentIntent[]
-  prescriptionPaymentRefunds                   PrescriptionPaymentRefund[]
-  prescriptionPickupFulfillments               PrescriptionPickupFulfillment[]
-  prescriptionDeliveryZones                    PrescriptionDeliveryZone[]
-  prescriptionDeliveryAddresses                PrescriptionDeliveryAddress[]
-  prescriptionDeliveryAssignments              PrescriptionDeliveryAssignment[]
-  whatsappConnections                          WhatsAppConnection[]
-  whatsappStoreBindings                        WhatsAppStoreBinding[]
-  whatsappInboundEvents                        WhatsAppInboundEvent[]
-  whatsappEmbeddedSignupSessions               WhatsAppEmbeddedSignupSession[]
-  serviceCommerceStoreTeamAssignments          ServiceCommerceStoreTeamAssignment[]
-  serviceCommerceStoreTeamAuditEvents          ServiceCommerceStoreTeamAuditEvent[]
-  customerEntryPoints                          CustomerEntryPoint[]
-  customerEntryPointAuditEvents                CustomerEntryPointAuditEvent[]
-  storeConversations                           StoreConversation[]
-  storeConversationMessages                    StoreConversationMessage[]
-  storeConversationRequestLinks                StoreConversationRequestLink[]
-  storeConversationCommandReceipts             StoreConversationCommandReceipt[]
-  storeConversationAssignmentEvents            StoreConversationAssignmentEvent[]
-  storeConversationEscalationEvents            StoreConversationEscalationEvent[]
-  storeConversationAuditEvents                 StoreConversationAuditEvent[]
-  storeConversationGuestAccesses               StoreConversationGuestAccess[]
-  storeConversationTransfers                   StoreConversationTransfer[]
-  serviceCommerceQuoteReleasePolicies          ServiceCommerceQuoteReleasePolicy[]
-  serviceCommerceQuoteReleasePolicyAuditEvents ServiceCommerceQuoteReleasePolicyAuditEvent[]
-  serviceCommerceQuoteReleaseCommandReceipts   ServiceCommerceQuoteReleaseCommandReceipt[]
-  serviceCommerceQuoteApprovals                ServiceCommerceQuoteApproval[]
-  serviceCommerceQuoteApprovalAuditEvents      ServiceCommerceQuoteApprovalAuditEvent[]
-  serviceCommerceMediaAssets                   ServiceCommerceMediaAsset[]
-  serviceCommerceSourceAttachments             ServiceCommerceSourceAttachment[]
-  serviceCommerceVerifiedObservations          ServiceCommerceVerifiedObservation[]
-  serviceCommerceMediaAuditEvents              ServiceCommerceMediaAuditEvent[]
-  serviceBookingStoreSettings                  ServiceBookingStoreSettings[]
-  serviceBookingOfferingConfigs                ServiceBookingOfferingConfig[]
-  serviceBookingResources                      ServiceBookingResource[]
-  serviceBookingAvailabilityRules              ServiceBookingAvailabilityRule[]
-  serviceBookingAvailabilityExceptions         ServiceBookingAvailabilityException[]
-  serviceBookingConfigurationEvents            ServiceBookingConfigurationEvent[]
-  serviceBookingHolds                          ServiceBookingHold[]
-  serviceBookings                              ServiceBooking[]
-  serviceBookingEvents                         ServiceBookingEvent[]
-  serviceBookingAccessCapabilities             ServiceBookingAccessCapability[]
-  serviceBookingNotificationIntents            ServiceBookingNotificationIntent[]
-  serviceCommerceCustomerActionCapabilities    ServiceCommerceCustomerActionCapability[]
-  serviceCommerceCustomerActionExecutions      ServiceCommerceCustomerActionExecution[]
-  serviceCommerceCustomerNotificationIntents   ServiceCommerceCustomerNotificationIntent[]
-  serviceCommerceCustomerNotificationAttempts  ServiceCommerceCustomerNotificationAttempt[]
-  serviceCommerceCustomerNotificationReceipts  ServiceCommerceCustomerNotificationReceipt[]
-  serviceCommerceUsageEvents                   ServiceCommerceUsageEvent[]
-  serviceCommerceReportReadAuditEvents         ServiceCommerceReportReadAuditEvent[]
-  prescriptionCommunicationIntents             PrescriptionCommunicationIntent[]
-  prescriptionQuickActions                     PrescriptionQuickAction[]
-  prescriptionRetentionPolicies                PrescriptionRetentionPolicy[]
-  prescriptionPrivacyRequests                  PrescriptionPrivacyRequest[]
-  prescriptionIncidentControls                 PrescriptionIncidentControl[]
-  prescriptionSensitiveAccessEvents            PrescriptionSensitiveAccessEvent[]
-  prescriptionUsageEvents                      PrescriptionUsageEvent[]
-  commerceQuotes                               CommerceQuote[]
-  catalogItems                                 CatalogItem[]
-  catalogUnitDefinitions                       UnitDefinition[]
-  catalogOfferings                             SellableOffering[]
-  catalogProductUnitOfferings                  ProductUnitOffering[]
-  catalogPriceChanges                          CatalogPriceChange[]
-  catalogCommandReceipts                       CatalogCommandReceipt[]
-  catalogSourceLineLinks                       CatalogSourceLineLink[]
-  catalogVerifiedAliases                       CatalogVerifiedAlias[]
-  catalogAvailabilityAttestations              CatalogAvailabilityAttestation[]
-  catalogPricePromotions                       CatalogPricePromotion[]
-  stockBalanceSources                          StockBalanceSource[]
-  stockOperations                              StockOperation[]
-  stockReservations                            StockReservation[]
-  stockCounts                                  StockCount[]
-  stockTransfers                               StockTransfer[]
-  inventoryCloseouts                           InventoryCloseout[]
-  commercialOrders                             CommercialOrder[]
-  commercialOrderPayments                      CommercialOrderPayment[]
-  commercialOrderFulfillmentCommands           CommercialOrderFulfillmentCommand[]
-  commercialOrderReminderSettings              CommercialOrderReminderSettings[]
-  commercialOrderReminderDeliveries            CommercialOrderReminderDelivery[]
-  customers                                    Customer[]
-  productReturns                               ProductReturn[]
-  offlineCommands                              OfflineCommand[]
-  domainRegistrantProfile                      DomainRegistrantProfile?
-  domainQuotes                                 DomainQuote[]
-  domainOrders                                 DomainOrder[]
-  managedDomains                               ManagedDomain[]
-  domainConnections                            DomainConnection[]
-  domainEvents                                 DomainEvent[]
-  domainOperationAttempts                      DomainOperationAttempt[]
+  id                                                String                                               @id @default(cuid())
+  slug                                              String                                               @unique
+  name                                              String
+  type                                              TenantType
+  enabledModes                                      TenantMode[]
+  isActive                                          Boolean                                              @default(true)
+  dataClassification                                QaDataClassification                                 @default(LIVE)
+  qaSourceDomain                                    String?
+  qaMarkedAt                                        DateTime?
+  qaPurgeStartedAt                                  DateTime?
+  timezone                                          String                                               @default("Africa/Lagos")
+  countryCode                                       String?
+  currencyCode                                      String                                               @default("NGN")
+  metadata                                          Json?
+  lastCommercialOrderSequence                       Int                                                  @default(0)
+  createdAt                                         DateTime                                             @default(now())
+  updatedAt                                         DateTime                                             @updatedAt
+  users                                             Membership[]
+  stores                                            Store[]
+  sites                                             Site[]
+  hostnames                                         TenantHostname[]
+  conversations                                     Conversation[]
+  automations                                       AutomationEvent[]
+  subscription                                      TenantSubscription?
+  billingCheckoutSessions                           BillingCheckoutSession[]
+  billingInvoices                                   BillingInvoice[]
+  billingProviderEvents                             BillingProviderEvent[]
+  retailOpsStaffProfiles                            RetailOpsStaffProfile[]
+  retailOpsStaffInviteTokens                        RetailOpsStaffInviteToken[]
+  retailOpsStaffLifecycleEvents                     RetailOpsStaffLifecycleEvent[]
+  offlineDevices                                    OfflineDevice[]
+  offlineDeviceRevocations                          OfflineDeviceRevocation[]
+  serviceIntakes                                    ServiceIntake[]
+  serviceJobs                                       ServiceJob[]
+  serviceWorkEvents                                 ServiceWorkEvent[]
+  serviceEvidence                                   ServiceEvidence[]
+  serviceRequestForms                               ServiceRequestForm[]
+  serviceRequests                                   ServiceRequest[]
+  serviceQuotes                                     ServiceQuote[]
+  customerTrackingAccess                            CustomerTrackingAccess[]
+  serviceNotificationIntents                        ServiceNotificationIntent[]
+  serviceStoreSettings                              ServiceStoreSettings[]
+  serviceCommerceStoreProfiles                      ServiceCommerceStoreProfile[]
+  serviceCommerceStoreAuditEvents                   ServiceCommerceStoreAuditEvent[]
+  serviceCommercePolicyDecisions                    ServiceCommercePolicyDecision[]
+  serviceCommercePolicyAuditEvents                  ServiceCommercePolicyAuditEvent[]
+  commerceInquiries                                 CommerceInquiry[]
+  commerceInquiryLines                              CommerceInquiryLine[]
+  commerceInquiryAuditEvents                        CommerceInquiryAuditEvent[]
+  commerceQuoteReplayAccessTokens                   CommerceQuoteReplayAccessToken[]
+  prescriptionStoreSettings                         PrescriptionStoreSettings[]
+  prescriptionStoreRoles                            PrescriptionStoreRole[]
+  prescriptionStoreAuditEvents                      PrescriptionStoreAuditEvent[]
+  prescriptionChannels                              PrescriptionChannel[]
+  prescriptionRequests                              PrescriptionRequest[]
+  prescriptionMedia                                 PrescriptionMedia[]
+  prescriptionMediaAccessEvents                     PrescriptionMediaAccessEvent[]
+  prescriptionRequestAuditEvents                    PrescriptionRequestAuditEvent[]
+  prescriptionPaymentIntents                        PrescriptionPaymentIntent[]
+  prescriptionPaymentRefunds                        PrescriptionPaymentRefund[]
+  prescriptionPickupFulfillments                    PrescriptionPickupFulfillment[]
+  prescriptionDeliveryZones                         PrescriptionDeliveryZone[]
+  prescriptionDeliveryAddresses                     PrescriptionDeliveryAddress[]
+  prescriptionDeliveryAssignments                   PrescriptionDeliveryAssignment[]
+  whatsappConnections                               WhatsAppConnection[]
+  whatsappStoreBindings                             WhatsAppStoreBinding[]
+  whatsappInboundEvents                             WhatsAppInboundEvent[]
+  whatsappEmbeddedSignupSessions                    WhatsAppEmbeddedSignupSession[]
+  serviceCommerceStoreTeamAssignments               ServiceCommerceStoreTeamAssignment[]
+  serviceCommerceStoreTeamAuditEvents               ServiceCommerceStoreTeamAuditEvent[]
+  customerEntryPoints                               CustomerEntryPoint[]
+  customerEntryPointAuditEvents                     CustomerEntryPointAuditEvent[]
+  storeConversations                                StoreConversation[]
+  storeConversationMessages                         StoreConversationMessage[]
+  storeConversationActionMessages                   StoreConversationActionMessage[]
+  storeConversationRequestLinks                     StoreConversationRequestLink[]
+  storeConversationCommandReceipts                  StoreConversationCommandReceipt[]
+  storeConversationAssignmentEvents                 StoreConversationAssignmentEvent[]
+  storeConversationEscalationEvents                 StoreConversationEscalationEvent[]
+  storeConversationAuditEvents                      StoreConversationAuditEvent[]
+  storeConversationModerationCommands               StoreConversationModerationCommand[]
+  storeConversationModerationAuditEvents            StoreConversationModerationAuditEvent[]
+  storeConversationSensitiveReadAuditEvents         StoreConversationSensitiveReadAuditEvent[]
+  storeConversationPrivacyRequests                  StoreConversationPrivacyRequest[]
+  storeConversationMessageAttachments               StoreConversationMessageAttachment[]
+  storeConversationGuestAccesses                    StoreConversationGuestAccess[]
+  storeConversationTransfers                        StoreConversationTransfer[]
+  storeConversationCustomerWatermarks               StoreConversationCustomerWatermark[]
+  storeConversationStaffWatermarks                  StoreConversationStaffWatermark[]
+  storeConversationAvailabilityConfigurations       StoreConversationAvailabilityConfiguration[]
+  storeConversationAvailabilityAuditEvents          StoreConversationAvailabilityAuditEvent[]
+  storeConversationAccountInvitations               StoreConversationAccountInvitation[]
+  storeConversationAccountAccesses                  StoreConversationAccountAccess[]
+  storeConversationAccountAuditEvents               StoreConversationAccountAuditEvent[]
+  storeConversationAccountWatermarks                StoreConversationAccountWatermark[]
+  storeConversationGuestNotificationVerifications   StoreConversationGuestNotificationVerification[]
+  storeConversationNotificationContacts             StoreConversationGuestNotificationContact[]
+  storeConversationNotificationIntents              StoreConversationNotificationIntent[]
+  storeConversationNotificationAttempts             StoreConversationNotificationAttempt[]
+  storeConversationNotificationReceipts             StoreConversationNotificationReceipt[]
+  storeConversationNotificationAuditEvents          StoreConversationNotificationAuditEvent[]
+  storeConversationPushEndpoints                    StoreConversationPushEndpoint[]
+  storeConversationChannelConfigurations            StoreConversationChannelConfiguration[]
+  storeConversationChannelConfigurationCommands     StoreConversationChannelConfigurationCommand[]
+  storeConversationChannelConfigurationAudits       StoreConversationChannelConfigurationAuditEvent[]
+  storeConversationWhatsAppBridgeCapabilities       StoreConversationWhatsAppBridgeCapability[]
+  storeConversationWhatsAppBridges                  StoreConversationWhatsAppBridge[]
+  storeConversationWhatsAppBridgeChoiceCapabilities StoreConversationWhatsAppBridgeChoiceCapability[]
+  storeConversationWhatsAppBridgeAttempts           StoreConversationWhatsAppBridgeAttempt[]
+  storeConversationWhatsAppBridgeAudits             StoreConversationWhatsAppBridgeAuditEvent[]
+  storeConversationWhatsAppCandidates               StoreConversationWhatsAppCandidate[]
+  storeConversationWhatsAppCandidateCapabilities    StoreConversationWhatsAppCandidateActionCapability[]
+  storeConversationWhatsAppCandidateAttempts        StoreConversationWhatsAppCandidateAttempt[]
+  storeConversationWhatsAppCandidateSuppressions    StoreConversationWhatsAppCandidateSuppression[]
+  storeConversationWhatsAppRecoveryAttempts         StoreConversationWhatsAppRecoveryAttempt[]
+  storeConversationWhatsAppDirectSessions           StoreConversationWhatsAppDirectSession[]
+  storeConversationWhatsAppObservations             StoreConversationWhatsAppObservation[]
+  storeConversationWhatsAppObservationEvents        StoreConversationWhatsAppObservationEvent[]
+  storeConversationWhatsAppOutboundAttempts         StoreConversationWhatsAppOutboundAttempt[]
+  serviceCommerceQuoteReleasePolicies               ServiceCommerceQuoteReleasePolicy[]
+  serviceCommerceQuoteReleasePolicyAuditEvents      ServiceCommerceQuoteReleasePolicyAuditEvent[]
+  serviceCommerceQuoteReleaseCommandReceipts        ServiceCommerceQuoteReleaseCommandReceipt[]
+  serviceCommerceQuoteApprovals                     ServiceCommerceQuoteApproval[]
+  serviceCommerceQuoteApprovalAuditEvents           ServiceCommerceQuoteApprovalAuditEvent[]
+  serviceCommerceMediaAssets                        ServiceCommerceMediaAsset[]
+  serviceCommerceSourceAttachments                  ServiceCommerceSourceAttachment[]
+  serviceCommerceVerifiedObservations               ServiceCommerceVerifiedObservation[]
+  serviceCommerceMediaAuditEvents                   ServiceCommerceMediaAuditEvent[]
+  serviceBookingStoreSettings                       ServiceBookingStoreSettings[]
+  serviceBookingOfferingConfigs                     ServiceBookingOfferingConfig[]
+  serviceBookingResources                           ServiceBookingResource[]
+  serviceBookingAvailabilityRules                   ServiceBookingAvailabilityRule[]
+  serviceBookingAvailabilityExceptions              ServiceBookingAvailabilityException[]
+  serviceBookingConfigurationEvents                 ServiceBookingConfigurationEvent[]
+  serviceBookingHolds                               ServiceBookingHold[]
+  serviceBookings                                   ServiceBooking[]
+  serviceBookingEvents                              ServiceBookingEvent[]
+  serviceBookingAccessCapabilities                  ServiceBookingAccessCapability[]
+  serviceBookingNotificationIntents                 ServiceBookingNotificationIntent[]
+  serviceCommerceCustomerActionCapabilities         ServiceCommerceCustomerActionCapability[]
+  serviceCommerceCustomerActionExecutions           ServiceCommerceCustomerActionExecution[]
+  serviceCommerceCustomerNotificationIntents        ServiceCommerceCustomerNotificationIntent[]
+  serviceCommerceCustomerNotificationAttempts       ServiceCommerceCustomerNotificationAttempt[]
+  serviceCommerceCustomerNotificationReceipts       ServiceCommerceCustomerNotificationReceipt[]
+  serviceCommerceUsageEvents                        ServiceCommerceUsageEvent[]
+  serviceCommerceReportReadAuditEvents              ServiceCommerceReportReadAuditEvent[]
+  prescriptionCommunicationIntents                  PrescriptionCommunicationIntent[]
+  prescriptionQuickActions                          PrescriptionQuickAction[]
+  prescriptionRetentionPolicies                     PrescriptionRetentionPolicy[]
+  prescriptionPrivacyRequests                       PrescriptionPrivacyRequest[]
+  prescriptionIncidentControls                      PrescriptionIncidentControl[]
+  prescriptionSensitiveAccessEvents                 PrescriptionSensitiveAccessEvent[]
+  prescriptionUsageEvents                           PrescriptionUsageEvent[]
+  commerceQuotes                                    CommerceQuote[]
+  catalogItems                                      CatalogItem[]
+  catalogUnitDefinitions                            UnitDefinition[]
+  catalogOfferings                                  SellableOffering[]
+  catalogProductUnitOfferings                       ProductUnitOffering[]
+  catalogPriceChanges                               CatalogPriceChange[]
+  catalogCommandReceipts                            CatalogCommandReceipt[]
+  catalogSourceLineLinks                            CatalogSourceLineLink[]
+  catalogVerifiedAliases                            CatalogVerifiedAlias[]
+  catalogAvailabilityAttestations                   CatalogAvailabilityAttestation[]
+  catalogPricePromotions                            CatalogPricePromotion[]
+  stockBalanceSources                               StockBalanceSource[]
+  stockOperations                                   StockOperation[]
+  stockReservations                                 StockReservation[]
+  stockCounts                                       StockCount[]
+  stockTransfers                                    StockTransfer[]
+  inventoryCloseouts                                InventoryCloseout[]
+  commercialOrders                                  CommercialOrder[]
+  commercialOrderPayments                           CommercialOrderPayment[]
+  commercialOrderFulfillmentCommands                CommercialOrderFulfillmentCommand[]
+  commercialOrderReminderSettings                   CommercialOrderReminderSettings[]
+  commercialOrderReminderDeliveries                 CommercialOrderReminderDelivery[]
+  customers                                         Customer[]
+  productReturns                                    ProductReturn[]
+  offlineCommands                                   OfflineCommand[]
+  domainRegistrantProfile                           DomainRegistrantProfile?
+  domainQuotes                                      DomainQuote[]
+  domainOrders                                      DomainOrder[]
+  managedDomains                                    ManagedDomain[]
+  domainConnections                                 DomainConnection[]
+  domainEvents                                      DomainEvent[]
+  domainOperationAttempts                           DomainOperationAttempt[]
 }
 
 model QaPurgeRun {
@@ -162,6 +200,91 @@ model QaPurgeRun {
 
   @@index([status])
   @@index([createdAt])
+}
+
+model QaTesterGrant {
+  id               String                  @id @default(cuid())
+  qaDomain         String
+  testerIdentity   String
+  credentialDigest String                  @unique
+  status           String                  @default("ACTIVE")
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  authorizations   QaClientAuthorization[]
+  auditEvents      QaAccessAuditEvent[]
+
+  @@index([qaDomain, status, expiresAt])
+  @@index([testerIdentity, status])
+}
+
+model QaClientAuthorization {
+  id                String                     @id @default(cuid())
+  grantId           String
+  clientId          String
+  clientPlatform    String
+  tokenDigest       String                     @unique
+  status            String                     @default("ACTIVE")
+  expiresAt         DateTime
+  revokedAt         DateTime?
+  lastValidatedAt   DateTime                   @default(now())
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  grant             QaTesterGrant              @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  sessions          Session[]
+  profileSelections QaAccessProfileSelection[]
+  auditEvents       QaAccessAuditEvent[]
+
+  @@unique([grantId, clientId, clientPlatform])
+  @@index([status, expiresAt])
+  @@index([clientId, clientPlatform])
+}
+
+model QaAccessProfileSelection {
+  id              String                @id @default(cuid())
+  authorizationId String
+  referenceDigest String                @unique
+  membershipId    String
+  storeId         String?
+  expiresAt       DateTime
+  consumedAt      DateTime?
+  createdAt       DateTime              @default(now())
+  authorization   QaClientAuthorization @relation(fields: [authorizationId], references: [id], onDelete: Cascade)
+
+  @@index([authorizationId, expiresAt])
+  @@index([membershipId, storeId])
+}
+
+model QaAccessAttemptBucket {
+  id              String    @id @default(cuid())
+  bucketDigest    String    @unique
+  failedCount     Int       @default(0)
+  windowStartedAt DateTime  @default(now())
+  lockedUntil     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([lockedUntil])
+}
+
+model QaAccessAuditEvent {
+  id              String                 @id @default(cuid())
+  grantId         String?
+  authorizationId String?
+  eventType       String
+  outcome         String
+  domainDigest    String?
+  clientDigest    String?
+  networkDigest   String?
+  metadata        Json?
+  createdAt       DateTime               @default(now())
+  grant           QaTesterGrant?         @relation(fields: [grantId], references: [id], onDelete: SetNull)
+  authorization   QaClientAuthorization? @relation(fields: [authorizationId], references: [id], onDelete: SetNull)
+
+  @@index([eventType, createdAt])
+  @@index([grantId, createdAt])
+  @@index([authorizationId, createdAt])
 }
 
 model TenantHostname {
@@ -214,27 +337,46 @@ model LeadCapture {
 }
 
 model User {
-  id                     String                  @id @default(cuid())
-  name                   String                  @default("")
-  email                  String                  @unique
-  emailVerified          Boolean                 @default(false)
-  emailVerifiedAt        DateTime?
-  image                  String?
-  phone                  String?                 @unique
-  firstName              String?
-  lastName               String?
-  displayName            String?
-  avatarUrl              String?
-  isPlatformAdmin        Boolean                 @default(false)
-  metadata               Json?
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  accounts               Account[]
-  sessions               Session[]
-  memberships            Membership[]
-  retailOpsStaffProfiles RetailOpsStaffProfile[] @relation("RetailOpsStaffProfileUser")
-  sentMessages           Message[]
-  automationEvents       AutomationEvent[]       @relation("AutomationActor")
+  id                                             String                                            @id @default(cuid())
+  name                                           String                                            @default("")
+  email                                          String                                            @unique
+  emailVerified                                  Boolean                                           @default(false)
+  emailVerifiedAt                                DateTime?
+  image                                          String?
+  phone                                          String?                                           @unique
+  phoneVerifiedAt                                DateTime?
+  firstName                                      String?
+  lastName                                       String?
+  displayName                                    String?
+  avatarUrl                                      String?
+  isPlatformAdmin                                Boolean                                           @default(false)
+  metadata                                       Json?
+  createdAt                                      DateTime                                          @default(now())
+  updatedAt                                      DateTime                                          @updatedAt
+  accounts                                       Account[]
+  sessions                                       Session[]
+  memberships                                    Membership[]
+  retailOpsStaffProfiles                         RetailOpsStaffProfile[]                           @relation("RetailOpsStaffProfileUser")
+  sentMessages                                   Message[]
+  automationEvents                               AutomationEvent[]                                 @relation("AutomationActor")
+  storeConversationAccountAccesses               StoreConversationAccountAccess[]
+  storeConversationAccountLinkCommands           StoreConversationAccountLinkCommand[]
+  storeConversationAccountDeviceCommands         StoreConversationAccountDeviceCommand[]
+  storeConversationAccountAuditEvents            StoreConversationAccountAuditEvent[]
+  storeConversationAccountNotificationPreference StoreConversationAccountNotificationPreference?
+  storeConversationAccountWatermarks             StoreConversationAccountWatermark[]
+  storeConversationPrivacyRequests               StoreConversationPrivacyRequest[]                 @relation("StoreConversationPrivacyRequestAccount")
+  storeConversationNotificationCommands          StoreConversationNotificationCommand[]
+  storeConversationNotificationIntents           StoreConversationNotificationIntent[]
+  storeConversationNotificationAuditEvents       StoreConversationNotificationAuditEvent[]
+  storeConversationPushEndpoints                 StoreConversationPushEndpoint[]
+  storeConversationChannelConfigurationsUpdated  StoreConversationChannelConfiguration[]           @relation("StoreConversationChannelConfigUpdatedBy")
+  storeConversationChannelConfigurationAudits    StoreConversationChannelConfigurationAuditEvent[] @relation("StoreConversationChannelConfigAuditActor")
+  storeConversationWhatsAppBridgeAudits          StoreConversationWhatsAppBridgeAuditEvent[]       @relation("StoreConversationWhatsAppBridgeAuditAccount")
+  storeConversationWhatsAppCandidates            StoreConversationWhatsAppCandidate[]              @relation("StoreConversationWhatsAppCandidateAccount")
+  storeConversationModerationCommands            StoreConversationModerationCommand[]              @relation("StoreConversationModerationCommandActor")
+  storeConversationModerationAuditEvents         StoreConversationModerationAuditEvent[]           @relation("StoreConversationModerationAuditActor")
+  storeConversationSensitiveReadAuditEvents      StoreConversationSensitiveReadAuditEvent[]        @relation("StoreConversationSensitiveReadAuditActor")
 }
 
 model Account {
@@ -264,17 +406,24 @@ model Account {
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  userId    String
-  token     String   @unique
-  ipAddress String?
-  userAgent String?
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String                 @id @default(cuid())
+  userId            String
+  token             String                 @unique
+  ipAddress         String?
+  userAgent         String?
+  expiresAt         DateTime
+  qaAuthorizationId String?
+  qaTenantId        String?
+  qaMembershipId    String?
+  qaStoreId         String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  user              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  qaAuthorization   QaClientAuthorization? @relation(fields: [qaAuthorizationId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([qaAuthorizationId])
+  @@index([qaTenantId, qaMembershipId])
 }
 
 model Verification {
@@ -287,33 +436,37 @@ model Verification {
 }
 
 model Membership {
-  id                                      String                                   @id @default(cuid())
-  tenantId                                String
-  userId                                  String
-  role                                    MembershipRole
-  status                                  MembershipStatus                         @default(ACTIVE)
-  invitedById                             String?
-  invitedAt                               DateTime?
-  acceptedAt                              DateTime?
-  createdAt                               DateTime                                 @default(now())
-  updatedAt                               DateTime                                 @updatedAt
-  tenant                                  Tenant                                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user                                    User                                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  retailOpsStaffProfile                   RetailOpsStaffProfile?
-  retailOpsStaffInviteTokens              RetailOpsStaffInviteToken[]
-  retailOpsStaffLifecycleEvents           RetailOpsStaffLifecycleEvent[]
-  serviceCommerceStoreTeamAssignments     ServiceCommerceStoreTeamAssignment[]
-  requestedServiceCommerceQuoteApprovals  ServiceCommerceQuoteApproval[]           @relation("QuoteApprovalRequester")
-  decidedServiceCommerceQuoteApprovals    ServiceCommerceQuoteApproval[]           @relation("QuoteApprovalDecider")
-  serviceCommerceQuoteApprovalAuditEvents ServiceCommerceQuoteApprovalAuditEvent[]
-  serviceBookingResources                 ServiceBookingResource[]
-  currentStoreConversationAssignments     StoreConversation[]                      @relation("StoreConversationCurrentAssignee")
-  authoredStoreConversationMessages       StoreConversationMessage[]               @relation("StoreConversationMessageAuthor")
-  storeConversationAssignmentActions      StoreConversationAssignmentEvent[]       @relation("StoreConversationAssignmentActor")
-  storeConversationAssignmentsFrom        StoreConversationAssignmentEvent[]       @relation("StoreConversationAssignmentFrom")
-  storeConversationAssignmentsTo          StoreConversationAssignmentEvent[]       @relation("StoreConversationAssignmentTo")
-  storeConversationEscalationActions      StoreConversationEscalationEvent[]       @relation("StoreConversationEscalationActor")
-  storeConversationAuditActions           StoreConversationAuditEvent[]            @relation("StoreConversationAuditActor")
+  id                                        String                                     @id @default(cuid())
+  tenantId                                  String
+  userId                                    String
+  role                                      MembershipRole
+  status                                    MembershipStatus                           @default(ACTIVE)
+  invitedById                               String?
+  invitedAt                                 DateTime?
+  acceptedAt                                DateTime?
+  createdAt                                 DateTime                                   @default(now())
+  updatedAt                                 DateTime                                   @updatedAt
+  tenant                                    Tenant                                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user                                      User                                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  retailOpsStaffProfile                     RetailOpsStaffProfile?
+  retailOpsStaffInviteTokens                RetailOpsStaffInviteToken[]
+  retailOpsStaffLifecycleEvents             RetailOpsStaffLifecycleEvent[]
+  serviceCommerceStoreTeamAssignments       ServiceCommerceStoreTeamAssignment[]
+  requestedServiceCommerceQuoteApprovals    ServiceCommerceQuoteApproval[]             @relation("QuoteApprovalRequester")
+  decidedServiceCommerceQuoteApprovals      ServiceCommerceQuoteApproval[]             @relation("QuoteApprovalDecider")
+  serviceCommerceQuoteApprovalAuditEvents   ServiceCommerceQuoteApprovalAuditEvent[]
+  serviceBookingResources                   ServiceBookingResource[]
+  currentStoreConversationAssignments       StoreConversation[]                        @relation("StoreConversationCurrentAssignee")
+  authoredStoreConversationMessages         StoreConversationMessage[]                 @relation("StoreConversationMessageAuthor")
+  storeConversationAssignmentActions        StoreConversationAssignmentEvent[]         @relation("StoreConversationAssignmentActor")
+  storeConversationAssignmentsFrom          StoreConversationAssignmentEvent[]         @relation("StoreConversationAssignmentFrom")
+  storeConversationAssignmentsTo            StoreConversationAssignmentEvent[]         @relation("StoreConversationAssignmentTo")
+  storeConversationEscalationActions        StoreConversationEscalationEvent[]         @relation("StoreConversationEscalationActor")
+  storeConversationAuditActions             StoreConversationAuditEvent[]              @relation("StoreConversationAuditActor")
+  storeConversationStaffWatermarks          StoreConversationStaffWatermark[]
+  storeConversationModerationCommands       StoreConversationModerationCommand[]       @relation("StoreConversationModerationCommandMembership")
+  storeConversationModerationAuditEvents    StoreConversationModerationAuditEvent[]    @relation("StoreConversationModerationAuditMembership")
+  storeConversationSensitiveReadAuditEvents StoreConversationSensitiveReadAuditEvent[] @relation("StoreConversationSensitiveReadAuditMembership")
 
   @@unique([tenantId, userId])
   @@index([tenantId, role])

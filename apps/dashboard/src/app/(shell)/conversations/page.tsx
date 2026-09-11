@@ -59,6 +59,7 @@ export default async function ConversationsPage({
             id: store.id,
             name: store.name,
           }))}
+          timeZone={ctx.tenant.timezone}
         />
       </Suspense>
     </HydrateClient>

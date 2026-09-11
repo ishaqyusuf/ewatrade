@@ -1,15 +1,27 @@
 import { createHash } from "node:crypto"
 
-import type {
-  StoreConversationMessageProjection,
-  StoreConversationRequestSummaryProjection,
+import {
+  STORE_CONVERSATION_PRESENTATION_TOMBSTONE,
+  type StoreConversationWhatsAppObservationProvenance as SharedWhatsAppObservationProvenance,
+  type StoreConversationWhatsAppObservationStatus as SharedWhatsAppObservationStatus,
+  type StoreConversationAccountInvitationProjection,
+  type StoreConversationAttachmentProjection,
+  type StoreConversationAvailabilityProjection,
+  type StoreConversationChannelModeProjection,
+  type StoreConversationMessageProjection,
+  type StoreConversationQuoteActionMessageProjection,
+  type StoreConversationRequestSummaryProjection,
+  projectStoreConversationAccountInvitation,
 } from "@ewatrade/service-commerce"
 
 import { Prisma } from "../../generated/prisma/client"
 import {
   CommerceInquiryStatus,
+  type StoreConversationWhatsAppObservationProvenance as DbWhatsAppObservationProvenance,
+  type StoreConversationWhatsAppObservationStatus as DbWhatsAppObservationStatus,
   PrescriptionRequestStatus,
   ServiceRequestStatus,
+  StoreConversationAccountInvitationStatus,
   StoreConversationGuestAccessStatus,
   StoreConversationGuestCredentialPurpose,
   StoreConversationGuestCredentialStatus,
@@ -19,6 +31,26 @@ import {
   type StoreConversationMessageKind,
   type StoreConversationRequestKind,
 } from "../../generated/prisma/enums"
+
+const whatsAppObservationProvenance = {
+  BUSINESS_APP_ECHO: "business_app_echo",
+  BUSINESS_APP_HISTORY: "business_app_history",
+  CLOUD_API_INBOUND: "cloud_api_inbound",
+  CLOUD_API_OUTBOUND: "cloud_api_outbound",
+} satisfies Record<
+  DbWhatsAppObservationProvenance,
+  SharedWhatsAppObservationProvenance
+>
+
+const whatsAppObservationStatus = {
+  DELETED: "deleted",
+  DELIVERED: "delivered",
+  FAILED: "failed",
+  READ: "read",
+  RECEIVED: "received",
+  SENT: "sent",
+  UNSUPPORTED: "unsupported",
+} satisfies Record<DbWhatsAppObservationStatus, SharedWhatsAppObservationStatus>
 import {
   CustomerChannelsError,
   resolveCustomerEntryPointContextInTransaction,
@@ -33,6 +65,7 @@ export type StoreConversationErrorCode =
   | "GUEST_CREDENTIAL_EXPIRED"
   | "NOT_FOUND"
   | "NOT_READY"
+  | "STORE_UNAVAILABLE"
 
 export class StoreConversationError extends Error {
   constructor(
@@ -42,6 +75,29 @@ export class StoreConversationError extends Error {
     super(message)
     this.name = "StoreConversationError"
   }
+}
+
+export function assertStoreConversationAvailable(
+  availability: StoreConversationAvailabilityProjection,
+) {
+  if (availability.available) return
+  throw new StoreConversationError(
+    "STORE_UNAVAILABLE",
+    availability.customerMessage ??
+      "This Store is not accepting new chat messages right now.",
+  )
+}
+
+export function assertStoreConversationComposerEnabled(
+  channelMode: StoreConversationChannelModeProjection,
+) {
+  if (channelMode.composerEnabled) return
+  throw new StoreConversationError(
+    "STORE_UNAVAILABLE",
+    channelMode.whatsappAction === "continue_on_whatsapp"
+      ? "This Store is accepting new messages on WhatsApp right now."
+      : "This Store is not accepting new chat messages right now.",
+  )
 }
 
 export function digestStoreConversationValue(value: string) {
@@ -67,17 +123,29 @@ export function storeConversationPayloadHash(value: unknown) {
 }
 
 export function projectStoreConversationMessage(message: {
+  accountInvitation?: {
+    id: string
+    status: StoreConversationAccountInvitationStatus
+  } | null
+  actionMessage?: StoreConversationQuoteActionMessageProjection
+  attachments?: StoreConversationAttachmentProjection[]
   authorKind: StoreConversationMessageAuthorKind
   body: string
   channel: StoreConversationMessageChannel
   id: string
   kind: StoreConversationMessageKind
   occurredAt: Date
+  presentationRedactedAt?: Date | null
   requestLinks?: Array<{
     kind: StoreConversationRequestKind
     sourceId: string
   }>
   sequence: number
+  whatsAppObservation?: {
+    provenance: DbWhatsAppObservationProvenance
+    status: DbWhatsAppObservationStatus
+    statusOccurredAt: Date
+  } | null
 }): StoreConversationMessageProjection {
   const author =
     message.authorKind === StoreConversationMessageAuthorKind.CUSTOMER
@@ -93,6 +161,9 @@ export function projectStoreConversationMessage(message: {
     WHATSAPP: "whatsapp",
   } as const
   const kinds = {
+    ACCOUNT_INVITATION: "account_invitation",
+    ACTION_MESSAGE: "action_message",
+    CUSTOMER_ATTACHMENT: "customer_attachment",
     CUSTOMER_TEXT: "customer_text",
     STORE_TEXT: "store_text",
     SYSTEM_EVENT: "system_event",
@@ -105,6 +176,23 @@ export function projectStoreConversationMessage(message: {
   const request = message.requestLinks?.[0]
 
   return {
+    ...(message.accountInvitation
+      ? {
+          accountInvitation: projectStoreConversationAccountInvitation({
+            id: message.accountInvitation.id,
+            state:
+              message.accountInvitation.status ===
+              StoreConversationAccountInvitationStatus.LINKED
+                ? "linked"
+                : message.accountInvitation.status ===
+                    StoreConversationAccountInvitationStatus.DISMISSED
+                  ? "dismissed"
+                  : "offered",
+          }) satisfies StoreConversationAccountInvitationProjection,
+        }
+      : {}),
+    ...(message.actionMessage ? { actionMessage: message.actionMessage } : {}),
+    attachments: message.attachments ?? [],
     author,
     channel: channels[message.channel],
     id: message.id,
@@ -119,7 +207,22 @@ export function projectStoreConversationMessage(message: {
         }
       : {}),
     sequence: message.sequence,
-    text: message.body,
+    text: message.presentationRedactedAt
+      ? STORE_CONVERSATION_PRESENTATION_TOMBSTONE
+      : message.body,
+    ...(message.whatsAppObservation
+      ? {
+          whatsAppObservation: {
+            occurredAt: message.whatsAppObservation.statusOccurredAt,
+            provenance:
+              whatsAppObservationProvenance[
+                message.whatsAppObservation.provenance
+              ],
+            status:
+              whatsAppObservationStatus[message.whatsAppObservation.status],
+          },
+        }
+      : {}),
   }
 }
 
@@ -287,7 +390,6 @@ export async function resolveStoreConversationGuestCredential(
   const credential = await db.storeConversationGuestCredential.findFirst({
     include: { guestIdentity: { select: { id: true, status: true } } },
     where: {
-      expiresAt: { gt: input.now },
       ...(input.installationToken
         ? {
             deviceBindingDigest: digestStoreConversationValue(
@@ -296,8 +398,18 @@ export async function resolveStoreConversationGuestCredential(
           }
         : {}),
       purpose,
-      status: StoreConversationGuestCredentialStatus.ACTIVE,
       tokenDigest: digestStoreConversationValue(input.credentialToken),
+      OR: [
+        {
+          expiresAt: { gt: input.now },
+          status: StoreConversationGuestCredentialStatus.ACTIVE,
+        },
+        {
+          expiresAt: { gt: input.now },
+          overlapExpiresAt: { gt: input.now },
+          status: StoreConversationGuestCredentialStatus.ROTATED,
+        },
+      ],
     },
   })
   if (
@@ -315,19 +427,42 @@ export async function resolveStoreConversationGuestCredential(
 
 export async function touchStoreConversationGuestCredential(
   db: DbClient,
-  input: { credentialId: string; guestIdentityId: string; now: Date },
+  input: {
+    credentialId: string
+    credentialStatus?: StoreConversationGuestCredentialStatus
+    guestIdentityId: string
+    now: Date
+    overlapExpiresAt?: Date | null
+  },
 ) {
-  const expiresAt = new Date(input.now.getTime() + GUEST_CREDENTIAL_LIFETIME_MS)
-  await Promise.all([
-    db.storeConversationGuestCredential.update({
-      data: { expiresAt, lastUsedAt: input.now },
+  if (
+    input.credentialStatus === StoreConversationGuestCredentialStatus.ROTATED
+  ) {
+    if (!input.overlapExpiresAt || input.overlapExpiresAt <= input.now) {
+      throw new StoreConversationError(
+        "GUEST_CREDENTIAL_EXPIRED",
+        "This guest session is unavailable. Start again from the Store link.",
+      )
+    }
+    await db.storeConversationGuestCredential.update({
+      data: { lastUsedAt: input.now },
       where: { id: input.credentialId },
-    }),
-    db.storeConversationGuestIdentity.update({
+    })
+    await db.storeConversationGuestIdentity.update({
       data: { lastSeenAt: input.now },
       where: { id: input.guestIdentityId },
-    }),
-  ])
+    })
+    return input.overlapExpiresAt
+  }
+  const expiresAt = new Date(input.now.getTime() + GUEST_CREDENTIAL_LIFETIME_MS)
+  await db.storeConversationGuestCredential.update({
+    data: { expiresAt, lastUsedAt: input.now },
+    where: { id: input.credentialId },
+  })
+  await db.storeConversationGuestIdentity.update({
+    data: { lastSeenAt: input.now },
+    where: { id: input.guestIdentityId },
+  })
   return expiresAt
 }
 
@@ -363,6 +498,7 @@ export async function loadStoreConversationForGuest(
     purpose?: StoreConversationGuestCredentialPurpose
     storeId?: string
     tenantId?: string
+    touchCredential?: boolean
   },
 ) {
   const credential = await resolveStoreConversationGuestCredential(db, input)
@@ -391,11 +527,15 @@ export async function loadStoreConversationForGuest(
       "This Store conversation is unavailable.",
     )
   }
-  await touchStoreConversationGuestCredential(db, {
-    credentialId: credential.id,
-    guestIdentityId: credential.guestIdentityId,
-    now: input.now,
-  })
+  if (input.touchCredential !== false) {
+    await touchStoreConversationGuestCredential(db, {
+      credentialId: credential.id,
+      credentialStatus: credential.status,
+      guestIdentityId: credential.guestIdentityId,
+      now: input.now,
+      overlapExpiresAt: credential.overlapExpiresAt,
+    })
+  }
   return { conversation, credential }
 }
 

@@ -1,4 +1,4 @@
-export { ActionButton } from "./action-button"
+export { ActionButton, MarketDayActionButton } from "./action-button"
 export {
   MobileAppShell,
   type MobileAppShellNavItem,
@@ -44,6 +44,8 @@ export {
   DashboardRecordRow,
   DashboardRecentOrderRow,
   DashboardRevenueCard,
+  DashboardStoreSetup,
+  DashboardStoreSnapshot,
   DashboardStatTile,
   type DashboardMetricTone,
   type DashboardTone,
@@ -89,6 +91,7 @@ export {
   SecondarySheetHeader,
 } from "./secondary-operations"
 export { ServiceJobsContent } from "./service-jobs-sheet"
+export { SignUpMarketHeader, SignUpMarketStall } from "./sign-up-market-stalls"
 export {
   SessionInventoryLine,
   SessionSectionHeader,
@@ -104,6 +107,7 @@ export {
   ShareLinkRecordRow,
 } from "./share-link-flow"
 export { StaffInviteContent, StaffInviteSheet } from "./staff-invite-sheet"
+export { StaffOnboardingMarketNameplate } from "./staff-onboarding-market-nameplate"
 export {
   SetupChoicePill,
   SetupFlowHeader,

@@ -1,5 +1,9 @@
 import { z } from "zod"
 
+export const customerGetByIdSchema = z
+  .object({ customerId: z.string().trim().min(1).max(160) })
+  .strict()
+
 export const customerCreateSchema = z
   .object({
     email: z.string().trim().email().max(320).optional(),

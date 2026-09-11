@@ -1,7 +1,9 @@
+import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
+import { resolveCustomerRequestChoicePresentation } from "./customer-request-choice-presentation"
 import type { CustomerRequestTarget } from "./use-customer-conversation-detail"
 
 type Timeline =
@@ -12,87 +14,92 @@ export function CustomerRequestChoice({
   onSelect,
   requestKinds,
   requests,
+  selecting,
 }: {
   disabled: boolean
   onSelect: (target: CustomerRequestTarget) => void
   requestKinds: Timeline["availableRequestKinds"]
   requests: Timeline["requests"]
+  selecting: boolean
 }) {
+  const presentation = resolveCustomerRequestChoicePresentation({
+    requestKinds,
+    requests,
+  })
+
   return (
-    <View className="ml-auto w-[92%] gap-2 rounded-2xl border border-border bg-card p-3">
-      <Text className="font-bold text-foreground">
-        What is this message about?
+    <View className="w-full gap-1">
+      <Text className="text-base font-bold text-foreground">
+        {presentation.heading}
       </Text>
       <Text className="text-xs leading-5 text-muted-foreground">
-        Choose where it belongs. EwaTrade will not infer this from your message.
+        {presentation.lead}
       </Text>
-      <View className="flex-row flex-wrap gap-2">
-        {requests
-          .filter((request) => request.lifecycle === "active")
-          .map((request) => (
-            <ChoiceButton
-              disabled={disabled}
-              key={`${request.kind}:${request.id}`}
-              label={`Continue ${request.label}`}
-              onPress={() =>
-                onSelect({
-                  kind: "existing_request",
-                  requestId: request.id,
-                  requestKind: request.kind,
-                })
-              }
-            />
-          ))}
-        {requestKinds.includes("product_inquiry") ? (
-          <ChoiceButton
+      <View className="mt-1">
+        {presentation.options.map((option, index) => (
+          <ChoiceRow
+            description={option.description}
             disabled={disabled}
-            label="New product request"
-            onPress={() => onSelect({ kind: "new_commerce_inquiry" })}
-            primary
+            key={option.key}
+            label={option.label}
+            last={index === presentation.options.length - 1}
+            onPress={() => onSelect(option.target)}
+            primary={option.primary}
+            selecting={selecting}
           />
-        ) : null}
+        ))}
       </View>
-      {requestKinds.some((kind) => kind !== "product_inquiry") ? (
-        <Text className="text-xs text-muted-foreground">
-          New service and prescription intake will be added to the app next.
-        </Text>
-      ) : null}
     </View>
   )
 }
 
-function ChoiceButton({
+function ChoiceRow({
+  description,
   disabled,
   label,
+  last,
   onPress,
   primary = false,
+  selecting,
 }: {
+  description: string
   disabled: boolean
   label: string
+  last: boolean
   onPress: () => void
   primary?: boolean
+  selecting: boolean
 }) {
   return (
     <Pressable
-      accessibilityRole="button"
-      className={
-        primary
-          ? "min-h-11 justify-center rounded-full bg-primary px-4"
-          : "min-h-11 justify-center rounded-full border border-border px-4"
+      accessibilityLabel={
+        primary ? `Start a ${label.toLowerCase()}` : `Continue ${label}`
       }
+      accessibilityRole="button"
+      accessibilityHint={selecting ? "Selection in progress" : undefined}
+      accessibilityState={{ busy: selecting, disabled }}
+      className={`min-h-[58px] flex-row items-center gap-3 border-t border-border px-2 py-2 disabled:opacity-50 ${last ? "border-b" : ""}`}
       disabled={disabled}
       haptic
       onPress={onPress}
     >
-      <Text
-        className={
-          primary
-            ? "text-sm font-bold text-primary-foreground"
-            : "text-sm font-bold text-foreground"
-        }
+      <View
+        className={`size-9 items-center justify-center rounded-full ${primary ? "bg-primary" : "bg-muted"}`}
       >
-        {label}
-      </Text>
+        <Icon
+          className={`size-sm ${primary ? "text-primary-foreground" : "text-muted-foreground"}`}
+          name={primary ? "Plus" : "Link"}
+        />
+      </View>
+      <View className="min-w-0 flex-1">
+        <Text className="text-sm font-bold text-foreground" numberOfLines={1}>
+          {label}
+        </Text>
+        <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+          {description}
+        </Text>
+      </View>
+      <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
     </Pressable>
   )
 }

@@ -1,3 +1,6 @@
+import { parseCustomerConversationDetailQaState } from "./customer-conversation-detail-qa"
+import { parseCustomerConversationListQaState } from "./customer-conversation-list-qa"
+
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{32,200}$/
 
 function customerChatHost() {
@@ -21,6 +24,44 @@ function storeTokenFromUrl(url: URL) {
   }
 
   return null
+}
+
+export function resolveCustomerConversationQaPath(
+  path: string,
+  development: boolean,
+) {
+  if (!development) return null
+
+  try {
+    const url = new URL(path)
+    const detailQaState = parseCustomerConversationDetailQaState({
+      development,
+      qaState: url.searchParams.get("qaState"),
+    })
+    if (
+      detailQaState &&
+      url.protocol === "ewatrade-dev:" &&
+      url.hostname === "conversation"
+    ) {
+      return `/(customer)/conversations/qa-${detailQaState}?publicToken=qa-luma&qaState=${detailQaState}`
+    }
+
+    const qaState = parseCustomerConversationListQaState({
+      development,
+      qaState: url.searchParams.get("qaState"),
+    })
+    if (
+      !qaState ||
+      url.protocol !== "ewatrade-dev:" ||
+      url.hostname !== "conversations"
+    ) {
+      return null
+    }
+
+    return `/(customer)/conversations?qaState=${qaState}`
+  } catch {
+    return null
+  }
 }
 
 export function resolveCustomerDeepLink(path: string): {

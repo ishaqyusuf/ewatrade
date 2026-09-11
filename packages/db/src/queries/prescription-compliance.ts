@@ -114,7 +114,7 @@ export async function authorizePrescriptionBreakGlassAccess(
 }
 
 function findActivePrescriptionBreakGlassControl(
-  db: PrismaClient,
+  db: PrismaClient | Prisma.TransactionClient,
   input: { actorUserId: string; storeId: string; tenantId: string },
 ) {
   return db.prescriptionIncidentControl.findFirst({
@@ -131,7 +131,7 @@ function findActivePrescriptionBreakGlassControl(
 }
 
 export async function assertPrescriptionOperationalOrBreakGlassAccess(
-  db: PrismaClient,
+  db: PrismaClient | Prisma.TransactionClient,
   input: {
     actorUserId: string
     reason: string
@@ -165,7 +165,7 @@ export async function assertPrescriptionOperationalOrBreakGlassAccess(
 }
 
 export async function getPrescriptionOperationalAccessState(
-  db: PrismaClient,
+  db: PrismaClient | Prisma.TransactionClient,
   input: {
     actorUserId: string
     storeId: string

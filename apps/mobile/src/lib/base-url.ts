@@ -1,66 +1,38 @@
-import Constants from "expo-constants";
+import Constants from "expo-constants"
+import { resolveMobileServiceUrl } from "./mobile-service-url"
 
-const DEFAULT_API_PORT = "3095";
-const DEFAULT_WEB_PORT = "3092";
-
-const getLocalPort = (value: string | undefined, fallback: string) =>
-  value?.trim() || fallback;
+const DEFAULT_API_PORT = "3095"
+const DEFAULT_WEB_PORT = "3092"
+const DEFAULT_CHAT_PORT = "3091"
 
 const getDebuggerHostname = () => {
-  const debuggerHost = Constants.expoConfig?.hostUri;
-  return debuggerHost?.split(":")[0] ?? null;
-};
+  const debuggerHost = Constants.expoConfig?.hostUri
+  return debuggerHost?.split(":")[0] ?? null
+}
 
-const localHostnames = new Set(["localhost", "127.0.0.1", "0.0.0.0", "::1"]);
+export const getBaseUrl = () =>
+  resolveMobileServiceUrl({
+    configuredPort: process.env.EXPO_PUBLIC_API_PORT,
+    configuredUrl: process.env.EXPO_PUBLIC_API_URL,
+    debuggerHostname: getDebuggerHostname(),
+    defaultPort: DEFAULT_API_PORT,
+    requiredUrlName: "EXPO_PUBLIC_API_URL",
+  })
 
-const resolveReachableLocalUrl = (value: string) => {
-  const trimmed = value.replace(/\/$/, "");
-  const debuggerHostname = getDebuggerHostname();
-  if (!debuggerHostname) return trimmed;
+export const getWebUrl = () =>
+  resolveMobileServiceUrl({
+    configuredPort: process.env.EXPO_PUBLIC_WEB_PORT,
+    configuredUrl: process.env.EXPO_PUBLIC_WEB_URL,
+    debuggerHostname: getDebuggerHostname(),
+    defaultPort: DEFAULT_WEB_PORT,
+    requiredUrlName: "EXPO_PUBLIC_WEB_URL",
+  })
 
-  try {
-    const url = new URL(trimmed);
-    if (!localHostnames.has(url.hostname)) return trimmed;
-
-    url.hostname = debuggerHostname;
-    return url.toString().replace(/\/$/, "");
-  } catch {
-    return trimmed;
-  }
-};
-
-export const getBaseUrl = () => {
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return resolveReachableLocalUrl(process.env.EXPO_PUBLIC_API_URL);
-  }
-
-  const localhost = getDebuggerHostname();
-  if (!localhost) {
-    throw new Error(
-      "EXPO_PUBLIC_API_URL must be set when a local Expo host is unavailable.",
-    );
-  }
-
-  return `http://${localhost}:${getLocalPort(
-    process.env.EXPO_PUBLIC_API_PORT,
-    DEFAULT_API_PORT,
-  )}`;
-};
-
-export const getWebUrl = () => {
-  if (process.env.EXPO_PUBLIC_WEB_URL) {
-    return resolveReachableLocalUrl(process.env.EXPO_PUBLIC_WEB_URL);
-  }
-
-  const localhost = getDebuggerHostname();
-  if (!localhost) {
-    throw new Error(
-      "EXPO_PUBLIC_WEB_URL must be set when a local Expo host is unavailable.",
-    );
-  }
-
-  return `http://${localhost}:${getLocalPort(
-    process.env.EXPO_PUBLIC_WEB_PORT,
-    DEFAULT_WEB_PORT,
-  )}`;
-};
+export const getChatUrl = () =>
+  resolveMobileServiceUrl({
+    configuredPort: process.env.EXPO_PUBLIC_CHAT_PORT,
+    configuredUrl: process.env.EXPO_PUBLIC_CHAT_URL,
+    debuggerHostname: getDebuggerHostname(),
+    defaultPort: DEFAULT_CHAT_PORT,
+    requiredUrlName: "EXPO_PUBLIC_CHAT_URL",
+  })

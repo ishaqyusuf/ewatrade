@@ -14,7 +14,13 @@ export type MobileAuthMode = "login" | "sign_up"
 
 export type MobileAuthTenantSummary = OwnerBusinessSummary
 
+export type MobileAccessProfile = {
+  hasBusinessAccess: boolean
+  hasCustomerHistory: boolean
+}
+
 export type MobileAuthSessionResult = {
+  accessProfile: MobileAccessProfile
   expiresAt: Date
   profile: {
     businessId: string | null
@@ -73,7 +79,7 @@ function getEmailDisplayName(email: string) {
 }
 
 function buildOtpIdentifier(input: { email: string; mode: MobileAuthMode }) {
-  return `mobile-owner-auth:${input.mode}:${normalizeEmail(input.email)}`
+  return `mobile-auth:${input.mode}:${normalizeEmail(input.email)}`
 }
 
 function hashOtp(code: string) {
@@ -114,18 +120,26 @@ function addDays(date: Date, days: number) {
 async function getFirstActiveTenantForUser(
   db: DbClient,
   input: { userId: string },
+  options: { includeInvited?: boolean } = {},
 ): Promise<MobileAuthTenantSummary | null> {
+  const membershipAccess =
+    options.includeInvited === false
+      ? { status: "ACTIVE" as const }
+      : {
+          OR: [
+            { status: "ACTIVE" as const },
+            {
+              role: {
+                in: ["CASHIER", "MANAGER", "OPERATOR"],
+              },
+              status: "INVITED" as const,
+            },
+          ],
+        }
+
   const membership = await db.membership.findFirst({
     where: {
-      OR: [
-        { status: "ACTIVE" },
-        {
-          role: {
-            in: ["CASHIER", "MANAGER", "OPERATOR"],
-          },
-          status: "INVITED",
-        },
-      ],
+      ...membershipAccess,
       userId: input.userId,
     },
     orderBy: [{ status: "asc" }, { createdAt: "asc" }],
@@ -171,6 +185,27 @@ async function getFirstActiveTenantForUser(
     status: membership.status,
     storeId: activeStore?.id ?? null,
     storeName: activeStore?.name ?? null,
+  }
+}
+
+export async function getMobileAccessProfile(
+  db: DbClient,
+  input: { userId: string },
+): Promise<MobileAccessProfile> {
+  const [tenant, linkedConversation] = await Promise.all([
+    getFirstActiveTenantForUser(db, input, { includeInvited: false }),
+    db.storeConversationAccountAccess.findFirst({
+      where: {
+        accountUserId: input.userId,
+        status: "ACTIVE",
+      },
+      select: { id: true },
+    }),
+  ])
+
+  return {
+    hasBusinessAccess: Boolean(tenant),
+    hasCustomerHistory: Boolean(linkedConversation),
   }
 }
 
@@ -241,25 +276,6 @@ export async function createMobileOwnerOtp(
   },
 ): Promise<MobileOwnerOtpResult> {
   const email = normalizeEmail(input.email)
-  if (input.mode === "login") {
-    const existingUser = await db.user.findUnique({
-      where: { email },
-      select: { id: true },
-    })
-
-    if (!existingUser) {
-      throw new Error("No owner account exists for this email yet.")
-    }
-
-    const tenant = await getFirstActiveTenantForUser(db, {
-      userId: existingUser.id,
-    })
-
-    if (!tenant) {
-      throw new Error("No active business is available for this account.")
-    }
-  }
-
   const code = createOtpCode()
   const now = new Date()
   const expiresAt = addMinutes(now, OTP_TTL_MINUTES)
@@ -402,10 +418,6 @@ export async function verifyMobileOwnerOtp(
     },
   })
 
-  if (input.mode === "login" && !existingUser) {
-    throw new Error("No owner account exists for this email yet.")
-  }
-
   const user = await db.user.upsert({
     create: {
       displayName,
@@ -446,9 +458,7 @@ export async function verifyMobileOwnerOtp(
         })
       : await getFirstActiveTenantForUser(db, { userId: user.id })
 
-  if (!tenant) {
-    throw new Error("No active business is available for this account.")
-  }
+  const accessProfile = await getMobileAccessProfile(db, { userId: user.id })
 
   const session = await createMobileSession(db, {
     tenant,
@@ -456,16 +466,17 @@ export async function verifyMobileOwnerOtp(
   })
 
   return {
+    accessProfile,
     expiresAt: session.expiresAt,
     profile: {
-      businessId: tenant.id,
-      businessName: tenant.name,
-      currencyCode: tenant.currencyCode,
+      businessId: tenant?.id ?? null,
+      businessName: tenant?.name ?? null,
+      currencyCode: tenant?.currencyCode ?? "NGN",
       email: user.email,
       id: user.id,
       name: user.name || displayName,
-      role: tenant.role,
-      status: tenant.status,
+      role: tenant?.role ?? "NONE",
+      status: tenant?.status ?? "NONE",
     },
     tenant,
     token: session.token,
@@ -502,10 +513,6 @@ export async function verifyMobileGoogleIdentity(
       name: true,
     },
   })
-
-  if (input.mode === "login" && !linkedAccount && !existingUser) {
-    throw new Error("No owner account exists for this Google account yet.")
-  }
 
   const displayName =
     cleanText(input.name) ??
@@ -588,9 +595,7 @@ export async function verifyMobileGoogleIdentity(
         })
       : await getFirstActiveTenantForUser(db, { userId: user.id })
 
-  if (!tenant) {
-    throw new Error("No active business is available for this account.")
-  }
+  const accessProfile = await getMobileAccessProfile(db, { userId: user.id })
 
   const session = await createMobileSession(db, {
     tenant,
@@ -598,16 +603,17 @@ export async function verifyMobileGoogleIdentity(
   })
 
   return {
+    accessProfile,
     expiresAt: session.expiresAt,
     profile: {
-      businessId: tenant.id,
-      businessName: tenant.name,
-      currencyCode: tenant.currencyCode,
+      businessId: tenant?.id ?? null,
+      businessName: tenant?.name ?? null,
+      currencyCode: tenant?.currencyCode ?? "NGN",
       email: user.email,
       id: user.id,
       name: user.name || displayName,
-      role: tenant.role,
-      status: tenant.status,
+      role: tenant?.role ?? "NONE",
+      status: tenant?.status ?? "NONE",
     },
     tenant,
     token: session.token,

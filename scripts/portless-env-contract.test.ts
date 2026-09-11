@@ -21,7 +21,7 @@ function sampleEnvironment() {
 
 describe("Portless environment contract", () => {
   test("documents Neon as the local development database", () => {
-    const databaseUrl = new URL(sampleEnvironment().DATABASE_URL)
+    const databaseUrl = new URL(sampleEnvironment().EWATRADE_DATABASE_URL)
 
     expect(databaseUrl.hostname.endsWith(".neon.tech")).toBe(true)
     expect(databaseUrl.hostname).not.toBe("localhost")
