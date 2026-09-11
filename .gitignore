@@ -16,3 +16,6 @@ packages/db/generated
 /.design/*
 !/.design/reference-*.png
 packages/jobs/.trigger/
+/.brain/
+/.scratch/
+/output/
