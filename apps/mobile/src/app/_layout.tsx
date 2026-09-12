@@ -1,3 +1,4 @@
+import { AnalyticsRuntime } from "@/runtime/analytics-runtime"
 import FontAwesome from "@expo/vector-icons/FontAwesome"
 import { ThemeProvider } from "@react-navigation/native"
 import * as Sentry from "@sentry/react-native"
@@ -441,6 +442,7 @@ function RootLayoutNav() {
                 <AppLockProvider>
                   <ToastProviderWithViewport>
                     <BottomSheetModalProvider>
+                      <AnalyticsRuntime />
                       <FlashMessage position="top" />
                       <InitialLayout />
                       <AppLockGate />
