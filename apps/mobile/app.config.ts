@@ -10,7 +10,7 @@ const { withGoogleSignInModularHeaders } =
     withGoogleSignInModularHeaders: (config: ExpoConfig) => ExpoConfig
   }
 
-export const UPDATE_VERSION = "2026.09.11"
+export const UPDATE_VERSION = "2026.09.22"
 
 const PROJECT = {
   default: {
