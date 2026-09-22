@@ -69,7 +69,7 @@ type StoreConversationAggregateInput = {
 }
 
 function count(value: bigint | undefined) {
-  const result = Number(value ?? 0n)
+  const result = Number(value ?? BigInt(0))
   if (!Number.isSafeInteger(result) || result < 0) {
     throw new Error("REPORT_COUNT_OUT_OF_RANGE")
   }

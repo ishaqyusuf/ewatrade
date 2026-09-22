@@ -146,7 +146,6 @@ async function sendExpoPush(input: {
     )
   }
   return {
-    assertProviderAllowed: (input) => assertQaJobProviderAllowed(input),
     providerKey: "expo-push",
     providerOperationReference: payload.data.id,
   }
@@ -158,6 +157,7 @@ async function unavailableWebPush(): Promise<PushResult> {
 
 function defaultDependencies(): Dependencies {
   return {
+    assertProviderAllowed: (input) => assertQaJobProviderAllowed(input),
     claim: (payload) =>
       claimStoreConversationNotificationIntent(prisma, payload),
     complete: (payload) =>

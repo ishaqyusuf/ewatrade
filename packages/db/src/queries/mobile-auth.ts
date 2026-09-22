@@ -4,6 +4,7 @@ import {
   type OperatingCurrencyCode,
   normalizeOperatingCurrencyCode,
 } from "@ewatrade/utils"
+import { MembershipRole } from "../../generated/prisma/enums"
 import {
   type OwnerBusinessSummary,
   createOwnerSignupBusiness,
@@ -130,7 +131,11 @@ async function getFirstActiveTenantForUser(
             { status: "ACTIVE" as const },
             {
               role: {
-                in: ["CASHIER", "MANAGER", "OPERATOR"],
+                in: [
+                  MembershipRole.CASHIER,
+                  MembershipRole.MANAGER,
+                  MembershipRole.OPERATOR,
+                ],
               },
               status: "INVITED" as const,
             },

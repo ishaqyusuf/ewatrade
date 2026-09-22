@@ -253,7 +253,7 @@ export async function resolveStoreConversationChannelProjectionInTransaction(
     store.serviceCommerceStoreTeamAssignments === undefined
       ? db.serviceCommerceStoreTeamAssignment.findFirst({
           where: {
-            active: true,
+            status: "ACTIVE",
             storeId: input.storeId,
             tenantId: input.tenantId,
           },

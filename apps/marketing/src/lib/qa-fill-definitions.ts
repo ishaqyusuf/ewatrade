@@ -1,3 +1,4 @@
+import { normalizeOperatingCurrencyCode } from "@ewatrade/utils"
 import {
   createQaBusinessFixture,
   createQaStaffFixture,
@@ -28,7 +29,7 @@ export const businessFill = (
     businessSize: "2_5",
     city: business.city,
     countryCode: "NG",
-    currencyCode: business.currencyCode,
+    currencyCode: normalizeOperatingCurrencyCode(business.currencyCode),
     operatingModel: "products",
     orderChannels: ["walk_in"],
     otherBusinessDescription: "",

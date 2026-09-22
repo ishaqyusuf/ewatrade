@@ -6,11 +6,11 @@ import {
   resolvePayloadBoundOperation,
 } from "@/lib/payload-bound-operation"
 import { useTRPC } from "@/trpc/client"
-import { Button, Input, Select } from "@ewatrade/ui"
 import {
   type StoreConversationModerationFormValues,
   storeConversationModerationFormSchema,
 } from "@ewatrade/service-commerce"
+import { Button, Input, Select } from "@ewatrade/ui"
 import { useMutation } from "@tanstack/react-query"
 import { useEffect, useRef } from "react"
 
@@ -43,7 +43,7 @@ export function ConversationModerationForm({
   const form = useZodForm<StoreConversationModerationFormValues>(
     storeConversationModerationFormSchema,
     {
-    defaultValues: defaults(moderation.state),
+      defaultValues: defaults(moderation.state),
     },
   )
   const mutation = useMutation(
@@ -54,6 +54,11 @@ export function ConversationModerationForm({
       },
       onSuccess: async (result) => {
         operation.current = null
+        if (!result?.state) {
+          await onChanged()
+          onMessage("The moderation result could not be confirmed.")
+          return
+        }
         form.reset(defaults(result.state))
         await onChanged()
         onMessage(
@@ -68,9 +73,9 @@ export function ConversationModerationForm({
   useEffect(() => {
     operation.current = null
     form.reset(defaults(moderation.state))
-  }, [form, moderation.revision, moderation.state])
+  }, [form, moderation.state])
 
-  const action = form.watch("action")
+  const action = form.watch("action") ?? defaults(moderation.state).action
   useEffect(() => {
     const currentReason = form.getValues("reason")
     const allowed =
@@ -95,13 +100,12 @@ export function ConversationModerationForm({
     <form
       className="grid gap-3 border-t border-border pt-5"
       onSubmit={form.handleSubmit((values) => {
+        const operatorNote = values.operatorNote?.trim()
         const input = {
           action: values.action,
           conversationId,
           expectedRevision: moderation.revision,
-          ...(values.operatorNote.trim()
-            ? { operatorNote: values.operatorNote.trim() }
-            : {}),
+          ...(operatorNote ? { operatorNote } : {}),
           reason: values.reason,
           storeId,
         }
@@ -118,20 +122,26 @@ export function ConversationModerationForm({
       <div>
         <h3 className="font-medium">Customer submission</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Restriction pauses new text, media, voice, and actions without deleting
-          the conversation or its Requests.
+          Restriction pauses new text, media, voice, and actions without
+          deleting the conversation or its Requests.
         </p>
       </div>
-      <label className="grid gap-1 text-sm font-medium">
+      <label
+        className="grid gap-1 text-sm font-medium"
+        htmlFor="moderation-action"
+      >
         Action
-        <Select {...form.register("action")}>
+        <Select id="moderation-action" {...form.register("action")}>
           <option value="restrict">Restrict new submissions</option>
           <option value="reinstate">Reinstate submissions</option>
         </Select>
       </label>
-      <label className="grid gap-1 text-sm font-medium">
+      <label
+        className="grid gap-1 text-sm font-medium"
+        htmlFor="moderation-reason"
+      >
         Reason
-        <Select {...form.register("reason")}>
+        <Select id="moderation-reason" {...form.register("reason")}>
           {action === "restrict" ? (
             <>
               <option value="operator_review">Operator review</option>
@@ -152,9 +162,13 @@ export function ConversationModerationForm({
           </span>
         ) : null}
       </label>
-      <label className="grid gap-1 text-sm font-medium">
+      <label
+        className="grid gap-1 text-sm font-medium"
+        htmlFor="moderation-note"
+      >
         Internal note (optional)
         <Input
+          id="moderation-note"
           maxLength={240}
           placeholder="Visible only to authorized operators"
           {...form.register("operatorNote")}

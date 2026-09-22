@@ -149,7 +149,11 @@ export const qaAccessRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       requireAvailability(input.contractVersion)
-      if (!isConfiguredQaDomain(input.qaDomain, process.env)) {
+      if (
+        !isConfiguredQaDomain(input.qaDomain, {
+          EMAIL_QA_DOMAIN_ROUTES: process.env.EMAIL_QA_DOMAIN_ROUTES,
+        })
+      ) {
         mapQaAccessError(new QaAccessError("authorization_required"))
       }
       try {

@@ -230,7 +230,11 @@ export async function exchangeQaWebCredential(
   request: NextRequest,
   input: { clientId: string; credential: string; qaDomain: string },
 ) {
-  if (!isConfiguredQaDomain(input.qaDomain, process.env)) {
+  if (
+    !isConfiguredQaDomain(input.qaDomain, {
+      EMAIL_QA_DOMAIN_ROUTES: process.env.EMAIL_QA_DOMAIN_ROUTES,
+    })
+  ) {
     throw new QaAccessError("authorization_required")
   }
   return exchangeQaTesterCredential(prisma, {
