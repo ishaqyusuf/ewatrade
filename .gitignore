@@ -19,6 +19,5 @@ packages/db/generated
 packages/jobs/.trigger/
 /.brain/
 /.scratch/
-/.design/
 /output/
 /outputs/
