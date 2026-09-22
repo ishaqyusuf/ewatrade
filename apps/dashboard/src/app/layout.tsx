@@ -33,7 +33,7 @@ export default function RootLayout({
     <html lang="en" className={cn("font-sans", geist.variable)}>
       <body className="bg-background">
         <Providers qaAcceleratorEnabled={qaAcceleratorEnabled}>
-          <EventsProvider>{children}</EventsProvider>
+          <EventsProvider surface="dashboard">{children}</EventsProvider>
         </Providers>
       </body>
     </html>

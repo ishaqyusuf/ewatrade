@@ -1,8 +1,5 @@
-import type {
-  AnalyticsBatch,
-  AnalyticsConfig,
-  AnalyticsEvent,
-} from "@ishaqyusuf/logly-core"
+import type { AnalyticsConfig } from "@ishaqyusuf/logly-core"
+import type { NativeBatch, NativeEvent } from "./native-contract"
 import { safeRoute } from "./policy"
 
 type Visitor = { id: string; firstSeenOn: string; lastVisitOn: string | null }
@@ -10,23 +7,25 @@ type Visitor = { id: string; firstSeenOn: string; lastVisitOn: string | null }
 export function createNativeAnalytics(options: {
   endpoint: string
   enabled: boolean
+  appVersion?: string
+  appBuild?: string
   storage: AnalyticsConfig["storage"]
   createId: () => string
   now?: () => Date
-  send?: (batch: AnalyticsBatch) => Promise<void>
+  send?: (batch: NativeBatch) => Promise<void>
 }) {
   const project = "ewatrade-mobile"
   const key = `logly:${project}:visitor`
   const now = options.now ?? (() => new Date())
   let visitor: Visitor | undefined
-  let queue: AnalyticsEvent[] = []
+  let queue: NativeEvent[] = []
   let timer: ReturnType<typeof setInterval> | undefined
   let inFlight: Promise<void> | undefined
   let active = false
   let lastRoute: string | undefined
   const send =
     options.send ??
-    (async (batch: AnalyticsBatch) => {
+    (async (batch: NativeBatch) => {
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), 4000)
       try {
@@ -51,7 +50,7 @@ export function createNativeAnalytics(options: {
     if (!events.length) return Promise.resolve()
     inFlight = send({
       sentAt: now().toISOString(),
-      sdk: { name: "@ishaqyusuf/logly-core", version: "0.2.0" },
+      sdk: { name: "@ishaqyusuf/logly-core", version: "0.3.0" },
       events,
     })
       .then(() => {
@@ -99,12 +98,15 @@ export function createNativeAnalytics(options: {
       const newDay = visitor.lastVisitOn !== day
       if (lastRoute === safe && !newDay) return
       const visitorId = visitor.id
-      const event = (name: string): AnalyticsEvent => ({
+      const event = (name: NativeEvent["name"]): NativeEvent => ({
         eventId: options.createId(),
         project,
         name,
         version: 1,
-        source: "browser",
+        source: "mobile",
+        platform: "android",
+        appVersion: options.appVersion,
+        appBuild: options.appBuild,
         occurredAt: date.toISOString(),
         visitorId,
         route: safe,
@@ -112,13 +114,13 @@ export function createNativeAnalytics(options: {
       })
       if (newDay) {
         queue.push({
-          ...event("site_visit"),
+          ...event("app_session"),
           visitKind: visitor.firstSeenOn === day ? "new" : "returning",
         })
         visitor.lastVisitOn = day
         options.storage?.setItem(key, JSON.stringify(visitor))
       }
-      queue.push(event("page_view"))
+      queue.push(event("screen_view"))
       queue = queue.slice(-250)
       lastRoute = safe
       void flush()

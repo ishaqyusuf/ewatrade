@@ -1,1 +1,2 @@
-export { POST } from "@ewatrade/events/route"
+import { createEventsRoute } from "@ewatrade/events/route"
+export const POST = createEventsRoute("dashboard")

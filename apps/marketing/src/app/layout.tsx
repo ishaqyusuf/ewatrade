@@ -47,7 +47,7 @@ export default function RootLayout({
     >
       <body>
         <Providers qaAcceleratorEnabled={qaAcceleratorEnabled}>
-          <EventsProvider>{children}</EventsProvider>
+          <EventsProvider surface="marketing">{children}</EventsProvider>
         </Providers>
       </body>
     </html>

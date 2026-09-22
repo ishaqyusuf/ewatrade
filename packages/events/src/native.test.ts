@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test"
-import type { AnalyticsBatch } from "@ishaqyusuf/logly-core"
 import { createNativeAnalytics } from "./native"
+import { type NativeBatch, nativeBatchSchema } from "./native-contract"
 
 test("native queues failed delivery, removes private routes and rolls UTC visit days", async () => {
   const values = new Map<string, string>()
-  const batches: AnalyticsBatch[] = []
+  const batches: NativeBatch[] = []
   let fail = true
   let time = new Date("2026-09-07T23:59:00Z")
   const client = createNativeAnalytics({
@@ -33,9 +33,14 @@ test("native queues failed delivery, removes private routes and rolls UTC visit 
     expect(batches).toHaveLength(0)
     fail = false
     await client.flush()
+    expect(nativeBatchSchema.safeParse(batches[0]).success).toBe(true)
+    expect(batches[0]?.events[0]).toMatchObject({
+      source: "mobile",
+      platform: "android",
+    })
     expect(batches[0]?.events.map((event) => event.name)).toEqual([
-      "site_visit",
-      "page_view",
+      "app_session",
+      "screen_view",
     ])
     expect(
       batches[0]?.events.every(

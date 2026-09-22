@@ -387,8 +387,9 @@
       "name": "@ewatrade/events",
       "version": "0.1.0",
       "dependencies": {
-        "@ishaqyusuf/logly-core": "^0.2.0",
-        "@ishaqyusuf/logly-next": "^0.2.0",
+        "@ishaqyusuf/logly-core": "0.2.0",
+        "@ishaqyusuf/logly-next": "0.2.1",
+        "zod": "catalog:",
       },
       "devDependencies": {
         "@ewatrade/tsconfig": "workspace:*",
@@ -1173,7 +1174,7 @@
 
     "@ishaqyusuf/logly-core": ["@ishaqyusuf/logly-core@0.2.0", "", { "dependencies": { "zod": "^4.3.5" } }, "sha512-F+6IanI9JAnp0galz+st5ON4f0F+yPFTULlASWLYB9jCF+eUjdveIYPJznwX/FdtEFnMZKyejlqbuEGwYIoVAw=="],
 
-    "@ishaqyusuf/logly-next": ["@ishaqyusuf/logly-next@0.2.0", "", { "dependencies": { "@ishaqyusuf/logly-core": "^0.2.0" }, "peerDependencies": { "next": ">=15", "react": ">=19" } }, "sha512-Xz4AW3GvIQAZrLvizlxnOAJsF6xc5JUks5w/inQSGJvTZpJQNG/VBWTKO0Do9aAydoeW08WjtBNRKfvKa0dmvg=="],
+    "@ishaqyusuf/logly-next": ["@ishaqyusuf/logly-next@0.2.1", "", { "dependencies": { "@ishaqyusuf/logly-core": "^0.2.0" }, "peerDependencies": { "next": ">=15", "react": ">=19" } }, "sha512-sjeuI9Ya3VNgBvBDltPYY2O4O8ePp2wynJqmG+Tz4Xz+PEpPd4afqzbnohj7u9D7V0vk3EL1TVecq7aQ/gaoQg=="],
 
     "@istanbuljs/load-nyc-config": ["@istanbuljs/load-nyc-config@1.1.0", "", { "dependencies": { "camelcase": "^5.3.1", "find-up": "^4.1.0", "get-package-type": "^0.1.0", "js-yaml": "^3.13.1", "resolve-from": "^5.0.0" } }, "sha512-VjeHSlIzpv/NyD3N0YuHfXOPDIixcA1q2ZV98wsMqcYlPmv2n3Yb2lYP9XMElnaFVXg5A7YLTeLu6V84uQDjmQ=="],
 
@@ -4049,8 +4050,6 @@
 
     "@eslint/eslintrc/minimatch": ["minimatch@3.1.5", "", { "dependencies": { "brace-expansion": "^1.1.7" } }, "sha512-VgjWUsnnT6n+NUk6eZq77zeFdpW2LWDzP6zFGrCbHXiYNul5Dzqk2HHQ5uFH2DNW5Xbp8+jVzaeNt94ssEEl4w=="],
 
-    "@ewatrade/events/@types/bun": ["@types/bun@1.4.0", "", { "dependencies": { "bun-types": "1.4.0" } }, "sha512-K+lZULY23vRgK/CfTjFIV+tyifaNdSMlPh9j+6mQ/cLfpOznLyAuzgV/JQysyECpkBQLVMSyvjlr2fBUSA9wFQ=="],
-
     "@ewatrade/events/@types/node": ["@types/node@25.9.5", "", { "dependencies": { "undici-types": ">=7.24.0 <7.24.7" } }, "sha512-OScDchr2fwuUmWdf4kZ9h7PcJiYDVInhJizG/biAq3cAvqwYktuy/TYGGdZNMtNTFUP7rnb0NU4TUdm82kt4Rg=="],
 
     "@ewatrade/mobile/@types/react": ["@types/react@19.1.17", "", { "dependencies": { "csstype": "^3.0.2" } }, "sha512-Qec1E3mhALmaspIrhWt9jkQMNdw6bReVu64mjvhbhq2NFPftLPVr+l1SZgmw/66WwBNpDh7ao5AT6gF5v41PFA=="],
@@ -5005,8 +5004,6 @@
 
     "@eslint/eslintrc/minimatch/brace-expansion": ["brace-expansion@1.1.16", "", { "dependencies": { "balanced-match": "^1.0.0", "concat-map": "0.0.1" } }, "sha512-IDw48K2/2kRkg9LdJxurvq3lV3aBgq0REY89duEqFRthjlPdXHKMj7EnQOXVckxzgisinf3nHfrcE2FufFLXMw=="],
 
-    "@ewatrade/events/@types/bun/bun-types": ["bun-types@1.4.0", "", { "dependencies": { "@types/node": "*" } }, "sha512-iIKw23BspnQQYd3prITOBxeUsxBHnwzX6YJfGMuNOZzeNcMmVqzIIVGRm1l69ogaPQmb4wB6BN8mA5bE9YuC5Q=="],
-
     "@ewatrade/events/@types/node/undici-types": ["undici-types@7.24.6", "", {}, "sha512-WRNW+sJgj5OBN4/0JpHFqtqzhpbnV0GuB+OozA9gCL7a993SmU+1JBZCzLNxYsbMfIeDL+lTsphD5jN5N+n0zg=="],
 
     "@expo/cli/@expo/env/dotenv": ["dotenv@16.4.7", "", {}, "sha512-47qPchRCykZC03FhkYAhrvwU4xDBFIj1QPqaarj6mdM/hgUzfPHcpkHJOn3mJAufFeeAxAzeGsr5X0M4k6fLZQ=="],
@@ -5552,8 +5549,6 @@
     "@eslint/config-array/minimatch/brace-expansion/balanced-match": ["balanced-match@1.0.2", "", {}, "sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw=="],
 
     "@eslint/eslintrc/minimatch/brace-expansion/balanced-match": ["balanced-match@1.0.2", "", {}, "sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw=="],
-
-    "@ewatrade/events/@types/bun/bun-types/@types/node": ["@types/node@24.12.0", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-GYDxsZi3ChgmckRT9HPU0WEhKLP08ev/Yfcq2AstjrDASOYCSXeyjDsHg4v5t4jOj7cyDX3vmprafKlWIG9MXQ=="],
 
     "@expo/cli/chalk/supports-color/has-flag": ["has-flag@4.0.0", "", {}, "sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ=="],
 
