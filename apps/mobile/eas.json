@@ -27,6 +27,7 @@
     "production-apk": {
       "extends": "production",
       "distribution": "internal",
+      "environment": "production",
       "channel": "production",
       "android": {
         "buildType": "apk"
