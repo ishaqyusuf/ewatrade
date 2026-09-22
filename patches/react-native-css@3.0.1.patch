@@ -1,0 +1,13 @@
+diff --git a/src/components/TextInput.tsx b/src/components/TextInput.tsx
+index fb58a966b0e0436920e545ecbbec1855b615a3a9..d49b10ab6aa7c907a898a7e052cb8d225d7192cc 100644
+--- a/src/components/TextInput.tsx
++++ b/src/components/TextInput.tsx
+@@ -12,7 +12,7 @@ const mapping: StyledConfiguration<typeof RNTextInput> = {
+   className: {
+     target: "style",
+     nativeStyleMapping: {
+-      textAlign: true,
++      textAlign: "textAlign",
+     },
+   },
+ };

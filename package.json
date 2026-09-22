@@ -59,5 +59,8 @@
     "hono": "^4.12.10",
     "turbo": "^2.5.8",
     "typescript": "^5.9.3"
+  },
+  "patchedDependencies": {
+    "react-native-css@3.0.1": "patches/react-native-css@3.0.1.patch"
   }
 }
