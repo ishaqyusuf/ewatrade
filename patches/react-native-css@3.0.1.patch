@@ -1,3 +1,29 @@
+diff --git a/dist/commonjs/components/TextInput.js b/dist/commonjs/components/TextInput.js
+index 17fb786d42bca8926e5d60be23de68b87245e205..6cf5fc7b4af897212cc918070e657771046b1a87 100644
+--- a/dist/commonjs/components/TextInput.js
++++ b/dist/commonjs/components/TextInput.js
+@@ -11,7 +11,7 @@ const mapping = {
+   className: {
+     target: "style",
+     nativeStyleMapping: {
+-      textAlign: true
++      textAlign: "textAlign"
+     }
+   }
+ };
+diff --git a/dist/module/components/TextInput.js b/dist/module/components/TextInput.js
+index 7b0c562b77a142b49f2a8dc2fd4a2b4508efb72a..de9b68e6703d30dfd989f115886d517bfa8b812f 100644
+--- a/dist/module/components/TextInput.js
++++ b/dist/module/components/TextInput.js
+@@ -7,7 +7,7 @@ const mapping = {
+   className: {
+     target: "style",
+     nativeStyleMapping: {
+-      textAlign: true
++      textAlign: "textAlign"
+     }
+   }
+ };
 diff --git a/src/components/TextInput.tsx b/src/components/TextInput.tsx
 index fb58a966b0e0436920e545ecbbec1855b615a3a9..d49b10ab6aa7c907a898a7e052cb8d225d7192cc 100644
 --- a/src/components/TextInput.tsx
