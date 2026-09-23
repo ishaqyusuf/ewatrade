@@ -19,6 +19,9 @@ const nextConfig: NextConfig = {
     ? ["qa.ts", "tsx", "ts", "jsx", "js"]
     : ["tsx", "ts", "jsx", "js"],
   reactStrictMode: true,
+  // Vercel's basic build machine repeatedly exhausts memory in Next's
+  // duplicate type-check worker. CI/package type checks remain authoritative.
+  typescript: { ignoreBuildErrors: process.env.VERCEL === "1" },
   transpilePackages: [
     "@ewatrade/events",
     "@ewatrade/api",
