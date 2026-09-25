@@ -1,0 +1,114 @@
+{
+  "version": 1,
+  "project": "ewatrade",
+  "targets": [
+    {
+      "id": "database",
+      "kind": "database",
+      "environments": ["preview", "production"],
+      "sourcePaths": [
+        "packages/db/prisma/**/*.prisma",
+        "packages/db/prisma.config.ts"
+      ],
+      "impactTargets": ["api-web", "marketing-web", "jobs"]
+    },
+    {
+      "id": "api-web",
+      "kind": "web",
+      "environments": ["preview", "production"],
+      "sourcePaths": [
+        "apps/api/**",
+        "packages/auth/**",
+        "packages/communications/**",
+        "packages/db/**",
+        "packages/domains/**",
+        "packages/email/**",
+        "packages/errors/**",
+        "packages/jobs/**",
+        "packages/observability/**",
+        "packages/payments/**",
+        "packages/prescriptions/**",
+        "packages/service-commerce/**",
+        "packages/utils/**",
+        "scripts/api-deploy-target.mjs",
+        "scripts/deploy-api.mjs",
+        "package.json",
+        "bun.lock",
+        "turbo.json"
+      ],
+      "prerequisites": ["database"]
+    },
+    {
+      "id": "marketing-web",
+      "kind": "web",
+      "environments": ["preview", "production"],
+      "sourcePaths": [
+        "apps/marketing/**",
+        "packages/auth/**",
+        "packages/db/**",
+        "packages/email/**",
+        "packages/errors/**",
+        "packages/events/**",
+        "packages/jobs/**",
+        "packages/notifications/**",
+        "packages/notifications-react/**",
+        "packages/observability/**",
+        "packages/ui/**",
+        "packages/utils/**",
+        "package.json",
+        "bun.lock",
+        "turbo.json"
+      ],
+      "prerequisites": ["database", "api-web"]
+    },
+    {
+      "id": "mobile",
+      "kind": "mobile",
+      "environments": ["preview", "production"],
+      "sourcePaths": [
+        "apps/mobile/**",
+        "apps/api/src/trpc/**",
+        "apps/api/package.json",
+        "packages/errors/**",
+        "packages/events/**",
+        "packages/observability/**",
+        "packages/service-commerce/**",
+        "packages/utils/**",
+        "package.json",
+        "bun.lock",
+        "turbo.json"
+      ],
+      "nativeCandidatePaths": [
+        "apps/mobile/app.config.ts",
+        "apps/mobile/eas.json",
+        "apps/mobile/package.json",
+        "apps/mobile/plugins/**",
+        "apps/mobile/android/**",
+        "apps/mobile/ios/**",
+        "package.json",
+        "bun.lock",
+        "patches/**"
+      ],
+      "prerequisites": ["api-web"]
+    },
+    {
+      "id": "jobs",
+      "kind": "jobs",
+      "environments": ["preview", "production"],
+      "sourcePaths": [
+        "packages/jobs/**",
+        "packages/communications/**",
+        "packages/db/**",
+        "packages/errors/**",
+        "packages/events/**",
+        "packages/observability/**",
+        "packages/service-commerce/**",
+        "packages/utils/**",
+        "package.json",
+        "bun.lock",
+        "turbo.json"
+      ],
+      "prerequisites": ["database"]
+    }
+  ]
+}

@@ -10,6 +10,7 @@ build
 !.env.example
 !.env.*.example
 .vercel
+.release/runtime/
 packages/db/generated
 .gstack/
 .local-db-sync/
