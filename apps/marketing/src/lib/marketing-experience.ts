@@ -1,8 +1,12 @@
-export const marketingExperienceIds = ["legacy-v1", "operator-v2"] as const
+export const marketingExperienceIds = [
+  "legacy-v1",
+  "operator-v2",
+  "shop-v3",
+] as const
 
 export type MarketingExperienceId = (typeof marketingExperienceIds)[number]
 
-export const defaultMarketingExperience: MarketingExperienceId = "legacy-v1"
+export const defaultMarketingExperience: MarketingExperienceId = "shop-v3"
 
 export function isMarketingExperienceId(
   value: string | undefined,

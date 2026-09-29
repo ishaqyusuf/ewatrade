@@ -23,9 +23,23 @@ const fraunces = Fraunces({
 })
 
 export const metadata: Metadata = {
-  title: "EwaTrade — The operating layer behind the shop",
+  title: "EwaTrade — Good trade. All together.",
   description:
-    "Keep catalog, customers, orders, inventory, and service work on one commercial thread across every store and team.",
+    "The products you sell, the orders you take, and the work that follows. One connected place to keep your business moving.",
+  metadataBase: new URL("https://ewatrade.com"),
+  openGraph: {
+    title: "EwaTrade — Good trade. All together.",
+    description:
+      "One connected place for the products you sell, the orders you take, and the work that follows.",
+    images: [
+      {
+        url: "/brand/ewatrade-logo.png",
+        width: 1140,
+        height: 300,
+        alt: "EwaTrade",
+      },
+    ],
+  },
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",
