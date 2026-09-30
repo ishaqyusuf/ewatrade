@@ -21,6 +21,15 @@ describe("marketing experience production policy", () => {
     ).toBe("operator-v2")
   })
 
+  test("keeps the approved shop experience in production", () => {
+    expect(
+      resolveMarketingExperience({
+        requestedExperience: "shop-v3",
+        nodeEnvironment: "production",
+      }),
+    ).toBe("shop-v3")
+  })
+
   test("keeps a production-ready experience in production", () => {
     expect(
       resolveMarketingExperience({

@@ -9,12 +9,13 @@ describe("marketing experience configuration", () => {
   test("recognizes registered experience ids", () => {
     expect(isMarketingExperienceId("legacy-v1")).toBe(true)
     expect(isMarketingExperienceId("operator-v2")).toBe(true)
+    expect(isMarketingExperienceId("shop-v3")).toBe(true)
     expect(isMarketingExperienceId("unknown-v3")).toBe(false)
   })
 
   test("falls back when configuration is empty or unknown", () => {
-    expect(getRequestedMarketingExperience("")).toBe("legacy-v1")
-    expect(getRequestedMarketingExperience("unknown-v3")).toBe("legacy-v1")
+    expect(getRequestedMarketingExperience("")).toBe("shop-v3")
+    expect(getRequestedMarketingExperience("unknown-v3")).toBe("shop-v3")
   })
 
   test("keeps a registered configured experience", () => {

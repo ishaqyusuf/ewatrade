@@ -8,6 +8,9 @@ const marketingExperienceRegistry = {
   "legacy-v1": dynamic(() =>
     import("./experiences/legacy-v1").then((module) => module.LegacyV1Landing),
   ),
+  "shop-v3": dynamic(() =>
+    import("./experiences/shop-v3").then((module) => module.ShopV3Landing),
+  ),
   "operator-v2": dynamic(() =>
     import("./experiences/operator-v2").then(
       (module) => module.OperatorV2Landing,
