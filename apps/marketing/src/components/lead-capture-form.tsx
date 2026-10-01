@@ -1,7 +1,9 @@
 "use client"
 
+import { EarlyAccessPreview } from "@/components/dev/early-access-preview"
 import { QaQuickFillButton } from "@/components/qa/qa-quick-fill-button"
 import { useOptionalQaWebAccelerator } from "@/components/qa/qa-web-accelerator"
+import type { EarlyAccessDevPreview } from "@/lib/early-access-preview"
 import { createLeadDraft } from "@/lib/qa-lead-fill"
 import { startTransition, useId, useRef, useState } from "react"
 
@@ -58,6 +60,9 @@ export function LeadCaptureForm({
   const roleHintId = `${roleInputId}-hint`
   const [state, setState] = useState<SubmissionState>("idle")
   const [message, setMessage] = useState("")
+  const [devPreview, setDevPreview] = useState<EarlyAccessDevPreview | null>(
+    null,
+  )
   const [draft, setDraft] = useState<LeadDraft>(emptyDraft)
   const [undoDraft, setUndoDraft] = useState<LeadDraft | null>(null)
   const qa = useOptionalQaWebAccelerator()
@@ -87,6 +92,7 @@ export function LeadCaptureForm({
   async function handleSubmit(formData: FormData) {
     setState("submitting")
     setMessage("")
+    setDevPreview(null)
 
     const payload =
       type === "early-access"
@@ -112,7 +118,10 @@ export function LeadCaptureForm({
         body: JSON.stringify(payload),
       })
 
-      const result = (await response.json()) as { message?: string }
+      const result = (await response.json()) as {
+        message?: string
+        devPreview?: EarlyAccessDevPreview
+      }
 
       if (!response.ok) {
         setState("error")
@@ -136,6 +145,7 @@ export function LeadCaptureForm({
           : "You have been added to the waitlist.")
 
       setState("success")
+      setDevPreview(result.devPreview ?? null)
       setMessage(nextMessage)
       formRef.current?.reset()
       setDraft(emptyDraft)
@@ -282,6 +292,7 @@ export function LeadCaptureForm({
           </p>
         </div>
       </form>
+      {devPreview ? <EarlyAccessPreview preview={devPreview} /> : null}
       <QaQuickFillButton
         canUndo={Boolean(undoDraft)}
         onFill={quickFill}

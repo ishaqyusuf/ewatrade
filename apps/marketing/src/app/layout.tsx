@@ -23,32 +23,32 @@ const fraunces = Fraunces({
 })
 
 export const metadata: Metadata = {
-  title: "EwaTrade — Good trade. All together.",
+  title: "EwaTrade — Come. Trade. Together.",
   description:
     "The products you sell, the orders you take, and the work that follows. One connected place to keep your business moving.",
   metadataBase: new URL("https://ewatrade.com"),
   openGraph: {
-    title: "EwaTrade — Good trade. All together.",
+    title: "EwaTrade — Come. Trade. Together.",
     description:
       "One connected place for the products you sell, the orders you take, and the work that follows.",
     images: [
       {
-        url: "/brand/ewatrade-social-preview-v1.png",
-        width: 1729,
+        url: "/brand/ewatrade-social-preview-v3.png",
+        width: 1727,
         height: 910,
-        alt: "EwaTrade — Good trade. All together. Products. Orders. What’s next.",
+        alt: "ẸwáTrade — Come. Trade. Together. Products. Orders. What’s next.",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "EwaTrade — Good trade. All together.",
+    title: "EwaTrade — Come. Trade. Together.",
     description:
       "One connected place for the products you sell, the orders you take, and the work that follows.",
     images: [
       {
-        url: "/brand/ewatrade-social-preview-v1.png",
-        alt: "EwaTrade — Good trade. All together. Products. Orders. What’s next.",
+        url: "/brand/ewatrade-social-preview-v3.png",
+        alt: "ẸwáTrade — Come. Trade. Together. Products. Orders. What’s next.",
       },
     ],
   },

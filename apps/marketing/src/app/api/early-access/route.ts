@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 
 import {
   EARLY_ACCESS_ONBOARDING_KIND,
@@ -6,10 +6,13 @@ import {
   generateEarlyAccessToken,
   getEarlyAccessExpiresAt,
 } from "@/lib/early-access-onboarding"
+import { shouldPreviewEarlyAccess } from "@/lib/early-access-preview"
 import { earlyAccessSchema, toLeadCapturePayload } from "@/lib/lead-capture"
 import { blockMarketingIntakeInPreview } from "@/lib/preview-intake-guard"
+import { getQaWebRequestOrigin } from "@/lib/qa-request-origin"
+import { renderMarketingEarlyAccessConfirmationTemplate } from "@ewatrade/email"
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const previewBlock = blockMarketingIntakeInPreview()
   if (previewBlock) return previewBlock
 
@@ -29,13 +32,30 @@ export async function POST(request: Request) {
   const requestedAt = new Date()
   const accessToken = generateEarlyAccessToken()
   const accessUrl = buildEarlyAccessSignupUrl({
-    requestUrl: request.url,
+    requestUrl: getQaWebRequestOrigin(request),
     token: accessToken,
   })
   const expiresAt = getEarlyAccessExpiresAt(requestedAt)
+  const previewEmail = shouldPreviewEarlyAccess({
+    email: result.data.email,
+    requestUrl: getQaWebRequestOrigin(request),
+  })
   const { lead } = await prisma.$transaction(async (tx) => {
     const lead = await tx.leadCapture.create({
-      data: toLeadCapturePayload(LeadCaptureType.EARLY_ACCESS, result.data),
+      data: {
+        ...toLeadCapturePayload(LeadCaptureType.EARLY_ACCESS, result.data),
+        ...(previewEmail
+          ? {
+              metadata: {
+                qaEmailPreview: {
+                  deliveryMode: "inline",
+                  notificationEnqueued: false,
+                  recordedAt: requestedAt.toISOString(),
+                },
+              },
+            }
+          : {}),
+      },
     })
 
     await tx.onboardingSession.create({
@@ -59,7 +79,7 @@ export async function POST(request: Request) {
     return { lead }
   })
 
-  await enqueueMarketingLeadNotification({
+  const notification = {
     accessExpiresAt: expiresAt.toISOString(),
     accessUrl,
     companyName: lead.companyName,
@@ -70,7 +90,25 @@ export async function POST(request: Request) {
     phone: lead.phone,
     roleTitle: lead.roleTitle,
     type: lead.type,
-  })
+  }
+
+  if (previewEmail) {
+    const email = renderMarketingEarlyAccessConfirmationTemplate(notification)
+    return NextResponse.json(
+      {
+        message:
+          "Your QA request has been saved. Continue setup below; no email was sent.",
+        devPreview: {
+          accessUrl,
+          emailHtml: email.html,
+          expiresAt: expiresAt.toISOString(),
+        },
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    )
+  }
+
+  await enqueueMarketingLeadNotification(notification)
 
   return NextResponse.json({
     message:

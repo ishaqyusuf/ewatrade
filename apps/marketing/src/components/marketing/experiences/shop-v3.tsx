@@ -81,10 +81,10 @@ function Brand() {
   return (
     <img
       className="shop-brand"
-      src="/brand/ewatrade-logo.png"
-      alt="EwaTrade"
-      width="1140"
-      height="300"
+      src="/brand/ewatrade-logo-yoruba-v1.png"
+      alt="ẸwáTrade"
+      width="2172"
+      height="724"
     />
   )
 }
@@ -284,9 +284,9 @@ function Hero({ signupEnabled }: MarketingExperienceProps) {
         <div className="shop-hero-copy">
           <Eyebrow>For the business you’re building</Eyebrow>
           <h1>
-            Good trade.
+            Come. Trade.
             <br />
-            <em>All together.</em>
+            <em>Together.</em>
           </h1>
           <p>
             The products you sell. The orders you take. The work that follows.

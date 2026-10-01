@@ -101,8 +101,8 @@ export function LegacyV1Landing() {
           <div className="flex items-center gap-8">
             <a href="/" aria-label="EwaTrade home" className="block">
               <img
-                src="/brand/ewatrade-logo.png"
-                alt="EwaTrade"
+                src="/brand/ewatrade-logo-yoruba-v1.png"
+                alt="ẸwáTrade"
                 className="h-8 w-auto"
               />
             </a>

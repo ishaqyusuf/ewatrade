@@ -8,10 +8,10 @@ export function MarketingInfoPage({ kind }: { kind: "contact" | "support" }) {
         <a href="/" aria-label="EwaTrade home">
           <img
             className="shop-brand"
-            src="/brand/ewatrade-logo.png"
-            alt="EwaTrade"
-            width="1140"
-            height="300"
+            src="/brand/ewatrade-logo-yoruba-v1.png"
+            alt="ẸwáTrade"
+            width="2172"
+            height="724"
           />
         </a>
         <nav aria-label="Page navigation">
@@ -68,10 +68,10 @@ export function MarketingInfoPage({ kind }: { kind: "contact" | "support" }) {
         <a href="/" aria-label="EwaTrade home">
           <img
             className="shop-brand"
-            src="/brand/ewatrade-logo.png"
-            alt="EwaTrade"
-            width="1140"
-            height="300"
+            src="/brand/ewatrade-logo-yoruba-v1.png"
+            alt="ẸwáTrade"
+            width="2172"
+            height="724"
           />
         </a>
         <nav aria-label="Footer navigation">

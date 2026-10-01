@@ -46,8 +46,8 @@ export default function SignupLayout({
               aria-label="EwaTrade home"
             >
               <img
-                src="/brand/ewatrade-logo.png"
-                alt="EwaTrade"
+                src="/brand/ewatrade-logo-yoruba-v1.png"
+                alt="ẸwáTrade"
                 className="h-8 w-auto"
               />
             </a>
