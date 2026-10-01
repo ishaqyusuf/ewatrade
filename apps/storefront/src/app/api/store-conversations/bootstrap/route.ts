@@ -1,7 +1,10 @@
 import { prisma } from "@ewatrade/db"
+import { AccountAgeBand } from "@ewatrade/db/enums"
 import {
   StoreConversationError,
   bootstrapWebStoreConversation,
+  declareGuestAgeBandForCredential,
+  getGuestAgeStatusForCredential,
   resumeStoreConversationForAccount,
   rotateStoreConversationGuestCredential,
 } from "@ewatrade/db/queries"
@@ -11,12 +14,12 @@ import {
 } from "@ewatrade/service-commerce"
 import { type NextRequest, NextResponse } from "next/server"
 
+import { getStorefrontCustomerAccount } from "@/lib/store-conversation-account-session"
 import {
   STORE_CONVERSATION_GUEST_COOKIE,
   STORE_CONVERSATION_GUEST_COOKIE_OPTIONS,
   requestIsSameOrigin,
 } from "@/lib/store-conversation-cookie"
-import { getStorefrontCustomerAccount } from "@/lib/store-conversation-account-session"
 import {
   STORE_CONVERSATION_GUEST_ISSUED_AT_COOKIE,
   STORE_CONVERSATION_GUEST_ISSUED_AT_COOKIE_OPTIONS,
@@ -42,9 +45,14 @@ export async function POST(request: NextRequest) {
     })
     if (
       Object.keys(body).some(
-        (key) => key !== "publicToken" && key !== "resetGuest",
+        (key) =>
+          key !== "publicToken" && key !== "resetGuest" && key !== "ageBand",
       ) ||
-      (body.resetGuest !== undefined && typeof body.resetGuest !== "boolean")
+      (body.resetGuest !== undefined && typeof body.resetGuest !== "boolean") ||
+      (body.ageBand !== undefined &&
+        body.ageBand !== AccountAgeBand.AGE_13_TO_15 &&
+        body.ageBand !== AccountAgeBand.AGE_16_TO_17 &&
+        body.ageBand !== AccountAgeBand.ADULT)
     ) {
       throw Object.assign(new Error("Invalid input"), { name: "ZodError" })
     }
@@ -72,7 +80,28 @@ export async function POST(request: NextRequest) {
     const currentCredential = resetGuest
       ? null
       : request.cookies.get(STORE_CONVERSATION_GUEST_COOKIE)?.value
+    const ageBand = body.ageBand as AccountAgeBand | undefined
+    if (!currentCredential && !ageBand) {
+      throw new StoreConversationError(
+        "NOT_READY",
+        "Choose an eligible age range before entering Store chat.",
+      )
+    }
+    if (currentCredential && ageBand) {
+      const guestStatus = await getGuestAgeStatusForCredential(prisma, {
+        credentialToken: currentCredential,
+        purpose: "WEB_DEVICE",
+      })
+      if (!guestStatus.eligible) {
+        await declareGuestAgeBandForCredential(prisma, {
+          ageBand,
+          credentialToken: currentCredential,
+          purpose: "WEB_DEVICE",
+        })
+      }
+    }
     const result = await bootstrapWebStoreConversation(prisma, {
+      ageBand,
       credentialToken: currentCredential,
       publicToken: input.publicToken,
     })

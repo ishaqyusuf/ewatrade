@@ -3,6 +3,7 @@ import { prisma } from "@ewatrade/db"
 import {
   ServiceCommerceMediaError,
   getActiveTenantForUser,
+  getCustomerAccountAgeStatus,
   recordServiceCommerceMediaIntake,
   recordStoredServiceCommerceMediaAsset,
   requestServiceCommerceMediaSafety,
@@ -41,6 +42,15 @@ type UploadDependencies = {
       ReturnType<typeof getConfiguredPrivateMediaProvider>["store"]
     >[0]["mimeType"]
   }): Promise<{ storageReference: string }>
+}
+
+export async function resolveStaffMediaUploadTenant<T>(input: {
+  getAccountAgeStatus(): Promise<{ eligible: boolean }>
+  getTenantContext(): Promise<T>
+}): Promise<{ status: "age_required" } | { status: "ready"; tenant: T }> {
+  const age = await input.getAccountAgeStatus()
+  if (!age.eligible) return { status: "age_required" }
+  return { status: "ready", tenant: await input.getTenantContext() }
 }
 
 function uploadDependencies(): UploadDependencies {
@@ -145,19 +155,34 @@ export function registerServiceCommerceMediaUploadRoutes(app: OpenAPIHono) {
       return context.json({ error: "Attachment is too large." }, 413)
     }
     const requestContext = await createTRPCContext(undefined, context)
-    if (!requestContext.session) {
+    const session = requestContext.session
+    if (!session) {
       return context.json({ error: "Authentication required." }, 401)
     }
-    const tenantContext = await getActiveTenantForUser(prisma, {
-      tenantSlug: requestContext.tenantSlug,
-      userId: requestContext.session.user.id,
+    const tenantAccess = await resolveStaffMediaUploadTenant({
+      getAccountAgeStatus: () =>
+        getCustomerAccountAgeStatus(prisma, session.user.id),
+      getTenantContext: () =>
+        getActiveTenantForUser(prisma, {
+          tenantSlug: requestContext.tenantSlug,
+          userId: session.user.id,
+        }),
     })
+    if (tenantAccess.status === "age_required") {
+      return context.json(
+        {
+          error: "Choose an eligible age range before opening your workspace.",
+        },
+        412,
+      )
+    }
+    const tenantContext = tenantAccess.tenant
     if (!tenantContext) {
       return context.json({ error: "Tenant not found." }, 404)
     }
     const form = await context.req.formData()
     const file = form.get("file")
-    if (!(file instanceof File)) {
+    if (!file || typeof file === "string") {
       return context.json({ error: "Attachment file is required." }, 400)
     }
     const parsed = serviceCommerceMediaUploadIntentSchema.safeParse({
@@ -185,7 +210,7 @@ export function registerServiceCommerceMediaUploadRoutes(app: OpenAPIHono) {
     try {
       const result = await storeStaffServiceCommerceMediaUpload({
         ...parsed.data,
-        actorUserId: requestContext.session.user.id,
+        actorUserId: session.user.id,
         bytes: new Uint8Array(await file.arrayBuffer()),
         tenantId: tenantContext.tenant.id,
       })

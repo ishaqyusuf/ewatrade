@@ -12,6 +12,7 @@ import {
   recordFailedStoreConversationResponse,
   releaseStoreConversation,
   replyToStoreConversation,
+  reportStoreConversationAsOperator,
 } from "@ewatrade/db/queries"
 import {
   enqueueStoreConversationNotificationDispatch,
@@ -34,6 +35,7 @@ import {
   storeConversationStaffReassignInputSchema,
   storeConversationStaffReleaseInputSchema,
   storeConversationStaffReplyInputSchema,
+  storeConversationStaffReportInputSchema,
   storeConversationStaffTimelineInputSchema,
 } from "../../../schemas/store-conversations"
 import { createTRPCRouter, protectedProcedure } from "../../init"
@@ -73,6 +75,20 @@ function mapStoreConversationError(error: unknown): never {
 }
 
 export const serviceCommerceConversationsRouter = createTRPCRouter({
+  reportStoreConversation: protectedProcedure
+    .input(storeConversationStaffReportInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await reportStoreConversationAsOperator(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          storeId: storeId(ctx, input.storeId),
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        mapStoreConversationError(error)
+      }
+    }),
   acknowledgeStoreConversationStaffRead: protectedProcedure
     .input(storeConversationStaffReadAcknowledgementInputSchema)
     .mutation(async ({ ctx, input }) => {

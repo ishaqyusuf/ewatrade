@@ -33,10 +33,22 @@ export const metadata: Metadata = {
       "One connected place for the products you sell, the orders you take, and the work that follows.",
     images: [
       {
-        url: "/brand/ewatrade-logo.png",
-        width: 1140,
-        height: 300,
-        alt: "EwaTrade",
+        url: "/brand/ewatrade-social-preview-v1.png",
+        width: 1729,
+        height: 910,
+        alt: "EwaTrade — Good trade. All together. Products. Orders. What’s next.",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "EwaTrade — Good trade. All together.",
+    description:
+      "One connected place for the products you sell, the orders you take, and the work that follows.",
+    images: [
+      {
+        url: "/brand/ewatrade-social-preview-v1.png",
+        alt: "EwaTrade — Good trade. All together. Products. Orders. What’s next.",
       },
     ],
   },

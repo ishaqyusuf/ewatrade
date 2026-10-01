@@ -1,0 +1,50 @@
+# Keep the root Git exclusions when EAS selects this file instead of .gitignore.
+node_modules
+.turbo
+.next
+dist
+build
+*.tsbuildinfo
+.DS_Store
+.env
+.env.*
+!.env.example
+!.env.*.example
+.vercel
+.release/runtime/
+packages/db/generated
+.gstack/
+.local-db-sync/
+.designs/
+packages/jobs/.trigger/
+.brain/
+.scratch/
+output/
+outputs/
+
+# Native artifacts and signing material never belong in the source upload.
+apps/mobile/.expo/
+apps/mobile/.kotlin/
+apps/mobile/.metro-health-check*
+apps/mobile/expo-env.d.ts
+apps/mobile/ios/
+apps/mobile/android/
+apps/mobile/web-build/
+*.orig.*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+credentials.json
+
+# Workspace-local notes, commercial exports and release tooling are not inputs
+# to the Expo app, Metro or its shared monorepo packages.
+.claude/
+.design/
+.release/
+tmp/

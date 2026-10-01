@@ -15,6 +15,7 @@ type StaffCall = {
 
 function createInvitedUser() {
   return {
+    ageBand: "ADULT",
     displayName: "Attendant Name",
     email: "attendant@example.com",
     id: "user_staff",
@@ -115,6 +116,10 @@ function createMockStaffInviteDb() {
       },
     },
     tenant: {
+      findUnique: async () => ({
+        dataClassification: "LIVE",
+        qaSourceDomain: null,
+      }),
       findFirst: async ({ where }: { where: unknown }) => {
         calls.push({ kind: "tenant.findFirst", where })
 
@@ -139,6 +144,12 @@ function createMockStaffInviteDb() {
         calls.push({ data, kind: "tenant.update", where })
 
         return { id: "tenant_123" }
+      },
+    },
+    catalogItem: {
+      count: async ({ where }: { where: unknown }) => {
+        calls.push({ kind: "catalogItem.count", where })
+        return 1
       },
     },
     product: {
@@ -243,9 +254,10 @@ function createMockStaffTokenDb(input?: {
   }
 }
 
-function createMockStaffOnboardingDb() {
+function createMockStaffOnboardingDb(ageBand = "ADULT") {
   const calls: StaffCall[] = []
   const invitedMembership = createInvitedMembership()
+  invitedMembership.user.ageBand = ageBand
   const updatedUser = {
     ...invitedMembership.user,
     displayName: "Market Attendant",
@@ -573,5 +585,30 @@ describe("retail ops staff queries", () => {
         type: "ONBOARDING_COMPLETED",
       },
     })
+  })
+
+  test.each(["AGE_13_TO_15", "AGE_16_TO_17"])(
+    "allows declared %s staff to accept access",
+    async (ageBand) => {
+      const db = createMockStaffOnboardingDb(ageBand)
+      const result = await completeRetailOpsStaffOnboarding(db.client, {
+        userId: "user_staff",
+      })
+
+      expect(result.status).toBe("ACTIVE")
+      expect(db.calls.some((call) => call.kind === "membership.update")).toBe(
+        true,
+      )
+    },
+  )
+
+  test("does not activate staff access before age declaration", async () => {
+    const db = createMockStaffOnboardingDb("UNDECLARED")
+    await expect(
+      completeRetailOpsStaffOnboarding(db.client, { userId: "user_staff" }),
+    ).rejects.toThrow("Choose an eligible age range")
+    expect(db.calls.some((call) => call.kind === "membership.update")).toBe(
+      false,
+    )
   })
 })

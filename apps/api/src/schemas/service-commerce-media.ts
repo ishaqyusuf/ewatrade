@@ -1,4 +1,5 @@
 import {
+  privateMediaSafetyAttestationSchema,
   serviceCommerceChannelOriginSchema,
   serviceCommerceHumanVerifiedObservationDraftSchema,
   serviceCommerceMediaKindSchema,
@@ -93,6 +94,7 @@ export const serviceCommerceMediaSafetyResultSchema =
   serviceCommerceMediaSafetyRequestSchema
     .extend({
       outcome: serviceCommercePrivateMediaSafetyLifecycleSchema,
+      attestation: privateMediaSafetyAttestationSchema.optional(),
       safetyMetadata: z.record(z.string(), z.unknown()).optional(),
       safetyProvider: z.string().trim().min(1).max(100).optional(),
     })

@@ -4,6 +4,7 @@ import {
   recordServiceCommerceMediaSafety,
 } from "@ewatrade/db/queries"
 import {
+  type PrivateMediaSafetyAttestation,
   type PrivateMediaSafetyProviderInput,
   type ServiceCommerceMediaMimeType,
   type ServiceCommercePrivateMediaSafetyLifecycle,
@@ -30,14 +31,17 @@ type Dependencies = {
     adapter: "live" | "test"
     tenantId: string
   }): Promise<unknown>
-  inspect(
-    input: PrivateMediaSafetyProviderInput,
-  ): Promise<{ lifecycle: ServiceCommercePrivateMediaSafetyLifecycle }>
+  inspect(input: PrivateMediaSafetyProviderInput): Promise<{
+    lifecycle: ServiceCommercePrivateMediaSafetyLifecycle
+    attestation?: PrivateMediaSafetyAttestation
+  }>
   load(input: ServiceCommerceMediaSafetyPayload): Promise<SafetyRecord | null>
   record(
     input: ServiceCommerceMediaSafetyPayload & {
       outcome: ServiceCommercePrivateMediaSafetyLifecycle
+      attestation?: PrivateMediaSafetyAttestation
       reason: string
+      safetyProvider?: string
     },
   ): Promise<unknown>
 }
@@ -96,7 +100,10 @@ export async function runServiceCommerceMediaSafety(
     tenantId: payload.tenantId,
   })
   const input = assertSafetyInput(media)
-  let result: { lifecycle: ServiceCommercePrivateMediaSafetyLifecycle }
+  let result: {
+    lifecycle: ServiceCommercePrivateMediaSafetyLifecycle
+    attestation?: PrivateMediaSafetyAttestation
+  }
   try {
     result = await dependencies.inspect(input)
   } catch (error) {
@@ -109,8 +116,10 @@ export async function runServiceCommerceMediaSafety(
   }
   return dependencies.record({
     ...payload,
+    attestation: result.attestation,
     outcome: result.lifecycle,
     reason: "private_media_safety_completed",
+    safetyProvider: result.attestation?.provider,
   })
 }
 

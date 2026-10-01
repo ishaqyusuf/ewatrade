@@ -12,6 +12,16 @@ import {
 
 export class PrescriptionComplianceError extends Error {}
 
+const PRESCRIPTION_RECORD_MINIMUM_YEARS = 5
+
+function prescriptionRecordMinimumCutoff(now: Date) {
+  const cutoff = new Date(now)
+  cutoff.setUTCFullYear(
+    cutoff.getUTCFullYear() - PRESCRIPTION_RECORD_MINIMUM_YEARS,
+  )
+  return cutoff
+}
+
 export function assertPrescriptionBreakGlassWindow(input: {
   expiresAt?: Date
   now?: Date
@@ -43,14 +53,21 @@ export function prescriptionRetentionCutoffs(
   now = new Date(),
 ) {
   const before = (days: number) => new Date(now.getTime() - days * 86_400_000)
+  const recordBefore = (days: number) =>
+    new Date(
+      Math.min(
+        before(days).getTime(),
+        prescriptionRecordMinimumCutoff(now).getTime(),
+      ),
+    )
   return {
-    addressBefore: before(policy.addressDays),
-    auditBefore: before(policy.auditEvidenceDays),
-    commercialBefore: before(policy.commercialRecordDays),
-    mediaBefore: before(policy.rawMediaDays),
-    messageBefore: before(policy.messageDays),
+    addressBefore: recordBefore(policy.addressDays),
+    auditBefore: recordBefore(policy.auditEvidenceDays),
+    commercialBefore: recordBefore(policy.commercialRecordDays),
+    mediaBefore: recordBefore(policy.rawMediaDays),
+    messageBefore: recordBefore(policy.messageDays),
     tokenBefore: before(policy.secureTokenDays),
-    transcriptBefore: before(policy.transcriptDays),
+    transcriptBefore: recordBefore(policy.transcriptDays),
   }
 }
 
@@ -680,6 +697,11 @@ export async function claimPrescriptionPrivacyRequest(
         "Erasure cannot proceed while this Store is under legal hold.",
       )
     }
+    if (request.type === PrescriptionPrivacyRequestType.ERASURE) {
+      throw new PrescriptionComplianceError(
+        "Prescription record erasure is unavailable until a category-aware retention and provider policy is approved.",
+      )
+    }
     const subjects = await tx.prescriptionRequest.findMany({
       select: {
         id: true,
@@ -754,6 +776,11 @@ export async function completePrescriptionPrivacyRequest(
       storeId: input.storeId,
       tenantId: input.tenantId,
     }
+    if (input.type === PrescriptionPrivacyRequestType.ERASURE) {
+      throw new PrescriptionComplianceError(
+        "Prescription record erasure is unavailable until a category-aware retention and provider policy is approved.",
+      )
+    }
     if (input.type === PrescriptionPrivacyRequestType.CORRECTION) {
       const changes = requestedChanges(input.requestedChanges)
       if (Object.values(changes).every((value) => value === undefined)) {
@@ -769,80 +796,6 @@ export async function completePrescriptionPrivacyRequest(
           privacyRestrictedAt: new Date(),
           status: "WITHDRAWN",
           withdrawnAt: new Date(),
-        },
-        where: scope,
-      })
-    }
-    if (input.type === PrescriptionPrivacyRequestType.ERASURE) {
-      await tx.prescriptionMedia.updateMany({
-        data: {
-          deletedAt: new Date(),
-          objectKey: "deleted",
-          originalFileName: "deleted",
-          safetyMetadata: { erased: true },
-          status: PrescriptionMediaStatus.DELETED,
-        },
-        where: {
-          id: { in: input.deletedMediaIds },
-          requestId: { in: input.prescriptionRequestIds },
-          storeId: input.storeId,
-          tenantId: input.tenantId,
-        },
-      })
-      await tx.prescriptionTranscription.deleteMany({
-        where: { requestId: { in: input.prescriptionRequestIds } },
-      })
-      await tx.whatsAppInboundEvent.updateMany({
-        data: { normalizedPayload: { erased: true } },
-        where: {
-          OR: [
-            { requestId: { in: input.prescriptionRequestIds } },
-            { externalCustomerId: input.subjectReference },
-          ],
-          storeId: input.storeId,
-          tenantId: input.tenantId,
-        },
-      })
-      const orders = await tx.commercialOrder.findMany({
-        select: { id: true },
-        where: {
-          acceptedCommerceQuoteVersion: {
-            quote: {
-              sourceId: { in: input.prescriptionRequestIds },
-              sourceType: "PRESCRIPTION_REQUEST",
-            },
-          },
-          storeId: input.storeId,
-          tenantId: input.tenantId,
-        },
-      })
-      const orderIds = orders.map((order) => order.id)
-      await tx.prescriptionDeliveryAddress.updateMany({
-        data: { encryptedPayload: "deleted:v1" },
-        where: {
-          orderId: { in: orderIds },
-          storeId: input.storeId,
-          tenantId: input.tenantId,
-        },
-      })
-      await tx.commercialOrder.updateMany({
-        data: {
-          customerEmail: null,
-          customerName: null,
-          customerPhone: null,
-          notes: null,
-        },
-        where: { id: { in: orderIds } },
-      })
-      await tx.prescriptionRequest.updateMany({
-        data: {
-          customerEmail: null,
-          customerName: null,
-          customerPhone: null,
-          reuploadTokenDigest: null,
-          reuploadTokenExpiresAt: null,
-          sourceContext: { erased: true },
-          statusTokenDigest: null,
         },
         where: scope,
       })

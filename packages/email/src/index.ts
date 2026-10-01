@@ -14,6 +14,7 @@ import {
   renderRetailOpsStaffInviteTemplate,
 } from "../templates/retail-ops-staff-invite"
 import { getEmailDomain, parseQaDomainRoutes } from "./qa-email-routing"
+export { isValidEmailSender } from "./email-sender"
 
 export type EmailMessage = {
   from: string
@@ -23,6 +24,7 @@ export type EmailMessage = {
   subject: string
   text: string
   to: string
+  tags?: Array<{ name: string; value: string }>
   qaOriginalRecipient?: string
   qaRouted?: boolean
 }
@@ -450,6 +452,7 @@ export const resendEmailTransport: EmailTransport = {
         subject: message.subject,
         text: message.text,
         to: [message.to],
+        tags: message.tags,
       }),
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -481,17 +484,45 @@ export const resendEmailTransport: EmailTransport = {
   },
 }
 
+function isProductionEmailRuntime() {
+  const profiles = [process.env.APP_ENV, process.env.DEV_PROFILE]
+    .map((value) => value?.trim().toLowerCase())
+    .filter((value): value is string => Boolean(value))
+  if (profiles.some((value) => value === "production" || value === "prod"))
+    return true
+  if (
+    profiles.length > 0 &&
+    profiles.every((value) =>
+      ["local", "dev", "development", "preview"].includes(value),
+    )
+  )
+    return false
+  return process.env.NODE_ENV === "production"
+}
+
 export function getDefaultEmailTransport() {
+  const production = isProductionEmailRuntime()
+  const mode = process.env.EMAIL_DELIVERY_MODE?.trim().toLowerCase()
+  const providerKey = getResendApiKey()
+  if (
+    production &&
+    (getEmailCaptureFile() || !providerKey || (mode && mode !== "live"))
+  ) {
+    return {
+      async send() {
+        throw new Error(
+          "Production email delivery is not configured for live Resend.",
+        )
+      },
+    } satisfies EmailTransport
+  }
   if (getEmailCaptureFile()) {
     return captureEmailTransport
   }
 
-  const mode = process.env.EMAIL_DELIVERY_MODE?.trim().toLowerCase()
-  const live =
-    mode === "live" ||
-    (mode !== "console" && process.env.NODE_ENV === "production")
+  const live = mode === "live" || (mode !== "console" && production)
   const ordinaryTransport =
-    live && getResendApiKey() ? resendEmailTransport : consoleEmailTransport
+    live && providerKey ? resendEmailTransport : consoleEmailTransport
 
   return {
     async send(message: EmailMessage) {

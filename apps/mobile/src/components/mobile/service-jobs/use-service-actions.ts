@@ -185,6 +185,7 @@ export function useServiceActions({
           })
           if (!command.canAct())
             throw new Error("Workspace changed while checking assignment.")
+          if (!current) throw new Error("The job is no longer available.")
           if (current.storeId !== storeId)
             throw new Error("The job no longer matches this Store.")
           if (current.currentAssigneeUserId === input.assigneeUserId)

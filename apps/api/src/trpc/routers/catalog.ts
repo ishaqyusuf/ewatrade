@@ -314,6 +314,7 @@ export const catalogRouter = createTRPCRouter({
       try {
         return await publishProductUnitConfiguration(ctx.db, {
           ...input,
+          actorUserId: ctx.session.user.id,
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
@@ -329,6 +330,7 @@ export const catalogRouter = createTRPCRouter({
       try {
         return await setCatalogOfferingStoreAvailability(ctx.db, {
           ...input,
+          actorUserId: ctx.session.user.id,
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {

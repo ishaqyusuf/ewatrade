@@ -34,10 +34,10 @@ const requiredMarkers = [
   {
     file: "components/mobile/action-button.tsx",
     markers: [
-      'className="-translate-y-[2px] flex-row items-center justify-center gap-2"',
-      "includeFontPadding: false",
-      'textAlignVertical: "center"',
-      "lineHeight: 20",
+      '"-translate-y-[2px] flex-row items-center justify-center gap-2"',
+      "[-rn-include-font-padding:false]",
+      "[-rn-text-align-vertical:center]",
+      "[-rn-line-height:20]",
     ],
   },
   {
@@ -59,14 +59,17 @@ const requiredMarkers = [
   },
   {
     file: "components/mobile/startup-splash.tsx",
+    markers: ["MarketDayStartupSplash", "ClassicStartupSplash"],
+  },
+  {
+    file: "components/mobile/appearances/market-day/startup-splash.tsx",
     markers: [
-      "useMarketDayPalette",
-      "marketDay.palm",
-      "marketSun",
-      "pulseOuter",
+      "bg-market-palm",
+      "--splash-pulse-size",
+      "bg-market-marigold",
       "Opening your market",
       "ẸwáTrade",
-      "marketDay.ink",
+      "text-market-ink",
     ],
   },
   {
@@ -79,8 +82,11 @@ const requiredMarkers = [
   },
   {
     file: "app/login.tsx",
+    markers: ["LoginScreen", "<LoginScreen />"],
+  },
+  {
+    file: "components/mobile/login/login-screen.tsx",
     markers: [
-      "AuthBrandHeader",
       "AuthMethodButton",
       "StatusBanner",
       "Or Continue With",
@@ -89,8 +95,15 @@ const requiredMarkers = [
       "Create your business account",
       'placeholder="Enter your email address"',
       'href="/sign-up"',
-      "Sign in once, then we will open the work or Store conversations available to you.",
       "returnTo",
+    ],
+  },
+  {
+    file: "components/mobile/appearances/market-day/login-screen.tsx",
+    markers: [
+      "ẸwáTrade",
+      "Good to see you again.",
+      "Sign in once, then we will open the work or Store conversations",
     ],
   },
   {
@@ -103,13 +116,28 @@ const requiredMarkers = [
   },
   {
     file: "app/onboarding.tsx",
+    markers: ["OnboardingScreen", "<OnboardingScreen />"],
+  },
+  {
+    file: "components/mobile/appearances/market-day/onboarding-screen.tsx",
     markers: ["Get started"],
   },
   {
     file: "app/sign-up.tsx",
+    markers: ["AccountAgeEntry", "<AccountAgeEntry />"],
+  },
+  {
+    file: "components/mobile/sign-up/account-age-entry.tsx",
     markers: [
-      "SignUpMarketHeader",
-      "SignUpMarketStall",
+      "SignUpScreen",
+      "if (ageBand) return <SignUpScreen ageBand={ageBand} />",
+      'selected === "UNDER_13"',
+      "disabled={!selected}",
+    ],
+  },
+  {
+    file: "components/mobile/sign-up/sign-up-screen.tsx",
+    markers: [
       "AuthMethodButton",
       "StatusBanner",
       "Or Continue With",
@@ -120,24 +148,46 @@ const requiredMarkers = [
       'placeholder="Enter your email address"',
       "Tell us about your business.",
       "Create your owner account.",
+      "MarketDaySignUpScreen",
+      "MarketDaySignUpCategories",
+    ],
+  },
+  {
+    file: "components/mobile/appearances/market-day/sign-up-screen.tsx",
+    markers: [
+      "SignUpMarketHeader",
+      "SignUpMarketStall",
       "canopyScrolledAway",
-      'variant="market-day"',
+      "bg-market-canvas",
     ],
   },
   {
     file: "app/verify-email.tsx",
+    markers: ["VerifyEmailScreen", "<VerifyEmailScreen />"],
+  },
+  {
+    file: "components/mobile/verify-email/verify-email-screen.tsx",
     markers: [
-      "MobileScreen",
       "OtpInput",
       "OtpKeypad",
+      "MarketDayVerifyEmailScreen",
+      "VerificationResendLine",
+    ],
+  },
+  {
+    file: "components/mobile/appearances/market-day/verify-email-screen.tsx",
+    markers: [
+      "MobileScreen",
       "Check your inbox.",
       "Email check • 6 digits",
       "Enter the market tally we sent to",
-      "Resend code",
       "Verify and continue",
       "Use another email",
-      'variant="market-tally"',
     ],
+  },
+  {
+    file: "components/mobile/verify-email/verification-resend-line.tsx",
+    markers: ["Resend code"],
   },
   {
     file: "components/mobile/otp-keypad.tsx",
@@ -154,19 +204,19 @@ const requiredMarkers = [
 
 const forbiddenMarkers = [
   {
-    file: "app/sign-up.tsx",
+    file: "components/mobile/sign-up/sign-up-screen.tsx",
     markers: ["owner@business.com", "john@example.com"],
   },
   {
-    file: "app/login.tsx",
+    file: "components/mobile/login/login-screen.tsx",
     markers: ["owner@business.com", "john@example.com"],
   },
   {
-    file: "app/login.tsx",
+    file: "components/mobile/login/login-screen.tsx",
     markers: ["customer-account-login", "Access customer history"],
   },
   {
-    file: "app/onboarding.tsx",
+    file: "components/mobile/onboarding/onboarding-screen.tsx",
     markers: ["customer-account-login", "Access customer history"],
   },
   {

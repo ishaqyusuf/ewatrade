@@ -51,6 +51,7 @@ function createIssueDb(input?: {
       row.channel !== "WHATSAPP",
   )
   const client = {
+    $queryRaw: async () => [],
     $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
       callback(client),
     commerceInquiry: { findMany: async () => [] },
@@ -137,6 +138,9 @@ function createIssueDb(input?: {
         id: "credential_1",
       }),
     },
+    storeConversationGuestIdentity: {
+      findUnique: async () => ({ ageBand: "ADULT" }),
+    },
     storeConversationRequestLink: { findMany: async () => [] },
     storeConversationWhatsAppBridgeAuditEvent: {
       create: async ({ data }: { data: Record<string, unknown> }) => {
@@ -152,7 +156,7 @@ function createIssueDb(input?: {
       },
       findUnique: async () => capability,
     },
-    user: { findUnique: async () => ({ id: "account_1" }) },
+    user: { findUnique: async () => ({ ageBand: "ADULT", id: "account_1" }) },
     whatsAppStoreBinding: { findMany: async () => [readyBinding] },
   }
   return {

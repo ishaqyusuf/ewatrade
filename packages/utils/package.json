@@ -17,7 +17,10 @@
     "./qa-fixtures": "./src/qa-fixtures.ts",
     "./qa-network-source": "./src/qa-network-source.ts",
     "./qa-provider-policy": "./src/qa-provider-policy.ts",
-    "./qa-quick-fill": "./src/qa-quick-fill.ts"
+    "./qa-quick-fill": "./src/qa-quick-fill.ts",
+    "./legal-documents": "./src/legal-documents.ts",
+    "./legal-approval": "./src/legal-approval.ts",
+    "./account-privacy-intake": "./src/account-privacy-intake.ts"
   },
   "sideEffects": false,
   "scripts": {

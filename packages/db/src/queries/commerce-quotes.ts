@@ -9,6 +9,7 @@ import {
   multiplyExactDecimals,
   parseExactDecimal,
 } from "@ewatrade/utils/exact-decimal"
+import { currentEffectiveLegalPublication } from "@ewatrade/utils/legal-approval"
 
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
@@ -49,7 +50,10 @@ import {
   resolveQuoteReleaseRuntimeFacts,
   supersedeServiceCommerceQuoteApprovalInTransaction,
 } from "./service-commerce-quote-release"
+import { assertAccountStoreConversationTermsAccepted } from "./store-conversation-account-terms"
 import { appendReleasedQuoteActionMessagesInTransaction } from "./store-conversation-actions"
+import { assertStoreConversationTextScreened } from "./store-conversation-text-safety"
+import { StoreConversationError } from "./store-conversations-core"
 import { materializePrescriptionQuoteReadyEffectsInTransaction } from "./whatsapp-connections"
 
 const COMMERCE_QUOTE_READ_CUSTOMER_ACTIONS = [
@@ -59,6 +63,28 @@ const COMMERCE_QUOTE_READ_CUSTOMER_ACTIONS = [
   "pick_up",
   "delivery",
 ] as const satisfies readonly ServiceCommerceAction[]
+
+type QuoteTermsPublication = NonNullable<
+  ReturnType<typeof currentEffectiveLegalPublication>
+>
+
+export async function assertQuoteAuthorTermsAccepted(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  publication: QuoteTermsPublication | null,
+) {
+  try {
+    await assertAccountStoreConversationTermsAccepted(tx, userId, publication)
+  } catch (error) {
+    if (error instanceof StoreConversationError) {
+      throw new CommerceQuoteError(
+        "QUOTE_RELEASE_FORBIDDEN",
+        "Review and accept the current EwaTrade Terms before releasing this Quote.",
+      )
+    }
+    throw error
+  }
+}
 
 const COMMERCE_QUOTE_TRANSACTION_OPTIONS = {
   isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -575,6 +601,34 @@ export function normalizeIssueCommerceQuoteOptions(
   ]
 }
 
+/** Covers customer-visible merchant prose even when no chat is linked. */
+export async function assertCommerceQuoteCustomerTextScreened(
+  options: ReadonlyArray<{
+    customerNote?: string | null
+    fulfilmentPromise?: string | null
+    label: string
+    lines: ReadonlyArray<{ customerNote?: string | null }>
+  }>,
+) {
+  try {
+    for (const option of options) {
+      for (const text of [
+        option.label,
+        option.customerNote,
+        option.fulfilmentPromise,
+        ...option.lines.map((line) => line.customerNote),
+      ]) {
+        if (text?.trim()) await assertStoreConversationTextScreened(text)
+      }
+    }
+  } catch (error) {
+    if (error instanceof StoreConversationError) {
+      throw new CommerceQuoteError("QUOTE_RELEASE_FORBIDDEN", error.message)
+    }
+    throw error
+  }
+}
+
 type QuoteSourceHandlerInput = {
   actorUserId: string
   lines: IssueCommerceQuoteLineInput[]
@@ -959,8 +1013,14 @@ async function releasePreparedCommerceQuoteVersion(
     actionExpiresAt: Date
     protectActionId?: (actionId: string) => string
     versionId: string
+    termsPublication: QuoteTermsPublication | null
   },
 ) {
+  await assertQuoteAuthorTermsAccepted(
+    tx,
+    input.sourceInput.actorUserId,
+    input.termsPublication,
+  )
   if (input.currentVersionId) {
     const superseded = await tx.commerceQuoteVersion.updateMany({
       data: {
@@ -1053,9 +1113,11 @@ async function releasePreparedCommerceQuoteVersion(
 export async function issueCommerceQuote(
   db: PrismaClient,
   input: IssueCommerceQuoteInput,
+  termsPublication: QuoteTermsPublication | null = currentEffectiveLegalPublication(),
 ) {
   const source = assertCommerceQuoteSource(input)
   const quoteOptions = normalizeIssueCommerceQuoteOptions(input)
+  await assertCommerceQuoteCustomerTextScreened(quoteOptions)
   const rawToken = token()
   const payloadHash = hash(
     input.options
@@ -1712,6 +1774,7 @@ export async function issueCommerceQuote(
       sourceInput,
       sourceState,
       versionId: version.id,
+      termsPublication,
     })
     await appendReleasedQuoteActionMessagesInTransaction(tx, {
       actorUserId: input.actorUserId,
@@ -1963,6 +2026,7 @@ async function supersedePendingApproval(
 export async function approveCommerceQuoteVersion(
   db: PrismaClient,
   input: QuoteApprovalDecisionInput,
+  termsPublication: QuoteTermsPublication | null = currentEffectiveLegalPublication(),
 ) {
   const rawToken = token()
   const decisionPayloadHash = hash({
@@ -1976,6 +2040,21 @@ export async function approveCommerceQuoteVersion(
   const result = await runCommerceQuoteDecisionTransaction(db, async (tx) => {
     const runtime = await resolveQuoteReleaseRuntimeFacts(tx, input)
     const approval = await loadQuoteApprovalDecision(tx, input)
+    await assertQuoteAuthorTermsAccepted(
+      tx,
+      input.actorUserId,
+      termsPublication,
+    )
+    await assertQuoteAuthorTermsAccepted(
+      tx,
+      approval.quoteVersion.createdByUserId,
+      termsPublication,
+    )
+    if (approval.status === ServiceCommerceQuoteApprovalStatus.PENDING) {
+      await assertCommerceQuoteCustomerTextScreened(
+        approval.quoteVersion.options,
+      )
+    }
     if (approval.status === ServiceCommerceQuoteApprovalStatus.APPROVED) {
       const actorStillSelected =
         runtime.actor.quoteApproverActive &&

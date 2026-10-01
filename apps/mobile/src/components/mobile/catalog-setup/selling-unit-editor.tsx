@@ -39,6 +39,8 @@ export function SellingUnitEditor({
     >
       <MobileWorkflowChrome
         screen="first-product"
+          hideHeader={false}
+          keyboardBottomOffset={footerHeight + 12}
         title={fields.isEditingUnit ? "Edit selling unit" : "Add selling unit"}
         closeLabel="Cancel selling unit changes"
         onClose={onClose}

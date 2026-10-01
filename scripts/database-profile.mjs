@@ -165,7 +165,7 @@ function isLocalDatabaseHost(hostname) {
       : false
 }
 
-function databaseTargetsEqual(left, right) {
+export function databaseTargetsEqual(left, right) {
   const leftUrl = new URL(left)
   const rightUrl = new URL(right)
   const leftSupabaseProject = supabaseProjectRef(leftUrl)

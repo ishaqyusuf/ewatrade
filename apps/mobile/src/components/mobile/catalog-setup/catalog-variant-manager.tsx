@@ -137,6 +137,8 @@ export function CatalogVariantManager(props: CatalogVariantManagerProps) {
       >
         <MobileWorkflowChrome
           screen="first-product"
+          hideHeader={false}
+          keyboardBottomOffset={footerHeight + 12}
           title={editorTitle}
           closeLabel="Cancel option changes"
           onClose={model.closeEditor}

@@ -6,6 +6,8 @@ import { commitAppThemeSelection } from "@/components/mobile/app-theme-selection
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { useModal } from "@/components/ui/modal"
 import { View } from "@/components/ui/view"
+import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useColorScheme } from "@/hooks/use-color"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
@@ -229,6 +231,9 @@ export function MoreScreen() {
             ) : null}
           </Section>
         ))}
+        <Pressable accessibilityRole="button" className="min-h-12 justify-center px-5" onPress={() => router.push("/account-privacy")}>
+          <Text className="font-semibold text-primary">Account, privacy and deletion</Text>
+        </Pressable>
       </Frame>
 
       <MoreThemeSheet

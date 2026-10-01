@@ -466,7 +466,14 @@ export async function listQaAccessProfiles(
     },
   })
 
-  const profiles = []
+  type Membership = (typeof memberships)[number]
+  const profiles: Array<{
+    business: Pick<Membership["tenant"], "currencyCode" | "id" | "name" | "slug" | "timezone">
+    identity: { email: string; id: string; name: string }
+    membership: Pick<Membership, "role">
+    profileReference: string
+    store: Membership["tenant"]["stores"][number]
+  }> = []
   const profileSelections: Array<{
     authorizationId: string
     expiresAt: Date

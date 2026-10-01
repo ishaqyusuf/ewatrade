@@ -11,19 +11,19 @@ import type {
   ReleaseReceipt,
 } from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/evidence"
 import {
-  decideExpoRelease,
-  generateExpoCurrentState,
   type ExpoBuildRecord,
   type ExpoChannelRecord,
   type ExpoMobileConfig,
   type ExpoPlatform,
   type ExpoUpdateRecord,
+  decideExpoRelease,
+  generateExpoCurrentState,
 } from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/expo"
 import {
-  verifyJobsDeployments,
   type JobsDeploymentRecord,
   type JobsPreviewWaiverRecord,
   type JobsTargetConfig,
+  verifyJobsDeployments,
 } from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/jobs"
 import type { ProviderLiveStateMetadata } from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/live-state"
 import type {
@@ -31,11 +31,11 @@ import type {
   ReleasePlan,
 } from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/plan"
 import {
-  verifyVercelWebDeployments,
   type VercelDeploymentMetadata,
   type VercelDomainAssignment,
   type VercelPromotionGate,
   type VercelWebTarget,
+  verifyVercelWebDeployments,
 } from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/vercel"
 
 const MAX_EVIDENCE_BYTES = 1024 * 1024
@@ -87,7 +87,7 @@ export const WEB_TARGETS: VercelWebTarget[] = [
     targetId: "api-web",
     projectId: "prj_ykC8ltJlPgEuFN90CQhFpC5uC3Vh",
     teamId: "team_BV5rgKHJH4fMyFL1YfscZIZK",
-    productionDomain: "ewatrade.com",
+    productionDomain: "api.ewatrade.com",
     dbGateCheckName: "release-assurance-production",
   },
   {
@@ -144,13 +144,17 @@ function evidenceText(context: ConsumerReleaseContext) {
   ) {
     throw new Error("Signed release evidence must stay inside the repository.")
   }
-  let stat
+  let stat: ReturnType<typeof lstatSync>
   try {
     stat = lstatSync(path)
   } catch {
     throw new Error("Signed provider evidence is unavailable.")
   }
-  if (!stat.isFile() || stat.isSymbolicLink() || stat.size > MAX_EVIDENCE_BYTES) {
+  if (
+    !stat.isFile() ||
+    stat.isSymbolicLink() ||
+    stat.size > MAX_EVIDENCE_BYTES
+  ) {
     throw new Error("Signed provider evidence file is invalid.")
   }
   return readFileSync(path, "utf8")
@@ -162,7 +166,10 @@ function verifiedPayload(encoded: string, signature: string, secret: string) {
   }
   const expected = createHmac("sha256", secret).update(encoded).digest()
   const supplied = Buffer.from(signature, "hex")
-  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) {
+  if (
+    supplied.length !== expected.length ||
+    !timingSafeEqual(supplied, expected)
+  ) {
     throw new Error("Signed provider evidence is invalid.")
   }
   try {
@@ -183,7 +190,8 @@ export function loadSignedProviderBundle(
   try {
     envelope = JSON.parse(evidenceText(context)) as SignedEnvelope
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith("Signed")) throw error
+    if (error instanceof Error && error.message.startsWith("Signed"))
+      throw error
     throw new Error("Signed provider evidence is invalid.")
   }
   if (
@@ -284,7 +292,9 @@ export function createEwaTradeProviderBindings(
             const platform = command.args[platformIndex + 1] as
               | ExpoPlatform
               | undefined
-            return { hash: platform ? bundle.expo.fingerprints[platform] : null }
+            return {
+              hash: platform ? bundle.expo.fingerprints[platform] : null,
+            }
           },
           async (platform) => bundle.expo.runtimeVersions[platform],
         )
@@ -312,8 +322,7 @@ export function createEwaTradeProviderBindings(
         plan,
         configs: [JOBS_TARGET],
         deploymentIds: bundle.jobs.deploymentIds,
-        currentConfigurationFingerprints:
-          bundle.jobs.configurationFingerprints,
+        currentConfigurationFingerprints: bundle.jobs.configurationFingerprints,
         lookupDeployment: async (id) =>
           bundle.jobs.deployments.find((item) => item.id === id) ?? null,
         previewWaiverIds: bundle.jobs.previewWaiverIds,

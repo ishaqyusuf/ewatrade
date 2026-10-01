@@ -1,4 +1,13 @@
 import {
+  ClassicSignUpCategories,
+  ClassicSignUpScreen,
+} from "@/components/mobile/appearances/classic/sign-up-screen"
+import {
+  MarketDaySignUpCategories,
+  MarketDaySignUpScreen,
+} from "@/components/mobile/appearances/market-day/sign-up-screen"
+import { AppleAuthButton } from "@/components/mobile/apple-auth-button"
+import {
   AuthActionButton,
   AuthDivider,
   AuthFooterAction,
@@ -7,28 +16,21 @@ import {
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { CurrencySelector } from "@/components/mobile/currency-selector"
 import { FormField } from "@/components/mobile/form-field"
-import { StatusBanner } from "@/components/mobile/status-banner"
-import {
-  ClassicSignUpCategories,
-  ClassicSignUpScreen,
-} from "@/components/mobile/appearances/classic/sign-up-screen"
-import {
-  MarketDaySignUpCategories,
-  MarketDaySignUpScreen,
-} from "@/components/mobile/appearances/market-day/sign-up-screen"
-import { SignUpChoice } from "./sign-up-choice"
-import type { SignUpStep } from "./sign-up-presentation"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { View } from "@/components/ui/view"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { useMobileAppleAuth } from "@/hooks/use-mobile-apple-auth"
+import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useMobileGoogleAuth } from "@/hooks/use-mobile-google-auth"
 import {
   createBusinessFixture,
   createFixtureIdentity,
 } from "@/internal-tooling/fixture-recipes"
 import { shouldShowListSearch } from "@/lib/list-pagination"
+import { publicLegalUrl } from "@/lib/public-legal-url"
 import { useTRPC } from "@/trpc/client"
 import {
   BUSINESS_OPERATING_MODELS,
@@ -43,12 +45,18 @@ import {
   findBusinessProfile,
   listBusinessProfiles,
 } from "@ewatrade/utils"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
 import { useMemo, useRef, useState } from "react"
-import { View } from "@/components/ui/view"
+import { SignUpChoice } from "./sign-up-choice"
+import type { SignUpStep } from "./sign-up-presentation"
+import { SignupLegalChoices } from "./signup-legal-choices"
 
-export function SignUpScreen() {
+export function SignUpScreen({
+  ageBand,
+}: {
+  ageBand: "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT"
+}) {
   const largeTextLayout = useLargeTextLayout()
   const appearance = useMobileDesign("sign-up")
   const Screen =
@@ -77,6 +85,17 @@ export function SignUpScreen() {
   const [teamSize, setTeamSize] = useState<BusinessTeamSize>("solo")
   const [step, setStep] = useState<SignUpStep>("businessType")
   const [error, setError] = useState<string | null>(null)
+  const [legalChoices, setLegalChoices] = useState({
+    version: "",
+    acceptedTerms: false,
+    acknowledgedPrivacyNotice: false,
+  })
+  const legalPublication = useQuery(
+    trpc.auth.legalPublication.queryOptions(undefined, {
+      enabled: step === "account",
+      retry: false,
+    }),
+  )
   const quickFillSnapshot = useRef<{
     addressLine1: string
     businessName: string
@@ -108,18 +127,66 @@ export function SignUpScreen() {
     orderChannels.length > 0 &&
     (businessProfileKey !== "other-mixed-business" ||
       otherBusinessDescription.trim().length >= 2)
+  const legalVersion = legalPublication.data?.effective
+    ? legalPublication.data.version
+    : null
+  const acceptedTerms =
+    legalChoices.version === legalVersion && legalChoices.acceptedTerms
+  const acknowledgedPrivacyNotice =
+    legalChoices.version === legalVersion &&
+    legalChoices.acknowledgedPrivacyNotice
+  const hasLegalPages = Boolean(publicLegalUrl("terms"))
+  const legalReady =
+    legalPublication.isSuccess &&
+    legalPublication.data.signupAvailable &&
+    (!legalPublication.data.effective ||
+      (hasLegalPages &&
+        Boolean(legalVersion) &&
+        acceptedTerms &&
+        acknowledgedPrivacyNotice))
+  const legalSignupInput = legalVersion
+    ? {
+        legalVersion,
+        acceptedTerms: acceptedTerms ? (true as const) : undefined,
+        acknowledgedPrivacyNotice: acknowledgedPrivacyNotice
+          ? (true as const)
+          : undefined,
+      }
+    : {}
   const canContinueWithGoogle =
     !!normalizedBusinessName &&
     !!currencyCode &&
     hasBusinessContact &&
-    hasBusinessProfile
+    hasBusinessProfile &&
+    legalReady
   const canContinueWithEmail =
     !!name.trim() &&
     !!normalizedBusinessName &&
     !!normalizedEmail &&
     hasBusinessContact &&
-    hasBusinessProfile
+    hasBusinessProfile &&
+    legalReady
   const googleAuth = useMobileGoogleAuth({
+    ageBand,
+    ...legalSignupInput,
+    addressLine1: addressLine1.trim(),
+    businessProfileKey,
+    businessProfileVersion: BUSINESS_PROFILE_SCHEMA_VERSION,
+    businessName: normalizedBusinessName,
+    city: city.trim(),
+    currencyCode,
+    mode: "sign_up",
+    name: name.trim() || undefined,
+    operatingModel,
+    orderChannels,
+    otherBusinessDescription: otherBusinessDescription.trim() || undefined,
+    phone: phone.trim(),
+    teamSize,
+    onError: setError,
+  })
+  const appleAuth = useMobileAppleAuth({
+    ageBand,
+    ...legalSignupInput,
     addressLine1: addressLine1.trim(),
     businessProfileKey,
     businessProfileVersion: BUSINESS_PROFILE_SCHEMA_VERSION,
@@ -149,12 +216,20 @@ export function SignUpScreen() {
           pathname: "/verify-email",
           params: {
             addressLine1: addressLine1.trim(),
+            ageBand,
             businessProfileKey,
             businessProfileVersion: String(BUSINESS_PROFILE_SCHEMA_VERSION),
             businessName: normalizedBusinessName,
             city: city.trim(),
             currencyCode,
             email: normalizedEmail,
+            ...(legalVersion
+              ? {
+                  acceptedTerms: "true",
+                  acknowledgedPrivacyNotice: "true",
+                  legalVersion,
+                }
+              : {}),
             mode: "sign-up",
             name: name.trim(),
             operatingModel,
@@ -176,6 +251,8 @@ export function SignUpScreen() {
     if (!canContinueWithEmail) return
 
     requestOtpMutation.mutate({
+      ageBand,
+      ...legalSignupInput,
       addressLine1: addressLine1.trim(),
       businessProfileKey,
       businessProfileVersion: BUSINESS_PROFILE_SCHEMA_VERSION,
@@ -195,7 +272,11 @@ export function SignUpScreen() {
 
   const continueWithGoogle = () => {
     if (!canContinueWithGoogle) {
-      setError("Enter your business name first, then continue with Google.")
+      setError(
+        legalReady
+          ? "Enter your business details first, then continue with Google."
+          : "Review the current Terms and Privacy Notice before continuing.",
+      )
       return
     }
 
@@ -537,6 +618,56 @@ export function SignUpScreen() {
             value={email}
             variant="auth"
           />
+          {legalPublication.isSuccess ? (
+            <SignupLegalChoices
+              effective={legalPublication.data.effective}
+              signupAvailable={legalPublication.data.signupAvailable}
+              version={legalPublication.data.version}
+              effectiveDate={legalPublication.data.effectiveDate}
+              acceptedTerms={acceptedTerms}
+              acknowledgedPrivacyNotice={acknowledgedPrivacyNotice}
+              onAcceptedTermsChange={(accepted) => {
+                if (!legalVersion) return
+                setLegalChoices((current) => ({
+                  version: legalVersion,
+                  acceptedTerms: accepted,
+                  acknowledgedPrivacyNotice:
+                    current.version === legalVersion
+                      ? current.acknowledgedPrivacyNotice
+                      : false,
+                }))
+              }}
+              onAcknowledgedPrivacyNoticeChange={(acknowledged) => {
+                if (!legalVersion) return
+                setLegalChoices((current) => ({
+                  version: legalVersion,
+                  acceptedTerms:
+                    current.version === legalVersion
+                      ? current.acceptedTerms
+                      : false,
+                  acknowledgedPrivacyNotice: acknowledged,
+                }))
+              }}
+            />
+          ) : legalPublication.error ? (
+            <StatusBanner
+              icon="TriangleAlert"
+              message="We could not check the current Terms. Connect and try again."
+              title="Policies unavailable"
+              tone="destructive"
+            />
+          ) : null}
+          {legalPublication.error ? (
+            <Pressable
+              accessibilityRole="button"
+              className="min-h-11 justify-center"
+              onPress={() => void legalPublication.refetch()}
+            >
+              <Text className="font-semibold text-primary">
+                Retry policy check
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       )}
 
@@ -579,6 +710,10 @@ export function SignUpScreen() {
         {step === "account" ? (
           <>
             <AuthDivider label="Or Continue With" />
+            <AppleAuthButton
+              onPress={appleAuth.startAppleAuth}
+              disabled={appleAuth.isPending || !canContinueWithGoogle}
+            />
             <AuthMethodButton
               brandIcon="google"
               disabled={googleAuth.isPending || !canContinueWithGoogle}

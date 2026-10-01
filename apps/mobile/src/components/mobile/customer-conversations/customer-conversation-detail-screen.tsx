@@ -8,8 +8,10 @@ import {
 } from "@/lib/customer-conversation-state"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { router } from "expo-router"
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { FlatList, RefreshControl } from "react-native"
+import { CustomerConversationAccountTerms } from "./customer-conversation-account-terms"
+import { CustomerConversationAge } from "./customer-conversation-age"
 import { projectCustomerConversationAvailability } from "./customer-conversation-availability-presentation"
 import { CustomerConversationChannelBoundary } from "./customer-conversation-channel-boundary"
 import { CustomerConversationChannelMode } from "./customer-conversation-channel-mode"
@@ -21,6 +23,7 @@ import {
   resolveCustomerConversationHeaderStatus,
 } from "./customer-conversation-detail-presentation"
 import { CustomerConversationDetailQaScreen } from "./customer-conversation-detail-qa-screen"
+import { CustomerConversationGuestTerms } from "./customer-conversation-guest-terms"
 import {
   CustomerConversationNotice,
   CustomerConversationTransientNotice,
@@ -28,6 +31,7 @@ import {
 import { CustomerConversationPrivacyControl } from "./customer-conversation-privacy-control"
 import { projectCustomerConversationRestriction } from "./customer-conversation-restriction-presentation"
 import { CustomerConversationRouteState } from "./customer-conversation-route-state"
+import { CustomerConversationSafetyControl } from "./customer-conversation-safety-control"
 import { CustomerMessage } from "./customer-message"
 import { CustomerNotificationControls } from "./customer-notification-controls"
 import { CustomerRequestChoice } from "./customer-request-choice"
@@ -42,6 +46,7 @@ export function CustomerConversationDetailScreen({
   accountAccess = false,
   bootstrap = false,
   conversationId = null,
+  entryAgeBand,
   publicToken,
   qaState,
   targetCredentialToken = null,
@@ -50,6 +55,7 @@ export function CustomerConversationDetailScreen({
   accountAccess?: boolean
   bootstrap?: boolean
   conversationId?: string | null
+  entryAgeBand?: "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT"
   publicToken: string | null
   qaState?: string | string[]
   targetCredentialToken?: string | null
@@ -73,6 +79,7 @@ export function CustomerConversationDetailScreen({
       accountAccess={accountAccess}
       bootstrap={bootstrap}
       conversationId={conversationId}
+      entryAgeBand={entryAgeBand}
       publicToken={publicToken}
       targetCredentialToken={targetCredentialToken}
       transferToken={transferToken}
@@ -84,6 +91,7 @@ function CustomerConversationDetailLiveScreen({
   accountAccess,
   bootstrap,
   conversationId,
+  entryAgeBand,
   publicToken,
   targetCredentialToken,
   transferToken,
@@ -91,6 +99,7 @@ function CustomerConversationDetailLiveScreen({
   accountAccess: boolean
   bootstrap: boolean
   conversationId: string | null
+  entryAgeBand?: "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT"
   publicToken: string | null
   targetCredentialToken: string | null
   transferToken: string | null
@@ -98,6 +107,41 @@ function CustomerConversationDetailLiveScreen({
   const listRef = useRef<FlatList<CustomerConversationTimelineItem>>(null)
   const largeTextLayout = useLargeTextLayout()
   const [composerHeight, setComposerHeight] = useState(190)
+  const [guestTermsState, setGuestTermsState] = useState({
+    allowed: false,
+    scope: "",
+  })
+  const [accountTermsState, setAccountTermsState] = useState({
+    allowed: false,
+    scope: "",
+  })
+  const [ageState, setAgeState] = useState({ allowed: false, scope: "" })
+  const [blockedState, setBlockedState] = useState<{
+    scope: string
+    value: boolean
+  } | null>(null)
+  const blockScope = `${accountAccess}:${conversationId}:${publicToken}`
+  const guestTermsScope = `${conversationId}:${publicToken}`
+  const guestTermsAllowed =
+    guestTermsState.scope === guestTermsScope && guestTermsState.allowed
+  const accountTermsAllowed =
+    accountTermsState.scope === blockScope && accountTermsState.allowed
+  const ageAllowed = ageState.scope === blockScope && ageState.allowed
+  const setGuestTermsAllowed = useCallback(
+    (allowed: boolean) =>
+      setGuestTermsState({ allowed, scope: guestTermsScope }),
+    [guestTermsScope],
+  )
+  const setAccountTermsAllowed = useCallback(
+    (allowed: boolean) => setAccountTermsState({ allowed, scope: blockScope }),
+    [blockScope],
+  )
+  const setAgeAllowed = useCallback(
+    (allowed: boolean) => setAgeState({ allowed, scope: blockScope }),
+    [blockScope],
+  )
+  const blockedOverride =
+    blockedState?.scope === blockScope ? blockedState.value : null
   const updateComposerHeight = (nextHeight: number) => {
     setComposerHeight((currentHeight) =>
       Math.abs(currentHeight - nextHeight) > 1 ? nextHeight : currentHeight,
@@ -107,11 +151,16 @@ function CustomerConversationDetailLiveScreen({
     accountAccess,
     bootstrap,
     conversationId,
+    entryAgeBand,
+    postingTermsAccepted:
+      ageAllowed && (accountAccess ? accountTermsAllowed : guestTermsAllowed),
     publicToken,
     targetCredentialToken,
     transferToken,
   })
   const timeline = detail.timeline.data
+  const customerBlocked =
+    blockedOverride ?? timeline?.conversation.customerBlocked ?? false
   const messages = mergeMessages(detail.olderMessages, timeline?.messages ?? [])
   const activeRequests =
     timeline?.requests.filter((request) => request.lifecycle === "active") ?? []
@@ -146,6 +195,15 @@ function CustomerConversationDetailLiveScreen({
     : null
 
   useEffect(() => {
+    if (
+      blockedOverride !== null &&
+      timeline?.conversation.customerBlocked === blockedOverride
+    ) {
+      setBlockedState(null)
+    }
+  }, [blockedOverride, timeline?.conversation.customerBlocked])
+
+  useEffect(() => {
     if (composerHeight <= 0 || newestSequence === 0) return
     let layoutFrame: number | undefined
     const contentFrame = requestAnimationFrame(() => {
@@ -170,11 +228,13 @@ function CustomerConversationDetailLiveScreen({
         storeName={timeline?.conversation.storeName}
         storeStatus={
           timeline
-            ? timeline.conversation.moderation.state === "restricted"
-              ? "Messaging restricted"
-              : resolveCustomerConversationHeaderStatus(timeline.requests, {
-                  hasMessages: messages.length > 0,
-                })
+            ? customerBlocked
+              ? "Store blocked"
+              : timeline.conversation.moderation.state === "restricted"
+                ? "Messaging restricted"
+                : resolveCustomerConversationHeaderStatus(timeline.requests, {
+                    hasMessages: messages.length > 0,
+                  })
             : undefined
         }
       />
@@ -240,16 +300,30 @@ function CustomerConversationDetailLiveScreen({
                   }
                   requests={timeline.requests}
                 />
-                <CustomerConversationChannelMode
-                  channelMode={timeline.channelMode}
-                  onOpen={() => void detail.openWhatsAppBridge()}
-                  opening={detail.openingWhatsApp}
-                />
+                {!customerBlocked ? (
+                  <CustomerConversationChannelMode
+                    channelMode={timeline.channelMode}
+                    onOpen={() => void detail.openWhatsAppBridge()}
+                    opening={detail.openingWhatsApp}
+                  />
+                ) : null}
                 <CustomerNotificationControls
                   accountAccess={accountAccess}
                   available={timeline.availability.available}
+                  blocked={customerBlocked}
                   conversationId={timeline.conversation.id}
                   onNotice={detail.setNotice}
+                  publicToken={publicToken ?? ""}
+                />
+                <CustomerConversationSafetyControl
+                  accountAccess={accountAccess}
+                  blocked={customerBlocked}
+                  conversationId={timeline.conversation.id}
+                  key={`${accountAccess}:${timeline.conversation.id}`}
+                  onBlockedChange={(blocked) => {
+                    setBlockedState({ scope: blockScope, value: blocked })
+                    void detail.timeline.refetch()
+                  }}
                   publicToken={publicToken ?? ""}
                 />
                 {accountAccess ? (
@@ -294,9 +368,11 @@ function CustomerConversationDetailLiveScreen({
                   <CustomerMessage
                     accountAccess={accountAccess}
                     accountInvitationActionsDisabled={
+                      customerBlocked ||
                       timeline.conversation.moderation.state === "restricted"
                     }
                     accountInvitationInteractive={
+                      !customerBlocked &&
                       timeline.conversation.moderation.state !== "restricted"
                     }
                     conversationId={timeline.conversation.id}
@@ -331,6 +407,7 @@ function CustomerConversationDetailLiveScreen({
                     onRefresh={() => detail.timeline.refetch()}
                     publicToken={publicToken ?? ""}
                     quoteInteractive={
+                      !customerBlocked &&
                       timeline.conversation.moderation.state !== "restricted"
                     }
                     storeName={timeline.conversation.storeName}
@@ -338,7 +415,10 @@ function CustomerConversationDetailLiveScreen({
                   {message.author.kind === "customer" && !message.request ? (
                     <CustomerRequestChoice
                       disabled={
-                        accountAccess ||
+                        (accountAccess
+                          ? !accountTermsAllowed
+                          : !guestTermsAllowed) ||
+                        customerBlocked ||
                         detail.selecting ||
                         timeline.conversation.state !== "active" ||
                         !timeline.channelMode.composerEnabled
@@ -355,10 +435,24 @@ function CustomerConversationDetailLiveScreen({
               )
             }}
           />
+          <CustomerConversationAge
+            accountAccess={accountAccess}
+            onAllowedChange={setAgeAllowed}
+          />
+          {accountAccess ? (
+            <CustomerConversationAccountTerms
+              onAllowedChange={setAccountTermsAllowed}
+            />
+          ) : (
+            <CustomerConversationGuestTerms
+              onAllowedChange={setGuestTermsAllowed}
+            />
+          )}
           <CustomerConversationComposer
             attachment={detail.attachmentDraft.draft}
             attachmentKinds={
-              detail.attachmentCapability.data?.available
+              detail.attachmentCapabilityAvailable &&
+              detail.attachmentCapability.data
                 ? detail.attachmentCapability.data.allowedKinds
                 : []
             }
@@ -368,10 +462,22 @@ function CustomerConversationDetailLiveScreen({
               label: target.label,
             }))}
             disabled={
+              !ageAllowed ||
+              (accountAccess ? !accountTermsAllowed : !guestTermsAllowed) ||
+              customerBlocked ||
               timeline.conversation.state !== "active" ||
               !timeline.channelMode.composerEnabled
             }
             disabledMessage={
+              (!ageAllowed
+                ? "Choose an eligible age range before posting."
+                : null) ??
+              ((accountAccess ? !accountTermsAllowed : !guestTermsAllowed)
+                ? "Accept the current Terms before posting."
+                : null) ??
+              (customerBlocked
+                ? "You blocked this Store. Unblock it to send messages."
+                : null) ??
               restrictionPresentation?.recoveryLabel ??
               resolveCustomerConversationDisabledComposerLabel({
                 composerEnabled: timeline.channelMode.composerEnabled,

@@ -361,6 +361,12 @@ type SubmitPublicServiceRequestInput = {
 export async function submitPublicServiceRequest(
   db: PrismaClient,
   input: SubmitPublicServiceRequestInput,
+  options?: {
+    onRequest?: (
+      tx: Prisma.TransactionClient,
+      request: { id: string; revision: number },
+    ) => Promise<void>
+  },
 ) {
   const now = new Date()
   const channelOrigin = input.channelOrigin ?? "web"
@@ -464,6 +470,7 @@ export async function submitPublicServiceRequest(
             "This request command was already used with different details.",
           )
         }
+        await options?.onRequest?.(tx, previous)
         return { ...previous, created: false as const }
       }
       const allowed = new Map(
@@ -520,6 +527,7 @@ export async function submitPublicServiceRequest(
           },
         })
       }
+      await options?.onRequest?.(tx, request)
       return { ...request, created: true as const }
     })
   } catch (error) {
@@ -555,6 +563,10 @@ export async function submitPublicServiceRequest(
         "IDEMPOTENCY_MISMATCH",
         "This request command was already used with different details.",
       )
+    }
+    const onRequest = options?.onRequest
+    if (onRequest) {
+      await db.$transaction((tx) => onRequest(tx, replay))
     }
     return { ...replay, created: false as const }
   }

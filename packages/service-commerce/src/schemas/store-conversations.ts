@@ -5,6 +5,32 @@ const opaqueIdSchema = z.string().trim().min(1).max(191)
 const clientOperationIdSchema = z.string().trim().min(8).max(160)
 const conversationTextSchema = z.string().trim().min(1).max(2_000)
 
+export const storeConversationCustomerReportInputSchema = z
+  .object({
+    clientOperationId: clientOperationIdSchema,
+    conversationId: opaqueIdSchema,
+    publicToken: opaqueIdSchema,
+    messageId: opaqueIdSchema.optional(),
+    reason: z.enum([
+      "spam",
+      "harassment",
+      "hateful_content",
+      "sexual_content",
+      "violence",
+      "other",
+    ]),
+    details: z.string().trim().max(500).optional(),
+  })
+  .strict()
+
+export const storeConversationCustomerBlockInputSchema = z
+  .object({
+    clientOperationId: clientOperationIdSchema,
+    conversationId: opaqueIdSchema,
+    publicToken: opaqueIdSchema,
+  })
+  .strict()
+
 export const storeConversationAssignmentReasonSchema = z.enum([
   "customer_request",
   "membership_unavailable",
@@ -319,6 +345,10 @@ export const storeConversationReadAcknowledgementInputSchema = z
 
 export const storeConversationMobileBootstrapInputSchema =
   storeConversationBootstrapInputSchema
+    .extend({
+      ageBand: z.enum(["AGE_13_TO_15", "AGE_16_TO_17", "ADULT"]).optional(),
+    })
+    .strict()
 
 export const storeConversationMobileListInputSchema = z
   .object({
@@ -402,12 +432,7 @@ function assertModerationReason(
 ) {
   const allowed =
     input.action === "restrict"
-      ? [
-          "spam_or_abuse",
-          "security_review",
-          "policy_review",
-          "operator_review",
-        ]
+      ? ["spam_or_abuse", "security_review", "policy_review", "operator_review"]
       : ["appeal_approved", "review_complete"]
   if (!allowed.includes(input.reason)) {
     ctx.addIssue({

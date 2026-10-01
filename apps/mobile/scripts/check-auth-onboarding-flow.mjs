@@ -6,21 +6,92 @@ const MOBILE_DIR = join(REPO_ROOT, "apps/mobile")
 const FILES = {
   googleHook: join(MOBILE_DIR, "src/hooks/use-mobile-google-auth.ts"),
   layout: join(MOBILE_DIR, "src/app/_layout.tsx"),
-  login: join(MOBILE_DIR, "src/app/login.tsx"),
+  loginRoute: join(MOBILE_DIR, "src/app/login.tsx"),
+  login: join(MOBILE_DIR, "src/components/mobile/login/login-screen.tsx"),
   nativeIntent: join(MOBILE_DIR, "src/app/+native-intent.tsx"),
-  onboarding: join(MOBILE_DIR, "src/app/onboarding.tsx"),
+  onboardingRoute: join(MOBILE_DIR, "src/app/onboarding.tsx"),
+  onboarding: join(
+    MOBILE_DIR,
+    "src/components/mobile/onboarding/onboarding-screen.tsx",
+  ),
+  onboardingPresentation: join(
+    MOBILE_DIR,
+    "src/components/mobile/onboarding/onboarding-presentation.ts",
+  ),
   onboardingQa: join(MOBILE_DIR, "src/lib/onboarding-market-day-qa.ts"),
-  signup: join(MOBILE_DIR, "src/app/sign-up.tsx"),
+  signupRoute: join(MOBILE_DIR, "src/app/sign-up.tsx"),
+  signupAgeEntry: join(
+    MOBILE_DIR,
+    "src/components/mobile/sign-up/account-age-entry.tsx",
+  ),
+  signup: join(MOBILE_DIR, "src/components/mobile/sign-up/sign-up-screen.tsx"),
+  signupPresentation: join(
+    MOBILE_DIR,
+    "src/components/mobile/sign-up/sign-up-presentation.ts",
+  ),
+  signupMarketAppearance: join(
+    MOBILE_DIR,
+    "src/components/mobile/appearances/market-day/sign-up-screen.tsx",
+  ),
   splashGate: join(MOBILE_DIR, "src/components/mobile/startup-splash-gate.tsx"),
-  staffOnboarding: join(MOBILE_DIR, "src/app/staff-onboarding.tsx"),
+  staffOnboardingRoute: join(MOBILE_DIR, "src/app/staff-onboarding.tsx"),
+  staffOnboarding: join(
+    MOBILE_DIR,
+    "src/components/mobile/staff-onboarding/staff-onboarding-screen.tsx",
+  ),
   staffOnboardingSurface: join(
     MOBILE_DIR,
-    "src/components/mobile/staff-onboarding-market-nameplate.tsx",
+    "src/components/mobile/appearances/market-day/staff-onboarding-screen.tsx",
   ),
-  verifyEmail: join(MOBILE_DIR, "src/app/verify-email.tsx"),
+  verifyEmailRoute: join(MOBILE_DIR, "src/app/verify-email.tsx"),
+  verifyEmail: join(
+    MOBILE_DIR,
+    "src/components/mobile/verify-email/verify-email-screen.tsx",
+  ),
+  verifyEmailAppearance: join(
+    MOBILE_DIR,
+    "src/components/mobile/appearances/market-day/verify-email-screen.tsx",
+  ),
+  verificationResend: join(
+    MOBILE_DIR,
+    "src/components/mobile/verify-email/verification-resend-line.tsx",
+  ),
 }
 
+const ROUTES = [
+  [FILES.loginRoute, "LoginScreen", "LoginRoute"],
+  [FILES.onboardingRoute, "OnboardingScreen", "OnboardingRoute"],
+  [FILES.verifyEmailRoute, "VerifyEmailScreen", "VerifyEmailRoute"],
+  [FILES.staffOnboardingRoute, "StaffOnboardingScreen", "StaffOnboardingRoute"],
+]
+
 const CONTRACTS = [
+  ...ROUTES.map(([file, screen, route]) => ({
+    file,
+    markers: [`import { ${screen} }`, `function ${route}()`, `<${screen} />`],
+    reason: "Expo route must render its auth or onboarding screen",
+  })),
+  {
+    file: FILES.signupRoute,
+    markers: [
+      "import { AccountAgeEntry }",
+      "function SignUpRoute()",
+      "<AccountAgeEntry />",
+    ],
+    reason: "signup route must enter the 13+ age step before account fields",
+  },
+  {
+    file: FILES.signupAgeEntry,
+    markers: [
+      "SignUpScreen",
+      "if (ageBand) return <SignUpScreen ageBand={ageBand} />",
+      'selected === "UNDER_13"',
+      "disabled={!selected}",
+      "setAgeBand(selected as EligibleAgeBand)",
+    ],
+    reason:
+      "the age step must block under-13 users and mount signup only after an eligible choice",
+  },
   {
     file: FILES.layout,
     markers: [
@@ -69,14 +140,16 @@ const CONTRACTS = [
     file: FILES.onboarding,
     markers: [
       "ONBOARDING_STEPS",
-      "Set up your business",
-      "Build your catalog",
-      "Run daily work",
       "completeOnboarding(true)",
       'router.replace("/login")',
     ],
     reason:
       "the approved three-step Market Day onboarding and persisted Login handoff must remain intact",
+  },
+  {
+    file: FILES.onboardingPresentation,
+    markers: ["Set up your business", "Build your catalog", "Run daily work"],
+    reason: "the three onboarding tasks must remain visible",
   },
   {
     file: FILES.onboardingQa,
@@ -112,16 +185,10 @@ const CONTRACTS = [
       'placeholder="Enter your business name"',
       'placeholder="Enter your full name"',
       'placeholder="Enter your email address"',
-      'type SignUpStep = "businessType" | "profile" | "business" | "account"',
       "What kind of business do you run?",
       "How does your business work?",
       "Choose a different business type",
-      "SignUpMarketHeader",
-      "SignUpMarketStall",
-      "canopyScrolledAway",
-      "marketDay.canvas",
       "selectBusinessType",
-      "onPress={() => selectBusinessType(profile)}",
       '{step === "profile" ? (',
       "How do customers order?",
     ],
@@ -129,10 +196,28 @@ const CONTRACTS = [
       "signup must keep type-first profile personalization, editable step navigation, lightweight business identity, Google, and email OTP paths",
   },
   {
+    file: FILES.signupPresentation,
+    markers: [
+      'type SignUpStep = "businessType" | "profile" | "business" | "account"',
+    ],
+    reason: "signup must retain its four-step presentation contract",
+  },
+  {
+    file: FILES.signupMarketAppearance,
+    markers: [
+      "SignUpMarketHeader",
+      "SignUpMarketStall",
+      "canopyScrolledAway",
+      "palette.canvas",
+      "onPress={() => onSelect(profile)}",
+    ],
+    reason:
+      "Market Day signup must keep its canopy and selectable business types",
+  },
+  {
     file: FILES.verifyEmail,
     markers: [
       "OTP_LENGTH = 6",
-      "MobileScreen",
       "OtpInput",
       "OtpKeypad",
       "verifyMobileOwnerOtp",
@@ -140,11 +225,21 @@ const CONTRACTS = [
       "businessProfileKey",
       "useEffect",
       "verifyCode()",
-      "Resend code",
-      "Verify and continue",
+      "VerificationResendLine",
     ],
     reason:
       "OTP verification must keep separated OTP entry, auto-submit, resend, and production verify behavior",
+  },
+  {
+    file: FILES.verifyEmailAppearance,
+    markers: ["MobileScreen", 'accessibilityLabel="Verify and continue"'],
+    reason:
+      "Market Day OTP must retain its mobile presentation and verify action",
+  },
+  {
+    file: FILES.verificationResend,
+    markers: ['accessibilityLabel="Resend code"'],
+    reason: "OTP resend must remain accessible",
   },
   {
     file: FILES.googleHook,
@@ -169,7 +264,7 @@ const CONTRACTS = [
       "resolveStaffInviteToken",
       "completeStaffOnboarding",
       "Sign in to accept invite",
-      "StaffOnboardingMarketNameplate",
+      "MarketDayStaffOnboardingScreen",
     ],
     reason: "staff onboarding must stay invite-based",
   },

@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test"
 
 import {
+  bootstrapNewStoreEntryWithCredentialRecovery,
+  canRetryNewStoreEntryAfterCredentialRejection,
   completePendingCustomerTransfer,
   isCustomerCredentialError,
   isDefinitiveCustomerTransferError,
@@ -41,6 +43,116 @@ describe("customer conversation state", () => {
       false,
     )
     expect(isCustomerCredentialError(new Error("UNAUTHORIZED"))).toBe(false)
+  })
+
+  test("starts a fresh guest only when a different direct Store link rejects the old credential", () => {
+    const input = {
+      accountAccess: false,
+      error: { data: { code: "UNAUTHORIZED" } },
+      previousSession: {
+        lastConversation: { publicToken: "previous-store" },
+      },
+      publicToken: "new-store",
+      transferToken: null,
+    }
+    expect(canRetryNewStoreEntryAfterCredentialRejection(input)).toBe(true)
+    expect(
+      canRetryNewStoreEntryAfterCredentialRejection({
+        ...input,
+        publicToken: "previous-store",
+      }),
+    ).toBe(false)
+    expect(
+      canRetryNewStoreEntryAfterCredentialRejection({
+        ...input,
+        transferToken: "web-transfer",
+      }),
+    ).toBe(false)
+    expect(
+      canRetryNewStoreEntryAfterCredentialRejection({
+        ...input,
+        accountAccess: true,
+      }),
+    ).toBe(false)
+    expect(
+      canRetryNewStoreEntryAfterCredentialRejection({
+        ...input,
+        previousSession: null,
+      }),
+    ).toBe(false)
+    expect(
+      canRetryNewStoreEntryAfterCredentialRejection({
+        ...input,
+        error: { data: { code: "NOT_FOUND" } },
+      }),
+    ).toBe(false)
+  })
+
+  test("waits for local credential removal before one fresh bootstrap", async () => {
+    const calls: string[] = []
+    let attempts = 0
+    const result = await bootstrapNewStoreEntryWithCredentialRecovery({
+      accountAccess: false,
+      bootstrap: async () => {
+        attempts += 1
+        calls.push(`bootstrap-${attempts}`)
+        if (attempts === 1) {
+          throw { data: { code: "UNAUTHORIZED" } }
+        }
+        return "new-conversation"
+      },
+      clearSession: async () => {
+        calls.push("clear-start")
+        await Promise.resolve()
+        calls.push("clear-finished")
+      },
+      previousSession: {
+        lastConversation: { publicToken: "previous-store" },
+      },
+      publicToken: "new-store",
+      transferToken: null,
+    })
+    expect(result).toBe("new-conversation")
+    expect(calls).toEqual([
+      "bootstrap-1",
+      "clear-start",
+      "clear-finished",
+      "bootstrap-2",
+    ])
+  })
+
+  test("does not replace same-Store access or retry repeatedly", async () => {
+    const rejection = { data: { code: "UNAUTHORIZED" } }
+    let attempts = 0
+    let clears = 0
+    const input = {
+      accountAccess: false,
+      bootstrap: async () => {
+        attempts += 1
+        throw rejection
+      },
+      clearSession: async () => {
+        clears += 1
+      },
+      previousSession: {
+        lastConversation: { publicToken: "previous-store" },
+      },
+      publicToken: "previous-store",
+      transferToken: null,
+    }
+    await expect(
+      bootstrapNewStoreEntryWithCredentialRecovery(input),
+    ).rejects.toBe(rejection)
+    expect(attempts).toBe(1)
+    expect(clears).toBe(0)
+    await expect(
+      bootstrapNewStoreEntryWithCredentialRecovery({
+        ...input,
+        publicToken: "new-store",
+      }),
+    ).rejects.toBe(rejection)
+    expect(attempts).toBe(3)
+    expect(clears).toBe(1)
   })
 
   test("keeps interrupted transfers but discards definitive server rejection", () => {

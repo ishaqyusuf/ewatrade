@@ -1,0 +1,22 @@
+import {
+  currentEffectiveLegalPublication,
+  isSignupAvailableForLegalPublication,
+} from "@ewatrade/utils/legal-approval"
+import { NextResponse } from "next/server"
+
+export const dynamic = "force-dynamic"
+
+export function GET() {
+  const publication = currentEffectiveLegalPublication()
+  const approved = Boolean(publication)
+  return NextResponse.json(
+    {
+      approved,
+      signupAvailable: isSignupAvailableForLegalPublication(approved),
+      version: publication?.version ?? null,
+      effectiveDate: publication?.effectiveDate ?? null,
+      documentHash: publication?.documentHash ?? null,
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  )
+}

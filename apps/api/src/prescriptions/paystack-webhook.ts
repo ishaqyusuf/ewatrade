@@ -1,6 +1,7 @@
 import { prisma } from "@ewatrade/db"
 import {
   PrescriptionPaymentError,
+  isPrescriptionProductionLaunchApproved,
   processPrescriptionPaymentProviderEvent,
 } from "@ewatrade/db/queries"
 import { enqueuePrescriptionCommunicationDispatch } from "@ewatrade/jobs"
@@ -10,6 +11,9 @@ import { getRequestTrace } from "../utils/request-trace"
 
 export function registerPrescriptionPaystackWebhook(app: OpenAPIHono) {
   app.post("/api/prescriptions/webhooks/paystack", async (c) => {
+    if (!isPrescriptionProductionLaunchApproved()) {
+      return c.json({ error: "Payment processing is unavailable." }, 503)
+    }
     const secretKey = process.env.PAYSTACK_SECRET_KEY?.trim()
     if (!secretKey) {
       return c.json({ error: "Payment processing is unavailable." }, 503)

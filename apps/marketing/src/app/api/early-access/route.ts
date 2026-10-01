@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server"
 
-import { LeadCaptureType, prisma } from "@ewatrade/db"
-import { enqueueMarketingLeadNotification } from "@ewatrade/jobs"
-
 import {
   EARLY_ACCESS_ONBOARDING_KIND,
   buildEarlyAccessSignupUrl,
@@ -10,8 +7,12 @@ import {
   getEarlyAccessExpiresAt,
 } from "@/lib/early-access-onboarding"
 import { earlyAccessSchema, toLeadCapturePayload } from "@/lib/lead-capture"
+import { blockMarketingIntakeInPreview } from "@/lib/preview-intake-guard"
 
 export async function POST(request: Request) {
+  const previewBlock = blockMarketingIntakeInPreview()
+  if (previewBlock) return previewBlock
+
   const body = await request.json().catch(() => null)
   const result = earlyAccessSchema.safeParse(body)
 
@@ -21,6 +22,9 @@ export async function POST(request: Request) {
       { status: 400 },
     )
   }
+
+  const [{ LeadCaptureType, prisma }, { enqueueMarketingLeadNotification }] =
+    await Promise.all([import("@ewatrade/db"), import("@ewatrade/jobs")])
 
   const requestedAt = new Date()
   const accessToken = generateEarlyAccessToken()

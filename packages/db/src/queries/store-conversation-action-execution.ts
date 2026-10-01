@@ -12,6 +12,7 @@ import {
   customerActionTokenDigest,
   customerActionValues,
 } from "./service-commerce-actions/shared"
+import { assertAccountStoreConversationTermsAccepted } from "./store-conversation-account-terms"
 import { loadStoreConversationForAccount } from "./store-conversation-accounts"
 import {
   allowedConversationActions,
@@ -21,8 +22,14 @@ import {
 } from "./store-conversation-action-projection"
 import { runStoreConversationActionTransaction } from "./store-conversation-action-transaction"
 import {
+  assertCustomerAccountAgeAuthority,
+  assertGuestAgeAuthority,
+} from "./store-conversation-age-authority"
+import { assertGuestStoreConversationTermsAccepted } from "./store-conversation-guest-terms"
+import {
   StoreConversationError,
   assertStoreConversationAvailable,
+  assertStoreConversationCustomerNotBlocked,
   loadStoreConversationForGuest,
   lockStoreConversation,
   resolveStoreConversationEntry,
@@ -82,7 +89,18 @@ async function previewStoreConversationActionMessageForCustomer(
             tenantId: entry.tenantId,
           })
     const conversation = customer.conversation
+    if (conversation.customerBlockedAt) {
+      throw new StoreConversationError(
+        "FORBIDDEN",
+        "Unblock this Store before continuing the conversation.",
+      )
+    }
     await lockStoreConversation(tx, {
+      conversationId: conversation.id,
+      storeId: conversation.storeId,
+      tenantId: conversation.tenantId,
+    })
+    await assertStoreConversationCustomerNotBlocked(tx, {
       conversationId: conversation.id,
       storeId: conversation.storeId,
       tenantId: conversation.tenantId,
@@ -216,7 +234,37 @@ async function executeStoreConversationActionMessageForCustomer(
             tenantId: entry.tenantId,
           })
     const conversation = customer.conversation
+    if (principal.kind === "guest") {
+      await assertGuestStoreConversationTermsAccepted(
+        tx,
+        conversation.guestIdentityId,
+      )
+      if (!("credential" in customer)) {
+        throw new StoreConversationError(
+          "NOT_FOUND",
+          "This Store conversation is unavailable.",
+        )
+      }
+      await assertGuestAgeAuthority(tx, customer.credential.guestIdentityId)
+    } else {
+      await assertAccountStoreConversationTermsAccepted(
+        tx,
+        principal.accountUserId,
+      )
+      await assertCustomerAccountAgeAuthority(tx, principal.accountUserId)
+    }
+    if (conversation.customerBlockedAt) {
+      throw new StoreConversationError(
+        "FORBIDDEN",
+        "Unblock this Store before continuing the conversation.",
+      )
+    }
     await lockStoreConversation(tx, {
+      conversationId: conversation.id,
+      storeId: conversation.storeId,
+      tenantId: conversation.tenantId,
+    })
+    await assertStoreConversationCustomerNotBlocked(tx, {
       conversationId: conversation.id,
       storeId: conversation.storeId,
       tenantId: conversation.tenantId,

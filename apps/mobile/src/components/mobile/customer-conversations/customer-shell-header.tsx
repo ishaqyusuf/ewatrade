@@ -14,6 +14,7 @@ export function CustomerShellHeader({
   backToList = false,
   onBack,
   onToggleSound,
+  showAccountPrivacy = false,
   soundEnabled = false,
   storeName,
   storeStatus,
@@ -22,6 +23,7 @@ export function CustomerShellHeader({
   backToList?: boolean
   onBack?: () => void
   onToggleSound?: () => void
+  showAccountPrivacy?: boolean
   soundEnabled?: boolean
   storeName?: string
   storeStatus?: string
@@ -101,7 +103,11 @@ export function CustomerShellHeader({
             : "Opens Business sign in"
         }
         accessibilityRole="button"
-        className="min-h-11 min-w-28 flex-row items-center justify-center gap-2 rounded-full bg-muted px-5 active:bg-accent"
+        className={
+          largeTextLayout
+            ? "min-h-16 flex-row items-center justify-center gap-2 rounded-full bg-muted px-5 active:bg-accent"
+            : "min-h-11 min-w-28 flex-row items-center justify-center gap-2 rounded-full bg-muted px-5 active:bg-accent"
+        }
         haptic
         onPress={async () => {
           await setLastMobileShell("business")
@@ -110,29 +116,68 @@ export function CustomerShellHeader({
         transition
       >
         <Icon className="size-sm text-foreground" name="Building2" />
-        <Text className="text-sm font-bold text-foreground">Business</Text>
+        <Text
+          className={
+            largeTextLayout
+              ? "text-sm leading-10 font-bold text-foreground"
+              : "text-sm font-bold text-foreground"
+          }
+        >
+          Business
+        </Text>
       </Pressable>
     ) : null
 
-  if (largeTextLayout) {
+  const accountActions =
+    accountControl || showAccountPrivacy ? (
+      <View className="flex-row items-center gap-2">
+        {accountControl}
+        {showAccountPrivacy ? (
+          <Pressable
+            accessibilityHint="Open account-wide privacy and deletion options"
+            accessibilityLabel="Account and privacy"
+            accessibilityRole="button"
+            className="size-11 items-center justify-center rounded-full bg-muted active:bg-accent"
+            haptic
+            onPress={() => router.push("/account-privacy")}
+          >
+            <Icon className="size-sm text-foreground" name="User" />
+          </Pressable>
+        ) : null}
+      </View>
+    ) : null
+
+  if (largeTextLayout || showAccountPrivacy) {
     return (
       <View style={{ paddingTop: insets.top + 6 }}>
         <View className="gap-2 bg-background px-5 pb-4">
-          <View className="flex-row items-start justify-between gap-3">
+          <View className="gap-0.5">
             <Text
               accessibilityRole="header"
-              className="shrink-0 text-2xl font-extrabold tracking-tight text-foreground"
+              className="text-2xl font-extrabold tracking-tight text-foreground"
             >
               Chats
             </Text>
-            <View className="min-w-0 flex-1 flex-row flex-wrap items-center justify-end gap-2">
-              {accountControl}
-              {businessButton}
-            </View>
+            <Text
+              className={
+                largeTextLayout
+                  ? "text-sm leading-10 font-medium text-muted-foreground"
+                  : "text-sm font-medium text-muted-foreground"
+              }
+            >
+              Your conversations with stores
+            </Text>
           </View>
-          <Text className="text-sm font-medium text-muted-foreground">
-            Your conversations with stores
-          </Text>
+          <View
+            className={
+              largeTextLayout
+                ? "items-end gap-2"
+                : "flex-row flex-wrap items-center justify-end gap-2"
+            }
+          >
+            {accountActions}
+            {businessButton}
+          </View>
         </View>
       </View>
     )
@@ -156,7 +201,7 @@ export function CustomerShellHeader({
             Your conversations with stores
           </Text>
         </View>
-        {accountControl}
+        {accountActions}
         {businessButton}
       </View>
     </View>

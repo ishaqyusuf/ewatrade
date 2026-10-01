@@ -146,7 +146,7 @@ export function QaAuthorizationSheet() {
               icon="RefreshCw"
               message={`Checking this ${modeLabel.toLowerCase()} build and any saved QA authorization.`}
               title="Preparing QA access"
-              tone="info"
+              tone="primary"
             />
           ) : qa.capabilityCategory === "network_unavailable" ? (
             <View className="gap-3">

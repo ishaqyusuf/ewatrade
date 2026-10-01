@@ -6,9 +6,11 @@ import {
   StatusBadge,
   StatusBanner,
 } from "@/components/mobile"
-import { useAuthContext } from "@/hooks/use-auth"
 import { ClassicStaffOnboardingScreen } from "@/components/mobile/appearances/classic/staff-onboarding-screen"
 import { MarketDayStaffOnboardingScreen } from "@/components/mobile/appearances/market-day/staff-onboarding-screen"
+import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
+import { useAuthContext } from "@/hooks/use-auth"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { getMobileRoleLabel, isInvitedStaffProfile } from "@/lib/mobile-roles"
 import { useBusinessStore } from "@/store/businessStore"
@@ -17,6 +19,18 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router"
 import { useMemo, useState } from "react"
 import { View } from "react-native"
+
+type EligibleAgeBand = "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT"
+
+const ageChoices: Array<{
+  label: string
+  value: EligibleAgeBand | "UNDER_13"
+}> = [
+  { label: "Under 13", value: "UNDER_13" },
+  { label: "13–15", value: "AGE_13_TO_15" },
+  { label: "16–17", value: "AGE_16_TO_17" },
+  { label: "18 or older", value: "ADULT" },
+]
 
 type CompletedStaffOnboarding = {
   role: string
@@ -68,6 +82,19 @@ export function StaffOnboardingScreen() {
   const [name, setName] = useState(profile?.name ?? "")
   const [displayName, setDisplayName] = useState(profile?.name ?? "")
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [ageChoice, setAgeChoice] = useState<
+    EligibleAgeBand | "UNDER_13" | null
+  >(null)
+  const [ageError, setAgeError] = useState<string | null>(null)
+  const ageStatus = useQuery(
+    trpc.serviceCommerce.accountAgeStatus.queryOptions(undefined, {
+      enabled: isAuthenticated && isInvitedStaffProfile(profile),
+      retry: false,
+    }),
+  )
+  const declareAge = useMutation(
+    trpc.serviceCommerce.accountDeclareAgeBand.mutationOptions(),
+  )
   const inviteQuery = useQuery(
     trpc.retailOps.resolveStaffInviteToken.queryOptions(
       { token: inviteToken },
@@ -81,8 +108,9 @@ export function StaffOnboardingScreen() {
   const trimmedName = name.trim()
   const trimmedDisplayName = displayName.trim()
   const canSubmit = useMemo(
-    () => !!session && trimmedName.length > 0,
-    [session, trimmedName],
+    () =>
+      !!session && trimmedName.length > 0 && ageStatus.data?.eligible === true,
+    [ageStatus.data?.eligible, session, trimmedName],
   )
   const completeStaffOnboardingMutation = useMutation(
     trpc.retailOps.completeStaffOnboarding.mutationOptions({
@@ -206,6 +234,76 @@ export function StaffOnboardingScreen() {
     }
 
     return <Redirect href="/dashboard" />
+  }
+
+  if (ageStatus.isPending || ageStatus.isError || !ageStatus.data?.eligible) {
+    return (
+      <MobileScreen contentClassName="justify-center gap-5">
+        <SecondarySheetHeader
+          description="Staff access is for people aged 13 or older. Choose your own age range before entering staff details."
+          icon="ShieldCheck"
+          title="Before accepting staff access"
+        />
+        {ageStatus.isPending ? (
+          <StatusBadge icon="Clock" label="Checking age status" tone="muted" />
+        ) : ageStatus.isError ? (
+          <ActionButton onPress={() => void ageStatus.refetch()}>
+            Retry age check
+          </ActionButton>
+        ) : (
+          <View className="gap-3">
+            {ageChoices.map((choice) => (
+              <Pressable
+                key={choice.value}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: ageChoice === choice.value }}
+                className="min-h-11 flex-row items-center gap-3 rounded-lg border border-border px-3"
+                onPress={() => setAgeChoice(choice.value)}
+              >
+                <Text className="text-foreground">
+                  {ageChoice === choice.value ? "◉" : "○"} {choice.label}
+                </Text>
+              </Pressable>
+            ))}
+            {ageChoice === "UNDER_13" ? (
+              <Text className="text-sm text-muted-foreground">
+                Staff access is not available to people under 13.
+              </Text>
+            ) : (
+              <ActionButton
+                disabled={!ageChoice || declareAge.isPending}
+                isLoading={declareAge.isPending}
+                loadingLabel="Saving age range"
+                onPress={() => {
+                  if (!ageChoice) return
+                  setAgeError(null)
+                  void declareAge
+                    .mutateAsync({ ageBand: ageChoice })
+                    .then(() => ageStatus.refetch())
+                    .catch((error: unknown) =>
+                      setAgeError(
+                        error instanceof Error
+                          ? error.message
+                          : "Age range could not be saved.",
+                      ),
+                    )
+                }}
+              >
+                Continue to staff setup
+              </ActionButton>
+            )}
+          </View>
+        )}
+        {ageStatus.isError || ageError ? (
+          <StatusBanner
+            icon="TriangleAlert"
+            message={ageError ?? "Age status is unavailable."}
+            title="Unable to continue"
+            tone="destructive"
+          />
+        ) : null}
+      </MobileScreen>
+    )
   }
 
   const submit = () => {

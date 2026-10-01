@@ -1,64 +1,52 @@
 #!/usr/bin/env bun
 import { spawnSync } from "node:child_process"
-import { existsSync, readFileSync } from "node:fs"
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import {
+  assertApiDeployTarget,
+  assertProductionApiDeployMode,
+  assertProductionApiProjectEnvironment,
+  assertProductionMigrationGate,
+} from "./api-deploy-target.mjs"
+import {
+  probeProductionApi,
+  validateProductionApiHostConfiguration,
+} from "./production-api-readiness.mjs"
+import { inspectFreshProductionDatabase } from "./production-empty-database.mjs"
 
 const rootDir = new URL("../", import.meta.url).pathname
+const apiDir = new URL("../apps/api/", import.meta.url).pathname
 const envFile = ".env.production"
 
 process.chdir(rootDir)
 
-const defaultEnvKeys = [
-  "EWATRADE_DATABASE_URL",
-  "BETTER_AUTH_SECRET",
-  "AUTH_SECRET",
-  "BETTER_AUTH_URL",
-  "BETTER_AUTH_PRODUCTION_URL",
-  "API_URL",
-  "NEXT_PUBLIC_API_URL",
-  "ALLOWED_API_ORIGINS",
-  "BETTER_AUTH_TRUSTED_ORIGINS",
-  "INTERNAL_API_KEY",
-  "NEXT_PUBLIC_PLATFORM_DOMAIN",
-  "PLATFORM_DOMAIN",
-  "NEXT_PUBLIC_MARKETING_URL",
-  "NEXT_PUBLIC_DASHBOARD_URL",
-  "MARKETING_URL",
-  "DASHBOARD_URL",
-  "EMAIL_DELIVERY_MODE",
-  "EMAIL_FROM",
-  "EMAIL_REPLY_TO",
-  "EMAIL_QA_DOMAIN_ROUTES",
-  "MARKETING_INBOX_EMAILS",
-  "RESEND_API_KEY",
-  "TEST_EMAILS",
-  "TEST_EMAIL",
-  "TRIGGER_SECRET_KEY",
-  "NEXT_PUBLIC_SIGNUP_ENABLED",
-  "QA_ACCELERATOR_ENABLED",
-  "QA_ACCELERATOR_SECRET",
-  "QA_ACCELERATOR_ALLOWED_ORIGINS",
-  "QA_MESSAGING_TEST_ADAPTER_ENABLED",
-  "DEBUG_PERF",
-]
-
 function usage() {
   console.log(`Usage: bun run api:deploy
 
-Deploys @ewatrade/api to Vercel using one-time config from ${envFile}.
+Deploys @ewatrade/api to Vercel using project-scoped Production variables.
+The local ${envFile} selects the migration target and deploy safeguards.
 
 Required in ${envFile}:
   EWATRADE_DATABASE_URL
   BETTER_AUTH_SECRET or AUTH_SECRET
+  API_URL, NEXT_PUBLIC_API_URL and VERCEL_API_HEALTH_URL (one API host)
 
 Optional deployment config in ${envFile}:
   VERCEL_SCOPE=<account-or-team-slug>
   VERCEL_API_PROJECT=ewatrade-api
-  VERCEL_API_TARGET=production
+  VERCEL_API_TARGET=production (this helper is production-only)
   VERCEL_API_SKIP_TEST=false
   VERCEL_API_SKIP_MIGRATIONS=false
-  VERCEL_API_HEALTH_URL=https://ewatrade.com
   VERCEL_API_FORCE=false
-  VERCEL_API_ENV_KEYS=EWATRADE_DATABASE_URL,BETTER_AUTH_SECRET,...
 `)
 }
 
@@ -115,6 +103,23 @@ function run(command, args, options = {}) {
   return result
 }
 
+// Staged commands must throw so the caller's finally block removes pulled
+// Production environment files even when Vercel or Bun fails.
+function runStage(command, args) {
+  const result = spawnSync(command, args, {
+    cwd: rootDir,
+    env: process.env,
+    encoding: "utf8",
+    maxBuffer: 32 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "pipe"],
+  })
+  if (result.error || result.status !== 0)
+    throw new Error(
+      `API_DEPLOY_STAGE_FAILED:${command}:${args[0] ?? ""}:${result.status ?? "unknown"}`,
+    )
+  return result
+}
+
 function getDeploymentUrl(output) {
   try {
     const parsed = JSON.parse(output)
@@ -129,6 +134,70 @@ function getDeploymentUrl(output) {
     } catch {
       return ""
     }
+  }
+}
+
+function stageProductionApi() {
+  const stage = mkdtempSync(path.join(tmpdir(), "ewatrade-api-production-"))
+  try {
+    for (const directory of ["apps/api", "packages", "scripts", "patches"]) {
+      mkdirSync(path.join(stage, directory), { recursive: true })
+      runStage("rsync", [
+        "-a",
+        "--exclude=node_modules",
+        "--exclude=.vercel",
+        "--exclude=.env*",
+        "--exclude=.git",
+        `${directory}/`,
+        `${path.join(stage, directory)}/`,
+      ])
+    }
+    for (const file of ["package.json", "bun.lock", "tsconfig.json"]) {
+      copyFileSync(path.join(rootDir, file), path.join(stage, file))
+    }
+    const stageApi = path.join(stage, "apps/api")
+    const configPath = path.join(stageApi, "tsconfig.json")
+    const config = JSON.parse(readFileSync(configPath, "utf8"))
+    config.compilerOptions = { ...config.compilerOptions, noCheck: true }
+    writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`)
+    const outputPath = path.join(stageApi, "src/bundle.js")
+    runStage("bun", [
+      "build",
+      "--target=bun",
+      "--packages=bundle",
+      "--env=disable",
+      `--outfile=${outputPath}`,
+      "apps/api/src/index.ts",
+    ])
+    const bundle = readFileSync(outputPath, "utf8")
+    for (const profile of [".env.production", ".env.preview", ".env.local"]) {
+      if (!existsSync(profile)) continue
+      for (const [key, value] of Object.entries(parseEnvFile(profile))) {
+        if (
+          /(?:DATABASE_URL|SECRET|TOKEN|PRIVATE_KEY|INTERNAL_API_KEY)/.test(
+            key,
+          ) &&
+          value?.length >= 16 &&
+          bundle.includes(value)
+        )
+          throw new Error(
+            `API_DEPLOY_BUNDLE_CONTAINS_CREDENTIAL:${profile}:${key}`,
+          )
+      }
+    }
+    writeFileSync(
+      path.join(stageApi, "src/index.ts"),
+      'import { Hono } from "hono"\nimport bundledApp from "./bundle.js"\nconst app = new Hono()\napp.all("*", (context) => bundledApp.fetch(context.req.raw))\nexport default app\n',
+    )
+    mkdirSync(path.join(stage, ".vercel"), { recursive: true })
+    copyFileSync(
+      path.join(apiDir, ".vercel/project.json"),
+      path.join(stage, ".vercel/project.json"),
+    )
+    return stage
+  } catch (error) {
+    rmSync(stage, { recursive: true, force: true })
+    throw error
   }
 }
 
@@ -153,7 +222,7 @@ if (!existsSync(envFile)) {
 
 const fileEnv = parseEnvFile(envFile)
 const env = { ...process.env, ...fileEnv }
-delete env.DATABASE_URL
+env.DATABASE_URL = undefined
 const project = env.VERCEL_API_PROJECT?.trim() || "ewatrade-api"
 const scope = env.VERCEL_SCOPE?.trim() || ""
 const target = env.VERCEL_API_TARGET?.trim() || "production"
@@ -161,10 +230,52 @@ const isProduction = target === "production"
 const skipTest = bool(env.VERCEL_API_SKIP_TEST, false)
 const skipMigrations = bool(env.VERCEL_API_SKIP_MIGRATIONS, false)
 const force = bool(env.VERCEL_API_FORCE, false)
-const healthUrl = env.VERCEL_API_HEALTH_URL?.trim() || ""
-const envKeys = (env.VERCEL_API_ENV_KEYS?.split(",") ?? defaultEnvKeys)
-  .map((key) => key.trim())
-  .filter(Boolean)
+const hostCheck = validateProductionApiHostConfiguration(fileEnv)
+
+// The checkout may be linked to Marketing. Refuse to run migrations or deploy
+// until the exact API project is linked; `vercel deploy` uses that local link.
+try {
+  // This helper reads .env.production and runs --prod migrations. A preview
+  // target must use an isolated profile and cannot be selected here.
+  assertProductionApiDeployMode(target)
+  assertApiDeployTarget(
+    apiDir,
+    project,
+    env.VERCEL_API_PROJECT_ID?.trim(),
+    env.VERCEL_API_ORG_ID?.trim(),
+  )
+  const readonlyDatabaseUrl = env.PRODUCTION_READONLY_DATABASE_URL?.trim()
+  const backupReference = env.VERCEL_API_BACKUP_REFERENCE?.trim()
+  const migrationApproved = env.VERCEL_API_PROD_MIGRATION_APPROVED?.trim()
+  const freshDatabaseVerified =
+    !skipMigrations &&
+    !readonlyDatabaseUrl &&
+    backupReference &&
+    migrationApproved === "true"
+      ? inspectFreshProductionDatabase({
+          productionUrl: env.EWATRADE_DATABASE_URL,
+          localUrl: parseEnvFile(".env.local").EWATRADE_DATABASE_URL,
+          previewUrl: parseEnvFile(".env.preview").EWATRADE_DATABASE_URL,
+          backupReference,
+          rootDir,
+        })
+      : false
+  assertProductionMigrationGate({
+    isProduction,
+    skipMigrations,
+    readonlyDatabaseUrl,
+    freshDatabaseVerified,
+    backupReference,
+    migrationApproved,
+  })
+  if (!skipTest && hostCheck.failures.length)
+    throw new Error(hostCheck.failures.join(" "))
+} catch (error) {
+  console.error(
+    error instanceof Error ? error.message : "API_DEPLOY_TARGET_MISMATCH",
+  )
+  process.exit(1)
+}
 
 requireValue(env, "EWATRADE_DATABASE_URL")
 
@@ -182,6 +293,33 @@ if (/localhost|127\.0\.0\.1/.test(env.EWATRADE_DATABASE_URL)) {
 
 const vercelScopeArgs = scope ? ["--scope", scope] : []
 
+// Verify the exact linked project's Production inventory before mutating its
+// database. Sensitive values are unreadable after creation and never enter
+// deployment command arguments or this process's output.
+try {
+  const inventory = run(
+    "bunx",
+    [
+      "vercel",
+      "api",
+      `/v9/projects/${env.VERCEL_API_PROJECT_ID}/env`,
+      "--cwd",
+      apiDir,
+      "--raw",
+      ...vercelScopeArgs,
+    ],
+    { capture: true },
+  )
+  assertProductionApiProjectEnvironment(JSON.parse(inventory.stdout))
+} catch (error) {
+  console.error(
+    error instanceof Error
+      ? error.message
+      : "API_DEPLOY_PRODUCTION_ENV_INVENTORY_UNAVAILABLE",
+  )
+  process.exit(1)
+}
+
 console.log("Deploying @ewatrade/api to Vercel")
 console.log(`Project: ${project}`)
 if (scope) console.log(`Scope:   ${scope}`)
@@ -189,58 +327,43 @@ console.log(`Target:  ${target}`)
 console.log(`Env:     ${envFile}`)
 console.log(`Migrate: ${skipMigrations ? "skip" : "deploy"}`)
 
-if (!existsSync(".vercel/project.json")) {
-  console.log("No local Vercel link found. Linking or creating project...")
-  run("bunx", [
-    "vercel",
-    "link",
-    "--yes",
-    "--project",
-    project,
-    ...vercelScopeArgs,
-  ])
-}
-
 if (!skipMigrations) {
   console.log("Running database migrations...")
   run("bun", ["run", "db:migrate", "--prod"], { env })
 }
 
-const deployArgs = [
-  "vercel",
-  "deploy",
-  "--yes",
-  "--project",
-  project,
-  "--format",
-  "json",
-]
-
-if (isProduction) deployArgs.push("--prod")
-if (force) deployArgs.push("--force")
-
-for (const key of envKeys) {
-  const value = env[key]
-  if (!value?.trim()) continue
-
-  deployArgs.push("--env", `${key}=${value}`)
-
-  // Vercel may evaluate server entrypoints during build/bundling. These keep
-  // top-level production env checks from failing before the runtime exists.
-  if (
-    key === "EWATRADE_DATABASE_URL" ||
-    key === "BETTER_AUTH_SECRET" ||
-    key === "AUTH_SECRET"
-  ) {
-    deployArgs.push("--build-env", `${key}=${value}`)
-  }
+console.log("Building isolated Production artifact...")
+run("bun", ["run", "--cwd", "apps/api", "typecheck"], { env })
+let deploymentUrl
+const stage = stageProductionApi()
+try {
+  runStage("bunx", [
+    "vercel",
+    "pull",
+    "--yes",
+    "--environment=production",
+    "--cwd",
+    stage,
+    ...vercelScopeArgs,
+  ])
+  console.log("Starting deployment...")
+  const deploy = runStage("bunx", [
+    "vercel",
+    "deploy",
+    stage,
+    "--project",
+    env.VERCEL_API_PROJECT_ID,
+    "--yes",
+    "--format",
+    "json",
+    "--prod",
+    ...(force ? ["--force"] : []),
+    ...vercelScopeArgs,
+  ])
+  deploymentUrl = getDeploymentUrl(deploy.stdout)
+} finally {
+  rmSync(stage, { recursive: true, force: true })
 }
-
-console.log("Starting deployment...")
-const deploy = run("bunx", [...deployArgs, ...vercelScopeArgs], {
-  capture: true,
-})
-const deploymentUrl = getDeploymentUrl(deploy.stdout)
 
 if (!deploymentUrl) {
   console.log(deploy.stdout)
@@ -255,30 +378,13 @@ const url = deploymentUrl.startsWith("http")
 console.log(`Deployment URL: ${url}`)
 
 if (!skipTest) {
-  console.log("Testing health endpoint...")
-  const baseUrl = healthUrl || url
-  const response = await fetch(`${baseUrl.replace(/\/$/, "")}/health`, {
-    redirect: "manual",
-  })
-  const body = await response.text()
-
-  if (!response.ok) {
-    console.error(`/health failed with ${response.status}: ${body}`)
+  console.log(`Testing Production API routes at ${hostCheck.origin}...`)
+  const failures = await probeProductionApi(hostCheck.origin)
+  if (failures.length) {
+    for (const failure of failures) console.error(`- ${failure}`)
     process.exit(1)
   }
-
-  try {
-    const health = JSON.parse(body)
-    if (health.status !== "ok") {
-      console.error(`/health returned unexpected JSON: ${body}`)
-      process.exit(1)
-    }
-  } catch {
-    console.error(`/health returned non-JSON response: ${body.slice(0, 200)}`)
-    process.exit(1)
-  }
-
-  console.log(body)
+  console.log("Health, auth and legal-publication API probes passed.")
 }
 
 console.log("Done.")

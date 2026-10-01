@@ -1,4 +1,6 @@
 import { auth } from "@ewatrade/auth"
+import { prisma } from "@ewatrade/db"
+import { isLegalSignupSessionBlocked } from "@ewatrade/db/legal-session-access"
 import { headers } from "next/headers"
 export { getUserInitials } from "./user-display"
 
@@ -23,7 +25,8 @@ export async function getServerSession(): Promise<AuthSession | null> {
     headers: await headers(),
   })
 
-  if (!session) return null
+  if (!session || (await isLegalSignupSessionBlocked(prisma, session.user.id)))
+    return null
 
   const user = session.user as typeof session.user & {
     firstName?: string | null

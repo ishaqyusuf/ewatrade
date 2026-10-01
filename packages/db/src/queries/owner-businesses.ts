@@ -3,8 +3,9 @@ import type {
   OperatingCurrencyCode,
 } from "@ewatrade/utils"
 import { Prisma } from "../../generated/prisma/client"
-import { createTenantStore } from "./stores"
+import { AccountAgeBand } from "../../generated/prisma/enums"
 import { configuredQaDomainForEmail } from "./qa-maintenance"
+import { createTenantStore } from "./stores"
 import type { DbClient } from "./types"
 
 export type OwnerBusinessSummary = {
@@ -32,6 +33,29 @@ export type CreateOwnerBusinessInput = {
   phone?: string | null
   teamSize?: string | null
   userId: string
+}
+
+export class OwnerBusinessAgeError extends Error {
+  constructor() {
+    super("Choose an eligible age range before creating a business.")
+    this.name = "OwnerBusinessAgeError"
+  }
+}
+
+export async function requireEligibleOwnerAge(db: DbClient, userId: string) {
+  const owner = await db.user.findUnique({
+    where: { id: userId },
+    select: { ageBand: true, email: true },
+  })
+  if (!owner) throw new Error("Owner account not found.")
+  if (
+    owner.ageBand !== AccountAgeBand.AGE_13_TO_15 &&
+    owner.ageBand !== AccountAgeBand.AGE_16_TO_17 &&
+    owner.ageBand !== AccountAgeBand.ADULT
+  ) {
+    throw new OwnerBusinessAgeError()
+  }
+  return owner
 }
 
 function toSlug(name: string) {
@@ -101,11 +125,7 @@ async function createOwnerBusinessWithSource(
   input: CreateOwnerBusinessInput,
   source: "mobile_owner_business_create" | "mobile_owner_signup",
 ): Promise<OwnerBusinessSummary> {
-  const owner = await db.user.findUnique({
-    where: { id: input.userId },
-    select: { email: true },
-  })
-  if (!owner) throw new Error("Owner account not found.")
+  const owner = await requireEligibleOwnerAge(db, input.userId)
   const qaSourceDomain = configuredQaDomainForEmail(owner.email)
   const tenant = await createUniqueTenant(db, {
     businessName: input.businessName,

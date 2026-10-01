@@ -1,9 +1,30 @@
-import { access, mkdir, readFile, realpath, writeFile } from "node:fs/promises"
+import { createHash } from "node:crypto"
+import {
+  access,
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 
-type Operation = "build" | "submit" | "update"
+type Operation =
+  | "build"
+  | "submit"
+  | "update"
+  | "view"
+  | "download"
+  | "env-check"
+  | "env-sync"
+  | "env-chat-sync"
+  | "env-legal-sync"
+  | "env-analytics-sync"
 type Target = "dev" | "preview" | "prod"
+type BuildPlatform = "android" | "ios"
 type Action =
   | "build:dev"
   | "build:preview"
@@ -11,10 +32,17 @@ type Action =
   | "submit:prod"
   | "update:preview"
   | "update:prod"
-type CurrentIdentity = {
-  email: string | null
-  username: string | null
-}
+  | "view:dev"
+  | "view:preview"
+  | "view:prod"
+  | "download:dev"
+  | "download:preview"
+  | "download:prod"
+  | "env-check:prod"
+  | "env-sync:prod"
+  | "env-chat-sync:prod"
+  | "env-legal-sync:prod"
+  | "env-analytics-sync:prod"
 type EasAccount = {
   label: string
   login: string
@@ -30,70 +58,208 @@ const TARGET_PROFILES: Record<Target, string> = {
   preview: "preview",
   prod: "production",
 }
+const TARGET_ENV_FILES: Record<Target, string> = {
+  dev: ".env.dev",
+  preview: ".env.preview",
+  prod: ".env.production",
+}
 
 const operation = process.argv[2] as Operation | undefined
 const actionArgs = process.argv.slice(3)
 
-if (!operation || !["build", "submit", "update"].includes(operation)) {
+if (
+  !operation ||
+  ![
+    "build",
+    "submit",
+    "update",
+    "view",
+    "download",
+    "env-check",
+    "env-sync",
+    "env-chat-sync",
+    "env-legal-sync",
+    "env-analytics-sync",
+  ].includes(operation)
+) {
   console.error(getUsage())
   process.exit(1)
 }
 
 const target = resolveTarget(operation, actionArgs)
+const buildPlatform = resolveBuildPlatform(operation, actionArgs)
+const exactBuildId =
+  operation === "submit" || operation === "view" || operation === "download"
+    ? assertExactSubmissionBuildId(actionArgs)
+    : undefined
+const expectedSubmissionVersion =
+  operation === "submit"
+    ? assertExpectedSubmissionVersion(actionArgs)
+    : undefined
+const expectedSubmissionCommit =
+  operation === "submit"
+    ? assertExpectedSubmissionCommit(actionArgs)
+    : undefined
 const action = `${operation}:${target}` as Action
+const profileEnvFile = TARGET_ENV_FILES[target]
 const env = await loadEnvFiles({ ...Bun.env }, [
   path.join(REPO_DIR, ".env"),
-  path.join(REPO_DIR, ".env.local"),
+  path.join(REPO_DIR, profileEnvFile),
   path.join(APP_DIR, ".env"),
-  path.join(APP_DIR, ".env.local"),
+  path.join(APP_DIR, profileEnvFile),
 ])
 env.APP_VARIANT = TARGET_PROFILES[target]
+env.EXPO_PUBLIC_APP_VARIANT = TARGET_PROFILES[target]
+env.APP_ENV = target === "prod" ? "production" : target
+env.DEV_PROFILE = target === "prod" ? "prod" : env.APP_ENV
 env.EXPO_TOKEN = undefined
+
+if (target === "preview" && ["build", "update"].includes(operation)) {
+  await assertPreviewMobileTarget(env)
+}
+
+if (
+  operation === "submit" ||
+  ((operation === "build" || operation === "update") && target === "prod")
+) {
+  const checks: Array<[string, string]> = [
+    ["teen audience", "scripts/check-teen-release-readiness.mjs"],
+    ["production API", "apps/mobile/scripts/check-production-api-live.mjs"],
+    ["public legal publication", "scripts/check-production-legal-live.mjs"],
+  ]
+  if (operation === "submit") {
+    checks.push(["store billing", "scripts/check-store-billing-readiness.mjs"])
+  }
+  if (buildPlatform === "ios") {
+    checks.push(["iOS login", "scripts/check-ios-login-readiness.mjs"])
+    checks.push([
+      "iOS organization app identity",
+      "scripts/check-production-ios-identity.mjs",
+    ])
+  }
+  for (const [label, script] of checks) {
+    const code = await runCommand(["bun", script], {
+      cwd: REPO_DIR,
+      env,
+      stdio: "inherit",
+    })
+    if (code !== 0) {
+      console.error(`EAS ${operation} stopped: ${label} preflight failed.`)
+      process.exit(1)
+    }
+  }
+}
+
+if (operation === "env-sync") {
+  const code = await runCommand(
+    ["bun", "apps/mobile/scripts/check-production-api-live.mjs"],
+    { cwd: REPO_DIR, env, stdio: "inherit" },
+  )
+  if (code !== 0) {
+    console.error(
+      "EAS Production API origin sync stopped: live preflight failed.",
+    )
+    process.exit(1)
+  }
+}
 
 const account = resolveAccount(action, env, actionArgs)
 const forwardedArgs = getForwardedArgs(actionArgs)
 
-const desiredIdentifiers = new Set(
-  [account.login.toLowerCase(), account.username?.toLowerCase()].filter(
-    Boolean,
-  ),
-)
+const isolatedHome = await mkdtemp(path.join(tmpdir(), "ewatrade-eas-"))
+let exitCode = 1
 
-const currentIdentity = await getCurrentIdentity()
-const currentUsername = currentIdentity.username
-const currentEmail = currentIdentity.email?.toLowerCase() ?? null
-
-if (
-  (currentEmail && currentEmail === account.login.toLowerCase()) ||
-  (currentUsername && desiredIdentifiers.has(currentUsername.toLowerCase()))
-) {
-  console.log(
-    `EAS session already matches ${currentEmail ?? currentUsername ?? account.login}.`,
-  )
-} else {
-  if (currentUsername) {
-    console.log(
-      `Current EAS session is ${currentUsername}. Switching to ${account.label}.`,
-    )
-  } else {
-    console.log(
-      `No active EAS session found. Logging in with ${account.label}.`,
-    )
-  }
-
+try {
+  // EAS reads $HOME/.expo/state.json. Never replace another app's session.
+  env.HOME = isolatedHome
+  env.EXPO_LOCAL = undefined
+  env.EXPO_STAGING = undefined
   const session = await loginWithEmailAndPassword(
     account.login,
     account.password,
   )
-  await writeExpoSession(session)
-  console.log(`Authenticated EAS session as ${session.username}.`)
+  await writeExpoSession(isolatedHome, session)
+  console.log(`Authenticated isolated EAS session as ${session.username}.`)
+
+  let attachmentReady = true
+  const attachmentEnvironment =
+    operation === "env-check" || operation === "submit"
+      ? "production"
+      : (operation === "build" || operation === "update") && target !== "dev"
+        ? target === "prod"
+          ? "production"
+          : "preview"
+        : null
+  if (attachmentEnvironment) {
+    const attachmentCode = await runCommand(
+      ["bun", "apps/mobile/scripts/check-expo-env-attachment.mjs"],
+      {
+        cwd: REPO_DIR,
+        env: {
+          ...env,
+          EXPO_ENV_ATTACHMENT_ONLY: attachmentEnvironment,
+          EXPO_ENV_VERIFY_LIVE: "1",
+        },
+        stdio: "inherit",
+      },
+    )
+    if (attachmentCode !== 0) {
+      console.error(
+        `Expo ${attachmentEnvironment} environment verification failed.`,
+      )
+      attachmentReady = false
+    }
+  }
+
+  const submissionBuildReady =
+    attachmentReady &&
+    (operation !== "submit" ||
+      (await inspectSubmissionBuild({
+        buildId: exactBuildId ?? "",
+        expectedCommit: expectedSubmissionCommit ?? "",
+        expectedVersion: expectedSubmissionVersion ?? "",
+        platform: buildPlatform,
+        env,
+      })))
+  exitCode = !submissionBuildReady
+    ? 1
+    : operation === "env-check"
+      ? 0
+      : operation === "env-sync"
+        ? await syncProductionApiOrigin(env)
+        : operation === "env-chat-sync"
+          ? await syncProductionChatOrigin(env)
+          : operation === "env-legal-sync"
+            ? await syncProductionLegalOrigin(env)
+            : operation === "env-analytics-sync"
+              ? await syncProductionAnalyticsFlag(env)
+              : operation === "download"
+                ? await downloadBuild(
+                    ["eas", "build:view", exactBuildId ?? "", "--json"],
+                    exactBuildId ?? "",
+                    actionArgs,
+                    { cwd: APP_DIR, env },
+                  )
+                : operation === "view"
+                  ? await viewBuild(
+                      ["eas", "build:view", exactBuildId ?? "", "--json"],
+                      {
+                        cwd: APP_DIR,
+                        env,
+                      },
+                    )
+                  : await runCommand(
+                      [
+                        ...getActionCommand(operation, target, buildPlatform),
+                        ...forwardedArgs,
+                      ],
+                      { cwd: APP_DIR, env, stdio: "inherit" },
+                    )
+} finally {
+  await rm(isolatedHome, { recursive: true, force: true })
 }
 
-await runOrExit([...getActionCommand(operation, target), ...forwardedArgs], {
-  cwd: APP_DIR,
-  env,
-  stdio: "inherit",
-})
+process.exitCode = exitCode
 
 function resolveAccount(
   actionValue: Action,
@@ -180,6 +346,22 @@ function resolveTarget(operation: Operation, args: string[]): Target {
 
   const target = selectedFlags[0].slice(2) as Target
 
+  if (
+    [
+      "env-sync",
+      "env-chat-sync",
+      "env-legal-sync",
+      "env-analytics-sync",
+      "env-check",
+    ].includes(operation) &&
+    target !== "prod"
+  ) {
+    console.error(
+      `eas:env:${operation === "env-check" ? "check" : "sync"} supports only --prod.`,
+    )
+    process.exit(1)
+  }
+
   if (operation === "update" && target === "dev") {
     console.error("eas:update supports only --preview or --prod.\n")
     console.error(getUsage())
@@ -189,13 +371,98 @@ function resolveTarget(operation: Operation, args: string[]): Target {
   return target
 }
 
-function getActionCommand(operation: Operation, target: Target): string[] {
+function resolveBuildPlatform(
+  operation: Operation,
+  args: string[],
+): BuildPlatform {
+  let selected: string | undefined
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index]
+    if (arg !== "--platform" && !arg.startsWith("--platform=")) continue
+    if (operation === "update" || selected !== undefined) {
+      throw new Error("Choose one platform only for EAS build or submit.")
+    }
+    selected =
+      arg === "--platform" ? args[++index] : arg.slice("--platform=".length)
+  }
+  if (selected !== undefined && selected !== "android" && selected !== "ios") {
+    throw new Error("EAS platform must be android or ios.")
+  }
+  return (selected ?? "android") as BuildPlatform
+}
+
+function assertExactSubmissionBuildId(args: string[]): string {
+  if (
+    args.some(
+      (arg) =>
+        ["--latest", "--path", "--url"].includes(arg) ||
+        arg.startsWith("--path=") ||
+        arg.startsWith("--url="),
+    )
+  ) {
+    throw new Error(
+      "EAS submission requires an exact --id; latest, path and URL selectors are disabled.",
+    )
+  }
+  const ids = args.flatMap((arg, index) => {
+    if (arg === "--id") return [args[index + 1] ?? ""]
+    if (arg.startsWith("--id=")) return [arg.slice("--id=".length)]
+    return []
+  })
+  if (
+    ids.length !== 1 ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      ids[0],
+    )
+  ) {
+    throw new Error(
+      "EAS action requires exactly one UUID build ID: --id <build-id>.",
+    )
+  }
+  return ids[0] ?? ""
+}
+
+function assertExpectedSubmissionVersion(args: string[]): string {
+  const values = args.flatMap((arg, index) => {
+    if (arg === "--expected-version") return [args[index + 1] ?? ""]
+    if (arg.startsWith("--expected-version="))
+      return [arg.slice("--expected-version=".length)]
+    return []
+  })
+  if (values.length !== 1 || !/^[1-9]\d*$/.test(values[0] ?? "")) {
+    throw new Error(
+      "EAS submission requires exactly one positive --expected-version for the reviewed build.",
+    )
+  }
+  return values[0] ?? ""
+}
+
+function assertExpectedSubmissionCommit(args: string[]): string {
+  const values = args.flatMap((arg, index) => {
+    if (arg === "--expected-commit") return [args[index + 1] ?? ""]
+    if (arg.startsWith("--expected-commit="))
+      return [arg.slice("--expected-commit=".length)]
+    return []
+  })
+  if (values.length !== 1 || !/^[0-9a-f]{40}$/i.test(values[0] ?? "")) {
+    throw new Error(
+      "EAS submission requires exactly one full --expected-commit SHA for the reviewed build.",
+    )
+  }
+  return values[0]?.toLowerCase() ?? ""
+}
+
+function getActionCommand(
+  operation: Operation,
+  target: Target,
+  platform: BuildPlatform,
+): string[] {
   if (operation === "build") {
     return [
       "eas",
       "build",
       "--platform",
-      "android",
+      platform,
       "--profile",
       TARGET_PROFILES[target],
     ]
@@ -206,7 +473,7 @@ function getActionCommand(operation: Operation, target: Target): string[] {
       "eas",
       "submit",
       "--platform",
-      "android",
+      platform,
       "--profile",
       TARGET_PROFILES[target],
     ]
@@ -250,7 +517,32 @@ function getForwardedArgs(args: string[]): string[] {
       continue
     }
 
+    if (arg === "--expected-version") {
+      index += 1
+      continue
+    }
+
+    if (arg.startsWith("--expected-version=")) {
+      continue
+    }
+    if (arg === "--expected-commit") {
+      index += 1
+      continue
+    }
+    if (arg.startsWith("--expected-commit=")) {
+      continue
+    }
+
     if (["--dev", "--preview", "--prod"].includes(arg)) {
+      continue
+    }
+
+    if (arg === "--platform") {
+      index += 1
+      continue
+    }
+
+    if (arg.startsWith("--platform=")) {
       continue
     }
 
@@ -283,9 +575,16 @@ function toEnvKey(value: string): string {
 function getUsage(): string {
   return [
     "Usage:",
-    "  bun run eas:build <--dev|--preview|--prod> [--account <name>]",
-    "  bun run eas:submit [--prod] [--account <name>] [--latest|--id <build-id>]",
+    "  bun run eas:build <--dev|--preview|--prod> [--platform android|ios] [--account <name>]",
+    "  bun run eas:submit [--prod] [--platform android|ios] --id <build-id> --expected-version <version> --expected-commit <full-sha> [--account <name>]",
+    "  bun run eas:view <--dev|--preview|--prod> --id <build-id> [--account <name>]",
+    "  bun run eas:download <--dev|--preview|--prod> --id <build-id> --output <path> [--account <name>]",
     "  bun run eas:update <--preview|--prod> [--account <name>]",
+    "  bun run eas:env:sync --prod [--account <name>]",
+    "  bun run eas:env:chat-sync --prod [--account <name>]",
+    "  bun run eas:env:legal-sync --prod [--account <name>]",
+    "  bun run eas:env:analytics-sync --prod [--account <name>]",
+    "  bun run eas:env:check --prod [--account <name>]",
     "",
     "Default credentials:",
     "  EAS_EMAIL or EAS_LOGIN",
@@ -298,6 +597,42 @@ function getUsage(): string {
     "  EAS_WORK_PASSWORD",
     "  EAS_WORK_USERNAME optional",
   ].join("\n")
+}
+
+async function assertPreviewMobileTarget(
+  env: NodeJS.ProcessEnv,
+): Promise<void> {
+  const mobileFile = path.join(APP_DIR, ".env.preview")
+  let source: string
+  try {
+    source = await readFile(mobileFile, "utf8")
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new Error(
+        "Preview mobile target is missing: apps/mobile/.env.preview must explicitly name the Preview API and legal origin.",
+      )
+    }
+    throw error
+  }
+  const mobile = parseEnvFile(source)
+  const production = parseEnvFile(
+    await readFile(path.join(APP_DIR, ".env.production"), "utf8"),
+  )
+  const { validatePreviewMobileTarget } = await import(
+    "./eas-preview-mobile-target"
+  )
+  validatePreviewMobileTarget({
+    apiUrl: mobile.EXPO_PUBLIC_API_URL,
+    expectedApiUrl: env.API_URL,
+    legalOrigin: mobile.EXPO_PUBLIC_LEGAL_ORIGIN,
+    productionApiUrl: production.EXPO_PUBLIC_API_URL,
+    baseUrl: mobile.EXPO_PUBLIC_BASE_URL,
+    webUrl: mobile.EXPO_PUBLIC_WEB_URL,
+    chatUrl: mobile.EXPO_PUBLIC_CHAT_URL,
+    productionBaseUrl: production.EXPO_PUBLIC_BASE_URL,
+    productionWebUrl: production.EXPO_PUBLIC_WEB_URL,
+    productionChatUrl: production.EXPO_PUBLIC_CHAT_URL,
+  })
 }
 
 async function loadEnvFiles(
@@ -376,87 +711,6 @@ function unquoteEnvValue(value: string): string {
   return commentIndex >= 0 ? value.slice(0, commentIndex).trimEnd() : value
 }
 
-async function getCurrentIdentity(): Promise<CurrentIdentity> {
-  const sessionSecret = await readSessionSecret()
-
-  if (!sessionSecret) {
-    return { email: null, username: null }
-  }
-
-  try {
-    const easCliRoot = await resolveEasCliRoot()
-    const createGraphqlClientModule = (await import(
-      pathToFileURL(
-        path.join(
-          easCliRoot,
-          "build",
-          "commandUtils",
-          "context",
-          "contextUtils",
-          "createGraphqlClient.js",
-        ),
-      ).href
-    )) as {
-      createGraphqlClient: (authInfo: {
-        accessToken: string | null
-        sessionSecret: string | null
-      }) => {
-        query: (
-          query: string,
-          variables: Record<string, never>,
-        ) => {
-          toPromise: () => Promise<unknown>
-        }
-      }
-    }
-    const clientModule = (await import(
-      pathToFileURL(path.join(easCliRoot, "build", "graphql", "client.js")).href
-    )) as {
-      withErrorHandlingAsync: <T>(promise: Promise<T>) => Promise<{
-        meActor: {
-          __typename?: string
-          username?: string
-          email?: string
-        } | null
-      }>
-    }
-
-    const client = createGraphqlClientModule.createGraphqlClient({
-      accessToken: null,
-      sessionSecret,
-    })
-
-    const data = await clientModule.withErrorHandlingAsync(
-      client
-        .query(
-          `
-            query CurrentIdentity {
-              meActor {
-                __typename
-                ... on User {
-                  username
-                  email
-                }
-                ... on SSOUser {
-                  username
-                }
-              }
-            }
-          `,
-          {},
-        )
-        .toPromise(),
-    )
-
-    return {
-      email: data.meActor?.email ?? null,
-      username: data.meActor?.username ?? null,
-    }
-  } catch {
-    return { email: null, username: null }
-  }
-}
-
 async function loginWithEmailAndPassword(
   emailValue: string,
   passwordValue: string,
@@ -483,74 +737,33 @@ async function loginWithEmailAndPassword(
   })
 }
 
-async function writeExpoSession(session: {
-  sessionSecret: string
-  id: string
-  username: string
-}): Promise<void> {
-  const statePath = path.join(Bun.env.HOME ?? "", ".expo", "state.json")
-
-  if (!Bun.env.HOME) {
-    throw new Error(
-      "HOME is not set, so the Expo session path cannot be resolved.",
-    )
-  }
+async function writeExpoSession(
+  isolatedHome: string,
+  session: {
+    sessionSecret: string
+    id: string
+    username: string
+  },
+): Promise<void> {
+  const statePath = path.join(isolatedHome, ".expo", "state.json")
 
   await mkdir(path.dirname(statePath), { recursive: true })
-
-  let state: Record<string, unknown> = {}
-
-  try {
-    state = JSON.parse(await readFile(statePath, "utf8")) as Record<
-      string,
-      unknown
-    >
-  } catch (error) {
-    const isMissingFile =
-      error instanceof Error &&
-      "code" in error &&
-      (error as NodeJS.ErrnoException).code === "ENOENT"
-
-    if (!isMissingFile) {
-      throw error
-    }
-  }
-
-  state.auth = {
-    sessionSecret: session.sessionSecret,
-    userId: session.id,
-    username: session.username,
-    currentConnection: "Username-Password-Authentication",
-  }
-
-  await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8")
-}
-
-async function readSessionSecret(): Promise<string | null> {
-  const statePath = path.join(Bun.env.HOME ?? "", ".expo", "state.json")
-
-  if (!Bun.env.HOME) {
-    return null
-  }
-
-  try {
-    const state = JSON.parse(await readFile(statePath, "utf8")) as {
-      auth?: { sessionSecret?: string }
-    }
-
-    return state.auth?.sessionSecret ?? null
-  } catch (error) {
-    const isMissingFile =
-      error instanceof Error &&
-      "code" in error &&
-      (error as NodeJS.ErrnoException).code === "ENOENT"
-
-    if (isMissingFile) {
-      return null
-    }
-
-    throw error
-  }
+  await writeFile(
+    statePath,
+    `${JSON.stringify(
+      {
+        auth: {
+          sessionSecret: session.sessionSecret,
+          userId: session.id,
+          username: session.username,
+          currentConnection: "Username-Password-Authentication",
+        },
+      },
+      null,
+      2,
+    )}\n`,
+    { encoding: "utf8", mode: 0o600 },
+  )
 }
 
 async function resolveEasCliRoot(): Promise<string> {
@@ -660,10 +873,10 @@ async function resolveRealpathSafe(filePath: string): Promise<string> {
   }
 }
 
-async function runOrExit(
+async function runCommand(
   cmd: string[],
   options: { cwd: string; env: NodeJS.ProcessEnv; stdio: "inherit" | "pipe" },
-): Promise<void> {
+): Promise<number> {
   const proc = Bun.spawn({
     cmd,
     cwd: options.cwd,
@@ -673,9 +886,499 @@ async function runOrExit(
     stderr: options.stdio,
   })
 
-  const exitCode = await proc.exited
+  return await proc.exited
+}
 
+async function syncProductionApiOrigin(
+  env: NodeJS.ProcessEnv,
+): Promise<number> {
+  const origin = env.EXPO_PUBLIC_API_URL?.trim()
+  if (!origin) throw new Error("Local Production mobile API URL is missing.")
+  const update = await runCommand(
+    [
+      "eas",
+      "env:update",
+      "production",
+      "--variable-name",
+      "EXPO_PUBLIC_API_URL",
+      "--value",
+      origin,
+      "--visibility",
+      "plaintext",
+      "--scope",
+      "project",
+      "--non-interactive",
+    ],
+    { cwd: APP_DIR, env, stdio: "inherit" },
+  )
+  if (update !== 0) return update
+
+  const proc = Bun.spawn({
+    cmd: [
+      "eas",
+      "env:list",
+      "production",
+      "--format",
+      "short",
+      "--scope",
+      "project",
+    ],
+    cwd: APP_DIR,
+    env,
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+  })
+  const [output, , status] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ])
+  if (
+    status !== 0 ||
+    !output
+      .split(/\r?\n/)
+      .some(
+        (line) => line.includes("EXPO_PUBLIC_API_URL") && line.includes(origin),
+      )
+  ) {
+    console.error("EAS Production API URL readback did not confirm the update.")
+    return 1
+  }
+  console.log("EAS Production API URL matches the verified live API host.")
+  return 0
+}
+
+async function syncProductionChatOrigin(
+  env: NodeJS.ProcessEnv,
+): Promise<number> {
+  const origin = env.EXPO_PUBLIC_CHAT_URL?.trim()
+  if (origin !== "https://chat.ewatrade.com") {
+    throw new Error(
+      "Local Production mobile chat URL must be the canonical HTTPS host.",
+    )
+  }
+  const [home, legal] = await Promise.all([
+    fetch(origin, { redirect: "manual", signal: AbortSignal.timeout(15_000) }),
+    fetch(`${origin}/api/store-conversations/account/legal-publication`, {
+      redirect: "manual",
+      signal: AbortSignal.timeout(15_000),
+    }),
+  ])
+  const publication = legal.ok ? await legal.json() : null
+  if (
+    home.status !== 200 ||
+    home.headers.get("x-tenant-surface") !== "customer-chat" ||
+    legal.status !== 200 ||
+    publication?.effective !== false ||
+    publication?.signupAvailable !== false
+  ) {
+    throw new Error(
+      "Production chat host or closed legal gate failed live preflight.",
+    )
+  }
+  const create = await runCommand(
+    [
+      "eas",
+      "env:create",
+      "production",
+      "--name",
+      "EXPO_PUBLIC_CHAT_URL",
+      "--value",
+      origin,
+      "--visibility",
+      "plaintext",
+      "--scope",
+      "project",
+      "--force",
+      "--non-interactive",
+    ],
+    { cwd: APP_DIR, env, stdio: "inherit" },
+  )
+  if (create !== 0) return create
+
+  const proc = Bun.spawn({
+    cmd: [
+      "eas",
+      "env:list",
+      "production",
+      "--format",
+      "short",
+      "--scope",
+      "project",
+    ],
+    cwd: APP_DIR,
+    env,
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+  })
+  const [output, , status] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ])
+  if (
+    status !== 0 ||
+    !output
+      .split(/\r?\n/)
+      .some(
+        (line) =>
+          line.includes("EXPO_PUBLIC_CHAT_URL") && line.includes(origin),
+      )
+  ) {
+    console.error(
+      "EAS Production chat URL readback did not confirm the update.",
+    )
+    return 1
+  }
+  console.log("EAS Production chat URL matches the verified gated chat host.")
+  return 0
+}
+
+async function syncProductionLegalOrigin(
+  env: NodeJS.ProcessEnv,
+): Promise<number> {
+  const origin = env.EXPO_PUBLIC_LEGAL_ORIGIN?.trim()
+  const marketingUrl = env.NEXT_PUBLIC_MARKETING_URL?.trim()
+  if (origin !== "https://ewatrade.com" || origin !== marketingUrl) {
+    throw new Error(
+      "Local Production legal origin must match the canonical Marketing URL.",
+    )
+  }
+  const create = await runCommand(
+    [
+      "eas",
+      "env:create",
+      "production",
+      "--name",
+      "EXPO_PUBLIC_LEGAL_ORIGIN",
+      "--value",
+      origin,
+      "--visibility",
+      "plaintext",
+      "--scope",
+      "project",
+      "--force",
+      "--non-interactive",
+    ],
+    { cwd: APP_DIR, env, stdio: "inherit" },
+  )
+  if (create !== 0) return create
+
+  const proc = Bun.spawn({
+    cmd: [
+      "eas",
+      "env:list",
+      "production",
+      "--format",
+      "short",
+      "--scope",
+      "project",
+    ],
+    cwd: APP_DIR,
+    env,
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+  })
+  const [output, , status] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ])
+  if (
+    status !== 0 ||
+    !output
+      .split(/\r?\n/)
+      .some(
+        (line) =>
+          line.includes("EXPO_PUBLIC_LEGAL_ORIGIN") && line.includes(origin),
+      )
+  ) {
+    console.error(
+      "EAS Production legal origin readback did not confirm the update.",
+    )
+    return 1
+  }
+  console.log("EAS Production legal origin matches the Marketing host.")
+  return 0
+}
+
+async function syncProductionAnalyticsFlag(
+  env: NodeJS.ProcessEnv,
+): Promise<number> {
+  if (env.EXPO_PUBLIC_LOGLY_ENABLED !== "false") {
+    throw new Error(
+      "Production mobile analytics must be disabled while the mixed-age audience lacks a pre-collection age gate.",
+    )
+  }
+  const update = await runCommand(
+    [
+      "eas",
+      "env:update",
+      "production",
+      "--variable-name",
+      "EXPO_PUBLIC_LOGLY_ENABLED",
+      "--value",
+      "false",
+      "--visibility",
+      "plaintext",
+      "--scope",
+      "project",
+      "--non-interactive",
+    ],
+    { cwd: APP_DIR, env, stdio: "inherit" },
+  )
+  if (update !== 0) return update
+
+  const proc = Bun.spawn({
+    cmd: [
+      "eas",
+      "env:list",
+      "production",
+      "--format",
+      "short",
+      "--scope",
+      "project",
+    ],
+    cwd: APP_DIR,
+    env,
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+  })
+  const [output, , status] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ])
+  if (
+    status !== 0 ||
+    !output
+      .split(/\r?\n/)
+      .some((line) =>
+        /^EXPO_PUBLIC_LOGLY_ENABLED\s*=\s*false\s*$/.test(line.trim()),
+      )
+  ) {
+    console.error(
+      "EAS Production mobile analytics readback did not confirm disabled state.",
+    )
+    return 1
+  }
+  console.log(
+    "EAS Production mobile analytics is disabled for the mixed-age release.",
+  )
+  return 0
+}
+
+async function inspectSubmissionBuild({
+  buildId,
+  env,
+  expectedCommit,
+  expectedVersion,
+  platform,
+}: {
+  buildId: string
+  env: NodeJS.ProcessEnv
+  expectedCommit: string
+  expectedVersion: string
+  platform: BuildPlatform
+}): Promise<boolean> {
+  const proc = Bun.spawn({
+    cmd: ["eas", "build:view", buildId, "--json"],
+    cwd: APP_DIR,
+    env,
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+  })
+  const [rawOutput, , exitCode] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ])
   if (exitCode !== 0) {
-    process.exit(exitCode)
+    console.error("EAS submission stopped: exact build inspection failed.")
+    return false
+  }
+  let build: {
+    id?: string
+    status?: string
+    platform?: string
+    buildProfile?: string
+    distribution?: string
+    channel?: string
+    appBuildVersion?: string
+    gitCommitHash?: string | null
+    isForIosSimulator?: boolean
+    artifacts?: { buildUrl?: string }
+    project?: { id?: string; ownerAccount?: { name?: string } }
+  }
+  try {
+    build = JSON.parse(rawOutput)
+    if (!build || typeof build !== "object" || Array.isArray(build))
+      throw new Error("Invalid build metadata")
+  } catch {
+    console.error("EAS submission stopped: build metadata is unreadable.")
+    return false
+  }
+  const failures = [
+    build.id === buildId || "build ID",
+    build.status === "FINISHED" || "build status",
+    build.platform === platform.toUpperCase() || "platform",
+    build.buildProfile === "production" || "build profile",
+    build.distribution === "STORE" || "store distribution",
+    build.channel === "production" || "update channel",
+    build.appBuildVersion === expectedVersion || "reviewed version",
+    (typeof build.gitCommitHash === "string" &&
+      build.gitCommitHash.toLowerCase() === expectedCommit) ||
+      "reviewed commit",
+    build.project?.id === "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b" ||
+      "Expo project",
+    build.project?.ownerAccount?.name === "cipron-startups" || "Expo owner",
+    platform !== "ios" ||
+      build.isForIosSimulator === false ||
+      "device distribution",
+    (typeof build.artifacts?.buildUrl === "string" &&
+      build.artifacts.buildUrl.startsWith("https://")) ||
+      "HTTPS artifact",
+  ].filter((item): item is string => item !== true)
+  if (failures.length) {
+    console.error(
+      `EAS submission stopped: selected build failed ${failures.join(", ")}.`,
+    )
+    return false
+  }
+  return true
+}
+
+async function viewBuild(
+  cmd: string[],
+  options: { cwd: string; env: NodeJS.ProcessEnv },
+): Promise<number> {
+  const proc = Bun.spawn({
+    cmd,
+    cwd: options.cwd,
+    env: options.env,
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+  })
+  const [rawOutput, , exitCode] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ])
+  if (exitCode !== 0) {
+    console.error(`EAS build inspection failed (exit ${exitCode}).`)
+    return exitCode
+  }
+  try {
+    const result = JSON.parse(rawOutput) as {
+      id?: string
+      status?: string
+      platform?: string
+      buildProfile?: string
+      distribution?: string
+      channel?: string
+      appBuildVersion?: string
+      gitCommitHash?: string | null
+      artifacts?: Record<string, unknown>
+      createdAt?: string
+      updatedAt?: string
+      project?: { id?: string; ownerAccount?: { name?: string } }
+    }
+    console.log(
+      JSON.stringify({
+        id: result.id,
+        status: result.status,
+        platform: result.platform,
+        buildProfile: result.buildProfile,
+        distribution: result.distribution,
+        channel: result.channel,
+        appBuildVersion: result.appBuildVersion,
+        gitCommitHash: result.gitCommitHash,
+        artifactAvailable: Boolean(result.artifacts?.buildUrl),
+        createdAt: result.createdAt,
+        updatedAt: result.updatedAt,
+        projectId: result.project?.id,
+        ownerAccount: result.project?.ownerAccount?.name,
+      }),
+    )
+    return 0
+  } catch {
+    console.error("EAS build inspection returned an unreadable response.")
+    return 1
+  }
+}
+
+async function downloadBuild(
+  cmd: string[],
+  exactId: string,
+  args: string[],
+  options: { cwd: string; env: NodeJS.ProcessEnv },
+): Promise<number> {
+  const outputFlag = args.indexOf("--output")
+  const outputPath = outputFlag >= 0 ? args[outputFlag + 1] : undefined
+  if (!outputPath || !path.isAbsolute(outputPath)) {
+    console.error("Choose an absolute --output path for the AAB.")
+    return 1
+  }
+  const proc = Bun.spawn({
+    cmd,
+    cwd: options.cwd,
+    env: options.env,
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+  })
+  const [rawOutput, , exitCode] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ])
+  if (exitCode !== 0) {
+    console.error(`EAS artifact lookup failed (exit ${exitCode}).`)
+    return exitCode
+  }
+  let build: {
+    id?: string
+    status?: string
+    platform?: string
+    artifacts?: { buildUrl?: string }
+  }
+  try {
+    build = JSON.parse(rawOutput)
+  } catch {
+    console.error("EAS artifact lookup returned an unreadable response.")
+    return 1
+  }
+  if (
+    build.id !== exactId ||
+    build.status !== "FINISHED" ||
+    build.platform !== "ANDROID" ||
+    !build.artifacts?.buildUrl?.startsWith("https://")
+  ) {
+    console.error("Exact finished Android artifact is unavailable.")
+    return 1
+  }
+  try {
+    const response = await fetch(build.artifacts.buildUrl)
+    if (!response.ok) throw new Error("Artifact download failed")
+    const bytes = new Uint8Array(await response.arrayBuffer())
+    await writeFile(outputPath, bytes, { flag: "wx", mode: 0o600 })
+    console.log(
+      JSON.stringify({
+        id: exactId,
+        path: outputPath,
+        bytes: bytes.byteLength,
+        sha256: createHash("sha256").update(bytes).digest("hex"),
+      }),
+    )
+    return 0
+  } catch {
+    console.error("Artifact download or exclusive save failed.")
+    return 1
   }
 }

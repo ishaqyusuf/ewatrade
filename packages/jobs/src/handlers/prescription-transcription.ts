@@ -2,6 +2,7 @@ import { prisma } from "@ewatrade/db/client"
 import {
   claimPrescriptionTranscriptionJob,
   completePrescriptionTranscription,
+  isPrescriptionProductionLaunchApproved,
   retryPrescriptionTranscriptionJob,
 } from "@ewatrade/db/queries"
 import {
@@ -125,5 +126,6 @@ export async function prescriptionTranscriptionHandler(
   payload: PrescriptionTranscriptionPayload,
   attempt: number,
 ) {
+  if (!isPrescriptionProductionLaunchApproved()) return
   return runPrescriptionTranscription(payload, attempt)
 }

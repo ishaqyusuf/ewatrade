@@ -1,5 +1,6 @@
 import { prisma } from "@ewatrade/db/client"
 import {
+  isPrescriptionProductionLaunchApproved,
   listPendingPrescriptionMediaForSafety,
   recordPrescriptionMediaSafety,
 } from "@ewatrade/db/queries"
@@ -91,5 +92,6 @@ export async function runPrescriptionMediaSafety(
 export async function prescriptionMediaSafetyHandler(
   payload: PrescriptionMediaSafetyPayload,
 ) {
+  if (!isPrescriptionProductionLaunchApproved()) return
   return runPrescriptionMediaSafety(payload)
 }

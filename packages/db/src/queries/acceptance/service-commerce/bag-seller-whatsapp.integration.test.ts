@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto"
 
 import { afterAll, beforeAll, expect, setDefaultTimeout, test } from "bun:test"
+import { createQaPrivateMediaSafetyAttestation } from "@ewatrade/service-commerce"
 
 import { createSimpleCatalogItem } from "../../catalog"
 import {
@@ -182,6 +183,14 @@ describeWithServiceCommerceDatabase(
       await recordServiceCommerceMediaSafety(fixture.db, {
         mediaAssetId: attachment.media.id,
         outcome: "safe",
+        attestation: createQaPrivateMediaSafetyAttestation({
+          byteSize: 4,
+          contentDigest: "a".repeat(64),
+          mediaAssetId: attachment.media.id,
+          mimeType: "image/jpeg",
+          storageReference: `private/${fixture.tenantId}/${attachment.media.id}`,
+        }),
+        safetyProvider: "qa_fixture",
         reason: "Run-owned generic image safety result",
         storeId: fixture.storeId,
         tenantId: fixture.tenantId,

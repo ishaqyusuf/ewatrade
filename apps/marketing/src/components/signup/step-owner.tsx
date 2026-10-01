@@ -3,6 +3,10 @@
 import { QaQuickFillButton } from "@/components/qa/qa-quick-fill-button"
 import { useQaFormFill } from "@/hooks/use-qa-form-fill"
 import { useZodForm } from "@/hooks/use-zod-form"
+import type {
+  PublicLegalPublication,
+  SignupLegalAcceptance,
+} from "@/lib/legal-publication"
 import { ownerFill } from "@/lib/qa-fill-definitions"
 import { type OwnerValues, ownerSchema } from "@/lib/signup-schemas"
 import { Button } from "@ewatrade/ui"
@@ -68,10 +72,12 @@ function PasswordStrength({ password }: { password: string }) {
 
 type StepOwnerProps = {
   defaultValues?: Partial<OwnerValues>
-  onNext: (data: OwnerValues) => void
+  onNext: (data: OwnerValues, legalAcceptance?: SignupLegalAcceptance) => void
   onBack: () => void
   isSubmitting?: boolean
   submitError?: string
+  legalPublication: PublicLegalPublication | null
+  legalPublicationError: string | null
 }
 
 export function StepOwner({
@@ -80,6 +86,8 @@ export function StepOwner({
   onBack,
   isSubmitting,
   submitError,
+  legalPublication,
+  legalPublicationError,
 }: StepOwnerProps) {
   const form = useZodForm<OwnerValues>(ownerSchema, {
     defaultValues: defaultValues ?? {
@@ -97,7 +105,47 @@ export function StepOwner({
   )
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [acknowledgedPrivacyNotice, setAcknowledgedPrivacyNotice] =
+    useState(false)
+  const [legalError, setLegalError] = useState<string | null>(null)
   const password = form.watch("password") ?? ""
+
+  const submitOwner = (data: OwnerValues) => {
+    if (!legalPublication) {
+      setLegalError(
+        "The current legal documents could not be checked. Reload and try again.",
+      )
+      return
+    }
+    if (!legalPublication.signupAvailable) {
+      setLegalError(
+        "Account creation is paused until the Terms and Privacy Notice are effective.",
+      )
+      return
+    }
+    if (!legalPublication.approved) {
+      setLegalError(null)
+      onNext(data)
+      return
+    }
+    if (
+      !legalPublication.version ||
+      !acceptedTerms ||
+      !acknowledgedPrivacyNotice
+    ) {
+      setLegalError(
+        "Agree to the Terms and acknowledge the Privacy Notice before creating an account.",
+      )
+      return
+    }
+    setLegalError(null)
+    onNext(data, {
+      legalVersion: legalPublication.version,
+      acceptedTerms: true,
+      acknowledgedPrivacyNotice: true,
+    })
+  }
 
   return (
     <div>
@@ -114,7 +162,7 @@ export function StepOwner({
         </p>
       </div>
 
-      <form onSubmit={form.handleSubmit(onNext)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(submitOwner)} className="space-y-4">
         {/* Name row */}
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block space-y-1.5 text-sm font-medium text-foreground">
@@ -237,10 +285,91 @@ export function StepOwner({
           </div>
         )}
 
-        <p className="text-center text-xs text-muted-foreground">
-          By creating an account you agree to our Terms of Service and Privacy
-          Policy.
-        </p>
+        {!legalPublication ? (
+          <p className="text-center text-xs text-muted-foreground">
+            Checking the current legal documents…
+          </p>
+        ) : legalPublication.approved ? (
+          <div className="space-y-3 text-sm text-foreground">
+            <p>
+              Review the current Terms and Privacy Notice (version{" "}
+              {legalPublication.version}).
+            </p>
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(event) => setAcceptedTerms(event.target.checked)}
+                className="mt-1"
+              />
+              <span>
+                I agree to the{" "}
+                <a
+                  href="/terms"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline"
+                >
+                  Terms of Service
+                </a>
+                .
+              </span>
+            </label>
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={acknowledgedPrivacyNotice}
+                onChange={(event) =>
+                  setAcknowledgedPrivacyNotice(event.target.checked)
+                }
+                className="mt-1"
+              />
+              <span>
+                I acknowledge the{" "}
+                <a
+                  href="/privacy"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline"
+                >
+                  Privacy Notice
+                </a>
+                . This is not consent to optional marketing.
+              </span>
+            </label>
+          </div>
+        ) : (
+          <p className="text-center text-xs text-muted-foreground">
+            Read our{" "}
+            <a
+              href="/terms"
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+            >
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a
+              href="/privacy"
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+            >
+              Privacy Notice
+            </a>
+            . These policies are not yet effective; this notice does not record
+            legal acceptance.
+            {!legalPublication.signupAvailable
+              ? " Account creation is paused until they take effect."
+              : ""}
+          </p>
+        )}
+        {legalPublicationError || legalError ? (
+          <p role="alert" className="text-sm text-destructive">
+            {legalPublicationError ?? legalError}
+          </p>
+        ) : null}
 
         <div className="flex items-center justify-between border-t border-border/60 pt-5">
           <Button
@@ -257,7 +386,12 @@ export function StepOwner({
             type="submit"
             size="lg"
             className="rounded-lg px-8"
-            disabled={isSubmitting}
+            disabled={
+              isSubmitting ||
+              !legalPublication ||
+              !legalPublication.signupAvailable ||
+              !!legalPublicationError
+            }
           >
             {isSubmitting ? "Creating workspace…" : "Create workspace"}
           </Button>

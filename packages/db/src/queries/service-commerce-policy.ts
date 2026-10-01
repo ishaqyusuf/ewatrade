@@ -20,6 +20,7 @@ import {
   ServiceCommercePolicySubject as ServiceCommercePolicySubjectEnum,
   ServiceCommercePolicyVertical,
 } from "../../generated/prisma/enums"
+import { isPrescriptionProductionLaunchApproved } from "./prescription-launch-gate"
 import type { DbClient } from "./types"
 
 type PolicyTx = DbClient
@@ -283,11 +284,19 @@ export async function evaluateServiceCommercePolicyBatchInTransaction(
         decision.subject === subjectToDb[scope.subject] &&
         decision.vertical === verticalToDb[scope.vertical],
     )
-    const evaluation = evaluateServiceCommercePolicyFacts({
-      ...scope,
-      facts: scopedDecisions.map((decision) => toFact(decision, scope)),
-      jurisdictionCode: store.countryCode,
-    })
+    const evaluation: ServiceCommercePolicyEvaluation =
+      scope.vertical === "pharmacy" && !isPrescriptionProductionLaunchApproved()
+        ? {
+            outcome: "restricted",
+            policyRevision: null,
+            reason: "policy_restricted",
+            validUntil: null,
+          }
+        : evaluateServiceCommercePolicyFacts({
+            ...scope,
+            facts: scopedDecisions.map((decision) => toFact(decision, scope)),
+            jurisdictionCode: store.countryCode,
+          })
     const exactDecision = scopedDecisions.find(
       (decision) => decision.jurisdictionCode === jurisdictionCode,
     )

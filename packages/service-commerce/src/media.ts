@@ -1,3 +1,4 @@
+import { z } from "zod"
 import {
   SERVICE_COMMERCE_MEDIA_MAX_ATTACHMENTS_PER_INTAKE,
   SERVICE_COMMERCE_MEDIA_MAX_ATTACHMENT_BYTES,
@@ -64,9 +65,88 @@ export type PrivateMediaSafetyProviderInput = {
   storageReference: string
 }
 
+/** Evidence that a verdict covers the original asset, not a preview or subset. */
+export const privateMediaSafetyAttestationSchema = z
+  .object({
+    byteSize: z
+      .number()
+      .int()
+      .positive()
+      .max(SERVICE_COMMERCE_MEDIA_MAX_ATTACHMENT_BYTES),
+    contentDigest: z.string().regex(/^[a-f0-9]{64}$/),
+    mimeType: z.enum(SERVICE_COMMERCE_MEDIA_MIME_TYPES),
+    provider: z.string().trim().min(1).max(100),
+    modelVersion: z.string().trim().min(1).max(100),
+    source: z.enum(["live", "qa_fixture"]),
+    coverage: z.discriminatedUnion("kind", [
+      z
+        .object({
+          kind: z.literal("image"),
+          framesDetected: z.number().int().positive(),
+          framesInspected: z.number().int().positive(),
+        })
+        .strict(),
+      z
+        .object({
+          kind: z.literal("document"),
+          pagesDetected: z.number().int().positive(),
+          pagesTextInspected: z.number().int().positive(),
+          pagesVisualInspected: z.number().int().positive(),
+        })
+        .strict(),
+      z
+        .object({
+          kind: z.literal("audio"),
+          durationMs: z.number().int().positive(),
+          transcribedMs: z.number().int().positive(),
+          nonSpeechReviewed: z.literal(true),
+        })
+        .strict(),
+    ]),
+  })
+  .strict()
+
+export type PrivateMediaSafetyAttestation = z.infer<
+  typeof privateMediaSafetyAttestationSchema
+>
+
+/** Synthetic coverage for local fixtures; it proves no real bytes were scanned. */
+export function createQaPrivateMediaSafetyAttestation(
+  input: PrivateMediaSafetyProviderInput,
+): PrivateMediaSafetyAttestation {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("QA media safety attestations are disabled in production.")
+  }
+  return {
+    byteSize: input.byteSize,
+    contentDigest: input.contentDigest,
+    mimeType: input.mimeType,
+    provider: "qa_fixture",
+    modelVersion: "deterministic-1",
+    source: "qa_fixture",
+    coverage:
+      input.mimeType === "application/pdf"
+        ? {
+            kind: "document",
+            pagesDetected: 1,
+            pagesTextInspected: 1,
+            pagesVisualInspected: 1,
+          }
+        : input.mimeType.startsWith("audio/")
+          ? {
+              kind: "audio",
+              durationMs: 1,
+              transcribedMs: 1,
+              nonSpeechReviewed: true,
+            }
+          : { kind: "image", framesDetected: 1, framesInspected: 1 },
+  }
+}
+
 export type PrivateMediaSafetyProvider = {
   inspect(input: PrivateMediaSafetyProviderInput): Promise<{
     lifecycle: ServiceCommercePrivateMediaSafetyLifecycle
+    attestation?: PrivateMediaSafetyAttestation
   }>
 }
 
@@ -177,11 +257,16 @@ export function createDeterministicPrivateMediaSafetyProvider(
 ): PrivateMediaSafetyProvider {
   return {
     async inspect(safetyInput) {
+      const lifecycle =
+        input.outcomesByContentDigest?.[safetyInput.contentDigest] ??
+        input.defaultLifecycle ??
+        "safe"
       return {
-        lifecycle:
-          input.outcomesByContentDigest?.[safetyInput.contentDigest] ??
-          input.defaultLifecycle ??
-          "safe",
+        lifecycle,
+        attestation:
+          lifecycle === "safe"
+            ? createQaPrivateMediaSafetyAttestation(safetyInput)
+            : undefined,
       }
     },
   }

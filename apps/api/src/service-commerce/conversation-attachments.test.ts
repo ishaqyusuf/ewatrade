@@ -36,6 +36,85 @@ const authorizeTestUpload = async () => ({
 })
 
 describe("Store Conversation attachment transport", () => {
+  test("rejects clinical attachment targets before provider or database work when pharmacy launch is closed", async () => {
+    const previousAppEnv = process.env.APP_ENV
+    const previousApproval = process.env.PRESCRIPTION_COMMERCE_LAUNCH_APPROVED
+    process.env.APP_ENV = "production"
+    process.env.PRESCRIPTION_COMMERCE_LAUNCH_APPROVED = "false"
+    let dependencyCalled = false
+    const deps = new Proxy({} as never, {
+      get() {
+        dependencyCalled = true
+        throw new Error("must not run")
+      },
+    })
+    try {
+      for (const target of [
+        { kind: "new_prescription_request" as const },
+        {
+          kind: "existing_request" as const,
+          request: {
+            id: "prescription-1",
+            kind: "prescription_request" as const,
+            revision: 1,
+          },
+        },
+      ]) {
+        await expect(
+          processGuestStoreConversationAttachment(
+            {
+              ...baseInput,
+              bytes: new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31]),
+              prescriptionConsentAccepted:
+                target.kind === "new_prescription_request" ? true : undefined,
+              target,
+            },
+            deps,
+          ),
+        ).rejects.toMatchObject({ code: "NOT_FOUND" })
+      }
+      let parsedBody = false
+      await expect(
+        parseGuestStoreConversationAttachmentRequest(
+          {
+            formData: async () => {
+              parsedBody = true
+              throw new Error("must not parse")
+            },
+            headers: {
+              get: (name: string) =>
+                name.toLowerCase() === "content-length" ? "512" : null,
+            },
+            url: "https://chat.ewatrade.com/api/attachments",
+          },
+          {
+            channel: "web",
+            credentialToken: "c".repeat(32),
+            uploadAuthorization: "test-authorization",
+          },
+          {
+            authorizeUpload: async () => ({
+              ...(await authorizeTestUpload()),
+              target: { kind: "new_prescription_request" },
+            }),
+          },
+        ),
+      ).rejects.toMatchObject({ code: "NOT_FOUND" })
+      expect(parsedBody).toBe(false)
+      expect(dependencyCalled).toBe(false)
+    } finally {
+      if (previousAppEnv === undefined)
+        Reflect.deleteProperty(process.env, "APP_ENV")
+      else process.env.APP_ENV = previousAppEnv
+      if (previousApproval === undefined)
+        Reflect.deleteProperty(
+          process.env,
+          "PRESCRIPTION_COMMERCE_LAUNCH_APPROVED",
+        )
+      else process.env.PRESCRIPTION_COMMERCE_LAUNCH_APPROVED = previousApproval
+    }
+  })
+
   test("binds native attachment capability to the installation-scoped mobile credential purpose", async () => {
     const calls: unknown[] = []
     await expect(

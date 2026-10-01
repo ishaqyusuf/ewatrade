@@ -44,24 +44,21 @@ async function deleteAcceptanceFixture(
   const { tenantId, userIds } = input
   await db.$transaction(
     async (tx) => {
-      const [conversationGuests, accessGuests, transferGuests] =
-        await Promise.all([
-          tx.storeConversation.findMany({
-            select: { guestIdentityId: true },
-            where: { tenantId },
-          }),
-          tx.storeConversationGuestAccess.findMany({
-            select: { guestIdentityId: true },
-            where: { tenantId },
-          }),
-          tx.storeConversationTransfer.findMany({
-            select: {
-              redeemedGuestIdentityId: true,
-              sourceCredential: { select: { guestIdentityId: true } },
-            },
-            where: { tenantId },
-          }),
-        ])
+      const conversationGuests = await tx.storeConversation.findMany({
+        select: { guestIdentityId: true },
+        where: { tenantId },
+      })
+      const accessGuests = await tx.storeConversationGuestAccess.findMany({
+        select: { guestIdentityId: true },
+        where: { tenantId },
+      })
+      const transferGuests = await tx.storeConversationTransfer.findMany({
+        select: {
+          redeemedGuestIdentityId: true,
+          sourceCredential: { select: { guestIdentityId: true } },
+        },
+        where: { tenantId },
+      })
       const storeConversationGuestIdentityIds = [
         ...new Set([
           ...conversationGuests.map((row) => row.guestIdentityId),
@@ -390,7 +387,9 @@ async function deleteAcceptanceFixture(
 
 export async function createServiceCommerceAcceptanceFixture(): Promise<ServiceCommerceAcceptanceFixture> {
   if (!process.env.EWATRADE_DATABASE_URL) {
-    throw new Error("EWATRADE_DATABASE_URL is required for database integration tests.")
+    throw new Error(
+      "EWATRADE_DATABASE_URL is required for database integration tests.",
+    )
   }
   const db = (await import("../../../client")).prisma
   const fixtureStartedAt = new Date(Date.now() - 60_000)
@@ -610,6 +609,46 @@ export async function disposeServiceCommerceAcceptanceFixture(
     tenantId: fixture.tenantId,
     userIds: fixture.cleanupUserIds,
   })
+}
+
+export async function disposePreviewStoreEntryFixture(
+  db: PrismaClient,
+  input: { actorUserId: string; tenantId: string },
+) {
+  const [tenant, actor, membership] = await Promise.all([
+    db.tenant.findUnique({
+      select: { dataClassification: true, slug: true },
+      where: { id: input.tenantId },
+    }),
+    db.user.findUnique({
+      select: { email: true },
+      where: { id: input.actorUserId },
+    }),
+    db.membership.findFirst({
+      select: { id: true },
+      where: { tenantId: input.tenantId, userId: input.actorUserId },
+    }),
+  ])
+  if (
+    tenant?.dataClassification !== QaDataClassification.QA ||
+    !tenant.slug.startsWith("preview-store-entry-") ||
+    !actor?.email.startsWith("preview-store-entry-") ||
+    !actor.email.endsWith("@example.invalid") ||
+    !membership
+  ) {
+    throw new Error("Refusing to delete a non-fixture tenant or user.")
+  }
+  await deleteAcceptanceFixture(db, {
+    tenantId: input.tenantId,
+    userIds: [input.actorUserId],
+  })
+  const [tenantCount, userCount] = await Promise.all([
+    db.tenant.count({ where: { id: input.tenantId } }),
+    db.user.count({ where: { id: input.actorUserId } }),
+  ])
+  if (tenantCount || userCount) {
+    throw new Error("Preview Store Entry fixture cleanup left owned records.")
+  }
 }
 
 export async function createServiceCommerceAcceptanceMember(

@@ -1,6 +1,7 @@
 import { resolveCommunicationsRecipient } from "@ewatrade/communications"
 import { prisma } from "@ewatrade/db/client"
 import {
+  canDeliverStoreConversationNotificationVerification,
   claimStoreConversationNotificationVerification,
   completeStoreConversationNotificationVerification,
   failStoreConversationNotificationVerification,
@@ -25,6 +26,9 @@ type Claim = NonNullable<
 >
 
 type Dependencies = {
+  canDeliver(
+    payload: StoreConversationNotificationVerificationPayload,
+  ): Promise<boolean>
   claim(
     payload: StoreConversationNotificationVerificationPayload,
   ): Promise<Claim | null>
@@ -44,6 +48,8 @@ type Dependencies = {
 
 function defaultDependencies(): Dependencies {
   return {
+    canDeliver: (payload) =>
+      canDeliverStoreConversationNotificationVerification(prisma, payload),
     claim: (payload) =>
       claimStoreConversationNotificationVerification(prisma, payload),
     complete: (payload) =>
@@ -65,6 +71,14 @@ export async function runStoreConversationNotificationVerification(
     await dependencies.fail({
       ...payload,
       failureCode: "whatsapp_verification_policy_unavailable",
+      terminal: true,
+    })
+    return null
+  }
+  if (!(await dependencies.canDeliver(payload))) {
+    await dependencies.fail({
+      ...payload,
+      failureCode: "verification_authorization_unavailable",
       terminal: true,
     })
     return null

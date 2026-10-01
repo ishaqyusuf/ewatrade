@@ -60,6 +60,13 @@ export const retailOpsSubscriptionsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       assertCanManageRetailOpsBilling(ctx.tenantContext.membership.role)
 
+      if (input.surface === "mobile") {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Mobile software plans require an App Store or Google Play purchase. Store subscriptions are not available yet.",
+        })
+      }
+
       return createRetailOpsSubscriptionCheckoutIntent(ctx.db, {
         planId: input.planId,
         requestedByUserId: ctx.session.user.id,

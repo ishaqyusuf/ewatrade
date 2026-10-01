@@ -8,10 +8,25 @@ const requiredMarkers = [
   {
     file: "app/dashboard.tsx",
     markers: [
-      "MobileAppShell",
+      "DashboardCompatibilityRoute",
+      "isSalesRepRole",
+      '"/sales-rep-home"',
+      '"/admin-home"',
+    ],
+  },
+  {
+    file: "app/(admin-tabs)/admin-home.tsx",
+    markers: ["OperationsDashboardSurface", "embeddedInAdminTabs"],
+  },
+  {
+    file: "app/sales-rep-home.tsx",
+    markers: ["OperationsDashboardSurface", "<OperationsDashboardSurface />"],
+  },
+  {
+    file: "components/mobile/dashboard/operations-dashboard-screen.tsx",
+    markers: [
       "StatusBanner",
       "OperationsDashboardSurface",
-      "isSalesRepRole",
       "getOfflineProvisionalProjection",
       "hasProduct",
       "hasSellableCatalogItem",
@@ -34,9 +49,6 @@ const requiredMarkers = [
       "DashboardRecentOrderRow",
       'title="Recent orders"',
       'title="Recent sales"',
-      "statusBarFollowsHero",
-      "statusBarColor={isAttendant ? marketDay.marigold : marketDay.paprika}",
-      "scrolledStatusBarColor={marketDay.canvas}",
       "Add a product",
       "Add a service",
       "Add a sellable item to create orders",
@@ -67,7 +79,20 @@ const requiredMarkers = [
     ],
   },
   {
-    file: "components/mobile/sales-rep-shift-ledger.tsx",
+    file: "components/mobile/appearances/market-day/dashboard-screen.tsx",
+    markers: [
+      "MobileAppShell",
+      "statusBarFollowsHero",
+      "scrolledStatusBarColor={palette.canvas}",
+      'props.role === "attendant" ? palette.marigold : palette.paprika',
+    ],
+  },
+  {
+    file: "components/mobile/appearances/classic/dashboard-screen.tsx",
+    markers: ["MobileAppShell", "<MobileAppShell"],
+  },
+  {
+    file: "components/mobile/appearances/market-day/sales-rep-shift-ledger.tsx",
     markers: [
       "SalesRepShiftLedgerHero",
       "SalesRepShiftLedgerOverview",
@@ -77,9 +102,9 @@ const requiredMarkers = [
       "sales-rep-shift-ledger-overview",
       "sales-rep-shift-ledger-start-sale",
       "useLargeTextLayout",
-      "marketDay.marigold",
+      "bg-market-marigold",
       "marketDay.paprika",
-      "minHeight: 44",
+      "min-h-[44px]",
       "Sellable catalog",
       "Recent value",
     ],
@@ -131,7 +156,7 @@ const requiredMarkers = [
     ],
   },
   {
-    file: "components/mobile/business-home-market-ledger.tsx",
+    file: "components/mobile/appearances/market-day/business-home-market-ledger.tsx",
     markers: [
       "BusinessHomeMarketLedgerHero",
       "BusinessHomeMarketLedgerSetup",
@@ -139,7 +164,7 @@ const requiredMarkers = [
       "BusinessHomeMarketLedgerSectionHeader",
       "BusinessHomeMarketLedgerEmptyOrders",
       "useMarketDayPalette",
-      "marketDay.heroHairline",
+      "bg-market-paprika",
       "useLargeTextLayout",
       "Good morning,",
       "TODAY · MARKET LEDGER",
@@ -147,13 +172,13 @@ const requiredMarkers = [
       "Store snapshot",
       "Recent orders",
       "CLEAR TILL",
-      'tone === "attention" ? marketDay.marigold : marketDay.palm',
+      'tone === "attention" ? "bg-market-marigold" : "bg-market-palm"',
       "sectionHeaderLargeText",
       "operationalHeadingLargeText",
       "marketDay.onPaprika",
       "getBusinessHomeLedgerStepSemantics",
       "disabled={disabled}",
-      "minHeight: 44",
+      "min-h-[44px]",
     ],
   },
   {
@@ -199,7 +224,15 @@ const requiredMarkers = [
   },
   {
     file: "components/mobile/simple-catalog-item-screen.tsx",
-    markers: ["initialKind?: CatalogItemKind", "initialKind ?? null"],
+    markers: ["SimpleCatalogItemScreen", "catalog-setup/catalog-setup-screen"],
+  },
+  {
+    file: "components/mobile/catalog-setup/catalog-setup-model.ts",
+    markers: ["initialKind?: CatalogItemKind"],
+  },
+  {
+    file: "components/mobile/catalog-setup/use-catalog-setup.ts",
+    markers: ["initialKind ?? null"],
   },
   {
     file: "components/mobile/app-shell.tsx",
@@ -226,7 +259,7 @@ const requiredMarkers = [
 
 const forbiddenMarkers = [
   {
-    file: "app/dashboard.tsx",
+    file: "components/mobile/dashboard/operations-dashboard-screen.tsx",
     markers: [
       "Retail ops",
       "Feed",

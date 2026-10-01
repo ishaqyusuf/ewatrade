@@ -12,17 +12,17 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@react-email/components": "1.0.10",
+    "@react-email/components": "1.0.12",
     "react": "catalog:",
-    "react-dom": "catalog:",
-    "react-email": "5.2.10"
+    "react-dom": "catalog:"
   },
   "devDependencies": {
-    "@react-email/preview-server": "5.2.10",
+    "@react-email/ui": "6.9.5",
     "@ewatrade/tsconfig": "workspace:*",
     "@types/node": "^24.6.0",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
+    "react-email": "6.9.5",
     "typescript": "catalog:"
   }
 }

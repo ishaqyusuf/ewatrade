@@ -1,17 +1,18 @@
+import { afterEach, describe, expect, test } from "bun:test"
 import { createHmac } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
-import { afterEach, describe, expect, test } from "bun:test"
 import {
-  loadSignedProviderBundle,
   type EwaTradeProviderBundle,
+  WEB_TARGETS,
+  loadSignedProviderBundle,
 } from "../.release/ewatrade-provider-bundle"
 import { checkRelease } from "../.release/release-adapter"
 import { validateReleaseManifest } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/manifest"
 import {
-  planRelease,
   type ReleaseManifest,
   type ReleaseTargetChange,
+  planRelease,
 } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/plan"
 
 const root = resolve(import.meta.dir, "..")
@@ -20,14 +21,23 @@ const secret = "release-test-key-with-at-least-32-bytes"
 const originalEnvelope = process.env.EWATRADE_RELEASE_EVIDENCE_ENVELOPE
 const originalKey = process.env.EWATRADE_RELEASE_EVIDENCE_HMAC_KEY
 
+test("Production API release evidence targets the dedicated API hostname", () => {
+  expect(
+    WEB_TARGETS.find((target) => target.targetId === "api-web"),
+  ).toMatchObject({
+    projectId: "prj_ykC8ltJlPgEuFN90CQhFpC5uC3Vh",
+    productionDomain: "api.ewatrade.com",
+  })
+})
+
 afterEach(() => {
   if (originalEnvelope === undefined) {
-    delete process.env.EWATRADE_RELEASE_EVIDENCE_ENVELOPE
+    Reflect.deleteProperty(process.env, "EWATRADE_RELEASE_EVIDENCE_ENVELOPE")
   } else {
     process.env.EWATRADE_RELEASE_EVIDENCE_ENVELOPE = originalEnvelope
   }
   if (originalKey === undefined) {
-    delete process.env.EWATRADE_RELEASE_EVIDENCE_HMAC_KEY
+    Reflect.deleteProperty(process.env, "EWATRADE_RELEASE_EVIDENCE_HMAC_KEY")
   } else {
     process.env.EWATRADE_RELEASE_EVIDENCE_HMAC_KEY = originalKey
   }
@@ -36,7 +46,8 @@ afterEach(() => {
 function revision() {
   const head = readFileSync(resolve(root, ".git/HEAD"), "utf8").trim()
   if (/^[0-9a-f]{40}$/i.test(head)) return head
-  if (!head.startsWith("ref: ")) throw new Error("Could not resolve test Git SHA.")
+  if (!head.startsWith("ref: "))
+    throw new Error("Could not resolve test Git SHA.")
   const ref = head.slice("ref: ".length)
   try {
     return readFileSync(resolve(root, ".git", ref), "utf8").trim()
@@ -266,7 +277,7 @@ describe("Ewa Trade signed provider gate", () => {
       repository: root,
       toolkitRevision,
     }
-    delete process.env.EWATRADE_RELEASE_EVIDENCE_HMAC_KEY
+    Reflect.deleteProperty(process.env, "EWATRADE_RELEASE_EVIDENCE_HMAC_KEY")
     expect(() => loadSignedProviderBundle(context)).toThrow(
       "key is unavailable",
     )

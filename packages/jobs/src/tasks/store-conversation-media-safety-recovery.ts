@@ -1,5 +1,6 @@
 import { prisma } from "@ewatrade/db/client"
 import {
+  isPrescriptionProductionLaunchApproved,
   listPendingStoreConversationMediaSafetyWork,
   preparePendingStoreConversationMediaSafetyWork,
 } from "@ewatrade/db/queries"
@@ -102,7 +103,10 @@ export async function runStoreConversationMediaSafetyRecovery(
       limit: PAGE_LIMIT,
     })
     scanned += page.items.length
-    const enqueueResult = await enqueueBounded(page.items, dependencies)
+    const work = isPrescriptionProductionLaunchApproved()
+      ? page.items
+      : page.items.filter((item) => item.kind === "generic")
+    const enqueueResult = await enqueueBounded(work, dependencies)
     failed += enqueueResult.failed
     queued += enqueueResult.queued
     nextCursor = page.nextCursor

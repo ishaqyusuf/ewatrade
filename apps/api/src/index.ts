@@ -2,19 +2,26 @@ import "./instrument"
 
 import { auth } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
+import { isLegalSignupSessionBlocked } from "@ewatrade/db/legal-session-access"
+import { isPrescriptionProductionLaunchApproved } from "@ewatrade/db/queries"
 import { toPublicErrorEnvelope } from "@ewatrade/errors"
 import { trpcServer } from "@hono/trpc-server"
 import { OpenAPIHono } from "@hono/zod-openapi"
+import { Hono } from "hono"
+import type { Context } from "hono"
 import { cors } from "hono/cors"
 import { HTTPException } from "hono/http-exception"
 import { secureHeaders } from "hono/secure-headers"
+import { registerAccountPrivacyResendWebhook } from "./account-privacy/resend-webhook"
 import { registerBillingProviderEventRoutes } from "./billing/provider-events"
+import { registerStoreNotificationRoutes } from "./billing/store-notifications"
 import { registerWhatsAppEmbeddedSignupRoutes } from "./communications/whatsapp-embedded-signup"
 import { registerWhatsAppWebhookRoutes } from "./communications/whatsapp-webhook"
 import { registerDomainPaystackWebhook } from "./domains/paystack-webhook"
 import { captureApiError } from "./observability/sentry"
 import { registerPrescriptionMediaDeliveryRoutes } from "./prescriptions/media-delivery"
 import { registerPrescriptionPaystackWebhook } from "./prescriptions/paystack-webhook"
+import { isPrescriptionTrpcRoute } from "./prescriptions/trpc-launch-route"
 import { registerSelfServiceStoreDetectionRoutes } from "./self-service/store-detection"
 import { registerStoreConversationAttachmentRoutes } from "./service-commerce/conversation-attachments-routes"
 import { registerServiceCommerceMediaDeliveryRoutes } from "./service-commerce/media-delivery"
@@ -84,6 +91,17 @@ app.use(
 const debugPerf = process.env.DEBUG_PERF === "true"
 
 app.use("/api/trpc/*", async (c, next) => {
+  if (
+    !isPrescriptionProductionLaunchApproved() &&
+    isPrescriptionTrpcRoute(c.req.path)
+  ) {
+    c.header("Cache-Control", "no-store")
+    return c.json({ error: "Pharmacy Commerce is unavailable." }, 404)
+  }
+  await next()
+})
+
+app.use("/api/trpc/*", async (c, next) => {
   const start = performance.now()
   await next()
 
@@ -92,6 +110,10 @@ app.use("/api/trpc/*", async (c, next) => {
     .replace("/api/trpc/", "")
     .split(",")
     .filter(Boolean)
+
+  if (procedures.includes("search.global")) {
+    c.header("Cache-Control", "private, no-store")
+  }
 
   c.header(
     "Server-Timing",
@@ -115,7 +137,7 @@ app.use("/api/trpc/*", async (c, next) => {
 app.get("/favicon.ico", (c) => c.body(null, 204))
 app.get("/robots.txt", (c) => c.body(null, 204))
 
-app.get("/health", async (c) => {
+const healthHandler = async (c: Context) => {
   const start = performance.now()
   const accounts = await prisma.account.count({})
 
@@ -123,9 +145,14 @@ app.get("/health", async (c) => {
   c.header("X-Server-Timestamp", Date.now().toString())
 
   return c.json({ status: "ok", database: { accounts } }, 200)
-})
+}
+
+app.get("/health", healthHandler)
+app.get("/api/health", healthHandler)
 
 registerBillingProviderEventRoutes(app)
+registerAccountPrivacyResendWebhook(app)
+registerStoreNotificationRoutes(app)
 registerDomainPaystackWebhook(app)
 registerSelfServiceStoreDetectionRoutes(app)
 registerPrescriptionMediaDeliveryRoutes(app)
@@ -136,6 +163,35 @@ registerPrescriptionPaystackWebhook(app)
 registerWhatsAppWebhookRoutes(app)
 registerWhatsAppEmbeddedSignupRoutes(app)
 
+// Account creation must pass a surface that records the exact legal version.
+app.use("/api/auth/sign-up/*", async (c, next) => {
+  if (
+    process.env.APP_ENV === "production" ||
+    process.env.NODE_ENV === "production"
+  ) {
+    c.header("Cache-Control", "no-store")
+    return c.json({ error: "Account creation is unavailable here." }, 404)
+  }
+  await next()
+})
+
+app.use("/api/auth/*", async (c, next) => {
+  const path = new URL(c.req.url).pathname
+  if (path.startsWith("/api/auth/sign-in/") || path === "/api/auth/sign-out") {
+    await next()
+    return
+  }
+  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+  if (
+    session?.user?.id &&
+    (await isLegalSignupSessionBlocked(prisma, session.user.id))
+  ) {
+    c.header("Cache-Control", "no-store")
+    return c.json({ error: "Account setup is incomplete." }, 403)
+  }
+  await next()
+})
+
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw))
 
 app.use(
@@ -144,6 +200,7 @@ app.use(
     router: appRouter,
     createContext: createTRPCContext,
     endpoint: "/api/trpc",
+    allowMethodOverride: true,
     onError: ({ ctx, error, path }) => {
       captureApiError(error, {
         operation: path ? `trpc.${path}` : "trpc.unknown",
@@ -178,16 +235,10 @@ app.onError((err, c) => {
   return c.json(toPublicErrorEnvelope(err, requestId), 500)
 })
 
-const requestedPort = Number(
-  process.env.PORT ?? process.env.PORTLESS_APP_PORT ?? 3095,
-)
-const port = Number.isFinite(requestedPort) ? requestedPort : 3095
-
 export { app }
 
-export default {
-  port,
-  fetch: app.fetch,
-  host: "0.0.0.0",
-  idleTimeout: 60,
-}
+// Vercel's Hono adapter detects a direct `hono` entrypoint. Route the shared
+// API app through that entrypoint while local Bun continues to serve `app`.
+const vercelApp = new Hono()
+vercelApp.route("/", app)
+export default vercelApp

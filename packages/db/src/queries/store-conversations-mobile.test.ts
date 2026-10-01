@@ -112,6 +112,7 @@ describe("Mobile Store Conversation repositories", () => {
         update: async () => ({ id: "mobile_credential" }),
       },
       storeConversationGuestIdentity: {
+        findUnique: async () => ({ ageBand: "ADULT" }),
         update: async () => ({ id: "mobile_guest" }),
       },
     }
@@ -167,6 +168,7 @@ describe("Mobile Store Conversation repositories", () => {
         }),
       },
       storeConversationGuestIdentity: {
+        findUnique: async () => ({ ageBand: "ADULT" }),
         update: async () => ({ id: "mobile_guest" }),
       },
       storeConversationCustomerWatermark: {
@@ -196,6 +198,36 @@ describe("Mobile Store Conversation repositories", () => {
     ])
     expect(result.nextCursor).toBeString()
     expect(result.credentialExpiresAt).toBeInstanceOf(Date)
+  })
+
+  test("does not read legacy Guest conversation content before age declaration", async () => {
+    let contentReads = 0
+    const client = {
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback(client),
+      storeConversationGuestAccess: {
+        findMany: async () => {
+          contentReads += 1
+          return []
+        },
+      },
+      storeConversationGuestCredential: {
+        findFirst: async () => activeMobileCredential(),
+        update: async () => ({ id: "mobile_credential" }),
+      },
+      storeConversationGuestIdentity: {
+        findUnique: async () => ({ ageBand: "UNDECLARED" }),
+        update: async () => ({ id: "mobile_guest" }),
+      },
+    }
+
+    await expect(
+      listMobileStoreConversations(dbClient(client), {
+        credentialToken,
+        installationToken,
+      }),
+    ).rejects.toMatchObject({ code: "NOT_READY" })
+    expect(contentReads).toBe(0)
   })
 
   test("claim is retryable only by the first installation and redeem consumes once", async () => {

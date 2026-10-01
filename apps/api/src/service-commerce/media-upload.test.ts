@@ -1,6 +1,33 @@
 import { describe, expect, test } from "bun:test"
 
-import { storeStaffServiceCommerceMediaUpload } from "./media-upload"
+import {
+  resolveStaffMediaUploadTenant,
+  storeStaffServiceCommerceMediaUpload,
+} from "./media-upload"
+
+test("staff media upload checks Account age before Tenant or Store lookup", async () => {
+  let tenantReads = 0
+  const tenantLookup = async () => {
+    tenantReads += 1
+    return { id: "tenant-1" }
+  }
+
+  expect(
+    await resolveStaffMediaUploadTenant({
+      getAccountAgeStatus: async () => ({ eligible: false }),
+      getTenantContext: tenantLookup,
+    }),
+  ).toEqual({ status: "age_required" })
+  expect(tenantReads).toBe(0)
+
+  expect(
+    await resolveStaffMediaUploadTenant({
+      getAccountAgeStatus: async () => ({ eligible: true }),
+      getTenantContext: tenantLookup,
+    }),
+  ).toEqual({ status: "ready", tenant: { id: "tenant-1" } })
+  expect(tenantReads).toBe(1)
+})
 
 describe("staff Service Commerce media upload", () => {
   test("verifies bytes before private storage and enqueues identifier-only safety", async () => {

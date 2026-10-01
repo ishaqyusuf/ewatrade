@@ -1,7 +1,10 @@
 import { createHash, randomUUID } from "node:crypto"
 
 import { afterAll, beforeAll, expect, setDefaultTimeout, test } from "bun:test"
-import type { ServiceCommerceProfileSettings } from "@ewatrade/service-commerce"
+import {
+  type ServiceCommerceProfileSettings,
+  createQaPrivateMediaSafetyAttestation,
+} from "@ewatrade/service-commerce"
 
 import {
   publishCustomerEntryPoint,
@@ -300,6 +303,14 @@ describeWithServiceCommerceDatabase(
       await recordServiceCommerceMediaSafety(fixture.db, {
         mediaAssetId: generic.media.id,
         outcome: "safe",
+        attestation: createQaPrivateMediaSafetyAttestation({
+          byteSize: 4,
+          contentDigest: "a".repeat(64),
+          mediaAssetId: generic.media.id,
+          mimeType: "image/jpeg",
+          storageReference: `private/${runId}/generic`,
+        }),
+        safetyProvider: "qa_fixture",
         reason: "Store Conversation attachment acceptance",
         storeId: fixture.storeId,
         tenantId: fixture.tenantId,
@@ -401,6 +412,14 @@ describeWithServiceCommerceDatabase(
       await recordServiceCommerceMediaSafety(fixture.db, {
         mediaAssetId: voice.media.id,
         outcome: "safe",
+        attestation: createQaPrivateMediaSafetyAttestation({
+          byteSize: command.sizeBytes,
+          contentDigest: command.contentDigest,
+          mediaAssetId: voice.media.id,
+          mimeType: "audio/mp4",
+          storageReference: `private/${runId}/voice-note.m4a`,
+        }),
+        safetyProvider: "qa_fixture",
         reason: "Store Conversation voice acceptance",
         storeId: fixture.storeId,
         tenantId: fixture.tenantId,

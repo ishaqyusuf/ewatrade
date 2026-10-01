@@ -137,6 +137,20 @@ export async function requestGuestStoreConversationNotificationVerification(
         storeId: context.entry.storeId,
         tenantId: context.entry.tenantId,
       })
+      const currentConversation = await tx.storeConversation.findFirst({
+        select: { customerBlockedAt: true },
+        where: {
+          id: context.conversation.id,
+          storeId: context.entry.storeId,
+          tenantId: context.entry.tenantId,
+        },
+      })
+      if (!currentConversation || currentConversation.customerBlockedAt) {
+        throw new StoreConversationNotificationError(
+          "NOT_READY",
+          "Notifications are paused while this Store is blocked.",
+        )
+      }
       const replay =
         await tx.storeConversationGuestNotificationVerification.findUnique({
           include: { contact: true },
@@ -640,6 +654,7 @@ export async function claimStoreConversationNotificationVerification(
               guestIdentityId: true,
               lifecycle: true,
               moderationState: true,
+              customerBlockedAt: true,
             },
           },
           guestIdentity: { select: { status: true } },
@@ -692,6 +707,7 @@ export async function claimStoreConversationNotificationVerification(
         StoreConversationGuestIdentityStatus.ACTIVE ||
       verification.conversation.lifecycle !==
         StoreConversationLifecycle.ACTIVE ||
+      Boolean(verification.conversation.customerBlockedAt) ||
       verification.conversation.moderationState !==
         StoreConversationModerationState.OPEN
     ) {
@@ -728,6 +744,44 @@ export async function claimStoreConversationNotificationVerification(
       verificationId: verification.id,
     }
   }, STORE_CONVERSATION_NOTIFICATION_TRANSACTION_OPTIONS)
+}
+
+export async function canDeliverStoreConversationNotificationVerification(
+  db: PrismaClient,
+  input: StoreConversationNotificationVerificationIdentifier & { now?: Date },
+) {
+  const now = input.now ?? new Date()
+  const verification =
+    await db.storeConversationGuestNotificationVerification.findFirst({
+      select: {
+        contact: { select: { status: true } },
+        conversation: {
+          select: {
+            customerBlockedAt: true,
+            lifecycle: true,
+            moderationState: true,
+          },
+        },
+        expiresAt: true,
+      },
+      where: {
+        id: input.verificationId,
+        status: StoreConversationNotificationVerificationStatus.CLAIMED,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    })
+  return Boolean(
+    verification &&
+      verification.expiresAt > now &&
+      verification.contact.status ===
+        StoreConversationNotificationContactStatus.PENDING &&
+      verification.conversation.lifecycle ===
+        StoreConversationLifecycle.ACTIVE &&
+      !verification.conversation.customerBlockedAt &&
+      verification.conversation.moderationState ===
+        StoreConversationModerationState.OPEN,
+  )
 }
 
 export async function completeStoreConversationNotificationVerification(

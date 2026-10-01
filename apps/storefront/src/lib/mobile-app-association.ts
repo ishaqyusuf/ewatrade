@@ -9,7 +9,7 @@ function commaSeparated(value: string | undefined) {
 
 export function createAppleAppSiteAssociation(value: string | undefined) {
   const appIDs = commaSeparated(value).filter((appID) =>
-    /^[A-Z0-9]{10}\.com\.ewatrade\.(?:app|dev)$/.test(appID),
+    /^[A-Z0-9]{10}\.com\.ewatrade\.(?:app|dev|preview)$/.test(appID),
   )
   if (appIDs.length === 0) return null
 
@@ -22,7 +22,7 @@ export function createAppleAppSiteAssociation(value: string | undefined) {
 
 export function createAndroidAssetLinks(
   value: string | undefined,
-  packageValue = "com.ewatrade.app",
+  packageValue: string | undefined,
 ) {
   const fingerprints = commaSeparated(value).filter((fingerprint) =>
     /^(?:[A-F0-9]{2}:){31}[A-F0-9]{2}$/.test(fingerprint),
@@ -30,7 +30,7 @@ export function createAndroidAssetLinks(
   if (fingerprints.length === 0) return null
 
   const packageNames = commaSeparated(packageValue).filter((packageName) =>
-    /^com\.ewatrade\.(?:app|dev)$/.test(packageName),
+    /^com\.ewatrade\.(?:app|dev|preview)$/.test(packageName),
   )
   if (packageNames.length === 0) return null
 

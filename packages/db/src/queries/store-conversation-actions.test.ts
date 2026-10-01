@@ -14,6 +14,12 @@ function dbClient(client: Record<string, unknown>) {
   return client as unknown as PrismaClient
 }
 
+const effectiveTerms = {
+  documentHash: "a".repeat(64),
+  effectiveDate: "2026-10-01",
+  version: "approved-v1",
+}
+
 function releasedVersion() {
   return {
     currencyCode: "NGN",
@@ -310,6 +316,9 @@ describe("Store Conversation Quote action messages", () => {
         findFirst: async () => ({ revision: 4, status: "QUOTED" }),
       },
       commerceQuoteVersion: { findFirst: async () => releasedVersion() },
+      legalAcceptance: {
+        findUnique: async () => ({ documentHash: effectiveTerms.documentHash }),
+      },
       storeConversation: {
         findFirst: async (args: { where: { id: string } }) => ({
           guestIdentityId: `guest_${args.where.id}`,
@@ -399,6 +408,7 @@ describe("Store Conversation Quote action messages", () => {
         storeId: "store_1",
         tenantId: "tenant_1",
       },
+      effectiveTerms,
     )
 
     expect(locked).toEqual([
@@ -486,6 +496,9 @@ describe("Store Conversation Quote action messages", () => {
         findFirst: async () => ({ revision: 4, status: "QUOTED" }),
       },
       commerceQuoteVersion: { findFirst: async () => version },
+      legalAcceptance: {
+        findUnique: async () => ({ documentHash: effectiveTerms.documentHash }),
+      },
       storeConversation: {
         findFirst: async () => ({
           guestIdentityId: "guest_1",
@@ -560,6 +573,7 @@ describe("Store Conversation Quote action messages", () => {
         storeId: "store_1",
         tenantId: "tenant_1",
       },
+      effectiveTerms,
     )
     existing.payloadHash = firstAttempt[0]?.payloadHash ?? ""
 

@@ -1,10 +1,13 @@
 import { createHmac } from "node:crypto"
 import { prisma } from "@ewatrade/db"
+import { isAccountPrivacyAccessBlocked } from "@ewatrade/db/account-privacy-access"
+import { isLegalSignupSessionBlocked } from "@ewatrade/db/legal-session-access"
 import { normalizeHostname, stripPort } from "@ewatrade/utils"
 import { compare } from "bcryptjs"
 import type { BetterAuthOptions } from "better-auth"
 import { betterAuth } from "better-auth"
 import { prismaAdapter } from "better-auth/adapters/prisma"
+import { APIError } from "better-auth/api"
 import { hashPassword, verifyPassword } from "better-auth/crypto"
 import { nextCookies } from "better-auth/next-js"
 
@@ -264,13 +267,30 @@ export function initAuth(options: InitAuthOptions = {}) {
     },
     session: {
       cookieCache: {
-        enabled: true,
-        maxAge: 5 * 60,
-        strategy: "jwe",
+        enabled: false,
+      },
+    },
+    databaseHooks: {
+      session: {
+        create: {
+          before: async (session) => {
+            if (await isAccountPrivacyAccessBlocked(prisma, session.userId)) {
+              throw new APIError("FORBIDDEN", {
+                message: "This account is being closed.",
+              })
+            }
+            if (await isLegalSignupSessionBlocked(prisma, session.userId)) {
+              throw new APIError("FORBIDDEN", {
+                message: "Account setup is incomplete. Contact support.",
+              })
+            }
+          },
+        },
       },
     },
     emailAndPassword: {
       enabled: true,
+      autoSignIn: false,
       password: {
         hash: hashPassword,
         async verify({ hash, password }) {

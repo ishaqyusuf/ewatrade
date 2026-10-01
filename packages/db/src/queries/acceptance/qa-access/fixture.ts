@@ -244,37 +244,34 @@ export async function disposeQaAccessAcceptanceFixture(
     })
   ).map((event) => event.id)
 
-  await fixture.db.$transaction(
-    [
-      fixture.db.session.deleteMany({
-        where: {
-          OR: [
-            { qaAuthorizationId: { in: authorizationIds } },
-            { userId: { in: fixture.userIds } },
-          ],
-        },
-      }),
-      fixture.db.qaAccessAuditEvent.deleteMany({
-        where: { id: { in: auditIds } },
-      }),
-      fixture.db.qaTesterGrant.deleteMany({
-        where: { id: { in: grantIds } },
-      }),
-      fixture.db.qaAccessAttemptBucket.deleteMany({
-        where: { bucketDigest: { in: [...fixture.attemptBucketDigests] } },
-      }),
-      fixture.db.tenant.deleteMany({
-        where: { id: { in: fixture.tenantIds } },
-      }),
-      fixture.db.user.deleteMany({
-        where: {
-          id: { in: fixture.userIds },
-          memberships: { none: {} },
-        },
-      }),
-    ],
-    { timeout: 60_000 },
-  )
+  await fixture.db.$transaction([
+    fixture.db.session.deleteMany({
+      where: {
+        OR: [
+          { qaAuthorizationId: { in: authorizationIds } },
+          { userId: { in: fixture.userIds } },
+        ],
+      },
+    }),
+    fixture.db.qaAccessAuditEvent.deleteMany({
+      where: { id: { in: auditIds } },
+    }),
+    fixture.db.qaTesterGrant.deleteMany({
+      where: { id: { in: grantIds } },
+    }),
+    fixture.db.qaAccessAttemptBucket.deleteMany({
+      where: { bucketDigest: { in: [...fixture.attemptBucketDigests] } },
+    }),
+    fixture.db.tenant.deleteMany({
+      where: { id: { in: fixture.tenantIds } },
+    }),
+    fixture.db.user.deleteMany({
+      where: {
+        id: { in: fixture.userIds },
+        memberships: { none: {} },
+      },
+    }),
+  ])
 
   const [
     auditEvents,

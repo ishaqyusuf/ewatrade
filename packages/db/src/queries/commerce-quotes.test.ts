@@ -3,7 +3,9 @@ import { describe, expect, test } from "bun:test"
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
   approveCommerceQuoteVersion,
+  assertCommerceQuoteCustomerTextScreened,
   assertCommerceQuoteSource,
+  assertQuoteAuthorTermsAccepted,
   assertQuoteVersionAcceptable,
   assertQuotedSourceQuoteIdentity,
   getCommerceQuoteAcceptanceContext,
@@ -17,7 +19,109 @@ import {
 } from "./commerce-quotes"
 import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service-commerce-policy"
 
+const quoteTermsPublication = {
+  documentHash: "a".repeat(64),
+  effectiveDate: "2026-09-28",
+  version: "approved-quote-test",
+}
+const acceptedQuoteTerms = {
+  findUnique: async () => ({
+    documentHash: quoteTermsPublication.documentHash,
+  }),
+}
+
 describe("Commerce Quote invariants", () => {
+  test("requires exact effective Quote-author Terms and permits retry after acceptance", async () => {
+    let acceptedHash: string | null = null
+    const tx = {
+      legalAcceptance: {
+        findUnique: async () =>
+          acceptedHash ? { documentHash: acceptedHash } : null,
+      },
+    }
+    await expect(
+      assertQuoteAuthorTermsAccepted(tx as never, "author-1", null),
+    ).rejects.toMatchObject({ code: "QUOTE_RELEASE_FORBIDDEN" })
+    await expect(
+      assertQuoteAuthorTermsAccepted(
+        tx as never,
+        "author-1",
+        quoteTermsPublication,
+      ),
+    ).rejects.toMatchObject({ code: "QUOTE_RELEASE_FORBIDDEN" })
+    acceptedHash = "b".repeat(64)
+    await expect(
+      assertQuoteAuthorTermsAccepted(
+        tx as never,
+        "author-1",
+        quoteTermsPublication,
+      ),
+    ).rejects.toMatchObject({ code: "QUOTE_RELEASE_FORBIDDEN" })
+    acceptedHash = quoteTermsPublication.documentHash
+    await expect(
+      assertQuoteAuthorTermsAccepted(
+        tx as never,
+        "author-1",
+        quoteTermsPublication,
+      ),
+    ).resolves.toBeUndefined()
+  })
+
+  test("rejects an unsafe standalone option label before any Quote transaction", async () => {
+    let transactions = 0
+    const db = {
+      $transaction: () => {
+        transactions += 1
+        throw new Error("unsafe Quote must not be persisted")
+      },
+    } as unknown as PrismaClient
+    await expect(
+      issueCommerceQuote(db, {
+        actorUserId: "attendant-1",
+        clientQuoteId: "quote-1",
+        clientVersionId: "version-1",
+        options: [
+          {
+            availabilityOutcome: "unavailable",
+            clientOptionId: "option-1",
+            label: "[[qa-reject]]",
+            lines: [{ outcome: "unavailable", sourceLineId: "line-1" }],
+          },
+        ],
+        sourceId: "request-1",
+        sourceType: "service_request",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      }),
+    ).rejects.toMatchObject({ code: "QUOTE_RELEASE_FORBIDDEN" })
+    expect(transactions).toBe(0)
+  })
+
+  test.each([
+    {
+      customerNote: "[[qa-review]]",
+      fulfilmentPromise: null,
+      label: "Option",
+      lines: [],
+    },
+    {
+      customerNote: null,
+      fulfilmentPromise: "[[qa-reject]]",
+      label: "Option",
+      lines: [],
+    },
+    {
+      customerNote: null,
+      fulfilmentPromise: null,
+      label: "Option",
+      lines: [{ customerNote: "[[qa-review]]" }],
+    },
+  ])("screens every standalone Quote prose field", async (option) => {
+    await expect(
+      assertCommerceQuoteCustomerTextScreened([option]),
+    ).rejects.toMatchObject({ code: "QUOTE_RELEASE_FORBIDDEN" })
+  })
+
   test("lets only source-verified private Service drafts bypass Product availability", () => {
     expect(
       quoteLineRequiresStoreAvailability({
@@ -510,6 +614,7 @@ describe("Commerce Quote invariants", () => {
       variant: { name: "Default", selections: [] },
     }
     const client = {
+      legalAcceptance: acceptedQuoteTerms,
       $transaction: async (callback: (tx: PrismaClient) => Promise<unknown>) =>
         callback(client as unknown as PrismaClient),
       commerceQuote: {
@@ -589,24 +694,28 @@ describe("Commerce Quote invariants", () => {
     } as unknown as PrismaClient
 
     await expect(
-      issueCommerceQuote(client, {
-        actorUserId: "actor-1",
-        availabilityOutcome: "full",
-        clientQuoteId: "quote-command-1",
-        clientVersionId: "quote-version-command-1",
-        lines: [
-          {
-            offeringId: "offering-1",
-            outcome: "included",
-            quantity: "1",
-            unitPriceMinor: 7_500,
-          },
-        ],
-        sourceId: "request-1",
-        sourceType: "service_request",
-        storeId: "store-1",
-        tenantId: "tenant-1",
-      }),
+      issueCommerceQuote(
+        client,
+        {
+          actorUserId: "actor-1",
+          availabilityOutcome: "full",
+          clientQuoteId: "quote-command-1",
+          clientVersionId: "quote-version-command-1",
+          lines: [
+            {
+              offeringId: "offering-1",
+              outcome: "included",
+              quantity: "1",
+              unitPriceMinor: 7_500,
+            },
+          ],
+          sourceId: "request-1",
+          sourceType: "service_request",
+          storeId: "store-1",
+          tenantId: "tenant-1",
+        },
+        quoteTermsPublication,
+      ),
     ).resolves.toMatchObject({
       quoteId: "quote-1",
       versionId: "version-1",
@@ -643,6 +752,7 @@ describe("Commerce Quote invariants", () => {
       variant: { name: "Default", selections: [] },
     }
     const client = {
+      legalAcceptance: acceptedQuoteTerms,
       $transaction: async (callback: (tx: PrismaClient) => Promise<unknown>) =>
         callback(client as unknown as PrismaClient),
       commerceQuote: {
@@ -734,29 +844,33 @@ describe("Commerce Quote invariants", () => {
       },
     } as unknown as PrismaClient
 
-    const result = await issueCommerceQuote(client, {
-      actorUserId: "actor-1",
-      availabilityOutcome: "full",
-      clientQuoteId: "quote-command-rx",
-      clientVersionId: "quote-version-rx",
-      expiresAt: new Date("2030-01-01T00:00:00.000Z"),
-      lines: [
-        {
-          balanceRevision: 4,
-          configurationVersionId: "configuration-1",
-          offeringId: "offering-1",
-          outcome: "included",
-          quantity: "1",
-          sourceLineId: "transcription-line-1",
-          unitPriceMinor: 7_500,
-        },
-      ],
-      protectActionId: (actionId) => `protected:${actionId.length}`,
-      sourceId: "request-1",
-      sourceType: "prescription_request",
-      storeId: "store-1",
-      tenantId: "tenant-1",
-    })
+    const result = await issueCommerceQuote(
+      client,
+      {
+        actorUserId: "actor-1",
+        availabilityOutcome: "full",
+        clientQuoteId: "quote-command-rx",
+        clientVersionId: "quote-version-rx",
+        expiresAt: new Date("2030-01-01T00:00:00.000Z"),
+        lines: [
+          {
+            balanceRevision: 4,
+            configurationVersionId: "configuration-1",
+            offeringId: "offering-1",
+            outcome: "included",
+            quantity: "1",
+            sourceLineId: "transcription-line-1",
+            unitPriceMinor: 7_500,
+          },
+        ],
+        protectActionId: (actionId) => `protected:${actionId.length}`,
+        sourceId: "request-1",
+        sourceType: "prescription_request",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      },
+      quoteTermsPublication,
+    )
 
     expect(result).toMatchObject({
       communicationIntentId: "intent-1",
@@ -919,6 +1033,8 @@ describe("Commerce Quote invariants", () => {
   test("revalidates and atomically releases one pending approval without creator self-approval", async () => {
     const events: string[] = []
     let actionMessages = 0
+    const termsUsers: string[] = []
+    let authorTermsHash: string | null = null
     const approval = {
       decidedByMembershipId: null,
       decisionClientId: null,
@@ -935,6 +1051,7 @@ describe("Commerce Quote invariants", () => {
       },
       quoteId: "quote-1",
       quoteVersion: {
+        createdByUserId: "author-user",
         currencyCode: "NGN",
         expiresAt: new Date("2030-01-01T00:00:00.000Z"),
         id: "version-1",
@@ -973,6 +1090,19 @@ describe("Commerce Quote invariants", () => {
       tenantId: "tenant-1",
     }
     const client = {
+      legalAcceptance: {
+        findUnique: async ({
+          where,
+        }: { where: { userId_version: { userId: string } } }) => {
+          termsUsers.push(where.userId_version.userId)
+          return {
+            documentHash:
+              where.userId_version.userId === "author-user"
+                ? authorTermsHash
+                : quoteTermsPublication.documentHash,
+          }
+        },
+      },
       $transaction: async (callback: (tx: PrismaClient) => Promise<unknown>) =>
         callback(client as unknown as PrismaClient),
       $queryRaw: async () => [{ id: "conversation-1" }],
@@ -1083,14 +1213,14 @@ describe("Commerce Quote invariants", () => {
         create: async () => {
           events.push("conversation:source-link")
         },
-        findMany: async () => [{ conversationId: "conversation-1" }],
+        findMany: async () => [],
       },
       store: {
         findFirst: async () => ({ countryCode: "NG", id: "store-1" }),
       },
     } as unknown as PrismaClient
 
-    const result = await approveCommerceQuoteVersion(client, {
+    const decision = {
       actorUserId: "approver-user",
       approvalId: "approval-1",
       clientDecisionId: "decision-1",
@@ -1100,22 +1230,31 @@ describe("Commerce Quote invariants", () => {
       reason: "Commercial details verified",
       storeId: "store-1",
       tenantId: "tenant-1",
-    })
+    }
+    await expect(
+      approveCommerceQuoteVersion(client, decision, quoteTermsPublication),
+    ).rejects.toMatchObject({ code: "QUOTE_RELEASE_FORBIDDEN" })
+    expect(events).toEqual([])
+    authorTermsHash = quoteTermsPublication.documentHash
+    termsUsers.length = 0
+
+    const result = await approveCommerceQuoteVersion(
+      client,
+      decision,
+      quoteTermsPublication,
+    )
     expect(result).toMatchObject({
       approvalId: "approval-1",
       releaseState: "released",
       versionId: "version-1",
     })
     expect(result.token).toBeString()
-    expect(actionMessages).toBe(1)
+    expect(actionMessages).toBe(0)
+    expect(termsUsers).toEqual(["approver-user", "author-user"])
     expect(events).toEqual([
       "approval:approved",
       "version:issued",
       "source:quoted",
-      "conversation:advanced",
-      "conversation:message",
-      "conversation:source-link",
-      "conversation:action",
       "approval:audit:approved",
     ])
   })
@@ -1176,6 +1315,7 @@ describe("Commerce Quote invariants", () => {
       tenantId: "tenant-1",
     }
     const client = {
+      legalAcceptance: acceptedQuoteTerms,
       $transaction: async (callback: (tx: PrismaClient) => Promise<unknown>) =>
         callback(client as unknown as PrismaClient),
       catalogAvailabilityAttestation: {
@@ -1276,18 +1416,22 @@ describe("Commerce Quote invariants", () => {
       },
     } as unknown as PrismaClient
 
-    const result = await approveCommerceQuoteVersion(client, {
-      actorUserId: "approver-user",
-      approvalId: "approval-rx",
-      clientDecisionId: "decision-rx",
-      expectedPolicyRevision: 3,
-      protectActionId: (actionId) => `protected:${actionId.length}`,
-      quoteId: "quote-rx",
-      quoteVersionId: "version-rx",
-      reason: "Commercial details verified",
-      storeId: "store-1",
-      tenantId: "tenant-1",
-    })
+    const result = await approveCommerceQuoteVersion(
+      client,
+      {
+        actorUserId: "approver-user",
+        approvalId: "approval-rx",
+        clientDecisionId: "decision-rx",
+        expectedPolicyRevision: 3,
+        protectActionId: (actionId) => `protected:${actionId.length}`,
+        quoteId: "quote-rx",
+        quoteVersionId: "version-rx",
+        reason: "Commercial details verified",
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      },
+      quoteTermsPublication,
+    )
 
     expect(result).toMatchObject({
       approvalId: "approval-rx",

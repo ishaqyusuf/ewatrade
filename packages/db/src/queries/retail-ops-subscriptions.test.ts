@@ -41,7 +41,9 @@ function createGrowthPlanRow() {
   }
 }
 
-function createMockSnapshotDb() {
+function createMockSnapshotDb(
+  subscriptionOverride: Record<string, unknown> = {},
+) {
   const calls: SubscriptionCall[] = []
   const tenant = createTenantRow()
   const growthPlan = createGrowthPlanRow()
@@ -91,9 +93,9 @@ function createMockSnapshotDb() {
         return []
       },
     },
-    product: {
+    catalogItem: {
       count: async ({ where }: { where: unknown }) => {
-        calls.push({ kind: "product.count", where })
+        calls.push({ kind: "catalogItem.count", where })
 
         return 12
       },
@@ -131,6 +133,7 @@ function createMockSnapshotDb() {
           status: "ACTIVE",
           trialEndsAt: null,
           updatedAt: new Date("2026-07-12T08:00:00.000Z"),
+          ...subscriptionOverride,
         }
       },
     },
@@ -178,9 +181,9 @@ function createMockCheckoutDb() {
         return []
       },
     },
-    product: {
+    catalogItem: {
       count: async ({ where }: { where: unknown }) => {
-        calls.push({ kind: "product.count", where })
+        calls.push({ kind: "catalogItem.count", where })
 
         return 2
       },
@@ -292,9 +295,9 @@ function createMockOfflineDeviceDb() {
         return []
       },
     },
-    product: {
+    catalogItem: {
       count: async ({ where }: { where: unknown }) => {
-        calls.push({ kind: "product.count", where })
+        calls.push({ kind: "catalogItem.count", where })
 
         return 1
       },
@@ -404,6 +407,36 @@ describe("retail ops subscription queries", () => {
         in: ["ACTIVE", "INVITED", "SUSPENDED"],
       },
       tenantId: "tenant_123",
+    })
+    expect(getCall(db.calls, "catalogItem.count").where).toEqual({
+      tenantId: "tenant_123",
+      status: { not: "ARCHIVED" },
+    })
+  })
+
+  test("removes expired store access from the actual subscription snapshot", async () => {
+    const db = createMockSnapshotDb({
+      provider: "PLAY_STORE",
+      currentPeriodEndsAt: new Date("2020-01-01T00:00:00.000Z"),
+    })
+
+    const snapshot = await getRetailOpsSubscriptionSnapshot(db.client, {
+      tenantId: "tenant_123",
+    })
+
+    expect(snapshot.subscription.status).toBe("cancelled")
+    expect(snapshot.plan.limits).toEqual({
+      businesses: 0,
+      offlineDevices: 0,
+      products: 0,
+      reportsHistoryDays: 0,
+      staff: 0,
+    })
+    expect(snapshot.entitlements).toContainEqual({
+      isAtLimit: true,
+      key: "products",
+      limit: 0,
+      used: 12,
     })
   })
 

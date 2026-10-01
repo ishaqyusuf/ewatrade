@@ -31,6 +31,7 @@ describe("business signup schemas", () => {
     expect(
       signupPayloadSchema.parse({
         ...BUSINESS_INPUT,
+        ageBand: "AGE_13_TO_15",
         email: "owner@example.com",
         firstName: "Ada",
         lastName: "Nwosu",
@@ -56,6 +57,22 @@ describe("business signup schemas", () => {
         businessProfileKey: "other-mixed-business",
         otherBusinessDescription: "",
       }).success,
+    ).toBe(false)
+  })
+
+  test("requires a 13+ account entry choice", () => {
+    const account = {
+      ...BUSINESS_INPUT,
+      email: "owner@example.com",
+      firstName: "Ada",
+      lastName: "Nwosu",
+      password: "password123",
+      subdomain: "bird-feed-store",
+    }
+    expect(signupPayloadSchema.safeParse(account).success).toBe(false)
+    expect(
+      signupPayloadSchema.safeParse({ ...account, ageBand: "UNDER_13" })
+        .success,
     ).toBe(false)
   })
 })

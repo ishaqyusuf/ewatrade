@@ -1,3 +1,4 @@
+import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 
 import { CustomerNotificationAccountContent } from "./customer-notification-account-content"
@@ -8,12 +9,14 @@ import { useCustomerNotificationControls } from "./use-customer-notification-con
 export function CustomerNotificationControls({
   accountAccess,
   available,
+  blocked,
   conversationId,
   onNotice,
   publicToken,
 }: {
   accountAccess: boolean
   available: boolean
+  blocked: boolean
   conversationId: string
   onNotice(message: string): void
   publicToken: string
@@ -27,9 +30,16 @@ export function CustomerNotificationControls({
 
   return (
     <View className="gap-2 py-1">
+      {blocked ? (
+        <Text className="text-xs leading-4 text-muted-foreground">
+          Conversation notifications are paused while this Store is blocked. You
+          can still manage your notification settings and contacts.
+        </Text>
+      ) : null}
       {!available || !controls.expanded || accountAccess ? (
         <CustomerNotificationSummaryControls
           available={available}
+          blocked={blocked}
           busy={controls.busy}
           expanded={controls.expanded}
           onNotifyWhenAvailable={() => void controls.notifyWhenAvailable()}

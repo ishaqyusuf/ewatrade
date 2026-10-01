@@ -1,9 +1,13 @@
 const { describe, expect, test } = require("bun:test")
-const { readFileSync } = require("node:fs")
+const { mkdtempSync, readFileSync, rmSync, writeFileSync } = require("node:fs")
+const { tmpdir } = require("node:os")
 const { join } = require("node:path")
 const {
+  createProductionDesignReferenceAliases,
   createProductionQaAliases,
   isInternalQaBuild,
+  resolveDesignReferenceAlias,
+  resolveProductionInternalDesignAssetAlias,
 } = require("./qa-build-aliases.cjs")
 
 describe("mobile QA build aliases", () => {
@@ -37,6 +41,80 @@ describe("mobile QA build aliases", () => {
     ).toBe(true)
   })
 
+  test("uses an included reference for design-only images excluded from EAS", () => {
+    const aliases = createProductionDesignReferenceAliases(__dirname)
+    const designData = readFileSync(
+      join(
+        __dirname,
+        "src/components/mobile/design-system/designs/design-01/design-01.data.ts",
+      ),
+      "utf8",
+    )
+    const sourceImports = [
+      ...designData.matchAll(/require\("(@design\/[^\"]+)"\)/g),
+    ].map((match) => match[1])
+    expect([...aliases.keys()].sort()).toEqual(sourceImports.sort())
+    expect([...aliases.keys()].sort()).toEqual([
+      "@design/reference-commerce-home-customer-orders.png",
+      "@design/reference-customer-orders-insights.png",
+      "@design/reference-customer-wishlist-reviews-loyalty.png",
+      "@design/reference-customers-profile-orders.png",
+      "@design/reference-products-create-media.png",
+    ])
+    expect(new Set(aliases.values()).size).toBe(1)
+    expect([...aliases.values()][0]).toBe(
+      join(__dirname, "assets/icons/splash-logo.png"),
+    )
+  })
+
+  test("keeps internal design art out of Production while retaining local QA art", () => {
+    const placeholder = join(__dirname, "assets/icons/splash-logo.png")
+    for (const moduleName of [
+      "@assets/images/design-system/reference-home-shell.jpg",
+      "@assets/images/design-system/reference-admin-more.png",
+      "@assets/images/e-shop/banner.jpg",
+      "@assets/images/e-shop/hair/olaplex-1.jpeg",
+    ]) {
+      expect(
+        resolveProductionInternalDesignAssetAlias(moduleName, __dirname, false),
+      ).toBe(placeholder)
+      expect(
+        resolveProductionInternalDesignAssetAlias(moduleName, __dirname, true),
+      ).toBeNull()
+    }
+    expect(
+      resolveProductionInternalDesignAssetAlias(
+        "@assets/icons/splash-logo.png",
+        __dirname,
+        false,
+      ),
+    ).toBeNull()
+  })
+
+  test("keeps available QA reference art and substitutes absent EAS archive art", () => {
+    const designRoot = mkdtempSync(join(tmpdir(), "ewa-design-reference-"))
+    const aliases = createProductionDesignReferenceAliases(__dirname)
+    const moduleName = "@design/reference-commerce-home-customer-orders.png"
+    const bundledReference = aliases.get(moduleName)
+    try {
+      expect(
+        resolveDesignReferenceAlias(moduleName, designRoot, aliases, true),
+      ).toBe(bundledReference)
+      writeFileSync(
+        join(designRoot, moduleName.slice("@design/".length)),
+        "art",
+      )
+      expect(
+        resolveDesignReferenceAlias(moduleName, designRoot, aliases, true),
+      ).toBeNull()
+      expect(
+        resolveDesignReferenceAlias(moduleName, designRoot, aliases, false),
+      ).toBe(bundledReference)
+    } finally {
+      rmSync(designRoot, { recursive: true, force: true })
+    }
+  })
+
   test("keeps QA context above the bottom-sheet portal host", () => {
     const layout = readFileSync(join(__dirname, "src/app/_layout.tsx"), "utf8")
     const qaProviderOpen = layout.indexOf("<QaAcceleratorProvider>")
@@ -61,7 +139,10 @@ describe("mobile QA build aliases", () => {
       join(__dirname, "src/components/mobile/qa-account-chooser.tsx"),
       "utf8",
     )
-    const login = readFileSync(join(__dirname, "src/app/login.tsx"), "utf8")
+    const login = readFileSync(
+      join(__dirname, "src/components/mobile/login/login-screen.tsx"),
+      "utf8",
+    )
 
     expect(sheet).toContain("enableDismissOnClose")
     expect(sheet).toContain("enablePanDownToClose")

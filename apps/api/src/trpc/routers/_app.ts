@@ -1,6 +1,8 @@
+import { storeSubscriptionsRouter } from "./store-subscriptions"
 import { isQaAcceleratorClientMode } from "@ewatrade/utils/qa-accelerator"
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server"
 import { createTRPCRouter } from "../init"
+import { accountPrivacyRouter } from "./account-privacy"
 import { authRouter } from "./auth"
 import { catalogRouter } from "./catalog"
 import { customersRouter } from "./customers"
@@ -28,6 +30,8 @@ const qaAccessRegistration: { qaAccess: typeof qaAccessRouter } =
 
 export const appRouter = createTRPCRouter({
   auth: authRouter,
+  storeSubscriptions: storeSubscriptionsRouter,
+  accountPrivacy: accountPrivacyRouter,
   catalog: catalogRouter,
   customers: customersRouter,
   inventory: inventoryRouter,

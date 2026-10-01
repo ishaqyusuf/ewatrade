@@ -14,7 +14,6 @@
     "better-auth": "^1.5.5"
   },
   "devDependencies": {
-    "@better-auth/cli": "^1.4.21",
     "@biomejs/biome": "^1.9.4",
     "@ewatrade/tsconfig": "workspace:*",
     "@types/bun": "latest",

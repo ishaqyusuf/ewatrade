@@ -86,6 +86,14 @@ export function DesignSystemScreen() {
       >
         Preview app lock
       </ActionButton>
+      <ActionButton
+        icon="User"
+        onPress={() => router.push("/design-system/customer-account-privacy")}
+        trailingIcon="ChevronRight"
+        variant="outline"
+      >
+        Preview customer account privacy
+      </ActionButton>
       <ReferenceDecisionsSection />
     </MobileScreen>
   )

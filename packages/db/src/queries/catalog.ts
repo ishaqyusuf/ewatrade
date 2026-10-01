@@ -6,6 +6,7 @@ import {
   EXACT_QUANTITY_MAX_SCALE,
   parseExactDecimal,
 } from "@ewatrade/utils/exact-decimal"
+import { currentEffectiveLegalPublication } from "@ewatrade/utils/legal-approval"
 
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import {
@@ -20,6 +21,9 @@ import {
   UnitConfigurationStatus,
   WorkAuthorizationPolicy,
 } from "../../generated/prisma/enums"
+import { assertAccountStoreConversationTermsAccepted } from "./store-conversation-account-terms"
+import { assertStoreConversationTextScreened } from "./store-conversation-text-safety"
+import { StoreConversationError } from "./store-conversations-core"
 
 export type CatalogItemKindValue = "product" | "service"
 export type CatalogItemStatusValue = "active" | "archived" | "draft"
@@ -277,6 +281,125 @@ const catalogItemGraph = {
     orderBy: { sortOrder: "asc" },
   },
 } satisfies Prisma.CatalogItemInclude
+
+type CatalogTermsPublication = NonNullable<
+  ReturnType<typeof currentEffectiveLegalPublication>
+>
+
+/** A write-time boundary for all customer-visible Catalog copy and media. */
+export async function assertCatalogPublicationSafety(
+  tx: Prisma.TransactionClient,
+  input: {
+    actorUserId: string
+    mediaUrls: readonly (string | null | undefined)[]
+    publication?: CatalogTermsPublication | null
+    texts: readonly (string | null | undefined)[]
+  },
+) {
+  try {
+    await assertAccountStoreConversationTermsAccepted(
+      tx,
+      input.actorUserId,
+      input.publication === undefined
+        ? currentEffectiveLegalPublication()
+        : input.publication,
+    )
+  } catch (error) {
+    if (error instanceof StoreConversationError) {
+      throw new CatalogError(
+        "INVALID_CATALOG_ITEM",
+        "Review and accept the current EwaTrade Terms before publishing Catalog content.",
+      )
+    }
+    throw error
+  }
+
+  // URL validation is not image inspection. Keep media closed until the
+  // approved live media provider is wired into this same publication boundary.
+  if (input.mediaUrls.some((url) => url?.trim())) {
+    throw new CatalogError(
+      "INVALID_CATALOG_ITEM",
+      "Catalog image publication is paused until live media screening is approved.",
+    )
+  }
+
+  for (const value of new Set(
+    input.texts
+      .map((text) => text?.trim())
+      .filter((text): text is string => Boolean(text)),
+  )) {
+    try {
+      await assertStoreConversationTextScreened(value)
+    } catch (error) {
+      if (error instanceof StoreConversationError) {
+        throw new CatalogError(
+          "INVALID_CATALOG_ITEM",
+          "Catalog text cannot be published until live safety screening is available and passes.",
+        )
+      }
+      throw error
+    }
+  }
+}
+
+/** Recheck saved copy when a draft or unavailable Offering becomes visible. */
+export async function assertExistingCatalogOfferingPublicationSafety(
+  tx: Prisma.TransactionClient,
+  input: {
+    actorUserId: string
+    offeringId: string
+    publication?: CatalogTermsPublication | null
+    tenantId: string
+  },
+) {
+  const offering = await tx.sellableOffering.findFirst({
+    where: { id: input.offeringId, tenantId: input.tenantId },
+    select: { catalogItemId: true, variantId: true },
+  })
+  if (!offering) {
+    throw new CatalogError(
+      "CATALOG_OFFERING_NOT_FOUND",
+      "Catalog Offering not found.",
+    )
+  }
+  const item = await tx.catalogItem.findFirst({
+    include: catalogItemGraph,
+    where: { id: offering.catalogItemId, tenantId: input.tenantId },
+  })
+  const variant = item?.variants.find(
+    (entry) => entry.id === offering.variantId,
+  )
+  const selectedOffering = variant?.offerings.find(
+    (entry) => entry.id === input.offeringId,
+  )
+  if (!item || !variant || !selectedOffering) {
+    throw new CatalogError(
+      "CATALOG_OFFERING_NOT_FOUND",
+      "Catalog Offering not found.",
+    )
+  }
+  await assertCatalogPublicationSafety(tx, {
+    actorUserId: input.actorUserId,
+    publication: input.publication,
+    mediaUrls: [item.imageUrl, ...item.imageLinks, variant.imageUrl],
+    texts: [
+      item.name,
+      item.category,
+      item.description,
+      ...item.optionGroups.flatMap((group) => [
+        group.name,
+        ...group.values.map((value) => value.label),
+      ]),
+      ...(item.product?.currentUnitConfiguration?.units ?? []).flatMap(
+        (unit) => [unit.name, unit.symbol],
+      ),
+      variant.name,
+      variant.description,
+      selectedOffering.name,
+      selectedOffering.serviceOffering?.guidance,
+    ],
+  })
+}
 
 type CatalogItemGraph = Prisma.CatalogItemGetPayload<{
   include: typeof catalogItemGraph
@@ -819,6 +942,40 @@ export async function createCatalogItem(
 
       return serializeCatalogItem(previousItem)
     }
+
+    await assertCatalogPublicationSafety(tx, {
+      actorUserId: input.actorUserId,
+      mediaUrls: [
+        input.imageUrl,
+        ...(input.imageLinks ?? []),
+        ...input.variants.map((variant) => variant.imageUrl),
+      ],
+      texts: [
+        input.name,
+        input.category,
+        input.description,
+        ...(input.optionGroups ?? []).flatMap((group) => [
+          group.name,
+          ...group.values.map((value) => value.label),
+        ]),
+        ...(input.kind === "product"
+          ? input.unitConfiguration.units.flatMap((unit) => [
+              unit.name,
+              unit.symbol,
+            ])
+          : []),
+        ...input.variants.flatMap((variant) => [
+          variant.name,
+          variant.description,
+          ...variant.offerings.flatMap((offering) => [
+            offering.name,
+            ...(input.kind === "service"
+              ? ["guidance" in offering ? offering.guidance : undefined]
+              : []),
+          ]),
+        ]),
+      ],
+    })
 
     const store = await tx.store.findFirst({
       where: { id: input.storeId, tenantId: input.tenantId },
@@ -1419,6 +1576,7 @@ export async function listCatalogItemsPage(
 export async function setCatalogOfferingStoreAvailability(
   db: PrismaClient,
   input: {
+    actorUserId: string
     isAvailable: boolean
     offeringId: string
     storeId: string
@@ -1446,6 +1604,10 @@ export async function setCatalogOfferingStoreAvailability(
         "STORE_NOT_FOUND",
         "Store not found for this business.",
       )
+    }
+
+    if (input.isAvailable) {
+      await assertExistingCatalogOfferingPublicationSafety(tx, input)
     }
 
     return tx.storeOfferingAvailability.upsert({

@@ -13,7 +13,9 @@ const providerDigest = "d".repeat(64)
 const eventDigest = "e".repeat(64)
 const now = new Date("2026-08-16T14:00:00.000Z")
 
-function routeDb(input: { bridge?: boolean; direct?: boolean } = {}) {
+function routeDb(
+  input: { bridge?: boolean; direct?: boolean; blocked?: boolean } = {},
+) {
   const writes: Array<{ data: Record<string, unknown>; model: string }> = []
   const route = {
     connectionId: "connection_1",
@@ -28,11 +30,16 @@ function routeDb(input: { bridge?: boolean; direct?: boolean } = {}) {
     tenantId: "tenant_1",
   }
   const client = {
+    storeConversation: {
+      findFirst: async () => (input.blocked ? null : { id: "conversation_1" }),
+    },
     storeConversationWhatsAppBridge: {
-      findMany: async () => (input.bridge ? [{ ...route, id: "bridge_1" }] : []),
+      findMany: async () =>
+        input.bridge ? [{ ...route, id: "bridge_1" }] : [],
     },
     storeConversationWhatsAppDirectSession: {
-      findMany: async () => (input.direct ? [{ ...route, id: "direct_1" }] : []),
+      findMany: async () =>
+        input.direct ? [{ ...route, id: "direct_1" }] : [],
     },
     storeConversationWhatsAppOutboundAttempt: {
       create: async ({ data }: { data: Record<string, unknown> }) => {
@@ -45,17 +52,33 @@ function routeDb(input: { bridge?: boolean; direct?: boolean } = {}) {
 }
 
 describe("Store Conversation WhatsApp outbound preparation", () => {
+  test("does not queue a WhatsApp reply for a customer-blocked conversation", async () => {
+    const db = routeDb({ bridge: true, blocked: true })
+    expect(
+      await prepareStoreConversationWhatsAppOutboundAttemptInTransaction(
+        db.client,
+        {
+          conversationId: "conversation_1",
+          messageId: "message_1",
+          storeId: "store_1",
+          tenantId: "tenant_1",
+        },
+      ),
+    ).toBeNull()
+    expect(db.writes).toHaveLength(0)
+  })
   test("creates one identifier-only outbox row for one exact current route", async () => {
     const db = routeDb({ bridge: true })
-    const result = await prepareStoreConversationWhatsAppOutboundAttemptInTransaction(
-      db.client,
-      {
-        conversationId: "conversation_1",
-        messageId: "message_1",
-        storeId: "store_1",
-        tenantId: "tenant_1",
-      },
-    )
+    const result =
+      await prepareStoreConversationWhatsAppOutboundAttemptInTransaction(
+        db.client,
+        {
+          conversationId: "conversation_1",
+          messageId: "message_1",
+          storeId: "store_1",
+          tenantId: "tenant_1",
+        },
+      )
 
     expect(result).toEqual({
       attemptId: "attempt_1",
@@ -104,7 +127,7 @@ describe("Store Conversation WhatsApp outbound preparation", () => {
   })
 })
 
-function lifecycleDb() {
+function lifecycleDb(input: { blocked?: boolean } = {}) {
   const writes: Array<{ data: Record<string, unknown>; model: string }> = []
   let attempt = {
     attemptCount: 0,
@@ -139,6 +162,11 @@ function lifecycleDb() {
     $queryRaw: async () => [{ id: "locked" }],
     $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
       callback(client),
+    storeConversation: {
+      findFirst: async () => ({
+        customerBlockedAt: input.blocked ? now : null,
+      }),
+    },
     commerceInquiry: {
       findFirst: async () => ({ revision: 2, status: "QUOTED" }),
     },
@@ -164,7 +192,10 @@ function lifecycleDb() {
         prescriptionRoles: [],
         prescriptionSettings: null,
         storeConversationAvailabilityConfiguration: null,
-        storeConversationChannelConfiguration: { desiredMode: "BOTH", revision: 1 },
+        storeConversationChannelConfiguration: {
+          desiredMode: "BOTH",
+          revision: 1,
+        },
         tenant: { timezone: "Africa/Lagos" },
       }),
     },
@@ -215,17 +246,38 @@ function lifecycleDb() {
       ],
     },
   }
-  return { client: client as unknown as PrismaClient, getAttempt: () => attempt, writes }
+  return {
+    client: client as unknown as PrismaClient,
+    getAttempt: () => attempt,
+    writes,
+  }
 }
 
 describe("Store Conversation WhatsApp outbound lifecycle", () => {
+  test("cancels a queued WhatsApp reply before provider claim when the customer blocks", async () => {
+    const db = lifecycleDb({ blocked: true })
+    expect(
+      await claimStoreConversationWhatsAppOutboundAttempt(db.client, {
+        attemptId: "attempt_1",
+        claimToken: "claim_1",
+        now,
+      }),
+    ).toBeNull()
+    expect(db.getAttempt()).toMatchObject({
+      status: "CANCELLED",
+      failureCode: "customer_blocked",
+    })
+  })
   test("claims once and completes with one outbound observation", async () => {
     const db = lifecycleDb()
-    const claimed = await claimStoreConversationWhatsAppOutboundAttempt(db.client, {
-      attemptId: "attempt_1",
-      claimToken: "claim_1",
-      now,
-    })
+    const claimed = await claimStoreConversationWhatsAppOutboundAttempt(
+      db.client,
+      {
+        attemptId: "attempt_1",
+        claimToken: "claim_1",
+        now,
+      },
+    )
     expect(claimed).toMatchObject({
       recipientCiphertext: "recipient_ciphertext",
       text: "Your quote is ready",

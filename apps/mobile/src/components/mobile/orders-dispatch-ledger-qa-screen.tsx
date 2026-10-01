@@ -27,11 +27,14 @@ function fixtureOrder(
     amountPaidMinor: 0,
     balanceDueMinor: 48_500_00,
     clientOrderId: `client-${input.id}`,
+    createdBy: null,
+    createdByUserId: "qa-owner",
     createdAt: new Date("2026-09-06T10:30:00.000Z"),
     currencyCode: "NGN",
     customerEmail: null,
     customerName: "Amina Yusuf",
     customerPhone: null,
+    deliveryDueAt: null,
     discountMinor: 0,
     lines: [
       {

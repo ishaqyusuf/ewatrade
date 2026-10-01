@@ -35,6 +35,36 @@ function activeCredential(status = "ACTIVE") {
 }
 
 describe("Store Conversation account adoption repositories", () => {
+  test("legacy undeclared Account cannot resolve a Guest credential during linking", async () => {
+    let guestCredentialReads = 0
+    const client = {
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback(client),
+      user: {
+        findUnique: async () => ({
+          ageBand: "UNDECLARED",
+          id: "legacy_account_1",
+        }),
+      },
+      storeConversationGuestCredential: {
+        findFirst: async () => {
+          guestCredentialReads += 1
+          return activeCredential()
+        },
+      },
+    }
+    await expect(
+      linkGuestStoreConversationsToAccount(dbClient(client), {
+        accountUserId: "legacy_account_1",
+        clientOperationId: "legacy-link-operation-1",
+        confirmed: true,
+        conversationIds: ["conversation_1"],
+        credentialToken,
+      }),
+    ).rejects.toMatchObject({ code: "NOT_READY" })
+    expect(guestCredentialReads).toBe(0)
+  })
+
   test("resumes only the authenticated account conversation for the resolved Store", async () => {
     const touchedAccessIds: string[] = []
     const client = {
@@ -63,7 +93,7 @@ describe("Store Conversation account adoption repositories", () => {
           return { id: args.where.id }
         },
       },
-      user: { findUnique: async () => ({ id: "account_1" }) },
+      user: { findUnique: async () => ({ ageBand: "ADULT", id: "account_1" }) },
     }
 
     await expect(
@@ -173,7 +203,7 @@ describe("Store Conversation account adoption repositories", () => {
       storeConversationGuestIdentity: {
         update: async () => ({ id: "guest_1" }),
       },
-      user: { findUnique: async () => ({ id: "account_1" }) },
+      user: { findUnique: async () => ({ ageBand: "ADULT", id: "account_1" }) },
     }
 
     const result = await listGuestStoreConversationAccountCandidates(
@@ -261,7 +291,7 @@ describe("Store Conversation account adoption repositories", () => {
       storeConversationGuestIdentity: {
         update: async () => ({ id: "guest_1" }),
       },
-      user: { findUnique: async () => ({ id: "account_1" }) },
+      user: { findUnique: async () => ({ ageBand: "ADULT", id: "account_1" }) },
     }
     const input = {
       accountUserId: "account_1",
@@ -320,7 +350,7 @@ describe("Store Conversation account adoption repositories", () => {
       storeConversationGuestCredential: {
         findFirst: async () => activeCredential(),
       },
-      user: { findUnique: async () => ({ id: "account_1" }) },
+      user: { findUnique: async () => ({ ageBand: "ADULT", id: "account_1" }) },
     }
 
     await expect(
@@ -355,7 +385,7 @@ describe("Store Conversation account adoption repositories", () => {
         },
       },
       storeConversationGuestCredential: { findFirst: async () => null },
-      user: { findUnique: async () => ({ id: "account_1" }) },
+      user: { findUnique: async () => ({ ageBand: "ADULT", id: "account_1" }) },
     }
 
     await expect(
@@ -396,7 +426,7 @@ describe("Store Conversation account adoption repositories", () => {
       storeConversationGuestCredential: {
         findFirst: async () => activeCredential(),
       },
-      user: { findUnique: async () => ({ id: "account_1" }) },
+      user: { findUnique: async () => ({ ageBand: "ADULT", id: "account_1" }) },
     }
 
     await expect(
@@ -424,7 +454,7 @@ describe("Store Conversation account adoption repositories", () => {
     const audits: Array<Record<string, unknown>> = []
     let accessCreates = 0
     const conversation = {
-      accountAccess: { accountUserId: "account_2" },
+      accountAccess: { accountUserId: "account_2", status: "ACTIVE" },
       accountInvitations: [{ id: "invitation_1" }],
       id: "conversation_1",
       storeId: "store_1",
@@ -451,7 +481,7 @@ describe("Store Conversation account adoption repositories", () => {
       storeConversationGuestCredential: {
         findFirst: async () => activeCredential(),
       },
-      user: { findUnique: async () => ({ id: "account_1" }) },
+      user: { findUnique: async () => ({ ageBand: "ADULT", id: "account_1" }) },
     }
 
     await expect(
@@ -470,6 +500,87 @@ describe("Store Conversation account adoption repositories", () => {
       reasonCode: "account_link_conversation_conflict",
       storeId: "store_1",
       tenantId: "tenant_1",
+    })
+    conversation.accountAccess = {
+      accountUserId: "account_1",
+      status: "REVOKED",
+    }
+    await expect(
+      linkGuestStoreConversationsToAccount(dbClient(client), {
+        accountUserId: "account_1",
+        clientOperationId: "account-link-revoked-owner",
+        confirmed: true,
+        conversationIds: ["conversation_1"],
+        credentialToken,
+      }),
+    ).rejects.toThrow(
+      "This conversation is no longer available for account linking.",
+    )
+    expect(accessCreates).toBe(0)
+    expect(audits[1]).toMatchObject({
+      outcome: "DENIED",
+      reasonCode: "account_link_conversation_conflict",
+    })
+  })
+
+  test("rejects a different conversation when this account's Store link was revoked", async () => {
+    const audits: Array<Record<string, unknown>> = []
+    let accessCreates = 0
+    const client = {
+      $queryRaw: async () => [{ id: "locked" }],
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback(client),
+      storeConversation: {
+        findMany: async () => [
+          {
+            accountAccess: null,
+            accountInvitations: [{ id: "invitation_2" }],
+            id: "conversation_2",
+            storeId: "store_1",
+            tenantId: "tenant_1",
+          },
+        ],
+      },
+      storeConversationAccountAccess: {
+        findMany: async () => [
+          {
+            conversationId: "conversation_1",
+            status: "REVOKED",
+            storeId: "store_1",
+          },
+        ],
+        create: async () => {
+          accessCreates += 1
+          return { id: "unexpected_access" }
+        },
+      },
+      storeConversationAccountAuditEvent: {
+        create: async (args: { data: Record<string, unknown> }) => {
+          audits.push(args.data)
+          return { id: "audit_1" }
+        },
+      },
+      storeConversationAccountLinkCommand: { findUnique: async () => null },
+      storeConversationGuestCredential: {
+        findFirst: async () => activeCredential(),
+      },
+      user: { findUnique: async () => ({ ageBand: "ADULT", id: "account_1" }) },
+    }
+    await expect(
+      linkGuestStoreConversationsToAccount(dbClient(client), {
+        accountUserId: "account_1",
+        clientOperationId: "account-link-revoked-store",
+        confirmed: true,
+        conversationIds: ["conversation_2"],
+        credentialToken,
+      }),
+    ).rejects.toThrow(
+      "This Store account link was revoked and cannot be linked again.",
+    )
+    expect(accessCreates).toBe(0)
+    expect(audits[0]).toMatchObject({
+      outcome: "DENIED",
+      reasonCode: "account_link_store_conflict",
     })
   })
 
@@ -515,7 +626,7 @@ describe("Store Conversation account adoption repositories", () => {
       storeConversationGuestCredential: {
         findFirst: async () => activeCredential(),
       },
-      user: { findUnique: async () => ({ id: "account_1" }) },
+      user: { findUnique: async () => ({ ageBand: "ADULT", id: "account_1" }) },
     }
 
     await expect(
@@ -569,7 +680,7 @@ describe("Store Conversation account adoption repositories", () => {
         ],
       },
       storeConversationMessage: { count: async () => 1 },
-      user: { findUnique: async () => ({ id: "account_1" }) },
+      user: { findUnique: async () => ({ ageBand: "ADULT", id: "account_1" }) },
     }
 
     const result = await listStoreConversationAccountConversations(
@@ -619,7 +730,7 @@ describe("Store Conversation account adoption repositories", () => {
           return []
         },
       },
-      user: { findUnique: async () => ({ id: "account_1" }) },
+      user: { findUnique: async () => ({ ageBand: "ADULT", id: "account_1" }) },
     }
 
     expect(
@@ -673,7 +784,7 @@ describe("Store Conversation account adoption repositories", () => {
           return { id: "credential_1" }
         },
       },
-      user: { findUnique: async () => ({ id: "account_1" }) },
+      user: { findUnique: async () => ({ ageBand: "ADULT", id: "account_1" }) },
     }
     const input = {
       accountUserId: "account_1",
@@ -718,7 +829,7 @@ describe("Store Conversation account adoption repositories", () => {
           return { id: "foreign_credential" }
         },
       },
-      user: { findUnique: async () => ({ id: "account_1" }) },
+      user: { findUnique: async () => ({ ageBand: "ADULT", id: "account_1" }) },
     }
 
     await expect(

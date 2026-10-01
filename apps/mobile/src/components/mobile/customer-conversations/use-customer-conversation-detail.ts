@@ -6,12 +6,14 @@ import {
 } from "@/lib/customer-conversation-draft-store"
 import {
   type CustomerOperation,
+  bootstrapNewStoreEntryWithCredentialRecovery,
   isCustomerCredentialError,
   isDefinitiveCustomerTransferError,
   resolveCustomerOperation,
 } from "@/lib/customer-conversation-state"
 import {
   clearCustomerConversationSession,
+  clearCustomerConversationSessionAndWait,
   clearPendingCustomerTransfer,
   completeCustomerCredentialRotation,
   getCustomerConversationSession,
@@ -49,6 +51,10 @@ import {
 } from "expo-file-system/legacy"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Linking } from "react-native"
+import {
+  canLoadCustomerAttachmentCapability,
+  canUseCustomerAttachmentCapability,
+} from "./customer-conversation-attachment-gate"
 import { useCustomerAttachmentDraft } from "./use-customer-attachment-draft"
 import { useCustomerRealtime } from "./use-customer-realtime"
 import { useCustomerVoiceNote } from "./use-customer-voice-note"
@@ -107,6 +113,8 @@ export function useCustomerConversationDetail(input: {
   accountAccess: boolean
   bootstrap: boolean
   conversationId: string | null
+  entryAgeBand?: "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT"
+  postingTermsAccepted: boolean
   publicToken: string | null
   targetCredentialToken: string | null
   transferToken: string | null
@@ -196,7 +204,9 @@ export function useCustomerConversationDetail(input: {
     const pending = getOrCreatePendingCustomerCredentialRotation()
     const rotated = await rotateCredentialMutation.mutateAsync(pending)
     if (!completeCustomerCredentialRotation(rotated)) {
-      throw new Error("The rotated conversation credential could not be stored.")
+      throw new Error(
+        "The rotated conversation credential could not be stored.",
+      )
     }
   }, [rotateCredentialMutation])
 
@@ -220,7 +230,8 @@ export function useCustomerConversationDetail(input: {
   }, [input.conversationId, inputScope])
 
   const openStore = useCallback(async () => {
-    if (!input.publicToken) return
+    const publicToken = input.publicToken
+    if (!publicToken) return
     setNotice(null)
     try {
       if (input.transferToken) {
@@ -228,7 +239,7 @@ export function useCustomerConversationDetail(input: {
           throw new Error("This app transfer could not be secured.")
         }
         const transfer = {
-          publicToken: input.publicToken,
+          publicToken,
           transferToken: input.transferToken,
         }
         await claimMutation.mutateAsync(transfer)
@@ -238,12 +249,24 @@ export function useCustomerConversationDetail(input: {
             targetCredentialToken: input.targetCredentialToken,
           }),
         )
-        clearPendingCustomerTransfer(input.publicToken)
+        clearPendingCustomerTransfer(publicToken)
         await rotateCredentialIfDue()
         return
       }
+      const previousSession = getCustomerConversationSession()
       persistBootstrap(
-        await bootstrapMutation.mutateAsync({ publicToken: input.publicToken }),
+        await bootstrapNewStoreEntryWithCredentialRecovery({
+          accountAccess: input.accountAccess,
+          bootstrap: () =>
+            bootstrapMutation.mutateAsync({
+              ageBand: input.entryAgeBand,
+              publicToken,
+            }),
+          clearSession: clearCustomerConversationSessionAndWait,
+          previousSession,
+          publicToken,
+          transferToken: input.transferToken,
+        }),
       )
       await rotateCredentialIfDue()
     } catch (error) {
@@ -259,6 +282,8 @@ export function useCustomerConversationDetail(input: {
   }, [
     bootstrapMutation.mutateAsync,
     claimMutation.mutateAsync,
+    input.accountAccess,
+    input.entryAgeBand,
     input.publicToken,
     input.targetCredentialToken,
     input.transferToken,
@@ -351,19 +376,24 @@ export function useCustomerConversationDetail(input: {
         target: selectedAttachmentTarget ?? { kind: "new_commerce_inquiry" },
       },
       {
-        enabled: Boolean(
-          !input.accountAccess &&
-            conversationId &&
-            input.publicToken &&
-            selectedAttachmentTarget &&
-            timeline.data?.channelMode.composerEnabled,
-        ),
+        enabled: canLoadCustomerAttachmentCapability({
+          accountAccess: input.accountAccess,
+          composerEnabled: Boolean(timeline.data?.channelMode.composerEnabled),
+          conversationId,
+          postingTermsAccepted: input.postingTermsAccepted,
+          publicToken: input.publicToken,
+          targetSelected: Boolean(selectedAttachmentTarget),
+        }),
         retry: false,
       },
     ),
   )
+  const attachmentCapabilityAvailable = canUseCustomerAttachmentCapability({
+    available: Boolean(attachmentCapability.data?.available),
+    postingTermsAccepted: input.postingTermsAccepted,
+  })
   const attachmentPolicy: StoreConversationAttachmentPolicy =
-    attachmentCapability.data?.available
+    attachmentCapabilityAvailable && attachmentCapability.data
       ? {
           acceptedMimeTypes: attachmentCapability.data.acceptedMimeTypes,
           allowedKinds: attachmentCapability.data.allowedKinds,
@@ -373,9 +403,10 @@ export function useCustomerConversationDetail(input: {
       : NO_ATTACHMENT_POLICY
   const attachmentDraft = useCustomerAttachmentDraft({
     enabled:
+      input.postingTermsAccepted &&
       Boolean(timeline.data?.channelMode.composerEnabled) &&
       canSelectStoreConversationAttachment({
-        capabilityAvailable: Boolean(attachmentCapability.data?.available),
+        capabilityAvailable: attachmentCapabilityAvailable,
         prescriptionConsentAccepted,
         target: selectedAttachmentTarget,
       }),
@@ -386,6 +417,7 @@ export function useCustomerConversationDetail(input: {
     onUpload: async ({ draft: localDraft, file, updateProgress }) => {
       if (
         input.accountAccess ||
+        !input.postingTermsAccepted ||
         !conversationId ||
         !input.publicToken ||
         !selectedAttachmentTarget
@@ -443,7 +475,7 @@ export function useCustomerConversationDetail(input: {
       await timeline.refetch()
     },
     policy: attachmentPolicy,
-    scopeKey: `${input.publicToken}:${conversationId ?? "unresolved"}`,
+    scopeKey: `${input.publicToken}:${conversationId ?? "unresolved"}:${input.postingTermsAccepted ? "accepted" : "draft"}`,
   })
 
   useEffect(() => {
@@ -501,9 +533,10 @@ export function useCustomerConversationDetail(input: {
   ])
   const voiceNote = useCustomerVoiceNote({
     enabled: Boolean(
-      timeline.data?.channelMode.composerEnabled &&
-        attachmentCapability.data?.available &&
-        attachmentCapability.data.allowedKinds.includes("audio") &&
+      input.postingTermsAccepted &&
+        timeline.data?.channelMode.composerEnabled &&
+        attachmentCapabilityAvailable &&
+        attachmentCapability.data?.allowedKinds.includes("audio") &&
         selectedAttachmentTarget &&
         selectedAttachmentTarget.kind !== "new_prescription_request" &&
         !attachmentDraft.draft,
@@ -832,15 +865,17 @@ export function useCustomerConversationDetail(input: {
 
   return {
     attachmentCapability,
+    attachmentCapabilityAvailable,
     attachmentDraft,
-    attachmentNotice:
-      attachmentDraft.notice ??
-      (attachmentCapability.isError
-        ? errorMessage(
-            attachmentCapability.error,
-            "Private attachments are unavailable.",
-          )
-        : attachmentBlockerMessage(attachmentCapability.data?.blockers)),
+    attachmentNotice: input.postingTermsAccepted
+      ? (attachmentDraft.notice ??
+        (attachmentCapability.isError
+          ? errorMessage(
+              attachmentCapability.error,
+              "Private attachments are unavailable.",
+            )
+          : attachmentBlockerMessage(attachmentCapability.data?.blockers)))
+      : null,
     attachmentTargets: availableAttachmentTargets,
     conversationId,
     draft,

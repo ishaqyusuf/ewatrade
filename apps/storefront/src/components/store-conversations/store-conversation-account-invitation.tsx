@@ -10,6 +10,16 @@ import { StoreConversationAccountDialog } from "./store-conversation-account-dia
 
 type Account = { user: { email: string; id: string; name: string } }
 type AuthMode = "sign_in" | "sign_up"
+type LegalPublication = {
+  effective: boolean
+  signupAvailable: boolean
+  version: string | null
+  effectiveDate: string | null
+}
+const legalOrigin =
+  process.env.NODE_ENV === "production"
+    ? "https://www.ewatrade.com"
+    : "https://ewatrade.localhost"
 
 async function responseJson<T>(response: Response) {
   const body = (await response.json()) as T & { message?: string }
@@ -37,6 +47,10 @@ export function StoreConversationAccountInvitation({
   const [email, setEmail] = useState("")
   const [name, setName] = useState("")
   const [password, setPassword] = useState("")
+  const [legalPublication, setLegalPublication] =
+    useState<LegalPublication | null>(null)
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [acknowledgedPrivacyNotice, setAcknowledPrivacyNotice] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [candidates, setCandidates] =
@@ -57,6 +71,26 @@ export function StoreConversationAccountInvitation({
       .catch(() => undefined)
     return () => controller.abort()
   }, [])
+
+  useEffect(() => {
+    if (!dialogOpen || mode !== "sign_up" || account) return
+    const controller = new AbortController()
+    void fetch("/api/store-conversations/account/legal-publication", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((response) => responseJson<LegalPublication>(response))
+      .then((publication) => {
+        if (controller.signal.aborted) return
+        setLegalPublication(publication)
+        setAcceptedTerms(false)
+        setAcknowledPrivacyNotice(false)
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setLegalPublication(null)
+      })
+    return () => controller.abort()
+  }, [account, dialogOpen, mode])
 
   const loadCandidates = async () => {
     setBusy(true)
@@ -92,6 +126,9 @@ export function StoreConversationAccountInvitation({
 
   const open = (nextMode: AuthMode) => {
     setMode(nextMode)
+    setLegalPublication(null)
+    setAcceptedTerms(false)
+    setAcknowledPrivacyNotice(false)
     setError(null)
     setDialogOpen(true)
     if (account) void loadCandidates()
@@ -99,12 +136,43 @@ export function StoreConversationAccountInvitation({
   }
 
   const authenticate = async () => {
+    if (mode === "sign_up") {
+      if (!legalPublication?.signupAvailable) {
+        setError(
+          "Account creation is paused until the current policies are available.",
+        )
+        return
+      }
+      if (
+        legalPublication.effective &&
+        (!legalPublication.version ||
+          !acceptedTerms ||
+          !acknowledgedPrivacyNotice)
+      ) {
+        setError(
+          "Review the Terms and Privacy Notice before creating an account.",
+        )
+        return
+      }
+    }
     setBusy(true)
     setError(null)
     try {
       const result = await responseJson<{ account: Account }>(
         await fetch("/api/store-conversations/account/auth", {
-          body: JSON.stringify({ email, mode, name, password }),
+          body: JSON.stringify({
+            email,
+            mode,
+            name,
+            password,
+            ...(mode === "sign_up" && legalPublication?.effective
+              ? {
+                  legalVersion: legalPublication.version,
+                  acceptedTerms: true,
+                  acknowledgedPrivacyNotice: true,
+                }
+              : {}),
+          }),
           headers: { "content-type": "application/json" },
           method: "POST",
         }),
@@ -309,9 +377,85 @@ export function StoreConversationAccountInvitation({
                 value={password}
               />
             </label>
+            {mode === "sign_up" ? (
+              <div className="grid gap-3 border-t border-border pt-4 text-sm">
+                {!legalPublication ? (
+                  <p className="text-muted-foreground">
+                    Checking the current Terms and Privacy Notice…
+                  </p>
+                ) : legalPublication.effective ? (
+                  <>
+                    <p className="text-muted-foreground">
+                      Version {legalPublication.version} · Effective{" "}
+                      {legalPublication.effectiveDate}
+                    </p>
+                    <label className="flex items-start gap-3">
+                      <input
+                        checked={acceptedTerms}
+                        className="mt-1"
+                        onChange={(event) =>
+                          setAcceptedTerms(event.target.checked)
+                        }
+                        type="checkbox"
+                      />
+                      <span>
+                        I agree to the{" "}
+                        <a
+                          className="underline"
+                          href={`${legalOrigin}/terms`}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          Terms of Service
+                        </a>
+                        .
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-3">
+                      <input
+                        checked={acknowledgedPrivacyNotice}
+                        className="mt-1"
+                        onChange={(event) =>
+                          setAcknowledPrivacyNotice(event.target.checked)
+                        }
+                        type="checkbox"
+                      />
+                      <span>
+                        I acknowledge the{" "}
+                        <a
+                          className="underline"
+                          href={`${legalOrigin}/privacy`}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          Privacy Notice
+                        </a>
+                        .
+                      </span>
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      Privacy acknowledgment is not consent to optional
+                      marketing.
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">
+                    {legalPublication.signupAvailable
+                      ? "The policies are under review. No legal acceptance is recorded in this test environment."
+                      : "Account creation is paused until the Terms and Privacy Notice are effective."}
+                  </p>
+                )}
+              </div>
+            ) : null}
             <button
               className="min-h-12 rounded-xl bg-primary px-4 font-semibold text-primary-foreground disabled:opacity-60"
-              disabled={busy}
+              disabled={
+                busy ||
+                (mode === "sign_up" &&
+                  (!legalPublication?.signupAvailable ||
+                    (legalPublication.effective &&
+                      (!acceptedTerms || !acknowledgedPrivacyNotice))))
+              }
               type="submit"
             >
               {busy
@@ -322,9 +466,12 @@ export function StoreConversationAccountInvitation({
             </button>
             <button
               className="min-h-11 font-semibold"
-              onClick={() =>
+              onClick={() => {
+                setLegalPublication(null)
+                setAcceptedTerms(false)
+                setAcknowledPrivacyNotice(false)
                 setMode(mode === "sign_up" ? "sign_in" : "sign_up")
-              }
+              }}
               type="button"
             >
               {mode === "sign_up"

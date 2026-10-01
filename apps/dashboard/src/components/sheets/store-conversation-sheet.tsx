@@ -3,9 +3,11 @@
 import { DashboardSheet } from "@/components/dashboard/dashboard-sheet"
 import { createMessageFixture } from "@/components/qa/fixture-recipes"
 import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
+import { ConversationAccountTerms } from "@/components/store-conversations/conversation-account-terms"
 import { ConversationAttachment } from "@/components/store-conversations/conversation-attachment"
 import { StoreConversationHeader } from "@/components/store-conversations/conversation-header"
 import { ConversationModerationForm } from "@/components/store-conversations/conversation-moderation-form"
+import { ConversationReportForm } from "@/components/store-conversations/conversation-report-form"
 import {
   type StoreConversationAssignmentFormValues,
   StoreConversationFormProvider,
@@ -74,6 +76,7 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
     newStoreConversationCommandId("claim"),
   )
   const [hydrated, setHydrated] = useState(false)
+  const [legalCanPost, setLegalCanPost] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [olderMessages, setOlderMessages] = useState<
     StoreConversationMessageProjection[]
@@ -467,9 +470,14 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
           ) : null}
 
           {timeline.data.permissions.canReply ? (
+            <ConversationAccountTerms onAllowedChange={setLegalCanPost} />
+          ) : null}
+
+          {timeline.data.permissions.canReply ? (
             <form
               className="grid gap-3 border-t border-border pt-5"
               onSubmit={replyForm.handleSubmit((values) => {
+                if (!legalCanPost) return
                 const [kind, id, revision] = values.request.split(":")
                 if (!kind || !id || !revision) return
                 setNotice(null)
@@ -546,7 +554,7 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
                   {...replyForm.register("text")}
                 />
               </label>
-              <Button disabled={pending} type="submit">
+              <Button disabled={pending || !legalCanPost} type="submit">
                 Send reply
               </Button>
             </form>
@@ -687,6 +695,13 @@ function StoreConversationSheetContent({ storeId }: { storeId: string }) {
               </Button>
             </form>
           ) : null}
+
+          <ConversationReportForm
+            conversationId={timeline.data.conversation.id}
+            key={`${resolvedStoreId}:${timeline.data.conversation.id}`}
+            onMessage={setNotice}
+            storeId={resolvedStoreId}
+          />
 
           {timeline.data.permissions.canModerate ? (
             <ConversationModerationForm

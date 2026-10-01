@@ -17,8 +17,8 @@ type Dependencies = {
   complete(
     input: Parameters<typeof completePrescriptionRetentionBatch>[1],
   ): Promise<unknown>
+  getMedia(): PrivateMediaProvider
   listStores(): Promise<Array<{ storeId: string; tenantId: string }>>
-  media: PrivateMediaProvider
 }
 
 function defaultDependencies(): Dependencies {
@@ -26,7 +26,7 @@ function defaultDependencies(): Dependencies {
     claim: (input) => claimPrescriptionRetentionBatch(prisma, input),
     complete: (input) => completePrescriptionRetentionBatch(prisma, input),
     listStores: () => listPrescriptionRetentionStoreIds(prisma),
-    media: getConfiguredPrivateMediaProvider(),
+    getMedia: getConfiguredPrivateMediaProvider,
   }
 }
 
@@ -37,9 +37,12 @@ export async function runPrescriptionRetention(
     const batch = await dependencies.claim({ storeId, tenantId })
     if (!batch) continue
     const deletedMediaIds: string[] = []
-    for (const media of batch.media) {
-      await dependencies.media.delete(media.objectKey)
-      deletedMediaIds.push(media.id)
+    if (batch.media.length) {
+      const mediaProvider = dependencies.getMedia()
+      for (const media of batch.media) {
+        await mediaProvider.delete(media.objectKey)
+        deletedMediaIds.push(media.id)
+      }
     }
     await dependencies.complete({
       addressIds: batch.addressIds,

@@ -36,6 +36,7 @@ export function StoreConversationQuoteMessage({
   accountAccess,
   actionMessage,
   conversationId,
+  customerBlocked = false,
   messageId,
   onContactStore,
   onRefresh,
@@ -44,6 +45,7 @@ export function StoreConversationQuoteMessage({
   accountAccess: boolean
   actionMessage: StoreConversationQuoteActionMessageProjection
   conversationId: string
+  customerBlocked?: boolean
   messageId: string
   onContactStore: () => void
   onRefresh: () => Promise<void>
@@ -60,6 +62,7 @@ export function StoreConversationQuoteMessage({
 
   const preview = useCallback(
     async (signal?: AbortSignal) => {
+      if (customerBlocked) return
       setLoading(true)
       setError(null)
       try {
@@ -89,7 +92,7 @@ export function StoreConversationQuoteMessage({
         if (!signal?.aborted) setLoading(false)
       }
     },
-    [accountAccess, conversationId, messageId, publicToken],
+    [accountAccess, conversationId, customerBlocked, messageId, publicToken],
   )
 
   useEffect(() => {
@@ -100,7 +103,12 @@ export function StoreConversationQuoteMessage({
   }, [actionMessage])
 
   useEffect(() => {
+    if (customerBlocked) setConfirmingToken(null)
+  }, [customerBlocked])
+
+  useEffect(() => {
     const recover = () => {
+      if (customerBlocked) return
       if (document.visibilityState !== "visible") return
       const transition = advanceStoreConversationActionReturn(
         returnStateRef.current,
@@ -129,10 +137,11 @@ export function StoreConversationQuoteMessage({
       window.removeEventListener("pageshow", recover)
       document.removeEventListener("visibilitychange", onVisibilityChange)
     }
-  }, [onRefresh, preview])
+  }, [customerBlocked, onRefresh, preview])
 
   const execute = useCallback(
     async (action: ServiceCommerceCustomerActionProjection) => {
+      if (customerBlocked) return
       const requested = requestWebQuoteAction(confirmingToken, action)
       if (!requested.execute) {
         setConfirmingToken(requested.confirmingToken)
@@ -194,6 +203,7 @@ export function StoreConversationQuoteMessage({
       accountAccess,
       confirmingToken,
       conversationId,
+      customerBlocked,
       messageId,
       onContactStore,
       onRefresh,
@@ -242,7 +252,12 @@ export function StoreConversationQuoteMessage({
           {feedback.status}
         </p>
       ) : null}
-      {feedback.retryVisible ? (
+      {customerBlocked ? (
+        <p className="text-xs text-muted-foreground">
+          Quotation actions are paused while this Store is blocked.
+        </p>
+      ) : null}
+      {!customerBlocked && feedback.retryVisible ? (
         <div aria-live="polite" className="grid gap-2">
           <p className="text-xs text-destructive">{feedback.status}</p>
           <button
@@ -254,7 +269,9 @@ export function StoreConversationQuoteMessage({
           </button>
         </div>
       ) : null}
-      {feedback.actionsVisible && projection.actions.length > 0 ? (
+      {!customerBlocked &&
+      feedback.actionsVisible &&
+      projection.actions.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {projection.actions.map((action) => {
             const confirming = confirmingToken === action.capabilityToken
@@ -304,7 +321,7 @@ export function StoreConversationQuoteMessage({
           })}
         </div>
       ) : null}
-      {feedback.actionsVisible && projection.recovery ? (
+      {!customerBlocked && feedback.actionsVisible && projection.recovery ? (
         <button
           className="min-h-11 justify-self-start rounded-full border border-border px-4 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           onClick={

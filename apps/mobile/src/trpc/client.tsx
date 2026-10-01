@@ -1,6 +1,7 @@
 "use client"
 
 import { getBaseUrl } from "@/lib/base-url"
+import { mobileAgeRequestHeaders } from "@/lib/mobile-age-request-headers"
 import { getSession } from "@/lib/session-store"
 import type { AppRouter } from "@ewatrade/api/trpc/routers/_app"
 import type { QueryClient } from "@tanstack/react-query"
@@ -16,6 +17,7 @@ import { createTRPCContext } from "@trpc/tanstack-react-query"
 import { useState } from "react"
 import superjson from "superjson"
 import { makeQueryClient } from "./query-client"
+import { searchPostLink } from "./search-post-link"
 
 export const { TRPCProvider, useTRPC } = createTRPCContext<AppRouter>()
 
@@ -62,6 +64,10 @@ async function getTrpcHeaders() {
   return Object.fromEntries(headers)
 }
 
+function getAgeGateHeaders() {
+  return mobileAgeRequestHeaders(getSession()?.token)
+}
+
 export function TRPCReactProvider(
   props: Readonly<{
     children: React.ReactNode
@@ -72,16 +78,34 @@ export function TRPCReactProvider(
     createTRPCClient<AppRouter>({
       links: [
         splitLink({
-          condition: (op) => op.type === "mutation",
-          true: httpLink({
+          condition: (op) => op.type === "query" && op.path === "search.global",
+          true: searchPostLink({
             url: getTrpcUrl(),
             transformer: superjson,
             headers: getTrpcHeaders,
           }),
-          false: httpBatchLink({
-            url: getTrpcUrl(),
-            transformer: superjson,
-            headers: getTrpcHeaders,
+          false: splitLink({
+            condition: (op) =>
+              op.path === "serviceCommerce.accountAgeStatus" ||
+              op.path === "serviceCommerce.accountDeclareAgeBand",
+            true: httpLink({
+              url: getTrpcUrl(),
+              transformer: superjson,
+              headers: getAgeGateHeaders,
+            }),
+            false: splitLink({
+              condition: (op) => op.type === "mutation",
+              true: httpLink({
+                url: getTrpcUrl(),
+                transformer: superjson,
+                headers: getTrpcHeaders,
+              }),
+              false: httpBatchLink({
+                url: getTrpcUrl(),
+                transformer: superjson,
+                headers: getTrpcHeaders,
+              }),
+            }),
           }),
         }),
         loggerLink({

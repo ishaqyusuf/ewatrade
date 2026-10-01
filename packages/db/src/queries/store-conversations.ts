@@ -7,6 +7,13 @@ export {
   rotateStoreConversationGuestCredential,
 } from "./store-conversation-guest-security"
 export { moderateStoreConversation } from "./store-conversation-moderation"
+export {
+  reportCustomerStoreConversation,
+  reportStoreConversationAsOperator,
+  listOpenStoreConversationSafetyReports,
+  updateStoreConversationSafetyReportStatus,
+  setCustomerStoreConversationBlock,
+} from "./store-conversation-customer-safety"
 export { runStoreConversationSensitiveRead } from "./store-conversation-sensitive-reads"
 export {
   approveStoreConversationSecurityChallenge,

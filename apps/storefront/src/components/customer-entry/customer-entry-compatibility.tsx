@@ -62,7 +62,7 @@ export function CustomerEntryCompatibility({
           {canRequest && canRequestProduct ? (
             <EntryAction
               description="Describe the product you need securely on EwaTrade."
-              href={`/request/${encodedToken}`}
+              href={`/r/${encodedToken}`}
               label="Request a product online"
               meta="Continue on web"
             />

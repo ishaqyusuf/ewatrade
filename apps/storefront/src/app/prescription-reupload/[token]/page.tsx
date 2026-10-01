@@ -9,10 +9,13 @@ import { enqueuePrescriptionMediaSafety } from "@ewatrade/jobs"
 import { storePrescriptionMedia } from "@ewatrade/prescriptions"
 import { redirect } from "next/navigation"
 
+import { requirePrescriptionLaunch } from "@/lib/require-prescription-launch"
+
 export const dynamic = "force-dynamic"
 
 async function submit(data: FormData) {
   "use server"
+  requirePrescriptionLaunch()
   const token = String(data.get("token") ?? "")
   const files = data
     .getAll("media")
@@ -55,6 +58,7 @@ export default async function Page({
   params: Promise<{ token: string }>
   searchParams: Promise<{ error?: string; sent?: string }>
 }) {
+  requirePrescriptionLaunch()
   const { token } = await params
   const query = await searchParams
   return (

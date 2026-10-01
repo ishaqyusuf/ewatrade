@@ -1,13 +1,51 @@
 import { describe, expect, test } from "bun:test"
 
 import type { PrismaClient } from "../../generated/prisma/client"
-import { getStoreConversationStaffTimeline } from "./store-conversations-staff"
+import {
+  getStoreConversationStaffTimeline,
+  replyToStoreConversation,
+} from "./store-conversations-staff"
 
 function dbClient(client: Record<string, unknown>) {
   return client as unknown as PrismaClient
 }
 
 describe("Store Conversation staff timeline", () => {
+  test("staff reply query excludes customer-blocked conversations", async () => {
+    let checkedBlock = false
+    const transaction = {
+      $queryRaw: async () => [{ id: "conversation_1" }],
+      membership: {
+        findFirst: async () => ({ id: "membership_1", role: "MANAGER" }),
+      },
+      store: { findFirst: async () => ({ id: "store_1" }) },
+      storeConversation: {
+        findFirst: async ({
+          where,
+        }: { where: { customerBlockedAt: null } }) => {
+          checkedBlock = where.customerBlockedAt === null
+          return null
+        },
+      },
+    }
+    const client = dbClient({
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback(transaction),
+    })
+    await expect(
+      replyToStoreConversation(client, {
+        actorUserId: "user_1",
+        tenantId: "tenant_1",
+        storeId: "store_1",
+        conversationId: "conversation_1",
+        clientOperationId: "blocked-reply-operation",
+        expectedAssignmentRevision: 0,
+        expectedLastMessageSequence: 0,
+        text: "A reply that must not be sent",
+      }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" })
+    expect(checkedBlock).toBe(true)
+  })
   test("returns the scoped timeline only after its legacy and sensitive read audits", async () => {
     const calls: string[] = []
     const transaction = {

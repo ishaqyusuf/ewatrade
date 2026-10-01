@@ -1,4 +1,4 @@
-import { Prisma } from "../../generated/prisma/client"
+import type { Prisma } from "../../generated/prisma/client"
 import {
   StoreConversationLifecycle,
   StoreConversationMessageAuthorKind,
@@ -7,6 +7,7 @@ import {
   StoreConversationModerationState,
   type StoreConversationRequestKind,
 } from "../../generated/prisma/enums"
+import { assertStoreConversationTextScreened } from "./store-conversation-text-safety"
 import {
   lockStoreConversation,
   projectStoreConversationMessage,
@@ -72,6 +73,15 @@ export async function appendStoreConversationWhatsAppCustomerTextInTransaction(
       replayed: true,
     }
   }
+  if (
+    input.auditReasonCode !== "whatsapp_bridge_account_message" &&
+    input.auditReasonCode !== "whatsapp_bridge_guest_message"
+  ) {
+    // Direct and candidate discovery have no current Terms acceptance proof
+    // for the external sender. Keep their inbound text out of the timeline.
+    throw new Error("WHATSAPP_TERMS_ACCEPTANCE_REQUIRED")
+  }
+  await assertStoreConversationTextScreened(input.text)
   const currentRevision = await resolveCurrentStoreConversationRequestRevision(
     tx,
     {

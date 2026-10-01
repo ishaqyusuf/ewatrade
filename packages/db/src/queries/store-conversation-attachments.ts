@@ -41,6 +41,11 @@ import {
   getScopedAsset,
   validateServiceCommerceMediaIntakeReadiness,
 } from "./service-commerce-media-assets"
+import { assertGuestAgeAuthority } from "./store-conversation-age-authority"
+import {
+  type GuestTermsPublication,
+  assertGuestStoreConversationTermsAccepted,
+} from "./store-conversation-guest-terms"
 import { runStoreConversationSensitiveRead } from "./store-conversation-sensitive-reads"
 import {
   StoreConversationError,
@@ -271,27 +276,40 @@ export async function resolveGuestStoreConversationAttachmentUpload(
     purpose?: StoreConversationGuestCredentialPurpose
     target: StoreConversationAttachmentTarget
   },
-  dependencies: { resolveEntry?: ResolveEntry } = {},
+  dependencies: {
+    guestTermsPublication?: GuestTermsPublication
+    resolveEntry?: ResolveEntry
+  } = {},
 ): Promise<GuestStoreConversationAttachmentUploadProjection> {
   const target = storeConversationAttachmentTargetSchema.parse(input.target)
   const resolveEntry =
     dependencies.resolveEntry ?? resolveStoreConversationEntry
   return db.$transaction(async (tx) => {
     const entry = await resolveEntry(tx, { publicToken: input.publicToken })
-    const { conversation } = await loadStoreConversationForGuest(tx, {
-      conversationId: input.conversationId,
-      credentialToken: input.credentialToken,
-      installationToken: input.installationToken,
-      now: new Date(),
-      purpose: input.purpose,
-      storeId: entry.storeId,
-      tenantId: entry.tenantId,
-    })
+    const { conversation, credential } = await loadStoreConversationForGuest(
+      tx,
+      {
+        conversationId: input.conversationId,
+        credentialToken: input.credentialToken,
+        installationToken: input.installationToken,
+        now: new Date(),
+        purpose: input.purpose,
+        storeId: entry.storeId,
+        tenantId: entry.tenantId,
+      },
+    )
+    await assertGuestStoreConversationTermsAccepted(
+      tx,
+      conversation.guestIdentityId,
+      dependencies.guestTermsPublication,
+    )
+    await assertGuestAgeAuthority(tx, credential.guestIdentityId)
     assertStoreConversationAvailable(entry.availability)
     assertStoreConversationComposerEnabled(entry.channelMode)
     if (
       conversation.lifecycle !== StoreConversationLifecycle.ACTIVE ||
-      conversation.moderationState !== StoreConversationModerationState.OPEN
+      conversation.moderationState !== StoreConversationModerationState.OPEN ||
+      Boolean(conversation.customerBlockedAt)
     ) {
       throw new StoreConversationError(
         "NOT_READY",
@@ -867,7 +885,10 @@ export async function appendGuestStoreConversationAttachment(
     installationToken?: string
     purpose?: StoreConversationGuestCredentialPurpose
   },
-  dependencies: { resolveEntry?: ResolveEntry } = {},
+  dependencies: {
+    guestTermsPublication?: GuestTermsPublication
+    resolveEntry?: ResolveEntry
+  } = {},
 ) {
   const parsed = storeConversationAttachmentCommitInputSchema.parse({
     channel: input.channel,
@@ -888,15 +909,24 @@ export async function appendGuestStoreConversationAttachment(
   })
   return db.$transaction(async (tx) => {
     const entry = await resolveEntry(tx, { publicToken: parsed.publicToken })
-    const { conversation } = await loadStoreConversationForGuest(tx, {
-      conversationId: parsed.conversationId,
-      credentialToken: input.credentialToken,
-      installationToken: input.installationToken,
-      now,
-      purpose: input.purpose,
-      storeId: entry.storeId,
-      tenantId: entry.tenantId,
-    })
+    const { conversation, credential } = await loadStoreConversationForGuest(
+      tx,
+      {
+        conversationId: parsed.conversationId,
+        credentialToken: input.credentialToken,
+        installationToken: input.installationToken,
+        now,
+        purpose: input.purpose,
+        storeId: entry.storeId,
+        tenantId: entry.tenantId,
+      },
+    )
+    await assertGuestStoreConversationTermsAccepted(
+      tx,
+      conversation.guestIdentityId,
+      dependencies.guestTermsPublication,
+    )
+    await assertGuestAgeAuthority(tx, credential.guestIdentityId)
     assertStoreConversationAvailable(entry.availability)
     assertStoreConversationComposerEnabled(entry.channelMode)
     await lockStoreConversation(tx, {
@@ -909,6 +939,7 @@ export async function appendGuestStoreConversationAttachment(
         id: conversation.id,
         lifecycle: StoreConversationLifecycle.ACTIVE,
         moderationState: StoreConversationModerationState.OPEN,
+        customerBlockedAt: null,
         storeId: entry.storeId,
         tenantId: entry.tenantId,
       },
@@ -1121,7 +1152,10 @@ export async function commitGuestStoreConversationPrescriptionAttachment(
     purpose?: StoreConversationGuestCredentialPurpose
     requestId: string
   },
-  dependencies: { resolveEntry?: ResolveEntry } = {},
+  dependencies: {
+    guestTermsPublication?: GuestTermsPublication
+    resolveEntry?: ResolveEntry
+  } = {},
 ) {
   if (input.clientOperationId.trim().length < 8) {
     throw new StoreConversationError(
@@ -1147,15 +1181,24 @@ export async function commitGuestStoreConversationPrescriptionAttachment(
   })
   return db.$transaction(async (tx) => {
     const entry = await resolveEntry(tx, { publicToken: input.publicToken })
-    const { conversation } = await loadStoreConversationForGuest(tx, {
-      conversationId: input.conversationId,
-      credentialToken: input.credentialToken,
-      installationToken: input.installationToken,
-      now,
-      purpose: input.purpose,
-      storeId: entry.storeId,
-      tenantId: entry.tenantId,
-    })
+    const { conversation, credential } = await loadStoreConversationForGuest(
+      tx,
+      {
+        conversationId: input.conversationId,
+        credentialToken: input.credentialToken,
+        installationToken: input.installationToken,
+        now,
+        purpose: input.purpose,
+        storeId: entry.storeId,
+        tenantId: entry.tenantId,
+      },
+    )
+    await assertGuestStoreConversationTermsAccepted(
+      tx,
+      conversation.guestIdentityId,
+      dependencies.guestTermsPublication,
+    )
+    await assertGuestAgeAuthority(tx, credential.guestIdentityId)
     assertStoreConversationAvailable(entry.availability)
     assertStoreConversationComposerEnabled(entry.channelMode)
     if (!entry.requestKinds.includes("prescription")) {
@@ -1174,6 +1217,7 @@ export async function commitGuestStoreConversationPrescriptionAttachment(
         id: conversation.id,
         lifecycle: StoreConversationLifecycle.ACTIVE,
         moderationState: StoreConversationModerationState.OPEN,
+        customerBlockedAt: null,
         storeId: entry.storeId,
         tenantId: entry.tenantId,
       },

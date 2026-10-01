@@ -14,6 +14,74 @@ const consent = {
 }
 
 describe("Service Commerce channel-neutral intake repository", () => {
+  test("refuses closed pharmacy intake before any context read on every channel", async () => {
+    const previousProfile = process.env.APP_ENV
+    const previousApproval = process.env.PRESCRIPTION_COMMERCE_LAUNCH_APPROVED
+    process.env.APP_ENV = "preview"
+    process.env.PRESCRIPTION_COMMERCE_LAUNCH_APPROVED = "true"
+    let databaseReads = 0
+    const db = dbClient(
+      new Proxy(
+        {},
+        {
+          get: () => {
+            databaseReads += 1
+            throw new Error("Pharmacy intake must not read the database")
+          },
+        },
+      ),
+    )
+    try {
+      for (const entry of [
+        {
+          channel: "web" as const,
+          context: { kind: "entry_point" as const, token: "entry_1" },
+        },
+        {
+          channel: "staff" as const,
+          context: { kind: "store" as const, storeId: "store_1" },
+        },
+        {
+          channel: "whatsapp" as const,
+          context: {
+            inboundEventId: "event_1",
+            kind: "inbound_event" as const,
+          },
+          providerEventId: "provider_event_1",
+        },
+      ]) {
+        await expect(
+          submitServiceCommerceIntake(db, {
+            actorUserId: entry.channel === "staff" ? "staff_1" : undefined,
+            envelope: {
+              ...entry,
+              clientCommandId: `${entry.channel}_prescription_1`,
+              consent,
+              intent: {
+                customer: { name: "Ada" },
+                fulfilmentPreference: "pickup",
+                kind: "prescription",
+                manualIntakeText: "Prescription details",
+              },
+            },
+            tenantId: entry.channel === "staff" ? "tenant_1" : undefined,
+          }),
+        ).rejects.toMatchObject({ code: "FORBIDDEN" })
+      }
+      expect(databaseReads).toBe(0)
+    } finally {
+      if (previousProfile === undefined)
+        Reflect.deleteProperty(process.env, "APP_ENV")
+      else process.env.APP_ENV = previousProfile
+      if (previousApproval === undefined)
+        Reflect.deleteProperty(
+          process.env,
+          "PRESCRIPTION_COMMERCE_LAUNCH_APPROVED",
+        )
+      else process.env.PRESCRIPTION_COMMERCE_LAUNCH_APPROVED = previousApproval
+    }
+  })
+
   test("resolves an active Store attendant before returning exact Product recovery", async () => {
     const calls: unknown[] = []
     const client = {

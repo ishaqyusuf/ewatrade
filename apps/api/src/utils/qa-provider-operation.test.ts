@@ -3,6 +3,7 @@ import { qaLiveEffectForProcedure } from "./qa-provider-operation"
 
 describe("qaLiveEffectForProcedure", () => {
   test.each([
+    ["storeSubscriptions.verifyPurchase", "subscription"],
     ["domains.checkAvailability", "domain_registration"],
     ["domains.connectExternal", "domain_hosting"],
     ["domains.createCheckout", "domain_registration"],
@@ -16,7 +17,7 @@ describe("qaLiveEffectForProcedure", () => {
     ["prescriptions.connectWhatsAppManually", "whatsapp"],
     ["prescriptions.updateWhatsAppConnectionLifecycle", "whatsapp"],
     ["catalog.permanentDelete", "destructive"],
-  ])("classifies %s", (path, operation) => {
+  ] as const)("classifies %s", (path, operation) => {
     expect(qaLiveEffectForProcedure(path)).toBe(operation)
   })
 

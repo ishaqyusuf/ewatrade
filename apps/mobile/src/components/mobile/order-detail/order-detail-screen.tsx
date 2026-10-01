@@ -25,11 +25,11 @@ import { getOrderFulfilmentConfirmation } from "@/lib/order-action-sheet-model"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import {
-  createQaPaymentFixture,
   formatMinorMoney,
   majorToMinor,
   minorToMajorInput,
 } from "@ewatrade/utils"
+import { createQaPaymentFixture } from "@ewatrade/utils/qa-quick-fill"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { useRouter } from "expo-router"

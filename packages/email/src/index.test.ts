@@ -10,9 +10,23 @@ import {
   createTestRoutedEmailMessages,
   dispatchEmailMessages,
   getDefaultEmailTransport,
+  isValidEmailSender,
 } from "./index"
 
+test("sender validation accepts Resend display names without header injection", () => {
+  expect(isValidEmailSender("alerts@example.test")).toBe(true)
+  expect(isValidEmailSender("EwaTrade Alerts <alerts@example.test>")).toBe(true)
+  expect(
+    isValidEmailSender(
+      "EwaTrade\r\nBcc:bad@example.test <alerts@example.test>",
+    ),
+  ).toBe(false)
+  expect(isValidEmailSender("EwaTrade <alerts@example.test")).toBe(false)
+})
+
 const originalNodeEnv = process.env.NODE_ENV
+const originalAppEnv = process.env.APP_ENV
+const originalDevProfile = process.env.DEV_PROFILE
 const originalEmailCaptureFile = process.env.EMAIL_CAPTURE_FILE
 const originalEmailDeliveryMode = process.env.EMAIL_DELIVERY_MODE
 const originalEmailQaDomainRoutes = process.env.EMAIL_QA_DOMAIN_ROUTES
@@ -23,6 +37,8 @@ const originalFetch = globalThis.fetch
 
 afterEach(() => {
   restoreEnv("NODE_ENV", originalNodeEnv)
+  restoreEnv("APP_ENV", originalAppEnv)
+  restoreEnv("DEV_PROFILE", originalDevProfile)
   restoreEnv("EMAIL_CAPTURE_FILE", originalEmailCaptureFile)
   restoreEnv("EMAIL_DELIVERY_MODE", originalEmailDeliveryMode)
   restoreEnv("EMAIL_QA_DOMAIN_ROUTES", originalEmailQaDomainRoutes)
@@ -106,6 +122,39 @@ describe("Resend email transport", () => {
     expect(receipt?.provider).toBe("console")
   })
 
+  test("fails closed in Production when the provider is absent or console is selected", async () => {
+    process.env.APP_ENV = "production"
+    process.env.DEV_PROFILE = "production"
+    clearEnv("RESEND_API_KEY")
+    clearEnv("EMAIL_DELIVERY_MODE")
+    await expect(
+      getDefaultEmailTransport().send(createBaseMessage()),
+    ).rejects.toThrow("Production email delivery is not configured")
+
+    process.env.RESEND_API_KEY = "re_test_key"
+    process.env.EMAIL_DELIVERY_MODE = "console"
+    await expect(
+      getDefaultEmailTransport().send(createBaseMessage()),
+    ).rejects.toThrow("Production email delivery is not configured")
+
+    process.env.EMAIL_DELIVERY_MODE = "live"
+    process.env.EMAIL_CAPTURE_FILE = "/tmp/ewatrade-production-email-capture"
+    await expect(
+      getDefaultEmailTransport().send(createBaseMessage()),
+    ).rejects.toThrow("Production email delivery is not configured")
+  })
+
+  test("allows explicit Preview console delivery under a production Node build", async () => {
+    process.env.NODE_ENV = "production"
+    process.env.APP_ENV = "preview"
+    process.env.DEV_PROFILE = "preview"
+    clearEnv("RESEND_API_KEY")
+    process.env.EMAIL_DELIVERY_MODE = "console"
+    expect(
+      (await getDefaultEmailTransport().send(createBaseMessage()))?.provider,
+    ).toBe("console")
+  })
+
   test("sends ordinary live email through Resend", async () => {
     process.env.RESEND_API_KEY = "re_test_key"
     process.env.EMAIL_DELIVERY_MODE = "live"
@@ -127,6 +176,7 @@ describe("Resend email transport", () => {
         subject: "Hello from EwaTrade",
         text: "Hello",
         to: "customer@example.com",
+        tags: [{ name: "category", value: "account_privacy_outcome_notice" }],
       },
     ])
 
@@ -143,6 +193,7 @@ describe("Resend email transport", () => {
         subject: "Hello from EwaTrade",
         text: "Hello",
         to: ["customer@example.com"],
+        tags: [{ name: "category", value: "account_privacy_outcome_notice" }],
       },
     ])
   })

@@ -303,6 +303,7 @@ export async function claimStoreConversationNotificationIntent(
             guestIdentity: { select: { id: true, status: true } },
             lifecycle: true,
             moderationState: true,
+            customerBlockedAt: true,
           },
         },
         store: { select: { name: true } },
@@ -345,6 +346,7 @@ export async function claimStoreConversationNotificationIntent(
       })
     if (
       intent.conversation.lifecycle !== StoreConversationLifecycle.ACTIVE ||
+      Boolean(intent.conversation.customerBlockedAt) ||
       intent.conversation.moderationState !==
         StoreConversationModerationState.OPEN
     ) {

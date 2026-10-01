@@ -1,12 +1,15 @@
 import "server-only"
 
 import { auth } from "@ewatrade/auth"
+import { prisma } from "@ewatrade/db"
+import { isLegalSignupSessionBlocked } from "@ewatrade/db/legal-session-access"
 import { StoreConversationError } from "@ewatrade/db/queries"
 import { NextResponse } from "next/server"
 
 export async function getStorefrontCustomerAccount(headers: Headers) {
   const session = await auth.api.getSession({ headers })
-  return session?.user?.id
+  return session?.user?.id &&
+    !(await isLegalSignupSessionBlocked(prisma, session.user.id))
     ? {
         user: {
           email: session.user.email,

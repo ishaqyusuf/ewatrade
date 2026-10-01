@@ -12,23 +12,118 @@ const SOURCE_MARK = resolve(
 )
 const ICON_DIR = resolve(MOBILE_DIR, "assets/icons")
 const CANVAS_SIZE = 1024
-const TARGET_ART_WIDTH = 500
+const TARGET_ART_WIDTH = 560
+const ADAPTIVE_ART_WIDTH = 430
 const SOURCE_BACKGROUND_THRESHOLD = 60
+const ENVIRONMENTS = {
+  production: {
+    backgroundBottom: [246, 242, 232],
+    backgroundTop: [255, 252, 244],
+    palette: "canonical",
+    pattern: "none",
+  },
+  preview: {
+    arrow: [255, 191, 63],
+    backgroundBottom: [123, 42, 84],
+    backgroundTop: [37, 18, 59],
+    palette: "environment",
+    pattern: "market-print",
+    rail: [255, 248, 234],
+  },
+  development: {
+    arrow: [255, 221, 117],
+    backgroundBottom: [8, 61, 116],
+    backgroundTop: [23, 105, 176],
+    palette: "environment",
+    pattern: "blueprint",
+    rail: [255, 255, 255],
+  },
+  productionDark: {
+    arrow: [60, 230, 149],
+    backgroundBottom: [4, 24, 19],
+    backgroundTop: [8, 55, 42],
+    palette: "environment",
+    pattern: "none",
+    rail: [235, 248, 238],
+  },
+}
 const OUTPUTS = [
-  { file: "adaptive-icon.png", transparent: false },
-  { file: "dev-adaptive-icon.png", transparent: false, development: true },
-  { file: "loading-icon.png", transparent: false },
-  { file: "dev-loading-icon.png", transparent: false, development: true },
-  { file: "ios-light.png", transparent: false },
-  { file: "dev-ios-light.png", transparent: false, development: true },
-  { file: "ios-dark.png", transparent: false },
-  { file: "dev-ios-dark.png", transparent: false, development: true },
   {
-    file: "dev-splash-logo.png",
+    environment: "production",
+    file: "adaptive-icon.png",
+    targetArtWidth: ADAPTIVE_ART_WIDTH,
+    transparent: true,
+  },
+  {
+    environment: "preview",
+    file: "preview-adaptive-icon.png",
+    targetArtWidth: ADAPTIVE_ART_WIDTH,
+    transparent: true,
+  },
+  {
+    environment: "development",
+    file: "dev-adaptive-icon.png",
+    targetArtWidth: ADAPTIVE_ART_WIDTH,
+    transparent: true,
+  },
+  { environment: "production", file: "loading-icon.png", transparent: false },
+  {
+    environment: "preview",
+    file: "preview-loading-icon.png",
     transparent: false,
-    development: true,
+  },
+  {
+    environment: "development",
+    file: "dev-loading-icon.png",
+    transparent: false,
+  },
+  { environment: "production", file: "ios-light.png", transparent: false },
+  { environment: "preview", file: "preview-ios-light.png", transparent: false },
+  { environment: "development", file: "dev-ios-light.png", transparent: false },
+  { environment: "productionDark", file: "ios-dark.png", transparent: false },
+  { environment: "preview", file: "preview-ios-dark.png", transparent: false },
+  { environment: "development", file: "dev-ios-dark.png", transparent: false },
+  {
     canvasSize: 640,
+    environment: "production",
+    file: "splash-logo.png",
     targetArtWidth: 400,
+    transparent: true,
+  },
+  {
+    canvasSize: 640,
+    environment: "productionDark",
+    file: "splash-logo-dark.png",
+    targetArtWidth: 400,
+    transparent: true,
+  },
+  {
+    canvasSize: 640,
+    environment: "preview",
+    file: "preview-splash-logo.png",
+    targetArtWidth: 400,
+    transparent: true,
+  },
+  {
+    canvasSize: 640,
+    environment: "preview",
+    file: "preview-splash-logo-dark.png",
+    targetArtWidth: 400,
+    transparent: true,
+  },
+  {
+    canvasSize: 640,
+    environment: "development",
+    file: "dev-splash-logo.png",
+    targetArtWidth: 400,
+    transparent: true,
+  },
+  {
+    canvasSize: 640,
+    environment: "development",
+    file: "dev-splash-logo-dark.png",
+    targetArtWidth: 400,
+    transparent: true,
   },
 ]
 
@@ -190,7 +285,7 @@ function crc32(buffer) {
   return (crc ^ 0xffffffff) >>> 0
 }
 
-function normalizeLightBackground(source) {
+function extractArtwork(source) {
   const background = averageCornerColor(source)
   const data = new Uint8Array(source.data)
 
@@ -201,12 +296,13 @@ function normalizeLightBackground(source) {
       data[index + 2] - background[2],
     )
 
-    if (distance < SOURCE_BACKGROUND_THRESHOLD) {
-      data[index] = 255
-      data[index + 1] = 255
-      data[index + 2] = 255
-      data[index + 3] = 255
-    }
+    data[index + 3] = Math.round(
+      clamp(
+        ((distance - 12) / (SOURCE_BACKGROUND_THRESHOLD - 12)) * 255,
+        0,
+        255,
+      ),
+    )
   }
 
   return { ...source, data }
@@ -278,7 +374,11 @@ function resizePremultiplied(image, targetWidth, targetHeight) {
   return { width: targetWidth, height: targetHeight, data }
 }
 
-function recolorGreenToRed(image) {
+function recolorArtwork(image, environment) {
+  const treatment = ENVIRONMENTS[environment]
+  if (!treatment) throw new Error(`Unknown icon environment: ${environment}`)
+  if (treatment.palette === "canonical") return image
+
   const data = new Uint8Array(image.data)
 
   for (let index = 0; index < data.length; index += 4) {
@@ -291,16 +391,27 @@ function recolorGreenToRed(image) {
       data[index + 1] > data[index] * 1.15 &&
       data[index + 1] > data[index + 2] * 1.05
 
-    if (!isGreenHue || !isGreenDominant) continue
+    const isArrow = isGreenHue && isGreenDominant
+    const sourceColor = [data[index], data[index + 1], data[index + 2]]
+    const sourceLuminance = luminance(sourceColor)
+    const referenceLuminance = isArrow ? 96 : 28
+    const texture = clamp(
+      1 + (sourceLuminance - referenceLuminance) / 420,
+      0.82,
+      1.16,
+    )
+    const targetColor = isArrow ? treatment.arrow : treatment.rail
 
-    const value = Math.max(data[index], data[index + 1], data[index + 2])
-    const shade = value / 255
-    data[index] = Math.round(150 + shade * 90)
-    data[index + 1] = Math.round(12 + shade * 34)
-    data[index + 2] = Math.round(12 + shade * 42)
+    data[index] = Math.round(clamp(targetColor[0] * texture, 0, 255))
+    data[index + 1] = Math.round(clamp(targetColor[1] * texture, 0, 255))
+    data[index + 2] = Math.round(clamp(targetColor[2] * texture, 0, 255))
   }
 
   return { ...image, data }
+}
+
+function luminance([red, green, blue]) {
+  return red * 0.2126 + green * 0.7152 + blue * 0.0722
 }
 
 function rgbToHue(red, green, blue) {
@@ -317,15 +428,13 @@ function rgbToHue(red, green, blue) {
   return 60 * ((r - g) / delta + 4)
 }
 
-function composeIcon(mark, { transparent, canvasSize = CANVAS_SIZE }) {
+function composeIcon(
+  mark,
+  { environment, transparent, canvasSize = CANVAS_SIZE },
+) {
   const data = new Uint8Array(canvasSize * canvasSize * 4)
   if (!transparent) {
-    for (let index = 0; index < data.length; index += 4) {
-      data[index] = 255
-      data[index + 1] = 255
-      data[index + 2] = 255
-      data[index + 3] = 255
-    }
+    paintBackground(data, canvasSize, ENVIRONMENTS[environment])
   }
 
   const offsetX = Math.round((canvasSize - mark.width) / 2)
@@ -354,6 +463,85 @@ function composeIcon(mark, { transparent, canvasSize = CANVAS_SIZE }) {
   }
 
   return { width: canvasSize, height: canvasSize, data }
+}
+
+function paintBackground(data, size, treatment) {
+  for (let y = 0; y < size; y += 1) {
+    const verticalProgress = y / Math.max(size - 1, 1)
+    for (let x = 0; x < size; x += 1) {
+      const index = (y * size + x) * 4
+      const radialDistance = Math.hypot(x - size * 0.32, y - size * 0.18) / size
+      const highlight = clamp((0.58 - radialDistance) * 0.08, 0, 0.035)
+      const color = treatment.backgroundTop.map((channel, channelIndex) =>
+        Math.round(
+          mix(
+            channel,
+            treatment.backgroundBottom[channelIndex],
+            verticalProgress,
+          ) *
+            (1 + highlight),
+        ),
+      )
+
+      if (treatment.pattern === "market-print" && x % 42 <= 2 && y % 42 <= 2) {
+        for (let channel = 0; channel < 3; channel += 1) {
+          color[channel] = Math.round(mix(color[channel], 255, 0.1))
+        }
+      }
+
+      if (treatment.pattern === "blueprint" && (x % 64 <= 1 || y % 64 <= 1)) {
+        for (let channel = 0; channel < 3; channel += 1) {
+          color[channel] = Math.round(mix(color[channel], 255, 0.1))
+        }
+      }
+
+      data[index] = clamp(color[0], 0, 255)
+      data[index + 1] = clamp(color[1], 0, 255)
+      data[index + 2] = clamp(color[2], 0, 255)
+      data[index + 3] = 255
+    }
+  }
+
+  if (treatment.pattern === "blueprint") {
+    paintBlueprintGuides(data, size)
+  }
+}
+
+function paintBlueprintGuides(data, size) {
+  const inset = Math.round(size * 0.08)
+  const guideColor = [255, 255, 255]
+  const guideAlpha = 0.24
+
+  for (let x = inset; x < size - inset; x += 1) {
+    blendPixel(data, size, x, inset, guideColor, guideAlpha)
+    blendPixel(data, size, x, size - inset - 1, guideColor, guideAlpha)
+  }
+
+  for (let y = inset; y < size - inset; y += 1) {
+    blendPixel(data, size, inset, y, guideColor, guideAlpha)
+    blendPixel(data, size, size - inset - 1, y, guideColor, guideAlpha)
+  }
+
+  const tickLength = Math.round(size * 0.025)
+  for (const coordinate of [size * 0.25, size * 0.5, size * 0.75]) {
+    const position = Math.round(coordinate)
+    for (let offset = 0; offset < tickLength; offset += 1) {
+      blendPixel(data, size, position, inset + offset, guideColor, guideAlpha)
+      blendPixel(data, size, inset + offset, position, guideColor, guideAlpha)
+    }
+  }
+}
+
+function blendPixel(data, size, x, y, color, alpha) {
+  if (x < 0 || y < 0 || x >= size || y >= size) return
+  const index = (y * size + x) * 4
+  data[index] = Math.round(mix(data[index], color[0], alpha))
+  data[index + 1] = Math.round(mix(data[index + 1], color[1], alpha))
+  data[index + 2] = Math.round(mix(data[index + 2], color[2], alpha))
+}
+
+function mix(from, to, progress) {
+  return from + (to - from) * progress
 }
 
 function measureArtwork(image, { transparent }) {
@@ -395,8 +583,8 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value))
 }
 
-const source = normalizeLightBackground(readPng(SOURCE_MARK))
-const sourceMeasurement = measureArtwork(source, { transparent: false })
+const source = extractArtwork(readPng(SOURCE_MARK))
+const sourceMeasurement = measureArtwork(source, { transparent: true })
 for (const output of OUTPUTS) {
   const targetTileSize = Math.round(
     ((output.targetArtWidth ?? TARGET_ART_WIDTH) / sourceMeasurement.width) *
@@ -407,7 +595,7 @@ for (const output of OUTPUTS) {
     targetTileSize,
     targetTileSize,
   )
-  const mark = output.development ? recolorGreenToRed(resizedMark) : resizedMark
+  const mark = recolorArtwork(resizedMark, output.environment)
   const image = composeIcon(mark, output)
   const destination = resolve(ICON_DIR, output.file)
   writePng(destination, image, output)

@@ -5,12 +5,14 @@ import { View } from "@/components/ui/view"
 
 export function CustomerNotificationSummaryControls({
   available,
+  blocked,
   busy,
   expanded,
   onNotifyWhenAvailable,
   onToggle,
 }: {
   available: boolean
+  blocked: boolean
   busy: boolean
   expanded: boolean
   onNotifyWhenAvailable(): void
@@ -19,12 +21,12 @@ export function CustomerNotificationSummaryControls({
   return (
     <View
       className={
-        available
+        available || blocked
           ? "min-h-11 items-end"
           : "min-h-11 flex-row items-center justify-between gap-2"
       }
     >
-      {!available ? (
+      {!available && !blocked ? (
         <Pressable
           accessibilityRole="button"
           className="min-h-11 min-w-0 flex-1 flex-row items-center justify-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3"

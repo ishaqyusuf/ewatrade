@@ -1,11 +1,88 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, spyOn, test } from "bun:test"
+import { auth } from "@ewatrade/auth"
+import { createCallerFactory } from "../init"
 import {
+  authRouter,
   createMobileOwnerOtpEmailMessages,
+  mobilePasswordSignInSchema,
   requestMobileOwnerOtpSchema,
   shouldDispatchMobileOwnerOtpEmail,
   verifyMobileGoogleSchema,
   verifyMobileOwnerOtpSchema,
 } from "./auth"
+
+test("unverified mobile password account never reaches Better Auth sign-in", async () => {
+  const previousSecret = process.env.BETTER_AUTH_SECRET
+  process.env.BETTER_AUTH_SECRET = "test-mobile-password-secret"
+  const rejectSignIn = Object.assign(
+    async () => {
+      throw new Error("Better Auth must not run for an unverified account")
+    },
+    {
+      options: auth.api.signInEmail.options,
+      path: auth.api.signInEmail.path,
+    },
+  )
+  const signIn = spyOn(auth.api, "signInEmail").mockImplementation(rejectSignIn)
+  const caller = createCallerFactory(authRouter)({
+    db: {
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback({
+          accountPrivacyRateBucket: {
+            findUnique: async () => null,
+            upsert: async () => ({}),
+          },
+        }),
+      user: {
+        findUnique: async () => ({ emailVerified: false }),
+      },
+    },
+    requestHeaders: new Headers(),
+    session: null,
+  } as never)
+  try {
+    await expect(
+      caller.signInMobilePassword({
+        email: "unverified@example.test",
+        password: "correct password",
+      }),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" })
+    expect(signIn).not.toHaveBeenCalled()
+  } finally {
+    signIn.mockRestore()
+    if (previousSecret === undefined)
+      Reflect.deleteProperty(process.env, "BETTER_AUTH_SECRET")
+    else process.env.BETTER_AUTH_SECRET = previousSecret
+  }
+})
+
+test("legacy undeclared Account cannot enumerate workspace access at startup", async () => {
+  let accessReads = 0
+  const caller = createCallerFactory(authRouter)({
+    db: {
+      user: { findUnique: async () => ({ ageBand: "UNDECLARED" }) },
+      membership: {
+        findFirst: async () => {
+          accessReads += 1
+          return null
+        },
+      },
+      storeConversationAccountAccess: {
+        findFirst: async () => {
+          accessReads += 1
+          return null
+        },
+      },
+    },
+    requestHeaders: new Headers(),
+    session: { user: { id: "legacy-account" } },
+  } as never)
+
+  await expect(caller.getMobileAccessProfile()).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+  })
+  expect(accessReads).toBe(0)
+})
 
 function expectRejected(
   schema: { safeParse: (value: unknown) => unknown },
@@ -17,6 +94,7 @@ function expectRejected(
 }
 
 const validSignupProfile = {
+  ageBand: "AGE_13_TO_15" as const,
   businessProfileKey: "general-retail-groceries",
   businessProfileVersion: 1 as const,
   operatingModel: "products" as const,
@@ -25,8 +103,51 @@ const validSignupProfile = {
 }
 
 describe("mobile auth router schemas", () => {
+  test("requires a 13+ choice for signup but not login", () => {
+    expectRejected(requestMobileOwnerOtpSchema, {
+      email: "new@example.test",
+      mode: "sign_up",
+      ...validSignupProfile,
+      ageBand: undefined,
+    })
+    expectRejected(verifyMobileGoogleSchema, {
+      idToken: "google-id-token-with-enough-length",
+      mode: "sign_up",
+      ...validSignupProfile,
+      ageBand: "UNDER_13",
+    })
+    expect(
+      requestMobileOwnerOtpSchema.safeParse({
+        email: "existing@example.test",
+        mode: "login",
+      }).success,
+    ).toBe(true)
+  })
+
+  test("accepts only bounded email/password mobile sign-in input", () => {
+    expect(
+      mobilePasswordSignInSchema.parse({
+        email: " REVIEWER@EXAMPLE.TEST ",
+        password: "correct horse battery staple",
+      }),
+    ).toEqual({
+      email: "reviewer@example.test",
+      password: "correct horse battery staple",
+    })
+    expectRejected(mobilePasswordSignInSchema, {
+      email: "reviewer@example.test",
+      password: "",
+    })
+    expectRejected(mobilePasswordSignInSchema, {
+      email: "reviewer@example.test",
+      password: "secret",
+      tenantId: "other-business",
+    })
+  })
+
   test("normalizes lightweight owner email OTP signup payloads", () => {
     const input = requestMobileOwnerOtpSchema.parse({
+      ageBand: "AGE_13_TO_15",
       businessProfileKey: " animal-feed-agricultural-supplies ",
       businessProfileVersion: 1,
       businessName: " Rice Store ",
@@ -40,6 +161,7 @@ describe("mobile auth router schemas", () => {
     })
 
     expect(input).toEqual({
+      ageBand: "AGE_13_TO_15",
       businessProfileKey: "animal-feed-agricultural-supplies",
       businessProfileVersion: 1,
       businessName: "Rice Store",
@@ -106,6 +228,37 @@ describe("mobile auth router schemas", () => {
       idToken: "google-id-token-with-enough-length",
       mode: "sign_up",
       name: "Store Owner",
+    })
+  })
+
+  test("mobile signup inputs carry bounded separate legal choices", () => {
+    const legal = {
+      legalVersion: "2026-10-01",
+      acceptedTerms: true,
+      acknowledgedPrivacyNotice: true,
+    }
+    expect(
+      requestMobileOwnerOtpSchema.parse({
+        ...validSignupProfile,
+        ...legal,
+        email: "owner@business.test",
+        mode: "sign_up",
+      }),
+    ).toMatchObject(legal)
+    expect(
+      verifyMobileGoogleSchema.parse({
+        ...validSignupProfile,
+        ...legal,
+        idToken: "google-id-token-with-enough-length",
+        mode: "sign_up",
+      }),
+    ).toMatchObject(legal)
+    expectRejected(requestMobileOwnerOtpSchema, {
+      ...validSignupProfile,
+      ...legal,
+      acceptedTerms: false,
+      email: "owner@business.test",
+      mode: "sign_up",
     })
   })
 

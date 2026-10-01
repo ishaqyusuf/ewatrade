@@ -1,10 +1,12 @@
 import {
+  type PrivateMediaSafetyAttestation,
   type ServiceCommerceChannelOrigin,
   type ServiceCommerceMediaKind,
   type ServiceCommerceMediaMimeType,
   type ServiceCommercePrivateMediaSafetyLifecycle,
   canTransitionServiceCommerceMediaAsset,
   getServiceCommerceMediaIntakeValidation,
+  privateMediaSafetyAttestationSchema,
 } from "@ewatrade/service-commerce"
 
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
@@ -64,6 +66,67 @@ function lifecycleFromSafety(
   }
   if (lifecycle === "rejected") return ServiceCommerceMediaLifecycle.REJECTED
   return ServiceCommerceMediaLifecycle.RETRYABLE
+}
+
+function assertCompleteSafetyAttestation(
+  asset: {
+    contentDigest: string | null
+    verifiedMediaType: string | null
+    verifiedSizeBytes: number | null
+  },
+  input: {
+    attestation?: PrivateMediaSafetyAttestation
+    safetyProvider?: string
+  },
+) {
+  // No live processor is approved or wired here. Internal callers cannot
+  // promote Production media by merely claiming to be a live adapter.
+  if (process.env.NODE_ENV === "production") {
+    throw new ServiceCommerceMediaError(
+      "NOT_READY",
+      "Production media safety approval is not configured.",
+    )
+  }
+  const parsed = privateMediaSafetyAttestationSchema.safeParse(
+    input.attestation,
+  )
+  if (!parsed.success) {
+    throw new ServiceCommerceMediaError(
+      "NOT_READY",
+      "Complete media safety evidence is required before an asset can be marked safe.",
+    )
+  }
+  const evidence = parsed.data
+  if (
+    evidence.contentDigest !== asset.contentDigest ||
+    evidence.mimeType !== asset.verifiedMediaType ||
+    evidence.byteSize !== asset.verifiedSizeBytes ||
+    evidence.provider !== input.safetyProvider?.trim() ||
+    evidence.source !== "qa_fixture"
+  ) {
+    throw new ServiceCommerceMediaError(
+      "NOT_READY",
+      "Media safety evidence does not match the original asset or approved runtime.",
+    )
+  }
+  const coverage = evidence.coverage
+  const complete =
+    coverage.kind === "image"
+      ? evidence.mimeType.startsWith("image/") &&
+        coverage.framesDetected === coverage.framesInspected
+      : coverage.kind === "document"
+        ? evidence.mimeType === "application/pdf" &&
+          coverage.pagesDetected === coverage.pagesTextInspected &&
+          coverage.pagesDetected === coverage.pagesVisualInspected
+        : evidence.mimeType.startsWith("audio/") &&
+          coverage.durationMs === coverage.transcribedMs &&
+          coverage.nonSpeechReviewed
+  if (!complete) {
+    throw new ServiceCommerceMediaError(
+      "NOT_READY",
+      "Media safety evidence does not cover the complete asset.",
+    )
+  }
 }
 
 function mediaLifecycle(value: string) {
@@ -439,6 +502,7 @@ export async function recordServiceCommerceMediaSafety(
   db: PrismaClient,
   input: {
     actorUserId?: string | null
+    attestation?: PrivateMediaSafetyAttestation
     mediaAssetId: string
     outcome: ServiceCommercePrivateMediaSafetyLifecycle
     reason: string
@@ -452,18 +516,25 @@ export async function recordServiceCommerceMediaSafety(
     const asset = await getScopedAsset(tx, input)
     const lifecycle = lifecycleFromSafety(input.outcome)
     assertTransition(asset.lifecycle, lifecycle)
+    if (lifecycle === ServiceCommerceMediaLifecycle.SAFE) {
+      assertCompleteSafetyAttestation(asset, input)
+    }
     const changed = await tx.serviceCommerceMediaAsset.updateMany({
       data: {
         lifecycle,
         safetyAttempts: { increment: 1 },
-        safetyMetadata: input.safetyMetadata as
-          | Prisma.InputJsonValue
-          | undefined,
+        safetyMetadata: (input.attestation
+          ? { ...input.safetyMetadata, attestation: input.attestation }
+          : input.safetyMetadata) as Prisma.InputJsonValue | undefined,
         safetyProvider: input.safetyProvider?.trim() || null,
         safetyResolvedAt: new Date(),
       },
       where: {
         id: asset.id,
+        lifecycle: ServiceCommerceMediaLifecycle.SAFETY_PENDING,
+        contentDigest: asset.contentDigest,
+        verifiedMediaType: asset.verifiedMediaType,
+        verifiedSizeBytes: asset.verifiedSizeBytes,
         storeId: input.storeId,
         tenantId: input.tenantId,
       },

@@ -4,6 +4,7 @@ import {
   PrescriptionRequestStatus,
 } from "../../generated/prisma/enums"
 
+import { isPrescriptionProductionLaunchApproved } from "./prescription-launch-gate"
 import type { DbClient } from "./types"
 
 type PrescriptionSourceActionRecord = {
@@ -94,7 +95,9 @@ export async function loadPrescriptionServiceCommerceSourceActionFacts(
   })
 
   return {
-    commerceActive: settings?.status === PrescriptionCommerceStoreStatus.ACTIVE,
+    commerceActive:
+      isPrescriptionProductionLaunchApproved() &&
+      settings?.status === PrescriptionCommerceStoreStatus.ACTIVE,
     contactOptIn: request.contactOptIn,
     customerEmail: request.customerEmail,
     customerPhone: request.customerPhone,

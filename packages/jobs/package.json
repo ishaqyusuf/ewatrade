@@ -23,15 +23,15 @@
     "@ewatrade/prescriptions": "workspace:*",
     "@ewatrade/service-commerce": "workspace:*",
     "@ewatrade/utils": "workspace:*",
-    "@trigger.dev/build": "4.0.1",
+    "@trigger.dev/build": "4.5.16",
     "@sentry/node": "^10.72.0",
-    "@trigger.dev/sdk": "4.0.1"
+    "@trigger.dev/sdk": "4.5.16"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",
     "@types/bun": "latest",
     "@types/node": "^24.6.0",
-    "trigger.dev": "4.0.1",
+    "trigger.dev": "4.5.16",
     "typescript": "catalog:"
   }
 }

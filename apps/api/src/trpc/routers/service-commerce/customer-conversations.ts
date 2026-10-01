@@ -1,15 +1,26 @@
 import { issueServiceCommerceCustomerActionToken } from "@ewatrade/communications"
 import {
+  AccountAgeBand,
+  StoreConversationGuestCredentialPurpose,
+} from "@ewatrade/db/enums"
+import {
+  StoreConversationError,
+  acceptGuestStoreConversationTerms,
   acknowledgeMobileStoreConversationProgress,
   bootstrapMobileStoreConversation,
   claimMobileStoreConversationTransfer,
   createPrescriptionHostedCheckoutRepository,
   createStoreConversationPrivacyRequest,
+  declareCustomerAccountAgeBand,
+  declareGuestAgeBandForCredential,
   dismissGuestStoreConversationAccountInvitation,
   executeAccountStoreConversationActionMessage,
   executeMobileStoreConversationActionMessage,
   getAccountStoreConversationMessagesAfter,
   getAccountStoreConversationTimeline,
+  getCustomerAccountAgeStatus,
+  getGuestAgeStatusForCredential,
+  getGuestStoreConversationTermsStatus,
   getMobileStoreConversationMessagesAfter,
   getMobileStoreConversationTimeline,
   getStoreConversationPrivacyRequest,
@@ -17,17 +28,21 @@ import {
   linkGuestStoreConversationsToAccount,
   listGuestStoreConversationAccountCandidates,
   listMobileStoreConversations,
+  listOpenStoreConversationSafetyReports,
   listStoreConversationAccountConversations,
   listStoreConversationAccountDevices,
   previewAccountStoreConversationActionMessage,
   previewMobileStoreConversationActionMessage,
   projectStoreConversationWhatsAppBridgeIssue,
   redeemMobileStoreConversationTransfer,
+  reportCustomerStoreConversation,
   revokeStoreConversationAccountDevice,
   rotateStoreConversationGuestCredential,
   selectMobileStoreConversationRequest,
   sendAccountStoreConversationText,
   sendMobileStoreConversationText,
+  setCustomerStoreConversationBlock,
+  updateStoreConversationSafetyReportStatus,
 } from "@ewatrade/db/queries"
 import { enqueueStoreConversationPrivacyRequest } from "@ewatrade/jobs"
 import {
@@ -42,6 +57,8 @@ import {
   storeConversationAccountLinkInputSchema,
   storeConversationAccountPrivacyRequestInputSchema,
   storeConversationAttachmentCapabilityInputSchema,
+  storeConversationCustomerBlockInputSchema,
+  storeConversationCustomerReportInputSchema,
   storeConversationCustomerVoiceNoteGrantInputSchema,
   storeConversationGuestCredentialRotationInputSchema,
   storeConversationGuestPrivacyRequestInputSchema,
@@ -64,6 +81,7 @@ import {
   storeConversationWhatsAppBridgeTokenDigest,
 } from "@ewatrade/service-commerce/server"
 import { TRPCError } from "@trpc/server"
+import { z } from "zod"
 import {
   StoreConversationAttachmentViewerUnavailableError,
   issueGuestStoreConversationVoiceNoteGrant,
@@ -76,6 +94,7 @@ import {
 import {
   authenticatedProcedure,
   createTRPCRouter,
+  eligibleAccountProcedure,
   publicProcedure,
 } from "../../init"
 import {
@@ -85,6 +104,260 @@ import {
 } from "./customer-conversation-auth"
 
 export const serviceCommerceCustomerConversationsRouter = createTRPCRouter({
+  accountAgeStatus: authenticatedProcedure.query(async ({ ctx }) => {
+    try {
+      return await getCustomerAccountAgeStatus(ctx.db, ctx.session.user.id)
+    } catch (error) {
+      mapCustomerConversationError(error)
+    }
+  }),
+  mobileGuestAgeStatus: publicProcedure.query(async ({ ctx }) => {
+    try {
+      return await getGuestAgeStatusForCredential(ctx.db, {
+        credentialToken: customerCredential(ctx.customerConversationCredential),
+        installationToken: customerInstallation(
+          ctx.customerConversationInstallation,
+        ),
+        purpose: StoreConversationGuestCredentialPurpose.MOBILE_DEVICE,
+      })
+    } catch (error) {
+      mapCustomerConversationError(error)
+    }
+  }),
+  accountDeclareAgeBand: authenticatedProcedure
+    .input(
+      z
+        .object({
+          ageBand: z.enum([
+            AccountAgeBand.AGE_13_TO_15,
+            AccountAgeBand.AGE_16_TO_17,
+            AccountAgeBand.ADULT,
+          ]),
+        })
+        .strict(),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await declareCustomerAccountAgeBand(
+          ctx.db,
+          ctx.session.user.id,
+          input.ageBand,
+        )
+      } catch (error) {
+        mapCustomerConversationError(error)
+      }
+    }),
+  mobileGuestDeclareAgeBand: publicProcedure
+    .input(
+      z
+        .object({
+          ageBand: z.enum([
+            AccountAgeBand.AGE_13_TO_15,
+            AccountAgeBand.AGE_16_TO_17,
+            AccountAgeBand.ADULT,
+          ]),
+        })
+        .strict(),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await declareGuestAgeBandForCredential(ctx.db, {
+          ageBand: input.ageBand,
+          credentialToken: customerCredential(
+            ctx.customerConversationCredential,
+          ),
+          installationToken: customerInstallation(
+            ctx.customerConversationInstallation,
+          ),
+          purpose: StoreConversationGuestCredentialPurpose.MOBILE_DEVICE,
+        })
+      } catch (error) {
+        mapCustomerConversationError(error)
+      }
+    }),
+  mobileGuestTermsStatus: publicProcedure.query(async ({ ctx }) => {
+    try {
+      return await getGuestStoreConversationTermsStatus(ctx.db, {
+        credentialToken: customerCredential(ctx.customerConversationCredential),
+        installationToken: customerInstallation(
+          ctx.customerConversationInstallation,
+        ),
+        purpose: StoreConversationGuestCredentialPurpose.MOBILE_DEVICE,
+      })
+    } catch (error) {
+      mapCustomerConversationError(error)
+    }
+  }),
+  mobileAcceptGuestTerms: publicProcedure
+    .input(
+      z
+        .object({
+          acceptedTerms: z.literal(true),
+          version: z.string().trim().min(1).max(64),
+        })
+        .strict(),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await acceptGuestStoreConversationTerms(ctx.db, {
+          ...input,
+          credentialToken: customerCredential(
+            ctx.customerConversationCredential,
+          ),
+          installationToken: customerInstallation(
+            ctx.customerConversationInstallation,
+          ),
+          purpose: StoreConversationGuestCredentialPurpose.MOBILE_DEVICE,
+        })
+      } catch (error) {
+        mapCustomerConversationError(error)
+      }
+    }),
+  safetyReports: eligibleAccountProcedure
+    .input(
+      z
+        .object({
+          status: z.enum(["OPEN", "REVIEWING", "RESOLVED"]).optional(),
+          limit: z.number().int().min(1).max(100).optional(),
+          cursor: z
+            .object({
+              createdAt: z.string().datetime({ offset: true }),
+              id: z.string().trim().min(1).max(191),
+            })
+            .strict()
+            .optional(),
+        })
+        .strict(),
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        return await listOpenStoreConversationSafetyReports(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+        })
+      } catch (error) {
+        mapCustomerConversationError(error)
+      }
+    }),
+  updateSafetyReportStatus: eligibleAccountProcedure
+    .input(
+      z
+        .object({
+          reportId: z.string().trim().min(1).max(191),
+          status: z.enum(["REVIEWING", "RESOLVED"]),
+        })
+        .strict(),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await updateStoreConversationSafetyReportStatus(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+        })
+      } catch (error) {
+        mapCustomerConversationError(error)
+      }
+    }),
+  accountReportStoreConversation: authenticatedProcedure
+    .input(storeConversationCustomerReportInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await reportCustomerStoreConversation(ctx.db, input, {
+          kind: "account",
+          accountUserId: ctx.session.user.id,
+        })
+      } catch (error) {
+        mapCustomerConversationError(error)
+      }
+    }),
+  accountBlockStoreConversation: authenticatedProcedure
+    .input(storeConversationCustomerBlockInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await setCustomerStoreConversationBlock(
+          ctx.db,
+          { ...input, blocked: true },
+          { kind: "account", accountUserId: ctx.session.user.id },
+        )
+      } catch (error) {
+        mapCustomerConversationError(error)
+      }
+    }),
+  accountUnblockStoreConversation: authenticatedProcedure
+    .input(storeConversationCustomerBlockInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await setCustomerStoreConversationBlock(
+          ctx.db,
+          { ...input, blocked: false },
+          { kind: "account", accountUserId: ctx.session.user.id },
+        )
+      } catch (error) {
+        mapCustomerConversationError(error)
+      }
+    }),
+  mobileReportStoreConversation: publicProcedure
+    .input(storeConversationCustomerReportInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await reportCustomerStoreConversation(ctx.db, input, {
+          kind: "guest",
+          credentialToken: customerCredential(
+            ctx.customerConversationCredential,
+          ),
+          installationToken: customerInstallation(
+            ctx.customerConversationInstallation,
+          ),
+          purpose: StoreConversationGuestCredentialPurpose.MOBILE_DEVICE,
+        })
+      } catch (error) {
+        mapCustomerConversationError(error)
+      }
+    }),
+  mobileBlockStoreConversation: publicProcedure
+    .input(storeConversationCustomerBlockInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await setCustomerStoreConversationBlock(
+          ctx.db,
+          { ...input, blocked: true },
+          {
+            kind: "guest",
+            credentialToken: customerCredential(
+              ctx.customerConversationCredential,
+            ),
+            installationToken: customerInstallation(
+              ctx.customerConversationInstallation,
+            ),
+            purpose: StoreConversationGuestCredentialPurpose.MOBILE_DEVICE,
+          },
+        )
+      } catch (error) {
+        mapCustomerConversationError(error)
+      }
+    }),
+  mobileUnblockStoreConversation: publicProcedure
+    .input(storeConversationCustomerBlockInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await setCustomerStoreConversationBlock(
+          ctx.db,
+          { ...input, blocked: false },
+          {
+            kind: "guest",
+            credentialToken: customerCredential(
+              ctx.customerConversationCredential,
+            ),
+            installationToken: customerInstallation(
+              ctx.customerConversationInstallation,
+            ),
+            purpose: StoreConversationGuestCredentialPurpose.MOBILE_DEVICE,
+          },
+        )
+      } catch (error) {
+        mapCustomerConversationError(error)
+      }
+    }),
   accountCreateStoreConversationPrivacyRequest: authenticatedProcedure
     .input(storeConversationAccountPrivacyRequestInputSchema)
     .mutation(async ({ ctx, input }) => {
@@ -182,7 +455,7 @@ export const serviceCommerceCustomerConversationsRouter = createTRPCRouter({
       }
     }),
 
-  accountPreviewStoreConversationAction: authenticatedProcedure
+  accountPreviewStoreConversationAction: eligibleAccountProcedure
     .input(storeConversationQuoteActionPreviewInputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -256,7 +529,7 @@ export const serviceCommerceCustomerConversationsRouter = createTRPCRouter({
       }
     }),
 
-  linkMobileStoreConversationsToAccount: authenticatedProcedure
+  linkMobileStoreConversationsToAccount: eligibleAccountProcedure
     .input(storeConversationAccountLinkInputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
@@ -276,7 +549,7 @@ export const serviceCommerceCustomerConversationsRouter = createTRPCRouter({
       }
     }),
 
-  mobileStoreConversationAccountCandidates: authenticatedProcedure
+  mobileStoreConversationAccountCandidates: eligibleAccountProcedure
     .input(storeConversationAccountCandidateListInputSchema)
     .query(async ({ ctx, input }) => {
       try {
@@ -296,7 +569,7 @@ export const serviceCommerceCustomerConversationsRouter = createTRPCRouter({
       }
     }),
 
-  mobileStoreConversationAccountDevices: authenticatedProcedure
+  mobileStoreConversationAccountDevices: eligibleAccountProcedure
     .input(storeConversationAccountDeviceListInputSchema)
     .query(async ({ ctx }) => {
       try {
@@ -544,12 +817,19 @@ export const serviceCommerceCustomerConversationsRouter = createTRPCRouter({
     .input(storeConversationMobileBootstrapInputSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        const credentialToken = customerCredential(
+          ctx.customerConversationCredential,
+          { optional: true },
+        )
+        if (!credentialToken && !input.ageBand) {
+          throw new StoreConversationError(
+            "NOT_READY",
+            "Choose an eligible age range before entering Store chat.",
+          )
+        }
         return await bootstrapMobileStoreConversation(ctx.db, {
           ...input,
-          credentialToken: customerCredential(
-            ctx.customerConversationCredential,
-            { optional: true },
-          ),
+          credentialToken,
           installationToken: customerInstallation(
             ctx.customerConversationInstallation,
           ),

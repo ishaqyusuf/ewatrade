@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import type { PrismaClient } from "../../generated/prisma/client"
 
 import {
   CommercialPaymentType,
@@ -9,7 +10,6 @@ import {
   listCommercialOrderPaymentsPage,
   summarizeCommercialPayment,
 } from "./commercial-payments"
-import type { DbClient } from "./types"
 
 describe("listCommercialOrderPaymentsPage", () => {
   test("groups complete received totals by immutable Order currency in one read", async () => {
@@ -33,7 +33,7 @@ describe("listCommercialOrderPaymentsPage", () => {
       commercialOrderPayment: {
         findMany: async () => [],
       },
-    } as unknown as DbClient
+    } as unknown as PrismaClient
 
     await expect(
       listCommercialOrderPaymentsPage(db, {

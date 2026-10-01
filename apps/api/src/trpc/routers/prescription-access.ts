@@ -13,6 +13,7 @@ import {
   getPublicPrescriptionPaymentStatus,
   getPublicPrescriptionQuote,
   getPublicPrescriptionRequestStatus,
+  isPrescriptionProductionLaunchApproved,
   replacePrescriptionMedia,
   revisePrescriptionQuoteForDelivery,
   selectPrescriptionQuoteOption,
@@ -45,6 +46,16 @@ import {
   prescriptionStatusSchema,
 } from "../../schemas/prescriptions"
 import { createTRPCRouter, publicProcedure } from "../init"
+
+const pharmacyPublicProcedure = publicProcedure.use(({ next }) => {
+  if (!isPrescriptionProductionLaunchApproved()) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "This public prescription action is unavailable.",
+    })
+  }
+  return next()
+})
 
 function publicFailure(cause: unknown) {
   return new TRPCError({
@@ -115,18 +126,18 @@ async function acceptQuoteWithReviewPay(
 }
 
 export const prescriptionAccessRouter = createTRPCRouter({
-  selectDelivery: publicProcedure
+  selectDelivery: pharmacyPublicProcedure
     .input(prescriptionDeliverySelectionSchema)
     .mutation(({ ctx, input }) =>
       runPublic(() => revisePrescriptionQuoteForDelivery(ctx.db, input)),
     ),
 
-  acceptDeliveryQuote: publicProcedure
+  acceptDeliveryQuote: pharmacyPublicProcedure
     .input(prescriptionPublicQuoteAcceptSchema)
     .mutation(({ ctx, input }) =>
       runPublic(() => acceptQuoteWithReviewPay(ctx.db, input, "delivery")),
     ),
-  createCheckout: publicProcedure
+  createCheckout: pharmacyPublicProcedure
     .input(prescriptionPaymentCheckoutSchema)
     .mutation(({ ctx, input }) =>
       runPublic(() =>
@@ -137,12 +148,12 @@ export const prescriptionAccessRouter = createTRPCRouter({
       ),
     ),
 
-  paymentStatus: publicProcedure
+  paymentStatus: pharmacyPublicProcedure
     .input(prescriptionPaymentStatusSchema)
     .query(({ ctx, input }) =>
       runPublic(() => getPublicPrescriptionPaymentStatus(ctx.db, input)),
     ),
-  uploadMedia: publicProcedure
+  uploadMedia: pharmacyPublicProcedure
     .input(prescriptionMediaUploadSchema)
     .mutation(async ({ ctx, input }) => {
       if (!input.publicToken || input.storeId)
@@ -159,31 +170,31 @@ export const prescriptionAccessRouter = createTRPCRouter({
       })
     }),
 
-  channel: publicProcedure
+  channel: pharmacyPublicProcedure
     .input(prescriptionPublicChannelSchema)
     .query(({ ctx, input }) =>
       runPublic(() => getPublicPrescriptionChannel(ctx.db, input)),
     ),
 
-  quote: publicProcedure
+  quote: pharmacyPublicProcedure
     .input(prescriptionPublicQuoteSchema)
     .query(({ ctx, input }) =>
       runPublic(() => getPublicPrescriptionQuote(ctx.db, input)),
     ),
 
-  selectQuoteOption: publicProcedure
+  selectQuoteOption: pharmacyPublicProcedure
     .input(prescriptionPublicQuoteOptionSelectSchema)
     .mutation(({ ctx, input }) =>
       runPublic(() => selectPrescriptionQuoteOption(ctx.db, input)),
     ),
 
-  acceptPickupQuote: publicProcedure
+  acceptPickupQuote: pharmacyPublicProcedure
     .input(prescriptionPublicQuoteAcceptSchema)
     .mutation(({ ctx, input }) =>
       runPublic(() => acceptQuoteWithReviewPay(ctx.db, input, "pickup")),
     ),
 
-  reupload: publicProcedure
+  reupload: pharmacyPublicProcedure
     .input(prescriptionReuploadSchema)
     .mutation(({ ctx, input }) =>
       runPublic(async () => {
@@ -193,13 +204,13 @@ export const prescriptionAccessRouter = createTRPCRouter({
       }),
     ),
 
-  status: publicProcedure
+  status: pharmacyPublicProcedure
     .input(prescriptionStatusSchema)
     .query(({ ctx, input }) =>
       runPublic(() => getPublicPrescriptionRequestStatus(ctx.db, input)),
     ),
 
-  submit: publicProcedure
+  submit: pharmacyPublicProcedure
     .input(prescriptionPublicIntakeSchema)
     .mutation(({ ctx, input }) =>
       runPublic(async () => {

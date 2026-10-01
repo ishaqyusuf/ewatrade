@@ -1,4 +1,5 @@
 import type { StoreConversationQuoteSnapshot } from "@ewatrade/service-commerce"
+import { currentEffectiveLegalPublication } from "@ewatrade/utils/legal-approval"
 
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
@@ -9,8 +10,10 @@ import {
   StoreConversationMessageKind,
   StoreConversationRequestKind,
 } from "../../generated/prisma/enums"
+import { assertAccountStoreConversationTermsAccepted } from "./store-conversation-account-terms"
 import { appendFirstReleasedQuoteAccountInvitationInTransaction } from "./store-conversation-accounts"
 import { scheduleUnreadStoreConversationNotificationInTransaction } from "./store-conversation-notifications/intents"
+import { assertStoreConversationTextScreened } from "./store-conversation-text-safety"
 import {
   StoreConversationError,
   lockStoreConversation,
@@ -109,6 +112,9 @@ export async function appendReleasedQuoteActionMessagesInTransaction(
     storeId: string
     tenantId: string
   },
+  publication: NonNullable<
+    ReturnType<typeof currentEffectiveLegalPublication>
+  > | null = currentEffectiveLegalPublication(),
 ): Promise<ReleasedQuoteActionMessageReceipt[]> {
   const linked = await tx.storeConversationRequestLink.findMany({
     distinct: ["conversationId"],
@@ -192,6 +198,8 @@ export async function appendReleasedQuoteActionMessagesInTransaction(
     options: version.options,
     version: version.version,
   })
+  for (const option of snapshot.options)
+    await assertStoreConversationTextScreened(option.label)
   const payloadHash = storeConversationPayloadHash({
     quoteSnapshot: snapshot,
     quoteVersionId: version.id,
@@ -218,7 +226,7 @@ export async function appendReleasedQuoteActionMessagesInTransaction(
       tenantId: input.tenantId,
     })
     const conversation = await tx.storeConversation.findFirst({
-      select: { id: true, lastMessageSequence: true },
+      select: { id: true, lastMessageSequence: true, customerBlockedAt: true },
       where: {
         id: conversationId,
         storeId: input.storeId,
@@ -276,6 +284,14 @@ export async function appendReleasedQuoteActionMessagesInTransaction(
       })
       continue
     }
+
+    if (conversation.customerBlockedAt) continue
+
+    await assertAccountStoreConversationTermsAccepted(
+      tx,
+      input.actorUserId,
+      publication,
+    )
 
     const sequence = conversation.lastMessageSequence + 1
     const advanced = await tx.storeConversation.updateMany({

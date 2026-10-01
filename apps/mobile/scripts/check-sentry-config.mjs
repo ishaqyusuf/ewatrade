@@ -18,18 +18,30 @@ function expect(source, pattern, message) {
 }
 
 const packageJson = JSON.parse(read("apps/mobile/package.json"))
+const easConfig = JSON.parse(read("apps/mobile/eas.json"))
 const appConfig = read("apps/mobile/app.config.ts")
 const metroConfig = read("apps/mobile/metro.config.js")
 const rootLayout = read("apps/mobile/src/app/_layout.tsx")
 const mobileObservability = read("apps/mobile/src/observability/sentry.ts")
 const sharedObservability = read("packages/observability/src/index.ts")
 const launchUpdate = read("apps/mobile/src/hooks/use-launch-auto-update.ts")
-const updatesScreen = read("apps/mobile/src/screens/updates-screen.tsx")
+const updatesRoute = read("apps/mobile/src/screens/updates-screen.tsx")
+const updatesScreen = read(
+  "apps/mobile/src/components/mobile/updates/updates-screen.tsx",
+)
 const rootEnvExample = read(".env.example")
 const mobileEnvExample = read("apps/mobile/.env.example")
 
 if (!packageJson.dependencies?.["@sentry/react-native"]) {
   throw new Error("@sentry/react-native is missing from mobile dependencies.")
+}
+
+for (const profile of ["preview", "production"]) {
+  if (easConfig.build?.[profile]?.env?.EXPO_PUBLIC_SENTRY_ENABLED !== "false") {
+    throw new Error(
+      `The ${profile} EAS build must keep mobile Sentry off until age-data review.`,
+    )
+  }
 }
 
 expect(
@@ -61,6 +73,11 @@ expect(
   mobileObservability,
   /process\.env\.EXPO_PUBLIC_SENTRY_DSN/,
   "Sentry does not read the public DSN environment variable.",
+)
+expect(
+  mobileObservability,
+  /if \(process\.env\.EXPO_PUBLIC_SENTRY_ENABLED !== "true"\) return/,
+  "Mobile Sentry must remain opt-in until the signed 13+ data review is complete.",
 )
 expect(
   sharedObservability,
@@ -108,6 +125,11 @@ expect(
   "Automatic OTA reloads do not flush pending Sentry events.",
 )
 expect(
+  updatesRoute,
+  /export \{ default \} from "@\/components\/mobile\/updates\/updates-screen"/,
+  "The manual OTA route does not use the guarded updates screen.",
+)
+expect(
   updatesScreen,
   /Sentry\.flush\(\)[\s\S]*Updates\.reloadAsync\(\)/,
   "Manual OTA reloads do not flush pending Sentry events.",
@@ -131,6 +153,11 @@ for (const [name, envSource] of [
     envSource,
     /^EXPO_PUBLIC_SENTRY_ENVIRONMENT=.+$/m,
     `${name} is missing EXPO_PUBLIC_SENTRY_ENVIRONMENT.`,
+  )
+  expect(
+    envSource,
+    /^EXPO_PUBLIC_SENTRY_ENABLED=false$/m,
+    `${name} must default mobile Sentry off before age is known.`,
   )
   expect(
     envSource,

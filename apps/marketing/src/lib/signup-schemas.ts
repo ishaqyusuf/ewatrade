@@ -132,6 +132,7 @@ export type OwnerValues = z.infer<typeof ownerSchema>
 
 export const signupPayloadSchema = z
   .object({
+    ageBand: z.enum(["AGE_13_TO_15", "AGE_16_TO_17", "ADULT"]),
     addressLine1: z.string().min(3).max(200),
     accessToken: z.string().trim().min(1).optional(),
     subdomain: z.string().min(3).max(32),
@@ -154,6 +155,9 @@ export const signupPayloadSchema = z
     operatingModel: z.enum(BUSINESS_OPERATING_MODEL_KEYS),
     orderChannels: z.array(z.enum(BUSINESS_ORDER_CHANNEL_KEYS)).min(1).max(5),
     otherBusinessDescription: z.string().trim().max(240).optional(),
+    legalVersion: z.string().min(1).max(80).optional(),
+    acceptedTerms: z.literal(true).optional(),
+    acknowledgedPrivacyNotice: z.literal(true).optional(),
   })
   .superRefine((value, ctx) => {
     if (

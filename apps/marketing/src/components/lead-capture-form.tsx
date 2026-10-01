@@ -3,7 +3,7 @@
 import { QaQuickFillButton } from "@/components/qa/qa-quick-fill-button"
 import { useOptionalQaWebAccelerator } from "@/components/qa/qa-web-accelerator"
 import { createLeadDraft } from "@/lib/qa-lead-fill"
-import { startTransition, useRef, useState } from "react"
+import { startTransition, useId, useRef, useState } from "react"
 
 import {
   createMarketingLeadSubmissionFailedNotification,
@@ -54,6 +54,8 @@ export function LeadCaptureForm({
   submitLabel,
 }: LeadCaptureFormProps) {
   const formRef = useRef<HTMLFormElement>(null)
+  const roleInputId = useId()
+  const roleHintId = `${roleInputId}-hint`
   const [state, setState] = useState<SubmissionState>("idle")
   const [message, setMessage] = useState("")
   const [draft, setDraft] = useState<LeadDraft>(emptyDraft)
@@ -180,7 +182,7 @@ export function LeadCaptureForm({
               required
               name="fullName"
               onChange={(event) => setField("fullName", event.target.value)}
-              placeholder="Ada Nwosu"
+              placeholder="Enter your name"
               className={baseInputClasses}
               value={draft.fullName}
             />
@@ -193,7 +195,7 @@ export function LeadCaptureForm({
               type="email"
               name="email"
               onChange={(event) => setField("email", event.target.value)}
-              placeholder="ada@merchant.com"
+              placeholder="Enter your email"
               className={baseInputClasses}
               value={draft.email}
             />
@@ -204,30 +206,38 @@ export function LeadCaptureForm({
           <>
             <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-2 text-sm text-foreground">
-                <span>Company name</span>
+                <span>Business name</span>
                 <input
                   name="companyName"
                   onChange={(event) =>
                     setField("companyName", event.target.value)
                   }
-                  placeholder="Nile Market"
+                  placeholder="Enter business name"
                   className={baseInputClasses}
                   value={draft.companyName}
                 />
               </label>
 
-              <label className="space-y-2 text-sm text-foreground">
-                <span>Role</span>
+              <div className="space-y-2 text-sm text-foreground">
+                <label htmlFor={roleInputId}>Role in the business</label>
                 <input
+                  aria-describedby={roleHintId}
+                  id={roleInputId}
                   name="roleTitle"
                   onChange={(event) =>
                     setField("roleTitle", event.target.value)
                   }
-                  placeholder="Founder, Operations Lead, Merchant Owner"
+                  placeholder="Enter your role"
                   className={baseInputClasses}
                   value={draft.roleTitle}
                 />
-              </label>
+                <span
+                  id={roleHintId}
+                  className="block text-xs text-muted-foreground"
+                >
+                  For example: owner, manager, or staff member.
+                </span>
+              </div>
             </div>
 
             <label className="space-y-2 text-sm text-foreground">
@@ -235,7 +245,7 @@ export function LeadCaptureForm({
               <input
                 name="phone"
                 onChange={(event) => setField("phone", event.target.value)}
-                placeholder="+234..."
+                placeholder="Enter your phone number"
                 className={baseInputClasses}
                 value={draft.phone}
               />
@@ -247,7 +257,7 @@ export function LeadCaptureForm({
                 name="message"
                 onChange={(event) => setField("message", event.target.value)}
                 rows={4}
-                placeholder="Tell us about your storefront, fulfillment, or POS needs."
+                placeholder="Describe what you want to launch or improve"
                 className={`${baseInputClasses} resize-y`}
                 value={draft.message}
               />

@@ -13,6 +13,7 @@ import {
   authorizePrescriptionCommunicationAttempt,
   claimPrescriptionCommunicationIntent,
   completePrescriptionCommunicationAttempt,
+  isPrescriptionProductionLaunchApproved,
 } from "@ewatrade/db/queries"
 import { assertQaJobProviderAllowed } from "../qa-provider-guard"
 
@@ -196,5 +197,6 @@ export async function runPrescriptionCommunicationDispatch(
 export async function prescriptionCommunicationDispatchHandler(
   payload: PrescriptionCommunicationDispatchPayload,
 ) {
+  if (!isPrescriptionProductionLaunchApproved()) return
   await runPrescriptionCommunicationDispatch(payload)
 }

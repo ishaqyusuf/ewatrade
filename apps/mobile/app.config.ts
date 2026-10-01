@@ -1,9 +1,10 @@
 import type { ExpoConfig } from "expo/config"
 
-const designRelease = require("./src/lib/mobile-design/release-config.json") as {
-  defaultDesign: string
-  screens: Record<string, string>
-}
+const designRelease =
+  require("./src/lib/mobile-design/release-config.json") as {
+    defaultDesign: string
+    screens: Record<string, string>
+  }
 
 const { withGoogleSignInModularHeaders } =
   require("./plugins/with-google-signin-modular-headers.cjs") as {
@@ -34,12 +35,8 @@ const normalizedAppVariant = (appVariant ?? "production").toLowerCase()
 const isDevelopmentBuild =
   normalizedAppVariant === "development" || normalizedAppVariant === "dev"
 const isPreviewBuild = normalizedAppVariant === "preview"
-const nativeSplashDesign = designRelease.screens["startup-splash"] ?? designRelease.defaultDesign
-const nativeSplashImage = nativeSplashDesign === "market-day"
-  ? "./assets/icons/market-pulse-splash-mark.png"
-  : isDevelopmentBuild || isPreviewBuild
-    ? "./assets/icons/dev-splash-logo.png"
-    : "./assets/icons/splash-logo.png"
+const nativeSplashDesign =
+  designRelease.screens["startup-splash"] ?? designRelease.defaultDesign
 const autoUpdateOnForeground =
   process.env.EXPO_PUBLIC_AUTO_UPDATE_ON_FOREGROUND !== "false"
 const autoUpdateForegroundCooldownMs = Number(
@@ -69,12 +66,16 @@ const variantConfig = isDevelopmentBuild
       scheme: "ewatrade-dev",
       iosBundleIdentifier: "com.ewatrade.dev",
       androidPackage: "com.ewatrade.dev",
-      iconBackgroundColor: "#FEE2E2",
+      iconBackgroundColor: "#1769B0",
+      splashBackgroundColor: "#1769B0",
+      splashDarkBackgroundColor: "#082B3B",
       icons: {
         app: "./assets/icons/dev-loading-icon.png",
         adaptive: "./assets/icons/dev-adaptive-icon.png",
         iosDark: "./assets/icons/dev-ios-dark.png",
         iosLight: "./assets/icons/dev-ios-light.png",
+        splashDark: "./assets/icons/dev-splash-logo-dark.png",
+        splashLight: "./assets/icons/dev-splash-logo.png",
       },
     }
   : isPreviewBuild
@@ -83,12 +84,16 @@ const variantConfig = isDevelopmentBuild
         scheme: "ewatrade-preview",
         iosBundleIdentifier: "com.ewatrade.preview",
         androidPackage: "com.ewatrade.preview",
-        iconBackgroundColor: "#FEF3C7",
+        iconBackgroundColor: "#25123B",
+        splashBackgroundColor: "#25123B",
+        splashDarkBackgroundColor: "#170B25",
         icons: {
-          app: "./assets/icons/dev-loading-icon.png",
-          adaptive: "./assets/icons/dev-adaptive-icon.png",
-          iosDark: "./assets/icons/dev-ios-dark.png",
-          iosLight: "./assets/icons/dev-ios-light.png",
+          app: "./assets/icons/preview-loading-icon.png",
+          adaptive: "./assets/icons/preview-adaptive-icon.png",
+          iosDark: "./assets/icons/preview-ios-dark.png",
+          iosLight: "./assets/icons/preview-ios-light.png",
+          splashDark: "./assets/icons/preview-splash-logo-dark.png",
+          splashLight: "./assets/icons/preview-splash-logo.png",
         },
       }
     : {
@@ -96,14 +101,61 @@ const variantConfig = isDevelopmentBuild
         scheme: "ewatrade",
         iosBundleIdentifier: "com.ewatrade.app",
         androidPackage: "com.ewatrade.app",
-        iconBackgroundColor: "#E6F4FE",
+        iconBackgroundColor: "#FFF8E9",
+        splashBackgroundColor: "#FFF8E9",
+        splashDarkBackgroundColor: "#08372A",
         icons: {
           app: "./assets/icons/loading-icon.png",
           adaptive: "./assets/icons/adaptive-icon.png",
           iosDark: "./assets/icons/ios-dark.png",
           iosLight: "./assets/icons/ios-light.png",
+          splashDark: "./assets/icons/splash-logo-dark.png",
+          splashLight: "./assets/icons/splash-logo.png",
         },
       }
+
+const nativeSplashImageLight =
+  nativeSplashDesign === "market-day"
+    ? "./assets/icons/market-pulse-splash-mark.png"
+    : variantConfig.icons.splashLight
+const nativeSplashImageDark =
+  nativeSplashDesign === "market-day"
+    ? "./assets/icons/market-pulse-splash-mark.png"
+    : variantConfig.icons.splashDark
+const nativeSplashBackgroundColor =
+  nativeSplashDesign === "market-day"
+    ? "#17684F"
+    : variantConfig.splashBackgroundColor
+const nativeSplashDarkBackgroundColor =
+  nativeSplashDesign === "market-day"
+    ? "#17684F"
+    : variantConfig.splashDarkBackgroundColor
+
+// App-owned data sent to the EwaTrade API. SDK-owned collection remains in
+// each SDK's manifest and the final Xcode privacy report.
+const appOwnedPrivacyDataTypes = [
+  "NSPrivacyCollectedDataTypeName",
+  "NSPrivacyCollectedDataTypeEmailAddress",
+  "NSPrivacyCollectedDataTypePhoneNumber",
+  "NSPrivacyCollectedDataTypePhysicalAddress",
+  "NSPrivacyCollectedDataTypeOtherDataTypes",
+  "NSPrivacyCollectedDataTypeUserID",
+  "NSPrivacyCollectedDataTypeDeviceID",
+  "NSPrivacyCollectedDataTypePaymentInfo",
+  "NSPrivacyCollectedDataTypeOtherFinancialInfo",
+  "NSPrivacyCollectedDataTypePurchaseHistory",
+  "NSPrivacyCollectedDataTypeEmailsOrTextMessages",
+  "NSPrivacyCollectedDataTypePhotosorVideos",
+  "NSPrivacyCollectedDataTypeAudioData",
+  "NSPrivacyCollectedDataTypeOtherUserContent",
+].map((NSPrivacyCollectedDataType) => ({
+  NSPrivacyCollectedDataType,
+  NSPrivacyCollectedDataTypeLinked: true,
+  NSPrivacyCollectedDataTypeTracking: false,
+  NSPrivacyCollectedDataTypePurposes: [
+    "NSPrivacyCollectedDataTypePurposeAppFunctionality",
+  ],
+}))
 
 const config: ExpoConfig = {
   name: variantConfig.name,
@@ -123,11 +175,16 @@ const config: ExpoConfig = {
     policy: "appVersion",
   },
   ios: {
+    usesAppleSignIn: true,
     associatedDomains: [`applinks:${customerChatHost}`],
     supportsTablet: true,
     bundleIdentifier: variantConfig.iosBundleIdentifier,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+    },
+    privacyManifests: {
+      NSPrivacyCollectedDataTypes: appOwnedPrivacyDataTypes,
+      NSPrivacyTracking: false,
     },
     icon: {
       dark: variantConfig.icons.iosDark,
@@ -135,6 +192,14 @@ const config: ExpoConfig = {
     },
   },
   android: {
+    blockedPermissions: [
+      "android.permission.FOREGROUND_SERVICE",
+      "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+      "com.android.vending.BILLING",
+      ...(!isDevelopmentBuild
+        ? ["android.permission.SYSTEM_ALERT_WINDOW"]
+        : []),
+    ],
     adaptiveIcon: {
       backgroundColor: variantConfig.iconBackgroundColor,
       foregroundImage: variantConfig.icons.adaptive,
@@ -162,6 +227,9 @@ const config: ExpoConfig = {
     favicon: "./assets/images/favicon.png",
   },
   plugins: [
+    "./plugins/with-foreground-audio-only.cjs",
+    "./plugins/with-ios-pod-deployment-target.cjs",
+    "expo-apple-authentication",
     [
       "@sentry/react-native/expo",
       {
@@ -211,13 +279,13 @@ const config: ExpoConfig = {
     [
       "expo-splash-screen",
       {
-        image: nativeSplashImage,
+        image: nativeSplashImageLight,
         imageWidth: 170,
         resizeMode: "contain",
-        backgroundColor: nativeSplashDesign === "market-day" ? "#17684F" : "#ffffff",
+        backgroundColor: nativeSplashBackgroundColor,
         dark: {
-          image: nativeSplashImage,
-          backgroundColor: nativeSplashDesign === "market-day" ? "#17684F" : "#000000",
+          image: nativeSplashImageDark,
+          backgroundColor: nativeSplashDarkBackgroundColor,
         },
       },
     ],

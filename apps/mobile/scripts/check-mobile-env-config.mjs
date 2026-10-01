@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs"
 import { join, relative, resolve } from "node:path"
+import { validateProductionApiConfiguration } from "./production-api-readiness.mjs"
 
 const REPO_ROOT = resolve(new URL("../../..", import.meta.url).pathname)
 const MOBILE_DIR = join(REPO_ROOT, "apps/mobile")
@@ -44,6 +45,7 @@ const MOBILE_EXAMPLE_KEYS = [
   "EXPO_PUBLIC_API_URL",
   "EXPO_PUBLIC_API_PORT",
   "EXPO_PUBLIC_WEB_URL",
+  "EXPO_PUBLIC_LEGAL_ORIGIN",
   "EXPO_PUBLIC_WEB_PORT",
   "EXPO_PUBLIC_CHAT_URL",
   "EXPO_PUBLIC_CHAT_PORT",
@@ -57,33 +59,37 @@ const EXPECTED = [
   {
     checks: {
       ALLOWED_API_ORIGINS: includesAll([
-        "http://localhost:3091",
-        "http://localhost:3092",
-        "http://localhost:3094",
-        "http://localhost:3095",
+        "https://chat.ewatrade-storefront.localhost",
+        "https://ewatrade-storefront.localhost",
+        "https://ewatrade.localhost",
+        "https://ewatrade-pos.localhost",
+        "https://ewatrade-dashboard.localhost",
+        "https://ewatrade-api.localhost",
       ]),
       BETTER_AUTH_TRUSTED_ORIGINS: includesAll([
-        "http://localhost:3091",
-        "http://localhost:3092",
-        "http://localhost:3094",
-        "http://localhost:3095",
+        "https://chat.ewatrade-storefront.localhost",
+        "https://ewatrade-storefront.localhost",
+        "https://ewatrade.localhost",
+        "https://ewatrade-pos.localhost",
+        "https://ewatrade-dashboard.localhost",
+        "https://ewatrade-api.localhost",
       ]),
       EMAIL_FROM: nonLocalEmailLike,
       EMAIL_REPLY_TO: nonLocalEmailLike,
       RESEND_API_KEY: startsWith("re_"),
-      API_URL: equals("http://localhost:3095"),
+      API_URL: equals("https://ewatrade-api.localhost"),
       MOBILE_APP_URL: equals("http://localhost:3096"),
-      PLATFORM_DOMAIN: equals("localhost:3092"),
-      STOREFRONT_URL: equals("http://ewatrade-storefront.localhost"),
+      PLATFORM_DOMAIN: equals("localhost"),
+      STOREFRONT_URL: equals("https://ewatrade-storefront.localhost"),
       CHAT_URL: equals("https://chat.ewatrade-storefront.localhost"),
       MARKETING_INBOX_EMAILS: nonLocalEmailLike,
-      NEXT_PUBLIC_API_URL: equals("http://localhost:3095"),
-      NEXT_PUBLIC_APP_URL: equals("http://localhost:3092"),
-      NEXT_PUBLIC_DASHBOARD_URL: equals("http://localhost:3094"),
-      NEXT_PUBLIC_PLATFORM_DOMAIN: equals("localhost:3092"),
-      NEXT_PUBLIC_MARKETING_URL: equals("http://localhost:3092"),
+      NEXT_PUBLIC_API_URL: equals("https://ewatrade-api.localhost"),
+      NEXT_PUBLIC_APP_URL: equals("https://ewatrade.localhost"),
+      NEXT_PUBLIC_DASHBOARD_URL: equals("https://ewatrade-dashboard.localhost"),
+      NEXT_PUBLIC_PLATFORM_DOMAIN: equals("localhost"),
+      NEXT_PUBLIC_MARKETING_URL: equals("https://ewatrade.localhost"),
       NEXT_PUBLIC_STOREFRONT_URL: equals(
-        "http://ewatrade-storefront.localhost",
+        "https://ewatrade-storefront.localhost",
       ),
       NEXT_PUBLIC_CHAT_URL: equals(
         "https://chat.ewatrade-storefront.localhost",
@@ -106,13 +112,11 @@ const EXPECTED = [
       EMAIL_FROM: productionEmail,
       EMAIL_REPLY_TO: productionEmail,
       RESEND_API_KEY: startsWith("re_"),
-      API_URL: equals("https://ewatrade.com"),
       MOBILE_APP_URL: equals("https://ewatrade.com/download"),
       PLATFORM_DOMAIN: equals("ewatrade.com"),
       STOREFRONT_URL: equals("https://ewatrade.com"),
       CHAT_URL: equals("https://chat.ewatrade.com"),
       MARKETING_INBOX_EMAILS: productionEmail,
-      NEXT_PUBLIC_API_URL: equals("https://ewatrade.com"),
       NEXT_PUBLIC_APP_URL: equals("https://ewatrade.com"),
       NEXT_PUBLIC_DASHBOARD_URL: equals("https://dashboard.ewatrade.com"),
       NEXT_PUBLIC_PLATFORM_DOMAIN: equals("ewatrade.com"),
@@ -120,6 +124,7 @@ const EXPECTED = [
       NEXT_PUBLIC_SIGNUP_ENABLED: equals("true"),
       NEXT_PUBLIC_STOREFRONT_URL: equals("https://ewatrade.com"),
       NEXT_PUBLIC_CHAT_URL: equals("https://chat.ewatrade.com"),
+      EXPO_PUBLIC_LOGLY_ENABLED: equals("false"),
     },
     file: ROOT_PRODUCTION_ENV,
     label: "root production env",
@@ -144,9 +149,9 @@ const EXPECTED = [
   {
     checks: {
       APP_VARIANT: equals("production"),
-      EXPO_PUBLIC_API_URL: equals("https://ewatrade.com"),
       EXPO_PUBLIC_APP_VARIANT: equals("production"),
       EXPO_PUBLIC_BASE_URL: equals("https://ewatrade.com"),
+      EXPO_PUBLIC_LEGAL_ORIGIN: equals("https://ewatrade.com"),
       EXPO_PUBLIC_WEB_URL: equals("https://ewatrade.com"),
       EXPO_PUBLIC_CHAT_URL: equals("https://chat.ewatrade.com"),
     },
@@ -180,6 +185,13 @@ for (const config of EXPECTED) {
     }
   }
 }
+
+failures.push(
+  ...validateProductionApiConfiguration(
+    readEnvFile(ROOT_PRODUCTION_ENV),
+    readEnvFile(MOBILE_PRODUCTION_ENV),
+  ).failures,
+)
 
 checkExampleKeys(ROOT_EXAMPLE_ENV, ROOT_EXAMPLE_KEYS)
 checkExampleKeys(MOBILE_EXAMPLE_ENV, MOBILE_EXAMPLE_KEYS)

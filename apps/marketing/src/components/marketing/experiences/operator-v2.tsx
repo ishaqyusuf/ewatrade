@@ -3,7 +3,6 @@ import {
   ArrowRight01Icon,
   CheckListIcon,
   CheckmarkCircle01Icon,
-  Package01Icon,
   Store04Icon,
   WhatsappIcon,
 } from "@hugeicons/core-free-icons"
@@ -102,11 +101,6 @@ const businessTypes = [
     icon: CheckListIcon,
     name: "Service teams",
     body: "Requests, offers, quotes, bookings, fulfilment, and customer updates.",
-  },
-  {
-    icon: Package01Icon,
-    name: "Pharmacy",
-    body: "A focused pharmacy layer on top of the same catalog and commerce core.",
   },
   {
     icon: Analytics01Icon,
@@ -628,10 +622,10 @@ export function OperatorV2Landing({ signupEnabled }: MarketingExperienceProps) {
             </div>
             <p className="max-w-xl text-base leading-7 text-white/60 lg:justify-self-end">
               EwaTrade adds focused workflows where a business needs them
-              without turning the platform into four disconnected products.
+              without turning the platform into disconnected products.
             </p>
           </div>
-          <div className="mt-14 grid border-l border-t border-white/15 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-14 grid border-l border-t border-white/15 sm:grid-cols-2 lg:grid-cols-3">
             {businessTypes.map((business) => (
               <article
                 key={business.name}
@@ -787,6 +781,18 @@ export function OperatorV2Landing({ signupEnabled }: MarketingExperienceProps) {
             </a>
             <a href="#businesses" className="hover:text-[#10251d]">
               Businesses
+            </a>
+            <a href="/terms" className="hover:text-[#10251d]">
+              Terms
+            </a>
+            <a href="/privacy" className="hover:text-[#10251d]">
+              Privacy
+            </a>
+            <a href="/support" className="hover:text-[#10251d]">
+              Support
+            </a>
+            <a href="/delete-account" className="hover:text-[#10251d]">
+              Delete account
             </a>
             <span>© {new Date().getFullYear()} EwaTrade</span>
           </div>

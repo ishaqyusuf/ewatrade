@@ -3,7 +3,7 @@ import {
   storeConversationSelectRequestInputSchema,
 } from "@ewatrade/service-commerce"
 
-import type { PrismaClient } from "../../generated/prisma/client"
+import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import {
   StoreConversationAuditEventType,
   StoreConversationCommandKind,
@@ -12,9 +12,12 @@ import {
   StoreConversationRequestKind,
 } from "../../generated/prisma/enums"
 import { createChannelCommerceInquiryInTransaction } from "./commerce-inquiries"
+import { assertGuestAgeAuthority } from "./store-conversation-age-authority"
+import { assertGuestStoreConversationTermsAccepted } from "./store-conversation-guest-terms"
 import {
   StoreConversationError,
   assertStoreConversationComposerEnabled,
+  assertStoreConversationCustomerNotBlocked,
   loadStoreConversationForGuest,
   loadStoreConversationRequestSummaries,
   lockStoreConversation,
@@ -129,7 +132,7 @@ async function assertCurrentRequestSource(
 }
 
 async function linkRequestInTransaction(
-  tx: DbClient,
+  tx: Prisma.TransactionClient,
   input: {
     clientOperationId: string
     conversationId: string
@@ -173,7 +176,17 @@ async function linkRequestInTransaction(
       "This Store conversation is unavailable.",
     )
   }
+  await assertGuestStoreConversationTermsAccepted(
+    tx,
+    credential.guestIdentityId,
+  )
+  await assertGuestAgeAuthority(tx, credential.guestIdentityId)
   await lockStoreConversation(tx, {
+    conversationId: conversation.id,
+    storeId: conversation.storeId,
+    tenantId: conversation.tenantId,
+  })
+  await assertStoreConversationCustomerNotBlocked(tx, {
     conversationId: conversation.id,
     storeId: conversation.storeId,
     tenantId: conversation.tenantId,
@@ -310,6 +323,13 @@ export async function attachStoreConversationTypedRequest(
   )
 }
 
+export async function attachStoreConversationTypedRequestInTransaction(
+  tx: Prisma.TransactionClient,
+  input: Parameters<typeof linkRequestInTransaction>[1],
+) {
+  return linkRequestInTransaction(tx, input)
+}
+
 export async function selectGuestStoreConversationRequest(
   db: PrismaClient,
   input: StoreConversationSelectRequestInput & {
@@ -330,15 +350,29 @@ export async function selectGuestStoreConversationRequest(
     const entry = await resolveStoreConversationEntry(tx, {
       publicToken: parsed.publicToken,
     })
-    const { conversation } = await loadStoreConversationForGuest(tx, {
-      conversationId: parsed.conversationId,
-      credentialToken: input.credentialToken,
-      installationToken: input.installationToken,
-      now: new Date(),
-      purpose: input.purpose,
-      storeId: entry.storeId,
-      tenantId: entry.tenantId,
-    })
+    const { conversation, credential } = await loadStoreConversationForGuest(
+      tx,
+      {
+        conversationId: parsed.conversationId,
+        credentialToken: input.credentialToken,
+        installationToken: input.installationToken,
+        now: new Date(),
+        purpose: input.purpose,
+        storeId: entry.storeId,
+        tenantId: entry.tenantId,
+      },
+    )
+    await assertGuestStoreConversationTermsAccepted(
+      tx,
+      conversation.guestIdentityId,
+    )
+    await assertGuestAgeAuthority(tx, credential.guestIdentityId)
+    if (conversation.customerBlockedAt) {
+      throw new StoreConversationError(
+        "FORBIDDEN",
+        "Unblock this Store before continuing the conversation.",
+      )
+    }
     assertStoreConversationComposerEnabled(entry.channelMode)
     const message = await tx.storeConversationMessage.findFirst({
       select: { body: true },

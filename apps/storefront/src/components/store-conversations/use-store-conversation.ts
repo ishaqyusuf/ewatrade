@@ -120,7 +120,11 @@ function uploadAttachmentForm(input: {
   })
 }
 
-export function useStoreConversation(publicToken: string) {
+export function useStoreConversation(
+  publicToken: string,
+  entryAgeBand?: "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT",
+  initialResetGuest = false,
+) {
   const [state, setState] = useState<StoreConversationLoadState>({
     kind: "loading",
   })
@@ -296,6 +300,8 @@ export function useStoreConversation(publicToken: string) {
         let moderation:
           | StoreConversationGuestMessagesAfterProjection["moderation"]
           | null = null
+        let customerBlocked: boolean | null = null
+        let customerBlockedAt: Date | null = null
         const update =
           await drainMountedStoreConversationActionRecovery<Message>({
             actionMessageIds,
@@ -324,6 +330,8 @@ export function useStoreConversation(publicToken: string) {
               availability = page.availability
               channelMode = page.channelMode
               moderation = page.moderation
+              customerBlocked = page.customerBlocked
+              customerBlockedAt = page.customerBlockedAt
               actionMessageUpdates.push(...page.actionMessageUpdates)
               return page
             },
@@ -337,7 +345,8 @@ export function useStoreConversation(publicToken: string) {
           actionMessageUpdates.length > 0 ||
           availability ||
           channelMode ||
-          moderation
+          moderation ||
+          customerBlocked !== null
         ) {
           setState((currentState) =>
             currentState.kind === "ready" &&
@@ -346,17 +355,21 @@ export function useStoreConversation(publicToken: string) {
                   ...currentState,
                   ...(availability ? { availability } : {}),
                   ...(channelMode ? { channelMode } : {}),
-                  ...(moderation
+                  ...(moderation || customerBlocked !== null
                     ? {
                         conversation: {
                           ...currentState.conversation,
-                          moderation,
-                          state:
-                            moderation.state === "restricted"
+                          ...(moderation ? { moderation } : {}),
+                          ...(customerBlocked !== null
+                            ? { customerBlocked, customerBlockedAt }
+                            : {}),
+                          state: moderation
+                            ? moderation.state === "restricted"
                               ? ("restricted" as const)
                               : currentState.conversation.state === "restricted"
                                 ? ("active" as const)
-                                : currentState.conversation.state,
+                                : currentState.conversation.state
+                            : currentState.conversation.state,
                         },
                       }
                     : {}),
@@ -438,6 +451,7 @@ export function useStoreConversation(publicToken: string) {
       state.kind === "ready" &&
       state.access === "guest" &&
       state.conversation.state === "active" &&
+      !state.conversation.customerBlocked &&
       state.channelMode.composerEnabled &&
       canSelectStoreConversationAttachment({
         capabilityAvailable: Boolean(attachmentCapability?.available),
@@ -581,7 +595,11 @@ export function useStoreConversation(publicToken: string) {
             rotationPrepared?: boolean
           }>(
             await fetch("/api/store-conversations/bootstrap", {
-              body: JSON.stringify({ publicToken, resetGuest }),
+              body: JSON.stringify({
+                ageBand: entryAgeBand,
+                publicToken,
+                resetGuest,
+              }),
               headers: { "content-type": "application/json" },
               method: "POST",
             }),
@@ -605,15 +623,20 @@ export function useStoreConversation(publicToken: string) {
         })
       }
     },
-    [loadTimeline, publicToken],
+    [entryAgeBand, loadTimeline, publicToken],
   )
 
   useEffect(() => {
-    void bootstrap()
-  }, [bootstrap])
+    void bootstrap(initialResetGuest)
+  }, [bootstrap, initialResetGuest])
 
   const openWhatsAppBridge = useCallback(async () => {
-    if (state.kind !== "ready" || openingWhatsApp) return
+    if (
+      state.kind !== "ready" ||
+      state.conversation.customerBlocked ||
+      openingWhatsApp
+    )
+      return
     const scope = `${state.access}:${publicToken}:${state.conversation.id}`
     const operation = resolveStoreConversationWhatsAppBridgeClientOperation({
       createId: () => crypto.randomUUID(),
@@ -696,6 +719,7 @@ export function useStoreConversation(publicToken: string) {
     event.preventDefault()
     if (
       state.kind !== "ready" ||
+      state.conversation.customerBlocked ||
       !state.channelMode.composerEnabled ||
       sending ||
       (!draft.trim() && !attachmentDraft.draft)
@@ -771,6 +795,7 @@ export function useStoreConversation(publicToken: string) {
     if (
       state.kind !== "ready" ||
       state.access === "account" ||
+      state.conversation.customerBlocked ||
       !state.channelMode.composerEnabled ||
       selectingMessageId
     )
@@ -815,6 +840,29 @@ export function useStoreConversation(publicToken: string) {
     setDraft(value)
   }
 
+  function applyCustomerBlocked(blocked: boolean) {
+    const current = stateRef.current
+    if (current.kind !== "ready") return
+    setState((prior) =>
+      prior.kind === "ready" &&
+      prior.conversation.id === current.conversation.id
+        ? {
+            ...prior,
+            conversation: {
+              ...prior.conversation,
+              customerBlocked: blocked,
+              customerBlockedAt: blocked ? new Date() : null,
+            },
+          }
+        : prior,
+    )
+    void loadTimeline(current.conversation).catch(() => {
+      setRefreshNotice(
+        "Your Store block setting was saved. Refresh to check the latest conversation state.",
+      )
+    })
+  }
+
   function setStartingNewRequest(value: boolean) {
     operationIdRef.current = null
     setStartingNewRequestState(value)
@@ -830,6 +878,7 @@ export function useStoreConversation(publicToken: string) {
   }
 
   return {
+    applyCustomerBlocked,
     attachmentCapability,
     attachmentCapabilityError,
     attachmentDraft,

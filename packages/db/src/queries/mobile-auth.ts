@@ -1,17 +1,36 @@
-import { createHash, randomBytes, randomInt } from "node:crypto"
+import { createHash, createHmac, randomBytes, randomInt } from "node:crypto"
 import {
   type BusinessOperatingModel,
   type OperatingCurrencyCode,
   normalizeOperatingCurrencyCode,
 } from "@ewatrade/utils"
-import { MembershipRole } from "../../generated/prisma/enums"
+import {
+  currentEffectiveLegalPublication,
+  resolveLegalSignupChoice,
+} from "@ewatrade/utils/legal-approval"
+import { AccountAgeBand, MembershipRole } from "../../generated/prisma/enums"
+import { recordLegalAcceptance } from "./account-privacy"
+import { isAccountPrivacyAccessBlocked } from "./account-privacy-access"
+import { isLegalSignupSessionBlocked } from "./legal-session-access"
+import {
+  type MobileAuthMode,
+  buildMobileOtpIdentifier,
+} from "./mobile-otp-identifier"
 import {
   type OwnerBusinessSummary,
   createOwnerSignupBusiness,
 } from "./owner-businesses"
+import { getCustomerAccountAgeStatus } from "./store-conversation-age-authority"
 import type { DbClient } from "./types"
 
-export type MobileAuthMode = "login" | "sign_up"
+export type { MobileAuthMode } from "./mobile-otp-identifier"
+
+export class MobileAccountNotFoundError extends Error {
+  constructor() {
+    super("No account was found. Create an account first.")
+    this.name = "MobileAccountNotFoundError"
+  }
+}
 
 export type MobileAuthTenantSummary = OwnerBusinessSummary
 
@@ -44,6 +63,9 @@ export type MobileOwnerOtpResult = {
 }
 
 export type MobileGoogleIdentityInput = {
+  ageBand?: AccountAgeBand
+  acceptedTerms?: true
+  acknowledgedPrivacyNotice?: true
   addressLine1?: string | null
   businessProfileKey?: string | null
   businessProfileVersion?: 1 | null
@@ -53,6 +75,7 @@ export type MobileGoogleIdentityInput = {
   email: string
   idToken?: string | null
   image?: string | null
+  legalVersion?: string
   mode: MobileAuthMode
   name?: string | null
   operatingModel?: BusinessOperatingModel | null
@@ -66,6 +89,38 @@ export type MobileGoogleIdentityInput = {
 const OTP_TTL_MINUTES = 10
 const SESSION_TTL_DAYS = 90
 
+function requireMobileSignupAgeBand(
+  mode: MobileAuthMode,
+  band: AccountAgeBand | null | undefined,
+) {
+  if (mode !== "sign_up") return null
+  if (
+    band === AccountAgeBand.AGE_13_TO_15 ||
+    band === AccountAgeBand.AGE_16_TO_17 ||
+    band === AccountAgeBand.ADULT
+  )
+    return band
+  throw new Error("Choose an eligible age range before creating an account.")
+}
+
+async function ensureMobileSignupAgeBand(
+  db: DbClient,
+  userId: string,
+  band: AccountAgeBand | null,
+) {
+  if (!band) return
+  await db.user.updateMany({
+    data: { ageBand: band, ageDeclaredAt: new Date() },
+    where: { id: userId, ageBand: AccountAgeBand.UNDECLARED },
+  })
+  const user = await db.user.findUnique({
+    select: { ageBand: true },
+    where: { id: userId },
+  })
+  if (user?.ageBand !== band)
+    throw new Error("This account's age range is already set.")
+}
+
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase()
 }
@@ -77,10 +132,6 @@ function cleanText(value: string | null | undefined) {
 
 function getEmailDisplayName(email: string) {
   return email.split("@")[0] || email
-}
-
-function buildOtpIdentifier(input: { email: string; mode: MobileAuthMode }) {
-  return `mobile-auth:${input.mode}:${normalizeEmail(input.email)}`
 }
 
 function hashOtp(code: string) {
@@ -244,6 +295,10 @@ async function createMobileSession(
   db: DbClient,
   input: { tenant: MobileAuthTenantSummary | null; userId: string },
 ): Promise<Pick<MobileAuthSessionResult, "expiresAt" | "token">> {
+  if (await isAccountPrivacyAccessBlocked(db, input.userId))
+    throw new Error("This account is being closed.")
+  if (await isLegalSignupSessionBlocked(db, input.userId))
+    throw new Error("Account setup is incomplete. Contact support.")
   const now = new Date()
   const expiresAt = addDays(now, SESSION_TTL_DAYS)
   const session = await db.session.create({
@@ -261,9 +316,84 @@ async function createMobileSession(
   return session
 }
 
+/** Issues the ordinary mobile session after an independent credential check. */
+export async function createMobileSessionForVerifiedUser(
+  db: DbClient,
+  userId: string,
+): Promise<MobileAuthSessionResult> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, emailVerified: true, name: true },
+  })
+  if (!user?.emailVerified) throw new Error("A verified account is required.")
+  const age = await getCustomerAccountAgeStatus(db, user.id)
+  const tenant = age.eligible
+    ? await getFirstActiveTenantForUser(db, { userId: user.id })
+    : null
+  const accessProfile = age.eligible
+    ? await getMobileAccessProfile(db, { userId: user.id })
+    : { hasBusinessAccess: false, hasCustomerHistory: false }
+  const session = await createMobileSession(db, { tenant, userId: user.id })
+  return {
+    accessProfile,
+    expiresAt: session.expiresAt,
+    profile: {
+      businessId: tenant?.id ?? null,
+      businessName: tenant?.name ?? null,
+      currencyCode: tenant?.currencyCode ?? "NGN",
+      email: user.email,
+      id: user.id,
+      name: user.name,
+      role: tenant?.role ?? "NONE",
+      status: tenant?.status ?? "NONE",
+    },
+    tenant,
+    token: session.token,
+  }
+}
+
+/** Durable per-address throttle for the server-side Better Auth password call. */
+export async function consumeMobilePasswordAttempt(
+  db: DbClient,
+  email: string,
+  now = new Date(),
+): Promise<boolean> {
+  const secret = process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET
+  if (!secret) throw new Error("Authentication secret is required")
+  const bucketDigest = createHmac("sha256", secret)
+    .update(`mobile-password:${email.trim().toLowerCase()}`)
+    .digest("hex")
+  const windowMs = 15 * 60_000
+  const maximum = 8
+  return db.$transaction(
+    async (tx) => {
+      const bucket = await tx.accountPrivacyRateBucket.findUnique({
+        where: { bucketDigest },
+      })
+      const inWindow = Boolean(
+        bucket && now.getTime() - bucket.windowStartedAt.getTime() < windowMs,
+      )
+      if (inWindow && bucket && bucket.sentCount >= maximum) return false
+      await tx.accountPrivacyRateBucket.upsert({
+        where: { bucketDigest },
+        create: { bucketDigest, sentCount: 1, windowStartedAt: now },
+        update: {
+          sentCount: inWindow ? { increment: 1 } : 1,
+          windowStartedAt: inWindow ? undefined : now,
+        },
+      })
+      return true
+    },
+    { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
+  )
+}
+
 export async function createMobileOwnerOtp(
   db: DbClient,
   input: {
+    ageBand?: AccountAgeBand
+    acceptedTerms?: true
+    acknowledgedPrivacyNotice?: true
     addressLine1?: string | null
     businessProfileKey?: string | null
     businessProfileVersion?: 1 | null
@@ -271,6 +401,7 @@ export async function createMobileOwnerOtp(
     city?: string | null
     currencyCode?: OperatingCurrencyCode | null
     email: string
+    legalVersion?: string
     mode: MobileAuthMode
     name?: string | null
     operatingModel?: BusinessOperatingModel | null
@@ -280,11 +411,16 @@ export async function createMobileOwnerOtp(
     teamSize?: string | null
   },
 ): Promise<MobileOwnerOtpResult> {
+  const ageBand = requireMobileSignupAgeBand(input.mode, input.ageBand)
+  const legalPublication =
+    input.mode === "sign_up"
+      ? resolveLegalSignupChoice(input, currentEffectiveLegalPublication())
+      : null
   const email = normalizeEmail(input.email)
   const code = createOtpCode()
   const now = new Date()
   const expiresAt = addMinutes(now, OTP_TTL_MINUTES)
-  const identifier = buildOtpIdentifier({ email, mode: input.mode })
+  const identifier = buildMobileOtpIdentifier({ email, mode: input.mode })
 
   await db.verification.deleteMany({
     where: { identifier },
@@ -295,12 +431,15 @@ export async function createMobileOwnerOtp(
       expiresAt,
       identifier,
       value: JSON.stringify({
+        ageBand,
         addressLine1: cleanText(input.addressLine1),
         businessProfileKey: cleanText(input.businessProfileKey),
         businessProfileVersion: input.businessProfileVersion === 1 ? 1 : null,
         businessName: cleanText(input.businessName),
         city: cleanText(input.city),
         codeHash: hashOtp(code),
+        legalVersion: legalPublication?.version ?? null,
+        legalDocumentHash: legalPublication?.documentHash ?? null,
         currencyCode:
           input.mode === "sign_up"
             ? normalizeOperatingCurrencyCode(input.currencyCode)
@@ -326,6 +465,7 @@ export async function createMobileOwnerOtp(
 export async function verifyMobileOwnerOtp(
   db: DbClient,
   input: {
+    ageBand?: AccountAgeBand
     addressLine1?: string | null
     businessProfileKey?: string | null
     businessProfileVersion?: 1 | null
@@ -344,7 +484,7 @@ export async function verifyMobileOwnerOtp(
   },
 ): Promise<MobileAuthSessionResult> {
   const email = normalizeEmail(input.email)
-  const identifier = buildOtpIdentifier({ email, mode: input.mode })
+  const identifier = buildMobileOtpIdentifier({ email, mode: input.mode })
   const verification = await db.verification.findFirst({
     where: {
       expiresAt: { gt: new Date() },
@@ -358,10 +498,13 @@ export async function verifyMobileOwnerOtp(
   }
 
   let payload: {
+    ageBand?: AccountAgeBand | null
     addressLine1?: string | null
     businessProfileKey?: string | null
     businessProfileVersion?: 1 | null
     businessName?: string | null
+    legalVersion?: string | null
+    legalDocumentHash?: string | null
     city?: string | null
     codeHash?: string
     currencyCode?: OperatingCurrencyCode | null
@@ -382,6 +525,31 @@ export async function verifyMobileOwnerOtp(
   if (!payload.codeHash || payload.codeHash !== hashOtp(input.code)) {
     throw new Error("The verification code is incorrect.")
   }
+
+  const signupAgeBand = requireMobileSignupAgeBand(input.mode, payload.ageBand)
+  if (signupAgeBand && input.ageBand !== signupAgeBand)
+    throw new Error("The age choice changed. Restart account creation.")
+
+  const legalPublication =
+    input.mode === "sign_up"
+      ? resolveLegalSignupChoice(
+          payload.legalVersion
+            ? {
+                legalVersion: payload.legalVersion,
+                acceptedTerms: true,
+                acknowledgedPrivacyNotice: true,
+              }
+            : {},
+          currentEffectiveLegalPublication(),
+        )
+      : null
+  if (
+    (legalPublication?.documentHash ?? null) !==
+    (payload.legalDocumentHash ?? null)
+  )
+    throw new Error(
+      "The legal documents changed. Restart signup and review them.",
+    )
 
   await db.verification.deleteMany({
     where: { identifier },
@@ -420,33 +588,72 @@ export async function verifyMobileOwnerOtp(
     select: {
       id: true,
       name: true,
+      ageBand: true,
     },
   })
 
-  const user = await db.user.upsert({
-    create: {
-      displayName,
-      email,
-      emailVerified: true,
-      emailVerifiedAt: new Date(),
-      name: displayName,
-    },
-    update: {
-      displayName,
-      emailVerified: true,
-      emailVerifiedAt: new Date(),
-      name: displayName,
-    },
-    where: { email },
-    select: {
-      email: true,
-      id: true,
-      name: true,
-    },
-  })
+  if (
+    signupAgeBand &&
+    existingUser?.ageBand !== AccountAgeBand.UNDECLARED &&
+    existingUser?.ageBand !== undefined &&
+    existingUser.ageBand !== signupAgeBand
+  )
+    throw new Error("This account's age range is already set.")
 
-  const tenant =
-    input.mode === "sign_up"
+  if (input.mode === "login" && !existingUser) {
+    throw new MobileAccountNotFoundError()
+  }
+
+  const user =
+    input.mode === "login" && existingUser
+      ? await db.user.update({
+          where: { id: existingUser.id },
+          data: {
+            emailVerified: true,
+            emailVerifiedAt: new Date(),
+          },
+          select: { email: true, id: true, name: true },
+        })
+      : await db.user.upsert({
+          create: {
+            ageBand: signupAgeBand ?? undefined,
+            ageDeclaredAt: signupAgeBand ? new Date() : undefined,
+            displayName,
+            email,
+            emailVerified: true,
+            emailVerifiedAt: new Date(),
+            name: displayName,
+          },
+          update: {
+            ageBand:
+              existingUser?.ageBand === AccountAgeBand.UNDECLARED
+                ? (signupAgeBand ?? undefined)
+                : undefined,
+            ageDeclaredAt:
+              signupAgeBand &&
+              existingUser?.ageBand === AccountAgeBand.UNDECLARED
+                ? new Date()
+                : undefined,
+            displayName,
+            emailVerified: true,
+            emailVerifiedAt: new Date(),
+            name: displayName,
+          },
+          where: { email },
+          select: {
+            email: true,
+            id: true,
+            name: true,
+          },
+        })
+
+  await ensureMobileSignupAgeBand(db, user.id, signupAgeBand)
+
+  const age = await getCustomerAccountAgeStatus(db, user.id)
+
+  const tenant = !age.eligible
+    ? null
+    : input.mode === "sign_up"
       ? await ensureOwnerTenant(db, {
           addressLine1,
           businessProfileKey,
@@ -463,7 +670,19 @@ export async function verifyMobileOwnerOtp(
         })
       : await getFirstActiveTenantForUser(db, { userId: user.id })
 
-  const accessProfile = await getMobileAccessProfile(db, { userId: user.id })
+  if (legalPublication) {
+    const acceptance = await recordLegalAcceptance(db, {
+      userId: user.id,
+      version: legalPublication.version,
+      surface: "mobile",
+    })
+    if (acceptance.documentHash !== legalPublication.documentHash)
+      throw new Error("The legal documents changed. Restart signup.")
+  }
+
+  const accessProfile = age.eligible
+    ? await getMobileAccessProfile(db, { userId: user.id })
+    : { hasBusinessAccess: false, hasCustomerHistory: false }
 
   const session = await createMobileSession(db, {
     tenant,
@@ -491,13 +710,25 @@ export async function verifyMobileOwnerOtp(
 export async function verifyMobileGoogleIdentity(
   db: DbClient,
   input: MobileGoogleIdentityInput,
+) {
+  return verifyMobileSocialIdentity(db, { ...input, provider: "google" })
+}
+
+export async function verifyMobileSocialIdentity(
+  db: DbClient,
+  input: MobileGoogleIdentityInput & { provider: "google" | "apple" },
 ): Promise<MobileAuthSessionResult> {
+  const signupAgeBand = requireMobileSignupAgeBand(input.mode, input.ageBand)
+  const legalPublication =
+    input.mode === "sign_up"
+      ? resolveLegalSignupChoice(input, currentEffectiveLegalPublication())
+      : null
   const email = normalizeEmail(input.email)
-  const providerId = "google"
+  const providerId = input.provider
   const providerAccountId = input.providerAccountId.trim()
 
   if (!providerAccountId) {
-    throw new Error("Google did not return an account id.")
+    throw new Error("The sign-in provider did not return an account id.")
   }
 
   const linkedAccount = await db.account.findUnique({
@@ -512,28 +743,49 @@ export async function verifyMobileGoogleIdentity(
     },
   })
   const existingUser = await db.user.findUnique({
-    where: { email },
+    where: linkedAccount ? { id: linkedAccount.userId } : { email },
     select: {
+      ageBand: true,
       id: true,
       name: true,
+      email: true,
     },
   })
 
   const displayName =
-    cleanText(input.name) ??
-    cleanText(existingUser?.name) ??
-    getEmailDisplayName(email)
+    (linkedAccount
+      ? (cleanText(existingUser?.name) ?? cleanText(input.name))
+      : (cleanText(input.name) ?? cleanText(existingUser?.name))) ??
+    getEmailDisplayName(existingUser?.email ?? email)
   const businessName = cleanText(input.businessName) ?? "My Business"
   const now = new Date()
   const userId = linkedAccount?.userId ?? existingUser?.id
+  if (
+    signupAgeBand &&
+    existingUser?.ageBand !== AccountAgeBand.UNDECLARED &&
+    existingUser?.ageBand !== undefined &&
+    existingUser.ageBand !== signupAgeBand
+  )
+    throw new Error("This account's age range is already set.")
+  if (input.mode === "login" && !userId) throw new MobileAccountNotFoundError()
+  if (userId && (await isAccountPrivacyAccessBlocked(db, userId)))
+    throw new Error("This account is being closed.")
 
   const user = userId
     ? await db.user.update({
         data: {
+          ageBand:
+            signupAgeBand && existingUser?.ageBand === AccountAgeBand.UNDECLARED
+              ? signupAgeBand
+              : undefined,
+          ageDeclaredAt:
+            signupAgeBand && existingUser?.ageBand === AccountAgeBand.UNDECLARED
+              ? now
+              : undefined,
           avatarUrl: cleanText(input.image) ?? undefined,
           displayName,
-          emailVerified: true,
-          emailVerifiedAt: now,
+          emailVerified: linkedAccount ? undefined : true,
+          emailVerifiedAt: linkedAccount ? undefined : now,
           image: cleanText(input.image) ?? undefined,
           name: displayName,
         },
@@ -546,6 +798,8 @@ export async function verifyMobileGoogleIdentity(
       })
     : await db.user.create({
         data: {
+          ageBand: signupAgeBand ?? undefined,
+          ageDeclaredAt: signupAgeBand ? now : undefined,
           avatarUrl: cleanText(input.image),
           displayName,
           email,
@@ -560,6 +814,10 @@ export async function verifyMobileGoogleIdentity(
           name: true,
         },
       })
+
+  await ensureMobileSignupAgeBand(db, user.id, signupAgeBand)
+
+  const age = await getCustomerAccountAgeStatus(db, user.id)
 
   await db.account.upsert({
     create: {
@@ -582,8 +840,9 @@ export async function verifyMobileGoogleIdentity(
     },
   })
 
-  const tenant =
-    input.mode === "sign_up"
+  const tenant = !age.eligible
+    ? null
+    : input.mode === "sign_up"
       ? await ensureOwnerTenant(db, {
           addressLine1: input.addressLine1,
           businessProfileKey: input.businessProfileKey,
@@ -600,7 +859,19 @@ export async function verifyMobileGoogleIdentity(
         })
       : await getFirstActiveTenantForUser(db, { userId: user.id })
 
-  const accessProfile = await getMobileAccessProfile(db, { userId: user.id })
+  if (legalPublication) {
+    const acceptance = await recordLegalAcceptance(db, {
+      userId: user.id,
+      version: legalPublication.version,
+      surface: "mobile",
+    })
+    if (acceptance.documentHash !== legalPublication.documentHash)
+      throw new Error("The legal documents changed. Restart signup.")
+  }
+
+  const accessProfile = age.eligible
+    ? await getMobileAccessProfile(db, { userId: user.id })
+    : { hasBusinessAccess: false, hasCustomerHistory: false }
 
   const session = await createMobileSession(db, {
     tenant,

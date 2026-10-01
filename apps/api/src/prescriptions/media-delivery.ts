@@ -1,8 +1,12 @@
+import { isPrescriptionProductionLaunchApproved } from "@ewatrade/db/queries"
 import { consumeDevelopmentAuthorizedMedia } from "@ewatrade/prescriptions"
 import type { OpenAPIHono } from "@hono/zod-openapi"
 
 export function registerPrescriptionMediaDeliveryRoutes(app: OpenAPIHono) {
   app.get("/api/prescriptions/media/:token", (c) => {
+    if (!isPrescriptionProductionLaunchApproved()) {
+      return c.json({ error: "Not found" }, 404)
+    }
     try {
       const media = consumeDevelopmentAuthorizedMedia(c.req.param("token"))
       return new Response(media.bytes, {

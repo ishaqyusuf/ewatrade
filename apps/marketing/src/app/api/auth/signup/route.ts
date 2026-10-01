@@ -1,4 +1,5 @@
 import { resolveDashboardUrl } from "@/lib/dashboard-url"
+import { resolveSignupLegalAcceptance } from "@/lib/signup-legal"
 import { signupPayloadSchema } from "@/lib/signup-schemas"
 import { auth } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
@@ -13,6 +14,13 @@ import {
   buildInternalTenantHostname,
   provisionTenantVercelDomains,
 } from "@ewatrade/utils"
+import {
+  assertLegalVersionHash,
+  currentLegalPublicationDigest,
+  isApprovedLegalPublication,
+  isSignupAvailableForLegalPublication,
+} from "@ewatrade/utils/legal-approval"
+import { LEGAL_DOCUMENT_VERSION } from "@ewatrade/utils/legal-documents"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
@@ -78,6 +86,7 @@ export async function POST(request: NextRequest) {
   }
 
   const {
+    ageBand,
     accessToken,
     addressLine1,
     subdomain,
@@ -97,7 +106,49 @@ export async function POST(request: NextRequest) {
     operatingModel,
     orderChannels,
     otherBusinessDescription,
+    legalVersion,
+    acceptedTerms,
+    acknowledgedPrivacyNotice,
   } = result.data
+
+  const legalApproved = isApprovedLegalPublication()
+  let legalAcceptance: ReturnType<typeof resolveSignupLegalAcceptance>
+  try {
+    legalAcceptance = resolveSignupLegalAcceptance(
+      { legalVersion, acceptedTerms, acknowledgedPrivacyNotice },
+      {
+        approved: legalApproved,
+        version: LEGAL_DOCUMENT_VERSION,
+        documentHash: currentLegalPublicationDigest(),
+      },
+    )
+  } catch {
+    return NextResponse.json(
+      {
+        message: !isSignupAvailableForLegalPublication(legalApproved)
+          ? "Signup is unavailable until the Terms and Privacy Notice are effective."
+          : "The current Terms must be reviewed before signup. Reload and try again.",
+      },
+      { status: 412 },
+    )
+  }
+  if (legalAcceptance) {
+    const existingVersion = await prisma.legalAcceptance.findFirst({
+      where: { version: legalAcceptance.version },
+      select: { documentHash: true },
+    })
+    try {
+      assertLegalVersionHash(
+        existingVersion?.documentHash,
+        legalAcceptance.documentHash,
+      )
+    } catch {
+      return NextResponse.json(
+        { message: "The current Terms are temporarily unavailable." },
+        { status: 412 },
+      )
+    }
+  }
 
   const normalizedEmail = email.toLowerCase()
   const normalizedPhone = phone.replace(/\s+/g, "")
@@ -279,6 +330,8 @@ export async function POST(request: NextRequest) {
       const user = await tx.user.update({
         where: { id: userId },
         data: {
+          ageBand,
+          ageDeclaredAt: new Date(),
           email: normalizedEmail,
           name: displayName || normalizedEmail,
           emailVerified: false,
@@ -339,6 +392,24 @@ export async function POST(request: NextRequest) {
         },
       })
 
+      if (legalAcceptance) {
+        const existingVersion = await tx.legalAcceptance.findFirst({
+          where: { version: legalAcceptance.version },
+          select: { documentHash: true },
+        })
+        assertLegalVersionHash(
+          existingVersion?.documentHash,
+          legalAcceptance.documentHash,
+        )
+        await tx.legalAcceptance.create({
+          data: {
+            userId: user.id,
+            ...legalAcceptance,
+            surface: "web",
+          },
+        })
+      }
+
       await tx.store.create({
         data: {
           addressLine1: addressLine1.trim(),
@@ -396,6 +467,17 @@ export async function POST(request: NextRequest) {
       throw error
     })
 
+  const signedIn = await auth.api
+    .signInEmail({
+      body: { email: normalizedEmail, password },
+      headers: request.headers,
+    })
+    .catch(() => null)
+  const signupDashboardUrl =
+    signedIn?.user?.id === userId
+      ? dashboardUrl
+      : `${process.env.NEXT_PUBLIC_MARKETING_URL ?? `${urlProtocol}://${PLATFORM_DOMAIN}`}/login`
+
   // ── 6. Vercel domain provisioning (fire-and-forget) ──────────────────────
   if (process.env.VERCEL_API_TOKEN) {
     void provisionTenantVercelDomains({
@@ -409,7 +491,7 @@ export async function POST(request: NextRequest) {
     firstName,
     businessName,
     dashboardHostname,
-    dashboardUrl,
+    dashboardUrl: signupDashboardUrl,
     posHostname,
     storefrontHostname,
   })
@@ -417,7 +499,7 @@ export async function POST(request: NextRequest) {
     firstName,
     businessName,
     dashboardHostname,
-    dashboardUrl,
+    dashboardUrl: signupDashboardUrl,
     posHostname,
     storefrontHostname,
   })
@@ -454,7 +536,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     success: true,
     tenantSlug: tenant.slug,
-    dashboardUrl,
+    dashboardUrl: signupDashboardUrl,
     posUrl,
     storefrontUrl,
     emailDeliveryStatus,

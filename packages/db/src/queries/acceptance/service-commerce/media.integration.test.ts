@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto"
 
 import { afterAll, beforeAll, expect, setDefaultTimeout, test } from "bun:test"
-import type { ServiceCommerceProfileSettings } from "@ewatrade/service-commerce"
+import {
+  type ServiceCommerceProfileSettings,
+  createQaPrivateMediaSafetyAttestation,
+} from "@ewatrade/service-commerce"
 
 import { createCommerceInquiry } from "../../commerce-inquiries"
 import {
@@ -169,6 +172,14 @@ describeWithServiceCommerceDatabase(
         actorUserId: fixture.actorUserId,
         mediaAssetId: intake.media.id,
         outcome: "safe",
+        attestation: createQaPrivateMediaSafetyAttestation({
+          byteSize: 4,
+          contentDigest: "a".repeat(64),
+          mediaAssetId: intake.media.id,
+          mimeType: "image/jpeg",
+          storageReference: `private/${fixture.tenantId}/${intake.media.id}`,
+        }),
+        safetyProvider: "qa_fixture",
         reason: "Neon acceptance deterministic safety",
         storeId: fixture.storeId,
         tenantId: fixture.tenantId,

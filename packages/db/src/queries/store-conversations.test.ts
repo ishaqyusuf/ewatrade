@@ -3,6 +3,7 @@ import { createHash } from "node:crypto"
 
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
+  AccountAgeBand,
   StoreConversationMessageAuthorKind,
   StoreConversationMessageChannel,
   StoreConversationMessageKind,
@@ -65,6 +66,15 @@ function publicEntryDependencies({ pharmacyAllowed = true } = {}) {
 }
 
 describe("Store Conversation repositories", () => {
+  test("rejects an ineligible bootstrap band before any Guest write", async () => {
+    await expect(
+      bootstrapWebStoreConversation(dbClient({}), {
+        ageBand: AccountAgeBand.UNDECLARED,
+        publicToken,
+      }),
+    ).rejects.toMatchObject({ code: "NOT_READY" })
+  })
+
   test("projects only scoped source-owned Request status cards", async () => {
     const scopes: Array<Record<string, unknown>> = []
     const client = {
@@ -252,14 +262,24 @@ describe("Store Conversation repositories", () => {
         },
       },
       storeConversationGuestIdentity: {
-        create: async () => ({ id: "guest_1" }),
+        create: async (args: { data: Record<string, unknown> }) => {
+          writes.push({ name: "guest", value: args.data })
+          return { id: "guest_1" }
+        },
         update: async () => ({ id: "guest_1" }),
       },
     }
 
     const created = await bootstrapWebStoreConversation(dbClient(client), {
+      ageBand: AccountAgeBand.AGE_13_TO_15,
       publicToken,
     })
+    expect(writes.find((write) => write.name === "guest")?.value).toMatchObject(
+      {
+        ageBand: AccountAgeBand.AGE_13_TO_15,
+        ageDeclaredAt: expect.any(Date),
+      },
+    )
     expect(created.credentialToken).toBeString()
     expect(created.conversation.id).toBe("conversation_1")
     const credentialWrite = writes.find((write) => write.name === "credential")
@@ -288,8 +308,16 @@ describe("Store Conversation repositories", () => {
   })
 
   test("creates one typed Commerce Inquiry and message under exact replay", async () => {
+    const approvedTermsFixture = {
+      guestTermsPublication: {
+        documentHash: "a".repeat(64),
+        effectiveDate: "2026-09-28",
+        version: "test-approved-terms",
+      },
+    }
     const credentialToken = "guest-secret"
     const messageRows: Record<string, unknown>[] = []
+    let guestAgeBand = "ADULT"
     const requestLinks: Record<string, unknown>[] = []
     let inquiryCreateCount = 0
     const receipts = new Map<string, Record<string, unknown>>()
@@ -394,7 +422,11 @@ describe("Store Conversation repositories", () => {
         update: async () => ({ id: "credential_1" }),
       },
       storeConversationGuestIdentity: {
+        findUnique: async () => ({ ageBand: guestAgeBand }),
         update: async () => ({ id: "guest_1" }),
+      },
+      storeConversationGuestLegalAcceptance: {
+        findUnique: async () => ({ documentHash: "a".repeat(64) }),
       },
       storeConversationMessage: {
         create: async (args: { data: Record<string, unknown> }) => {
@@ -428,8 +460,18 @@ describe("Store Conversation repositories", () => {
       text: "I need a small red bag",
     }
 
-    const first = await sendGuestStoreConversationText(dbClient(client), input)
-    const replay = await sendGuestStoreConversationText(dbClient(client), input)
+    const first = await sendGuestStoreConversationText(
+      dbClient(client),
+      input,
+      undefined,
+      approvedTermsFixture,
+    )
+    const replay = await sendGuestStoreConversationText(
+      dbClient(client),
+      input,
+      undefined,
+      approvedTermsFixture,
+    )
 
     expect(first).toMatchObject({
       message: { sequence: 1, text: input.text },
@@ -444,11 +486,16 @@ describe("Store Conversation repositories", () => {
     expect(messageRows).toHaveLength(1)
     expect(inquiryCreateCount).toBe(1)
 
-    const followUp = await sendGuestStoreConversationText(dbClient(client), {
-      ...input,
-      clientOperationId: "operation-0002",
-      text: "Please make it leather",
-    })
+    const followUp = await sendGuestStoreConversationText(
+      dbClient(client),
+      {
+        ...input,
+        clientOperationId: "operation-0002",
+        text: "Please make it leather",
+      },
+      undefined,
+      approvedTermsFixture,
+    )
     expect(followUp).toMatchObject({
       message: {
         request: { id: "inquiry_1", kind: "commerce_inquiry" },
@@ -457,6 +504,20 @@ describe("Store Conversation repositories", () => {
       source: { id: "inquiry_1" },
     })
     expect(inquiryCreateCount).toBe(1)
+    guestAgeBand = "AGE_16_TO_17"
+    await expect(
+      sendGuestStoreConversationText(
+        dbClient(client),
+        {
+          ...input,
+          clientOperationId: "operation-0003",
+          text: "Can you reserve the bag?",
+        },
+        undefined,
+        approvedTermsFixture,
+      ),
+    ).resolves.toMatchObject({ message: { sequence: 3 } })
+    expect(messageRows).toHaveLength(3)
   })
 
   test("rejects an expired guest credential before any message write", async () => {

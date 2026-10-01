@@ -281,6 +281,53 @@ Commercial Order line, including its Product unit or Service policy meaning at
 that time.
 _Avoid_: Current offering, live catalog value
 
+## Customer Ledger Language (Planned)
+
+**Tenant Customer**:
+A saved business-owned customer contact whose commercial history belongs to
+that business, independently of any customer login or chat participation.
+_Avoid_: Customer Account, Guest Identity, global customer
+
+**Customer Ledger Account**:
+One Tenant Customer's financial position in one currency, including unsettled
+charges and credit held by the business.
+_Avoid_: Customer Account, wallet, subscription account
+
+**Customer Debit**:
+An amount that increases the customer's net obligation to the business, such
+as a purchase charge, opening debt or money returned to the customer.
+_Avoid_: Debit-card payment, stock movement
+
+**Customer Credit**:
+An amount that decreases the customer's net obligation to the business, such
+as a received payment, deposit, opening credit or commercial credit note.
+_Avoid_: Credit-card payment, permission to borrow
+
+**Credit Available**:
+Customer credit that has not been used to settle a charge or returned to the
+customer and remains held by the business.
+_Avoid_: Credit limit, total payments, amount owed
+
+**Opening Balance**:
+An identified pre-existing customer debt or credit introduced when account
+tracking starts, excluding amounts already represented by recorded history.
+_Avoid_: Balance overwrite, new sale, new cash receipt
+
+**Account Receipt**:
+Actual money received for a Tenant Customer, whether allocated to a charge
+immediately or retained as an unused deposit.
+_Avoid_: Credit application, commercial credit note
+
+**Settlement Allocation**:
+The identified portion of a customer credit used to settle one customer
+charge, without representing another receipt of money.
+_Avoid_: New payment received, charge correction
+
+**Commercial Credit Note**:
+A reasoned reduction of an existing commercial charge, independent of
+inventory return and of any money returned to the customer.
+_Avoid_: Stock Return, cash refund, historical price edit
+
 ## Customer Conversation Language
 
 **Store Conversation**:

@@ -13,6 +13,11 @@ import {
 import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service-commerce-policy"
 
 const digest = "d".repeat(64)
+const approvedTerms = {
+  documentHash: "a".repeat(64),
+  effectiveDate: "2026-08-01",
+  version: "bridge-qa-terms",
+}
 
 function bridgeRecord(input: {
   choice?: "START_NEW_REQUEST" | null
@@ -67,6 +72,12 @@ function createDb(initialBridge: ReturnType<typeof bridgeRecord>) {
     $queryRaw: async () => [{ id: "locked" }],
     $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
       callback(client),
+    storeConversationGuestIdentity: {
+      findUnique: async () => ({ ageBand: "ADULT" }),
+    },
+    storeConversationGuestLegalAcceptance: {
+      findUnique: async () => ({ documentHash: approvedTerms.documentHash }),
+    },
     serviceCommercePolicyAuditEvent: { createMany: async () => ({ count: 8 }) },
     serviceCommercePolicyDecision: {
       findMany: async () => allowedServiceCommercePolicyDecisionRows(),
@@ -271,6 +282,12 @@ describe("Store Conversation WhatsApp bridge repository", () => {
       $queryRaw: async () => [{ id: "locked" }],
       $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
         callback(client),
+      storeConversationGuestIdentity: {
+        findUnique: async () => ({ ageBand: "ADULT" }),
+      },
+      storeConversationGuestLegalAcceptance: {
+        findUnique: async () => ({ documentHash: approvedTerms.documentHash }),
+      },
       commerceInquiry: { findMany: async () => [] },
       prescriptionRequest: { findMany: async () => [] },
       serviceCommercePolicyAuditEvent: {
@@ -406,17 +423,21 @@ describe("Store Conversation WhatsApp bridge repository", () => {
       },
     } as unknown as PrismaClient
 
-    const result = await consumeStoreConversationWhatsAppBridge(client, {
-      bridgeTokenDigest: digest,
-      connectionId: "connection_1",
-      externalCustomerIdCiphertext: "recipient_ciphertext",
-      externalCustomerIdDigest: digest,
-      now: new Date("2026-08-16T09:30:00Z"),
-      tokenServices: {
-        deriveChoiceToken: () => `ewb1_${"a".repeat(43)}`,
-        digestToken: () => digest,
+    const result = await consumeStoreConversationWhatsAppBridge(
+      client,
+      {
+        bridgeTokenDigest: digest,
+        connectionId: "connection_1",
+        externalCustomerIdCiphertext: "recipient_ciphertext",
+        externalCustomerIdDigest: digest,
+        now: new Date("2026-08-16T09:30:00Z"),
+        tokenServices: {
+          deriveChoiceToken: () => `ewb1_${"a".repeat(43)}`,
+          digestToken: () => digest,
+        },
       },
-    })
+      approvedTerms,
+    )
 
     expect(result).toMatchObject({
       bridgeId: "bridge_1",
@@ -477,6 +498,7 @@ describe("Store Conversation WhatsApp bridge repository", () => {
         externalCustomerIdDigest: digest,
         now: new Date("2026-08-16T09:15:00Z"),
       },
+      approvedTerms,
     )
 
     expect(result).toMatchObject({
@@ -515,6 +537,7 @@ describe("Store Conversation WhatsApp bridge repository", () => {
         now: new Date("2026-08-16T09:16:00Z"),
         requestKind: "commerce_inquiry",
       },
+      approvedTerms,
     )
 
     expect(selected).toMatchObject({

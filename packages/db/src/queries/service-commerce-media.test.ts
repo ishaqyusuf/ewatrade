@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test"
 import { createHash } from "node:crypto"
+import {
+  type PrivateMediaSafetyAttestation,
+  createQaPrivateMediaSafetyAttestation,
+} from "@ewatrade/service-commerce"
 
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
@@ -53,6 +57,194 @@ function asset(overrides: Record<string, unknown> = {}) {
 }
 
 describe("Service Commerce media repositories", () => {
+  test.each([
+    {
+      mimeType: "image/heic",
+      coverage: { kind: "image", framesDetected: 2, framesInspected: 1 },
+    },
+    {
+      mimeType: "application/pdf",
+      coverage: {
+        kind: "document",
+        pagesDetected: 2,
+        pagesTextInspected: 2,
+        pagesVisualInspected: 1,
+      },
+    },
+    {
+      mimeType: "audio/webm",
+      coverage: {
+        kind: "audio",
+        durationMs: 2,
+        transcribedMs: 1,
+        nonSpeechReviewed: true,
+      },
+    },
+  ] as const)(
+    "rejects incomplete $mimeType inspection before SAFE",
+    async ({ mimeType, coverage }) => {
+      const current = asset({
+        lifecycle: "SAFETY_PENDING",
+        verifiedMediaType: mimeType,
+        verifiedSizeBytes: 24,
+      })
+      let writes = 0
+      const client = {
+        $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+          callback(client),
+        serviceCommerceMediaAsset: {
+          findFirst: async () => current,
+          updateMany: async () => {
+            writes++
+            return { count: 1 }
+          },
+        },
+      }
+      const attestation = {
+        ...createQaPrivateMediaSafetyAttestation({
+          byteSize: 24,
+          contentDigest: "a".repeat(64),
+          mediaAssetId: "asset_1",
+          mimeType,
+          storageReference: "private/object",
+        }),
+        coverage,
+      } as PrivateMediaSafetyAttestation
+      await expect(
+        recordServiceCommerceMediaSafety(dbClient(client), {
+          ...scope,
+          mediaAssetId: "asset_1",
+          outcome: "safe",
+          reason: "incomplete coverage",
+          attestation,
+          safetyProvider: "qa_fixture",
+        }),
+      ).rejects.toMatchObject({ code: "NOT_READY" })
+      expect(writes).toBe(0)
+    },
+  )
+
+  test("requires matching original facts and conditionally updates only the pending digest", async () => {
+    const current = asset({
+      lifecycle: "SAFETY_PENDING",
+      verifiedMediaType: "image/jpeg",
+      verifiedSizeBytes: 24,
+    })
+    const whereClauses: Array<Record<string, unknown>> = []
+    const client = {
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback(client),
+      serviceCommerceMediaAsset: {
+        findFirst: async () => current,
+        updateMany: async ({
+          data,
+          where,
+        }: {
+          data: Record<string, unknown>
+          where: Record<string, unknown>
+        }) => {
+          whereClauses.push(where)
+          Object.assign(current, data)
+          return { count: 1 }
+        },
+      },
+      serviceCommerceMediaAuditEvent: { create: async () => ({ id: "audit" }) },
+    }
+    const attestation = createQaPrivateMediaSafetyAttestation({
+      byteSize: 24,
+      contentDigest: "a".repeat(64),
+      mediaAssetId: "asset_1",
+      mimeType: "image/jpeg",
+      storageReference: "private/object",
+    })
+    for (const bad of [
+      undefined,
+      { ...attestation, contentDigest: "b".repeat(64) },
+      { ...attestation, byteSize: 23 },
+    ]) {
+      await expect(
+        recordServiceCommerceMediaSafety(dbClient(client), {
+          ...scope,
+          mediaAssetId: "asset_1",
+          outcome: "safe",
+          reason: "incomplete evidence",
+          attestation: bad,
+          safetyProvider: "qa_fixture",
+        }),
+      ).rejects.toMatchObject({ code: "NOT_READY" })
+    }
+    expect(whereClauses).toHaveLength(0)
+    await recordServiceCommerceMediaSafety(dbClient(client), {
+      ...scope,
+      mediaAssetId: "asset_1",
+      outcome: "safe",
+      reason: "complete evidence",
+      attestation,
+      safetyProvider: "qa_fixture",
+      safetyMetadata: { reviewerQueue: "qa" },
+    })
+    expect(whereClauses).toEqual([
+      expect.objectContaining({
+        lifecycle: "SAFETY_PENDING",
+        contentDigest: "a".repeat(64),
+        verifiedMediaType: "image/jpeg",
+        verifiedSizeBytes: 24,
+      }),
+    ])
+    expect(current.lifecycle).toBe("SAFE")
+    expect((current as Record<string, unknown>).safetyMetadata).toEqual({
+      attestation,
+      reviewerQueue: "qa",
+    })
+  })
+
+  test("keeps Production SAFE closed even when an internal caller claims live coverage", async () => {
+    const current = asset({
+      lifecycle: "SAFETY_PENDING",
+      verifiedMediaType: "image/jpeg",
+      verifiedSizeBytes: 24,
+    })
+    let writes = 0
+    const client = {
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback(client),
+      serviceCommerceMediaAsset: {
+        findFirst: async () => current,
+        updateMany: async () => {
+          writes++
+          return { count: 1 }
+        },
+      },
+    }
+    const attestation = {
+      ...createQaPrivateMediaSafetyAttestation({
+        byteSize: 24,
+        contentDigest: "a".repeat(64),
+        mediaAssetId: "asset_1",
+        mimeType: "image/jpeg",
+        storageReference: "private/object",
+      }),
+      source: "live" as const,
+      provider: "claimed_live_provider",
+    }
+    const previous = process.env.NODE_ENV
+    try {
+      process.env.NODE_ENV = "production"
+      await expect(
+        recordServiceCommerceMediaSafety(dbClient(client), {
+          ...scope,
+          mediaAssetId: "asset_1",
+          outcome: "safe",
+          reason: "claimed live result",
+          attestation,
+          safetyProvider: "claimed_live_provider",
+        }),
+      ).rejects.toMatchObject({ code: "NOT_READY" })
+    } finally {
+      process.env.NODE_ENV = previous
+    }
+    expect(writes).toBe(0)
+  })
   test("persists media only after source, readiness, policy, and attachment-limit checks", async () => {
     const calls: Array<{ name: string; value: unknown }> = []
     const client = {

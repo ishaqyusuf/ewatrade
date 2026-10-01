@@ -60,7 +60,7 @@ export function QaAccountChooser() {
           accessibilityRole="button"
           className="relative min-h-11 flex-row items-center justify-center gap-2 rounded-2xl bg-primary px-3 shadow-sm active:bg-primary/90"
           haptic
-          onPress={modal.present}
+          onPress={() => modal.present()}
           transition
         >
           <Icon className="size-sm text-primary-foreground" name="Users" />
@@ -118,7 +118,7 @@ export function QaAccountChooser() {
                 icon="RefreshCw"
                 message="Loading the active businesses and stores for this exact QA domain."
                 title="Loading QA businesses"
-                tone="info"
+                tone="primary"
               />
             ) : filteredProfiles.length ? (
               <View className="gap-2">
@@ -171,7 +171,7 @@ export function QaAccountChooser() {
                 message="No active QA businesses match this domain and search."
                 onActionPress={() => void qa.refreshProfiles()}
                 title="No QA businesses"
-                tone="info"
+                tone="primary"
               />
             )}
             <View className="flex-row justify-between gap-3 border-t border-border pt-3">

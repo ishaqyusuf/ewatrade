@@ -4,21 +4,25 @@ import {
   projectStoreConversationWhatsAppAction,
   storeConversationWhatsAppObservedStatusLabel,
 } from "@ewatrade/service-commerce"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { OpenInAppButton } from "./open-in-app-button"
 import { StoreConversationAccountInvitation } from "./store-conversation-account-invitation"
 import { StoreConversationAccountSecurity } from "./store-conversation-account-security"
+import { StoreConversationAccountTerms } from "./store-conversation-account-terms"
+import { StoreConversationAge } from "./store-conversation-age"
 import { StoreConversationAttachment } from "./store-conversation-attachment"
 import {
   StoreConversationAttachmentTray,
   StoreConversationRestoredAttachmentAvatar,
 } from "./store-conversation-attachment-draft"
+import { StoreConversationGuestTerms } from "./store-conversation-guest-terms"
 import { StoreConversationNotificationControls } from "./store-conversation-notification-controls"
 import { StoreConversationQuoteMessage } from "./store-conversation-quote-message"
 import {
   StoreConversationRequestChoice,
   StoreConversationRequestRail,
 } from "./store-conversation-request-ui"
+import { StoreConversationSafety } from "./store-conversation-safety"
 import { useStoreConversation } from "./use-store-conversation"
 import {
   formatStoreConversationVoiceElapsed,
@@ -31,14 +35,23 @@ const VOICE_WAVE_BAR_IDS = Array.from(
 )
 
 export function StoreConversationWeb({
+  entryAgeBand,
+  initialResetGuest,
   publicToken,
   storeName,
 }: {
+  entryAgeBand?: "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT"
+  initialResetGuest?: boolean
   publicToken: string
   storeName: string
 }) {
   const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false)
+  const [reportMessageId, setReportMessageId] = useState<string | null>(null)
+  const [guestTermsAllowed, setGuestTermsAllowed] = useState(false)
+  const [accountTermsAllowed, setAccountTermsAllowed] = useState(false)
+  const [ageState, setAgeState] = useState({ allowed: false, scope: "" })
   const {
+    applyCustomerBlocked,
     attachmentCapability,
     attachmentCapabilityError,
     attachmentDraft,
@@ -69,11 +82,24 @@ export function StoreConversationWeb({
     state,
     soundAlertsEnabled,
     textareaRef,
-  } = useStoreConversation(publicToken)
+  } = useStoreConversation(publicToken, entryAgeBand, initialResetGuest)
+  const ageScope =
+    state.kind === "ready" ? `${state.conversation.id}:${state.access}` : ""
+  const ageAllowed = ageState.scope === ageScope && ageState.allowed
+  const setAgeAllowed = useCallback(
+    (allowed: boolean) => setAgeState({ allowed, scope: ageScope }),
+    [ageScope],
+  )
+  const composerEnabled =
+    state.kind === "ready" &&
+    state.channelMode.composerEnabled &&
+    !state.conversation.customerBlocked &&
+    ageAllowed &&
+    (state.access === "account" ? accountTermsAllowed : guestTermsAllowed)
   const voiceCanRecord = Boolean(
     state.kind === "ready" &&
       state.conversation.state === "active" &&
-      state.channelMode.composerEnabled &&
+      composerEnabled &&
       selectedAttachmentTarget &&
       selectedAttachmentTarget.kind !== "new_prescription_request" &&
       attachmentCapability?.available &&
@@ -122,6 +148,15 @@ export function StoreConversationWeb({
           </div>
           {state.kind === "ready" ? (
             <div className="flex items-center justify-end gap-2">
+              <StoreConversationSafety
+                access={state.access}
+                blocked={state.conversation.customerBlocked}
+                conversationId={state.conversation.id}
+                onBlockedChange={applyCustomerBlocked}
+                onReportMessageHandled={() => setReportMessageId(null)}
+                publicToken={publicToken}
+                reportMessageId={reportMessageId}
+              />
               <StoreConversationAccountSecurity
                 conversationId={state.conversation.id}
                 publicToken={publicToken}
@@ -208,7 +243,7 @@ export function StoreConversationWeb({
           {state.kind === "ready" ? (
             <StoreConversationNotificationControls
               accountAccess={state.access === "account"}
-              available={state.channelMode.composerEnabled}
+              available={composerEnabled}
               conversationId={state.conversation.id}
               publicToken={publicToken}
             />
@@ -230,6 +265,7 @@ export function StoreConversationWeb({
                       accountAccess={state.access === "account"}
                       actionMessage={message.actionMessage}
                       conversationId={state.conversation.id}
+                      customerBlocked={state.conversation.customerBlocked}
                       messageId={message.id}
                       onContactStore={() => textareaRef.current?.focus()}
                       onRefresh={() => loadTimeline(state.conversation)}
@@ -299,14 +335,23 @@ export function StoreConversationWeb({
                       ) : null}
                     </article>
                   )}
+                  {message.author.kind === "store_attendant" ? (
+                    <button
+                      aria-label={`Report message ${message.sequence} from ${message.author.label}`}
+                      className="min-h-11 justify-self-start rounded-full px-3 text-xs font-medium text-muted-foreground underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      onClick={() => setReportMessageId(message.id)}
+                      type="button"
+                    >
+                      Report message
+                    </button>
+                  ) : null}
                   {state.access === "guest" &&
                   message.author.kind === "customer" &&
                   !message.request ? (
                     <StoreConversationRequestChoice
                       conversationId={state.conversation.id}
                       disabled={
-                        selectingMessageId === message.id ||
-                        !state.channelMode.composerEnabled
+                        selectingMessageId === message.id || !composerEnabled
                       }
                       messageId={message.id}
                       onSelect={(target) =>
@@ -327,8 +372,38 @@ export function StoreConversationWeb({
         {state.kind === "ready" ? (
           <form
             className="sticky bottom-0 border-t border-border bg-background p-3 sm:p-4"
-            onSubmit={sendMessage}
+            onSubmit={
+              composerEnabled ? sendMessage : (event) => event.preventDefault()
+            }
           >
+            <StoreConversationAge
+              key={`${state.conversation.id}:${state.access}:age`}
+              access={state.access}
+              onAllowedChange={setAgeAllowed}
+            />
+            {state.access === "guest" ? (
+              <StoreConversationGuestTerms
+                key={state.conversation.id}
+                onAllowedChange={setGuestTermsAllowed}
+              />
+            ) : (
+              <StoreConversationAccountTerms
+                key={state.conversation.id}
+                onAllowedChange={setAccountTermsAllowed}
+              />
+            )}
+            {state.conversation.customerBlocked ? (
+              <aside
+                aria-live="polite"
+                className="mx-auto mb-3 grid max-w-3xl gap-1 rounded-2xl border border-border bg-card px-4 py-3"
+              >
+                <p className="font-semibold">Store blocked</p>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  New messages and Store reply alerts are paused. Your history
+                  remains available. Open Safety to unblock this Store.
+                </p>
+              </aside>
+            ) : null}
             {state.conversation.moderation.state === "restricted" ? (
               <aside
                 aria-live="polite"
@@ -340,7 +415,8 @@ export function StoreConversationWeb({
                 </p>
               </aside>
             ) : null}
-            {!state.channelMode.composerEnabled ? (
+            {!state.channelMode.composerEnabled &&
+            !state.conversation.customerBlocked ? (
               <aside
                 aria-live="polite"
                 className="mx-auto mb-3 grid max-w-3xl gap-1 rounded-2xl border border-border bg-card px-4 py-3"
@@ -377,8 +453,7 @@ export function StoreConversationWeb({
                 ) : null}
               </aside>
             ) : null}
-            {state.channelMode.composerEnabled &&
-            state.channelMode.whatsappAction ? (
+            {composerEnabled && state.channelMode.whatsappAction ? (
               <div className="mx-auto mb-3 flex max-w-3xl justify-end">
                 <WhatsAppConversationAction
                   action={state.channelMode.whatsappAction}
@@ -421,7 +496,7 @@ export function StoreConversationWeb({
                 </button>
               </div>
             ) : null}
-            {state.channelMode.composerEnabled &&
+            {composerEnabled &&
             attachmentTargets.length > 1 &&
             !attachmentDraft.draft ? (
               <fieldset className="mx-auto mb-2 grid max-w-3xl gap-2">
@@ -449,7 +524,7 @@ export function StoreConversationWeb({
                 </div>
               </fieldset>
             ) : null}
-            {state.channelMode.composerEnabled &&
+            {composerEnabled &&
             selectedAttachmentTarget?.kind === "new_prescription_request" &&
             !attachmentDraft.draft ? (
               <label className="mx-auto mb-2 flex min-h-11 max-w-3xl cursor-pointer items-start gap-3 rounded-xl border border-border bg-card p-3 text-xs leading-5">
@@ -467,9 +542,7 @@ export function StoreConversationWeb({
                 </span>
               </label>
             ) : null}
-            {state.channelMode.composerEnabled &&
-            attachmentMenuOpen &&
-            !attachmentDraft.draft ? (
+            {composerEnabled && attachmentMenuOpen && !attachmentDraft.draft ? (
               <div className="mx-auto mb-2 grid max-w-3xl gap-3 rounded-2xl border border-border bg-card p-3">
                 {selectedAttachmentTarget && attachmentCapability?.available ? (
                   <button
@@ -489,7 +562,7 @@ export function StoreConversationWeb({
                 ) : null}
               </div>
             ) : null}
-            {state.channelMode.composerEnabled &&
+            {composerEnabled &&
             state.access === "guest" &&
             state.requests.some((request) => request.lifecycle === "active") ? (
               <div className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-3 rounded-xl border border-border bg-card px-3 py-2">
@@ -621,7 +694,7 @@ export function StoreConversationWeb({
                   aria-expanded={attachmentMenuOpen}
                   aria-label={
                     state.conversation.state !== "active" ||
-                    !state.channelMode.composerEnabled ||
+                    !composerEnabled ||
                     attachmentTargets.length === 0 ||
                     !selectedAttachmentTarget ||
                     (selectedAttachmentTarget.kind ===
@@ -633,7 +706,7 @@ export function StoreConversationWeb({
                   className="grid size-11 shrink-0 place-items-center rounded-full text-xl text-muted-foreground"
                   disabled={
                     state.conversation.state !== "active" ||
-                    !state.channelMode.composerEnabled ||
+                    !composerEnabled ||
                     sending ||
                     Boolean(attachmentDraft.draft) ||
                     attachmentTargets.length === 0 ||
@@ -653,7 +726,7 @@ export function StoreConversationWeb({
                   disabled={
                     sending ||
                     state.conversation.state !== "active" ||
-                    !state.channelMode.composerEnabled
+                    !composerEnabled
                   }
                   maxLength={2_000}
                   onChange={(event) => {
@@ -663,8 +736,7 @@ export function StoreConversationWeb({
                     changeDraft(element.value)
                   }}
                   placeholder={
-                    state.conversation.state !== "active" ||
-                    !state.channelMode.composerEnabled
+                    state.conversation.state !== "active" || !composerEnabled
                       ? "Messaging is unavailable"
                       : "Message the Store"
                   }
@@ -688,7 +760,7 @@ export function StoreConversationWeb({
                       attachmentDraft.draft?.status !== "selected" &&
                       !voiceCanRecord) ||
                     state.conversation.state !== "active" ||
-                    !state.channelMode.composerEnabled
+                    !composerEnabled
                   }
                   onClick={
                     !draft.trim() &&

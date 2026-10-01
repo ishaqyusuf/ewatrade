@@ -55,6 +55,49 @@ export function isCustomerCredentialError(error: unknown) {
   )
 }
 
+export function canRetryNewStoreEntryAfterCredentialRejection(input: {
+  accountAccess: boolean
+  error: unknown
+  previousSession: {
+    lastConversation?: { publicToken: string }
+  } | null
+  publicToken: string | null
+  transferToken: string | null
+}) {
+  const previousToken = input.previousSession?.lastConversation?.publicToken
+  return Boolean(
+    !input.accountAccess &&
+      !input.transferToken &&
+      input.publicToken &&
+      previousToken &&
+      previousToken !== input.publicToken &&
+      isCustomerCredentialError(input.error),
+  )
+}
+
+export async function bootstrapNewStoreEntryWithCredentialRecovery<
+  Result,
+>(input: {
+  accountAccess: boolean
+  bootstrap: () => Promise<Result>
+  clearSession: () => Promise<void>
+  previousSession: {
+    lastConversation?: { publicToken: string }
+  } | null
+  publicToken: string
+  transferToken: string | null
+}): Promise<Result> {
+  try {
+    return await input.bootstrap()
+  } catch (error) {
+    if (!canRetryNewStoreEntryAfterCredentialRejection({ ...input, error })) {
+      throw error
+    }
+    await input.clearSession()
+    return input.bootstrap()
+  }
+}
+
 export function resolveCustomerConversationRetryTarget(input: {
   conversationId: string | null
   timelineFailed: boolean

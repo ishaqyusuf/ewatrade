@@ -52,6 +52,13 @@ enum MembershipStatus {
   REMOVED
 }
 
+enum AccountAgeBand {
+  UNDECLARED
+  AGE_13_TO_15
+  AGE_16_TO_17
+  ADULT
+}
+
 enum RetailOpsStaffInviteTokenStatus {
   ACTIVE
   ACCEPTED
@@ -556,6 +563,19 @@ enum BillingProviderEventStatus {
   PROCESSED
   FAILED
   SKIPPED
+}
+
+enum PlayRefundReviewPreference {
+  APPROVE
+  DECLINE
+  NEUTRAL
+}
+
+enum PlayRefundReviewResponseStatus {
+  PREPARED
+  CLAIMED
+  CONFIRMED
+  UNCERTAIN
 }
 
 enum OfflineDevicePlatform {

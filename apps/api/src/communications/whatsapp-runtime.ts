@@ -15,6 +15,7 @@ import {
   ServiceCommercePolicyError,
   StoreConversationWhatsAppDiscoveryError,
   WhatsAppConnectionError,
+  isPrescriptionProductionLaunchApproved,
   recordServiceCommerceCustomerNotificationReceipt,
   recordServiceCommerceUsageEvent,
   recordStoreConversationWhatsAppObservationStatus,
@@ -280,6 +281,19 @@ export async function handleWhatsAppWebhookRequest(
       continue
     }
     const routeVertical = binding.routeVertical
+    if (
+      routeVertical === "pharmacy" &&
+      !isPrescriptionProductionLaunchApproved()
+    ) {
+      await recordWhatsAppRoutingAlert(prisma, {
+        code: "inactive_or_unknown_connection",
+        connectionId: route.connectionId,
+        phoneNumberId: route.phoneNumberId,
+        providerEventId: event.messageId,
+        tenantId: route.tenantId,
+      })
+      continue
+    }
     await state.setRoutingSelection({
       connectionId: route.connectionId,
       externalCustomerId: event.externalCustomerId,

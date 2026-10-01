@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
+  canDeliverStoreConversationNotificationVerification,
   claimStoreConversationNotificationIntent,
   claimStoreConversationNotificationVerification,
   completeStoreConversationNotificationAttempt,
@@ -95,6 +96,165 @@ function guestNotificationDependencies() {
 }
 
 describe("Store Conversation notification repositories", () => {
+  test("delivery recheck sees a block committed after verification claim", async () => {
+    let blockedAt: Date | null = null
+    const client = dbClient({
+      storeConversationGuestNotificationVerification: {
+        findFirst: async () => ({
+          contact: { status: "PENDING" },
+          conversation: {
+            customerBlockedAt: blockedAt,
+            lifecycle: "ACTIVE",
+            moderationState: "OPEN",
+          },
+          expiresAt: new Date("2026-08-15T12:10:00.000Z"),
+        }),
+      },
+    })
+    const input = {
+      now: new Date("2026-08-15T12:00:00.000Z"),
+      storeId: "store_1",
+      tenantId: "tenant_1",
+      verificationId: "verification_1",
+    }
+    expect(
+      await canDeliverStoreConversationNotificationVerification(client, input),
+    ).toBe(true)
+    blockedAt = new Date("2026-08-15T12:00:01.000Z")
+    expect(
+      await canDeliverStoreConversationNotificationVerification(client, input),
+    ).toBe(false)
+  })
+
+  test("blocked Store refuses a new Guest contact verification before contact writes", async () => {
+    let verificationReads = 0
+    const client = {
+      ...guestNotificationDependencies(),
+      $queryRaw: async () => [{ id: "conversation_1" }],
+      $transaction: async (callback: (tx: PrismaClient) => Promise<unknown>) =>
+        callback(dbClient(client)),
+      storeConversation: {
+        findFirst: async () => ({
+          customerBlockedAt: new Date("2026-08-15T11:00:00.000Z"),
+          guestIdentityId: "guest_1",
+          id: "conversation_1",
+          store: { name: "Ada Pharmacy" },
+          storeId: "store_1",
+          tenantId: "tenant_1",
+        }),
+      },
+      storeConversationGuestNotificationVerification: {
+        findUnique: async () => {
+          verificationReads += 1
+          return null
+        },
+      },
+    }
+    await expect(
+      requestGuestStoreConversationNotificationVerification(dbClient(client), {
+        channel: "email",
+        clientOperationId: "operation_12345678",
+        consentAccepted: true,
+        conversationId: "conversation_1",
+        credentialToken: "credential-token-that-is-at-least-32-chars",
+        destinationCiphertext: "protected_destination",
+        destinationDigest: "destination_digest",
+        maskedDestination: "cu•••@example.test",
+        publicToken: "public-token-that-is-at-least-32-characters",
+        tokenDigest: "verification_code_digest",
+        verificationId: "verification_1",
+      }),
+    ).rejects.toMatchObject({ code: "NOT_READY" })
+    expect(verificationReads).toBe(0)
+  })
+
+  test("blocked Store expires a queued Guest verification before delivery", async () => {
+    const updates: Record<string, unknown>[] = []
+    const client = dbClient({
+      $queryRaw: async () => [{ id: "verification_1" }],
+      $transaction: async (callback: (tx: PrismaClient) => Promise<unknown>) =>
+        callback(client),
+      storeConversationGuestCredential: {
+        findFirst: async () => ({ id: "credential_1" }),
+      },
+      storeConversationGuestNotificationVerification: {
+        findFirst: async () => ({
+          contact: { status: "PENDING" },
+          conversation: {
+            customerBlockedAt: new Date("2026-08-15T11:00:00.000Z"),
+            guestAccesses: [],
+            guestIdentityId: "guest_1",
+            lifecycle: "ACTIVE",
+            moderationState: "OPEN",
+          },
+          expiresAt: new Date("2026-08-15T12:10:00.000Z"),
+          guestIdentity: { status: "ACTIVE" },
+          guestIdentityId: "guest_1",
+          id: "verification_1",
+          maxSendAttempts: 3,
+          sendAttemptCount: 0,
+        }),
+        update: async ({ data }: { data: Record<string, unknown> }) => {
+          updates.push(data)
+          return { id: "verification_1", ...data }
+        },
+      },
+    })
+    await expect(
+      claimStoreConversationNotificationVerification(client, {
+        now: new Date("2026-08-15T12:00:00.000Z"),
+        storeId: "store_1",
+        tenantId: "tenant_1",
+        verificationId: "verification_1",
+      }),
+    ).resolves.toBeNull()
+    expect(updates[0]).toMatchObject({
+      lastFailureCode: "verification_authorization_unavailable",
+      status: "EXPIRED",
+    })
+  })
+
+  test("cancels a pending notification before delivery when the customer blocked the Store", async () => {
+    const updates: Record<string, unknown>[] = []
+    const client = dbClient({
+      $queryRaw: async () => [{ id: "intent_1" }],
+      $transaction: async (callback: (tx: PrismaClient) => Promise<unknown>) =>
+        callback(client),
+      storeConversationNotificationIntent: {
+        findFirst: async () => ({
+          id: "intent_1",
+          tenantId: "tenant_1",
+          storeId: "store_1",
+          conversationId: "conversation_1",
+          accountUserId: "account_1",
+          guestIdentityId: null,
+          conversation: {
+            lifecycle: "ACTIVE",
+            moderationState: "OPEN",
+            customerBlockedAt: new Date(),
+          },
+        }),
+        updateMany: async ({ data }: { data: Record<string, unknown> }) => {
+          updates.push(data)
+          return { count: 1 }
+        },
+      },
+      storeConversationNotificationAuditEvent: {
+        create: async () => ({ id: "audit_1" }),
+      },
+    })
+    await expect(
+      claimStoreConversationNotificationIntent(client, {
+        intentId: "intent_1",
+        storeId: "store_1",
+        tenantId: "tenant_1",
+      }),
+    ).resolves.toBeNull()
+    expect(updates[0]).toMatchObject({
+      status: "CANCELLED",
+      lastFailureCode: "conversation_unavailable",
+    })
+  })
   test("rejects a Guest verification write without explicit notification-only consent", async () => {
     await expect(
       requestGuestStoreConversationNotificationVerification(dbClient({}), {

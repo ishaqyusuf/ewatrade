@@ -106,6 +106,16 @@ function caller(input?: { attendant?: boolean; stores?: string[] }) {
 }
 
 describe("Service Commerce conversations router", () => {
+  test("merchant report cannot target a Store outside the active Tenant context", async () => {
+    await expect(
+      caller({ stores: ["store_1"] }).client.reportStoreConversation({
+        clientOperationId: "operator-report-0001",
+        conversationId: "conversation_1",
+        storeId: "foreign_store",
+        reason: "spam",
+      }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" })
+  })
   test("derives actor and Tenant scope while claiming an allowed Store conversation", async () => {
     const { calls, client } = caller()
     const result = await client.claimStoreConversation({

@@ -131,7 +131,9 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
     }),
   )
 
-  const exchangeCredential = trpc.qaAccess.exchange.mutationOptions().mutationFn
+  const { mutateAsync: exchangeCredential } = useMutation(
+    trpc.qaAccess.exchange.mutationOptions(),
+  )
   const select = useMutation(
     trpc.qaAccess.selectProfile.mutationOptions({
       onError(error) {

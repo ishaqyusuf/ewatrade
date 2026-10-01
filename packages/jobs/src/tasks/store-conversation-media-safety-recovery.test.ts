@@ -19,6 +19,39 @@ const prescription = {
 }
 
 describe("Store Conversation media safety recovery", () => {
+  test("keeps generic recovery active when production pharmacy is closed", async () => {
+    const previousAppEnv = process.env.APP_ENV
+    const previousApproval = process.env.PRESCRIPTION_COMMERCE_LAUNCH_APPROVED
+    process.env.APP_ENV = "production"
+    process.env.PRESCRIPTION_COMMERCE_LAUNCH_APPROVED = "false"
+    const queued: string[] = []
+    try {
+      const result = await runStoreConversationMediaSafetyRecovery(
+        {},
+        {
+          enqueue: async (work) => {
+            queued.push(work.kind)
+          },
+          list: async () => ({
+            items: [generic, prescription],
+            nextCursor: null,
+          }),
+          prepare: async (work) => work,
+        },
+      )
+      expect(result).toEqual({
+        failed: 0,
+        nextCursor: null,
+        queued: 1,
+        scanned: 2,
+      })
+      expect(queued).toEqual(["generic"])
+    } finally {
+      process.env.APP_ENV = previousAppEnv ?? ""
+      process.env.PRESCRIPTION_COMMERCE_LAUNCH_APPROVED = previousApproval ?? ""
+    }
+  })
+
   test("queues only bounded identifier-only work across pages", async () => {
     const calls: unknown[] = []
     const result = await runStoreConversationMediaSafetyRecovery(

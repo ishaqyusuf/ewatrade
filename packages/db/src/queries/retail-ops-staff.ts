@@ -7,6 +7,7 @@ import {
   type PrismaClient,
 } from "../../generated/prisma/client"
 import {
+  AccountAgeBand,
   RetailOpsStaffInviteTokenStatus as DurableRetailOpsStaffInviteTokenStatus,
   RetailOpsStaffLifecycleEventType as DurableRetailOpsStaffLifecycleEventType,
 } from "../../generated/prisma/enums"
@@ -157,6 +158,7 @@ type RetailOpsStaffErrorCode =
   | "STAFF_INVITE_EXPIRED"
   | "STAFF_INVITE_INVALID"
   | "STAFF_ALREADY_ACTIVE"
+  | "STAFF_AGE_REQUIRED"
   | "STAFF_NOT_FOUND"
   | "STAFF_SELF_UPDATE_FORBIDDEN"
   | "STAFF_STATUS_NOT_ALLOWED"
@@ -1520,6 +1522,7 @@ export async function completeRetailOpsStaffOnboarding(
         },
         user: {
           select: {
+            ageBand: true,
             displayName: true,
             email: true,
             id: true,
@@ -1539,6 +1542,17 @@ export async function completeRetailOpsStaffOnboarding(
       throw new RetailOpsStaffError(
         "STAFF_NOT_FOUND",
         "Invited Retail Ops staff membership not found.",
+      )
+    }
+
+    if (
+      membership.user.ageBand !== AccountAgeBand.AGE_13_TO_15 &&
+      membership.user.ageBand !== AccountAgeBand.AGE_16_TO_17 &&
+      membership.user.ageBand !== AccountAgeBand.ADULT
+    ) {
+      throw new RetailOpsStaffError(
+        "STAFF_AGE_REQUIRED",
+        "Choose an eligible age range before accepting staff access.",
       )
     }
 

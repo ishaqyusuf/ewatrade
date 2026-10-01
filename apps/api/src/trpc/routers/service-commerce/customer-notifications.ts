@@ -40,6 +40,7 @@ import {
 import {
   authenticatedProcedure,
   createTRPCRouter,
+  eligibleAccountProcedure,
   publicProcedure,
 } from "../../init"
 import {
@@ -70,8 +71,8 @@ function protectPushEndpoint(input: StoreConversationPushEndpointInput) {
 }
 
 export const serviceCommerceCustomerNotificationsRouter = createTRPCRouter({
-  accountStoreConversationNotificationPreference: authenticatedProcedure.query(
-    async ({ ctx }) => {
+  accountStoreConversationNotificationPreference:
+    eligibleAccountProcedure.query(async ({ ctx }) => {
       try {
         return await getStoreConversationAccountNotificationPreference(ctx.db, {
           accountUserId: ctx.session.user.id,
@@ -79,8 +80,7 @@ export const serviceCommerceCustomerNotificationsRouter = createTRPCRouter({
       } catch (error) {
         mapCustomerConversationError(error)
       }
-    },
-  ),
+    }),
 
   acknowledgeAccountStoreConversationProgress: authenticatedProcedure
     .input(storeConversationMobileReadAcknowledgementInputSchema)

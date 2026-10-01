@@ -240,6 +240,8 @@ type DurableSubscriptionPlan = {
   supportLabel: string | null
 }
 type DurableTenantSubscription = {
+  provider?: string
+  billingSubscriptionId?: string | null
   currentPeriodEndsAt: Date | null
   limitsSnapshot: unknown
   plan: DurableSubscriptionPlan
@@ -910,6 +912,16 @@ function mergeDurableRetailOpsSubscriptionPlans(
   return RETAIL_OPS_SUBSCRIPTION_PLANS.map((plan) => plansById.get(plan.id) ?? plan)
 }
 
+export function projectDurableStoreAccess(input: { provider?: string; status: string; currentPeriodEndsAt: Date | null }, now = new Date()) {
+  if (input.provider !== "APP_STORE" && input.provider !== "PLAY_STORE") return null
+  return input.status === "ACTIVE" && Boolean(input.currentPeriodEndsAt && input.currentPeriodEndsAt > now)
+}
+
+export function projectDurableReviewerAccess(input: { provider?: string; billingSubscriptionId?: string | null; status: string; currentPeriodEndsAt: Date | null }, now = new Date()) {
+  if (input.provider !== "MANUAL" || !input.billingSubscriptionId?.startsWith("play-review:")) return null
+  return input.status === "ACTIVE" && Boolean(input.currentPeriodEndsAt && input.currentPeriodEndsAt > now)
+}
+
 function mapDurableRetailOpsTenantSubscription(
   subscription: DurableTenantSubscription,
 ): {
@@ -920,10 +932,13 @@ function mapDurableRetailOpsTenantSubscription(
 
   if (!mappedPlan) return null
 
+  const storeAccess = projectDurableStoreAccess(subscription)
+  const reviewerAccess = projectDurableReviewerAccess(subscription)
+  const timeBoundAccess = storeAccess ?? reviewerAccess
   return {
     plan: {
       ...mappedPlan,
-      limits: normalizePlanLimits(
+      limits: timeBoundAccess === false ? { businesses: 0, offlineDevices: 0, products: 0, reportsHistoryDays: 0, staff: 0 } : normalizePlanLimits(
         subscription.limitsSnapshot,
         mappedPlan.limits,
       ),
@@ -933,7 +948,7 @@ function mapDurableRetailOpsTenantSubscription(
         subscription.currentPeriodEndsAt?.toISOString() ?? null,
       planId: mappedPlan.id,
       source: "tenant_subscription",
-      status: fromDurableSubscriptionStatus(subscription.status),
+      status: timeBoundAccess === false ? "cancelled" : fromDurableSubscriptionStatus(subscription.status),
       trialEndsAt: subscription.trialEndsAt?.toISOString() ?? null,
       updatedAt: subscription.updatedAt.toISOString(),
     },
@@ -2018,17 +2033,22 @@ export async function processRetailOpsBillingProviderEvent(
     }
 
     if (providerEvent) {
-      await db.billingProviderEvent.update({
-        where: {
-          id: providerEvent.id,
-        },
-        data: {
-          errorMessage:
-            error instanceof Error ? error.message : "Unknown billing error",
-          failedAt: new Date(),
-          status: DurableBillingProviderEventStatus.FAILED,
-        },
-      })
+      try {
+        await db.billingProviderEvent.update({
+          where: {
+            id: providerEvent.id,
+          },
+          data: {
+            errorMessage:
+              error instanceof Error ? error.message : "Unknown billing error",
+            failedAt: new Date(),
+            status: DurableBillingProviderEventStatus.FAILED,
+          },
+        })
+      } catch {
+        // A database conflict can abort the caller's transaction, making this
+        // best-effort ledger update impossible. Preserve the original failure.
+      }
     }
 
     throw error

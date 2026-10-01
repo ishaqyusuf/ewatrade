@@ -29,12 +29,16 @@ let nativeGoogleConfigured = false
 type MobileGoogleAuthMode = "login" | "sign_up"
 
 type UseMobileGoogleAuthInput = {
+  ageBand?: "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT"
+  acceptedTerms?: true
+  acknowledgedPrivacyNotice?: true
   addressLine1?: string
   businessProfileKey?: string
   businessProfileVersion?: 1
   businessName?: string
   city?: string
   currencyCode?: OperatingCurrencyCode
+  legalVersion?: string
   mode: MobileGoogleAuthMode
   name?: string
   operatingModel?: BusinessOperatingModel
@@ -105,12 +109,16 @@ function configureNativeGoogleSignIn(
 }
 
 export function useMobileGoogleAuth({
+  ageBand,
+  acceptedTerms,
+  acknowledgedPrivacyNotice,
   addressLine1,
   businessProfileKey,
   businessProfileVersion,
   businessName,
   city,
   currencyCode,
+  legalVersion,
   mode,
   name,
   operatingModel,
@@ -172,6 +180,9 @@ export function useMobileGoogleAuth({
       lastSubmittedIdToken.current = idToken
 
       verifyGoogleMutation.mutate({
+        ageBand,
+        acceptedTerms,
+        acknowledgedPrivacyNotice,
         addressLine1,
         businessProfileKey,
         businessProfileVersion,
@@ -179,6 +190,7 @@ export function useMobileGoogleAuth({
         city,
         currencyCode,
         idToken,
+        legalVersion,
         mode,
         name,
         operatingModel,
@@ -189,12 +201,16 @@ export function useMobileGoogleAuth({
       })
     },
     [
+      ageBand,
+      acceptedTerms,
+      acknowledgedPrivacyNotice,
       addressLine1,
       businessProfileKey,
       businessProfileVersion,
       businessName,
       city,
       currencyCode,
+      legalVersion,
       mode,
       name,
       operatingModel,

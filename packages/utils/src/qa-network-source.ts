@@ -1,4 +1,6 @@
-const TRUSTED_QA_CLIENT_IP_HEADERS = new Set(["cf-connecting-ip", "x-real-ip"])
+import { isIP } from "node:net"
+
+const TRUSTED_CLIENT_IP_HEADERS = new Set(["cf-connecting-ip", "x-real-ip"])
 
 function isPlausibleIpAddress(value: string) {
   const hasControlCharacter = [...value].some((character) => {
@@ -9,7 +11,7 @@ function isPlausibleIpAddress(value: string) {
     value.length <= 64 &&
     !hasControlCharacter &&
     !/[\s,]/.test(value) &&
-    (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(value) || value.includes(":"))
+    isIP(value) !== 0
   )
 }
 
@@ -18,10 +20,29 @@ export function getTrustedQaNetworkSource(input: {
   env: Record<string, string | undefined>
   getHeader(name: string): string | null | undefined
 }) {
-  const headerName =
-    input.env.QA_ACCELERATOR_TRUSTED_CLIENT_IP_HEADER?.trim().toLowerCase()
-  if (!headerName || !TRUSTED_QA_CLIENT_IP_HEADERS.has(headerName)) return null
+  return getTrustedClientIp(
+    input.env.QA_ACCELERATOR_TRUSTED_CLIENT_IP_HEADER,
+    input.getHeader,
+  )
+}
 
-  const value = input.getHeader(headerName)?.trim()
+export function getTrustedPrivacyNetworkSource(input: {
+  env: Record<string, string | undefined>
+  getHeader(name: string): string | null | undefined
+}) {
+  return getTrustedClientIp(
+    input.env.ACCOUNT_PRIVACY_TRUSTED_CLIENT_IP_HEADER,
+    input.getHeader,
+  )
+}
+
+function getTrustedClientIp(
+  configuredHeader: string | undefined,
+  getHeader: (name: string) => string | null | undefined,
+) {
+  const headerName = configuredHeader?.trim().toLowerCase()
+  if (!headerName || !TRUSTED_CLIENT_IP_HEADERS.has(headerName)) return null
+
+  const value = getHeader(headerName)?.trim()
   return value && isPlausibleIpAddress(value) ? value : null
 }

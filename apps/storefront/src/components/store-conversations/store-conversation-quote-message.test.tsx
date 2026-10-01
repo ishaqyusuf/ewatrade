@@ -47,6 +47,25 @@ const actionMessage = {
 }
 
 describe("Store Conversation web Quote message", () => {
+  test("keeps Quote history visible but pauses actions while Store is blocked", () => {
+    const markup = renderToStaticMarkup(
+      <StoreConversationQuoteMessage
+        actionMessage={actionMessage}
+        conversationId="conversation-1"
+        customerBlocked
+        messageId="message-1"
+        onContactStore={() => undefined}
+        onRefresh={async () => undefined}
+        publicToken="published-entry-token-that-is-long-enough"
+      />,
+    )
+
+    expect(markup).toContain("Quotation")
+    expect(markup).toContain(">Express</span>")
+    expect(markup).toContain("Quotation actions are paused")
+    expect(markup).not.toContain('aria-label="Choose Express"')
+  })
+
   test("renders server-materialized actions without a loading placeholder", () => {
     const markup = renderToStaticMarkup(
       <StoreConversationQuoteMessage

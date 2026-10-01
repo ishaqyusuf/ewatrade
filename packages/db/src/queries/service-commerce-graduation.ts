@@ -24,6 +24,10 @@ import {
   UnitConfigurationStatus,
   WorkAuthorizationPolicy,
 } from "../../generated/prisma/enums"
+import {
+  CatalogError,
+  assertExistingCatalogOfferingPublicationSafety,
+} from "./catalog"
 import { ServiceCommerceCatalogError } from "./service-commerce-catalog-source"
 import { assertServiceCommercePolicyAllowedInTransaction } from "./service-commerce-policy"
 import type { DbClient } from "./types"
@@ -698,6 +702,14 @@ export async function publishServiceCommerceCatalogOffering(
           "NOT_READY",
           "Complete every managed-operation fact before publication.",
         )
+      }
+      try {
+        await assertExistingCatalogOfferingPublicationSafety(tx, input)
+      } catch (error) {
+        if (error instanceof CatalogError) {
+          throw new ServiceCommerceCatalogError("NOT_READY", error.message)
+        }
+        throw error
       }
       const before = snapshot(offering)
       const changed = await tx.sellableOffering.updateMany({

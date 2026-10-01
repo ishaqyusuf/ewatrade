@@ -11,7 +11,12 @@ import {
   StockOperationType,
   UnitConfigurationStatus,
 } from "../../generated/prisma/enums"
-import { CatalogError, type InventoryUnitStockBehaviorValue } from "./catalog"
+import {
+  CatalogError,
+  type InventoryUnitStockBehaviorValue,
+  assertCatalogPublicationSafety,
+  assertExistingCatalogOfferingPublicationSafety,
+} from "./catalog"
 
 export type UnitConfigurationUnitInput = {
   factor: string
@@ -355,6 +360,7 @@ export async function updateProductUnitConfigurationDraft(
 export async function publishProductUnitConfiguration(
   db: PrismaClient,
   input: {
+    actorUserId: string
     configurationId: string
     stockTransitionOperationId?: string
     tenantId: string
@@ -460,10 +466,38 @@ export async function publishProductUnitConfiguration(
         inventoryUnit: { configurationVersionId: current.id },
         offering: {
           catalogItemId: draft.product.catalogItemId,
-          status: { in: [CatalogRecordStatus.ACTIVE, CatalogRecordStatus.DRAFT] },
+          status: {
+            in: [CatalogRecordStatus.ACTIVE, CatalogRecordStatus.DRAFT],
+          },
         },
       },
     })
+    if (draft.product.catalogItem.status === CatalogRecordStatus.ACTIVE) {
+      await assertCatalogPublicationSafety(tx, {
+        actorUserId: input.actorUserId,
+        mediaUrls: [
+          draft.product.catalogItem.imageUrl,
+          ...draft.product.catalogItem.imageLinks,
+        ],
+        texts: [
+          draft.product.catalogItem.name,
+          draft.product.catalogItem.category,
+          draft.product.catalogItem.description,
+          ...draft.units.flatMap((unit) => [unit.name, unit.symbol]),
+        ],
+      })
+      for (const offeringId of new Set(
+        offeringUnits
+          .filter((unit) => unit.offering.status === CatalogRecordStatus.ACTIVE)
+          .map((unit) => unit.offeringId),
+      )) {
+        await assertExistingCatalogOfferingPublicationSafety(tx, {
+          actorUserId: input.actorUserId,
+          offeringId,
+          tenantId: input.tenantId,
+        })
+      }
+    }
     for (const offering of offeringUnits) {
       const replacement = draftByKey.get(offering.inventoryUnit.key)
       if (!replacement) {

@@ -484,8 +484,7 @@ export async function assertStoreConversationWhatsAppCandidateEvidenceCurrent(
         select: { id: true },
         where: {
           channel: StoreConversationNotificationContactChannel.WHATSAPP,
-          destinationDigest:
-            input.candidate.notificationDestinationDigest,
+          destinationDigest: input.candidate.notificationDestinationDigest,
           guestIdentityId: input.candidate.conversation.guestIdentityId,
           id: input.candidate.notificationContactId,
           status: StoreConversationNotificationContactStatus.VERIFIED,
@@ -708,6 +707,12 @@ function translateMessageError(error: unknown): never {
     throw new StoreConversationWhatsAppDiscoveryError(
       "NOT_READY",
       "This Store conversation cannot continue on WhatsApp right now.",
+    )
+  }
+  if (error.message === "WHATSAPP_TERMS_ACCEPTANCE_REQUIRED") {
+    throw new StoreConversationWhatsAppDiscoveryError(
+      "NOT_READY",
+      "WhatsApp messaging is paused until sender Terms acceptance can be verified in EwaTrade.",
     )
   }
   throw error

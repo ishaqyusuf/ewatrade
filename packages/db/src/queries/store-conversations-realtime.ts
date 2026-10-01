@@ -17,6 +17,10 @@ import {
   projectStoreConversationActionMessageRow,
   storeConversationActionMessageInclude,
 } from "./store-conversation-actions"
+import {
+  assertCustomerAccountAgeAuthority,
+  assertGuestAgeAuthority,
+} from "./store-conversation-age-authority"
 import { projectStoreConversationMessageAttachments } from "./store-conversation-attachments"
 import {
   StoreConversationError,
@@ -258,6 +262,12 @@ async function getStoreConversationMessagesAfterForCustomer(
             tenantId: entry.tenantId,
           })
     const conversation = customer.conversation
+    if (principal.kind === "guest" && "credential" in customer)
+      await assertGuestAgeAuthority(tx, customer.credential.guestIdentityId)
+    else if (principal.kind === "account")
+      await assertCustomerAccountAgeAuthority(tx, principal.accountUserId)
+    else
+      throw new StoreConversationError("NOT_FOUND", "Conversation not found.")
     const rows = await tx.storeConversationMessage.findMany({
       include: realtimeMessageInclude,
       orderBy: { sequence: "asc" },
@@ -312,6 +322,8 @@ async function getStoreConversationMessagesAfterForCustomer(
       availability: entry.availability,
       channelMode: entry.channelMode,
       moderation: projectStoreConversationModeration(conversation),
+      customerBlocked: conversation.customerBlockedAt !== null,
+      customerBlockedAt: conversation.customerBlockedAt,
       lastMessageSequence: conversation.lastMessageSequence,
       messages: selected.map((message) =>
         projectStoreConversationMessage({

@@ -69,6 +69,33 @@ const context = {
 }
 
 describe("Service Commerce fulfillment repository", () => {
+  test("blocks pharmacy detail before database access while preserving service", async () => {
+    const previousAppEnv = process.env.APP_ENV
+    const previousApproval = process.env.PRESCRIPTION_COMMERCE_LAUNCH_APPROVED
+    process.env.APP_ENV = "production"
+    process.env.PRESCRIPTION_COMMERCE_LAUNCH_APPROVED = "false"
+    try {
+      const { calls, db } = fixture()
+      await expect(
+        getServiceCommerceFulfillmentOrder(db, {
+          ...context,
+          actorUserId: "attendant-1",
+          source: { id: "request-1", kind: "prescription" },
+        }),
+      ).rejects.toMatchObject({ code: "FULFILLMENT_BLOCKED" })
+      expect(calls).toEqual([])
+      await expect(
+        getServiceCommerceFulfillmentOrder(db, {
+          ...context,
+          actorUserId: "attendant-1",
+        }),
+      ).resolves.toMatchObject({ source: context.source })
+    } finally {
+      process.env.APP_ENV = previousAppEnv ?? ""
+      process.env.PRESCRIPTION_COMMERCE_LAUNCH_APPROVED = previousApproval ?? ""
+    }
+  })
+
   test("authorizes before resolving an exact Tenant, Store, Order and source", async () => {
     const { calls, db, predicates } = fixture()
     await expect(

@@ -56,4 +56,22 @@ export const storeConversationStaffReassignInputSchema =
 export const storeConversationStaffModerationInputSchema =
   storeConversationModerationCommandInputSchema
 
+export const storeConversationStaffReportInputSchema = z
+  .object({
+    clientOperationId: z.string().trim().min(8).max(160),
+    conversationId: z.string().trim().min(1).max(191),
+    storeId: storeConversationQueueInputSchema.shape.storeId,
+    messageId: z.string().trim().min(1).max(191).optional(),
+    reason: z.enum([
+      "spam",
+      "harassment",
+      "hateful_content",
+      "sexual_content",
+      "violence",
+      "other",
+    ]),
+    details: z.string().trim().max(500).optional(),
+  })
+  .strict()
+
 export { storeConversationQueueInputSchema }

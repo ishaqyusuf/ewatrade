@@ -90,8 +90,32 @@ const contracts = [
   {
     file: "app/dashboard.tsx",
     markers: [
+      "DashboardCompatibilityRoute",
+      '"/sales-rep-home"',
+      '"/admin-home"',
+    ],
+    reason: "the old dashboard URL must resolve to the role-specific home",
+  },
+  {
+    file: "app/(admin-tabs)/admin-home.tsx",
+    markers: [
       "OperationsDashboardSurface",
-      "MobileAppShell",
+      "embeddedInAdminTabs",
+      "setDockHidden",
+    ],
+    reason: "admin home must mount the shared dashboard in the admin tab shell",
+  },
+  {
+    file: "app/sales-rep-home.tsx",
+    markers: ["OperationsDashboardSurface", "<OperationsDashboardSurface />"],
+    reason: "sales-rep home must mount the shared dashboard",
+  },
+  {
+    file: "components/mobile/dashboard/operations-dashboard-screen.tsx",
+    markers: [
+      "OperationsDashboardSurface",
+      "MarketDayDashboardScreen",
+      "ClassicDashboardScreen",
       "centralAction={{",
       "getMobileDashboardNavigation",
       "navItems={navItems}",
@@ -112,7 +136,28 @@ const contracts = [
       'label: "Reports"',
     ],
     reason:
-      "the generic dashboard must preserve stable role-aware tabs plus record-derived and provisional content",
+      "the shared dashboard must preserve stable role-aware tabs plus record-derived and provisional content",
+  },
+  {
+    file: "components/mobile/dashboard/dashboard-presentation.ts",
+    markers: [
+      "MobileAppShell",
+      "DashboardScreenProps",
+      '"centralAction"',
+      '"navItems"',
+      '"role"',
+    ],
+    reason: "dashboard presentation must keep the typed app-shell contract",
+  },
+  {
+    file: "components/mobile/appearances/market-day/dashboard-screen.tsx",
+    markers: ["MobileAppShell", "<MobileAppShell", "{...props}"],
+    reason: "Market Day dashboard must render the shared operational shell",
+  },
+  {
+    file: "components/mobile/appearances/classic/dashboard-screen.tsx",
+    markers: ["MobileAppShell", "<MobileAppShell", "{...props}"],
+    reason: "classic dashboard must render the shared operational shell",
   },
 ]
 

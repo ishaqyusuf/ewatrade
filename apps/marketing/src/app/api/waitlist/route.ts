@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server"
 
-import { LeadCaptureType, prisma } from "@ewatrade/db"
-import { enqueueMarketingLeadNotification } from "@ewatrade/jobs"
-
 import { toLeadCapturePayload, waitlistSchema } from "@/lib/lead-capture"
+import { blockMarketingIntakeInPreview } from "@/lib/preview-intake-guard"
 
 export async function POST(request: Request) {
+  const previewBlock = blockMarketingIntakeInPreview()
+  if (previewBlock) return previewBlock
+
   const body = await request.json().catch(() => null)
   const result = waitlistSchema.safeParse(body)
 
@@ -15,6 +16,9 @@ export async function POST(request: Request) {
       { status: 400 },
     )
   }
+
+  const [{ LeadCaptureType, prisma }, { enqueueMarketingLeadNotification }] =
+    await Promise.all([import("@ewatrade/db"), import("@ewatrade/jobs")])
 
   const lead = await prisma.leadCapture.create({
     data: toLeadCapturePayload(LeadCaptureType.WAITLIST, result.data),

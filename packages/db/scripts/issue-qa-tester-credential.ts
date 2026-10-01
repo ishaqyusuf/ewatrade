@@ -24,7 +24,11 @@ if (!Number.isFinite(expiresInHours) || expiresInHours <= 0) {
 if (!secret || secret.length < 32) {
   throw new Error("QA_ACCELERATOR_SECRET must contain at least 32 characters.")
 }
-if (!isConfiguredQaDomain(qaDomain, process.env)) {
+if (
+  !isConfiguredQaDomain(qaDomain, {
+    EMAIL_QA_DOMAIN_ROUTES: process.env.EMAIL_QA_DOMAIN_ROUTES,
+  })
+) {
   throw new Error("The QA Domain is not configured for routed QA email.")
 }
 

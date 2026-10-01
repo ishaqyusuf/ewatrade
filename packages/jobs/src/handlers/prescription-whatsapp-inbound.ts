@@ -12,6 +12,7 @@ import {
   consumePrescriptionQuickAction,
   continueWhatsAppPrescriptionRequest,
   createPrescriptionCommunicationIntent,
+  isPrescriptionProductionLaunchApproved,
   markWhatsAppInboundEventProcessed,
   submitWhatsAppPrescriptionRequest,
 } from "@ewatrade/db/queries"
@@ -261,5 +262,6 @@ export async function runPrescriptionWhatsAppInbound(
 export async function prescriptionWhatsAppInboundHandler(
   payload: PrescriptionWhatsAppInboundPayload,
 ) {
+  if (!isPrescriptionProductionLaunchApproved()) return
   await runPrescriptionWhatsAppInbound(payload)
 }

@@ -5,6 +5,8 @@ import {
 } from "@ewatrade/db/queries"
 import { redirect } from "next/navigation"
 
+import { requirePrescriptionLaunch } from "@/lib/require-prescription-launch"
+
 export const dynamic = "force-dynamic"
 
 function field(data: FormData, key: string) {
@@ -14,6 +16,7 @@ function field(data: FormData, key: string) {
 
 async function selectDelivery(data: FormData) {
   "use server"
+  requirePrescriptionLaunch()
   const token = field(data, "token")
   let nextToken: string
   try {
@@ -49,6 +52,7 @@ export default async function Page({
   params: Promise<{ token: string }>
   searchParams: Promise<{ error?: string }>
 }) {
+  requirePrescriptionLaunch()
   const { token } = await params
   const query = await searchParams
   return (

@@ -16,6 +16,10 @@ function mobileRelease() {
 }
 
 export function initMobileObservability() {
+  // Age is not known at app startup. Keep diagnostic transport off until the
+  // signed 13+ flow and SDK payloads have been reviewed for the release.
+  if (process.env.EXPO_PUBLIC_SENTRY_ENABLED !== "true") return
+
   Sentry.init(
     sentryRuntimeOptions("mobile", {
       deploymentEnvironment: process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT,

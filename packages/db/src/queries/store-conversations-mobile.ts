@@ -26,6 +26,7 @@ import {
   StoreConversationTransferStatus,
 } from "../../generated/prisma/enums"
 import type { StoreConversationActionMaterializationDependencies } from "./store-conversation-actions"
+import { assertGuestAgeAuthority } from "./store-conversation-age-authority"
 import {
   GUEST_CREDENTIAL_LIFETIME_MS,
   StoreConversationError,
@@ -195,6 +196,7 @@ function assertTransferSourceIsActive(
 export async function bootstrapMobileStoreConversation(
   db: PrismaClient,
   input: {
+    ageBand?: "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT"
     credentialToken?: string | null
     installationToken: string
     publicToken: string
@@ -229,6 +231,7 @@ export async function listMobileStoreConversations(
       now,
       purpose: StoreConversationGuestCredentialPurpose.MOBILE_DEVICE,
     })
+    await assertGuestAgeAuthority(tx, credential.guestIdentityId)
     const rows = await tx.storeConversationGuestAccess.findMany({
       include: {
         conversation: {

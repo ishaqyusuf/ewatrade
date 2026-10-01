@@ -147,7 +147,7 @@ export const StaffInvitationSheet = forwardRef<
       enablePanDownToClose={!hasDraft && !isPending}
       keyboardBehavior="fillParent"
       maxDynamicContentSize={getStaffInviteSheetMaxHeight(height)}
-      snapPoints={STAFF_INVITE_SHEET_SNAP_POINTS}
+      snapPoints={[...STAFF_INVITE_SHEET_SNAP_POINTS]}
     >
       <BottomSheetKeyboardAwareScrollView
         bottomOffset={footerHeight + 12}

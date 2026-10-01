@@ -33,6 +33,7 @@ function getStaffErrorCode(
   error: RetailOpsStaffError,
 ): "BAD_REQUEST" | "CONFLICT" | "FORBIDDEN" | "NOT_FOUND" {
   if (error.code === "STAFF_ALREADY_ACTIVE") return "CONFLICT"
+  if (error.code === "STAFF_AGE_REQUIRED") return "BAD_REQUEST"
   if (error.code === "STAFF_SELF_UPDATE_FORBIDDEN") return "FORBIDDEN"
   if (error.code === "STAFF_STATUS_NOT_ALLOWED") return "BAD_REQUEST"
   if (error.code === "STAFF_STATUS_UNCHANGED") return "CONFLICT"

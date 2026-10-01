@@ -9,6 +9,7 @@ import {
   appendGuestStoreConversationAttachment,
   commitGuestStoreConversationPrescriptionAttachment,
   createChannelCommerceInquiry,
+  isPrescriptionProductionLaunchApproved,
   recordServiceCommerceMediaIntake,
   recordStoredServiceCommerceMediaAsset,
   requestServiceCommerceMediaSafety,
@@ -110,6 +111,22 @@ export class StoreConversationAttachmentTransportError extends Error {
   ) {
     super(message)
     this.name = "StoreConversationAttachmentTransportError"
+  }
+}
+
+function assertPrescriptionAttachmentLaunch(
+  target: z.infer<typeof storeConversationAttachmentTargetSchema> | undefined,
+) {
+  if (!target) return
+  const isPrescription =
+    target.kind === "new_prescription_request" ||
+    (target.kind === "existing_request" &&
+      target.request.kind === "prescription_request")
+  if (isPrescription && !isPrescriptionProductionLaunchApproved()) {
+    throw new StoreConversationAttachmentTransportError(
+      "NOT_FOUND",
+      "This Request attachment is unavailable.",
+    )
   }
 }
 
@@ -329,6 +346,7 @@ export async function resolveStoreConversationAttachmentCapability(
     publicToken: input.publicToken,
     target: input.target,
   })
+  assertPrescriptionAttachmentLaunch(parsed.target)
   try {
     const capability = await deps.resolveCapability(prisma, {
       channel: input.channel,
@@ -376,6 +394,7 @@ export async function processGuestStoreConversationAttachment(
   },
   deps: AttachmentDependencies = dependencies(),
 ) {
+  assertPrescriptionAttachmentLaunch(input.target)
   if (
     input.target.kind === "new_prescription_request" &&
     input.prescriptionConsentAccepted !== true
@@ -801,6 +820,7 @@ export async function parseGuestStoreConversationAttachmentRequest(
       "Refresh attachment access before sending this file.",
     )
   }
+  assertPrescriptionAttachmentLaunch(authorized.target)
   if (!dependencies.authorizeUpload) {
     const currentCapability =
       await resolveStoreConversationAttachmentCapability({
@@ -825,13 +845,13 @@ export async function parseGuestStoreConversationAttachmentRequest(
     )
   })
   const files = form.getAll("file")
-  if (files.length !== 1 || !(files[0] instanceof File)) {
+  const file = files[0]
+  if (files.length !== 1 || !file || typeof file === "string") {
     throw new StoreConversationAttachmentTransportError(
       "INVALID_INPUT",
       "Choose one attachment.",
     )
   }
-  const file = files[0]
   if (
     !file.name.trim() ||
     file.name.length > 255 ||

@@ -11,6 +11,7 @@ import {
 
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
+  AccountAgeBand,
   StoreConversationAuditEventType,
   StoreConversationCommandKind,
   StoreConversationGuestAccessOrigin,
@@ -24,6 +25,7 @@ import {
   StoreConversationRequestKind,
 } from "../../generated/prisma/enums"
 import { createChannelCommerceInquiryInTransaction } from "./commerce-inquiries"
+import { assertAccountStoreConversationTermsAccepted } from "./store-conversation-account-terms"
 import { loadStoreConversationForAccount } from "./store-conversation-accounts"
 import { runStoreConversationActionTransaction } from "./store-conversation-action-transaction"
 import {
@@ -31,7 +33,16 @@ import {
   materializeGuestStoreConversationActionMessagesInTransaction,
   storeConversationActionMessageInclude,
 } from "./store-conversation-actions"
+import {
+  assertCustomerAccountAgeAuthority,
+  assertGuestAgeAuthority,
+} from "./store-conversation-age-authority"
 import { projectStoreConversationMessageAttachments } from "./store-conversation-attachments"
+import {
+  type GuestTermsPublication,
+  assertGuestStoreConversationTermsAccepted,
+} from "./store-conversation-guest-terms"
+import { assertStoreConversationTextScreened } from "./store-conversation-text-safety"
 import {
   GUEST_CREDENTIAL_LIFETIME_MS,
   StoreConversationError,
@@ -84,9 +95,24 @@ const WEB_DEVICE_CONTEXT: GuestConversationDeviceContext = {
 
 export async function bootstrapWebStoreConversation(
   db: PrismaClient,
-  input: { credentialToken?: string | null; publicToken: string },
+  input: {
+    ageBand?: AccountAgeBand
+    credentialToken?: string | null
+    publicToken: string
+  },
   device: GuestConversationDeviceContext = WEB_DEVICE_CONTEXT,
 ) {
+  if (
+    input.ageBand !== undefined &&
+    input.ageBand !== AccountAgeBand.AGE_13_TO_15 &&
+    input.ageBand !== AccountAgeBand.AGE_16_TO_17 &&
+    input.ageBand !== AccountAgeBand.ADULT
+  ) {
+    throw new StoreConversationError(
+      "NOT_READY",
+      "Choose an eligible age range before entering Store chat.",
+    )
+  }
   const now = new Date()
   return db.$transaction(async (tx) => {
     const entry = await resolveStoreConversationEntry(tx, {
@@ -105,7 +131,11 @@ export async function bootstrapWebStoreConversation(
       })
     } else {
       rawCredential = createGuestCredential()
-      const guest = await tx.storeConversationGuestIdentity.create({ data: {} })
+      const guest = await tx.storeConversationGuestIdentity.create({
+        data: input.ageBand
+          ? { ageBand: input.ageBand, ageDeclaredAt: now }
+          : {},
+      })
       credential = await tx.storeConversationGuestCredential.create({
         data: {
           expiresAt: new Date(now.getTime() + GUEST_CREDENTIAL_LIFETIME_MS),
@@ -220,6 +250,8 @@ export async function bootstrapWebStoreConversation(
 
     return {
       conversation: {
+        customerBlocked: conversation.customerBlockedAt !== null,
+        customerBlockedAt: conversation.customerBlockedAt,
         id: conversation.id,
         moderation: projectStoreConversationModeration(conversation),
         state:
@@ -249,6 +281,7 @@ async function sendStoreConversationTextForCustomer(
     text: string
   },
   principal: CustomerConversationPrincipal,
+  dependencies: { guestTermsPublication?: GuestTermsPublication } = {},
 ) {
   const parsed = storeConversationSendTextInputSchema.parse({
     clientOperationId: input.clientOperationId,
@@ -264,6 +297,7 @@ async function sendStoreConversationTextForCustomer(
     ...(parsed.requestIntent ? { requestIntent: parsed.requestIntent } : {}),
     text: parsed.text,
   })
+  await assertStoreConversationTextScreened(parsed.text)
   return db.$transaction(async (tx) => {
     const entry = await resolveStoreConversationEntry(tx, {
       publicToken: parsed.publicToken,
@@ -296,6 +330,23 @@ async function sendStoreConversationTextForCustomer(
         "NOT_FOUND",
         "This Store conversation is unavailable.",
       )
+    }
+    if (guestCustomer) {
+      await assertGuestStoreConversationTermsAccepted(
+        tx,
+        conversation.guestIdentityId,
+        dependencies.guestTermsPublication,
+      )
+      await assertGuestAgeAuthority(
+        tx,
+        guestCustomer.credential.guestIdentityId,
+      )
+    } else if (principal.kind === "account") {
+      await assertAccountStoreConversationTermsAccepted(
+        tx,
+        principal.accountUserId,
+      )
+      await assertCustomerAccountAgeAuthority(tx, principal.accountUserId)
     }
     assertStoreConversationAvailable(entry.availability)
     assertStoreConversationComposerEnabled(entry.channelMode)
@@ -370,6 +421,12 @@ async function sendStoreConversationTextForCustomer(
       throw new StoreConversationError(
         "FORBIDDEN",
         "This conversation cannot accept new messages right now.",
+      )
+    }
+    if (lockedConversation.customerBlockedAt) {
+      throw new StoreConversationError(
+        "FORBIDDEN",
+        "You blocked this Store. Unblock it to send a message.",
       )
     }
 
@@ -607,13 +664,19 @@ export function sendGuestStoreConversationText(
     text: string
   },
   device: GuestConversationDeviceContext = WEB_DEVICE_CONTEXT,
+  dependencies: { guestTermsPublication?: GuestTermsPublication } = {},
 ) {
   const { credentialToken, ...messageInput } = input
-  return sendStoreConversationTextForCustomer(db, messageInput, {
-    credentialToken,
-    device,
-    kind: "guest",
-  })
+  return sendStoreConversationTextForCustomer(
+    db,
+    messageInput,
+    {
+      credentialToken,
+      device,
+      kind: "guest",
+    },
+    dependencies,
+  )
 }
 
 export function sendAccountStoreConversationText(
@@ -690,6 +753,13 @@ async function getStoreConversationTimelineForCustomer(
         "This Store conversation is unavailable.",
       )
     }
+    if (principal.kind === "guest" && guestCustomer)
+      await assertGuestAgeAuthority(
+        tx,
+        guestCustomer.credential.guestIdentityId,
+      )
+    else if (principal.kind === "account")
+      await assertCustomerAccountAgeAuthority(tx, principal.accountUserId)
     const [rows, requests] = await Promise.all([
       tx.storeConversationMessage.findMany({
         include: {
@@ -778,6 +848,8 @@ async function getStoreConversationTimelineForCustomer(
       availableRequestKinds: entry.requestKinds,
       channelMode: entry.channelMode,
       conversation: {
+        customerBlocked: conversation.customerBlockedAt !== null,
+        customerBlockedAt: conversation.customerBlockedAt,
         id: conversation.id,
         moderation: projectStoreConversationModeration(conversation),
         state:

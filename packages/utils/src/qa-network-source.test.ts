@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import { getTrustedQaNetworkSource } from "./qa-network-source"
+import {
+  getTrustedPrivacyNetworkSource,
+  getTrustedQaNetworkSource,
+} from "./qa-network-source"
 
 describe("trusted QA network source", () => {
   test("ignores forwarding headers unless the deployment opts in", () => {
@@ -38,4 +41,28 @@ describe("trusted QA network source", () => {
       }),
     ).toBeNull()
   })
+})
+
+test("privacy intake requires its own configured proxy-sanitized IP header", () => {
+  expect(
+    getTrustedPrivacyNetworkSource({ env: {}, getHeader: () => "203.0.113.9" }),
+  ).toBeNull()
+  expect(
+    getTrustedPrivacyNetworkSource({
+      env: { ACCOUNT_PRIVACY_TRUSTED_CLIENT_IP_HEADER: "cf-connecting-ip" },
+      getHeader: (name) => (name === "cf-connecting-ip" ? "203.0.113.9" : null),
+    }),
+  ).toBe("203.0.113.9")
+  expect(
+    getTrustedPrivacyNetworkSource({
+      env: { ACCOUNT_PRIVACY_TRUSTED_CLIENT_IP_HEADER: "x-forwarded-for" },
+      getHeader: () => "203.0.113.9",
+    }),
+  ).toBeNull()
+  expect(
+    getTrustedPrivacyNetworkSource({
+      env: { ACCOUNT_PRIVACY_TRUSTED_CLIENT_IP_HEADER: "x-real-ip" },
+      getHeader: () => "not-an-ip:evil",
+    }),
+  ).toBeNull()
 })

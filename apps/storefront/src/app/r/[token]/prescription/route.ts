@@ -1,6 +1,7 @@
 import { prisma } from "@ewatrade/db"
 import {
   CustomerChannelsError,
+  isPrescriptionProductionLaunchApproved,
   resolveCustomerEntryPointPrescriptionRedirect,
 } from "@ewatrade/db/queries"
 
@@ -10,6 +11,11 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ token: string }> },
 ) {
+  if (!isPrescriptionProductionLaunchApproved()) {
+    return new Response("This prescription channel is unavailable.", {
+      status: 404,
+    })
+  }
   const { token } = await context.params
   const sourceUrl = new URL(request.url)
   let channel: Awaited<

@@ -30,16 +30,22 @@ import { CustomerShellHeader } from "./customer-shell-header"
 type ConversationItem =
   RouterOutputs["serviceCommerce"]["mobileStoreConversations"]["items"][number]
 
-export function CustomerConversationListScreen() {
+export function CustomerConversationListScreen({
+  allowAccount,
+  allowGuest,
+}: {
+  allowAccount: boolean
+  allowGuest: boolean
+}) {
   const insets = useSafeAreaInsets()
   const router = useRouter()
   const { accessProfile, isAuthenticated } = useAuthContext()
   const { qaState } = useLocalSearchParams<{ qaState?: string | string[] }>()
   const trpc = useCustomerTRPC()
   const queryClient = useQueryClient()
-  const hasCredential = Boolean(getCustomerConversationSession())
+  const hasCredential = allowGuest && Boolean(getCustomerConversationSession())
   const hasLinkedCustomerHistory = Boolean(
-    isAuthenticated && accessProfile?.hasCustomerHistory,
+    allowAccount && isAuthenticated && accessProfile?.hasCustomerHistory,
   )
   const qaUnavailable = isCustomerConversationListUnavailableQaState({
     development: __DEV__,
@@ -166,6 +172,7 @@ export function CustomerConversationListScreen() {
             <CustomerAccountSecurityControl />
           ) : undefined
         }
+        showAccountPrivacy={isAuthenticated}
       />
       <FlatList
         contentContainerStyle={{

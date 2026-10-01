@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { existsSync, readFileSync } from "node:fs"
 import { join, relative, resolve } from "node:path"
 
@@ -9,12 +10,20 @@ const ICON_DIR = join(MOBILE_DIR, "assets/icons")
 const REQUIRED_MARKERS = [
   'name: "ẸwáTrade"',
   'name: "ẸwáTrade Dev"',
+  'name: "ẸwáTrade Preview"',
   'scheme: "ewatrade"',
   'scheme: "ewatrade-dev"',
+  'scheme: "ewatrade-preview"',
   'iosBundleIdentifier: "com.ewatrade.app"',
   'iosBundleIdentifier: "com.ewatrade.dev"',
+  'iosBundleIdentifier: "com.ewatrade.preview"',
   'androidPackage: "com.ewatrade.app"',
   'androidPackage: "com.ewatrade.dev"',
+  'androidPackage: "com.ewatrade.preview"',
+  'app: "./assets/icons/preview-loading-icon.png"',
+  'adaptive: "./assets/icons/preview-adaptive-icon.png"',
+  'iosDark: "./assets/icons/preview-ios-dark.png"',
+  'iosLight: "./assets/icons/preview-ios-light.png"',
   '"expo-splash-screen"',
   "variantConfig.icons.splashLight",
   "variantConfig.icons.splashDark",
@@ -25,21 +34,38 @@ const REQUIRED_MARKERS = [
   'userInterfaceStyle: "automatic"',
 ]
 const REQUIRED_PNGS = [
-  { file: "adaptive-icon.png", height: 1024, width: 1024 },
-  { file: "dev-adaptive-icon.png", height: 1024, width: 1024 },
+  { alpha: true, file: "adaptive-icon.png", height: 1024, width: 1024 },
+  { alpha: true, file: "dev-adaptive-icon.png", height: 1024, width: 1024 },
   { file: "dev-ios-dark.png", height: 1024, width: 1024 },
   { file: "dev-ios-light.png", height: 1024, width: 1024 },
   { file: "dev-loading-icon.png", height: 1024, width: 1024 },
-  { file: "dev-splash-logo.png", height: 640, width: 640 },
+  { alpha: true, file: "dev-splash-logo-dark.png", height: 640, width: 640 },
+  { alpha: true, file: "dev-splash-logo.png", height: 640, width: 640 },
   { file: "ios-dark.png", height: 1024, width: 1024 },
   { file: "ios-light.png", height: 1024, width: 1024 },
   { file: "loading-icon.png", height: 1024, width: 1024 },
   { file: "market-day-splash-lockup.png", height: 1280, width: 2560 },
   { file: "market-pulse-splash-mark.png", height: 1024, width: 1024 },
-  { file: "splash-logo.png", height: 640, width: 640 },
+  { alpha: true, file: "preview-adaptive-icon.png", height: 1024, width: 1024 },
+  { file: "preview-ios-dark.png", height: 1024, width: 1024 },
+  { file: "preview-ios-light.png", height: 1024, width: 1024 },
+  { file: "preview-loading-icon.png", height: 1024, width: 1024 },
+  {
+    alpha: true,
+    file: "preview-splash-logo-dark.png",
+    height: 640,
+    width: 640,
+  },
+  { alpha: true, file: "preview-splash-logo.png", height: 640, width: 640 },
+  { alpha: true, file: "splash-logo-dark.png", height: 640, width: 640 },
+  { alpha: true, file: "splash-logo.png", height: 640, width: 640 },
+]
+const DISTINCT_ICON_GROUPS = [
+  ["loading-icon.png", "preview-loading-icon.png", "dev-loading-icon.png"],
+  ["adaptive-icon.png", "preview-adaptive-icon.png", "dev-adaptive-icon.png"],
 ]
 
-function readPngSize(filePath) {
+function readPngMetadata(filePath) {
   const bytes = readFileSync(filePath)
   const signature = bytes.subarray(0, 8).toString("hex")
 
@@ -48,6 +74,7 @@ function readPngSize(filePath) {
   }
 
   return {
+    hasAlpha: bytes[25] === 4 || bytes[25] === 6,
     height: bytes.readUInt32BE(20),
     width: bytes.readUInt32BE(16),
   }
@@ -67,11 +94,32 @@ for (const png of REQUIRED_PNGS) {
     continue
   }
 
-  const size = readPngSize(filePath)
+  const metadata = readPngMetadata(filePath)
 
-  if (size.width !== png.width || size.height !== png.height) {
+  if (metadata.width !== png.width || metadata.height !== png.height) {
     imageFailures.push(
-      `${relative(REPO_ROOT, filePath)} is ${size.width}x${size.height}, expected ${png.width}x${png.height}.`,
+      `${relative(REPO_ROOT, filePath)} is ${metadata.width}x${metadata.height}, expected ${png.width}x${png.height}.`,
+    )
+  }
+
+  if (png.alpha === true && !metadata.hasAlpha) {
+    imageFailures.push(
+      `${relative(REPO_ROOT, filePath)} must preserve transparency for adaptive or splash composition.`,
+    )
+  }
+}
+
+for (const files of DISTINCT_ICON_GROUPS) {
+  const hashes = files.map((file) => {
+    const filePath = join(ICON_DIR, file)
+    return existsSync(filePath)
+      ? createHash("sha256").update(readFileSync(filePath)).digest("hex")
+      : null
+  })
+
+  if (new Set(hashes.filter(Boolean)).size !== files.length) {
+    imageFailures.push(
+      `${files.join(", ")} must be distinct Production, Preview, and Development colorways.`,
     )
   }
 }

@@ -3,10 +3,6 @@ import {
   claimPrescriptionPrivacyRequest,
   completePrescriptionPrivacyRequest,
 } from "@ewatrade/db/queries"
-import {
-  type PrivateMediaProvider,
-  getConfiguredPrivateMediaProvider,
-} from "@ewatrade/prescriptions"
 
 export type PrescriptionPrivacyRequestPayload = {
   actorUserId: string
@@ -22,14 +18,12 @@ type Dependencies = {
   complete(
     input: Parameters<typeof completePrescriptionPrivacyRequest>[1],
   ): Promise<unknown>
-  media: PrivateMediaProvider
 }
 
 function defaultDependencies(): Dependencies {
   return {
     claim: (input) => claimPrescriptionPrivacyRequest(prisma, input),
     complete: (input) => completePrescriptionPrivacyRequest(prisma, input),
-    media: getConfiguredPrivateMediaProvider(),
   }
 }
 
@@ -41,16 +35,9 @@ export async function runPrescriptionPrivacyRequest(
     privacyRequestId: payload.privacyRequestId,
   })
   if (!claim) return null
-  const deletedMediaIds: string[] = []
-  if (claim.type === "ERASURE") {
-    for (const media of claim.media) {
-      await dependencies.media.delete(media.objectKey)
-      deletedMediaIds.push(media.id)
-    }
-  }
   return dependencies.complete({
     actorUserId: payload.actorUserId,
-    deletedMediaIds,
+    deletedMediaIds: [],
     prescriptionRequestIds: claim.prescriptionRequestIds,
     privacyRequestId: claim.privacyRequestId,
     requestedChanges: claim.requestedChanges,

@@ -1,9 +1,12 @@
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import {
+  OwnerBusinessAgeError,
   RetailOpsSubscriptionError,
   createOwnerBusiness,
   createTenantStore,
+  getCustomerAccountAgeStatus,
   getWorkspaceFeatureAvailability,
+  requireEligibleOwnerAge,
 } from "@ewatrade/db/queries"
 import { TRPCError } from "@trpc/server"
 import { createBusinessSchema, createStoreSchema } from "../../schemas/tenant"
@@ -42,6 +45,12 @@ export const tenantRouter = createTRPCRouter({
           }),
         )
       } catch (error) {
+        if (error instanceof OwnerBusinessAgeError) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: error.message,
+          })
+        }
         if (error instanceof RetailOpsSubscriptionError) {
           throw new TRPCError({
             code: "FORBIDDEN",
@@ -54,6 +63,13 @@ export const tenantRouter = createTRPCRouter({
     }),
 
   businesses: authenticatedProcedure.query(async ({ ctx }) => {
+    const age = await getCustomerAccountAgeStatus(ctx.db, ctx.session.user.id)
+    if (!age.eligible) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Choose an eligible age range before opening your workspace.",
+      })
+    }
     const memberships = await ctx.db.membership.findMany({
       orderBy: { createdAt: "asc" },
       select: {
@@ -114,6 +130,7 @@ export const tenantRouter = createTRPCRouter({
       const { onboarding, ...storeInput } = input
 
       try {
+        await requireEligibleOwnerAge(ctx.db, ctx.session.user.id)
         return await createTenantStore(ctx.db, {
           createdByUserId: ctx.session.user.id,
           tenantId: ctx.tenantContext.tenant.id,
@@ -127,6 +144,12 @@ export const tenantRouter = createTRPCRouter({
             : undefined,
         })
       } catch (error) {
+        if (error instanceof OwnerBusinessAgeError) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: error.message,
+          })
+        }
         if (error instanceof RetailOpsSubscriptionError) {
           throw new TRPCError({
             code: "FORBIDDEN",

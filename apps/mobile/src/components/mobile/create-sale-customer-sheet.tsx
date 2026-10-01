@@ -147,7 +147,7 @@ export const CreateSaleCustomerSheet = forwardRef<
           maxDynamicContentSize={maxDynamicContentSize}
           ref={ref}
           onDismiss={onDismiss}
-          snapPoints={CREATE_CUSTOMER_SHEET_SNAP_POINTS}
+          snapPoints={[...CREATE_CUSTOMER_SHEET_SNAP_POINTS]}
           title="Create customer"
         >
           <BottomSheetKeyboardAwareScrollView

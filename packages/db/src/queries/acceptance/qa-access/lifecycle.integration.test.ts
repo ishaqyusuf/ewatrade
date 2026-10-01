@@ -208,6 +208,13 @@ async function exerciseQaAccessLifecycle(fixture: QaAccessAcceptanceFixture) {
   const mobileSession = await fixture.db.session.findUniqueOrThrow({
     where: { token: mobileSelection.value.token },
   })
+  if (
+    !mobileSession.qaMembershipId ||
+    !mobileSession.qaStoreId ||
+    !mobileSession.qaTenantId
+  ) {
+    throw new Error("Mobile QA session lacks its selected access scope.")
+  }
   expect(mobileSession.expiresAt.getTime()).toBeLessThanOrEqual(
     mobile.authorization.expiresAt.getTime(),
   )

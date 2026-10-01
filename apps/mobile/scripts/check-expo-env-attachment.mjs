@@ -55,6 +55,37 @@ const ENVIRONMENTS = [
     ],
   },
   {
+    envFile: join(MOBILE_DIR, ".env.preview"),
+    label: "preview",
+    listFile: process.env.EXPO_ENV_LIST_PREVIEW_FILE,
+    requiredKeys: [
+      "APP_VARIANT",
+      "EXPO_PUBLIC_APP_VARIANT",
+      "EXPO_PUBLIC_BASE_URL",
+      "EXPO_PUBLIC_API_URL",
+      "EXPO_PUBLIC_WEB_URL",
+      "EXPO_PUBLIC_LEGAL_ORIGIN",
+      "EXPO_PUBLIC_CHAT_URL",
+      "EXPO_PUBLIC_CUSTOMER_CHAT_HOST",
+    ],
+    valueCheckedKeys: [
+      "EXPO_PUBLIC_BASE_URL",
+      "EXPO_PUBLIC_API_URL",
+      "EXPO_PUBLIC_WEB_URL",
+      "EXPO_PUBLIC_LEGAL_ORIGIN",
+      "EXPO_PUBLIC_CHAT_URL",
+      "EXPO_PUBLIC_CUSTOMER_CHAT_HOST",
+    ],
+    remoteRequiredKeys: [
+      "EXPO_PUBLIC_BASE_URL",
+      "EXPO_PUBLIC_API_URL",
+      "EXPO_PUBLIC_WEB_URL",
+      "EXPO_PUBLIC_LEGAL_ORIGIN",
+      "EXPO_PUBLIC_CHAT_URL",
+      "EXPO_PUBLIC_CUSTOMER_CHAT_HOST",
+    ],
+  },
+  {
     envFile: MOBILE_PRODUCTION_ENV,
     label: "production",
     listFile: process.env.EXPO_ENV_LIST_PRODUCTION_FILE,
@@ -64,6 +95,8 @@ const ENVIRONMENTS = [
       "EXPO_PUBLIC_BASE_URL",
       "EXPO_PUBLIC_API_URL",
       "EXPO_PUBLIC_WEB_URL",
+      "EXPO_PUBLIC_LEGAL_ORIGIN",
+      "EXPO_PUBLIC_LOGLY_ENABLED",
       "EXPO_PUBLIC_CHAT_URL",
       "EXPO_PUBLIC_GOOGLE_CLIENT_ID",
       "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID",
@@ -80,12 +113,30 @@ const ENVIRONMENTS = [
       "EXPO_PUBLIC_BASE_URL",
       "EXPO_PUBLIC_API_URL",
       "EXPO_PUBLIC_WEB_URL",
+      "EXPO_PUBLIC_LEGAL_ORIGIN",
+      "EXPO_PUBLIC_LOGLY_ENABLED",
       "EXPO_PUBLIC_CHAT_URL",
+      "EXPO_PUBLIC_GOOGLE_CLIENT_ID",
+      "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID",
+      "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID",
+      "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID",
+      "GOOGLE_CLIENT_ID",
+      "GOOGLE_WEB_CLIENT_ID",
+      "GOOGLE_ANDROID_CLIENT_ID",
+      "GOOGLE_IOS_CLIENT_ID",
     ],
   },
 ]
+const selectedEnvironment = process.env.EXPO_ENV_ATTACHMENT_ONLY
+const environments = selectedEnvironment
+  ? ENVIRONMENTS.filter(({ label }) => label === selectedEnvironment)
+  : ENVIRONMENTS.filter(({ label }) => label !== "preview")
 
 const failures = []
+
+if (selectedEnvironment && environments.length === 0) {
+  failures.push(`Unknown Expo environment: ${selectedEnvironment}.`)
+}
 
 checkAppConfig()
 checkEasJson()
@@ -160,10 +211,16 @@ function checkEasJson() {
   if (parsed?.build?.preview?.channel !== "preview") {
     failures.push("eas.json preview build must keep channel=preview.")
   }
+  if (parsed?.build?.preview?.environment !== "preview") {
+    failures.push("eas.json preview build must use environment=preview.")
+  }
+  if (parsed?.build?.preview?.env?.APP_VARIANT !== "preview") {
+    failures.push("eas.json preview build must set APP_VARIANT=preview.")
+  }
 }
 
 function checkEnvFiles() {
-  for (const environment of ENVIRONMENTS) {
+  for (const environment of environments) {
     const env = readEnvFile(environment.envFile)
 
     for (const key of environment.requiredKeys) {
@@ -190,14 +247,36 @@ function checkExpoEnvLists() {
   const verifyLive = process.env.EXPO_ENV_VERIFY_LIVE === "1"
   let verifiedAnyList = false
 
-  for (const environment of ENVIRONMENTS) {
+  for (const environment of environments) {
     const env = readEnvFile(environment.envFile)
     const listOutput = getExpoEnvListOutput(environment, verifyLive)
     if (!listOutput) continue
 
     verifiedAnyList = true
     const attached = parseEasEnvList(listOutput)
-    const missing = environment.requiredKeys.filter((key) => {
+    if (environment.label === "production" || environment.label === "preview") {
+      const sentry = attached.get("EXPO_PUBLIC_SENTRY_ENABLED")
+      if (sentry && sentry.value !== "false") {
+        failures.push(
+          `Expo ${environment.label} env EXPO_PUBLIC_SENTRY_ENABLED must be absent or explicitly false.`,
+        )
+      } else {
+        console.log(
+          `Expo ${environment.label} Sentry opt-in flag: ${sentry ? "false" : "absent"}.`,
+        )
+      }
+    }
+    if (environment.label === "preview") {
+      const logly = attached.get("EXPO_PUBLIC_LOGLY_ENABLED")
+      if (logly && logly.value !== "false") {
+        failures.push(
+          "Expo preview env EXPO_PUBLIC_LOGLY_ENABLED must be absent or explicitly false.",
+        )
+      }
+    }
+    const missing = (
+      environment.remoteRequiredKeys ?? environment.requiredKeys
+    ).filter((key) => {
       const entry = attached.get(key)
       return (
         !entry ||
@@ -217,21 +296,21 @@ function checkExpoEnvLists() {
     for (const key of environment.valueCheckedKeys) {
       const entry = attached.get(key)
       const expectedValue = env[key]
-      if (!entry || !hasValue(expectedValue) || !hasValue(entry.value)) {
+      if (!entry || !hasValue(expectedValue)) {
         continue
       }
 
-      if (entry.value !== expectedValue) {
+      if (!hasValue(entry.value) || entry.value !== expectedValue) {
         failures.push(
-          `Expo ${environment.label} env ${key} must be ${expectedValue}.`,
+          `Expo ${environment.label} env ${key} does not match the local release configuration.`,
         )
       }
     }
   }
 
-  if (!verifiedAnyList) {
+  if (!verifiedAnyList && !verifyLive) {
     console.log(
-      "External Expo env list verification skipped. Set EXPO_ENV_LIST_DEVELOPMENT_FILE and EXPO_ENV_LIST_PRODUCTION_FILE, or set EXPO_ENV_VERIFY_LIVE=1.",
+      "External Expo env list verification skipped. Supply an Expo env list fixture or set EXPO_ENV_VERIFY_LIVE=1.",
     )
   }
 }
@@ -264,7 +343,7 @@ function getExpoEnvListOutput(environment, verifyLive) {
     failures.push(
       `EAS env:list failed for ${environment.label}. Re-authenticate with Expo and rerun.`,
     )
-    return output
+    return null
   }
 
   return output

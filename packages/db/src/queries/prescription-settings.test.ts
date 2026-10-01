@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 
 import type { PrismaClient } from "../../generated/prisma/client"
+import { isPrescriptionProductionLaunchApproved } from "./prescription-launch-gate"
 import {
   assertActivePrescriptionStore,
   assertPrescriptionStoreRole,
@@ -13,6 +14,103 @@ import {
 import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service-commerce-policy"
 
 describe("Prescription Commerce store readiness", () => {
+  test("requires a separate platform approval before production pharmacy activation", () => {
+    expect(
+      isPrescriptionProductionLaunchApproved({
+        APP_ENV: "production",
+        NODE_ENV: "production",
+        PRESCRIPTION_COMMERCE_LAUNCH_APPROVED: undefined,
+      }),
+    ).toBe(false)
+    expect(
+      isPrescriptionProductionLaunchApproved({
+        APP_ENV: "preview",
+        NODE_ENV: "production",
+        PRESCRIPTION_COMMERCE_LAUNCH_APPROVED: "false",
+      }),
+    ).toBe(false)
+    expect(
+      isPrescriptionProductionLaunchApproved({
+        APP_ENV: "production",
+        DEV_PROFILE: "prod",
+        NODE_ENV: "production",
+        PRESCRIPTION_COMMERCE_LAUNCH_APPROVED: "true",
+      }),
+    ).toBe(true)
+    for (const env of [
+      { APP_ENV: "production", NODE_ENV: "production" },
+      {
+        APP_ENV: "production",
+        DEV_PROFILE: "preview",
+        NODE_ENV: "production",
+      },
+      { APP_ENV: "production", DEV_PROFILE: "prod", NODE_ENV: "development" },
+    ]) {
+      expect(
+        isPrescriptionProductionLaunchApproved({
+          ...env,
+          PRESCRIPTION_COMMERCE_LAUNCH_APPROVED: "true",
+        }),
+      ).toBe(false)
+    }
+    expect(
+      isPrescriptionProductionLaunchApproved({
+        APP_ENV: undefined,
+        NODE_ENV: "production",
+        PRESCRIPTION_COMMERCE_LAUNCH_APPROVED: "true",
+      }),
+    ).toBe(false)
+    expect(
+      isPrescriptionProductionLaunchApproved({
+        APP_ENV: "preview",
+        NODE_ENV: "production",
+        PRESCRIPTION_COMMERCE_LAUNCH_APPROVED: "true",
+      }),
+    ).toBe(false)
+    expect(
+      isPrescriptionProductionLaunchApproved({
+        APP_ENV: "preview",
+        NODE_ENV: "development",
+        PRESCRIPTION_COMMERCE_LAUNCH_APPROVED: "true",
+      }),
+    ).toBe(false)
+    expect(
+      isPrescriptionProductionLaunchApproved({
+        APP_ENV: "preview",
+        NODE_ENV: undefined,
+        PRESCRIPTION_COMMERCE_LAUNCH_APPROVED: "false",
+      }),
+    ).toBe(false)
+    expect(
+      isPrescriptionProductionLaunchApproved({
+        APP_ENV: undefined,
+        NODE_ENV: "test",
+        PRESCRIPTION_COMMERCE_LAUNCH_APPROVED: undefined,
+      }),
+    ).toBe(true)
+    expect(
+      isPrescriptionProductionLaunchApproved({
+        APP_ENV: undefined,
+        NODE_ENV: undefined,
+        PRESCRIPTION_COMMERCE_LAUNCH_APPROVED: undefined,
+      }),
+    ).toBe(false)
+    expect(
+      isPrescriptionProductionLaunchApproved({
+        APP_ENV: "unknown",
+        NODE_ENV: "development",
+        PRESCRIPTION_COMMERCE_LAUNCH_APPROVED: "true",
+      }),
+    ).toBe(false)
+    expect(
+      isPrescriptionProductionLaunchApproved({
+        APP_ENV: "local",
+        NODE_ENV: "development",
+        PRESCRIPTION_COMMERCE_LAUNCH_APPROVED: undefined,
+      }),
+    ).toBe(true)
+  })
+
   test("uses active shared Service Commerce outcomes ahead of legacy Pharmacy flags", () => {
     expect(
       resolvePrescriptionFulfilmentCompatibility({

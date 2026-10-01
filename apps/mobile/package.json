@@ -28,6 +28,7 @@
     "qa:expo-env-attachment": "node ./scripts/check-expo-env-attachment.mjs",
     "qa:expo-env-attachment-live": "EXPO_ENV_VERIFY_LIVE=1 node ./scripts/check-expo-env-attachment.mjs",
     "qa:expo-env-attachment-fixtures": "node ./scripts/check-expo-env-attachment-fixtures.mjs",
+    "ios:preview:prebuild": "bun ./scripts/prebuild-ios-preview.ts",
     "qa:google-oauth-ready": "node ./scripts/check-google-oauth-ready.mjs",
     "qa:google-oauth-ready:prod": "GOOGLE_OAUTH_READY_ENV_FILE=../../.env.production node ./scripts/check-google-oauth-ready.mjs",
     "qa:google-oauth-fixtures": "node ./scripts/check-google-oauth-ready-fixtures.mjs",
@@ -40,6 +41,7 @@
     "qa:list-pagination": "node ./scripts/check-list-pagination.mjs",
     "qa:large-text-layout": "node ./scripts/check-large-text-layout.mjs",
     "qa:mobile-env-config": "node ./scripts/check-mobile-env-config.mjs",
+    "qa:production-api-live": "node ./scripts/check-production-api-live.mjs",
     "qa:mobile-auth-api-boundary": "node ./scripts/check-mobile-auth-api-boundary.mjs",
     "qa:mobile-real-session": "node ./scripts/run-mobile-real-session-qa.mjs",
     "qa:mobile-real-session-guard": "node ./scripts/check-mobile-real-session-qa.mjs",
@@ -70,6 +72,7 @@
   "dependencies": {
     "@ewatrade/api": "workspace:*",
     "@ewatrade/errors": "workspace:*",
+    "@ewatrade/events": "workspace:*",
     "@ewatrade/observability": "workspace:*",
     "@ewatrade/service-commerce": "workspace:*",
     "@ewatrade/utils": "workspace:*",
@@ -95,23 +98,25 @@
     "@trpc/tanstack-react-query": "^11.16.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
-    "expo": "~54.0.36",
+    "expo": "~54.0.37",
+    "expo-apple-authentication": "~8.0.8",
     "expo-asset": "~12.0.13",
     "expo-audio": "~1.1.1",
     "expo-auth-session": "~7.0.11",
     "expo-clipboard": "~8.0.8",
-    "expo-constants": "~18.0.10",
+    "expo-constants": "~18.0.14",
     "expo-crypto": "~15.0.9",
     "expo-dev-client": "~6.0.21",
     "expo-document-picker": "~14.0.8",
-    "expo-file-system": "~19.0.23",
+    "expo-file-system": "~19.0.24",
     "expo-font": "~14.0.12",
     "expo-haptics": "~15.0.8",
+    "expo-iap": "3.4.13",
     "expo-image": "~3.0.10",
     "expo-image-picker": "~17.0.11",
     "expo-linear-gradient": "~15.0.8",
     "expo-linking": "~8.0.12",
-    "expo-local-authentication": "~17.0.8",
+    "expo-local-authentication": "~17.0.9",
     "expo-navigation-bar": "~5.0.10",
     "expo-router": "~6.0.24",
     "expo-secure-store": "~15.0.8",
@@ -119,7 +124,7 @@
     "expo-status-bar": "~3.0.8",
     "expo-symbols": "~1.0.7",
     "expo-system-ui": "~6.0.8",
-    "expo-updates": "~29.0.19",
+    "expo-updates": "~29.0.20",
     "expo-web-browser": "~15.0.11",
     "lucide-react-native": "^0.545.0",
     "nativewind": "5.0.0-preview.3",
@@ -143,8 +148,7 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "zod": "catalog:",
-    "zustand": "^5.0.8",
-    "@ewatrade/events": "workspace:*"
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "catalog:",
@@ -160,10 +164,11 @@
     "typescript": "~5.9.2"
   },
   "expo": {
+    "autolinking": {
+      "exclude": ["expo-iap"]
+    },
     "install": {
-      "exclude": [
-        "@sentry/react-native"
-      ]
+      "exclude": ["@sentry/react-native"]
     }
   },
   "private": true

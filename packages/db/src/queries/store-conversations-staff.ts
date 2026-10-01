@@ -22,6 +22,7 @@ import {
   StoreConversationRequestKind,
 } from "../../generated/prisma/enums"
 import { resolveServiceCommerceSourceContext } from "./service-commerce-sources"
+import { assertAccountStoreConversationTermsAccepted } from "./store-conversation-account-terms"
 import {
   projectStoreConversationActionMessageRow,
   storeConversationActionMessageInclude,
@@ -29,6 +30,7 @@ import {
 import { projectStoreConversationMessageAttachments } from "./store-conversation-attachments"
 import { scheduleUnreadStoreConversationNotificationInTransaction } from "./store-conversation-notifications/intents"
 import { runStoreConversationSensitiveRead } from "./store-conversation-sensitive-reads"
+import { assertStoreConversationTextScreened } from "./store-conversation-text-safety"
 import { prepareStoreConversationWhatsAppOutboundAttemptInTransaction } from "./store-conversation-whatsapp-outbound-repository"
 import {
   StoreConversationError,
@@ -98,6 +100,7 @@ export async function replyToStoreConversation(
     request: parsed.request ?? null,
     text: parsed.text,
   })
+  await assertStoreConversationTextScreened(parsed.text)
   return db.$transaction(async (tx) => {
     const membership = await assertStoreConversationAttendant(tx, input)
     await lockStoreConversation(tx, input)
@@ -106,6 +109,7 @@ export async function replyToStoreConversation(
         id: parsed.conversationId,
         lifecycle: StoreConversationLifecycle.ACTIVE,
         moderationState: StoreConversationModerationState.OPEN,
+        customerBlockedAt: null,
         storeId: input.storeId,
         tenantId: input.tenantId,
       },
@@ -113,6 +117,7 @@ export async function replyToStoreConversation(
     if (!conversation) {
       throw new StoreConversationError("NOT_FOUND", "Conversation not found.")
     }
+    await assertAccountStoreConversationTermsAccepted(tx, input.actorUserId)
     const receipt = await tx.storeConversationCommandReceipt.findFirst({
       include: {
         message: {

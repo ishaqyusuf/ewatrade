@@ -1,5 +1,16 @@
+import { auth } from "@ewatrade/auth"
 import {
+  consumeMobileAppleChallenge,
+  createMobileAppleChallenge,
+  getMobileAppleChallenge,
+  verifyMobileAppleIdentity,
+} from "@ewatrade/db/queries"
+import {
+  MobileAccountNotFoundError,
+  consumeMobilePasswordAttempt,
   createMobileOwnerOtp,
+  createMobileSessionForVerifiedUser,
+  getCustomerAccountAgeStatus,
   getMobileAccessProfile,
   verifyMobileGoogleIdentity,
   verifyMobileOwnerOtp,
@@ -19,8 +30,18 @@ import {
   OPERATING_CURRENCY_CODES,
   isBusinessProfileKey,
 } from "@ewatrade/utils"
+import {
+  currentEffectiveLegalPublication,
+  isSignupAvailableForLegalPublication,
+  resolveLegalSignupChoice,
+} from "@ewatrade/utils/legal-approval"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
+import {
+  appleCredentialExchangeConfigured,
+  exchangeAppleAuthorizationCode,
+} from "../../auth/apple-credentials"
+import { verifyAppleIdToken } from "../../auth/mobile-apple"
 import { verifyGoogleIdToken } from "../../auth/mobile-google"
 import {
   authenticatedProcedure,
@@ -29,6 +50,12 @@ import {
 } from "../init"
 
 const emailSchema = z.string().trim().toLowerCase().pipe(z.email())
+export const mobilePasswordSignInSchema = z
+  .object({
+    email: emailSchema,
+    password: z.string().min(1).max(1024),
+  })
+  .strict()
 
 const mobileAuthModeSchema = z.enum(["login", "sign_up"])
 const businessProfileKeySchema = z
@@ -46,6 +73,7 @@ const optionalBusinessDescriptionSchema = z
   )
 
 type MobileSignupProfileInput = {
+  ageBand?: "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT"
   businessProfileKey?: string
   businessProfileVersion?: 1
   mode: "login" | "sign_up"
@@ -62,6 +90,7 @@ function requireMobileSignupProfile(
   if (value.mode !== "sign_up") return
 
   const requiredFields = [
+    [value.ageBand, "ageBand", "Choose an eligible age range"],
     [
       value.businessProfileKey,
       "businessProfileKey",
@@ -102,6 +131,7 @@ function requireMobileSignupProfile(
 }
 
 const mobileOwnerAuthShape = {
+  ageBand: z.enum(["AGE_13_TO_15", "AGE_16_TO_17", "ADULT"]).optional(),
   addressLine1: z.string().trim().min(3).max(200).optional(),
   businessProfileKey: businessProfileKeySchema.optional(),
   businessProfileVersion: z.literal(BUSINESS_PROFILE_SCHEMA_VERSION).optional(),
@@ -118,8 +148,45 @@ const mobileOwnerAuthShape = {
   teamSize: z.enum(BUSINESS_TEAM_SIZE_KEYS).optional(),
 } as const
 
+const mobileSignupLegalShape = {
+  legalVersion: z.string().trim().min(1).max(64).optional(),
+  acceptedTerms: z.literal(true).optional(),
+  acknowledgedPrivacyNotice: z.literal(true).optional(),
+} as const
+
+function requireMobileLegalChoice(input: {
+  mode: "login" | "sign_up"
+  legalVersion?: string
+  acceptedTerms?: true
+  acknowledgedPrivacyNotice?: true
+}) {
+  if (input.mode === "login") {
+    if (
+      input.legalVersion !== undefined ||
+      input.acceptedTerms !== undefined ||
+      input.acknowledgedPrivacyNotice !== undefined
+    )
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Legal acceptance is available during signup only.",
+      })
+    return
+  }
+  try {
+    resolveLegalSignupChoice(input)
+  } catch (error) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Review the current Terms and Privacy Notice.",
+    })
+  }
+}
+
 export const requestMobileOwnerOtpSchema = z
-  .object(mobileOwnerAuthShape)
+  .object({ ...mobileOwnerAuthShape, ...mobileSignupLegalShape })
   .strict()
   .superRefine(requireMobileSignupProfile)
 
@@ -136,6 +203,8 @@ export const verifyMobileOwnerOtpSchema = z
 
 export const verifyMobileGoogleSchema = z
   .object({
+    ageBand: z.enum(["AGE_13_TO_15", "AGE_16_TO_17", "ADULT"]).optional(),
+    ...mobileSignupLegalShape,
     addressLine1: z.string().trim().min(3).max(200).optional(),
     businessProfileKey: businessProfileKeySchema.optional(),
     businessProfileVersion: z
@@ -216,13 +285,155 @@ export function shouldDispatchMobileOwnerOtpEmail(
 }
 
 export const authRouter = createTRPCRouter({
-  getMobileAccessProfile: authenticatedProcedure.query(async ({ ctx }) =>
-    getMobileAccessProfile(ctx.db, { userId: ctx.session.user.id }),
-  ),
+  legalPublication: publicProcedure.query(() => {
+    const publication = currentEffectiveLegalPublication()
+    return publication
+      ? {
+          effective: true,
+          signupAvailable: true,
+          version: publication.version,
+          effectiveDate: publication.effectiveDate,
+        }
+      : {
+          effective: false,
+          signupAvailable: isSignupAvailableForLegalPublication(false),
+          version: null,
+          effectiveDate: null,
+        }
+  }),
+  signInMobilePassword: publicProcedure
+    .input(mobilePasswordSignInSchema)
+    .mutation(async ({ ctx, input }) => {
+      const allowed = await consumeMobilePasswordAttempt(
+        ctx.db,
+        input.email,
+      ).catch(() => false)
+      if (!allowed)
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Too many sign-in attempts. Try again later.",
+        })
+      const verifiedUser = await ctx.db.user.findUnique({
+        where: { email: input.email },
+        select: { emailVerified: true },
+      })
+      if (!verifiedUser?.emailVerified) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Invalid email or password, or the account is not verified.",
+        })
+      }
+      const authenticated = await auth.api
+        .signInEmail({
+          body: input,
+          headers: ctx.requestHeaders,
+        })
+        .catch(() => null)
+      if (!authenticated?.user?.id || !authenticated.user.emailVerified) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Invalid email or password, or the account is not verified.",
+        })
+      }
+      try {
+        return await createMobileSessionForVerifiedUser(
+          ctx.db,
+          authenticated.user.id,
+        )
+      } catch {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Invalid email or password, or the account is not verified.",
+        })
+      }
+    }),
+  createMobileAppleChallenge: publicProcedure.mutation(async ({ ctx }) => {
+    const clientIds = (process.env.APPLE_CLIENT_IDS ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+    if (clientIds.length === 0 || !(await appleCredentialExchangeConfigured()))
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Apple sign-in is not configured. Use email sign-in.",
+      })
+    return createMobileAppleChallenge(ctx.db)
+  }),
+  verifyMobileApple: publicProcedure
+    .input(
+      verifyMobileGoogleSchema.safeExtend({
+        challengeId: z.string().uuid(),
+        authorizationCode: z.string().min(1).max(4096),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      requireMobileLegalChoice(input)
+      const challenge = await getMobileAppleChallenge(ctx.db, input.challengeId)
+      if (!challenge)
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Apple sign-in expired. Please try again.",
+        })
+      try {
+        const profile = await verifyAppleIdToken({
+          idToken: input.idToken,
+          nonce: challenge.value,
+        })
+        const tokens = await exchangeAppleAuthorizationCode(
+          input.authorizationCode,
+          profile.aud,
+        )
+        const exchanged = await verifyAppleIdToken({
+          idToken: tokens.idToken,
+          nonce: challenge.value,
+        })
+        if (exchanged.sub !== profile.sub || exchanged.aud !== profile.aud)
+          throw new Error("Apple authorization code identity mismatch.")
+        return await ctx.db.$transaction(
+          async (tx) => {
+            await consumeMobileAppleChallenge(
+              tx,
+              input.challengeId,
+              challenge.value,
+            )
+            return verifyMobileAppleIdentity(tx, {
+              ...input,
+              idToken: undefined,
+              email: profile.email,
+              providerAccountId: profile.sub,
+              encryptedRefreshToken: tokens.encryptedRefreshToken,
+              clientId: profile.aud,
+            })
+          },
+          { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
+        )
+      } catch (error) {
+        if (error instanceof MobileAccountNotFoundError)
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: error.message,
+          })
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message:
+            "Apple sign-in could not be verified. Try again or use email sign-in.",
+        })
+      }
+    }),
+  getMobileAccessProfile: authenticatedProcedure.query(async ({ ctx }) => {
+    const age = await getCustomerAccountAgeStatus(ctx.db, ctx.session.user.id)
+    if (!age.eligible)
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Choose an eligible age range before opening your workspace.",
+      })
+    return getMobileAccessProfile(ctx.db, { userId: ctx.session.user.id })
+  }),
 
   requestMobileOwnerOtp: publicProcedure
     .input(requestMobileOwnerOtpSchema)
     .mutation(async ({ ctx, input }) => {
+      requireMobileLegalChoice(input)
       const otp = await (async () => {
         try {
           return await createMobileOwnerOtp(ctx.db, input)
@@ -277,7 +488,10 @@ export const authRouter = createTRPCRouter({
     .input(verifyMobileOwnerOtpSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        return await verifyMobileOwnerOtp(ctx.db, input)
+        return await ctx.db.$transaction(
+          (tx) => verifyMobileOwnerOtp(tx, input),
+          { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
+        )
       } catch (error) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -292,28 +506,37 @@ export const authRouter = createTRPCRouter({
   verifyMobileGoogle: publicProcedure
     .input(verifyMobileGoogleSchema)
     .mutation(async ({ ctx, input }) => {
+      requireMobileLegalChoice(input)
       const profile = await verifyGoogleIdToken({ idToken: input.idToken })
 
       try {
-        return await verifyMobileGoogleIdentity(ctx.db, {
-          addressLine1: input.addressLine1,
-          businessProfileKey: input.businessProfileKey,
-          businessProfileVersion: input.businessProfileVersion,
-          businessName: input.businessName,
-          city: input.city,
-          currencyCode: input.currencyCode,
-          email: profile.email,
-          idToken: input.idToken,
-          image: profile.picture,
-          mode: input.mode,
-          name: input.name ?? profile.name,
-          operatingModel: input.operatingModel,
-          orderChannels: input.orderChannels,
-          otherBusinessDescription: input.otherBusinessDescription,
-          phone: input.phone,
-          providerAccountId: profile.sub,
-          teamSize: input.teamSize,
-        })
+        return await ctx.db.$transaction(
+          (tx) =>
+            verifyMobileGoogleIdentity(tx, {
+              ageBand: input.ageBand,
+              addressLine1: input.addressLine1,
+              businessProfileKey: input.businessProfileKey,
+              businessProfileVersion: input.businessProfileVersion,
+              businessName: input.businessName,
+              city: input.city,
+              currencyCode: input.currencyCode,
+              email: profile.email,
+              idToken: input.idToken,
+              image: profile.picture,
+              legalVersion: input.legalVersion,
+              acceptedTerms: input.acceptedTerms,
+              acknowledgedPrivacyNotice: input.acknowledgedPrivacyNotice,
+              mode: input.mode,
+              name: input.name ?? profile.name,
+              operatingModel: input.operatingModel,
+              orderChannels: input.orderChannels,
+              otherBusinessDescription: input.otherBusinessDescription,
+              phone: input.phone,
+              providerAccountId: profile.sub,
+              teamSize: input.teamSize,
+            }),
+          { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
+        )
       } catch (error) {
         throw new TRPCError({
           code: "BAD_REQUEST",

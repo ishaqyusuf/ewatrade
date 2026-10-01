@@ -77,6 +77,7 @@ describe("Store Conversation realtime repositories", () => {
         update: async () => ({ id: "credential_1" }),
       },
       storeConversationGuestIdentity: {
+        findUnique: async () => ({ ageBand: "ADULT" }),
         update: async () => ({ id: "guest_1" }),
       },
       storeConversationMessage: {
@@ -157,6 +158,7 @@ describe("Store Conversation realtime repositories", () => {
         update: async () => ({ id: "credential_1" }),
       },
       storeConversationGuestIdentity: {
+        findUnique: async () => ({ ageBand: "ADULT" }),
         update: async () => ({ id: "guest_1" }),
       },
       storeConversationMessage: { findMany: async () => [] },
@@ -235,6 +237,7 @@ describe("Store Conversation realtime repositories", () => {
         update: async () => ({ id: "credential_1" }),
       },
       storeConversationGuestIdentity: {
+        findUnique: async () => ({ ageBand: "ADULT" }),
         update: async () => ({ id: "guest_1" }),
       },
       storeConversationMessage: { findMany: async () => [] },
@@ -298,6 +301,7 @@ describe("Store Conversation realtime repositories", () => {
         update: async () => ({ id: "credential_1" }),
       },
       storeConversationGuestIdentity: {
+        findUnique: async () => ({ ageBand: "ADULT" }),
         update: async () => ({ id: "guest_1" }),
       },
       storeConversationMessage: { findMany: async () => [] },

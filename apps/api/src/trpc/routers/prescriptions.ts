@@ -35,6 +35,7 @@ import {
   getPrescriptionStoreSetup,
   getWhatsAppEmbeddedSignupSession,
   handoffPrescriptionPickup,
+  isPrescriptionProductionLaunchApproved,
   issuePrescriptionQuote,
   listPrescriptionComplianceEvents,
   listPrescriptionDeliveryQueue,
@@ -125,6 +126,17 @@ import {
 } from "../../schemas/prescriptions"
 import { createTRPCRouter, protectedProcedure } from "../init"
 
+const pharmacyProtectedProcedure = protectedProcedure.use(({ next }) => {
+  if (!isPrescriptionProductionLaunchApproved()) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message:
+        "Pharmacy Commerce is unavailable until platform launch approval.",
+    })
+  }
+  return next()
+})
+
 function assertPrescriptionSetupManager(role: string) {
   const normalizedRole = normalizeRole(role)
   if (!normalizedRole || !canManageTenant(normalizedRole)) {
@@ -214,7 +226,7 @@ async function run<T>(action: () => Promise<T>) {
 }
 
 export const prescriptionsRouter = createTRPCRouter({
-  workspaceAccess: protectedProcedure
+  workspaceAccess: pharmacyProtectedProcedure
     .input(prescriptionStoreSetupSchema)
     .query(({ ctx, input }) => {
       const storeId = resolveStoreId(
@@ -232,7 +244,7 @@ export const prescriptionsRouter = createTRPCRouter({
       }))
     }),
 
-  queueContext: protectedProcedure
+  queueContext: pharmacyProtectedProcedure
     .input(prescriptionStoreSetupSchema)
     .query(async ({ ctx, input }) => {
       const storeId = resolveStoreId(
@@ -255,7 +267,7 @@ export const prescriptionsRouter = createTRPCRouter({
       })
     }),
 
-  report: protectedProcedure
+  report: pharmacyProtectedProcedure
     .input(prescriptionReportSchema)
     .query(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -273,7 +285,7 @@ export const prescriptionsRouter = createTRPCRouter({
       })
     }),
 
-  reconcileUsage: protectedProcedure
+  reconcileUsage: pharmacyProtectedProcedure
     .input(prescriptionStoreSetupSchema)
     .query(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -288,7 +300,7 @@ export const prescriptionsRouter = createTRPCRouter({
       })
     }),
 
-  retentionPolicy: protectedProcedure
+  retentionPolicy: pharmacyProtectedProcedure
     .input(prescriptionStoreSetupSchema)
     .query(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -303,7 +315,7 @@ export const prescriptionsRouter = createTRPCRouter({
       })
     }),
 
-  updateRetentionPolicy: protectedProcedure
+  updateRetentionPolicy: pharmacyProtectedProcedure
     .input(prescriptionRetentionPolicySchema)
     .mutation(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -314,7 +326,7 @@ export const prescriptionsRouter = createTRPCRouter({
       })
     }),
 
-  complianceEvents: protectedProcedure
+  complianceEvents: pharmacyProtectedProcedure
     .input(prescriptionStoreSetupSchema)
     .query(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -329,7 +341,7 @@ export const prescriptionsRouter = createTRPCRouter({
       })
     }),
 
-  createPrivacyRequest: protectedProcedure
+  createPrivacyRequest: pharmacyProtectedProcedure
     .input(prescriptionPrivacyRequestSchema)
     .mutation(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -340,7 +352,7 @@ export const prescriptionsRouter = createTRPCRouter({
       })
     }),
 
-  verifyPrivacyRequest: protectedProcedure
+  verifyPrivacyRequest: pharmacyProtectedProcedure
     .input(prescriptionPrivacyVerificationSchema)
     .mutation(async ({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -363,7 +375,7 @@ export const prescriptionsRouter = createTRPCRouter({
       return { queued: true }
     }),
 
-  privacyRequestResult: protectedProcedure
+  privacyRequestResult: pharmacyProtectedProcedure
     .input(prescriptionPrivacyRequestIdSchema)
     .query(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -379,7 +391,7 @@ export const prescriptionsRouter = createTRPCRouter({
       })
     }),
 
-  activateIncident: protectedProcedure
+  activateIncident: pharmacyProtectedProcedure
     .input(prescriptionIncidentSchema)
     .mutation(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -390,7 +402,7 @@ export const prescriptionsRouter = createTRPCRouter({
       })
     }),
 
-  resolveIncident: protectedProcedure
+  resolveIncident: pharmacyProtectedProcedure
     .input(prescriptionIncidentIdSchema)
     .mutation(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -400,7 +412,7 @@ export const prescriptionsRouter = createTRPCRouter({
         tenantId: ctx.tenantContext.tenant.id,
       })
     }),
-  channelInfo: protectedProcedure
+  channelInfo: pharmacyProtectedProcedure
     .input(prescriptionStoreSetupSchema)
     .query(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -414,14 +426,14 @@ export const prescriptionsRouter = createTRPCRouter({
         tenantId: ctx.tenantContext.tenant.id,
       })
     }),
-  whatsappConnections: protectedProcedure.query(({ ctx }) => {
+  whatsappConnections: pharmacyProtectedProcedure.query(({ ctx }) => {
     assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
     return listWhatsAppConnections(ctx.db, {
       tenantId: ctx.tenantContext.tenant.id,
     })
   }),
 
-  connectWhatsAppManually: protectedProcedure
+  connectWhatsAppManually: pharmacyProtectedProcedure
     .input(whatsappManualConnectionSchema)
     .mutation(async ({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -449,7 +461,7 @@ export const prescriptionsRouter = createTRPCRouter({
       return connection
     }),
 
-  retestWhatsAppConnection: protectedProcedure
+  retestWhatsAppConnection: pharmacyProtectedProcedure
     .input(whatsappConnectionIdSchema)
     .mutation(async ({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -465,7 +477,7 @@ export const prescriptionsRouter = createTRPCRouter({
       return { queued: true }
     }),
 
-  updateWhatsAppConnectionLifecycle: protectedProcedure
+  updateWhatsAppConnectionLifecycle: pharmacyProtectedProcedure
     .input(whatsappConnectionLifecycleSchema)
     .mutation(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -482,7 +494,7 @@ export const prescriptionsRouter = createTRPCRouter({
       })
     }),
 
-  suspendWhatsAppStoreBinding: protectedProcedure
+  suspendWhatsAppStoreBinding: pharmacyProtectedProcedure
     .input(whatsappConnectionIdSchema)
     .mutation(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -499,7 +511,7 @@ export const prescriptionsRouter = createTRPCRouter({
       })
     }),
 
-  whatsappEmbeddedSignupUrl: protectedProcedure
+  whatsappEmbeddedSignupUrl: pharmacyProtectedProcedure
     .input(prescriptionStoreSetupSchema)
     .query(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -535,7 +547,7 @@ export const prescriptionsRouter = createTRPCRouter({
       return { available: true as const, url: url.toString() }
     }),
 
-  whatsappEmbeddedSignupSession: protectedProcedure
+  whatsappEmbeddedSignupSession: pharmacyProtectedProcedure
     .input(whatsappEmbeddedSignupSessionSchema)
     .query(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -552,7 +564,7 @@ export const prescriptionsRouter = createTRPCRouter({
       })
     }),
 
-  selectWhatsAppEmbeddedSignupNumber: protectedProcedure
+  selectWhatsAppEmbeddedSignupNumber: pharmacyProtectedProcedure
     .input(whatsappEmbeddedSignupSelectionSchema)
     .mutation(async ({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -576,7 +588,7 @@ export const prescriptionsRouter = createTRPCRouter({
       })
       return connection
     }),
-  deliveryZones: protectedProcedure
+  deliveryZones: pharmacyProtectedProcedure
     .input(prescriptionStoreSetupSchema)
     .query(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -591,7 +603,7 @@ export const prescriptionsRouter = createTRPCRouter({
       })
     }),
 
-  manualDeliveryReviews: protectedProcedure
+  manualDeliveryReviews: pharmacyProtectedProcedure
     .input(prescriptionStoreSetupSchema)
     .query(({ ctx, input }) => {
       const storeId = resolveStoreId(
@@ -605,7 +617,7 @@ export const prescriptionsRouter = createTRPCRouter({
       })
     }),
 
-  approveManualDeliveryFee: protectedProcedure
+  approveManualDeliveryFee: pharmacyProtectedProcedure
     .input(prescriptionManualDeliveryFeeSchema)
     .mutation(async ({ ctx, input }) => {
       const result = await approvePrescriptionManualDeliveryFee(ctx.db, {
@@ -643,7 +655,7 @@ export const prescriptionsRouter = createTRPCRouter({
       return { versionId: result.versionId }
     }),
 
-  upsertDeliveryZone: protectedProcedure
+  upsertDeliveryZone: pharmacyProtectedProcedure
     .input(prescriptionDeliveryZoneSchema)
     .mutation(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -654,7 +666,7 @@ export const prescriptionsRouter = createTRPCRouter({
       })
     }),
 
-  pickupQueue: protectedProcedure
+  pickupQueue: pharmacyProtectedProcedure
     .input(prescriptionStoreSetupSchema)
     .query(async ({ ctx, input }) => {
       const storeId = resolveStoreId(
@@ -678,7 +690,7 @@ export const prescriptionsRouter = createTRPCRouter({
       )
     }),
 
-  deliveryQueue: protectedProcedure
+  deliveryQueue: pharmacyProtectedProcedure
     .input(prescriptionStoreSetupSchema)
     .query(async ({ ctx, input }) => {
       const storeId = resolveStoreId(
@@ -702,7 +714,7 @@ export const prescriptionsRouter = createTRPCRouter({
       )
     }),
 
-  markPickupReady: protectedProcedure
+  markPickupReady: pharmacyProtectedProcedure
     .input(prescriptionPickupReadySchema)
     .mutation(async ({ ctx, input }) => {
       const result = await markPrescriptionPickupReady(ctx.db, {
@@ -721,7 +733,7 @@ export const prescriptionsRouter = createTRPCRouter({
       }
     }),
 
-  handoffPickup: protectedProcedure
+  handoffPickup: pharmacyProtectedProcedure
     .input(prescriptionPickupHandoffSchema)
     .mutation(({ ctx, input }) =>
       handoffPrescriptionPickup(ctx.db, {
@@ -731,7 +743,7 @@ export const prescriptionsRouter = createTRPCRouter({
       }),
     ),
 
-  recordPickupException: protectedProcedure
+  recordPickupException: pharmacyProtectedProcedure
     .input(prescriptionPickupExceptionSchema)
     .mutation(({ ctx, input }) =>
       recordPrescriptionPickupException(ctx.db, {
@@ -741,7 +753,7 @@ export const prescriptionsRouter = createTRPCRouter({
       }),
     ),
 
-  assignDelivery: protectedProcedure
+  assignDelivery: pharmacyProtectedProcedure
     .input(prescriptionDeliveryAssignmentSchema)
     .mutation(({ ctx, input }) =>
       createPrescriptionDeliveryAssignment(ctx.db, {
@@ -751,7 +763,7 @@ export const prescriptionsRouter = createTRPCRouter({
       }),
     ),
 
-  markDeliveryReady: protectedProcedure
+  markDeliveryReady: pharmacyProtectedProcedure
     .input(prescriptionDeliveryReadySchema)
     .mutation(async ({ ctx, input }) => {
       const result = await markPrescriptionDeliveryReady(ctx.db, {
@@ -767,7 +779,7 @@ export const prescriptionsRouter = createTRPCRouter({
       return result.assignment
     }),
 
-  transitionDelivery: protectedProcedure
+  transitionDelivery: pharmacyProtectedProcedure
     .input(prescriptionDeliveryTransitionSchema)
     .mutation(async ({ ctx, input }) => {
       const result = await transitionPrescriptionDelivery(ctx.db, {
@@ -782,7 +794,7 @@ export const prescriptionsRouter = createTRPCRouter({
       }
       return result.assignment
     }),
-  refund: protectedProcedure
+  refund: pharmacyProtectedProcedure
     .input(prescriptionRefundSchema)
     .mutation(async ({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -843,7 +855,7 @@ export const prescriptionsRouter = createTRPCRouter({
         tenantId: ctx.tenantContext.tenant.id,
       })
     }),
-  uploadMedia: protectedProcedure
+  uploadMedia: pharmacyProtectedProcedure
     .input(prescriptionMediaUploadSchema)
     .mutation(async ({ ctx, input }) => {
       if (!input.storeId || input.publicToken) {
@@ -881,7 +893,7 @@ export const prescriptionsRouter = createTRPCRouter({
       })
     }),
 
-  channel: protectedProcedure
+  channel: pharmacyProtectedProcedure
     .input(prescriptionStoreSetupSchema)
     .mutation(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -899,7 +911,7 @@ export const prescriptionsRouter = createTRPCRouter({
       )
     }),
 
-  queue: protectedProcedure
+  queue: pharmacyProtectedProcedure
     .input(prescriptionQueueSchema)
     .query(async ({ ctx, input }) => {
       const storeId = resolveStoreId(
@@ -924,7 +936,7 @@ export const prescriptionsRouter = createTRPCRouter({
       )
     }),
 
-  detail: protectedProcedure
+  detail: pharmacyProtectedProcedure
     .input(prescriptionDetailSchema)
     .query(async ({ ctx, input }) => {
       const storeId = resolveStoreId(
@@ -953,7 +965,7 @@ export const prescriptionsRouter = createTRPCRouter({
       )
     }),
 
-  staffIntake: protectedProcedure
+  staffIntake: pharmacyProtectedProcedure
     .input(prescriptionStaffIntakeSchema)
     .mutation(({ ctx, input }) => {
       const storeId = resolveStoreId(
@@ -992,7 +1004,7 @@ export const prescriptionsRouter = createTRPCRouter({
       })
     }),
 
-  requestClearerMedia: protectedProcedure
+  requestClearerMedia: pharmacyProtectedProcedure
     .input(prescriptionClearerMediaSchema)
     .mutation(({ ctx, input }) =>
       run(async () => {
@@ -1027,7 +1039,7 @@ export const prescriptionsRouter = createTRPCRouter({
       }),
     ),
 
-  mediaAccess: protectedProcedure
+  mediaAccess: pharmacyProtectedProcedure
     .input(prescriptionMediaAccessSchema)
     .mutation(async ({ ctx, input }) => {
       const media = await run(() =>
@@ -1049,7 +1061,7 @@ export const prescriptionsRouter = createTRPCRouter({
       }
     }),
 
-  startTranscription: protectedProcedure
+  startTranscription: pharmacyProtectedProcedure
     .input(prescriptionMediaReadySchema)
     .mutation(async ({ ctx, input }) => {
       const transcription = await run(() =>
@@ -1063,7 +1075,7 @@ export const prescriptionsRouter = createTRPCRouter({
       return transcription
     }),
 
-  verifyLine: protectedProcedure
+  verifyLine: pharmacyProtectedProcedure
     .input(prescriptionLineVerificationSchema)
     .mutation(({ ctx, input }) =>
       run(() =>
@@ -1075,7 +1087,7 @@ export const prescriptionsRouter = createTRPCRouter({
       ),
     ),
 
-  reviseTranscription: protectedProcedure
+  reviseTranscription: pharmacyProtectedProcedure
     .input(prescriptionTranscriptionRevisionSchema)
     .mutation(({ ctx, input }) =>
       run(() =>
@@ -1087,7 +1099,7 @@ export const prescriptionsRouter = createTRPCRouter({
       ),
     ),
 
-  submitForPharmacistReview: protectedProcedure
+  submitForPharmacistReview: pharmacyProtectedProcedure
     .input(prescriptionDetailSchema)
     .mutation(({ ctx, input }) =>
       run(() =>
@@ -1099,7 +1111,7 @@ export const prescriptionsRouter = createTRPCRouter({
       ),
     ),
 
-  pharmacistReview: protectedProcedure
+  pharmacistReview: pharmacyProtectedProcedure
     .input(prescriptionPharmacistReviewSchema)
     .mutation(({ ctx, input }) =>
       run(() =>
@@ -1111,7 +1123,7 @@ export const prescriptionsRouter = createTRPCRouter({
       ),
     ),
 
-  issueQuote: protectedProcedure
+  issueQuote: pharmacyProtectedProcedure
     .input(prescriptionQuoteIssueSchema)
     .mutation(({ ctx, input }) =>
       run(async () => {
@@ -1130,7 +1142,7 @@ export const prescriptionsRouter = createTRPCRouter({
       }),
     ),
 
-  assignRole: protectedProcedure
+  assignRole: pharmacyProtectedProcedure
     .input(prescriptionRoleAssignmentSchema)
     .mutation(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -1143,7 +1155,7 @@ export const prescriptionsRouter = createTRPCRouter({
       )
     }),
 
-  revokeRole: protectedProcedure
+  revokeRole: pharmacyProtectedProcedure
     .input(prescriptionRoleRevokeSchema)
     .mutation(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -1156,7 +1168,7 @@ export const prescriptionsRouter = createTRPCRouter({
       )
     }),
 
-  setActivation: protectedProcedure
+  setActivation: pharmacyProtectedProcedure
     .input(prescriptionActivationSchema)
     .mutation(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -1169,7 +1181,7 @@ export const prescriptionsRouter = createTRPCRouter({
       )
     }),
 
-  setup: protectedProcedure
+  setup: pharmacyProtectedProcedure
     .input(prescriptionStoreSetupSchema)
     .query(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)
@@ -1187,7 +1199,7 @@ export const prescriptionsRouter = createTRPCRouter({
       )
     }),
 
-  selectableOfferings: protectedProcedure
+  selectableOfferings: pharmacyProtectedProcedure
     .input(prescriptionSelectableOfferingsSchema)
     .query(({ ctx, input }) => {
       const storeId = resolveStoreId(
@@ -1201,7 +1213,7 @@ export const prescriptionsRouter = createTRPCRouter({
       })
     }),
 
-  updateSettings: protectedProcedure
+  updateSettings: pharmacyProtectedProcedure
     .input(prescriptionStoreSettingsUpdateSchema)
     .mutation(({ ctx, input }) => {
       assertPrescriptionSetupManager(ctx.tenantContext.membership.role)

@@ -1,0 +1,201 @@
+enum AccountPrivacyRequestStatus {
+  RECEIVED
+  UNDER_REVIEW
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum AccountPrivacyAccessRevocationStatus {
+  PENDING
+  PROCESSING
+  REVOKED
+  FAILED
+}
+
+enum AccountPrivacyDomain {
+  IDENTITY_ACCESS
+  MEMBERSHIP
+  CONVERSATIONS
+  PRESCRIPTIONS
+  COMMERCIAL_RECORDS
+  SOFTWARE_SUBSCRIPTIONS
+  EXTERNAL_PROCESSORS
+  ACCOUNT_PROFILE
+  OUTCOME_NOTICE
+}
+
+enum AccountPrivacyDisposition {
+  ACCESS_REVOKED
+  ERASURE_CONFIRMED
+  ANONYMIZATION_CONFIRMED
+  RETENTION_APPROVED
+  NOT_APPLICABLE
+  NOTICE_DELIVERED
+}
+
+enum AccountPrivacyNoticeAttemptStatus {
+  PREPARED
+  SENDING
+  SENT
+  DELIVERED
+  FAILED
+  UNCERTAIN
+}
+
+// Account-wide requests are separate from tenant/customer and conversation requests.
+model AccountPrivacyRequest {
+  id                    String                          @id @default(cuid())
+  userId                String?
+  verifiedSubjectUserId String?
+  contactEmail          String?
+  requestKey            String                          @unique
+  status                AccountPrivacyRequestStatus     @default(RECEIVED)
+  requestedAt           DateTime                        @default(now())
+  verifiedAt            DateTime
+  updatedAt             DateTime                        @updatedAt
+  completedAt           DateTime?
+  outcome               Json?
+  user                  User?                           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  accessRevocation      AccountPrivacyAccessRevocation?
+  domainOutcomes        AccountPrivacyDomainOutcome[]
+  noticeAttempts        AccountPrivacyNoticeAttempt[]
+
+  @@index([userId, requestedAt])
+  @@index([status, requestedAt])
+}
+
+// A provider send is not delivery. Only a recipient-matched provider event
+// may advance an attempt to DELIVERED and produce the notice outcome.
+model AccountPrivacyNoticeAttempt {
+  id                     String                            @id @default(cuid())
+  requestId              String
+  userId                 String
+  attemptNumber          Int
+  status                 AccountPrivacyNoticeAttemptStatus @default(PREPARED)
+  policyVersion          String
+  contentDigest          String
+  recipientDigest        String
+  idempotencyKey         String                            @unique
+  providerMessageId      String?                           @unique
+  providerEventId        String?                           @unique
+  deliveryEvidenceDigest String?
+  failureEventId         String?
+  failureEvidenceDigest  String?
+  preparedAt             DateTime                          @default(now())
+  sentAt                 DateTime?
+  deliveredAt            DateTime?
+  failedAt               DateTime?
+  updatedAt              DateTime                          @updatedAt
+  request                AccountPrivacyRequest             @relation(fields: [requestId], references: [id], onDelete: Restrict)
+
+  @@unique([requestId, attemptNumber])
+  @@index([requestId, status])
+  @@index([userId, preparedAt])
+  @@index([failureEventId])
+}
+
+// Only domain processors may write this evidence. No sensitive content or
+// provider token belongs here; the digest references a separate audit result.
+model AccountPrivacyDomainOutcome {
+  id             String                    @id @default(cuid())
+  requestId      String
+  userId         String
+  domain         AccountPrivacyDomain
+  disposition    AccountPrivacyDisposition
+  processor      String
+  policyVersion  String
+  evidenceDigest String
+  nextReviewAt   DateTime?
+  processedAt    DateTime                  @default(now())
+  request        AccountPrivacyRequest     @relation(fields: [requestId], references: [id], onDelete: Restrict)
+
+  @@unique([requestId, domain])
+  @@index([userId, domain])
+}
+
+// Identifier-only stage audit; external credentials never enter this row.
+model AccountPrivacyAccessRevocation {
+  id                String                               @id @default(cuid())
+  requestId         String                               @unique
+  userId            String
+  reviewedByUserId  String?
+  reviewedAt        DateTime?
+  claimedByUserId   String?
+  status            AccountPrivacyAccessRevocationStatus @default(PENDING)
+  claimId           String?
+  claimExpiresAt    DateTime?
+  attempts          Int                                  @default(0)
+  sessionsRevokedAt DateTime?
+  appleRevokedAt    DateTime?
+  completedAt       DateTime?
+  failureCode       String?
+  createdAt         DateTime                             @default(now())
+  updatedAt         DateTime                             @updatedAt
+  request           AccountPrivacyRequest                @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  recoveryEvents    AccountPrivacyAccessRecoveryEvent[]
+
+  @@index([status, claimExpiresAt])
+  @@index([userId])
+}
+
+// Append-only evidence that a previously revoked access stage was reclaimed
+// because live access reappeared. Counts and ids only; no credential material.
+model AccountPrivacyAccessRecoveryEvent {
+  id                   String                         @id @default(cuid())
+  stageId              String
+  requestId            String
+  userId               String
+  operatorUserId       String
+  claimId              String                         @unique
+  activeSessions       Int
+  appleAuthorizations  Int
+  activePushEndpoints  Int
+  storedIdentityTokens Int                            @default(0)
+  otherProviderTokens  Int                            @default(0)
+  claimedAt            DateTime                       @default(now())
+  stage                AccountPrivacyAccessRevocation @relation(fields: [stageId], references: [id], onDelete: Restrict)
+
+  @@index([requestId, claimedAt])
+  @@index([userId, claimedAt])
+}
+
+// A short-lived verification challenge for a person who cannot sign in.
+// The email digest is keyed so the lookup index does not expose addresses.
+model AccountPrivacyChallenge {
+  id              String   @id @default(cuid())
+  emailDigest     String   @unique
+  contactEmail    String
+  codeDigest      String
+  expiresAt       DateTime
+  sentAt          DateTime
+  sentCount       Int      @default(1)
+  windowStartedAt DateTime
+  attempts        Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([expiresAt])
+}
+
+// Keyed per-source and overall send counters prevent cross-address email abuse.
+model AccountPrivacyRateBucket {
+  id              String   @id @default(cuid())
+  bucketDigest    String   @unique
+  sentCount       Int      @default(0)
+  windowStartedAt DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model LegalAcceptance {
+  id           String   @id @default(cuid())
+  userId       String
+  version      String
+  documentHash String
+  surface      String
+  acceptedAt   DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, version])
+}

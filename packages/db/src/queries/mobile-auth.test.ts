@@ -1,10 +1,14 @@
 import { describe, expect, test } from "bun:test"
+import { verifyMobileAppleIdentity } from "./mobile-apple-auth"
 import {
+  MobileAccountNotFoundError,
   createMobileOwnerOtp,
+  createMobileSessionForVerifiedUser,
   getMobileAccessProfile,
   shouldUseFixedMobileOwnerOtp,
   verifyMobileGoogleIdentity,
   verifyMobileOwnerOtp,
+  verifyMobileSocialIdentity,
 } from "./mobile-auth"
 import { createOwnerBusiness } from "./owner-businesses"
 import type { DbClient } from "./types"
@@ -17,6 +21,8 @@ type VerificationRow = {
 }
 
 type UserRow = {
+  ageBand?: string
+  ageDeclaredAt?: Date | null
   avatarUrl?: string | null
   displayName?: string | null
   email: string
@@ -34,6 +40,8 @@ type AccountRow = {
   provider: string
   providerAccountId: string
   providerId: string
+  refreshToken?: string | null
+  scope?: string | null
   userId: string
 }
 
@@ -79,6 +87,7 @@ type StoreConversationAccountAccessRow = {
 }
 
 function createMockMobileAuthDb(input?: {
+  privacyStatus?: string
   accounts?: AccountRow[]
   accountAccesses?: StoreConversationAccountAccessRow[]
   memberships?: MembershipRow[]
@@ -96,6 +105,10 @@ function createMockMobileAuthDb(input?: {
   const sessions: Array<{ expiresAt: Date; token: string; userId: string }> = []
 
   const db = {
+    accountPrivacyRequest: {
+      findUnique: async () =>
+        input?.privacyStatus ? { status: input.privacyStatus } : null,
+    },
     account: {
       findUnique: async ({
         where,
@@ -109,13 +122,19 @@ function createMockMobileAuthDb(input?: {
       }) => {
         const lookup = where.provider_providerAccountId
 
-        return (
-          accounts.find(
-            (account) =>
-              account.provider === lookup.provider &&
-              account.providerAccountId === lookup.providerAccountId,
-          ) ?? null
+        const account = accounts.find(
+          (account) =>
+            account.provider === lookup.provider &&
+            account.providerAccountId === lookup.providerAccountId,
         )
+        return account
+          ? {
+              ...account,
+              user: {
+                email: users.find((user) => user.id === account.userId)?.email,
+              },
+            }
+          : null
       },
       upsert: async ({
         create,
@@ -145,6 +164,28 @@ function createMockMobileAuthDb(input?: {
 
         accounts.push(create)
         return create
+      },
+      update: async ({
+        data,
+        where,
+      }: {
+        data: Partial<AccountRow>
+        where: {
+          provider_providerAccountId: {
+            provider: string
+            providerAccountId: string
+          }
+        }
+      }) => {
+        const lookup = where.provider_providerAccountId
+        const account = accounts.find(
+          (item) =>
+            item.provider === lookup.provider &&
+            item.providerAccountId === lookup.providerAccountId,
+        )
+        if (!account) throw new Error("Account missing")
+        Object.assign(account, data)
+        return account
       },
     },
     membership: {
@@ -327,6 +368,7 @@ function createMockMobileAuthDb(input?: {
         data: Omit<UserRow, "id"> & { id?: string }
       }) => {
         const user = {
+          ageBand: "UNDECLARED",
           ...data,
           id: data.id ?? `user_${users.length + 1}`,
         }
@@ -348,13 +390,33 @@ function createMockMobileAuthDb(input?: {
         const user = users.find((currentUser) => currentUser.id === where.id)
         if (!user) throw new Error("User not found")
 
-        Object.assign(user, data)
+        Object.assign(
+          user,
+          Object.fromEntries(
+            Object.entries(data).filter(([, value]) => value !== undefined),
+          ),
+        )
 
         return {
           email: user.email,
           id: user.id,
           name: user.name,
         }
+      },
+      updateMany: async ({
+        data,
+        where,
+      }: {
+        data: Partial<UserRow>
+        where: { id: string; ageBand: string }
+      }) => {
+        const user = users.find(
+          (current) =>
+            current.id === where.id && current.ageBand === where.ageBand,
+        )
+        if (!user) return { count: 0 }
+        Object.assign(user, data)
+        return { count: 1 }
       },
       upsert: async ({
         create,
@@ -378,6 +440,7 @@ function createMockMobileAuthDb(input?: {
         }
 
         const nextUser = {
+          ageBand: "UNDECLARED",
           ...create,
           id: create.id ?? `user_${users.length + 1}`,
         }
@@ -438,6 +501,24 @@ function createMockMobileAuthDb(input?: {
 }
 
 describe("mobile auth queries", () => {
+  test("does not issue a new bearer for an account being closed", async () => {
+    const db = createMockMobileAuthDb({
+      privacyStatus: "PROCESSING",
+      users: [
+        {
+          email: "closing@example.com",
+          emailVerified: true,
+          id: "user-closing",
+          name: "Closing User",
+        },
+      ],
+    })
+    await expect(
+      createMobileSessionForVerifiedUser(db.client, "user-closing"),
+    ).rejects.toThrow("being closed")
+    expect(db.sessions).toHaveLength(0)
+  })
+
   test("uses the fixed OTP only outside production runtimes", () => {
     expect(shouldUseFixedMobileOwnerOtp({})).toBe(true)
     expect(
@@ -531,6 +612,7 @@ describe("mobile auth queries", () => {
       tenants: [existingTenant],
       users: [
         {
+          ageBand: "ADULT",
           email: "owner@example.com",
           id: "user_owner",
           name: "Owner Name",
@@ -579,12 +661,63 @@ describe("mobile auth queries", () => {
     })
   })
 
+  test.each(["AGE_13_TO_15", "AGE_16_TO_17"])(
+    "allows a declared %s account to create a business",
+    async (ageBand) => {
+      const db = createMockMobileAuthDb({
+        users: [
+          {
+            ageBand,
+            email: "teen-owner@example.com",
+            id: "user_teen",
+            name: "Teen Owner",
+          },
+        ],
+      })
+
+      const business = await createOwnerBusiness(db.client, {
+        businessName: "Teen Store",
+        currencyCode: "NGN",
+        userId: "user_teen",
+      })
+
+      expect(business.role).toBe("OWNER")
+      expect(db.tenants).toHaveLength(1)
+      expect(db.stores).toHaveLength(1)
+    },
+  )
+
+  test("does not create a business for an undeclared account", async () => {
+    const db = createMockMobileAuthDb({
+      users: [
+        {
+          ageBand: "UNDECLARED",
+          email: "unknown-age@example.com",
+          id: "user_unknown",
+          name: "Unknown Age",
+        },
+      ],
+    })
+
+    await expect(
+      createOwnerBusiness(db.client, {
+        businessName: "Unverified Store",
+        currencyCode: "NGN",
+        userId: "user_unknown",
+      }),
+    ).rejects.toThrow("Choose an eligible age range")
+    expect(db.tenants).toHaveLength(0)
+    expect(db.memberships).toHaveLength(0)
+    expect(db.stores).toHaveLength(0)
+  })
+
   test("creates a normalized OTP verification without storing the raw code", async () => {
     const db = createMockMobileAuthDb()
 
     const otp = await createMobileOwnerOtp(db.client, {
       businessName: "  Main Market Store  ",
       email: " OWNER@Example.COM ",
+      ageBand: "AGE_13_TO_15",
       mode: "sign_up",
       name: "  Store Owner  ",
     })
@@ -600,11 +733,38 @@ describe("mobile auth queries", () => {
     const payload = JSON.parse(db.verifications[0]?.value ?? "{}")
     expect(payload).toMatchObject({
       businessName: "Main Market Store",
+      ageBand: "AGE_13_TO_15",
       mode: "sign_up",
       name: "Store Owner",
     })
     expect(typeof payload.codeHash).toBe("string")
     expect(payload.codeHash).not.toBe(otp.code)
+  })
+
+  test("does not issue a signup OTP without a 13+ declaration", async () => {
+    const db = createMockMobileAuthDb()
+    await expect(
+      createMobileOwnerOtp(db.client, {
+        email: "new-owner@example.com",
+        mode: "sign_up",
+      }),
+    ).rejects.toThrow("Choose an eligible age range")
+    expect(db.verifications).toHaveLength(0)
+  })
+
+  test("draft signup cannot persist a claimed legal acceptance", async () => {
+    const db = createMockMobileAuthDb()
+    await expect(
+      createMobileOwnerOtp(db.client, {
+        email: "owner@example.com",
+        ageBand: "AGE_13_TO_15",
+        mode: "sign_up",
+        legalVersion: "2026-10-01",
+        acceptedTerms: true,
+        acknowledgedPrivacyNotice: true,
+      }),
+    ).rejects.toThrow("Draft legal documents")
+    expect(db.verifications).toHaveLength(0)
   })
 
   test("creates a common login OTP before account access is known", async () => {
@@ -617,6 +777,182 @@ describe("mobile auth queries", () => {
 
     expect(otp.email).toBe("missing-owner@example.com")
     expect(db.verifications).toHaveLength(1)
+    await expect(
+      verifyMobileOwnerOtp(db.client, {
+        code: otp.code,
+        email: "missing-owner@example.com",
+        mode: "login",
+      }),
+    ).rejects.toBeInstanceOf(MobileAccountNotFoundError)
+    expect(db.users).toHaveLength(0)
+    expect(db.sessions).toHaveLength(0)
+  })
+
+  test("production OTP and social login keep an existing account usable without draft signup", async () => {
+    const previousAppEnv = process.env.APP_ENV
+    process.env.APP_ENV = "production"
+    try {
+      const db = createMockMobileAuthDb({
+        users: [
+          {
+            email: "reviewer@example.test",
+            id: "user_reviewer",
+            name: "Review Owner",
+          },
+        ],
+      })
+      const otp = await createMobileOwnerOtp(db.client, {
+        email: "reviewer@example.test",
+        mode: "login",
+      })
+      const otpSession = await verifyMobileOwnerOtp(db.client, {
+        code: otp.code,
+        email: "reviewer@example.test",
+        mode: "login",
+      })
+      expect(otpSession.profile.id).toBe("user_reviewer")
+      const socialSession = await verifyMobileSocialIdentity(db.client, {
+        email: "reviewer@example.test",
+        mode: "login",
+        provider: "google",
+        providerAccountId: "google-reviewer",
+      })
+      expect(socialSession.profile.id).toBe("user_reviewer")
+      expect(db.users).toHaveLength(1)
+      expect(db.users[0]?.name).toBe("Review Owner")
+    } finally {
+      process.env.APP_ENV = previousAppEnv ?? ""
+    }
+  })
+
+  test("returning Apple login resolves its linked account when Apple omits email", async () => {
+    const db = createMockMobileAuthDb({
+      users: [
+        {
+          email: "relay@privaterelay.appleid.com",
+          id: "user-apple",
+          name: "Apple Owner",
+        },
+      ],
+      accounts: [
+        {
+          accountId: "apple-subject",
+          provider: "apple",
+          providerAccountId: "apple-subject",
+          providerId: "apple",
+          userId: "user-apple",
+        },
+      ],
+    })
+    const session = await verifyMobileAppleIdentity(db.client, {
+      mode: "login",
+      providerAccountId: "apple-subject",
+      encryptedRefreshToken: "encrypted-refresh-token",
+      clientId: "com.ewatrade.app",
+    })
+    expect(session.profile.id).toBe("user-apple")
+    expect(db.users).toHaveLength(1)
+    expect(db.accounts[0]).toMatchObject({
+      refreshToken: "encrypted-refresh-token",
+      scope: "com.ewatrade.app",
+    })
+  })
+
+  test("returning social login keeps the linked user's profile when provider email belongs to another user", async () => {
+    const db = createMockMobileAuthDb({
+      users: [
+        {
+          email: "original@example.test",
+          emailVerified: false,
+          id: "user-linked",
+          name: "Original Owner",
+        },
+        {
+          email: "changed@example.test",
+          id: "user-other",
+          name: "Other Owner",
+        },
+      ],
+      accounts: [
+        {
+          accountId: "google-subject",
+          provider: "google",
+          providerAccountId: "google-subject",
+          providerId: "google",
+          userId: "user-linked",
+        },
+      ],
+    })
+    const session = await verifyMobileGoogleIdentity(db.client, {
+      mode: "login",
+      email: "changed@example.test",
+      name: "Changed Provider Name",
+      providerAccountId: "google-subject",
+    })
+
+    expect(session.profile).toMatchObject({
+      email: "original@example.test",
+      id: "user-linked",
+      name: "Original Owner",
+    })
+    expect(db.users).toEqual([
+      expect.objectContaining({
+        email: "original@example.test",
+        emailVerified: false,
+        id: "user-linked",
+        name: "Original Owner",
+      }),
+      expect.objectContaining({
+        email: "changed@example.test",
+        id: "user-other",
+        name: "Other Owner",
+      }),
+    ])
+    expect(db.accounts[0]?.userId).toBe("user-linked")
+  })
+
+  test("first Apple link uses verified email to reach an existing account", async () => {
+    const db = createMockMobileAuthDb({
+      users: [
+        {
+          email: "owner@example.com",
+          id: "user-owner",
+          name: "Existing Owner",
+        },
+      ],
+    })
+    const session = await verifyMobileAppleIdentity(db.client, {
+      mode: "login",
+      email: "owner@example.com",
+      providerAccountId: "apple-new-link",
+      encryptedRefreshToken: "encrypted-refresh-token",
+      clientId: "com.ewatrade.app",
+    })
+    expect(session.profile.id).toBe("user-owner")
+    expect(db.users).toHaveLength(1)
+    expect(db.accounts).toContainEqual(
+      expect.objectContaining({
+        provider: "apple",
+        providerAccountId: "apple-new-link",
+        userId: "user-owner",
+        refreshToken: "encrypted-refresh-token",
+      }),
+    )
+  })
+
+  test("unlinked Apple identity without email cannot create or enter an account", async () => {
+    const db = createMockMobileAuthDb()
+    await expect(
+      verifyMobileAppleIdentity(db.client, {
+        mode: "login",
+        providerAccountId: "unknown-apple-subject",
+        encryptedRefreshToken: "encrypted-refresh-token",
+        clientId: "com.ewatrade.app",
+      }),
+    ).rejects.toThrow("did not provide an email")
+    expect(db.users).toHaveLength(0)
+    expect(db.accounts).toHaveLength(0)
+    expect(db.sessions).toHaveLength(0)
   })
 
   test("creates a common login OTP for a User with Business access", async () => {
@@ -729,6 +1065,7 @@ describe("mobile auth queries", () => {
 
   test("verifies a returning owner OTP into the active business session context", async () => {
     const user = {
+      ageBand: "ADULT",
       email: "owner@example.com",
       id: "user_owner",
       name: "Owner Name",
@@ -783,10 +1120,105 @@ describe("mobile auth queries", () => {
       storeId: "store_123",
       storeName: "Main Market Store",
     })
+    expect(db.users[0]?.name).toBe("Owner Name")
+  })
+
+  test("legacy undeclared owner OTP login issues only a limited session", async () => {
+    const user = {
+      ageBand: "UNDECLARED",
+      email: "legacy-owner@example.com",
+      id: "legacy_owner",
+      name: "Legacy Owner",
+    }
+    const db = createMockMobileAuthDb({
+      memberships: [
+        {
+          role: "OWNER",
+          status: "ACTIVE",
+          tenant: {
+            id: "legacy_tenant",
+            name: "Legacy Store",
+            slug: "legacy-store",
+            stores: [],
+          },
+          userId: user.id,
+        },
+      ],
+      users: [user],
+    })
+    const otp = await createMobileOwnerOtp(db.client, {
+      email: user.email,
+      mode: "login",
+    })
+
+    const session = await verifyMobileOwnerOtp(db.client, {
+      code: otp.code,
+      email: user.email,
+      mode: "login",
+    })
+
+    expect(session.accessProfile).toEqual({
+      hasBusinessAccess: false,
+      hasCustomerHistory: false,
+    })
+    expect(session.tenant).toBeNull()
+    expect(session.profile.businessId).toBeNull()
+    expect(db.sessions).toHaveLength(1)
+  })
+
+  test("legacy undeclared password account receives a limited session", async () => {
+    const db = createMockMobileAuthDb({
+      users: [
+        {
+          ageBand: "UNDECLARED",
+          email: "legacy-password@example.com",
+          emailVerified: true,
+          id: "legacy_password",
+          name: "Legacy Password",
+        },
+      ],
+    })
+
+    const session = await createMobileSessionForVerifiedUser(
+      db.client,
+      "legacy_password",
+    )
+    expect(session.accessProfile).toEqual({
+      hasBusinessAccess: false,
+      hasCustomerHistory: false,
+    })
+    expect(session.tenant).toBeNull()
+    expect(db.sessions).toHaveLength(1)
+  })
+
+  test("legacy undeclared social login receives no workspace access", async () => {
+    const db = createMockMobileAuthDb({
+      users: [
+        {
+          ageBand: "UNDECLARED",
+          email: "legacy-social@example.com",
+          id: "legacy_social",
+          name: "Legacy Social",
+        },
+      ],
+    })
+
+    const session = await verifyMobileGoogleIdentity(db.client, {
+      email: "legacy-social@example.com",
+      mode: "login",
+      providerAccountId: "legacy-google-id",
+    })
+    expect(session.accessProfile).toEqual({
+      hasBusinessAccess: false,
+      hasCustomerHistory: false,
+    })
+    expect(session.tenant).toBeNull()
+    expect(db.sessions).toHaveLength(1)
   })
 
   test("verifies a customer-linked User into the common session without inventing Business access", async () => {
     const user = {
+      ageBand: "ADULT",
       email: "customer@example.com",
       id: "user_customer",
       name: "Customer Name",
@@ -827,6 +1259,7 @@ describe("mobile auth queries", () => {
       businessName: " Main Market Store ",
       currencyCode: "GHS",
       email: "new-owner@example.com",
+      ageBand: "AGE_13_TO_15",
       mode: "sign_up",
       name: " New Owner ",
       operatingModel: "products",
@@ -837,7 +1270,13 @@ describe("mobile auth queries", () => {
     const session = await verifyMobileOwnerOtp(db.client, {
       code: otp.code,
       email: "new-owner@example.com",
+      ageBand: "AGE_13_TO_15",
       mode: "sign_up",
+    })
+
+    expect(db.users[0]).toMatchObject({
+      ageBand: "AGE_13_TO_15",
+      ageDeclaredAt: expect.any(Date),
     })
 
     expect(db.tenants).toEqual([
@@ -911,6 +1350,7 @@ describe("mobile auth queries", () => {
     const otp = await createMobileOwnerOtp(db.client, {
       businessName: "Jawdah",
       email: "jawdah@ishaq.qa.test",
+      ageBand: "AGE_13_TO_15",
       mode: "sign_up",
       name: "Ishaq Yusuf",
       phone: businessPhone,
@@ -920,6 +1360,7 @@ describe("mobile auth queries", () => {
       businessName: "Jawdah",
       code: otp.code,
       email: "jawdah@ishaq.qa.test",
+      ageBand: "AGE_13_TO_15",
       mode: "sign_up",
       name: "Ishaq Yusuf",
       phone: businessPhone,
@@ -942,26 +1383,27 @@ describe("mobile auth queries", () => {
     ])
   })
 
-  test("creates a common Google identity without Business access", async () => {
-    const db = createMockMobileAuthDb()
-
-    const session = await verifyMobileGoogleIdentity(db.client, {
-      email: "new-owner@example.com",
-      mode: "login",
-      name: "New Owner",
-      providerAccountId: "google-new-owner",
-    })
-
-    expect(session.accessProfile).toEqual({
-      hasBusinessAccess: false,
-      hasCustomerHistory: false,
-    })
-    expect(db.accounts).toHaveLength(1)
-    expect(db.sessions).toHaveLength(1)
+  test("first-time Google and Apple login cannot create an account without signup choices", async () => {
+    for (const provider of ["google", "apple"] as const) {
+      const db = createMockMobileAuthDb()
+      await expect(
+        verifyMobileSocialIdentity(db.client, {
+          email: "new-owner@example.com",
+          mode: "login",
+          name: "New Owner",
+          provider,
+          providerAccountId: `${provider}-new-owner`,
+        }),
+      ).rejects.toBeInstanceOf(MobileAccountNotFoundError)
+      expect(db.users).toHaveLength(0)
+      expect(db.accounts).toHaveLength(0)
+      expect(db.sessions).toHaveLength(0)
+    }
   })
 
   test("links an existing owner email to Google and returns the active business session context", async () => {
     const user = {
+      ageBand: "ADULT",
       email: "owner@example.com",
       id: "user_owner",
       name: "Existing Owner",
@@ -1043,12 +1485,18 @@ describe("mobile auth queries", () => {
       currencyCode: "USD",
       email: "new-google-owner@example.com",
       idToken: "new-google-id-token",
+      ageBand: "AGE_13_TO_15",
       mode: "sign_up",
       name: " New Google Owner ",
       operatingModel: "services",
       orderChannels: ["walk_in", "phone_whatsapp"],
       providerAccountId: " new-google-owner ",
       teamSize: "2_5",
+    })
+
+    expect(db.users[0]).toMatchObject({
+      ageBand: "AGE_13_TO_15",
+      ageDeclaredAt: expect.any(Date),
     })
 
     expect(db.accounts).toEqual([
@@ -1106,5 +1554,29 @@ describe("mobile auth queries", () => {
       storeId: "store_1",
       storeName: "Main Market Store",
     })
+  })
+
+  test("does not overwrite an existing account age during social signup", async () => {
+    const db = createMockMobileAuthDb({
+      users: [
+        {
+          ageBand: "ADULT",
+          ageDeclaredAt: new Date("2026-09-01T00:00:00.000Z"),
+          email: "owner@example.com",
+          id: "user_1",
+          name: "Owner",
+        },
+      ],
+    })
+
+    await expect(
+      verifyMobileGoogleIdentity(db.client, {
+        ageBand: "AGE_13_TO_15",
+        email: "owner@example.com",
+        mode: "sign_up",
+        providerAccountId: "google-owner-id",
+      }),
+    ).rejects.toThrow("age range is already set")
+    expect(db.users[0]?.ageBand).toBe("ADULT")
   })
 })

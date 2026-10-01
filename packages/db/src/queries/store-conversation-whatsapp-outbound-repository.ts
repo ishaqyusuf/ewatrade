@@ -101,6 +101,16 @@ export async function prepareStoreConversationWhatsAppOutboundAttemptInTransacti
     tenantId: string
   },
 ) {
+  const allowed = await tx.storeConversation.findFirst({
+    select: { id: true },
+    where: {
+      id: input.conversationId,
+      tenantId: input.tenantId,
+      storeId: input.storeId,
+      customerBlockedAt: null,
+    },
+  })
+  if (!allowed) return null
   const routes = await loadCurrentOutboundRoutes(tx, input)
   const current = [
     ...routes.bridges.map((route) => ({ kind: "bridge" as const, route })),
@@ -181,6 +191,32 @@ export async function claimStoreConversationWhatsAppOutboundAttempt(
         where: { id: input.attemptId },
       })
     if (!attempt) return null
+    const conversation = await tx.storeConversation.findFirst({
+      select: { customerBlockedAt: true },
+      where: {
+        id: attempt.conversationId,
+        tenantId: attempt.tenantId,
+        storeId: attempt.storeId,
+      },
+    })
+    if (!conversation || conversation.customerBlockedAt) {
+      await tx.storeConversationWhatsAppOutboundAttempt.updateMany({
+        data: {
+          status: StoreConversationWhatsAppOutboundAttemptStatus.CANCELLED,
+          failureCode: "customer_blocked",
+        },
+        where: {
+          id: attempt.id,
+          status: {
+            in: [
+              StoreConversationWhatsAppOutboundAttemptStatus.PENDING,
+              StoreConversationWhatsAppOutboundAttemptStatus.FAILED,
+            ],
+          },
+        },
+      })
+      return null
+    }
     if (
       attempt.status ===
         StoreConversationWhatsAppOutboundAttemptStatus.CLAIMED ||

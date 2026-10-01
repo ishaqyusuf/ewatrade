@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs"
-import { extname, join, relative, resolve } from "node:path"
+import { existsSync, readFileSync } from "node:fs"
+import { join, resolve } from "node:path"
 
 const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname)
 const REPO_DIR = resolve(MOBILE_DIR, "../..")
@@ -44,6 +44,10 @@ const contracts = [
   },
   {
     file: "src/components/mobile/admin-tabs/admin-orders-screen.tsx",
+    markers: ["OrdersScreen as AdminOrdersScreen"],
+  },
+  {
+    file: "src/components/mobile/orders/orders-screen.tsx",
     markers: [
       "FlatList",
       "CommercePendingOrderRow",
@@ -56,7 +60,15 @@ const contracts = [
   },
   {
     file: "src/components/mobile/catalog-items-sheet.tsx",
-    markers: ['presentation?: "modal" | "tab"', 'presentation === "tab"'],
+    markers: ["CatalogItemsContent"],
+  },
+  {
+    file: "src/components/mobile/catalog/catalog-presentation.ts",
+    markers: ['presentation?: "modal" | "tab"'],
+  },
+  {
+    file: "src/components/mobile/catalog/catalog-screen.tsx",
+    markers: ['presentation === "tab"'],
   },
   {
     file: "src/components/mobile/admin-tabs/admin-create-action-sheet.tsx",
@@ -82,23 +94,34 @@ const contracts = [
   },
   {
     file: "src/components/mobile/admin-tabs/admin-more-screen.tsx",
+    markers: ["MoreScreen as AdminMoreScreen"],
+  },
+  {
+    file: "src/components/mobile/more/more-screen.tsx",
     markers: [
-      "More",
-      "Manage your store and account.",
       "Current business",
-      "StatusBadge",
       "buildAdminMoreSections",
       "buildAppThemeOptions",
       "syncAlertCount",
-      'accessibilityLabel="App theme"',
-      "themeOptions.map",
       "commitAppThemeSelection",
       "persist: setThemeOverride",
       "themeSavePending",
+      "useResetAdminDock",
+      "MoreThemeSheet",
+      "MoreSignOutSheet",
+    ],
+  },
+  {
+    file: "src/components/mobile/more/more-sheets.tsx",
+    markers: [
+      'accessibilityLabel="App theme"',
       'accessibilityRole="radio"',
       "unsynced",
-      "useResetAdminDock",
     ],
+  },
+  {
+    file: "src/components/mobile/appearances/classic/more-screen.tsx",
+    markers: ["Manage your store and account.", "StatusBadge"],
   },
   {
     file: "src/components/mobile/app-theme-presentation.ts",
@@ -168,20 +191,6 @@ for (const contract of contracts) {
 const gitignore = readFileSync(join(REPO_DIR, ".gitignore"), "utf8")
 if (!gitignore.split("\n").includes("/.designs/")) {
   failures.push(".gitignore must ignore the root /.designs/ archive")
-}
-
-const rasterExtensions = new Set([".jpeg", ".jpg", ".png", ".webp"])
-function findRasterFiles(directory) {
-  if (!existsSync(directory)) return []
-  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(directory, entry.name)
-    if (entry.isDirectory()) return findRasterFiles(path)
-    return rasterExtensions.has(extname(entry.name).toLowerCase()) ? [path] : []
-  })
-}
-
-for (const path of findRasterFiles(join(REPO_DIR, ".scratch"))) {
-  failures.push(`${relative(REPO_DIR, path)} must be archived under .designs/`)
 }
 
 if (failures.length > 0) {

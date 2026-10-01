@@ -31,6 +31,7 @@ import {
   StoreConversationModerationState,
 } from "../../generated/prisma/enums"
 import { runStoreConversationActionTransaction } from "./store-conversation-action-transaction"
+import { assertCustomerAccountAgeAuthority } from "./store-conversation-age-authority"
 import {
   StoreConversationError,
   digestStoreConversationValue,
@@ -650,6 +651,7 @@ export async function listStoreConversationAccountConversations(
   const cursor = decodeCandidateCursor(parsed.cursor)
   return runStoreConversationActionTransaction(db, async (tx) => {
     await assertAccountUser(tx, input.accountUserId)
+    await assertCustomerAccountAgeAuthority(tx, input.accountUserId)
     const rows = await tx.storeConversationAccountAccess.findMany({
       include: {
         conversation: {
@@ -784,6 +786,7 @@ async function linkAccountConversationsTransaction(
 ): Promise<AccountCommandResult<StoreConversationAccountLinkProjection>> {
   const now = new Date()
   await assertAccountUser(tx, input.accountUserId)
+  await assertCustomerAccountAgeAuthority(tx, input.accountUserId)
   await lockAccountUser(tx, input.accountUserId)
   let credential = await resolveStoreConversationGuestCredential(tx, {
     credentialToken: input.credentialToken,
@@ -956,7 +959,9 @@ async function linkAccountConversationsTransaction(
   const conflict = conversations.find(
     (conversation) =>
       conversation.accountAccess &&
-      conversation.accountAccess.accountUserId !== input.accountUserId,
+      (conversation.accountAccess.accountUserId !== input.accountUserId ||
+        conversation.accountAccess.status !==
+          StoreConversationAccountAccessStatus.ACTIVE),
   )
   if (conflict) {
     await recordDeniedAccountAudit(tx, {
@@ -976,7 +981,10 @@ async function linkAccountConversationsTransaction(
     })
     return {
       code: "CONFLICT",
-      message: "One conversation is already linked to another account.",
+      message:
+        conflict.accountAccess?.accountUserId === input.accountUserId
+          ? "This conversation is no longer available for account linking."
+          : "One conversation is already linked to another account.",
       ok: false,
     }
   }
@@ -1013,10 +1021,9 @@ async function linkAccountConversationsTransaction(
     }
   }
   const existingForStores = await tx.storeConversationAccountAccess.findMany({
-    select: { conversationId: true, storeId: true },
+    select: { conversationId: true, status: true, storeId: true },
     where: {
       accountUserId: input.accountUserId,
-      status: StoreConversationAccountAccessStatus.ACTIVE,
       storeId: { in: storeIds },
     },
   })
@@ -1048,7 +1055,9 @@ async function linkAccountConversationsTransaction(
     return {
       code: "CONFLICT",
       message:
-        "This account already has another active conversation with the Store.",
+        storeConflict.status === StoreConversationAccountAccessStatus.REVOKED
+          ? "This Store account link was revoked and cannot be linked again."
+          : "This account already has another active conversation with the Store.",
       ok: false,
     }
   }

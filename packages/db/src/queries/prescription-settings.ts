@@ -7,6 +7,7 @@ import {
   PrescriptionStoreRoleType,
 } from "../../generated/prisma/enums"
 import { recordPrescriptionSensitiveAccess } from "./prescription-compliance"
+import { isPrescriptionProductionLaunchApproved } from "./prescription-launch-gate"
 import { evaluateServiceCommercePolicyBatchInTransaction } from "./service-commerce-policy"
 
 export type PrescriptionStoreRoleInput = "attendant" | "pharmacist"
@@ -27,6 +28,15 @@ export class PrescriptionCommerceError extends Error {
     super(message)
     this.name = "PrescriptionCommerceError"
     this.code = code
+  }
+}
+
+function assertPrescriptionProductionLaunchApproved() {
+  if (!isPrescriptionProductionLaunchApproved()) {
+    throw new PrescriptionCommerceError(
+      "PRESCRIPTION_NOT_READY",
+      "Prescription Commerce requires platform launch approval.",
+    )
   }
 }
 
@@ -666,6 +676,7 @@ export async function setPrescriptionStoreActivation(
     tenantId: string
   },
 ) {
+  if (input.active) assertPrescriptionProductionLaunchApproved()
   await requireStore(db, input)
   await db.$transaction(async (tx) => {
     const settings = await ensureSettings(tx, input)
@@ -778,6 +789,7 @@ export async function assertActivePrescriptionStore(
   db: PrismaClient | Prisma.TransactionClient,
   input: { storeId: string; tenantId: string },
 ) {
+  assertPrescriptionProductionLaunchApproved()
   const settings = await db.prescriptionStoreSettings.findFirst({
     where: {
       status: PrescriptionCommerceStoreStatus.ACTIVE,

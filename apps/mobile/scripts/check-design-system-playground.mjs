@@ -92,6 +92,10 @@ const requiredFiles = [
   },
   {
     file: "src/app/login.tsx",
+    markers: ["LoginScreen"],
+  },
+  {
+    file: "src/components/mobile/login/login-screen.tsx",
     markers: [
       "DevDesignSystemShortcut",
       "shouldShowInternalDesignSystemEntry",

@@ -2,8 +2,11 @@ const { withNativewind } = require("nativewind/metro")
 const { resolve, sep } = require("node:path")
 const { getSentryExpoConfig } = require("@sentry/react-native/metro")
 const {
+  createProductionDesignReferenceAliases,
   createProductionQaAliases,
   isInternalQaBuild,
+  resolveDesignReferenceAlias,
+  resolveProductionInternalDesignAssetAlias,
 } = require("./qa-build-aliases.cjs")
 
 /** @type {import('expo/metro-config').MetroConfig} */
@@ -16,6 +19,8 @@ const nativewindConfig = withNativewind(config, {
 const designRoot = resolve(__dirname, "../../.design")
 const internalQaBuild = isInternalQaBuild()
 const productionQaAliases = createProductionQaAliases(__dirname)
+const productionDesignReferenceAliases =
+  createProductionDesignReferenceAliases(__dirname)
 
 nativewindConfig.watchFolders = Array.from(
   new Set([...(nativewindConfig.watchFolders ?? []), designRoot]),
@@ -68,11 +73,29 @@ nativewindConfig.resolver.resolveRequest = (context, moduleName, platform) => {
   const shouldUseAppSingleton =
     singletonPackage && isNodeModulesOrigin(originModulePath)
 
+  const designReferenceAlias = resolveDesignReferenceAlias(
+    moduleName,
+    designRoot,
+    productionDesignReferenceAliases,
+    internalQaBuild,
+  )
+  if (designReferenceAlias) {
+    return { type: "sourceFile", filePath: designReferenceAlias }
+  }
+
+  const internalDesignAssetAlias = resolveProductionInternalDesignAssetAlias(
+    moduleName,
+    __dirname,
+    internalQaBuild,
+  )
+  if (internalDesignAssetAlias) {
+    return { type: "sourceFile", filePath: internalDesignAssetAlias }
+  }
+
   if (!internalQaBuild) {
     const productionAlias = productionQaAliases.get(moduleName)
-    if (productionAlias) {
+    if (productionAlias)
       return { type: "sourceFile", filePath: productionAlias }
-    }
   }
 
   if (shouldUseAppSingleton) {

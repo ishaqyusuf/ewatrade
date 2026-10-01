@@ -1,4 +1,3 @@
-import { AnalyticsRuntime } from "@/runtime/analytics-runtime"
 import FontAwesome from "@expo/vector-icons/FontAwesome"
 import { ThemeProvider } from "@react-navigation/native"
 import * as Sentry from "@sentry/react-native"
@@ -18,6 +17,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler"
 
 import { AppAutoUpdateModal } from "@/components/app-auto-update-modal"
 import { FloatingThemeToggle } from "@/components/mobile"
+import { AccountAgeStartupGate } from "@/components/mobile/account-age-startup-gate"
 import { AppLockGate } from "@/components/mobile/app-lock-gate"
 import { QaAuthorizationSheet } from "@/components/mobile/qa-authorization-sheet"
 import { StartupSplashGate } from "@/components/mobile/startup-splash-gate"
@@ -31,8 +31,8 @@ import { isInvitedStaffProfile, isSalesRepRole } from "@/lib/mobile-roles"
 import { nativewindThemeVars } from "@/lib/nativewind-theme-vars"
 import { NAV_THEME } from "@/lib/theme"
 import { getThemeOverride } from "@/lib/theme-preference"
-import { hydrateMobileDesign } from "@/store/mobile-design-store"
 import { initMobileObservability } from "@/observability/sentry"
+import { hydrateMobileDesign } from "@/store/mobile-design-store"
 import {
   pendingOfflineCommands,
   useOfflineCommandStore,
@@ -83,10 +83,9 @@ function RootLayout() {
         .then(applyThemeOverride)
         .catch(() => applyThemeOverride("system")),
       hydrateMobileDesign(),
-    ])
-      .finally(() => {
-        if (mounted) setThemeReady(true)
-      })
+    ]).finally(() => {
+      if (mounted) setThemeReady(true)
+    })
     return () => {
       mounted = false
     }
@@ -189,6 +188,10 @@ const InitialLayout = () => {
         </Stack.Protected>
         <Stack.Protected guard={isAuthenticated}>
           <Stack.Screen name="no-access" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="account-privacy"
+            options={{ headerShown: false }}
+          />
         </Stack.Protected>
         <Stack.Protected
           guard={isAuthenticated && !isInvitedStaff && canManageTenant}
@@ -422,33 +425,34 @@ function RootLayoutNav() {
           <View className="flex-1 bg-background" testID="ewatrade-react-root">
             <ThemeProvider value={navigationTheme}>
               <AuthProvider value={auth}>
-                <AnalyticsRuntime />
                 <TRPCReactProvider>
-                  <QaAcceleratorProvider>
-                    <AppLockProvider>
-                      <ToastProviderWithViewport>
-                        <BottomSheetModalProvider>
-                          {hasPresentedStartupSplash ? (
-                            <>
-                              <FlashMessage position="top" />
-                              <InitialLayout />
-                              <AppLockGate />
-                              <AppAutoUpdateModal />
-                              {shouldShowFloatingThemeToggle() ? (
-                                <FloatingThemeToggle />
-                              ) : null}
-                            </>
-                          ) : (
-                            <StartupSplashGate
-                              onComplete={() =>
-                                setHasPresentedStartupSplash(true)
-                              }
-                            />
-                          )}
-                        </BottomSheetModalProvider>
-                      </ToastProviderWithViewport>
-                    </AppLockProvider>
-                  </QaAcceleratorProvider>
+                  <AccountAgeStartupGate>
+                    <QaAcceleratorProvider>
+                      <AppLockProvider>
+                        <ToastProviderWithViewport>
+                          <BottomSheetModalProvider>
+                            {hasPresentedStartupSplash ? (
+                              <>
+                                <FlashMessage position="top" />
+                                <InitialLayout />
+                                <AppLockGate />
+                                <AppAutoUpdateModal />
+                                {shouldShowFloatingThemeToggle() ? (
+                                  <FloatingThemeToggle />
+                                ) : null}
+                              </>
+                            ) : (
+                              <StartupSplashGate
+                                onComplete={() =>
+                                  setHasPresentedStartupSplash(true)
+                                }
+                              />
+                            )}
+                          </BottomSheetModalProvider>
+                        </ToastProviderWithViewport>
+                      </AppLockProvider>
+                    </QaAcceleratorProvider>
+                  </AccountAgeStartupGate>
                 </TRPCReactProvider>
               </AuthProvider>
             </ThemeProvider>

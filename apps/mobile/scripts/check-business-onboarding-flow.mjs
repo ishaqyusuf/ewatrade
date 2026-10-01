@@ -27,15 +27,21 @@ const checks = [
   {
     file: "components/mobile/business-switch-sheet.tsx",
     markers: [
+      'from "./business-switch/business-switch-screen"',
+      "BusinessSwitchSheet",
+    ],
+  },
+  {
+    file: "components/mobile/business-switch/business-switch-screen.tsx",
+    markers: [
       "BUSINESS_SWITCH_COPY",
-      "getBusinessSwitchRowPresentation",
+      "useBusinessSwitch",
       "ListCreateFab",
       'accessibilityLabel="Add a new business"',
       'testID="business-add-fab"',
-      'router.push("/new-business-onboarding-modal"',
-      "presentation.canActivate ? onPress : undefined",
       "onComplete?.()",
-      "onActionPress={() => void productionBusinessesQuery.refetch()}",
+      "onActionPress={() => void vm.refresh()}",
+      "disabled={!vm.canCreate}",
     ],
     forbiddenMarkers: [
       "Current workspace",
@@ -49,22 +55,51 @@ const checks = [
   {
     file: "components/mobile/new-business-onboarding-screen.tsx",
     markers: [
-      "SetupFlowHeader",
-      "KeyboardAwareScrollView",
-      "BUSINESS_PROFILE_SCHEMA_VERSION",
-      "trpc.tenant.createBusiness",
+      'from "./new-business/new-business-screen"',
+      "NewBusinessOnboardingScreen",
+    ],
+  },
+  {
+    file: "components/mobile/business-switch/use-business-switch.ts",
+    markers: [
+      "getBusinessSwitchRowPresentation",
+      'router.push("/new-business-onboarding-modal")',
       "switchMobileBusinessSession",
-      'const STEPS = ["Type", "Profile", "Details", "Review"]',
-      "Choose a business type",
-      "How this business works",
+      "memberships.refetch({ throwOnError: true })",
+      "currentSession()",
+    ],
+  },
+  {
+    file: "components/mobile/new-business/new-business-screen.tsx",
+    markers: [
+      "KeyboardAwareScrollView",
       "Choose a different business type",
       "BottomSearchFooter",
-      "selectBusinessType",
-      "onPress={() => selectBusinessType(profile)}",
-      "setStep(2)",
-      "step === 1 ? null : step < STEPS.length",
-      '"/dashboard"',
+      "onPress={() => model.selectProfile(item)}",
+      "model.step > 1",
+      "model.step === 1",
       "Create and open business",
+    ],
+  },
+  {
+    file: "components/mobile/new-business/new-business-model.ts",
+    markers: [
+      "BUSINESS_PROFILE_SCHEMA_VERSION",
+      'BUSINESS_SETUP_STEPS = ["Type", "Profile", "Details", "Review"]',
+      "Choose a business type",
+      "How this business works",
+      "businessCreateInput",
+    ],
+  },
+  {
+    file: "components/mobile/new-business/use-new-business.ts",
+    markers: [
+      "trpc.tenant.createBusiness",
+      "switchMobileBusinessSession",
+      "changeStep(2)",
+      '"/dashboard"',
+      "businessCreateInput(inputDraft)",
+      "hasScope()",
     ],
   },
 ]

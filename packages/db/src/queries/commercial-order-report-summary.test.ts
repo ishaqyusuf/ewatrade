@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
+import type { PrismaClient } from "../../generated/prisma/client"
 
 import { getCommercialOrderReportSummary } from "./commercial-orders"
-import type { DbClient } from "./types"
 
 describe("Commercial Order report summary", () => {
   test("counts and totals every tenant Order in one aggregate read", async () => {
@@ -16,7 +16,7 @@ describe("Commercial Order report summary", () => {
           }
         },
       },
-    } as unknown as DbClient
+    } as unknown as PrismaClient
 
     await expect(
       getCommercialOrderReportSummary(db, { tenantId: "tenant_123" }),
@@ -38,7 +38,7 @@ describe("Commercial Order report summary", () => {
           _sum: { totalMinor: null },
         }),
       },
-    } as unknown as DbClient
+    } as unknown as PrismaClient
 
     await expect(
       getCommercialOrderReportSummary(db, { tenantId: "tenant_empty" }),

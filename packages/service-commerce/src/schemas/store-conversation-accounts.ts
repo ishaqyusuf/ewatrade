@@ -13,6 +13,9 @@ export const storeConversationCustomerAccountAuthInputSchema = z
     mode: z.enum(["sign_in", "sign_up"]),
     name: z.string().trim().min(1).max(120).optional(),
     password: z.string().min(8).max(128),
+    legalVersion: z.string().trim().min(1).max(64).optional(),
+    acceptedTerms: z.literal(true).optional(),
+    acknowledgedPrivacyNotice: z.literal(true).optional(),
   })
   .strict()
   .superRefine((value, context) => {
@@ -21,6 +24,18 @@ export const storeConversationCustomerAccountAuthInputSchema = z
         code: "custom",
         message: "Enter your name.",
         path: ["name"],
+      })
+    }
+    if (
+      value.mode === "sign_in" &&
+      (value.legalVersion !== undefined ||
+        value.acceptedTerms !== undefined ||
+        value.acknowledgedPrivacyNotice !== undefined)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Legal acceptance is available during signup only.",
+        path: ["legalVersion"],
       })
     }
   })

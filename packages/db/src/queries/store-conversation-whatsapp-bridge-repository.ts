@@ -28,8 +28,15 @@ import {
   WhatsAppBindingStatus,
   WhatsAppConnectionStatus,
 } from "../../generated/prisma/enums"
+import { assertAccountStoreConversationTermsAccepted } from "./store-conversation-account-terms"
 import { runStoreConversationActionTransaction } from "./store-conversation-action-transaction"
+import {
+  assertCustomerAccountAgeAuthority,
+  assertGuestAgeAuthority,
+} from "./store-conversation-age-authority"
 import { resolveStoreConversationChannelProjectionInTransaction } from "./store-conversation-channel-projection"
+import { assertGuestStoreConversationTermsAccepted } from "./store-conversation-guest-terms"
+import type { GuestTermsPublication } from "./store-conversation-guest-terms"
 import { appendStoreConversationWhatsAppCustomerTextInTransaction } from "./store-conversation-whatsapp-message-repository"
 import {
   StoreConversationError,
@@ -85,6 +92,17 @@ type AuthorizedPrincipal =
       guestIdentityId: string
       kind: "guest"
     }
+
+async function assertBridgeAgeAuthority(
+  tx: Prisma.TransactionClient,
+  principal: AuthorizedPrincipal,
+) {
+  if (principal.kind === "account") {
+    await assertCustomerAccountAgeAuthority(tx, principal.accountUserId)
+  } else {
+    await assertGuestAgeAuthority(tx, principal.guestIdentityId)
+  }
+}
 
 type BridgeTokenServices = {
   deriveChoiceToken: (input: {
@@ -210,10 +228,12 @@ async function authorizeBridgePrincipal(
 function assertConversationCurrent(conversation: {
   lifecycle: StoreConversationLifecycle
   moderationState: StoreConversationModerationState
+  customerBlockedAt: Date | null
 }) {
   if (
     conversation.lifecycle !== StoreConversationLifecycle.ACTIVE ||
-    conversation.moderationState !== StoreConversationModerationState.OPEN
+    conversation.moderationState !== StoreConversationModerationState.OPEN ||
+    Boolean(conversation.customerBlockedAt)
   ) {
     throw new StoreConversationWhatsAppBridgeError(
       "NOT_READY",
@@ -345,6 +365,7 @@ export async function issueStoreConversationWhatsAppBridge(
       now,
       principal: input.principal,
     })
+    await assertBridgeAgeAuthority(tx, authorized.principal)
     assertConversationCurrent(authorized.conversation)
     const entry = await resolveStoreConversationEntry(tx, {
       publicToken: input.publicToken,
@@ -456,7 +477,7 @@ export async function issueStoreConversationWhatsAppBridge(
 }
 
 async function assertCapabilityPrincipalCurrent(
-  db: DbClient,
+  db: Prisma.TransactionClient,
   capability: {
     accountAccessId: string | null
     candidateId?: string | null
@@ -466,6 +487,7 @@ async function assertCapabilityPrincipalCurrent(
     storeId: string
     tenantId: string
   },
+  publicationOverride?: GuestTermsPublication,
 ) {
   if (
     ("capabilityId" in capability || "candidateId" in capability) &&
@@ -522,6 +544,17 @@ async function assertCapabilityPrincipalCurrent(
     )
   }
   if (capability.accountAccessId && accountAccess) {
+    await assertAccountStoreConversationTermsAccepted(
+      db,
+      accountAccess.accountUserId,
+      publicationOverride,
+    )
+    await assertBridgeAgeAuthority(db, {
+      accountAccessId: capability.accountAccessId,
+      accountUserId: accountAccess.accountUserId,
+      guestIdentityId: null,
+      kind: "account",
+    })
     return {
       accountAccessId: capability.accountAccessId,
       accountUserId: accountAccess.accountUserId,
@@ -530,6 +563,17 @@ async function assertCapabilityPrincipalCurrent(
     } satisfies AuthorizedPrincipal
   }
   if (capability.guestIdentityId && guestAccess) {
+    await assertGuestStoreConversationTermsAccepted(
+      db,
+      capability.guestIdentityId,
+      publicationOverride,
+    )
+    await assertBridgeAgeAuthority(db, {
+      accountAccessId: null,
+      accountUserId: null,
+      guestIdentityId: capability.guestIdentityId,
+      kind: "guest",
+    })
     return {
       accountAccessId: null,
       accountUserId: null,
@@ -560,6 +604,7 @@ async function appendBridgeSystemMessage(
       id: input.conversationId,
       lifecycle: StoreConversationLifecycle.ACTIVE,
       moderationState: StoreConversationModerationState.OPEN,
+      customerBlockedAt: null,
       storeId: input.storeId,
       tenantId: input.tenantId,
     },
@@ -611,6 +656,7 @@ export async function consumeStoreConversationWhatsAppBridge(
     now?: Date
     tokenServices: BridgeTokenServices
   },
+  publicationOverride?: GuestTermsPublication,
 ) {
   assertDigest(input.bridgeTokenDigest)
   assertDigest(input.externalCustomerIdDigest)
@@ -653,7 +699,11 @@ export async function consumeStoreConversationWhatsAppBridge(
         "This WhatsApp continuation is unavailable.",
       )
     }
-    const principal = await assertCapabilityPrincipalCurrent(tx, current)
+    const principal = await assertCapabilityPrincipalCurrent(
+      tx,
+      current,
+      publicationOverride,
+    )
     const connection = await resolveCurrentWhatsAppBinding(tx, current)
     if (connection.id !== current.connectionId) {
       throw new StoreConversationWhatsAppBridgeError(
@@ -859,6 +909,7 @@ export async function selectStoreConversationWhatsAppBridgeChoice(
     externalCustomerIdDigest: string
     now?: Date
   },
+  publicationOverride?: GuestTermsPublication,
 ) {
   assertDigest(input.choiceTokenDigest)
   assertDigest(input.externalCustomerIdDigest)
@@ -909,13 +960,17 @@ export async function selectStoreConversationWhatsAppBridgeChoice(
         "This WhatsApp choice is unavailable.",
       )
     }
-    const principal = await assertCapabilityPrincipalCurrent(tx, {
-      accountAccessId: current.bridge.accountAccessId,
-      conversationId: current.bridge.conversationId,
-      guestIdentityId: current.bridge.guestIdentityId,
-      storeId: current.bridge.storeId,
-      tenantId: current.bridge.tenantId,
-    })
+    const principal = await assertCapabilityPrincipalCurrent(
+      tx,
+      {
+        accountAccessId: current.bridge.accountAccessId,
+        conversationId: current.bridge.conversationId,
+        guestIdentityId: current.bridge.guestIdentityId,
+        storeId: current.bridge.storeId,
+        tenantId: current.bridge.tenantId,
+      },
+      publicationOverride,
+    )
     const connection = await resolveCurrentWhatsAppBinding(tx, current.bridge)
     if (connection.id !== current.bridge.connectionId) {
       throw new StoreConversationWhatsAppBridgeError(
@@ -1124,6 +1179,7 @@ export async function selectStoreConversationWhatsAppBridgeRequestKind(
     now?: Date
     requestKind: "commerce_inquiry"
   },
+  publicationOverride?: GuestTermsPublication,
 ) {
   assertDigest(input.externalCustomerIdDigest)
   const now = input.now ?? new Date()
@@ -1149,7 +1205,11 @@ export async function selectStoreConversationWhatsAppBridgeRequestKind(
     ) {
       return null
     }
-    const principal = await assertCapabilityPrincipalCurrent(tx, current)
+    const principal = await assertCapabilityPrincipalCurrent(
+      tx,
+      current,
+      publicationOverride,
+    )
     const connection = await resolveCurrentWhatsAppBinding(tx, current)
     if (connection.id !== current.connectionId) {
       throw new StoreConversationWhatsAppBridgeError(
@@ -1274,22 +1334,21 @@ export async function bindStoreConversationWhatsAppBridgeNewRequest(
             storeId: bridge.storeId,
             tenantId: bridge.tenantId,
           })
-    const result =
-      await appendBridgeWhatsAppCustomerText(tx, {
-        auditReasonCode:
-          principal.kind === "account"
-            ? "whatsapp_bridge_account_message"
-            : "whatsapp_bridge_guest_message",
-        now,
-        providerEventDigest: input.providerEventDigest,
-        route: bridge,
-        source: {
-          sourceId: input.sourceId,
-          sourceKind: input.sourceKind,
-          sourceRevision,
-        },
-        text,
-      })
+    const result = await appendBridgeWhatsAppCustomerText(tx, {
+      auditReasonCode:
+        principal.kind === "account"
+          ? "whatsapp_bridge_account_message"
+          : "whatsapp_bridge_guest_message",
+      now,
+      providerEventDigest: input.providerEventDigest,
+      route: bridge,
+      source: {
+        sourceId: input.sourceId,
+        sourceKind: input.sourceKind,
+        sourceRevision,
+      },
+      text,
+    })
     if (!result.replayed) {
       await tx.storeConversationWhatsAppBridge.update({
         data: {

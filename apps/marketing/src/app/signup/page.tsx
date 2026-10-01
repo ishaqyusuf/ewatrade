@@ -6,6 +6,10 @@ import { StepOwner } from "@/components/signup/step-owner"
 import { StepSuccess } from "@/components/signup/step-success"
 import { StepWorkspace } from "@/components/signup/step-workspace"
 import type {
+  PublicLegalPublication,
+  SignupLegalAcceptance,
+} from "@/lib/legal-publication"
+import type {
   BusinessValues,
   OwnerValues,
   WorkspaceValues,
@@ -43,9 +47,25 @@ type SuccessState = {
   storefrontUrl?: string
 }
 
+type EligibleAgeBand = "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT"
+
+const ageChoices: Array<{
+  label: string
+  value: EligibleAgeBand | "UNDER_13"
+}> = [
+  { label: "Under 13", value: "UNDER_13" },
+  { label: "13–15", value: "AGE_13_TO_15" },
+  { label: "16–17", value: "AGE_16_TO_17" },
+  { label: "18 or older", value: "ADULT" },
+]
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SignupPage() {
+  const [entryAgeChoice, setEntryAgeChoice] = useState<
+    EligibleAgeBand | "UNDER_13" | null
+  >(null)
+  const [ageBand, setAgeBand] = useState<EligibleAgeBand | null>(null)
   const [step, setStep] = useState(1)
   const [formState, setFormState] = useState<SignupFormState>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -53,8 +73,46 @@ export default function SignupPage() {
   const [success, setSuccess] = useState<SuccessState | null>(null)
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [accessNotice, setAccessNotice] = useState<string | null>(null)
+  const [legalPublication, setLegalPublication] =
+    useState<PublicLegalPublication | null>(null)
+  const [legalPublicationError, setLegalPublicationError] = useState<
+    string | null
+  >(null)
 
   useEffect(() => {
+    let cancelled = false
+    async function loadLegalPublication() {
+      try {
+        const response = await fetch("/api/legal-publication", {
+          cache: "no-store",
+        })
+        const body = (await response.json()) as PublicLegalPublication
+        if (
+          !response.ok ||
+          typeof body.approved !== "boolean" ||
+          typeof body.signupAvailable !== "boolean" ||
+          (body.approved && !body.version)
+        )
+          throw new Error("Invalid legal publication status")
+        if (!cancelled) {
+          setLegalPublication(body)
+          setLegalPublicationError(null)
+        }
+      } catch {
+        if (!cancelled)
+          setLegalPublicationError(
+            "The current Terms could not be checked. Reload to continue.",
+          )
+      }
+    }
+    void loadLegalPublication()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!ageBand) return
     const token = new URLSearchParams(window.location.search)
       .get("access_token")
       ?.trim()
@@ -120,7 +178,7 @@ export default function SignupPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [ageBand])
 
   // ── Step handlers ──────────────────────────────────────────────────────────
 
@@ -134,12 +192,16 @@ export default function SignupPage() {
     setStep(3)
   }
 
-  async function handleOwner(data: OwnerValues) {
+  async function handleOwner(
+    data: OwnerValues,
+    legalAcceptance?: SignupLegalAcceptance,
+  ) {
     setSubmitError("")
     setIsSubmitting(true)
 
     try {
       const payload = {
+        ageBand,
         addressLine1: formState.business?.addressLine1 ?? "",
         accessToken: accessToken ?? undefined,
         subdomain: formState.workspace?.subdomain ?? "",
@@ -160,6 +222,7 @@ export default function SignupPage() {
         orderChannels: formState.business?.orderChannels ?? [],
         otherBusinessDescription:
           formState.business?.otherBusinessDescription ?? undefined,
+        ...legalAcceptance,
       }
 
       const response = await fetch("/api/auth/signup", {
@@ -208,6 +271,50 @@ export default function SignupPage() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
+  if (!ageBand) {
+    return (
+      <main className="mx-auto grid min-h-[calc(100vh-8rem)] max-w-lg place-content-center gap-4 px-6 pb-16">
+        <section className="grid gap-4 rounded-xl border border-border/70 bg-background p-6 sm:p-8">
+          <h1 className="text-2xl font-semibold">Before creating an account</h1>
+          <p className="text-sm text-muted-foreground">
+            EwaTrade accounts are for people aged 13 or older. Choose your age
+            range before entering account or Store details.
+          </p>
+          <div className="grid gap-2">
+            {ageChoices.map((choice) => (
+              <label
+                className="flex min-h-11 items-center gap-3 rounded-lg border border-border px-3"
+                key={choice.value}
+              >
+                <input
+                  checked={entryAgeChoice === choice.value}
+                  name="account-entry-age"
+                  onChange={() => setEntryAgeChoice(choice.value)}
+                  type="radio"
+                />
+                <span>{choice.label}</span>
+              </label>
+            ))}
+          </div>
+          {entryAgeChoice === "UNDER_13" ? (
+            <output className="text-sm text-muted-foreground">
+              EwaTrade accounts are not available to people under 13.
+            </output>
+          ) : (
+            <button
+              className="min-h-11 rounded-lg bg-primary px-4 font-semibold text-primary-foreground disabled:opacity-50"
+              disabled={!entryAgeChoice}
+              onClick={() => setAgeBand(entryAgeChoice as EligibleAgeBand)}
+              type="button"
+            >
+              Continue
+            </button>
+          )}
+        </section>
+      </main>
+    )
+  }
+
   return (
     <div className="min-h-[calc(100vh-8rem)] px-6 pb-16 sm:px-10">
       <div className="mx-auto max-w-2xl">
@@ -247,6 +354,8 @@ export default function SignupPage() {
               onBack={() => setStep(2)}
               isSubmitting={isSubmitting}
               submitError={submitError}
+              legalPublication={legalPublication}
+              legalPublicationError={legalPublicationError}
             />
           )}
 

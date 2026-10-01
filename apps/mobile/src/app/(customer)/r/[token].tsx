@@ -1,4 +1,4 @@
-import { CustomerConversationDetailScreen } from "@/components/mobile/customer-conversations/customer-conversation-detail-screen"
+import { CustomerConversationEntryAge } from "@/components/mobile/customer-conversations/customer-conversation-entry-age"
 import { oneRouteParam } from "@/lib/customer-conversation-state"
 import { getOrCreatePendingCustomerTransfer } from "@/lib/customer-conversation-store"
 import {
@@ -21,8 +21,7 @@ export default function CustomerStoreEntryRoute() {
     : null
 
   return (
-    <CustomerConversationDetailScreen
-      bootstrap
+    <CustomerConversationEntryAge
       publicToken={publicToken}
       targetCredentialToken={transfer?.targetCredentialToken ?? null}
       transferToken={transfer?.transferToken ?? null}

@@ -6,7 +6,8 @@ export type CustomerConversationListEmptyPresentation =
       sourceLabel: "Chats start from a store link"
       title: "No conversations yet"
     }
-  | { mode: "hidden" | "loading" }
+  | { mode: "hidden" }
+  | { mode: "loading" }
   | {
       actionLabel: "Try again" | "Trying again…"
       icon: "WifiOff"

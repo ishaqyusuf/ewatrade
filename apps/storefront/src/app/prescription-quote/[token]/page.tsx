@@ -3,6 +3,7 @@ import { createHash } from "node:crypto"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { notFound, redirect } from "next/navigation"
 
+import { requirePrescriptionLaunch } from "@/lib/require-prescription-launch"
 import { trpc } from "@/trpc/server"
 
 export const dynamic = "force-dynamic"
@@ -12,6 +13,7 @@ function commandId(prefix: string, token: string) {
 }
 
 async function load(token: string) {
+  requirePrescriptionLaunch()
   try {
     return await trpc.prescriptionAccess.quote.query({ acceptanceToken: token })
   } catch {
@@ -21,6 +23,7 @@ async function load(token: string) {
 
 async function acceptPickup(data: FormData) {
   "use server"
+  requirePrescriptionLaunch()
   const token = String(data.get("token") ?? "")
   try {
     await trpc.prescriptionAccess.acceptPickupQuote.mutate({
@@ -36,6 +39,7 @@ async function acceptPickup(data: FormData) {
 
 async function selectOption(data: FormData) {
   "use server"
+  requirePrescriptionLaunch()
   const token = String(data.get("token") ?? "")
   try {
     await trpc.prescriptionAccess.selectQuoteOption.mutate({
@@ -51,6 +55,7 @@ async function selectOption(data: FormData) {
 
 async function acceptDelivery(data: FormData) {
   "use server"
+  requirePrescriptionLaunch()
   const token = String(data.get("token") ?? "")
   try {
     await trpc.prescriptionAccess.acceptDeliveryQuote.mutate({
@@ -66,6 +71,7 @@ async function acceptDelivery(data: FormData) {
 
 async function payNow(data: FormData) {
   "use server"
+  requirePrescriptionLaunch()
   const token = String(data.get("token") ?? "")
   const statusToken = createHash("sha256")
     .update(`prescription-payment-status:${token}`)
@@ -95,6 +101,7 @@ export default async function Page({
     error?: string
   }>
 }) {
+  requirePrescriptionLaunch()
   const { token } = await params
   const query = await searchParams
   const quote = await load(token)

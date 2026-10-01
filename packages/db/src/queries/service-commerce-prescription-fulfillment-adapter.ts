@@ -16,6 +16,7 @@ import {
   recordPrescriptionPickupException,
   transitionPrescriptionDelivery,
 } from "./prescription-fulfillment"
+import { isPrescriptionProductionLaunchApproved } from "./prescription-launch-gate"
 import {
   ServiceCommerceFulfillmentError,
   getServiceCommerceFulfillmentOrder,
@@ -24,6 +25,12 @@ import {
 function assertPrescriptionSource(
   command: ServiceCommerceDeliveryCommand | ServiceCommercePickupCommand,
 ) {
+  if (!isPrescriptionProductionLaunchApproved()) {
+    throw new ServiceCommerceFulfillmentError(
+      "FULFILLMENT_BLOCKED",
+      "Prescription fulfilment is unavailable.",
+    )
+  }
   if (command.context.source.kind !== "prescription") {
     throw new ServiceCommerceFulfillmentError(
       "SOURCE_MISMATCH",

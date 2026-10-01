@@ -25,6 +25,12 @@ export default function NoAccessRoute() {
         href="/sign-up"
         label="Create your business account"
       />
+      <AuthActionButton
+        onPress={() => router.push("/account-privacy")}
+        variant="ghost"
+      >
+        Account, privacy and deletion
+      </AuthActionButton>
       <AuthActionButton onPress={auth.onLogout} variant="ghost">
         Sign out
       </AuthActionButton>

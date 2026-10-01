@@ -45,6 +45,7 @@ enum StoreConversationAccountInvitationStatus {
 
 enum StoreConversationAccountAccessStatus {
   ACTIVE
+  REVOKED
 }
 
 enum StoreConversationAccountAuditType {
@@ -351,6 +352,7 @@ enum StoreConversationWhatsAppCandidateStatus {
   STARTED_NEW
   REJECTED
   EXPIRED
+  REVOKED
 }
 
 enum StoreConversationWhatsAppCandidateAction {
@@ -538,6 +540,8 @@ enum StoreConversationNotificationAuditType {
 model StoreConversationGuestIdentity {
   id                         String                                           @id @default(cuid())
   status                     StoreConversationGuestIdentityStatus             @default(ACTIVE)
+  ageBand                    AccountAgeBand                                   @default(UNDECLARED)
+  ageDeclaredAt              DateTime?
   lastSeenAt                 DateTime                                         @default(now())
   revokedAt                  DateTime?
   createdAt                  DateTime                                         @default(now())
@@ -558,8 +562,25 @@ model StoreConversationGuestIdentity {
   whatsAppBridges            StoreConversationWhatsAppBridge[]                @relation("StoreConversationWhatsAppBridgeGuest")
   whatsAppBridgeAudits       StoreConversationWhatsAppBridgeAuditEvent[]      @relation("StoreConversationWhatsAppBridgeAuditGuest")
   privacyRequests            StoreConversationPrivacyRequest[]
+  legalAcceptances           StoreConversationGuestLegalAcceptance[]
 
   @@index([status, lastSeenAt])
+}
+
+/// Exact approved platform Terms consent for a device-scoped Guest Identity.
+/// Draft publications cannot create this row. An immutable version/hash pair
+/// makes acceptance replay-safe across credential rotation and app handoff.
+model StoreConversationGuestLegalAcceptance {
+  id              String                         @id @default(cuid())
+  guestIdentityId String
+  version         String
+  documentHash    String
+  surface         String
+  acceptedAt      DateTime                       @default(now())
+  guestIdentity   StoreConversationGuestIdentity @relation(fields: [guestIdentityId], references: [id], onDelete: Restrict)
+
+  @@unique([guestIdentityId, version])
+  @@index([acceptedAt])
 }
 
 /// Purpose-bound bearer credential. Only its SHA-256 digest is persisted.
@@ -639,6 +660,7 @@ model StoreConversation {
   lastActivityAt                DateTime                                         @default(now())
   archivedAt                    DateTime?
   restrictedAt                  DateTime?
+  customerBlockedAt             DateTime?
   updatedAt                     DateTime                                         @updatedAt
   tenant                        Tenant                                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   store                         Store                                            @relation(fields: [storeId], references: [id], onDelete: Restrict)
@@ -654,6 +676,7 @@ model StoreConversation {
   auditEvents                   StoreConversationAuditEvent[]
   moderationCommands            StoreConversationModerationCommand[]
   moderationAuditEvents         StoreConversationModerationAuditEvent[]
+  customerBlockCommands         StoreConversationCustomerBlockCommand[]
   sensitiveReadAuditEvents      StoreConversationSensitiveReadAuditEvent[]
   privacyRequests               StoreConversationPrivacyRequest[]
   guestAccesses                 StoreConversationGuestAccess[]
@@ -682,6 +705,44 @@ model StoreConversation {
   @@index([tenantId, storeId, lifecycle, lastActivityAt])
   @@index([tenantId, storeId, lifecycle, responseDueAt])
   @@index([assignedMembershipId, lifecycle, lastActivityAt])
+}
+
+/// A customer safety report is retained for human review. Details are bounded
+/// and never projected into Store conversation timelines or operator queues.
+model StoreConversationCustomerReport {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  storeId            String
+  conversationId     String
+  messageId          String?
+  principalKind      String
+  principalId        String
+  clientOperationId  String
+  reason             String
+  details            String?
+  status             String   @default("OPEN")
+  createdAt          DateTime @default(now())
+  reviewedByUserId   String?
+  resolvedAt         DateTime?
+
+  @@unique([conversationId, principalKind, principalId, clientOperationId])
+  @@index([status, createdAt])
+  @@index([tenantId, storeId, status, createdAt])
+}
+
+/// Replay receipt for the customer's separate block switch.
+model StoreConversationCustomerBlockCommand {
+  id                 String   @id @default(cuid())
+  conversationId     String
+  principalKind      String
+  principalId        String
+  clientOperationId  String
+  blocked            Boolean
+  resultingBlockedAt DateTime?
+  createdAt          DateTime @default(now())
+  conversation       StoreConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, principalKind, principalId, clientOperationId])
 }
 
 /// Payload-bound successful moderation mutation. Existing Request and message
@@ -943,6 +1004,7 @@ model StoreConversationAccountAccess {
   status                              StoreConversationAccountAccessStatus        @default(ACTIVE)
   linkedAt                            DateTime                                    @default(now())
   lastOpenedAt                        DateTime                                    @default(now())
+  revokedAt                           DateTime?
   createdAt                           DateTime                                    @default(now())
   updatedAt                           DateTime                                    @updatedAt
   tenant                              Tenant                                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -1703,6 +1765,7 @@ model StoreConversationWhatsAppCandidate {
   expiresAt                     DateTime
   selectedAt                    DateTime?
   rejectedAt                    DateTime?
+  revokedAt                     DateTime?
   createdAt                     DateTime                                             @default(now())
   updatedAt                     DateTime                                             @updatedAt
   tenant                        Tenant                                               @relation(fields: [tenantId], references: [id], onDelete: Cascade)

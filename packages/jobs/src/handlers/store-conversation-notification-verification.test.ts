@@ -12,6 +12,10 @@ describe("Store Conversation notification verification", () => {
   test("sends the deterministic code only after a scoped email claim", async () => {
     const calls: Array<{ input: unknown; name: string }> = []
     const result = await runStoreConversationNotificationVerification(payload, {
+      canDeliver: async (input) => {
+        calls.push({ input, name: "canDeliver" })
+        return true
+      },
       claim: async (input) => {
         calls.push({ input, name: "claim" })
         return {
@@ -43,17 +47,21 @@ describe("Store Conversation notification verification", () => {
     expect(result).toEqual({ channel: "email", sent: true })
     expect(calls.map((call) => call.name)).toEqual([
       "claim",
+      "canDeliver",
       "resolve",
       "email",
       "complete",
     ])
-    expect(JSON.stringify(calls[2]?.input)).toMatch(/\d{6}/)
+    expect(JSON.stringify(calls[3]?.input)).toMatch(/\d{6}/)
     expect(JSON.stringify(payload)).not.toContain("customer@example.com")
   })
 
   test("fails WhatsApp verification closed pending the policy-enabled bridge", async () => {
     const failures: unknown[] = []
     const result = await runStoreConversationNotificationVerification(payload, {
+      canDeliver: async () => {
+        throw new Error("must not check email delivery")
+      },
       claim: async () => ({
         channel: "whatsapp",
         destinationCiphertext: "protected-recipient",
@@ -82,6 +90,46 @@ describe("Store Conversation notification verification", () => {
         failureCode: "whatsapp_verification_policy_unavailable",
         terminal: true,
       },
+    ])
+  })
+
+  test("block committed after claim prevents recipient decryption and email send", async () => {
+    const calls: string[] = []
+    const result = await runStoreConversationNotificationVerification(payload, {
+      canDeliver: async () => {
+        calls.push("canDeliver")
+        return false
+      },
+      claim: async () => {
+        calls.push("claim")
+        return {
+          channel: "email",
+          destinationCiphertext: "protected-recipient",
+          expiresAt: new Date("2030-01-01T00:10:00.000Z"),
+          sendAttemptCount: 1,
+          verificationId: payload.verificationId,
+        }
+      },
+      complete: async () => {
+        throw new Error("must not complete")
+      },
+      emailTransport: {
+        send: async () => {
+          throw new Error("must not send")
+        },
+      },
+      fail: async (input) => {
+        calls.push(`${input.failureCode}:${input.terminal}`)
+      },
+      resolveRecipient: () => {
+        throw new Error("must not decrypt")
+      },
+    })
+    expect(result).toBeNull()
+    expect(calls).toEqual([
+      "claim",
+      "canDeliver",
+      "verification_authorization_unavailable:true",
     ])
   })
 })

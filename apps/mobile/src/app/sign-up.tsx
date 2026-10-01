@@ -1,5 +1,5 @@
-import { SignUpScreen } from "@/components/mobile/sign-up/sign-up-screen"
+import { AccountAgeEntry } from "@/components/mobile/sign-up/account-age-entry"
 
 export default function SignUpRoute() {
-  return <SignUpScreen />
+  return <AccountAgeEntry />
 }

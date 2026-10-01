@@ -20,6 +20,7 @@ import {
   PaymentStatus,
 } from "../../generated/prisma/enums"
 import { resolveCommerceQuotePayableState } from "./commerce-quotes"
+import { isPrescriptionProductionLaunchApproved } from "./prescription-launch-gate"
 
 const SOURCE_KIND_BY_TYPE = {
   [CommerceQuoteSourceType.COMMERCE_INQUIRY]: "commerce_inquiry",
@@ -509,6 +510,15 @@ export async function getServiceCommerceFulfillmentOrder(
     actorUserId: string
   },
 ): Promise<ServiceCommerceFulfillmentProjection> {
+  if (
+    input.source.kind === "prescription" &&
+    !isPrescriptionProductionLaunchApproved()
+  ) {
+    throw new ServiceCommerceFulfillmentError(
+      "FULFILLMENT_BLOCKED",
+      "Prescription fulfilment is unavailable.",
+    )
+  }
   return db.$transaction(async (tx) => {
     await assertServiceCommerceFulfillmentAttendantInTransaction(tx, input)
     return resolveServiceCommerceFulfillmentOrderInTransaction(tx, input)

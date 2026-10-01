@@ -278,7 +278,7 @@ const QA_PAUSED_AVAILABILITY: Timeline["availability"] = {
   reason: null,
   recovery: [],
   reopensAt: new Date("2026-08-26T15:00:00.000Z"),
-  state: "manually_paused",
+  state: "unavailable_until",
 }
 
 const QA_MODERATION: Timeline["conversation"]["moderation"] = {

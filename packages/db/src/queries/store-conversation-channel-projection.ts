@@ -7,6 +7,7 @@ import {
   evaluateStoreConversationAvailability,
 } from "@ewatrade/service-commerce"
 
+import { isPrescriptionProductionLaunchApproved } from "./prescription-launch-gate"
 import { evaluateServiceCommercePolicyBatchInTransaction } from "./service-commerce-policy"
 import { projectStoredStoreConversationAvailabilityConfiguration } from "./store-conversation-availability"
 import { projectStoredStoreConversationDesiredMode } from "./store-conversation-channel-mode"
@@ -292,11 +293,14 @@ export async function resolveStoreConversationChannelProjectionInTransaction(
 
   const prescriptionRoles = store.prescriptionRoles ?? []
   const profileReady = profile?.status === "ACTIVE" && profile.intakeEnabled
+  const pharmacyLaunchApproved = isPrescriptionProductionLaunchApproved()
   const pharmacyConfigured =
-    store.prescriptionSettings?.status === "ACTIVE" ||
-    store.prescriptionChannel?.status === "ACTIVE" ||
-    prescriptionRoles.length > 0
+    pharmacyLaunchApproved &&
+    (store.prescriptionSettings?.status === "ACTIVE" ||
+      store.prescriptionChannel?.status === "ACTIVE" ||
+      prescriptionRoles.length > 0)
   const pharmacyProfessionalReady =
+    pharmacyLaunchApproved &&
     store.prescriptionSettings?.status === "ACTIVE" &&
     store.prescriptionChannel?.status === "ACTIVE" &&
     store.prescriptionChannel.webEnabled &&

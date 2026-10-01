@@ -4,6 +4,8 @@ import type { PrismaClient } from "../../generated/prisma/client"
 import {
   assertPrescriptionBreakGlassWindow,
   assertPrescriptionOperationalOrBreakGlassAccess,
+  claimPrescriptionPrivacyRequest,
+  completePrescriptionPrivacyRequest,
   getPrescriptionOperationalAccessState,
   prescriptionRetentionCutoffs,
 } from "./prescription-compliance"
@@ -50,7 +52,7 @@ describe("Prescription compliance controls", () => {
     ).toThrow("within 60 minutes")
   })
 
-  test("applies independent audit and commercial retention boundaries", () => {
+  test("preserves prescription records for at least five years while expiring tokens", () => {
     const now = new Date("2026-08-09T00:00:00.000Z")
     const cutoffs = prescriptionRetentionCutoffs(
       {
@@ -64,12 +66,57 @@ describe("Prescription compliance controls", () => {
       },
       now,
     )
-    expect(cutoffs.auditBefore).toEqual(
-      new Date(now.getTime() - 365 * 86_400_000),
-    )
+    const minimum = new Date("2021-08-09T00:00:00.000Z")
+    expect(cutoffs.auditBefore).toEqual(minimum)
     expect(cutoffs.commercialBefore).toEqual(
       new Date(now.getTime() - 2555 * 86_400_000),
     )
+    expect(cutoffs.mediaBefore).toEqual(minimum)
+    expect(cutoffs.transcriptBefore).toEqual(minimum)
+    expect(cutoffs.messageBefore).toEqual(minimum)
+    expect(cutoffs.addressBefore).toEqual(minimum)
+    expect(cutoffs.tokenBefore).toEqual(
+      new Date(now.getTime() - 30 * 86_400_000),
+    )
+  })
+
+  test("blocks prescription erasure without an approved provider policy", async () => {
+    const db = {
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback(db),
+      prescriptionPrivacyRequest: {
+        findUnique: async () => ({
+          id: "request-1",
+          identityVerifiedAt: new Date(),
+          status: "VERIFIED",
+          store: { prescriptionRetentionPolicy: { legalHold: false } },
+          type: "ERASURE",
+        }),
+      },
+    } as unknown as PrismaClient
+    await expect(
+      claimPrescriptionPrivacyRequest(db, { privacyRequestId: "request-1" }),
+    ).rejects.toThrow("category-aware retention and provider policy")
+  })
+
+  test("cannot bypass the erasure gate by calling completion directly", async () => {
+    const db = {
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback(db),
+    } as unknown as PrismaClient
+    await expect(
+      completePrescriptionPrivacyRequest(db, {
+        actorUserId: "operator-1",
+        deletedMediaIds: [],
+        prescriptionRequestIds: ["request-1"],
+        privacyRequestId: "privacy-1",
+        requestedChanges: null,
+        storeId: "store-1",
+        subjectReference: "request-1",
+        tenantId: "tenant-1",
+        type: "ERASURE",
+      }),
+    ).rejects.toThrow("category-aware retention and provider policy")
   })
 
   test("uses only the actor's active tenant/store break-glass grant and audits use", async () => {

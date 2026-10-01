@@ -1,4 +1,7 @@
 model Tenant {
+  storeBillingAccount                               StoreBillingAccount?
+  playRefundReviewCases                             PlayRefundReviewCase[]
+  storeSubscriptionPurchases                        StoreSubscriptionPurchase[]
   id                                                String                                               @id @default(cuid())
   slug                                              String                                               @unique
   name                                              String
@@ -337,6 +340,8 @@ model LeadCapture {
 }
 
 model User {
+  accountPrivacyRequests                         AccountPrivacyRequest[]
+  legalAcceptances                               LegalAcceptance[]
   id                                             String                                            @id @default(cuid())
   name                                           String                                            @default("")
   email                                          String                                            @unique
@@ -350,6 +355,8 @@ model User {
   displayName                                    String?
   avatarUrl                                      String?
   isPlatformAdmin                                Boolean                                           @default(false)
+  ageBand                                        AccountAgeBand                                    @default(UNDECLARED)
+  ageDeclaredAt                                  DateTime?
   metadata                                       Json?
   createdAt                                      DateTime                                          @default(now())
   updatedAt                                      DateTime                                          @updatedAt

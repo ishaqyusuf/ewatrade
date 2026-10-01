@@ -83,8 +83,14 @@ export function updateCustomerConversationExpiry(value: unknown) {
 }
 
 export function clearCustomerConversationSession() {
-  void SecureStore.deleteItemAsync(CUSTOMER_SESSION_KEY)
-  void SecureStore.deleteItemAsync(CUSTOMER_PENDING_CREDENTIAL_ROTATION_KEY)
+  void clearCustomerConversationSessionAndWait()
+}
+
+export async function clearCustomerConversationSessionAndWait() {
+  await Promise.all([
+    SecureStore.deleteItemAsync(CUSTOMER_SESSION_KEY),
+    SecureStore.deleteItemAsync(CUSTOMER_PENDING_CREDENTIAL_ROTATION_KEY),
+  ])
 }
 
 export type PendingCustomerCredentialRotation = {

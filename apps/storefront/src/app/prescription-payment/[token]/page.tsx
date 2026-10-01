@@ -6,6 +6,8 @@ import {
 import { formatMinorMoney } from "@ewatrade/utils"
 import { notFound } from "next/navigation"
 
+import { requirePrescriptionLaunch } from "@/lib/require-prescription-launch"
+
 export const dynamic = "force-dynamic"
 
 export default async function Page({
@@ -13,6 +15,7 @@ export default async function Page({
 }: {
   params: Promise<{ token: string }>
 }) {
+  requirePrescriptionLaunch()
   const { token } = await params
   const payment = await getPublicPrescriptionPaymentStatus(prisma, {
     statusToken: token,

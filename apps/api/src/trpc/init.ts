@@ -1,12 +1,18 @@
 import { type Session, auth, parseCookieHeader } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
+import { isAccountPrivacyAccessBlocked } from "@ewatrade/db/account-privacy-access"
+import { isLegalSignupSessionBlocked } from "@ewatrade/db/legal-session-access"
 import type { TenantContext } from "@ewatrade/db/queries"
 import {
   getActiveTenantForUser,
+  getCustomerAccountAgeStatus,
   validateQaDerivedSession,
 } from "@ewatrade/db/queries"
 import { toPublicError } from "@ewatrade/errors"
-import { getTrustedQaNetworkSource } from "@ewatrade/utils/qa-network-source"
+import {
+  getTrustedPrivacyNetworkSource,
+  getTrustedQaNetworkSource,
+} from "@ewatrade/utils/qa-network-source"
 import { evaluateQaProviderPolicy } from "@ewatrade/utils/qa-provider-policy"
 import { TRPCError, initTRPC } from "@trpc/server"
 import type { Context } from "hono"
@@ -19,6 +25,7 @@ import { safeCompare } from "../utils/safe-compare"
 type AuthenticatedSession = Session
 
 export type TRPCContext = {
+  requestHeaders: Headers
   db: typeof prisma
   session: AuthenticatedSession | null
   tenantSlug: string | null
@@ -32,6 +39,7 @@ export type TRPCContext = {
   customerConversationInstallation?: string | null
   origin: string | null
   clientIp: string | null
+  privacyClientIp: string | null
   userAgent: string | null
   activeStoreId: string | null
   qaSessionScope: {
@@ -91,7 +99,10 @@ async function getSessionFromBearer(
     },
   })
 
-  if (!session?.user) {
+  if (
+    !session?.user ||
+    (await isAccountPrivacyAccessBlocked(prisma, session.userId))
+  ) {
     return null
   }
 
@@ -128,7 +139,11 @@ export const createTRPCContext = async (
       ? await validateQaDerivedSession(prisma, candidateSession.session.id)
       : { active: true, scope: null }
     : { active: false, scope: null }
-  const session = qaSessionValidation.active ? candidateSession : null
+  const legalSessionAllowed = candidateSession
+    ? !(await isLegalSignupSessionBlocked(prisma, candidateSession.user.id))
+    : false
+  const session =
+    qaSessionValidation.active && legalSessionAllowed ? candidateSession : null
   const internalKey = c.req.header("x-internal-key")
   const expectedInternalKey = process.env.INTERNAL_API_KEY
   const requestCookies = parseCookieHeader(c.req.header("cookie"))
@@ -138,6 +153,7 @@ export const createTRPCContext = async (
     null
 
   return {
+    requestHeaders: c.req.raw.headers,
     db: prisma,
     session,
     tenantSlug,
@@ -153,6 +169,10 @@ export const createTRPCContext = async (
       c.req.header("x-store-conversation-installation") ?? null,
     origin: c.req.header("origin") ?? null,
     clientIp: getTrustedQaNetworkSource({
+      env: process.env,
+      getHeader: (name) => c.req.header(name),
+    }),
+    privacyClientIp: getTrustedPrivacyNetworkSource({
       env: process.env,
       getHeader: (name) => c.req.header(name),
     }),
@@ -244,6 +264,19 @@ const requireGlobalAuthMiddleware = t.middleware(async (opts) => {
   return opts.next({ ctx: { ...opts.ctx, session } })
 })
 
+async function requireEligibleAccountAge(
+  db: TRPCContext["db"],
+  userId: string,
+) {
+  const age = await getCustomerAccountAgeStatus(db, userId)
+  if (!age.eligible) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: "Choose an eligible age range before opening your workspace.",
+    })
+  }
+}
+
 const withTenantPermissionMiddleware = t.middleware(async (opts) => {
   const { session } = opts.ctx
 
@@ -254,6 +287,9 @@ const withTenantPermissionMiddleware = t.middleware(async (opts) => {
     })
   }
 
+  if (!opts.ctx.tenantContext) {
+    await requireEligibleAccountAge(opts.ctx.db, session.user.id)
+  }
   const tenantContext =
     opts.ctx.tenantContext ??
     (await getActiveTenantForUser(opts.ctx.db, {
@@ -351,6 +387,13 @@ export const authenticatedProcedure = publicProcedure.use(
   requireGlobalAuthMiddleware,
 )
 
+export const eligibleAccountProcedure = authenticatedProcedure.use(
+  async (opts) => {
+    await requireEligibleAccountAge(opts.ctx.db, opts.ctx.session.user.id)
+    return opts.next()
+  },
+)
+
 export const platformAdminProcedure = authenticatedProcedure.use(
   async (opts) => {
     if (!opts.ctx.session?.user.isPlatformAdmin) {
@@ -384,6 +427,10 @@ export const protectedOrInternalProcedure = publicProcedure
         code: "UNAUTHORIZED",
         message: "You must be signed in to continue.",
       })
+    }
+
+    if (!opts.ctx.tenantContext) {
+      await requireEligibleAccountAge(opts.ctx.db, session.user.id)
     }
 
     const tenantContext =

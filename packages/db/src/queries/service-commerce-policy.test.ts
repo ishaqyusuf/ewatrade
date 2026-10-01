@@ -138,6 +138,41 @@ const setInput = {
 }
 
 describe("Service Commerce policy decisions", () => {
+  test("production launch gate restricts pharmacy while preserving allowed service", async () => {
+    const previousAppEnv = process.env.APP_ENV
+    const previousApproval = process.env.PRESCRIPTION_COMMERCE_LAUNCH_APPROVED
+    process.env.APP_ENV = "production"
+    process.env.PRESCRIPTION_COMMERCE_LAUNCH_APPROVED = "false"
+    try {
+      const { client } = createDb({
+        decisions: [
+          row(),
+          row({
+            id: "pharmacy-decision",
+            vertical: ServiceCommercePolicyVertical.PHARMACY,
+          }),
+        ],
+      })
+      const results = await evaluateServiceCommercePolicyBatchInTransaction(
+        client as never,
+        {
+          actorUserId: "user-1",
+          purpose: "test",
+          scopes: [scope, { ...scope, vertical: "pharmacy" }],
+          storeId: "store-1",
+          tenantId: "tenant-1",
+        },
+      )
+      expect(results.map((result) => result.outcome)).toEqual([
+        "allowed",
+        "restricted",
+      ])
+    } finally {
+      process.env.APP_ENV = previousAppEnv ?? ""
+      process.env.PRESCRIPTION_COMMERCE_LAUNCH_APPROVED = previousApproval ?? ""
+    }
+  })
+
   test("evaluates an exact tenant/store decision and never returns its private evidence", async () => {
     const { calls, client } = createDb()
     const [evaluation] = await evaluateServiceCommercePolicyBatchInTransaction(

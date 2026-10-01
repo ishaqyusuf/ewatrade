@@ -56,6 +56,7 @@ export function QaQuickFillButton({
   }
 
   function fill() {
+    if (!fixtureFacts) return
     sequence.current += 1
     onFill(
       createQaFixtureContext({

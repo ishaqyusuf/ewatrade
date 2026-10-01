@@ -1,10 +1,9 @@
-import { OtpInput } from "@/components/mobile/otp-input"
-import { OtpKeypad } from "@/components/mobile/otp-keypad"
 import { ClassicVerifyEmailScreen } from "@/components/mobile/appearances/classic/verify-email-screen"
 import { MarketDayVerifyEmailScreen } from "@/components/mobile/appearances/market-day/verify-email-screen"
-import { VerificationResendLine } from "./verification-resend-line"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
+import { OtpInput } from "@/components/mobile/otp-input"
+import { OtpKeypad } from "@/components/mobile/otp-keypad"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { useTRPC } from "@/trpc/client"
 import {
@@ -18,6 +17,7 @@ import { useMutation } from "@tanstack/react-query"
 import * as Clipboard from "expo-clipboard"
 import { useLocalSearchParams } from "expo-router"
 import { useCallback, useEffect, useState } from "react"
+import { VerificationResendLine } from "./verification-resend-line"
 
 const OTP_LENGTH = 6
 
@@ -40,13 +40,17 @@ export function VerifyEmailScreen() {
     (state) => state.completeOnboarding,
   )
   const params = useLocalSearchParams<{
+    acceptedTerms?: string
+    acknowledgedPrivacyNotice?: string
     addressLine1?: string
+    ageBand?: string
     businessProfileKey?: string
     businessProfileVersion?: string
     businessName?: string
     city?: string
     currencyCode?: string
     email?: string
+    legalVersion?: string
     mode?: "login" | "sign-up"
     name?: string
     operatingModel?: string
@@ -60,6 +64,14 @@ export function VerifyEmailScreen() {
   const returnTo = firstParam(params.returnTo)
   const mode = firstParam(params.mode) === "login" ? "login" : "sign-up"
   const apiMode = mode === "login" ? "login" : "sign_up"
+  const ageBandValue = firstParam(params.ageBand)
+  const ageBand =
+    ageBandValue === "AGE_13_TO_15" ||
+    ageBandValue === "AGE_16_TO_17" ||
+    ageBandValue === "ADULT"
+      ? ageBandValue
+      : undefined
+  const legalVersion = firstParam(params.legalVersion)
   const emailDeliveryLabel = email || "your email address"
   const name = firstParam(params.name) ?? "Store Owner"
   const addressLine1 = firstParam(params.addressLine1)
@@ -149,6 +161,7 @@ export function VerifyEmailScreen() {
 
     verifyOtpMutation.mutate({
       addressLine1,
+      ageBand,
       businessProfileKey,
       businessProfileVersion,
       businessName,
@@ -167,6 +180,7 @@ export function VerifyEmailScreen() {
   }, [
     apiMode,
     addressLine1,
+    ageBand,
     businessProfileKey,
     businessProfileVersion,
     businessName,
@@ -237,6 +251,16 @@ export function VerifyEmailScreen() {
     if (requestOtpMutation.isPending || isVerifying) return
 
     requestOtpMutation.mutate({
+      ageBand,
+      ...(legalVersion &&
+      firstParam(params.acceptedTerms) === "true" &&
+      firstParam(params.acknowledgedPrivacyNotice) === "true"
+        ? {
+            acceptedTerms: true as const,
+            acknowledgedPrivacyNotice: true as const,
+            legalVersion,
+          }
+        : {}),
       addressLine1,
       businessProfileKey,
       businessProfileVersion,
@@ -254,6 +278,7 @@ export function VerifyEmailScreen() {
     })
   }, [
     apiMode,
+    ageBand,
     addressLine1,
     businessProfileKey,
     businessProfileVersion,
@@ -261,6 +286,7 @@ export function VerifyEmailScreen() {
     city,
     currencyCode,
     email,
+    legalVersion,
     isVerifying,
     name,
     operatingModel,
@@ -268,6 +294,8 @@ export function VerifyEmailScreen() {
     otherBusinessDescription,
     phone,
     requestOtpMutation,
+    params.acceptedTerms,
+    params.acknowledgedPrivacyNotice,
     teamSize,
   ])
 

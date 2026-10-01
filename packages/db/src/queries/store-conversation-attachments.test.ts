@@ -56,6 +56,12 @@ const entry = {
   webVerticals: { pharmacy: true, service: true },
 }
 
+const approvedTermsFixture = {
+  documentHash: "a".repeat(64),
+  effectiveDate: "2026-09-28",
+  version: "test-approved-terms",
+}
+
 test("authorizes the guest before revealing unavailable attachment capability", async () => {
   let credentialReads = 0
   const client = {
@@ -171,7 +177,15 @@ test("resolves an exact current generic target without exposing guest or private
       },
       update: async () => ({}),
     },
-    storeConversationGuestIdentity: { update: async () => ({}) },
+    storeConversationGuestIdentity: {
+      findUnique: async () => ({ ageBand: "ADULT" }),
+      update: async () => ({}),
+    },
+    storeConversationGuestLegalAcceptance: {
+      findUnique: async () => ({
+        documentHash: approvedTermsFixture.documentHash,
+      }),
+    },
     storeConversationRequestLink: {
       findMany: async () => [
         {
@@ -210,7 +224,10 @@ test("resolves an exact current generic target without exposing guest or private
         },
       },
     },
-    { resolveEntry: async () => entry },
+    {
+      guestTermsPublication: approvedTermsFixture,
+      resolveEntry: async () => entry,
+    },
   )
 
   expect(resolved).toMatchObject({
@@ -419,7 +436,15 @@ describe("conversation attachment commit", () => {
         }),
         update: async () => ({}),
       },
-      storeConversationGuestIdentity: { update: async () => ({}) },
+      storeConversationGuestIdentity: {
+        findUnique: async () => ({ ageBand: "ADULT" }),
+        update: async () => ({}),
+      },
+      storeConversationGuestLegalAcceptance: {
+        findUnique: async () => ({
+          documentHash: approvedTermsFixture.documentHash,
+        }),
+      },
       storeConversationMessage: {
         create: async ({ data }: { data: Record<string, unknown> }) => {
           writes.push({ data, name: "message" })
@@ -456,12 +481,18 @@ describe("conversation attachment commit", () => {
     const first = await appendGuestStoreConversationAttachment(
       dbClient(client),
       input,
-      { resolveEntry: async () => entry },
+      {
+        guestTermsPublication: approvedTermsFixture,
+        resolveEntry: async () => entry,
+      },
     )
     const replay = await appendGuestStoreConversationAttachment(
       dbClient(client),
       input,
-      { resolveEntry: async () => entry },
+      {
+        guestTermsPublication: approvedTermsFixture,
+        resolveEntry: async () => entry,
+      },
     )
 
     expect(first).toMatchObject({ replayed: false })

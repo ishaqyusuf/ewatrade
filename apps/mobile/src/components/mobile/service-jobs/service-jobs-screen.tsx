@@ -125,7 +125,7 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
           <View className="gap-2 px-5 py-3">
             <ServiceAction
               disabled={model.command.pending}
-              onPress={model.command.resume}
+              onPress={() => model.command.resume()}
             >
               {model.command.isAccepted
                 ? "View accepted action"

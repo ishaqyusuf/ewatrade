@@ -246,6 +246,8 @@ export type StoreConversationTimelineProjection = {
   availableRequestKinds: ServiceCommercePublicEntryRequestKind[]
   channelMode: StoreConversationChannelModeProjection
   conversation: {
+    customerBlocked: boolean
+    customerBlockedAt: Date | null
     id: string
     moderation: StoreConversationModerationProjection
     state: "active" | "archived" | "restricted"
@@ -271,6 +273,8 @@ export type StoreConversationGuestMessagesAfterProjection =
     availability: StoreConversationAvailabilityProjection
     channelMode: StoreConversationChannelModeProjection
     moderation: StoreConversationModerationProjection
+    customerBlocked: boolean
+    customerBlockedAt: Date | null
   }
 
 export type StoreConversationCustomerProgressProjection = {

@@ -100,6 +100,27 @@ export function assertStoreConversationComposerEnabled(
   )
 }
 
+export async function assertStoreConversationCustomerNotBlocked(
+  db: DbClient,
+  input: { conversationId: string; storeId: string; tenantId: string },
+) {
+  const allowed = await db.storeConversation.findFirst({
+    select: { id: true },
+    where: {
+      id: input.conversationId,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      customerBlockedAt: null,
+    },
+  })
+  if (!allowed) {
+    throw new StoreConversationError(
+      "FORBIDDEN",
+      "Unblock this Store before continuing the conversation.",
+    )
+  }
+}
+
 export function digestStoreConversationValue(value: string) {
   return createHash("sha256").update(value).digest("hex")
 }

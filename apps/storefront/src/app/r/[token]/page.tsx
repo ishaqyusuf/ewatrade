@@ -1,4 +1,4 @@
-import { StoreConversationWeb } from "@/components/store-conversations/store-conversation-web"
+import { StoreConversationEntryAge } from "@/components/store-conversations/store-conversation-entry-age"
 import { prisma } from "@ewatrade/db"
 import {
   CustomerChannelsError,
@@ -37,7 +37,7 @@ export default async function CustomerEntryPage({ params }: Props) {
   const { token } = await params
   const entryPoint = await loadEntryPoint(token)
   return (
-    <StoreConversationWeb
+    <StoreConversationEntryAge
       publicToken={token}
       storeName={entryPoint.storeName}
     />

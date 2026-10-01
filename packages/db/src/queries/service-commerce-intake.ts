@@ -8,6 +8,7 @@ import {
 import type { PrismaClient } from "../../generated/prisma/client"
 import { createChannelCommerceInquiry } from "./commerce-inquiries"
 import { resolveCustomerEntryPointIntakeContext } from "./customer-channels"
+import { isPrescriptionProductionLaunchApproved } from "./prescription-launch-gate"
 import { submitServiceCommercePrescriptionRequest } from "./prescription-requests"
 import { resolveServiceCommerceCatalogSourceLine } from "./service-commerce-catalog-source"
 import {
@@ -173,6 +174,15 @@ export async function submitServiceCommerceIntake(
   },
 ): Promise<ServiceCommerceIntakeAccepted | ServiceCommerceIntakeRecovery> {
   const envelope = serviceCommerceIntakeEnvelopeSchema.parse(input.envelope)
+  if (
+    envelope.intent.kind === "prescription" &&
+    !isPrescriptionProductionLaunchApproved()
+  ) {
+    throw new ServiceCommerceIntakeError(
+      "FORBIDDEN",
+      "Prescription Commerce is unavailable.",
+    )
+  }
   const scope = await resolveIntakeScope(db, { ...input, envelope })
   const intent = envelope.intent
   if (intent.kind === "exact_product") {

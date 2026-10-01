@@ -14,6 +14,7 @@ import type { Metadata } from "next"
 import { cookies } from "next/headers"
 import { notFound, redirect } from "next/navigation"
 
+import { requirePrescriptionLaunch } from "@/lib/require-prescription-launch"
 import { STORE_CONVERSATION_GUEST_COOKIE } from "@/lib/store-conversation-cookie"
 
 export const dynamic = "force-dynamic"
@@ -39,6 +40,7 @@ function opaqueId(value: string) {
 }
 
 async function loadChannel(token: string) {
+  requirePrescriptionLaunch()
   try {
     return await getPublicPrescriptionChannel(prisma, { publicToken: token })
   } catch (error) {
@@ -49,6 +51,7 @@ async function loadChannel(token: string) {
 
 async function submit(data: FormData) {
   "use server"
+  requirePrescriptionLaunch()
   const token = value(data, "token")
   const channel = await loadChannel(token)
   const files = data
@@ -141,6 +144,7 @@ async function submit(data: FormData) {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  requirePrescriptionLaunch()
   const { token } = await params
   const channel = await getPublicPrescriptionChannel(prisma, {
     publicToken: token,
@@ -154,6 +158,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function Page({ params, searchParams }: Props) {
+  requirePrescriptionLaunch()
   const { token } = await params
   const query = await searchParams
   const channel = await loadChannel(token)

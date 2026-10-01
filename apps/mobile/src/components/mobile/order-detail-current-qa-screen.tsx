@@ -26,11 +26,12 @@ import { buildCommercialOrderActivity } from "./commerce/commercial-order-overvi
 
 const inert = () => undefined
 
-const CURRENT_ORDER_FIXTURE = {
+const CURRENT_ORDER_FIXTURE: CommercialOrder = {
   amountPaidMinor: 48_500_00,
   balanceDueMinor: 77_500_00,
   clientOrderId: "baseline-order-2040",
   createdAt: new Date("2026-09-06T08:52:00.000Z"),
+  createdByUserId: "owner-1",
   createdBy: {
     email: "owner@northstar.example",
     id: "owner-1",
@@ -48,12 +49,25 @@ const CURRENT_ORDER_FIXTURE = {
     {
       discountMinor: 5_000_00,
       id: "line-rice",
+      offeringId: "offering-rice",
       kind: "product",
       productFulfillments: [],
       productReturns: [],
       quantity: "5",
-      reservation: { id: "reservation-1", status: "ACTIVE" },
+      reservation: { balanceSourceId: "balance-rice", id: "reservation-1", status: "ACTIVE" },
       snapshot: {
+        balanceSourceId: "balance-rice",
+        configurationVersionId: "configuration-rice",
+        currencyCode: "NGN",
+        inventoryUnitId: "unit-rice-bag",
+        transactionScale: 0,
+        sku: null,
+        barcode: null,
+        offeringKind: "product",
+        optionSelections: [],
+        pricingPolicy: "fixed",
+        stockBehavior: "PACKAGED_STOCK",
+        unitFactor: "1",
         catalogItemName: "Ofada rice",
         inventoryUnitName: "25 kg bag",
         offeringName: "Wholesale bag",
@@ -66,12 +80,26 @@ const CURRENT_ORDER_FIXTURE = {
     {
       discountMinor: 0,
       id: "line-delivery",
+      offeringId: "offering-delivery",
       kind: "service",
       productFulfillments: [],
       productReturns: [],
       quantity: "1",
       reservation: null,
       snapshot: {
+        balanceSourceId: null,
+        configurationVersionId: null,
+        currencyCode: "NGN",
+        inventoryUnitId: null,
+        inventoryUnitName: null,
+        transactionScale: 0,
+        sku: null,
+        barcode: null,
+        offeringKind: "service",
+        optionSelections: [],
+        pricingPolicy: "fixed",
+        stockBehavior: null,
+        unitFactor: null,
         catalogItemName: "Market delivery",
         offeringName: "Same-day delivery",
         variantName: "Mainland route",
@@ -91,7 +119,7 @@ const CURRENT_ORDER_FIXTURE = {
   subtotalMinor: 126_000_00,
   taxMinor: 0,
   totalMinor: 126_000_00,
-} as CommercialOrder
+}
 
 export function OrderDetailCurrentQaScreen({
   action = null,
@@ -117,20 +145,20 @@ export function OrderDetailCurrentQaScreen({
   const [paymentMethod, setPaymentMethod] = useState<OrderPaymentMethod>("cash")
   const [paymentReference, setPaymentReference] = useState("")
   useEffect(() => setColorScheme(theme), [setColorScheme, theme])
-  const order = useMemo(() => {
+  const order = useMemo<CommercialOrder>(() => {
     if (state === "paid") {
       return {
         ...CURRENT_ORDER_FIXTURE,
         amountPaidMinor: CURRENT_ORDER_FIXTURE.totalMinor,
         balanceDueMinor: 0,
         paymentStatus: "PAID",
-      } as CommercialOrder
+      }
     }
     if (state === "scheduled") {
       return {
         ...CURRENT_ORDER_FIXTURE,
         deliveryDueAt: new Date("2027-09-06T11:30:00.000Z"),
-      } as CommercialOrder
+      }
     }
     return CURRENT_ORDER_FIXTURE
   }, [state])
