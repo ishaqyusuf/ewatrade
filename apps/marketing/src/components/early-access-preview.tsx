@@ -1,16 +1,14 @@
 "use client"
 
-import type { EarlyAccessDevPreview } from "@/lib/early-access-preview"
+import type { EarlyAccessQaPreview } from "@/lib/early-access-preview"
 import { Button } from "@ewatrade/ui"
 import Link from "next/link"
 
 export function EarlyAccessPreview({
   preview,
 }: {
-  preview: EarlyAccessDevPreview
+  preview: EarlyAccessQaPreview
 }) {
-  if (process.env.NODE_ENV !== "development") return null
-
   return (
     <section
       aria-label="QA continuation"

@@ -26,8 +26,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const [{ LeadCaptureType, prisma }, { enqueueMarketingLeadNotification }] =
-    await Promise.all([import("@ewatrade/db"), import("@ewatrade/jobs")])
+  const { LeadCaptureType, prisma } = await import("@ewatrade/db")
 
   const requestedAt = new Date()
   const accessToken = generateEarlyAccessToken()
@@ -38,7 +37,6 @@ export async function POST(request: NextRequest) {
   const expiresAt = getEarlyAccessExpiresAt(requestedAt)
   const previewEmail = shouldPreviewEarlyAccess({
     email: result.data.email,
-    requestUrl: getQaWebRequestOrigin(request),
   })
   const { lead } = await prisma.$transaction(async (tx) => {
     const lead = await tx.leadCapture.create({
@@ -98,7 +96,7 @@ export async function POST(request: NextRequest) {
       {
         message:
           "Your QA request has been saved. Continue setup below; no email was sent.",
-        devPreview: {
+        qaPreview: {
           accessUrl,
           emailHtml: email.html,
           expiresAt: expiresAt.toISOString(),
@@ -108,6 +106,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  const { enqueueMarketingLeadNotification } = await import("@ewatrade/jobs")
   await enqueueMarketingLeadNotification(notification)
 
   return NextResponse.json({

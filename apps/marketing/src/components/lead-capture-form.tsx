@@ -1,9 +1,9 @@
 "use client"
 
-import { EarlyAccessPreview } from "@/components/dev/early-access-preview"
+import { EarlyAccessPreview } from "@/components/early-access-preview"
 import { QaQuickFillButton } from "@/components/qa/qa-quick-fill-button"
 import { useOptionalQaWebAccelerator } from "@/components/qa/qa-web-accelerator"
-import type { EarlyAccessDevPreview } from "@/lib/early-access-preview"
+import type { EarlyAccessQaPreview } from "@/lib/early-access-preview"
 import { createLeadDraft } from "@/lib/qa-lead-fill"
 import { startTransition, useId, useRef, useState } from "react"
 
@@ -60,7 +60,7 @@ export function LeadCaptureForm({
   const roleHintId = `${roleInputId}-hint`
   const [state, setState] = useState<SubmissionState>("idle")
   const [message, setMessage] = useState("")
-  const [devPreview, setDevPreview] = useState<EarlyAccessDevPreview | null>(
+  const [qaPreview, setQaPreview] = useState<EarlyAccessQaPreview | null>(
     null,
   )
   const [draft, setDraft] = useState<LeadDraft>(emptyDraft)
@@ -92,7 +92,7 @@ export function LeadCaptureForm({
   async function handleSubmit(formData: FormData) {
     setState("submitting")
     setMessage("")
-    setDevPreview(null)
+    setQaPreview(null)
 
     const payload =
       type === "early-access"
@@ -120,7 +120,7 @@ export function LeadCaptureForm({
 
       const result = (await response.json()) as {
         message?: string
-        devPreview?: EarlyAccessDevPreview
+        qaPreview?: EarlyAccessQaPreview
       }
 
       if (!response.ok) {
@@ -145,7 +145,7 @@ export function LeadCaptureForm({
           : "You have been added to the waitlist.")
 
       setState("success")
-      setDevPreview(result.devPreview ?? null)
+      setQaPreview(result.qaPreview ?? null)
       setMessage(nextMessage)
       formRef.current?.reset()
       setDraft(emptyDraft)
@@ -292,7 +292,7 @@ export function LeadCaptureForm({
           </p>
         </div>
       </form>
-      {devPreview ? <EarlyAccessPreview preview={devPreview} /> : null}
+      {qaPreview ? <EarlyAccessPreview preview={qaPreview} /> : null}
       <QaQuickFillButton
         canUndo={Boolean(undoDraft)}
         onFill={quickFill}
