@@ -6,13 +6,17 @@
 .design/
 .designs/
 .gstack/
+.claude/
+.codex/
+.agents/
+.turbo/
 .release/
 tmp/
 output/
 outputs/
 dist/
 apps/mobile/
-apps/dashboard/
+# Shared by Marketing and Dashboard; keep both project build roots present.
 apps/pos/
 apps/desktop/
 **/node_modules/

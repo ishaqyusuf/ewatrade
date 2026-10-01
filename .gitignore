@@ -14,11 +14,15 @@ build
 packages/db/generated
 .gstack/
 .local-db-sync/
-/.design/*
-!/.design/reference-*.png
-/.designs/
+# Local project memory, design/review material, and agent state.
+# Keep .github/, .release/ source, and public .well-known/ routes tracked.
+.brain/
+.design/
+.designs/
+.scratch/
+.claude/
+.codex/
+.agents/
 packages/jobs/.trigger/
-/.brain/
-/.scratch/
 /output/
 /outputs/
